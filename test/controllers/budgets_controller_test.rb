@@ -19,6 +19,98 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show reconciles parent overage without marking shared children over budget" do
+    budget = budgets(:one)
+    parent_category = Category.create!(
+      name: "Vehicle budget presentation",
+      family: budget.family,
+      color: "#4da568",
+      lucide_icon: "car"
+    )
+    limited_category = Category.create!(
+      name: "Vehicle payment presentation",
+      parent: parent_category,
+      family: budget.family
+    )
+    shared_category = Category.create!(
+      name: "Vehicle fuel presentation",
+      parent: parent_category,
+      family: budget.family
+    )
+    parent_budget_category = BudgetCategory.create!(
+      budget: budget,
+      category: parent_category,
+      budgeted_spending: 100,
+      currency: "USD"
+    )
+    BudgetCategory.create!(
+      budget: budget,
+      category: limited_category,
+      budgeted_spending: 80,
+      currency: "USD"
+    )
+    shared_budget_category = BudgetCategory.create!(
+      budget: budget,
+      category: shared_category,
+      budgeted_spending: 0,
+      currency: "USD"
+    )
+
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: limited_category),
+      date: Date.current,
+      name: "Vehicle payment expense",
+      amount: 1,
+      currency: "USD"
+    )
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: parent_category),
+      date: Date.current,
+      name: "Vehicle parent expense",
+      amount: 190.90,
+      currency: "USD"
+    )
+
+    get budget_url(Budget.date_to_param(Date.current))
+
+    assert_response :success
+    assert_select "a[href=?]", budget_budget_category_path(budget, parent_budget_category), text: /Over by:\s*\$91\.90/
+    assert_select "a[href=?]", budget_budget_category_path(budget, shared_budget_category), count: 0
+  end
+
+  test "show displays ring-fenced child carry on the parent card" do
+    budget = budgets(:one)
+    parent_category = budget.family.categories.create!(name: "Parent rollover card", color: "#4da568")
+    child_category = budget.family.categories.create!(name: "Child rollover card", parent: parent_category)
+    previous_budget = budget.family.budgets.create!(
+      start_date: 6.months.ago.beginning_of_month.to_date,
+      end_date: 6.months.ago.end_of_month.to_date,
+      budgeted_spending: 20,
+      expected_income: 100,
+      currency: "USD"
+    )
+    previous_budget.budget_categories.create!(
+      category: parent_category, budgeted_spending: 20, currency: "USD"
+    )
+    previous_budget.budget_categories.create!(
+      category: child_category, budgeted_spending: 20, currency: "USD", rollover_enabled: true
+    )
+    parent_budget_category = budget.budget_categories.create!(
+      category: parent_category, budgeted_spending: 100, currency: "USD"
+    )
+    budget.budget_categories.create!(
+      category: child_category, budgeted_spending: 100, currency: "USD", rollover_enabled: true
+    )
+
+    get budget_url(Budget.date_to_param(Date.current))
+
+    assert_response :success
+    assert_select "a[href=?]", budget_budget_category_path(budget, parent_budget_category),
+                  text: /\+\$20\.00 rolled over/
+  end
+
   test "breadcrumbs include the Plan hub for preview users" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
 

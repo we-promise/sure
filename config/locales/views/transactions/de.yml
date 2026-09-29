@@ -69,8 +69,12 @@ de:
       keep_both: Nein, beide behalten
       loan_payment: Kreditrate
       mark_recurring: Als wiederkehrend markieren
+      create_bill: Rechnung hinzufügen
       mark_recurring_subtitle: Erfasse das als wiederkehrende Transaktion. Die Schwankungsbreite des Betrags wird automatisch aus ähnlichen Transaktionen der letzten 6 Monate berechnet.
       mark_recurring_title: Wiederkehrende Transaktion
+      applied_to_title: Damit bezahlte Rechnungen
+      applied_to_detail: "%{amount} für die am %{date} fällige Rechnung"
+      applied_to_unreviewed: Prüfung erforderlich
       memo: Memo
       merge_duplicate: Ja, zusammenführen
       open_matcher: Zuordnung öffnen

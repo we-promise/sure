@@ -13,6 +13,7 @@ fr:
       invalid_account: Compte Plaid non valide sélectionné
       success: Compte lié avec succès à Plaid
     plaid_item:
+      add_accounts: Ajouter des comptes
       add_new: Ajouter une nouvelle connexion
       confirm_accept: Supprimer l'institution
       confirm_body: Cela supprimera de manière permanente tous les comptes de ce groupe ainsi que toutes les données associées.

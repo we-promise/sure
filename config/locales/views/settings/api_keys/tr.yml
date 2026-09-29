@@ -68,9 +68,8 @@ tr:
         name_help_text: Bu anahtarı daha sonra tanımanıza yardımcı olacak açıklayıcı
           bir ad seçin.
         name_label: API Anahtarı Adı
-        name_placeholder: örn. Üretim Uygulaması, Analitik Paneli
-        permissions_help: API anahtarınızın ihtiyaç duyduğu yetkileri seçin. Her zaman
-          farklı yetkilerle yeni bir anahtar oluşturabilirsiniz.
+        name_placeholder: örn. Bütçe Uygulamam, Portföy Takipçisi
+        permissions_help: 'Bu API anahtarının sahip olması gereken yetkileri seçin:'
         permissions_label: Yetkiler
         save_api_key: API Anahtarını Kaydet
         scope_details:
@@ -140,6 +139,8 @@ tr:
           page_title: API Anahtarı Başarıyla Oluşturuldu
           your_api_key: API Anahtarınız
         title: API Anahtarı Yönetimi
+      key_reveal:
+        copied: Kopyalandı!
     api_keys_controller:
       revoke_failed: API anahtarı iptal edilemedi
       revoked_successfully: API anahtarı başarıyla iptal edildi

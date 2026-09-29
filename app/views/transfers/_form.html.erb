@@ -7,6 +7,12 @@
     </div>
   <% end %>
 
+  <%# Anti-double-submit token: a fresh UUID per page load, echoed back on
+      submit. TransfersController#create / Transfer::Creator use it to
+      recognize a repeat submission (double-click, retry, or a genuine
+      concurrent race) and avoid creating a duplicate transfer. %>
+  <%= hidden_field_tag "transfer[idempotency_key]", new_transfer_idempotency_key %>
+
   <%# Hide expense/income tabs when creating a transfer involving an investment or crypto account. %>
   <% show_type_tabs = true %>
   <% account_ids = [] %>

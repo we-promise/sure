@@ -4,6 +4,8 @@ class TransfersController < ApplicationController
   before_action :set_transfer, only: %i[show destroy update update_tags mark_as_recurring]
   before_action :set_accounts, only: %i[new create]
 
+  helper_method :new_transfer_idempotency_key
+
   def new
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
@@ -43,7 +45,8 @@ class TransfersController < ApplicationController
       exchange_rate: transfer_params[:exchange_rate].presence&.to_d,
       source_fee_amount: transfer_params[:source_fee_amount],
       destination_fee_amount: transfer_params[:destination_fee_amount],
-      tag_ids: transfer_params[:tag_ids]
+      tag_ids: transfer_params[:tag_ids],
+      idempotency_key: submitted_idempotency_key
     ).create
 
     if @transfer.persisted?
@@ -61,6 +64,7 @@ class TransfersController < ApplicationController
     @transfer ||= Transfer.new
     @transfer.tag_ids = transfer_params[:tag_ids]
     @transfer.errors.add(:base, t(".exchange_rate_unavailable"))
+    @from_account_id = transfer_params[:from_account_id]
     set_accounts
     @tags = Current.family.tags.alphabetically
     render :new, status: :unprocessable_entity
@@ -68,6 +72,15 @@ class TransfersController < ApplicationController
     @transfer ||= Transfer.new
     @transfer.tag_ids = transfer_params[:tag_ids]
     @transfer.errors.add(:date, t(".date_invalid"))
+    @from_account_id = transfer_params[:from_account_id]
+    set_accounts
+    @tags = Current.family.tags.alphabetically
+    render :new, status: :unprocessable_entity
+  rescue Transfer::Creator::StaleIdempotencyKeyError
+    @transfer ||= Transfer.new
+    @transfer.tag_ids = transfer_params[:tag_ids]
+    @transfer.errors.add(:base, t(".stale_form"))
+    @from_account_id = transfer_params[:from_account_id]
     set_accounts
     @tags = Current.family.tags.alphabetically
     render :new, status: :unprocessable_entity
@@ -193,8 +206,26 @@ class TransfersController < ApplicationController
       params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :source_fee_amount, :destination_fee_amount, tag_ids: [])
     end
 
+    # Anti-double-submit token: a random UUID rendered fresh on every "new
+    # transfer" form load, echoed back on submit, only ever trusted to look
+    # like something we could have generated (see
+    # Transfer::Creator#find_existing_transfer for how it's used to
+    # de-duplicate).
+    UUID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+    private_constant :UUID_FORMAT
+
+    def submitted_idempotency_key
+      key = params.dig(:transfer, :idempotency_key)
+      key if key.is_a?(String) && key.match?(UUID_FORMAT)
+    end
+
+    def new_transfer_idempotency_key
+      @new_transfer_idempotency_key ||= submitted_idempotency_key || SecureRandom.uuid
+    end
+
     def set_accounts
       @accounts = accessible_accounts
+        .active
         .alphabetically
         .includes(
           :account_providers,

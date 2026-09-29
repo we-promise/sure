@@ -1,0 +1,154 @@
+---
+pt-PT:
+  wise_items:
+    profile_types:
+      personal: Pessoal
+      business: Empresarial
+    entries:
+      default_name: Transação Wise
+      fee_name: Comissão da Wise
+    activities:
+      jar_deposit: Depósito no jar
+      jar_withdrawal: Levantamento do jar
+      transfer_to_jar: "Transferência para %{jar}"
+      transfer_from_jar: "Transferência do %{jar}"
+      interest: Juros da Wise
+      asset_fee: Comissão de ativo da Wise
+      default_name: Atividade Wise
+    sync_status:
+      no_accounts: Sem contas encontradas
+      all_synced:
+        one: "%{count} conta sincronizada"
+        other: "%{count} contas sincronizadas"
+      partial_setup: "%{synced} sincronizadas, %{pending} precisam de configuração"
+    create:
+      no_profiles_found: Não foram encontrados perfis da Wise. Verifique o seu token de API.
+      invalid_token: Token de API inválido. Verifique e tente novamente.
+      connection_failed: Não foi possível ligar à Wise. Tente novamente mais tarde.
+    destroy:
+      success: Ligação à Wise removida
+    update:
+      success: Ligação à Wise atualizada
+    sync:
+      success: Sincronização iniciada
+    syncer:
+      importing_accounts: A importar contas da Wise...
+      checking_account_configuration: A verificar a configuração das contas...
+      accounts_need_setup:
+        one: "%{count} conta precisa de configuração..."
+        other: "%{count} contas precisam de configuração..."
+      processing_transactions: A processar transações...
+      calculating_balances: A calcular saldos...
+      credentials_invalid: Token de API da Wise inválido ou permissões insuficientes
+      failed: A sincronização falhou. Tente novamente ou contacte o suporte.
+      import_failed: A importação da Wise falhou.
+      accounts_failed:
+        one: "%{count} saldo falhou ao importar."
+        other: "%{count} saldos falharam ao importar."
+      transactions_failed:
+        one: "%{count} saldo teve falhas de importação de transações."
+        other: "%{count} saldos tiveram falhas de importação de transações."
+      account_processing_failed:
+        one: "%{count} conta da Wise falhou durante o processamento."
+        other: "%{count} contas da Wise falharam durante o processamento."
+      account_sync_failed:
+        one: "%{count} sincronização de conta da Wise não pôde ser agendada."
+        other: "%{count} sincronizações de contas da Wise não puderam ser agendadas."
+    provider_panel:
+      setup_title: "Instruções de configuração:"
+      add_connection: Adicionar ligação à Wise
+      token_label: Token de API
+      token_placeholder: Cole o seu token de API pessoal da Wise
+      keep_token_placeholder: Deixe em branco para manter o token atual
+      connection_name_label: Designação da ligação
+      connection_name_placeholder: Wise Pessoal
+      sync_start_date_label: Importar transações a partir de
+      sync_start_date_help: Os extratos da Wise são importados a partir desta data. Deixe o valor predefinido para até um ano de histórico.
+      import_all_history_label: Importar o histórico completo de transações
+      import_all_history_help: Obter todos os extratos históricos da Wise em vez de apenas o último ano.
+      connect: Ligar à Wise
+      update_connection: Atualizar ligação
+      setup_accounts: Configurar contas
+      sync: Sincronizar
+      disconnect: Desligar
+      disconnect_label: "Desligar %{name}"
+      disconnect_confirm: "Tem a certeza de que pretende desligar %{name}? Isto irá remover todos os dados de contas sincronizados."
+      accounts_link: Contas
+      configured_html: "Ligado e a sincronizar. Visite o separador %{accounts_link} para gerir as suas contas."
+      not_configured: Não configurado
+      sandbox_note_html: "Utilize o URL base <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>) para testes. Defina <code>WISE_BASE_URL</code> no seu ambiente."
+      encryption_warning:
+        title: A encriptação da base de dados não está configurada
+        message: Configure as chaves de encriptação do Active Record antes de adicionar tokens da Wise em produção. Sem encriptação, os tokens são armazenados em texto simples.
+      instructions:
+        sign_in_html: "Visite %{link} e inicie sessão na sua conta"
+        open_tokens: "Vá a Settings → Connect and manage apps → Developer tools → API tokens"
+        create_token: "Crie um novo token de API pessoal com acesso só de leitura"
+        copy_token_html: "Copie o token e cole-o abaixo. A Sure utiliza-o apenas para sincronizar os seus saldos e transações."
+    provider_connection:
+      default_name: Wise
+      default_description: Ligue a sua conta multimoeda da Wise
+      name: "Wise — %{name}"
+      description: "Ligar através de %{name}"
+    link_profiles:
+      session_expired: Sessão expirada. Tente ligar novamente.
+      no_profiles_selected: Selecione pelo menos um perfil.
+      already_connected: Todos os perfis selecionados já estão ligados.
+      success:
+        one: "Ligado com sucesso %{count} perfil da Wise"
+        other: "Ligados com sucesso %{count} perfis da Wise"
+    select_profiles:
+      session_expired: Sessão expirada. Tente ligar novamente.
+      title: Selecionar Perfis da Wise
+      subtitle: Escolha os perfis a ligar
+      description: A sua conta da Wise tem vários perfis. Selecione os que pretende sincronizar com a Sure.
+      unnamed_profile: "(Perfil sem designação)"
+      already_connected_label: Já ligado
+      connect: Ligar perfis selecionados
+      cancel: Cancelar
+    wise_item:
+      deletion_in_progress: eliminação em curso...
+      syncing: A sincronizar...
+      error: Erro de sincronização
+      status: "Sincronizado há %{timestamp}"
+      status_never: Nunca sincronizado
+      status_with_summary: "Última sincronização há %{timestamp} — %{summary}"
+      delete: Desligar
+      setup_needed: Novas contas prontas para configurar
+      setup_description: "%{linked} de %{total} contas ligadas. Crie contas Sure para os seus saldos em moeda da Wise."
+      setup_action: Configurar Contas
+      no_accounts_title: Ainda não existem contas ligadas
+      no_accounts_description: Execute uma sincronização para descobrir os seus saldos da Wise e, depois, associe-os a contas Sure.
+    setup_accounts:
+      title: Configurar Contas da Wise
+      subtitle: Associe os seus saldos em moeda da Wise
+      description: Crie uma conta Sure para cada saldo em moeda da Wise que pretenda acompanhar. Cada moeda torna-se na sua própria conta.
+      no_accounts_to_setup: Todas as contas estão configuradas
+      all_accounts_linked: Todos os seus saldos em moeda da Wise foram associados a contas Sure.
+      create_account: Criar Conta
+      done: Concluído
+    select_accounts:
+      title: Selecionar Saldo da Wise
+      description: Selecione o saldo em moeda da Wise que pretende associar à sua conta %{product_name}.
+      no_accounts_found: Todos os saldos da Wise já estão associados a contas Sure.
+      no_connection: Não foi encontrada nenhuma ligação à Wise. Associe a Wise nas Definições do Serviço primeiro.
+      link_account: Associar saldo
+      cancel: Cancelar
+    select_existing_account:
+      title: "Associar %{account_name} com a Wise"
+      description: Selecione o saldo em moeda da Wise a associar a esta conta. As transações serão sincronizadas automaticamente.
+      no_accounts_found: Não foram encontrados saldos da Wise não associados.
+      link_account: Associar saldo
+      cancel: Cancelar
+    link_accounts:
+      not_found: Saldo da Wise não encontrado.
+      success: Saldo da Wise associado à conta com sucesso.
+      failed: Falha ao associar o saldo da Wise. Tente novamente.
+    link_existing_account:
+      not_found: Conta ou saldo da Wise não encontrado.
+      success: "%{account_name} associada com sucesso à Wise"
+      failed: Falha ao associar a conta. Tente novamente.
+    complete_account_setup:
+      not_found: Saldo da Wise não encontrado.
+      success: Conta criada e associada com sucesso.
+      failed: Falha ao criar a conta. Tente novamente.

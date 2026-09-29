@@ -41,6 +41,8 @@ fr:
         revoke_key: Révoquer
         subtitle: Gérez les clés API pour l'accès programmatique à vos données.
         title: Clés API
+      key_reveal:
+        copied: Copié !
       new:
         cancel: Annuler
         create_key: Créer une clé API

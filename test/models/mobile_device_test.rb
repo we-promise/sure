@@ -31,7 +31,21 @@ class MobileDeviceTest < ActiveSupport::TestCase
     user.update_column(:active, false)
 
     assert_no_difference "Doorkeeper::AccessToken.count" do
-      assert_raises(ActiveRecord::RecordInvalid) { device.issue_token! }
+      assert_raises(User::InactiveError) { device.issue_token! }
     end
+  end
+
+  test "issue_token! does not report a genuine persistence failure as an inactive user" do
+    user = users(:family_member)
+    device = user.mobile_devices.create!(
+      device_id: "persistence-failure-test",
+      device_name: "Persistence failure test device",
+      device_type: "ios"
+    )
+    assert user.active?
+
+    Doorkeeper::AccessToken.stubs(:create!).raises(ActiveRecord::RecordInvalid.new(Doorkeeper::AccessToken.new))
+
+    assert_raises(ActiveRecord::RecordInvalid) { device.issue_token! }
   end
 end

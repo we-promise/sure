@@ -1,0 +1,45 @@
+---
+pl:
+  plans:
+    budget_card:
+      days_left:
+        few: Zostały %{count} dni
+        many: Zostało %{count} dni
+        one: Został 1 dzień
+        other: Zostało %{count} dni
+      edit_budget: Edytuj budżet
+      empty_body: Ustaw miesięczny cel wydatków i limity dla poszczególnych kategorii,
+        aby zobaczyć, jak wygląda ten miesiąc.
+      of_total: z %{total}
+      percent_used: wykorzystano %{percent}%
+      set_up: Skonfiguruj budżet na ten miesiąc
+      title: Ten miesiąc
+      top_categories: Najważniejsze kategorie
+      view_budget: Zobacz pełny budżet
+    goals_card:
+      active_count:
+        few: "%{count} aktywne"
+        many: "%{count} aktywnych"
+        one: 1 aktywny
+        other: "%{count} aktywnych"
+      active_goals: Aktywne cele
+      all_goals: Wszystkie cele
+      all_on_pace: Wszystko na dobrej drodze
+      behind_count:
+        few: "%{count} opóźnione"
+        many: "%{count} opóźnionych"
+        one: 1 opóźniony
+        other: "%{count} opóźnionych"
+      new_goal: Nowy cel
+      of_targets: z %{total} we wszystkich celach
+      pending_count:
+        few: "%{count} oczekujące deklaracje"
+        many: "%{count} oczekujących deklaracji"
+        one: 1 oczekująca deklaracja
+        other: "%{count} oczekujących deklaracji"
+      pending_marker: oczekuje
+      runway: "%{months} mies. zapasu · %{pace}/mies."
+      title: Twoje cele
+    show:
+      subtitle: 'Zdecyduj, na co idą Twoje pieniądze: co wydajesz, a co oszczędzasz.'
+      title: Plan

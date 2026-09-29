@@ -5,3 +5,10 @@ tr:
       etiketleri (Al, Sat, Temettü) mevcut olmadığından bütçe doğruluğu etkilenebilir.
       Yatırım işlemlerini hariç tutmak veya kategorize etmek için kurallar oluşturmayı
       düşünün.
+    lunchflow_accounts_failed:
+      one: 'Lunchflow içe aktarma: %{count} hesap güncellenemedi'
+      other: 'Lunchflow içe aktarma: %{count} hesap güncellenemedi'
+    lunchflow_transactions_failed:
+      one: 'Lunchflow içe aktarma: %{count} hesabın işlemleri alınamadı'
+      other: 'Lunchflow içe aktarma: %{count} hesabın işlemleri alınamadı'
+    lunchflow_import_error: 'Lunchflow içe aktarma: %{error}'

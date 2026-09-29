@@ -22,7 +22,7 @@ en:
           one: "1 txn"
           other: "%{count} txns"
         split_warning_title: Split transactions detected
-        split_warning_description: "This QIF file contains split transactions. Splits are not yet supported, so each split transaction will be imported as a single transaction with its full amount and no category. The individual split breakdowns will not be preserved."
+        split_warning_description: "This QIF file contains split transactions. Review the detected split categories and tags below before importing."
         split_badge: split
         empty_state_primary: No categories or tags were found in this QIF file.
         empty_state_secondary: All transactions will be imported without categories or tags.
@@ -163,6 +163,11 @@ en:
       show:
         description: Select the columns that correspond to each field in your CSV.
         title: Configure your import
+        template_found: Template configuration found
+        template_description: We found a configuration from a previous import for this account.  Would you like to apply it to this import?
+        manually_configure: Manually configure
+        apply_template: Apply template
+        sample_caption: Sample data from your uploaded CSV
     confirms:
       sure_import:
         title: Confirm your import
@@ -200,6 +205,7 @@ en:
     uploads:
       handle_qif_upload:
         qif_uploaded: "QIF file uploaded successfully."
+        qif_account_required: Please select an account for the QIF import
       update:
         qif_uploaded: "QIF file uploaded successfully."
       show:
@@ -215,7 +221,7 @@ en:
         download_sample_csv: Download a sample CSV
         to_see_format: to see the required CSV format
         qif_title: Upload QIF file
-        qif_description: Select the account this QIF file belongs to, then upload your .qif export from Quicken.
+        qif_description: Select an account for single-account files, or leave blank when your QIF export includes account names.
         qif_account_label: Account
         qif_account_placeholder: Select an account…
         qif_file_prompt: to add your QIF file here
@@ -368,6 +374,7 @@ en:
       map: Map
       confirm: Confirm
       select: Select
+      label: "Step %{step}"
       progress: "Step %{step} of %{total}"
     empty:
       message: No imports found.
@@ -460,6 +467,50 @@ en:
       empty_summary: We could not find any importable records in this file. It may be empty, or the lines may not match the expected export format (each line should be a JSON object with "type" and "data" keys, using types this import supports).
       publish_import: Publish import
       back_to_imports: Back to imports
+      missing_merchant_warning_title: Some merchants are missing from this export
+      missing_merchant_warning_description:
+        one: >-
+          1 merchant reference in this file points to a merchant that isn't included. This can happen
+          with an export taken before provider-assigned merchants were added to Sure exports. You can still
+          publish this import -- the affected record will just import without a merchant, and you can tag
+          it afterward.
+        other: >-
+          %{count} merchant references in this file point to merchants that aren't included. This can happen
+          with an export taken before provider-assigned merchants were added to Sure exports. You can still
+          publish this import -- the affected records will just import without a merchant, and you can tag
+          them afterward.
+      skipped_recurring_description:
+        one: >-
+          1 recurring transaction has no name and its merchant is missing, so it will be skipped.
+          Automatically detected recurring transactions are rebuilt after the import.
+        other: >-
+          %{count} recurring transactions have no name and their merchants are missing, so they will be skipped.
+          Automatically detected recurring transactions are rebuilt after the import.
+      reused_taxonomy_notice_title: Some categories, tags or merchants already exist
+      reused_taxonomy_notice_description:
+        one: >-
+          1 category, tag or merchant in this file already exists in your account (for
+          example, from onboarding's default categories). It'll be reused and updated with this file's
+          data instead of creating a duplicate.
+        other: >-
+          %{count} categories, tags or merchants in this file already exist in your account (for
+          example, from onboarding's default categories). They'll be reused and updated with this file's
+          data instead of creating duplicates.
+      provider_merchant_diff_title: Some merchants already exist with different details
+      provider_merchant_diff_description:
+        one: >-
+          1 merchant in this file already exists with different details. The existing merchant
+          will be kept and this file's values won't be applied.
+        other: >-
+          %{count} merchants in this file already exist with different details. The existing merchants
+          will be kept and this file's values won't be applied.
+      provider_merchant_diff_summary: View differences
+      provider_merchant_diff_none: none
+      provider_merchant_diff_fields:
+        website_url: Website
+        name: Name
+        provider_merchant_id: Provider ID
+      provider_merchant_diff_row: "%{field}: keeping %{kept}, file has %{imported}"
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
       interrupted: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."

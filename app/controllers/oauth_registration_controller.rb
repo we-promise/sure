@@ -1,5 +1,9 @@
 class OauthRegistrationController < ApplicationController
   LOOPBACK_HOSTS = [ "localhost", "127.0.0.1", "::1" ].freeze
+  # Schemes that can execute script, read local files, invoke device handlers,
+  # or are not OAuth redirects.
+  FORBIDDEN_SCHEMES = %w[javascript data file about blob ws wss ftp mailto tel sms intent].freeze
+  SCHEME_PATTERN = /\A[a-z][a-z0-9+\-.]*\z/.freeze
 
   skip_authentication
   skip_before_action :verify_authenticity_token
@@ -14,6 +18,7 @@ class OauthRegistrationController < ApplicationController
     }, status: :bad_request
   end
 
+  # Registers a public OAuth client from MCP dynamic client registration.
   def create
     body = JSON.parse(request.raw_post)
 
@@ -38,7 +43,7 @@ class OauthRegistrationController < ApplicationController
     unless redirect_uris.all? { |uri| valid_redirect_uri?(uri) }
       render json: {
         error: "invalid_client_metadata",
-        error_description: "redirect_uris must use https or loopback http"
+        error_description: t("oauth.registration.invalid_redirect_uris")
       }, status: :bad_request
       return
     end
@@ -78,17 +83,40 @@ class OauthRegistrationController < ApplicationController
 
   private
 
+    # Returns true for https, loopback http, and RFC 8252 private-use schemes
+    # (cursor://, vscode://). Rejects fragments, userinfo, handler schemes, and
+    # non-loopback http.
     def valid_redirect_uri?(raw_uri)
       uri = URI.parse(raw_uri)
-      return false if uri.host.blank?
+      return false unless uri.fragment.nil?
+      return false if uri.userinfo.present?
 
       scheme = uri.scheme.to_s.downcase
-      return true if scheme == "https"
-      return false unless scheme == "http"
+      return false if scheme.blank? || FORBIDDEN_SCHEMES.include?(scheme)
+      return false unless scheme.match?(SCHEME_PATTERN)
+
+      case scheme
+      when "https"
+        uri.host.present?
+      when "http"
+        loopback_http?(uri)
+      else
+        native_app_redirect?(uri)
+      end
+    rescue URI::Error
+      false
+    end
+
+    # Returns true when +uri+ is http to localhost, 127.0.0.1, or ::1.
+    def loopback_http?(uri)
+      return false if uri.host.blank?
 
       host = uri.host.downcase.delete_prefix("[").delete_suffix("]")
       LOOPBACK_HOSTS.include?(host)
-    rescue URI::InvalidURIError
-      false
+    end
+
+    # Returns true when a private-use URI has a host or path to redirect to.
+    def native_app_redirect?(uri)
+      uri.host.present? || uri.path.present?
     end
 end

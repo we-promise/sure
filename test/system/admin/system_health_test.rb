@@ -1,6 +1,8 @@
 require "application_system_test_case"
 
 class Admin::SystemHealthTest < ApplicationSystemTestCase
+  include ActiveJob::TestHelper
+
   setup do
     sign_in users(:sure_support_staff)
     Setting.stubs(:llm_provider).returns("openai")
@@ -16,12 +18,7 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
   end
 
   test "selecting AI status runs live probes" do
-    ClimateControl.modify(
-      "OPENAI_ACCESS_TOKEN" => "test-token",
-      "OPENAI_URI_BASE" => nil,
-      "OPENAI_MODEL" => nil,
-      "VECTOR_STORE_PROVIDER" => nil
-    ) do
+    with_openai_access_token do
       visit admin_system_health_path
 
       click_button "AI status"
@@ -37,7 +34,103 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     end
   end
 
+  test "running the checks again stays on the AI tab and forces fresh probes" do
+    with_openai_access_token do
+      visit admin_system_health_path(tab: "ai")
+      assert_text "Live check passed"
+
+      click_on "Run checks again"
+
+      assert_current_path admin_system_health_path(tab: "ai", refresh_ai_health: "1")
+      assert_selector "turbo-frame#ai_status[src$='?refresh_ai_health=1']"
+      assert_text "Live check passed"
+    end
+  end
+
+  test "going back after switching tabs returns to system health" do
+    with_openai_access_token do
+      visit admin_system_health_path
+      click_button "AI status"
+      assert_text "Live check passed"
+
+      click_link "Preferences", match: :first
+      assert_no_selector "[data-testid='system-health-tabs']"
+      page.go_back
+
+      assert_current_path admin_system_health_path(tab: "ai")
+      assert_selector "button[role='tab'][aria-selected='true']", text: "AI status"
+    end
+  end
+
+  # The redirect comes back to this page, which the button's `replace` action
+  # turns into a morphing refresh even after a tab switch. The button has to
+  # leave the frame for the flash to show, and the frame has to keep its status
+  # through the morph instead of taking the new page's loading placeholder.
+  test "queueing a worker check keeps the AI status on screen" do
+    with_openai_access_token do
+      visit admin_system_health_path
+      click_button "AI status"
+      assert_text "Live check passed"
+      page.execute_script(<<~JS)
+        document.addEventListener("turbo:morph", () => {
+          window.aiStatusAfterMorph = document.getElementById("ai_status").textContent
+        }, { once: true })
+      JS
+
+      click_button "Verify worker configuration"
+
+      assert_text "Worker check queued"
+      assert_match "Live check passed", page.evaluate_script("window.aiStatusAfterMorph")
+    end
+  end
+
+  test "hosted super admin enables the test button by registering an iOS device" do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
+    Apns::Client.stubs(:configured?).returns(true)
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    visit admin_system_health_path
+    assert_selector "button[role='tab']", count: 2
+    assert_selector "button[role='tab'][aria-selected='true']", text: "Background jobs"
+    assert_selector "h2", text: "Push notifications"
+    assert_button "Send test push notification", disabled: true
+    assert_text "Enable push notifications in the Sure iOS app"
+
+    user = users(:sure_support_staff)
+    user.push_subscriptions.create!(
+      token: "ab" * 32, environment: "sandbox", platform: "ios", last_registered_at: Time.current
+    )
+    visit admin_system_health_path(tab: "background_jobs")
+    assert_button "Send test push notification", disabled: false
+    Apns::Client.expects(:new).never
+    assert_enqueued_jobs 1, only: DeliverTestPushNotificationJob do
+      click_button "Send test push notification"
+      assert_text "Test notification queued"
+    end
+    assert_text "Queued"
+    assert_button "Send test push notification", disabled: true
+    Apns::Client.unstub(:new)
+    Apns::Client.any_instance.stubs(:deliver_test).returns(stub(ok?: true))
+    perform_enqueued_jobs only: DeliverTestPushNotificationJob
+    travel 31.seconds do
+      visit admin_system_health_path(tab: "background_jobs")
+      assert_text "Latest test requested at"
+      assert_text "Accepted by APNs"
+      assert_button "Send test push notification", disabled: false
+      page.save_screenshot(Rails.root.join("tmp", "system-health-background-push-notifications.png"))
+    end
+  end
+
   private
+    def with_openai_access_token(&block)
+      ClimateControl.modify(
+        "OPENAI_ACCESS_TOKEN" => "test-token",
+        "OPENAI_URI_BASE" => nil,
+        "OPENAI_MODEL" => nil,
+        "VECTOR_STORE_PROVIDER" => nil,
+        &block
+      )
+    end
+
     def probe_result(status)
       AiHealth::Probe::Result.new(
         status: status,

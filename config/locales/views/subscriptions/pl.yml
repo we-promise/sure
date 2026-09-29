@@ -1,18 +1,31 @@
 ---
 pl:
   subscriptions:
+    create:
+      trial_already_used: Okres próbny już się rozpoczął albo zakończył. Przejdź na
+        wersję płatną, aby kontynuować.
+      welcome: Witaj w Sure!
     self_hosted_alert: "%{product_name} nie jest dostępny w trybie self-hosted."
+    success:
+      contribution_failed: Coś poszło nie tak podczas przetwarzania Twojej wpłaty.
+        Spróbuj ponownie.
+      welcome_with_contribution: Witaj w Sure! Doceniamy Twoją wpłatę.
     upgrade:
-      contribute_and_support_sure: "Wspieraj i rozwijaj Sure"
-      cta: "Wesprzyj dalszy rozwój tej bazy kodu!"
+      account_settings: Ustawienia konta
+      already_contributing: Już wspierasz projekt. Dziękujemy!
+      contribute_and_support_sure: Wspieraj i rozwijaj Sure
+      cta: Wesprzyj dalszy rozwój tej bazy kodu!
       header:
-        support: "Wesprzyj"
-        sure: "Sure"
-        today: "już dziś"
-      redirect_to_stripe: "W kolejnym kroku nastąpi przekierowanie do Stripe, który obsługuje płatności kartą."
+        support: Wesprzyj
+        sure: Sure
+        today: już dziś
+      page_title: Uaktualnij
+      redirect_to_stripe: W kolejnym kroku nastąpi przekierowanie do Stripe, który
+        obsługuje płatności kartą.
+      sign_out: Wyloguj się
+      trial_over: Okres próbny dobiegł końca
       trialing:
-        one: "Twoje dane zostaną usunięte za %{count} dzień"
-        few: "Twoje dane zostaną usunięte za %{count} dni"
-        many: "Twoje dane zostaną usunięte za %{count} dni"
-        other: "Twoje dane zostaną usunięte za %{count} dnia"
-      trial_over: "Okres próbny dobiegł końca"
+        few: Twoje dane zostaną usunięte za %{count} dni
+        many: Twoje dane zostaną usunięte za %{count} dni
+        one: Twoje dane zostaną usunięte za %{count} dzień
+        other: Twoje dane zostaną usunięte za %{count} dnia

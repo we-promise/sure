@@ -11,7 +11,9 @@
      data-action="click@window->tag-select#handleOutsideClick keydown->tag-select#handleKeydown">
   <div class="form-field">
     <div class="form-field__body">
-      <%= form.label :tag_ids, helpers.t("transactions.form.tags_label"), class: "form-field__label" %>
+      <% if show_label %>
+        <%= form.label attribute, label || helpers.t("transactions.form.tags_label"), class: "form-field__label" %>
+      <% end %>
 
       <button type="button"
               class="form-field__input form-field__input--multiselect-trigger min-h-7 flex items-center gap-2 pr-8 <%= "cursor-not-allowed text-subdued" if disabled %>"
@@ -20,6 +22,7 @@
               aria-haspopup="listbox"
               aria-expanded="false"
               aria-controls="<%= menu_id %>"
+              <% unless show_label %> aria-label="<%= label || helpers.t("transactions.form.tags_label") %>" <% end %>
               <%= "disabled" if disabled %>>
         <span class="flex flex-wrap gap-1"
               data-tag-select-target="selectionContainer"

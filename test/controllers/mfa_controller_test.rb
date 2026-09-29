@@ -50,6 +50,49 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_empty rendered_codes & @user.otp_backup_codes
   end
 
+  # A double-click or browser resubmit replays the correct enrollment code;
+  # before the guard this fell into disable_mfa! and wiped the whole setup.
+  test "resubmitting the enrollment code does not tear down the finished setup" do
+    @user.setup_mfa!
+    code = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances").now
+
+    post mfa_path, params: { code: code }
+    assert_response :success
+    assert @user.reload.otp_required?
+
+    @user.webauthn_credentials.create!(
+      nickname: "Touch ID",
+      credential_id: "touch-id-credential",
+      public_key: "public-key"
+    )
+
+    post mfa_path, params: { code: code }
+
+    assert_redirected_to root_path
+    @user.reload
+    assert @user.otp_required?, "MFA must stay enabled"
+    assert_equal 8, @user.otp_backup_codes.length
+    assert @user.webauthn_credentials.exists?, "WebAuthn credentials must survive"
+  end
+
+  # Same replay, but caught before the first submit finished enabling MFA
+  # (the otp_required? guard cannot help yet): keep the pending secret so
+  # the user can enter the next code instead of restarting setup.
+  test "a replayed enrollment code keeps the pending secret" do
+    @user.setup_mfa!
+    code = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances").now
+    assert @user.verify_otp?(code), "simulates the concurrent submit that claimed the step first"
+    secret = @user.otp_secret
+
+    post mfa_path, params: { code: code }
+
+    assert_redirected_to new_mfa_path
+    assert_equal I18n.t("mfa.create.code_already_used"), flash[:alert]
+    @user.reload
+    assert_equal secret, @user.otp_secret, "the pending secret must survive"
+    assert_not @user.otp_required?
+  end
+
   test "does not enable MFA with invalid code" do
     @user.setup_mfa!
 
@@ -185,7 +228,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_operator stored_credential.sign_count, :>, 0
   end
 
-  test "verify_webauthn rejects authentication when session creation fails" do
+  test "verify_webauthn rejects a user deactivated after MFA verification started" do
     @user.setup_mfa!
     @user.enable_mfa!
     client = register_webauthn_credential
@@ -194,19 +237,31 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
 
     post sessions_path, params: { email: @user.email, password: user_password_test }
     post webauthn_options_mfa_path, as: :json
+    assert_response :success
+
     options = JSON.parse(response.body)
     assertion = client.get(
       challenge: options.fetch("challenge"),
       rp_id: "www.example.com",
       allow_credentials: [ stored_credential.credential_id ]
     )
-    MfaController.any_instance.stubs(:create_session_for).returns(false)
+
+    # Simulate deactivation happening after the challenge was issued but
+    # before the assertion is submitted.
+    @user.update_column(:active, false)
 
     post verify_webauthn_mfa_path, params: { credential: assertion }, as: :json
 
-    assert_response :unprocessable_entity
-    assert_equal I18n.t("mfa.verify_webauthn.invalid_credential"), JSON.parse(response.body).fetch("error")
+    assert_response :unauthorized
+    assert_equal "This account has been deactivated. Please contact an administrator.", JSON.parse(response.body)["error"]
     assert_not Session.exists?(user_id: @user.id)
+    # The credential must not be consumed by a rejected login attempt.
+    assert_nil stored_credential.reload.last_used_at
+    assert_equal 0, stored_credential.sign_count
+    # The pending MFA state must not survive the rejection either — otherwise
+    # a later reactivation could let the user finish MFA without redoing the
+    # first factor.
+    assert_nil session[:mfa_user_id]
   end
 
   test "verify_webauthn authenticates with configured relying party id" do

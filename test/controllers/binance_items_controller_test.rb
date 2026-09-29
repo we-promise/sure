@@ -96,6 +96,20 @@ class BinanceItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Sync start date must be a valid date in the past.", flash[:alert]
   end
 
+  test "complete_account_setup localizes an invalid sync_start_date in German" do
+    user = users(:family_admin)
+    user.update!(locale: "de")
+    sign_in user
+
+    post complete_account_setup_binance_item_url(@binance_item), params: {
+      selected_accounts: [],
+      sync_start_date: (Date.current + 2.days).to_s
+    }
+
+    assert_equal "Wähl ein gültiges Startdatum für die Synchronisierung, das nicht in der Zukunft liegt.", flash[:alert]
+    assert I18n.exists?("binance_items.complete_account_setup.invalid_sync_start_date", :de, fallback: false)
+  end
+
   test "complete_account_setup with no selection shows message" do
     @binance_item.binance_accounts.create!(
       name: "Spot Portfolio",

@@ -10,14 +10,17 @@ pl:
       title: Nie znaleziono wpisów
     loading:
       loading: Ładowanie wpisów...
+    protection:
+      description: Twoje zmiany w tym wpisie nie zostaną nadpisane przez synchronizację
+        z dostawcą.
+      locked_fields_label: 'Zablokowane pola:'
+      title: Chronione przed synchronizacją
+      tooltip: Chronione przed synchronizacją
+      unlock_button: Zezwól synchronizacji na aktualizację
+      unlock_confirm: Zezwolić synchronizacji na aktualizację tego wpisu? Twoje zmiany
+        mogą zostać nadpisane przy następnej synchronizacji.
+    unlock:
+      success: Wpis został odblokowany. Może zostać zaktualizowany podczas następnej
+        synchronizacji.
     update:
       success: Wpis został zaktualizowany
-    unlock:
-      success: Wpis został odblokowany. Może zostać zaktualizowany podczas następnej synchronizacji.
-    protection:
-      tooltip: Chronione przed synchronizacją
-      title: Chronione przed synchronizacją
-      description: Twoje zmiany w tym wpisie nie zostaną nadpisane przez synchronizację z dostawcą.
-      locked_fields_label: "Zablokowane pola:"
-      unlock_button: Zezwól synchronizacji na aktualizację
-      unlock_confirm: Zezwolić synchronizacji na aktualizację tego wpisu? Twoje zmiany mogą zostać nadpisane przy następnej synchronizacji.

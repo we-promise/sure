@@ -122,6 +122,7 @@ fr:
         no_target_date: Ouvert
         on_track: En bonne voie
         paused: En pause
+      chips_aria: Filtrer les objectifs par statut
       empty_filtered: Aucun objectif ne correspond.
       goals_section:
         heading: Objectifs

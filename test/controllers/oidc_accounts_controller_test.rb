@@ -77,7 +77,8 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal "Invalid email or password", flash[:alert]
   end
 
-  test "should reject linking an identity to an inactive user" do
+  test "should reject linking for a deactivated user even with correct password" do
+    @user.sessions.destroy_all # @user (family_admin) has a pre-existing fixture session
     @user.update_column(:active, false)
     session[:pending_oidc_auth] = pending_auth
 
@@ -91,6 +92,34 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     assert_response :unprocessable_entity
     assert_equal "Invalid email or password", flash[:alert]
+  end
+
+  test "should reject linking for a user deactivated between the initial check and session creation" do
+    session[:pending_oidc_auth] = pending_auth
+    @user.sessions.destroy_all
+
+    # Simulate deactivation landing after the initial active? check but
+    # before create_session_for's reload catches it — SsoAuditLog.log_link!
+    # runs in that window in the real flow, so hook the deactivation there.
+    # create_link wraps identity creation, the audit log, and session creation
+    # in one transaction, so a failed session creation rolls back the identity
+    # link too — no dangling, unlinked OidcIdentity left behind.
+    SsoAuditLog.stubs(:log_link!).with do |**kwargs|
+      kwargs[:user].update_column(:active, false)
+      true
+    end
+
+    assert_no_difference "OidcIdentity.count" do
+      post :create_link,
+        params: {
+          email: @user.email,
+          password: user_password_test
+        }
+    end
+
+    assert_redirected_to new_session_path
+    assert_equal "Could not authenticate via OpenID Connect.", flash[:alert]
+    assert_not Session.exists?(user_id: @user.id)
   end
 
   test "should redirect to MFA when user has MFA enabled" do

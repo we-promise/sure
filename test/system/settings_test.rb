@@ -58,7 +58,7 @@ class SettingsTest < ApplicationSystemTestCase
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
-    Provider::Registry.stubs(:get_provider).with(:github).returns(stub(fetch_latest_release_notes: nil))
+    Provider::Registry.stubs(:get_provider).with(:github).returns(stub(fetch_latest_release_notes: nil, fetch_release_notes: nil))
     open_settings_from_sidebar
     assert_selector "li", text: "Self-Hosting"
     click_link "Self-Hosting", match: :first
@@ -80,6 +80,18 @@ class SettingsTest < ApplicationSystemTestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     open_settings_from_sidebar
     assert_no_selector "li", text: I18n.t("settings.settings_nav.payment_label")
+  end
+
+  # Escape is also the settings nav's hotkey back to the page before settings.
+  test "Escape closes an open dialog instead of leaving settings" do
+    visit settings_api_keys_path
+    click_on I18n.t("settings.api_keys.index.revoke_key"), match: :first
+    assert_selector "dialog#confirm-dialog[open]"
+
+    page.send_keys(:escape)
+
+    assert_no_selector "dialog#confirm-dialog[open]"
+    assert_current_path settings_api_keys_path
   end
 
   test "does not show admin settings to non-admin users" do

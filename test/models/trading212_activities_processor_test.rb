@@ -274,6 +274,29 @@ class Trading212ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Interest", entry.entryable.investment_activity_label
   end
 
+  test "processes INTEREST_ON_FREE_CASH as Interest" do
+    @trading212_account.update!(
+      raw_transactions_payload: [
+        {
+          "reference" => "txn_003_free_cash",
+          "type" => "INTEREST_ON_FREE_CASH",
+          "amount" => "0.03",
+          "currency" => "EUR",
+          "dateTime" => "2026-09-09T01:13:26.766Z"
+        }
+      ]
+    )
+
+    processor = Trading212Account::ActivitiesProcessor.new(@trading212_account)
+    result = processor.process
+
+    assert_equal 1, result[:transactions]
+    entry = @account.entries.find_by(external_id: "trading212_transaction_txn_003_free_cash")
+    assert_not_nil entry
+    assert_equal "Interest", entry.entryable.investment_activity_label
+    assert entry.amount.negative?
+  end
+
   test "processes FEE as Fee" do
     @trading212_account.update!(
       raw_transactions_payload: [

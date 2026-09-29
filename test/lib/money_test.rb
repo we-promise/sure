@@ -202,6 +202,25 @@ class MoneyTest < ActiveSupport::TestCase
     end
   end
 
+  test "conversion error names the currency pair and date it failed on" do
+    error = Money::ConversionError.new(from_currency: "EUR", to_currency: "UAH", date: Date.new(2026, 9, 10))
+
+    assert_equal "Couldn't find exchange rate from EUR to UAH on 2026-09-10", error.message
+    assert_equal "EUR", error.from_currency
+    assert_equal "UAH", error.to_currency
+    assert_equal Date.new(2026, 9, 10), error.date
+  end
+
+  test "conversion error raised by exchange_to carries a descriptive message" do
+    ExchangeRate.expects(:find_or_fetch_rate).returns(nil)
+
+    error = assert_raises(Money::ConversionError) do
+      Money.new(1000, :usd).exchange_to(:jpy, date: Date.new(2026, 9, 10))
+    end
+
+    assert_equal "Couldn't find exchange rate from USD to JPY on 2026-09-10", error.message
+  end
+
   test "uses custom rate when provided" do
     ExchangeRate.expects(:find_or_fetch_rate).never
 

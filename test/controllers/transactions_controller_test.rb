@@ -2,10 +2,74 @@ require "test_helper"
 
 class TransactionsControllerTest < ActionDispatch::IntegrationTest
   include EntryableResourceInterfaceTest, EntriesTestHelper
+  include ActionView::RecordIdentifier
 
   setup do
     sign_in @user = users(:family_admin)
     @entry = entries(:transaction)
+  end
+
+  # Bills has always linked out to transactions. Until now nothing linked back,
+  # so a transaction that settled a bill was a dead end. The link-back is part
+  # of the preview-gated bills surface, so the viewer needs the flag.
+  test "a German transaction shows the bill it paid with localized copy" do
+    @user.update!(locale: "de")
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    series = @user.family.recurring_transactions.create!(
+      account: accounts(:depository), name: "Watson Property", amount: 2000,
+      currency: "USD", expected_day_of_month: 9, status: "active", manual: true,
+      bill_type: "bill", last_occurrence_date: Date.current,
+      next_expected_date: Date.current
+    )
+    series.recurring_occurrences.destroy_all
+    due = Date.current.beginning_of_month + 8
+    occurrence = series.recurring_occurrences.create!(
+      family: @user.family, original_due_on: due, due_on: due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+    RecurringTransaction::Allocator.new(occurrence).allocate!(entry: @entry)
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match "Watson Property", response.body
+    assert_match bill_path(series), response.body, "the bill must be reachable from the transaction"
+
+    translations = {
+      "transactions.show.create_bill" => "Rechnung hinzufügen",
+      "transactions.show.applied_to_title" => "Damit bezahlte Rechnungen",
+      "transactions.show.applied_to_detail" => "%{amount} für die am %{date} fällige Rechnung",
+      "transactions.show.applied_to_unreviewed" => "Prüfung erforderlich"
+    }
+    translations.each do |key, text|
+      assert_equal text, I18n.t(key, locale: :de, fallback: false)
+    end
+
+    assert_match translations.fetch("transactions.show.create_bill"), response.body
+    assert_match translations.fetch("transactions.show.applied_to_title"), response.body
+    assert_match(/für die am .* fällige Rechnung/, response.body)
+  end
+
+  test "the bill link-back stays hidden without preview access" do
+    series = @user.family.recurring_transactions.create!(
+      account: accounts(:depository), name: "Watson Property", amount: 2000,
+      currency: "USD", expected_day_of_month: 9, status: "active", manual: true,
+      bill_type: "bill", last_occurrence_date: Date.current,
+      next_expected_date: Date.current
+    )
+    series.recurring_occurrences.destroy_all
+    due = Date.current.beginning_of_month + 8
+    occurrence = series.recurring_occurrences.create!(
+      family: @user.family, original_due_on: due, due_on: due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+    RecurringTransaction::Allocator.new(occurrence).allocate!(entry: @entry)
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match bill_path(series), response.body,
+      "the preview-gated bill link must not render for a user without the flag"
   end
 
   test "index groups subcategories immediately after their parent in the category filter" do
@@ -48,6 +112,151 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(created_entry.account)
     assert_equal "Transaction created", flash[:notice]
     assert_enqueued_with(job: SyncJob)
+  end
+
+  test "resubmitting the same idempotency key does not create a duplicate transaction" do
+    idempotency_key = SecureRandom.uuid
+    params = {
+      entry: {
+        account_id: @entry.account_id,
+        name: "New transaction",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: { category_id: Category.first.id },
+        idempotency_key: idempotency_key
+      }
+    }
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: params
+    end
+    assert_response :redirect
+    first_entry = Entry.order(:created_at).last
+
+    # Simulates a double-click or a browser retry: same form, same
+    # idempotency key, submitted again after the first request already
+    # completed and committed.
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: params
+    end
+    assert_response :redirect
+    assert_equal "Transaction created", flash[:notice]
+    assert_redirected_to account_url(first_entry.account)
+  end
+
+  test "the idempotency key does not mark the created transaction as provider-linked" do
+    # Regression test: the idempotency key must not be stored in
+    # external_id/source (Entry#linked? = external_id.present?), or a plain
+    # manual entry would incorrectly look provider-synced - disabling its
+    # editable fields in the UI and hiding it from future provider dedup.
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "New transaction",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: { category_id: Category.first.id },
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    created_entry = Entry.order(:created_at).last
+    assert_not created_entry.linked?
+    assert_nil created_entry.external_id
+    assert_nil created_entry.source
+  end
+
+  test "handles a genuine concurrent double-submit without raising or duplicating" do
+    idempotency_key = SecureRandom.uuid
+
+    # Simulates the race: another request with the same idempotency key wins
+    # and commits its INSERT in the window between our pre-check (which
+    # therefore still sees nothing, hence the first `nil`) and our own
+    # #save (which then hits the real partial unique index on
+    # entries(account_id, idempotency_key) and raises RecordNotUnique,
+    # exactly like the DB would under real concurrent requests). The rescue
+    # then re-runs the same lookup, this time finding the winner.
+    winning_entry = @entry.account.entries.create!(
+      name: "New transaction", date: Date.current, currency: "USD", amount: 100,
+      idempotency_key: idempotency_key,
+      entryable: Transaction.new
+    )
+    TransactionsController.any_instance.stubs(:find_duplicate_manual_entry).returns(nil, winning_entry)
+    Entry.any_instance.stubs(:save).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_response :redirect
+    assert_redirected_to account_url(winning_entry.account)
+    assert_equal "Transaction created", flash[:notice]
+  end
+
+  test "a RecordNotUnique with no matching entry is not silently swallowed" do
+    idempotency_key = SecureRandom.uuid
+
+    # Defensive-branch coverage: if the unique index ever rejects an insert
+    # for a reason other than "another request with this exact idempotency
+    # key already won" (e.g. a different constraint), we must not pretend it
+    # succeeded - the error should propagate instead of being hidden behind
+    # a fake success redirect.
+    TransactionsController.any_instance.stubs(:find_duplicate_manual_entry).returns(nil)
+    Entry.any_instance.stubs(:save).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+  end
+
+  test "create without an idempotency key still creates a transaction as before" do
+    # A raw POST that doesn't go through the rendered form (e.g. a script)
+    # simply skips the idempotency check rather than being rejected - the
+    # form always supplies a key in normal browser usage.
+    assert_difference [ "Entry.count", "Transaction.count" ], 2 do
+      2.times do
+        post transactions_url, params: {
+          entry: {
+            account_id: @entry.account_id,
+            name: "New transaction",
+            date: Date.current,
+            currency: "USD",
+            amount: 100,
+            nature: "inflow",
+            entryable_type: "Transaction",
+            entryable_attributes: { category_id: Category.first.id }
+          }
+        }
+      end
+    end
   end
 
   test "create without an account re-renders the form instead of raising" do
@@ -281,6 +490,63 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
   end
 
+  test "tag-only endpoint toggles a single tag and streams the row's tag UI" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ], locked_attributes: {})
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.reload.entryable.tag_ids.sort
+    assert @entry.entryable.locked?(:tag_ids)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, "tag_summary_desktop")
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, "tag_summary_mobile")
+    assert_select "turbo-stream[action=replace][target=?]", "#{dom_id(@entry, :tag_option)}_#{tags(:two).id}"
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal [ tags(:two).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint falls back to a redirect for plain HTML toggles" do
+    @entry.entryable.update!(tag_ids: [], locked_attributes: {})
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:one).id }
+
+    assert_redirected_to transaction_path(@entry)
+    assert_equal [ tags(:one).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint does not toggle tags from another family" do
+    other_tag = users(:empty).family.tags.create!(name: "Other family")
+    original_tag_ids = @entry.entryable.tag_ids
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: other_tag.id }, as: :turbo_stream
+
+    assert_response :not_found
+    assert_equal original_tag_ids, @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint does not toggle tags for read-only users" do
+    sign_in users(:family_member)
+    read_only_entry = entries(:transfer_in)
+    original_tag_ids = read_only_entry.entryable.tag_ids
+
+    patch tags_transaction_url(read_only_entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
+
+    assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
+  test "transaction rows show tags" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ])
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(@entry.entryable, "tag_summary_desktop")}", text: /#{tags(:one).name}/
+    assert_select "##{dom_id(@entry.entryable, "tag_summary_mobile")}", text: /#{tags(:one).name}/
+  end
+
   test "split parent rows mark amount as privacy-sensitive" do
     entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
 
@@ -293,6 +559,43 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select ".split-group > div.opacity-50 p.privacy-sensitive", count: 1
+  end
+
+  # Row only opened on a precise click on the name text (whitespace between
+  # name/avatar/amount looked clickable via the row's hover styling but did
+  # nothing). A row-level click delegates to the name link now, so the whole
+  # row opens the drawer while interactive descendants (checkbox, category
+  # menu, account link) keep handling their own clicks.
+  test "transaction row delegates whole-row clicks to the drawer link" do
+    get transactions_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    frame_id = ActionView::RecordIdentifier.dom_id(@entry.entryable)
+    row = doc.at_css("turbo-frame##{frame_id} [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(@entry), drawer_link["href"]
+  end
+
+  test "split parent row delegates whole-row clicks to the drawer link" do
+    entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
+
+    entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get transactions_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css(".split-group [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(entry), drawer_link["href"]
   end
 
   test "can paginate" do

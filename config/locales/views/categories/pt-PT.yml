@@ -1,0 +1,70 @@
+---
+pt-PT:
+  categories:
+    bootstrap:
+      success: Categorias predefinidas criadas com sucesso
+    category:
+      delete: Eliminar categoria
+      edit: Editar categoria
+    create:
+      success: Categoria criada com sucesso
+    destroy:
+      success: Categoria eliminada com sucesso
+    edit:
+      edit: Editar categoria
+    form:
+      placeholder: Nome da categoria
+      name_label: Designação
+      unassigned: "(sem atribuição)"
+      parent_category_label: "Categoria principal (opcional)"
+      trigger_label: Escolher cor e ícone
+      color: Cor
+      icon: Ícone
+      auto_adjust: ajuste automático.
+      poor_contrast: "Contraste fraco, escolha uma cor mais escura ou"
+    destroy_all:
+      success: Todas as categorias eliminadas
+    index:
+      bootstrap: Utilizar predefinições (recomendado)
+      categories: Categorias
+      categories_expenses: Categorias de despesas
+      categories_incomes: Categorias de rendimentos
+      delete_all: Eliminar tudo
+      empty: Nenhuma categoria encontrada
+      merge: Unir categorias
+      new: Nova categoria
+    merge:
+      title: Unir categorias
+      description: Selecione uma categoria de destino e as categorias a unir. As transações e linhas de orçamento correspondentes serão movidas para o destino.
+      target_label: Unir em (destino)
+      select_target: Selecionar categoria de destino...
+      sources_label: Categorias a unir
+      sources_hint: As categorias selecionadas serão eliminadas depois de as suas transações e linhas de orçamento serem movidas para o destino. Não selecione o destino como origem.
+      submit: Unir selecionadas
+    menu:
+      loading: A carregar...
+    new:
+      new_category: Nova categoria
+    perform_merge:
+      success:
+        one: "%{count} categoria unida com sucesso"
+        other: "%{count} categorias unidas com sucesso"
+      no_categories_selected: Nenhuma categoria selecionada para unir
+      target_not_found: Categoria de destino não encontrada
+      invalid_categories: Categorias selecionadas inválidas
+      target_selected_as_source: Escolha categorias diferentes para o destino e as origens.
+    update:
+      success: Categoria atualizada com sucesso
+    virtual:
+      transfer: Transferência
+      payment: Pagamento
+      trade: Negociação
+  category:
+    dropdowns:
+      show:
+        bootstrap: Gerar categorias predefinidas
+        empty: Nenhuma categoria encontrada
+        match_transfer: "Corresponder transferência/pagamento"
+        one_time: "%{type} único(a)"
+        income: "rendimento"
+        expense: "despesa"

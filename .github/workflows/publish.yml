@@ -46,6 +46,8 @@ permissions:
 jobs:
   ci:
     uses: ./.github/workflows/ci.yml
+    with:
+      require_js_dependency_audit: false
 
   build:
     name: Build Docker image

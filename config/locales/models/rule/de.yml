@@ -7,3 +7,6 @@ de:
           duplicate_actions: 'Eine Regel darf keine doppelten Aktionen enthalten: %{types}'
           min_actions: braucht mindestens eine Aktion
           nested_conditions: Zusammengesetzte Bedingungen lassen sich nicht verschachteln
+  rule:
+    conditions:
+      unsupported_label: "Nicht unterstützt (%{type})"

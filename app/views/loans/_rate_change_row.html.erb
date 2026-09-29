@@ -1,0 +1,19 @@
+<%# locals: (effective_date:, rate:, disabled: false) %>
+
+<%# `disabled` is set server-side for a fixed loan so the row is not submitted
+    even without JavaScript; the Stimulus controller toggles it from there. %>
+<div class="flex items-center gap-2" data-rate-change-row>
+  <%= render "loans/rate_change_field",
+             label: t("loans.form.rate_change_effective_date"), type: "date",
+             name: "account[accountable_attributes][rate_changes][][effective_date]",
+             value: effective_date, disabled: disabled %>
+
+  <%= render "loans/rate_change_field",
+             label: t("loans.form.rate_change_rate"), type: "number",
+             name: "account[accountable_attributes][rate_changes][][rate]",
+             value: rate, disabled: disabled,
+             attributes: { step: "0.005", min: "0", max: "100" } %>
+
+  <%= render DS::Button.new(text: t("loans.form.rate_change_remove"), variant: "ghost", type: "button", class: "shrink-0",
+                            disabled: disabled, data: { action: "loan-rate-changes#remove" }) %>
+</div>

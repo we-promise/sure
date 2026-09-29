@@ -1,0 +1,40 @@
+<%# locals: (period:, currency:) %>
+<%# The gap before the next paycheck, when the cash does cover it.
+
+    Its twin next door reports the same window when the cash falls short. This
+    one exists because the covered case used to be dropped from the page
+    outright: the bridge is filtered out of the timeline, and only a shortfall
+    earned a banner, so a bill due in five days appeared nowhere on the plan
+    that is supposed to answer what is due before payday.
+
+    Deliberately quiet. Nothing is wrong here, and the window still has to be
+    visible. %>
+<div class="rounded-lg bg-container-inset px-4 py-3 space-y-1">
+  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <p class="text-sm text-primary tabular-nums privacy-sensitive">
+      <span class="font-medium"><%= t("bills.paycheck.bridge_label") %></span>
+      <%= t("bills.paycheck.bridge_amount", amount: format_money(Money.new(period.obligation_total, currency))) %>
+    </p>
+    <%= link_to t("bills.paycheck.review_plan"), bills_path,
+          class: "text-xs text-secondary hover:text-primary shrink-0" %>
+  </div>
+
+  <p class="text-xs text-secondary">
+    <%= t("bills.paycheck.bridge_split",
+          date: l(period.ends_on + 1, format: :short),
+          cash: format_money(Money.new(period.cash_on_hand, currency))) %>
+  </p>
+
+  <div class="pt-1 space-y-0.5">
+    <% period.items_due.each do |item| %>
+      <div class="flex items-baseline justify-between gap-3 text-xs">
+        <%= link_to item.occurrence.recurring_transaction.display_name,
+              bill_path(item.occurrence.recurring_transaction),
+              class: "text-secondary hover:text-primary truncate" %>
+        <span class="text-secondary tabular-nums privacy-sensitive shrink-0">
+          <%= format_money(Money.new(item.share, currency)) %>
+        </span>
+      </div>
+    <% end %>
+  </div>
+</div>

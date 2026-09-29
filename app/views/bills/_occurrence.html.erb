@@ -1,0 +1,138 @@
+<%# locals: (occurrence:, date_label: false, suggestion: nil, disambiguate: false) %>
+<% series = occurrence.recurring_transaction %>
+<% expected = occurrence.resolved_expected_amount_money %>
+<% paid = occurrence.confirmed_allocated_money %>
+<% pane_frame = dom_id(occurrence, :pane) %>
+
+<%# SCAN. What is this, and does it need me?
+    Everything past that question lives one tap deeper, in the expansion.
+
+    An autopaying bill is still worth seeing and still counts toward the total,
+    but it recedes so the rows that want something from you carry the weight. %>
+<div>
+<%# The row reads as interactive without dressing up as a button: a hover tint
+    and the name underlining, the same cues the transaction list uses.
+
+    The tint hangs off this element rather than a group on the wrapper. The
+    wrapper also holds the expansion, so a group hover kept the row lit while
+    the pointer was down in the expanded pane, and the lit band clipped against
+    the pane's own fill. Hover still propagates from every child of the row, so
+    the trailing action tints it exactly as before. %>
+<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 transition-colors hover:bg-surface-hover <%= "opacity-70" if series.autopay? %>">
+  <%# The bulk of the row is the inspect control. Only the trailing verb sits
+      outside it, so there are no anchors inside anchors. %>
+  <%# Names the cycle it was opened from. Without it the expansion falls back to
+      the series' current occurrence, so expanding a settled row described the
+      NEXT one and reported it unpaid. %>
+  <%= link_to bill_path(series, display: "pane", frame: pane_frame, occurrence: occurrence.id),
+        data: { turbo_frame: pane_frame, turbo_prefetch: false },
+        class: "flex items-center gap-3 lg:gap-4 min-w-0 flex-1 group" do %>
+    <%# A date rail, and only a date. It used to print "Overdue" beside a
+        subline already reading "14 days overdue", which spent the row's one
+        piece of temporal context saying the same word twice. The colour still
+        carries the state; the rail now carries the date the state is about.
+
+        Desktop-only: on a phone the subline says it in words instead. %>
+    <% if date_label %>
+      <div class="hidden @lg:block w-14 shrink-0 text-xs <%= occurrence.derived_state == :overdue ? "text-destructive font-medium" : "text-secondary" %>">
+        <% if occurrence.due_on == Date.current %>
+          <%= t("bills.row_today") %>
+        <% else %>
+          <%= l(occurrence.due_on, format: "%b %-d") %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if series.merchant&.logo_url.present? %>
+      <%= image_tag Setting.transform_brand_fetch_url(series.merchant.logo_url),
+            class: "w-9 h-9 rounded-full shrink-0",
+            loading: "lazy" %>
+    <% else %>
+      <%= render DS::FilledIcon.new(
+            variant: :text,
+            text: series.display_name,
+            size: "lg",
+            rounded: true
+          ) %>
+    <% end %>
+
+    <% reason = date_label ? bills_attention_reason(occurrence, suggestion: suggestion) : nil %>
+    <div class="min-w-0 flex-1">
+      <p class="text-primary text-sm font-medium truncate group-hover:underline">
+        <%= series.display_name %>
+        <% if series.transfer? %>
+          <span class="text-xs text-secondary font-normal"><%= t("bills.debt_payment") %></span>
+        <% end %>
+      </p>
+      <%# In a dated section the subline says WHY this row needs attention,
+          which is the whole point of pulling those rows out of the run. %>
+      <p class="text-xs truncate <%= reason && occurrence.derived_state == :overdue ? "text-destructive" : "text-secondary" %>">
+        <% if reason %>
+          <%= reason %>
+          <%# Two rows reading the same name and the same amount need telling
+              apart, and the schedule is what actually differs between
+              subscription tiers. %>
+          <% if disambiguate %>
+            <span class="text-secondary">&middot; <%= frequency_label(series) %></span>
+          <% end %>
+        <% else %>
+          <%= date_label ? frequency_label(series) : occurrence_due_label(occurrence) %><%= bills_paid_from_label(series) %><%= bills_autopay_label(series) %>
+          <% if disambiguate && !date_label %>
+            &middot; <%= frequency_label(series) %>
+          <% end %>
+        <% end %>
+        <% if (progress = series.installment_progress) %>
+          &middot; <%= t("bills.installment_progress", done_plus_one: progress.first + 1, total: progress.last) %>
+        <% end %>
+      </p>
+      <% if series.notes.present? %>
+        <p class="text-xs text-subdued truncate"><%= series.notes %></p>
+      <% end %>
+    </div>
+
+    <%# One amount, and it is the one the next decision turns on. Payment state
+        used to be printed twice: a coloured subline on the left and a figure
+        on the right. %>
+    <div class="shrink-0 text-right min-w-0">
+      <p class="text-sm font-medium text-primary privacy-sensitive whitespace-nowrap">
+        <% if occurrence.paid? %>
+          <%= format_money(paid) %>
+        <% elsif occurrence.partially_paid? %>
+          <%= format_money(occurrence.remaining_amount_money) %>
+        <% else %>
+          <%= "~" if occurrence_amount_estimated?(occurrence) %><%= format_money(expected) %>
+        <% end %>
+      </p>
+      <% if occurrence.paid? %>
+        <p class="text-xs text-success"><%= occurrence.overpaid? ? t("bills.paid_over_short") : t("bills.paid_label") %></p>
+      <% elsif occurrence.partially_paid? %>
+        <%# Only when the left-hand subline has not already said it. In a dated
+            section the attention reason reads "Partial · $1,612.50 remaining",
+            and printing the same arithmetic again on the right is what was
+            squeezing the bill's name out of the row. %>
+        <% if reason.present? %>
+          <p class="text-xs text-secondary"><%= t("bills.remaining_label") %></p>
+        <% else %>
+          <p class="text-xs text-secondary privacy-sensitive truncate">
+            <%= t("bills.partial_progress", paid: format_money(paid), expected: format_money(expected)) %>
+          </p>
+        <% end %>
+      <% elsif occurrence_amount_estimated?(occurrence) && series.has_amount_variance? %>
+        <p class="text-xs text-secondary privacy-sensitive">
+          <%= t("bills.amount_range",
+                min: format_money(series.expected_amount_min_money),
+                max: format_money(series.expected_amount_max_money)) %>
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="shrink-0 flex items-center gap-2">
+    <%= render "bills/row_action", occurrence: occurrence, suggestion: suggestion %>
+  </div>
+</div>
+
+<%# The row's expansion: empty until the row is clicked, then the bill's
+    current state slides in under the line item. %>
+<%= turbo_frame_tag pane_frame %>
+</div>

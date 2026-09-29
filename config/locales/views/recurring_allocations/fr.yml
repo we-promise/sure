@@ -1,0 +1,15 @@
+---
+fr:
+  recurring_allocations:
+    already_allocated: Cette transaction est déjà affectée à cette facture
+    confirm:
+      success: Paiement affecté à la facture
+    create:
+      success: Paiement affecté
+    destroy:
+      success: Paiement délié
+    invalid: Le paiement n'a pas pu être enregistré
+    missing_rate: Aucun taux de change disponible ; saisissez le montant explicitement
+    over_allocation: Cela affecterait plus que le montant de la transaction
+    reject:
+      success: Ignorée. Cette transaction ne sera plus suggérée pour cette facture.

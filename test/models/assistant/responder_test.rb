@@ -70,6 +70,21 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     assert tool_choices_seen[0..-2].all?(&:nil?)
   end
 
+  test "a model that never stops calling tools hits the cap and raises" do
+    function_request = Provider::LlmConcept::ChatFunctionRequest.new(
+      id: "1", call_id: "1", function_name: "echo", function_args: "{}"
+    )
+    tool_response = Provider::LlmConcept::ChatResponse.new(
+      id: "1", model: "gpt-4.1", messages: [], function_requests: [ function_request ]
+    )
+
+    @llm.stubs(:chat_response).returns(provider_success_response(tool_response))
+
+    with_iteration_cap(2) do
+      assert_raises(Assistant::Responder::ToolCallLimitError) { @responder.respond }
+    end
+  end
+
   private
     def with_iteration_cap(value)
       previous = ENV["ASSISTANT_MAX_TOOL_CALL_ITERATIONS"]

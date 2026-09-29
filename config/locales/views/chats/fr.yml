@@ -39,6 +39,8 @@ fr:
     index:
       chats: Discussions
       new_chat: Nouvelle discussion
+    new:
+      default_title: Nouvelle discussion %{timestamp}
     thinking: Traitement en cours ...
     update:
       success: Chat mis à jour

@@ -197,4 +197,29 @@ class UpEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_nil entry.transaction.category_id
   end
+
+  test "skips category matching when the account has the matcher switched off" do
+    @family.categories.bootstrap!
+    @account.update!(enable_category_matcher: false)
+    matcher = UpAccount::Transactions::CategoryMatcher.new(@family.categories.to_a)
+
+    entry = UpEntry::Processor.new(
+      {
+        id: "tx_cat_3",
+        account_id: "acc_123",
+        status: "SETTLED",
+        description: "Woolworths",
+        amount: { currencyCode: "AUD", value: "-40.00", valueInBaseUnits: -4000 },
+        settledAt: "2026-01-15T00:00:00+11:00",
+        createdAt: "2026-01-15T00:00:00+11:00",
+        category_id: "groceries"
+      },
+      up_account: @up_account,
+      category_matcher: matcher
+    ).process
+
+    assert_nil entry.transaction.category_id
+    # Still imported, still carries the Up slug — only the auto-category is withheld.
+    assert_equal "groceries", entry.transaction.extra.dig("up", "category_id")
+  end
 end

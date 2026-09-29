@@ -1,0 +1,36 @@
+---
+fr:
+  plans:
+    budget_card:
+      days_left:
+        one: 1 jour restant
+        other: "%{count} jours restants"
+      edit_budget: Modifier le budget
+      empty_body: Fixez un objectif de dépenses mensuel et des limites par catégorie pour suivre l'évolution du mois.
+      of_total: sur %{total}
+      percent_used: "%{percent} % utilisés"
+      set_up: Configurer le budget de ce mois-ci
+      title: Ce mois-ci
+      top_categories: Principales catégories
+      view_budget: Voir le budget complet
+    goals_card:
+      active_count:
+        one: 1 actif
+        other: "%{count} actifs"
+      active_goals: Objectifs actifs
+      all_goals: Tous les objectifs
+      all_on_pace: Tout est dans les temps
+      behind_count:
+        one: 1 en retard
+        other: "%{count} en retard"
+      new_goal: Nouvel objectif
+      of_targets: sur %{total} tous objectifs confondus
+      pending_count:
+        one: 1 promesse en attente
+        other: "%{count} promesses en attente"
+      pending_marker: en attente
+      runway: "%{months} mois d'autonomie · %{pace}/mois"
+      title: Vos objectifs
+    show:
+      subtitle: 'Décidez où va votre argent : ce que vous dépensez et ce que vous épargnez.'
+      title: Plan

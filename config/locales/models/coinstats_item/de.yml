@@ -2,6 +2,8 @@
 de:
   models:
     coinstats_item:
+      wallet_linker:
+        no_tokens_found: Für dieses Krypto-Wallet wurden keine Token gefunden.
       syncer:
         importing_wallets: Wallets werden von CoinStats importiert...
         checking_configuration: Wallet-Konfiguration wird geprüft...

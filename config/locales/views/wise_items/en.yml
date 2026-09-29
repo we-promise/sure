@@ -85,6 +85,16 @@ en:
         open_tokens: "Go to Settings → Connect and manage apps → Developer tools → API tokens"
         create_token: "Create a new personal API token with read-only access"
         copy_token_html: "Copy the token and paste it below. Sure uses it only to sync your balances and transactions."
+      sca:
+        title: Strong Customer Authentication (SCA)
+        description: Wise requires a signed one-time-token challenge to read full transaction statements, including incoming payments. Generate a keypair here and register the public key with Wise to enable this.
+        public_key_label: Public key (PEM)
+        registered_help_html: "Register this key with Wise: Settings → Connect and manage apps → Developer tools → Public keys → Add public key."
+        copy: Copy
+        copied: Copied!
+        generate: Generate keypair
+        regenerate: Regenerate keypair
+        regenerate_confirm: "This generates a new keypair. Wise will keep accepting the previous public key until you remove it yourself in your Wise account — Sure has no way to revoke it remotely. You'll need to register the new public key with Wise before statements can sync again. Continue?"
     provider_connection:
       default_name: Wise
       default_description: Connect your Wise multi-currency account
@@ -152,3 +162,6 @@ en:
       not_found: Wise balance not found.
       success: Account created and linked successfully.
       failed: Failed to create account. Please try again.
+    generate_sca_keypair:
+      success: New SCA keypair generated. Register the public key with Wise to finish enabling it.
+      failed: Failed to generate a new SCA keypair. Please try again.

@@ -30,6 +30,9 @@ fr:
       shares: "%{qty} actions"
       unknown: "--"
     index:
+      positions:
+        one: "%{count} position"
+        other: "%{count} positions"
       average_cost: Coût moyen
       holdings: Holdings
       name: Nom

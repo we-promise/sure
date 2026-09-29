@@ -39,6 +39,7 @@ fr:
       syncing: Synchronisation…
       update_credentials: Mettre à jour les identifiants
     complete_account_setup:
+      invalid_sync_start_date: La date de début de synchronisation doit être une date valide dans le passé.
       no_accounts: Aucun compte à importer
       none_selected: Aucun compte sélectionné
       success:

@@ -41,7 +41,10 @@ pl:
     formats:
       default: "%d-%m-%Y"
       long: "%-d %B %Y"
+      month_year: "%B %Y"
       short: "%-d %b"
+      short_month_year: "%b %Y"
+      short_with_year: "%d %b %Y"
     month_names:
     -
     - stycznia
@@ -118,6 +121,11 @@ pl:
         many: "%{count} sekund"
         one: "%{count} sekunda"
         other: "%{count} sekund"
+      x_years:
+        few: "%{count} lata"
+        many: "%{count} lat"
+        one: "%{count} rok"
+        other: "%{count} lat"
     prompts:
       day: Dzień
       hour: Godzina
@@ -125,6 +133,11 @@ pl:
       month: Miesiąc
       second: Sekundy
       year: Rok
+  defaults:
+    brand_name: "%{brand_name}"
+    common:
+      close: Zamknij
+    product_name: "%{product_name}"
   errors:
     format: "%{attribute} %{message}"
     messages:
@@ -137,10 +150,12 @@ pl:
       exclusion: jest zarezerwowane
       greater_than: musi być większe od %{count}
       greater_than_or_equal_to: musi być większe lub równe %{count}
+      in: musi zawierać się w %{count}
       inclusion: nie znajduje się na liście dopuszczalnych wartości
       invalid: jest nieprawidłowe
       less_than: musi być mniejsze od %{count}
       less_than_or_equal_to: musi być mniejsze lub równe %{count}
+      model_invalid: 'Walidacja nie powiodła się: %{errors}'
       not_a_number: nie jest liczbą
       not_an_integer: musi być liczbą całkowitą
       odd: musi być nieparzyste
@@ -170,26 +185,30 @@ pl:
         many: "%{model} nie został zachowany z powodu %{count} błędów"
         one: "%{model} nie został zachowany z powodu jednego błędu"
         other: "%{model} nie został zachowany z powodu %{count} błędów"
+  global:
+    expand: Rozwiń
   helpers:
     select:
+      default_label: Wybierz...
       prompt: Proszę wybrać
+      search_placeholder: Szukaj
     submit:
       create: Utwórz %{model}
       submit: Wyślij %{model}
       update: Aktualizuj %{model}
+  mcp:
+    errors:
+      invalid_session_id: Nieprawidłowy identyfikator sesji MCP
+      unsupported_protocol_version: 'Nieobsługiwana wersja protokołu MCP: %{version}'
   number:
     currency:
       format:
-        delimiter: " "
-        format: "%n %u"
-        precision: 2
-        separator: ","
         significant: false
         strip_insignificant_zeros: true
-        unit: zł
     format:
       delimiter: " "
       precision: 3
+      round_mode: default
       separator: ","
       significant: false
       strip_insignificant_zeros: false
@@ -216,9 +235,11 @@ pl:
             many: bajtów
             one: bajt
             other: bajty
+          eb: EB
           gb: GB
           kb: KB
           mb: MB
+          pb: PB
           tb: TB
     percentage:
       format:
@@ -227,6 +248,10 @@ pl:
     precision:
       format:
         delimiter: ''
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris musi używać https, loopback http lub schematu
+        URI aplikacji natywnej
   support:
     array:
       last_word_connector: " oraz "

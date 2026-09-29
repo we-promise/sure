@@ -1,0 +1,5 @@
+---
+pt-PT:
+  passkey_sessions:
+    invalid_credential: Não foi possível iniciar sessão com essa passkey. Tente novamente ou
+      utilize a sua palavra-passe.

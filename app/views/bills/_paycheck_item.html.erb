@@ -1,0 +1,25 @@
+<%# One bill as a ledger line: due date in a fixed column, name, amount. A
+    reserved line also names the obligation it is a slice of, since the amount
+    on the right is a share rather than the whole bill. %>
+
+<% series = item.occurrence.recurring_transaction %>
+
+<div class="flex items-baseline gap-3 py-1">
+  <span class="w-14 shrink-0 text-xs text-secondary tabular-nums">
+    <%= l(item.occurrence.due_on, format: :short) %>
+  </span>
+
+  <span class="min-w-0 flex-1 truncate">
+    <%= link_to series.display_name, recurring_occurrence_path(item.occurrence),
+          data: { turbo_frame: :drawer }, class: "text-sm text-primary hover:underline" %>
+    <% if reserved && item.remaining_total > item.share %>
+      <span class="text-xs text-subdued privacy-sensitive">
+        <%= t("bills.paycheck.of_total", amount: format_money(Money.new(item.remaining_total, currency))) %>
+      </span>
+    <% end %>
+  </span>
+
+  <span class="text-sm text-primary privacy-sensitive shrink-0 tabular-nums">
+    <%= format_money(Money.new(item.share, currency)) %>
+  </span>
+</div>

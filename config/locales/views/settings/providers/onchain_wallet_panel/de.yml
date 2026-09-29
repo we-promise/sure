@@ -1,0 +1,21 @@
+---
+de:
+  settings:
+    providers:
+      taglines:
+        onchain_wallet: Verfolgt selbstverwahrte Bitcoin-, EVM- und Solana-Wallets über ihre öffentlichen Adressen.
+      onchain_wallet_panel:
+        add_wallet: Wallet hinzufügen
+        advanced: Erweitert
+        disconnect_all: Alle Wallets trennen
+        disconnect_all_confirm: Dadurch werden alle verfolgten Adressen und ihre Konten entfernt. Möchtest du fortfahren?
+        etherscan_api_key_label: Etherscan-API-Schlüssel (optional)
+        etherscan_api_key_placeholder: Etherscan-API-Schlüssel einfügen
+        etherscan_hint: Ethereum-Daten können ohne API-Schlüssel abgerufen werden. Ein Etherscan-API-Schlüssel erhöht lediglich das Anfragelimit für Ethereum.
+        keep_etherscan_api_key: Lass das Feld leer, um den vorhandenen Schlüssel beizubehalten
+        keyless_title: Nur Lesezugriff, keine Schlüssel erforderlich
+        keyless_body: Sure liest ausschließlich öffentliche Blockchain-Daten. Dabei werden weder Schlüssel, Seed-Phrases noch Signaturen verwendet. Mit diesen Daten lassen sich keine Vermögenswerte übertragen.
+        manage_wallets: Wallets verwalten
+        save: Speichern
+        sync_start_date_hint: Übertragungen vor diesem Datum werden ignoriert. Lass das Feld leer, um alles zu importieren, was der Explorer meldet.
+        sync_start_date_label: Übertragungen vor diesem Datum ignorieren

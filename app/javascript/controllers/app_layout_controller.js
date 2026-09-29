@@ -31,6 +31,16 @@ export default class extends Controller {
     this.#toggleSidebarWidth(this.rightSidebarTarget, isOpen, "right");
   }
 
+  // For actions that send content into the chat sidebar (quick prompts,
+  // AI review): make sure it is visible, and never close it.
+  openRightSidebar() {
+    const isOpen = this.rightSidebarTarget.classList.contains("w-full");
+    if (isOpen) return;
+
+    this.#updateUserPreference("show_ai_sidebar", true);
+    this.#toggleSidebarWidth(this.rightSidebarTarget, false, "right");
+  }
+
   #toggleSidebarWidth(el, isCurrentlyOpen, side) {
     const expandedClasses = side === "left" ? [...this.expandedSidebarClasses, "border-r"] : [...this.expandedSidebarClasses, "border-l"];
     const collapsedClasses = side === "left" ? [...this.collapsedSidebarClasses, "border-r-0"] : [...this.collapsedSidebarClasses, "border-l-0"];
