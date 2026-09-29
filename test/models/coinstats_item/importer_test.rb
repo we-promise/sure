@@ -599,7 +599,7 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
     assert_equal @family.id, entry.family_id
     assert_equal coinstats_account1.account_provider.id, entry.account_provider_id
     assert_equal "wallet_missing_from_bulk_response", entry.metadata["reason"]
-    assert_equal "0xworking", entry.metadata["wallet_address"]
+    assert_not entry.metadata.key?("wallet_address"), "the wallet address is not worth surfacing in the diagnostic"
   end
 
   test "bulk balance fetch failure preserves all existing wallet balances during import" do
@@ -679,7 +679,8 @@ class CoinstatsItem::ImporterTest < ActiveSupport::TestCase
 
     preserved_entries = entries.select { |entry| entry.message == "CoinStats wallet balance sync preserved existing snapshot after bulk fetch failure" }
     assert_equal 2, preserved_entries.size
-    assert_equal [ "0xeth123", "Ddoge456" ], preserved_entries.map { |entry| entry.metadata["wallet_address"] }.sort
+    assert preserved_entries.none? { |entry| entry.metadata.key?("wallet_address") },
+      "the wallet address is not worth surfacing in the diagnostic"
   end
 
   test "uses bulk endpoint for multiple unique wallets and falls back on error" do
