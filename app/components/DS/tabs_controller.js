@@ -4,11 +4,7 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static classes = ["navBtnActive", "navBtnInactive"];
   static targets = ["panel", "navBtn"];
-  static values = {
-    sessionKey: String,
-    urlParamKey: String,
-    navigateOnChange: Boolean,
-  };
+  static values = { sessionKey: String, urlParamKey: String };
 
   show(e) {
     const btn = e.target.closest("button");
@@ -41,13 +37,9 @@ export default class extends Controller {
     if (this.urlParamKeyValue) {
       const url = new URL(window.location.href);
       url.searchParams.set(this.urlParamKeyValue, selectedTabId);
-
-      if (this.navigateOnChangeValue) {
-        window.location.assign(url.toString());
-        return;
-      }
-
-      window.history.replaceState({}, "", url);
+      // Keep Turbo's entry in the state: without it, Turbo ignores the
+      // popstate when Back returns here and the other page stays on screen.
+      window.history.replaceState(window.history.state, "", url);
     }
 
     // Update URL with the selected tab

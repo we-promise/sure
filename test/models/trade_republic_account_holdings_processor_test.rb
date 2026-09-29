@@ -511,6 +511,65 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "TGAT", security.exchange_operating_mic
   end
 
+  test "crypto positions resolve to the shared crypto security when crypto prices are enabled" do
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data binance_public])
+
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    security = @account.holdings.sole.security
+    assert_equal "CRYPTO:BTC", security.ticker
+    assert_equal "binance_public", security.price_provider
+    assert security.crypto?
+  end
+
+  test "crypto positions keep the offline ISIN security without a crypto price provider" do
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data])
+
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    security = @account.holdings.sole.security
+    assert_equal "XF000BTC0017", security.ticker
+    assert security.offline?
+  end
+
+  test "holdings move from the offline crypto ISIN once crypto prices are enabled" do
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data])
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data binance_public])
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    assert_equal [ "CRYPTO:BTC" ], @account.holdings.includes(:security).map { |holding| holding.security.ticker }
+  end
+
+  test "crypto positions move to the linked Crypto account" do
+    @tr_account.update!(
+      holdings_snapshot_complete: true,
+      current_balance: 270,
+      raw_positions_payload: [
+        position_payload(isin: "US0378331005", quantity: "2", price: "100"),
+        position_payload(isin: "XF000BTC0017", quantity: "0.001", price: "70000").merge("category" => "crypto_wallet")
+      ]
+    )
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+    assert_equal 2, @account.holdings.count
+
+    crypto = @item.trade_republic_accounts.create!(
+      name: "Crypto", kind: "crypto", trade_republic_account_id: "crypto:DEHOLD1", currency: "EUR", current_balance: 70
+    )
+    crypto_sure = @family.accounts.create!(
+      name: "Trade Republic Crypto", balance: 0, cash_balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "exchange")
+    )
+    crypto.ensure_account_provider!(crypto_sure)
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::HoldingsProcessor.new(crypto.reload).process
+
+    assert_equal [ "US0378331005" ], @account.holdings.map { |holding| holding.security.ticker }
+    assert_equal [ "XF000BTC0017" ], crypto_sure.holdings.map { |holding| holding.security.ticker }
+    assert_equal BigDecimal("200"), @tr_account.account_balance
+    assert_equal BigDecimal("70"), crypto.account_balance
+  end
+
   private
 
     def import_position(isin:, quantity:, price:, average_cost: nil, symbol: nil, exchange_slug: nil)
