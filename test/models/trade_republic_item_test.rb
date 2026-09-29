@@ -13,6 +13,33 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
     end
   end
 
+  test "database enforces one active connection per family per brokerage account" do
+    family = trade_republic_items(:configured_item).family
+    family.trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :good, session_blob: "a", brokerage_account_id: "DE1234"
+    )
+
+    assert_raises ActiveRecord::RecordNotUnique do
+      family.trade_republic_items.create!(
+        name: "Trade Republic", currency: "EUR", status: :good, session_blob: "b", brokerage_account_id: "DE1234"
+      )
+    end
+  end
+
+  test "a connection scheduled for deletion does not block reconnecting the same brokerage account" do
+    family = trade_republic_items(:configured_item).family
+    deleted = family.trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :good, session_blob: "a", brokerage_account_id: "DE1234",
+      scheduled_for_deletion: true
+    )
+
+    reconnected = family.trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :good, session_blob: "b", brokerage_account_id: "DE1234"
+    )
+
+    assert_not_equal deleted.id, reconnected.id
+  end
+
   test "syncable scope requires a stored session" do
     items = TradeRepublicItem.syncable
 

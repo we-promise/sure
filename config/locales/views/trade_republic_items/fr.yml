@@ -8,6 +8,7 @@ fr:
   trade_republic_items:
     create:
       success: Trade Republic enregistré. Confirmez la connexion dans l'application Trade Republic pour la finaliser.
+    duplicate_connection: "Ce compte Trade Republic est déjà connecté. La nouvelle connexion a été supprimée."
     defaults:
       name: Trade Republic
     destroy:

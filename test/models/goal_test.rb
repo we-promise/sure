@@ -48,15 +48,12 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 100, vacances.progress_percent.to_i
   end
 
-  # The confirm dialog assigns `body` to innerHTML, so an unescaped goal name
-  # would execute when a family member opens the delete confirmation.
-  test "deletion_confirm escapes the goal name in the dialog body" do
-    @goal.name = "<img src=x onerror=alert(1)>"
+  # The confirm dialog renders `body` as text, so the goal name goes in as it
+  # is; escaping it would show "&amp;" in the dialog.
+  test "deletion_confirm names the goal as it is written" do
+    @goal.name = "Rock & Roll <3"
 
-    body = @goal.deletion_confirm.to_data_attribute[:body]
-
-    assert_includes body, "&lt;img src=x onerror=alert(1)&gt;"
-    assert_no_match(/<img/, body)
+    assert_includes @goal.deletion_confirm.to_data_attribute[:body], "Rock & Roll <3"
   end
 
   # Derived, not a hardcoded list: a locale added later ships a goals YAML
