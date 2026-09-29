@@ -38,7 +38,7 @@ module TransactionsHelper
     when "equal" then t("transactions.searches.search.equal_to")
     when "greater" then t("transactions.searches.search.greater_than")
     when "less" then t("transactions.searches.search.less_than")
-    else t(operator.to_s)
+    else operator.to_s
     end
   end
 
