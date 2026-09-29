@@ -27,7 +27,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key demo_family_refresh_enabled demo_family_refresh_family_id].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -81,6 +81,29 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       ai_response_timeout_help
     ].each do |key|
       assert I18n.exists?("settings.hostings.openai_settings.#{key}", :de, fallback: false)
+    end
+  end
+
+  test "only a super admin can opt in and the selected family must own the demo email" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
+      assert_not Setting.demo_family_refresh_enabled
+
+      sign_in users(:sure_support_staff)
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
+      assert_response :unprocessable_entity
+      assert_not Setting.demo_family_refresh_enabled
+
+      family = families(:dylan_family)
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: family.id } }
+      assert_response :unprocessable_entity
+
+      demo_family = Family.create!(name: "Disposable Demo")
+      demo_family.users.create!(first_name: "Demo", last_name: "Owner", email: Rails.application.config_for(:demo).with_indifferent_access.fetch(:email), password: "password123", role: :admin)
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: demo_family.id } }
+      assert_redirected_to settings_hosting_path
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
+      assert Setting.demo_family_refresh_enabled
     end
   end
 

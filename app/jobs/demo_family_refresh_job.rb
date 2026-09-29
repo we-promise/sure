@@ -3,10 +3,10 @@ class DemoFamilyRefreshJob < ApplicationJob
   sidekiq_options retry: false
 
   def perform
-    return unless Rails.application.config.app_mode.managed?
+    return unless Rails.application.config.app_mode.managed? || Setting.demo_family_refresh_enabled
 
     with_advisory_lock do
-      refresh_demo_family
+      refresh_demo_family if Rails.application.config.app_mode.managed? || Setting.demo_family_refresh_enabled
     end
   end
 
@@ -19,6 +19,19 @@ class DemoFamilyRefreshJob < ApplicationJob
       demo_user = User.find_by(email: demo_email)
       old_family = demo_user&.family
 
+      if Rails.application.config.app_mode.self_hosted?
+        # Email alone is not proof that a family is disposable. An administrator
+        # must explicitly enroll the family whose data will be replaced.
+        configured_id = Setting.demo_family_refresh_family_id.presence
+        return Rails.logger.warn("Skipped demo family refresh: no family selected") unless configured_id
+        return Rails.logger.warn("Skipped demo family refresh: selected family does not own demo email") unless old_family && old_family.id.to_s == configured_id.to_s
+
+        # The generator transfers this global key to the new demo user. Never
+        # take it away from a different family on a self-hosted instance.
+        monitoring_key = ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+        return Rails.logger.warn("Skipped demo family refresh: monitoring key belongs to another family") if monitoring_key && monitoring_key.user.family_id != old_family.id
+      end
+
       old_family_session_count = sessions_count_for(old_family, period_start:, period_end:)
       newly_created_families_count = Family.where(created_at: period_start...period_end).count
 
@@ -28,6 +41,10 @@ class DemoFamilyRefreshJob < ApplicationJob
         end
 
         Demo::Generator.new.generate_default_data!(skip_clear: true, email: demo_email)
+        if Rails.application.config.app_mode.self_hosted?
+          new_family = User.find_by!(email: demo_email).family
+          Setting.demo_family_refresh_family_id = new_family.id.to_s
+        end
       end
 
       DestroyJob.perform_later(old_family) if old_family

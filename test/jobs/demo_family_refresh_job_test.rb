@@ -72,6 +72,56 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     DemoFamilyRefreshJob.perform_now
   end
 
+  test "self-hosted refresh is disabled by default" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    Setting.demo_family_refresh_enabled = false
+    Demo::Generator.expects(:new).never
+
+    DemoFamilyRefreshJob.perform_now
+    assert_equal @demo_email, @demo_user.reload.email
+  end
+
+  test "self-hosted refresh replaces only the explicitly selected demo family" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    visitor = Family.create!(name: "Visitor")
+    visitor_user = visitor.users.create!(first_name: "Visitor", last_name: "Owner", email: "visitor@example.com", password: "password123", role: :admin)
+    Setting.demo_family_refresh_family_id = @demo_family.id.to_s
+    Setting.demo_family_refresh_enabled = true
+
+    generator = mock
+    generator.expects(:generate_default_data!).with(skip_clear: true, email: @demo_email) do
+      new_family = Family.create!(name: "Fresh Demo")
+      new_family.users.create!(first_name: "New", last_name: "Demo", email: @demo_email, password: "password123", role: :admin)
+    end
+    Demo::Generator.expects(:new).returns(generator)
+
+    assert_enqueued_with(job: DestroyJob, args: [ @demo_family ]) do
+      DemoFamilyRefreshJob.perform_now
+    end
+    assert_equal visitor.id, visitor_user.reload.family_id
+    assert_equal User.find_by!(email: @demo_email).family_id.to_s, Setting.demo_family_refresh_family_id
+  ensure
+    Setting.demo_family_refresh_enabled = false
+    Setting.demo_family_refresh_family_id = nil
+  end
+
+  test "self-hosted refresh refuses a family mismatch or a monitoring key owned by another family" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    Setting.demo_family_refresh_enabled = true
+    Setting.demo_family_refresh_family_id = families(:dylan_family).id.to_s
+    Demo::Generator.expects(:new).never
+    DemoFamilyRefreshJob.perform_now
+    assert_equal @demo_email, @demo_user.reload.email
+
+    Setting.demo_family_refresh_family_id = @demo_family.id.to_s
+    @super_admin.api_keys.create!(name: "monitoring", key: ApiKey::DEMO_MONITORING_KEY, scopes: [ "read" ], source: "monitoring")
+    DemoFamilyRefreshJob.perform_now
+    assert_equal @demo_email, @demo_user.reload.email
+  ensure
+    Setting.demo_family_refresh_enabled = false
+    Setting.demo_family_refresh_family_id = nil
+  end
+
   test "does not retry after a failed refresh" do
     assert_equal false, DemoFamilyRefreshJob.sidekiq_options_hash["retry"]
   end
