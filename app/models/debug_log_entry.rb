@@ -14,9 +14,13 @@ class DebugLogEntry < ApplicationRecord
   # Credential shapes redacted inside string values (e.g. an error_message that
   # embeds an Authorization header or a serialized JSON fragment) — key-based
   # redaction alone cannot catch secrets hiding in innocuously named keys.
+  # The sensitive-key alternative consumes quoted strings, unquoted scalars
+  # (42.5, null, true) and complete compound values — `compound` recurses via
+  # \g<compound> so nested objects/arrays like {"body":{"note":"..."}} are
+  # swallowed whole rather than leaking everything past the opening brace.
   SENSITIVE_METADATA_VALUE_PATTERNS = [
     /\b(?:Bearer|Basic)\s+[A-Za-z0-9\-._~+\/=]+/i,
-    /"[^"]*(?:#{SENSITIVE_METADATA_KEY_PATTERN.source})[^"]*"\s*(?::|=>)\s*(?:"[^"]*"|[^,}\]\s"]+)/i
+    /"[^"]*(?:#{SENSITIVE_METADATA_KEY_PATTERN.source})[^"]*"\s*(?::|=>)\s*(?:"[^"]*"|(?<compound>[\{\[](?:[^{}\[\]"]|"(?:\\.|[^"\\])*"|\g<compound>)*[\}\]])|[^,}\]\s"]+)/i
   ].freeze
 
   if encryption_ready?

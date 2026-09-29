@@ -105,6 +105,7 @@ class DebugLogEntryTest < ActiveSupport::TestCase
         error_message: "401 Unauthorized for header Authorization: Bearer sk-live-secret-123",
         response_fragment: 'server said {"access_token":"tok-abc","scope":"read"}',
         unquoted_fragment: 'rejected {"amount":42.5,"password":null,"note":"x"}',
+        compound_fragment: 'got {"body":{"note":"raw response"},"status":200}',
         nested: [ { note: "retry with Basic dXNlcjpwYXNz later" } ],
         harmless: "connection timed out"
       }
@@ -113,6 +114,7 @@ class DebugLogEntryTest < ActiveSupport::TestCase
     assert_equal "401 Unauthorized for header Authorization: [REDACTED]", entry.metadata["error_message"]
     assert_equal 'server said {[REDACTED],"scope":"read"}', entry.metadata["response_fragment"]
     assert_equal 'rejected {[REDACTED],[REDACTED],"note":"x"}', entry.metadata["unquoted_fragment"]
+    assert_equal 'got {[REDACTED],"status":200}', entry.metadata["compound_fragment"]
     assert_equal "retry with [REDACTED] later", entry.metadata["nested"][0]["note"]
     assert_equal "connection timed out", entry.metadata["harmless"]
   end
