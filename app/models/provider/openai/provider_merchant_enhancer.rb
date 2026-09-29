@@ -103,7 +103,7 @@ class Provider::Openai::ProviderMerchantEnhancer
         merchants: merchants
       })
 
-      response = client.responses.create(parameters: {
+      params = {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
         text: {
@@ -115,7 +115,10 @@ class Provider::Openai::ProviderMerchantEnhancer
           }
         },
         instructions: instructions
-      })
+      }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :responses)
+
+      response = client.responses.create(parameters: params)
 
       Rails.logger.info("Tokens used to enhance provider merchants: #{response.dig("usage", "total_tokens")}")
 
@@ -194,6 +197,7 @@ class Provider::Openai::ProviderMerchantEnhancer
       when Provider::Openai::AutoMerchantDetector::JSON_MODE_OBJECT
         params[:response_format] = { type: "json_object" }
       end
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
       response = client.chat(parameters: params)
 
