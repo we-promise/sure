@@ -348,7 +348,7 @@ class TradeRepublicItemsController < ApplicationController
       .active
       .includes(trade_republic_accounts: { account_provider: :account })
       .flat_map(&:trade_republic_accounts)
-      .select { |tr_account| tr_account.account_provider.nil? }
+      .select { |tr_account| tr_account.account_provider.nil? && tr_account.linkable_to?(@account) }
       .sort_by { |tr_account| tr_account.updated_at || tr_account.created_at }
       .reverse
 
@@ -367,7 +367,7 @@ class TradeRepublicItemsController < ApplicationController
       return
     end
 
-    unless account.accountable_type.in?(%w[Investment Depository]) &&
+    unless tr_account.linkable_to?(account) &&
         account.account_providers.none? &&
         account.plaid_account_id.blank? &&
         account.simplefin_account_id.blank?
@@ -434,12 +434,17 @@ class TradeRepublicItemsController < ApplicationController
       @trade_republic_item.sync_later
     end
 
-    @linkable_accounts = Current.family.accounts
+    linkable_accounts = Current.family.accounts
       .visible
-      .where(accountable_type: %w[Investment Depository])
+      .where(accountable_type: %w[Investment Depository Crypto])
       .left_joins(:account_providers)
       .where(account_providers: { id: nil })
+      .includes(:accountable)
       .order(:name)
+      .to_a
+    @linkable_accounts_by_tr_account = @unlinked_accounts.index_with do |tr_account|
+      linkable_accounts.select { |linkable| tr_account.linkable_to?(linkable) }
+    end
 
     @syncing = @trade_republic_item.syncing?
     @waiting_for_sync = no_accounts && @syncing

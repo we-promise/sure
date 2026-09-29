@@ -793,6 +793,100 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert entry.reload.user_modified?
   end
 
+  test "a linked Crypto account takes crypto trades and their settlements from the portfolio" do
+    cash_account, cash_sure = create_linked_cash_account!
+    stock = order_execution_detail(event_id: "evt_stock", quantity: "1", isin: "US0378331005", amount: "150.00")
+      .deep_merge(detail: { signed_amount: -150.0 })
+    bitcoin = order_execution_detail(event_id: "evt_btc", quantity: "0.000134", isin: "XF000BTC0017", amount: "11.00")
+      .deep_merge(title: "Bitcoin", detail: { name: "Bitcoin", signed_amount: -11.0 })
+    @tr_account.update!(raw_timeline_payload: [ stock, bitcoin ])
+    process_all(@tr_account, cash_account)
+    assert @account.entries.exists?(external_id: "trade_republic_settlement_evt_btc")
+
+    crypto_account, crypto_sure = create_linked_crypto_account!
+    process_all(@tr_account, crypto_account, cash_account)
+
+    assert_equal %w[trade_republic_event_evt_stock trade_republic_settlement_evt_stock],
+      @account.entries.order(:external_id).pluck(:external_id)
+    assert_equal 0, @account.entries.sum(:amount)
+
+    crypto_trade = crypto_sure.entries.find_by!(external_id: "trade_republic_event_evt_btc")
+    assert_equal BigDecimal("11.0"), crypto_trade.amount
+    counterpart = crypto_sure.entries.find_by!(external_id: "trade_republic_settlement_evt_btc")
+    settlement = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_btc")
+    assert_equal counterpart.transaction, settlement.transaction.transfer.inflow_transaction
+    assert_equal 0, crypto_sure.entries.sum(:amount)
+
+    assert_no_difference [ -> { crypto_sure.entries.count }, -> { @account.entries.count }, -> { Transfer.count } ] do
+      process_all(@tr_account, crypto_account, cash_account)
+    end
+  end
+
+  test "an edited crypto trade stays on the portfolio when the Crypto account is linked" do
+    bitcoin = order_execution_detail(event_id: "evt_btc", quantity: "0.000134", isin: "XF000BTC0017", amount: "11.00")
+    import_event(bitcoin)
+    edited = find_trade("trade_republic_event_evt_btc")
+    edited.update!(user_modified: true)
+
+    crypto_account, crypto_sure = create_linked_crypto_account!
+    process_all(@tr_account, crypto_account)
+
+    assert @account.entries.exists?(edited.id)
+    assert_not crypto_sure.entries.exists?
+  end
+
+  test "a crypto trade with an edited settlement counterpart stays on the portfolio" do
+    cash_account, _cash_sure = create_linked_cash_account!
+    bitcoin = order_execution_detail(event_id: "evt_btc", quantity: "0.000134", isin: "XF000BTC0017", amount: "11.00")
+      .deep_merge(detail: { signed_amount: -11.0 })
+    @tr_account.update!(raw_timeline_payload: [ bitcoin ])
+    process_all(@tr_account, cash_account)
+    @account.entries.find_by!(external_id: "trade_republic_settlement_evt_btc").update!(user_modified: true)
+
+    crypto_account, crypto_sure = create_linked_crypto_account!
+    process_all(@tr_account, crypto_account, cash_account)
+
+    assert find_trade("trade_republic_event_evt_btc")
+    assert_not crypto_sure.entries.exists?
+  end
+
+  test "trades of a position listed under crypto go to the Crypto account whatever its ISIN" do
+    @tr_account.update!(raw_positions_payload: [
+      { "isin" => "XS0000000001", "name" => "Some Coin", "category" => "crypto_wallet", "quantity" => "1", "price" => "10" }
+    ])
+    coin = order_execution_detail(event_id: "evt_coin", quantity: "1", isin: "XS0000000001", amount: "10.00")
+    @tr_account.update!(raw_timeline_payload: [ coin ])
+
+    crypto_account, crypto_sure = create_linked_crypto_account!
+    process_all(@tr_account, crypto_account)
+
+    assert_not find_trade("trade_republic_event_evt_coin")
+    assert crypto_sure.entries.exists?(external_id: "trade_republic_event_evt_coin")
+  end
+
+  test "trades of a closed crypto position stay on the Crypto account" do
+    crypto_position = { "isin" => "XS0000000001", "name" => "Some Coin", "category" => "crypto_wallet", "quantity" => "1", "price" => "10" }
+    coin = order_execution_detail(event_id: "evt_coin", quantity: "1", isin: "XS0000000001", amount: "10.00")
+    @tr_account.update!(raw_positions_payload: [ crypto_position ], raw_timeline_payload: [ coin ])
+    crypto_account, crypto_sure = create_linked_crypto_account!
+    process_all(@tr_account, crypto_account)
+
+    @tr_account.update!(raw_positions_payload: [])
+    process_all(@tr_account)
+    assert_not find_trade("trade_republic_event_evt_coin")
+
+    process_all(crypto_account)
+    assert crypto_sure.entries.exists?(external_id: "trade_republic_event_evt_coin")
+  end
+
+  test "crypto trades stay on the portfolio while the Crypto account is unlinked" do
+    @item.trade_republic_accounts.create!(name: "Crypto", kind: "crypto", trade_republic_account_id: "crypto:DEPROC1", currency: "EUR")
+
+    import_event(order_execution_detail(event_id: "evt_btc", quantity: "0.000134", isin: "XF000BTC0017", amount: "11.00"))
+
+    assert find_trade("trade_republic_event_evt_btc")
+  end
+
   test "split accounts settle buys and sells against the cash account" do
     cash_account, cash_sure = create_linked_cash_account!
     buy = order_execution_detail(event_id: "evt_settle_buy", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
@@ -1525,6 +1619,30 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
   end
 
   private
+
+    def create_linked_crypto_account!
+      crypto_provider = @item.trade_republic_accounts.create!(
+        name: "Crypto",
+        kind: "crypto",
+        trade_republic_account_id: "crypto:DEPROC1",
+        currency: "EUR"
+      )
+      crypto_sure = @family.accounts.create!(
+        name: "Trade Republic Crypto",
+        balance: 0,
+        cash_balance: 0,
+        currency: "EUR",
+        accountable: Crypto.new(subtype: "exchange")
+      )
+      crypto_provider.ensure_account_provider!(crypto_sure)
+      [ crypto_provider.reload, crypto_sure ]
+    end
+
+    def process_all(*trade_republic_accounts)
+      trade_republic_accounts.each do |trade_republic_account|
+        TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account.reload).process
+      end
+    end
 
     def create_linked_cash_account!
       cash_provider = @item.trade_republic_accounts.create!(

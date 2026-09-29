@@ -27,6 +27,11 @@ class TradeRepublicAccount::ActivitiesProcessor
     trade_count = 0
     transaction_count = 0
 
+    # Also before the events: a trade that moved to the Crypto account has to
+    # lose its portfolio counterpart before its settlement can link to a new
+    # one on the Crypto account.
+    reconcile_settlement_counterparts!
+
     timeline_events.each do |event|
       next unless event.is_a?(Hash)
 
@@ -50,6 +55,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     reconcile_split_portfolio_transactions!
+    reconcile_moved_crypto_trades!
     reconcile_stale_saveback_cash_transactions!
     reconcile_non_importable_entries!
     reconcile_settlement_counterparts!
@@ -85,34 +91,77 @@ class TradeRepublicAccount::ActivitiesProcessor
     # copies come first so they win the dedupe: a cash snapshot retained from
     # a failed timeline update can still hold an order execution whose
     # portfolio copy has since been deleted.
+    # The Crypto account stores no timeline of its own: it takes the crypto
+    # events from the portfolio's.
     def timeline_events
       @timeline_events ||= begin
-        events = Array(@trade_republic_account.raw_timeline_payload)
+        events = if @trade_republic_account.crypto?
+          portfolio_timeline_events.select { |event| event.is_a?(Hash) && crypto_event?(event.with_indifferent_access) }
+        else
+          Array(@trade_republic_account.raw_timeline_payload)
+        end
         events = portfolio_order_execution_events + events if @trade_republic_account.cash?
         events.uniq { |event| event.is_a?(Hash) ? (event["id"] || event[:id]).presence || event : event }
       end
     end
 
     def portfolio_order_execution_events
-      portfolio = @trade_republic_account.trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
-      return [] unless portfolio
-
-      Array(portfolio.raw_timeline_payload).select do |event|
+      portfolio_timeline_events.select do |event|
         event.is_a?(Hash) && event_category(event.with_indifferent_access) == CATEGORY_ORDER_EXECUTION
       end
     end
 
+    def portfolio_timeline_events
+      Array(@trade_republic_account.sibling("portfolio")&.raw_timeline_payload)
+    end
+
+    # Matches the positions the Crypto account holds: an XF000 pseudo-ISIN,
+    # or the ISIN of a position Trade Republic lists under crypto. A trade the
+    # Crypto account already holds stays there after the position is closed
+    # and leaves the snapshot.
+    def crypto_event?(event)
+      detail = event[:detail]
+      return false unless detail.is_a?(Hash)
+
+      isin = detail.with_indifferent_access[:isin].to_s
+      TradeRepublicAccount.crypto_isin?(isin) ||
+        crypto_position_isins.include?(isin) ||
+        crypto_account_trade_ids.include?("trade_republic_event_#{event[:id]}")
+    end
+
+    def crypto_account_trade_ids
+      @crypto_account_trade_ids ||= begin
+        crypto_account = @trade_republic_account.sibling("crypto")&.usable_account
+        ids = crypto_account&.entries&.where(source: "trade_republic", entryable_type: "Trade")&.pluck(:external_id)
+        Array(ids).to_set
+      end
+    end
+
+    def crypto_position_isins
+      @crypto_position_isins ||= Array(@trade_republic_account.sibling("portfolio")&.raw_positions_payload)
+        .select { |position| TradeRepublicAccount.crypto_position?(position) }
+        .filter_map { |position| position.with_indifferent_access[:isin].to_s.presence }
+        .to_set
+    end
+
     # Saveback and Round Up stay classified as POC_CREATED at the client
     # boundary so other cash withdrawals are unchanged. Routing happens here
-    # by eventType: Saveback is portfolio-only; Round Up is portfolio trade
-    # plus cash outflow when both accounts are linked.
+    # by eventType: Saveback is a trade only; Round Up is a trade plus cash
+    # outflow when both accounts are linked. Crypto trades go to the Crypto
+    # account once it is linked, except a portfolio copy the user edited.
     def processable_event?(event)
       event_type = event[:eventType].to_s
 
-      return @trade_republic_account.portfolio? if saveback_event?(event_type)
+      if crypto_event?(event)
+        return false if @trade_republic_account.portfolio? && crypto_split?
+        return false if @trade_republic_account.crypto? && protected_portfolio_trade?(event)
+      end
+
+      return @trade_republic_account.holds_securities? if saveback_event?(event_type)
       return true if round_up_event?(event_type)
 
       category = event[:category].to_s
+      return category == CATEGORY_ORDER_EXECUTION if @trade_republic_account.crypto?
       return category == CATEGORY_ORDER_EXECUTION if linked_cash_account_present? && @trade_republic_account.portfolio?
 
       true
@@ -166,13 +215,13 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     def process_saveback(event, detail, external_id, date)
-      return nil unless @trade_republic_account.portfolio?
+      return nil unless @trade_republic_account.holds_securities?
 
       import_order_execution(event, detail, external_id, date) ? :trade : nil
     end
 
     def process_round_up(event, detail, external_id, date)
-      if @trade_republic_account.portfolio?
+      if @trade_republic_account.holds_securities?
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       else
         import_labeled_cash_movement(event, detail, external_id, date, "round_up", sign: 1, kind: "investment_contribution", settles_trade: true)
@@ -397,11 +446,11 @@ class TradeRepublicAccount::ActivitiesProcessor
       cash_transaction = cash_entry&.entryable
       return unless cash_transaction.is_a?(Transaction)
 
-      portfolio_account = linked_portfolio_account
-      return unless portfolio_account && portfolio_trade_present?(portfolio_account, cash_entry.external_id)
-      return log_settlement_currency_mismatch(cash_entry, portfolio_account) if portfolio_account.currency != cash_entry.currency
+      securities_account = securities_account_with_trade(cash_entry.external_id)
+      return unless securities_account
+      return log_settlement_currency_mismatch(cash_entry, securities_account) if securities_account.currency != cash_entry.currency
 
-      counterpart = portfolio_import_adapter(portfolio_account).import_transaction(
+      counterpart = securities_import_adapter(securities_account).import_transaction(
         external_id: settlement_counterpart_external_id(cash_entry.external_id),
         amount: -cash_entry.amount,
         currency: cash_entry.currency,
@@ -424,29 +473,31 @@ class TradeRepublicAccount::ActivitiesProcessor
       Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
     end
 
-    # Trade Republic settles in the portfolio's currency, so the counterpart
-    # books the settlement amount as is. Should the currencies ever differ,
-    # an unconverted counterpart would misstate the portfolio's cash.
-    def log_settlement_currency_mismatch(cash_entry, portfolio_account)
+    # Trade Republic settles in the currency of the portfolio and Crypto
+    # accounts, so the counterpart books the settlement amount as is. Should
+    # the currencies ever differ, an unconverted counterpart would misstate
+    # that account's cash.
+    def log_settlement_currency_mismatch(cash_entry, securities_account)
       DebugLogEntry.capture(
         category: "sync",
         level: "warn",
-        message: "Skipped Trade Republic settlement counterpart: settlement currency differs from the portfolio's",
+        message: "Skipped Trade Republic settlement counterpart: settlement currency differs from the securities account's",
         source: "trade_republic",
         family: @trade_republic_account.trade_republic_item.family,
         provider_key: "trade_republic",
-        account: portfolio_account,
+        account: securities_account,
         metadata: {
           settlement_external_id: cash_entry.external_id,
           settlement_currency: cash_entry.currency,
-          portfolio_currency: portfolio_account.currency
+          securities_account_currency: securities_account.currency
         }
       )
       nil
     end
 
-    def portfolio_import_adapter(portfolio_account)
-      @portfolio_import_adapter ||= Account::ProviderImportAdapter.new(portfolio_account)
+    def securities_import_adapter(securities_account)
+      @securities_import_adapters ||= {}
+      @securities_import_adapters[securities_account.id] ||= Account::ProviderImportAdapter.new(securities_account)
     end
 
     def settlement_counterpart_external_id(settlement_external_id)
@@ -593,9 +644,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     # replacement trade exists, and unless the user edited or split them.
     def reconcile_stale_saveback_cash_transactions!
       return unless @trade_republic_account.cash?
-
-      portfolio_account = linked_portfolio_account
-      return unless portfolio_account
+      return if linked_securities_accounts.empty?
 
       saveback_event_ids = Array(@trade_republic_account.raw_timeline_payload).filter_map do |event|
         next unless event.is_a?(Hash)
@@ -639,7 +688,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
         # Keep the legacy cash row until the portfolio trade is present so an
         # incomplete Saveback detail cannot open a ledger gap.
-        unless portfolio_trade_present?(portfolio_account, entry.external_id)
+        unless securities_account_with_trade(entry.external_id)
           skipped_count += 1
           DebugLogEntry.capture(
             category: "sync",
@@ -651,8 +700,7 @@ class TradeRepublicAccount::ActivitiesProcessor
             account: account,
             metadata: {
               trade_republic_account_id: @trade_republic_account.id,
-              external_id: entry.external_id,
-              portfolio_account_id: portfolio_account.id
+              external_id: entry.external_id
             }
           )
           next
@@ -680,21 +728,19 @@ class TradeRepublicAccount::ActivitiesProcessor
       )
     end
 
-    def linked_portfolio_account
-      portfolio_tr = @trade_republic_account.trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
-      return unless portfolio_tr
-
-      portfolio_account = portfolio_tr.current_account
-      return unless portfolio_account
-      return if portfolio_account.pending_deletion? || portfolio_account.disabled?
-
-      portfolio_account
+    # The Portfolio and Crypto accounts whose trades the Cash account settles.
+    def linked_securities_accounts
+      @linked_securities_accounts ||= %w[portfolio crypto].filter_map do |kind|
+        @trade_republic_account.sibling(kind)&.usable_account
+      end
     end
 
-    def portfolio_trade_present?(portfolio_account, external_id)
-      portfolio_account.entries
-        .where(source: "trade_republic", entryable_type: "Trade", external_id: external_id)
-        .exists?
+    def securities_account_with_trade(external_id)
+      linked_securities_accounts.find do |securities_account|
+        securities_account.entries
+          .where(source: "trade_republic", entryable_type: "Trade", external_id: external_id)
+          .exists?
+      end
     end
 
     # Runs last, after this run removed stale cash entries and the portfolio
@@ -703,18 +749,21 @@ class TradeRepublicAccount::ActivitiesProcessor
     def reconcile_settlement_counterparts!
       return unless @trade_republic_account.cash?
 
-      portfolio_account = linked_portfolio_account
-      return unless portfolio_account
-
       settlement_ids = account.entries
         .where(source: "trade_republic", entryable_type: "Transaction")
         .pluck(:external_id)
-      trade_ids = portfolio_account.entries
+      linked_securities_accounts.each do |securities_account|
+        reconcile_settlement_counterparts_on!(securities_account, settlement_ids)
+      end
+    end
+
+    def reconcile_settlement_counterparts_on!(securities_account, settlement_ids)
+      trade_ids = securities_account.entries
         .where(source: "trade_republic", entryable_type: "Trade")
         .pluck(:external_id)
       linked_ids = (settlement_ids & trade_ids).map { |id| settlement_counterpart_external_id(id) }
 
-      stale_entries = portfolio_account.entries
+      stale_entries = securities_account.entries
         .where(source: "trade_republic", entryable_type: "Transaction")
         .where("external_id LIKE ?", "#{ActiveRecord::Base.sanitize_sql_like(SETTLEMENT_COUNTERPART_PREFIX)}%")
         .where.not(external_id: linked_ids)
@@ -735,9 +784,56 @@ class TradeRepublicAccount::ActivitiesProcessor
         source: "trade_republic",
         family: @trade_republic_account.trade_republic_item.family,
         provider_key: "trade_republic",
+        account: securities_account,
+        metadata: { trade_republic_account_id: @trade_republic_account.id, removed_count: removed_count }
+      )
+    end
+
+    # Once the Crypto account is linked, it imports the crypto trades the
+    # portfolio held until then. Remove the portfolio copies after the Crypto
+    # account has its own. A trade whose portfolio copy or settlement
+    # counterpart the user edited stays on the portfolio, and the Crypto
+    # account skips it (see processable_event?).
+    def reconcile_moved_crypto_trades!
+      return unless @trade_republic_account.crypto?
+
+      portfolio_account = @trade_republic_account.sibling("portfolio")&.usable_account
+      return unless portfolio_account
+
+      moved_ids = account.entries.where(source: "trade_republic", entryable_type: "Trade").pluck(:external_id)
+      return if moved_ids.empty?
+
+      removed_count = 0
+      portfolio_account.entries
+        .where(source: "trade_republic", entryable_type: "Trade", external_id: moved_ids)
+        .find_each do |entry|
+          next if entry.protected_from_sync?
+
+          entry.destroy!
+          removed_count += 1
+        end
+      return unless removed_count.positive?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Moved #{removed_count} Trade Republic crypto trade(s) from the portfolio to the Crypto account",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
         account: portfolio_account,
         metadata: { trade_republic_account_id: @trade_republic_account.id, removed_count: removed_count }
       )
+    end
+
+    def protected_portfolio_trade?(event)
+      portfolio_account = @trade_republic_account.sibling("portfolio")&.current_account
+      return false unless portfolio_account
+
+      external_id = "trade_republic_event_#{event[:id]}"
+      portfolio_account.entries
+        .where(source: "trade_republic", external_id: [ external_id, settlement_counterpart_external_id(external_id) ])
+        .any?(&:protected_from_sync?)
     end
 
     # Remove previously imported entries whose upstream events are now deleted,
@@ -822,6 +918,12 @@ class TradeRepublicAccount::ActivitiesProcessor
           skipped_count: skipped_count
         }
       )
+    end
+
+    def crypto_split?
+      return @crypto_split if defined?(@crypto_split)
+
+      @crypto_split = @trade_republic_account.crypto_split?
     end
 
     def linked_cash_account_present?
