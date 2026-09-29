@@ -9526,7 +9526,9 @@ paths:
                     transfer_account_id:
                       type: string
                       format: uuid
-                      description: Destination/source account ID for linked transfers
+                      description: Destination/source account ID for linked transfers.
+                        Must be an account the user can write to; otherwise the request
+                        returns 404.
                   required:
                   - account_id
                   - date

@@ -174,7 +174,7 @@ class HoldingsController < ApplicationController
       end
       return if provider.blank?
 
-      values = Array(provider.raw_positions_payload).group_by { |position| position["category"].presence || "brokerage" }
+      values = provider.positions.group_by { |position| position["category"].presence || "brokerage" }
       TradeRepublicClientCategories::ALL.index_with do |category|
         positions = values.fetch(category, [])
         {

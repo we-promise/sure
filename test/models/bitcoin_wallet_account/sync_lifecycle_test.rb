@@ -126,7 +126,13 @@ class BitcoinWalletAccount::SyncLifecycleTest < ActiveSupport::TestCase
   test "wallet and account child jobs use the same family date across midnight" do
     @wallet.family.update!(timezone: "Pacific/Auckland")
     travel_to Time.utc(2026, 9, 27, 16) do
-      Time.use_zone("Pacific/Auckland") { @wallet.connect! }
+      Time.use_zone("Pacific/Auckland") do
+        @wallet.security.prices.find_or_create_by!(date: Date.current) do |price|
+          price.price = 10_000
+          price.currency = "USD"
+        end
+        @wallet.connect!
+      end
       parent = @wallet.syncs.create!
       SyncJob.perform_now(parent)
       child = parent.children.find_by!(syncable: @account)

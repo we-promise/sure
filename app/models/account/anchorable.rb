@@ -40,10 +40,11 @@ module Account::Anchorable
     end
   end
 
-  # Distinguish an imported provider total from a user-entered account valuation.
-  def set_current_balance(balance, provider_balance: false)
+  # Distinguish imported totals from manual valuations; providers that schedule
+  # their own account sync can defer it until all related accounts are processed.
+  def set_current_balance(balance, provider_balance: false, schedule_sync: true)
     result = current_balance_manager.set_current_balance(balance, provider_balance: provider_balance)
-    sync_later if result.success?
+    sync_later if schedule_sync && result.success?
     result
   end
 

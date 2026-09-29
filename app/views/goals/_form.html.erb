@@ -70,8 +70,11 @@
       <p class="mt-1 text-xs text-secondary"><%= t("goals.form.fields.target_months_hint") %></p>
     </div>
 
-    <div class="grid grid-cols-2 gap-3 items-start">
-      <div data-goal-kind-target="amountField">
+    <%# Flex, not a two-column grid. A reserve hides the date, and a hidden grid
+        cell still holds its column, which left the amount at half the width of
+        the months field above it. Flex children share whatever is visible. %>
+    <div class="flex gap-3 items-start">
+      <div data-goal-kind-target="amountField" class="flex-1 min-w-0">
         <%= f.money_field :target_amount,
                           label: t("goals.form.fields.target_amount"),
                           hide_currency: true,
@@ -85,7 +88,7 @@
           that are the actual question — so it is shown as what it is. Only
           when there is spending to work it out from, though: with none, the
           controller leaves the field above in place and this stays hidden. %>
-      <div data-goal-kind-target="amountDerived" class="hidden">
+      <div data-goal-kind-target="amountDerived" class="hidden flex-1 min-w-0">
         <p class="form-field__label"><%= t("goals.form.fields.target_balance") %></p>
         <p class="mt-1 text-lg font-medium text-primary tabular-nums privacy-sensitive">
           <% if goal.target_amount.to_d.positive? %>
@@ -96,7 +99,7 @@
         </p>
         <p class="mt-1 text-xs text-subdued"><%= t("goals.form.fields.target_balance_hint") %></p>
       </div>
-      <div data-goal-kind-target="dateField">
+      <div data-goal-kind-target="dateField" class="flex-1 min-w-0">
         <%= f.date_field :target_date,
                          label: t("goals.form.fields.target_date"),
                          data: { goal_form_target: "dateInput", action: "input->goal-form#suggestedChanged" } %>
