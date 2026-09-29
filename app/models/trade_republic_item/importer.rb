@@ -99,6 +99,43 @@ class TradeRepublicItem::Importer
         warnings: [],
         domain_statuses: domain_statuses
       )
+      upsert_crypto_account(account_id, currency, domain_statuses)
+    end
+
+    # Crypto gets its own account because Sure has a Crypto account type.
+    # It reads its positions and trades from the portfolio payloads, so only
+    # its balance is stored here. Created once the portfolio holds or traded
+    # crypto; it stays unlinked until the user sets it up.
+    def upsert_crypto_account(account_id, currency, domain_statuses)
+      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      crypto = trade_republic_item.trade_republic_accounts.find_by(kind: "crypto")
+      return if crypto.nil? && !holds_or_traded_crypto?(portfolio)
+
+      crypto ||= trade_republic_item.trade_republic_accounts.build(kind: "crypto")
+
+      crypto.assign_attributes(
+        trade_republic_account_id: "crypto:#{account_id}",
+        name: build_account_name(account_id, kind: "crypto"),
+        currency: currency,
+        cash_balance: 0
+      )
+      if domain_statuses["portfolio"] == "success"
+        crypto.current_balance = positions_value(crypto_positions(portfolio), fallback: crypto.current_balance)
+      end
+      crypto.save!
+    end
+
+    def holds_or_traded_crypto?(portfolio)
+      return false unless portfolio
+
+      crypto_positions(portfolio).any? || Array(portfolio.raw_timeline_payload).any? do |event|
+        detail = event.is_a?(Hash) ? (event["detail"] || event[:detail]) : nil
+        detail.is_a?(Hash) && TradeRepublicAccount.crypto_isin?(detail["isin"] || detail[:isin])
+      end
+    end
+
+    def crypto_positions(portfolio)
+      Array(portfolio&.raw_positions_payload).select { |position| TradeRepublicAccount.crypto_position?(position) }
     end
 
     def upsert_kind(kind:, external_id:, name:, currency:, current_balance:, cash_balance:, positions:, events:, instrument_symbols:, warnings:, domain_statuses:, unresolved_symbol_isins: [])
@@ -375,7 +412,10 @@ class TradeRepublicItem::Importer
     end
 
     def portfolio_balance(data, fallback: nil)
-      positions = Array(data["positions"])
+      positions_value(Array(data["positions"]), fallback: fallback)
+    end
+
+    def positions_value(positions, fallback: nil)
       return BigDecimal("0") if positions.empty?
 
       values = positions.map do |position|
@@ -393,7 +433,7 @@ class TradeRepublicItem::Importer
 
     def build_account_name(account_id, kind:)
       base = I18n.t("trade_republic_items.defaults.name")
-      suffix = kind == "cash" ? "Cash" : "Portfolio"
+      suffix = { "cash" => "Cash", "crypto" => "Crypto" }.fetch(kind, "Portfolio")
       account_id.present? ? "#{base} #{suffix} (#{account_id})" : "#{base} #{suffix}"
     end
 
