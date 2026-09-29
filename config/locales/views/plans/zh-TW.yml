@@ -4,6 +4,10 @@ zh-TW:
     show:
       title: 規劃
       subtitle: 決定您的錢要花在哪裡，又要存下多少。
+    bills_card:
+      title: 帳單
+      body: 追蹤到期、已付款和即將到來的帳單。
+      view_bills: 查看帳單
     budget_card:
       title: 本月
       edit_budget: 編輯預算

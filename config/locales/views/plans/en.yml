@@ -4,6 +4,10 @@ en:
     show:
       title: Plan
       subtitle: Decide where your money goes — what you spend, and what you save.
+    bills_card:
+      title: Bills
+      body: "Track what's due, what's paid and what's coming up next."
+      view_bills: View bills
     budget_card:
       title: This month
       edit_budget: Edit budget

@@ -4,6 +4,10 @@ ca:
     show:
       title: Pla
       subtitle: 'Decideix on van els teus diners: què gastes i què estalvies.'
+    bills_card:
+      title: Factures
+      body: Segueix què vence, què has pagat i què arriba aviat.
+      view_bills: Mostra les factures
     budget_card:
       title: Aquest mes
       edit_budget: Edita el pressupost

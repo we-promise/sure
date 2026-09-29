@@ -4,6 +4,10 @@ pt-PT:
     show:
       title: Plano
       subtitle: Decida para onde vai o seu dinheiro — o que gasta e o que poupa.
+    bills_card:
+      title: Faturas
+      body: Acompanhe o que vence, o que está pago e o que vem a seguir.
+      view_bills: Ver faturas
     budget_card:
       title: Este mês
       edit_budget: Editar orçamento

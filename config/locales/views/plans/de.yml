@@ -4,6 +4,10 @@ de:
     show:
       title: Plan
       subtitle: "Entscheide, wohin dein Geld geht: was du ausgibst und was du sparst."
+    bills_card:
+      title: Rechnungen
+      body: Behalte im Blick, was fällig ist, was bezahlt ist und was als Nächstes kommt.
+      view_bills: Rechnungen ansehen
     budget_card:
       title: Dieser Monat
       edit_budget: Budget bearbeiten

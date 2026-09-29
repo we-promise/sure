@@ -4,6 +4,10 @@ tr:
     show:
       title: Plan
       subtitle: Paranızın nereye gideceğine karar verin — neyi harcayacağınıza ve neyi biriktireceğinize.
+    bills_card:
+      title: Faturalar
+      body: Vadesi gelenleri, ödenenleri ve sıradakileri takip edin.
+      view_bills: Faturaları görüntüle
     budget_card:
       title: Bu ay
       edit_budget: Bütçeyi düzenle

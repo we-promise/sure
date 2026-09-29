@@ -4,6 +4,10 @@ it:
     show:
       title: Piano
       subtitle: "Decidi come destinare il tuo denaro: quanto spendere e quanto risparmiare."
+    bills_card:
+      title: Bollette
+      body: Tieni traccia di cosa scade, cosa è pagato e cosa arriva a breve.
+      view_bills: Vedi bollette
     budget_card:
       title: Questo mese
       edit_budget: Modifica budget

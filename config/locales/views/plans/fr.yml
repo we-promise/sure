@@ -1,6 +1,10 @@
 ---
 fr:
   plans:
+    bills_card:
+      title: Factures
+      body: Suivez ce qui est dû, ce qui est payé et ce qui arrive bientôt.
+      view_bills: Voir les factures
     budget_card:
       days_left:
         one: 1 jour restant

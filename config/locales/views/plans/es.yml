@@ -4,6 +4,10 @@ es:
     show:
       title: Plan
       subtitle: "Decide a dónde va tu dinero: lo que gastas y lo que ahorras."
+    bills_card:
+      title: Facturas
+      body: Controla qué vence, qué está pagado y qué llega próximamente.
+      view_bills: Ver facturas
     budget_card:
       title: Este mes
       edit_budget: Editar presupuesto

@@ -1,6 +1,10 @@
 ---
 pl:
   plans:
+    bills_card:
+      title: Rachunki
+      body: Sprawdzaj, co jest do zapłaty, co zapłacone i co nadchodzi.
+      view_bills: Zobacz rachunki
     budget_card:
       days_left:
         few: Zostały %{count} dni

@@ -84,6 +84,34 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", goals_path, minimum: 1
   end
 
+  # Bills lives in the hub, not the nav, for the users who see the hub.
+  test "fronts Bills with a hub card instead of a nav entry" do
+    get plan_url
+
+    assert_response :success
+    assert_select "main h2", text: I18n.t("plans.bills_card.title")
+    assert_select "main a[href=?]", bills_path
+    assert_select "nav a[href=?]", bills_path, count: 0
+    assert_select "nav a[href=?][aria-current=page]", plan_path, minimum: 1
+  end
+
+  test "keeps the Plan nav entry lit on the Bills page" do
+    get bills_url
+
+    assert_response :success
+    assert_select "nav a[href=?][aria-current=page]", plan_path, minimum: 1
+  end
+
+  test "drops the bills card while recurring detection is off" do
+    @user.family.update!(recurring_transactions_disabled: true)
+
+    get plan_url
+
+    assert_response :success
+    assert_select "main h2", text: I18n.t("plans.bills_card.title"), count: 0
+    assert_select "a[href=?]", bills_path, count: 0
+  end
+
   test "shows the budget setup CTA when the month is uninitialized" do
     budgets(:one).update!(budgeted_spending: nil)
 

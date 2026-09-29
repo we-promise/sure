@@ -1,7 +1,7 @@
 class PlansController < ApplicationController
   include BudgetOwnership
 
-  # The Plan hub fronts budgets + goals under one nav entry, and only
+  # The Plan hub fronts budgets, goals and bills under one nav entry, and only
   # replaces the Budgets entry for preview users (see
   # ApplicationHelper#plan_nav_item). Without the flag, fall through to the
   # budgets flow so a shared /plan link still lands somewhere sensible.
@@ -23,6 +23,9 @@ class PlansController < ApplicationController
                                      .where(accountable_type: Goal::FUNDABLE_ACCOUNT_TYPES)
                                      .visible
                                      .count
+    # Same gate the Bills pages apply: a family with recurring detection off
+    # has nothing to list.
+    @show_bills = !Current.family.recurring_transactions_disabled?
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.plan"), nil ] ]
   end
