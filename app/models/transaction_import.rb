@@ -42,6 +42,16 @@ class TransactionImport < Import
           exclude_entry_ids: claimed_entry_ids
         )
 
+        provider_entry = if duplicate_entry.nil? && csv_provided_name?(row)
+          adapter.find_duplicate_transaction(
+            date: row.date_iso,
+            amount: row.signed_amount,
+            currency: effective_currency,
+            exclude_entry_ids: claimed_entry_ids,
+            provider_entries_only: true
+          )
+        end
+
         if duplicate_entry
           # Update existing transaction instead of creating a new one
           duplicate_entry.transaction.category = category if category.present?
@@ -51,6 +61,10 @@ class TransactionImport < Import
           duplicate_entry.import_locked = true  # Protect from provider sync overwrites
           updated_entries << duplicate_entry
           claimed_entry_ids.add(duplicate_entry.id)
+        elsif provider_entry
+          # The provider still owns this entry. Attaching it to the CSV import
+          # would delete it on revert and import_locked would block later syncs.
+          claimed_entry_ids.add(provider_entry.id)
         else
           # Create new transaction (no duplicate found)
           # Mark as import_locked to protect from provider sync overwrites
@@ -116,4 +130,16 @@ class TransactionImport < Import
     csv.delete("account") if account.present?
     csv
   end
+
+  private
+    # Blank CSV names become the default placeholder, which is not enough to
+    # identify a provider transaction from date and amount alone.
+    def csv_provided_name?(row)
+      return false if row.name.blank?
+      return true unless row.name == default_row_name
+      return false if raw_file_str.blank? || row.source_row_number.blank?
+
+      csv_row = csv_rows[row.source_row_number - 1]
+      csv_row && csv_value(csv_row, name_col_label, "name").present?
+    end
 end
