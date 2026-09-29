@@ -307,6 +307,30 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal 200, after.find { |h| h.security_id == @wmt.id && h.date == Date.current }.qty, "the split security itself did change"
   end
 
+  # Security::Split.scale used to keep more precision than the qty column can
+  # hold, so a position sold down to the last share the column can express kept
+  # about 3e-31 of a share. The forward calculator decides a liquidation by an
+  # exact zero, so the transfer's "cost unknown" mark never cleared and the
+  # repurchase inherited it.
+  test "selling every representable share of a split position clears the unknown basis" do
+    security = Security.create!(ticker: "FRAC", name: "Fractional")
+    (6.days.ago.to_date..Date.current).each do |date|
+      Security::Price.create!(security: security, date: date, price: 150)
+    end
+
+    transfer_in = create_trade(security, qty: 10, date: 6.days.ago.to_date, price: 10, account: @account)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # moved in, unknown cost
+    add_split(security, ex_date: 4.days.ago.to_date, numerator: 1, denominator: 3)
+    create_trade(security, qty: -BigDecimal("3.333333333333333333"), date: 2.days.ago.to_date, price: 150, account: @account)
+    create_trade(security, qty: 1, date: 1.day.ago.to_date, price: 150, account: @account)
+
+    today = holding_on(security, Date.current)
+
+    assert_equal BigDecimal("1"), today.qty, "the sell cleared the position exactly"
+    assert_equal 150, today.cost_basis, "the repurchase starts from a clean basis"
+    assert_not today.cost_basis_unknown, "the transfer's mark is released once the position is closed"
+  end
+
   private
     def split_security(before:, after:)
       security = Security.create!(ticker: "SPLT", name: "Split Test")

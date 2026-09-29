@@ -18,22 +18,32 @@ class Security::Split < ApplicationRecord
     Rational(numerator, denominator)
   end
 
+  # The scale of the `qty` columns on `holdings` and `trades`. A quantity this
+  # code hands around has to be one the database can hold: anything finer is a
+  # number no position can actually be in.
+  QTY_SCALE = 18
+
   # A share count after a split of `ratio`, and before it. Multiplying a
   # BigDecimal by a Rational rounds at 32 digits, so 3 shares through a
   # 1-for-3 split came out 0.999...; multiplying by the numerator and then
   # dividing by the denominator is exact whenever the answer is.
   #
-  # When the answer doesn't terminate (10 shares through a 1-for-3 split is
-  # 3.333...), the division keeps about 32 significant digits, so scaling and
-  # unscaling back can land 1e-31 away from where it started (9.999...9 for
-  # 10). The qty column holds 18 decimal places, so a stored holding never
-  # sees the difference.
+  # When the answer doesn't terminate -- 10 shares through a 1-for-3 split is
+  # 3.333... -- the result is rounded to the stored scale. Carrying the extra
+  # digits instead left a position that had been sold in full holding about
+  # 3e-31 of a share: the seller can only sell what the column can hold, so the
+  # subtraction missed exact zero, the cost-basis tracker never reset, and an
+  # inbound transfer's "cost unknown" mark survived a full liquidation.
+  #
+  # The cost of rounding here is that scaling and unscaling back can land one
+  # unit in the last place away from where it started. That is the floor the
+  # column imposes anyway.
   def self.scale(qty, ratio)
-    qty.to_d * ratio.numerator / ratio.denominator
+    (qty.to_d * ratio.numerator / ratio.denominator).round(QTY_SCALE)
   end
 
   def self.unscale(qty, ratio)
-    qty.to_d * ratio.denominator / ratio.numerator
+    (qty.to_d * ratio.denominator / ratio.numerator).round(QTY_SCALE)
   end
 
   private
