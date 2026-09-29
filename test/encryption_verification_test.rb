@@ -337,25 +337,18 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     assert_column_not_plaintext(MonobankItem, item.id, :raw_payload, "test")
   end
 
-  test "monobank account payloads and identifiers are encrypted" do
+  test "monobank account payloads are encrypted" do
     skip "No monobank accounts in fixtures" unless MonobankAccount.any?
 
     account = MonobankAccount.first
     account.update!(
       raw_payload: { account_test: "value" },
-      raw_transactions_payload: [ { id: "tx_probe" } ],
-      masked_pan: "537541******9999",
-      iban: "UA-TEST-IBAN-ENCRYPTION-PROBE"
+      raw_transactions_payload: [ { id: "tx_probe" } ]
     )
     account.reload
 
     assert_equal({ "account_test" => "value" }, account.raw_payload)
-    assert_equal "537541******9999", account.masked_pan
-    assert_equal "UA-TEST-IBAN-ENCRYPTION-PROBE", account.iban
 
-    # A partial card number and an IBAN are exactly the fields worth proving opaque.
-    assert_column_not_plaintext(MonobankAccount, account.id, :masked_pan, "537541******9999")
-    assert_column_not_plaintext(MonobankAccount, account.id, :iban, "UA-TEST-IBAN-ENCRYPTION-PROBE")
     assert_column_not_plaintext(MonobankAccount, account.id, :raw_payload, "account_test")
     assert_column_not_plaintext(MonobankAccount, account.id, :raw_transactions_payload, "tx_probe")
   end

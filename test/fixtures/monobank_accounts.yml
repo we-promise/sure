@@ -6,5 +6,3 @@ black_card:
   current_balance: 1500.00
   account_kind: "card"
   account_type: "black"
-  masked_pan: "537541******1234"
-  iban: "UA-TEST-IBAN-FIXTURE"
