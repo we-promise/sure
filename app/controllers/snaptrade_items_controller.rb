@@ -492,12 +492,17 @@ class SnaptradeItemsController < ApplicationController
     return unless require_relinkable_provider_account!(snaptrade_account, account)
 
     begin
-      # Create AccountProvider linking - pass the account directly
-      provider = snaptrade_account.ensure_account_provider!(account)
+      # ensure_account_provider! has no lock of its own, so the relink runs
+      # inside one here and the holder is re-authorized under it.
+      relinked = relinking(snaptrade_account, account) do
+        # Create AccountProvider linking - pass the account directly
+        provider = snaptrade_account.ensure_account_provider!(account)
 
-      unless provider
-        raise "Failed to create AccountProvider link"
+        unless provider
+          raise "Failed to create AccountProvider link"
+        end
       end
+      return unless relinked
 
       # Trigger sync to process the linked account
       snaptrade_item.sync_later_with_follow_up

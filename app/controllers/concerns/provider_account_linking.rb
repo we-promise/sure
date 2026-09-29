@@ -16,12 +16,59 @@ module ProviderAccountLinking
 
     # Relinking moves the provider off the account that holds it, and some
     # providers then schedule that account for deletion, so it needs :write too.
+    #
+    # This is the early refusal, before any work is done. It is NOT the
+    # authorization that protects the mutation -- see #relinking below for why
+    # the answer it gives cannot be trusted by the time the link moves.
     def require_relinkable_provider_account!(provider_account, target_account)
+      relink_holders_authorized?(provider_account, target_account)
+    end
+
+    # The question both checks ask. Named separately from the early refusal so
+    # the two call sites are distinguishable -- a test can answer the pre-lock
+    # one the way a stale read would and still watch the real one run.
+    def relink_holders_authorized?(provider_account, target_account)
       provider_link_holders(provider_account).each do |holder|
         next if holder == target_account
         return false unless require_account_permission!(holder, :write, redirect_path: accounts_path)
       end
       true
+    end
+
+    # Runs a relink with the holder authorized at the moment it is moved.
+    #
+    # #require_relinkable_provider_account! reads the mapping before the
+    # provider row is locked. Between that read and the lock another request
+    # can point the provider at a different account -- one this user cannot
+    # write. The block then moves the link off whatever the mapping names
+    # *now*, and several providers queue that account for deletion, so the
+    # pre-lock answer is about an account that is no longer the one at risk.
+    #
+    # Inside the lock the mapping is read again and the holders it actually
+    # names are authorized again. A refusal raises, so the transaction rolls
+    # back: nothing is moved, nothing is queued for deletion, and the redirect
+    # #require_account_permission! has already set is what the user gets.
+    #
+    # Returns true when the block ran, false when the relink was refused. Every
+    # relinking path goes through it, so a new provider cannot reintroduce the
+    # window by writing its own transaction.
+    def relinking(provider_account, target_account)
+      refused = false
+
+      Account.transaction do
+        # lock! reloads, which clears the association cache, so the holders
+        # read below come from inside the lock rather than from before it.
+        provider_account.lock!
+
+        unless relink_holders_authorized?(provider_account, target_account)
+          refused = true
+          raise ActiveRecord::Rollback
+        end
+
+        yield
+      end
+
+      !refused
     end
 
     # Select dialogs that offer already-linked provider accounts must not offer,
