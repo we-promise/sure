@@ -113,7 +113,8 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     @demo_family.start_subscription!("sub_demo_123")
     session = Session.create!(user: @demo_user)
     app = Doorkeeper::Application.create!(name: "Demo Retirement Test", redirect_uri: "https://example.com/callback", confidential: false)
-    token = Doorkeeper::AccessToken.create!(application: app, resource_owner_id: @demo_user.id, scopes: "read", expires_in: 1.year)
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore Credential in URL
+      application: app, resource_owner_id: @demo_user.id, scopes: "read", expires_in: 1.year)
     grant = Doorkeeper::AccessGrant.create!(application: app, resource_owner_id: @demo_user.id, redirect_uri: app.redirect_uri, expires_in: 10.minutes, scopes: "read")
     key = @demo_user.api_keys.create!(name: "visitor", key: "old-demo-visitor-key", scopes: [ "read" ], source: "web")
 
