@@ -400,6 +400,46 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_equal [ 5, 50 ], [ holdings[3.days.ago.to_date].cost_basis, holdings[2.days.ago.to_date].cost_basis ]
   end
 
+  # The walk starts at today and undoes its way back, so it reads whatever the
+  # snapshot holds as today's position. A provider snapshot is regularly older
+  # than that — a sync that failed and retried, or a provider that had not
+  # refreshed — and a split in between has already changed the count it
+  # reported. Read as current, the pre-split count became today's holding and
+  # the walk then undid the same split again on the way past.
+  test "a provider snapshot older than the split is brought forward before the walk" do
+    security = Security.create!(ticker: "STAL", name: "Stale Snapshot")
+    Security::Price.create!(security: security, date: 2.days.ago.to_date, price: 100)
+    Security::Price.create!(security: security, date: 1.day.ago.to_date, price: 50)
+    Security::Price.create!(security: security, date: Date.current, price: 50)
+
+    # An entry so the walk reaches back past the snapshot's own day; account
+    # history starts the day before the first entry.
+    @account.entries.create!(
+      name: "Opening", date: 4.days.ago.to_date, amount: 20000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    coinstats_item = @account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+    @account.holdings.create!(
+      security: security, date: 2.days.ago.to_date, qty: 10, price: 100, amount: 1000,
+      currency: "USD", account_provider: account_provider
+    )
+
+    add_split(security, ex_date: 1.day.ago.to_date, numerator: 2, denominator: 1)
+
+    holdings = Holding::ReverseCalculator
+      .new(@account, portfolio_snapshot: Holding::PortfolioSnapshot.new(@account))
+      .calculate
+      .select { |h| h.security_id == security.id }
+      .index_by(&:date)
+
+    assert_equal 20, holdings[Date.current].qty, "the split the provider has already applied"
+    assert_equal 1000, holdings[Date.current].amount, "20 shares at the post-split price"
+    assert_equal 10, holdings[2.days.ago.to_date].qty, "the day the provider actually reported"
+  end
+
   test "walking back past a 1-for-3 reverse split of one share gives exactly three" do
     security = split_security(before: 10, after: 30)
     create_trade(security, qty: 3, date: 4.days.ago.to_date, price: 10, account: @account)
