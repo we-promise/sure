@@ -6,13 +6,15 @@
 # rate) so the series always agrees with the totals shown elsewhere on the
 # dashboard.
 class IncomeStatement::DailyExpenseTotals
+  include IncomeStatement::TransferFiltering
   include IncomeStatement::ScopedTransactionsQuery
 
-  def initialize(family, transactions_scope:, date_range:, included_account_ids: nil)
+  def initialize(family, transactions_scope:, date_range:, included_account_ids: nil, include_investment_contributions: true)
     @family = family
     @transactions_scope = transactions_scope
     @date_range = date_range
     @included_account_ids = included_account_ids
+    @include_investment_contributions = include_investment_contributions
 
     validate_date_range!
   end
@@ -49,6 +51,7 @@ class IncomeStatement::DailyExpenseTotals
           #{accounts_join_sql}
           #{exchange_rates_join_sql}
           WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
+            AND (#{transfer_filter_sql("at")})
             #{investment_activity_label_sql("at")}
             AND ae.excluded = false
             AND a.family_id = :family_id
