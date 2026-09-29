@@ -2,7 +2,9 @@ require "test_helper"
 
 # track_stale_unmatched_pending counts stale pending entries that have no posted
 # match. It decides "pending" as Transaction#pending? does, across every pending
-# provider, like the stale-pending exclusion that runs just before it.
+# provider, like the stale-pending exclusion that runs straight after it. The
+# order of the two is pinned in SimplefinItem::ImporterTest; these tests cover
+# the predicate alone.
 class SimplefinItem::ImporterStaleUnmatchedPendingTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
