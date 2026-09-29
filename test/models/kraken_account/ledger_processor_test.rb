@@ -309,6 +309,29 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     assert_match(/Deposit.*BTC/, entry.name)
   end
 
+  # Pricing can fail on one sync and succeed on the next. A trade recorded at
+  # zero with the flag is completed once the price on its date exists.
+  test "a crypto trade recorded without a price is priced on a later sync" do
+    set_raw_payload_assets([])
+    set_ledgers(
+      "LBTC20" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.10000000", fee: "0.00000000", time: 1_700_000_000)
+    )
+    process
+    trade = @account.entries.find_by(external_id: "kraken_ledger_LBTC20", source: "kraken").entryable
+    assert_equal 0, trade.price
+    assert trade.extra.dig("kraken", "price_missing"), "recorded without a price"
+
+    Security::Price.create!(security: trade.security, date: Time.zone.at(1_700_000_000).to_date, price: 40_000, currency: "USD")
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    trade.reload
+    assert_in_delta 40_000.0, trade.price.to_f, 0.01
+    assert_nil trade.extra.dig("kraken", "price_missing")
+  end
+
   # An account synced before this change holds the coin movement as a
   # Transaction: a cash leg that never existed, and a quantity the holdings never
   # saw. A plain sync replaces it, so nobody has to re-import to be right.

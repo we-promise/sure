@@ -48,11 +48,16 @@ class KrakenAccount::LedgerProcessor
     # sync can carry up to ~10k entries — see MAX_LEDGER_PAGES in the importer).
     # Scoped to the kraken_ledger_ prefix so trade entries aren't loaded.
     # The name comes along so a principal already holding its fee can be told
-    # from one still owed it, without a lookup per ledger row.
+    # from one still owed it, and a trade's price_missing flag so one recorded
+    # before its price existed can be priced later -- all without a lookup per
+    # ledger row. The flag lives on the trade, read here by subselect so this
+    # stays one query on entries.
     existing = account.entries
                       .where(source: "kraken")
                       .where("external_id LIKE 'kraken_ledger_%'")
-                      .pluck(:external_id, :name, :user_modified, :entryable_type)
+                      .pluck(:external_id, :name, :user_modified, :entryable_type,
+                             Arel.sql("(SELECT trades.extra -> 'kraken' ->> 'price_missing' FROM trades " \
+                                      "WHERE entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id)"))
     @existing_external_ids = existing.map(&:first).to_set
     @existing_principals = existing.to_h { |external_id, *rest| [ external_id, rest ] }
 
@@ -200,6 +205,8 @@ class KrakenAccount::LedgerProcessor
       # shape, which a sync should heal rather than keep.
       legacy = nil
       if @existing_external_ids.include?(external_id)
+        return reprice_crypto_trade(external_id, base_symbol, date) if unpriced_trade?(external_id)
+
         legacy = legacy_crypto_transaction(external_id)
         return if legacy.nil?
       end
@@ -256,6 +263,28 @@ class KrakenAccount::LedgerProcessor
       return nil if entry.nil? || in_transfer?(entry.entryable)
 
       entry
+    end
+
+    def unpriced_trade?(external_id)
+      _name, user_modified, entryable_type, price_missing = @existing_principals[external_id]
+      entryable_type == "Trade" && price_missing == "true" && !user_modified
+    end
+
+    # A trade recorded before its price existed carries zero and the flag.
+    # Pricing can fail on one sync and succeed on the next, so it is tried
+    # again here and the trade is completed once a price is found.
+    def reprice_crypto_trade(external_id, base_symbol, date)
+      entry = account.entries.includes(:entryable).find_by(external_id: external_id)
+      return if entry.nil?
+
+      price, price_missing = unit_price_on(entry.entryable.security, base_symbol, date)
+      return if price_missing
+
+      trade = entry.entryable
+      extra = trade.extra.deep_dup
+      extra["kraken"]&.delete("price_missing")
+      trade.update!(price: price, extra: extra)
+      @existing_principals[external_id][3] = nil
     end
 
     # A transfer records its two legs on its own row; the transaction's own
