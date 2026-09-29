@@ -82,7 +82,7 @@ ru:
       pulse_next_seven: в ближайшие 7 дней
       pulse_bar_aria: Оплачено %{percent}% платежей этого месяца
       next_up: Ближайшие
-      view_upcoming: Посмотреть предстоящие
+      view_calendar: Посмотреть календарь
       date_today: Сегодня
       date_tomorrow: Завтра
       unconvertible:
@@ -301,7 +301,7 @@ ru:
         few: '%{count} мелких изменения'
         many: '%{count} мелких изменений'
         other: '%{count} мелкого изменения'
-      suggestion_line: '%{entry} похоже на оплату платежа «%{bill}»'
+      suggestion_line: '%{entry} похоже на оплату «%{bill}»'
       suggestion_unknown_entry: Операция
       confidence: Совпадение %{percent}%
       accept: Применить

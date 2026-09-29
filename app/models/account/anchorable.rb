@@ -39,9 +39,11 @@ module Account::Anchorable
     end
   end
 
-  def set_current_balance(balance)
+  # Pass schedule_sync: false when the caller schedules the account sync
+  # itself, such as a provider sync that syncs its accounts afterwards.
+  def set_current_balance(balance, schedule_sync: true)
     result = current_balance_manager.set_current_balance(balance)
-    sync_later if result.success?
+    sync_later if schedule_sync && result.success?
     result
   end
 
