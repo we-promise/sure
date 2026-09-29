@@ -86,6 +86,13 @@ class Assistant::Function::SetOpeningBalanceTest < ActiveSupport::TestCase
     assert_equal "invalid_date", @function.call("account_id" => @account.id, "balance" => 0, "date" => "28/09/2026")[:error]
   end
 
+  test "rejects a blank date instead of keeping the current one" do
+    result = @function.call("account_id" => @account.id, "balance" => 900, "date" => "")
+
+    assert_equal "invalid_date", result[:error]
+    assert_equal 500, @account.opening_anchor_balance
+  end
+
   test "refuses accounts synced from a provider" do
     result = @function.call("account_id" => accounts(:connected).id, "balance" => 0)
 

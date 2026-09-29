@@ -23,22 +23,24 @@ class Account::OpeningBalanceManager
     opening_anchor_valuation&.entry&.amount || 0
   end
 
+  # Serialized per account, so concurrent calls (e.g. an assistant retrying)
+  # can't both see "no anchor" and create two.
   def set_opening_balance(balance:, date: nil)
-    resolved_date = date || default_date
+    Account.transaction do
+      lock_account!
 
-    if (error = date_error(date))
-      return Result.new(success?: false, changes_made?: false, error: error)
-    end
-
-    if opening_anchor_valuation.nil?
-      create_opening_anchor(
-        balance: balance,
-        date: resolved_date
-      )
-      Result.new(success?: true, changes_made?: true, error: nil)
-    else
-      changes_made = update_opening_anchor(balance: balance, date: date)
-      Result.new(success?: true, changes_made?: changes_made, error: nil)
+      if (error = date_error(date))
+        Result.new(success?: false, changes_made?: false, error: error)
+      elsif opening_anchor_valuation.nil?
+        create_opening_anchor(
+          balance: balance,
+          date: date || default_date
+        )
+        Result.new(success?: true, changes_made?: true, error: nil)
+      else
+        changes_made = update_opening_anchor(balance: balance, date: date)
+        Result.new(success?: true, changes_made?: changes_made, error: nil)
+      end
     end
   end
 
@@ -70,6 +72,13 @@ class Account::OpeningBalanceManager
 
   private
     attr_reader :account
+
+    # Row lock only: callers may hold unsaved changes on the account, which
+    # with_lock would reload (or refuse). Re-read the anchor under the lock.
+    def lock_account!
+      Account.where(id: account.id).lock.pick(:id)
+      @opening_anchor_valuation = nil
+    end
 
     def opening_anchor_valuation
       @opening_anchor_valuation ||= account.valuations.opening_anchor.includes(:entry).first

@@ -69,7 +69,8 @@ class Assistant::Function::SetOpeningBalance < Assistant::Function
     return error("invalid_balance", "balance must be a number.") unless balance
 
     date = nil
-    if params["date"].present?
+    # A supplied blank date is an error, not "keep the current date".
+    unless params["date"].nil?
       date = parse_date(params["date"])
       return error("invalid_date", "date must be YYYY-MM-DD.") unless date
     end

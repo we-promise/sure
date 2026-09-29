@@ -330,4 +330,19 @@ class Account::OpeningBalanceManagerTest < ActiveSupport::TestCase
     assert_not result.changes_made?
     assert_nil result.error
   end
+
+  test "locks the account row before reading the opening anchor" do
+    sql = []
+    callback = ->(*, payload) { sql << payload[:sql] }
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      Account::OpeningBalanceManager.new(@depository_account).set_opening_balance(balance: 100, date: 1.year.ago.to_date)
+    end
+
+    lock = sql.index { |q| q.include?("FOR UPDATE") && q.include?('"accounts"') }
+    anchor_read = sql.index { |q| q.match?(/"valuations"."kind"/) }
+    assert lock, "expected the account row to be locked"
+    assert anchor_read, "expected the opening anchor to be read"
+    assert_operator lock, :<, anchor_read
+  end
 end
