@@ -82,6 +82,17 @@ class EnableBankingEntry::Processor
     data[:transaction_id].blank? && data[:entry_reference].blank?
   end
 
+  # True when the ASPSP has flagged this raw payload as not yet settled.
+  #
+  # Named pending_payload? rather than the bare pending? that Transaction#pending?
+  # already uses, on purpose: this checks the incoming provider hash, not a
+  # persisted row, and the two are easy to conflate at a glance.
+  #
+  # @return [Boolean]
+  def self.pending_payload?(raw_transaction_data)
+    raw_transaction_data.with_indifferent_access[:_pending] == true
+  end
+
   # External ids of the rows stored under a synthesised content hash, which are
   # the only rows a later identifier can claim.
   #
@@ -89,17 +100,25 @@ class EnableBankingEntry::Processor
   # ASPSP has not yet given an identifier to, which it typically does within a
   # day.
   #
+  # Excludes pending rows deliberately: a pending row settling into a booked one
+  # is Enable Banking's own pending->booked reconciliation's job
+  # (Account::ProviderImportAdapter's pending_match), which matches and protects
+  # that transition more conservatively than this claim mechanism does. Without
+  # this exclusion a pending, identifierless row could be claimed here instead,
+  # by a payload that has nothing to do with it settling.
+  #
   # @return [Set<String>]
   def self.identifierless_external_ids_for(account)
     return Set.new if account.blank?
 
     prefix = ActiveRecord::Base.sanitize_sql_like(CONTENT_ID_PREFIX)
-    account.entries
-           .where(source: "enable_banking")
-           .where("external_id LIKE ?", "#{prefix}%")
-           .pluck(:external_id)
-           .compact
-           .to_set
+    Transaction.excluding_pending
+               .joins(:entry)
+               .where(entries: { account_id: account.id, source: "enable_banking" })
+               .where("entries.external_id LIKE ?", "#{prefix}%")
+               .pluck("entries.external_id")
+               .compact
+               .to_set
   end
 
   # known_merchant_names: optional pre-fetched Family#known_merchant_names, so a
@@ -396,6 +415,13 @@ class EnableBankingEntry::Processor
     def claim_identifierless_predecessor!
       return if account.blank?
       return if self.class.identifierless?(data)
+      # A pending row can carry a real transaction_id/entry_reference (unlike a
+      # BOOK row without one, which is the case this method exists for) and
+      # Enable Banking's own pending->booked reconciliation in
+      # Account::ProviderImportAdapter already matches and protects that
+      # transition more conservatively. Keeping this claim scoped to BOOK on both
+      # sides avoids the two mechanisms fighting over the same row.
+      return if self.class.pending_payload?(data)
 
       incoming = self.class.compute_external_id(data)
       return if incoming.blank?

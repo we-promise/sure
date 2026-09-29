@@ -416,6 +416,50 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
                  "the first settled row claims the predecessor, the second imports on its own"
   end
 
+  test "a pending incoming payload does not claim an identifierless BOOK predecessor" do
+    raw = identifierless_transaction(amount: "45.67")
+    content_id = EnableBankingEntry::Processor.compute_external_id(raw)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+    before = @account.entries.count
+
+    # Carries a real identifier, same content, but is itself still pending --
+    # Enable Banking's own pending->booked reconciliation owns this transition,
+    # not this claim mechanism.
+    pending_settled = raw.merge(entry_reference: "2026-01-01.7", _pending: true)
+    EnableBankingEntry::Processor.new(pending_settled, enable_banking_account: @enable_banking_account).process
+
+    assert_equal before + 1, @account.entries.count,
+                 "a pending payload must not re-key the BOOK predecessor"
+    assert @account.entries.exists?(external_id: content_id),
+           "the original BOOK row must be untouched"
+  end
+
+  test "a pending identifierless row is not offered as a claimable predecessor by THIS mechanism" do
+    pending_raw = identifierless_transaction(amount: "56.78").merge(_pending: true)
+    content_id = EnableBankingEntry::Processor.compute_external_id(pending_raw)
+
+    EnableBankingEntry::Processor.new(pending_raw, enable_banking_account: @enable_banking_account).process
+    predecessor = @account.entries.find_by!(external_id: content_id)
+
+    settled = pending_raw.merge(entry_reference: "2026-01-01.8", _pending: false)
+    settled_id = EnableBankingEntry::Processor.compute_external_id(settled)
+    EnableBankingEntry::Processor.new(settled, enable_banking_account: @enable_banking_account).process
+
+    # Enable Banking's own pending->booked reconciliation (ProviderImportAdapter's
+    # amount/date pending_match, not claim_identifierless_predecessor!) is free to
+    # claim this same row -- that is the intended outcome, and the whole point of
+    # excluding pending rows from identifierless_external_ids_for is to let that
+    # more conservative, purpose-built path own this transition instead of this
+    # one. What matters here is which mechanism did the claiming, not whether a
+    # claim happened at all.
+    predecessor.reload
+    assert_equal settled_id, predecessor.external_id,
+                 "the existing pending->booked reconciliation should still settle this row"
+    assert_not predecessor.transaction.pending?,
+               "settling should have cleared the pending flag, same as any ordinary pending transaction"
+  end
+
   # --- payment wallet prefixes ---
 
   test "a payment wallet prefix does not claim the transaction for the wallet's merchant" do
