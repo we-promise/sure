@@ -1,6 +1,16 @@
 # Imports wallet/account data from Coinbase API.
 # Fetches accounts, balances, and transaction history.
 class CoinbaseItem::Importer
+  # Coinbase's /v2/accounts/{id}/transactions endpoint returns newest-first,
+  # so a low limit silently drops older history for any wallet with more
+  # lifetime transactions than that (e.g. one funded by frequent staking
+  # rewards) - it's never even fetched, let alone processed by
+  # CoinbaseAccount::Processor. 5000 comfortably covers even a multi-year
+  # daily-staking-reward history without risking an unbounded loop against
+  # Coinbase's API; Provider::Coinbase#get_transactions already paginates up
+  # to whatever limit it's given, following Coinbase's next_uri cursor.
+  FULL_HISTORY_LIMIT = 5000
+
   attr_reader :coinbase_item, :coinbase_provider
 
   # @param coinbase_item [CoinbaseItem] Item containing accounts to import
@@ -91,7 +101,7 @@ class CoinbaseItem::Importer
     def fetch_and_store_transactions(coinbase_account, account_id)
       # Fetch transactions for this account (includes buys, sells, sends, receives)
       # This endpoint returns better data than separate buys/sells endpoints
-      transactions = coinbase_provider.get_transactions(account_id, limit: 100)
+      transactions = coinbase_provider.get_transactions(account_id, limit: FULL_HISTORY_LIMIT)
 
       # Store raw transaction data for processing later
       coinbase_account.raw_transactions_payload = {
