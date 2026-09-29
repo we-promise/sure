@@ -448,6 +448,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       securities_account = securities_account_with_trade(cash_entry.external_id)
       return unless securities_account
+      return log_settlement_currency_mismatch(cash_entry, securities_account) if securities_account.currency != cash_entry.currency
 
       counterpart = securities_import_adapter(securities_account).import_transaction(
         external_id: settlement_counterpart_external_id(cash_entry.external_id),
@@ -470,6 +471,28 @@ class TradeRepublicAccount::ActivitiesProcessor
       return if RejectedTransfer.exists?(inflow_transaction_id: inflow.id, outflow_transaction_id: outflow.id)
 
       Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+    end
+
+    # Trade Republic settles in the currency of the portfolio and Crypto
+    # accounts, so the counterpart books the settlement amount as is. Should
+    # the currencies ever differ, an unconverted counterpart would misstate
+    # that account's cash.
+    def log_settlement_currency_mismatch(cash_entry, securities_account)
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "warn",
+        message: "Skipped Trade Republic settlement counterpart: settlement currency differs from the securities account's",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: securities_account,
+        metadata: {
+          settlement_external_id: cash_entry.external_id,
+          settlement_currency: cash_entry.currency,
+          securities_account_currency: securities_account.currency
+        }
+      )
+      nil
     end
 
     def securities_import_adapter(securities_account)

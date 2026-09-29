@@ -67,6 +67,10 @@ class TradeRepublicItem < ApplicationRecord
     # Portfolio and Crypto before cash so Saveback trades exist before cash
     # reconciliation removes legacy Saveback withdrawals in the same
     # process_accounts pass, and cash settlements find the trade they link to.
+    # The accounts are processed without a spanning transaction: each pass
+    # derives its entries and reconciliations from the stored snapshots, so
+    # when one account fails, the next successful sync repairs any trade or
+    # settlement counterpart left halfway through a move.
     linked_trade_republic_accounts
       .includes(account_provider: :account)
       .order(Arel.sql("CASE kind WHEN 'portfolio' THEN 0 WHEN 'crypto' THEN 1 WHEN 'cash' THEN 2 ELSE 3 END"), :id)
