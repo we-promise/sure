@@ -158,20 +158,25 @@ class TradeRepublicItemsController < ApplicationController
   # the user approves the login in the Trade Republic app (maximum two minutes).
   def poll_login
     provider = @trade_republic_item.trade_republic_provider
-    unless provider && @trade_republic_item.pending_login_state.present?
+    pending = @trade_republic_item.pending_login_state
+    unless provider && pending.present?
       return render_login_panel(alert: t(".no_pending_login"))
     end
 
-    result = provider.complete_login(pending_login_b64: @trade_republic_item.pending_login_state)
+    result = provider.complete_login(pending_login_b64: pending)
     if result.data["status"] == "pending"
-      @trade_republic_item.update!(pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
-      render_login_panel
+      update_if_pending_login_current!(pending, pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
+      login_poll_response(:no_content) { render_login_panel }
     elsif duplicate_connection?(result)
+      return render_superseded_push_login unless update_if_pending_login_current!(pending, pending_login_state: nil, status: :requires_update)
+
       discard_duplicate_connection!
       render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
     else
       begin
-        @trade_republic_item.update!(session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good, brokerage_account_id: account_id_from(result))
+        unless update_if_pending_login_current!(pending, session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good, brokerage_account_id: account_id_from(result))
+          return render_superseded_push_login
+        end
       rescue ActiveRecord::RecordNotUnique
         discard_duplicate_connection!
         return render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
@@ -180,9 +185,20 @@ class TradeRepublicItemsController < ApplicationController
       render_login_panel(success: true)
     end
   rescue Provider::TradeRepublicClient::LoginExpired, Provider::TradeRepublicClient::AuthenticationRequired
-    @trade_republic_item.update!(pending_login_state: nil)
+    return render_superseded_push_login unless update_if_pending_login_current!(pending, pending_login_state: nil)
+
     render_login_panel(alert: t(".login_expired"))
+  rescue Provider::TradeRepublicClient::RateLimited => e
+    capture_login_poll_error(e, login: "push", retryable: true)
+    login_poll_response(:too_many_requests) { render_login_panel(alert: e.message) }
+  rescue Provider::TradeRepublicClient::Timeout,
+         Provider::TradeRepublicClient::TransientProviderError => e
+    capture_login_poll_error(e, login: "push", retryable: true)
+    login_poll_response(:service_unavailable) { render_login_panel(alert: e.message) }
   rescue Provider::TradeRepublicClient::Error => e
+    capture_login_poll_error(e, login: "push", retryable: false)
+    return render_superseded_push_login unless update_if_pending_login_current!(pending, pending_login_state: nil)
+
     render_login_panel(alert: e.message)
   end
 
@@ -332,7 +348,7 @@ class TradeRepublicItemsController < ApplicationController
       .active
       .includes(trade_republic_accounts: { account_provider: :account })
       .flat_map(&:trade_republic_accounts)
-      .select { |tr_account| tr_account.account_provider.nil? }
+      .select { |tr_account| tr_account.account_provider.nil? && tr_account.linkable_to?(@account) }
       .sort_by { |tr_account| tr_account.updated_at || tr_account.created_at }
       .reverse
 
@@ -351,7 +367,7 @@ class TradeRepublicItemsController < ApplicationController
       return
     end
 
-    unless account.accountable_type.in?(%w[Investment Depository]) &&
+    unless tr_account.linkable_to?(account) &&
         account.account_providers.none? &&
         account.plaid_account_id.blank? &&
         account.simplefin_account_id.blank?
@@ -418,12 +434,17 @@ class TradeRepublicItemsController < ApplicationController
       @trade_republic_item.sync_later
     end
 
-    @linkable_accounts = Current.family.accounts
+    linkable_accounts = Current.family.accounts
       .visible
-      .where(accountable_type: %w[Investment Depository])
+      .where(accountable_type: %w[Investment Depository Crypto])
       .left_joins(:account_providers)
       .where(account_providers: { id: nil })
+      .includes(:accountable)
       .order(:name)
+      .to_a
+    @linkable_accounts_by_tr_account = @unlinked_accounts.index_with do |tr_account|
+      linkable_accounts.select { |linkable| tr_account.linkable_to?(linkable) }
+    end
 
     @syncing = @trade_republic_item.syncing?
     @waiting_for_sync = no_accounts && @syncing
@@ -647,23 +668,35 @@ class TradeRepublicItemsController < ApplicationController
     end
 
     def render_qr_login_error(error, pending: nil, status: :unprocessable_entity, retryable: false)
-      # Malformed-response messages can quote the provider response body.
-      detail = error.is_a?(Provider::TradeRepublicClient::MalformedResponse) ? error.class.name : "#{error.class} - #{error.message}"
-      DebugLogEntry.capture(
-        category: "sync",
-        level: retryable ? "info" : "warn",
-        message: "Trade Republic QR login poll failed for item #{@trade_republic_item.id} " \
-                 "(#{retryable ? "retryable" : "fatal"}): #{detail}",
-        source: "trade_republic",
-        family: Current.family,
-        provider_key: "trade_republic"
-      )
+      capture_login_poll_error(error, login: "QR", retryable: retryable)
 
       if pending.present? && error.respond_to?(:pending_login_b64) && error.pending_login_b64.present?
         update_if_pending_login_current!(pending, pending_login_state: error.pending_login_b64)
       end
 
       render json: { error: error.message, retryable: retryable }, status: status
+    end
+
+    # The background poller lives on the card, so re-rendering the card for it
+    # would reconnect it, restart its timeout and poll again without waiting.
+    # The manual status button submits a Turbo form (no XHR header) and needs
+    # the card back as feedback.
+    def login_poll_response(poller_status)
+      request.xhr? ? head(poller_status) : yield
+    end
+
+    def capture_login_poll_error(error, login:, retryable:)
+      # Malformed-response messages can quote the provider response body.
+      detail = error.is_a?(Provider::TradeRepublicClient::MalformedResponse) ? error.class.name : "#{error.class} - #{error.message}"
+      DebugLogEntry.capture(
+        category: "sync",
+        level: retryable ? "info" : "warn",
+        message: "Trade Republic #{login} login poll failed for item #{@trade_republic_item.id} " \
+                 "(#{retryable ? "retryable" : "fatal"}): #{detail}",
+        source: "trade_republic",
+        family: Current.family,
+        provider_key: "trade_republic"
+      )
     end
 
     # Cancellation or a newer QR login can replace the state while a poll is
@@ -674,6 +707,11 @@ class TradeRepublicItemsController < ApplicationController
         @trade_republic_item.update!(attributes) if current
         current
       end
+    end
+
+    # A newer login owns the card now; leave its state and poller alone.
+    def render_superseded_push_login
+      login_poll_response(:no_content) { render_login_panel }
     end
 
     def render_superseded_qr_login

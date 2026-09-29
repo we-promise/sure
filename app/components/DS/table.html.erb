@@ -1,0 +1,25 @@
+<%= tag.div class: container_classes, **container_opts do %>
+  <%= tag.div class: scroll_classes, **scroll_opts do %>
+    <%# Separate borders, drawn by the cells. With the collapsing model
+        (Tailwind's default for tables) a sticky header's rule stays behind
+        in the table grid and is gone once the body scrolls. %>
+    <table class="w-full border-separate border-spacing-0 text-sm text-primary">
+      <thead>
+        <tr>
+          <% columns.each do |column| %>
+            <%= column %>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.each_with_index do |row, index| %>
+          <%= tag.tr class: row_classes(row) do %>
+            <% columns.each do |column| %>
+              <%= column.cell(row, index) %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+<% end %>
