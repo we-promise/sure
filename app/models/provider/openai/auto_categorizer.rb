@@ -14,6 +14,10 @@ class Provider::Openai::AutoCategorizer
   # This is a heuristic to detect when strict JSON mode is breaking the model's ability to reason
   AUTO_MODE_NULL_THRESHOLD = 0.5
 
+  # Key aliases accepted from models that don't follow the schema's field names
+  TRANSACTION_ID_KEYS = %w[transaction_id id txn_id].freeze
+  CATEGORY_NAME_KEYS = %w[category_name category name].freeze
+
   attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family, :json_mode
 
   def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil, json_mode: nil)
@@ -385,15 +389,20 @@ class Provider::Openai::AutoCategorizer
       # malformed batch from the auto-mode retry heuristic. A missing category
       # field is fine (models in none/json_object mode often omit nulls) and
       # is treated as "no category" downstream.
-      categorizations.select! { |cat| (cat["transaction_id"] || cat["id"] || cat["txn_id"]).present? }
+      categorizations.select! { |cat| field_value(cat, TRANSACTION_ID_KEYS).present? }
 
       # Normalize field names (some LLMs use different naming)
       categorizations.map do |cat|
         {
-          "transaction_id" => cat["transaction_id"] || cat["id"] || cat["txn_id"],
-          "category_name" => cat["category_name"] || cat["category"] || cat["name"]
+          "transaction_id" => field_value(cat, TRANSACTION_ID_KEYS),
+          "category_name" => field_value(cat, CATEGORY_NAME_KEYS)
         }
       end
+    end
+
+    # First truthy value among the accepted key aliases (same semantics as `a || b || c`)
+    def field_value(item, keys)
+      item.values_at(*keys).find(&:itself)
     end
 
     # Flexible JSON parsing that handles common LLM output issues

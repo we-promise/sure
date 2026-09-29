@@ -14,6 +14,11 @@ class Provider::Openai::AutoMerchantDetector
   # Threshold for auto mode: if more than this percentage returns null, retry with none mode
   AUTO_MODE_NULL_THRESHOLD = 0.5
 
+  # Key aliases accepted from models that don't follow the schema's field names
+  TRANSACTION_ID_KEYS = %w[transaction_id id txn_id].freeze
+  BUSINESS_NAME_KEYS = %w[business_name name merchant_name merchant].freeze
+  BUSINESS_URL_KEYS = %w[business_url url website].freeze
+
   attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace, :family, :json_mode
 
   def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil, family: nil, json_mode: nil)
@@ -345,16 +350,21 @@ class Provider::Openai::AutoMerchantDetector
       # malformed batch from the auto-mode retry heuristic. Missing name/url
       # fields are fine (models in none/json_object mode often omit nulls) and
       # are treated as "unknown" downstream.
-      merchants.select! { |m| (m["transaction_id"] || m["id"] || m["txn_id"]).present? }
+      merchants.select! { |m| field_value(m, TRANSACTION_ID_KEYS).present? }
 
       # Normalize field names (some LLMs use different naming)
       merchants.map do |m|
         {
-          "transaction_id" => m["transaction_id"] || m["id"] || m["txn_id"],
-          "business_name" => m["business_name"] || m["name"] || m["merchant_name"] || m["merchant"],
-          "business_url" => m["business_url"] || m["url"] || m["website"]
+          "transaction_id" => field_value(m, TRANSACTION_ID_KEYS),
+          "business_name" => field_value(m, BUSINESS_NAME_KEYS),
+          "business_url" => field_value(m, BUSINESS_URL_KEYS)
         }
       end
+    end
+
+    # First truthy value among the accepted key aliases (same semantics as `a || b || c`)
+    def field_value(item, keys)
+      item.values_at(*keys).find(&:itself)
     end
 
     # Flexible JSON parsing that handles common LLM output issues
