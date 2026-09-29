@@ -110,7 +110,7 @@ zh-TW:
         failed: 已失敗
         no_usage_data: 所選期間內查無使用資料
         cost_estimates_title: 關於費用預估
-        cost_estimates_description: 費用是依各供應商公布的價格預估，其中 OpenAI 的價格以 2026 年 7 月為準。實際費用可能有所不同。價格以每 100 萬個 Token 計算，並依模型而異。自訂或自行代管的模型會顯示「N/A」，且不列入費用總計。
+        cost_estimates_description: 費用依各供應商公布的價格預估，最近核實日期為 %{date}。實際費用可能有所不同。價格以每 100 萬個 Token 計算，並依模型而異。自訂或自行代管的模型會顯示「N/A」，且不列入費用總計。
     ai_prompts:
       show:
         page_title: AI 提示詞

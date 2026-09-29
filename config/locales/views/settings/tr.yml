@@ -117,8 +117,7 @@ tr:
         completion: tamamlama
         cost_by_model: Modele Göre Maliyet
         cost_by_operation: İşleme Göre Maliyet
-        cost_estimates_description: Maliyetler, Temmuz 2026 itibarıyla OpenAI fiyatlandırması
-          dahil olmak üzere yayınlanan sağlayıcı fiyatlarına göre tahmin edilir. Gerçek
+        cost_estimates_description: Maliyetler, en son %{date} tarihinde doğrulanan yayınlanmış sağlayıcı fiyatlarına göre tahmin edilir. Gerçek
           maliyetler farklılık gösterebilir. Fiyatlandırma 1 milyon token başınadır
           ve modele göre değişir. Özel veya kendi sunucunuzda barındırılan modeller
           "Yok" olarak gösterilir ve maliyet toplamlarına dahil edilmez.

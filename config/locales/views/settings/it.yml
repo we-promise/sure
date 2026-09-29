@@ -67,7 +67,7 @@ it:
         failed: "Fallita"
         no_usage_data: "Nessun dato di utilizzo trovato per il periodo selezionato"
         cost_estimates_title: "Informazioni sulle stime dei costi"
-        cost_estimates_description: "I costi sono stimati in base ai prezzi di OpenAI del 2025. I costi effettivi possono variare. I prezzi sono per 1 milione di token e variano per modello. I modelli personalizzati o self-hosted mostreranno \"N/A\" e non sono inclusi nei totali dei costi."
+        cost_estimates_description: "I costi sono stimati in base ai prezzi pubblicati dai fornitori, verificati l’ultima volta il %{date}. I costi effettivi possono variare. I prezzi sono per 1 milione di token e variano per modello. I modelli personalizzati o self-hosted mostreranno \"N/A\" e non sono inclusi nei totali dei costi."
     ai_prompts:
       show:
         page_title: Prompt AI
