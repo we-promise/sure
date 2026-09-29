@@ -199,6 +199,10 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
     # Before repair: @simplefin_account is linked (but stale), new_simplefin_account is unlinked
     assert_equal @simplefin_account.id, @account.reload.simplefin_account_id
 
+    # Simulate what SimplefinItem::Importer sets during discovery: the old account_id is
+    # genuinely absent upstream, so the repair is allowed to proceed.
+    @simplefin_item.upstream_account_ids = [ new_simplefin_account.account_id ]
+
     # Process accounts - should repair the stale linkage
     @simplefin_item.process_accounts
 
@@ -260,6 +264,10 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
         { "id" => "TRN-new", "posted" => 1766417520, "amount" => "5.00", "description" => "New" }
       ]
     )
+
+    # Simulate what SimplefinItem::Importer sets during discovery: the old account_id is
+    # genuinely absent upstream, so the repair is allowed to proceed.
+    @simplefin_item.upstream_account_ids = [ new_simplefin_account.account_id ]
 
     @simplefin_item.process_accounts
 

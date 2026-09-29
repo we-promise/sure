@@ -30,7 +30,7 @@ en:
         label: "SimpleFIN Setup Token:"
         placeholder: "Paste your SimpleFIN setup token here..."
         help_text: "The token should be a long string starting with letters and numbers"
-      title: Update SimpleFin Connection
+      title: Update SimpleFIN Connection
       header_subtitle: Get a new setup token to reconnect your SimpleFIN account
       connection_needs_update: "Your SimpleFIN connection needs to be updated:"
       step_1_html: "Visit <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> to create a new setup token"
@@ -39,9 +39,9 @@ en:
       update: Update
       cancel: Cancel
     setup_accounts:
-      title: Set Up Your SimpleFin Accounts
+      title: Set Up Your SimpleFIN Accounts
       header_subtitle: Choose the correct account types for your imported accounts
-      choose_account_type: "Choose the correct account type for each SimpleFin account:"
+      choose_account_type: "Choose the correct account type for each SimpleFIN account:"
       account_type_checking_savings: Checking or Savings
       account_type_checking_savings_desc: Regular bank accounts
       account_type_credit_card: Credit Card
@@ -53,7 +53,7 @@ en:
       account_type_other_asset: Other Asset
       account_type_other_asset_desc: Everything else
       transaction_history_title: "Transaction History:"
-      transaction_history_description_html: "SimpleFin typically provides <strong>60-90 days</strong> of transaction history, depending on your bank. After initial setup, new transactions will sync automatically going forward. Historical data availability varies by institution and account type."
+      transaction_history_description_html: "SimpleFIN typically provides <strong>60-90 days</strong> of transaction history, depending on your bank. After initial setup, new transactions will sync automatically going forward. Historical data availability varies by institution and account type."
       account_type_label: "Account Type:"
       create_accounts: Create Accounts
       creating_accounts: Creating Accounts...
@@ -92,6 +92,24 @@ en:
       stale_accounts_errors:
         one: "%{count} stale account action failed. Check logs for details."
         other: "%{count} stale account actions failed. Check logs for details."
+    sync_status:
+      no_accounts: No accounts found
+      synced:
+        one: "%{count} account synced"
+        other: "%{count} accounts synced"
+      partial_setup:
+        one: "%{linked} synced, %{unlinked} need setup"
+        other: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: No institutions connected
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+    rate_limited:
+      daily_refresh: "You've hit SimpleFIN's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours)."
+    stale_sync:
+      last_successful: "Last successful sync was %{count} days ago. Your SimpleFIN connection may need attention."
+      no_transactions: "No new transactions in %{count} days. Check your SimpleFIN dashboard to ensure your bank connections are active."
     simplefin_item:
       add_new: Add new connection
       confirm_accept: Delete connection
@@ -130,6 +148,7 @@ en:
       link_account: Link account
       no_accounts_found: "No SimpleFIN accounts found for this %{moniker}."
       wait_for_sync: If you just connected or synced, try again after the sync completes.
+      check_provider_health: Check that your SimpleFIN connection is healthy under Settings → Providers.
       unlink_to_move: To move a link, first unlink it from the account’s actions menu.
       all_accounts_already_linked: All SimpleFIN accounts appear to be linked already.
       currently_linked_to: "Currently linked to: %{account_name}"

@@ -1,0 +1,30 @@
+---
+de:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Konto
+        account_last4_hint: Letzte vier Stellen der Kontonummer
+        account_name_hint: Hinweis auf den Kontonamen
+        closing_balance: Schlusssaldo
+        content_sha256: Prüfsumme des Inhalts
+        currency: Währung
+        filename: Dateiname
+        institution_name_hint: Hinweis auf das Institut
+        opening_balance: Anfangssaldo
+        original_file: Auszugsdatei
+        period_end_on: Ende des Zeitraums
+        period_start_on: Beginn des Zeitraums
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: wurde für diese Familie bereits hochgeladen
+            content_sha256:
+              duplicate_statement_file: wurde für diese Familie bereits hochgeladen
+            original_file:
+              invalid_format: muss eine PDF-, CSV- oder XLSX-Datei sein
+              too_large: ist zu groß. Erlaubt sind höchstens %{max_mb} MB
+            period_end_on:
+              on_or_after_start: muss am oder nach dem Beginn des Zeitraums liegen

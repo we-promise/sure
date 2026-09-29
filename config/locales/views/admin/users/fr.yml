@@ -1,11 +1,46 @@
 ---
 fr:
   admin:
+    families:
+      destroy:
+        family_has_active_subscription: Cette famille / ce groupe a un abonnement actif et ne peut pas être supprimé tant que l'abonnement n'est pas résilié.
+        family_has_users: Cette famille / ce groupe compte encore des utilisateurs et ne peut pas être supprimé.
+        success: Famille / groupe supprimé avec succès.
     users:
+      deletion:
+        cancel: Annuler
+        email_label: Adresse e-mail de l'utilisateur
+        instruction: Saisissez %{email} pour confirmer.
+        submit: Supprimer définitivement l'utilisateur
+        title: Supprimer définitivement l'utilisateur
+        warning: Cette action révoque immédiatement l'accès et programme la suppression définitive de l'utilisateur et de ses données. Elle est irréversible.
+      destroy:
+        cannot_remove_last_super_admin: Vous ne pouvez pas supprimer le dernier super administrateur actif.
+        cannot_remove_self: Vous ne pouvez pas supprimer votre propre compte depuis cet écran.
+        confirmation_mismatch: L'adresse e-mail ne correspond pas. L'utilisateur n'a pas été supprimé.
+        failure: Impossible de supprimer l'utilisateur.
+        success: Accès de l'utilisateur révoqué et suppression définitive programmée.
       index:
+        actions:
+          delete_user: Supprimer l'utilisateur
+          last_super_admin_role_locked: Le changement de rôle est bloqué car vous êtes le dernier super administrateur du système.
+          manage_user: Gérer l'utilisateur
+          self_edit_warning: Changer votre propre rôle modifiera vos privilèges d'administration.
+          self_update_confirm: Voulez-vous vraiment modifier le rôle ou la famille de votre propre compte ?
+          update: Mettre à jour l'utilisateur
+        auth_types:
+          local: Local
+          local_and_sso: Local + SSO
+          sso: SSO
+          sso_provider_tooltip: 'Fournisseur SSO : %{providers}'
+        delete_confirm: Voulez-vous vraiment supprimer cet utilisateur ? Cette action est irréversible.
+        delete_confirm_last_user: 'Voulez-vous vraiment supprimer cet utilisateur ? C''est le dernier de sa famille / de son groupe : le supprimer supprimera aussi la famille / le groupe et toutes les données associées. Cette action est irréversible.'
         description: Gérez les rôles des utilisateurs pour votre instance. Les super
           administrateurs peuvent accéder aux paramètres des fournisseurs SSO et à
           la gestion des utilisateurs.
+        family_monikers:
+          family: Famille
+          group: Groupe
         family_summary: "%{members} membres · %{accounts} comptes · %{transactions}
           transactions"
         filters:
@@ -24,6 +59,12 @@ fr:
         no_subscription: Aucun abonnement
         no_users: Aucun utilisateur trouvé.
         not_available: n/a
+        remove: Supprimer l'utilisateur
+        removed_sso_identities:
+          allow_again: Autoriser de nouveau
+          confirm: Autoriser de nouveau %{email} à se connecter ou à créer un compte via SSO ?
+          description: Ces identités ne peuvent ni créer ni reconnecter un compte. N'en autorisez une de nouveau que si la suppression était accidentelle.
+          title: Identités SSO supprimées
         role_descriptions:
           admin: Administrateur familial. Peut accéder aux paramètres avancés comme
             les clés API, les importations et les prompts IA.
@@ -44,18 +85,44 @@ fr:
         summary:
           trials_expiring_7_days: Essais expirant dans les 7 prochains jours
         table:
+          actions: Actions
+          create_new_family_option: "+ Créer une famille / un groupe"
+          family: Famille / groupe
           family_accounts: Comptes de la famille
           family_transactions: Transactions de la famille
+          keep_current_family: Conserver la famille / le groupe actuel
           last_login: Dernière connexion
           never: Jamais
+          new_family_moniker: Type de la nouvelle famille / du nouveau groupe
+          new_family_name: Nom de la nouvelle famille / du nouveau groupe
+          new_family_name_placeholder: Saisissez un nom pour créer une famille / un groupe
+          password_placeholder: Laissez vide pour conserver l'actuel
           role: Rôle
           session_count: Nombre de sessions
+          set_password: Définir un nouveau mot de passe
           trial_ends_at: Fin de l'essai
           user: Utilisateur
         title: Gestion des utilisateurs
         trial_ends_at: Fin de l'essai
         unnamed_family: Famille/Groupe sans nom
+        unused_families:
+          delete: Supprimer la famille inutilisée
+          delete_confirm: Voulez-vous vraiment supprimer cette famille / ce groupe inutilisé ? Cette action est irréversible.
+          empty: Aucune famille / aucun groupe inutilisé n'a été trouvé.
+          family_id: 'Identifiant de la famille : %{id}'
+          title: Familles / groupes inutilisés
         you: "(Vous)"
       update:
         failure: Échec de la mise à jour du rôle de l'utilisateur.
+        family_required: Sélectionnez une famille / un groupe existant ou saisissez un nom pour en créer un.
+        last_super_admin_error: Impossible de rétrograder le dernier super administrateur du système.
+        password_and_family_conflict: Le mot de passe et l'appartenance à une famille / un groupe ne peuvent pas être modifiés en même temps.
+        password_missing_case: Le mot de passe doit contenir des majuscules et des minuscules.
+        password_missing_number: Le mot de passe doit contenir au moins un chiffre.
+        password_missing_special: Le mot de passe doit contenir au moins un caractère spécial.
+        password_too_short: Le mot de passe doit comporter au moins 8 caractères.
         success: Rôle de l'utilisateur mis à jour avec succès.
+        success_family: Appartenance de l'utilisateur à une famille / un groupe mise à jour avec succès.
+        success_password: Mot de passe de l'utilisateur mis à jour avec succès.
+        success_role: Rôle de l'utilisateur mis à jour avec succès.
+        success_role_and_password: Rôle et mot de passe de l'utilisateur mis à jour avec succès.

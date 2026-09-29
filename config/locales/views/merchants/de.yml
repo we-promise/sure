@@ -18,11 +18,11 @@ de:
       new: Neuer Händler
       merge: Händler zusammenführen
       title: Händler
-      family_title: Händler der Familie
-      family_empty: Noch keine Händler der Familie vorhanden
+      family_title: Händler deiner %{moniker}
+      family_empty: Noch keine Händler der %{moniker} vorhanden
       provider_title: Anbieter-Händler
-      provider_empty: Noch keine Anbieter-Händler mit dieser Familie verbunden
-      provider_read_only: Anbieter-Händler werden von deinen verbundenen Institutionen synchronisiert. Sie können hier nicht bearbeitet werden.
+      provider_empty: Noch keine Anbieter-Händler mit dieser %{moniker} verbunden
+      provider_read_only: Anbieter-Händler werden von deinen verbundenen Instituten synchronisiert. Sie lassen sich hier nicht bearbeiten.
       provider_info: Diese Händler wurden automatisch von deinen Bankverbindungen oder der KI erkannt. Du kannst sie bearbeiten, um deine eigene Kopie zu erstellen, oder sie entfernen, um sie von deinen Transaktionen zu trennen.
       unlinked_title: Kürzlich getrennt
       unlinked_info: Diese Händler wurden kürzlich von deinen Transaktionen entfernt. Sie verschwinden nach 30 Tagen aus dieser Liste, sofern sie nicht erneut einer Transaktion zugewiesen werden.
@@ -30,6 +30,16 @@ de:
         merchant: Händler
         actions: Aktionen
         source: Quelle
+      enhance_button: Mit KI ergänzen
+      enhance_info:
+        one: Bei %{count} Anbieter-Händler fehlt die Website. Lass die KI Websites erkennen, Logos anzeigen und Duplikate zusammenführen.
+        other: Bei %{count} Anbieter-Händlern fehlt die Website. Lass die KI Websites erkennen, Logos anzeigen und Duplikate zusammenführen.
+      import: Händler importieren
+      no_family_merchants_found: Keine passenden eigenen Händler gefunden
+      no_provider_merchants_found: Keine passenden Anbieter-Händler gefunden
+      per_page: pro Seite
+      search_family_merchants: Eigene Händler suchen …
+      search_provider_merchants: Anbieter-Händler suchen …
     merchant:
       confirm_accept: Händler löschen
       confirm_body: Bist du sicher, dass du diesen Händler löschen möchtest? Das Entfernen dieses Händlers
@@ -45,10 +55,14 @@ de:
       sources_label: Händler zum Zusammenführen
       sources_hint: Die ausgewählten Händler werden in den Zielhändler zusammengeführt. Familienhändler werden gelöscht, Anbieter-Händler werden getrennt.
       submit: Ausgewählte zusammenführen
+      no_merchants_found: Keine passenden Händler gefunden
+      sources_search_placeholder: Händler suchen …
     new:
       title: Neuer Händler
     perform_merge:
-      success: "%{count} Händler erfolgreich zusammengeführt"
+      success:
+        one: "%{count} Händler zusammengeführt"
+        other: "%{count} Händler zusammengeführt"
       no_merchants_selected: Keine Händler zum Zusammenführen ausgewählt
       target_not_found: Zielhändler nicht gefunden
       invalid_merchants: Ungültige Händler ausgewählt
@@ -60,3 +74,9 @@ de:
     update:
       success: Händler erfolgreich aktualisiert
       converted_success: Händler umgewandelt und erfolgreich aktualisiert
+    enhance:
+      already_running: Die Ergänzung läuft bereits. Warte, bis sie fertig ist.
+      success: Die Ergänzung der Anbieter-Händler läuft. Händler werden gleich ergänzt und Duplikate zusammengeführt.
+    family_merchant:
+      delete: Löschen
+      edit: Bearbeiten

@@ -41,10 +41,12 @@ module ExchangeRate::Provided
         ) do |exchange_rate|
           exchange_rate.rate = rate.rate
         end if cache
-      rescue ActiveRecord::RecordNotUnique
-        # Race condition: another process inserted between our SELECT and INSERT
-        # Retry by finding the existing record
-        ExchangeRate.find_by!(
+      rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+        # Race condition: another process inserted between our SELECT and INSERT.
+        # RecordNotUnique = DB unique constraint; RecordInvalid = model uniqueness
+        # validation fired before the DB got a chance to reject it. Both are safe
+        # to handle by reading back the record that the other process just saved.
+        return ExchangeRate.find_by!(
           from_currency: rate.from,
           to_currency: rate.to,
           date: rate.date

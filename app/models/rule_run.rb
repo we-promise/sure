@@ -34,13 +34,53 @@ class RuleRun < ApplicationRecord
   # Thread-safe method to complete a job and update the run
   def complete_job!(modified_count: 0)
     with_lock do
-      increment!(:transactions_modified, modified_count)
-      decrement!(:pending_jobs_count)
+      self.transactions_modified += modified_count
+      self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
 
-      # If all jobs are done, mark as success
-      if pending_jobs_count <= 0
-        update!(status: "success")
-      end
+      # Preserve a previously recorded failure while still draining pending jobs.
+      self.status = "success" if pending_jobs_count <= 0 && !failed?
+
+      save!
     end
   end
+
+  def fail_job!(error:, source:, transaction_ids: [])
+    should_log = false
+    current_error_message = "#{error.class}: #{error.message}"
+
+    with_lock do
+      should_log = !failed?
+
+      self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
+      self.status = "failed"
+      existing_error_messages = error_message.to_s.split("\n").reject(&:blank?)
+      self.error_message = (existing_error_messages + [ current_error_message ]).uniq.join("\n")
+
+      save!
+    end
+
+    capture_failure_debug_log(error:, source:, transaction_ids:) if should_log
+  end
+
+  private
+    def capture_failure_debug_log(error:, source:, transaction_ids:)
+      DebugLogEntry.capture(
+        category: "rule_run",
+        level: "error",
+        message: "Rule run failed: #{error.class}: #{error.message}",
+        source: source,
+        family: rule.family,
+        metadata: {
+          rule_run_id: id,
+          rule_id: rule_id,
+          rule_name: rule_name,
+          execution_type: execution_type,
+          error_class: error.class.name,
+          error_message: error.message,
+          transaction_count: transaction_ids.size,
+          transaction_ids: transaction_ids,
+          backtrace: Array(error.backtrace).first(10)
+        }
+      )
+    end
 end

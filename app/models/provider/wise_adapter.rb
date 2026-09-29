@@ -30,7 +30,7 @@ class Provider::WiseAdapter < Provider::Base
     item = resolve_wise_item(family, wise_item_id)
     return nil unless item&.credentials_configured?
 
-    Provider::Wise.new(item.token.to_s.strip, base_url: Rails.configuration.x.wise.base_url)
+    Provider::Wise.new(item.token.to_s.strip, base_url: Rails.configuration.x.wise.base_url, sca_private_key: item.sca_private_key)
   end
 
   def sync_path

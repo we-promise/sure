@@ -3,8 +3,8 @@ ro:
     attributes:
       user:
         email: Email
-        family: Familie
-        family_id: Familie
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         first_name: Prenume
         last_name: Nume de familie
         password: Parolă

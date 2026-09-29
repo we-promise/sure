@@ -14,33 +14,45 @@ class InsightTest < ActiveSupport::TestCase
     assert @insight.read_at.present?
   end
 
-  test "mark_read! does not touch dismissed insights" do
-    @insight.dismiss!
+  test "mark_read! does not touch acknowledged insights" do
+    @insight.acknowledge!
 
     @insight.mark_read!
 
-    assert @insight.reload.dismissed?
+    assert @insight.reload.acknowledged?
     assert_nil @insight.read_at
   end
 
-  test "dismiss! removes insight from visible scope" do
+  test "acknowledge! removes insight from visible scope" do
     assert_includes Insight.visible, @insight
 
-    @insight.dismiss!
+    @insight.acknowledge!
 
     assert_not_includes Insight.visible, @insight
     assert @insight.dismissed_at.present?
   end
 
-  test "undismiss! restores a dismissed insight as read, not new" do
-    @insight.dismiss!
+  test "unacknowledge! restores an acknowledged insight as read, not new" do
+    @insight.acknowledge!
 
-    @insight.undismiss!
+    @insight.unacknowledge!
 
     assert @insight.reload.read?
     assert_nil @insight.dismissed_at
     assert @insight.read_at.present?
     assert_includes Insight.visible, @insight
+  end
+
+  # A stale/replayed undo (e.g. an old toast link clicked after the insight
+  # has since expired or resurrected) must not force a non-acknowledged
+  # insight back to :read — that would wrongly pull an :expired insight back
+  # into view.
+  test "unacknowledge! is a no-op on an insight that isn't acknowledged" do
+    @insight.update!(status: :expired)
+
+    @insight.unacknowledge!
+
+    assert @insight.reload.expired?
   end
 
   test "duplicate dedup_key within a family is rejected" do

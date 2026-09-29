@@ -45,6 +45,7 @@ class SnaptradeItem::Syncer
     end
 
     # Mark sync health
+    snaptrade_item.update!(status: :good) if snaptrade_item.requires_update?
     collect_health_stats(sync, errors: nil)
   rescue Provider::Snaptrade::AuthenticationError => e
     snaptrade_item.update!(status: :requires_update)

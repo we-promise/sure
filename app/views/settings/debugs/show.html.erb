@@ -50,53 +50,44 @@
     <% end %>
   <% end %>
 
-  <div class="bg-container rounded-xl shadow-border-xs overflow-hidden">
+  <%# Seven columns of long-form diagnostics stay cramped however wide the
+      settings page gets, so the whole table can be reopened in a near
+      full-width dialog — same pattern as the dashboard cashflow chart. %>
+  <div class="bg-container rounded-xl shadow-border-xs overflow-hidden group" data-controller="expandable">
     <% if @debug_log_entries.any? %>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-surface border-b border-primary">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.time") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.level") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.category") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.source") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.message") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.context") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.metadata") %></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
-            <% @debug_log_entries.each do |entry| %>
-              <tr>
-                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= l(entry.created_at, format: :long) %></td>
-                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= entry.level %></td>
-                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= entry.category %></td>
-                <td class="px-4 py-3 text-sm text-primary font-mono"><%= entry.source %></td>
-                <td class="px-4 py-3 text-sm text-primary"><%= entry.message %></td>
-                <td class="px-4 py-3 text-xs text-secondary font-mono whitespace-nowrap align-top">
-                  <div><%= t(".context.provider", value: entry.provider_key.presence || t(".missing_value")) %></div>
-                  <div><%= t(".context.family", value: entry.family_id || t(".missing_value")) %></div>
-                  <div><%= t(".context.account", value: entry.account_id || t(".missing_value")) %></div>
-                  <div><%= t(".context.user", value: entry.user_id || t(".missing_value")) %></div>
-                  <div><%= t(".context.account_provider", value: entry.account_provider_id || t(".missing_value")) %></div>
-                </td>
-                <td class="px-4 py-3 text-xs text-secondary align-top">
-                  <% if entry.metadata.present? %>
-                    <%= render DS::Disclosure.new(variant: :inline) do |disclosure| %>
-                      <% disclosure.with_summary_content do %>
-                        <span class="text-xs text-secondary"><%= t(".table.view_metadata") %></span>
-                      <% end %>
-                      <pre class="whitespace-pre-wrap break-words"><%= JSON.pretty_generate(entry.metadata) %></pre>
-                    <% end %>
-                  <% else %>
-                    <%= t(".missing_value") %>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
+      <%# Never hover-only: pointer hover, keyboard focus, and always shown on
+          coarse pointers, where there is no hover to reveal it. Viewport width
+          is the wrong proxy for that — a large tablet is touch-only well past
+          `lg`. Same shape as the dashboard insights feed's row controls. %>
+      <div class="flex items-center justify-end px-4 py-2 border-b border-primary">
+        <%= render DS::Button.new(
+              variant: "icon",
+              size: :sm,
+              icon: "maximize-2",
+              title: t("global.expand"),
+              aria_label: t("global.expand"),
+              class: "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity",
+              data: { action: "click->expandable#open" }
+            ) %>
       </div>
+
+      <div class="overflow-x-auto">
+        <%= render "settings/debugs/log_table", entries: @debug_log_entries %>
+      </div>
+
+      <%= render DS::Dialog.new(
+            auto_open: false,
+            disable_frame: true,
+            width: "expanded",
+            data: { expandable_target: "dialog" }
+          ) do |dialog| %>
+        <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle")) %>
+        <% dialog.with_body do %>
+          <div class="max-h-[75dvh] overflow-auto overscroll-contain">
+            <%= render "settings/debugs/log_table", entries: @debug_log_entries %>
+          </div>
+        <% end %>
+      <% end %>
     <% else %>
       <div class="p-8 text-center text-secondary"><%= t(".empty") %></div>
     <% end %>

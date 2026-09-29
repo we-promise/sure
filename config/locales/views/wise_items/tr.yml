@@ -5,8 +5,8 @@ tr:
       asset_fee: Wise Assets ücreti
       default_name: Wise etkinliği
       interest: Wise faizi
-      jar_deposit: Jar'a transfer
-      jar_withdrawal: Jar'dan transfer
+      jar_deposit: Kumbaraya transfer
+      jar_withdrawal: Kumbaradan transfer
       transfer_from_jar: "%{jar} kaynağından transfer"
       transfer_to_jar: "%{jar} hedefine transfer"
     complete_account_setup:
@@ -53,6 +53,10 @@ tr:
       connect: Wise'ı Bağla
       connection_name_label: Bağlantı adı
       connection_name_placeholder: Wise Bireysel
+      sync_start_date_label: İşlemleri şu tarihten itibaren içe aktar
+      sync_start_date_help: Wise hesap özetleri bu tarihten itibaren içe aktarılır. Varsayılanı bırakırsanız bir yıla kadar geçmiş yüklenir.
+      import_all_history_label: Tüm işlem geçmişini içe aktar
+      import_all_history_help: Yalnızca son bir yıl yerine tüm geçmiş Wise hesap özetlerini getirir.
       disconnect: Bağlantıyı kes
       disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?
         Bu, tüm eşitlenmiş hesap verilerini kaldıracaktır."
@@ -65,7 +69,7 @@ tr:
         copy_token_html: Token'ı kopyalayın ve aşağıya yapıştırın. Sure bunu yalnızca
           bakiyelerinizi ve işlemlerinizi eşitlemek için kullanır.
         create_token: Salt okunur erişimle yeni bir kişisel API token'ı oluşturun
-        open_tokens: Ayarlar → API token'ları bölümüne gidin
+        open_tokens: Settings → Connect and manage apps → Developer tools → API tokens bölümüne gidin
         sign_in_html: "%{link} adresini ziyaret edin ve hesabınıza giriş yapın"
       keep_token_placeholder: Mevcut token'ı korumak için boş bırakın
       not_configured: Yapılandırılmamış
@@ -77,6 +81,16 @@ tr:
       token_label: API token'ı
       token_placeholder: Wise kişisel API token'ınızı yapıştırın
       update_connection: Bağlantıyı güncelle
+      sca:
+        title: Güçlü Müşteri Kimlik Doğrulaması (SCA)
+        description: Wise, gelen ödemeler dahil tüm hesap özetlerini okumak için imzalı bir tek kullanımlık token doğrulaması ister. Bunu etkinleştirmek için burada bir anahtar çifti oluşturun ve açık anahtarı Wise'a kaydedin.
+        public_key_label: Açık anahtar (PEM)
+        registered_help_html: 'Bu anahtarı Wise''a kaydedin: Settings → Connect and manage apps → Developer tools → Public keys → Add public key.'
+        copy: Kopyala
+        copied: Kopyalandı!
+        generate: Anahtar çifti oluştur
+        regenerate: Anahtar çiftini yeniden oluştur
+        regenerate_confirm: Bu işlem yeni bir anahtar çifti oluşturur. Wise, önceki açık anahtarı siz Wise hesabınızdan kaldırana kadar kabul etmeye devam eder — Sure bu anahtarı uzaktan iptal edemez. Hesap özetlerinin yeniden eşitlenebilmesi için yeni açık anahtarı Wise'a kaydetmeniz gerekir. Devam edilsin mi?
     select_accounts:
       cancel: İptal
       description: "%{product_name} hesabınıza bağlamak istediğiniz Wise para birimi
@@ -161,3 +175,6 @@ tr:
       status_never: Hiç eşitlenmedi
       status_with_summary: Son eşitleme %{timestamp} önce — %{summary}
       syncing: Eşitleniyor...
+    generate_sca_keypair:
+      success: Yeni SCA anahtar çifti oluşturuldu. Etkinleştirmeyi tamamlamak için açık anahtarı Wise'a kaydedin.
+      failed: Yeni SCA anahtar çifti oluşturulamadı. Lütfen tekrar deneyin.

@@ -40,6 +40,271 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal "+$110.00", component.converted_balance_display
   end
 
+  # A loan with a schedule takes the loan balance chart; every other
+  # account keeps the chart it always had. Asserted on the mounted controller,
+  # because "unchanged for everyone else" is the blast-radius promise this
+  # branch makes.
+  test "a loan account with a chart payload mounts the loan balance chart and nothing else" do
+    loan_account = accounts(:loan)
+    payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
+    assert_not_nil payload, "the loan fixture must have a schedule, or this test asserts nothing"
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: payload))
+
+    assert_selector "[data-controller='loan-payoff-chart']"
+    assert_no_selector "[data-controller='time-series-chart']"
+    assert_no_selector "table", visible: :all
+    assert_selector "p.sr-only", text: payload[:aria_description], visible: :all
+  end
+
+  test "a non-loan account mounts the time-series chart and no loan chart" do
+    render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
+
+    assert_no_selector "[data-controller='loan-payoff-chart']"
+  end
+
+  # The balance a loan's chart plots is what is still owed, and the title says
+  # so without "principal". Only the loan chart: a loan without a schedule
+  # keeps the title every loan had.
+  test "a loan account's chart is titled remaining balance only when it has the loan chart" do
+    loan_account = accounts(:loan)
+    payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
+    assert_not_nil payload, "the loan fixture must have a schedule, or this test asserts nothing"
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: payload))
+    assert_selector "p", exact_text: "Remaining balance"
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: nil))
+    assert_selector "p", exact_text: "Remaining principal balance"
+  end
+
+  test "a loan without a chart payload falls back to the chart every account has" do
+    loan_account = accounts(:loan)
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: nil))
+
+    assert_no_selector "[data-controller='loan-payoff-chart']"
+    assert_selector "[data-controller='time-series-chart']", count: 1
+  end
+
+  # Degradation matrix: the legend promises only the lines
+  # the payload says are drawn. Under a period that ends today the forward
+  # lines have no room, and a legend entry for a line that is not there is a
+  # chart lying about itself.
+  test "the legend lists only the series the payload marks visible" do
+    loan_account = accounts(:loan)
+    payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
+    assert_not_nil payload, "the loan fixture must have a schedule, or this test asserts nothing"
+    windowed = payload.merge(visible: %w[actual scheduled])
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: windowed))
+
+    legend = "ul[aria-label='#{I18n.t("UI.account.chart.loan.legend")}'] li"
+    assert_selector legend, count: 2
+    assert_selector legend, text: payload[:labels][:actual]
+    assert_selector legend, text: payload[:labels][:scheduled]
+    assert_no_selector legend, text: payload[:labels][:projected]
+  end
+
+  # A projection that ran but never clears the balance has a line and no
+  # payoff date. The cards would quote a date that does not exist; the notice
+  # says why there is none instead.
+  test "a projection with no payoff date shows the not-converged notice in place of the cards" do
+    loan_account = accounts(:loan)
+    payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
+    assert_not_nil payload, "the loan fixture must have a schedule, or this test asserts nothing"
+    assert payload[:projected].any?, "the fixture loan must project, or this asserts nothing"
+    stalled = payload.merge(projected_payoff_date: nil, months_saved: nil, interest_saved: nil, balloon: 12_345.67)
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: stalled))
+
+    # The notice quotes the balloon, so the page says how far behind rather
+    # than only that it is.
+    assert_text I18n.t("UI.account.chart.loan.not_converged", balloon: Money.new(12_345.67, "USD").format)
+    # The card title; the accessible description also says "projected payoff",
+    # and must, so the text alone would not tell the two apart.
+    assert_no_selector "h4", text: I18n.t("UI.account.chart.loan.projected_payoff")
+    assert_selector "[data-controller='loan-payoff-chart']"
+  end
+
+  # The cards compare today's recorded balance with the schedule's balance on
+  # the same day, and a payment posted before its scheduled date reads as
+  # ahead until that date. The basis is stated beside the figures it governs.
+  test "the projection cards state the basis of their comparison" do
+    loan_account = accounts(:loan)
+    payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
+    assert_not_nil payload, "the loan fixture must have a schedule, or this test asserts nothing"
+    assert_not_nil payload[:projected_payoff_date], "the fixture loan must project a payoff, or this asserts nothing"
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: payload))
+
+    assert_text I18n.t("UI.account.chart.loan.projection_basis")
+  end
+
+  # jjmata on we-promise/sure#3474: the trend, its comparison label and the
+  # chart mount all read the series. It is built once per render, not once per
+  # reader.
+  test "the card builds its balance series once per render" do
+    loan_account = accounts(:loan)
+    series = loan_account.balance_series(period: Period.last_30_days, view: "balance")
+    loan_account.expects(:balance_series).once.returns(series)
+
+    render_inline(UI::Account::Chart.new(account: loan_account))
+  end
+
+  # A loan's picker offers a subset of the shared periods, under their own
+  # labels, so a pick stays the user's default everywhere and means the same
+  # dates it does on every other chart. A saved period the loan chart does not
+  # offer reads as All.
+  test "a loan's period picker offers a subset of the shared periods" do
+    loan_account = accounts(:loan)
+    payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
+    assert_not_nil payload, "the loan fixture must have a schedule, or this test asserts nothing"
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: payload, period: Period.from_key("last_5_years")))
+
+    %w[current_month last_90_days current_year last_365_days last_5_years last_10_years all_time].each do |key|
+      # The label's own span: the link also holds the menu's check-mark slot.
+      assert_selector "a[href*='period=#{key}'] span", exact_text: Period.from_key(key).label_short, visible: :all
+    end
+    assert_no_selector "a[href*='period=last_30_days']", visible: :all
+    assert_selector "button", text: "5Y"
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: payload, period: Period.from_key("last_30_days")))
+    assert_selector "button", text: "All"
+  end
+
+  test "a loan's change line compares with the original loan amount" do
+    loan_account = accounts(:loan)
+    payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
+    assert_not_nil payload, "the loan fixture must have a schedule, or this test asserts nothing"
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: payload, period: Period.from_key("last_5_years")))
+
+    assert_text I18n.t("UI.account.chart.loan.since_start")
+    assert_no_text Period.from_key("last_5_years").comparison_label
+  end
+
+  test "scopes all_time period to account history_start_date when history postdates family oldest entry date" do
+    account_opening = 60.days.ago.to_date
+    @account.stubs(:history_start_date).returns(account_opening)
+
+    family_oldest = 5.years.ago.to_date
+    all_time_period = Period.new(key: "all_time", start_date: family_oldest, end_date: Date.current)
+
+    component = UI::Account::Chart.new(account: @account, period: all_time_period)
+
+    assert_equal "all_time", component.period.key
+    assert_equal account_opening, component.period.start_date
+    assert_equal Date.current, component.period.end_date
+    assert_equal "1 day", component.period.interval
+  end
+
+  test "does not clamp non-all_time periods even if account opening postdates period start" do
+    account_opening = 10.days.ago.to_date
+    @account.stubs(:history_start_date).returns(account_opening)
+
+    last_30_days = Period.from_key("last_30_days")
+    component = UI::Account::Chart.new(account: @account, period: last_30_days)
+
+    assert_equal "last_30_days", component.period.key
+    assert_equal 30.days.ago.to_date, component.period.start_date
+  end
+
+  test "unlinked account with trade 2 years ago clamps all_time to 2 years with 1 week interval" do
+    two_years_ago = 2.years.ago.to_date
+    @account.stubs(:history_start_date).returns(two_years_ago)
+
+    family_oldest = 10.years.ago.to_date
+    all_time_period = Period.new(key: "all_time", start_date: family_oldest, end_date: Date.current)
+
+    component = UI::Account::Chart.new(account: @account, period: all_time_period)
+
+    assert_equal "all_time", component.period.key
+    assert_equal two_years_ago, component.period.start_date
+    assert_equal "1 week", component.period.interval
+  end
+
+  test "unlinked account with trade 10 years ago clamps all_time to 10 years with 1 month interval" do
+    ten_years_ago = 10.years.ago.to_date
+    @account.stubs(:history_start_date).returns(ten_years_ago)
+
+    family_oldest = 15.years.ago.to_date
+    all_time_period = Period.new(key: "all_time", start_date: family_oldest, end_date: Date.current)
+
+    component = UI::Account::Chart.new(account: @account, period: all_time_period)
+
+    assert_equal "all_time", component.period.key
+    assert_equal ten_years_ago, component.period.start_date
+    assert_equal "1 month", component.period.interval
+  end
+
+  test "unlinked account on 5Y period does not clamp period and shows full timeframe comparison" do
+    two_years_ago = 2.years.ago.to_date
+    @account.stubs(:history_start_date).returns(two_years_ago)
+
+    last_5_years = Period.from_key("last_5_years")
+    component = UI::Account::Chart.new(account: @account, period: last_5_years)
+
+    assert_equal "last_5_years", component.period.key
+    assert_equal 5.years.ago.to_date, component.period.start_date
+    assert_equal "1 week", component.period.interval
+
+    last_10_years = Period.from_key("last_10_years")
+    ten_year_component = UI::Account::Chart.new(account: @account, period: last_10_years)
+    assert_equal "last_10_years", ten_year_component.period.key
+    assert_equal 10.years.ago.to_date, ten_year_component.period.start_date
+    assert_equal "1 month", ten_year_component.period.interval
+
+    # When series covers full period (unlinked account showing 0 baseline)
+    mock_series = Series.new(
+      start_date: 5.years.ago.to_date,
+      end_date: Date.current,
+      interval: "1 month",
+      values: [
+        Series::Value.new(date: 5.years.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(100, "USD"))
+      ],
+      favorable_direction: @account.favorable_direction
+    )
+    component.stubs(:series).returns(mock_series)
+    assert_equal "vs. 5 years ago", component.comparison_label
+  end
+
+  test "linked account on 5Y period with trimmed history shows vs available history comparison" do
+    two_years_ago = 2.years.ago.to_date
+    @account.stubs(:history_start_date).returns(two_years_ago)
+
+    last_5_years = Period.from_key("last_5_years")
+    component = UI::Account::Chart.new(account: @account, period: last_5_years)
+
+    # Series normalized to 2 years ago (trimmed from 5 years ago)
+    mock_series = Series.new(
+      start_date: two_years_ago,
+      end_date: Date.current,
+      interval: "1 month",
+      values: [
+        Series::Value.new(date: two_years_ago, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(100, "USD"))
+      ],
+      favorable_direction: @account.favorable_direction
+    )
+    component.stubs(:series).returns(mock_series)
+    assert_equal I18n.t("UI.account.chart.vs_available_history"), component.comparison_label
+  end
+
+  test "empty account with nil history_start_date leaves all_time period unchanged" do
+    @account.stubs(:history_start_date).returns(nil)
+
+    family_oldest = 5.years.ago.to_date
+    all_time_period = Period.new(key: "all_time", start_date: family_oldest, end_date: Date.current)
+
+    component = UI::Account::Chart.new(account: @account, period: all_time_period)
+
+    assert_equal "all_time", component.period.key
+    assert_equal family_oldest, component.period.start_date
+  end
+
   private
     # 10 shares at $100 market price; gain = 1000 - cost_basis * 10
     def create_holding(cost_basis:)

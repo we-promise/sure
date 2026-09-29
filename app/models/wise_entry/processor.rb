@@ -150,8 +150,15 @@ class WiseEntry::Processor
       raise ArgumentError, "Wise transfer missing created date" unless raw
 
       case raw
-      when Date   then raw
-      when String then DateTime.parse(raw).to_date
+      when String
+        if raw.include?("T") || raw.include?(":")
+          Time.parse(raw).in_time_zone(account&.family&.timezone).to_date
+        else
+          Date.parse(raw)
+        end
+      when Time, DateTime
+        raw.in_time_zone(account&.family&.timezone).to_date
+      when Date then raw
       else raise ArgumentError, "Invalid date format: #{raw.inspect}"
       end
     rescue ArgumentError
@@ -162,6 +169,7 @@ class WiseEntry::Processor
 
     def extra
       {
+        exchange_rate: exchange_rate,
         wise: {
           transfer_id: transfer_id,
           status: data[:status],
@@ -174,6 +182,19 @@ class WiseEntry::Processor
           fee: fee > 0 ? fee : nil,
           reference: data.dig(:details, :reference).presence || data[:reference]
         }.compact
-      }
+      }.compact
+    end
+
+    # Wise reports the rate actually applied to the transfer (target units per
+    # source unit). Balance calculators read Transaction#exchange_rate
+    # (extra["exchange_rate"]) as a custom rate, so cross-currency transfers
+    # routed to an account in the target currency can be converted without a
+    # historical rate from the global exchange_rates table.
+    def exchange_rate
+      rate = data[:rate].presence
+      return nil if rate.blank?
+
+      parsed = rate.to_d
+      parsed.positive? ? parsed : nil
     end
 end

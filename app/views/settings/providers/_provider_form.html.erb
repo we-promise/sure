@@ -1,6 +1,7 @@
 <%
   # Parameters:
   # - configuration: Provider::Configurable::Configuration object
+  # - provider_setup_encryption_warning: whether to warn before saving credentials
   provider_key = configuration.provider_key.to_s
 
   setup_steps_data =
@@ -16,6 +17,14 @@
 %>
 
 <div class="space-y-4">
+  <% if local_assigns[:provider_setup_encryption_warning] %>
+    <%= render DS::Alert.new(
+          variant: :warning,
+          title: t("settings.providers.provider_setup_encryption_warning.title"),
+          message: t("settings.providers.provider_setup_encryption_warning.message")
+        ) %>
+  <% end %>
+
   <% if setup_steps_data %>
     <%= render "settings/providers/setup_steps", steps: setup_steps_data %>
   <% elsif configuration.provider_description.present? %>
@@ -66,5 +75,11 @@
         <%= form.submit t(".save_and_connect") %>
       </div>
     </div>
+  <% end %>
+
+  <% if local_assigns[:provider_setup_encryption_warning] %>
+    <p class="text-xs text-secondary pt-3 border-t border-tertiary">
+      <%= t("settings.providers.drawer_trust_statement_encryption_unconfigured") %>
+    </p>
   <% end %>
 </div>

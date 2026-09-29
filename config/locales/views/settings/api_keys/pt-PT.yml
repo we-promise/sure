@@ -1,0 +1,77 @@
+---
+pt-PT:
+  settings:
+    api_keys_controller:
+      success: "A sua chave de API foi criada com sucesso"
+      revoked_successfully: "A chave de API foi revogada com sucesso"
+      revoke_failed: "Falha ao revogar a chave de API"
+    api_keys:
+      create:
+        success: "A sua chave de API foi criada com sucesso"
+      destroy:
+        revoked_successfully: "A chave de API foi revogada com sucesso"
+        revoke_failed: "Falha ao revogar a chave de API"
+      shared:
+        active: "Ativa"
+        created_ago: "Criada há %{time}"
+        last_used_ago: "Utilizada pela última vez há %{time}"
+        never_used: "Nunca utilizada"
+        scope_read_only: "Apenas Leitura"
+        scope_read_write: "Leitura/Escrita"
+      index:
+        title: "Chaves de API"
+        subtitle: "Gira as chaves de API para acesso programático aos seus dados."
+        new_key: "Nova Chave de API"
+        empty_heading: "Ainda sem chaves de API"
+        empty_description: "Crie uma chave de API para aceder aos seus dados programaticamente."
+        revoke_key: "Revogar"
+        revoke_confirmation: "Tem a certeza de que pretende revogar \"%{name}\"? Isto desativará imediatamente qualquer aplicação que utilize esta chave."
+      key_reveal:
+        copied: "Copiado!"
+      show:
+        title: "Gestão de Chave de API"
+        newly_created:
+          page_title: "Chave de API Criada com Sucesso"
+          heading: "Chave de API Criada com Sucesso!"
+          key_ready: "A sua nova chave de API \"%{name}\" foi criada e está pronta a utilizar."
+          your_api_key: "A Sua Chave de API"
+          copy_store_securely: "Copie e guarde esta chave em segurança. Vai precisar dela para autenticar os seus pedidos de API."
+          copy_api_key: "Copiar Chave de API"
+          how_to_use: "Como utilizar a sua chave de API"
+          continue: "Continuar para as Definições de Chave de API"
+        current_api_key:
+          title: "A Sua Chave de API"
+          permissions: "Permissões"
+          copy_api_key: "Copiar Chave de API"
+          copy_store_securely: "Copie e guarde esta chave em segurança. Vai precisar dela para autenticar os seus pedidos de API."
+          usage_instructions_title: "Como utilizar a sua chave de API"
+          usage_instructions: "Inclua a sua chave de API no cabeçalho X-Api-Key ao efetuar pedidos à API do %{product_name}:"
+          back_to_keys: "Voltar às Chaves de API"
+          revoke_key: "Revogar Chave"
+          revoke_confirmation: "Tem a certeza de que pretende revogar esta chave de API? Esta ação é irreversível e desativará imediatamente todas as aplicações que utilizam esta chave."
+      new:
+        title: "Criar Chave de API"
+        create_new_api_key: "Criar Nova Chave de API"
+        subtitle: "Gere uma nova chave de API para aceder aos seus dados do Sure programaticamente."
+        description: "Configure a sua nova chave de API com uma designação descritiva e permissões adequadas."
+        name_label: "Designação da Chave de API"
+        name_placeholder: "ex.: A Minha Aplicação de Orçamento, Gestor de Carteira"
+        name_help_text: "Escolha uma designação descritiva para o ajudar a identificar esta chave mais tarde."
+        name_help: "Escolha uma designação descritiva para o ajudar a identificar a finalidade desta chave."
+        permissions_label: "Permissões"
+        permissions_help: "Selecione as permissões que esta chave de API deve ter:"
+        scope_read_only: "Apenas Leitura"
+        scope_read_only_description: "Ver as suas contas, transações e saldos"
+        scope_read_write: "Leitura/Escrita"
+        scope_read_write_description: "Ver os seus dados e criar novas transações"
+        scope_details:
+          read_accounts: "Ver informações das contas, saldos e dados ao nível da conta"
+          read_transactions: "Ver dados de transações, categorias e detalhes das transações"
+          read_balances: "Ver dados históricos de saldos e tendências de valor das contas"
+          write_transactions: "Criar e atualizar registos de transações (em breve)"
+        security_warning_title: "Aviso de Segurança"
+        security_warning_body: "A sua chave de API será apresentada apenas uma vez após a criação. Certifique-se de a copiar e guardar em segurança. Qualquer pessoa com acesso a esta chave pode aceder aos seus dados de acordo com as permissões selecionadas."
+        security_warning: "A sua chave de API será apresentada apenas uma vez após a criação. Guarde-a em segurança e nunca a partilhe publicamente. Se a perder, terá de criar uma nova."
+        create_key: "Criar Chave de API"
+        cancel: "Cancelar"
+        save_api_key: "Guardar Chave de API"

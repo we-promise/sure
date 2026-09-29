@@ -1,0 +1,26 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle", address: @address)) %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-3">
+      <%= render DS::Alert.new(variant: :info, message: t(".explanation")) %>
+
+      <div class="space-y-2">
+        <% @detection.candidates.each do |candidate| %>
+          <%= button_to preview_wallet_onchain_wallet_items_path,
+                        method: :post,
+                        params: { address: @address, chain: candidate.key },
+                        class: "w-full flex items-center justify-between gap-3 p-3 border border-primary rounded-lg hover:bg-surface text-left",
+                        form: { data: { turbo_frame: "modal" } } do %>
+            <span class="font-medium text-primary"><%= candidate.label %></span>
+            <% if @detection.detected?(candidate) %>
+              <span class="text-xs text-success"><%= t(".activity_found") %></span>
+            <% else %>
+              <span class="text-xs text-subdued"><%= t(".no_activity_found") %></span>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

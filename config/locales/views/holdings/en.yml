@@ -48,6 +48,9 @@ en:
       name: Name
       new_holding: New activity
       no_holdings: No holdings to show.
+      positions:
+        one: "%{count} position"
+        other: "%{count} positions"
       return: Total return
       weight: Weight
     missing_price_tooltip:

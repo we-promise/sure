@@ -1,0 +1,9 @@
+---
+es:
+  activerecord:
+    errors:
+      models:
+        rule:
+          min_actions: debe tener al menos una acción
+          duplicate_actions: La regla no puede tener acciones duplicadas %{types}
+          nested_conditions: Las condiciones compuestas no se pueden anidar

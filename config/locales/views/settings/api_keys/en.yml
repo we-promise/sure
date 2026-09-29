@@ -26,6 +26,8 @@ en:
         empty_description: "Create an API key to access your data programmatically."
         revoke_key: "Revoke"
         revoke_confirmation: "Are you sure you want to revoke \"%{name}\"? This will immediately disable any application using this key."
+      key_reveal:
+        copied: "Copied!"
       show:
         title: "API Key Management"
         newly_created:

@@ -8,4 +8,5 @@ en:
       show:
         clear: Clear category
         no_categories: No categories found
+        recent: Recent
         search_placeholder: Search

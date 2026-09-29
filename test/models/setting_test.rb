@@ -131,4 +131,57 @@ class SettingTest < ActiveSupport::TestCase
     assert_nil result
     assert_equal "test-model", Setting.openai_model
   end
+
+  test "brand_fetch_icon_url builds a logo URL with the requested fallback" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
+
+    assert_equal(
+      "https://cdn.brandfetch.io/example.com/icon/fallback/404/w/40/h/40?c=test-client-id",
+      Setting.brand_fetch_icon_url("example.com", fallback: "404")
+    )
+  end
+
+  test "brand_fetch_icon_url supports namespaced routes and explicit dimensions" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
+
+    assert_equal(
+      "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/80/h/80?c=test-client-id",
+      Setting.brand_fetch_icon_url("BTC", namespace: "crypto", width: 80, height: 80)
+    )
+  end
+
+  test "brand_fetch_icon_url returns nil without an identifier or client id" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    assert_nil Setting.brand_fetch_icon_url(nil)
+
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    assert_nil Setting.brand_fetch_icon_url("example.com")
+  end
+
+  test "enabled_securities_providers falls back to twelve_data when nothing is configured" do
+    with_env_overrides("SECURITIES_PROVIDERS" => nil, "SECURITIES_PROVIDER" => nil) do
+      assert_equal [ "twelve_data" ], Setting.enabled_securities_providers
+    end
+  end
+
+  test "enabled_securities_providers returns an empty list when explicitly cleared, not the legacy default" do
+    original_providers = Setting.securities_providers
+    original_provider = Setting.securities_provider
+
+    Setting.securities_providers = ""
+    Setting.securities_provider = ""
+
+    assert_equal [], Setting.enabled_securities_providers
+  ensure
+    # Restore whatever was there before this test, not a hardcoded value —
+    # and restore via assignment (not nil) either way, since
+    # rails-settings-cached's cache layer doesn't reliably invalidate on
+    # delete within a single test process, so a later test can still read
+    # back the just-deleted blank override instead of falling through to
+    # the field's default.
+    Setting.securities_providers = original_providers.presence || ""
+    Setting.securities_provider = original_provider.presence || "twelve_data"
+  end
 end

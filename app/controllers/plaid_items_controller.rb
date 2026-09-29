@@ -1,8 +1,11 @@
 class PlaidItemsController < ApplicationController
-  include StreamExtensions
+  include StreamExtensions, ConnectorAuthorizable
+
+  connects_provider PlaidItem
 
   before_action :set_plaid_item, only: %i[edit destroy sync]
-  before_action :require_admin!, only: %i[new create select_existing_account link_existing_account edit destroy sync]
+  before_action :require_connector_create!, only: %i[new create select_existing_account link_existing_account]
+  before_action :require_connector_manage!, only: %i[edit destroy sync]
 
   def new
     region = params[:region] == "eu" ? :eu : :us
@@ -24,6 +27,7 @@ class PlaidItemsController < ApplicationController
     @link_token = @plaid_item.get_update_link_token(
       webhooks_url: webhooks_url,
       redirect_url: accounts_url,
+      account_selection_enabled: @plaid_item.us? && params[:add_accounts] == "true",
     )
   rescue Plaid::ApiError => e
     handle_link_token_error(e)
@@ -45,9 +49,7 @@ class PlaidItemsController < ApplicationController
   end
 
   def sync
-    unless @plaid_item.syncing?
-      @plaid_item.sync_later
-    end
+    @plaid_item.sync_later_with_provider_refresh
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -59,10 +61,18 @@ class PlaidItemsController < ApplicationController
     @account = Current.family.accounts.find(params[:account_id])
     @region = params[:region] || "us"
 
+    # A non-admin reaches this action now, so the target account needs its own
+    # check -- family membership alone is not authorisation to attach a feed to
+    # someone else's account.
+    return if !Current.user.admin? && !require_account_permission!(@account)
+
     # Get all Plaid accounts from this family's Plaid items for the specified region
-    # that are not yet linked to any account
-    @available_plaid_accounts = Current.family.plaid_items
-      .where(plaid_region: @region)
+    # that are not yet linked to any account. A member only sees the items they
+    # own; an admin sees the family's.
+    scope = Current.family.plaid_items.where(plaid_region: @region)
+    scope = scope.owned_by(Current.user) unless Current.user.admin?
+
+    @available_plaid_accounts = scope
       .includes(:plaid_accounts)
       .flat_map(&:plaid_accounts)
       .select { |pa| pa.account_provider.nil? && pa.account.nil? } # Not linked via new or legacy system
@@ -76,11 +86,16 @@ class PlaidItemsController < ApplicationController
     @account = Current.family.accounts.find(params[:account_id])
     plaid_account = PlaidAccount.find(params[:plaid_account_id])
 
-    # Verify the Plaid account belongs to this family's Plaid items
-    unless Current.family.plaid_items.include?(plaid_account.plaid_item)
+    # Verify the Plaid account belongs to this family's Plaid items, and that
+    # this user may act on that connection at all -- a member must not be able
+    # to attach a connection someone else owns.
+    unless Current.family.plaid_items.include?(plaid_account.plaid_item) &&
+           plaid_account.plaid_item.manageable_by?(Current.user)
       redirect_to account_path(@account), alert: t(".invalid_account")
       return
     end
+
+    return if !Current.user.admin? && !require_account_permission!(@account)
 
     # Verify the Plaid account is not already linked
     if plaid_account.account_provider.present? || plaid_account.account.present?

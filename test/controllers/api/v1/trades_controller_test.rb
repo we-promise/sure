@@ -99,6 +99,90 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Sell", body["investment_activity_label"]
   end
 
+  test "create sweep in trade returns 201" do
+    security = Security.create!(ticker: "SWIN", name: "Sweep In Security", country_code: "US")
+
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "sweep_in",
+        date: Date.current,
+        qty: 10,
+        price: 1.00,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "Sweep In", body["investment_activity_label"]
+    assert_equal 10, body["qty"].to_i
+  end
+
+  test "create sweep out trade returns 201" do
+    security = Security.create!(ticker: "SWOUT", name: "Sweep Out Security", country_code: "US")
+
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "sweep_out",
+        date: Date.current,
+        qty: 10,
+        price: 1.00,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "Sweep Out", body["investment_activity_label"]
+    assert_equal(-10, body["qty"].to_i)
+  end
+
+  test "create reinvestment trade returns 201" do
+    security = Security.create!(ticker: "REINV", name: "Reinvestment Security", country_code: "US")
+
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "reinvestment",
+        date: Date.current,
+        qty: 2,
+        price: 12.34,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "Reinvestment", body["investment_activity_label"]
+    assert_equal 2, body["qty"].to_i
+  end
+
+  test "create fee trade returns 201" do
+    security = Security.create!(ticker: "FEESEC", name: "Fee Security", country_code: "US")
+
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "fee",
+        date: Date.current,
+        amount: 0.68,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "Fee", body["investment_activity_label"]
+    assert_equal 0, body["qty"].to_d
+    assert_in_delta 0.68, Trade.find(body["id"]).entry.amount.to_f, 0.001
+  end
+
   test "invalid type returns 422" do
     post "/api/v1/trades",
       params: { trade: {
@@ -107,6 +191,47 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
         date: Date.current
       } },
       headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+  end
+
+  test "rejects a type-label mismatch without persisting a trade" do
+    security = Security.create!(ticker: "MISMATCH", name: "Mismatch Security", country_code: "US")
+
+    assert_no_difference [ "Entry.count", "Trade.count" ] do
+      post "/api/v1/trades",
+        params: { trade: {
+          account_id: @investment_account.id,
+          type: "sweep_out",
+          investment_activity_label: "Buy",
+          date: Date.current,
+          qty: 10,
+          price: 1,
+          security_id: security.id
+        } },
+        headers: api_headers(read_write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "rejects an inaccessible category without persisting a trade" do
+    security = Security.create!(ticker: "BADCAT", name: "Bad Category Security", country_code: "US")
+    other_category = families(:empty).categories.create!(name: "Other family category", color: "#123456", lucide_icon: "circle")
+
+    assert_no_difference [ "Entry.count", "Trade.count" ] do
+      post "/api/v1/trades",
+        params: { trade: {
+          account_id: @investment_account.id,
+          type: "buy",
+          date: Date.current,
+          qty: 10,
+          price: 1,
+          security_id: security.id,
+          category_id: other_category.id
+        } },
+        headers: api_headers(read_write_api_key)
+    end
 
     assert_response :unprocessable_entity
   end
@@ -186,6 +311,32 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert transfer, "Transfer should exist linking accounts"
     assert_equal depository.id, transfer.inflow_transaction.entry.account_id, "Inflow should be to depository"
     assert_equal @investment_account.id, transfer.outflow_transaction.entry.account_id, "Outflow should come from investment"
+  end
+
+  # The transfer books an entry on the other account too, so the key's user
+  # needs write permission there. family_member can write to the investment
+  # account here, only read credit_card and not see connected at all.
+  test "create withdrawal rejects a transfer account the user may only read or not access" do
+    @user = users(:family_member)
+    @investment_account.account_shares.create!(user: @user, permission: "full_control")
+
+    [ accounts(:credit_card), accounts(:connected) ].each do |transfer_account|
+      assert_no_difference [ "Entry.count", "Transfer.count" ] do
+        post "/api/v1/trades",
+          params: { trade: {
+            account_id: @investment_account.id,
+            type: "withdrawal",
+            date: Date.current,
+            amount: 500.00,
+            currency: "USD",
+            transfer_account_id: transfer_account.id
+          } },
+          headers: api_headers(read_write_api_key)
+      end
+
+      assert_response :not_found
+      assert_equal "Account not found", JSON.parse(response.body)["message"]
+    end
   end
 
   test "create deposit without amount returns 422" do
@@ -500,6 +651,40 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
 
     response_data = JSON.parse(response.body)
     assert_equal "Updated notes", response_data["notes"]
+  end
+
+  test "updates a security trade to sweep out with matching sign and label" do
+    security = Security.create!(ticker: "UPDSWEEP", name: "Update Sweep Security", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    trade_id = JSON.parse(response.body).fetch("id")
+
+    patch api_v1_trade_url(trade_id),
+      params: { trade: { type: "sweep_out", qty: 4 } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal(-4, body["qty"].to_d)
+    assert_equal "Sweep Out", body["investment_activity_label"]
+  end
+
+  test "rejects unsupported cash trade types on update" do
+    trade = @investment_account.trades.first
+
+    patch api_v1_trade_url(trade.id),
+      params: { trade: { type: "fee", qty: 1 } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
   end
 
   test "should reject update with read-only API key" do

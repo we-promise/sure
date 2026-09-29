@@ -32,6 +32,75 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "requests liability products only for liability account types" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:products] == [ "investments" ] &&
+        params[:additional_consented_products] == [ "transactions" ]
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      accountable_type: "Investment"
+    )
+  end
+
+  test "does not request liabilities for a depository link" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:products] == [ "transactions" ] &&
+        params[:additional_consented_products] == [ "investments" ]
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      accountable_type: "Depository"
+    )
+  end
+
+  test "requests liabilities as primary for a credit card link" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:products] == [ "liabilities" ] &&
+        params[:additional_consented_products] == [ "transactions", "investments" ]
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      accountable_type: "CreditCard"
+    )
+  end
+
+  test "enables account selection for an update link token" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:access_token] == "access-token" &&
+        params[:update] == { account_selection_enabled: true } &&
+        params[:products].nil? &&
+        params[:transactions].nil?
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    result = @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      access_token: "access-token",
+      account_selection_enabled: true
+    )
+
+    assert_equal "response", result
+  end
+
   test "exchanges public token" do
     VCR.use_cassette("plaid/exchange_public_token") do
       public_token = @plaid.create_public_token
@@ -58,6 +127,14 @@ class Provider::PlaidTest < ActiveSupport::TestCase
 
       assert_equal 4, accounts_response.accounts.size
     end
+  end
+
+  test "requests a transaction refresh" do
+    @plaid.client.expects(:transactions_refresh).with do |request|
+      request.access_token == "access-token"
+    end
+
+    @plaid.refresh_transactions("access-token")
   end
 
   test "gets item investments" do

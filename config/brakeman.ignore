@@ -118,13 +118,13 @@
     {
       "warning_type": "Mass Assignment",
       "warning_code": 105,
-      "fingerprint": "01a88a0a17848e70999c17f6438a636b00e01da39a2c0aa0c46f20f0685c7202",
+      "fingerprint": "dba46648ab625bae43bd8126e4dcdba34b6828a064cedb5129c3c2e8607789c7",
       "check_name": "PermitAttributes",
       "message": "Potentially dangerous key allowed for mass assignment",
       "file": "app/controllers/admin/users_controller.rb",
-      "line": 35,
+      "line": 146,
       "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
-      "code": "params.require(:user).permit(:role)",
+      "code": "params.require(:user).permit(:role, :family_id, :new_family_name, :new_family_moniker, :password)",
       "render_path": null,
       "location": {
         "type": "method",
@@ -141,13 +141,13 @@
     {
       "warning_type": "Dangerous Eval",
       "warning_code": 13,
-      "fingerprint": "ad8e31fe9321feba741d551654a6fb0c0c7cfe8abee81822e6143404817bff5b",
+      "fingerprint": "abc0f66938760081100a003a9ce62aae3fc27a3e62bcaa026a009da6a2ed99d1",
       "check_name": "Evaluation",
       "message": "Dynamic string evaluated as code",
       "file": "app/helpers/styled_form_builder.rb",
-      "line": 10,
+      "line": 15,
       "link": "https://brakemanscanner.org/docs/warning_types/dangerous_eval/",
-      "code": "class_eval(\"      def #{selector}(method, options = {})\\n        form_options = options.slice(:label, :label_tooltip, :inline, :container_class, :required)\\n        html_options = options.except(:label, :label_tooltip, :inline, :container_class)\\n\\n        build_field(method, form_options, html_options) do |merged_options|\\n          super(method, merged_options)\\n        end\\n      end\\n\", \"app/helpers/styled_form_builder.rb\", (10 + 1))",
+      "code": "class_eval(\"      def #{selector}(method, options = {})\\n        form_options = options.slice(*BUILDER_OPTIONS, :required)\\n        html_options = options.except(*BUILDER_OPTIONS)\\n\\n        build_field(method, form_options, html_options) do |merged_options|\\n          super(method, merged_options)\\n        end\\n      end\\n\", \"app/helpers/styled_form_builder.rb\", (15 + 1))",
       "render_path": null,
       "location": {
         "type": "method",
@@ -195,6 +195,26 @@
         22
       ],
       "note": ""
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "dc0c96660c7e4fd22afb88b441ad90dda58879fbdbabfcb422ba072b1f5168ed",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/recurring_transactions_controller.rb",
+      "line": 371,
+      "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
+      "code": "params.require(:recurring_transaction).permit(:name, :amount, :account_id, :first_due_on, :frequency_preset, :frequency_interval, :frequency_interval_unit, :payment_url, :autopay, :notes, :is_income)",
+      "render_path": null,
+      "location": {
+        "type": "controller",
+        "controller": "RecurringTransactionsController",
+        "method": "new_recurring_transaction_params"
+      },
+      "user_input": ":account_id",
+      "confidence": "High",
+      "note": "account_id is never mass-assigned: build_declared_bill resolves it through Current.user.accessible_accounts.find_by, so a foreign id degrades to no account rather than an association write."
     }
   ],
   "brakeman_version": "7.1.0"

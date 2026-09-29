@@ -9,6 +9,9 @@ pt-BR:
       per_share: por ação
       shares: "%{qty} ações"
     index:
+      positions:
+        one: "%{count} posição"
+        other: "%{count} posições"
       average_cost: Custo médio
       holdings: Posições
       name: Nome

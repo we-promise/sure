@@ -3,8 +3,61 @@ es:
   rules:
     no_action: Sin acción
     no_condition: Sin condición
+    rule:
+      edit: Editar
+      re_apply_rule: Volver a aplicar la regla
+      delete: Eliminar
+      then: ENTONCES
+      and_more_conditions:
+        one: y 1 condición más
+        other: y %{count} condiciones más
+      and_more_actions:
+        one: y 1 acción más
+        other: y %{count} acciones más
+      action_label_to: '%{label} a %{value}'
+      all_past_and_future: Todas las %{resource} pasadas y futuras
+      on_or_after: '%{resource} a partir del %{date}'
+    form:
+      rule_name_label: Nombre de la regla (opcional)
+      rule_name_placeholder: Introduce un nombre para esta regla
+      add_condition: Añadir condición
+      add_condition_group: Añadir grupo de condiciones
+      add_action: Añadir acción
+      all_past_and_future: Todas las %{resource} pasadas y futuras
+      starting_from: A partir de
+      then: ENTONCES
+    index:
+      page_title: Reglas
+      delete_all_rules: Eliminar todas las reglas
+      new_rule: Nueva regla
+      ai_cost_warning: Las acciones de reglas con IA tienen un coste. Filtra de la forma más precisa posible para evitar costes innecesarios.
+      rules_heading: Reglas
+      sort_by: 'Ordenar por:'
+      sort_name: Nombre
+      sort_updated_at: Fecha de actualización
+      toggle_sort_direction: Cambiar el orden
+      no_rules_title: Todavía no hay reglas
+      no_rules_description: Configura reglas para ejecutar acciones sobre tus transacciones y otros datos en cada sincronización de cuentas.
+    confirm:
+      title: Confirmar cambios
+      title_with_name: Confirmar cambios en «%{name}»
+      apply_notice_html: Estás a punto de aplicar esta regla a <span class="text-primary font-medium">%{count} %{resource}</span> que cumplen los criterios especificados. Confirma si quieres continuar con este cambio.
+      ai_cost_title: Estimación de coste de IA
+      ai_cost_with_estimate_html: 'Se usará IA para categorizar %{count} transacción(es). Coste estimado: <span class="font-semibold">~%{cost} $</span>'
+      ai_cost_no_estimate_html: Se usará IA para categorizar %{count} transacción(es).
+      cost_unavailable_model: Estimación de coste no disponible para el modelo «%{model}».
+      cost_unavailable_no_provider: Estimación de coste no disponible (no hay ningún proveedor de LLM configurado).
+      cost_warning: Puedes incurrir en costes; consulta con el proveedor del modelo los precios más actualizados.
+      view_usage_history: Ver historial de uso
+      confirm_changes: Confirmar cambios
     actions:
       value_placeholder: Introduce un valor
+    update:
+      success: Regla actualizada
+    destroy:
+      success: Regla eliminada
+    destroy_all:
+      success: Todas las reglas eliminadas
     apply_all:
       button: Aplicar todas
       confirm_title: Aplicar todas las reglas
@@ -13,7 +66,7 @@ es:
       success: Todas las reglas han sido puestas en cola para su ejecución
       ai_cost_title: Estimación de costes de IA
       ai_cost_message: Esto utilizará IA para categorizar hasta %{transactions} transacciones.
-      estimated_cost: "Coste estimado: ~$%{cost}"
+      estimated_cost: 'Coste estimado: ~$%{cost}'
       cost_unavailable_model: Estimación de costes no disponible para el modelo "%{model}".
       cost_unavailable_no_provider: Estimación de costes no disponible (no hay proveedor de LLM configurado).
       cost_warning: Puedes incurrir en costes, consulta con el proveedor del modelo los precios más actualizados.
@@ -31,6 +84,7 @@ es:
           queued: En Cola
           processed: Procesadas
           modified: Modificadas
+          blocked: Bloqueadas
       execution_types:
         manual: Manual
         scheduled: Programada
@@ -50,3 +104,12 @@ es:
         expense: Gasto
         transfer: Transferencia
         equal_to: Igual a
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: y
+        match: cumplir
+        all: todas
+        any: alguna
+        of_the_following_conditions: de las siguientes condiciones
+        add_condition: Añadir condición

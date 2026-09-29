@@ -3,6 +3,14 @@ en:
   rules:
     no_action: No Action
     no_condition: No condition
+    category_rule_cta:
+      close: Close
+      create_rule: Create rule
+      description: You can create a rule to automatically categorize transactions like this one
+      dont_show_again: Don't show this again
+      hide_for_today: Hide for today
+      hide_for_today_hint: "Hide for today pauses these suggestions for 24 hours."
+      message: Updated to %{category_name}
     rule:
       edit: Edit
       re_apply_rule: Re-apply rule
@@ -51,6 +59,7 @@ en:
       view_usage_history: View usage history
       confirm_changes: Confirm changes
     actions:
+      to_label: to
       value_placeholder: Enter a value
     update:
       success: Rule updated
@@ -104,6 +113,18 @@ en:
         expense: Expense
         transfer: Transfer
         equal_to: Equal to
+      operators:
+        contains: Contains
+        does_not_contain: Does not contain
+        equal_to: Equal to
+        is_equal_to: Is equal to
+        not_equal_to: Not equal to
+        is_empty: Is empty
+        is_not_empty: Is not empty
+        greater_than: Greater than
+        greater_or_equal_to: Greater or equal to
+        less_than: Less than
+        less_than_or_equal_to: Less than or equal to
   rule:
     conditions:
       condition_group:
@@ -113,3 +134,5 @@ en:
         any: any
         of_the_following_conditions: of the following conditions
         add_condition: Add condition
+      condition:
+        value_placeholder: Enter a value

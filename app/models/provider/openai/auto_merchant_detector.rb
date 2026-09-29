@@ -60,12 +60,12 @@ class Provider::Openai::AutoMerchantDetector
     end
   end
 
+  # A family's override from /settings/ai_prompts replaces both built-in
+  # variants. Without one, custom providers get the simplified instructions and
+  # everything else gets the detailed ones.
   def instructions
-    if custom_provider
-      simple_instructions
-    else
-      detailed_instructions
-    end
+    family&.ai_prompt(:merchant_openai) ||
+      (custom_provider ? simple_instructions : detailed_instructions)
   end
 
   # Simplified instructions for smaller/local LLMs

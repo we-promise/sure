@@ -14,21 +14,57 @@ zh-TW:
       edit: 編輯分類
     form:
       placeholder: 分類名稱
+      name_label: 名稱
+      unassigned: （未指定）
+      parent_category_label: 上層分類（選填）
+      trigger_label: 選擇顏色與圖示
+      color: 顏色
+      icon: 圖示
+      auto_adjust: 自動調整
+      poor_contrast: 對比不足，請選擇較深的顏色或
+    destroy_all:
+      success: 所有分類已刪除
     index:
       bootstrap: 使用預設分類（推薦）
       categories: 分類管理
       categories_expenses: 支出分類
       categories_incomes: 收入分類
-      empty: 暫無分類
-      new: 新建分類
+      delete_all: 全部刪除
+      empty: 找不到分類
+      merge: 合併分類
+      new: 新增分類
+    merge:
+      title: 合併分類
+      description: 請選擇目標分類，以及要併入目標的分類。相符的交易與預算項目都會移到目標分類。
+      target_label: 併入（目標）
+      select_target: 選擇目標分類...
+      sources_label: 要合併的分類
+      sources_hint: 所選分類的交易與預算項目移到目標分類後，這些分類會被刪除。請勿將目標分類選為來源。
+      submit: 合併所選項目
     menu:
       loading: 載入中...
     new:
-      new_category: 新建分類
+      new_category: 新增分類
+    perform_merge:
+      success:
+        one: 成功合併 %{count} 個分類
+        other: 成功合併 %{count} 個分類
+      no_categories_selected: 沒有選擇要合併的分類
+      target_not_found: 找不到目標分類
+      invalid_categories: 所選的分類無效
+      target_selected_as_source: 目標與來源請選擇不同的分類。
     update:
       success: 分類更新成功
+    virtual:
+      transfer: 轉帳
+      payment: 付款
+      trade: 證券交易
   category:
     dropdowns:
       show:
         bootstrap: 產生預設分類
-        empty: 暫無分類
+        empty: 找不到分類
+        match_transfer: 配對轉帳／付款
+        one_time: 一次性%{type}
+        income: 收入
+        expense: 支出

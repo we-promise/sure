@@ -4,7 +4,7 @@ class Trading212ItemsController < ApplicationController
 
   def create
     @trading212_item = Current.family.trading212_items.build(trading212_item_params)
-    @trading212_item.name ||= t("trading212_items.defaults.name")
+    @trading212_item.name ||= t("settings.providers.trading212_panel.default_account_name")
     @trading212_item.currency ||= Current.family.currency
 
     if @trading212_item.save

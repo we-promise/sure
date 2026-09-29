@@ -490,14 +490,15 @@ hpa:
     targetCPUUtilizationPercentage: 70
 
 # Pipelock: AI agent security proxy (optional)
-# Provides forward proxy (outbound HTTPS scanning) and MCP reverse proxy
+# Provides forward proxy (outbound HTTPS tunnel controls) and MCP reverse proxy
 # (inbound MCP traffic scanning for prompt injection, DLP, tool poisoning).
 # More info: https://github.com/luckyPipewrench/pipelock
 pipelock:
   enabled: false
   image:
     repository: ghcr.io/luckypipewrench/pipelock
-    tag: "2.8.0"
+    # Stable release pinned to its multi-architecture manifest digest.
+    tag: "3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c"
     pullPolicy: IfNotPresent
     imagePullSecrets: []
   replicas: 1
@@ -559,8 +560,9 @@ pipelock:
     action: warn
     windowSize: 20
     maxGap: 3
-  # Request body scanning (pipelock 2.5+): detect prompt-injection payloads
-  # in outbound request bodies (JSON, form-encoded, raw text, WebSocket frames).
+  # Request body scanning: detects prompt-injection payloads in cleartext HTTP,
+  # reverse-proxy, and WebSocket bodies. It cannot inspect encrypted HTTPS tunnel
+  # bodies unless TLS interception is separately configured and its CA trusted.
   # In enforce mode, prompt-injection findings hard-block non-provider
   # destinations even when action is "warn"; trusted provider hosts (OpenAI,
   # Anthropic, etc.) remain exempt via the response_scanning exemption list.
@@ -651,4 +653,5 @@ pipelock:
   # NOTE: This only guards the rails.externalAssistant path. Direct MCP access
   # (/mcp endpoint with MCP_API_TOKEN) is not detectable from Helm values.
   # For full coverage, also ensure pipelock is enabled whenever MCP_API_TOKEN is set.
-  requireForExternalAssistant: false
+  # Set false only when you deliberately accept direct external-assistant traffic.
+  requireForExternalAssistant: true

@@ -6,6 +6,17 @@ class Provider::EnableBanking
 
   BASE_URL = "https://api.enablebanking.com".freeze
 
+  # Progressive fallback windows (days) for retrying a transactions fetch when
+  # an ASPSP rejects the requested period (WRONG_TRANSACTIONS_PERIOD) without
+  # suggesting a corrected date_from in the response payload.
+  FALLBACK_TRANSACTIONS_DATE_FROM_DAYS = [ 89, 60, 30 ].freeze
+
+  # Progressive fallback windows (days) for retrying an authorization request when
+  # an ASPSP rejects the requested consent duration (e.g. Trade Republic caps at
+  # exactly 90 days). Mirrors FALLBACK_TRANSACTIONS_DATE_FROM_DAYS's proven pattern.
+  CONSENT_FALLBACK_DAYS = [ 180, 90, 45, 30 ].freeze
+  CONSENT_SAFETY_MARGIN_SECONDS = 60 # shaved off every attempt to guard against clock/network drift
+
   headers "User-Agent" => "Sure Finance Enable Banking Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
@@ -37,7 +48,8 @@ class Provider::EnableBanking
   # @param redirect_url [String] URL to redirect user back to after auth
   # @param state [String, nil] State parameter to pass through
   # @param psu_type [String] "personal" or "business"
-  # @param maximum_consent_validity [Integer, nil] Max consent duration in seconds from ASPSP (nil = use 90 days)
+  # @param maximum_consent_validity [Integer, nil] Max consent duration in seconds from ASPSP
+  #   (nil = use configured default, currently 180 days, see ENABLE_BANKING_CONSENT_DAYS)
   # @param language [String, nil] Two-letter language code (e.g. "fr", "en")
   # @param auth_method [String, nil] Name of a specific authentication method to use (from the ASPSP's
   #   auth_methods list). Required to drive DECOUPLED/EMBEDDED banks that expose several methods; when nil
@@ -45,34 +57,31 @@ class Provider::EnableBanking
   # @return [Hash] Contains :url and :authorization_id
   def start_authorization(aspsp_name:, aspsp_country:, redirect_url:, state: nil,
                           psu_type: "personal", maximum_consent_validity: nil, language: nil, auth_method: nil)
-    max_seconds = maximum_consent_validity ? [ maximum_consent_validity, 1 ].max : 90.days.to_i
-    valid_until = [ Time.current + max_seconds.seconds, Time.current + 90.days ].min
+    last_error = nil
 
-    body = {
-      access: {
-        valid_until: valid_until.iso8601,
-        balances: true,
-        transactions: true
-      },
-      aspsp: {
-        name: aspsp_name,
-        country: aspsp_country
-      },
-      state: state,
-      redirect_url: redirect_url,
-      psu_type: psu_type
-    }
-    body[:language] = language if language.present?
-    body[:auth_method] = auth_method if auth_method.present?
-    body = body.compact
+    consent_seconds_ladder(maximum_consent_validity).each do |seconds|
+      valid_until = Time.current + seconds.seconds
+      body = build_authorization_body(
+        aspsp_name: aspsp_name, aspsp_country: aspsp_country, redirect_url: redirect_url,
+        state: state, psu_type: psu_type, language: language, auth_method: auth_method,
+        valid_until: valid_until
+      )
 
-    response = self.class.post(
-      "#{BASE_URL}/auth",
-      headers: auth_headers.merge("Content-Type" => "application/json"),
-      body: body.to_json
-    )
+      response = self.class.post(
+        "#{BASE_URL}/auth",
+        headers: auth_headers.merge("Content-Type" => "application/json"),
+        body: body.to_json
+      )
 
-    handle_response(response)
+      begin
+        return handle_response(response).merge(requested_valid_until: valid_until)
+      rescue EnableBankingError => e
+        raise unless e.wrong_consent_validity?
+        last_error = e
+      end
+    end
+
+    raise last_error
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     raise EnableBankingError.new("Exception during POST request: #{e.message}", :request_failed)
   end
@@ -164,7 +173,7 @@ class Provider::EnableBanking
   # @param psu_headers [Hash] Optional PSU context headers required by some ASPSPs
   # @return [Hash] Transactions and continuation_key for pagination
   def get_account_transactions(account_id:, date_from: nil, date_to: nil,
-                               continuation_key: nil, transaction_status: nil, psu_headers: {}, retried_date_from: false)
+                               continuation_key: nil, transaction_status: nil, psu_headers: {}, retry_attempt: 0)
     encoded_id = CGI.escape(account_id.to_s)
     query_params = {}
     query_params[:transaction_status] = transaction_status if transaction_status.present?
@@ -180,17 +189,17 @@ class Provider::EnableBanking
 
     handle_response(response)
   rescue EnableBankingError => e
-    corrected_date_from = e.corrected_date_from
+    next_date_from = next_transactions_date_from(e, date_from, retry_attempt)
 
-    if !retried_date_from && e.wrong_transactions_period? && corrected_date_from.present? && corrected_date_from != date_from
+    if next_date_from
       get_account_transactions(
         account_id: account_id,
-        date_from: corrected_date_from,
+        date_from: next_date_from,
         date_to: date_to,
         continuation_key: continuation_key,
         transaction_status: transaction_status,
         psu_headers: psu_headers,
-        retried_date_from: true
+        retry_attempt: retry_attempt + 1
       )
     else
       raise
@@ -200,6 +209,84 @@ class Provider::EnableBanking
   end
 
   private
+
+    # Decides the next date_from to retry a transactions fetch with after an
+    # ASPSP rejects the requested window with WRONG_TRANSACTIONS_PERIOD.
+    #
+    # Some ASPSPs (e.g. certain PT banks) return this error WITHOUT a corrected
+    # date_from in the payload, which defeated the previous single-shot retry.
+    # In that case we step through progressively shorter windows so the sync can
+    # still succeed instead of surfacing a generic error. Returns nil when no
+    # further retry should be attempted.
+    def next_transactions_date_from(error, current_date_from, retry_attempt)
+      return nil unless error.wrong_transactions_period?
+      return nil if retry_attempt > FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.length
+
+      current = current_date_from&.to_date
+
+      # Prefer the ASPSP-suggested date on the first retry (original behaviour),
+      # but only when it actually moves the window forward.
+      if retry_attempt.zero?
+        corrected = error.corrected_date_from
+        return corrected if corrected.present? && (current.nil? || corrected > current)
+      end
+
+      # Otherwise pick the first progressively-shorter window that advances the
+      # window forward, skipping any window that is not newer than the current
+      # date_from. Moving strictly forward guarantees progress and termination.
+      FALLBACK_TRANSACTIONS_DATE_FROM_DAYS
+        .map { |days| days.days.ago.to_date }
+        .find { |candidate| current.nil? || candidate > current }
+    end
+
+    # Builds the ladder of consent durations (seconds) to try, most-preferred first:
+    # 1. The ASPSP's own advertised limit (authoritative) if present and sane,
+    #    capped defensively at our own configured ceiling.
+    # 2. Progressively shorter fallback rungs (only ones strictly shorter than the
+    #    first, so the ladder always makes forward progress and terminates).
+    # Every rung is shaved by a small safety margin so client/server clock drift
+    # and network latency can never push the *actual* requested duration over the
+    # rung's exact boundary (root cause of #2857).
+    def consent_seconds_ladder(maximum_consent_validity)
+      cap_seconds = Rails.configuration.x.enable_banking.consent_days.days.to_i
+      aspsp_seconds = normalized_consent_seconds(maximum_consent_validity)
+
+      primary = [ aspsp_seconds || cap_seconds, cap_seconds ].min
+      fallback_seconds = CONSENT_FALLBACK_DAYS.map(&:days).map(&:to_i).select { |s| s < primary }
+
+      ([ primary ] + fallback_seconds).map { |s| s - consent_safety_margin(s) }.uniq
+    end
+
+    def consent_safety_margin(seconds)
+      [ CONSENT_SAFETY_MARGIN_SECONDS, seconds - 1 ].min
+    end
+
+    def normalized_consent_seconds(value)
+      seconds = Integer(value)
+      seconds.positive? ? seconds : nil
+    rescue TypeError, ArgumentError
+      nil
+    end
+
+    def build_authorization_body(aspsp_name:, aspsp_country:, redirect_url:, state:, psu_type:, language:, auth_method:, valid_until:)
+      body = {
+        access: {
+          valid_until: valid_until.iso8601,
+          balances: true,
+          transactions: true
+        },
+        aspsp: {
+          name: aspsp_name,
+          country: aspsp_country
+        },
+        state: state,
+        redirect_url: redirect_url,
+        psu_type: psu_type
+      }
+      body[:language] = language if language.present?
+      body[:auth_method] = auth_method if auth_method.present?
+      body.compact
+    end
 
     def safe_psu_headers(headers)
       headers.except("Authorization", :Authorization, "Accept", :Accept, "Content-Type", :"Content-Type")
@@ -294,12 +381,33 @@ class Provider::EnableBanking
         @response_data = response_data
       end
 
+      # Different ASPSPs signal the same "requested date range exceeds the
+      # allowed lookback" condition with different payload shapes. Most use
+      # `{"error": "WRONG_TRANSACTIONS_PERIOD"}` (422), but some (e.g. N26)
+      # instead return `{"code": "PERIOD_INVALID", "detail": "dateFrom=...,dateTo=..."}`
+      # with a plain string `detail`, not a hash. (Issue #1262)
       def wrong_transactions_period?
-        error_type == :validation_error && response_data.is_a?(Hash) && response_data[:error] == "WRONG_TRANSACTIONS_PERIOD"
+        return false unless response_data.is_a?(Hash)
+
+        response_data[:error] == "WRONG_TRANSACTIONS_PERIOD" || response_data[:code] == "PERIOD_INVALID"
+      end
+
+      # WRONG_REQUEST_PARAMETERS is a generic error code shared by several unrelated
+      # validation failures (e.g. a bad redirect_url, handled separately by the
+      # controller). Match on the message text so we only retry with a shorter
+      # consent window for the specific rejection this ladder is meant to recover
+      # from, instead of silently masking other validation errors.
+      def wrong_consent_validity?
+        error_type == :validation_error && response_data.is_a?(Hash) &&
+          response_data[:error] == "WRONG_REQUEST_PARAMETERS" &&
+          response_data[:message].to_s.match?(/consent validity/i)
       end
 
       def corrected_date_from
-        value = response_data&.dig(:detail, :date_from)
+        detail = response_data.is_a?(Hash) ? response_data[:detail] : nil
+        return nil unless detail.is_a?(Hash)
+
+        value = detail[:date_from]
 
         if value.is_a?(Date)
           value

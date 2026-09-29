@@ -60,10 +60,6 @@ class SureChip extends StatelessWidget {
       // (Material FilterChip parity); the chip still sizes to content otherwise.
       constraints: const BoxConstraints(minHeight: 44),
       child: Padding(
-        // horizontal 14 is intentionally off the SureSpacing scale (between
-        // lg=12 and xl=16): it's the chip's tuned content inset for the
-        // FilterChip-parity look, not a spacing-scale step — don't "fix" it to a
-        // token. Vertical stays on-scale.
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: SureSpacing.lg),
         child: Row(
           mainAxisSize: MainAxisSize.min,

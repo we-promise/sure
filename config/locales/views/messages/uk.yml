@@ -1,0 +1,8 @@
+uk:
+  messages:
+    chat_form:
+      placeholder: "Запитуйте що завгодно..."
+      disclaimer: "Відповіді ШІ є лише інформаційними. Не фінансові поради!"
+      coming_soon: Незабаром
+    create:
+      chat_not_found: Цей чат більше не доступний.

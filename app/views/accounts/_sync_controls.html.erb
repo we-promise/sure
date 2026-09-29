@@ -1,0 +1,31 @@
+<%# locals: (family:) %>
+
+<%# Rendered both from a normal request (accounts#index) and from
+    Family::SyncCompleteEvent's broadcast (no Current.family there) — take
+    family as an explicit local and use absolute i18n keys, not lazy `t(".")`
+    lookups, to behave the same in both contexts. %>
+<div id="accounts-sync-controls" class="flex items-center gap-2 shrink-0">
+  <%= icon(
+        family.syncing? ? "loader-circle" : "refresh-cw",
+        as_button: true,
+        size: "sm",
+        href: sync_all_accounts_path,
+        disabled: family.syncing?,
+        class: (family.syncing? ? "animate-spin" : nil),
+        "aria-label": t("accounts.index.sync"),
+        frame: :_top
+      ) %>
+
+  <% if (family_sync = family.syncs.visible.first) %>
+    <%= render DS::Button.new(
+      text: t("accounts.index.cancel_sync"),
+      variant: :ghost,
+      size: :sm,
+      icon: "circle-x",
+      href: cancel_sync_path(family_sync),
+      method: :post,
+      frame: :_top,
+      aria_label: t("accounts.index.cancel_sync")
+    ) %>
+  <% end %>
+</div>

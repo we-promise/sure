@@ -15,7 +15,7 @@ de:
       success: Du hast dich erfolgreich registriert
     new:
       invitation_message: "%{inviter} hat dich eingeladen als %{role} beizutreten"
-      join_family_title: "%{family} beitreten"
+      join_family_title: "%{family} %{moniker} beitreten"
       role_admin: Administrator
       role_guest: Gast
       role_member: Mitglied

@@ -29,35 +29,35 @@ de:
    
     panel:
       setup_instructions: "Einrichtungsanleitung:"
-      step_1: "Besuchen Sie Ihr IndexaCapital Dashboard, um einen schreibgeschützten API-Token zu erstellen"
-      step_2: "Fügen Sie Ihren API-Token unten ein und klicken Sie auf Speichern"
-      step_3: "Nach erfolgreicher Verbindung gehen Sie zur Registerkarte Konten, um neue Konten einzurichten"
+      step_1: Öffne dein IndexaCapital Dashboard, um einen schreibgeschützten API-Token zu erstellen
+      step_2: Füg deinen API-Token unten ein und klick auf Speichern
+      step_3: Nach erfolgreicher Verbindung geh zur Registerkarte Konten, um neue Konten einzurichten
       field_descriptions: "Feldbeschreibungen:"
       optional: "(Optional)"
       required: "(Pflichtfeld)"
       optional_with_default: "(optional, Standard: %{default_value})"
-      alternative_auth: "Oder nutzen Sie Benutzername/Passwort-Anmeldung..."
+      alternative_auth: Oder nutz Benutzername/Passwort-Anmeldung...
       save_button: "Konfiguration speichern"
       update_button: "Konfiguration aktualisieren"
       fields:
         api_token:
           label: "API-Token"
-          description: "Ihr schreibgeschützter API-Token aus dem IndexaCapital Dashboard"
+          description: "Dein schreibgeschützter API-Token aus dem IndexaCapital Dashboard"
           placeholder_new: "API-Token hier einfügen"
           placeholder_update: "Neuen API-Token zum Aktualisieren eingeben"
         username:
           label: "Benutzername"
-          description: "Ihr IndexaCapital Benutzername/E-Mail"
+          description: "Dein IndexaCapital Benutzername/E-Mail"
           placeholder_new: "Benutzername hier einfügen"
           placeholder_update: "Neuen Benutzernamen zum Aktualisieren eingeben"
         document:
           label: "Dokument-ID"
-          description: "Ihre IndexaCapital Dokument-/ID-Nummer"
+          description: Deine Dokument- oder ID-Nummer bei IndexaCapital
           placeholder_new: "Dokument-ID hier einfügen"
           placeholder_update: "Neue Dokument-ID zum Aktualisieren eingeben"
         password:
           label: "Passwort"
-          description: "Ihr IndexaCapital Passwort"
+          description: "Dein IndexaCapital Passwort"
           placeholder_new: "Passwort hier einfügen"
           placeholder_update: "Neues Passwort zum Aktualisieren eingeben"
 
@@ -85,7 +85,7 @@ de:
         one: "Konto mit leerem Namen kann nicht verknüpft werden"
         other: "%{count} Konten mit leeren Namen können nicht verknüpft werden"
       link_failed: "Konten konnten nicht verknüpft werden"
-      no_accounts_selected: "Bitte wählen Sie mindestens ein Konto aus"
+      no_accounts_selected: Wähl mindestens ein Konto aus
       no_api_key: "IndexaCapital-Zugangsdaten nicht gefunden. Bitte in den Anbieter-Einstellungen konfigurieren."
       partial_invalid: "Erfolgreich %{created_count} Konto/Konten verknüpft, %{already_linked_count} waren bereits verknüpft, %{invalid_count} Konto/Konten hatten ungültige Namen"
       partial_success: "Erfolgreich %{created_count} Konto/Konten verknüpft. %{already_linked_count} Konto/Konten waren bereits verknüpft: %{already_linked_names}"
@@ -107,7 +107,7 @@ de:
       provider_name: "IndexaCapital"
       requires_update: "Verbindung muss aktualisiert werden"
       setup_action: "Neue Konten einrichten"
-      setup_description: "%{linked} von %{total} Konten verknüpft. Wählen Sie Kontotypen für Ihre neu importierten IndexaCapital-Konten."
+      setup_description: "%{linked} von %{total} Konten verknüpft. Wähl Kontotypen für deine neu importierten IndexaCapital-Konten."
       setup_needed: "Neue Konten bereit zur Einrichtung"
       status: "Vor %{timestamp} synchronisiert — %{summary}"
       status_never: "Noch nie synchronisiert"
@@ -122,11 +122,11 @@ de:
       api_error: "API-Fehler: %{message}"
       cancel: "Abbrechen"
       configure_name_in_provider: "Import nicht möglich – bitte Kontoname in IndexaCapital konfigurieren"
-      description: "Wählen Sie die Konten aus, die Sie mit Ihrem %{product_name}-Konto verknüpfen möchten."
+      description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen willst.
       link_accounts: "Ausgewählte Konten verknüpfen"
-      no_accounts_found: "Keine Konten gefunden. Bitte überprüfen Sie Ihre IndexaCapital-Zugangsdaten."
+      no_accounts_found: Keine Konten gefunden. Bitte prüf deine IndexaCapital-Zugangsdaten.
       no_api_key: "IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
-      no_credentials_configured: "Bitte konfigurieren Sie zuerst Ihre IndexaCapital-Zugangsdaten in den Anbieter-Einstellungen."
+      no_credentials_configured: Richte zuerst deine IndexaCapital-Zugangsdaten in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
       title: "IndexaCapital-Konten auswählen"
 
@@ -138,17 +138,17 @@ de:
       cancel: "Abbrechen"
       cancel_button: "Abbrechen"
       configure_name_in_provider: "Import nicht möglich – bitte Kontoname in IndexaCapital konfigurieren"
-      connect_hint: "Verbinden Sie ein IndexaCapital-Konto für automatische Synchronisation."
-      description: "Wählen Sie ein IndexaCapital-Konto zur Verknüpfung mit diesem Konto. Transaktionen werden automatisch synchronisiert und dedupliziert."
+      connect_hint: Verbinde ein IndexaCapital-Konto für automatische Synchronisation.
+      description: Wähl ein IndexaCapital-Konto zur Verknüpfung mit diesem Konto. Transaktionen werden automatisch synchronisiert und dedupliziert.
       header: "Mit IndexaCapital verknüpfen"
       link_account: "Konto verknüpfen"
       link_button: "Dieses Konto verknüpfen"
       linking_to: "Verknüpfe mit:"
       no_account_specified: "Kein Konto angegeben"
       no_accounts: "Keine unverknüpften IndexaCapital-Konten gefunden."
-      no_accounts_found: "Keine IndexaCapital-Konten gefunden. Bitte überprüfen Sie Ihre Zugangsdaten."
+      no_accounts_found: Keine IndexaCapital-Konten gefunden. Bitte prüf deine Zugangsdaten.
       no_api_key: "IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
-      no_credentials_configured: "Bitte konfigurieren Sie zuerst Ihre IndexaCapital-Zugangsdaten in den Anbieter-Einstellungen."
+      no_credentials_configured: Richte zuerst deine IndexaCapital-Zugangsdaten in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
       settings_link: "Zu den Anbieter-Einstellungen"
       subtitle: "IndexaCapital-Konto auswählen"
@@ -169,15 +169,15 @@ de:
       accounts_count:
         one: "%{count} Konto verfügbar"
         other: "%{count} Konten verfügbar"
-      all_accounts_linked: "Alle Ihre IndexaCapital-Konten sind bereits eingerichtet."
+      all_accounts_linked: Alle deine IndexaCapital-Konten sind bereits eingerichtet.
       api_error: "API-Fehler: %{message}"
       creating: "Konten werden erstellt..."
       fetch_failed: "Konten konnten nicht geladen werden"
       import_selected: "Ausgewählte Konten importieren"
-      instructions: "Wählen Sie die Konten aus, die Sie von IndexaCapital importieren möchten. Sie können mehrere Konten auswählen."
+      instructions: Wähl die Konten aus, die du von IndexaCapital importieren willst. Du kannst mehrere auswählen.
       no_accounts: "Keine unverknüpften Konten von dieser IndexaCapital-Verbindung gefunden."
       no_accounts_to_setup: "Keine Konten zum Einrichten"
-      no_api_key: "IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte überprüfen Sie Ihre Verbindungseinstellungen."
+      no_api_key: IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte prüf deine Verbindungseinstellungen.
       select_all: "Alle auswählen"
       account_types:
         skip: "Dieses Konto überspringen"
@@ -226,14 +226,14 @@ de:
           other: "Sonstiges Darlehen"
       balance: "Saldo"
       cancel: "Abbrechen"
-      choose_account_type: "Wählen Sie den passenden Kontotyp für jedes IndexaCapital-Konto:"
+      choose_account_type: 'Wähl den passenden Kontotyp für jedes IndexaCapital-Konto:'
       create_accounts: "Konten erstellen"
       creating_accounts: "Konten werden erstellt..."
       historical_data_range: "Zeitraum für Verlauf:"
-      subtitle: "Wählen Sie die passenden Kontotypen für Ihre importierten Konten"
-      sync_start_date_help: "Wählen Sie, wie weit die Transaktionshistorie synchronisiert werden soll."
+      subtitle: Wähl die passenden Kontotypen für deine importierten Konten
+      sync_start_date_help: Wähl, wie weit die Transaktionshistorie synchronisiert werden soll.
       sync_start_date_label: "Transaktionen synchronisieren ab:"
-      title: "Ihre IndexaCapital-Konten einrichten"
+      title: Deine IndexaCapital-Konten einrichten
 
     complete_account_setup:
       all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten erstellt."
@@ -242,4 +242,4 @@ de:
       success: "Erfolgreich %{count} Konto/Konten erstellt."
 
     preload_accounts:
-      no_credentials_configured: "Bitte konfigurieren Sie zuerst Ihre IndexaCapital-Zugangsdaten in den Anbieter-Einstellungen."
+      no_credentials_configured: Richte zuerst deine IndexaCapital-Zugangsdaten in den Anbietereinstellungen ein.

@@ -5,6 +5,7 @@ ca:
       redis_configured: Redis ja està configurat correctament! Ara pots configurar
         la teva aplicació Sure.
   shared:
+    dot_separator: "·"
     cancel: Cancel·la
     confirm_modal:
       accept: Confirma
@@ -15,11 +16,14 @@ ca:
       default_body: Aquesta acció no es pot desfer.
       default_btn_text: Confirma
       default_title: Segur que vols continuar?
+      resource_deletion_title: "Vols eliminar %{resource}?"
+      resource_deletion_body: "Segur que vols eliminar %{resource}? Aquesta acció no es pot desfer."
+      resource_deletion_btn_text: "Elimina %{resource}"
     exchange_rate_tabs:
       calculate_rate_tab: Calcular la taxa FX
       convert_tab: Convertir amb la taxa FX
-      destination_amount: Quantitat de destinació
-      exchange_rate: Taxa de canvi
+      destination_amount: Import de destinació
+      exchange_rate: Tipus de canvi
       exchange_rate_help: Tria com introduir la quantitat.
     family_moniker:
       group_plural: Grups
@@ -29,6 +33,9 @@ ca:
     money_field:
       label: Import
     require_admin: Només els administradors poden fer aquesta acció
+    sync_toast:
+      message: Hi ha dades noves disponibles
+      refresh: Actualitza
     syncing_notice:
       syncing: S'estan sincronitzant les dades dels comptes...
     transaction_tabs:
@@ -37,3 +44,14 @@ ca:
       transfer: Transferència
     trend_change:
       no_change: sense canvis
+    preview: Experimental
+    require_connector_owner: Només pots gestionar les connexions que has afegit tu
+    sidekiq_health_banner:
+      title: Algunes dades poden estar desactualitzades
+      body: Les tasques en segon pla no s'estan processant, així que els saldos, el patrimoni net i les sincronitzacions de comptes poden estar desactualitzats o incomplets.
+      cta: Mostra l'estat del sistema
+      reasons:
+        redis_unreachable: L'aplicació no pot connectar amb Redis. Comprova el teu REDIS_URL i que Redis estigui en execució.
+        no_worker_processes: No hi ha cap procés worker de Sidekiq connectat. Inicia el contenidor del worker o la unitat de systemd.
+        stale_heartbeat: El worker de Sidekiq fa estona que no envia cap senyal d'activitat. Pot estar encallat o haver-se aturat.
+        queue_backed_up: La tasca més antiga de la cua fa més temps que espera del que permet la latència màxima acceptable. El worker funciona, però s'està endarrerint.

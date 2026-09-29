@@ -1,0 +1,61 @@
+<%# Where every transaction the statement listed ended up. Counts are derived
+    from the entries themselves rather than stored on the import, so they stay
+    true if a later sync or edit changes the picture. %>
+<%= render DS::Dialog.new(width: "md") do |dialog| %>
+  <% dialog.with_header(
+       title: t(".title"),
+       subtitle: @import.account.present? ? t(".subtitle", account: @import.account.name) : t(".subtitle_no_account")
+     ) %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <dl class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200 border border-primary rounded-xl overflow-hidden">
+        <div class="flex items-center justify-between gap-4 px-4 py-3">
+          <dt class="text-sm text-secondary"><%= t(".extracted") %></dt>
+          <dd class="text-sm font-medium text-primary tabular-nums"><%= @import.extracted_count %></dd>
+        </div>
+
+        <div class="flex items-center justify-between gap-4 px-4 py-3">
+          <dt class="text-sm text-secondary">
+            <%= t(".already_recorded") %>
+            <span class="block text-xs text-subdued"><%= t(".already_recorded_hint") %></span>
+          </dt>
+          <dd class="text-sm font-medium text-primary tabular-nums"><%= @import.already_recorded_count %></dd>
+        </div>
+
+        <% if @import.imported_count.positive? %>
+          <div class="flex items-center justify-between gap-4 px-4 py-3">
+            <dt class="text-sm text-secondary"><%= t(".imported") %></dt>
+            <dd class="text-sm font-medium text-primary tabular-nums"><%= @import.imported_count %></dd>
+          </div>
+        <% end %>
+
+        <% if @import.awaiting_review_count.positive? %>
+          <div class="flex items-center justify-between gap-4 px-4 py-3">
+            <dt class="text-sm text-secondary"><%= t(".awaiting_review") %></dt>
+            <dd class="text-sm font-medium text-primary tabular-nums"><%= @import.awaiting_review_count %></dd>
+          </div>
+        <% end %>
+      </dl>
+
+      <%# The case this dialog exists for: an import that finished having created
+          nothing looks identical to one that found nothing. %>
+      <% if @import.reconciled_anything? && @import.awaiting_review_count.zero? && @import.imported_count.zero? %>
+        <p class="text-sm text-secondary px-3 py-2 bg-container-inset rounded-lg">
+          <%= t(".fully_reconciled", count: @import.already_recorded_count) %>
+        </p>
+      <% end %>
+
+      <% if @import.account_statement.present? %>
+        <p class="text-xs text-subdued">
+          <%= t(".statement_evidence_html",
+                statement: link_to(@import.account_statement.filename,
+                                   account_statement_path(@import.account_statement),
+                                   class: "text-primary hover:text-primary-hover underline")) %>
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% dialog.with_action(cancel_action: true, text: t(".close"), variant: "secondary", full_width: true) %>
+<% end %>

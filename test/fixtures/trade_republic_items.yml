@@ -1,0 +1,31 @@
+# Minimal fixtures for Trade Republic items
+# Keep fixtures minimal (2-3 per model for base cases)
+
+configured_item:
+  family: dylan_family
+  name: "Trade Republic Connection"
+  status: good
+  currency: EUR
+  phone_number: "+491701234567"
+  session_blob: "# Netscape HTTP Cookie File\n.traderepublic.com\tTRUE\t/\tTRUE\t0\tsession\tabc123"
+  scheduled_for_deletion: false
+  pending_account_setup: false
+
+requires_update_item:
+  family: dylan_family
+  name: "Trade Republic Needs Re-auth"
+  status: requires_update
+  currency: EUR
+  phone_number: "+491709876543"
+  scheduled_for_deletion: false
+  pending_account_setup: false
+
+no_session_item:
+  family: dylan_family
+  name: "Trade Republic No Session"
+  status: good
+  currency: EUR
+  phone_number: "+491700000000"
+  # session_blob intentionally blank
+  scheduled_for_deletion: false
+  pending_account_setup: true

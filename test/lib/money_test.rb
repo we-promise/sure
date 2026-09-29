@@ -90,6 +90,11 @@ class MoneyTest < ActiveSupport::TestCase
     assert_equal "€ 1.000,12", Money.new(1000.12, :eur).format(locale: :nl)
   end
 
+  test "rounds for display using currency precision" do
+    assert_equal Money.new(1000.9, :usd), Money.new(1000.899, :usd).for_display
+    assert_equal Money.new(1001, :jpy), Money.new(1000.6, :jpy).for_display
+  end
+
   test "formats correctly for French locale" do
     # French uses non-breaking spaces (NBSP = \u00A0) between thousands and before currency symbol
     assert_equal "1\u00A0000,12\u00A0€", Money.new(1000.12, :eur).format(locale: :fr)
@@ -195,6 +200,25 @@ class MoneyTest < ActiveSupport::TestCase
     assert_raises(Money::ConversionError) do
       Money.new(1000).exchange_to(:jpy)
     end
+  end
+
+  test "conversion error names the currency pair and date it failed on" do
+    error = Money::ConversionError.new(from_currency: "EUR", to_currency: "UAH", date: Date.new(2026, 9, 10))
+
+    assert_equal "Couldn't find exchange rate from EUR to UAH on 2026-09-10", error.message
+    assert_equal "EUR", error.from_currency
+    assert_equal "UAH", error.to_currency
+    assert_equal Date.new(2026, 9, 10), error.date
+  end
+
+  test "conversion error raised by exchange_to carries a descriptive message" do
+    ExchangeRate.expects(:find_or_fetch_rate).returns(nil)
+
+    error = assert_raises(Money::ConversionError) do
+      Money.new(1000, :usd).exchange_to(:jpy, date: Date.new(2026, 9, 10))
+    end
+
+    assert_equal "Couldn't find exchange rate from USD to JPY on 2026-09-10", error.message
   end
 
   test "uses custom rate when provided" do

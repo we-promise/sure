@@ -1,11 +1,11 @@
 <%= turbo_frame_tag "modal" do %>
   <%= render DS::Dialog.new do |dialog| %>
-    <% dialog.with_header(title: t(".title", default: "Select Your Bank")) %>
+    <% dialog.with_header(title: t(".title")) %>
 
     <% dialog.with_body do %>
       <div class="space-y-4" data-controller="bank-search">
         <p class="text-sm text-secondary">
-          <%= t(".description", default: "Choose the bank you want to connect to your account.") %>
+          <%= t(".description") %>
         </p>
 
         <% if @error_message.present? %>
@@ -15,16 +15,15 @@
         <% end %>
 
         <% if @aspsps.present? %>
-          <%# Search input — filters list client-side via Stimulus %>
-          <input
-            type="text"
-            placeholder="<%= t(".search_placeholder", default: "Search for your bank...") %>"
-            data-bank-search-target="input"
-            data-action="input->bank-search#filter"
-            class="w-full px-3 py-2 text-sm rounded-md border border-primary bg-container-inset text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
-            autocomplete="off"
-            aria-label="<%= t(".search_label", default: "Search for your bank") %>"
-            autofocus>
+          <%= render DS::SearchInput.new(
+                placeholder: t(".search_placeholder"),
+                aria_label: t(".search_label"),
+                autofocus: true,
+                data: {
+                  bank_search_target: "input",
+                  action: "input->bank-search#filter"
+                }
+              ) %>
 
           <div class="space-y-2 max-h-80 overflow-y-auto">
             <% @aspsps.each do |aspsp| %>
@@ -45,7 +44,7 @@
                     <div class="flex items-center gap-2 flex-wrap">
                       <p class="font-medium text-sm text-primary"><%= aspsp[:name] %></p>
                       <% if aspsp[:beta] %>
-                        <%= render DS::Pill.new(label: t(".beta_label", default: "Beta"), tone: :warning, marker: false) %>
+                        <%= render DS::Pill.new(label: t(".beta_label"), tone: :warning, marker: false) %>
                       <% end %>
                     </div>
                     <% if aspsp[:bic].present? %>
@@ -57,19 +56,19 @@
               </div>
             <% end %>
             <div data-bank-search-target="emptyState" class="hidden py-4 text-center text-sm text-secondary">
-              <%= t(".no_search_results", default: "No banks match your search.") %>
+              <%= t(".no_search_results") %>
             </div>
           </div>
         <% else %>
           <div class="text-center py-8">
-            <p class="text-secondary"><%= t(".no_banks", default: "No banks available for this country.") %></p>
-            <p class="text-sm text-secondary mt-2"><%= t(".check_country", default: "Please check your country code setting.") %></p>
+            <p class="text-secondary"><%= t(".no_banks") %></p>
+            <p class="text-sm text-secondary mt-2"><%= t(".check_country") %></p>
           </div>
         <% end %>
 
         <div class="flex justify-end pt-4">
           <%= render DS::Link.new(
-                text: t(".cancel", default: "Cancel"),
+                text: t(".cancel"),
                 variant: :secondary,
                 href: settings_providers_path,
                 data: { turbo_frame: "_top", action: "DS--dialog#close" }

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class SnaptradeItemTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @family = families(:dylan_family)
   end
@@ -39,5 +41,24 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     item.oauth_access_token = "test-access-token"
     assert_equal item.oauth_configured?, item.credentials_configured?
     assert item.credentials_configured?
+  end
+
+  test "an unlinked account awaiting activities does not keep the item syncing" do
+    item = snaptrade_items(:configured_item)
+    account = snaptrade_accounts(:fidelity_401k)
+    account.update!(activities_fetch_pending: true)
+
+    assert_nil account.current_account
+    assert_not item.syncing?
+  end
+
+  test "sync_later_with_follow_up queues a follow-up after an active sync" do
+    item = snaptrade_items(:configured_item)
+    active_sync = item.syncs.create!
+    active_sync.start!
+
+    assert_enqueued_with job: SnaptradeFollowUpSyncJob do
+      item.sync_later_with_follow_up
+    end
   end
 end

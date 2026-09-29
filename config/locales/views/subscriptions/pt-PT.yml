@@ -1,0 +1,24 @@
+---
+pt-PT:
+  subscriptions:
+    self_hosted_alert: "%{product_name} não está disponível no modo self-hosted."
+    upgrade:
+      already_contributing: Já está a contribuir. Obrigado!
+      page_title: "Atualizar"
+      account_settings: "Definições da conta"
+      sign_out: "Terminar sessão"
+      contribute_and_support_sure: "Contribuir e apoiar o Sure"
+      cta: "Continue a apoiar o desenvolvimento desta base de código!"
+      header:
+        support: "Apoiar"
+        sure: "Sure"
+        today: "hoje"
+      redirect_to_stripe: "No passo seguinte, será redirecionado para o Stripe, que processa os cartões de crédito por nós."
+      trialing: "Os seus dados serão eliminados em %{days} dias"
+      trial_over: "O seu período experimental terminou"
+    create:
+      welcome: "Bem-vindo ao Sure!"
+      trial_already_used: "Já iniciou ou concluiu um período experimental. Atualize para continuar."
+    success:
+      welcome_with_contribution: "Bem-vindo ao Sure! A sua contribuição é apreciada."
+      contribution_failed: "Ocorreu um erro ao processar a sua contribuição. Tente novamente."

@@ -12,6 +12,8 @@ class SsoAuditLog < ApplicationRecord
     link
     unlink
     jit_account_created
+    identity_unblocked
+    user_removed
   ].freeze
 
   validates :event_type, presence: true, inclusion: { in: EVENT_TYPES }
@@ -102,6 +104,34 @@ class SsoAuditLog < ApplicationRecord
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
         metadata: metadata
+      )
+    end
+
+    def log_user_removed!(user:, actor:, request:)
+      create!(
+        user: user,
+        event_type: "user_removed",
+        provider: nil,
+        ip_address: request.remote_ip,
+        user_agent: request.user_agent&.truncate(500),
+        metadata: {
+          actor_user_id: actor.id,
+          target_user_id: user.id
+        }
+      )
+    end
+
+    def log_identity_unblocked!(block:, actor:, request:)
+      create!(
+        user: nil,
+        event_type: "identity_unblocked",
+        provider: block.provider,
+        ip_address: request.remote_ip,
+        user_agent: request.user_agent&.truncate(500),
+        metadata: {
+          actor_user_id: actor.id,
+          identity_block_id: block.id
+        }
       )
     end
   end

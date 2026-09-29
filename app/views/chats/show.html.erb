@@ -1,4 +1,4 @@
-<div data-controller="chat hotkey">
+<div data-controller="chat hotkey" data-chat-response-timeout-value="<%= Chat.response_timeout_ms %>">
   <%= turbo_frame_tag chat_frame do %>
     <%= turbo_stream_from @chat %>
 

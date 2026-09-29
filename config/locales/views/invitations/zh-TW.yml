@@ -1,7 +1,15 @@
 ---
 zh-TW:
   invitations:
+    accept_choice:
+      create_account: 建立新帳號
+      joined_household: 您已加入這個家庭。
+      message: '%{inviter} 邀請您以%{role}的身分加入。'
+      sign_in_existing: 我已經有帳號了
+      title: 加入 %{family}
     create:
+      existing_user_added: 使用者已加入您的家庭。
+      existing_user_has_family_data: 這位使用者已經擁有自己的家庭，且該家庭底下有帳戶。對方必須先移除或轉移那些帳戶，才能加入您的家庭。
       failure: 傳送邀請失敗
       success: 邀請傳送成功
     destroy:
@@ -9,11 +17,12 @@ zh-TW:
       not_authorized: 您沒有管理邀請的權限。
       success: 邀請已成功刪除。
     new:
-      email_label: 電子信箱地址
-      email_placeholder: 請輸入電子信箱地址
+      email_label: 電子郵件地址
+      email_placeholder: 請輸入電子郵件地址
       role_admin: 管理員
+      role_guest: 訪客
       role_label: 角色
       role_member: 成員
       submit: 傳送邀請
-      subtitle: 傳送邀請，讓對方加入您在 %{product_name} 的家庭帳戶
+      subtitle: 傳送邀請，讓對方加入您在 %{product_name} 的%{moniker}帳號
       title: 邀請成員

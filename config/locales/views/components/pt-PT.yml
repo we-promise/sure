@@ -1,0 +1,169 @@
+---
+pt-PT:
+  UI:
+    period_picker:
+      aria_label: "Período: %{period}"
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Alternar seleção
+      balance_reconciliation:
+        labels:
+          adjustments: Ajustes
+          buys: Compras
+          change_in_brokerage_cash: Alteração no numerário da corretora
+          change_in_holdings_market: Alteração nas posições (atividade de preços de mercado)
+          change_in_holdings_trades: Alteração nas posições (compras/vendas)
+          charges: Encargos
+          end_balance: Saldo final
+          end_principal: Capital final
+          end_value: Valor final
+          final_balance: Saldo final
+          final_principal: Capital final
+          final_value: Valor final
+          market_changes: Alterações de mercado
+          net_cash_flow: Fluxo de numerário líquido
+          net_principal_change: Alteração líquida do capital
+          net_value_change: Alteração líquida do valor
+          payments: Pagamentos
+          sells: Vendas
+          start_balance: Saldo inicial
+          start_principal: Capital inicial
+          start_value: Valor inicial
+        tooltips:
+          adjustments: Reconciliações manuais ou outros ajustes
+          adjustments_asset: Ajustes manuais de valor ou avaliações
+          buys: Compras de criptomoedas durante o dia
+          change_in_brokerage_cash: Alteração líquida no numerário proveniente de depósitos, levantamentos e negociações
+          change_in_holdings_market: Alteração no valor das posições proveniente de movimentos de preços de mercado
+          change_in_holdings_trades: Impacto nas posições proveniente da compra e venda de valores mobiliários
+          charges: Novos encargos efetuados durante o dia
+          end_balance: O saldo calculado após todas as transações
+          end_balance_investment: O saldo calculado após toda a atividade
+          end_principal: O capital calculado após todas as transações
+          end_value: O valor calculado após todas as alterações
+          final_balance: O saldo final da conta para o dia
+          final_balance_credit: O saldo final em dívida para o dia
+          final_balance_crypto: O valor final das posições em criptomoedas para o dia
+          final_balance_investment: O valor final da carteira para o dia
+          final_principal: O saldo de capital final para o dia
+          final_value: O valor final do ativo para o dia
+          market_changes: Alterações de valor provenientes de movimentos de preços de mercado
+          net_cash_flow: Alteração líquida no saldo proveniente de todas as transações durante o dia
+          net_principal_change: Pagamentos de capital e novo empréstimo durante o dia
+          net_value_change: Todas as alterações de valor, incluindo melhorias e depreciação
+          payments: Pagamentos efetuados ao cartão durante o dia
+          sells: Vendas de criptomoedas durante o dia
+          start_balance: O saldo da conta no início deste dia
+          start_balance_credit: O saldo em dívida no início deste dia
+          start_balance_crypto: O valor das posições em criptomoedas no início deste dia
+          start_balance_investment: O valor total da carteira no início deste dia
+          start_principal: O saldo de capital no início deste dia
+          start_value: O valor do ativo no início deste dia
+      chart:
+        no_data_available: "Sem dados disponíveis"
+        title:
+          balance: Saldo
+          cash_value: Valor em numerário
+          debt_balance: Saldo de dívida
+          estimated_property_value: Valor estimado do imóvel
+          estimated_vehicle_value: Valor estimado do veículo
+          holdings_value: Valor das posições
+          remaining_principal_balance: Saldo de capital restante
+          total_account_value: Valor total da conta
+          total_gains: Ganhos totais
+        views:
+          cash: Numerário
+          gains: Ganhos / ROI
+          holdings: Posições
+          total_value: Valor total
+        vs_available_history: vs. histórico disponível
+      activity_date:
+        balance_tooltip: "O saldo no fim do dia, após todas as transações e ajustes"
+        no_balance_data: "Sem dados de saldo disponíveis para esta data"
+  ds:
+    alert:
+      variants:
+        info: Informação
+        success: Sucesso
+        warning: Aviso
+        error: Erro
+        destructive: Erro
+    pill:
+      aria_label: "%{label}"
+      default_label: Pré-visualizar
+    dialog:
+      close: Fechar
+    popover:
+      avatar_default_label: Abrir menu
+    tooltip:
+      trigger_label: Mais informações
+    link:
+      opens_in_new_tab: (abre num novo separador)
+    icon_picker:
+      no_matching_icons: Sem ícones correspondentes
+      search_placeholder: Pesquisar ícones...
+  provider_sync_summary:
+    title: Resumo da sincronização
+    last_sync: "Última sincronização: há %{time_ago}"
+    accounts:
+      title: Contas
+      total: "Total: %{count}"
+      linked: "Ligadas: %{count}"
+      unlinked: "Desligadas: %{count}"
+      institutions: "Instituições: %{count}"
+    transactions:
+      title: Transações
+      seen: "Vistas: %{count}"
+      imported: "Importadas: %{count}"
+      updated: "Atualizadas: %{count}"
+      skipped: "Ignoradas: %{count}"
+      fetching: "A obter dados da corretora..."
+      protected:
+        one: "%{count} registo protegido (não sobrescrito)"
+        other: "%{count} registos protegidos (não sobrescritos)"
+      view_protected: Ver registos protegidos
+    skip_reasons:
+      excluded: Excluída
+      user_modified: Modificada pelo utilizador
+      import_locked: Importação CSV
+      protected: Protegida
+    holdings:
+      title: Posições
+      found: "Encontradas: %{count}"
+      processed: "Processadas: %{count}"
+    trades:
+      title: Negociações
+      imported: "Importadas: %{count}"
+      skipped: "Ignoradas: %{count}"
+      fetching: "A obter atividades da corretora..."
+    health:
+      title: Estado
+      view_error_details: Ver detalhes do erro
+      rate_limited: "Limite de pedidos há %{time_ago}"
+      recently: recentemente
+      errors: "Erros: %{count}"
+      pending_reconciled:
+        one: "%{count} transação pendente duplicada reconciliada"
+        other: "%{count} transações pendentes duplicadas reconciliadas"
+      view_reconciled: Ver transações reconciliadas
+      duplicate_suggestions:
+        one: "%{count} possível duplicado precisa de revisão"
+        other: "%{count} possíveis duplicados precisam de revisão"
+      view_duplicate_suggestions: Ver duplicados sugeridos
+      stale_pending:
+        one: "%{count} transação pendente desatualizada (excluída dos orçamentos)"
+        other: "%{count} transações pendentes desatualizadas (excluídas dos orçamentos)"
+      view_stale_pending: Ver contas afetadas
+      stale_pending_count:
+        one: "%{count} transação"
+        other: "%{count} transações"
+      stale_unmatched:
+        one: "%{count} transação pendente precisa de revisão manual"
+        other: "%{count} transações pendentes precisam de revisão manual"
+      view_stale_unmatched: Ver transações que precisam de revisão
+      stale_unmatched_count:
+        one: "%{count} transação"
+        other: "%{count} transações"
+      data_warnings: "Avisos de dados: %{count}"
+      notices: "Avisos: %{count}"
+      view_data_quality: Ver detalhes da qualidade dos dados

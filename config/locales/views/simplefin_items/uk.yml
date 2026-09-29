@@ -1,0 +1,199 @@
+uk:
+  simplefin_items:
+    new:
+      title: Підключити SimpleFIN
+      setup_token: Токен налаштування
+      setup_token_placeholder: вставте свій токен налаштування SimpleFIN
+      connect: Підключити
+      cancel: Скасувати
+    create:
+      success: З'єднання SimpleFIN успішно додано! Ваші рахунки з'являться незабаром, оскільки вони синхронізуються у фоновому режимі.
+      errors:
+        blank_token: Будь ласка, введіть токен налаштування SimpleFIN.
+        invalid_token: Недійсний токен налаштування. Перевірте, чи ви скопіювали повний токен з SimpleFIN Bridge.
+        token_compromised: Токен налаштування може бути скомпрометований, прострочений або вже використаний. Будь ласка, створіть новий.
+        create_failed: "Не вдалося підключитися: %{message}"
+        unexpected: Сталася несподівана помилка. Спробуйте ще раз.
+    destroy:
+      success: З'єднання SimpleFIN буде видалено
+    update:
+      success: З'єднання SimpleFIN успішно оновлено! Ваші рахунки перепідключаються.
+      errors:
+        blank_token: Будь ласка, введіть токен налаштування SimpleFIN.
+        invalid_token: Недійсний токен налаштування. Перевірте, чи ви скопіювали повний токен з SimpleFIN Bridge.
+        token_compromised: Токен налаштування може бути скомпрометований, прострочений або вже використаний. Будь ласка, створіть новий.
+        update_failed: "Не вдалося оновити з'єднання: %{message}"
+        unexpected: Сталася несподівана помилка. Спробуйте ще раз.
+    edit:
+      setup_token:
+        label: "Токен налаштування SimpleFIN:"
+        placeholder: "Вставте свій токен налаштування SimpleFIN тут..."
+        help_text: "Токен має бути довгим рядком, що починається з літер і цифр"
+      title: Оновити з'єднання SimpleFIN
+      header_subtitle: Отримайте новий токен налаштування, щоб перепідключити свій обліковий запис SimpleFIN
+      connection_needs_update: "Ваше з'єднання SimpleFIN потребує оновлення:"
+      step_1_html: "Відвідайте <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a>, щоб створити новий токен налаштування"
+      step_2: Скопіюйте токен і вставте його нижче
+      step_3: "Натисніть \"Оновити\", щоб відновити доступ"
+      update: Оновити
+      cancel: Скасувати
+    setup_accounts:
+      title: Налаштуйте свої рахунки SimpleFIN
+      header_subtitle: Виберіть правильні типи рахунків для ваших імпортованих рахунків
+      choose_account_type: "Виберіть правильний тип рахунку для кожного рахунку SimpleFIN:"
+      account_type_checking_savings: Поточний або ощадний
+      account_type_checking_savings_desc: Звичайні банківські рахунки
+      account_type_credit_card: Кредитна картка
+      account_type_credit_card_desc: Рахунки кредитних карток
+      account_type_investment: Інвестиційний
+      account_type_investment_desc: "Брокерські, 401(k), IRA рахунки"
+      account_type_loan: Позика або іпотека
+      account_type_loan_desc: Боргові рахунки
+      account_type_other_asset: Інший актив
+      account_type_other_asset_desc: Все інше
+      transaction_history_title: "Історія транзакцій:"
+      transaction_history_description_html: "SimpleFIN зазвичай надає <strong>60-90 днів</strong> історії транзакцій, залежно від вашого банку. Після початкового налаштування нові транзакції будуть синхронізуватися автоматично. Доступність історичних даних залежить від установи та типу рахунку."
+      account_type_label: "Тип рахунку:"
+      create_accounts: Створити рахунки
+      creating_accounts: Створення рахунків...
+      cancel: Скасувати
+      account_card:
+        balance: "Баланс"
+      activity:
+        recent:
+          one: "%{count} транзакція • остання %{when}"
+          other: "%{count} транзакцій • остання %{when}"
+          few: '%{count} транзакції • остання %{when}'
+          many: '%{count} транзакцій • остання %{when}'
+        dormant: "Немає активності протягом %{days} днів"
+        empty: "Ще немає імпортованих транзакцій"
+        likely_closed: "Немає недавньої активності та нульовий баланс — це може бути закрита або замінена картка"
+        today: "сьогодні"
+        yesterday: "вчора"
+        days_ago:
+          one: "%{count} день тому"
+          other: "%{count} днів тому"
+          few: '%{count} дні тому'
+          many: '%{count} днів тому'
+      stale_accounts:
+        title: "Рахунки, яких більше немає в SimpleFIN"
+        description: "Ці рахунки існують у вашій базі даних, але більше не надаються SimpleFIN. Це може статися, коли конфігурації рахунків змінюються на стороні постачальника."
+        action_prompt: "Що б ви хотіли зробити?"
+        action_delete: "Видалити рахунок і всі транзакції"
+        action_move: "Перемістити транзакції до:"
+        action_skip: "Пропустити наразі"
+        transaction_count:
+          one: "%{count} транзакція"
+          other: "%{count} транзакцій"
+          few: '%{count} транзакції'
+          many: '%{count} транзакцій'
+    complete_account_setup:
+      all_skipped: "Усі рахунки було пропущено. Жоден рахунок не було створено."
+      no_accounts: "Немає рахунків для налаштування."
+      success:
+        one: "Успішно створено %{count} рахунок SimpleFIN! Ваші транзакції та активи імпортуються у фоновому режимі."
+        other: "Успішно створено %{count} рахунків SimpleFIN! Ваші транзакції та активи імпортуються у фоновому режимі."
+        few: Успішно створено %{count} рахунки SimpleFIN! Ваші транзакції та активи імпортуються у фоновому режимі.
+        many: Успішно створено %{count} рахунків SimpleFIN! Ваші транзакції та активи імпортуються у фоновому режимі.
+      stale_accounts_processed: "Застарілі рахунки: %{deleted} видалено, %{moved} переміщено."
+      stale_accounts_errors:
+        one: "%{count} дія із застарілим рахунком не вдалася. Перевірте журнали для отримання докладної інформації."
+        other: "%{count} дії із застарілими рахунками не вдалися. Перевірте журнали для отримання докладної інформації."
+        few: '%{count} дії із застарілими рахунками не вдалися. Перевірте журнали для отримання докладної інформації.'
+        many: '%{count} дій із застарілими рахунками не вдалися. Перевірте журнали для отримання докладної інформації.'
+    simplefin_item:
+      add_new: Додати нове з'єднання
+      confirm_accept: Видалити з'єднання
+      confirm_body: Це назавжди видалить усі рахунки в цій групі та всі пов'язані дані.
+      confirm_title: Видалити з'єднання SimpleFIN?
+      delete: Видалити
+      deletion_in_progress: "(видалення триває...)"
+      error: Сталася помилка під час синхронізації даних
+      no_accounts_description: Це з'єднання ще не має синхронізованих рахунків.
+      no_accounts_title: Рахунки не знайдено
+      requires_update: Перепідключити
+      setup_needed: Нові рахунки готові до налаштування
+      setup_description: Виберіть типи рахунків для ваших щойно імпортованих рахунків SimpleFIN.
+      setup_action: Налаштувати нові рахунки
+      setup_accounts_menu: Налаштувати рахунки
+      more_accounts_available:
+        one: "Ще %{count} рахунок доступний для налаштування"
+        other: "Ще %{count} рахунку доступно для налаштування"
+        few: Ще %{count} рахунки доступні для налаштування
+        many: Ще %{count} рахунків доступно для налаштування
+      accounts_skipped_tooltip: "Деякі рахунки було пропущено через помилки під час синхронізації"
+      accounts_skipped_label: "Пропущено: %{count}"
+      rate_limited_ago: "Обмеження швидкості (%{time} тому)"
+      rate_limited_recently: "Нещодавно обмежено швидкість"
+      status: Остання синхронізація %{timestamp} тому
+      status_never: Ніколи не синхронізовано
+      status_with_summary: "Остання синхронізація %{timestamp} тому • %{summary}"
+      syncing: Синхронізація...
+      update: Оновити
+      stale_pending_note: "(виключено з бюджетів)"
+      stale_pending_accounts: "в: %{accounts}"
+      reconciled_details_note: "(див. зведення синхронізації для отримання докладної інформації)"
+      duplicate_accounts_skipped: "Деякі рахунки було пропущено як дублікати — використовуйте 'Пов'язати існуючі рахунки' для об'єднання."
+    select_existing_account:
+      title: "Пов'язати %{account_name} з SimpleFIN"
+      description: Виберіть рахунок SimpleFIN для пов'язування з вашим існуючим рахунком
+      cancel: Скасувати
+      link_account: Пов'язати рахунок
+      no_accounts_found: "Для цього %{moniker} не знайдено рахунків SimpleFIN."
+      wait_for_sync: Якщо ви щойно підключилися або синхронізувалися, спробуйте ще раз після завершення синхронізації.
+      unlink_to_move: Щоб перемістити посилання, спочатку від'єднайте його з меню дій рахунку.
+      all_accounts_already_linked: Схоже, усі рахунки SimpleFIN вже пов'язано.
+      currently_linked_to: "Наразі пов'язано з: %{account_name}"
+      check_provider_health: Перевірте стан з'єднання SimpleFIN у розділі Налаштування → Постачальники.
+
+    link_existing_account:
+      success: Рахунок успішно пов'язано з SimpleFIN
+      errors:
+        only_manual: Можна пов'язувати лише ручні рахунки
+        different_provider: Цей рахунок пов'язано з іншим постачальником. Спочатку від'єднайте його від цього постачальника, а потім пов'яжіть з SimpleFIN.
+        invalid_simplefin_account: Вибрано недійсний рахунок SimpleFIN
+    dismiss_replacement_suggestion:
+      dismissed: Пропозицію про заміну відхилено
+    replacement_prompt:
+      title: "Вашу картку %{institution} могло бути замінено"
+      description: "“%{account_name}” пов'язано з “%{old_name}”, у якого не було недавньої активності та нульовий баланс. Нова картка, “%{new_name}”, тепер активна в тій самій установі. Переприв'яжіть, щоб зберегти свою історію."
+      relink: Переприв'язати до нової картки
+      confirm_title: Переприв'язати до нової картки?
+      confirm_body: "“%{account_name}” буде пов'язано з “%{new_name}”. Ваша історія транзакцій залишиться; майбутні транзакції надходитимуть з нової картки."
+      dismiss_aria: Відхилити пропозицію про заміну
+    reconciled_status:
+      message:
+        one: "%{count} дублікат очікуваної транзакції звірено"
+        other: "%{count} дублікатів очікуваних транзакцій звірено"
+        few: '%{count} дублікати очікуваних транзакцій звірено'
+        many: '%{count} дублікатів очікуваних транзакцій звірено'
+    stale_pending_status:
+      message:
+        one: "%{count} очікувана транзакція старша за %{days} днів"
+        other: "%{count} очікуваних транзакцій старші за %{days} днів"
+        few: '%{count} очікувані транзакції старші за %{days} днів'
+        many: '%{count} очікуваних транзакцій старші за %{days} днів'
+    sync_status:
+      no_accounts: Рахунки не знайдено
+      synced:
+        one: '%{count} рахунок синхронізовано'
+        few: '%{count} рахунки синхронізовано'
+        many: '%{count} рахунків синхронізовано'
+        other: '%{count} рахунку синхронізовано'
+      partial_setup:
+        one: '%{linked} синхронізовано, %{unlinked} потребує налаштування'
+        few: '%{linked} синхронізовано, %{unlinked} потребують налаштування'
+        many: '%{linked} синхронізовано, %{unlinked} потребують налаштування'
+        other: '%{linked} синхронізовано, %{unlinked} потребують налаштування'
+    institution_summary:
+      none: Немає підключених установ
+      count:
+        one: '%{count} установа'
+        few: '%{count} установи'
+        many: '%{count} установ'
+        other: '%{count} установи'
+    rate_limited:
+      daily_refresh: Ви досягли денного ліміту оновлень SimpleFIN. Спробуйте ще раз після оновлення даних у SimpleFIN Bridge (до 24 годин).
+    stale_sync:
+      last_successful: Остання успішна синхронізація була %{count} дн. тому. Можливо, ваше з'єднання SimpleFIN потребує уваги.
+      no_transactions: Немає нових транзакцій протягом %{count} дн. Перевірте панель керування SimpleFIN, щоб переконатися, що з'єднання з вашими банками активні.

@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  has_many :financekit_items, dependent: :destroy
+
   include Encryptable
 
   # Allow nil password for SSO-only users (JIT provisioning).
@@ -25,6 +27,7 @@ class User < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
+  has_many :push_subscriptions, dependent: :destroy
   has_many :webauthn_credentials, dependent: :destroy
   has_many :mobile_devices, dependent: :destroy
   has_many :invitations, foreign_key: :inviter_id, dependent: :destroy
@@ -35,6 +38,8 @@ class User < ApplicationRecord
   has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
   has_many :shared_accounts, through: :account_shares, source: :account
+  has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
+  has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy
   accepts_nested_attributes_for :family, update_only: true
 
   MFA_BACKUP_CODE_COUNT = 8
@@ -74,9 +79,34 @@ class User < ApplicationRecord
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
-  # get the specified fallback role (typically :admin for family creators).
+  # get the specified admin-capable fallback role.
+  # Keep this one-key advisory lock stable across deploys so old and new app
+  # processes serialize first-user role selection on the same database lock.
+  FIRST_USER_ROLE_LOCK_KEY = 8_391_247
+
+  def self.lock_first_user_role!
+    connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", FIRST_USER_ROLE_LOCK_KEY ]))
+  end
+
   def self.role_for_new_family_creator(fallback_role: :admin)
+    fallback_role = fallback_role.to_s.in?(%w[admin super_admin]) ? fallback_role : :admin
+
     User.exists? ? fallback_role : :super_admin
+  end
+
+  class << self
+    def human_attribute_name(attribute, options = {})
+      locale = options[:locale] || I18n.locale
+      moniker = I18n.with_locale(locale) do
+        Current.family&.moniker_label || I18n.t("shared.family_moniker.singular", default: "Family")
+      end
+
+      options = {
+        moniker: moniker
+      }.merge(options)
+
+      super(attribute, options)
+    end
   end
 
   has_one_attached :profile_image, dependent: :purge_later do |attachable|
@@ -139,6 +169,12 @@ class User < ApplicationRecord
     family.accounts.included_in_finances_for(self)
   end
 
+  # Other family members who have granted this user access to their personal
+  # budget (see BudgetShare). Used to build the budget owner switcher.
+  def budget_owners_shared_with_me
+    User.where(id: budget_shares_received.select(:owner_id))
+  end
+
   def display_name
     [ first_name, last_name ].compact.join(" ").presence || email
   end
@@ -192,7 +228,7 @@ class User < ApplicationRecord
   # SSO-only users have OIDC identities but no local password.
   # They cannot use password reset or local login.
   def sso_only?
-    password_digest.nil? && oidc_identities.exists?
+    password_digest.nil? && oidc_identities.any?
   end
 
   # Check if user has a local password set (can authenticate locally)
@@ -205,10 +241,119 @@ class User < ApplicationRecord
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
+
+  # Super Admin Invariant
+  validate :ensure_not_last_super_admin, if: :losing_super_admin_privileges?
+  before_destroy :ensure_not_last_super_admin_on_destroy
+
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
+  after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
-    update active: false, email: deactivated_email
+    return true unless active?
+
+    transaction do
+      update(active: false, email: deactivated_email)
+    end || false
+  end
+
+  private
+
+    def losing_super_admin_privileges?
+      (role_changed? && role_was == "super_admin" && role != "super_admin") ||
+        (active_changed? && active_was == true && !active && role == "super_admin")
+    end
+
+    def ensure_not_last_super_admin
+      return unless check_last_super_admin_invariant_failed?
+
+      attribute = role_changed? ? :role : :base
+      errors.add(attribute, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+    end
+
+    def ensure_not_last_super_admin_on_destroy
+      return unless role == "super_admin" && active?
+
+      if check_last_super_admin_invariant_failed?
+        errors.add(:base, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+        throw(:abort)
+      end
+    end
+
+    def check_last_super_admin_invariant_failed?
+      # Lock all active super admins in a consistent order to prevent deadlocks
+      locked_ids = User.where(role: :super_admin, active: true).order(:id).lock.pluck(:id)
+      locked_ids.size <= 1 && locked_ids.include?(id)
+    end
+
+  public
+
+  # Permanent removal of another user, initiated by a super admin from the
+  # instance users page. Reuses the sanctioned deactivate -> UserPurgeJob path
+  # (which reassigns owned accounts, or destroys the family when this is its
+  # last member) for the heavy data cleanup, but additionally revokes every
+  # live authentication vector *synchronously* so there is no window in which
+  # the removed user can keep acting or re-authenticate before the async purge
+  # runs. Returns false (with errors populated) when the user cannot be
+  # deactivated, e.g. an admin who still has co-members in their family.
+  def permanently_remove!
+    was_active = active?
+    removed = transaction do
+      identity_label = email
+      raise ActiveRecord::Rollback unless deactivate
+
+      SsoIdentityBlock.block_all!(oidc_identities, identity_label: identity_label)
+      revoke_all_credentials!
+      true
+    end || false
+
+    purge_later if removed && !was_active
+    removed
+  end
+
+  # Destroys every credential/session that can authenticate as this user.
+  # Web sessions and the SSO identity re-auth path (OidcIdentity lookup by
+  # provider+uid) are not gated on #active?, so they must be torn down here for
+  # revocation to be immediate; the async purge would otherwise leave a window.
+  def revoke_all_credentials!
+    Doorkeeper::AccessToken
+      .where(resource_owner_id: id, revoked_at: nil)
+      .update_all(revoked_at: Time.current)
+    sessions.destroy_all
+    api_keys.destroy_all
+    mobile_devices.destroy_all
+    webauthn_credentials.destroy_all
+    oidc_identities.destroy_all
+  end
+
+  # Raised by #with_active_lock! to reject session/token issuance for a
+  # deactivated or concurrently-purged user. The one error contract every
+  # web/JSON/mobile/OAuth-adapter caller rescues, so a deactivation result
+  # can never be confused with an unrelated persistence failure.
+  class InactiveError < StandardError; end
+
+  # The one locked primitive for the actual authorization boundary: asserts
+  # this user is eligible for new session/token issuance *right now*, under
+  # a row lock, immediately before minting. Callers may additionally check
+  # #active? earlier for a fast, friendly rejection (skip an MFA/device
+  # round trip) — that's a UX optimization only, never a substitute for
+  # this check, however "obviously" already-checked the user seems.
+  def with_active_lock!
+    lock_acquired = false
+
+    with_lock do
+      lock_acquired = true
+      raise InactiveError unless active?
+      yield self
+    end
+  rescue ActiveRecord::RecordNotFound
+    # Only translate a RecordNotFound raised by with_lock's own reload (the
+    # row was deleted by a concurrent purge before we could lock it) into
+    # InactiveError. Once the lock is held, re-raise: a RecordNotFound from
+    # inside the caller's block is an unrelated failure and must not be
+    # misreported as "inactive" either.
+    raise if lock_acquired
+    raise InactiveError
   end
 
   def can_deactivate
@@ -219,6 +364,110 @@ class User < ApplicationRecord
 
   def purge_later
     UserPurgeJob.perform_later(self)
+  end
+
+  def transfer_to_family!(new_family, role: self.role)
+    transaction do
+      lock!
+
+      accounts_to_move = owned_accounts.order(:id).to_a
+      provider_items_to_move = provider_items_for_transfer(accounts_to_move)
+      moving_default_account = accounts_to_move.any? { |account| account.id == default_account_id }
+
+      provider_items_to_move.sort_by(&:id).each(&:lock!)
+      accounts_to_move.each(&:lock!)
+
+      account_shares.delete_all
+
+      update!(family: new_family, role: role, default_account: moving_default_account ? default_account : nil)
+
+      accounts_to_move.each do |account|
+        account.update!(family: new_family)
+      end
+
+      AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
+
+      provider_items_to_move.each do |provider_item|
+        if provider_item.is_a?(FinancekitItem)
+          lineage_ids = provider_item.financekit_account_lineages.select(:id)
+          FinancekitAccountLineage.where(id: lineage_ids).update_all(family_id: new_family.id, updated_at: Time.current)
+          provider_item.financekit_conflicts.update_all(family_id: new_family.id, updated_at: Time.current)
+        end
+        attrs = { family: new_family }
+
+        # provider_items_for_transfer only returns items whose accounts all
+        # belong to this user, so the connection genuinely follows them. Its
+        # owner has to follow too: the previous owner stays behind in the old
+        # family, and ProviderItemOwnable validates that an owner and its item
+        # share a family.
+        attrs[:owner] = self if provider_item.respond_to?(:owner_id)
+
+        provider_item.update!(**attrs)
+      end
+
+      new_family.auto_share_existing_accounts_with(self)
+    end
+  end
+
+  def provider_items_for_transfer(accounts_to_move)
+    account_ids_to_move = accounts_to_move.map(&:id)
+    provider_items = accounts_to_move.flat_map do |account|
+      account.account_providers.includes(:provider).filter_map do |account_provider|
+        provider_items_for(account_provider.provider)
+      end
+    end.flatten.uniq
+    provider_items.concat(financekit_items)
+    provider_items.uniq!
+
+    provider_items.each do |provider_item|
+      if provider_item.is_a?(FinancekitItem) && provider_item.user_id != id
+        errors.add(:base, :provider_item_has_other_accounts)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
+      linked_account_ids = provider_item.accounts.map(&:id)
+      next if linked_account_ids.all? { |account_id| account_ids_to_move.include?(account_id) }
+
+      errors.add(:base, :provider_item_has_other_accounts)
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    provider_items
+  end
+
+  def provider_items_for(provider)
+    if provider.is_a?(FinancekitAccountLineage)
+      return provider.financekit_accounts.includes(:financekit_item).map(&:financekit_item).uniq
+    end
+
+    item_association = provider.class.reflect_on_all_associations(:belongs_to).find do |association|
+      association.name.to_s.end_with?("_item") && provider.respond_to?(association.name)
+    end
+
+    Array(provider.public_send(item_association.name)) if item_association
+  end
+
+  # Revokes mobile/third-party API access alongside the web-session
+  # invalidation above. Without this, a deactivated user's existing
+  # Doorkeeper tokens and API keys stay valid on the wire — currently
+  # harmless only because Api::V1::BaseController/McpController re-check
+  # active? on every request, but that's a second, independent safeguard,
+  # not a substitute for actually revoking the credentials. Also revokes
+  # unexchanged OAuth authorization grants — /oauth/token doesn't go
+  # through the cookie authenticator, so a still-valid grant issued right
+  # before deactivation could otherwise be exchanged for a fresh token
+  # afterward.
+  def revoke_all_access_tokens
+    tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    grants_revoked = Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
+
+    if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
+      Rails.logger.warn(
+        "[AUTH] Revoked #{tokens_revoked} access token(s), #{grants_revoked} authorization grant(s), " \
+        "and #{keys_revoked} API key(s) for deactivated user_id=#{id}"
+      )
+    end
   end
 
   def purge
@@ -235,7 +484,8 @@ class User < ApplicationRecord
     update!(
       otp_secret: ROTP::Base32.random(32),
       otp_required: false,
-      otp_backup_codes: []
+      otp_backup_codes: [],
+      otp_last_used_at: nil
     )
   end
 
@@ -258,21 +508,38 @@ class User < ApplicationRecord
       update!(
         otp_secret: nil,
         otp_required: false,
-        otp_backup_codes: []
+        otp_backup_codes: [],
+        otp_last_used_at: nil
       )
       webauthn_credentials.destroy_all
     end
   end
 
   def verify_otp?(code)
-    return false if otp_secret.blank?
+    verify_otp(code) == :accepted
+  end
+
+  # Enrollment needs to tell a replayed (correct but already-used) code apart
+  # from a wrong one so a duplicate submit does not tear down MFA; login
+  # callers use verify_otp?, where a replay stays a plain failure.
+  def verify_otp(code)
+    return :invalid if otp_secret.blank?
 
     normalized_code = normalize_mfa_code(code)
-    return false if normalized_code.blank?
-    return true if totp.verify(normalized_code, drift_behind: 15)
-    return false unless backup_code_input?(normalized_code)
+    return :invalid if normalized_code.blank?
 
-    consume_backup_code!(normalized_code)
+    # after: rejects the time step already used, so a code seen once (over a
+    # shoulder, in a proxy log) cannot sign in again while it is still valid.
+    if (time_step = totp.verify(normalized_code, drift_behind: 15, after: otp_last_used_at))
+      return claim_otp_time_step!(time_step) ? :accepted : :replayed
+    end
+
+    if backup_code_input?(normalized_code)
+      return consume_backup_code!(normalized_code) ? :accepted : :invalid
+    end
+
+    # Still valid for the secret? Then only its time step was already used.
+    totp.verify(normalized_code, drift_behind: 15) ? :replayed : :invalid
   end
 
   def provisioning_uri
@@ -313,6 +580,43 @@ class User < ApplicationRecord
     return nil unless account&.eligible_for_transaction_default? && account.family_id == family_id
 
     account
+  end
+
+  # Release highlight ("What's new" popup) tracking. Account-level so every
+  # device the user signs in from stays in sync.
+  def last_seen_release_tag
+    preferences&.[]("last_seen_release_tag")
+  end
+
+  def mark_release_seen!(tag)
+    tag_version = parsed_release_tag_version!(tag)
+
+    with_lock do
+      current = last_seen_release_tag
+
+      # Never regress the marker: a stale tab (or an old app version during a
+      # rolling deploy) must not make an already-acknowledged release look
+      # unseen again. A previously stored malformed tag is overwritten by the
+      # next valid dismissal so the account can recover.
+      if current
+        current_version = parsed_release_tag_version(current)
+        next if current_version && tag_version < current_version
+      end
+
+      update!(preferences: (preferences || {}).merge("last_seen_release_tag" => tag))
+    end
+  end
+
+  def parsed_release_tag_version!(tag)
+    raise ArgumentError, "invalid release tag" unless tag.to_s.match?(/\Av\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.-]+)?\z/)
+
+    Semver.from_release_tag(tag).version
+  end
+
+  def parsed_release_tag_version(tag)
+    parsed_release_tag_version!(tag)
+  rescue ArgumentError
+    nil
   end
 
   # Dashboard preferences management
@@ -385,42 +689,35 @@ class User < ApplicationRecord
   end
 
   # Transactions preferences management
-  def transactions_section_collapsed?(section_key)
-    preferences&.dig("transactions_collapsed_sections", section_key) == true
-  end
-
   def show_split_grouped?
     preferences&.dig("show_split_grouped") != false
   end
 
+  # Returns whether the user has enabled the two-column dashboard layout.
   def dashboard_two_column?
     preferences&.dig("dashboard_two_column") == true
   end
 
+  # Returns the accountable keys (e.g. "depository", "credit_card") that should
+  # start expanded in the sidebar and dashboard balance sheet, or an empty
+  # array when unset. Stored in the preferences JSONB column.
+  def always_expanded_account_groups
+    preferences&.dig("always_expanded_account_groups") || []
+  end
+
+  # Returns whether the given key (coerced to a string) is selected to start
+  # expanded in the sidebar and dashboard balance sheet.
+  def always_expanded_account_group?(account_group_key)
+    always_expanded_account_groups.include?(account_group_key.to_s)
+  end
+
+  # Returns whether clicking outside a modal is prevented from closing it.
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
   end
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
-  end
-
-  def update_transactions_preferences(prefs)
-    transaction do
-      lock!
-
-      updated_prefs = (preferences || {}).deep_dup
-      prefs.each do |key, value|
-        if value.is_a?(Hash)
-          updated_prefs["transactions_#{key}"] ||= {}
-          updated_prefs["transactions_#{key}"] = updated_prefs["transactions_#{key}"].merge(value)
-        else
-          updated_prefs["transactions_#{key}"] = value
-        end
-      end
-
-      update!(preferences: updated_prefs)
-    end
   end
 
   private
@@ -513,6 +810,26 @@ class User < ApplicationRecord
 
     def totp
       ROTP::TOTP.new(otp_secret, issuer: "Sure Finances")
+    end
+
+    # Two requests carrying the same code can both pass verify before either
+    # records it; the conditional update lets only one of them through. The
+    # otp_secret match drops a claim verified against a secret that was
+    # replaced (disable + re-setup) in the meantime, so it cannot mark a time
+    # step as used on the newly enrolled factor.
+    def claim_otp_time_step!(time_step)
+      used_at = Time.zone.at(time_step)
+      claimed = self.class.where(id: id, otp_secret: otp_secret)
+        .where("otp_last_used_at IS NULL OR otp_last_used_at < ?", used_at)
+        .update_all(otp_last_used_at: used_at) == 1
+
+      if claimed
+        # Already written by update_all; keep the record clean so a later
+        # with_lock or update! sees it as persisted.
+        self.otp_last_used_at = used_at
+        clear_attribute_changes([ :otp_last_used_at ])
+      end
+      claimed
     end
 
     def consume_backup_code!(normalized_code)

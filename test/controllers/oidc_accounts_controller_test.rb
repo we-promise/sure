@@ -46,6 +46,22 @@ class OidcAccountsControllerTest < ActionController::TestCase
     )
   end
 
+  test "rolls back identity linking when session creation fails" do
+    session[:pending_oidc_auth] = pending_auth
+    @controller.stubs(:create_session_for).returns(false)
+
+    assert_no_difference [ "OidcIdentity.count", "SsoAuditLog.count" ] do
+      post :create_link,
+        params: {
+          email: @user.email,
+          password: user_password_test
+        }
+    end
+
+    assert_redirected_to new_session_path
+    assert session[:pending_oidc_auth].present?
+  end
+
   test "should reject linking with invalid password" do
     session[:pending_oidc_auth] = pending_auth
 
@@ -59,6 +75,51 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     assert_response :unprocessable_entity
     assert_equal "Invalid email or password", flash[:alert]
+  end
+
+  test "should reject linking for a deactivated user even with correct password" do
+    @user.sessions.destroy_all # @user (family_admin) has a pre-existing fixture session
+    @user.update_column(:active, false)
+    session[:pending_oidc_auth] = pending_auth
+
+    assert_no_difference "OidcIdentity.count" do
+      post :create_link,
+        params: {
+          email: @user.email,
+          password: user_password_test
+        }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "Invalid email or password", flash[:alert]
+  end
+
+  test "should reject linking for a user deactivated between the initial check and session creation" do
+    session[:pending_oidc_auth] = pending_auth
+    @user.sessions.destroy_all
+
+    # Simulate deactivation landing after the initial active? check but
+    # before create_session_for's reload catches it — SsoAuditLog.log_link!
+    # runs in that window in the real flow, so hook the deactivation there.
+    # create_link wraps identity creation, the audit log, and session creation
+    # in one transaction, so a failed session creation rolls back the identity
+    # link too — no dangling, unlinked OidcIdentity left behind.
+    SsoAuditLog.stubs(:log_link!).with do |**kwargs|
+      kwargs[:user].update_column(:active, false)
+      true
+    end
+
+    assert_no_difference "OidcIdentity.count" do
+      post :create_link,
+        params: {
+          email: @user.email,
+          password: user_password_test
+        }
+    end
+
+    assert_redirected_to new_session_path
+    assert_equal "Could not authenticate via OpenID Connect.", flash[:alert]
+    assert_not Session.exists?(user_id: @user.id)
   end
 
   test "should redirect to MFA when user has MFA enabled" do
@@ -187,6 +248,36 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal new_user_auth["uid"], oidc_identity.uid
   end
 
+  test "create_user makes new family creator admin even when provider default role is member" do
+    session[:pending_oidc_auth] = new_user_auth
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: new_user_auth["provider"], settings: { default_role: "member" } }
+    ])
+
+    assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
+      post :create_user
+    end
+
+    new_user = User.find_by!(email: new_user_auth["email"])
+    assert_equal "admin", new_user.role
+    assert new_user.admin?
+  end
+
+  test "create_user preserves super admin provider default for new family creator" do
+    session[:pending_oidc_auth] = new_user_auth
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: new_user_auth["provider"], settings: { default_role: "super_admin" } }
+    ])
+
+    assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
+      post :create_user
+    end
+
+    new_user = User.find_by!(email: new_user_auth["email"])
+    assert_equal "super_admin", new_user.role
+    assert new_user.admin?
+  end
+
   test "create_user uses form params for name when provided" do
     session[:pending_oidc_auth] = new_user_auth
 
@@ -229,6 +320,19 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     assert_response :unprocessable_entity
     assert_nil User.find_by(email: auth["email"])
+  end
+
+  test "create_user rolls back onboarding when session creation fails" do
+    session[:pending_oidc_auth] = new_user_auth
+    @controller.stubs(:create_session_for).returns(false)
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+      post :create_user
+    end
+
+    assert_response :unprocessable_entity
+    assert_nil User.find_by(email: new_user_auth["email"])
+    assert session[:pending_oidc_auth].present?
   end
 
   test "should create session after OIDC registration" do
@@ -310,5 +414,56 @@ class OidcAccountsControllerTest < ActionController::TestCase
     invitee = User.find_by(email: "invitee2@example.com")
     assert_equal family.id, invitee.family_id
     assert_equal 0, AccountShare.where(user: invitee).count
+  end
+
+  # A pending_oidc_auth stashed in the session outlives the removal that blocks
+  # its identity, so every action that consumes it has to re-check the block.
+
+  test "create_user refuses a pending auth whose identity was removed" do
+    SsoIdentityBlock.create!(
+      provider: pending_auth["provider"],
+      uid_digest: SsoIdentityBlock.digest(pending_auth["uid"]),
+      identity_label: pending_auth["email"]
+    )
+    session[:pending_oidc_auth] = pending_auth.merge("email" => "blocked-jit@example.com")
+
+    assert_no_difference "User.count" do
+      post :create_user
+    end
+
+    assert_redirected_to new_session_path
+    assert_nil session[:pending_oidc_auth]
+  end
+
+  test "create_link refuses a pending auth whose identity was removed" do
+    SsoIdentityBlock.create!(
+      provider: pending_auth["provider"],
+      uid_digest: SsoIdentityBlock.digest(pending_auth["uid"]),
+      identity_label: pending_auth["email"]
+    )
+    session[:pending_oidc_auth] = pending_auth
+
+    assert_no_difference "OidcIdentity.count" do
+      post :create_link, params: { email: @user.email, password: user_password_test }
+    end
+
+    assert_redirected_to new_session_path
+    assert_nil session[:pending_oidc_auth]
+  end
+
+  test "link and new_user refuse a pending auth whose identity was removed" do
+    SsoIdentityBlock.create!(
+      provider: pending_auth["provider"],
+      uid_digest: SsoIdentityBlock.digest(pending_auth["uid"]),
+      identity_label: pending_auth["email"]
+    )
+
+    session[:pending_oidc_auth] = pending_auth
+    get :link
+    assert_redirected_to new_session_path
+
+    session[:pending_oidc_auth] = pending_auth
+    get :new_user
+    assert_redirected_to new_session_path
   end
 end

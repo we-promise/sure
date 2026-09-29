@@ -1,0 +1,30 @@
+uk:
+  helpers:
+    label:
+      user:
+        invite_code: Код запрошення
+    submit:
+      user:
+        create: Продовжити
+  registrations:
+    closed: Реєстрація наразі закрита.
+    create:
+      failure: Виникла проблема з реєстрацією.
+      invalid_invite_code: Недійсний код запрошення, спробуйте ще раз.
+      success: Ви успішно зареєструвалися.
+    new:
+      invitation_message: "%{inviter} запросив вас приєднатися як %{role}"
+      join_family_title: Приєднатися до %{family} %{moniker}
+      role_admin: адміністратор
+      role_guest: гість
+      role_member: учасник
+      submit: Створити обліковий запис
+      title: Створіть свій обліковий запис
+      welcome_body: Щоб розпочати, ви повинні зареєструвати новий обліковий запис. Потім ви зможете налаштувати додаткові параметри в програмі.
+      welcome_title: Ласкаво просимо до Self Hosted %{product_name}!
+      password_placeholder: Введіть свій пароль
+      password_requirements:
+        length: Мінімум 8 символів
+        case: Великі та малі літери
+        number: Цифра (0-9)
+        special: "Спеціальний символ (!, @, #, $, %, тощо)"

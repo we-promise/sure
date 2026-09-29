@@ -47,6 +47,25 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_select 'select[name="import[account_id]"] option', text: "Plaid Depository Account", count: 0
   end
 
+  test "respects SURE_IMPORT_MAX_NDJSON_SIZE_MB when uploading Sure import file (#3010)" do
+    configured_limit = 2.megabytes
+    SureImport.stubs(:max_ndjson_size).returns(configured_limit)
+
+    sure_import = imports(:sure)
+    oversized_file = Rack::Test::UploadedFile.new(
+      StringIO.new("x" * (configured_limit + 1)),
+      "application/x-ndjson",
+      original_filename: "all.ndjson"
+    )
+
+    patch import_upload_url(sure_import), params: {
+      import: { ndjson_file: oversized_file }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal I18n.t("imports.create.file_too_large", max_size: configured_limit / 1.megabyte), flash[:alert]
+  end
+
   test "invalid csv cannot be uploaded" do
     patch import_upload_url(@import), params: {
       import: {

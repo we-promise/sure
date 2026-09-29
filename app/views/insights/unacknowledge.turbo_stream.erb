@@ -1,0 +1,12 @@
+<%= turbo_stream.replace "insights-list" do %>
+  <%= render "insights/list", insights: @insights, unread_ids: @unread_ids %>
+<% end %>
+
+<%# Dashboard well, when it's still on screen. If acknowledging the last insight
+    removed the whole section, there is no target left to replace and the widget
+    comes back on the next dashboard render — this action has no UI entry point
+    since the undo toast was dropped, so it isn't worth rebuilding the section
+    shell from here. %>
+<%= turbo_stream.replace "insights-feed" do %>
+  <%= render "pages/dashboard/insights_feed", insights: @feed_insights %>
+<% end %>

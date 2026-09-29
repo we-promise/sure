@@ -32,4 +32,15 @@ class Current < ActiveSupport::CurrentAttributes
     return family&.entries unless user
     family.entries.joins(:account).merge(Account.accessible_by(user))
   end
+
+  # Used for invalidating caches whose results depend on the current user's
+  # account-share access (e.g. the transactions index's uncategorized count
+  # and projected recurring list, which are scoped to accessible accounts).
+  # Changes whenever an AccountShare granting/revoking the user's access is
+  # created, updated, or destroyed.
+  def account_share_version
+    return "0-" unless user
+    shares = AccountShare.where(user: user)
+    "#{shares.count}-#{shares.maximum(:updated_at)&.to_f}"
+  end
 end

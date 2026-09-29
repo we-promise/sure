@@ -165,12 +165,71 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "Groups", family.moniker_label_plural
   end
 
+  test "entries_cache_version changes when an older entry is destroyed" do
+    family = families(:dylan_family)
+    newer_entry = entries(:transaction)
+    older_entry = Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: categories(:food_and_drink)),
+      date: Date.current,
+      name: "Older duplicate",
+      amount: 42,
+      currency: "USD",
+      created_at: 2.days.ago,
+      updated_at: 2.days.ago
+    )
+
+    newer_entry.update!(updated_at: 1.day.ago)
+
+    before_destroy = family.reload.entries_cache_version
+    older_entry.destroy!
+
+    assert_not_equal before_destroy, family.reload.entries_cache_version
+  end
+
+  test "default currency comes from country ISO data" do
+    assert_equal "CAD", Family.default_currency_for_country("CA")
+    assert_equal "EUR", Family.default_currency_for_country("DE")
+    assert_equal "BRL", Family.default_currency_for_country("BR")
+    assert_equal "USD", Family.default_currency_for_country("unknown")
+  end
+
   test "available_merchants includes family merchants without transactions" do
     family = families(:dylan_family)
 
     new_merchant = family.merchants.create!(name: "New Test Merchant")
 
     assert_includes family.available_merchants, new_merchant
+  end
+
+  test "known_merchant_names includes assigned and family-owned merchant names, deduplicates matching names, and excludes recently-unlinked merchants" do
+    family = families(:dylan_family)
+
+    provider_merchant = ProviderMerchant.create!(name: "Known Provider Merchant", source: "enable_banking")
+    transactions(:one).update!(merchant: provider_merchant)
+
+    # Same name as the assigned provider merchant, but a distinct record -- proves
+    # the result is deduplicated by name value, not just by record identity.
+    family.merchants.create!(name: "Known Provider Merchant")
+
+    unassigned_family_merchant = family.merchants.create!(name: "Unassigned Family Merchant")
+
+    # Assign then unlink a merchant -- available_merchants deliberately keeps
+    # recently-unlinked merchants around (so the UI can offer a quick undo);
+    # known_merchant_names must NOT, since it's used to auto-match/auto-assign new
+    # transactions and re-surfacing a deliberately-removed association would undo
+    # the user's action silently.
+    unlinked_merchant = ProviderMerchant.create!(name: "Recently Unlinked Merchant", source: "enable_banking")
+    transactions(:one).update!(merchant: unlinked_merchant)
+    unlinked_merchant.unlink_from_family(family)
+    transactions(:one).update!(merchant: provider_merchant)
+
+    names = family.known_merchant_names
+
+    assert_equal 1, names.count("Known Provider Merchant")
+    assert_includes names, unassigned_family_merchant.name
+    assert_not_includes names, "Recently Unlinked Merchant"
+    assert_includes family.available_merchants.map(&:name), "Recently Unlinked Merchant"
   end
 
   test "enabled currencies always include the base currency" do
@@ -350,6 +409,207 @@ class FamilyTest < ActiveSupport::TestCase
       "the per-user predicate the UI reads must reject a non-boolean"
     assert_not family.reload.preview_features_enabled?
     assert_not_includes Family.with_preview_features, family
+  end
+
+  test "rejects a timezone ActiveSupport::TimeZone doesn't recognize" do
+    family = families(:dylan_family)
+    family.timezone = "Invalid/Timezone"
+
+    assert_not family.valid?
+    assert_includes family.errors[:timezone], "is invalid"
+  end
+
+  test "accepts a timezone identifier, the form the settings dropdown actually submits" do
+    family = families(:dylan_family)
+    # LanguagesHelper#timezone_options submits tz.tzinfo.identifier (e.g.
+    # "America/New_York"), not tz.name (e.g. "Eastern Time (US & Canada)") --
+    # these differ for every zone Rails ships, so this is the case that
+    # actually matters, not just the display name.
+    family.timezone = "America/New_York"
+
+    assert family.valid?
+  end
+
+  test "allows a blank timezone" do
+    family = families(:dylan_family)
+    family.timezone = nil
+
+    assert family.valid?
+  end
+
+  test "does not re-validate an existing invalid timezone when saving unrelated changes" do
+    family = families(:dylan_family)
+    # Bypasses validations, simulating data that predates this validation --
+    # e.g. the exact #390 scenario (a stale/renamed IANA zone already sitting
+    # in the DB).
+    family.update_column(:timezone, "Invalid/Timezone")
+
+    family.name = "Updated name, timezone untouched"
+
+    assert family.valid?, "an unrelated change must not be blocked by a pre-existing bad timezone"
+    assert family.save
+  end
+
+  test "balance_sheet memoizes per user for the same family instance" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    member = users(:family_member)
+
+    first_call_for_admin = family.balance_sheet(user: admin)
+
+    assert_same first_call_for_admin, family.balance_sheet(user: admin),
+      "repeated calls for the same user must reuse the same BalanceSheet instance"
+
+    refute_same first_call_for_admin, family.balance_sheet(user: member),
+      "different users must not share a memoized BalanceSheet (family sharing scoping)"
+  end
+
+  test "investment_statement memoizes per user for the same family instance" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    member = users(:family_member)
+
+    first_call_for_admin = family.investment_statement(user: admin)
+
+    assert_same first_call_for_admin, family.investment_statement(user: admin),
+      "repeated calls for the same user must reuse the same InvestmentStatement instance"
+
+    refute_same first_call_for_admin, family.investment_statement(user: member),
+      "different users must not share a memoized InvestmentStatement (family sharing scoping)"
+  end
+
+  test "requests transaction refreshes for syncable Plaid items" do
+    family = families(:dylan_family)
+
+    assert_enqueued_with job: PlaidTransactionsRefreshAllJob, args: [ family, { source: "TestSync" } ] do
+      family.request_plaid_transactions_refreshes_later(source: "TestSync")
+    end
+  end
+
+  test "records a sanitized diagnostic and returns when Plaid refresh orchestration cannot be enqueued" do
+    family = families(:dylan_family)
+
+    PlaidTransactionsRefreshAllJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
+
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_nil family.request_plaid_transactions_refreshes_later(source: "TestSync")
+    end
+
+    debug_entry = DebugLogEntry.order(:created_at).last
+    assert_equal "TestSync", debug_entry.source
+    assert_equal "RedisClient::Error", debug_entry.metadata["error_class"]
+  end
+
+  test "does not raise when both Plaid refresh enqueue and diagnostic capture fail" do
+    family = families(:dylan_family)
+
+    PlaidTransactionsRefreshAllJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
+    DebugLogEntry.stubs(:capture).raises(ActiveRecord::ConnectionNotEstablished, "DB unavailable")
+
+    assert_nil family.request_plaid_transactions_refreshes_later(source: "TestSync")
+  end
+
+  # A non-loopback http:// endpoint is the misconfiguration these guard: the
+  # settings form rejects it, but JEV_ENDPOINT never passes through the form.
+  # Marked for the secret scanner: a redaction test has to hold the shape it
+  # redacts. The host and secrets are fake.
+  CREDENTIALED_JEV_ENDPOINT = "http://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET#frag" # pipelock:ignore Credential in URL
+
+  REJECTED_JEV_ENV = {
+    "JEV_API_KEY" => "test_api_key",
+    "JEV_ENDPOINT" => "http://internal-gateway.example.com/v1/systemone"
+  }.freeze
+
+  test "resolved_categorization_provider builds Jev when the endpoint is allowed" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+
+    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_ENDPOINT" => "https://api.typesafe.ai/v1/systemone") do
+      assert_instance_of Provider::Jev, family.resolved_categorization_provider
+    end
+  end
+
+  test "categorization_model_name names the Jev model when Jev will categorize" do
+    family = families(:dylan_family)
+    family.stubs(:resolved_categorization_provider).returns(Provider::Jev.allocate)
+    Provider::Jev.stubs(:effective_model).returns("~typesafe/jev-latest")
+
+    assert_equal "~typesafe/jev-latest", family.categorization_model_name
+  end
+
+  test "categorization_model_name names the Anthropic model when Anthropic will categorize" do
+    family = families(:dylan_family)
+    family.stubs(:resolved_categorization_provider).returns(Provider::Anthropic.allocate)
+    Provider::Anthropic.stubs(:effective_model).returns("claude-sonnet-test")
+
+    assert_equal "claude-sonnet-test", family.categorization_model_name
+  end
+
+  test "resolved_categorization_provider falls back to the LLM provider when the endpoint is rejected" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    llm = Provider::Openai.allocate
+    Provider::Registry.stubs(:preferred_llm_provider).returns(llm)
+
+    with_env_overrides(REJECTED_JEV_ENV) do
+      assert_same llm, family.resolved_categorization_provider
+    end
+  end
+
+  test "resolved_categorization_provider does not write diagnostics from view-time callers" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    assert_no_difference "DebugLogEntry.count" do
+      with_env_overrides(REJECTED_JEV_ENV) do
+        assert_nil family.resolved_categorization_provider
+      end
+    end
+  end
+
+  test "categorization_model_name does not write diagnostics from view-time callers" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    assert_no_difference "DebugLogEntry.count" do
+      with_env_overrides(REJECTED_JEV_ENV) do
+        assert_nil family.categorization_model_name
+      end
+    end
+  end
+
+  test "shadow_categorization_provider returns nil when the Jev endpoint is rejected" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "llm")
+
+    with_env_overrides(REJECTED_JEV_ENV) do
+      assert_nil family.shadow_categorization_provider
+    end
+  end
+
+  test "resolved_categorization_provider hands the construction error to a caller that asks" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    errors = []
+
+    with_env_overrides(REJECTED_JEV_ENV) do
+      assert_nil family.resolved_categorization_provider { |error| errors << error }
+    end
+
+    assert_equal [ Provider::Jev::Error ], errors.map(&:class)
+  end
+
+  # The rescue is deliberately narrow, so a registry bug still surfaces rather
+  # than being reported to the operator as a Jev misconfiguration.
+  test "resolved_categorization_provider does not swallow non-provider errors" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:get_provider).with(:jev).raises(ArgumentError, "boom")
+
+    assert_raises(ArgumentError) { family.resolved_categorization_provider }
   end
 
   private

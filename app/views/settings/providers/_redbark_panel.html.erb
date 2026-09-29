@@ -42,8 +42,11 @@
                         value: nil %>
 
     <div class="flex justify-end">
-      <%= form.submit is_new_record ? t("redbark_items.panel.save_button") : t("redbark_items.panel.update_button"),
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary" %>
+      <%= render DS::Button.new(
+        text: is_new_record ? t("redbark_items.panel.save_button") : t("redbark_items.panel.update_button"),
+        variant: "primary",
+        type: "submit"
+      ) %>
     </div>
   <% end %>
 

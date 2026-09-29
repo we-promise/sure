@@ -1,9 +1,10 @@
 class Provider::Simplefin
   # Pending: some institutions do not return pending transactions even with `pending=1`.
-  # This is provider variability (not a bug). For troubleshooting, you can set
-  # `SIMPLEFIN_INCLUDE_PENDING=1` and/or `SIMPLEFIN_DEBUG_RAW=1` (both default-off).
-  # These are centralized in `Rails.configuration.x.simplefin.*` via
-  # `config/initializers/simplefin.rb`.
+  # This is provider variability (not a bug). The importer resolves pending inclusion
+  # from its explicit argument, SIMPLEFIN_INCLUDE_PENDING, or Setting.syncs_include_pending
+  # (default-on without overrides), then passes pending: to this client.
+  # SIMPLEFIN_DEBUG_RAW=1 enables raw payload logging (default-off); environment
+  # configuration lives in config/initializers/simplefin.rb.
   include HTTParty
   extend SslConfigurable
 

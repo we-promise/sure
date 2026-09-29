@@ -1,15 +1,19 @@
 ---
 zh-TW:
   defaults:
-    brand_name: "%{brand_name}"
-    product_name: "%{product_name}"
+    brand_name: '%{brand_name}'
+    product_name: '%{product_name}'
+    common:
+      close: 關閉
+  global:
+    expand: 展開
   activerecord:
     errors:
       messages:
-        record_invalid: '驗證失敗：%{errors}'
+        record_invalid: 驗證失敗：%{errors}
         restrict_dependent_destroy:
-          has_many: 因為存在關聯的 %{record}，所以無法刪除紀錄
-          has_one: 因為存在關聯的 %{record}，所以無法刪除紀錄
+          has_many: 因為仍有相關聯的 %{record}，所以無法刪除這筆紀錄
+          has_one: 因為仍有相關聯的 %{record}，所以無法刪除這筆紀錄
   date:
     abbr_day_names:
     - 週日
@@ -20,7 +24,7 @@ zh-TW:
     - 週五
     - 週六
     abbr_month_names:
-    -
+    - null
     - 1月
     - 2月
     - 3月
@@ -42,11 +46,13 @@ zh-TW:
     - 星期五
     - 星期六
     formats:
-      default: "%Y-%m-%d"
-      long: "%Y年%m月%d日"
-      short: "%m月%d日"
+      default: '%Y-%m-%d'
+      long: '%Y年%-m月%-d日'
+      short: '%m月%d日'
+      month_year: '%Y年%-m月'
+      short_month_year: '%Y年%b'
     month_names:
-    -
+    - null
     - 一月
     - 二月
     - 三月
@@ -88,20 +94,20 @@ zh-TW:
         one: 超過 %{count} 年
         other: 超過 %{count} 年
       x_days:
-        one: "%{count} 天"
-        other: "%{count} 天"
+        one: '%{count} 天'
+        other: '%{count} 天'
       x_minutes:
-        one: "%{count} 分鐘"
-        other: "%{count} 分鐘"
+        one: '%{count} 分鐘'
+        other: '%{count} 分鐘'
       x_months:
-        one: "%{count} 個月"
-        other: "%{count} 個月"
+        one: '%{count} 個月'
+        other: '%{count} 個月'
       x_seconds:
-        one: "%{count} 秒"
-        other: "%{count} 秒"
+        one: '%{count} 秒'
+        other: '%{count} 秒'
       x_years:
-        one: "%{count} 年"
-        other: "%{count} 年"
+        one: '%{count} 年'
+        other: '%{count} 年'
     prompts:
       day: 日
       hour: 時
@@ -110,7 +116,7 @@ zh-TW:
       second: 秒
       year: 年
   errors:
-    format: "%{attribute} %{message}"
+    format: '%{attribute} %{message}'
     messages:
       accepted: 必須接受
       blank: 不能為空白
@@ -126,7 +132,7 @@ zh-TW:
       invalid: 無效
       less_than: 必須小於 %{count}
       less_than_or_equal_to: 必須小於或等於 %{count}
-      model_invalid: '驗證失敗：%{errors}'
+      model_invalid: 驗證失敗：%{errors}
       not_a_number: 不是數字
       not_an_integer: 必須是整數
       odd: 必須為奇數
@@ -144,13 +150,15 @@ zh-TW:
         one: 長度錯誤（應為 %{count} 個字元）
         other: 長度錯誤（應為 %{count} 個字元）
     template:
-      body: '以下欄位發生問題：'
+      body: 以下欄位發生問題：
       header:
-        one: "有 %{count} 個錯誤導致此 %{model} 無法儲存"
-        other: "有 %{count} 個錯誤導致此 %{model} 無法儲存"
+        one: 有 %{count} 個錯誤導致此 %{model} 無法儲存
+        other: 有 %{count} 個錯誤導致此 %{model} 無法儲存
   helpers:
     select:
       prompt: 請選擇
+      search_placeholder: 搜尋
+      default_label: 請選擇...
     submit:
       create: 建立 %{model}
       submit: 儲存 %{model}
@@ -161,15 +169,15 @@ zh-TW:
         significant: false
         strip_insignificant_zeros: false
     format:
-      delimiter: ","
+      delimiter: ','
       precision: 3
       round_mode: default
-      separator: "."
+      separator: .
       significant: false
       strip_insignificant_zeros: false
     human:
       decimal_units:
-        format: "%n %u"
+        format: '%n %u'
         units:
           billion: 十億
           million:
@@ -187,7 +195,7 @@ zh-TW:
         significant: true
         strip_insignificant_zeros: true
       storage_units:
-        format: "%n %u"
+        format: '%n %u'
         units:
           byte:
             one: 位元組 (Byte)
@@ -201,19 +209,19 @@ zh-TW:
     percentage:
       format:
         delimiter: ''
-        format: "%n%"
+        format: '%n%'
     precision:
       format:
         delimiter: ''
   support:
     array:
-      last_word_connector: " 與 "
-      two_words_connector: " 與 "
-      words_connector: "、"
+      last_word_connector: ' 與 '
+      two_words_connector: ' 與 '
+      words_connector: 、
   time:
     am: 上午
     formats:
-      default: "%Y年%m月%d日 (%a) %H:%M:%S %z"
-      long: "%Y年%m月%d日 %H:%M"
-      short: "%m月%d日 %H:%M"
+      default: '%Y年%m月%d日 (%a) %H:%M:%S %z'
+      long: '%Y年%m月%d日 %H:%M'
+      short: '%m月%d日 %H:%M'
     pm: 下午

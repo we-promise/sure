@@ -10,7 +10,9 @@
     items = local_assigns[:snaptrade_items] || @snaptrade_items || Current.family.snaptrade_items.active.ordered
     snaptrade_item = items.reject(&:scheduled_for_deletion?).first
     oauth_env_configured = Provider::Snaptrade.oauth_configured?
+    redirect_flow_available = Provider::Snaptrade.authorization_code_configured?
     oauth_active = snaptrade_item&.oauth_token_active?
+    oauth_item_id = snaptrade_item&.persisted? ? snaptrade_item.id : nil
   %>
 
   <% if !oauth_env_configured %>
@@ -31,22 +33,44 @@
           <p class="text-sm text-secondary">
             <% if oauth_active %>
               <%= t("providers.snaptrade.oauth_status_authorized") %>
-            <% else %>
+            <% elsif redirect_flow_available %>
               <%= t("providers.snaptrade.oauth_status_ready") %>
+            <% else %>
+              <%= t("providers.snaptrade.oauth_status_ready_device") %>
             <% end %>
           </p>
         </div>
       </div>
 
-      <%= render DS::Link.new(
-        text: oauth_active ? t("providers.snaptrade.oauth_reauthorize_button") : t("providers.snaptrade.oauth_connect_button"),
-        icon: "external-link",
-        variant: :primary,
-        full_width: true,
-        href: snaptrade_item&.persisted? ?
-          oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id) :
-          oauth_authorize_snaptrade_items_path
-      ) %>
+      <%# Both grants end with the same access token; which ones are offered %>
+      <%# depends only on what this deployment configured. %>
+      <% if redirect_flow_available %>
+        <%= render DS::Link.new(
+          text: oauth_active ? t("providers.snaptrade.oauth_reauthorize_button") : t("providers.snaptrade.oauth_connect_button"),
+          icon: "external-link",
+          variant: :primary,
+          full_width: true,
+          href: oauth_authorize_snaptrade_items_path(item_id: oauth_item_id)
+        ) %>
+
+        <%= render DS::Link.new(
+          text: t("providers.snaptrade.oauth_device_button"),
+          icon: "keyboard",
+          variant: :secondary,
+          full_width: true,
+          href: oauth_device_authorize_snaptrade_items_path(item_id: oauth_item_id),
+          frame: :drawer
+        ) %>
+      <% else %>
+        <%= render DS::Link.new(
+          text: oauth_active ? t("providers.snaptrade.oauth_reauthorize_button") : t("providers.snaptrade.oauth_device_button"),
+          icon: "keyboard",
+          variant: :primary,
+          full_width: true,
+          href: oauth_device_authorize_snaptrade_items_path(item_id: oauth_item_id),
+          frame: :drawer
+        ) %>
+      <% end %>
     </div>
 
     <% if snaptrade_item&.persisted? && snaptrade_item.oauth_configured? %>

@@ -17,9 +17,11 @@
         <p class="text-2xl font-semibold mb-1 privacy-sensitive" style="color: <%= trend.color %>">
           <%= trend.value.format(signify_positive: true) %>
         </p>
-        <p class="text-xs" style="color: <%= trend.color %>">
-          <%= trend.value >= 0 ? "+" : "" %><%= trend.percent_formatted %>
-        </p>
+        <% if trend.percent.finite? %>
+          <p class="text-xs" style="color: <%= trend.color %>">
+            <%= trend.value >= 0 ? "+" : "" %><%= trend.percent_formatted %>
+          </p>
+        <% end %>
       <% else %>
         <p class="text-2xl font-semibold mb-1 text-subdued">--</p>
       <% end %>

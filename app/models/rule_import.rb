@@ -215,24 +215,17 @@ class RuleImport < Import
 
       # Map category names to UUIDs
       if condition_type == "transaction_category"
-        category = family.categories.find_by(name: value)
-        unless category
-          category = family.categories.create!(
-            name: value,
-            color: Category::UNCATEGORIZED_COLOR,
-            lucide_icon: "shapes"
-          )
-        end
-        return category.id
+        return find_or_create_category(value).id
       end
 
       # Map merchant names to UUIDs
       if condition_type == "transaction_merchant"
-        merchant = family.merchants.find_by(name: value)
-        unless merchant
-          merchant = family.merchants.create!(name: value)
-        end
-        return merchant.id
+        return find_or_create_merchant(value).id
+      end
+
+      # Map tag names to UUIDs
+      if condition_type == "transaction_tag"
+        return find_or_create_tag(value).id
       end
 
       value
@@ -246,39 +239,62 @@ class RuleImport < Import
 
       # Map category names to UUIDs
       if action_type == "set_transaction_category"
-        category = family.categories.find_by(name: value)
-        # Create category if it doesn't exist
-        unless category
-          category = family.categories.create!(
-            name: value,
-            color: Category::UNCATEGORIZED_COLOR,
-            lucide_icon: "shapes"
-          )
-        end
-        return category.id
+        return find_or_create_category(value).id
       end
 
       # Map merchant names to UUIDs
       if action_type == "set_transaction_merchant"
-        merchant = family.merchants.find_by(name: value)
-        # Create merchant if it doesn't exist
-        unless merchant
-          merchant = family.merchants.create!(name: value)
-        end
-        return merchant.id
+        return find_or_create_merchant(value).id
       end
 
-      # Map tag names to UUIDs
+      # Map tag names to UUIDs. `value` may be a comma-separated list of tag
+      # names for multi-tag actions (see Rule::Action#value=), so each name
+      # is resolved independently rather than treating the whole string as
+      # a single tag name.
       if action_type == "set_transaction_tags"
-        tag = family.tags.find_by(name: value)
-        # Create tag if it doesn't exist
-        unless tag
-          tag = family.tags.create!(name: value)
-        end
-        return tag.id
+        return resolve_import_multi_tag_value(value)
       end
 
       value
+    end
+
+    def resolve_import_multi_tag_value(value)
+      names = Rule::Action.decode_multi_value_names(value).map(&:strip).reject(&:blank?)
+      return value if names.empty?
+
+      names.map { |name| find_or_create_tag(name).id }.join(",")
+    end
+
+    # Preloaded once per import and extended in place on cache-miss, so a
+    # category/merchant/tag created for an earlier row is immediately visible
+    # to a later row referencing the same name, instead of one query per
+    # condition/action across every row in the file.
+    def categories_by_name
+      @categories_by_name ||= family.categories.index_by(&:name)
+    end
+
+    def merchants_by_name
+      @merchants_by_name ||= family.merchants.index_by(&:name)
+    end
+
+    def tags_by_name
+      @tags_by_name ||= family.tags.index_by(&:name)
+    end
+
+    def find_or_create_category(name)
+      categories_by_name[name] ||= family.categories.create!(
+        name: name,
+        color: Category::UNCATEGORIZED_COLOR,
+        lucide_icon: "shapes"
+      )
+    end
+
+    def find_or_create_merchant(name)
+      merchants_by_name[name] ||= family.merchants.create!(name: name)
+    end
+
+    def find_or_create_tag(name)
+      tags_by_name[name] ||= family.tags.create!(name: name)
     end
 
     def parse_boolean(value)

@@ -1,115 +1,156 @@
 ---
 pl:
   admin:
-    unauthorized: Nie masz uprawnień do dostępu do tego obszaru.
     sso_providers:
-      index:
-        title: Dostawcy SSO
-        description: Zarządzaj dostawcami uwierzytelniania jednokrotnego logowania dla swojej instancji
-        add_provider: Dodaj dostawcę
-        no_providers_title: Brak dostawców SSO
-        no_providers_message: Zacznij od dodania pierwszego dostawcy SSO.
-        note: Zmiany dostawców SSO wymagają ponownego uruchomienia serwera, aby weszły w życie. Alternatywnie włącz flagę AUTH_PROVIDERS_SOURCE=db, aby dynamicznie ładować dostawców z bazy danych.
-        table:
-          name: Nazwa
-          strategy: Strategia
-          status: Status
-          issuer: Wystawca
-          actions: Akcje
-          enabled: Włączony
-          disabled: Wyłączony
-        legacy_providers_title: Dostawcy skonfigurowani przez zmienne środowiskowe
-        legacy_providers_notice: Ci dostawcy są skonfigurowani przez zmienne środowiskowe lub YAML i nie można nimi zarządzać przez ten interfejs. Aby zarządzać nimi tutaj, przenieś ich do dostawców opartych na bazie danych, włączając AUTH_PROVIDERS_SOURCE=db i odtwarzając ich w interfejsie.
-        env_configured: Środowisko/YAML
-      new:
-        title: Dodaj dostawcę SSO
-        description: Skonfiguruj nowego dostawcę uwierzytelniania jednokrotnego logowania
-      edit:
-        title: Edytuj dostawcę SSO
-        description: Zaktualizuj konfigurację dla %{label}
       create:
         success: Dostawca SSO został pomyślnie utworzony.
-      update:
-        success: Dostawca SSO został pomyślnie zaktualizowany.
       destroy:
-        success: Dostawca SSO został pomyślnie usunięty.
         confirm: Czy na pewno chcesz usunąć tego dostawcę? Tej akcji nie można cofnąć.
-      toggle:
-        success_enabled: Dostawca SSO został pomyślnie włączony.
-        success_disabled: Dostawca SSO został pomyślnie wyłączony.
-        confirm_enable: Czy na pewno chcesz włączyć tego dostawcę?
-        confirm_disable: Czy na pewno chcesz wyłączyć tego dostawcę?
+        success: Dostawca SSO został pomyślnie usunięty.
+      edit:
+        description: Zaktualizuj konfigurację dla %{label}
+        provider_configuration: Konfiguracja dostawcy
+        title: Edytuj dostawcę SSO
       form:
+        admin_groups: Grupy Admina
+        advanced_title: Zaawansowane ustawienia OIDC
         basic_information: Podstawowe informacje
-        oauth_configuration: Konfiguracja OAuth/OIDC
-        strategy_label: Strategia
-        strategy_help: Strategia uwierzytelniania do użycia
-        name_label: Nazwa
-        name_placeholder: np. openid_connect, keycloak, authentik
-        name_help: Unikalny identyfikator (tylko małe litery, cyfry i podkreślenia)
-        label_label: Etykieta
-        label_placeholder: np. Zaloguj przez Keycloak
-        label_help: Tekst przycisku widoczny dla użytkowników
-        icon_label: Ikona
-        icon_placeholder: np. key, google, github
-        icon_help: Nazwa ikony Lucide (opcjonalne)
-        enabled_label: Włącz tego dostawcę
-        enabled_help: Użytkownicy mogą logować się przez tego dostawcę, gdy jest włączony
-        issuer_label: Wystawca
-        issuer_placeholder: https://accounts.google.com
-        issuer_help: URL wystawcy OIDC (waliduje endpoint .well-known/openid-configuration)
+        cancel: Anuluj
+        client_id_help: ID klienta OAuth od Twojego dostawcy tożsamości
         client_id_label: ID klienta
         client_id_placeholder: twoj-client-id
-        client_id_help: ID klienta OAuth od Twojego dostawcy tożsamości
-        client_secret_label: Sekret klienta
-        client_secret_placeholder_new: twoj-client-secret
-        client_secret_placeholder_existing: "zapisany-sekret"
         client_secret_help: Sekret klienta OAuth (zaszyfrowany w bazie danych)
         client_secret_help_existing: " - pozostaw puste, aby zachować istniejący"
-        redirect_uri_label: URI przekierowania
-        redirect_uri_placeholder: https://yourdomain.com/auth/openid_connect/callback
-        redirect_uri_help: URL zwrotny do skonfigurowania u Twojego dostawcy tożsamości
+        client_secret_label: Sekret klienta
+        client_secret_placeholder_existing: zapisany-sekret
+        client_secret_placeholder_new: twoj-client-secret
         copy_button: Kopiuj
-        cancel: Anuluj
-        submit: Zapisz dostawcę
-        errors_title: "%{count} błąd uniemożliwia zapisanie tego dostawcy:"
-        provisioning_title: Udostępnianie użytkowników
+        create_provider: Utwórz dostawcę
+        default_role_help: 'Rola przypisywana użytkownikom tworzonym przez SSO just-in-time
+          (JIT). Domyślnie: Członek.'
         default_role_label: Domyślna rola dla nowych użytkowników
-        default_role_help: "Rola przypisywana użytkownikom tworzonymi przez SSO just-in-time (JIT). Domyślnie: Członek."
-        role_guest: Gość
-        role_member: Członek
-        role_admin: Administrator
-        role_super_admin: Superadministrator
-        role_mapping_title: Mapowanie grup na role (opcjonalne)
-        role_mapping_help: Mapuj grupy/claims IdP na role aplikacji. Użytkownicy otrzymują najwyższą pasującą rolę. Pozostaw puste, aby używać domyślnej roli powyżej.
-        super_admin_groups: Grupy Super Admina
-        admin_groups: Grupy Admina
+        enabled_help: Użytkownicy mogą logować się przez tego dostawcę, gdy jest włączony
+        enabled_label: Włącz tego dostawcę
+        errors_title: 'Liczba błędów uniemożliwiających zapisanie tego dostawcy: %{count}'
+        groups_help: Lista nazw grup IdP oddzielona przecinkami. Użyj *, aby pasować
+          do wszystkich grup.
         guest_groups: Grupy Gościa
-        member_groups: Grupy Członka
-        groups_help: Lista nazw grup IdP oddzielona przecinkami. Użyj *, aby pasować do wszystkich grup.
-        advanced_title: Zaawansowane ustawienia OIDC
-        scopes_label: Własne zakresy
-        scopes_help: Lista zakresów OIDC oddzielona spacjami. Pozostaw puste dla wartości domyślnych (openid email profile). Dodaj 'groups', aby pobrać claims grup.
-        prompt_label: Monit uwierzytelniania
-        prompt_default: Domyślny (decyduje IdP)
-        prompt_login: Wymuś logowanie (ponowne uwierzytelnienie)
-        prompt_consent: Wymuś zgodę (ponowna autoryzacja)
-        prompt_select_account: Wybór konta (wybierz konto)
-        prompt_none: Bez monitu (uwierzytelnienie ciche)
-        prompt_help: Określa, w jaki sposób IdP wyświetla monity użytkownikowi podczas uwierzytelniania.
-        test_connection: Testuj połączenie
-        saml_configuration: Konfiguracja SAML
-        idp_metadata_url: URL metadanych IdP
-        idp_metadata_url_help: URL do metadanych SAML Twojego IdP. Jeśli podany, inne ustawienia SAML zostaną skonfigurowane automatycznie.
-        manual_saml_config: Konfiguracja ręczna (jeśli nie używasz adresu URL metadanych)
-        manual_saml_help: Używaj tych ustawień tylko wtedy, gdy Twój IdP nie udostępnia adresu URL metadanych.
-        idp_sso_url: URL SSO IdP
-        idp_slo_url: IdP SLO URL (opcjonalne)
-        idp_certificate: Certyfikat IdP
-        idp_certificate_help: Certyfikat X.509 w formacie PEM. Wymagany, jeśli nie używasz adresu URL metadanych.
+        icon_help: Nazwa ikony Lucide (opcjonalne)
+        icon_label: Ikona
+        icon_placeholder: np. key, google, github
         idp_cert_fingerprint: Odcisk cyfrowy certyfikatu (alternatywa)
-        name_id_format: Format identyfikatora nazwy
+        idp_certificate: Certyfikat IdP
+        idp_certificate_help: Certyfikat X.509 w formacie PEM. Wymagany, jeśli nie
+          używasz adresu URL metadanych.
+        idp_metadata_url: URL metadanych IdP
+        idp_metadata_url_help: URL do metadanych SAML Twojego IdP. Jeśli podany, inne
+          ustawienia SAML zostaną skonfigurowane automatycznie.
+        idp_slo_url: IdP SLO URL (opcjonalne)
+        idp_sso_url: URL SSO IdP
+        issuer_help: URL wystawcy OIDC (waliduje endpoint .well-known/openid-configuration)
+        issuer_label: Wystawca
+        issuer_placeholder: https://accounts.google.com
+        label_help: Tekst przycisku widoczny dla użytkowników
+        label_label: Etykieta
+        label_placeholder: np. Zaloguj przez Keycloak
+        manual_saml_config: Konfiguracja ręczna (jeśli nie używasz adresu URL metadanych)
+        manual_saml_help: Używaj tych ustawień tylko wtedy, gdy Twój IdP nie udostępnia
+          adresu URL metadanych.
+        member_groups: Grupy Członka
+        name_help: Unikalny identyfikator (tylko małe litery, cyfry i podkreślenia)
         name_id_email: Adres e-mail (domyślny)
+        name_id_format: Format identyfikatora nazwy
         name_id_persistent: Trwały
         name_id_transient: Przejściowy
         name_id_unspecified: Nieokreślony
+        name_label: Nazwa
+        name_placeholder: np. openid_connect, keycloak, authentik
+        oauth_configuration: Konfiguracja OAuth/OIDC
+        prompt_consent: Wymuś zgodę (ponowna autoryzacja)
+        prompt_default: Domyślny (decyduje IdP)
+        prompt_help: Określa, w jaki sposób IdP wyświetla monity użytkownikowi podczas
+          uwierzytelniania.
+        prompt_label: Monit uwierzytelniania
+        prompt_login: Wymuś logowanie (ponowne uwierzytelnienie)
+        prompt_none: Bez monitu (uwierzytelnienie ciche)
+        prompt_select_account: Wybór konta (wybierz konto)
+        provisioning_title: Udostępnianie użytkowników
+        redirect_uri_help: URL zwrotny do skonfigurowania u Twojego dostawcy tożsamości
+        redirect_uri_label: URI przekierowania
+        redirect_uri_placeholder: https://yourdomain.com/auth/openid_connect/callback
+        role_admin: Administrator
+        role_guest: Gość
+        role_mapping_help: Mapuj grupy/claims IdP na role aplikacji. Użytkownicy otrzymują
+          najwyższą pasującą rolę. Pozostaw puste, aby używać domyślnej roli powyżej.
+        role_mapping_title: Mapowanie grup na role (opcjonalne)
+        role_member: Członek
+        role_super_admin: Superadministrator
+        saml_configuration: Konfiguracja SAML
+        saml_sp_callback_url_help: Skonfiguruj ten URL jako Assertion Consumer Service
+          URL u swojego dostawcy tożsamości (IdP)
+        saml_sp_callback_url_label: URL zwrotny SP (ACS URL)
+        scopes_help: Lista zakresów OIDC oddzielona spacjami. Pozostaw puste dla wartości
+          domyślnych (openid email profile). Dodaj 'groups', aby pobrać claims grup.
+        scopes_label: Własne zakresy
+        strategy_github: GitHub
+        strategy_google_oauth2: Google OAuth2
+        strategy_help: Strategia uwierzytelniania do użycia
+        strategy_label: Strategia
+        strategy_openid_connect: OpenID Connect
+        strategy_saml: SAML 2.0
+        submit: Zapisz dostawcę
+        super_admin_groups: Grupy Super Admina
+        test_connection: Testuj połączenie
+        update_provider: Zaktualizuj dostawcę
+      index:
+        add_provider: Dodaj dostawcę
+        configuration_mode: Tryb konfiguracji
+        configured_providers: Skonfigurowani dostawcy
+        db_backed_providers: Dostawcy z konfiguracją w bazie danych
+        db_backed_providers_description: Wczytuj dostawców z bazy danych zamiast z
+          konfiguracji YAML
+        db_backed_providers_help_html: Ustaw <code class="bg-surface px-1 py-0.5 rounded
+          text-xs">AUTH_PROVIDERS_SOURCE=db</code>, aby włączyć dostawców z konfiguracją
+          w bazie danych. Dzięki temu zmiany nie wymagają restartu serwera.
+        delete: Usuń
+        description: Zarządzaj dostawcami uwierzytelniania jednokrotnego logowania
+          dla swojej instancji
+        disable: Wyłącz
+        disabled: Wyłączony
+        edit: Edytuj
+        enable: Włącz
+        enabled: Włączony
+        env_configured: Środowisko/YAML
+        legacy_providers_notice: Ci dostawcy są skonfigurowani przez zmienne środowiskowe
+          lub YAML i nie można nimi zarządzać przez ten interfejs. Aby zarządzać nimi
+          tutaj, przenieś ich do dostawców opartych na bazie danych, włączając AUTH_PROVIDERS_SOURCE=db
+          i odtwarzając ich w interfejsie.
+        legacy_providers_title: Dostawcy skonfigurowani przez zmienne środowiskowe
+        no_providers_message: Zacznij od dodania pierwszego dostawcy SSO.
+        no_providers_title: Brak dostawców SSO
+        note: Zmiany dostawców SSO wymagają ponownego uruchomienia serwera, aby weszły
+          w życie. Alternatywnie włącz flagę AUTH_PROVIDERS_SOURCE=db, aby dynamicznie
+          ładować dostawców z bazy danych.
+        page_title: Dostawcy SSO
+        restart_required: Zmiany zaczną działać dopiero po restarcie serwera.
+        table:
+          actions: Akcje
+          disabled: Wyłączony
+          enabled: Włączony
+          issuer: Wystawca
+          name: Nazwa
+          status: Status
+          strategy: Strategia
+        title: Dostawcy SSO
+      new:
+        description: Skonfiguruj nowego dostawcę uwierzytelniania jednokrotnego logowania
+        provider_configuration: Konfiguracja dostawcy
+        title: Dodaj dostawcę SSO
+      toggle:
+        confirm_disable: Czy na pewno chcesz wyłączyć tego dostawcę?
+        confirm_enable: Czy na pewno chcesz włączyć tego dostawcę?
+        success_disabled: Dostawca SSO został pomyślnie wyłączony.
+        success_enabled: Dostawca SSO został pomyślnie włączony.
+      update:
+        success: Dostawca SSO został pomyślnie zaktualizowany.
+    unauthorized: Nie masz uprawnień do dostępu do tego obszaru.

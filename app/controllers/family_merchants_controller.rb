@@ -47,9 +47,20 @@ class FamilyMerchantsController < ApplicationController
       respond_to do |format|
         format.html { redirect_to family_merchants_path, notice: t(".success") }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+        format.json { render json: merchant_json(@family_merchant), status: :created }
       end
     else
-      render :new, status: :unprocessable_entity
+      respond_to do |format|
+        # No explicit format.turbo_stream branch: Turbo's form submissions send an
+        # Accept header that prefers turbo-stream, but forcing that format here would
+        # lock the response's Content-Type to turbo-stream while still rendering the
+        # plain :new HTML template — Turbo's client then sees a turbo-stream
+        # Content-Type with no <turbo-stream> tags in the body and does nothing.
+        # Leaving turbo-stream undeclared lets Rails' content negotiation fall back to
+        # format.html below, which renders :new with the correct text/html type.
+        format.html { render :new, status: :unprocessable_entity }
+        format.json { render json: { errors: @family_merchant.errors.full_messages }, status: :unprocessable_entity }
+      end
     end
   end
 
@@ -156,6 +167,16 @@ class FamilyMerchantsController < ApplicationController
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
       params.require(key).permit(:name, :color, :website_url)
+    end
+
+    def merchant_json(merchant)
+      merchant.as_json(only: %i[id name]).merge(
+        html: render_to_string(
+          partial: "DS/merchant_select/option",
+          formats: [ :html ],
+          locals: { merchant: merchant, selected: true, view_helpers: helpers }
+        )
+      )
     end
 
     def all_family_merchants

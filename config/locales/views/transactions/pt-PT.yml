@@ -1,0 +1,356 @@
+---
+pt-PT:
+  transactions:
+    bulk_updates:
+      new:
+        cancel: Cancelar
+        category_label: Categoria
+        category_prompt: Selecione uma categoria
+        date_label: Data
+        header_title: Editar transações
+        merchant_label: Comerciante
+        merchant_prompt: Selecione um comerciante
+        name_label: Designação
+        name_placeholder: Introduza uma designação a ser aplicada às transações selecionadas.
+        none: "(nenhum)"
+        notes_label: Notas
+        notes_placeholder: Introduza uma nota a ser aplicada às transações selecionadas.
+        overview: Visão geral
+        save: Guardar
+        tags_label: Tags
+        transactions_section: Transações
+    unknown_name: Transação desconhecida
+    selection_bar:
+      duplicate: Duplicar
+      edit: Editar
+      selected: selecionado
+    form:
+      details: Detalhes
+      account: Conta
+      account_prompt: Selecione uma conta
+      amount: Montante
+      category: Categoria
+      category_label: Categoria
+      category_prompt: Selecione uma categoria
+      category_search_placeholder: Procurar categorias
+      create_category: 'Criar "%{name}"'
+      create_category_error: Não foi possível criar a categoria
+      date: Data
+      description: Descrição
+      description_placeholder: Descreva a transação
+      expense: Despesa
+      income: Rendimento
+      merchant_label: Comerciante
+      none: (nenhum)
+      note_label: Notas
+      note_placeholder: Introduza uma nota
+      create_tag: Criar
+      create_merchant: Criar
+      create_merchant_error: Não foi possível criar o comerciante
+      merchant_search_placeholder: Procurar ou criar comerciante
+      submit: Adicionar transação
+      tag_search_placeholder: Procurar ou criar tag
+      tags_label: Tags
+      transfer: Transferência
+    create:
+      created: Transação criada
+    update:
+      updated: Transação atualizada
+    new:
+      new_transaction: Nova transação
+    show:
+      keep_both: Não, manter ambos
+      loan_payment: Pagamento de Empréstimo
+      mark_recurring: Marcar como Recorrente
+      mark_recurring_subtitle: Acompanhe isto como uma transação recorrente. A variação de montante é calculada automaticamente com base nos últimos 6 meses de transações semelhantes.
+      mark_recurring_title: Transação Recorrente
+      merge_duplicate: Sim, fundir
+      potential_duplicate_description: Esta transação pendente pode ser a mesma que a transação efetuada abaixo. Nesse caso, funda-as para evitar dupla contagem.
+      potential_duplicate_title: Possível duplicado detetado
+      transfer: Transferência
+      account_label: Conta
+      amount: Montante
+      category_label: Categoria
+      date_label: Data
+      delete: Eliminar
+      delete_subtitle: Isto elimina permanentemente a transação, afeta os seus saldos
+        históricos e não pode ser anulado.
+      delete_title: Eliminar transação
+      details: Detalhes
+      attachments: Anexos
+      exclude: Excluir
+      exclude_description: As transações excluídas serão removidas dos cálculos de orçamentação e dos relatórios.
+      activity_type: Tipo de Atividade
+      activity_type_description: Tipo de atividade de investimento (Compra, Venda, Dividendo, etc.). Detetado automaticamente ou definido manualmente.
+      one_time_title: "%{type} pontual"
+      one_time_description: As transações pontuais serão excluídas de certos cálculos de orçamentação e relatórios para o ajudar a ver o que é realmente importante.
+      convert_to_trade_title: Converter em Negociação de Título
+      convert_to_trade_description: Converta esta transação numa negociação de Compra ou Venda com detalhes do título para acompanhamento da carteira.
+      convert_to_trade_button: Converter em Negociação
+      transfer_matcher_description: Ligue esta transação à sua correspondente noutra conta.
+      pending_duplicate_merger_title: Duplicado da Transação Efetuada?
+      pending_duplicate_merger_description: Funda manualmente esta transação pendente com a sua versão efetuada.
+      pending_duplicate_merger_button: Abrir fusão
+      merchant_label: Comerciante
+      name_label: Designação
+      nature: Tipo
+      none: "(nenhum)"
+      note_label: Notas
+      note_placeholder: Introduza uma nota
+      overview: Visão geral
+      settings: Definições
+      tags_label: Tags
+      tab_transactions: Transações
+      tab_upcoming: Próximo
+      uncategorized: "(sem categoria)"
+      additional_details: "Detalhes adicionais"
+      payee: "Beneficiário"
+      description: "Descrição"
+      memo: "Memorando"
+      provider_extras: "Extras do serviço"
+      transfer_or_debt_payment: "Transferência ou Pagamento de Dívida?"
+      open_matcher: "Abrir correspondente"
+      convert: "Converter"
+    activity_labels:
+      buy: Compra
+      sell: Venda
+      sweep_in: Transferência interna (entrada)
+      sweep_out: Transferência interna (saída)
+      dividend: Dividendo
+      reinvestment: Reinvestimento
+      interest: Juros
+      fee: Comissão
+      transfer: Transferência
+      contribution: Contribuição
+      withdrawal: Levantamento
+      exchange: Troca
+      other: Outro
+    mark_recurring: Marcar como Recorrente
+    mark_recurring_subtitle: Acompanhe isto como uma transação recorrente. A variação de montante é calculada automaticamente com base nos últimos 6 meses de transações semelhantes.
+    mark_recurring_title: Transação Recorrente
+    potential_duplicate_title: Possível duplicado detetado
+    potential_duplicate_description: Esta transação pendente pode ser a mesma que a transação efetuada abaixo. Nesse caso, funda-as para evitar dupla contagem.
+    keep_both: Não, manter ambos
+    split_parent_row:
+      split_label: "Dividir"
+    transfer_match:
+      auto_matched: Correspondência automática
+      auto_matched_short: A/M
+      confirm_match: Confirmar correspondência
+      payment_confirmed: O pagamento está confirmado
+      reject_match: Rejeitar correspondência
+      transfer_confirmed: A transferência está confirmada
+    transaction:
+      pending: Pendente
+      pending_tooltip: Transação pendente — pode mudar quando for efetuada
+      linked_with_provider: Ligada a %{provider}
+      activity_type_tooltip: Tipo de atividade de investimento
+      possible_duplicate: Duplicado?
+      potential_duplicate_tooltip: Esta pode ser um duplicado de outra transação
+      review_recommended: Rever
+      review_recommended_tooltip: Grande diferença de montante — recomenda-se rever para verificar se esta é um duplicado
+      split: Dividir
+      split_tooltip: Esta transação foi dividida em múltiplas entradas
+      split_child_tooltip: Parte de uma transação dividida
+    merge_duplicate:
+      success: Transações fundidas com sucesso
+      failure: Não foi possível fundir as transações
+    dismiss_duplicate:
+      success: Mantidas como transações separadas
+      failure: Não foi possível rejeitar a sugestão de duplicado
+    pending_duplicate_merge:
+      possible_duplicate: Duplicado?
+      possible_duplicate_short: Dup?
+      review_recommended: Rever
+      review_recommended_short: Rev
+      confirm_title: "Fundir com a transação efetuada (%{posted_amount})"
+      reject_title: Manter como transações separadas
+    summary:
+      total_transactions: Total de transações
+      income: Rendimento
+      expenses: Despesas
+      inflow: Entradas
+      outflow: Saídas
+    header:
+      edit_categories: Editar categorias
+      edit_imports: Editar importações
+      edit_merchants: Editar comerciantes
+      edit_tags: Editar tags
+      import: Importar
+    index:
+      title: "Transações"
+      transaction: transação
+      transactions: transações
+      import: Importar
+      new_rule: "Nova regra"
+      edit_rules: "Editar regras"
+      edit_categories: "Editar categorias"
+      edit_tags: "Editar tags"
+      edit_merchants: "Editar comerciantes"
+      edit_imports: "Editar importações"
+      new_transaction: "Nova transação"
+      categorize_button:
+        one: "Categorizar (1)"
+        other: "Categorizar (%{count})"
+    categorizes:
+      show:
+        exit: "Sair"
+        skip: "Saltar"
+        remaining:
+          one: "1 transação sem categoria restante"
+          other: "%{count} transações sem categoria restantes"
+        transaction_count:
+          one: "1 transação"
+          other: "%{count} transações"
+        transactions_hint: "Desmarque para excluir uma transação, ou atribua-lhe uma categoria diferente diretamente na sua linha."
+        assign_category: "Atribuir uma categoria"
+        assign_category_prompt: "→ atribuir"
+        filter_placeholder: "Procurar categorias..."
+        col_transaction: "Transação"
+        col_date: "Data"
+        col_amount: "Montante"
+        col_category: "Categoria"
+        type_income: "Rendimento"
+        type_expense: "Despesa"
+        create_rule_label: "Criar Regra de Categorização"
+        rule_description_prefix: "Futuras transações de %{type} cuja designação contém"
+        rule_description_suffix: "também devem receber esta categoria."
+        no_categories: "Sem categorias correspondentes"
+        all_done: "Todas as transações estão categorizadas"
+      create:
+        categorized:
+          one: "1 transação categorizada"
+          other: "%{count} transações categorizadas"
+        rule_creation_failed: "Transações categorizadas, mas a regra não pôde ser criada (pode já existir)."
+      entry_row:
+        include_checkbox: "Incluir %{name}"
+        assign_category_select: "Atribuir categoria a %{name}"
+    list:
+      drag_drop_title: Coloque o CSV aqui para importar
+      drag_drop_subtitle: Carregar transações diretamente
+      transaction: transação
+      transactions: transações
+    toggle_recurring_section: Alternar transações recorrentes futuras
+    search:
+      filters:
+        account: Conta
+        date: Data
+        type: Tipo
+        status: Estado
+        amount: Montante
+        category: Categoria
+        tag: Etiqueta
+        merchant: Comerciante
+    convert_to_trade:
+      title: Converter em Negociação de Título
+      description: Converta esta transação numa negociação com detalhes do título
+      date_label: "Data:"
+      account_label: "Conta:"
+      amount_label: "Montante:"
+      security_label: Título
+      security_prompt: Selecione um título...
+      security_custom: "+ Introduzir ticker personalizado"
+      security_not_listed_hint: Não encontra o seu título? Selecione "Introduzir ticker personalizado" no final da lista.
+      ticker_placeholder: AAPL
+      ticker_hint: Introduza o símbolo do ticker da ação/ETF (por exemplo, AAPL, MSFT)
+      ticker_search_placeholder: Procurar um ticker...
+      ticker_search_hint: Procure por símbolo do ticker ou nome da empresa, ou introduza um ticker personalizado
+      price_mismatch_title: O preço pode não corresponder
+      price_mismatch_message: "O seu preço (%{entered_price}/ação) difere significativamente do preço de mercado atual de %{ticker} (%{market_price}). Se isto parecer errado, poderá ter selecionado o título errado — tente usar \"Introduzir ticker personalizado\" para especificar o correto."
+      quantity_label: Quantidade (Ações)
+      quantity_placeholder: "ex.: 20"
+      quantity_hint: Número de ações negociadas
+      price_label: Preço por Ação
+      price_placeholder: "ex.: 52.15"
+      price_hint: Preço por ação (%{currency})
+      qty_or_price_hint: Introduza pelo menos qtd OU preço. O outro será calculado a partir do montante da transação (%{amount}).
+      trade_type_label: Tipo de Negociação
+      trade_type_hint: Comprar ou Vender ações de um título
+      exchange_label: Bolsa (Opcional)
+      exchange_placeholder: XNAS
+      exchange_hint: Deixe em branco para deteção automática
+      cancel: Cancelar
+      submit: Converter em Negociação
+      success: Transação convertida em negociação
+      conversion_note: "Convertida da transação: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Apenas transações em contas de investimento podem ser convertidas em negociações
+        already_converted: Esta transação já foi convertida ou excluída
+        enter_ticker: Introduza um símbolo de ticker, por favor
+        security_not_found: O título selecionado já não existe. Selecione outro, por favor.
+        select_security: Selecione ou introduza um título, por favor
+        enter_qty_or_price: Introduza a quantidade ou o preço por ação, por favor. O outro será calculado a partir do montante da transação.
+        invalid_qty_or_price: Quantidade ou preço inválidos. Introduza valores positivos válidos, por favor.
+        conversion_failed: "Falha ao converter a transação: %{error}"
+        unexpected_error: "Erro inesperado durante a conversão: %{error}"
+    searches:
+      filters:
+        account_filter:
+          filter_accounts: Filtrar contas
+        category_filter:
+          filter_category: Filtrar categoria
+        date_filter:
+          start_date: "Data de início"
+          end_date: "Data de fim"
+        merchant_filter:
+          filter_merchants: Filtrar comerciantes
+        tag_filter:
+          filter_tags: Filtrar etiquetas
+        amount_filter:
+          equal_to: Igual a
+          greater_than: Superior a
+          less_than: Inferior a
+          placeholder: '0'
+        badge:
+          expense: Despesa
+          income: Rendimento
+          on_or_after: em ou após %{date}
+          on_or_before: em ou antes de %{date}
+          transfer: Transferência
+          confirmed: Confirmado
+          pending: Pendente
+        type_filter:
+          expense: Despesa
+          income: Rendimento
+          transfer: Transferência
+        status_filter:
+          confirmed: Confirmado
+          pending: Pendente
+      menu:
+        account_filter: Conta
+        amount_filter: Montante
+        apply: Aplicar
+        cancel: Cancelar
+        category_filter: Categoria
+        clear_filters: Limpar filtros
+        date_filter: Data
+        merchant_filter: Comerciante
+        status_filter: Estado
+        tag_filter: Etiqueta
+        type_filter: Tipo
+      search:
+        equal_to: igual a
+        greater_than: superior a
+        less_than: inferior a
+      form:
+        toggle_selection_checkboxes: Alternar todas as caixas de seleção
+        search_placeholder: "Procurar transações ..."
+        filter: "Filtro"
+    attachments:
+      cannot_exceed: "Não pode exceder %{count} anexos por transação"
+      uploaded_one: "Anexo carregado com sucesso"
+      uploaded_many: "%{count} anexos carregados com sucesso"
+      failed_upload: "Falha ao carregar o anexo: %{error}"
+      no_files_selected: "Nenhum ficheiro selecionado para carregamento"
+      attachment_deleted: "Anexo eliminado com sucesso"
+      failed_delete: "Falha ao eliminar o anexo: %{error}"
+      upload_failed: "Falha ao carregar o anexo. Tente novamente ou contacte o suporte."
+      delete_failed: "Falha ao eliminar o anexo. Tente novamente ou contacte o suporte."
+      upload: "Carregar"
+      no_attachments: "Sem anexos ainda"
+      select_up_to: "Selecione até %{count} ficheiros (imagens ou PDFs, máx. %{size}MB cada) • %{used} de %{count} utilizados"
+      files:
+        one: "Ficheiro (1)"
+        other: "Ficheiros (%{count})"
+      browse_to_add: "Procure para adicionar ficheiros"
+      max_reached: "Limite máximo de ficheiros atingido (%{count}/%{max}). Elimine um ficheiro existente para carregar outro."

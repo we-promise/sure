@@ -16,12 +16,16 @@ class BinanceAccount::HoldingsProcessor
     end
 
     assets = raw_assets
-    if assets.empty?
-      Rails.logger.info "BinanceAccount::HoldingsProcessor - no assets in payload"
+    if assets.nil?
+      # No asset list at all is not an empty wallet, it is a wallet nothing has
+      # reported on yet. Cleaning up here would delete holdings on the strength
+      # of missing information.
+      Rails.logger.info "BinanceAccount::HoldingsProcessor - no asset list in payload"
       return
     end
 
     assets.each { |asset| process_asset(asset) }
+    cleanup_stale_holdings!(assets)
   rescue StandardError => e
     Rails.logger.error "BinanceAccount::HoldingsProcessor - error: #{e.message}"
     nil
@@ -39,8 +43,43 @@ class BinanceAccount::HoldingsProcessor
       binance_account.current_account
     end
 
+    # nil when the payload has never carried an asset list, [] when Binance
+    # reported an empty wallet. The two mean different things to the cleanup.
     def raw_assets
-      binance_account.raw_payload&.dig("assets") || []
+      binance_account.raw_payload&.dig("assets")
+    end
+
+    # Binance reports what the wallet holds NOW, so a holding written for today
+    # whose asset is no longer in the payload is one that has left the wallet.
+    # Nothing removed them before, and the account page reads exactly today's
+    # rows — so a coin sold hours ago was still in the portfolio.
+    #
+    # Keyed on what the PAYLOAD contains, not on what was successfully
+    # imported: an asset whose price could not be fetched is skipped above, and
+    # deleting it would turn a price outage into a disappeared holding.
+    def cleanup_stale_holdings!(assets)
+      provider_id = binance_account.account_provider&.id
+      return if provider_id.nil?
+
+      keep = assets.filter_map { |asset| external_id_for(asset) }
+      scope = account.holdings.where(account_provider_id: provider_id, date: Date.current)
+      scope = scope.where.not(external_id: keep) if keep.any?
+
+      removed = scope.delete_all
+      Rails.logger.info "BinanceAccount::HoldingsProcessor - removed #{removed} holding(s) no longer in the wallet" if removed.positive?
+    end
+
+    def external_id_for(asset)
+      symbol = asset["symbol"] || asset[:symbol]
+      source = asset["source"] || asset[:source]
+      return if symbol.blank?
+      return if (asset["total"] || asset[:total]).to_d.zero?
+
+      holding_external_id(symbol, source)
+    end
+
+    def holding_external_id(symbol, source)
+      "binance_#{symbol}_#{source}_#{Date.current}"
     end
 
     def process_asset(asset)
@@ -76,7 +115,7 @@ class BinanceAccount::HoldingsProcessor
         date:                   Date.current,
         price:                  price,
         cost_basis:             nil,
-        external_id:            "binance_#{symbol}_#{source}_#{Date.current}",
+        external_id:            holding_external_id(symbol, source),
         account_provider_id:    binance_account.account_provider&.id,
         source:                 "binance",
         delete_future_holdings: false

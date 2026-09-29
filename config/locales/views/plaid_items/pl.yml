@@ -5,24 +5,40 @@ pl:
       success: Konto zostało pomyślnie połączone. Poczekaj na synchronizację kont.
     destroy:
       success: Konta zostały zaplanowane do usunięcia.
+    errors:
+      link_token_generic: Nie udało się teraz otworzyć Plaid. Spróbuj ponownie, a
+        jeśli problem będzie się powtarzał, sprawdź logi serwera po szczegóły.
+      link_token_with_message: 'Plaid nie mógł otworzyć połączenia: %{message}'
+    link_existing_account:
+      already_linked: To konto Plaid jest już połączone
+      invalid_account: Wybrano nieprawidłowe konto Plaid
+      success: Konto zostało pomyślnie połączone z Plaid
     plaid_item:
+      add_accounts: Dodaj konta
       add_new: Dodaj nowe połączenie
       confirm_accept: Usuń instytucję
-      confirm_body: To trwale usunie wszystkie konta w tej grupie oraz wszystkie powiązane dane.
+      confirm_body: To trwale usunie wszystkie konta w tej grupie oraz wszystkie powiązane
+        dane.
       confirm_title: Usunąć instytucję?
       connection_lost: Utracono połączenie
-      connection_lost_description: To połączenie nie jest już prawidłowe. Aby kontynuować synchronizację danych, usuń je i dodaj ponownie.
+      connection_lost_description: To połączenie nie jest już prawidłowe. Aby kontynuować
+        synchronizację danych, usuń je i dodaj ponownie.
       delete: Usuń
+      deletion_in_progress: "(usuwanie w toku...)"
       error: Wystąpił błąd podczas synchronizacji danych
-      no_accounts_description: Nie udało się wczytać żadnych kont z tej instytucji finansowej.
+      no_accounts_description: Nie udało się wczytać żadnych kont z tej instytucji
+        finansowej.
       no_accounts_title: Nie znaleziono kont
+      provider_name: Plaid
       requires_update: Połącz ponownie
       status: Ostatnia synchronizacja %{timestamp} temu
       status_never: Wymaga synchronizacji danych
       syncing: Synchronizacja...
       update: Aktualizuj
     select_existing_account:
-      title: Połącz %{account_name} z Plaid
-      description: Wybierz konto Plaid, aby połączyć je z istniejącym kontem
       cancel: Anuluj
+      description: Wybierz konto Plaid, aby połączyć je z istniejącym kontem
       link_account: Połącz konto
+      no_available_accounts: Brak dostępnych kont Plaid do połączenia. Najpierw połącz
+        nowe konto Plaid.
+      title: Połącz %{account_name} z Plaid

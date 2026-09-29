@@ -1,0 +1,7 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        plaid_account:
+          no_balance: Plaid 帳戶必須有目前餘額或可用餘額

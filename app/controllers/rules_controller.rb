@@ -66,17 +66,7 @@ class RulesController < ApplicationController
   def confirm
     # Compute provider, model, and cost estimation for auto-categorize actions
     if @rule.actions.any? { |a| a.action_type == "auto_categorize" }
-      # Use the same provider determination logic as Family::AutoCategorizer
-      llm_provider = Provider::Registry.get_provider(:openai)
-
-      if llm_provider
-        @selected_model = Provider::Openai.effective_model
-        @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
-          transaction_count: @rule.affected_resource_count,
-          category_count: @rule.family.categories.count,
-          model: @selected_model
-        )
-      end
+      @selected_model, @estimated_cost = auto_categorize_estimate(@rule)
     end
   end
 
@@ -110,16 +100,10 @@ class RulesController < ApplicationController
 
     # Compute AI cost estimation if any rule has auto_categorize action
     if @rules.any? { |r| r.actions.any? { |a| a.action_type == "auto_categorize" } }
-      llm_provider = Provider::Registry.get_provider(:openai)
-
-      if llm_provider
-        @selected_model = Provider::Openai.effective_model
-        @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
-          transaction_count: @total_affected_count,
-          category_count: Current.family.categories.count,
-          model: @selected_model
-        )
-      end
+      @selected_model, @estimated_cost = auto_categorize_estimate(
+        Current.family,
+        transaction_count: @total_affected_count
+      )
     end
   end
 
@@ -129,11 +113,77 @@ class RulesController < ApplicationController
   end
 
   def clear_ai_cache
-    ClearAiCacheJob.perform_later(Current.family)
+    enqueue_ai_cache_reset
     redirect_to rules_path, notice: t("rules.clear_ai_cache.success")
   end
 
   private
+    # Names the provider that will actually run, and prices against it.
+    #
+    # This previously hardcoded :openai, so an Anthropic install was quoted the
+    # wrong model and a family on Jev was quoted a provider that would not run
+    # at all. LlmUsage has no pricing for Jev, so the cost comes back nil and the
+    # view says so rather than inventing a figure.
+    def auto_categorize_estimate(scope, transaction_count: nil)
+      family = scope.is_a?(Rule) ? scope.family : scope
+      count = transaction_count || scope.affected_resource_count
+      model = family.categorization_model_name
+      return [ nil, nil ] if model.blank?
+
+      cost = LlmUsage.estimate_auto_categorize_cost(
+        transaction_count: count,
+        category_count: family.categories.count,
+        model: model
+      )
+
+      [ model, cost ]
+    end
+
+    # The reset itself happens in a background job, so an enqueue that never
+    # lands looks exactly like a job that ran and found nothing. Logging the
+    # request separately from the job's own "started" entry tells those apart.
+    def enqueue_ai_cache_reset
+      perform_ai_cache_reset_later
+
+      DebugLogEntry.capture(
+        category: ClearAiCacheJob::DEBUG_CATEGORY,
+        level: "info",
+        message: "AI cache reset requested from the rules page",
+        source: self.class.name,
+        family: Current.family,
+        user: Current.user
+      )
+    end
+
+    # Split out so the rescue below covers only the enqueue it reports on.
+    # Anything that runs after the job is safely queued — the request log above,
+    # the redirect — is then structurally incapable of being recorded as an
+    # enqueue failure and retried, without that resting on the internals of
+    # whatever those later steps happen to call.
+    def perform_ai_cache_reset_later
+      attempted_job = nil
+      enqueued = ClearAiCacheJob.perform_later(Current.family) { |job| attempted_job = job }
+
+      # perform_later turns an ActiveJob::EnqueueError — or an enqueue aborted by
+      # a callback — into a false return rather than raising it, so the return
+      # value is the only signal that the reset never reached the queue. The
+      # yielded job carries the underlying error when there was one.
+      return if enqueued
+
+      raise attempted_job&.enqueue_error || ActiveJob::EnqueueError.new("ClearAiCacheJob was not enqueued")
+    rescue => e
+      DebugLogEntry.capture(
+        category: ClearAiCacheJob::DEBUG_CATEGORY,
+        level: "error",
+        message: "AI cache reset could not be enqueued: #{e.class}: #{e.message}",
+        source: self.class.name,
+        family: Current.family,
+        user: Current.user,
+        metadata: { error_class: e.class.name, error_message: e.message }
+      )
+      raise
+    end
+
     def set_rule
       @rule = Current.family.rules.find(params[:id])
     end
@@ -146,7 +196,7 @@ class RulesController < ApplicationController
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]
         ],
         actions_attributes: [
-          :id, :action_type, :value, :_destroy
+          :id, :action_type, :value, :_destroy, { value: [] }
         ]
       )
     end

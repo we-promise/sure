@@ -13,7 +13,7 @@
       </div>
     <% end %>
     <% dialog.with_body do %>
-      <%= render "form", goal: @goal, linkable_accounts: @linkable_accounts %>
+      <%= render "form", goal: @goal, linkable_accounts: @linkable_accounts, currently_linked_account_ids: @currently_linked_account_ids, pooled_allocations: @pooled_allocations %>
     <% end %>
   <% end %>
 <% else %>
@@ -25,6 +25,6 @@
         <p class="text-sm text-secondary mt-0.5"><%= t(".subtitle") %></p>
       </div>
     </header>
-    <%= render "form", goal: @goal, linkable_accounts: @linkable_accounts %>
+    <%= render "form", goal: @goal, linkable_accounts: @linkable_accounts, currently_linked_account_ids: @currently_linked_account_ids, pooled_allocations: @pooled_allocations %>
   </div>
 <% end %>

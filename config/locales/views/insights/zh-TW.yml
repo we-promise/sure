@@ -1,0 +1,99 @@
+---
+zh-TW:
+  insights:
+    notification:
+      title: 新的財務洞察
+      body: 開啟 Sure 以查看最新的 AI 洞察。
+    index:
+      title: 洞察
+      subtitle: 您財務狀況的近期動態，每晚更新。
+      refresh: 檢查是否有新洞察
+      empty:
+        title: 尚無洞察
+        description: 當您的帳戶累積足夠的活動後，洞察就會出現在這裡，並在每晚自動更新。
+    refresh:
+      queued: 正在產生新的洞察，請稍待一分鐘後再回來查看。
+      checking: 檢查中…
+    card:
+      acknowledge: 我知道了
+      acknowledge_title: 在數字變動前先隱藏這則
+      new: 新
+      acknowledged: 我知道了 — 在情況改變前隱藏
+      undo: 復原
+    feed:
+      view_all: 查看所有洞察
+      header: 最新
+      header_new: 新
+      acknowledge_aria: 我知道了：%{title}
+    types:
+      spending_anomaly: 支出
+      cash_flow_warning: 現金流
+      net_worth_milestone: 淨資產
+      subscription_audit: 訂閱
+      savings_rate_change: 儲蓄率
+      idle_cash: 閒置現金
+      budget_at_risk: 預算
+      budget_on_track: 預算
+    meta:
+      next_n_days:
+        one: 未來一天
+        other: 未來 %{count} 天
+      last_n_days:
+        one: 過去一天
+        other: 過去 %{count} 天
+      date_range: '%{from} 至 %{to}'
+    figures:
+      vs_previous: 相較上月
+      today: 今天
+      on_pace: 依目前進度
+      of_budget: 佔預算
+      need_attention: 需要注意
+      days_overdue:
+        one: 逾期 %{count} 天
+        other: 逾期 %{count} 天
+      idle_days:
+        one: 閒置 %{count} 天
+        other: 閒置 %{count} 天
+    actions:
+      spending_anomaly: 查看 %{category} 的交易
+      cash_flow_warning: 檢視定期交易
+      net_worth_milestone: 查看淨資產報表
+      subscription_audit: 檢視定期交易
+      savings_rate_change: 查看該月份的交易
+      idle_cash: 前往帳戶
+      budget: 查看預算
+    titles:
+      spending_anomaly:
+        above: '%{category} 的支出正在上升'
+        below: '%{category} 的支出正在下降'
+      cash_flow_warning:
+        low: 您的現金餘額可能會偏低
+        negative: 您的現金餘額可能會變成負數
+      net_worth_milestone: 淨資產里程碑：%{milestone}
+      subscription_audit: '%{name} 還在使用中嗎？'
+      savings_rate_change:
+        up: 您在%{month}的儲蓄率提高了
+        down: 您在%{month}的儲蓄率下降了
+      idle_cash: '%{account} 有閒置現金'
+      budget_at_risk:
+        one: 您的預算中有一個分類需要注意
+        other: 您的預算中有 %{count} 個分類需要注意
+      budget_on_track: 您的預算進度正常
+    templates:
+      spending_anomaly:
+        above: 依目前進度，您這個月在 %{category} 的支出約為 %{projected_spend}，比近期月均 %{baseline_spend} 高出約 %{deviation_pct}%。
+        below: 依目前進度，您這個月在 %{category} 的支出約為 %{projected_spend}，比近期月均 %{baseline_spend} 低約 %{deviation_pct}%。
+      cash_flow_warning:
+        low: 根據即將到來的定期交易與您平常的支出，您的現金餘額可能在 %{projected_low_date} 前後降到 %{projected_low}。
+        negative: 根據即將到來的定期交易與您平常的支出，您的現金餘額可能在 %{projected_low_date} 前後跌到 %{projected_low}。
+      net_worth_milestone: 您的淨資產已越過 %{milestone}，目前為 %{net_worth}。
+      subscription_audit: '%{name}（%{amount}）自預期的 %{expected_on} 之後就沒有再出現。可能已經取消，或是扣款時間改變了。'
+      savings_rate_change:
+        up: 您在%{month}存下了收入的 %{current_rate}%，比前一個月的 %{previous_rate}% 高出 %{change_pp} 個百分點。
+        down: 您在%{month}存下了收入的 %{current_rate}%，比前一個月的 %{previous_rate}% 低了 %{change_pp} 個百分點。
+        down_negative: 您在%{month}的支出超過收入：儲蓄率從前一個月的 %{previous_rate}% 降到 %{current_rate}%。
+      idle_cash: '%{account} 有 %{balance}，且在過去 %{idle_days} 天內沒有任何活動。'
+      budget_at_risk:
+        over: '%{categories} 這個月已超出預算。您目前已使用總預算的 %{budget_spent_pct}%。'
+        near: '%{categories} 這個月已接近預算上限。您目前已使用總預算的 %{budget_spent_pct}%。'
+      budget_on_track: 您已使用 %{budgeted} 預算中的 %{spent}（%{budget_spent_pct}%），全部都在上限之內。

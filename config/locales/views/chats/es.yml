@@ -1,6 +1,45 @@
 ---
 es:
   chats:
-    demo_banner_title: "Modo de demostración activo"
-    demo_banner_message: "Estás utilizando un LLM Qwen3 de pesos abiertos con créditos proporcionados por Cloudflare Workers AI. Los resultados pueden variar, ya que la base de código se probó principalmente con `gpt-4.1`, ¡pero tus tokens no se enviarán a ningún otro lugar para ser entrenados! 🤖"
-    thinking: "Procesando ..."
+    demo_banner_title: Modo de demostración activo
+    demo_banner_message: Estás utilizando un LLM Qwen3 de pesos abiertos con créditos proporcionados por Cloudflare Workers AI. Los resultados pueden variar, ya que la base de código se probó principalmente con `gpt-4.1`, ¡pero tus tokens no se enviarán a ningún otro lugar para ser entrenados! 🤖
+    thinking: Procesando ...
+    worker_unhealthy_warning: 'Puede que las respuestas de la IA no lleguen ahora mismo: el worker en segundo plano parece estar caído o saturado. Comprueba que tu worker de Sidekiq está en marcha.'
+    ai_greeting:
+      greeting: ¡Hola, %{name}! Soy una IA (modelo de lenguaje) que puede ayudarte con tus finanzas. Tengo acceso a la web y a los datos de tu cuenta.
+      there: hola
+      commands_hint_html: Puedes usar <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> para acceder a los comandos
+      questions_intro: 'Aquí tienes algunas preguntas que puedes hacer:'
+      evaluate_portfolio: Evaluar la cartera de inversión
+      spending_insights: Mostrar análisis de gastos
+      unusual_patterns: Encontrar patrones inusuales
+    chat:
+      edit_chat_title: Editar título del chat
+      delete_chat: Eliminar chat
+    chat_nav:
+      all_chats: Todos los chats
+      start_new_chat: Iniciar nuevo chat
+      edit_chat_title: Editar título del chat
+      delete_chat: Eliminar chat
+    error:
+      retry: Reintentar
+    destroy:
+      notice: El chat se ha eliminado correctamente
+    index:
+      chats: Chats
+      new_chat: Nuevo chat
+    update:
+      success: Chat actualizado
+    ai_consent:
+      title: Activar chats con IA
+      available_description: El chat con IA puede responder preguntas financieras y ofrecer análisis basados en tus datos. Para usar esta función tendrás que activarla explícitamente.
+      unavailable_description_html: Para usar el asistente de IA, necesitas definir la variable de entorno <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> o configurarla en los ajustes de autoalojamiento de tu instancia.
+      enable_button: Activar chats con IA
+      disable_note: Desactívalo cuando quieras. Todos los datos enviados a nuestros proveedores de LLM se anonimizan.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Razonamiento del asistente
+    tool_calls:
+      tool_calls: Llamadas a herramientas
+      function: 'Función:'
+      arguments: 'Argumentos:'

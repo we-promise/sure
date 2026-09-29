@@ -1,0 +1,37 @@
+uk:
+  settings:
+    securities:
+      show:
+        disable_mfa: Вимкнути 2FA
+        disable_mfa_confirm: Ви впевнені, що хочете вимкнути двофакторну автентифікацію?
+          Це зробить ваш обліковий запис менш безпечним.
+        enable_mfa: Увімкнути 2FA
+        mfa_enabled_status_html: "Двофакторна автентифікація <span class=\"font-medium text-green-600\">ввімкнена</span>"
+        mfa_enabled_description: Ваш обліковий запис захищено додатковим рівнем безпеки.
+        mfa_disabled_status_html: "Двофакторна автентифікація <span class=\"font-medium text-red-600\">вимкнена</span>"
+        mfa_disabled_description: Увімкніть 2FA, щоб додати додатковий рівень безпеки до вашого облікового запису.
+        mfa_description: Додайте додатковий рівень безпеки до вашого облікового запису, вимагаючи
+          код з вашого додатка-автентифікатора під час входу
+        mfa_title: Двофакторна автентифікація
+        webauthn_add: Додати ключ доступу або ключ безпеки
+        webauthn_added: Додано %{date}
+        webauthn_description: Використовуйте ключ доступу, Touch ID, Windows Hello або апаратний
+          ключ безпеки як другий фактор під час входу.
+        webauthn_empty: Ще не зареєстровано жодного ключа доступу або ключа безпеки.
+        webauthn_last_used: Останнє використання %{time_ago} тому
+        webauthn_name_label: Назва ключа
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey тощо.
+        webauthn_remove: Видалити
+        webauthn_remove_confirm: Ви впевнені, що хочете видалити цей ключ доступу або
+          ключ безпеки?
+        webauthn_remove_confirm_body: Вам потрібно буде знову зареєструвати цей ключ доступу або
+          ключ безпеки, перш ніж його можна буде використовувати для перевірки входу.
+        webauthn_title: Ключі доступу та ключі безпеки
+        webauthn_unsupported: Цей браузер не підтримує ключі доступу або ключі
+          безпеки.
+  webauthn_credentials:
+    default_name: Ключ безпеки
+    failure: Не вдалося зберегти цей ключ доступу або ключ безпеки. Будь ласка, спробуйте ще раз.
+    mfa_required: Увімкніть двофакторну автентифікацію перед додаванням ключа доступу або ключа
+      безпеки.
+    success: Ключ доступу або ключ безпеки видалено.

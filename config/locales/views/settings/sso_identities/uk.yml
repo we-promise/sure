@@ -1,0 +1,6 @@
+uk:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Неможливо від'єднати останній обліковий запис SSO
+        success: Успіх

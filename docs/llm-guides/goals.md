@@ -44,7 +44,7 @@ Model layer:
 
 Controllers / routes:
 
-- `app/controllers/goals_controller.rb` — index / show / new / create / edit / update / destroy / pause / resume / complete / archive / unarchive.
+- `app/controllers/goals_controller.rb` — index / show / new / create / edit / update / destroy (any state) / pause / resume / complete / archive / unarchive.
 - `app/controllers/goal_pledges_controller.rb` — new / create / renew / destroy.
 - `config/routes.rb` — `resources :goals do resources :pledges ... member { patch :renew } end`.
 
@@ -116,6 +116,17 @@ the selected account's connection state.
 The AASM `state` is independent. Read `Goal#display_status` (not `#status`)
 to get the right pill label: it returns the AASM state when it's not
 `:active`, otherwise falls through to `#status`.
+
+`archived` is a "keep it as a record" state, **not** a prerequisite for
+deleting. `GoalsController#destroy` accepts a goal in any state. The only
+affordance is the kebab on the show page — index cards deliberately carry
+no actions, so the card stays a single click target. A delete cascades
+only to `goal_accounts` and `goal_pledges`;
+`GoalPledge#clear_matched_transaction_extra` unstamps
+`extra["goal"]["pledge_id"]` from any transaction a matched pledge
+claimed. No account, balance, entry or transaction is removed. Reuse
+`Goal#deletion_confirm` rather than building a second `CustomConfirm` at
+a new call site.
 
 `Goal#pace` is the rolling 90-day net inflow into the linked accounts,
 divided by three. The query joins `entries` with `transactions`

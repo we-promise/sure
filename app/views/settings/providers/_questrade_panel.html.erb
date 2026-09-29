@@ -4,16 +4,16 @@
 
   <% unless connected %>
     <%= render "settings/providers/setup_steps",
-               eyebrow: t("questrade_items.panel.eyebrow", default: "Setup · desktop only"),
+               eyebrow: t("questrade_items.panel.eyebrow"),
                steps: [
-                 t("questrade_items.panel.steps.s1_html", default: %q{Sign in to the <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">Questrade portal</a> on a desktop browser. The API settings are not available in the mobile app.}).html_safe,
-                 t("questrade_items.panel.steps.s2", default: "Open Settings, and under General settings edit the IQ API settings."),
-                 t("questrade_items.panel.steps.s3_html", default: %q{In the API access modal, click <strong>Manage</strong> under <strong>My applications</strong>.}).html_safe,
-                 t("questrade_items.panel.steps.s4", default: "Register a personal app with a name and description, then save."),
-                 t("questrade_items.panel.steps.s5", default: "Add a new device and generate a token."),
-                 t("questrade_items.panel.steps.s6", default: "Paste the generated token below and save.")
+                 t("questrade_items.panel.steps.s1_html").html_safe,
+                 t("questrade_items.panel.steps.s2"),
+                 t("questrade_items.panel.steps.s3_html").html_safe,
+                 t("questrade_items.panel.steps.s4"),
+                 t("questrade_items.panel.steps.s5"),
+                 t("questrade_items.panel.steps.s6")
                ],
-               help: { url: "https://www.questrade.com/api/documentation/getting-started", text: t("questrade_items.panel.help_text", default: "Questrade API docs") } %>
+               help: { url: "https://www.questrade.com/api/documentation/getting-started", text: t("questrade_items.panel.help_text") } %>
   <% end %>
 
   <% error_msg = local_assigns[:error_message] || @error_message %>
@@ -50,13 +50,13 @@
 
     <div class="flex items-center gap-2 mt-4">
       <%= render DS::Button.new(
-        text: t("questrade_items.panel.disconnect", default: "Disconnect"),
+        text: t("questrade_items.panel.disconnect"),
         icon: "trash-2",
         variant: :outline_destructive,
         size: :sm,
         href: questrade_item_path(items.first),
         method: :delete,
-        data: { turbo_frame: "_top", turbo_confirm: t("questrade_items.panel.disconnect_confirm", default: "Disconnect Questrade? This removes the connection and unlinks its synced accounts.") }
+        data: { turbo_frame: "_top", turbo_confirm: t("questrade_items.panel.disconnect_confirm") }
       ) %>
     </div>
   <% else %>

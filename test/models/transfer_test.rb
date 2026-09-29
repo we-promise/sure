@@ -14,6 +14,38 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
+  test "destroy! clears the idempotency key so a retried request can create a new transfer" do
+    idempotency_key = SecureRandom.uuid
+
+    transfer = Transfer::Creator.new(
+      family: families(:dylan_family),
+      source_account_id: accounts(:depository).id,
+      destination_account_id: accounts(:credit_card).id,
+      date: Date.current,
+      amount: 100,
+      idempotency_key: idempotency_key
+    ).create
+
+    transfer.destroy!
+
+    assert_nil transfer.outflow_transaction.entry.reload.idempotency_key
+    assert_nil transfer.inflow_transaction.entry.reload.idempotency_key
+
+    # A retry of the original create request (e.g. the user resubmits after
+    # rejecting/undoing the first transfer) must not find a stale entry with
+    # this key and raise RecordNotUnique - it should create a fresh transfer.
+    assert_difference "Transfer.count", 1 do
+      Transfer::Creator.new(
+        family: families(:dylan_family),
+        source_account_id: accounts(:depository).id,
+        destination_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        idempotency_key: idempotency_key
+      ).create
+    end
+  end
+
   test "transfer has different accounts, opposing amounts, and within 4 days of each other" do
     outflow_entry = create_transaction(date: 1.day.ago.to_date, account: accounts(:depository), amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)

@@ -20,7 +20,7 @@
     </button>
   <% end %>
 
-  <div id="<%= panel_id %>" data-DS--popover-target="content" class="px-2 lg:px-0 max-w-full hidden z-50">
+  <div id="<%= panel_id %>" data-DS--popover-target="content" class="fixed px-2 lg:px-0 max-w-full hidden z-50">
     <%= tag.div class: "mx-auto min-w-[200px] shadow-border-lg bg-container rounded-lg", style: ("max-width: #{max_width}" if max_width) do %>
       <%= header %>
 

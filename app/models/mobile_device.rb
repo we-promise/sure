@@ -66,25 +66,38 @@ class MobileDevice < ApplicationRecord
   # Issues a fresh Doorkeeper access token for this device, revoking any
   # previous tokens. Returns a hash with token details ready for an API
   # response or deep-link callback.
+  #
+  # This is the single choke point every mobile-token-issuing path funnels
+  # through, so User#with_active_lock! (the actual authorization boundary,
+  # locked immediately before minting) lives here rather than at each call
+  # site. Callers may *additionally* check active? earlier for fast, friendly
+  # rejection (skip an MFA/device-validation round trip, avoid a pointless
+  # MobileDevice upsert) — but that's a UX optimization only and must never
+  # be assumed a substitute for this check, however "obviously"
+  # already-checked the user seems. Raises User::InactiveError for a
+  # deactivated/concurrently-purged user, distinct from a genuine
+  # ActiveRecord::RecordInvalid from Doorkeeper::AccessToken.create! itself.
   def issue_token!
-    revoke_all_tokens!
+    user.with_active_lock! do
+      revoke_all_tokens!
 
-    access_token = Doorkeeper::AccessToken.create!(
-      application: self.class.shared_oauth_application,
-      resource_owner_id: user_id,
-      mobile_device_id: id,
-      expires_in: 30.days.to_i,
-      scopes: "read_write",
-      use_refresh_token: true
-    )
+      access_token = Doorkeeper::AccessToken.create!( # pipelock:ignore Credential in URL
+        application: self.class.shared_oauth_application,
+        resource_owner_id: user_id,
+        mobile_device_id: id,
+        expires_in: 30.days.to_i,
+        scopes: "read_write",
+        use_refresh_token: true
+      )
 
-    {
-      access_token: access_token.plaintext_token,
-      refresh_token: access_token.plaintext_refresh_token,
-      token_type: "Bearer",
-      expires_in: access_token.expires_in,
-      created_at: access_token.created_at.to_i
-    }
+      {
+        access_token: access_token.plaintext_token,
+        refresh_token: access_token.plaintext_refresh_token,
+        token_type: "Bearer",
+        expires_in: access_token.expires_in,
+        created_at: access_token.created_at.to_i
+      }
+    end
   end
 
   private

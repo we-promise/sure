@@ -1,0 +1,8 @@
+---
+uk:
+  admin:
+    invitations:
+      destroy:
+        success: "Запрошення видалено."
+      destroy_all:
+        success: "Усі запрошення для цієї сім'ї було видалено."

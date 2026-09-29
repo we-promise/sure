@@ -1,0 +1,29 @@
+<%= flash_notification_stream_items %>
+
+<%= turbo_stream.replace dom_id(@budget, :allocation_progress), partial: "budget_categories/allocation_progress", locals: { budget: @budget } %>
+
+<%= turbo_stream.replace dom_id(@budget, :uncategorized_budget_category_form), partial: "budget_categories/uncategorized_budget_category_form", locals: { budget: @budget } %>
+
+<%= turbo_stream.replace dom_id(@budget, :confirm_button), partial: "budget_categories/confirm_button", locals: { budget: @budget } %>
+
+<%# Both ends of the move, plus whatever their allocation drags along: a
+    subcategory pulls its parent and siblings, a parent pushes down to its
+    children. Re-rendering the same row twice (from and to can be siblings)
+    is harmless — the last replace wins with identical markup. %>
+<% [ @from, @to ].each do |budget_category| %>
+  <%= turbo_stream.replace dom_id(budget_category, :form), partial: "budget_categories/budget_category_form", locals: { budget_category: budget_category } %>
+
+  <% if budget_category.subcategory? %>
+    <% if (parent_budget_category = budget_category.parent_budget_category) %>
+      <%= turbo_stream.replace dom_id(parent_budget_category, :form), partial: "budget_categories/budget_category_form", locals: { budget_category: parent_budget_category } %>
+    <% end %>
+
+    <% budget_category.siblings.each do |sibling| %>
+      <%= turbo_stream.replace dom_id(sibling, :form), partial: "budget_categories/budget_category_form", locals: { budget_category: sibling } %>
+    <% end %>
+  <% else %>
+    <% budget_category.subcategories.each do |subcategory| %>
+      <%= turbo_stream.replace dom_id(subcategory, :form), partial: "budget_categories/budget_category_form", locals: { budget_category: subcategory } %>
+    <% end %>
+  <% end %>
+<% end %>

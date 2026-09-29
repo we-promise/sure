@@ -5,7 +5,10 @@ zh-TW:
     upcoming: 即將到來的定期交易
     projected: 預估
     recurring: 定期
-    expected_on: 預計於 %{date}
+    expected_today: 預計今天
+    expected_in:
+      one: 預計 %{count} 天後
+      other: 預計 %{count} 天後
     day_of_month: 每月第 %{day} 天
     identify_patterns: 辨識規律
     cleanup_stale: 清理失效交易
@@ -16,10 +19,10 @@ zh-TW:
     info:
       title: 自動規律辨識
       manual_description: 您可以使用上方的按鈕手動辨識規律，或清理失效的定期交易。
-      automatic_description: "自動辨識也會在下列情況後執行："
+      automatic_description: 自動辨識也會在下列情況後執行：
       triggers:
-        - CSV 匯入完成（包含交易、投資交易、帳戶等）
-        - 任何提供商同步完成（如 Plaid, SimpleFIN 等）
+      - CSV 匯入完成（包含交易、證券交易、帳戶等）
+      - 任何供應商同步完成（如 Plaid, SimpleFIN 等）
     identified: 已辨識出 %{count} 個定期交易規律
     cleaned_up: 已清理 %{count} 個失效的定期交易
     marked_inactive: 定期交易已標記為停用
@@ -30,12 +33,12 @@ zh-TW:
     already_exists: 此規律已存在手動建立的定期交易
     creation_failed: 建立定期交易失敗。請檢查交易詳情並再試一次。
     unexpected_error: 建立定期交易時發生預期之外的錯誤
-    amount_range: "範圍：%{min} 至 %{max}"
+    amount_range: 範圍：%{min} 至 %{max}
     empty:
       title: 找不到定期交易
       description: 點擊「辨識規律」以從您的交易紀錄中自動偵測定期交易。
     table:
-      merchant: 商家
+      merchant: 名稱
       amount: 金額
       expected_day: 預計日期
       next_date: 下次交易日
@@ -47,3 +50,8 @@ zh-TW:
       inactive: 已停用
     badges:
       manual: 手動
+    transfer_marked_as_recurring: 轉帳已標記為定期
+    transfer_already_exists: 這組帳戶之間已經有一筆定期轉帳了
+    transfer_creation_failed: 建立定期轉帳失敗，請檢查轉帳內容後再試一次。
+    transfer_feature_disabled: 這個家庭已停用定期交易
+    expected_on: 預計於 %{date}

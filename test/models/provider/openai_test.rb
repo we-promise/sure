@@ -8,6 +8,221 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject_model = "gpt-4.1"
   end
 
+  test "effective_model uses Setting when ENV is unset" do
+    Setting.stubs(:openai_model).returns("llama3")
+    with_env_overrides("OPENAI_MODEL" => nil) do
+      assert_equal "llama3", Provider::Openai.effective_model
+    end
+  end
+
+  test "effective_model treats blank ENV as unset and uses Setting" do
+    Setting.stubs(:openai_model).returns("llama3")
+    with_env_overrides("OPENAI_MODEL" => "") do
+      assert_equal "llama3", Provider::Openai.effective_model
+    end
+  end
+
+  test "effective_model prefers ENV over Setting" do
+    Setting.stubs(:openai_model).returns("llama3")
+    with_env_overrides("OPENAI_MODEL" => "gpt-4o") do
+      assert_equal "gpt-4o", Provider::Openai.effective_model
+    end
+  end
+
+  test "effective_model falls back to default when ENV and Setting are blank" do
+    with_env_overrides("OPENAI_MODEL" => "") do
+      Setting.stubs(:openai_model).returns(nil)
+      assert_equal Provider::Openai::DEFAULT_MODEL, Provider::Openai.effective_model
+
+      Setting.stubs(:openai_model).returns("")
+      assert_equal Provider::Openai::DEFAULT_MODEL, Provider::Openai.effective_model
+    end
+  end
+
+  test "request_timeout uses ENV then Setting then default" do
+    Setting.stubs(:openai_request_timeout).returns(nil)
+    with_env_overrides("OPENAI_REQUEST_TIMEOUT" => nil) do
+      assert_equal Provider::Openai::DEFAULT_REQUEST_TIMEOUT, Provider::Openai.request_timeout
+    end
+
+    Setting.stubs(:openai_request_timeout).returns(180)
+    with_env_overrides("OPENAI_REQUEST_TIMEOUT" => nil) do
+      assert_equal 180, Provider::Openai.request_timeout
+    end
+
+    Setting.stubs(:openai_request_timeout).returns(180)
+    with_env_overrides("OPENAI_REQUEST_TIMEOUT" => "300") do
+      assert_equal 300, Provider::Openai.request_timeout
+    end
+  end
+
+  test "request_timeout is passed to OpenAI client" do
+    with_env_overrides("OPENAI_REQUEST_TIMEOUT" => nil, "OPENAI_EXTRA_HEADERS" => nil) do
+      Setting.stubs(:openai_request_timeout).returns(180)
+      ::OpenAI::Client.expects(:new).with(access_token: "test-token", request_timeout: 180).returns(mock)
+
+      Provider::Openai.new("test-token")
+    end
+  end
+
+  test "extra_headers parses valid JSON, stringifies keys and values, drops blanks" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-session": "abc", "Retry": 3, "empty": "", "drop": null}') do
+      assert_equal({ "x-session" => "abc", "Retry" => "3" }, Provider::Openai.extra_headers)
+    end
+  end
+
+  test "extra_headers stringifies nested values Ruby-style" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-meta":{"a":1}}') do
+      assert_equal({ "x-meta" => '{"a" => 1}' }, Provider::Openai.extra_headers)
+    end
+  end
+
+  test "extra_headers returns empty hash for unset, blank, malformed, and non-object JSON" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => nil) do
+      assert_equal({}, Provider::Openai.extra_headers)
+    end
+
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => "  ") do
+      assert_equal({}, Provider::Openai.extra_headers)
+    end
+
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => "{not json") do
+      Rails.logger.expects(:error).with(regexp_matches(/OPENAI_EXTRA_HEADERS is not valid JSON/))
+      assert_equal({}, Provider::Openai.extra_headers)
+    end
+
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => "[1,2]") do
+      Rails.logger.expects(:error).with(regexp_matches(/must be a JSON object/))
+      assert_equal({}, Provider::Openai.extra_headers)
+    end
+  end
+
+  test "client construction receives parsed extra_headers" do
+    with_env_overrides(
+      "OPENAI_REQUEST_TIMEOUT" => nil,
+      "OPENAI_EXTRA_HEADERS" => '{"X-Static":"1"}'
+    ) do
+      Setting.stubs(:openai_request_timeout).returns(nil)
+      ::OpenAI::Client.expects(:new).with(
+        access_token: "test-token",
+        request_timeout: 60,
+        extra_headers: { "X-Static" => "1" }
+      ).returns(mock)
+
+      Provider::Openai.new("test-token")
+    end
+  end
+
+  test "extra headers knob is documented in hosting docs and env examples" do
+    doc = Rails.root.join("docs/hosting/ai.md").read
+    assert_includes doc, "OPENAI_EXTRA_HEADERS"
+    assert_includes doc, "{session_id}"
+
+    assert_includes Rails.root.join(".env.example").read, "OPENAI_EXTRA_HEADERS"
+    assert_includes Rails.root.join(".env.local.example").read, "OPENAI_EXTRA_HEADERS"
+  end
+
+  test "client construction receives static extra_headers only; session values withheld" do
+    with_env_overrides(
+      "OPENAI_REQUEST_TIMEOUT" => nil,
+      "OPENAI_EXTRA_HEADERS" => '{"X-Static":"1","x-opencode-session":"sess-{session_id}"}'
+    ) do
+      Setting.stubs(:openai_request_timeout).returns(nil)
+      ::OpenAI::Client.expects(:new).with(
+        access_token: "test-token",
+        request_timeout: 60,
+        extra_headers: { "X-Static" => "1" }
+      ).returns(mock)
+
+      Provider::Openai.new("test-token")
+    end
+  end
+
+  test "session headers substitute the chat id onto a request-scoped client copy" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}","X-Static":"1"}') do
+      subject = Provider::Openai.new("test-token")
+      fake_client = mock
+      scoped_client = mock
+      fake_client.expects(:dup).returns(scoped_client)
+      scoped_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      subject.stubs(:client).returns(fake_client)
+
+      assert_same scoped_client, subject.send(:with_session_headers, session_id: "chat-42")
+    end
+  end
+
+  test "session headers are absent from the request when no session_id is given" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}') do
+      subject = Provider::Openai.new("test-token")
+      fake_client = mock
+      fake_client.expects(:dup).never
+      fake_client.expects(:add_headers).never
+      subject.stubs(:client).returns(fake_client)
+
+      assert_same subject.send(:client), subject.send(:with_session_headers, session_id: nil)
+    end
+  end
+
+  test "session headers never persist onto the shared client after a chat request" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}') do
+      subject = Provider::Openai.new("test-token")
+      scoped_client = mock
+      fake_client = mock
+      fake_client.expects(:dup).returns(scoped_client)
+      scoped_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      fake_client.expects(:responses).never
+      subject.stubs(:client).returns(fake_client)
+
+      scoped = subject.send(:with_session_headers, session_id: "chat-42")
+
+      assert_same scoped_client, scoped
+      assert_same fake_client, subject.send(:client)
+    end
+  end
+
+  test "native chat path resolves session headers onto a request-scoped client" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}') do
+      subject = Provider::Openai.new("test-token")
+      fake_responses = mock
+      scoped_client = mock
+      scoped_client.stubs(:responses).returns(fake_responses)
+      fake_client = mock
+      fake_client.stubs(:dup).returns(scoped_client)
+      scoped_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      fake_responses.stubs(:create).returns(
+        { "id" => "resp_1", "model" => "gpt-4.1", "output" => [], "usage" => { "total_tokens" => 1 } }
+      )
+      subject.stubs(:client).returns(fake_client)
+
+      response = subject.chat_response("hi", model: "gpt-4.1", session_id: "chat-42")
+
+      assert response.success?
+    end
+  end
+
+  test "generic chat path resolves session headers onto a request-scoped client" do
+    with_env_overrides(
+      "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => "false",
+      "OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}'
+    ) do
+      subject = Provider::Openai.new("test-token")
+      scoped_client = mock
+      fake_client = mock
+      fake_client.stubs(:dup).returns(scoped_client)
+      scoped_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      scoped_client.stubs(:chat).returns(
+        { "id" => "resp_1", "model" => "gpt-4.1", "choices" => [ { "message" => { "content" => "Yes" } } ],
+          "usage" => { "total_tokens" => 1 } }
+      )
+      subject.stubs(:client).returns(fake_client)
+
+      response = subject.chat_response("hi", model: "gpt-4.1", session_id: "chat-42")
+
+      assert response.success?
+      assert_equal "Yes", response.data.messages.first.output_text
+    end
+  end
+
   test "openai errors are automatically raised" do
     VCR.use_cassette("openai/chat/error") do
       response = @openai.chat_response("Test", model: "invalid-model-that-will-trigger-api-error")
@@ -377,6 +592,47 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "history budget subtracts the real instructions estimate when given" do
+    Setting.stubs(:llm_max_response_tokens).returns(nil)
+
+    with_env_overrides(
+      "LLM_CONTEXT_WINDOW" => "8192",
+      "LLM_MAX_RESPONSE_TOKENS" => nil,
+      "LLM_SYSTEM_PROMPT_RESERVE" => nil,
+      "LLM_MAX_HISTORY_TOKENS" => nil
+    ) do
+      subject = Provider::Openai.new("test-token")
+      instructions = "a" * 4000
+      estimate = Assistant::TokenEstimator.estimate(instructions)
+
+      assert_equal 8192 - 512 - estimate, subject.max_history_tokens(instructions: instructions)
+      # Without instructions the flat reserve still applies
+      assert_equal 8192 - 512 - 256, subject.max_history_tokens
+    end
+  end
+
+  test "response cap is only sent when explicitly configured" do
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(nil)
+      subject = Provider::Openai.new("test-token")
+
+      assert_nil subject.explicit_max_response_tokens
+    end
+
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(768)
+      subject = Provider::Openai.new("test-token")
+
+      assert_equal 768, subject.explicit_max_response_tokens
+    end
+
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "900") do
+      subject = Provider::Openai.new("test-token")
+
+      assert_equal 900, subject.explicit_max_response_tokens
+    end
+  end
+
   test "budget readers fall back to Setting when ENV unset" do
     with_env_overrides(
       "LLM_CONTEXT_WINDOW" => nil,
@@ -503,5 +759,76 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) do
       config.build_input(prompt: "hi", messages: [ { role: "user", content: "old" } ])
     end
+  end
+
+  test "generic chat path omits tool message name and sends string arguments" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    client = provider.instance_variable_get(:@client)
+    captured_params = nil
+    client.expects(:chat).with do |params|
+      captured_params = params.fetch(:parameters)
+      true
+    end.returns(
+      {
+        "id" => "chatcmpl-1",
+        "model" => "test-model",
+        "choices" => [ { "message" => { "role" => "assistant", "content" => "ok" } } ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 5, "total_tokens" => 15 }
+      }
+    )
+
+    response = provider.chat_response(
+      "What is my net worth?",
+      model: "test-model",
+      functions: [ {
+        name: "get_net_worth",
+        description: "Gets a user's net worth",
+        params_schema: { type: "object", properties: {}, required: [], additionalProperties: false },
+        strict: true
+      } ],
+      function_results: [ {
+        call_id: "call_1",
+        name: "get_net_worth",
+        arguments: { "currency" => "USD" },
+        output: { "amount" => 10000 }
+      } ]
+    )
+
+    assert response.success?
+
+    tool_calls = captured_params[:messages]
+                       .select { |m| m[:role] == "assistant" }
+                       .flat_map { |m| m[:tool_calls] || [] }
+    assert_equal 1, tool_calls.size
+    assert_equal "get_net_worth", tool_calls.first.dig(:function, :name)
+    assert_instance_of String, tool_calls.first.dig(:function, :arguments)
+    assert_equal({ "currency" => "USD" }, JSON.parse(tool_calls.first.dig(:function, :arguments)))
+
+    tool_messages = captured_params[:messages].select { |m| m[:role] == "tool" }
+    assert_equal 1, tool_messages.size
+    assert_equal "call_1", tool_messages.first[:tool_call_id]
+    assert_not tool_messages.first.key?(:name), "tool messages must not carry the deprecated `name` field"
+  end
+
+  test "generic chat builder normalizes blank arguments to an empty JSON object" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    messages = provider.send(
+      :build_generic_messages,
+      prompt: "hi",
+      function_results: [ { call_id: "call_1", name: "get_net_worth", arguments: "", output: { "amount" => 10000 } } ]
+    )
+
+    tool_call = messages.find { |m| m[:role] == "assistant" }[:tool_calls].first
+    assert_equal "{}", tool_call.dig(:function, :arguments)
   end
 end

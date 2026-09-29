@@ -1,0 +1,16 @@
+---
+uk:
+  models:
+    coinstats_item:
+      syncer:
+        importing_wallets: "Імпортування крипторахунків з CoinStats..."
+        checking_configuration: "Перевірка конфігурації рахунку CoinStats..."
+        wallets_need_setup:
+          one: "%{count} крипторахунок потребує налаштування..."
+          few: "%{count} крипторахунки потребують налаштування..."
+          many: "%{count} крипторахунків потребують налаштування..."
+          other: "%{count} крипторахунку потребують налаштування..."
+        processing_holdings: "Обробка активів..."
+        calculating_balances: "Розрахунок балансів..."
+      wallet_linker:
+        no_tokens_found: Для гаманця не знайдено токенів

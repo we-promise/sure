@@ -30,10 +30,15 @@ fr:
       import: Importer des commerçants
       merge: Fusionner des marchands
       new: Nouveau marchand
+      no_family_merchants_found: Aucun marchand de la famille ne correspond
+      no_provider_merchants_found: Aucun marchand de fournisseur ne correspond
+      per_page: par page
       provider_empty: Aucun marchand du fournisseur lié à ce %{moniker} pour l'instant
       provider_info: Ces marchands ont été détectés automatiquement par vos connexions bancaires ou par l'IA. Vous pouvez les modifier pour créer votre propre copie, ou les retirer pour les dissocier de vos transactions.
       provider_read_only: Les marchands du fournisseur sont synchronisés depuis vos institutions connectées. Ils ne peuvent pas être modifiés ici.
       provider_title: Marchands du fournisseur
+      search_family_merchants: Rechercher parmi les marchands de la famille...
+      search_provider_merchants: Rechercher parmi les marchands des fournisseurs...
       table:
         actions: Actions
         merchant: Marchand
@@ -49,9 +54,11 @@ fr:
       edit: Modifier le marchand
     merge:
       description: Sélectionnez un marchand cible et les marchands à fusionner avec lui. Toutes les transactions des marchands fusionnés seront réaffectées à la cible.
+      no_merchants_found: Aucun marchand ne correspond
       select_target: Sélectionnez le marchand cible…
       sources_hint: Les marchands sélectionnés seront fusionnés avec la cible. Les marchands de la famille seront supprimés, les marchands du fournisseur seront dissociés.
       sources_label: Marchands à fusionner
+      sources_search_placeholder: Rechercher des marchands...
       submit: Fusionner la sélection
       target_label: Fusionner vers (cible)
       title: Fusionner des marchands

@@ -1,0 +1,23 @@
+<button type="button"
+        class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if selected %>"
+        role="option"
+        aria-selected="<%= selected %>"
+        tabindex="-1"
+        data-action="click->merchant-select#selectOption"
+        data-merchant-select-target="option"
+        data-merchant-id="<%= merchant.id %>"
+        data-merchant-name="<%= merchant.name %>"
+        data-filter-name="<%= merchant.name %>">
+  <span class="check-icon w-5 shrink-0 <%= "hidden" unless selected %>">
+    <%= view_helpers.icon("check") %>
+  </span>
+  <% logo_url = merchant.respond_to?(:logo_url) && merchant.logo_url.present? ? Setting.transform_brand_fetch_url(merchant.logo_url) : nil %>
+  <span data-merchant-select-avatar class="shrink-0">
+    <% if logo_url %>
+      <%= image_tag logo_url, class: "w-5 h-5 rounded-full border border-secondary", loading: "lazy" %>
+    <% else %>
+      <%= render DS::FilledIcon.new(variant: :text, text: merchant.name, size: "sm", rounded: true) %>
+    <% end %>
+  </span>
+  <span data-merchant-select-name class="truncate"><%= merchant.name %></span>
+</button>

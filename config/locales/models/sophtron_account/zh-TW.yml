@@ -1,0 +1,7 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        sophtron_account:
+          no_balance: Sophtron 帳戶必須有目前餘額或可用餘額其中之一

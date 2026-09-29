@@ -9,13 +9,15 @@ es:
     post_logout:
       logout_successful: Has cerrado sesión correctamente.
     openid_connect:
-      account_linked: "Cuenta vinculada correctamente a %{provider}"
+      account_linked: Cuenta vinculada correctamente a %{provider}
       failed: No se pudo autenticar a través de OpenID Connect.
     failure:
       failed: No se pudo autenticar.
-      sso_provider_unavailable: "El proveedor de SSO no está disponible en este momento. Por favor, inténtalo de nuevo más tarde o contacta con un administrador."
-      sso_invalid_response: "Se ha recibido una respuesta no válida del proveedor de SSO. Por favor, inténtalo de nuevo."
-      sso_failed: "Error en la autenticación de inicio de sesión único (SSO). Por favor, inténtalo de nuevo."
+      sso_provider_unavailable: El proveedor de SSO no está disponible en este momento. Por favor, inténtalo de nuevo más tarde o contacta con un administrador.
+      sso_invalid_response: Se ha recibido una respuesta no válida del proveedor de SSO. Por favor, inténtalo de nuevo.
+      sso_failed: Error en la autenticación de inicio de sesión único (SSO). Por favor, inténtalo de nuevo.
+    mobile_sso_start:
+      redirecting_html: Redirigiendo para iniciar sesión... <a href="%{url}">Haz clic aquí</a> si no se te redirige.
     new:
       email: Dirección de correo electrónico
       email_placeholder: tu@ejemplo.com
@@ -29,5 +31,5 @@ es:
       google_auth_connect: Iniciar sesión con Google
       local_login_admin_only: El inicio de sesión local está restringido a administradores.
       no_auth_methods_enabled: No hay métodos de autenticación habilitados actualmente. Por favor, contacta con un administrador.
-      demo_banner_title: "Modo de demostración activo"
-      demo_banner_message: "Este es un entorno de demostración. Las credenciales de acceso se han rellenado automáticamente para tu comodidad. Por favor, no introduzcas información real o sensible."
+      demo_banner_title: Modo de demostración activo
+      demo_banner_message: Este es un entorno de demostración. Las credenciales de acceso se han rellenado automáticamente para tu comodidad. Por favor, no introduzcas información real o sensible.

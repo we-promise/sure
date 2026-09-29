@@ -1,18 +1,44 @@
 ---
 zh-TW:
   transactions:
+    bulk_updates:
+      new:
+        cancel: 取消
+        category_label: 分類
+        category_prompt: 選擇一個分類
+        date_label: 日期
+        header_title: 編輯交易
+        merchant_label: 商家
+        merchant_prompt: 選擇一個商家
+        name_label: 名稱
+        name_placeholder: 輸入要套用到所選交易的名稱
+        none: （無）
+        notes_label: 備註
+        notes_placeholder: 輸入要套用到所選交易的備註
+        overview: 概覽
+        save: 儲存
+        tags_label: 標籤
+        transactions_section: 交易紀錄
+    unknown_name: 未知交易
+    selection_bar:
+      duplicate: 複製
+      edit: 編輯
+      selected: 已選擇
     form:
+      details: 詳情
       account: 帳戶
       account_prompt: 選擇帳戶
       amount: 金額
-      category: 類別
-      category_prompt: 選擇類別
+      category: 分類
+      category_label: 分類
+      category_prompt: 選擇分類
       date: 日期
       description: 描述
       description_placeholder: 描述此筆交易
       expense: 支出
       income: 收入
-      none: (無)
+      merchant_label: 商家
+      none: （無）
       note_label: 備註
       note_placeholder: 輸入備註
       create_tag: 建立
@@ -20,45 +46,249 @@ zh-TW:
       tag_search_placeholder: 搜尋或建立標籤
       tags_label: 標籤
       transfer: 轉帳
+    create:
+      created: 交易已建立
+    update:
+      updated: 交易已更新
     new:
       new_transaction: 新增交易
     show:
+      keep_both: 不要，兩筆都保留
+      loan_payment: 貸款還款
+      mark_recurring: 標記為定期交易
+      mark_recurring_subtitle: 將此筆交易追蹤為定期交易。系統會根據過去 6 個月的類似交易自動計算金額變動範圍。
+      mark_recurring_title: 定期交易
+      merge_duplicate: 好，合併
+      potential_duplicate_description: 這筆待處理交易可能和下面那筆已入帳的交易是同一筆。若是如此，請合併這兩筆，以免重複計算。
+      potential_duplicate_title: 偵測到可能重複的交易
+      transfer: 轉帳
       account_label: 帳戶
       amount: 金額
-      category_label: 類別
+      category_label: 分類
       date_label: 日期
       delete: 刪除
       delete_subtitle: 這將永久刪除此筆交易，並影響您的歷史餘額，此操作無法復原。
       delete_title: 刪除交易
       details: 詳情
-      mark_recurring: 標記為定期交易
-      mark_recurring_subtitle: 將此筆交易追蹤為定期交易。系統會根據過去 6 個月的類似交易自動計算金額變動範圍。
-      mark_recurring_title: 定期交易
+      attachments: 附件
+      exclude: 排除
+      exclude_description: 被排除的交易不會納入預算計算與報表。
+      activity_type: 活動類型
+      activity_type_description: 投資活動的類型（買入、賣出、股息等）。系統會自動判斷，您也可以手動設定。
+      one_time_title: 一次性%{type}
+      one_time_description: 一次性交易會從部分預算計算與報表中排除，讓您更清楚看見真正重要的部分。
+      convert_to_trade_title: 轉換為證券交易
+      convert_to_trade_description: 把這筆交易轉換成帶有證券資訊的買入或賣出交易，以便追蹤投資組合。
+      convert_to_trade_button: 轉換為證券交易
+      transfer_matcher_description: 把這筆交易和另一個帳戶中對應的那一筆連結起來。
+      pending_duplicate_merger_title: 與已入帳交易重複？
+      pending_duplicate_merger_description: 手動把這筆待處理交易和已入帳的那一筆合併。
+      pending_duplicate_merger_button: 開啟合併工具
       merchant_label: 商家
       name_label: 名稱
       nature: 類型
-      none: "(無)"
+      none: （無）
       note_label: 備註
       note_placeholder: 輸入備註
       overview: 概覽
       settings: 設定
       tags_label: 標籤
-      uncategorized: "(未分類)"
+      tab_transactions: 交易紀錄
+      tab_upcoming: 即將發生
+      uncategorized: （未分類）
+      additional_details: 額外詳細資訊
+      payee: 收款人
+      description: 描述
+      memo: 備註
+      provider_extras: 供應商額外資訊
+      transfer_or_debt_payment: 轉帳或債務還款？
+      open_matcher: 開啟配對工具
+      convert: 轉換
+    activity_labels:
+      buy: 買入
+      sell: 賣出
+      sweep_in: 資金掃入
+      sweep_out: 資金掃出
+      dividend: 股息
+      reinvestment: 股息再投資
+      interest: 利息
+      fee: 費用
+      transfer: 轉帳
+      contribution: 投入
+      withdrawal: 提領
+      exchange: 兌換
+      other: 其他
+    mark_recurring: 標記為定期交易
+    mark_recurring_subtitle: 將此筆交易追蹤為定期交易。系統會根據過去 6 個月的類似交易自動計算金額變動範圍。
+    mark_recurring_title: 定期交易
+    potential_duplicate_title: 偵測到可能重複的交易
+    potential_duplicate_description: 這筆待處理交易可能和下面那筆已入帳的交易是同一筆。若是如此，請合併這兩筆，以免重複計算。
+    merge_duplicate:
+      success: 交易合併成功
+      failure: 無法合併交易
+    keep_both: 不要，兩筆都保留
+    split_parent_row:
+      split_label: 拆分
+    transfer_match:
+      auto_matched: 自動配對
+      auto_matched_short: 自動
+      confirm_match: 確認配對
+      payment_confirmed: 還款已確認
+      reject_match: 拒絕配對
+      transfer_confirmed: 轉帳已確認
+    transaction:
+      pending: 待處理
+      pending_tooltip: 待處理交易 - 入帳後可能會有變動
+      linked_with_provider: 已與 %{provider} 連結
+      activity_type_tooltip: 投資活動類型
+      possible_duplicate: 重複？
+      potential_duplicate_tooltip: 這筆可能和另一筆交易重複
+      review_recommended: 待檢視
+      review_recommended_tooltip: 金額差距很大 - 建議檢視一下是不是重複的交易
+      split: 拆分
+      split_tooltip: 這筆交易已被拆分成多筆項目
+      split_child_tooltip: 屬於某筆拆分交易的一部分
+    dismiss_duplicate:
+      success: 已保留為各自獨立的交易
+      failure: 無法忽略重複交易的提示
+    pending_duplicate_merge:
+      possible_duplicate: 重複？
+      possible_duplicate_short: 重複？
+      review_recommended: 待檢視
+      review_recommended_short: 檢視
+      confirm_title: 與已入帳的交易合併（%{posted_amount}）
+      reject_title: 保留為各自獨立的交易
+    summary:
+      total_transactions: 交易總數
+      income: 收入
+      expenses: 支出
+      inflow: 流入
+      outflow: 流出
     header:
-      edit_categories: 編輯類別
+      edit_categories: 編輯分類
       edit_imports: 編輯匯入
       edit_merchants: 編輯商家
       edit_tags: 編輯標籤
       import: 匯入
-    transaction:
-      linked_with_provider: 已與 %{provider} 連結
     index:
-      transaction: 筆交易
-      transactions: 筆交易
+      title: 交易紀錄
+      transaction: 交易
+      transactions: 交易
       import: 匯入
+      new_rule: 新增規則
+      edit_rules: 編輯規則
+      edit_categories: 編輯分類
+      edit_tags: 編輯標籤
+      edit_merchants: 編輯商家
+      edit_imports: 編輯匯入
+      new_transaction: 新增交易
+      categorize_button:
+        one: 分類交易 (1)
+        other: 分類交易 (%{count})
+    categorizes:
+      show:
+        exit: 離開
+        skip: 跳過
+        remaining:
+          one: 還剩 1 筆未分類的交易
+          other: 還剩 %{count} 筆未分類的交易
+        transaction_count:
+          one: 1 筆交易
+          other: '%{count} 筆交易'
+        transactions_hint: 取消勾選可排除某筆交易，也可以直接在該列指定不同的分類。
+        assign_category: 指定一個分類
+        assign_category_prompt: → 指定
+        filter_placeholder: 搜尋分類...
+        col_transaction: 交易
+        col_date: 日期
+        col_amount: 金額
+        col_category: 分類
+        type_income: 收入
+        type_expense: 支出
+        create_rule_label: 建立分類規則
+        rule_description_prefix: 日後的%{type}交易，只要名稱包含
+        rule_description_suffix: 也都會套用這個分類。
+        no_categories: 沒有符合的分類
+        all_done: 所有交易都已分類完成
+      create:
+        categorized:
+          one: 已分類 1 筆交易
+          other: 已分類 %{count} 筆交易
+        rule_creation_failed: 交易已完成分類，但規則無法建立（可能已經存在）。
+      entry_row:
+        include_checkbox: 納入 %{name}
+        assign_category_select: 為 %{name} 指定分類
+    list:
+      drag_drop_title: 拖曳 CSV 到這裡匯入
+      drag_drop_subtitle: 直接上傳交易資料
+      transaction: 交易
+      transactions: 交易
     toggle_recurring_section: 切換即將到來的定期交易顯示狀態
+    search:
+      filters:
+        account: 帳戶
+        date: 日期
+        type: 類型
+        status: 狀態
+        amount: 金額
+        category: 分類
+        tag: 標籤
+        merchant: 商家
+    convert_to_trade:
+      title: 轉換為證券交易
+      description: 把這筆交易轉換成帶有證券資訊的證券交易
+      date_label: 日期：
+      account_label: 帳戶：
+      amount_label: 金額：
+      security_label: 證券
+      security_prompt: 選擇一檔證券...
+      security_custom: + 自行輸入代碼
+      security_not_listed_hint: 找不到您的證券嗎？請選擇清單最下方的「自行輸入代碼」。
+      ticker_placeholder: AAPL
+      ticker_hint: 輸入股票或 ETF 的代碼（例如 AAPL、MSFT）
+      ticker_search_placeholder: 搜尋代碼...
+      ticker_search_hint: 可用代碼或公司名稱搜尋，也可以直接輸入自訂代碼
+      price_mismatch_title: 價格可能不符
+      price_mismatch_message: 您輸入的價格（每股 %{entered_price}）和 %{ticker} 目前的市價（%{market_price}）差距很大。如果看起來不對，可能是選錯證券了，請改用「自行輸入代碼」指定正確的那一檔。
+      quantity_label: 數量（股數）
+      quantity_placeholder: 例如 20
+      quantity_hint: 交易的股數
+      price_label: 每股價格
+      price_placeholder: 例如 52.15
+      price_hint: 每股價格（%{currency}）
+      qty_or_price_hint: 數量與價格至少填一項，另一項會依交易金額（%{amount}）自動計算。
+      trade_type_label: 交易類型
+      trade_type_hint: 買入或賣出某檔證券的股數
+      exchange_label: 交易所（選填）
+      exchange_placeholder: XNAS
+      exchange_hint: 留白即自動判斷
+      cancel: 取消
+      submit: 轉換為證券交易
+      success: 交易已轉換為證券交易
+      conversion_note: 由交易轉換而來：%{original_name}（%{original_date}）
+      errors:
+        not_investment_account: 只有投資帳戶中的交易才能轉換為證券交易
+        already_converted: 這筆交易已經轉換過或已被排除
+        enter_ticker: 請輸入代碼
+        security_not_found: 所選的證券已不存在，請另外選擇一檔。
+        select_security: 請選擇或輸入一檔證券
+        enter_qty_or_price: 請輸入數量或每股價格其中一項，另一項會依交易金額自動計算。
+        invalid_qty_or_price: 數量或價格無效，請輸入有效的正數。
+        conversion_failed: 轉換交易失敗：%{error}
+        unexpected_error: 轉換過程中發生非預期的錯誤：%{error}
     searches:
       filters:
+        account_filter:
+          filter_accounts: 篩選帳戶
+        category_filter:
+          filter_category: 篩選分類
+        date_filter:
+          start_date: 開始日期
+          end_date: 結束日期
+        merchant_filter:
+          filter_merchants: 篩選商家
+        tag_filter:
+          filter_tags: 篩選標籤
         amount_filter:
           equal_to: 等於
           greater_than: 大於
@@ -67,22 +297,28 @@ zh-TW:
         badge:
           expense: 支出
           income: 收入
-          on_or_after: "%{date} 當日或之後"
-          on_or_before: "%{date} 當日或之前"
+          on_or_after: '%{date} 當日或之後'
+          on_or_before: '%{date} 當日或之前'
           transfer: 轉帳
+          confirmed: 已確認
+          pending: 待處理
         type_filter:
           expense: 支出
           income: 收入
           transfer: 轉帳
+        status_filter:
+          confirmed: 已確認
+          pending: 待處理
       menu:
         account_filter: 帳戶
         amount_filter: 金額
-        apply: 應用
+        apply: 套用
         cancel: 取消
-        category_filter: 類別
-        clear_filters: 清除過濾
+        category_filter: 分類
+        clear_filters: 清除篩選
         date_filter: 日期
         merchant_filter: 商家
+        status_filter: 狀態
         tag_filter: 標籤
         type_filter: 類型
       search:
@@ -90,4 +326,24 @@ zh-TW:
         greater_than: 大於
         less_than: 小於
       form:
-        toggle_selection_checkboxes: 切換全選狀態
+        toggle_selection_checkboxes: 切換所有核取方塊
+        search_placeholder: 搜尋交易...
+        filter: 篩選
+    attachments:
+      cannot_exceed: 每筆交易最多只能有 %{count} 個附件
+      uploaded_one: 附件上傳成功
+      uploaded_many: '%{count} 個附件上傳成功'
+      failed_upload: 附件上傳失敗：%{error}
+      no_files_selected: 沒有選擇要上傳的檔案
+      attachment_deleted: 附件刪除成功
+      failed_delete: 附件刪除失敗：%{error}
+      upload_failed: 附件上傳失敗。請再試一次，或聯絡技術支援。
+      delete_failed: 附件刪除失敗。請再試一次，或聯絡技術支援。
+      upload: 上傳
+      no_attachments: 還沒有任何附件
+      select_up_to: 最多選擇 %{count} 個檔案（圖片或 PDF，每個最大 %{size}MB）• 已使用 %{used}／%{count}
+      files:
+        one: 檔案 (1)
+        other: 檔案 (%{count})
+      browse_to_add: 瀏覽以加入檔案
+      max_reached: 已達檔案數量上限（%{count}/%{max}）。請先刪除一個現有檔案才能再上傳。

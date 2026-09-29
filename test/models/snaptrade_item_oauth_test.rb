@@ -43,6 +43,31 @@ class SnaptradeItemOauthTest < ActiveSupport::TestCase
     assert @item.good?
   end
 
+  test "complete_oauth_device_flow! leaves the item where the redirect flow would" do
+    item = snaptrade_items(:unauthorized_item)
+    Provider::Snaptrade.expects(:poll_device_token)
+      .with(device_code: "dev-c0de")
+      .returns({ "access_token" => "at", "refresh_token" => "rt", "expires_in" => 900, "token_type" => "Bearer", "scope" => "read" })
+
+    item.complete_oauth_device_flow!(device_code: "dev-c0de")
+
+    assert_equal "at", item.oauth_access_token
+    assert_equal "rt", item.oauth_refresh_token
+    assert item.good?
+    # The whole point of the second grant: from here the item is an ordinary
+    # token-authorized item, so it syncs like any other.
+    assert item.oauth_configured?
+    assert_includes SnaptradeItem.syncable, item
+  end
+
+  test "start_oauth_device_flow asks the provider for a device code" do
+    Provider::Snaptrade.expects(:start_device_authorization)
+      .with(scope: "read")
+      .returns({ "device_code" => "dev-c0de", "user_code" => "WXYZ-1234" })
+
+    assert_equal "WXYZ-1234", @item.start_oauth_device_flow["user_code"]
+  end
+
   test "snaptrade_provider returns provider only when token present" do
     assert_instance_of Provider::Snaptrade, @item.snaptrade_provider
     assert_nil snaptrade_items(:unauthorized_item).snaptrade_provider

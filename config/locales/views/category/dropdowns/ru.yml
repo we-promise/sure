@@ -8,4 +8,5 @@ ru:
       show:
         clear: Очистить категорию
         no_categories: Категории не найдены
+        recent: Недавние
         search_placeholder: Поиск

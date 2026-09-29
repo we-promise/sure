@@ -1,0 +1,98 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle")) %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <%= render "onchain_wallet_items/price_provider_warning" %>
+
+      <% grouped = @onchain_wallet_item.grouped_accounts %>
+
+      <% if grouped.empty? %>
+        <p class="text-sm text-secondary py-4"><%= t(".no_wallets") %></p>
+      <% end %>
+
+      <% grouped.each do |(chain, address), accounts| %>
+        <section class="rounded-xl border border-primary bg-container p-4 space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="font-medium text-primary"><%= accounts.first.chain_label %></p>
+              <p class="text-xs text-secondary break-all"><%= address %></p>
+            </div>
+          </div>
+
+          <% if accounts.any?(&:history_truncated?) %>
+            <p class="flex items-start gap-2 text-xs text-warning">
+              <%= icon "alert-triangle", size: "sm", class: "shrink-0 mt-0.5" %>
+              <span><%= t(".history_truncated") %></span>
+            </p>
+          <% end %>
+
+          <% if accounts.any?(&:assets_truncated?) %>
+            <p class="flex items-start gap-2 text-xs text-warning">
+              <%= icon "alert-triangle", size: "sm", class: "shrink-0 mt-0.5" %>
+              <span><%= t(".assets_truncated", count: Onchain::AssetBudget.tokens) %></span>
+            </p>
+          <% end %>
+
+          <ul class="divide-y divide-primary border border-primary rounded-lg">
+            <% accounts.each do |onchain_account| %>
+              <li class="flex items-center justify-between gap-3 p-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-primary truncate">
+                    <%= onchain_account.symbol %>
+                    <% if onchain_account.native? %>
+                      <span class="text-xs text-secondary"><%= t(".native") %></span>
+                    <% end %>
+                  </p>
+                  <p class="text-xs text-secondary tabular-nums">
+                    <%= number_with_delimiter(onchain_account.quantity.round(8).to_s("F")) %>
+                  </p>
+                </div>
+
+                <%# Icon-only: this repeats once per asset, and a column of
+                    labelled buttons is not how this app renders a list. %>
+                <%= render DS::Button.new(
+                      variant: :icon,
+                      size: :sm,
+                      icon: "unlink",
+                      title: t(".disconnect_asset"),
+                      href: disconnect_asset_onchain_wallet_item_path(@onchain_wallet_item),
+                      method: :delete,
+                      params: { onchain_wallet_account_id: onchain_account.id },
+                      confirm: t(".disconnect_asset_confirm", symbol: onchain_account.symbol)
+                    ) %>
+              </li>
+            <% end %>
+          </ul>
+
+          <%# A menu rather than a row of labelled buttons: these actions
+              repeat for every tracked address, and accounts/_account.html.erb
+              renders its own per-row actions the same way. %>
+          <div class="flex items-center justify-end">
+            <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
+              <% menu.with_item(
+                   variant: "link",
+                   text: t(".review_tokens"),
+                   icon: "list-checks",
+                   href: review_tokens_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, address: address),
+                   data: { turbo_frame: :modal }
+                 ) %>
+
+              <% menu.with_item(
+                   variant: "button",
+                   text: t(".disconnect_wallet"),
+                   icon: "trash-2",
+                   href: disconnect_wallet_onchain_wallet_item_path(@onchain_wallet_item),
+                   method: :delete,
+                   params: { chain: chain, address: address },
+                   confirm: t(".disconnect_wallet_confirm")
+                 ) %>
+            <% end %>
+          </div>
+        </section>
+      <% end %>
+
+      <p class="text-xs text-secondary"><%= t(".history_note") %></p>
+    </div>
+  <% end %>
+<% end %>

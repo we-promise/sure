@@ -17,6 +17,21 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new groups subcategories immediately after their parent in the category selector" do
+    get new_transaction_split_path(@entry)
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    category_values = doc.css(".category-select-container [data-value]").map { |node| node["data-value"] }
+
+    parent_index = category_values.index(categories(:food_and_drink).id)
+    child_index = category_values.index(categories(:subcategory).id)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+  end
+
   test "create with valid params splits transaction" do
     assert_difference "Entry.count", 2 do
       post transaction_split_path(@entry), params: {

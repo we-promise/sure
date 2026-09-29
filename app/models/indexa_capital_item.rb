@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class IndexaCapitalItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -36,11 +36,6 @@ class IndexaCapitalItem < ApplicationRecord
 
   def syncer
     IndexaCapitalItem::Syncer.new(self)
-  end
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
   end
 
   # Override syncing? to include background activities fetch

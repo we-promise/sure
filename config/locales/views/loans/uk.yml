@@ -1,0 +1,63 @@
+uk:
+  loans:
+    edit:
+      edit: Редагувати %{account}
+    form:
+      interest_rate: Процентна ставка
+      interest_rate_placeholder: '5.25'
+      initial_balance: Початковий баланс позики
+      rate_type: Тип ставки
+      term_months: Термін (місяці)
+      term_months_placeholder: '360'
+      none: Немає
+      subtype_prompt: Виберіть тип позики
+      subtype_none: Немає
+      rate_type_adjustable: Змінна з періодичним переглядом
+      rate_type_fixed: Фіксована
+      rate_type_variable: Плаваюча
+      rate_changes: Зміни ставки
+      rate_changes_hint: Кожен рядок задає ставку, яка діє з дати набрання чинності до наступної зміни. Повторне введення дати замінює відповідний рядок, а не додає ще один.
+      rate_changes_empty: Змін ставки не записано. Кредит обслуговується за вказаною вище процентною ставкою.
+      rate_change_effective_date: Дата набрання чинності
+      rate_change_rate: Ставка
+      rate_change_add: Додати зміну ставки
+      rate_change_remove: Видалити
+      start_date: Дата видачі кредиту
+      start_date_hint: Коли кошти кредиту було видано. Залиште порожнім, щоб використати дату відкриття рахунку.
+    new:
+      title: Введіть деталі позики
+    overview:
+      interest_rate: Процентна ставка
+      monthly_payment: Щомісячний платіж
+      not_applicable: Н/Д
+      original_principal: Початкова сума позики
+      remaining_principal: Залишок основної суми
+      term: Термін
+      type: Тип
+      unknown: Невідомо
+      original_payoff_date: Початкова дата погашення
+    tabs:
+      overview:
+        interest_rate: Процентна ставка
+        monthly_payment: Щомісячний платіж
+        not_applicable: Н/Д
+        original_principal: Початкова сума позики
+        remaining_principal: Залишок основної суми
+        term: Термін
+        type: Тип
+        unknown: Невідомо
+        edit_loan_details: "Редагувати деталі позики"
+        original_payoff_date: Початкова дата погашення
+      schedule:
+        date: Дата
+        description: Розраховано на основі початкової суми, ставки й терміну, починаючи з %{start_date}. Дострокові платежі не враховано.
+        variable_rate_notice: 'Ставка цього кредиту змінюється з часом. Графік перераховується після кожної записаної зміни: дата остаточного погашення залишається початковою, а розмір платежу змінюється. Ще не записана зміна ставки вплине на ці цифри.'
+        opening_payment: Перший платіж
+        interest: Відсотки
+        monthly_payment: Щомісячний платіж
+        number: №
+        payment: Платіж
+        principal: Тіло кредиту
+        remaining_balance: Залишок боргу
+        total_cost: Загальна вартість
+        total_interest: Загальна сума відсотків

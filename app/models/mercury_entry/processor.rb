@@ -158,13 +158,15 @@ class MercuryEntry::Processor
 
       case date_value
       when String
-        # Mercury uses ISO 8601 format: "2024-01-15T10:30:00Z"
-        DateTime.parse(date_value).to_date
+        if date_value.include?("T") || date_value.include?(":")
+          Time.parse(date_value).in_time_zone(account&.family&.timezone).to_date
+        else
+          Date.parse(date_value)
+        end
       when Integer, Float
-        # Unix timestamp
-        Time.at(date_value).to_date
+        Time.at(date_value).in_time_zone(account&.family&.timezone).to_date
       when Time, DateTime
-        date_value.to_date
+        date_value.in_time_zone(account&.family&.timezone).to_date
       when Date
         date_value
       else

@@ -6,6 +6,6 @@
   <% if icon %>
     <%= helpers.icon(icon, size: icon_size, color: "current") %>
   <% elsif text %>
-    <%= tag.span text.first, class: text_classes %>
+    <%= tag.span text.first(text_length), class: text_classes %>
   <% end %>
 <% end %>

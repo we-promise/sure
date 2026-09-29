@@ -1,0 +1,8 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        merchant_import:
+          duplicate_columns: 'Nach der Normalisierung gibt es doppelte Spaltennamen: %{columns}'
+          missing_columns: 'Es fehlen Pflichtspalten: %{columns}'

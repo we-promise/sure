@@ -20,7 +20,7 @@ tr:
       provider: Sağlayıcıdan
     destroy:
       cannot_delete: Bu varlığı silemezsiniz
-      success: Holding silindi
+      success: Varlık silindi
     errors:
       security_collision: 'Yeniden eşlenemedi: %{ticker} için zaten %{date} tarihinde
         bir varlığınız var.'
@@ -30,6 +30,9 @@ tr:
       shares: "%{qty} adet hisse"
       unknown: "--"
     index:
+      positions:
+        one: "%{count} pozisyon"
+        other: "%{count} pozisyon"
       average_cost: Ortalama maliyet
       holdings: Varlıklar
       name: İsim

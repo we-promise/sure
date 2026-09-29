@@ -17,13 +17,10 @@ class Import::QifCategorySelectionsController < ApplicationController
 
   def update
     # If the user changed the date format, re-generate rows with the new format.
-    format_changed = false
     if selection_params[:date_format].present? && selection_params[:date_format] != @import.qif_date_format
-      format_changed = true
       @import.qif_date_format = selection_params[:date_format]
       @import.update_column(:column_mappings, @import.column_mappings)
       @import.generate_rows_from_csv
-      @import.sync_mappings
     end
 
     all_categories = @import.row_categories
@@ -36,6 +33,12 @@ class Import::QifCategorySelectionsController < ApplicationController
     deselected_tags       = all_tags - selected_tags
 
     ActiveRecord::Base.transaction do
+      @import.column_mappings = (@import.column_mappings || {}).merge(
+        "qif_selected_categories" => selected_categories,
+        "qif_selected_tags" => selected_tags
+      )
+      @import.save!(validate: false)
+
       # Clear category on rows whose category was deselected
       if deselected_categories.any?
         @import.rows.where(category: deselected_categories).update_all(category: "")
@@ -51,7 +54,7 @@ class Import::QifCategorySelectionsController < ApplicationController
         end
       end
 
-      @import.sync_mappings unless format_changed
+      @import.sync_mappings
     end
 
     redirect_to import_clean_path(@import), notice: t(".success")

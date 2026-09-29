@@ -7,10 +7,11 @@
 # OpenAI manages chunking, embedding, and retrieval; we simply upload files
 # and issue search queries.
 class VectorStore::Openai < VectorStore::Base
+  # Builds a vector-store client with the same OpenAI request timeout as chat and batch calls.
   def initialize(access_token:, uri_base: nil)
     client_options = { access_token: access_token }
     client_options[:uri_base] = uri_base if uri_base.present?
-    client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
+    client_options[:request_timeout] = Provider::Openai.request_timeout
 
     @client = ::OpenAI::Client.new(**client_options)
   end

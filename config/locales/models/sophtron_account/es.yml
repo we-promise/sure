@@ -1,0 +1,7 @@
+---
+es:
+  activerecord:
+    errors:
+      models:
+        sophtron_account:
+          no_balance: La cuenta de Sophtron debe tener saldo actual o disponible

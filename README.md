@@ -43,6 +43,8 @@ Join us!
 ## Hosting Sure
 
 Sure is a fully working personal finance app that can be [self hosted with Docker](docs/hosting/docker.md).
+Sure can be accessed from a browser, the macOS desktop app, the mobile app, API
+clients, and LLM agents. See [Sure Clients](docs/clients.md) for an overview.
 
 ## Forking and Attribution
 
@@ -103,14 +105,17 @@ For further instructions, see guides below.
 
 ### One-click Install
 
+Render expects each button target branch to have a `render.yaml` at the repository root. The branch-ready Blueprint files live in `branches/<branch-name>/render.yaml` in a separate repo and can be copied to each corresponding branch root.
+
+| Option | What it deploys | `latest` | `stable` |
+| --- | --- | --- | --- |
+| **Sure - No AI** | Sure web, Sidekiq worker, Render Postgres, and Render Key Value. AI tokens are intentionally blank. | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/we-promise/sure-render-templates/tree/sure-no-ai-latest) | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/we-promise/sure-render-templates/tree/sure-no-ai) |
+| **Sure - Simple AI** | Sure with OpenAI-backed AI settings, pgvector-ready Postgres, Sidekiq, and Render Key Value. Render prompts for the OpenAI token. | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/we-promise/sure-render-templates/tree/sure-simple-ai-latest) | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/we-promise/sure-render-templates/tree/sure-simple-ai) |
+| **Sure - External AI** | Sure with external assistant settings plus AlphaClaw, which manages the OpenClaw gateway on Render. | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/we-promise/sure-render-templates/tree/sure-external-ai-latest) | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/we-promise/sure-render-templates/tree/sure-external-ai) |
+
 [![Run on PikaPods](https://www.pikapods.com/static/run-button.svg)](https://www.pikapods.com/pods?run=sure)
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=CW_fPQ)
-
-### Managed OpenClaw for Sure Finances
-
-<a href="https://kilocode.pxf.io/repo-readme"><img src="https://kilo.ai/kiloclaw/partner-resources/kiloclaw-logo-yellow-bg-typography.png" alt="Managed OpenClaw for Sure Finances" width="185"/></a>
-
+[![Deploy on Hostim](https://hostim.dev/img/deploy-button.svg)](https://console.hostim.dev/dashboard?preview=1&modal=1&template=sure)
 
 ## License and Trademarks
 
@@ -118,15 +123,3 @@ Maybe and Sure are both distributed under
 an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
 - "Maybe" is a trademark of Maybe Finance, Inc.
 - "Sure" is not, and refers to this community fork.
-
-![Alt](https://repobeats.axiom.co/api/embed/3a9753cff07501fba8a6749d0ebd567ff63848c8.svg "Repobeats analytics image")
-
-<p align="center">
-  <a href="https://gittensor.io/miners/repository?name=we-promise%2Fsure">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/we-promise/sure/gittensor-impact-assets/gittensor-impact-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/we-promise/sure/gittensor-impact-assets/gittensor-impact-light.svg">
-      <img src="https://raw.githubusercontent.com/we-promise/sure/gittensor-impact-assets/gittensor-impact-light.svg" alt="Gittensor contributor impact for Sure repo" width="600">
-    </picture>
-  </a>
-</p>

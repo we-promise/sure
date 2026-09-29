@@ -1,0 +1,74 @@
+<%# The Income plan page: the income schedule, a warning if there is a gap
+    before the next payday, then one surface holding every upcoming pay
+    period in turn. %>
+
+<%= content_for :page_title, t("bills.index.title") %>
+
+<%# The bridge/period split and why the bridge never becomes a timeline row
+    live with BillsHelper#paycheck_plan_sections; this template only renders
+    the prepared sections. %>
+<%
+  currency = Current.family.currency
+  sections = paycheck_plan_sections(@plan)
+  periods = sections[:periods] || []
+  shortfall = sections[:shortfall]
+  bridge_note = sections[:bridge_note]
+%>
+
+<div class="space-y-4 pb-6 lg:pb-12">
+  <%= render "bills/view_switcher", active: "paycheck" %>
+
+  <%= render "bills/ai_prompts", prompts: %w[due_before_paycheck safe_to_spend] %>
+
+  <% if @income_series.any? %>
+    <%= render "bills/paycheck_income" %>
+  <% end %>
+
+  <% if @plan.nil? %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <%= render DS::EmptyState.new(
+            icon: "calendar-clock",
+            title: t(".empty.title"),
+            description: t(".empty.description")
+          ) do |empty| %>
+        <% empty.with_action do %>
+          <%= render DS::Link.new(
+                text: t(".empty.action"),
+                icon: "plus",
+                variant: "primary",
+                href: new_recurring_transaction_path(income: true),
+                frame: :modal
+              ) %>
+        <% end %>
+      <% end %>
+    </div>
+  <% elsif @plan.none? { |period| period.items.any? } %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <%= render DS::EmptyState.new(
+            icon: "circle-check",
+            title: t(".all_clear.title"),
+            description: t(".all_clear.description", date: l(@plan.last.ends_on, format: :long))
+          ) %>
+    </div>
+  <% else %>
+    <% if shortfall %>
+      <%= render "bills/paycheck_shortfall", period: shortfall, currency: currency %>
+    <% elsif bridge_note %>
+      <%= render "bills/paycheck_bridge", period: bridge_note, currency: currency %>
+    <% end %>
+
+    <div class="bg-container rounded-xl shadow-border-xs">
+      <% periods.each_with_index do |period, index| %>
+        <%= render "bills/paycheck_period",
+              period: period,
+              currency: currency,
+              first: index.zero?,
+              last: index == periods.size - 1 %>
+      <% end %>
+    </div>
+
+    <% if @plan_unconvertible.to_i.positive? %>
+      <p class="text-xs text-secondary"><%= t(".unconvertible", count: @plan_unconvertible) %></p>
+    <% end %>
+  <% end %>
+</div>

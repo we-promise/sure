@@ -1,0 +1,12 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              saml_url_required: SAML 供應商至少須提供 IdP Metadata 網址或 IdP SSO 網址其中一項
+              saml_cert_required: 未使用 Metadata 網址時，至少須提供 IdP 憑證或憑證指紋其中一項
+              metadata_url_invalid: IdP Metadata 網址必須是有效的網址
+              sso_url_invalid: IdP SSO 網址必須是有效的網址

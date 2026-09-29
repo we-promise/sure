@@ -17,9 +17,20 @@ en:
           attributes:
             base:
               at_least_one_linked_account_required: Pick at least one account to fund this goal.
+              whole_account_conflict_on_restore: "Can't restore this goal: “%{account_name}” is now fully earmarked for “%{goal_name}”. Enter an amount on one of them first."
+            target_mode:
+              months_requires_maintained: Only a reserve you maintain can have a target set in months of expenses.
+            target_months:
+              blank: Say how many months of expenses this reserve should cover.
+              only_with_months_mode: Months of expenses only apply when the target is set that way.
             linked_accounts:
               must_be_fundable: All linked accounts must be cash or investment accounts.
               currency_mismatch: All linked accounts must share the same currency.
               must_belong_to_family: Linked accounts must belong to the same family as the goal.
+            kind:
+              locked_while_released: Reopen this goal before turning it into a reserve.
+              locked_once_consumed: This goal has already recorded money as spent, so it cannot become a reserve.
+            target_amount:
+              below_consumed: Can't set a target below what this goal has already recorded as spent.
             currency:
               locked_after_linked: Can't change the currency after the goal is linked to accounts.

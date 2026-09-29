@@ -1,0 +1,9 @@
+---
+fr:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Ce compte est déjà entièrement affecté à l'objectif « %{goal_name} ». Indiquez un montant pour le partager.

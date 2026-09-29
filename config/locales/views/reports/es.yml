@@ -5,9 +5,9 @@ es:
       title: Informes
       subtitle: Información completa sobre tu salud financiera
       export: Exportar CSV
-      print_report: Imprimir informe 
-      drag_to_reorder: "Arrastra para reordenar la sección"
-      toggle_section: "Mostrar / Ocultar sección"
+      print_report: Imprimir informe
+      drag_to_reorder: Arrastra para reordenar la sección
+      toggle_section: Mostrar / Ocultar sección
       periods:
         monthly: Mensual
         quarterly: Trimestral
@@ -17,8 +17,23 @@ es:
       date_range:
         from: Desde
         to: Hasta
-      showing_period: "Mostrando datos desde %{start} hasta %{end}"
-    invalid_date_range: "La fecha de fin no puede ser anterior a la de inicio. Las fechas se han intercambiado."
+      showing_period: Mostrando datos desde %{start} hasta %{end}
+      previous_period: Periodo anterior
+      next_period: Periodo siguiente
+      today: Hoy
+      period_label:
+        quarterly: T%{quarter} %{year}
+        ytd: Año en curso %{year}
+        past_year: '%{year}'
+        last_6_months: '%{start} – %{end}'
+      period_picker:
+        quarter: T%{quarter} %{year}
+        ytd: Año en curso %{year}
+      previous_year: Año anterior
+      next_year: Año siguiente
+      previous_decade: Década anterior
+      next_decade: Década siguiente
+    invalid_date_range: La fecha de fin no puede ser anterior a la de inicio. Las fechas se han intercambiado.
     summary:
       total_income: Ingresos totales
       total_expenses: Gastos totales
@@ -35,7 +50,7 @@ es:
       remaining: Restante
       over_by: Exceso de
       shared: compartido
-      suggested_daily: "%{amount} sugerido por día durante los %{days} días restantes"
+      suggested_daily: '%{amount} sugerido por día durante los %{days} días restantes'
       no_budgets: No hay categorías de presupuesto configuradas para este mes
       status:
         good: Correcto
@@ -61,18 +76,18 @@ es:
       avg_per_transaction: Media por transacción
       transactions: Transacciones
       insight_title: Análisis
-      insight_higher_weekend: "Gastas un %{percent}% más por transacción los fines de semana que entre semana"
-      insight_higher_weekday: "Gastas un %{percent}% más por transacción entre semana que los fines de semana"
-      insight_similar: "Tu gasto por transacción es similar entre semana y en fin de semana"
+      insight_higher_weekend: Gastas un %{percent}% más por transacción los fines de semana que entre semana
+      insight_higher_weekday: Gastas un %{percent}% más por transacción entre semana que los fines de semana
+      insight_similar: Tu gasto por transacción es similar entre semana y en fin de semana
       no_spending_data: No hay datos de gasto disponibles para este periodo
     empty_state:
-      title: No hay datos disponibles    
+      title: No hay datos disponibles
       description: Empieza a registrar tus finanzas añadiendo transacciones o conectando tus cuentas para ver informes completos
       add_transaction: Añadir transacción
       add_account: Añadir cuenta
     transactions_breakdown:
       title: Desglose de actividad
-      no_transactions: No se ha encontrado actividad para el periodo y filtros seleccionados 
+      no_transactions: No se ha encontrado actividad para el periodo y filtros seleccionados
       filters:
         title: Filtros
         category: Categoría
@@ -105,9 +120,9 @@ es:
         income: Ingreso
         uncategorized: Sin categorizar
         entries:
-          one: Movimiento
-          other: Movimientos
-        percentage: "% del total"
+          one: '%{count} movimiento'
+          other: '%{count} movimientos'
+        percentage: '% del total'
       pagination:
         showing:
           one: Mostrando %{count} movimiento
@@ -116,7 +131,7 @@ es:
         next: Siguiente
     net_worth:
       title: Patrimonio neto
-      current_net_worth: Patrimonio neto actual 
+      current_net_worth: Patrimonio neto actual
       period_change: Variación del periodo
       assets_vs_liabilities: Activos vs Pasivos
       total_assets: Activos
@@ -127,6 +142,7 @@ es:
       title: Rendimiento de inversiones
       portfolio_value: Valor de la cartera
       total_return: Rentabilidad total
+      period_return: Rentabilidad del periodo
       contributions: Aportaciones del periodo
       withdrawals: Retiradas del periodo
       top_holdings: Top activos
@@ -140,34 +156,43 @@ es:
       realized_gains: Ganancias realizadas
       total_gains: Ganancias totales
       taxable_realized_note: Estas ganancias pueden estar sujetas a impuestos
-      no_data: "-"
+      no_data: '-'
       view_details: Ver detalles
       holdings_count:
-        one: "%{count} activo"
-        other: "%{count} activos"
+        one: '%{count} activo'
+        other: '%{count} activos'
       sells_count:
-        one: "%{count} venta"
-        other: "%{count} ventas"
+        one: '%{count} venta'
+        other: '%{count} ventas'
       holdings: Activos
       sell_trades: Operaciones de venta
-      and_more: "+%{count} más"
+      and_more: +%{count} más
     investment_flows:
       title: Flujos de inversión
       description: Controla el dinero que entra y sale de tus cuentas de inversión
       contributions: Aportaciones
+      contributions_description: Dinero aportado a inversiones
       withdrawals: Retiradas
+      withdrawals_description: Dinero retirado de inversiones
       net_flow: Flujo neto
+      net_flow_description: Variación neta total
     google_sheets_instructions:
-      title_with_key: "✅ Copiar URL para Google Sheets"
-      title_no_key: "⚠️ Se requiere clave API"
+      title_with_key: ✅ Copiar URL para Google Sheets
+      title_no_key: ⚠️ Se requiere clave API
       ready: Tu URL de CSV (con clave API) está lista.
-      steps: "Para importar en Google Sheets:\n1. Crea una nueva hoja de cálculo\n2. En la celda A1, introduce la fórmula que se muestra abajo\n3. Pulsa Enter"
-      security_warning: "Esta URL incluye tu clave API. ¡Mantenla segura!"
+      steps: 'Para importar en Google Sheets:
+
+        1. Crea una nueva hoja de cálculo
+
+        2. En la celda A1, introduce la fórmula que se muestra abajo
+
+        3. Pulsa Enter'
+      security_warning: Esta URL incluye tu clave API. ¡Mantenla segura!
       need_key: Para importar los datos en Google Sheets necesitas una clave API.
-      step1: "Ve a Ajustes → Claves API"  
-      step2: "Crea una nueva clave API con permiso de lectura (\"read\")"
+      step1: Ve a Ajustes → Claves API
+      step2: Crea una nueva clave API con permiso de lectura ("read")
       step3: Copia la clave API
-      step4: "Añádela a esta URL como: ?api_key=TU_CLAVE"
+      step4: 'Añádela a esta URL como: ?api_key=TU_CLAVE'
       example: Ejemplo
       then_use: Después usa la URL completa con =IMPORTDATA() en Google Sheets.
       open_sheets: Abrir Google Sheets
@@ -176,18 +201,16 @@ es:
     print:
       document_title: Informe financiero
       title: Informe financiero
-      generated_on: "Generado el %{date}"
-      # Summary section
+      generated_on: Generado el %{date}
       summary:
         title: Resumen
         income: Ingresos
         expenses: Gastos
         net_savings: Ahorro neto
         budget: Presupuesto
-        vs_prior: "%{percent}% respecto al anterior"
-        of_income: "%{percent}% de ingresos"
+        vs_prior: '%{percent}% respecto al anterior'
+        of_income: '%{percent}% de ingresos'
         used: utilizado
-      # Net Worth section
       net_worth:
         title: Patrimonio neto
         current_balance: Saldo actual
@@ -195,7 +218,6 @@ es:
         assets: Activos
         liabilities: Pasivos
         no_liabilities: Sin pasivos
-      # Monthly Trends section
       trends:
         title: Tendencias mensuales
         month: Mes
@@ -204,12 +226,12 @@ es:
         net: Neto
         savings_rate: Tasa de ahorro
         average: Media
-        current_month_note: "* Mes actual (datos parciales)"
-      # Investments section
+        current_month_note: '* Mes actual (datos parciales)'
       investments:
         title: Inversiones
         portfolio_value: Valor de la Cartera
         total_return: Rentabilidad Total
+        period_return: Rentabilidad del periodo
         contributions: Aportaciones
         withdrawals: Retiradas
         this_period: este periodo
@@ -218,12 +240,11 @@ es:
         weight: Peso
         value: Valor
         return: Rentabilidad
-      # Spending by Category section
       spending:
         title: Gasto por categoría
         income: Ingresos
         expenses: Gastos
         category: Categoría
         amount: Importe
-        percent: "%"
-        more_categories: "+ %{count} más categorías"
+        percent: '%'
+        more_categories: + %{count} más categorías

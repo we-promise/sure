@@ -8,8 +8,13 @@ de:
         assistant: Assistent
         budgets: Budgets
         home: Startseite
+        plan: Plan
         reports: Berichte
         transactions: Transaktionen
+        goals: Ziele
+      insights: Insights
+      resize_left_sidebar: Breite der Kontenleiste ändern
+      resize_right_sidebar: Breite der Assistenzleiste ändern
     auth:
       existing_account: Du hast bereits ein Konto?
       no_account: Neu bei %{product_name}?
@@ -20,6 +25,10 @@ de:
       footer:
         privacy_policy: Datenschutzrichtlinie
         terms_of_service: Nutzungsbedingungen
+      confirm_dialog:
+        are_you_sure: Bist du sicher?
+        cannot_be_undone: Das lässt sich nicht rückgängig machen.
+        confirm: Bestätigen
     trial:
       open_demo: Offene Demo
       data_deleted_in_days: Daten werden in %{days} Tagen gelöscht

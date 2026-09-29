@@ -3,6 +3,8 @@ de:
   defaults:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
+    common:
+      close: Schließen
   global:
     expand: "Aufklappen"
   activerecord:
@@ -48,6 +50,8 @@ de:
       default: "%d.%m.%Y"
       long: "%e. %B %Y"
       short: "%e. %b"
+      month_year: "%B %Y"
+      short_month_year: "%b %Y"
     month_names:
     -
     - Januar
@@ -147,13 +151,15 @@ de:
         one: hat die falsche Länge (muss genau %{count} Zeichen haben)
         other: hat die falsche Länge (muss genau %{count} Zeichen haben)
     template:
-      body: 'Bitte überprüfen Sie die folgenden Felder:'
+      body: 'Prüf die folgenden Felder:'
       header:
         one: 'Konnte %{model} nicht speichern: ein Fehler.'
         other: 'Konnte %{model} nicht speichern: %{count} Fehler.'
   helpers:
     select:
       prompt: Bitte wählen
+      default_label: Auswählen …
+      search_placeholder: Suchen
     submit:
       create: "%{model} erstellen"
       submit: "%{model} speichern"

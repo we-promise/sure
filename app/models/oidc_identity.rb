@@ -78,27 +78,37 @@ class OidcIdentity < ApplicationRecord
 
   # Extract and store relevant info from OmniAuth auth hash
   def self.create_from_omniauth(auth, user)
-    # Extract issuer from OIDC auth response if available
-    issuer = auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss")
+    SsoIdentityBlock.with_identity_lock(provider: auth.provider, uid: auth.uid) do
+      if SsoIdentityBlock.blocked?(provider: auth.provider, uid: auth.uid)
+        raise SsoIdentityBlock::BlockedIdentity
+      end
 
-    create!(
-      user: user,
-      provider: auth.provider,
-      uid: auth.uid,
-      issuer: issuer,
-      info: {
-        email: auth.info&.email,
-        name: auth.info&.name,
-        first_name: auth.info&.first_name,
-        last_name: auth.info&.last_name
-      },
-      last_authenticated_at: Time.current
-    )
+      # Extract issuer from OIDC auth response if available
+      issuer = auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss")
+
+      create!(
+        user: user,
+        provider: auth.provider,
+        uid: auth.uid,
+        issuer: issuer,
+        info: {
+          email: auth.info&.email,
+          name: auth.info&.name,
+          first_name: auth.info&.first_name,
+          last_name: auth.info&.last_name
+        },
+        last_authenticated_at: Time.current
+      )
+    end
   end
 
   # Find the configured provider for this identity
   def provider_config
-    AuthConfig.sso_providers&.find { |p| p[:name] == provider || p[:id] == provider }
+    AuthConfig.sso_providers&.find do |p|
+      p_name = p[:name] || p["name"]
+      p_id = p[:id] || p["id"]
+      p_name == provider || p_id == provider
+    end
   end
 
   # Validate that the stored issuer matches the configured provider's issuer
@@ -107,8 +117,9 @@ class OidcIdentity < ApplicationRecord
     return true if issuer.blank? # Backward compatibility for old records
 
     config = provider_config
-    return true if config.blank? || config[:issuer].blank? # No config to validate against
+    config_issuer = config&.dig(:issuer) || config&.dig("issuer")
+    return true if config_issuer.blank? # No config to validate against
 
-    issuer == config[:issuer]
+    issuer == config_issuer
   end
 end

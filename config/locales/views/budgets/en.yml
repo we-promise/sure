@@ -1,6 +1,9 @@
 ---
 en:
   budgets:
+    switcher:
+      aria_label: "Switch budget"
+      household: "Household"
     budget_donut:
       spent: "Spent"
       new_budget: "New budget"
@@ -35,6 +38,13 @@ en:
     name:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
+    available_cash:
+      heading: Cash on hand
+      subtitle: Beside the plan above, not part of it.
+      available: Available in cash
+      earmarked: Already earmarked for goals
+      free: Really free
+      goals_link: View goals
     show:
       categories:
         amount: Amount
@@ -64,17 +74,43 @@ en:
       no_source: "No previous budget found to copy from"
       already_initialized: "This budget has already been set up"
   budget_categories:
+    bills_reserved: "%{amount} reserved by bills"
+    bills_reserved_unconvertible:
+      one: "1 bill is not reserved, no exchange rate available"
+      other: "%{count} bills are not reserved, no exchange rate available"
     allocation_progress:
       budget_exceeded_html: 'Budget exceeded by <span class="text-red-500 privacy-sensitive">%{amount}</span>'
       left_to_allocate: left to allocate
       over_set: "> 100% set"
       percent_set: "%{percent} set"
+    budget_category:
+      rolled_over: "+%{amount} rolled over"
     budget_category_form:
       monthly_average: "%{amount}/m avg"
+      rollover_label: Rollover
+      rollover_title: Keep this category's unspent money from one month to the next
       shared_placeholder: Shared
       shared_title: Leave empty to share parent's budget
     confirm_button:
       confirm: "Confirm"
+    move:
+      button_title: Move money from this category
+      cancel: Cancel
+      dialog_title: Move money
+      no_destination: This is the only envelope money can move between right now — a category cannot send to its own parent or child.
+      submit: Move
+      amount_label: Amount
+      available: "%{amount} available"
+      from_label: From
+      to_label: To
+      success: Money moved.
+      errors:
+        different_budgets: Both categories must belong to the same budget.
+        insufficient_funds: That is more than this category has allocated.
+        non_positive_amount: Enter an amount greater than zero.
+        parent_child: Money cannot move between a category and its own subcategory — adjust the subcategory directly.
+        same_category: Pick a different category to move the money to.
+        uncategorized: Uncategorized is not a real envelope, so money cannot move in or out of it.
     no_categories:
       oops: "Oops!"
       no_categories_message: "You have not created or assigned any expense categories to your transactions yet."
@@ -91,6 +127,7 @@ en:
       overspent: "overspent"
       left: "left"
       budgeted: "Budgeted"
+      rolled_over: "Rolled over"
       monthly_average_spending: "Monthly average spending"
       monthly_median_spending: "Monthly median spending"
       recent_transactions: "Recent Transactions"

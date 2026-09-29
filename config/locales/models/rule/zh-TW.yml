@@ -1,0 +1,9 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        rule:
+          min_actions: 至少須有一個動作
+          duplicate_actions: 規則不能有重複的動作 %{types}
+          nested_conditions: 複合條件不能巢狀使用

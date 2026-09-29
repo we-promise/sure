@@ -1,0 +1,54 @@
+---
+de:
+  period:
+    all_time:
+      comparison_label: vs. Beginn
+      label: Gesamter Zeitraum
+      label_short: Alle
+    current_month:
+      comparison_label: vs. Monatsstart
+      label: Aktueller Monat
+      label_short: Monat
+    current_week:
+      comparison_label: vs. Wochenstart
+      label: Aktuelle Woche
+      label_short: Woche
+    current_year:
+      comparison_label: vs. Jahresstart
+      label: Aktuelles Jahr
+      label_short: Jahr
+    custom:
+      label: Eigener Zeitraum
+      label_short: Eigen
+    last_10_years:
+      comparison_label: vs. vor 10 Jahren
+      label: Letzte 10 Jahre
+      label_short: 10J
+    last_30_days:
+      comparison_label: vs. den letzten 30 Tagen
+      label: Letzte 30 Tage
+      label_short: 30T
+    last_365_days:
+      comparison_label: vs. Vorjahr
+      label: Letzte 365 Tage
+      label_short: 365T
+    last_5_years:
+      comparison_label: vs. vor 5 Jahren
+      label: Letzte 5 Jahre
+      label_short: 5J
+    last_7_days:
+      comparison_label: vs. Vorwoche
+      label: Letzte 7 Tage
+      label_short: 7T
+    last_90_days:
+      comparison_label: vs. Vorquartal
+      label: Letzte 90 Tage
+      label_short: 90T
+    last_day:
+      comparison_label: vs. gestern
+      label: Letzter Tag
+      label_short: 1T
+    last_month:
+      comparison_label: vs. Vormonat
+      label: Letzter Monat
+      label_short: Vormonat

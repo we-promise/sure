@@ -54,8 +54,15 @@ RSpec.describe 'API V1 Merchants', type: :request do
       consumes 'multipart/form-data'
       produces 'application/json'
 
-      parameter name: :file, in: :formData, type: :file, required: true,
-                description: 'CSV file with columns: name* (required), color, website_url'
+      parameter name: :file, in: :formData, required: true,
+                description: 'CSV file with columns: name* (required), color, website_url',
+                schema: {
+                  type: :object,
+                  required: [ 'file' ],
+                  properties: {
+                    file: { type: :string, format: :binary }
+                  }
+                }
 
       response '201', 'merchants imported' do
         schema '$ref' => '#/components/schemas/MerchantImportResult'

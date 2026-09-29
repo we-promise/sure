@@ -1,0 +1,208 @@
+---
+zh-TW:
+  mercury_items:
+    api_error:
+      title: Mercury 連線錯誤
+      unable_to_connect: 無法連線到 Mercury
+      common_issues: 常見問題：
+      invalid_api_token_label: API Token 無效
+      invalid_api_token_desc: 請在供應商設定中檢查您的 API Token
+      expired_credentials_label: 憑證已過期
+      expired_credentials_desc: 請從 Mercury 產生一組新的 API Token
+      insufficient_permissions_label: 權限不足
+      insufficient_permissions_desc: 請確認您的 Token 具備唯讀存取權
+      network_issue_label: 網路問題
+      network_issue_desc: 請檢查您的網路連線
+      service_down_label: 服務中斷
+      service_down_desc: Mercury API 可能暫時無法使用
+      check_provider_settings: 檢查供應商設定
+    setup_required:
+      title: 需要設定 Mercury
+      api_token_not_configured: 尚未設定 API Token
+      api_token_description: 連結 Mercury 帳戶之前，您需要先設定您的 Mercury API Token。
+      setup_steps_title: 設定步驟：
+      setup_step_1_html: 前往 <strong>設定 > 供應商</strong>
+      setup_step_2_html: 找到 <strong>Mercury</strong> 區塊
+      setup_step_3: 輸入您的 Mercury API Token
+      setup_step_4: 回到這裡連結您的帳戶
+      go_to_provider_settings: 前往供應商設定
+    create:
+      success: Mercury 連線建立成功
+    destroy:
+      success: 已移除 Mercury 連線
+    index:
+      title: Mercury 連線
+    loading:
+      loading_message: 正在載入 Mercury 帳戶...
+      loading_title: 載入中
+    link_accounts:
+      all_already_linked:
+        one: 所選的帳戶 (%{names}) 已經連結
+        other: 所有 %{count} 個選定的帳戶都已經連結：%{names}
+      api_error: API 錯誤：%{message}
+      invalid_account_names:
+        one: 無法連結名稱空白的帳戶
+        other: 無法連結 %{count} 個名稱空白的帳戶
+      link_failed: 連結帳戶失敗
+      no_accounts_selected: 請至少選擇一個帳戶
+      no_api_token: 找不到 Mercury API Token，請在供應商設定中設定。
+      partial_invalid: 已成功連結 %{created_count} 個帳戶，%{already_linked_count} 個原本就已連結，%{invalid_count} 個帳戶名稱無效
+      partial_success: 已成功連結 %{created_count} 個帳戶。另有 %{already_linked_count} 個帳戶原本就已連結：%{already_linked_names}
+      select_connection: 連結帳戶前，請先選擇一個 Mercury 連線。
+      success:
+        one: 已成功連結 %{count} 個帳戶
+        other: 已成功連結 %{count} 個帳戶
+    mercury_item:
+      accounts_need_setup: 帳戶需要設定
+      delete: 刪除連線
+      deletion_in_progress: 正在刪除...
+      error: 錯誤
+      no_accounts_description: 此連線尚未連結任何帳戶。
+      no_accounts_title: 無帳戶
+      setup_action: 設定新帳戶
+      setup_description: 已連結 %{total} 個帳戶中的 %{linked} 個。請為新匯入的 Mercury 帳戶選擇帳戶類型。
+      setup_needed: 有新帳戶可以設定
+      status: '%{timestamp}前已同步'
+      status_never: 從未同步
+      status_with_summary: 上次同步於 %{timestamp}前 - %{summary}
+      syncing: 同步中...
+      total: 總計
+      unlinked: 未連結
+    provider_panel:
+      add_connection: 新增 Mercury 連線
+      base_url_label: Base URL（選填）
+      base_url_placeholder: https://api.mercury.com/api/v1（預設）
+      connection_name_label: 連線名稱
+      connection_name_placeholder: 公司支票帳戶
+      default_connection_name: Mercury 連線
+      disconnect_confirm: 確定要中斷 %{name} 嗎？
+      instructions:
+        copy_token_html: 複製<strong>完整的 Token</strong>（包含 <code>secret-token:</code> 前綴），並在下方新增為一個具名連線
+        create_token: 建立一組具備「Read Only」存取權的新 API Token
+        open_tokens: 前往 Settings > Developer > API Tokens
+        sign_in_html: 前往 %{link} 並登入您想連結的帳號
+        whitelist_ip_html: <strong>重要：</strong>請將您伺服器的 IP 位址加入該 Token 的白名單
+      keep_token_placeholder: 留白以保留目前的 Token
+      sandbox_note_html: 每一組您想同步的 Mercury 登入帳號／API Token，都請使用各自獨立的具名連線。若要進行 sandbox 測試，請把 Base URL 設為 <code>https://api-sandbox.mercury.com/api/v1</code>。Mercury 要求 IP 白名單，記得在 Mercury 儀表板加入您的 IP。
+      setup_accounts: 設定帳戶
+      setup_title: 設定說明：
+      sync: 同步
+      token_label: 權杖 (Token)
+      token_placeholder: 在此貼上 Token
+      update_connection: 更新連線
+    provider_connection:
+      default_description: 透過 Mercury 連結您的銀行
+      default_name: Mercury
+      description: 使用 %{name} 連線
+      name: Mercury - %{name}
+    select_accounts:
+      accounts_selected: 個帳戶已選擇
+      api_error: API 錯誤：%{message}
+      cancel: 取消
+      configure_name_in_mercury: 無法匯入 - 請先在 Mercury 中設定帳戶名稱
+      description: 選擇您想要連結到 %{product_name} 的帳戶。
+      link_accounts: 連結所選帳戶
+      no_accounts_found: 找不到任何帳戶，請檢查您的 API Token 設定。
+      no_api_token: 尚未設定 Mercury API Token，請前往「設定」完成設定。
+      no_credentials_configured: 請先在供應商設定中設定您的 Mercury API Token。
+      no_name_placeholder: （無名稱）
+      select_connection: 請在供應商設定中選擇一個 Mercury 連線。
+      title: 選擇 Mercury 帳戶
+    select_existing_account:
+      account_already_linked: 此帳戶已與供應商連結
+      all_accounts_already_linked: 所有 Mercury 帳戶都已經連結過了
+      api_error: API 錯誤：%{message}
+      cancel: 取消
+      configure_name_in_mercury: 無法匯入 - 請先在 Mercury 中設定帳戶名稱
+      description: 選擇一個要與這個帳戶連結的 Mercury 帳戶。交易會自動同步並去除重複。
+      link_account: 連結帳戶
+      no_account_specified: 未指定帳戶
+      no_accounts_found: 找不到任何 Mercury 帳戶，請檢查您的 API Token 設定。
+      no_api_token: 尚未設定 Mercury API Token，請前往「設定」完成設定。
+      no_credentials_configured: 請先在供應商設定中設定您的 Mercury API Token。
+      no_name_placeholder: （無名稱）
+      select_connection: 請在供應商設定中選擇一個 Mercury 連線。
+      title: 將 %{account_name} 與 Mercury 連結
+    link_existing_account:
+      account_already_linked: 此帳戶已與供應商連結
+      api_error: API 錯誤：%{message}
+      invalid_account_name: 無法連結名稱空白的帳戶
+      mercury_account_already_linked: 這個 Mercury 帳戶已經連結到另一個帳戶了
+      mercury_account_not_found: 找不到 Mercury 帳戶
+      missing_parameters: 缺少必要參數
+      no_api_token: 找不到 Mercury API Token，請在供應商設定中設定。
+      select_connection: 連結帳戶前，請先選擇一個 Mercury 連線。
+      success: 已成功將 %{account_name} 與 Mercury 連結
+    setup_accounts:
+      account_type_label: 帳戶類型：
+      all_accounts_linked: 您所有的 Mercury 帳戶都已經設定完成了。
+      api_error: API 錯誤：%{message}
+      fetch_failed: 取得帳戶失敗
+      no_accounts_to_setup: 沒有需要設定的帳戶
+      no_api_token: 尚未設定 Mercury API Token，請檢查您的連線設定。
+      account_types:
+        skip: 跳過此帳戶
+        depository: 支票或儲蓄帳戶
+        credit_card: 信用卡
+        investment: 投資帳戶
+        loan: 貸款或房屋貸款
+        other_asset: 其他資產
+      subtype_labels:
+        depository: 帳戶子類型：
+        credit_card: ''
+        investment: 投資類型：
+        loan: 貸款類型：
+        other_asset: ''
+      subtype_messages:
+        credit_card: 信用卡將自動設定為信用卡帳戶。
+        other_asset: 其他資產不需要額外選項。
+      subtypes:
+        depository:
+          checking: 支票帳戶 (Checking)
+          savings: 儲蓄帳戶 (Savings)
+          hsa: 健康儲蓄帳戶 (HSA)
+          cd: 定期存款 (CD)
+          money_market: 貨幣市場帳戶
+        investment:
+          brokerage: 證券帳戶
+          pension: 退休金
+          retirement: 退休帳戶
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: 節儉儲蓄計畫 (TSP)
+          529_plan: 529 教育儲蓄計畫
+          hsa: 健康儲蓄帳戶 (HSA)
+          mutual_fund: 共同基金
+          ira: 傳統 IRA
+          roth_ira: Roth IRA
+          angel: 天使投資
+        loan:
+          mortgage: 房屋貸款
+          student: 學生貸款
+          auto: 汽車貸款
+          other: 其他貸款
+      balance: 餘額
+      cancel: 取消
+      choose_account_type: 請為每個 Mercury 帳戶選擇正確的帳戶類型：
+      create_accounts: 建立帳戶
+      creating_accounts: 正在建立帳戶...
+      historical_data_range: 歷史資料範圍：
+      subtitle: 為您匯入的帳戶選擇正確的帳戶類型
+      sync_start_date_help: 選擇您想要同步交易紀錄的追溯時間。最多可提供 3 年的歷史紀錄。
+      sync_start_date_label: 開始同步交易的日期：
+      title: 設定您的 Mercury 帳戶
+    complete_account_setup:
+      all_skipped: 已跳過所有帳戶。未建立任何帳戶。
+      creation_failed: 建立帳戶失敗：%{error}
+      no_accounts: 沒有需要設定的帳戶。
+      success: 已成功建立 %{count} 個帳戶。
+    sync:
+      success: 同步已開始
+    update:
+      success: Mercury 連線已更新
+    mercury_item_selection_error_payload:
+      select_connection: 載入帳戶前，請先選擇一個 Mercury 連線。
+    render_mercury_item_selection_failure:
+      select_connection: 請在供應商設定中選擇一個 Mercury 連線。
+      no_credentials_configured: 請先在供應商設定中設定您的 Mercury API Token。

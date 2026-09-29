@@ -8,4 +8,5 @@ vi:
       show:
         clear: Xóa danh mục
         no_categories: Không tìm thấy danh mục nào
+        recent: Gần đây
         search_placeholder: Tìm kiếm

@@ -1,0 +1,9 @@
+---
+zh-TW:
+  chat:
+    errors:
+      rate_limited: AI 供應商目前遭到用量限制，請幾分鐘後再試。
+      temporarily_unavailable: AI 供應商目前暫時無法使用，請幾分鐘後再試。
+      misconfigured: AI 供應商的設定不正確，請聯絡您的管理員。
+      no_response: 助手沒有回應。背景工作可能未執行，或 AI 尚未完整設定。請再試一次。
+      default: 無法產生回應，請再試一次。

@@ -5,3 +5,25 @@ es:
       uncategorized: Sin clasificar
       other_investments: Otras inversiones
       investment_contributions: Aportaciones a inversiones
+      defaults:
+        income: Ingresos
+        food_and_drink: Comida y bebida
+        groceries: Supermercado
+        shopping: Compras
+        transportation: Transporte
+        travel: Viajes
+        entertainment: Ocio
+        healthcare: Salud
+        personal_care: Cuidado personal
+        home_improvement: Mejoras del hogar
+        mortgage_rent: Hipoteca / Alquiler
+        utilities: Suministros
+        subscriptions: Suscripciones
+        insurance: Seguros
+        sports_and_fitness: Deporte y fitness
+        gifts_and_donations: Regalos y donaciones
+        taxes: Impuestos
+        loan_payments: Pagos de préstamos
+        services: Servicios
+        fees: Comisiones
+        savings_and_investments: Ahorro e inversiones

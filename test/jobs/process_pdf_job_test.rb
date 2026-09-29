@@ -119,6 +119,28 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "complete", @import.reload.status
   end
 
+  test "discards permanently and marks failed on Provider::Error" do
+    attach_pdf!(@import)
+    @import.expects(:process_with_ai).once.raises(Provider::Error, "Could not convert PDF to images")
+
+    assert_nothing_raised do
+      ProcessPdfJob.perform_now(@import)
+    end
+
+    assert_equal "failed", @import.reload.status
+    assert @import.error.present?
+  end
+
+  test "skips already failed import" do
+    attach_pdf!(@import)
+    @import.update!(status: :failed)
+    @import.expects(:process_with_ai).never
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert_equal "failed", @import.reload.status
+  end
+
   private
 
     def attach_pdf!(import)

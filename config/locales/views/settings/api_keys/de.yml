@@ -11,6 +11,8 @@ de:
         read_balances: Kontostände anzeigen
         write_transactions: Transaktionen erstellen
     api_keys:
+      key_reveal:
+        copied: Kopiert!
       show:
         title: API-Schlüsselverwaltung
         no_api_key:
@@ -37,10 +39,22 @@ de:
           never_expires: Läuft nie ab
           permissions: Berechtigungen
           usage_instructions_title: Verwendung deines API-Schlüssels
-          usage_instructions: "Füge deinen API-Schlüssel im X-Api-Key-Header ein, wenn du Anfragen an die Sure-API sendest:"
+          usage_instructions: So nutzt du die %{product_name}-API
           regenerate_key: Neuen Schlüssel erstellen
           revoke_key: Schlüssel widerrufen
           revoke_confirmation: Bist du sicher, dass du diesen API-Schlüssel widerrufen möchtest? Diese Aktion kann nicht rückgängig gemacht werden und deaktiviert sofort alle Anwendungen, die diesen Schlüssel verwenden.
+          back_to_keys: Zurück zu den API-Keys
+          copy_api_key: API-Key kopieren
+          copy_store_securely: Kopier diesen Key und bewahr ihn sicher auf. Du brauchst ihn, um deine API-Anfragen zu authentifizieren.
+        newly_created:
+          continue: Weiter zu den API-Key-Einstellungen
+          copy_api_key: API-Key kopieren
+          copy_store_securely: Kopier diesen Key und bewahr ihn sicher auf. Du brauchst ihn, um deine API-Anfragen zu authentifizieren.
+          heading: API-Key erstellt!
+          how_to_use: So nutzt du deinen API-Key
+          key_ready: Dein neuer API-Key „%{name}“ ist angelegt und einsatzbereit.
+          page_title: API-Key erstellt
+          your_api_key: Dein API-Key
       new:
         title: API-Schlüssel erstellen
         create_new_key: Neuen API-Schlüssel erstellen
@@ -59,6 +73,15 @@ de:
         security_warning: Dein API-Schlüssel wird nur einmal nach der Erstellung angezeigt. Bewahre ihn sicher auf und teile ihn niemals öffentlich. Wenn du ihn verlierst, musst du einen neuen erstellen.
         create_key: API-Schlüssel erstellen
         cancel: Abbrechen
+        create_new_api_key: Neuen API-Key anlegen
+        name_help_text: Wähl einen sprechenden Namen, damit du diesen Key später wiedererkennst.
+        save_api_key: API-Key speichern
+        scope_read_only: Nur lesen
+        scope_read_only_description: Konten, Transaktionen und Salden ansehen
+        scope_read_write: Lesen/Schreiben
+        scope_read_write_description: Daten ansehen und neue Transaktionen anlegen
+        security_warning_body: Dein API-Key wird nach dem Anlegen nur ein einziges Mal angezeigt. Kopier ihn und bewahr ihn sicher auf. Wer diesen Key hat, kommt im Rahmen der gewählten Rechte an deine Daten.
+        subtitle: Erzeug einen neuen API-Key für den programmatischen Zugriff auf deine Sure-Daten.
       created:
         title: API-Schlüssel erstellt
         success_title: API-Schlüssel erfolgreich erstellt
@@ -74,3 +97,23 @@ de:
         usage_instructions: "Verwende deinen API-Schlüssel, indem du ihn im X-Api-Key-Header einfügst:"
         copy_key: API-Schlüssel kopieren
         continue: Weiter zu den API-Schlüssel-Einstellungen
+      create:
+        success: Dein API-Key wurde erstellt
+      destroy:
+        revoke_failed: API-Key ließ sich nicht widerrufen
+        revoked_successfully: API-Key widerrufen
+      index:
+        empty_description: Leg einen API-Key an, um programmatisch auf deine Daten zuzugreifen.
+        empty_heading: Noch keine API-Keys
+        new_key: Neuer API-Key
+        revoke_confirmation: "„%{name}“ wirklich widerrufen? Jede Anwendung, die diesen Key nutzt, verliert sofort den Zugriff."
+        revoke_key: Widerrufen
+        subtitle: Verwalte API-Keys für den programmatischen Zugriff auf deine Daten.
+        title: API-Keys
+      shared:
+        active: Aktiv
+        created_ago: Erstellt vor %{time}
+        last_used_ago: Zuletzt genutzt vor %{time}
+        never_used: Nie genutzt
+        scope_read_only: Nur lesen
+        scope_read_write: Lesen/Schreiben

@@ -13,6 +13,10 @@ de:
               must_have_opposite_amounts: Überweisungen müssen entgegengesetzte Beträge aufweisen
               must_have_single_currency: Überweisungen müssen in einer einzigen Währung erfolgen
               outflow_cannot_be_in_multiple_transfers: Ausgangstransaktion kann nicht Teil mehrerer Überweisungen sein
+          different_accounts: muss von verschiedenen Konten stammen
+          opposite_amounts: muss entgegengesetzte Beträge haben
+          same_family: muss aus derselben Familie stammen
+          within_days: muss innerhalb von %{count} Tagen liegen
   transfer:
     name: Überweisung an %{to_account}
     payment_name: Zahlung an %{to_account}

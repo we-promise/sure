@@ -220,6 +220,12 @@ class Provider::YahooFinance < Provider
           )
         end
 
+        # Yahoo's search-suggest index has gaps for some instruments its own chart/quote
+        # backend still serves fine -- notably managed funds identified by codes like
+        # Australian APIR codes (e.g. VAN0111AU). When the index has nothing, try the
+        # query as a literal symbol against the chart endpoint before giving up.
+        securities = direct_symbol_fallback(symbol) if securities.empty?
+
         securities = deduplicate_dual_listings(securities) unless exchange_operating_mic.present?
 
         cache_result(cache_key, securities)
@@ -567,10 +573,33 @@ class Provider::YahooFinance < Provider
     # MIC code to its Yahoo-specific symbol suffix, the default currency when
     # Yahoo omits one, and an optional dual-listing group with a preference
     # rank (lower = preferred).  Adding a new market is a one-line hash entry.
+    # A MIC missing here means the symbol is sent to Yahoo bare, which for any
+    # non-US listing is a 404: the security then accumulates failed fetches and
+    # never gets a price, with nothing telling the user why.
     EXCHANGE_CONFIG = {
       "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
       "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },
-      "XBOG" => { yahoo_suffix: ".CL", default_currency: "COP" }
+      "XBOG" => { yahoo_suffix: ".CL", default_currency: "COP" },
+      "XIDX" => { yahoo_suffix: ".JK", default_currency: "IDR" },
+      # Europe. Yahoo quotes London in pence (GBp), which
+      # normalize_currency_and_price already converts.
+      "XETR" => { yahoo_suffix: ".DE", default_currency: "EUR" }, # Xetra
+      "XFRA" => { yahoo_suffix: ".F",  default_currency: "EUR" }, # Frankfurt floor
+      "XMUN" => { yahoo_suffix: ".MU", default_currency: "EUR" }, # Munich
+      "XSTU" => { yahoo_suffix: ".SG", default_currency: "EUR" }, # Stuttgart
+      "XLON" => { yahoo_suffix: ".L",  default_currency: "GBP" },
+      "XPAR" => { yahoo_suffix: ".PA", default_currency: "EUR" },
+      "XAMS" => { yahoo_suffix: ".AS", default_currency: "EUR" },
+      "XBRU" => { yahoo_suffix: ".BR", default_currency: "EUR" },
+      "XLIS" => { yahoo_suffix: ".LS", default_currency: "EUR" },
+      "XMAD" => { yahoo_suffix: ".MC", default_currency: "EUR" },
+      "XMIL" => { yahoo_suffix: ".MI", default_currency: "EUR" },
+      "XSWX" => { yahoo_suffix: ".SW", default_currency: "CHF" },
+      "XSTO" => { yahoo_suffix: ".ST", default_currency: "SEK" },
+      "XCSE" => { yahoo_suffix: ".CO", default_currency: "DKK" },
+      "XHEL" => { yahoo_suffix: ".HE", default_currency: "EUR" },
+      "XOSL" => { yahoo_suffix: ".OL", default_currency: "NOK" },
+      "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }  # Vienna
     }.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
@@ -626,6 +655,69 @@ class Provider::YahooFinance < Provider
 
       return securities if dominated.empty?
       securities.reject { |s| dominated.include?(s.object_id) }
+    end
+
+    # Symbols Yahoo's search-suggest index simply doesn't carry (e.g. Australian
+    # APIR-coded managed funds like "VAN0111AU") still resolve fine against the
+    # chart endpoint used elsewhere in this class for price data. When the normal
+    # search returns nothing, treat the raw query as a literal symbol and see if
+    # Yahoo's chart backend recognizes it -- synthesizing a single search result
+    # from the chart's `meta` block if so, rather than reporting no match at all.
+    #
+    # Only attempted for query shapes that plausibly ARE a ticker (no spaces,
+    # reasonable length): a full-name search like "Vanguard High Growth Index"
+    # would just waste a request here since it was never going to resolve as a
+    # literal symbol either.
+    def direct_symbol_fallback(query)
+      symbol = query.to_s.strip.upcase
+      return [] if symbol.blank? || symbol.include?(" ") || !symbol.match?(/\A[A-Z0-9.\-]{1,20}\z/)
+
+      # Require an exchange-qualified symbol (e.g. "VAN0111AU.AX"), not a bare
+      # one (e.g. "XYZ"). A bare ticker missing from Yahoo's search index would
+      # normally mean "no match" -- but the chart endpoint resolves bare tickers
+      # too, and some of those are real, unrelated securities (e.g. "XYZ" is
+      # NYSE-listed Block, Inc.), which would surface as a surprising spurious
+      # match for what the user actually typed. A plain, indexable ticker like
+      # that already resolves via the primary search above; this fallback exists
+      # for suffixed, non-US-style symbols the index has gaps for.
+      return [] unless symbol.match?(/\A[A-Z0-9\-]+\.[A-Z0-9\-]+\z/)
+
+      throttle_request
+      data = fetch_authenticated_chart(symbol, { "interval" => "1d", "range" => "5d" })
+      return [] if data.dig("chart", "error").present?
+
+      meta = data.dig("chart", "result", 0, "meta")
+      return [] if meta.blank?
+
+      # "YHD" is Yahoo's generic placeholder exchange, used for many instruments
+      # (like managed funds) that aren't tied to a real exchange in Yahoo's data.
+      # map_exchange_mic maps "YHD" to "XNAS" (NASDAQ) as a guess for regular
+      # search results, on the assumption an unrecognized US-style ticker is
+      # probably NASDAQ-listed -- that assumption doesn't hold here, since this
+      # fallback exists specifically for non-US instruments the search index
+      # missed (e.g. an Australian managed fund). Leave the MIC nil instead of
+      # applying that guess. Security::Resolver already treats a blank MIC as
+      # "unknown", not as one that fails to match.
+      yahoo_exchange = meta["exchangeName"]
+      mic = yahoo_exchange == "YHD" ? nil : map_exchange_mic(yahoo_exchange)
+
+      [
+        Security.new(
+          symbol: meta["symbol"] || symbol,
+          name: meta["longName"] || meta["shortName"] || symbol,
+          logo_url: nil,
+          exchange_operating_mic: mic,
+          country_code: mic.present? ? ::Security::EXCHANGES.dig(mic, "country") : nil,
+          currency: meta["currency"]
+        )
+      ]
+    rescue => e
+      # Best-effort only: this fallback exists purely to find something the
+      # primary search missed. Any failure here (auth, rate limit, network,
+      # malformed response) should degrade to "no fallback match" rather than
+      # turn an otherwise-successful (if empty) search into an error response.
+      Rails.logger.warn("Yahoo Finance direct symbol fallback failed for #{symbol}: #{e.class} - #{e.message}")
+      []
     end
 
     # ================================
@@ -741,19 +833,37 @@ class Provider::YahooFinance < Provider
     # If Yahoo returns a stale-crumb error (200 OK with Unauthorized body),
     # clears the crumb cache and retries once with fresh credentials.
     def fetch_authenticated_chart(symbol, params)
-      cookie, crumb = fetch_cookie_and_crumb
-      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-        params.each { |k, v| req.params[k] = v }
-        req.params["crumb"] = crumb
+      # The /v8/finance/chart endpoint does NOT require cookie/crumb auth, and
+      # Yahoo rate-limits AUTHENTICATED chart requests far more aggressively than
+      # anonymous ones (verified live: cookie+crumb => 429, same symbol/IP with
+      # no auth => 200). Use the plain client for price/chart data. Cookie+crumb
+      # remains scoped to quoteSummary (fetch_security_info), which needs it.
+      begin
+        response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+          params.each { |k, v| req.params[k] = v }
+        end
+        data = JSON.parse(response.body)
+        needs_auth = data.dig("chart", "error", "code") == "Unauthorized"
+      rescue Faraday::UnauthorizedError
+        # Hard HTTP 401 (raised by client's :raise_error) -- fall through to the
+        # authenticated retry below, same as a soft Unauthorized body code.
+        needs_auth = true
       end
-      data = JSON.parse(response.body)
 
-      if data.dig("chart", "error", "code") == "Unauthorized"
+      # Rare fallback: if Yahoo demands auth for a specific symbol (a hard 401
+      # or a 200 OK with an Unauthorized body), retry once with FRESH cookie+
+      # crumb. Clear any cached crumb first so a stale-but-shape-valid one
+      # isn't reused.
+      if needs_auth
         clear_crumb_cache
         cookie, crumb = fetch_cookie_and_crumb
-        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-          params.each { |k, v| req.params[k] = v }
-          req.params["crumb"] = crumb
+        begin
+          response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+            params.each { |k, v| req.params[k] = v }
+            req.params["crumb"] = crumb
+          end
+        rescue Faraday::UnauthorizedError
+          raise AuthenticationError, "Yahoo Finance authentication failed after crumb refresh"
         end
         data = JSON.parse(response.body)
         if data.dig("chart", "error", "code") == "Unauthorized"
@@ -1056,6 +1166,8 @@ class Provider::YahooFinance < Provider
         "MX"
       when /JSE|JOHANNESBURG/
         "ZA"
+      when /JAKARTA|IDX/
+        "ID"
       else
         nil
       end
@@ -1108,6 +1220,8 @@ class Provider::YahooFinance < Provider
         "XBOM" # BSE (Bombay Stock Exchange)
       when "BVC"
         "XBOG" # Colombian Securities Exchange
+      when "JKT"
+        "XIDX" # Indonesia Stock Exchange (IDX)
       else
         exchange_code.upcase
       end

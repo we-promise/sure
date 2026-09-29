@@ -1,0 +1,7 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: 無法刪除示範用的監控 API 金鑰

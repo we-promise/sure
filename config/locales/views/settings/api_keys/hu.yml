@@ -103,7 +103,6 @@ hu:
         created_label: "Létrehozva:"
         security_note_title: "Fontos biztonsági megjegyzés"
         security_note_body: "Ez az egyetlen alkalom, amikor az API-kulcsod megjelenik. Mindenképpen másold le most és tárold biztonságosan. Ha elveszíted, újat kell generálnod."
-        usage_instructions_title: "Az API-kulcs használata"
         key_name: "Név"
         permissions: "Jogosultságok"
         critical_warning_title: "⚠️ Kritikus: Mentsd el az API-kulcsodat most"

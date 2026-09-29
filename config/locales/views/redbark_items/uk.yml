@@ -1,0 +1,199 @@
+---
+uk:
+  redbark_items:
+    default_name: З'єднання Redbark
+    sync_status:
+      no_accounts: Рахунки не знайдено
+      synced:
+        one: '%{count} рахунок синхронізовано'
+        few: '%{count} рахунки синхронізовано'
+        many: '%{count} рахунків синхронізовано'
+        other: '%{count} рахунку синхронізовано'
+      synced_with_setup: '%{linked} синхронізовано, %{unlinked} потребують налаштування'
+    institution_summary:
+      none: Жодної установи не підключено
+      count:
+        one: '%{count} установа'
+        few: '%{count} установи'
+        many: '%{count} установ'
+        other: '%{count} установи'
+    errors:
+      provider_not_configured: Постачальника Redbark не налаштовано
+    sync:
+      status:
+        importing: Імпорт рахунків із Redbark...
+        processing: Обробка транзакцій...
+        calculating: Розрахунок балансів...
+        importing_data: Імпорт даних рахунку...
+        checking_setup: Перевірка налаштувань рахунку...
+        needs_setup: 'Рахунків, що потребують налаштування: %{count}...'
+      success: Синхронізацію розпочато
+    panel:
+      setup_instructions: 'Інструкції з налаштування:'
+      step_1: Створіть ключ API на app.redbark.com у розділі Settings
+      step_2: Введіть ключ API нижче та натисніть кнопку «Зберегти»
+      step_3: Після успішного підключення перейдіть на вкладку «Рахунки», щоб налаштувати нові рахунки
+      field_descriptions: 'Опис полів:'
+      optional: (необов'язково)
+      required: (обов'язково)
+      optional_with_default: (необов'язково, за замовчуванням %{default_value})
+      save_button: Зберегти конфігурацію
+      update_button: Оновити конфігурацію
+      status_configured_html: Налаштовано й готово до використання. Перейдіть на вкладку <a href="%{accounts_path}" class="link">Рахунки</a>, щоб керувати рахунками та налаштовувати їх.
+      status_not_configured: Не налаштовано
+      fields:
+        api_key:
+          label: Ключ API
+          description: Ваш ключ API Redbark (починається з rbk_live_)
+          placeholder_new: rbk_live_...
+          placeholder_update: Введіть новий ключ API, щоб оновити
+    create:
+      success: З'єднання Redbark успішно створено
+    update:
+      success: З'єднання Redbark оновлено
+    destroy:
+      success: З'єднання Redbark видалено
+      unlink_failed:
+        one: Не вдалося від'єднати %{count} рахунок. Спробуйте ще раз.
+        few: Не вдалося від'єднати %{count} рахунки. Спробуйте ще раз.
+        many: Не вдалося від'єднати %{count} рахунків. Спробуйте ще раз.
+        other: Не вдалося від'єднати %{count} рахунку. Спробуйте ще раз.
+    index:
+      title: З'єднання Redbark
+    loading:
+      loading_message: Завантаження рахунків Redbark...
+      loading_title: Завантаження
+    redbark_item:
+      accounts_need_setup: Рахунки потребують налаштування
+      delete: Видалити з'єднання
+      deletion_in_progress: видалення триває...
+      error: Помилка
+      more_accounts_available:
+        one: Доступний ще %{count} рахунок
+        few: Доступні ще %{count} рахунки
+        many: Доступно ще %{count} рахунків
+        other: Доступно ще %{count} рахунку
+      no_accounts_description: Це з'єднання ще не має пов'язаних рахунків.
+      no_accounts_title: Немає рахунків
+      provider_name: Redbark
+      requires_update: З'єднання потребує оновлення
+      setup_action: Налаштувати нові рахунки
+      setup_description: 'Пов''язано рахунків: %{linked} з %{total}. Виберіть типи для щойно імпортованих рахунків Redbark.'
+      setup_needed: Нові рахунки готові до налаштування
+      status: Синхронізовано %{timestamp} тому
+      status_never: Ще не синхронізовано
+      status_with_summary: Остання синхронізація %{timestamp} тому - %{summary}
+      syncing: Синхронізація...
+      total: Усього
+      unlinked: Не пов'язано
+      update_credentials: Оновити облікові дані
+    select_accounts:
+      accounts_selected: рахунків вибрано
+      api_error: 'Помилка API: %{message}'
+      cancel: Скасувати
+      configure_name_in_provider: Неможливо імпортувати — налаштуйте назву рахунку в Redbark
+      description: Виберіть рахунки, які потрібно пов'язати з вашим обліковим записом %{product_name}.
+      link_accounts: Пов'язати вибрані рахунки
+      no_accounts_found: Рахунки не знайдено. Перевірте налаштування ключа API.
+      no_api_key: Ключ API Redbark не налаштовано. Налаштуйте його в налаштуваннях.
+      no_credentials_configured: Спочатку налаштуйте облікові дані Redbark у налаштуваннях постачальника.
+      no_name_placeholder: (Без назви)
+      title: Виберіть рахунки Redbark
+    select_existing_account:
+      account_already_linked: Цей рахунок уже пов'язано з постачальником
+      all_accounts_already_linked: Усі рахунки Redbark уже пов'язано
+      api_error: 'Помилка API: %{message}'
+      balance_label: 'Баланс:'
+      cancel: Скасувати
+      cancel_button: Скасувати
+      configure_name_in_provider: Неможливо імпортувати — налаштуйте назву рахунку в Redbark
+      connect_hint: Підключіть рахунок Redbark, щоб увімкнути автоматичну синхронізацію.
+      description: Виберіть рахунок Redbark, який потрібно пов'язати з цим рахунком. Транзакції синхронізуватимуться, а дублікати видалятимуться автоматично.
+      header: Пов'язати з Redbark
+      link_account: Пов'язати рахунок
+      link_button: Пов'язати цей рахунок
+      linking_to: 'Пов''язується з:'
+      no_account_specified: Рахунок не вказано
+      no_accounts: Не знайдено непов'язаних рахунків Redbark.
+      no_accounts_found: Рахунки Redbark не знайдено. Перевірте налаштування ключа API.
+      no_api_key: Ключ API Redbark не налаштовано. Налаштуйте його в налаштуваннях.
+      no_credentials_configured: Спочатку налаштуйте облікові дані Redbark у налаштуваннях постачальника.
+      no_name_placeholder: (Без назви)
+      settings_link: Перейти до налаштувань постачальника
+      subtitle: Виберіть рахунок Redbark
+      title: Пов'язати %{account_name} з Redbark
+    link_existing_account:
+      account_already_linked: Цей рахунок уже пов'язано з постачальником
+      api_error: 'Помилка API: %{message}'
+      invalid_account_name: Неможливо пов'язати рахунок із порожньою назвою
+      provider_account_already_linked: Цей рахунок Redbark уже пов'язано з іншим рахунком
+      provider_account_not_found: Рахунок Redbark не знайдено
+      missing_parameters: Відсутні обов'язкові параметри
+      no_api_key: Ключ API Redbark не знайдено. Налаштуйте його в налаштуваннях постачальника.
+      success: '%{account_name} успішно пов''язано з Redbark'
+    setup_accounts:
+      account_type_label: 'Тип рахунку:'
+      accounts_count:
+        one: '%{count} доступний рахунок'
+        few: '%{count} доступні рахунки'
+        many: '%{count} доступних рахунків'
+        other: '%{count} доступного рахунку'
+      all_accounts_linked: Усі ваші рахунки Redbark уже налаштовано.
+      api_error: 'Помилка API: %{message}'
+      creating: Створення рахунків...
+      fetch_failed: Не вдалося отримати рахунки
+      import_selected: Імпортувати вибрані рахунки
+      instructions: Виберіть рахунки, які потрібно імпортувати з Redbark. Можна вибрати кілька рахунків.
+      no_accounts: У цьому з'єднанні Redbark не знайдено непов'язаних рахунків.
+      no_accounts_to_setup: Немає рахунків для налаштування
+      no_api_key: Ключ API Redbark не налаштовано. Перевірте налаштування з'єднання.
+      select_all: Вибрати все
+      account_types:
+        skip: Пропустити цей рахунок
+        depository: Поточний або ощадний рахунок
+        credit_card: Кредитна картка
+        loan: Кредит або іпотека
+        other_asset: Інший актив
+      subtype_labels:
+        depository: 'Підтип рахунку:'
+        credit_card: ''
+        loan: 'Тип кредиту:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Кредитні картки буде автоматично налаштовано як рахунки кредитних карток.
+        other_asset: Для інших активів додаткові параметри не потрібні.
+      subtypes:
+        depository:
+          checking: Поточний
+          savings: Ощадний
+          hsa: Медичний ощадний рахунок (HSA)
+          cd: Строковий депозит
+          money_market: Рахунок грошового ринку
+        loan:
+          mortgage: Іпотека
+          student: Студентський кредит
+          auto: Автокредит
+          other: Інший кредит
+      balance: Баланс
+      cancel: Скасувати
+      done: Готово
+      choose_account_type: 'Виберіть правильний тип для кожного рахунку Redbark:'
+      create_accounts: Створити рахунки
+      creating_accounts: Створення рахунків...
+      historical_data_range: 'Період історичних даних:'
+      subtitle: Виберіть правильні типи для імпортованих рахунків
+      sync_start_date_help: Виберіть, за який період синхронізувати історію транзакцій.
+      sync_start_date_label: 'Синхронізувати транзакції починаючи з:'
+      title: Налаштуйте свої рахунки Redbark
+    setup_required:
+      title: Спочатку підключіть Redbark
+      not_configured_title: Redbark ще не підключено
+      not_configured_description: Додайте ключ API Redbark у налаштуваннях постачальника, а потім поверніться сюди, щоб пов'язати рахунки.
+      go_to_provider_settings: Перейти до налаштувань постачальника
+    complete_account_setup:
+      all_skipped: Усі рахунки пропущено. Жодного рахунку не створено.
+      creation_failed: 'Не вдалося створити рахунки: %{error}'
+      creation_failed_generic: Не вдалося створити рахунки.
+      setup_failed: 'Не вдалося створити рахунків: %{count}. Більше нічого не змінено — усуньте проблему та спробуйте ще раз.'
+      no_accounts: Немає рахунків для налаштування.
+      success: 'Успішно створено рахунків: %{count}.'

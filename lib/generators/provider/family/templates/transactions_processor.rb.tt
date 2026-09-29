@@ -96,7 +96,7 @@ class <%= class_name %>Account::Transactions::Processor
       return nil if amount.nil?
 
       # TODO: Customize date field names based on your provider
-      date = parse_date(data[:date] || data[:transaction_date] || data[:posted_at])
+      date = parse_date(data[:date] || data[:transaction_date] || data[:posted_at], family: account&.family)
       return nil if date.nil?
 
       name = data[:name] || data[:description] || data[:merchant_name] || "Transaction"

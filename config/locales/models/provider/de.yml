@@ -1,0 +1,17 @@
+---
+de:
+  providers:
+    property_valuation:
+      missing_fields: Gib einen Namen und eine vollständige US-Adresse an (Straße, Stadt, Bundesstaat und ZIP-Code).
+      not_configured: Dieser Anbieter für Immobiliendaten ist nicht eingerichtet.
+      preview_expired: Diese Objektvorschau ist abgelaufen – such die Adresse noch einmal.
+    realie:
+      errors:
+        location_mismatch: Realie hat eine Immobilie in einer anderen Stadt oder mit anderer Postleitzahl gefunden. Prüf die Adresse noch einmal.
+        no_property: Realie hat für diese Adresse keine Immobilie geliefert.
+        no_valuation: Realie hat für diese Immobilie keine Bewertung geliefert.
+        not_found: Realie hat unter dieser Adresse keine Immobilie gefunden.
+    rentcast:
+      errors:
+        no_valuation: RentCast hat für diese Adresse keine Wertschätzung geliefert.
+        not_found: RentCast hat unter dieser Adresse keine Immobilie gefunden.

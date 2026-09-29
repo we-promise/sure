@@ -1,0 +1,7 @@
+uk:
+  invitation_mailer:
+    invite_email:
+      accept_button: Прийняти запрошення
+      body: "%{inviter} запросив вас приєднатися до %{family} %{moniker} на %{product_name}!"
+      expiry_notice: Термін дії цього запрошення закінчується через %{days} днів
+      greeting: Ласкаво просимо до %{product_name}!

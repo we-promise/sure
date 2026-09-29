@@ -3,9 +3,9 @@ de:
   family_exports:
     access_denied: Zugriff verweigert
     create:
-      success: Export gestartet. Sie können ihn in Kürze herunterladen.
-    delete_confirmation: Möchten Sie diesen Export wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-    delete_failed_confirmation: Möchten Sie diesen fehlgeschlagenen Export wirklich löschen?
+      success: Export gestartet. Du kannst ihn in Kürze herunterladen.
+    delete_confirmation: Willst du diesen Export wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+    delete_failed_confirmation: Willst du diesen fehlgeschlagenen Export wirklich löschen?
     destroy:
       success: Export erfolgreich gelöscht
     export_not_ready: Export noch nicht zum Download bereit
@@ -28,4 +28,21 @@ de:
         actions:
           delete: Löschen
           download: Herunterladen
+          confirm_mark_failed: Der Export steht still, sein Job wurde wohl unterbrochen. Als fehlgeschlagen markieren? Du kannst sofort einen neuen starten.
+          mark_failed: Als fehlgeschlagen markieren
       empty: Noch keine Exporte vorhanden.
+    cancel:
+      cancelled: Export als fehlgeschlagen markiert. Du kannst sofort einen neuen starten.
+      not_cancellable: Der Export lässt sich gerade nicht als fehlgeschlagen markieren, sein Job läuft noch. Versuch es in einer Stunde erneut.
+    new:
+      accounts_and_balances: Alle Konten und Salden
+      cancel: Abbrechen
+      categories_tags_rules: Kategorien, Tags und Regeln
+      dialog_subtitle: Lad alle deine Finanzdaten herunter
+      dialog_title: Daten exportieren
+      export_data: Daten exportieren
+      investment_trades: Wertpapiergeschäfte
+      note_description: Der Export enthält all deine Daten, aber nur ein Teil davon lässt sich über den CSV-Import zurückspielen. Unterstützt werden Konten, Transaktionen samt Kategorie und Tags sowie Wertpapiergeschäfte. Die übrigen Kontodaten sind nur für deine Unterlagen gedacht.
+      note_label: Hinweis
+      transaction_history: Transaktionsverlauf
+      whats_included: 'Enthalten sind:'

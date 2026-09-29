@@ -20,8 +20,32 @@ class Rule::Action < ApplicationRecord
   after_create_commit :seed_notification_baseline
   after_update_commit :seed_notification_baseline, if: :saved_change_to_action_type?
 
+  # Accepts an Array (e.g. from a multi-select tag input) and stores it as a
+  # comma-separated string in the existing `value` column, so multi-value
+  # actions don't require a schema change. A single scalar value round-trips
+  # unchanged, which keeps existing single-value rows backward compatible.
+  def value=(val)
+    val = val.reject(&:blank?).join(",") if val.is_a?(Array)
+    super(val)
+  end
+
+  # Encodes a list of tag (or other) names as a single comma-separated string
+  # for the portable `value`/CSV-import representation, CSV-quoting any name
+  # that itself contains a comma (e.g. "Food, Dining") so it round-trips as
+  # one name instead of being split into two on import.
+  def self.encode_multi_value_names(names)
+    CSV.generate_line(names, row_sep: "")
+  end
+
+  # Inverse of .encode_multi_value_names. Also accepts a plain unquoted
+  # comma-separated string (the format used before quoting was introduced),
+  # which CSV parses the same way as long as no name contains a comma.
+  def self.decode_multi_value_names(str)
+    CSV.parse_line(str.to_s) || []
+  end
+
   def apply(resource_scope, ignore_attribute_locks: false, rule_run: nil)
-    executor.execute(resource_scope, value: value, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run) || 0
+    executor.execute(resource_scope, value: execution_value, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run) || 0
   end
 
   def options
@@ -29,15 +53,13 @@ class Rule::Action < ApplicationRecord
   end
 
   def value_display
-    if value.present?
-      if options
-        options.find { |option| option.last == value }&.first
-      else
-        ""
-      end
-    else
-      ""
-    end
+    return "" if value.blank?
+
+    cached_options = options
+    return "" if cached_options.blank?
+
+    labels_by_id = cached_options.to_h { |label, id| [ id.to_s, label ] }
+    Array(execution_value).filter_map { |v| labels_by_id[v] }.join(", ")
   end
 
   def executor
@@ -45,6 +67,10 @@ class Rule::Action < ApplicationRecord
   end
 
   private
+    def execution_value
+      executor.type == "multi_select" ? value.to_s.split(",") : value
+    end
+
     def seed_notification_baseline
       return unless action_type == "send_email_notification"
 

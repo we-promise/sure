@@ -1,0 +1,42 @@
+---
+pt-PT:
+  oidc_accounts:
+    link:
+      no_pending_oidc: Não foi encontrada nenhuma autenticação OIDC pendente
+      title_link: Ligar Conta OIDC
+      title_create: Criar Conta
+      verify_heading: Verifique a Sua Identidade
+      verify_description_html: "Para ligar a sua conta %{provider}%{email_suffix}, verifique a sua identidade introduzindo a sua palavra-passe."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: E-mail
+      email_placeholder: Introduza o seu e-mail
+      password_label: Palavra-passe
+      password_placeholder: Introduza a sua palavra-passe
+      verify_hint: Isto ajuda a garantir que apenas você pode ligar contas externas ao seu perfil.
+      submit_link: Ligar Conta
+      create_heading: Criar Nova Conta
+      create_description_html: "Não foi encontrada nenhuma conta com o e-mail <strong>%{email}</strong>. Clique abaixo para criar uma nova conta utilizando a sua identidade %{provider}."
+      info_email: "E-mail:"
+      info_name: "Designação:"
+      submit_create: Criar Conta
+      submit_accept_invitation: Aceitar Convite
+      account_creation_disabled: A criação de novas contas através do início de sessão único está desativada. Contacte um administrador para criar a sua conta.
+      cancel: Cancelar
+    create_link:
+      no_pending_oidc: Não foi encontrada nenhuma autenticação OIDC pendente
+    new_user:
+      no_pending_oidc: Não foi encontrada nenhuma autenticação OIDC pendente
+      title: Concluir a Sua Conta
+      heading: Criar a Sua Conta
+      description: Confirme os seus dados para concluir a criação da conta com a sua identidade %{provider}.
+      email_label: E-mail (do serviço SSO)
+      first_name_label: Primeiro Nome
+      first_name_placeholder: Introduza o seu primeiro nome
+      last_name_label: Apelido
+      last_name_placeholder: Introduza o seu apelido
+      submit: Criar Conta
+      cancel: Cancelar
+    create_user:
+      no_pending_oidc: Não foi encontrada nenhuma autenticação OIDC pendente
+      account_creation_disabled: A criação de contas SSO está desativada. Contacte um administrador.
+      account_created: "Bem-vindo! A sua conta foi criada."

@@ -9,6 +9,8 @@ class TransactionCategoriesController < ApplicationController
 
     transaction = @entry.transaction
 
+    transaction.record_category_usage!
+
     if needs_rule_notification?(transaction)
       flash[:cta] = {
         type: "category_rule",
@@ -54,6 +56,7 @@ class TransactionCategoriesController < ApplicationController
 
     def needs_rule_notification?(transaction)
       return false if Current.user.rule_prompts_disabled
+      return false if transaction.category_id.blank?
 
       if Current.user.rule_prompt_dismissed_at.present?
         time_since_last_rule_prompt = Time.current - Current.user.rule_prompt_dismissed_at

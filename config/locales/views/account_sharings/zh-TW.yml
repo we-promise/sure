@@ -1,0 +1,29 @@
+---
+zh-TW:
+  account_sharings:
+    show:
+      title: 帳戶共享
+      subtitle: 控制誰可以檢視這個帳戶並與其互動
+      member: 成員
+      permission: 權限
+      shared: 已共享
+      no_members: 您的%{moniker}中沒有其他可共享的成員
+      permissions:
+        full_control: 完全控制
+        full_control_description: 可以檢視、編輯與管理交易
+        read_write: 可註記
+        read_write_description: 可以分類、加上標籤與新增備註
+        read_only: 僅供檢視
+        read_only_description: 只能檢視帳戶資料
+      save: 儲存共享設定
+      owner_label: 擁有者：%{name}
+      shared_with_count:
+        one: 已與 1 位成員共享
+        other: 已與 %{count} 位成員共享
+      include_in_finances: 納入我的預算與報表
+      exclude_from_finances: 從我的預算與報表中排除
+      finance_toggle_description: 將這個帳戶計入您的淨資產、預算與報表
+    update:
+      success: 共享設定已更新
+      not_owner: 只有帳戶擁有者才能管理共享設定
+      finance_toggle_success: 財務納入設定已更新

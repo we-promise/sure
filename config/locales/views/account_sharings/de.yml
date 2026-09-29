@@ -3,11 +3,11 @@ de:
   account_sharings:
     show:
       title: Kontofreigabe
-      subtitle: Legen Sie fest, wer dieses Konto sehen und damit interagieren kann
+      subtitle: Leg fest, wer dieses Konto sehen und damit interagieren kann
       member: Mitglied
       permission: Berechtigung
       shared: Freigegeben
-      no_members: Keine weiteren Mitglieder in Ihrem %{moniker} zum Teilen
+      no_members: Keine weiteren Mitglieder in deinem %{moniker} zum Teilen
       permissions:
         full_control: Volle Kontrolle
         full_control_description: Kann Transaktionen ansehen, bearbeiten und verwalten
@@ -22,7 +22,7 @@ de:
         other: "Mit %{count} Mitgliedern geteilt"
       include_in_finances: In meine Budgets & Berichte einbeziehen
       exclude_from_finances: Von meinen Budgets & Berichten ausschließen
-      finance_toggle_description: Dieses Konto in Ihrem Nettovermögen, Budgets und Berichten berücksichtigen
+      finance_toggle_description: Dieses Konto in deinem Nettovermögen, Budgets und Berichten berücksichtigen
     update:
       success: Freigabeeinstellungen aktualisiert
       not_owner: Nur der Kontoeigentümer kann die Freigabe verwalten

@@ -112,6 +112,33 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     assert result[:success]
   end
 
+  # Regression for #392: Trade Republic (via Enable Banking) rejects the PDNG request
+  # with a plain 400 (:bad_request) instead of the 422 (:validation_error) other ASPSPs use.
+  test "fetch_and_store_transactions succeeds and skips pending when ASPSP rejects PDNG with a bad_request error" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    @importer.stubs(:determine_sync_start_date).returns(Date.today)
+    @importer.stubs(:include_pending?).returns(true)
+
+    trade_republic_pdng_error = Provider::EnableBanking::EnableBankingError.new(
+      "Bad request to Enable Banking API: {\"error\":\"WRONG_REQUEST_PARAMETERS\"}",
+      :bad_request,
+      response_data: { error: "WRONG_REQUEST_PARAMETERS" }
+    )
+
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(trade_republic_pdng_error)
+
+    result = nil
+    assert_difference "DebugLogEntry.count", 1 do
+      result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
+    end
+
+    assert result[:success]
+    debug_log = DebugLogEntry.last
+    assert_equal "provider_sync_error", debug_log.category
+    assert_equal "bad_request", debug_log.metadata["error_type"]
+  end
+
   # Regression for #1805: ImaginV2 (and other Enable Banking connectors) reject PDNG with
   # a generic WRONG_REQUEST_PARAMETERS body whose message does not mention "transactionStatus".
   # The sync must still succeed and import booked transactions.
@@ -150,6 +177,137 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
 
     assert_not result[:success]
+  end
+
+  # Regression for #392: Trade Republic (via Enable Banking) issues a continuation_key
+  # on page 1 that its own API then rejects on page 2 as mismatched with
+  # transaction_status (422 WRONG_REQUEST_PARAMETERS). Failing outright would discard
+  # the page already fetched, so once at least one page has succeeded, a validation
+  # error mid-pagination must be treated as "pagination exhausted" and keep the partial
+  # result instead of raising.
+  test "fetch_paginated_transactions keeps partial results when a validation error interrupts a later page" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    page1_tx = { transaction_id: "tx1" }
+    page1_response = { transactions: [ page1_tx ], continuation_key: "next-page-key" }
+    error = Provider::EnableBanking::EnableBankingError.new(
+      "Validation error from Enable Banking API: transactionStatus in request is not the same as in continuationKey",
+      :validation_error
+    )
+
+    @mock_provider.expects(:get_account_transactions).twice.returns(page1_response).then.raises(error)
+
+    assert_difference "DebugLogEntry.count", 1 do
+      result = @importer.send(
+        :fetch_paginated_transactions,
+        enable_banking_account,
+        start_date: Date.today,
+        transaction_status: "BOOK"
+      )
+
+      assert_equal [ page1_tx ], result
+    end
+
+    debug_log = DebugLogEntry.last
+    assert_equal "provider_sync_error", debug_log.category
+    assert_equal "error", debug_log.level
+    assert_equal "enable_banking", debug_log.provider_key
+    assert_equal 1, debug_log.metadata["pages_kept"]
+    assert_equal 1, debug_log.metadata["transactions_kept"]
+  end
+
+  # Regression for we-promise/sure#2828 review feedback (jjmata): the PDNG-unsupported
+  # rescue in fetch_and_store_transactions already tolerates both :validation_error and
+  # :bad_request, but fetch_paginated_transactions is the shared method behind both the
+  # BOOK and PDNG fetches — without this, a :bad_request mid-PDNG-pagination would raise
+  # here, propagate past the PDNG-unsupported rescue's partial-keep logic, and discard
+  # the already-fetched PDNG page 1 entirely instead of keeping it like the BOOK path
+  # does. Trade Republic only 400s on PDNG page 1 today, so this is currently latent,
+  # but the two error types must stay symmetric for ASPSPs that don't.
+  test "fetch_paginated_transactions keeps partial results when a bad_request interrupts a later PDNG page" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    page1_tx = { transaction_id: "tx1" }
+    page1_response = { transactions: [ page1_tx ], continuation_key: "next-page-key" }
+    error = Provider::EnableBanking::EnableBankingError.new(
+      "Bad request to Enable Banking API: {\"error\":\"WRONG_REQUEST_PARAMETERS\"}",
+      :bad_request,
+      response_data: { error: "WRONG_REQUEST_PARAMETERS" }
+    )
+
+    @mock_provider.expects(:get_account_transactions).twice.returns(page1_response).then.raises(error)
+
+    result = @importer.send(
+      :fetch_paginated_transactions,
+      enable_banking_account,
+      start_date: Date.today,
+      transaction_status: "PDNG"
+    )
+
+    assert_equal [ page1_tx ], result
+  end
+
+  # A validation error on the very first page has no prior page to fall back on, so it
+  # is a real failure (not ASPSP pagination quirk) and must still propagate.
+  test "fetch_paginated_transactions propagates a validation error on the very first page" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    error = Provider::EnableBanking::EnableBankingError.new("Bad request parameters", :validation_error)
+
+    @mock_provider.expects(:get_account_transactions).once.raises(error)
+
+    assert_raises(Provider::EnableBanking::EnableBankingError) do
+      @importer.send(
+        :fetch_paginated_transactions,
+        enable_banking_account,
+        start_date: Date.today,
+        transaction_status: "BOOK"
+      )
+    end
+  end
+
+  # WRONG_TRANSACTIONS_PERIOD means the date range itself is invalid, not that
+  # pagination is exhausted (unlike the continuation-key mismatch above). It must
+  # still propagate mid-pagination instead of being swallowed as a truncated-but-
+  # successful result, otherwise the remaining pages are silently dropped.
+  test "fetch_paginated_transactions propagates a WRONG_TRANSACTIONS_PERIOD validation error mid-pagination" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    page1_tx = { transaction_id: "tx1" }
+    page1_response = { transactions: [ page1_tx ], continuation_key: "next-page-key" }
+    error = Provider::EnableBanking::EnableBankingError.new(
+      "Validation error from Enable Banking API: invalid transaction period",
+      :validation_error,
+      response_data: { error: "WRONG_TRANSACTIONS_PERIOD" }
+    )
+
+    @mock_provider.expects(:get_account_transactions).twice.returns(page1_response).then.raises(error)
+
+    assert_raises(Provider::EnableBanking::EnableBankingError) do
+      @importer.send(
+        :fetch_paginated_transactions,
+        enable_banking_account,
+        start_date: Date.today,
+        transaction_status: "BOOK"
+      )
+    end
+  end
+
+  # Non-validation errors (e.g. rate limiting, network failures) mid-pagination are
+  # real failures regardless of how many pages already succeeded, and must propagate
+  # so the sync is retried rather than silently importing a truncated result.
+  test "fetch_paginated_transactions propagates a non-validation error mid-pagination" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    page1_tx = { transaction_id: "tx1" }
+    page1_response = { transactions: [ page1_tx ], continuation_key: "next-page-key" }
+    error = Provider::EnableBanking::EnableBankingError.new("Rate limit exceeded. Please try again later.", :rate_limited)
+
+    @mock_provider.expects(:get_account_transactions).twice.returns(page1_response).then.raises(error)
+
+    assert_raises(Provider::EnableBanking::EnableBankingError) do
+      @importer.send(
+        :fetch_paginated_transactions,
+        enable_banking_account,
+        start_date: Date.today,
+        transaction_status: "BOOK"
+      )
+    end
   end
 
   test "fetch_and_update_balance does not flip whole connection on per-account unauthorized error" do

@@ -37,7 +37,9 @@ export default class extends Controller {
     if (this.urlParamKeyValue) {
       const url = new URL(window.location.href);
       url.searchParams.set(this.urlParamKeyValue, selectedTabId);
-      window.history.replaceState({}, "", url);
+      // Keep Turbo's entry in the state: without it, Turbo ignores the
+      // popstate when Back returns here and the other page stays on screen.
+      window.history.replaceState(window.history.state, "", url);
     }
 
     // Update URL with the selected tab

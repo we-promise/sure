@@ -1,0 +1,22 @@
+---
+uk:
+  activerecord:
+    errors:
+      models:
+        transfer:
+          attributes:
+            base:
+              inflow_cannot_be_in_multiple_transfers: "Транзакція надходження не може бути частиною кількох переказів"
+              must_be_from_different_accounts: "Переказ має бути з різних рахунків"
+              must_be_from_same_family: "Переказ має бути з однієї сім'ї"
+              must_be_within_date_range: "Дати транзакцій переказу мають бути в межах 4 днів одна від одної"
+              must_have_opposite_amounts: "Транзакції переказу повинні мати протилежні суми"
+              must_have_single_currency: "Переказ має бути в одній валюті"
+              outflow_cannot_be_in_multiple_transfers: "Транзакція відтоку не може бути частиною кількох переказів"
+          different_accounts: "Має бути з різних рахунків"
+          same_family: "Має бути з однієї сім'ї"
+          opposite_amounts: "Має мати протилежні суми"
+          within_days: "Має бути в межах %{count} днів"
+  transfer:
+    name: "Переказ на %{to_account}"
+    payment_name: "Платіж на %{to_account}"

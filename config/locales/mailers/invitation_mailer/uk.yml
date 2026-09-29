@@ -1,0 +1,5 @@
+---
+uk:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} запросив(ла) вас приєднатися до свого домогосподарства на %{product_name}!"

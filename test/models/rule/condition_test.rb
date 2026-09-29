@@ -56,6 +56,25 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_equal 3, filtered.count
   end
 
+  test "applies transaction_amount not equal operator using absolute values" do
+    create_transaction(date: Date.current, account: @account, amount: -100, name: "Rule test transaction negative 100")
+    scope = @account.transactions
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_amount",
+      operator: "!=",
+      value: "100"
+    )
+
+    scope = condition.prepare(scope)
+
+    filtered = condition.apply(scope)
+    # Absolute amounts: 100, -100, 200, 50, 10, 1000 — exclude both ±100
+    assert_equal 4, filtered.count
+    assert_not filtered.any? { |txn| txn.entry.amount.abs == 100 }
+  end
+
   test "applies transaction_merchant condition" do
     scope = @rule_scope
 
@@ -70,6 +89,98 @@ class Rule::ConditionTest < ActiveSupport::TestCase
 
     filtered = condition.apply(scope)
     assert_equal 2, filtered.count
+  end
+
+  test "applies not equal operator for select condition and includes nulls" do
+    scope = @rule_scope
+
+    # Only transaction1 and transaction4 have a merchant (@whole_foods_merchant)
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_merchant",
+      operator: "!=",
+      value: @whole_foods_merchant.id
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # "not equal" includes the 3 transactions with no merchant (NULL) too
+    assert_equal 3, filtered.count
+    assert filtered.all? { |t| t.merchant_id != @whole_foods_merchant.id }
+  end
+
+  test "applies is_not_null operator for select condition" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_merchant",
+      operator: "is_not_null",
+      value: nil
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 2, filtered.count
+    assert filtered.all? { |t| t.merchant_id.present? }
+  end
+
+  test "applies not equal operator for number condition" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_amount",
+      operator: "!=",
+      value: "100"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # transaction1 has absolute amount 100, the other 4 differ
+    assert_equal 4, filtered.count
+    assert filtered.all? { |t| t.entry.amount.abs != 100 }
+  end
+
+  test "applies not_like operator for text condition and includes nulls" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_name",
+      operator: "not_like",
+      value: "transaction1"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # Excludes only transaction1, keeps the other 4
+    assert_equal 4, filtered.count
+    assert filtered.none? { |t| t.entry.name.include?("transaction1") }
+  end
+
+  test "not_like operator keeps rows with NULL field value (OR IS NULL branch)" do
+    # entries.notes is nullable, so we can verify the OR IS NULL guard in not_like
+    noted_entry = @account.entries.first
+    noted_entry.update!(notes: "business trip")
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_notes",
+      operator: "not_like",
+      value: "business trip"
+    )
+
+    scope = condition.prepare(@rule_scope)
+    filtered = condition.apply(scope)
+
+    # The entry with matching notes is excluded; the 4 entries with NULL notes are kept
+    assert_equal 4, filtered.count
+    assert filtered.none? { |t| t.id == noted_entry.transaction.id }
   end
 
   test "applies compound and condition" do
@@ -166,6 +277,105 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert filtered.all? { |t| t.category_id.nil? }
   end
 
+  test "applies transaction_tag condition" do
+    scope = @rule_scope
+
+    tag = @family.tags.create!(name: "Reimbursable")
+    tagged = @account.transactions.first
+    tagged.tags << tag
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_tag",
+      operator: "=",
+      value: tag.id
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 1, filtered.count
+    assert_equal tagged.id, filtered.first.id
+  end
+
+  test "applies is_null condition for transaction_tag" do
+    scope = @rule_scope
+
+    tag = @family.tags.create!(name: "Reimbursable")
+    @account.transactions.first.tags << tag
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_tag",
+      operator: "is_null",
+      value: nil
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # The 4 transactions without any tag
+    assert_equal 4, filtered.count
+    assert filtered.none? { |t| t.tags.include?(tag) }
+  end
+
+  test "compound AND of two transaction_tag conditions matches transactions having both tags" do
+    scope = @rule_scope
+
+    tag_a = @family.tags.create!(name: "Reimbursable")
+    tag_b = @family.tags.create!(name: "Business")
+
+    both = @account.transactions.first
+    both.tags << [ tag_a, tag_b ]
+
+    only_a = @account.transactions.second
+    only_a.tags << tag_a
+
+    parent_condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "compound",
+      operator: "and",
+      sub_conditions: [
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_a.id),
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_b.id)
+      ]
+    )
+
+    scope = parent_condition.prepare(scope)
+    filtered = parent_condition.apply(scope)
+
+    # Only the transaction carrying BOTH tags matches (a single joined alias could not)
+    assert_equal 1, filtered.count
+    assert_equal both.id, filtered.first.id
+  end
+
+  test "compound OR of transaction_tag conditions does not duplicate multi-tagged transactions" do
+    scope = @rule_scope
+
+    tag_a = @family.tags.create!(name: "Reimbursable")
+    tag_b = @family.tags.create!(name: "Business")
+
+    multi = @account.transactions.first
+    multi.tags << [ tag_a, tag_b ]
+
+    parent_condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "compound",
+      operator: "or",
+      sub_conditions: [
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_a.id),
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_b.id)
+      ]
+    )
+
+    scope = parent_condition.prepare(scope)
+    filtered = parent_condition.apply(scope)
+
+    # Matches both OR branches but must be returned exactly once (no join fan-out)
+    assert_equal 1, filtered.count
+    assert_equal [ multi.id ], filtered.map(&:id)
+  end
+
   test "applies is_null condition for transaction_merchant" do
     scope = @rule_scope
 
@@ -258,6 +468,57 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     scope = condition_lowercase.prepare(scope)
     filtered = condition_lowercase.apply(scope)
     assert_equal 0, filtered.count
+  end
+
+  # Casting extra to text searched its keys as well as its values, so a rule for
+  # "payment" matched any row whose provider stored a payment_channel key, whatever
+  # that channel was. Plaid rows already carried pending and pending_transaction_id,
+  # which made "pending" and "transaction" match every one of them.
+  test "applies transaction_details condition to values, never to key names" do
+    entry = create_transaction(date: Date.current, account: @account, amount: 40, name: "Costco")
+    entry.transaction.update!(
+      extra: {
+        "plaid" => {
+          "pending" => false,
+          "pending_transaction_id" => "txn_1",
+          "payment_channel" => "in store",
+          "original_description" => "COSTCO WHSE 0112"
+        }
+      }
+    )
+
+    %w[payment description pending transaction channel original].each do |key_word|
+      assert_equal 0, details_matches("like", key_word).count,
+        "#{key_word.inspect} appears only as a key and must not match"
+    end
+
+    assert_equal [ entry.transaction.id ], details_matches("like", "in store").map(&:id)
+    assert_equal [ entry.transaction.id ], details_matches("like", "costco").map(&:id)
+  end
+
+  test "applies transaction_details condition to values nested at any depth" do
+    entry = create_transaction(date: Date.current, account: @account, amount: 40, name: "Costco")
+    entry.transaction.update!(
+      extra: {
+        "plaid" => {
+          "payment_meta" => { "reference_number" => "REF-9" },
+          "counterparties" => [ { "name" => "Costco", "confidence_level" => "VERY_HIGH" } ]
+        }
+      }
+    )
+
+    assert_equal [ entry.transaction.id ], details_matches("like", "REF-9").map(&:id)
+    assert_equal [ entry.transaction.id ], details_matches("like", "VERY_HIGH").map(&:id)
+  end
+
+  # true, false and null carry no text a rule would target, and matching "false"
+  # against every unposted pending flag was never what a details rule meant.
+  test "applies transaction_details condition without matching boolean or null literals" do
+    entry = create_transaction(date: Date.current, account: @account, amount: 40, name: "Costco")
+    entry.transaction.update!(extra: { "plaid" => { "pending" => false, "payment_meta" => nil } })
+
+    assert_equal 0, details_matches("like", "false").count
+    assert_equal 0, details_matches("like", "null").count
   end
 
   test "applies transaction_details condition with is_null operator" do
@@ -486,6 +747,54 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_not expense_filtered.map(&:id).include?(contribution_entry.transaction.id)
   end
 
+  test "SUPPORTED_CONDITION_TYPES comes from the registry's filter keys" do
+    expected = (Rule::Registry::TransactionResource.condition_filter_keys + [ "compound" ]).sort
+
+    assert_equal expected, Rule::Condition::SUPPORTED_CONDITION_TYPES.sort
+  end
+
+  test "validates condition_type against supported registry" do
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "definitely_not_a_real_type",
+      operator: "like",
+      value: "x"
+    )
+
+    assert_not condition.valid?
+    assert_includes condition.errors[:condition_type], "is not included in the list"
+  end
+
+  test "normalizes legacy 'name' condition_type to 'transaction_name' on save" do
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "name",
+      operator: "like",
+      value: "starbucks"
+    )
+
+    assert condition.valid?, condition.errors.full_messages.to_sentence
+    assert_equal "transaction_name", condition.condition_type
+  end
+
+  test "filter falls back gracefully when persisted condition_type is unsupported" do
+    # Bypass validations to simulate legacy rows that already exist in the database.
+    condition = Rule::Condition.new(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "x"
+    )
+    condition.rule = @transaction_rule
+    condition.save!
+    condition.update_columns(condition_type: "name")
+    condition.reload
+
+    assert_nothing_raised do
+      assert_equal "Unsupported (name)", condition.filter.label
+      assert_equal "name", condition.filter.key
+    end
+  end
+
   test "transaction_type income excludes investment_contribution" do
     scope = @rule_scope
 
@@ -511,4 +820,15 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     # Should NOT include investment_contribution even with negative amount
     assert_not filtered.map(&:id).include?(contribution_entry.transaction.id)
   end
+
+  private
+    # @param operator [String] a transaction_details operator
+    # @param value [String] the text the rule searches for
+    # @return [ActiveRecord::Relation] transactions in this test's account the condition selects
+    def details_matches(operator, value)
+      condition = Rule::Condition.new(
+        rule: @transaction_rule, condition_type: "transaction_details", operator: operator, value: value
+      )
+      condition.apply(condition.prepare(@rule_scope))
+    end
 end

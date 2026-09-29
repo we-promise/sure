@@ -1,6 +1,17 @@
 class Account::ProviderImportAdapter
+  # Matches a transaction any provider has flagged pending, for the lookups below that
+  # join `transactions` directly. Derived from Transaction::PENDING_PROVIDERS rather
+  # than spelled out, so a newly supported provider cannot silently drop out of
+  # pending→posted reconciliation. Frozen constant built from a frozen provider list:
+  # no user input reaches the SQL (same reasoning as Transaction::PENDING_CHECK_SQL).
+  PENDING_LOOKUP_SQL = Transaction::PENDING_PROVIDERS
+    .map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean = true" }
+    .join(" OR ")
+    .freeze
+
   attr_reader :account, :skipped_entries
 
+  # @param account [Account] the account every import through this adapter lands on
   def initialize(account)
     @account = account
     @skipped_entries = []
@@ -25,8 +36,15 @@ class Account::ProviderImportAdapter
   # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
+  # @param allow_heuristic_matching [Boolean] Claim likely duplicates using amount/date matching
+  # @param replace_extra_namespaces [Array<String>] Top-level `extra` keys the provider owns
+  #   outright. Those branches are replaced rather than deep-merged, so a nested value the
+  #   provider stops sending is actually removed instead of lingering.
+  # @param name_extra_keys [Hash{String=>Array<String>}] Keys, per namespace, that `name`
+  #   was built from. When a protected entry keeps its name, these keep their stored values
+  #   too, so the name and the data it came from cannot drift apart.
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {})
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -68,12 +86,38 @@ class Account::ProviderImportAdapter
           # through the auto-claim path. Without this, a user who categorised a pending entry
           # (setting user_modified=true) would see the pending badge stuck forever.
           # Excluded and import_locked entries are intentionally left untouched.
+          #
+          # Load-bearing even though the namespace refresh below usually rewrites the
+          # same branch: an entry that is both user_modified and import_locked reaches
+          # here (determine_skip_reason reports user_modified first) but is excluded
+          # from that refresh, so this is the only thing that clears its pending flag.
           if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
             entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
             if entry_is_pending
               entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
             end
           end
+          # Refresh the provider's own namespaces on a protected entry. Without this
+          # a user-modified entry keeps whatever payload it was created with, and a
+          # field the provider has since dropped shows in the drawer forever.
+          #
+          # Only the declared namespaces, never the whole payload. `extra` is not
+          # uniformly provider-owned: Transaction#exchange_rate reads and writes
+          # extra["exchange_rate"] at the top level, it is user-editable through the
+          # transaction form, and WiseEntry::Processor supplies one too — so merging
+          # the whole hash here would overwrite a rate the user typed and silently
+          # change how their balance converts. replace_extra_namespaces defaults to
+          # empty, so a provider that has not opted in changes nothing on this path.
+          #
+          # determine_skip_reason reports "user_modified" before it checks
+          # import_locked?, so an entry carrying both flags arrives here. Import
+          # ownership is the stronger claim, so those are left alone.
+          if skip_reason == "user_modified" && !entry.import_locked?
+            owned = extra.is_a?(Hash) ? extra.deep_stringify_keys.slice(*replace_extra_namespaces.map(&:to_s)) : nil
+            owned = keep_name_sources(entry, owned, name_extra_keys)
+            apply_provider_extra(entry, owned, replace_extra_namespaces)
+          end
+
           record_skip(entry, skip_reason)
           return entry
         end
@@ -83,7 +127,7 @@ class Account::ProviderImportAdapter
       # This handles the case where a user manually created or CSV imported a transaction
       # before linking their account to a provider
       # Note: We don't pass name here to allow matching even when provider formats names differently
-      if entry.new_record?
+      if entry.new_record? && allow_heuristic_matching
         duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
         if duplicate
           # Check if duplicate is protected - if so, link but don't modify
@@ -114,7 +158,7 @@ class Account::ProviderImportAdapter
 
         # PRIORITY 2: Fallback to EXACT amount match (for SimpleFIN and providers without linking IDs)
         # Only searches backward in time - pending date must be <= posted date
-        if pending_match.nil?
+        if pending_match.nil? && allow_heuristic_matching
           pending_match = find_pending_transaction(date: date, amount: amount, currency: currency, source: source)
           if pending_match
             Rails.logger.info("Reconciling pending→posted via exact amount match: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
@@ -195,12 +239,7 @@ class Account::ProviderImportAdapter
       end
 
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
-      if extra.present? && entry.entryable.is_a?(Transaction)
-        existing = entry.transaction.extra || {}
-        incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
-        entry.transaction.extra = existing.deep_merge(incoming)
-        entry.transaction.save!
-      end
+      apply_provider_extra(entry, extra, replace_extra_namespaces)
 
       # Auto-detect investment activity labels for investment accounts
       detected_label = investment_activity_label
@@ -224,8 +263,6 @@ class Account::ProviderImportAdapter
         auto_category = account.family.investment_contributions_category
       elsif account.accountable_type == "Loan" && amount.negative?
         auto_kind = "loan_payment"
-      elsif account.accountable_type == "CreditCard" && amount.negative?
-        auto_kind = "cc_payment"
       end
       auto_kind ||= kind.presence
 
@@ -262,7 +299,7 @@ class Account::ProviderImportAdapter
 
       # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
       # This handles tip adjustments where auto-matching is too risky
-      if is_new_posted
+      if is_new_posted && allow_heuristic_matching
         # PRIORITY 1: Try medium-confidence fuzzy match (≤30% amount difference)
         fuzzy_suggestion = find_pending_transaction_fuzzy(
           date: date,
@@ -619,7 +656,7 @@ class Account::ProviderImportAdapter
   # @param security [Security] The security object
   # @param quantity [BigDecimal, Numeric] Number of shares (negative for sells, positive for buys)
   # @param price [BigDecimal, Numeric] Price per share
-  # @param amount [BigDecimal, Numeric] Total trade value
+  # @param amount [BigDecimal, Numeric] Total cash impact of the trade, fee included
   # @param currency [String] Currency code
   # @param date [Date, String] Trade date
   # @param name [String, nil] Optional custom name for the trade
@@ -627,8 +664,9 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
+  # @param fee [BigDecimal, Numeric, nil] Optional provider-reported transaction fee, already included in `amount`
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, fee: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -669,6 +707,7 @@ class Account::ProviderImportAdapter
         investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
       }
       trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
+      trade_attributes[:fee] = fee unless fee.nil?
 
       entry.entryable.assign_attributes(trade_attributes)
 
@@ -717,24 +756,40 @@ class Account::ProviderImportAdapter
   # @param name [String, nil] Optional transaction name for more accurate matching
   # @param exclude_entry_ids [Set, Array, nil] Entry IDs to exclude from the search (e.g., already claimed entries)
   # @return [Entry, nil] The duplicate entry or nil if not found
-  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil)
+  # @param date_window [Integer] days either side of `date` to consider. Defaults
+  #   to 0 (exact date), which is what provider sync wants. Statement imports
+  #   pass a small window, because a statement's posting date routinely differs
+  #   from the date a provider recorded for the same transaction.
+  # @param include_provider_entries [Boolean] when false (the default) only
+  #   manual and CSV-imported entries are considered, which is correct for
+  #   provider sync: a provider must not claim another provider's entry. A
+  #   statement import passes true, because the whole question it is asking is
+  #   whether this transaction already arrived via sync.
+  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil, date_window: 0, include_provider_entries: false)
     # Convert date to Date object if it's a string
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
     # Look for entries on the same account with:
-    # 1. Same date
+    # 1. Same date (or within date_window of it)
     # 2. Same amount (exact match)
     # 3. Same currency
-    # 4. No external_id (manual/CSV imported transactions)
+    # 4. No external_id (manual/CSV imported transactions), unless the caller
+    #    opted into provider-sourced entries too
     # 5. Entry type is Transaction (not Trade or Valuation)
     # 6. Optionally same name (if name parameter is provided)
     # 7. Not in the excluded IDs list (if provided)
     query = account.entries
                    .where(entryable_type: "Transaction")
-                   .where(date: date)
                    .where(amount: amount)
                    .where(currency: currency)
-                   .where(external_id: nil)
+
+    query = if date_window.to_i.zero?
+      query.where(date: date)
+    else
+      query.where(date: (date - date_window.days)..(date + date_window.days))
+    end
+
+    query = query.where(external_id: nil) unless include_provider_entries
 
     # Add name filter if provided
     query = query.where(name: name) if name.present?
@@ -742,7 +797,15 @@ class Account::ProviderImportAdapter
     # Exclude already claimed entries if provided
     query = query.where.not(id: exclude_entry_ids) if exclude_entry_ids.present?
 
-    query.order(created_at: :asc).first
+    candidates = query.order(created_at: :asc)
+
+    # Exact-date search keeps the original oldest-first behaviour.
+    return candidates.first if date_window.to_i.zero?
+
+    # A windowed search prefers the closest date, falling back to oldest-created
+    # on a tie. Done in Ruby because the candidate set is already narrowed to one
+    # account, one amount and one currency within a few days -- a handful of rows.
+    candidates.to_a.min_by { |entry| [ (entry.date - date).abs, entry.created_at ] }
   end
 
   # Finds a pending transaction that likely matches a newly posted transaction
@@ -764,23 +827,15 @@ class Account::ProviderImportAdapter
     # 4. Same currency
     # 5. Date within window (pending can post days later)
     # 6. Is a Transaction (not Trade or Valuation)
-    # 7. Has pending=true in transaction.extra["simplefin"]["pending"] or extra["plaid"]["pending"]
+    # 7. Has pending=true in transaction.extra[<provider>]["pending"] for any provider
+    #    in Transaction::PENDING_PROVIDERS
     candidates = account.entries
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where(source: source)
       .where(amount: amount)
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
-      SQL
+      .where(PENDING_LOOKUP_SQL)
       .order(date: :desc) # Prefer most recent pending transaction
 
     candidates.first
@@ -822,16 +877,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
-      SQL
+      .where(PENDING_LOOKUP_SQL)
 
     # If merchant_id is provided, prioritize matching by merchant
     if merchant_id.present?
@@ -896,16 +942,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date)
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
-      SQL
+      .where(PENDING_LOOKUP_SQL)
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
     if merchant_id.present? && name.present?
@@ -1026,6 +1063,66 @@ class Account::ProviderImportAdapter
       @account_linked_to_any_goal = account.goal_accounts.exists?
     end
 
+    # Writes provider-owned metadata onto the transaction.
+    #
+    # Namespaces named in replace_extra_namespaces are snapshots, not
+    # accumulations: the whole branch is dropped before merging, so a nested key
+    # the provider stopped sending disappears with it. deep_merge alone recurses
+    # into nested hashes, so a removed payment_meta.payee would otherwise survive
+    # forever and the drawer would keep showing it. Only namespaces the incoming
+    # payload actually carries are replaced.
+    #
+    # @param entry [Entry] the entry being imported
+    # @param extra [Hash, nil] provider metadata to apply
+    # @param replace_extra_namespaces [Array<String>] branches to replace wholesale
+    # @return [void]
+    def apply_provider_extra(entry, extra, replace_extra_namespaces)
+      return unless extra.present? && entry.entryable.is_a?(Transaction)
+
+      existing = entry.transaction.extra || {}
+      incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
+      replaced = replace_extra_namespaces.map(&:to_s).select { |ns| incoming.key?(ns) }
+
+      entry.transaction.extra = existing.except(*replaced).deep_merge(incoming)
+      entry.transaction.save!
+    end
+
+    # A protected entry keeps its name, so the values that name was built from have
+    # to stay as well. Rule::ConditionFilter::TransactionName rebuilds a Plaid name
+    # from the stored original_description; refreshing that value while the name
+    # stays put would make the rebuilt name disagree with the real one, and flip
+    # `=` and `!=` rules on the entry. The drawer shows the kept value too, so it
+    # agrees with the name the user sees.
+    #
+    # A key with nothing stored yet takes the incoming value: a row imported before
+    # the key existed was never combined, so there is nothing to keep in step.
+    #
+    # @param entry [Entry] the protected entry
+    # @param owned [Hash, nil] the incoming namespaces the provider owns
+    # @param name_extra_keys [Hash{String=>Array<String>}] keys the name was built from
+    # @return [Hash, nil] owned, with those keys carried over from what is stored
+    def keep_name_sources(entry, owned, name_extra_keys)
+      return owned if owned.blank? || name_extra_keys.blank?
+
+      stored = entry.transaction.extra || {}
+      name_extra_keys.each do |namespace, keys|
+        ns = namespace.to_s
+        next unless owned[ns].is_a?(Hash) && stored[ns].is_a?(Hash)
+
+        Array(keys).map(&:to_s).each do |key|
+          owned[ns][key] = stored[ns][key] if stored[ns].key?(key)
+        end
+      end
+
+      owned
+    end
+
+    # Removes the pending flag every provider writes under its own namespace,
+    # dropping a namespace that held nothing else. Used when a booked version of
+    # a transaction arrives and the stale flag would otherwise stick forever.
+    #
+    # @param extra [Hash, nil] the transaction's current extra
+    # @return [Hash] a copy with the pending flags removed
     def clear_pending_flags_from_extra(extra)
       ex = (extra || {}).deep_dup
       ex = {} unless ex.is_a?(Hash)

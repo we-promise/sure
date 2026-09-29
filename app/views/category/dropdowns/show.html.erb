@@ -20,6 +20,15 @@
         <div class="pb-2 pl-4 mr-2 text-secondary hidden" data-list-filter-target="emptyMessage">
           <%= t(".no_categories") %>
         </div>
+        <% if @recent_categories.any? %>
+          <div data-list-filter-target="recentSection">
+            <p class="pl-2 pb-1 text-xs font-medium text-secondary uppercase tracking-wide"><%= t(".recent") %></p>
+            <% @recent_categories.each do |category| %>
+              <%= render "category/dropdowns/row", category: category, id_prefix: "recent_category_option" %>
+            <% end %>
+            <%= render "shared/ruler", classes: "my-2" %>
+          </div>
+        <% end %>
         <% if @categories.any? %>
           <% Category::Group.for(@categories).each do |group| %>
             <%= render "category/dropdowns/row", category: group.category %>

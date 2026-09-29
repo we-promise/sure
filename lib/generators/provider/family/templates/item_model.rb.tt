@@ -1,7 +1,14 @@
 # frozen_string_literal: true
 
 class <%= class_name %>Item < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, DestroyableLater, ProviderDisconnectable
+
+  # Set to true once this provider implements removal of the data it imported, so
+  # a client may disconnect with disposition "discard". Left false until then:
+  # the capability is advertised to API clients, and claiming it without the
+  # implementation would tell a family their data was deleted when it was not.
+  # See Unlinking#unlink_all! and Financekit::Purge for the worked example.
+  self.supports_discard = false
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -35,14 +42,13 @@ class <%= class_name %>Item < ApplicationRecord
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
+  # Family::Syncer discovers provider items reflectively and calls `syncable` on every
+  # `*_items` association whose model includes Syncable. Omitting this scope breaks the
+  # whole nightly family sync, not just this provider.
+  scope :syncable, -> { active }
 
   def syncer
     <%= class_name %>Item::Syncer.new(self)
-  end
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
   end
 
 <% if investment_provider? -%>

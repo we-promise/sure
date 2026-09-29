@@ -1,0 +1,138 @@
+---
+zh-TW:
+  admin:
+    unauthorized: 您沒有存取這個區域的權限。
+    sso_providers:
+      index:
+        page_title: SSO 供應商
+        title: SSO 供應商
+        description: 管理這個執行個體的單一登入驗證供應商。
+        restart_required: 變更需要重新啟動伺服器才會生效。
+        configured_providers: 已設定的供應商
+        add_provider: 新增供應商
+        no_providers_title: 沒有 SSO 供應商
+        no_providers_message: 尚未設定任何 SSO 供應商。
+        note: 變更 SSO 供應商需要重新啟動伺服器才會生效。或者，您可以啟用 AUTH_PROVIDERS_SOURCE=db 功能旗標，直接從資料庫動態載入供應商。
+        enabled: 已啟用
+        disabled: 已停用
+        edit: 編輯
+        enable: 啟用
+        disable: 停用
+        delete: 刪除
+        configuration_mode: 設定模式
+        db_backed_providers: 以資料庫儲存的供應商
+        db_backed_providers_description: 從資料庫載入供應商，而不是從 YAML 設定檔
+        db_backed_providers_help_html: 設定 <code class="bg-surface px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code> 即可啟用以資料庫儲存的供應商，這樣變更就不需要重新啟動伺服器。
+        table:
+          name: 名稱
+          strategy: 驗證策略
+          status: 狀態
+          issuer: 簽發者
+          actions: 操作
+          enabled: 已啟用
+          disabled: 已停用
+        legacy_providers_title: 以環境變數設定的供應商
+        legacy_providers_notice: 這些供應商是透過環境變數或 YAML 設定的，無法在這個介面管理。若要在這裡管理，請啟用 AUTH_PROVIDERS_SOURCE=db 改成以資料庫儲存的供應商，再從介面重新建立一次。
+        env_configured: 環境變數／YAML
+      new:
+        title: 新增 SSO 供應商
+        description: 設定一個新的單一登入驗證供應商
+      edit:
+        title: 編輯 SSO 供應商
+        description: 更新 %{label} 的設定
+      create:
+        success: SSO 供應商建立成功。
+      update:
+        success: SSO 供應商更新成功。
+      destroy:
+        success: SSO 供應商刪除成功。
+        confirm: 確定要刪除這個供應商嗎？這個動作無法復原。
+      toggle:
+        success_enabled: SSO 供應商啟用成功。
+        success_disabled: SSO 供應商停用成功。
+        confirm_enable: 確定要啟用這個供應商嗎？
+        confirm_disable: 確定要停用這個供應商嗎？
+      form:
+        basic_information: 基本資訊
+        oauth_configuration: OAuth／OIDC 設定
+        strategy_label: 驗證策略
+        strategy_help: 要使用的驗證策略
+        strategy_openid_connect: OpenID Connect
+        strategy_saml: SAML 2.0
+        strategy_google_oauth2: Google OAuth2
+        strategy_github: GitHub
+        name_label: 名稱
+        name_placeholder: 例如 keycloak、authentik
+        name_help: 唯一識別碼（僅限小寫字母、數字與底線）
+        label_label: 按鈕文字
+        label_placeholder: 例如「使用 Keycloak 登入」
+        label_help: 顯示給使用者看的按鈕文字
+        icon_label: 圖示（選填）
+        icon_placeholder: 例如 key、shield
+        icon_help: 登入按鈕要用的 Lucide 圖示名稱
+        enabled_label: 啟用這個供應商
+        enabled_help: 啟用後，使用者就能用這個供應商登入
+        issuer_label: 簽發者網址
+        issuer_placeholder: https://your-idp.example.com/realms/your-realm
+        issuer_help: OIDC 簽發者網址（會驗證 .well-known/openid-configuration）
+        client_id_label: Client ID
+        client_id_placeholder: your-client-id
+        client_id_help: 從您的識別供應商取得的 OAuth Client ID
+        client_secret_label: Client Secret
+        client_secret_placeholder_new: your-client-secret
+        client_secret_placeholder_existing: ••••••••
+        client_secret_help: OAuth Client Secret（在資料庫中加密儲存）
+        client_secret_help_existing: 留白即維持現有的 Secret
+        redirect_uri_label: 回呼 URL (Callback URL)
+        redirect_uri_placeholder: https://yourdomain.com/auth/openid_connect/callback
+        redirect_uri_help: 請在您的識別供應商中設定這個網址
+        saml_sp_callback_url_label: SP 回呼網址 (ACS URL)
+        saml_sp_callback_url_help: 請在您的 IdP 中把這個網址設為 Assertion Consumer Service URL
+        copy_button: 複製
+        cancel: 取消
+        submit: 儲存供應商
+        create_provider: 建立供應商
+        update_provider: 更新供應商
+        errors_title:
+          one: 有 1 個錯誤導致這個供應商無法儲存：
+          other: 有 %{count} 個錯誤導致這個供應商無法儲存：
+        provisioning_title: 使用者佈建
+        default_role_label: 新使用者的預設角色
+        default_role_help: 透過即時 (JIT) SSO 帳號佈建所建立的使用者，會取得這個角色；預設為「成員」。
+        role_guest: 訪客
+        role_member: 成員
+        role_admin: 管理員
+        role_super_admin: 超級管理員
+        role_mapping_title: 群組對應角色（選填）
+        role_mapping_help: 把 IdP 的群組／宣告對應到應用程式的角色。使用者會取得符合條件中最高的角色。留白則使用上方的預設角色。
+        super_admin_groups: 超級管理員群組
+        admin_groups: 管理員群組
+        guest_groups: 訪客群組
+        member_groups: 成員群組
+        groups_help: 以逗號分隔的 IdP 群組名稱清單。使用 * 可比對所有群組。
+        advanced_title: 進階 OIDC 設定
+        scopes_label: 自訂 Scope
+        scopes_help: 以空白分隔的 OIDC scope 清單。留白則使用預設值 (openid email profile)。加上 groups 可取得群組宣告。
+        prompt_label: 驗證提示 (Prompt)
+        prompt_default: 預設（由 IdP 決定）
+        prompt_login: 強制登入（重新驗證）
+        prompt_consent: 強制同意（重新授權）
+        prompt_select_account: 選擇帳號（讓使用者挑選帳號）
+        prompt_none: 不提示（靜默驗證）
+        prompt_help: 控制 IdP 在驗證過程中要如何提示使用者。
+        test_connection: 測試連線
+        saml_configuration: SAML 設定
+        idp_metadata_url: IdP Metadata 網址
+        idp_metadata_url_help: 您 IdP 的 SAML metadata 網址。填入後，其他 SAML 設定會自動帶入。
+        manual_saml_config: 手動設定（沒有使用 metadata 網址時）
+        manual_saml_help: 只有在您的 IdP 沒有提供 metadata 網址時，才需要使用這些設定。
+        idp_sso_url: IdP SSO 網址
+        idp_slo_url: IdP SLO 網址（選填）
+        idp_certificate: IdP 憑證
+        idp_certificate_help: PEM 格式的 X.509 憑證。若沒有使用 metadata 網址則為必填。
+        idp_cert_fingerprint: 憑證指紋（替代方案）
+        name_id_format: NameID 格式
+        name_id_email: 電子郵件地址（預設）
+        name_id_persistent: Persistent
+        name_id_transient: Transient
+        name_id_unspecified: Unspecified

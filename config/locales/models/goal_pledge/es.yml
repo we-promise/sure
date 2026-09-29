@@ -1,0 +1,20 @@
+---
+es:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: Importe
+        currency: Moneda
+        account: Cuenta
+        kind: Tipo
+        status: Estado
+        expires_at: Caduca el
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Elige una de las cuentas vinculadas al objetivo.
+            currency:
+              must_match_goal: La moneda de la aportación debe coincidir con la del objetivo.
+          duplicate_open_pledge: Ya tienes una aportación abierta por este importe en esta cuenta. Cancela o amplía la existente antes de registrar otra.

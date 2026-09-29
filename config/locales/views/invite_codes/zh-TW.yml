@@ -1,6 +1,10 @@
 ---
 zh-TW:
   invite_codes:
+    create:
+      success: 邀請碼已產生
+    destroy:
+      success: 邀請碼已刪除
     index:
-      invite_code_description: 產生新代碼後將會顯示在此處。已使用的產生代碼將不再顯示。
-      no_invite_codes: 暫無邀請碼
+      invite_code_description: 產生新的邀請碼後就會顯示在這裡。已經使用過的邀請碼不會再顯示。
+      no_invite_codes: 沒有可顯示的邀請碼

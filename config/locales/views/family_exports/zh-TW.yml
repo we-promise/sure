@@ -3,10 +3,31 @@ zh-TW:
   family_exports:
     access_denied: 存取被拒絕
     create:
-      success: 匯出已開始。您很快就能下載它。
+      success: 匯出已開始，很快就可以下載。
+    delete_confirmation: 確定要刪除這份匯出嗎？這個動作無法復原。
+    delete_failed_confirmation: 確定要刪除這份失敗的匯出嗎？
+    cancel:
+      cancelled: 匯出已標記為失敗。您可以立即建立新的匯出。
+      not_cancellable: 目前無法將此匯出標記為失敗 — 背景工作可能仍在執行中。請等背景工作閒置滿一小時後再試。
     destroy:
       success: 匯出已成功刪除
     export_not_ready: 匯出尚未準備好下載
+    exporting: 匯出中...
+    new:
+      dialog_title: 匯出您的資料
+      dialog_subtitle: 下載您所有的財務資料
+      whats_included: 包含的內容：
+      accounts_and_balances: 所有帳戶與餘額
+      transaction_history: 交易紀錄
+      investment_trades: 投資交易
+      categories_tags_rules: 分類、標籤與規則
+      note_label: 備註
+      note_description: 此匯出包含您的所有資料，但只有部分資料可以透過 CSV 匯入功能匯回。我們支援帳戶、交易（含分類與標籤）與證券交易的匯入。其他帳戶資料無法匯入，僅供您保存紀錄。
+      cancel: 取消
+      export_data: 匯出資料
+    index:
+      title: 匯出
+      new: 新增匯出
     table:
       title: 匯出
       header:
@@ -22,4 +43,6 @@ zh-TW:
         actions:
           delete: 刪除
           download: 下載
-      empty: 目前尚無匯出記錄。
+          mark_failed: 標記為失敗
+          confirm_mark_failed: 這筆匯出已閒置一段時間，背景工作很可能已中斷。要標記為失敗嗎？您可以立即建立新的匯出。
+      empty: 目前尚無匯出紀錄。

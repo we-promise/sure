@@ -3,7 +3,7 @@ de:
   providers:
     ibkr:
       name: Interactive Brokers
-      connection_description: Verbinden Sie einen Interactive Brokers Flex Web Service-Bericht
+      connection_description: Verbinde einen Interactive Brokers Flex Web Service-Bericht
       institution_name: Interactive Brokers
   ibkr_items:
     defaults:
@@ -21,11 +21,11 @@ de:
       accounts_need_setup: Konten müssen eingerichtet werden
       accounts_need_setup_description: Einige Konten von IBKR müssen mit Sure-Konten verknüpft werden.
       no_accounts_discovered: Noch keine IBKR-Konten gefunden.
-      no_accounts_discovered_description: Führen Sie nach der Konfiguration Ihrer Flex-Abfrage eine Synchronisierung durch, um Konten zu finden.
+      no_accounts_discovered_description: Starte nach dem Einrichten deiner Flex-Abfrage einen Sync, damit Konten gefunden werden.
     setup_accounts:
       page_title: Interactive Brokers-Konten einrichten
-      dialog_title: Richten Sie Ihre Interactive Brokers-Konten ein
-      subtitle: Wählen Sie aus, welche IBKR-Brokerage-Konten verknüpft werden sollen.
+      dialog_title: Richte deine Interactive Brokers-Konten ein
+      subtitle: Wähl aus, welche IBKR-Brokerage-Konten verknüpft werden sollen.
       info_box:
         title: IBKR Flex-Abfrage-Import
         items:
@@ -43,7 +43,7 @@ de:
         account_summary: "%{account_type} • Saldo: %{balance}"
         account_id: "Konto-ID: %{account_id}"
       link_existing:
-        description: Oder verknüpfen Sie ein gefundenes IBKR-Konto mit einem bestehenden manuellen Investmentkonto.
+        description: Oder verknüpf ein gefundenes IBKR-Konto mit einem bestehenden manuellen Investmentkonto.
         manual_account_option: "%{name} (%{balance})"
         select_prompt: Konto auswählen...
       linked_accounts:
@@ -65,8 +65,8 @@ de:
     select_existing_account:
       title: Interactive Brokers-Konto verknüpfen
       no_accounts_available: Es sind noch keine nicht verknüpften Interactive Brokers-Konten verfügbar.
-      run_sync_hint: "Führen Sie unter Einstellungen > Anbieter eine Synchronisierung durch, nachdem Sie Ihre Flex-Abfrage aktualisiert haben."
-      wait_for_sync: Warten Sie, bis die Synchronisierung zur Kontoerkennung abgeschlossen ist.
+      run_sync_hint: Starte unter Einstellungen > Anbieter einen Sync, nachdem du deinen API-Key gespeichert hast.
+      wait_for_sync: Warte, bis die Synchronisierung zur Kontoerkennung abgeschlossen ist.
       balance: Saldo
       link: Verknüpfen
       cancel: Abbrechen

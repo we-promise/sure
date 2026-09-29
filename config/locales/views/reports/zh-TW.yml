@@ -5,8 +5,9 @@ zh-TW:
       title: 報表
       subtitle: 深入洞察您的財務健康狀況
       export: 匯出 CSV
-      drag_to_reorder: "拖曳以重新排列區塊"
-      toggle_section: "切換區塊顯示狀態"
+      print_report: 列印報表
+      drag_to_reorder: 拖曳以重新排列區塊
+      toggle_section: 切換區塊顯示狀態
       periods:
         monthly: 按月
         quarterly: 按季
@@ -16,42 +17,58 @@ zh-TW:
       date_range:
         from: 開始
         to: 結束
-      showing_period: "顯示 %{start} 至 %{end} 的資料"
-    invalid_date_range: "結束日期不能早於開始日期。日期已自動對調。"
+      showing_period: 顯示 %{start} 至 %{end} 的資料
+      previous_period: 上一期
+      next_period: 下一期
+      today: 今天
+      period_label:
+        quarterly: '%{year} Q%{quarter}'
+        ytd: '%{year} 年初至今'
+        past_year: '%{year}'
+        last_6_months: '%{start} – %{end}'
+      period_picker:
+        quarter: '%{year} Q%{quarter}'
+        ytd: '%{year} 年初至今'
+      previous_year: 上一年
+      next_year: 下一年
+      previous_decade: 上一個十年
+      next_decade: 下一個十年
+    invalid_date_range: 結束日期不能早於開始日期。日期已自動對調。
     summary:
       total_income: 總收入
       total_expenses: 總支出
       net_savings: 淨儲蓄
       budget_performance: 預算執行狀況
-      vs_previous: 與上一期相比
+      vs_previous: （對比上一期）
       income_minus_expenses: 收入減去支出
       of_budget_used: 已使用預算
       no_budget_data: 此時段內無預算資料
     budget_performance:
       title: 預算執行狀況
       spent: 已支出
-      budgeted: 預算額度
+      budgeted: 預算
       remaining: 剩餘
       over_by: 超支
-      suggested_daily: "剩餘 %{days} 天，建議每日支出為 %{amount}"
-      no_budgets: 本月尚未設定預算類別
+      shared: 共享
+      suggested_daily: 剩餘 %{days} 天，建議每日支出為 %{amount}
+      no_budgets: 本月尚未設定預算分類
       status:
-        good: 符合進度
+        good: 正常
         warning: 接近上限
-        over: 預算超支
+        over: 超預算
     trends:
       title: 趨勢與洞察
       monthly_breakdown: 每月明細
       month: 月份
       income: 收入
       expenses: 支出
-      net: 淨值
+      net: 淨額
       savings_rate: 儲蓄率
       current: 目前
       avg_monthly_income: 平均月收入
       avg_monthly_expenses: 平均月支出
       avg_monthly_savings: 平均月儲蓄
-      no_data: 暫無趨勢資料
+      no_data: 沒有趨勢資料
       spending_patterns: 消費模式
       weekday_spending: 平日支出
       weekend_spending: 週末支出
@@ -59,9 +76,9 @@ zh-TW:
       avg_per_transaction: 每筆平均金額
       transactions: 交易筆數
       insight_title: 洞察
-      insight_higher_weekend: "您週末每筆交易的平均支出比平日高出 %{percent}%"
-      insight_higher_weekday: "您平日每筆交易的平均支出比週末高出 %{percent}%"
-      insight_similar: "您平日與週末的每筆交易平均支出相近"
+      insight_higher_weekend: 您週末每筆交易的平均支出比平日高出 %{percent}%
+      insight_higher_weekday: 您平日每筆交易的平均支出比週末高出 %{percent}%
+      insight_similar: 您平日與週末的每筆交易平均支出相近
       no_spending_data: 此時段內無消費資料
     empty_state:
       title: 尚無可用資料
@@ -70,20 +87,20 @@ zh-TW:
       add_account: 新增帳戶
     transactions_breakdown:
       title: 交易明細拆解
-      no_transactions: 在選定的時段與過濾條件下找不到交易紀錄
+      no_transactions: 在選定的時段與篩選條件下找不到交易紀錄
       filters:
-        title: 過濾條件
-        category: 類別
+        title: 篩選條件
+        category: 分類
         account: 帳戶
         tag: 標籤
         amount_min: 最低金額
         amount_max: 最高金額
         date_range: 日期範圍
-        all_categories: 所有類別
+        all_categories: 所有分類
         all_accounts: 所有帳戶
         all_tags: 所有標籤
-        apply: 應用過濾
-        clear: 清除過濾
+        apply: 套用篩選
+        clear: 清除篩選
       sort:
         label: 排序方式
         date_desc: 日期（從新到舊）
@@ -96,31 +113,139 @@ zh-TW:
         pdf: PDF
         google_sheets: 在 Google 試算表中開啟
       table:
-        category: 類別
+        category: 分類
         amount: 金額
         type: 類型
         expense: 支出
         income: 收入
         uncategorized: 未分類
+        entries:
+          one: '%{count} 筆項目'
+          other: '%{count} 筆項目'
+        percentage: 佔總計 %
         transactions: 筆交易
-        percentage: "占總計 %"
       pagination:
-        showing: 顯示 %{count} 筆交易
+        showing:
+          one: 顯示 %{count} 筆項目
+          other: 顯示 %{count} 筆項目
         previous: 上一頁
         next: 下一頁
+    net_worth:
+      title: 淨資產
+      current_net_worth: 目前淨資產
+      period_change: 期間變動
+      assets_vs_liabilities: 資產與負債比較
+      total_assets: 資產
+      total_liabilities: 負債
+      no_assets: 沒有資產
+      no_liabilities: 沒有負債
+    investment_performance:
+      title: 投資績效
+      portfolio_value: 投資組合價值
+      total_return: 總報酬
+      period_return: 期間報酬
+      contributions: 期間投入
+      withdrawals: 期間提領
+      top_holdings: 主要持股
+      holding: 持股
+      weight: 占比
+      value: 市值
+      return: 報酬
+      accounts: 投資帳戶
+      gains_by_tax_treatment: 依稅務處理方式區分的損益
+      unrealized_gains: 未實現損益
+      realized_gains: 已實現損益
+      total_gains: 總損益
+      taxable_realized_note: 這些損益可能需要課稅
+      no_data: '-'
+      view_details: 查看詳情
+      holdings_count:
+        one: '%{count} 檔持股'
+        other: '%{count} 檔持股'
+      sells_count:
+        one: '%{count} 筆賣出'
+        other: '%{count} 筆賣出'
+      holdings: 持股
+      sell_trades: 賣出交易
+      and_more: 另有 %{count} 筆
+    investment_flows:
+      title: 投資資金流
+      description: 追蹤透過投入與提領流進與流出您投資帳戶的資金。
+      contributions: 投入
+      contributions_description: 投入到投資中的資金
+      withdrawals: 提領
+      withdrawals_description: 從投資中提領的資金
+      net_flow: 淨流量
+      net_flow_description: 淨變動總額
     google_sheets_instructions:
-      title_with_key: "✅ 已複製 Google 試算表連結"
-      title_no_key: "⚠️ 需要 API 金鑰"
+      title_with_key: ✅ 複製 Google 試算表用的網址
+      title_no_key: ⚠️ 需要 API 金鑰
       ready: 您的 CSV URL（含 API 金鑰）已就緒。
-      steps: "若要匯入 Google 試算表：\n1. 建立一個新的 Google 試算表\n2. 在 A1 儲存格中輸入下方公式\n3. 按下 Enter 鍵"
-      security_warning: "此 URL 包含您的 API 金鑰。請妥善保管！"
+      steps: '若要匯入 Google 試算表：
+
+        1. 建立一個新的 Google 試算表
+
+        2. 在 A1 儲存格中輸入下方公式
+
+        3. 按下 Enter 鍵'
+      security_warning: 此 URL 包含您的 API 金鑰。請妥善保管！
       need_key: 若要將資料匯入 Google 試算表，您需要一個 API 金鑰。
-      step1: "前往「設定」→「API 金鑰」"
-      step2: "建立一個具備「讀取」權限的新 API 金鑰"
+      step1: 前往「設定」→「API 金鑰」
+      step2: 建立一個具備「讀取」權限的新 API 金鑰
       step3: 複製該 API 金鑰
-      step4: "將其加入此 URL 結尾：?api_key=您的金鑰"
+      step4: 將其加入此 URL 結尾：?api_key=您的金鑰
       example: 範例
       then_use: 接著在 Google 試算表中使用帶有 =IMPORTDATA() 的完整連結。
       open_sheets: 開啟 Google 試算表
       go_to_api_keys: 前往 API 金鑰設定
       close: 我知道了
+    print:
+      document_title: 財務報表
+      title: 財務報表
+      generated_on: 產生於 %{date}
+      summary:
+        title: 摘要
+        income: 收入
+        expenses: 支出
+        net_savings: 淨儲蓄
+        budget: 預算
+        vs_prior: 與前期相比 %{percent}%
+        of_income: 佔收入 %{percent}%
+        used: 已使用
+      net_worth:
+        title: 淨資產
+        current_balance: 目前餘額
+        this_period: （本期）
+        assets: 資產
+        liabilities: 負債
+        no_liabilities: 沒有負債
+      trends:
+        title: 每月趨勢
+        month: 月
+        income: 收入
+        expenses: 支出
+        net: 淨額
+        savings_rate: 儲蓄率
+        average: 平均
+        current_month_note: '* 本月（資料尚未完整）'
+      investments:
+        title: 投資
+        portfolio_value: 投資組合價值
+        total_return: 總報酬
+        period_return: 期間報酬
+        contributions: 投入
+        withdrawals: 提領
+        this_period: 本期
+        top_holdings: 主要持股
+        holding: 持股
+        weight: 占比
+        value: 市值
+        return: 報酬
+      spending:
+        title: 各分類支出
+        income: 收入
+        expenses: 支出
+        category: 分類
+        amount: 金額
+        percent: '%'
+        more_categories: 另有 %{count} 個分類

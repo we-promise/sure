@@ -1,0 +1,25 @@
+uk:
+  tags:
+    create:
+      created: Тег створено
+      error: 'Помилка створення тегу: %{error}'
+    destroy:
+      deleted: Тег видалено
+    destroy_all:
+      all_deleted: Усі теги видалено
+    edit:
+      edit: Редагувати тег
+    form:
+      placeholder: Назва тегу
+    index:
+      empty: Тегів ще немає
+      new: Новий тег
+      tags: Теги
+      delete_all: Видалити всі
+    new:
+      new: Новий тег
+    tag:
+      delete: Видалити
+      edit: Редагувати
+    update:
+      updated: Тег оновлено

@@ -14,6 +14,9 @@ fr:
       state_region_label: État/Région
       state_region_placeholder: CA
       title: Saisir la propriété manuellement
+    avm_providers:
+      realie: Realie
+      rentcast: RentCast
     balances:
       market_value_label: Valeur marchande estimée
       market_value_tooltip: La valeur marchande estimée de votre propriété. Ce numéro
@@ -24,6 +27,7 @@ fr:
       title: Saisir la propriété manuellement
     edit:
       edit: Modifier %{account}
+      title: Saisir le bien manuellement
     form:
       address_line1: Adresse
       address_line1_placeholder: 123, rue de la Paix
@@ -42,7 +46,21 @@ fr:
       subtype_prompt: Sélectionnez le type de propriété
       year_built: Année de construction
       year_built_placeholder: '2000'
+    form_tabs:
+      address: Adresse
+      overview: Vue d'ensemble
+      value: Valeur
     new:
+      avm_description: Saisissez un nom pour le bien et son adresse. %{provider} recherchera pour vous les caractéristiques du bien et sa valeur de marché estimée.
+      avm_option: Ajouter via %{provider}
+      avm_preview_back: Retour
+      avm_preview_confirm: Ajouter le bien
+      avm_preview_description: 'Voici ce que %{provider} a trouvé. Vérifiez les informations avant d''ajouter le bien : rien n''a encore été créé.'
+      avm_preview_no_record: "%{provider} n'a trouvé aucune fiche de bien à cette adresse : la valeur affichée est donc une estimation fondée sur le quartier. Vérifiez l'adresse avant de continuer."
+      avm_preview_title: Confirmer les informations du bien
+      avm_submit: Rechercher le bien
+      avm_title: Ajouter un bien via %{provider}
+      avm_us_only: "%{provider} ne prend en charge que les biens situés aux États-Unis."
       next: Suivant
       title: Saisir les détails de la propriété
     overview:
@@ -75,7 +93,7 @@ fr:
         long: Propriété commerciale
         short: Commercial
       plot:
-        long: Terrain / Terrain
+        long: Terrain / Parcelle
         short: Terrain
       rented:
         long: Propriété louée

@@ -1,0 +1,25 @@
+---
+de:
+  activerecord:
+    attributes:
+      goal:
+        color: Farbe
+        currency: Währung
+        linked_accounts: Verknüpfte Konten
+        name: Name
+        notes: Notizen
+        state: Status
+        target_amount: Zielbetrag
+        target_date: Zieldatum
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Wähl mindestens ein Konto, aus dem dieses Ziel gespeist wird.
+            currency:
+              locked_after_linked: Die Währung lässt sich nicht mehr ändern, sobald das Ziel mit Konten verknüpft ist.
+            linked_accounts:
+              currency_mismatch: Alle verknüpften Konten müssen dieselbe Währung haben.
+              must_be_fundable: Alle verknüpften Konten müssen Bank- oder Investmentkonten sein.
+              must_belong_to_family: Verknüpfte Konten müssen zur selben Familie gehören wie das Ziel.
