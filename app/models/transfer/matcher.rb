@@ -101,6 +101,19 @@ class Transfer::Matcher
       raise Error.new(:already_linked, "The transaction is already part of a transfer.") if txn.transfer.present?
     end
 
+    # ensure_matchable! checks without a lock, so two concurrent matches of one
+    # transaction (with different counterparts) could both pass it; the unique
+    # index only covers the pair. Lock both rows in a fixed order, then check
+    # again against the database.
+    def lock_unlinked!(*txns)
+      ids = txns.select(&:persisted?).map(&:id).sort
+      Transaction.where(id: ids).order(:id).lock.pluck(:id)
+
+      if Transfer.where(inflow_transaction_id: ids).or(Transfer.where(outflow_transaction_id: ids)).exists?
+        raise Error.new(:already_linked, "The transaction is already part of a transfer.")
+      end
+    end
+
     def link!(inflow:, outflow:, dry_run:)
       transfer = Transfer.new(
         inflow_transaction: inflow,
@@ -115,6 +128,7 @@ class Transfer::Matcher
       end
 
       Transfer.transaction do
+        lock_unlinked!(inflow, outflow)
         transfer.save!
 
         # Kinds follow the destination account, as in Transfer::Creator.
