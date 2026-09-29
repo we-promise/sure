@@ -50,6 +50,16 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil session[:wise_pending_token]
   end
 
+  test "create from the drawer shows a blank token error in the panel" do
+    post wise_items_url,
+         params: { wise_item: { token: "" } },
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, %(target="wise-providers-panel")
+    assert_includes response.body, ERB::Util.html_escape("Token can't be blank")
+  end
+
   test "create redirects to providers when Wise API rejects the token" do
     Provider::Wise.any_instance.stubs(:get_profiles).raises(
       Provider::Wise::WiseError.new("unauthorized", :unauthorized)
@@ -130,6 +140,28 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
     assert @wise_item.reload.sca_configured?
+  end
+
+  test "generate_sca_keypair from the page shows the new public key in place" do
+    WiseItem.any_instance.stubs(:sca_encryption_available?).returns(true)
+
+    post generate_sca_keypair_wise_item_url(@wise_item),
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :success
+    assert_includes response.body, %(target="wise-providers-panel")
+    assert_includes response.body, %(id="wise-providers-panel")
+    assert_includes response.body, @wise_item.reload.sca_public_key.lines.second.strip
+  end
+
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch wise_item_url(@wise_item),
+          params: { wise_item: { name: "Renamed Wise" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :success
+    assert_includes response.body, %(target="wise-providers-panel")
+    assert_equal "Renamed Wise", @wise_item.reload.name
   end
 
   test "generate_sca_keypair replaces a previously generated keypair" do

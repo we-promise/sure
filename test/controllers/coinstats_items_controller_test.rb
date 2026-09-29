@@ -55,6 +55,16 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "invalid create outside a frame redirects to the providers page with a 303" do
+    assert_no_difference "CoinstatsItem.count" do
+      post coinstats_items_url, params: { coinstats_item: { name: "New CoinStats Connection", api_key: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
   test "should destroy coinstats item" do
     # Schedules for deletion, doesn't actually delete immediately
     assert_no_difference("CoinstatsItem.count") do

@@ -173,7 +173,7 @@ class CoinstatsItemsController < ApplicationController
           locals: { error_message: error_message }
         ), status: :unprocessable_entity
       else
-        redirect_to settings_providers_path, alert: error_message, status: :unprocessable_entity
+        redirect_to settings_providers_path, alert: error_message, status: :see_other
       end
     end
 

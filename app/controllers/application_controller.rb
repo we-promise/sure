@@ -53,6 +53,12 @@ class ApplicationController < ActionController::Base
       end
     end
 
+    # Provider panels post from the page (connection row or drawer), so Turbo
+    # asks for a stream without sending a Turbo-Frame header.
+    def turbo_panel_request?
+      turbo_frame_request? || request.format.turbo_stream?
+    end
+
     def detect_os
       user_agent = request.user_agent
       @os = case user_agent

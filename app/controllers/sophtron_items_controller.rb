@@ -394,13 +394,13 @@ class SophtronItemsController < ApplicationController
 
     if @sophtron_item.save
       unless verify_and_provision_customer(@sophtron_item)
-        render_sophtron_panel_error(:new, @sophtron_item.last_connection_error)
+        render_sophtron_panel_error(@sophtron_item.last_connection_error)
         return
       end
 
       render_sophtron_panel_success(:create)
     else
-      render_sophtron_panel_error(:new, @sophtron_item.errors.full_messages.join(", "))
+      render_sophtron_panel_error(@sophtron_item.errors.full_messages.join(", "))
     end
   end
 
@@ -410,13 +410,13 @@ class SophtronItemsController < ApplicationController
   def update
     if @sophtron_item.update(sophtron_params)
       unless verify_and_provision_customer(@sophtron_item)
-        render_sophtron_panel_error(:edit, @sophtron_item.last_connection_error)
+        render_sophtron_panel_error(@sophtron_item.last_connection_error)
         return
       end
 
       render_sophtron_panel_success(:update)
     else
-      render_sophtron_panel_error(:edit, @sophtron_item.errors.full_messages.join(", "))
+      render_sophtron_panel_error(@sophtron_item.errors.full_messages.join(", "))
     end
   end
 
@@ -961,7 +961,7 @@ class SophtronItemsController < ApplicationController
       end
     end
 
-    def render_sophtron_panel_error(view_name, message)
+    def render_sophtron_panel_error(message)
       @error_message = message
       if turbo_frame_request?
         render turbo_stream: turbo_stream.replace(
@@ -970,7 +970,7 @@ class SophtronItemsController < ApplicationController
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        render view_name, status: :unprocessable_entity
+        redirect_to settings_providers_path, alert: @error_message, status: :see_other
       end
     end
 

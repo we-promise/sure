@@ -259,6 +259,18 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "Akahu Checking"
   end
 
+  # The row and drawer panels post from the page, not a frame. Turbo only
+  # follows a 3xx, so a 422 redirect left the form with no feedback.
+  test "invalid create outside a frame redirects to the providers page with a 303" do
+    assert_no_difference "AkahuItem.count" do
+      post akahu_items_url, params: { akahu_item: { app_token: "", user_token: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
   test "complete account setup hides raw creation errors from users" do
     raw_message = "raw provider failure with akahu-user-credential"
     AkahuItemsController.any_instance

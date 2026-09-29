@@ -58,6 +58,47 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://api-sandbox.mercury.com/api/v1", @second_item.base_url
   end
 
+  test "invalid create outside a frame redirects instead of rendering a missing template" do
+    assert_no_difference "MercuryItem.count" do
+      post mercury_items_url, params: { mercury_item: { name: "Joint Mercury", token: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "Token can't be blank", flash[:alert]
+  end
+
+  test "invalid update outside a frame redirects instead of rendering a missing template" do
+    patch mercury_item_url(@second_item), params: { mercury_item: { name: "" } }
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "Name can't be blank", flash[:alert]
+    assert_equal "Business Mercury", @second_item.reload.name
+  end
+
+  # Connection rows post from the page, so Turbo asks for a stream without a Turbo-Frame header.
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch mercury_item_url(@second_item),
+          params: { mercury_item: { name: "Renamed Business Mercury" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :success
+    assert_includes response.body, %(target="mercury-providers-panel")
+    assert_includes response.body, %(id="mercury-providers-panel")
+    assert_equal "Renamed Business Mercury", @second_item.reload.name
+  end
+
+  test "invalid update from the page re-renders the panel with the error" do
+    patch mercury_item_url(@second_item),
+          params: { mercury_item: { name: "" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, %(target="mercury-providers-panel")
+    assert_includes response.body, ERB::Util.html_escape("Name can't be blank")
+  end
+
   test "blank token update preserves the selected mercury token" do
     original_token = @second_item.token
 

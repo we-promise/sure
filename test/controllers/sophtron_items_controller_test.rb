@@ -207,6 +207,16 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  test "invalid create outside a frame redirects instead of rendering a missing template" do
+    assert_no_difference "SophtronItem.count" do
+      post sophtron_items_url, params: { sophtron_item: { name: "New Sophtron", user_id: "", access_key: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
   test "connection_status renders MFA challenge when Sophtron asks for security answers" do
     @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
     provider = mock

@@ -31,7 +31,7 @@ class BrexItemsController < ApplicationController
 
   def update
     if BrexItem::AccountFlow.update_item_with_cache_expiration(@brex_item, family: Current.family, attributes: brex_item_params)
-      render_provider_panel_success(t(".success"))
+      render_provider_panel_success(t(".success"), in_place: turbo_panel_request?)
     else
       render_provider_panel_error
     end
@@ -54,8 +54,10 @@ class BrexItemsController < ApplicationController
 
   private
 
-    def render_provider_panel_success(message)
-      return redirect_to accounts_path, notice: message, status: :see_other unless turbo_frame_request?
+    # A new connection moves on to Accounts unless it came from a frame; an
+    # update stays in the panel it was saved from.
+    def render_provider_panel_success(message, in_place: turbo_frame_request?)
+      return redirect_to accounts_path, notice: message, status: :see_other unless in_place
 
       flash.now[:notice] = message
       @brex_items = Current.family.brex_items.active.ordered.includes(:syncs, :brex_accounts)
@@ -64,7 +66,7 @@ class BrexItemsController < ApplicationController
 
     def render_provider_panel_error
       @error_message = @brex_item.errors.full_messages.join(", ")
-      return redirect_to settings_providers_path, alert: @error_message, status: :see_other unless turbo_frame_request?
+      return redirect_to settings_providers_path, alert: @error_message, status: :see_other unless turbo_panel_request?
 
       render_brex_provider_panel(locals: { error_message: @error_message }, status: :unprocessable_entity)
     end

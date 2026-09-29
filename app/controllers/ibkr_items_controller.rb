@@ -44,7 +44,7 @@ class IbkrItemsController < ApplicationController
     if @ibkr_item.update(attrs.merge(status: :good))
       @ibkr_item.sync_later unless @ibkr_item.syncing?
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[:notice] = t(".success")
         render turbo_stream: [
           turbo_stream.replace(
@@ -59,7 +59,7 @@ class IbkrItemsController < ApplicationController
     else
       @error_message = @ibkr_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "ibkr-providers-panel",
           partial: "settings/providers/ibkr_panel",

@@ -45,7 +45,7 @@ class Trading212ItemsController < ApplicationController
     if @trading212_item.update(attrs.merge(status: :good))
       @trading212_item.sync_later unless @trading212_item.syncing?
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[:notice] = t(".success")
         render turbo_stream: [
           turbo_stream.replace(
@@ -60,7 +60,7 @@ class Trading212ItemsController < ApplicationController
     else
       @error_message = @trading212_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "trading212-providers-panel",
           partial: "settings/providers/trading212_panel",

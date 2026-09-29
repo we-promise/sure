@@ -40,6 +40,25 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
       "Expected the searchable data attribute to still include the bank name (existing name-search behavior)"
   end
 
+  test "invalid create outside a frame redirects to the providers page with a 303" do
+    assert_no_difference "EnableBankingItem.count" do
+      post enable_banking_items_url, params: { enable_banking_item: { country_code: "", application_id: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
+  test "invalid update outside a frame redirects to the providers page with a 303" do
+    patch enable_banking_item_url(@item), params: { enable_banking_item: { country_code: "" } }
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+    assert_equal "DE", @item.reload.country_code
+  end
+
   test "authorize no longer blocks decoupled banks and proceeds to the hosted auth page" do
     Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
       aspsps: [

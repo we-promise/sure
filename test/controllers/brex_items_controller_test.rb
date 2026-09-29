@@ -73,6 +73,25 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://api-staging.brex.com", @second_item.base_url
   end
 
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch brex_item_url(@second_item),
+          params: { brex_item: { name: "Renamed Business Brex" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :success
+    assert_includes response.body, %(target="brex-providers-panel")
+    assert_includes response.body, %(id="brex-providers-panel")
+    assert_equal "Renamed Business Brex", @second_item.reload.name
+  end
+
+  test "create from the page still moves on to accounts" do
+    post brex_items_url,
+         params: { brex_item: { name: "Joint Brex", token: "joint_brex_token" } },
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_redirected_to accounts_path
+  end
+
   test "update rejects arbitrary brex base url" do
     patch brex_item_url(@second_item), params: {
       brex_item: {

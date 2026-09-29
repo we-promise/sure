@@ -5,6 +5,26 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:family_admin)
   end
 
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { name: "Renamed Lunch Flow" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :success
+    assert_includes response.body, %(target="lunchflow-providers-panel")
+    assert_includes response.body, %(id="lunchflow-providers-panel")
+    assert_equal "Renamed Lunch Flow", lunchflow_items(:one).reload.name
+  end
+
+  test "invalid non-Turbo update redirects back instead of rendering a missing template" do
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { name: "" } },
+          headers: { "HTTP_REFERER" => settings_providers_url }
+
+    assert_redirected_to settings_providers_url
+    assert_match "Name can't be blank", flash[:alert]
+  end
+
   test "setup accounts renders German subtype options without English fallbacks" do
     ensure_tailwind_build
     @user.update!(locale: "de")

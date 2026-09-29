@@ -451,7 +451,7 @@ class LunchflowItemsController < ApplicationController
 
   def update
     if @lunchflow_item.update(lunchflow_params)
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[:notice] = t(".success")
         @lunchflow_items = Current.family.lunchflow_items.ordered
         render turbo_stream: [
@@ -468,14 +468,14 @@ class LunchflowItemsController < ApplicationController
     else
       @error_message = @lunchflow_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "lunchflow-providers-panel",
           partial: "settings/providers/lunchflow_panel",
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        render :edit, status: :unprocessable_entity
+        redirect_back_or_to accounts_path, alert: @error_message
       end
     end
   end

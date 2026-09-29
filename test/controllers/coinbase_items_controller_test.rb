@@ -24,6 +24,24 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
     assert @coinbase_item.scheduled_for_deletion?
   end
 
+  test "invalid create outside a frame redirects to the providers page with a 303" do
+    assert_no_difference "CoinbaseItem.count" do
+      post coinbase_items_url, params: { coinbase_item: { api_key: "", api_secret: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
+  test "invalid update outside a frame redirects to the providers page with a 303" do
+    patch coinbase_item_url(@coinbase_item), params: { coinbase_item: { api_key: "" } }
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
   test "should sync coinbase item" do
     post sync_coinbase_item_url(@coinbase_item)
     assert_response :redirect

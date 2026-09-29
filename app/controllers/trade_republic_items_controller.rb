@@ -643,10 +643,6 @@ class TradeRepublicItemsController < ApplicationController
       @trade_republic_item.destroy_later if @trade_republic_item.trade_republic_accounts.none?
     end
 
-    def turbo_panel_request?
-      turbo_frame_request? || request.format.turbo_stream?
-    end
-
     def render_panel_error(message)
       @error_message = message
 

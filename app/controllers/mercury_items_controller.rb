@@ -434,7 +434,7 @@ class MercuryItemsController < ApplicationController
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        render :new, status: :unprocessable_entity
+        redirect_to settings_providers_path, alert: @error_message, status: :see_other
       end
     end
   end
@@ -449,7 +449,7 @@ class MercuryItemsController < ApplicationController
     if @mercury_item.update(permitted_params)
       Rails.cache.delete(mercury_accounts_cache_key(@mercury_item)) if expire_accounts_cache
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[:notice] = t(".success")
         @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
         render turbo_stream: [
@@ -466,14 +466,14 @@ class MercuryItemsController < ApplicationController
     else
       @error_message = @mercury_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "mercury-providers-panel",
           partial: "settings/providers/mercury_panel",
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        render :edit, status: :unprocessable_entity
+        redirect_to settings_providers_path, alert: @error_message, status: :see_other
       end
     end
   end

@@ -37,6 +37,16 @@ class IbkrItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch ibkr_item_url(@ibkr_item),
+          params: { ibkr_item: { query_id: "", token: "" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :success
+    assert_includes response.body, %(target="ibkr-providers-panel")
+    assert_includes response.body, %(id="ibkr-providers-panel")
+  end
+
   test "complete_account_setup creates investment account and provider link" do
     assert_difference "Account.count", 1 do
       assert_difference "AccountProvider.count", 1 do
