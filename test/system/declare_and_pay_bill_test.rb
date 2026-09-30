@@ -29,7 +29,9 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
     click_on I18n.t("bills.index.add_bill"), match: :first
     fill_in I18n.t("recurring_transactions.form.name_label"), with: "Watson Property"
     fill_in I18n.t("recurring_transactions.form.amount_label"), with: "2150"
-    fill_in I18n.t("recurring_transactions.form.first_due_on_label"), with: due.strftime("%m/%d/%Y")
+    # A Date, not a typed string: Capybara sets it as ISO, where typed digits
+    # land in whatever day/month order the browser's locale uses.
+    fill_in I18n.t("recurring_transactions.form.first_due_on_label"), with: due
     # Account is optional (DS::Select is a custom combobox; the family
     # fallback covers candidates), so the bill is declared without one.
     click_button I18n.t("recurring_transactions.form.submit")
