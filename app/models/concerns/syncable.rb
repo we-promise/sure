@@ -44,8 +44,9 @@ module Syncable
     end
   end
 
-  # Schedules a sync for syncable.  If there is an existing sync pending/syncing for this syncable,
-  # we do not create a new sync, and attempt to expand the sync window if needed.
+  # Schedules a sync for syncable. If there is an existing pending sync, widen
+  # its window. If work is already running, queue a follow-up to run afterward
+  # so it can use data committed during the active sync.
   #
   # NOTE: Uses `visible` scope (syncs < 5 min old) instead of `incomplete` to prevent
   # getting stuck on stale syncs after server/Sidekiq restarts. If a sync is older than
@@ -53,14 +54,33 @@ module Syncable
   def sync_later(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     Sync.transaction do
       with_lock do
-        sync = self.syncs.visible.first
+        # Prefer a queued sync over one already running. Queued follow-up syncs
+        # can still have their requested window widened; a running sync cannot.
+        sync = self.syncs.visible.where(status: "pending").ordered.first
+        sync ||= self.syncs.where(status: "syncing").ordered.first
 
         if sync
-          Rails.logger.info("There is an existing recent sync, expanding window if needed (#{sync.id})")
-          sync.expand_window_if_needed(window_start_date, window_end_date)
+          if sync.pending?
+            Rails.logger.info("There is an existing pending sync, expanding window if needed (#{sync.id})")
+            sync.expand_window_if_needed(window_start_date, window_end_date)
+          else
+            # A running sync may already have read the ledger and chosen its
+            # incremental starting balance. Queue a serialized follow-up so a
+            # mutation made during that sync is recalculated against fresh
+            # entries after it finishes.
+            Rails.logger.info("There is an existing running sync, queueing a follow-up (#{sync.id})")
+            sync = self.syncs.create!(
+              parent: parent_sync || sync.parent,
+              wait_for_sync: sync,
+              window_start_date: window_start_date,
+              window_end_date: window_end_date
+            )
+
+            SyncJob.perform_later(sync)
+          end
 
           # Update parent relationship if one is provided and sync doesn't already have a parent
-          if parent_sync && !sync.parent_id
+          if parent_sync && !sync.parent_id && sync.pending?
             sync.update!(parent: parent_sync)
           end
         else

@@ -14,6 +14,7 @@ class Sync < ApplicationRecord
 
   belongs_to :parent, class_name: "Sync", optional: true
   has_many :children, class_name: "Sync", foreign_key: :parent_id, dependent: :destroy
+  belongs_to :wait_for_sync, class_name: "Sync", optional: true
 
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
   scope :incomplete, -> { where("syncs.status IN (?)", %w[pending syncing]) }
@@ -202,7 +203,39 @@ class Sync < ApplicationRecord
         return
       end
 
-      start!
+      # Serialize sync starts for a syncable. This also protects against an
+      # older queued job waking up after a newer sync has already started.
+      start_result = syncable.with_lock do
+        with_lock do
+          if may_start?
+            blocking_sync = syncable.syncs
+              .where(status: "syncing")
+              .where.not(id: id)
+              .ordered
+              .first
+
+            if blocking_sync
+              update!(wait_for_sync: blocking_sync)
+              :wait
+            else
+              update!(wait_for_sync: nil) if wait_for_sync_id.present?
+              start!
+              :started
+            end
+          else
+            :skip
+          end
+        end
+      end
+
+      if start_result == :wait
+        SyncJob.set(wait: SyncJob::RETRY_DELAY).perform_later(
+          self,
+          balances_only: respond_to?(:balances_only?) && balances_only?
+        )
+        return
+      end
+      return unless start_result == :started
 
       begin
         syncable.perform_sync(self)

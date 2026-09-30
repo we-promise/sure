@@ -1,5 +1,6 @@
 class SyncJob < ApplicationJob
   queue_as :high_priority
+  RETRY_DELAY = 10.seconds
 
   # Accept a runtime-only flag to influence sync behavior without persisting config
   def perform(sync, balances_only: false)
