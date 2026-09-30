@@ -33,7 +33,6 @@ class Family::FinancialDataReset
     tags
     taggings
     merchants
-    family_merchant_associations
     provider_items
     syncs
     active_storage_attachments
@@ -144,7 +143,6 @@ class Family::FinancialDataReset
       scope(:rule_conditions).destroy_all
       scope(:budget_categories).destroy_all
       scope(:taggings).destroy_all
-      scope(:family_merchant_associations).delete_all
       scope(:account_statements).destroy_all
       scope(:family_exports).destroy_all
       scope(:imports).destroy_all

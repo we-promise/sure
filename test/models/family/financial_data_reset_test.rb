@@ -193,7 +193,6 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
       )
       tag = family.tags.create!(name: "#{label} Tag", color: "#12B76A")
       merchant = family.merchants.create!(name: "#{label} Merchant", color: "#12B76A")
-      family_merchant_association = FamilyMerchantAssociation.create!(family: family, merchant: merchant)
       transaction = Transaction.create!(category: category, merchant: merchant)
       tagging = transaction.taggings.create!(tag: tag)
       entry = account.entries.create!(
