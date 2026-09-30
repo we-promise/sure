@@ -8,6 +8,7 @@ en:
         title: "Push notifications"
         requested_at: "Latest test requested at %{time}"
         result_help: "APNs acceptance does not confirm delivery to your device. Refresh to see worker results. Results are retained for 24 hours."
+        results_label: "Test results"
         device: "Device %{number}"
         pending: "Pending"
         refresh: "Refresh results"
@@ -81,6 +82,7 @@ en:
           run_checks: Run checks again
           last_checked: "Live checks completed %{time_ago} ago. Results are cached briefly."
           not_checked_help: Open the AI status URL directly or run the checks to verify service liveness.
+          loading: "Running live checks…"
           alerts:
             custom_openai:
               title: The hosted vector-store check failed at this custom endpoint

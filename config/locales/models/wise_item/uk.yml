@@ -1,0 +1,12 @@
+---
+uk:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: Приватний ключ SCA
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: неможливо зберегти, оскільки шифрування Active Record не налаштовано в цій інсталяції

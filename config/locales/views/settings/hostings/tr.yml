@@ -133,7 +133,7 @@ tr:
           closed: Kapalı
           invite_only: Davet ile
           open: Açık
-        title: Onboarding
+        title: Kayıt
       llm_provider_selector:
         data_retention: API girdileri varsayılan olarak modelleri eğitmek için kullanılmaz;
           sağlayıcıların barındırılan API'leri, güven ve güvenlik amacıyla verileri
@@ -188,6 +188,14 @@ tr:
         title: OpenAI
         uri_base_label: API Temel URL'si (İsteğe Bağlı)
         uri_base_placeholder: https://api.openai.com/v1 (varsayılan)
+        model_function_calling_help: Yapay zeka asistanı verilerinizi fonksiyon çağrılarıyla okur; bu nedenle sağlayıcınızın araç/fonksiyon çağırmayı desteklediğini belirttiği bir model seçin. Bu desteği olmayan modellerde sohbet, anlaşılması güç bir sağlayıcı hatasıyla başarısız olur.
+        model_function_calling_link: Yapılandırılan modeli kontrol et
+        timeout_heading: Zaman aşımları
+        timeout_description: OpenAI uyumlu model çağrılarının Sure vazgeçmeden önce ne kadar süre çalışabileceğini belirler. Yavaş bir donanımda yerel model çalıştırıyorsanız bu değerleri artırın.
+        openai_request_timeout_label: Saniye Cinsinden İstek Zaman Aşımı (İsteğe Bağlı)
+        openai_request_timeout_help: 'Varsayılan: 60. Otomatik kategorizasyon, satıcı tespiti, sohbet, PDF işleme ve vektör deposu çağrıları dahil her OpenAI uyumlu HTTP isteğine uygulanır. OPENAI_REQUEST_TIMEOUT bu alanı geçersiz kılar.'
+        ai_response_timeout_label: Saniye Cinsinden Yanıt Zaman Aşımı (İsteğe Bağlı)
+        ai_response_timeout_help: 'Varsayılan: 90. Yalnızca sohbetin tüm yanıt turunu izleyen zamanlayıcıya uygulanır; bu yüzden toplam olarak hesaplayın: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × istek zaman aşımı, artı araç çalıştırma ve kuyruk süresi. AI_RESPONSE_TIMEOUT bu alanı geçersiz kılar.'
       provider_selection:
         binance_public_hint: ücretsiz, API anahtarı gerekmez -- yalnızca kripto (BTC,
           ETH vb.)
@@ -211,6 +219,7 @@ tr:
           tinkoff_invest: T-Invest (T-Bank)
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+          mansa: Mansa
         requires_api_key: API anahtarı gerektirir
         requires_api_key_alpha_vantage: API anahtarı gerektirir, günlük 25 çağrı sınırı
         requires_api_key_eodhd: API anahtarı gerektirir, günlük 20 çağrı sınırı
@@ -222,6 +231,7 @@ tr:
           fiyatları + marka logoları
         twelve_data_hint: API anahtarı gerektirir, günlük 800 kredi
         yahoo_finance_hint: ücretsiz, API anahtarı gerekmez
+        requires_api_key_mansa: API anahtarı gerektirir, günde 100 çağrılık ücretsiz katman -- yalnızca NGX (Nijerya Borsası)
       show:
         ai_assistant: Yapay Zeka Asistanı
         clear_cache: Veri önbelleğini temizle
@@ -239,6 +249,7 @@ tr:
         invites: Davet Kodları
         sync_settings: Eşitleme Ayarları
         title: Kendi Sunucunda Barındırma
+        property_valuation_providers: Gayrimenkul Değerleme Sağlayıcıları
       sync_auto_sync_scheduler!:
         scheduler_sync_failed: Ayarlar kaydedildi, ancak eşitleme zamanlaması güncellenemedi.
           Lütfen tekrar deneyin veya sunucu günlüklerini kontrol edin.
@@ -293,6 +304,7 @@ tr:
         step_2: Salt okunur erişimle bir token oluşturun.
         step_3: Token'ı kopyalayıp aşağıya yapıştırın.
         title: T-Invest (T-Bank)
+        moex_only_notice: Yukarıdaki fiyatlar için etkin değil — bir token yapılandırıldığında, yukarıdaki onay kutusundan bağımsız olarak tüm menkul kıymetlerinizin marka logolarını almak için T-Invest kullanılır.
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} günlük API çağrısı kullanıldı (%{percentage})"
         description: Twelve Data tarafından sağlanan API anahtarını girin
@@ -336,3 +348,35 @@ tr:
         title: Yahoo Finance
         troubleshooting: İnternet bağlantınızı ve güvenlik duvarı ayarlarınızı kontrol
           edin. Yahoo Finance geçici olarak kullanılamayabilir.
+        status_healthy: Yahoo Finance etkin ve çalışıyor.
+        status_rate_limited: Yahoo Finance istekleri geçici olarak sınırlıyor.
+        rate_limited_title: Yahoo Finance istek sınırına ulaşıldı.
+        rate_limited_message: Herhangi bir işlem yapmanız gerekmez. Sure 30 dakika boyunca ek durum kontrollerinden kaçınacak. Fiyat ve döviz kuru işlemleri bundan bağımsız olarak devam eder.
+        status_unavailable: Yahoo Finance şu anda kullanılamıyor.
+        unavailable_title: Yahoo Finance doğrulanamadı.
+        unavailable_message: Yahoo Finance'e ulaşılamadı veya beklenmeyen bir yanıt döndü. İnternet bağlantınızı kontrol edip daha sonra tekrar deneyin.
+        status_unknown: Yahoo Finance durumu kontrol ediliyor.
+      rentcast_settings:
+        title: RentCast
+        description: Mülk eklerken ABD'deki mülk ayrıntılarını ve değer tahminlerini sorgulamak için RentCast API anahtarınızı girin. Ücretsiz katman, mülk sorguları ve günlük değerleme güncellemeleri arasında paylaşılan ayda 50 API isteğiyle sınırlıdır. Ücretli bir planda bu sınırı RENTCAST_MAX_REQUESTS_PER_MONTH ortam değişkeniyle yükseltin.
+        env_configured_message: RENTCAST_API_KEY ortam değişkeni aracılığıyla başarıyla yapılandırıldı.
+        label: API Anahtarı
+        placeholder: RentCast API anahtarınızı buraya girin
+        usage: Aylık %{limit} isteğin %{used} tanesi kullanıldı
+      realie_settings:
+        title: Realie
+        description: Mülk eklerken ABD'deki mülk ayrıntılarını ve değer tahminlerini sorgulamak için Realie API anahtarınızı girin. Ücretsiz katman, mülk sorguları ve günlük değerleme güncellemeleri arasında paylaşılan ayda 25 API isteğiyle sınırlıdır. Ücretli bir planda bu sınırı REALIE_MAX_REQUESTS_PER_MONTH ortam değişkeniyle yükseltin.
+        env_configured_message: REALIE_API_KEY ortam değişkeni aracılığıyla başarıyla yapılandırıldı.
+        label: API Anahtarı
+        placeholder: Realie API anahtarınızı buraya girin
+        usage: Aylık %{limit} isteğin %{used} tanesi kullanıldı
+      mansa_settings:
+        title: Mansa
+        description: Mansa API'den aldığınız API anahtarını girin. Buradaki başka hiçbir sağlayıcının kapsamadığı NGX'i (Nijerya Borsası) destekler. Mansa diğer Afrika borsalarını da kapsar, ancak bu entegrasyonla yalnızca NGX doğrulanmıştır.
+        env_configured_message: MANSA_API_KEY ortam değişkeni aracılığıyla başarıyla yapılandırıldı.
+        label: API Anahtarı
+        placeholder: Mansa API anahtarınızı buraya girin
+        show_details: (ayrıntıları göster)
+        step_1_html: <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> adresine gidin ve ücretsiz API anahtarınızı alın -- kart gerekmez.
+        step_2: API anahtarınızı kopyalayıp aşağıya yapıştırın.
+        rate_limit_warning: Mansa'nın ücretsiz katmanı günde 100 API çağrısıyla sınırlıdır ve yalnızca güncel fiyatları sunar -- geçmiş fiyatlar ücretli plan gerektirir. Bu entegrasyonla yalnızca NGX (Nijerya Borsası) doğrulanmıştır; Mansa'nın kapsadığı diğer Afrika borsaları burada henüz desteklenmemektedir.

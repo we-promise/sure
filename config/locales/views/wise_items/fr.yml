@@ -51,10 +51,7 @@ fr:
       description: Connectez-vous en utilisant %{name}
       name: "Wise — %{name}"
     provider_panel:
-      accounts_link: Comptes
       add_connection: Ajouter une connexion Wise
-      configured_html: Connecté et synchronisation en cours. Rendez-vous sur l'onglet
-        %{accounts_link} pour gérer vos comptes.
       connect: Connecter Wise
       connection_name_label: Nom de la connexion
       connection_name_placeholder: Wise Personnel
@@ -89,11 +86,9 @@ fr:
         open_tokens: Accédez à Settings → Connect and manage apps → Developer tools → API tokens
         sign_in_html: Visitez %{link} et connectez-vous à votre compte
       keep_token_placeholder: Laisser vide pour conserver le jeton actuel
-      not_configured: Non configuré
       sandbox_note_html: Utilisez l'URL de base <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>)
         pour les tests. Définissez <code>WISE_BASE_URL</code> dans votre environnement.
       setup_accounts: Configurer des comptes
-      setup_title: 'Instructions de configuration :'
       sync: Synchroniser
       token_label: Jeton API
       token_placeholder: Collez votre jeton API personnel Wise

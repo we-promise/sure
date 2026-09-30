@@ -146,7 +146,7 @@ fr:
         other: "%{count} requièrent votre attention"
       needs_attention: Requiert votre attention
       needs_review: À vérifier
-      notice_price: "%{name} a changé de prix : %{from} → %{to} (%{percent} %)"
+      notice_price: "%{name} a changé de prix : %{from} → %{to} (%{percent})"
       notice_renewal: "%{name} se renouvelle le %{date}"
       notice_trial: L'essai de %{name} se termine le %{date}
       notices_routine:
@@ -207,7 +207,7 @@ fr:
       unconvertible:
         one: 1 facture n'est pas incluse, aucun taux de change disponible
         other: "%{count} factures ne sont pas incluses, aucun taux de change disponible"
-      view_upcoming: Voir les prochaines
+      view_calendar: Voir le calendrier
     paid_from: depuis %{account}
     paid_label: Payé
     paid_over: Payé %{paid}, plus que prévu

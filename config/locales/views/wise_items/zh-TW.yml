@@ -55,7 +55,6 @@ zh-TW:
         one: '%{count} 個 Wise 帳戶同步無法排程。'
         other: '%{count} 個 Wise 帳戶同步無法排程。'
     provider_panel:
-      setup_title: 設定說明：
       add_connection: 新增 Wise 連線
       token_label: API 權杖 (API Token)
       token_placeholder: 貼上您的 Wise 個人 API Token
@@ -69,9 +68,6 @@ zh-TW:
       disconnect: 中斷連線
       disconnect_label: 中斷 %{name}
       disconnect_confirm: 確定要中斷 %{name} 的連線嗎？這會移除所有已同步的帳戶資料。
-      accounts_link: 帳戶管理
-      configured_html: 已連線並同步中。請前往 %{accounts_link} 分頁管理您的帳戶。
-      not_configured: 未設定
       sandbox_note_html: 測試時請使用 <strong>sandbox</strong> 基礎網址（<code>https://api.sandbox.transferwise.tech</code>）。在環境變數中設定 <code>WISE_BASE_URL</code>。
       encryption_warning:
         title: 資料庫加密未設定
