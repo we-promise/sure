@@ -10,6 +10,7 @@ class Account::Syncer
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)
     apply_provider_balance_overrides
+    report_anchor_dated_away_from_holdings
   end
 
   def perform_post_sync
@@ -34,6 +35,47 @@ class Account::Syncer
     rescue => e
       Rails.logger.error("Error syncing market data for account #{account.id}: #{e.message}")
       Sentry.capture_exception(e)
+    end
+
+    # A provider that dates its holdings itself, but whose balance is anchored
+    # on the day of the sync, leaves the two a day apart; the reverse
+    # calculator reads the difference as cash, on every day, in the amount of
+    # the day's move (#3815 in IBKR, #3874 in Plaid). Nothing fails, so the only
+    # place it can show is here, once every provider has written. One entry per
+    # distinct gap: the same pair of dates on the next sync adds nothing.
+    def report_anchor_dated_away_from_holdings
+      return unless account.linked? && account.has_current_anchor?
+
+      holdings_date = account.latest_provider_holdings_snapshot_date
+      return if holdings_date.nil?
+
+      anchor_date = account.current_anchor_date
+      return if anchor_date == holdings_date
+      return if anchor_gap_already_reported?(anchor_date, holdings_date)
+
+      gap_days = (anchor_date - holdings_date).to_i
+      account_provider = account.account_providers.first
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Balance anchor dated #{gap_days.abs} day(s) #{gap_days.positive? ? 'after' : 'before'} the newest provider holding",
+        source: self.class.name,
+        provider_key: account_provider&.provider_type&.delete_suffix("Account")&.underscore,
+        account: account,
+        account_provider: account_provider,
+        family: account.family,
+        metadata: { anchor_date: anchor_date.to_s, holdings_date: holdings_date.to_s, gap_days: gap_days }
+      )
+    rescue => e
+      Rails.logger.error("Error checking anchor date for account #{account.id}: #{e.class} - #{e.message}")
+    end
+
+    def anchor_gap_already_reported?(anchor_date, holdings_date)
+      DebugLogEntry
+        .where(account: account, category: "provider_sync", source: self.class.name)
+        .where("metadata->>'anchor_date' = ? AND metadata->>'holdings_date' = ?", anchor_date.to_s, holdings_date.to_s)
+        .exists?
     end
 
     def apply_provider_balance_overrides
