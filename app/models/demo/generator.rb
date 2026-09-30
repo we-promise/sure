@@ -1,6 +1,11 @@
 require "securerandom"
 
 class Demo::Generator
+  # Sentinel Stripe subscription ID used for demo families.  This is not a real
+  # Stripe object, so any code path that would call the Stripe API must guard
+  # against it before making a network request.
+  DEMO_STRIPE_SUBSCRIPTION_ID = "sub_demo_123"
+
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
   #
@@ -165,7 +170,7 @@ class Demo::Generator
         date_format: "%m-%d-%Y"
       )
 
-      family.start_subscription!("sub_demo_123") if subscribed
+      family.start_subscription!(DEMO_STRIPE_SUBSCRIPTION_ID) if subscribed
 
       # Admin user
       family.users.create!(

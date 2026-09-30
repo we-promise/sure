@@ -68,6 +68,14 @@ class Family::SubscribeableTest < ActiveSupport::TestCase
     recent_family.destroy
   end
 
+  test "destroying a family with the demo sentinel stripe ID does not call Stripe" do
+    family = Family.create!(name: "Demo Family")
+    family.start_subscription!(Demo::Generator::DEMO_STRIPE_SUBSCRIPTION_ID)
+    Provider::Registry.expects(:get_provider).with(:stripe).never
+
+    assert family.destroy
+  end
+
   test "requires_data_archive? returns false with few transactions" do
     inactive = families(:inactive_trial)
     assert_not inactive.requires_data_archive?
