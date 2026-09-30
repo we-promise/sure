@@ -1,8 +1,12 @@
 module BillsHelper
-  # A bill's next due date reads "Oct 5" when it falls this year and gains the
-  # year otherwise, so an every-2-years bill never shows "Sep 1" for a date
-  # that is years out. Same rule as Period#label. Payment dates are historical
-  # and always carry the year instead.
+  # A date the bill is counting towards or from (a due date, the next due
+  # date, a trial end, a renewal) reads "Oct 5" when it falls this year and
+  # gains the year otherwise, so an every-2-years bill never shows "Sep 1" for
+  # a date that is years out. Same rule as Period#label. occurrence_due_label
+  # sends past cycles through here too (settled, overdue, due since), which
+  # stays unambiguous: a date read without a year is this year's. A recorded
+  # event (a payment, a cancellation) always carries the year instead, with
+  # :short_with_year.
   def bills_upcoming_date(date)
     l(date, format: date.year == Date.current.year ? :short : :short_with_year)
   end
@@ -201,24 +205,6 @@ module BillsHelper
     t("bills.paycheck.income_detected")
   end
 
-  # Leads with the relative distance, which is what tells you whether to act, and
-  # keeps the absolute date alongside it for anything further out than a few days.
-  #
-  # Relative wording is also the safer default: the app runs in UTC while users do
-  # not, so a bare calendar date can read as off-by-one for part of every day.
-  def bills_due_label(bill)
-    days = (bill.next_due_date - Date.current).to_i
-    date = l(bill.next_due_date, format: :short)
-
-    if days.negative?
-      t("bills.due_label.overdue", count: days.abs, date: date)
-    elsif days.zero?
-      t("bills.due_label.today")
-    else
-      t("bills.due_label.upcoming", count: days, date: date)
-    end
-  end
-
   # Which account the charge lands on. Worth showing only when it tells the rows
   # apart: on a single-account family it repeated the same name down every line,
   # which is nineteen copies of a fact carrying no information. The bill's
@@ -248,7 +234,12 @@ module BillsHelper
              .distinct.count(:account_id) > 1
   end
 
-  # The occurrence-level twin of bills_due_label: relative-first, snooze-aware.
+  # Relative-first and snooze-aware: an upcoming or overdue cycle leads with how
+  # far away it is, which is what tells you whether to act, and keeps the
+  # absolute date alongside it.
+  #
+  # Relative wording is also the safer default: the app runs in UTC while users do
+  # not, so a bare calendar date can read as off-by-one for part of every day.
   def occurrence_due_label(occurrence)
     due = occurrence.effective_due_on
     days = (due - Date.current).to_i

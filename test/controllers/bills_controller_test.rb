@@ -945,30 +945,72 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "trial, renewal and price history follow the bill into its detail" do
-    sub = create_bill(name: "STREAMFLIX", amount: 24.99)
-    sub.update!(bill_type: "subscription", trial_ends_on: Date.current + 5,
-                renews_on: Date.current + 30)
-    sub.recurring_price_changes.create!(
-      effective_on: 2.months.ago.to_date, previous_amount: 19.99, new_amount: 24.99,
-      currency: "USD", source: "detected"
-    )
+    # Mid-year, so both dates stay in this year and read without one.
+    travel_to Date.new(2026, 6, 10) do
+      sub = create_bill(name: "STREAMFLIX", amount: 24.99)
+      sub.update!(bill_type: "subscription", trial_ends_on: Date.current + 5,
+                  renews_on: Date.current + 30)
+      sub.recurring_price_changes.create!(
+        effective_on: 2.months.ago.to_date, previous_amount: 19.99, new_amount: 24.99,
+        currency: "USD", source: "detected"
+      )
 
-    # Trial and renewal are STATE: they change what you might do about the bill
-    # today, so both routes to it must say so. Price history is the record of
-    # how it got here, which is the page's job.
-    { "page" => bill_url(sub),
-      "expansion" => bill_url(sub, display: "pane", frame: "x") }.each do |label, url|
-      get url
-      assert_response :success
-      assert_match I18n.t("bills.detail.trial_chip", date: I18n.l(Date.current + 5, format: :short)),
-        response.body, "the #{label} lost the trial chip"
-      assert_match I18n.t("bills.detail.renews_chip", date: I18n.l(Date.current + 30, format: :short)),
-        response.body, "the #{label} lost the renewal date"
+      # Trial and renewal are STATE: they change what you might do about the bill
+      # today, so both routes to it must say so. Price history is the record of
+      # how it got here, which is the page's job.
+      { "page" => bill_url(sub),
+        "expansion" => bill_url(sub, display: "pane", frame: "x") }.each do |label, url|
+        get url
+        assert_response :success
+        assert_match I18n.t("bills.detail.trial_chip", date: I18n.l(Date.current + 5, format: :short)),
+          response.body, "the #{label} lost the trial chip"
+        assert_match I18n.t("bills.detail.renews_chip", date: I18n.l(Date.current + 30, format: :short)),
+          response.body, "the #{label} lost the renewal date"
+        # The short date is a prefix of the dated one, so the match above holds
+        # either way; only its absence shows no year was added.
+        assert_not_includes response.body,
+          I18n.t("bills.detail.trial_chip", date: I18n.l(Date.current + 5, format: :short_with_year)),
+          "the #{label}'s trial chip named a year it does not need"
+        assert_not_includes response.body,
+          I18n.t("bills.detail.renews_chip", date: I18n.l(Date.current + 30, format: :short_with_year)),
+          "the #{label}'s renewal chip named a year it does not need"
+      end
+
+      get bill_url(sub)
+      assert_match I18n.t("bills.detail.price_changes"), response.body,
+        "the bill's page keeps the price history"
     end
+  end
 
-    get bill_url(sub)
-    assert_match I18n.t("bills.detail.price_changes"), response.body,
-      "the bill's page keeps the price history"
+  # A yearly subscription routinely renews next year, and "Renews Sep 1" did not
+  # say which September. A cancellation is a recorded event rather than a date
+  # ahead, so it always names its year, in the chip and in the notice beside it.
+  test "subscription dates in another year name it, and a cancellation always does" do
+    travel_to Date.new(2026, 12, 20) do
+      trial_ends_on = Date.new(2027, 1, 5)
+      renews_on = Date.new(2027, 12, 1)
+      cancelled_on = Date.new(2026, 12, 1)
+      sub = create_bill(name: "STREAMFLIX", amount: 24.99, bill_type: "subscription",
+                        trial_ends_on: trial_ends_on, renews_on: renews_on, cancelled_on: cancelled_on)
+
+      { "page" => bill_url(sub),
+        "expansion" => bill_url(sub, display: "pane", frame: "x") }.each do |label, url|
+        get url
+        assert_response :success
+        assert_includes response.body,
+          I18n.t("bills.detail.trial_chip", date: I18n.l(trial_ends_on, format: :short_with_year)),
+          "the #{label}'s trial ends next year and has to say so"
+        assert_includes response.body,
+          I18n.t("bills.detail.renews_chip", date: I18n.l(renews_on, format: :short_with_year)),
+          "the #{label}'s renewal is next year and has to say so"
+        assert_includes response.body,
+          I18n.t("bills.detail.cancelled_chip", date: I18n.l(cancelled_on, format: :short_with_year)),
+          "the #{label}'s cancellation chip names its year even in this one"
+        assert_includes response.body,
+          I18n.t("bills.cancelled_still_scheduled", date: I18n.l(cancelled_on, format: :short_with_year)),
+          "the #{label}'s cancelled notice agrees with the chip beside it"
+      end
+    end
   end
 
   test "notices surface trials, renewals and price changes" do
@@ -1037,7 +1079,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bill_url(bill)
     assert_response :success
     assert_includes response.body,
-      I18n.t("bills.cancelled_still_scheduled", date: I18n.l(bill.cancelled_on, format: :short))
+      I18n.t("bills.cancelled_still_scheduled", date: I18n.l(bill.cancelled_on, format: :short_with_year))
     assert_includes response.body, toggle_status_recurring_transaction_path(bill)
   end
 
@@ -1047,7 +1089,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bill_url(bill)
     assert_response :success
     refute_includes response.body,
-      I18n.t("bills.cancelled_still_scheduled", date: I18n.l(bill.cancelled_on, format: :short))
+      I18n.t("bills.cancelled_still_scheduled", date: I18n.l(bill.cancelled_on, format: :short_with_year))
   end
 
   # The row carries one line of context, so anything on it has to earn the

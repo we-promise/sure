@@ -1,19 +1,21 @@
 <%# locals: (series:) %>
 <%# Trial, renewal and cancellation state, shared by the bill drawer and the
     summary tab so the two never drift apart. Renders nothing when the series
-    carries none of the three. %>
+    carries none of the three. Trial end and renewal are dates ahead, so they
+    name the year only when it is not this one; the cancellation is a recorded
+    event and always names it, as the cancelled notice beside it does. %>
 <% trial = series.trial_ends_on.present? && series.trial_ends_on >= Date.current %>
 <% renews = series.renews_on.present? && series.renews_on >= Date.current %>
 <% if trial || renews || series.cancelled_on.present? %>
   <div class="flex flex-wrap items-center gap-2">
     <% if trial %>
-      <%= render DS::Pill.new(label: t("bills.detail.trial_chip", date: l(series.trial_ends_on, format: :short)), tone: :warning, marker: false) %>
+      <%= render DS::Pill.new(label: t("bills.detail.trial_chip", date: bills_upcoming_date(series.trial_ends_on)), tone: :warning, marker: false) %>
     <% end %>
     <% if renews %>
-      <%= render DS::Pill.new(label: t("bills.detail.renews_chip", date: l(series.renews_on, format: :short)), tone: :neutral, marker: false) %>
+      <%= render DS::Pill.new(label: t("bills.detail.renews_chip", date: bills_upcoming_date(series.renews_on)), tone: :neutral, marker: false) %>
     <% end %>
     <% if series.cancelled_on.present? %>
-      <%= render DS::Pill.new(label: t("bills.detail.cancelled_chip", date: l(series.cancelled_on, format: :short)), tone: :neutral, marker: false) %>
+      <%= render DS::Pill.new(label: t("bills.detail.cancelled_chip", date: l(series.cancelled_on, format: :short_with_year)), tone: :neutral, marker: false) %>
     <% end %>
   </div>
 <% end %>

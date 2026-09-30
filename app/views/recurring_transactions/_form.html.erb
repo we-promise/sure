@@ -100,7 +100,14 @@
 
       <% if recurring_transaction.persisted? %>
         <%# data-units shows a group for the custom interval in that unit, so
-            "every 3 weeks" asks for a weekday and "every 2 months" a day. %>
+            "every 3 weeks" asks for a weekday and "every 2 months" a day.
+
+            Which group a field sits in decides whether it reaches the server:
+            frequency-fields disables the fields of every hidden group, and
+            disabled fields do not submit. A field a preset reads has to sit in
+            a group shown for that preset. Weekday matters most, since
+            weekly and biweekly have no server-side default for it. See
+            apply_frequency_preset. %>
         <div class="grid grid-cols-2 gap-3">
           <div data-frequency-fields-target="group" data-presets="monthly,semimonthly,quarterly,semiannual,annual" data-units="monthly,yearly" class="hidden">
             <%= f.select :frequency_day_of_month, frequency_day_options, { label: t(".frequency_day_label") } %>
@@ -134,6 +141,7 @@
               :id, :name,
               { label: t(".category_label"), include_blank: t(".category_blank") } %>
 
+        <%# Disabled, and so not submitted, unless the type is installment. %>
         <div data-frequency-fields-target="group" data-presets="installment" class="hidden col-span-2">
           <%= f.number_field :end_after_count,
                 label: t(".installment_count_label"),
