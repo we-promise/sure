@@ -366,6 +366,38 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert valuation_data.key?("notes")
   end
 
+
+  test "a member cannot read, change or add valuations on accounts they cannot reach" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member RW", scopes: [ "read_write" ], source: "web",
+                         display_key: "test_member_#{SecureRandom.hex(8)}")
+
+    private_account = @family.accounts.create!(name: "Admin Private Savings", owner: @user, balance: 0,
+                                               currency: "USD", accountable: Depository.new)
+    read_only = @family.accounts.create!(name: "Admin Read-only Savings", owner: @user, balance: 0,
+                                         currency: "USD", accountable: Depository.new)
+    read_only.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+    hidden = private_account.entries.create!(name: "Balance", date: 1.day.ago.to_date, amount: 100,
+                                             currency: "USD", entryable: Valuation.new(kind: "reconciliation"))
+    shared = read_only.entries.create!(name: "Balance", date: 1.day.ago.to_date, amount: 100,
+                                       currency: "USD", entryable: Valuation.new(kind: "reconciliation"))
+    headers = api_headers(key)
+
+    get "/api/v1/valuations/#{hidden.id}", headers: headers
+    assert_response :not_found
+
+    get "/api/v1/valuations/#{shared.id}", headers: headers
+    assert_response :success, "the read-only share must still be readable, or this proves nothing"
+
+    patch "/api/v1/valuations/#{shared.id}", params: { valuation: { amount: 999 } }, headers: headers
+    assert_response :not_found
+    assert_equal 100, shared.reload.amount
+
+    post "/api/v1/valuations", params: { valuation: { account_id: read_only.id, amount: 5, date: Date.current } }, headers: headers
+    assert_response :not_found
+  end
+
   private
 
     def api_headers(api_key)

@@ -138,7 +138,12 @@ class CategoriesController < ApplicationController
 
     def set_transaction
       if params[:transaction_id].present?
-        @transaction = Current.family.transactions.find(params[:transaction_id])
+        # Assigning a category annotates the transaction, so the account must be
+        # one this member may annotate, not merely one in the same family.
+        @transaction = Current.family.transactions
+          .joins(entry: :account)
+          .merge(Account.annotatable_by(Current.user))
+          .find(params[:transaction_id])
       end
     end
 

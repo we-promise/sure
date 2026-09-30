@@ -3,6 +3,8 @@
 require "test_helper"
 
 class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     @user.api_keys.active.destroy_all
@@ -998,6 +1000,75 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert trade_data["account"].key?("name")
     assert trade_data["account"].key?("account_type")
     assert trade_data.key?("notes")
+  end
+
+
+  test "a member cannot list, read, change or add trades on accounts they cannot reach" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member RW", key: ApiKey.generate_secure_key, scopes: %w[read_write], source: "web")
+    Redis.new.del("api_rate_limit:#{key.id}")
+
+    private_account = member.family.accounts.create!(name: "Admin Private Brokerage", owner: @user, balance: 1_000,
+                                                     currency: "USD", accountable: Investment.new)
+    read_only = member.family.accounts.create!(name: "Admin Read-only Brokerage", owner: @user, balance: 1_000,
+                                               currency: "USD", accountable: Investment.new)
+    read_only.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+    hidden = create_trade(securities(:aapl), account: private_account, qty: 1, date: Date.current, price: 100).trade
+    visible = create_trade(securities(:aapl), account: read_only, qty: 1, date: Date.current, price: 100).trade
+
+    get "/api/v1/trades", params: { per_page: 100 }, headers: api_headers(key)
+    ids = JSON.parse(response.body)["trades"].map { |t| t["id"] }
+    assert_includes ids, visible.id, "the read-only share must still be listed, or this proves nothing"
+    assert_not_includes ids, hidden.id
+
+    get "/api/v1/trades/#{hidden.id}", headers: api_headers(key)
+    assert_response :not_found
+
+    get "/api/v1/trades/#{visible.id}", headers: api_headers(key)
+    assert_response :success
+
+    patch "/api/v1/trades/#{visible.id}", params: { trade: { qty: 2 } }, headers: api_headers(key)
+    assert_response :not_found
+    delete "/api/v1/trades/#{visible.id}", headers: api_headers(key)
+    assert_response :not_found
+    assert Trade.exists?(visible.id)
+
+    post "/api/v1/trades", params: { trade: { account_id: read_only.id, type: "buy", date: Date.current,
+                                              qty: 1, price: 100, ticker: "AAPL|XNAS" } }, headers: api_headers(key)
+    assert_response :not_found
+  end
+
+  test "a linked deposit or withdrawal needs write access to the other account" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member RW", key: ApiKey.generate_secure_key, scopes: %w[read_write], source: "web")
+    Redis.new.del("api_rate_limit:#{key.id}")
+
+    brokerage = member.family.accounts.create!(name: "Member Brokerage", owner: member, balance: 1_000,
+                                               currency: "USD", accountable: Investment.new)
+    read_only = member.family.accounts.create!(name: "Admin Read-only Checking", owner: @user, balance: 1_000,
+                                               currency: "USD", accountable: Depository.new)
+    read_only.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+    full_control = member.family.accounts.create!(name: "Admin Shared Checking", owner: @user, balance: 1_000,
+                                                  currency: "USD", accountable: Depository.new)
+    full_control.account_shares.create!(user: member, permission: "full_control", include_in_finances: true)
+    unshared = member.family.accounts.create!(name: "Admin Private Checking", owner: @user, balance: 1_000,
+                                              currency: "USD", accountable: Depository.new)
+
+    [ [ "deposit", read_only ], [ "withdrawal", read_only ], [ "withdrawal", unshared ] ].each do |type, other|
+      assert_no_difference [ "Entry.count", "Transfer.count" ] do
+        post "/api/v1/trades", params: { trade: { account_id: brokerage.id, type: type, date: Date.current,
+                                                  amount: 50, transfer_account_id: other.id } }, headers: api_headers(key)
+      end
+      assert_response :not_found
+    end
+
+    assert_difference "Transfer.count", 1 do
+      post "/api/v1/trades", params: { trade: { account_id: brokerage.id, type: "withdrawal", date: Date.current,
+                                                amount: 50, transfer_account_id: full_control.id } }, headers: api_headers(key)
+    end
+    assert_response :created
   end
 
   private

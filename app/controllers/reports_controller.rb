@@ -522,6 +522,9 @@ class ReportsController < ApplicationController
         .joins(entry: :account)
         .where(entries: { date: @period.date_range })
         .merge(Account.included_in_reports)
+        # Same account set as the holdings above, so the card only shows
+        # disposals from accounts this member's statement covers.
+        .where(entries: { account_id: investment_statement.investment_accounts.select(:id) })
         .where("trades.qty < 0")
         # A transfer out has the same negative quantity as a sale and would be
         # counted and listed as one. Nothing was sold, so it belongs in neither.

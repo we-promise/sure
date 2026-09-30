@@ -740,6 +740,64 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
   end
 
+  # A member sees realized gains only from accounts shared with them. The
+  # owner's private brokerage must not leak its disposals into the member's card.
+  test "realized gains list only the viewer's accessible disposals" do
+    date = Date.current.beginning_of_month
+    member = users(:family_member)
+
+    mine = @family.accounts.create!(name: "Member Brokerage", owner: member, balance: 1_000,
+                                    currency: "USD", accountable: Investment.new)
+    theirs = @family.accounts.create!(name: "Admin Private Brokerage", owner: users(:family_admin), balance: 1_000,
+                                      currency: "USD", accountable: Investment.new)
+
+    own_security = Security.create!(ticker: "OWN#{SecureRandom.hex(3)}", name: "Member Holding")
+    private_security = Security.create!(ticker: "PRV#{SecureRandom.hex(3)}", name: "Admin Holding")
+
+    mine.holdings.create!(security: own_security, date: date, qty: 5, price: 150,
+                          amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+    theirs.holdings.create!(security: private_security, date: date, qty: 5, price: 150,
+                            amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+    create_trade(own_security, account: mine, qty: -2, date: date, price: 150)
+    create_trade(private_security, account: theirs, qty: -2, date: date, price: 150)
+
+    sign_in member
+    get reports_path
+    assert_response :ok
+
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text)
+    assert lines.any? { |text| text.include?(own_security.ticker) }, "the member's own disposal must be listed, or this proves nothing"
+    assert lines.none? { |text| text.include?(private_security.ticker) }, "a disposal on an unshared account leaked into the member's report"
+  end
+
+
+  test "realized gains skip shared accounts the member keeps out of their finances" do
+    date = Date.current.beginning_of_month
+    member = users(:family_member)
+
+    mine = @family.accounts.create!(name: "Member Brokerage", owner: member, balance: 1_000,
+                                    currency: "USD", accountable: Investment.new)
+    shared = @family.accounts.create!(name: "Shared Brokerage", owner: users(:family_admin), balance: 1_000,
+                                      currency: "USD", accountable: Investment.new)
+    shared.account_shares.create!(user: member, permission: "read_only", include_in_finances: false)
+
+    own_security = Security.create!(ticker: "OWN#{SecureRandom.hex(3)}", name: "Member Holding")
+    shared_security = Security.create!(ticker: "SHR#{SecureRandom.hex(3)}", name: "Shared Holding")
+    mine.holdings.create!(security: own_security, date: date, qty: 5, price: 150,
+                          amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+    shared.holdings.create!(security: shared_security, date: date, qty: 5, price: 150,
+                            amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+    create_trade(own_security, account: mine, qty: -2, date: date, price: 150)
+    create_trade(shared_security, account: shared, qty: -2, date: date, price: 150)
+
+    sign_in member
+    get reports_path
+
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text)
+    assert lines.any? { |text| text.include?(own_security.ticker) }, "the member's own disposal must be listed, or this proves nothing"
+    assert lines.none? { |text| text.include?(shared_security.ticker) }, "an account excluded from the member's finances contributed a disposal"
+  end
+
   private
     # n EUR-priced disposals in a USD account, each on its own date with its
     # own rate row, so every one needs a distinct lookup.

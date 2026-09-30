@@ -218,6 +218,48 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to @entry.account
   end
 
+  test "a linked deposit or withdrawal needs write access to the other account" do
+    member = users(:family_member)
+    sign_in member
+    brokerage = member.family.accounts.create!(name: "Member Brokerage", owner: member, balance: 1_000,
+                                               currency: "USD", accountable: Investment.new)
+    read_only = member.family.accounts.create!(name: "Admin Read-only Checking", owner: @user, balance: 1_000,
+                                               currency: "USD", accountable: Depository.new)
+    read_only.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+    full_control = member.family.accounts.create!(name: "Admin Shared Checking", owner: @user, balance: 1_000,
+                                                  currency: "USD", accountable: Depository.new)
+    full_control.account_shares.create!(user: member, permission: "full_control", include_in_finances: true)
+    unshared = member.family.accounts.create!(name: "Admin Private Checking", owner: @user, balance: 1_000,
+                                              currency: "USD", accountable: Depository.new)
+
+    get new_trade_url(account_id: brokerage.id, type: "deposit")
+    assert_select "[role='option'][data-value=?]", full_control.id
+    assert_select "[role='option'][data-value=?]", read_only.id, count: 0
+
+    %w[deposit withdrawal].each do |type|
+      assert_no_difference [ "Entry.count", "Transfer.count" ] do
+        post trades_url(account_id: brokerage.id), params: {
+          model: { type: type, date: Date.current, amount: 50, currency: "USD", transfer_account_id: read_only.id }
+        }
+      end
+      assert_redirected_to account_path(read_only)
+    end
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      post trades_url(account_id: brokerage.id), params: {
+        model: { type: "withdrawal", date: Date.current, amount: 50, currency: "USD", transfer_account_id: unshared.id }
+      }
+    end
+    assert_response :not_found
+
+    assert_difference "Transfer.count", 1 do
+      post trades_url(account_id: brokerage.id), params: {
+        model: { type: "withdrawal", date: Date.current, amount: 50, currency: "USD", transfer_account_id: full_control.id }
+      }
+    end
+    assert_redirected_to brokerage
+  end
+
   test "creates interest entry as trade with synthetic cash security when no ticker given" do
     assert_difference [ "Entry.count", "Trade.count" ], 1 do
       post trades_url(account_id: @entry.account_id), params: {
