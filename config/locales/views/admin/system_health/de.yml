@@ -8,6 +8,7 @@ de:
         title: "Push-Benachrichtigungen"
         requested_at: "Letzter Test angefordert am %{time}"
         result_help: "Die Annahme durch APNs bestätigt nicht die Zustellung auf deinem Gerät. Aktualisiere die Ergebnisse, um den Worker-Status zu sehen. Ergebnisse werden 24 Stunden gespeichert."
+        results_label: "Testergebnisse"
         device: "Gerät %{number}"
         pending: "Ausstehend"
         refresh: "Ergebnisse aktualisieren"
@@ -78,6 +79,7 @@ de:
           seconds: "%{seconds} s"
           no_queues: Es sind keine Warteschlangen registriert. Möglicherweise läuft der Worker nicht.
         ai:
+          loading: "Live-Prüfungen laufen…"
           labels:
             failure_reason: Fehlerursache
             function_calling_failure_reason: Fehlerursache beim Funktionsaufruf

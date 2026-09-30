@@ -44,6 +44,7 @@ tr:
       month_year: "%B %Y"
       short: "%e %b"
       short_month_year: "%b %Y"
+      short_with_year: '%e %b %Y'
     month_names:
     -
     - Ocak
@@ -134,7 +135,7 @@ tr:
       not_a_number: geçerli bir sayı değil
       not_an_integer: tam sayı olmalı
       odd: tek olmalı
-      other_than: "%{count} karakterden oluşamaz"
+      other_than: "%{count} dışında bir değer olmalı"
       present: boş bırakılmalı
       required: doldurulmalı
       taken: hali hazırda kullanılmakta
@@ -226,3 +227,10 @@ tr:
       long: "%e %B %Y, %A, %H:%M"
       short: "%e %B, %H:%M"
     pm: öğleden sonra
+  mcp:
+    errors:
+      invalid_session_id: Geçersiz MCP oturum kimliği
+      unsupported_protocol_version: 'Desteklenmeyen MCP protokol sürümü: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris yalnızca https, loopback http veya yerel uygulama URI şeması kullanabilir

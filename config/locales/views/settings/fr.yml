@@ -127,7 +127,7 @@ fr:
         completion: achèvement
         cost_by_model: Coût par modèle
         cost_by_operation: Coût par opération
-        cost_estimates_description: "Les coûts sont estimés d'après les tarifs publiés par les fournisseurs, y compris les tarifs OpenAI en vigueur en juillet 2026. Les coûts réels peuvent varier. Le prix est par million de jetons et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total."
+        cost_estimates_description: "Les coûts sont estimés selon les tarifs publiés par les fournisseurs, vérifiés pour la dernière fois le %{date}. Les coûts réels peuvent varier. Le prix est par million de jetons et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total."
         cost_estimates_title: À propos des estimations de coûts
         end_date: Date de fin
         failed: Échec
@@ -301,6 +301,7 @@ fr:
         api_secret_label: Secret API
         api_secret_placeholder: Collez votre secret API Binance
         connect_button: Connecter Binance
+        disconnect: Déconnecter
         disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter Binance ?
         historical_import: Paramètres d'importation historique
         ip_hint_body: "Ajoutez l'IP de sortie du serveur de l'application à la liste blanche de la clé API Binance :"
@@ -324,6 +325,7 @@ fr:
         api_secret_label: Secret API
         api_secret_placeholder: Entrez votre secret API Coinbase
         connect_button: Connecter Coinbase
+        disconnect: Déconnecter
         disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter cette connexion Coinbase ? Vos comptes synchronisés deviendront des comptes manuels.
         setup_instructions: "Pour connecter Coinbase :"
         step1_html: Allez dans les <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Paramètres API de Coinbase</a>
@@ -583,6 +585,9 @@ fr:
         currency_label: Devise du compte
         disconnect: Déconnecter Trade Republic
         disconnect_confirm: Déconnecter Trade Republic ? Vos comptes synchronisés deviendront des comptes manuels.
+        disconnect_confirm_with_identifier: "Déconnecter la connexion Trade Republic se terminant par %{last4} ? Vos comptes synchronisés deviendront des comptes manuels."
+        identifier_phone: Téléphone
+        identifier_account: Compte
         encryption_warning:
           message: Les identifiants et les données de session Trade Republic ne peuvent pas être stockés de façon sécurisée tant que le chiffrement Active Record n'est pas configuré.
           title: Le chiffrement n'est pas configuré
@@ -591,11 +596,11 @@ fr:
         phone_number_label: Numéro de téléphone
         phone_number_placeholder_existing: Laissez vide pour conserver le numéro actuel
         phone_number_placeholder_new: "+33 6 12 34 56 78"
-        pin_label: Code PIN
-        pin_placeholder_existing: Laissez vide pour conserver le code PIN actuel
-        pin_placeholder_new: Le code PIN de votre application Trade Republic
+        pin_label: Code PIN ou mot de passe
+        pin_placeholder_existing: Laissez vide pour conserver le code PIN ou le mot de passe actuel
+        pin_placeholder_new: Le code PIN ou le mot de passe de votre application Trade Republic
         push_login_notice: Approuvez la connexion dans votre application Trade Republic dès maintenant. Sure vérifie automatiquement en arrière-plan. Vous pouvez aussi vérifier l'état vous-même.
-        qr_back_to_credentials: Revenir au numéro de téléphone et au code PIN
+        qr_back_to_credentials: Revenir au numéro de téléphone et au code PIN ou mot de passe
         qr_cancel: Annuler la connexion par QR code
         qr_error: La connexion par QR code n'a pas pu être lancée. Veuillez réessayer.
         qr_instruction: Scannez le QR code avec votre application Trade Republic et approuvez la connexion.
@@ -603,15 +608,17 @@ fr:
         qr_login: Se connecter avec un QR code
         qr_success: Connexion approuvée. Sure actualise la page du fournisseur.
         restart_login: Relancer la connexion
+        add_account: "Ajouter une autre connexion"
         save_configuration: Enregistrer et lancer la connexion
         setup_accounts: Configurer les comptes
         status_configured_prefix: Connecté. Ouvrez l'onglet
         status_configured_suffix: pour gérer les comptes détectés.
         steps:
-          step_1: Saisissez le numéro de téléphone et le code PIN que vous utilisez pour l'application Trade Republic, puis enregistrez.
+          step_1: Saisissez le numéro de téléphone et le code PIN ou le mot de passe que vous utilisez pour l'application Trade Republic, puis enregistrez.
           step_2: Saisissez le code de votre application d'authentification lorsqu'il vous est demandé.
           step_3: Approuvez la connexion dans votre application Trade Republic lorsque vous y êtes invité.
         sync: Synchroniser
+        syncing: "Synchronisation..."
         update_configuration: Mettre à jour la configuration
       trading212_panel:
         accounts_tab: Comptes
