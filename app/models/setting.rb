@@ -270,20 +270,6 @@ class Setting < RailsSettings::Base
       end
     end
 
-    # The settings cache (request cache + Rails.cache) is shared by declared
-    # and dynamic fields. A write inside a transaction that is later rolled
-    # back can leave uncommitted values cached, so clear it again on rollback.
-    # The rollback hook is registered at most once per transaction.
-    def clear_cache
-      super
-
-      transaction = current_transaction
-      if transaction.open? && !CacheRollbackTracker.registered?(transaction)
-        CacheRollbackTracker.register(transaction)
-        transaction.after_rollback { clear_cache }
-      end
-    end
-
     def []=(key, value)
       key_str = key.to_s
 
@@ -335,25 +321,6 @@ class Setting < RailsSettings::Base
       def dynamic_key_name(key_str)
         "dynamic:#{key_str}"
       end
-  end
-
-  # Tracks which transactions already have a settings-cache rollback hook, so
-  # repeated writes in one transaction don't register duplicate callbacks.
-  module CacheRollbackTracker
-    KEY = :setting_cache_rollback_transactions
-
-    def self.registered?(transaction)
-      transactions.any? { |t| t.equal?(transaction) }
-    end
-
-    def self.register(transaction)
-      transactions.select!(&:open?)
-      transactions << transaction
-    end
-
-    def self.transactions
-      ActiveSupport::IsolatedExecutionState[KEY] ||= []
-    end
   end
 
   # Validates OpenAI configuration requires model when custom URI base is set

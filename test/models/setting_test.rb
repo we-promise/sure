@@ -109,18 +109,6 @@ class SettingTest < ActiveSupport::TestCase
     assert_equal "new", Setting["cached_key"]
   end
 
-  test "dynamic field reads do not keep rolled back values" do
-    Setting["rollback_key"] = "committed"
-
-    Setting.transaction(requires_new: true) do
-      Setting["rollback_key"] = "uncommitted"
-      assert_equal "uncommitted", Setting["rollback_key"]
-      raise ActiveRecord::Rollback
-    end
-
-    assert_equal "committed", Setting["rollback_key"]
-  end
-
   test "setting nil value deletes dynamic field" do
     Setting["temp_key"] = "temp_value"
     assert_equal "temp_value", Setting["temp_key"]
