@@ -1001,12 +1001,13 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       assert_select "label[for=goal_allocations_#{account.id}]", text: /#{I18n.t("goals.form.fields.earmark_for", account: "Earmark Pot")}/
+      # The text input has no native min; the bound rides on the money-field container.
+      assert_select "[data-controller='money-field'][data-money-field-min-value='0'] input#goal_allocations_#{account.id}", count: 1
       assert_select "input#goal_allocations_#{account.id}[name='goal[allocations][#{account.id}]']", count: 1 do |inputs|
         input = inputs.first
         assert_includes input["class"].split, "privacy-sensitive"
         assert_includes input["class"].split, "privacy-sensitive-interactive"
         assert_equal I18n.t("goals.form.fields.whole_balance"), input["placeholder"]
-        assert_equal "0", input["min"]
         assert_nil input["value"]
         assert_equal "allocationInput", input["data-goal-earmark-target"]
         assert_equal "amount", input["data-money-field-target"]
