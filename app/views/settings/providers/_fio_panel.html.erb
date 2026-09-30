@@ -3,7 +3,7 @@
 
   <%= render "settings/providers/setup_steps",
              steps: [
-               t("settings.providers.fio_panel.step_1_html", link: link_to(t("providers.fio.name"), "https://ib.fio.cz", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")),
+               t("settings.providers.fio_panel.step_1_html", link: link_to(t("providers.fio.name"), "https://ib.fio.cz", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")),
                t("settings.providers.fio_panel.step_2"),
                t("settings.providers.fio_panel.step_3")
              ] %>
@@ -129,10 +129,7 @@
 
   <% fio_item = Current.family.fio_items.build(name: t("fio_items.provider_panel.default_connection_name")) %>
   <% if active_items.any? %>
-    <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
-      <%= icon "plus", size: "sm" %>
-      <%= t("fio_items.provider_panel.add_connection") %>
-    </h3>
+    <%= render "settings/providers/add_connection_heading", label: t("fio_items.provider_panel.add_connection") %>
   <% end %>
 
   <%= styled_form_with model: fio_item,

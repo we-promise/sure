@@ -16,12 +16,10 @@ class RedbarkItemsController < ApplicationController
 
       if turbo_frame_request?
         flash.now[:notice] = t(".success")
-        @redbark_items = Current.family.redbark_items.ordered
         render turbo_stream: [
           turbo_stream.replace(
             "redbark-providers-panel",
-            partial: "settings/providers/redbark_panel",
-            locals: { redbark_items: @redbark_items }
+            partial: "settings/providers/redbark_panel"
           ),
           *flash_notification_stream_items
         ]
@@ -54,12 +52,10 @@ class RedbarkItemsController < ApplicationController
 
       if turbo_frame_request?
         flash.now[:notice] = t(".success")
-        @redbark_items = Current.family.redbark_items.ordered
         render turbo_stream: [
           turbo_stream.replace(
             "redbark-providers-panel",
-            partial: "settings/providers/redbark_panel",
-            locals: { redbark_items: @redbark_items }
+            partial: "settings/providers/redbark_panel"
           ),
           *flash_notification_stream_items
         ]

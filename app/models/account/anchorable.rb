@@ -42,8 +42,10 @@ module Account::Anchorable
 
   # Distinguish imported totals from manual valuations; providers that schedule
   # their own account sync can defer it until all related accounts are processed.
-  def set_current_balance(balance, provider_balance: false, schedule_sync: true)
-    result = current_balance_manager.set_current_balance(balance, provider_balance: provider_balance)
+  # `date` is the day the balance describes, for a provider whose figures are
+  # as of a statement rather than of this moment; it defaults to today.
+  def set_current_balance(balance, date: nil, provider_balance: false, schedule_sync: true)
+    result = current_balance_manager.set_current_balance(balance, date: date, provider_balance: provider_balance)
     sync_later if schedule_sync && result.success?
     result
   end
