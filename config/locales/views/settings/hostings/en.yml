@@ -17,7 +17,14 @@ en:
           open: Open
           closed: Closed
           invite_only: Invite-only
+      demo_refresh_settings:
+        description: "Automatically refresh only the selected demo family. All its data and logins will be removed. Other families are untouched. Requires a running worker with at least 2 GiB RAM. First create a disposable demo family using the demo generator, then select it here. Do not choose a real user's family."
+        none: No demo family selected
+        family_label: Disposable demo family
+        save_family: Save demo family
+        enabled_label: Enable daily demo family refresh
       show:
+        demo_refresh: Demo data refresh
         general: General Settings
         ai_assistant: AI Assistant
         financial_data_providers: Financial Data Providers
@@ -305,6 +312,8 @@ en:
         view_pricing: View Twelve Data pricing
         title: Twelve Data
       update:
+        invalid_demo_family: Selected family must own the configured demo email.
+        select_demo_family: Select a disposable demo family first.
         failure: Invalid setting value
         success: Settings updated
         invalid_onboarding_state: Invalid onboarding state

@@ -25,22 +25,16 @@ ca:
         needs_setup: '%{count} comptes necessiten configuració...'
       success: Sincronització iniciada
     panel:
-      setup_instructions: 'Instruccions de configuració:'
       step_1: Crea una clau API a app.redbark.com, a l'apartat Settings
       step_2: Introdueix la teva clau API a continuació i fes clic al botó Desa
       step_3: Un cop connectat correctament, ves a la pestanya Comptes per configurar els comptes nous
-      field_descriptions: 'Descripció dels camps:'
       optional: (Opcional)
-      required: (obligatori)
       optional_with_default: (opcional, per defecte %{default_value})
       save_button: Desa la configuració
       update_button: Actualitza la configuració
-      status_configured_html: Configurat i a punt per utilitzar. Ves a la pestanya <a href="%{accounts_path}" class="link">Comptes</a> per gestionar i configurar els comptes.
-      status_not_configured: No configurat
       fields:
         api_key:
           label: Clau API
-          description: La teva clau API de Redbark (comença per rbk_live_)
           placeholder_new: rbk_live_...
           placeholder_update: Introdueix una clau API nova per actualitzar-la
     create:

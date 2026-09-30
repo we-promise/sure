@@ -80,6 +80,7 @@ uk:
       connection_name_label: Назва з'єднання
       connection_name_placeholder: Бізнес-рахунок
       default_connection_name: З'єднання Mercury
+      disconnect: Відключити
       disconnect_confirm: "Відключити %{name}?"
       instructions:
         copy_token_html: "Скопіюйте <strong>повний токен</strong> (включаючи префікс <code>secret-token:</code>) і додайте його як іменоване з'єднання нижче"
