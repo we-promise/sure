@@ -38,20 +38,21 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
 
     assert_text "Watson Property"
 
-    # Scan, then inspect: the row itself opens the expansion. It is due in ten
-    # days, so the row carries no call to action -- there is nothing to chase
-    # yet -- and the verb lives in the expansion, spelled out.
+    # Scan, then inspect: the row itself opens the bill's drawer. It is due in
+    # ten days, so the row carries no call to action -- there is nothing to
+    # chase yet -- and the verb lives in the drawer, spelled out.
     #
-    # Targeted by the frame it loads rather than by bare name: the bill also
-    # appears in the summary's Next up strip, which goes to its page instead.
-    # And by name within that: the index materializes the fixture family's
-    # series on first visit now, so "first row" is no longer this bill.
-    find("a[data-turbo-frame^='pane_recurring_occurrence_']", text: "Watson Property", match: :first).click
-    within(find("turbo-frame[id^='pane_recurring_occurrence_']", match: :first)) do
+    # Targeted by name: the index materializes the fixture family's series on
+    # first visit now, so "first row" is no longer this bill. Its Next up item
+    # may come first, and opens the same drawer.
+    find("a[data-turbo-frame='drawer']", text: "Watson Property", match: :first).click
+    within("dialog[open]") do
       click_on I18n.t("bills.find_payment")
     end
 
-    # Act: the drawer leads with what is owed.
+    # Act: the payment drawer leads with what is owed. Its "remaining" line
+    # reads exactly like the bill drawer's, so wait on its own control first.
+    within("dialog[open]") { assert_link I18n.t("recurring_occurrences.show.mark_paid") }
     assert_text I18n.t("recurring_occurrences.show.remaining", amount: "$2,150.00")
 
     # This bill was declared a moment ago, so the matcher knows it only by the

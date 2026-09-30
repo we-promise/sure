@@ -94,8 +94,6 @@ uk:
       remaining: Залишилося %{amount}
       paid_headline: Сплачено %{amount}
       cost_line: У середньому %{average} за оплату, приблизно %{annualized} на рік
-    pane:
-      close: Згорнути деталі
     add_bill: Додати платіж
     manage: Керувати
     find_payment: Знайти оплату

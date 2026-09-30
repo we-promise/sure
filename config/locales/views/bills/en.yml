@@ -88,8 +88,6 @@ en:
       remaining: "%{amount} remaining"
       paid_headline: "%{amount} paid"
       cost_line: "Averages %{average} a payment, about %{annualized} a year"
-    pane:
-      close: Collapse details
     add_bill: Add bill
     manage: Manage
     find_payment: Find payment

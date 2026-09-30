@@ -25,6 +25,16 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
   end
 
+  # Pause redirects back to the page it was pressed on. Fetched for the drawer
+  # frame, that page has no drawer frame in it, so the drawer would read
+  # "Content missing" instead of the list updating behind it.
+  test "the dialog's pause submits to the whole page" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "form[action=?] button[data-turbo-frame=_top]", toggle_status_recurring_transaction_path(@series)
+  end
+
   test "recurring occurrence feedback is localized in German" do
     @user.update!(locale: "de")
 

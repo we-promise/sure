@@ -71,9 +71,8 @@
   <% end %>
 
   <%# What happens next, which is what makes this header operational rather
-      than statistical. Items open the bill's page: the row expansion belongs
-      to a row, and expanding one further down the page while you are reading
-      the top of it would be a jump with no explanation. %>
+      than statistical. Items open the same drawer their row does, over the
+      page, so reading the top of it never jumps you down to the row. %>
   <% if @next_up.any? %>
     <div class="pt-3 border-t border-subdued space-y-2">
       <div class="flex items-center justify-between gap-3">
@@ -87,7 +86,8 @@
       <div class="flex gap-2 overflow-x-auto no-scrollbar sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-4">
         <% @next_up.each do |occurrence| %>
           <% series = occurrence.recurring_transaction %>
-          <%= link_to bill_path(series),
+          <%= link_to bill_path(series, display: "drawer", occurrence: occurrence.id),
+                data: { turbo_frame: "drawer", turbo_prefetch: false },
                 class: "shrink-0 w-36 sm:w-auto rounded-lg px-2 py-1.5 -mx-2 hover:bg-surface-hover group" do %>
             <p class="text-xs text-secondary truncate">
               <%= bills_next_up_date(occurrence) %>
