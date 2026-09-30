@@ -29,7 +29,7 @@ class RedbarkItemsController < ApplicationController
       # Rotated credentials should be exercised right away
       @redbark_item.sync_later if update_params[:api_key].present? && !@redbark_item.syncing?
 
-      render_provider_panel("redbark", notice: t(".success"), redbark_items: Current.family.redbark_items.ordered)
+      render_provider_panel("redbark", notice: t(".success"))
     else
       render_provider_panel("redbark", alert: @redbark_item.errors.full_messages.join(", "))
     end

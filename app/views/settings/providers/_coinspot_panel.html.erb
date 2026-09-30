@@ -3,10 +3,8 @@
 
   <%= render DS::Alert.new(
         variant: :warning,
-        message: safe_join([
-          content_tag(:p, t("settings.providers.coinspot_panel.read_only_title"), class: "font-medium"),
-          content_tag(:p, t("settings.providers.coinspot_panel.read_only_body"), class: "mt-1")
-        ])
+        title: t("settings.providers.coinspot_panel.read_only_title"),
+        message: t("settings.providers.coinspot_panel.read_only_body")
       ) %>
 
   <%= render "settings/providers/setup_steps",
@@ -108,10 +106,7 @@
 
   <% coinspot_item = Current.family.coinspot_items.build(name: t("settings.providers.coinspot_panel.default_connection_name")) %>
   <% if items.any? %>
-    <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
-      <%= icon "plus", size: "sm" %>
-      <%= t("settings.providers.coinspot_panel.add_connection") %>
-    </h3>
+    <%= render "settings/providers/add_connection_heading", label: t("settings.providers.coinspot_panel.add_connection") %>
   <% end %>
 
   <%= styled_form_with model: coinspot_item,

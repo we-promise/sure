@@ -3,10 +3,8 @@
 
   <%= render DS::Alert.new(
         variant: :warning,
-        message: safe_join([
-          content_tag(:p, t("settings.providers.kraken_panel.read_only_title"), class: "font-medium"),
-          content_tag(:p, t("settings.providers.kraken_panel.read_only_body"), class: "mt-1")
-        ])
+        title: t("settings.providers.kraken_panel.read_only_title"),
+        message: t("settings.providers.kraken_panel.read_only_body")
       ) %>
 
   <%= render "settings/providers/setup_steps",
@@ -45,13 +43,15 @@
 
           <div class="mt-4 space-y-4">
             <div class="flex flex-wrap items-center gap-2">
-              <%= button_to sync_kraken_item_path(item, source: "panel"),
-                            method: :post,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
-                            disabled: item.syncing? do %>
-                <%= icon "refresh-cw", size: "sm" %>
-                <%= t("settings.providers.kraken_panel.sync") %>
-              <% end %>
+              <%= render DS::Button.new(
+                text: t("settings.providers.kraken_panel.sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                size: :sm,
+                href: sync_kraken_item_path(item, source: "panel"),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
 
               <%= render DS::Link.new(
                 text: t("settings.providers.kraken_panel.setup_accounts"),
@@ -61,13 +61,15 @@
                 frame: :modal
               ) %>
 
-              <%= button_to kraken_item_path(item),
-                            method: :delete,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                            data: { turbo_confirm: t("settings.providers.kraken_panel.disconnect_confirm", name: item.name) } do %>
-                <%= icon "trash-2", size: "sm" %>
-                <%= t("settings.providers.kraken_panel.disconnect") %>
-              <% end %>
+              <%= render DS::Button.new(
+                text: t("settings.providers.kraken_panel.disconnect"),
+                icon: "trash-2",
+                variant: :outline_destructive,
+                size: :sm,
+                href: kraken_item_path(item),
+                method: :delete,
+                data: { turbo_confirm: t("settings.providers.kraken_panel.disconnect_confirm", name: item.name) }
+              ) %>
             </div>
 
             <%= styled_form_with model: item,
@@ -104,10 +106,7 @@
 
   <% kraken_item = Current.family.kraken_items.build(name: t("settings.providers.kraken_panel.default_connection_name")) %>
   <% if items.any? %>
-    <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
-      <%= icon "plus", size: "sm" %>
-      <%= t("settings.providers.kraken_panel.add_connection") %>
-    </h3>
+    <%= render "settings/providers/add_connection_heading", label: t("settings.providers.kraken_panel.add_connection") %>
   <% end %>
 
   <%= styled_form_with model: kraken_item,
