@@ -12,7 +12,7 @@ class PdfImport < Import
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
   validate :account_statement_matches_import
-  after_destroy_commit :destroy_orphaned_import_owned_statement
+  after_destroy_commit :enqueue_orphaned_import_owned_statement_cleanup
 
   class << self
     # PdfImport's importing status doubles as a processing claim: the AI
@@ -530,15 +530,10 @@ class PdfImport < Import
 
   private
 
-    def destroy_orphaned_import_owned_statement
-      statement = AccountStatement.find_by(id: account_statement_id)
-      return unless statement&.pdf_import_owned?
-      return if statement.account_id.present?
-      return if statement.pdf_imports.exists?
-
-      statement.destroy!
+    def enqueue_orphaned_import_owned_statement_cleanup
+      CleanupOrphanedPdfImportStatementJob.perform_later(account_statement_id) if account_statement_id.present?
     rescue StandardError => error
-      Rails.logger.warn("Could not clean up source statement for PDF import #{id}: #{error.class}: #{error.message}")
+      Rails.logger.error("Could not enqueue source statement cleanup for PDF import #{id}: #{error.class}: #{error.message}")
     end
 
     # A statement's posting date routinely differs by a day or two from the date

@@ -86,7 +86,8 @@
               </td>
               <td class="px-2 py-3 min-w-0">
                 <span class="text-sm text-secondary block break-all privacy-sensitive">
-                  <%= import.file_name.presence || t("imports.table.no_file_name") %>
+                  <% file_name = import.file_name if import.account_statement.blank? || import.account_statement.viewable_by?(Current.user) %>
+                  <%= file_name.presence || t("imports.table.no_file_name") %>
                 </span>
               </td>
               <td class="px-2 py-3 w-24 whitespace-nowrap">

@@ -76,7 +76,8 @@ class ImportsController < ApplicationController
     content_sha256 = params[:content_sha256].to_s
     return render json: { duplicate: false }, status: :unprocessable_entity unless content_sha256.match?(/\A[0-9a-f]{64}\z/)
 
-    duplicate = Current.family.account_statements.exists?(content_sha256: content_sha256)
+    statement = Current.family.account_statements.find_by(content_sha256: content_sha256)
+    duplicate = statement.present? && statement.manageable_by?(Current.user)
     render json: { duplicate: duplicate }
   end
 
