@@ -129,9 +129,37 @@ class Transfer::MatcherTest < ActiveSupport::TestCase
     end
 
     lock = sql.index { |q| q.include?("FOR UPDATE") && q.include?('"transactions"') }
+    entry_lock = sql.index { |q| q.include?("FOR UPDATE") && q.include?('"entries"') }
     insert = sql.index { |q| q.start_with?('INSERT INTO "transfers"') }
     assert lock, "expected the transactions to be locked"
+    assert entry_lock, "expected their entries to be locked"
     assert_operator lock, :<, insert
+    assert_operator entry_lock, :<, insert
+  end
+
+  test "checks the transaction as committed, not as it was loaded" do
+    outflow = create_transaction(account: @checking, amount: 100).transaction
+    stale = Transaction.find(outflow.id)
+    stale.entry # loaded before the exclusion
+    outflow.entry.update!(excluded: true)
+
+    error = assert_no_difference "Transfer.count" do
+      assert_raises(Transfer::Matcher::Error) { Transfer::Matcher.new(stale).match_to_account!(@loan) }
+    end
+    assert_equal :excluded_transaction, error.code
+  end
+
+  test "re-checks the pair against the counterpart's committed amount" do
+    outflow = create_transaction(account: @checking, amount: 100).transaction
+    inflow = create_transaction(account: @card, amount: -100).transaction
+    stale = Transaction.find(inflow.id)
+    stale.entry # loaded while it still matched
+    inflow.entry.update!(amount: -250)
+
+    error = assert_no_difference "Transfer.count" do
+      assert_raises(Transfer::Matcher::Error) { Transfer::Matcher.new(outflow).match_with!(stale) }
+    end
+    assert_equal :not_a_candidate, error.code
   end
 
   test "refuses excluded and split transactions" do
