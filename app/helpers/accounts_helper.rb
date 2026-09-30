@@ -55,7 +55,13 @@ module AccountsHelper
   # inputs as the sparkline ETags (latest sync + account updates), so it moves
   # exactly when a sparkline could change. Computed once per sidebar render.
   def sidebar_sparkline_version(family)
-    key = family.build_cache_key("sidebar_sparklines_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
+    # Per user and share version too: which accounts a group sparkline covers
+    # depends on the viewer's account shares.
+    key = [
+      family.build_cache_key("sidebar_sparklines_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true),
+      Current.user&.id,
+      Current.account_share_version
+    ].join("_")
     Digest::SHA256.hexdigest(key).first(12)
   end
 
