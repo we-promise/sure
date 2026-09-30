@@ -253,8 +253,6 @@ class SnaptradeAccount::ActivitiesProcessor
         quantity.abs
       end
 
-      multiplier = contract_multiplier(symbol_data)
-
       case rule[:zero_amount]
       when :unconditional
         amount = BigDecimal("0.0")
@@ -272,7 +270,7 @@ class SnaptradeAccount::ActivitiesProcessor
         elsif price
           # Same convention as a manually entered trade: the fee adds to a buy's
           # cost and comes out of a sell's proceeds.
-          quantity * price * multiplier + (fee || 0)
+          quantity * price + (fee || 0)
         end
       end
 
@@ -283,7 +281,7 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       if price.nil? && !quantity.zero?
-        price = (amount - (fee || 0)) / (quantity * multiplier)
+        price = (amount - (fee || 0)) / quantity
         capture_debug_log(
           level: "info",
           message: "Derived missing price for trade #{external_id} from its amount and quantity",
@@ -456,14 +454,5 @@ class SnaptradeAccount::ActivitiesProcessor
       return [ nil, nil ] if ticker.blank?
 
       [ ticker, option_symbol_data ]
-    end
-
-    def contract_multiplier(symbol_data)
-      return 1 unless symbol_data.is_a?(Hash)
-
-      data = symbol_data.with_indifferent_access
-      return 1 unless data[:option_type].present? || data[:is_mini_option] != nil
-
-      ActiveModel::Type::Boolean.new.cast(data[:is_mini_option]) ? 10 : 100
     end
 end
