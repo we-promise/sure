@@ -54,35 +54,37 @@ class Transfer::Matcher
 
   # With dry_run: true, runs every check and returns the unsaved transfer.
   def match_with!(counterpart, dry_run: false)
-    ensure_matchable!(transaction)
-    ensure_matchable!(counterpart)
+    link!(transaction, counterpart, dry_run:) do
+      ensure_matchable!(transaction)
+      ensure_matchable!(counterpart)
 
-    unless candidates.any? { |row| counterpart_id(row) == counterpart.id }
-      raise Error.new(:not_a_candidate, "The two transactions cannot form a transfer: they need opposite, matching amounts in different accounts of the same family, at most #{DATE_WINDOW} days apart.")
+      unless candidates.any? { |row| counterpart_id(row) == counterpart.id }
+        raise Error.new(:not_a_candidate, "The two transactions cannot form a transfer: they need opposite, matching amounts in different accounts of the same family, at most #{DATE_WINDOW} days apart.")
+      end
+
+      entry.amount.negative? ? [ transaction, counterpart ] : [ counterpart, transaction ]
     end
-
-    inflow, outflow = entry.amount.negative? ? [ transaction, counterpart ] : [ counterpart, transaction ]
-    link!(inflow:, outflow:, dry_run:)
   end
 
   def match_to_account!(account, dry_run: false)
-    ensure_matchable!(transaction)
-    raise Error.new(:same_account, "The target account must differ from the transaction's account.") if account.id == entry.account_id
-    raise Error.new(:account_not_found, "The target account must belong to the same family.") unless account.family_id == entry.account.family_id
+    link!(transaction, dry_run:) do
+      ensure_matchable!(transaction)
+      raise Error.new(:same_account, "The target account must differ from the transaction's account.") if account.id == entry.account_id
+      raise Error.new(:account_not_found, "The target account must belong to the same family.") unless account.family_id == entry.account.family_id
 
-    # Built in memory; saved together with the transfer by link!.
-    counterpart = Transaction.new(
-      entry: account.entries.build(
-        amount: entry.amount * -1,
-        currency: entry.currency,
-        date: entry.date,
-        name: "Transfer to #{entry.amount.negative? ? entry.account.name : account.name}",
-        user_modified: true
+      # Built in memory; saved together with the transfer by link!.
+      counterpart = Transaction.new(
+        entry: account.entries.build(
+          amount: entry.amount * -1,
+          currency: entry.currency,
+          date: entry.date,
+          name: "Transfer to #{entry.amount.negative? ? entry.account.name : account.name}",
+          user_modified: true
+        )
       )
-    )
 
-    inflow, outflow = entry.amount.negative? ? [ transaction, counterpart ] : [ counterpart, transaction ]
-    link!(inflow:, outflow:, dry_run:)
+      entry.amount.negative? ? [ transaction, counterpart ] : [ counterpart, transaction ]
+    end
   end
 
   private
@@ -101,52 +103,62 @@ class Transfer::Matcher
       raise Error.new(:already_linked, "The transaction is already part of a transfer.") if txn.transfer.present?
     end
 
-    # ensure_matchable! checks without a lock, so two concurrent matches of one
-    # transaction (with different counterparts) could both pass it; the unique
-    # index only covers the pair. Lock both rows in a fixed order, then check
-    # again against the database.
-    def lock_unlinked!(*txns)
-      ids = txns.select(&:persisted?).map(&:id).sort
+    # Two concurrent matches of one transaction (with different counterparts)
+    # could otherwise both pass the checks; the unique index only covers the
+    # pair. Lock the persisted transactions and their entries in a fixed
+    # order, then reload them so the checks see what is committed now
+    # (another transfer, an exclusion, a split, a changed amount or date).
+    def lock_and_reload!(txns)
+      ids = txns.map(&:id).sort
       Transaction.where(id: ids).order(:id).lock.pluck(:id)
-
-      if Transfer.where(inflow_transaction_id: ids).or(Transfer.where(outflow_transaction_id: ids)).exists?
-        raise Error.new(:already_linked, "The transaction is already part of a transfer.")
-      end
+      Entry.where(entryable_type: "Transaction", entryable_id: ids).order(:id).lock.pluck(:id)
+      txns.each(&:reload)
     end
 
-    def link!(inflow:, outflow:, dry_run:)
-      transfer = Transfer.new(
-        inflow_transaction: inflow,
-        outflow_transaction: outflow,
-        status: "confirmed",
-        amount: outflow.entry.amount.abs
-      )
-
+    # The block runs the checks and returns [inflow, outflow]. For a real
+    # match it runs under the locks, uncached so no read is answered from a
+    # query cache filled before the lock.
+    def link!(*txns, dry_run:)
       if dry_run
+        transfer = build_transfer(*yield)
         raise Error.new(:invalid_transfer, transfer.errors.full_messages.to_sentence) unless transfer.valid?
         return transfer
       end
 
-      Transfer.transaction do
-        lock_unlinked!(inflow, outflow)
-        transfer.save!
+      transfer = nil
+      Transfer.uncached do
+        Transfer.transaction do
+          lock_and_reload!(txns)
+          inflow, outflow = yield
+          transfer = build_transfer(inflow, outflow)
+          transfer.save!
 
-        # Kinds follow the destination account, as in Transfer::Creator.
-        destination_account = inflow.entry.account
-        outflow_attrs = { kind: Transfer.kind_for_account(destination_account) }
+          # Kinds follow the destination account, as in Transfer::Creator.
+          destination_account = inflow.entry.account
+          outflow_attrs = { kind: Transfer.kind_for_account(destination_account) }
 
-        if outflow_attrs[:kind] == "investment_contribution"
-          category = destination_account.family.investment_contributions_category
-          outflow_attrs[:category] = category if category.present? && outflow.category_id.blank?
+          if outflow_attrs[:kind] == "investment_contribution"
+            category = destination_account.family.investment_contributions_category
+            outflow_attrs[:category] = category if category.present? && outflow.category_id.blank?
+          end
+
+          outflow.update!(outflow_attrs)
+          inflow.update!(kind: "funds_movement")
         end
-
-        outflow.update!(outflow_attrs)
-        inflow.update!(kind: "funds_movement")
       end
 
       transfer.sync_account_later
       transfer
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
       raise Error.new(:invalid_transfer, e.message)
+    end
+
+    def build_transfer(inflow, outflow)
+      Transfer.new(
+        inflow_transaction: inflow,
+        outflow_transaction: outflow,
+        status: "confirmed",
+        amount: outflow.entry.amount.abs
+      )
     end
 end
