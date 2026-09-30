@@ -114,6 +114,10 @@ class Transaction < ApplicationRecord
   # Providers that support pending transaction flags
   PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark financekit].freeze
 
+  # Slice size for the entry touch in reassign_category! — bounds the UPDATE
+  # statement size when a merge or category destroy hits many transactions.
+  REASSIGN_TOUCH_BATCH_SIZE = 5_000
+
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
   PENDING_CHECK_SQL = PENDING_PROVIDERS
@@ -144,6 +148,39 @@ class Transaction < ApplicationRecord
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(entry: :account).where(accounts: { family_id: family.id })
+  end
+
+  # Bulk category reassignment that still busts entry-keyed report caches.
+  # update_all skips callbacks, so the `has_one :entry, touch: true` bump that
+  # every normal save relies on (Family#entries_cache_version) never happens.
+  # Expects a plain relation — `to_sql` on a scope carrying `select` or
+  # `includes` would emit the wrong subquery for the IN clause.
+  def self.reassign_category!(scope, category_id)
+    transaction do
+      sql = <<~SQL
+        UPDATE #{quoted_table_name}
+        SET category_id = #{connection.quote(category_id)}
+        WHERE id IN (#{scope.reselect(:id).to_sql})
+        RETURNING id
+      SQL
+
+      # exec_query is the uncached primitive (QueryCache only wraps select_all)
+      # and isn't in dirties_query_cache's list, so clear the cache explicitly.
+      updated_ids = connection.exec_query(sql, "Transaction Reassign Category").rows.flatten
+      connection.clear_query_cache
+
+      next 0 if updated_ids.empty?
+
+      # Touch exactly the rows the UPDATE reassigned (RETURNING), so a
+      # transaction entering the scope mid-merge can't be updated without its
+      # entry being touched. Locks are taken transactions-first, matching a
+      # normal save; sliced to bound the entries UPDATE on large merges.
+      updated_ids.each_slice(REASSIGN_TOUCH_BATCH_SIZE) do |batch|
+        Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
+      end
+
+      updated_ids.size
+    end
   end
 
   # Overarching grouping method for all transfer-type transactions
