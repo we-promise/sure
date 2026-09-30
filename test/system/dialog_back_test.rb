@@ -36,6 +36,16 @@ class DialogBackTest < ApplicationSystemTestCase
     assert_no_selector "dialog[open]"
   end
 
+  # Visited directly, the drawer is the page, so Back has to bring it back.
+  test "going back to a drawer visited directly restores it as a modal" do
+    visit transfer_url(@transfer)
+    within("dialog[open]") { click_on @account.name }
+    assert_selector "main h2", text: @account.name
+
+    page.go_back
+    within("dialog:modal") { assert_link @account.name }
+  end
+
   private
     # The row's name is cut to nothing beside its badges, so this clicks the
     # link the way the row's own click handler does.
