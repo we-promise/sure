@@ -88,17 +88,13 @@ class SettingTest < ActiveSupport::TestCase
     Setting["key2"] = "value2"
     Setting.clear_cache
 
-    queries = 0
-    counter = ->(*, payload) { queries += 1 if payload[:sql].include?('FROM "settings"') }
-    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
-      3.times do
-        assert_equal "value1", Setting["key1"]
-        assert_equal "value2", Setting["key2"]
-        assert_nil Setting["missing_key"]
-      end
+    values = nil
+    queries = capture_sql_queries do
+      values = 3.times.map { [ Setting["key1"], Setting["key2"], Setting["missing_key"] ] }
     end
 
-    assert_operator queries, :<=, 1
+    assert_equal [ [ "value1", "value2", nil ] ] * 3, values
+    assert_operator queries.grep(/FROM "settings"/).size, :<=, 1
   end
 
   test "dynamic field reads reflect updates after caching" do
