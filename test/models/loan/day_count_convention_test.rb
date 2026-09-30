@@ -73,6 +73,54 @@ class Loan::DayCountConventionTest < ActiveSupport::TestCase
     end
   end
 
+  # A rate change INSIDE a period, on a day count: the period accrues at the
+  # opening rate for its actual days and the payment is re-sized at the new
+  # rate, told what that period really charged. Every other row keeps its
+  # payment -- the day count varies the charge, never the sizing.
+  test "a rate change inside a period re-sizes once, on the period's day-counted charge" do
+    schedule = (1..120).map { |n| Date.new(2026, 1, 1) >> n }
+    change = Date.new(2026, 6, 15)
+    result = Loan::Simulator.new(
+      starting_balance: BALANCE,
+      accrual_start_date: Date.new(2026, 1, 1),
+      payment_schedule: schedule,
+      accrual_rate_for: ->(date) { date < change ? RATE : 8 },
+      currency_precision: 2,
+      day_count_convention: :actual_365
+    ).run
+    rows = result.payments
+    straddle = rows.index { |row| row[:payment_date] == Date.new(2026, 7, 1) }
+    opening = rows[straddle][:beginning_balance]
+
+    assert_equal Loan::AmortizationMath.level_payment(balance: BigDecimal(BALANCE.to_s), monthly_rate: BigDecimal(RATE.to_s) / 100 / 12,
+                                                     remaining_payments: 120, currency_precision: 2),
+                 rows.first[:payment_amount], "the opening payment is the plain level payment: no rate moved in period 1"
+    assert_equal (opening * BigDecimal(RATE.to_s) / 100 * 30 / 365).round(2), rows[straddle][:interest_payment],
+                 "June accrues 30 days at the opening 6%, on actual/365"
+    assert_equal Loan::AmortizationMath.level_payment(balance: opening, monthly_rate: BigDecimal("8") / 100 / 12,
+                                                     remaining_payments: 120 - straddle, currency_precision: 2,
+                                                     first_period_interest: rows[straddle][:interest_payment]),
+                 rows[straddle][:payment_amount], "the re-sized payment covers what June actually charged"
+    assert_equal [ rows.first[:payment_amount] ], rows[0...straddle].map { |row| row[:payment_amount] }.uniq,
+                 "no row before the change is re-sized"
+    assert_equal [ rows[straddle][:payment_amount] ], rows[straddle...-1].map { |row| row[:payment_amount] }.uniq,
+                 "no row after the change is re-sized again"
+  end
+
+  # A decreasing-life premium is charged on each period's opening balance, so it
+  # follows the schedule's day count. Reassigning the convention must restate it
+  # at once, as it restates the schedule -- not answer from a memo built on the
+  # old basis.
+  test "changing the convention restates a decreasing premium without a reload" do
+    loan = insured_loan(:actual_365)
+    on_actual = loan.total_insurance
+
+    loan.day_count_convention = "thirty_360"
+
+    assert_equal insured_loan(:thirty_360).total_insurance, loan.total_insurance
+    assert_not_equal on_actual, loan.total_insurance, "the two conventions should charge different premiums on this loan"
+  end
+
   # The design decision that keeps the payment level. `level_payment` is an
   # annuity formula over one constant periodic rate; if the day count reached
   # the sizing, the rate would differ every month and :reamortize would rebuild
@@ -203,6 +251,15 @@ class Loan::DayCountConventionTest < ActiveSupport::TestCase
   end
 
   private
+    def insured_loan(convention)
+      Account.create!(
+        family: families(:dylan_family), name: "Insured #{SecureRandom.hex(3)}", balance: BALANCE, currency: "USD",
+        accountable: Loan.create!(subtype: "mortgage", interest_rate: RATE, term_months: 360, rate_type: "fixed",
+                                  start_date: Date.new(2026, 1, 1), insurance_rate: 1.2,
+                                  insurance_rate_type: "decreasing_life", day_count_convention: convention.to_s)
+      ).loan
+    end
+
     def simulate(schedule:, convention:, balance: BALANCE, rate: RATE, accrual_start: schedule.first - 31)
       Loan::Simulator.new(
         starting_balance: balance,
