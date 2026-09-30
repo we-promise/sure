@@ -55,6 +55,10 @@ export default class extends Controller {
     const claimedWhole = row.dataset.wholeAccountClaimed === "true"
     const raw = input.value.trim()
 
+    // A number input reports text it cannot parse as "", which would read as
+    // a blank amount and claim the whole balance for what the user typed.
+    if (input.validity?.badInput) return this.#hide(warning)
+
     // "whatever is left after the other earmarks" describes nothing when there
     // are none — and this is where a first-time user meets the word, pointed
     // at something absent. With the account to itself, say that instead.

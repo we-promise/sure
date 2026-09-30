@@ -1,0 +1,200 @@
+<div id="<%= dom_id %>">
+  <%= render DS::Disclosure.new(variant: :card, open: open) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-3 w-full">
+        <div class="min-w-0">
+          <p class="font-medium text-primary truncate">
+            <%= item.name %>
+            <% if identifier_last4 %>
+              <span class="font-normal text-secondary">&middot; <%= identifier_label %> &bull;&bull;&bull;&bull; <%= identifier_last4 %></span>
+            <% end %>
+          </p>
+          <p class="text-xs text-secondary">
+            <% if item.syncing? %>
+              <%= translation("syncing") %>
+            <% else %>
+              <%= item.sync_status_summary %>
+            <% end %>
+          </p>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="mt-4 space-y-4"
+         <% if item.persisted? && login_stage == "waiting_for_approval" %>
+           data-controller="trade-republic-login"
+           data-trade-republic-login-url-value="<%= helpers.poll_login_trade_republic_item_path(item) %>"
+         <% end %>>
+      <div class="flex flex-wrap justify-end gap-2">
+        <% if item.pending_login_state.blank? && item.session_configured? %>
+          <%= render DS::Button.new(
+                text: translation("connect"),
+                variant: :outline,
+                size: :sm,
+                icon: "log-in",
+                href: helpers.initiate_login_trade_republic_item_path(item),
+                method: :post
+              ) %>
+
+          <%= render DS::Button.new(
+                text: translation("sync"),
+                variant: :outline,
+                size: :sm,
+                icon: "refresh-cw",
+                href: helpers.sync_trade_republic_item_path(item),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
+        <% end %>
+
+        <%= render DS::Button.new(
+              variant: :outline_destructive,
+              size: :sm,
+              icon: "trash-2",
+              aria_label: translation("disconnect"),
+              title: translation("disconnect"),
+              href: helpers.trade_republic_item_path(item),
+              method: :delete,
+              confirm: identifier_last4 ? translation("disconnect_confirm_with_identifier", last4: identifier_last4) : translation("disconnect_confirm")
+            ) %>
+      </div>
+
+          <% if item.pending_login_state.blank? || login_stage == "qr_pending" %>
+        <div class="space-y-3" data-controller="trade-republic-qr"
+           data-trade-republic-qr-auto-poll-value="<%= qr_active %>"
+           data-trade-republic-qr-initiate-url-value="<%= helpers.initiate_qr_login_trade_republic_item_path(item) %>"
+           data-trade-republic-qr-poll-url-value="<%= helpers.poll_qr_login_trade_republic_item_path(item) %>"
+           data-trade-republic-qr-cancel-url-value="<%= helpers.cancel_qr_login_trade_republic_item_path(item) %>"
+           data-trade-republic-qr-return-url-value="<%= helpers.settings_providers_path(anchor: "trade-republic") %>"
+           data-trade-republic-qr-loading-text-value="<%= translation("qr_loading") %>"
+           data-trade-republic-qr-instruction-text-value="<%= translation("qr_instruction") %>"
+           data-trade-republic-qr-success-text-value="<%= translation("qr_success") %>"
+           data-trade-republic-qr-error-text-value="<%= translation("qr_error") %>"
+           data-trade-republic-qr-login-text-value="<%= translation("qr_login") %>"
+           data-trade-republic-qr-cancel-text-value="<%= translation("qr_cancel") %>">
+        <%= render DS::Button.new(
+              text: qr_active ? translation("qr_cancel") : translation("qr_login"),
+              variant: :outline,
+              size: :sm,
+              icon: "qr-code",
+              type: "button",
+              data: {
+                action: "trade-republic-qr#toggle",
+                trade_republic_qr_target: "button"
+              }
+            ) %>
+
+        <div data-trade-republic-qr-target="panel" <%= "hidden" unless qr_active %> class="rounded-lg border border-secondary bg-container-inset p-4 space-y-3">
+          <p data-trade-republic-qr-target="status" class="text-sm text-secondary"></p>
+          <div data-trade-republic-qr-target="code" class="qrcode flex justify-center min-h-48"><%= qr_code_svg %></div>
+        </div>
+        </div>
+      <% end %>
+
+      <% if login_stage == "authenticator_code" %>
+        <%= render DS::Alert.new(
+              message: translation("authenticator_code_notice"),
+              variant: :info
+            ) %>
+
+        <%= helpers.styled_form_with url: helpers.complete_login_trade_republic_item_path(item),
+                             method: :post,
+                             scope: :trade_republic_login,
+                             class: "space-y-3" do |form| %>
+          <%= form.text_field :code,
+                              label: translation("authenticator_code_label"),
+                              placeholder: translation("authenticator_code_placeholder"),
+                              value: nil,
+                              required: true %>
+          <div class="flex flex-wrap justify-end gap-2">
+            <%= form.submit(translation("complete_login")) %>
+          </div>
+        <% end %>
+      <% elsif login_stage == "waiting_for_approval" %>
+        <%= render DS::Alert.new(message: translation("push_login_notice"), variant: :info) %>
+        <div class="flex flex-wrap justify-end gap-2">
+          <%= render DS::Button.new(
+                text: translation("check_login_status"),
+                variant: :outline,
+                size: :sm,
+                icon: "refresh-cw",
+                href: helpers.poll_login_trade_republic_item_path(item),
+                method: :post
+              ) %>
+        </div>
+      <% end %>
+
+      <% if item.pending_login_state.blank? %>
+        <%= helpers.styled_form_with model: item,
+                             url: helpers.trade_republic_item_path(item),
+                             scope: :trade_republic_item,
+                             method: :patch,
+                             data: { turbo: true },
+                             class: "space-y-3" do |form| %>
+          <%= form.text_field :phone_number,
+                              label: translation("phone_number_label"),
+                              placeholder: translation("phone_number_placeholder_existing"),
+                              type: :tel,
+                              value: nil %>
+
+          <%= form.text_field :pin,
+                              label: translation("pin_label"),
+                              placeholder: translation("pin_placeholder_existing"),
+                              type: :password,
+                              value: nil %>
+
+          <div class="flex flex-wrap justify-end gap-2">
+            <%= form.submit(item.session_configured? ? translation("update_configuration") : translation("save_configuration")) %>
+          </div>
+        <% end %>
+      <% end %>
+
+      <div class="flex items-center gap-2">
+        <% if item.pending_login_state.present? %>
+          <% if login_stage == "expired" %>
+            <div class="w-2 h-2 bg-destructive rounded-full"></div>
+            <p class="text-sm text-secondary"><%= translation("login_expired") %></p>
+            <%= render DS::Button.new(
+                  text: translation("restart_login"),
+                  variant: :outline,
+                  size: :sm,
+                  icon: "rotate-cw",
+                  href: helpers.initiate_login_trade_republic_item_path(item),
+                  method: :post,
+                  form: { class: "ml-auto" }
+                ) %>
+          <% else %>
+            <div class="w-2 h-2 bg-warning rounded-full"></div>
+            <p class="text-sm text-secondary">
+              <%= login_stage == "authenticator_code" ? translation("awaiting_authenticator_code") : translation("awaiting_confirmation") %>
+            </p>
+          <% end %>
+        <% elsif item.status == "good" && item.session_configured? %>
+          <div class="w-2 h-2 bg-success rounded-full"></div>
+          <p class="text-sm text-secondary">
+            <% if item.unlinked_accounts_count.positive? %>
+              <%= translation("accounts_discovered", count: item.unlinked_accounts_count) %>
+              <%= render DS::Link.new(
+                    text: translation("setup_accounts"),
+                    icon: "plus",
+                    variant: "primary",
+                    href: helpers.setup_accounts_trade_republic_item_path(item),
+                    frame: :modal
+                  ) %>
+            <% else %>
+              <%= translation("status_configured_prefix", summary: item.sync_status_summary) %>
+              <%= helpers.link_to translation("accounts_tab"), helpers.accounts_path, class: "link" %>
+              <%= translation("status_configured_suffix") %>
+            <% end %>
+          </p>
+        <% elsif item.status == "requires_update" %>
+          <div class="w-2 h-2 bg-warning rounded-full"></div>
+          <p class="text-sm text-secondary"><%= translation("requires_update") %></p>
+        <% else %>
+          <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
+          <p class="text-sm text-secondary"><%= translation("not_configured") %></p>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

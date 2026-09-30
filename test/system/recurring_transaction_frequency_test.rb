@@ -26,6 +26,9 @@ class RecurringTransactionFrequencyTest < ApplicationSystemTestCase
     select I18n.t("date.day_names")[5],
            from: I18n.t("recurring_transactions.form.frequency_weekday_label")
     click_button I18n.t("recurring_transactions.form.submit")
+    # click_button returns before the Turbo submit lands. Wait for its flash,
+    # or the visit below can abort the PATCH or load the list before it commits.
+    assert_text I18n.t("recurring_transactions.update.success")
 
     # The update redirects via the referer; the cadence label lives on the
     # All bills management view now.
@@ -50,6 +53,7 @@ class RecurringTransactionFrequencyTest < ApplicationSystemTestCase
     select I18n.t("date.day_names")[5],
            from: I18n.t("recurring_transactions.form.frequency_weekday_label")
     click_button I18n.t("recurring_transactions.form.submit")
+    assert_text I18n.t("recurring_transactions.update.success")
 
     visit bills_url(view: "all")
     assert_text I18n.t("recurring_transactions.frequency.weekly", weekday: I18n.t("date.day_names")[5])
@@ -78,6 +82,7 @@ class RecurringTransactionFrequencyTest < ApplicationSystemTestCase
     select I18n.t("date.day_names")[5],
            from: I18n.t("recurring_transactions.form.frequency_weekday_label")
     click_button I18n.t("recurring_transactions.form.submit")
+    assert_text I18n.t("recurring_transactions.update.success")
 
     visit bills_url(view: "all")
     assert_text I18n.t("recurring_transactions.frequency.every_n_weeks", interval: 3, weekday: I18n.t("date.day_names")[5])

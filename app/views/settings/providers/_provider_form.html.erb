@@ -6,7 +6,7 @@
 
   setup_steps_data =
     if %w[plaid plaid_eu].include?(provider_key)
-      plaid_link = link_to("Plaid Dashboard", "https://dashboard.plaid.com/team/keys", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")
+      plaid_link = link_to("Plaid Dashboard", "https://dashboard.plaid.com/team/keys", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")
       step_1_key = "settings.providers.#{provider_key}_panel.step_1_html"
       [
         t(step_1_key, link: plaid_link),
