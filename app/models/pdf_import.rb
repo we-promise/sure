@@ -72,6 +72,18 @@ class PdfImport < Import
 
     def create_from_upload!(family:, file:, allow_large_pdf: false, allow_duplicate_upload: false)
       prepared_upload = AccountStatement.prepare_upload!(file, allow_large_pdf: allow_large_pdf)
+      family.with_lock do
+        create_from_upload_locked!(
+          family: family,
+          prepared_upload: prepared_upload,
+          allow_duplicate_upload: allow_duplicate_upload
+        )
+      end
+    end
+
+    # Serialize duplicate lookup and import creation with orphan cleanup, which
+    # takes the same family lock before it removes an unused source statement.
+    def create_from_upload_locked!(family:, prepared_upload:, allow_duplicate_upload:)
       if duplicate_upload?(family, prepared_upload)
         duplicate_statement = AccountStatement.duplicate_for(family, prepared_upload)
         if duplicate_statement
@@ -114,6 +126,7 @@ class PdfImport < Import
 
       create_from_statement!(statement: error.statement)
     end
+    private :create_from_upload_locked!
 
     def duplicate_upload?(family, prepared_upload)
       return true if AccountStatement.duplicate_for(family, prepared_upload)

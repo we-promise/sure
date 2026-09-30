@@ -11,11 +11,19 @@ class CleanupOrphanedPdfImportStatementJob < ApplicationJob
     statement = AccountStatement.find_by(id: statement_id)
     return unless statement
 
-    statement.with_lock do
-      return unless statement.pdf_import_owned?
-      return if statement.account_id.present? || statement.pdf_imports.exists?
+    statement.family.with_lock do
+      # Re-fetch after taking the same family lock used by PDF upload creation.
+      # If cleanup wins, a waiting upload will perform a fresh duplicate lookup
+      # and create a new source statement from its prepared file.
+      statement = AccountStatement.find_by(id: statement_id)
+      return unless statement
 
-      statement.destroy!
+      statement.with_lock do
+        return unless statement.pdf_import_owned?
+        return if statement.account_id.present? || statement.pdf_imports.exists?
+
+        statement.destroy!
+      end
     end
   end
 end
