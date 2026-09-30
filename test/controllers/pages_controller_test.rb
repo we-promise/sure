@@ -81,6 +81,33 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{dashboard_section_hidden_path("investment_summary")}']", count: 0
   end
 
+  test "customize mode offers back a hidden insights feed only while it has insights" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    @user.update_dashboard_section_hidden("insights_feed", true)
+
+    get root_path(customize: true)
+    assert_select "form[action='#{dashboard_section_hidden_path("insights_feed")}']"
+
+    @family.insights.update_all(status: "dismissed")
+
+    get root_path(customize: true)
+    assert_select "form[action='#{dashboard_section_hidden_path("insights_feed")}']", count: 0
+  end
+
+  # A user who never reordered has only the default order saved, which leaves
+  # out widgets like money_flow that render after it.
+  test "update_preferences keeps a hidden widget's place when the saved order never listed it" do
+    @user.update_dashboard_section_hidden("money_flow", true)
+
+    patch "/dashboard/preferences", params: {
+      preferences: { section_order: %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet spending_trend investment_summary] }
+    }, as: :json
+
+    assert_response :ok
+    assert_equal %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet money_flow spending_trend investment_summary],
+      @user.reload.dashboard_section_order
+  end
+
   test "update_section_hidden hides and re-adds a section" do
     patch dashboard_section_hidden_path("net_worth_chart"), params: { hidden: true }
 

@@ -654,14 +654,18 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_section_layout", section_key, "col_span")
   end
 
-  def update_dashboard_preferences(prefs)
+  # laid_out_order is the order the dashboard laid its widgets out in, which
+  # also places widgets the saved order doesn't list yet.
+  def update_dashboard_preferences(prefs, laid_out_order: nil)
     # Use pessimistic locking to ensure atomic read-modify-write
     # This prevents race conditions when multiple sections are collapsed quickly
     transaction do
       lock! # Acquire row-level lock (SELECT FOR UPDATE)
 
       updated_prefs = (preferences || {}).deep_dup
-      prefs = prefs.merge("section_order" => keep_hidden_sections_in_order(prefs["section_order"])) if prefs["section_order"]
+      if prefs["section_order"]
+        prefs = prefs.merge("section_order" => keep_hidden_sections_in_order(prefs["section_order"], laid_out_order || dashboard_section_order))
+      end
       prefs.each do |key, value|
         if value.is_a?(Hash)
           updated_prefs[key] ||= {}
@@ -781,8 +785,7 @@ class User < ApplicationRecord
 
     # The dashboard only sends the order of the widgets it rendered, so put
     # each hidden widget back after the one it followed before.
-    def keep_hidden_sections_in_order(new_order)
-      old_order = dashboard_section_order
+    def keep_hidden_sections_in_order(new_order, old_order)
       hidden = dashboard_hidden_sections
       (old_order & hidden).reduce(new_order - hidden) do |order, key|
         predecessor = old_order[0...old_order.index(key)].reverse.find { |k| order.include?(k) }

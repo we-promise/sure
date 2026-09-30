@@ -61,7 +61,7 @@ class PagesController < ApplicationController
   end
 
   def update_preferences
-    if Current.user.update_dashboard_preferences(preferences_params)
+    if Current.user.update_dashboard_preferences(preferences_params, laid_out_order: ordered_dashboard_section_keys)
       head :ok
     else
       head :unprocessable_entity
@@ -229,15 +229,18 @@ class PagesController < ApplicationController
     # Just enough for the hidden list, without running the widget's queries.
     # Widgets whose data depends on the period stay on offer, since another
     # period may have something to show. Without investment accounts the
-    # investment summary never has anything to show.
+    # investment summary never has anything to show, and without insights
+    # neither does the feed.
     def hidden_dashboard_section(key)
       return nil if key == "insights_feed" && !preview_features_enabled?
 
-      {
-        key: key,
-        title: "pages.dashboard.#{key}.title",
-        visible: key == "investment_summary" ? investment_summary_available? : @accounts.any?
-      }
+      visible = case key
+      when "investment_summary" then investment_summary_available?
+      when "insights_feed" then Current.family.insights.visible.exists?
+      else @accounts.any?
+      end
+
+      { key: key, title: "pages.dashboard.#{key}.title", visible: visible }
     end
 
     def investment_summary_available?
@@ -283,35 +286,28 @@ class PagesController < ApplicationController
 
     def build_dashboard_sections
       hidden_keys = Current.user.dashboard_hidden_sections
-      all_sections = dashboard_section_builders.filter_map do |key, build|
-        hidden_keys.include?(key) ? hidden_dashboard_section(key) : build.call
-      end
-
-      # Order sections according to user preference
-      section_order = Current.user.dashboard_section_order
-      ordered_sections = section_order.map do |key|
-        all_sections.find { |s| s[:key] == key }
-      end.compact
-
-      # Add any new sections that aren't in the saved order (future-proofing).
-      # The insights feed leads instead of appending: it's a proactive surface,
-      # and appending would bury it below the fold for every family with a
-      # saved order. Users can still drag it back down — that choice persists.
-      all_sections.each do |section|
-        next if ordered_sections.include?(section)
-
-        if section[:key] == "insights_feed"
-          ordered_sections.unshift(section)
-        else
-          ordered_sections << section
-        end
+      builders = dashboard_section_builders
+      sections = ordered_dashboard_section_keys.filter_map do |key|
+        hidden_keys.include?(key) ? hidden_dashboard_section(key) : builders.fetch(key).call
       end
 
       # Returns [shown, hidden]. Sections with nothing to show are dropped
       # first, so the hidden list never offers back a widget that wouldn't
       # appear once re-added.
-      hidden, shown = ordered_sections.select { |s| s[:visible] }.partition { |s| hidden_keys.include?(s[:key]) }
+      hidden, shown = sections.select { |s| s[:visible] }.partition { |s| hidden_keys.include?(s[:key]) }
       [ shown, hidden ]
+    end
+
+    # The order the dashboard lays its widgets out in: the user's saved order,
+    # then any widget missing from it (future-proofing). The insights feed
+    # leads instead of appending: it's a proactive surface, and appending
+    # would bury it below the fold for every family with a saved order. Users
+    # can still drag it back down — that choice persists.
+    def ordered_dashboard_section_keys
+      keys = dashboard_section_builders.keys
+      saved = Current.user.dashboard_section_order & keys
+      unsaved = keys - saved
+      (unsaved & %w[insights_feed]) + saved + (unsaved - %w[insights_feed])
     end
 
     # Resolves a section's layout guardrails, applying the user's height preset
