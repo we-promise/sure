@@ -8,8 +8,8 @@ class BillDrawerTest < ApplicationSystemTestCase
     sign_in @user = users(:family_admin)
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
 
-    # Overdue, so its drawer offers Find payment, and so its row is the only
-    # link to this cycle: Next up lists nothing already past due.
+    # Overdue, so its row and its drawer offer Find payment, and so its row is
+    # the only link to this cycle: Next up lists nothing already past due.
     due = 6.days.ago.to_date
     bill = @user.family.recurring_transactions.create!(
       name: "City Water", account: accounts(:depository), amount: 80, currency: "USD",
@@ -18,6 +18,7 @@ class BillDrawerTest < ApplicationSystemTestCase
     )
     overdue = bill.recurring_occurrences.detect(&:overdue?)
     @row_link = "a[data-turbo-frame='drawer'][href='#{bill_path(bill, display: "drawer", occurrence: overdue.id)}']"
+    @find_payment_link = "a[data-turbo-frame='drawer'][href='#{recurring_occurrence_path(overdue)}']"
   end
 
   # The inline expansion used to push everything below it down the page. The
@@ -60,6 +61,19 @@ class BillDrawerTest < ApplicationSystemTestCase
 
     find(@row_link).click
     within("dialog[open]") { click_on I18n.t("bills.view_full_bill") }
+    assert_selector "main h1", text: "City Water"
+
+    page.go_back
+    assert_selector @row_link
+    assert_no_selector "dialog[open]"
+  end
+
+  # The payment drawer's "View full bill" leaves the same way.
+  test "going back from the bill's page shows the list, not a leftover payment drawer" do
+    visit bills_url
+
+    find(@find_payment_link).click
+    within("dialog[open]") { click_on I18n.t("recurring_occurrences.show.view_bill") }
     assert_selector "main h1", text: "City Water"
 
     page.go_back

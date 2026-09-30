@@ -25,6 +25,19 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
   end
 
+  # Turbo caches the page as it was left, so a drawer still open when "View
+  # full bill" navigated away would come back from Back as a stray dialog.
+  # Visited directly, the dialog is the page, and Back has to restore it.
+  test "the dialog is left out of Turbo's page cache in the drawer, not on a direct visit" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+    assert_select "turbo-frame#drawer > dialog[data-turbo-temporary]", count: 1
+
+    # Scoped to the frame: the layout's own confirm dialog is a <dialog> too.
+    get recurring_occurrence_url(@occurrence)
+    assert_select "turbo-frame#drawer > dialog", count: 1
+    assert_select "turbo-frame#drawer > dialog[data-turbo-temporary]", count: 0
+  end
+
   # Pause redirects back to the page it was pressed on. Fetched for the drawer
   # frame, that page has no drawer frame in it, so the drawer would read
   # "Content missing" instead of the list updating behind it.
