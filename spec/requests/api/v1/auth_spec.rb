@@ -131,6 +131,7 @@ RSpec.describe 'API V1 Auth', type: :request do
 
       response '403', 'local login disabled (SSO-only instance)' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        before { allow(AuthConfig).to receive(:local_login_form_visible?).and_return(false) }
         run_test!
       end
     end
