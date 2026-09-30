@@ -21,7 +21,7 @@ import 'services/connectivity_service.dart';
 import 'services/log_service.dart';
 import 'services/preferences_service.dart';
 import 'services/telemetry_service.dart';
-import 'theme/sure_theme.dart';
+import 'theme/app_theme.dart';
 import 'l10n/app_localizations.dart';
 import 'package:upgrader/upgrader.dart';
 
@@ -106,8 +106,8 @@ class SureApp extends StatelessWidget {
           supportedLocales: AppLocalizations.supportedLocales,
           debugShowCheckedModeBanner: false,
           navigatorObservers: TelemetryService.instance.navigatorObservers,
-          theme: SureTheme.light,
-          darkTheme: SureTheme.dark,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
           themeMode: themeProvider.themeMode,
           routes: {
             '/config': (context) => const BackendConfigScreen(),
