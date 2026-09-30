@@ -107,7 +107,8 @@ class TradesController < ApplicationController
 
     def create_params
       params.require(:model).permit(
-        :date, :amount, :currency, :qty, :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id
+        :date, :amount, :currency, :qty, :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id,
+        :underlying_ticker, :option_type, :strike_price, :expiration_date, :contract_multiplier
       )
     end
 
@@ -134,7 +135,8 @@ class TradesController < ApplicationController
         qty = is_sell ? -qty.to_d.abs : qty.to_d.abs
         fee_val = fee.present? ? fee.to_d : (@entry.trade&.fee || 0)
         update_params[:entryable_attributes][:qty] = qty
-        update_params[:amount] = qty * price.to_d + fee_val
+        multiplier = @entry.trade&.contract_multiplier || 1
+        update_params[:amount] = qty * price.to_d * multiplier + fee_val
 
         # Sync investment_activity_label with Buy/Sell type if not explicitly set to something else
         # Check both the submitted param and the existing record's label
@@ -147,7 +149,12 @@ class TradesController < ApplicationController
         # Update entry name to reflect Buy/Sell change
         ticker = @entry.trade&.security&.ticker
         if ticker.present?
-          update_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", qty.abs, ticker)
+          security = @entry.trade.security
+          update_params[:name] = if security.option_contract?
+            I18n.t("trades.form.option_trade_name", label: is_sell ? "Sell" : "Buy", qty: qty.abs, security: security.name)
+          else
+            Trade.build_name(is_sell ? "sell" : "buy", qty.abs, ticker)
+          end
         end
       end
 

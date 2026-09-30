@@ -12,6 +12,8 @@
       <%= form.select :type, [
           [t(".type_buy"), "buy"],
           [t(".type_sell"), "sell"],
+          [t(".type_option_buy"), "option_buy"],
+          [t(".type_option_sell"), "option_sell"],
           [t(".type_deposit"), "deposit"],
           [t(".type_withdrawal"), "withdrawal"],
           [t(".type_dividend"), "dividend"],
@@ -39,6 +41,17 @@
         <% end %>
       <% end %>
 
+      <% if %w[option_buy option_sell].include?(type) %>
+        <%= form.text_field :underlying_ticker, label: t(".underlying_ticker"), placeholder: t(".ticker_placeholder"), required: true %>
+        <%= form.select :option_type, [
+              [t(".call"), "call"],
+              [t(".put"), "put"]
+            ], { label: t(".option_type"), selected: model.option_type || "call" }, { required: true } %>
+        <%= form.number_field :strike_price, label: t(".strike_price"), min: 0.000001, step: "any", required: true %>
+        <%= form.date_field :expiration_date, label: t(".expiration_date"), required: true %>
+        <%= form.number_field :contract_multiplier, label: t(".contract_multiplier"), value: model.contract_multiplier || 100, min: 1, step: 1, required: true %>
+      <% end %>
+
       <% if %w[dividend interest].include?(type) %>
         <% account_securities = account ? account.traded_standard_securities : [] %>
         <% security_options = account_securities.map { |s| [ s.name.presence || s.ticker, s.exchange_operating_mic.present? ? "#{s.ticker}|#{s.exchange_operating_mic}" : s.ticker ] } %>
@@ -50,7 +63,7 @@
 
       <%= form.date_field :date, label: true, value: model.date || Date.current, required: true %>
 
-      <% unless %w[buy sell].include?(type) %>
+      <% unless %w[buy sell option_buy option_sell].include?(type) %>
         <%= form.money_field :amount, label: t(".amount"), value: model.amount, required: true, default_currency: account&.currency %>
       <% end %>
 
@@ -58,9 +71,9 @@
         <%= form.collection_select :transfer_account_id, accessible_accounts.writable_by(Current.user).visible.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account") } %>
       <% end %>
 
-      <% if %w[buy sell].include?(type) %>
-        <%= form.number_field :qty, label: t(".qty"), placeholder: "10", min: 0.000000000000000001, step: "any", required: true %>
-        <%= form.money_field :price, label: t(".price"), step: "any", precision: 10, required: true, default_currency: account&.currency %>
+      <% if %w[buy sell option_buy option_sell].include?(type) %>
+        <%= form.number_field :qty, label: %w[option_buy option_sell].include?(type) ? t(".contracts") : t(".qty"), placeholder: "1", min: 0.000000000000000001, step: "any", required: true %>
+        <%= form.money_field :price, label: %w[option_buy option_sell].include?(type) ? t(".premium_per_share") : t(".price"), step: "any", precision: 10, required: true, default_currency: account&.currency %>
         <%= form.money_field :fee, label: t(".fee"), step: "any", min: 0, default_currency: account&.currency %>
       <% end %>
     </div>

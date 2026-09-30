@@ -14,18 +14,32 @@ en:
       holding: Ticker symbol
       holding_optional: Ticker symbol (optional)
       price: Price per share
+      premium_per_share: Option premium per share
+      contracts: Number of contracts
       qty: Quantity
       submit: Add transaction
       ticker_placeholder: AAPL
       type: Type
       type_buy: Buy
       type_sell: Sell
+      type_option_buy: Buy option
+      type_option_sell: Sell option
       type_deposit: Deposit
       type_withdrawal: Withdrawal
       type_dividend: Dividend
       type_interest: Interest
       dividend_requires_security: Security is required for dividends
       trade_requires_security: A security (ticker) is required for buy and sell trades
+      underlying_ticker: Underlying ticker
+      option_type: Contract type
+      call: Call
+      put: Put
+      strike_price: Strike price
+      expiration_date: Expiration date
+      contract_multiplier: Shares per contract
+      option_trade_name: "%{label} %{qty} %{security} contracts"
+      option_buy: Buy option
+      option_sell: Sell option
     header:
       buy: Buy
       sell: Sell
