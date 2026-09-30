@@ -24,22 +24,26 @@ class Account::OpeningBalanceManager
   end
 
   # Serialized per account, so concurrent calls (e.g. an assistant retrying)
-  # can't both see "no anchor" and create two.
+  # can't both see "no anchor" and create two. Uncached so the reads under
+  # the lock can't be served from a query cache filled before another
+  # request committed its anchor.
   def set_opening_balance(balance:, date: nil)
-    Account.transaction do
-      lock_account!
+    Account.uncached do
+      Account.transaction do
+        lock_account!
 
-      if (error = date_error(date))
-        Result.new(success?: false, changes_made?: false, error: error)
-      elsif opening_anchor_valuation.nil?
-        create_opening_anchor(
-          balance: balance,
-          date: date || default_date
-        )
-        Result.new(success?: true, changes_made?: true, error: nil)
-      else
-        changes_made = update_opening_anchor(balance: balance, date: date)
-        Result.new(success?: true, changes_made?: changes_made, error: nil)
+        if (error = date_error(date))
+          Result.new(success?: false, changes_made?: false, error: error)
+        elsif opening_anchor_valuation.nil?
+          create_opening_anchor(
+            balance: balance,
+            date: date || default_date
+          )
+          Result.new(success?: true, changes_made?: true, error: nil)
+        else
+          changes_made = update_opening_anchor(balance: balance, date: date)
+          Result.new(success?: true, changes_made?: changes_made, error: nil)
+        end
       end
     end
   end
