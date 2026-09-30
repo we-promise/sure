@@ -317,29 +317,619 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 500.00, outbound.amount.to_f, "money out must be stored positive on an asset account"
   end
 
-  test "maps all known activity types correctly" do
-    type_mappings = {
-      "BUY" => "Buy",
-      "SELL" => "Sell",
-      "DIVIDEND" => "Dividend",
-      "DIV" => "Dividend",
-      "CONTRIBUTION" => "Contribution",
-      "WITHDRAWAL" => "Withdrawal",
-      "TRANSFER_IN" => "Transfer",
-      "TRANSFER_OUT" => "Transfer",
-      "INTEREST" => "Interest",
-      "FEE" => "Fee",
-      "TAX" => "Fee",
-      "REI" => "Reinvestment",
-      "REINVEST" => "Reinvestment",
-      "CASH" => "Contribution",
-      "CORP_ACTION" => "Other",
-      "SPLIT_REVERSE" => "Other"
-    }
+  test "processes TRANSFER as cash transaction even when units are present in payload" do
+    # In 401(k) accounts, payroll contributions arrive as type: TRANSFER with units and cash amount
+    process_activities(
+      build_trade_activity(
+        id: "xfer_payroll_contrib",
+        type: "TRANSFER",
+        symbol: "5022",
+        units: 8.699,
+        price: 156.36,
+        amount: 1388.84
+      )
+    )
 
-    type_mappings.each do |snaptrade_type, expected_label|
-      actual = SnaptradeAccount::ActivitiesProcessor::SNAPTRADE_TYPE_TO_LABEL[snaptrade_type]
-      assert_equal expected_label, actual, "Type #{snaptrade_type} should map to #{expected_label}"
+    entry = snaptrade_entry("xfer_payroll_contrib")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Transaction), "TRANSFER must be processed as a cash Transaction"
+    assert_equal BigDecimal("-1388.84"), entry.amount, "cash contribution amount must be preserved as negative inflow"
+    assert_equal "Transfer", entry.entryable.investment_activity_label
+  end
+
+  test "keeps cash TRANSFER with zero units on the cash transaction path" do
+    process_activities(
+      build_cash_activity(
+        id: "xfer_cash_zero_units",
+        type: "TRANSFER",
+        amount: 250.00,
+        settlement_date: Date.current.to_s
+      ).merge("units" => 0)
+    )
+
+    entry = snaptrade_entry("xfer_cash_zero_units")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Transaction), "cash transfer with 0 units must remain a Transaction"
+    assert_equal(-250.00, entry.amount.to_f)
+    assert_equal "Transfer", entry.entryable.investment_activity_label
+  end
+
+  test "processes REBATE as negative cash inflow" do
+    process_activities(
+      build_cash_activity(id: "rebate_001", type: "REBATE", amount: 50.00, settlement_date: Date.current.to_s)
+    )
+
+    entry = snaptrade_entry("rebate_001")
+    assert_not_nil entry
+    assert_equal(-50.00, entry.amount.to_f, "rebate credited to account must be stored as negative inflow")
+    assert_equal "Other", entry.entryable.investment_activity_label
+  end
+
+  test "processes RETURN_OF_CAPITAL, DISTRIBUTION, and SUBSTITUTE_DIVIDEND as negative cash inflows with Dividend label" do
+    process_activities(
+      build_cash_activity(id: "roc_001", type: "RETURN_OF_CAPITAL", amount: 75.00, settlement_date: Date.current.to_s, symbol: "VTI"),
+      build_cash_activity(id: "dist_001", type: "DISTRIBUTION", amount: 120.00, settlement_date: Date.current.to_s, symbol: "VNQ"),
+      build_cash_activity(id: "sub_div_001", type: "SUBSTITUTE_DIVIDEND", amount: 45.00, settlement_date: Date.current.to_s, symbol: "AAPL")
+    )
+
+    roc = snaptrade_entry("roc_001")
+    dist = snaptrade_entry("dist_001")
+    sub_div = snaptrade_entry("sub_div_001")
+
+    assert_not_nil roc
+    assert_not_nil dist
+    assert_not_nil sub_div
+    assert_equal(-75.00, roc.amount.to_f)
+    assert_equal "Dividend", roc.entryable.investment_activity_label
+    assert_equal(-120.00, dist.amount.to_f)
+    assert_equal "Dividend", dist.entryable.investment_activity_label
+    assert_equal(-45.00, sub_div.amount.to_f)
+    assert_equal "Dividend", sub_div.entryable.investment_activity_label
+  end
+
+  test "processes cash FEE and TAX as positive outflow and INTEREST as negative inflow" do
+    process_activities(
+      build_cash_activity(id: "fee_001", type: "FEE", amount: -25.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "tax_001", type: "TAX", amount: 15.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "interest_001", type: "INTEREST", amount: 12.50, settlement_date: Date.current.to_s)
+    )
+
+    fee = snaptrade_entry("fee_001")
+    tax = snaptrade_entry("tax_001")
+    interest = snaptrade_entry("interest_001")
+
+    assert_not_nil fee
+    assert_not_nil tax
+    assert_not_nil interest
+
+    assert_equal 25.00, fee.amount.to_f
+    assert_equal "Fee", fee.entryable.investment_activity_label
+
+    assert_equal 15.00, tax.amount.to_f
+    assert_equal "Fee", tax.entryable.investment_activity_label
+
+    assert_equal(-12.50, interest.amount.to_f)
+    assert_equal "Interest", interest.entryable.investment_activity_label
+  end
+
+  test "processes INTERNAL_CASH_TRANSFER_IN and OUT with correct signs" do
+    process_activities(
+      build_cash_activity(id: "int_cash_in", type: "INTERNAL_CASH_TRANSFER_IN", amount: 250.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "int_cash_out", type: "INTERNAL_CASH_TRANSFER_OUT", amount: 100.00, settlement_date: Date.current.to_s)
+    )
+
+    inbound = snaptrade_entry("int_cash_in")
+    outbound = snaptrade_entry("int_cash_out")
+
+    assert_not_nil inbound
+    assert_not_nil outbound
+    assert_equal(-250.00, inbound.amount.to_f)
+    assert_equal "Transfer", inbound.entryable.investment_activity_label
+    assert_equal 100.00, outbound.amount.to_f
+    assert_equal "Transfer", outbound.entryable.investment_activity_label
+  end
+
+  test "processes cash ADJUSTMENT by inverting provider sign" do
+    process_activities(
+      build_cash_activity(id: "adj_credit", type: "ADJUSTMENT", amount: 15.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "adj_debit", type: "ADJUSTMENT", amount: -20.00, settlement_date: Date.current.to_s)
+    )
+
+    credit = snaptrade_entry("adj_credit")
+    debit = snaptrade_entry("adj_debit")
+
+    assert_not_nil credit
+    assert_not_nil debit
+    assert_equal(-15.00, credit.amount.to_f, "credit adjustment must be stored as negative inflow")
+    assert_equal 20.00, debit.amount.to_f, "debit adjustment must be stored as positive outflow"
+  end
+
+  test "processes forward SPLIT as zero-cash trade adding shares (LAB-156)" do
+    process_activities(
+      build_trade_activity(
+        id: "split_001",
+        type: "SPLIT",
+        symbol: "VGT",
+        units: 3010.014,
+        price: 0.0,
+        amount: 304071.61 # SnapTrade notional value must NOT become a cash withdrawal
+      )
+    )
+
+    entry = snaptrade_entry("split_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade), "SPLIT must be imported as a Trade, not a cash Transaction"
+    trade = entry.entryable
+    assert_equal BigDecimal("3010.014"), trade.qty
+    assert_equal BigDecimal("0"), trade.price
+    assert_equal BigDecimal("0"), entry.amount, "cash impact must be zero to prevent balance distortion"
+    assert_equal "Other", trade.investment_activity_label
+  end
+
+  test "processes REVERSE_SPLIT as zero-cash trade with negative quantity" do
+    process_activities(
+      build_trade_activity(
+        id: "rev_split_001",
+        type: "REVERSE_SPLIT",
+        symbol: "SOXL",
+        units: 50.0,
+        price: 0.0
+      )
+    )
+
+    entry = snaptrade_entry("rev_split_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    trade = entry.entryable
+    assert_equal BigDecimal("-50.0"), trade.qty
+    assert_equal BigDecimal("0"), trade.price
+    assert_equal BigDecimal("0"), entry.amount
+    assert_equal "Other", trade.investment_activity_label
+  end
+
+  test "processes STOCK_DIVIDEND as zero-cash trade with Dividend label" do
+    process_activities(
+      build_trade_activity(
+        id: "stock_div_001",
+        type: "STOCK_DIVIDEND",
+        symbol: "AAPL",
+        units: 2.0,
+        price: 0.0
+      )
+    )
+
+    entry = snaptrade_entry("stock_div_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    trade = entry.entryable
+    assert_equal BigDecimal("2.0"), trade.qty
+    assert_equal BigDecimal("0"), trade.price
+    assert_equal BigDecimal("0"), entry.amount
+    assert_equal "Dividend", trade.investment_activity_label
+  end
+
+  test "processes SPINOFF as zero-cash trade" do
+    process_activities(
+      build_trade_activity(
+        id: "spinoff_001",
+        type: "SPINOFF",
+        symbol: "GEV",
+        units: 10.0,
+        price: 0.0
+      )
+    )
+
+    entry = snaptrade_entry("spinoff_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    trade = entry.entryable
+    assert_equal BigDecimal("10.0"), trade.qty
+    assert_equal BigDecimal("0"), trade.price
+    assert_equal BigDecimal("0"), entry.amount
+    assert_equal "Other", trade.investment_activity_label
+  end
+
+  test "processes OPTIONASSIGNMENT and OPTIONEXERCISE as trades" do
+    process_activities(
+      build_trade_activity(
+        id: "opt_assign_001",
+        type: "OPTIONASSIGNMENT",
+        symbol: "AAPL",
+        units: 1.0,
+        price: 150.0
+      ),
+      build_trade_activity(
+        id: "opt_exercise_001",
+        type: "OPTIONEXERCISE",
+        symbol: "MSFT",
+        units: 1.0,
+        price: 300.0
+      ),
+      build_trade_activity(
+        id: "opt_exercise_close",
+        type: "OPTIONEXERCISE",
+        symbol: "QQQ",
+        units: -1.0,
+        price: 0.0,
+        amount: -23805.0 # Exercise cash outlay
+      )
+    )
+
+    assign = snaptrade_entry("opt_assign_001")
+    exercise = snaptrade_entry("opt_exercise_001")
+    exercise_close = snaptrade_entry("opt_exercise_close")
+
+    assert_not_nil assign
+    assert_not_nil exercise
+    assert_not_nil exercise_close
+    assert assign.entryable.is_a?(Trade)
+    assert exercise.entryable.is_a?(Trade)
+    assert exercise_close.entryable.is_a?(Trade)
+    assert_equal BigDecimal("-1.0"), assign.entryable.qty, "assignment should be sell-side (negative)"
+    assert_equal BigDecimal("1.0"), exercise.entryable.qty
+    assert_equal BigDecimal("-1.0"), exercise_close.entryable.qty, "negative units removes exercised contract"
+  end
+
+  test "processes EXTERNAL_ASSET_TRANSFER_IN and OUT as zero-cash asset trades" do
+    process_activities(
+      build_trade_activity(
+        id: "acat_in_001",
+        type: "EXTERNAL_ASSET_TRANSFER_IN",
+        symbol: "VTI",
+        units: 100.0,
+        price: 220.0
+      ),
+      build_trade_activity(
+        id: "acat_out_001",
+        type: "EXTERNAL_ASSET_TRANSFER_OUT",
+        symbol: "VXUS",
+        units: 50.0,
+        price: 60.0
+      )
+    )
+
+    inbound = snaptrade_entry("acat_in_001")
+    outbound = snaptrade_entry("acat_out_001")
+
+    assert_not_nil inbound
+    assert_not_nil outbound
+    assert inbound.entryable.is_a?(Trade)
+    assert outbound.entryable.is_a?(Trade)
+    assert_equal BigDecimal("100.0"), inbound.entryable.qty
+    assert_equal BigDecimal("-50.0"), outbound.entryable.qty
+    assert_equal BigDecimal("0"), inbound.amount, "ACAT transfer in has zero cash flow"
+    assert_equal BigDecimal("0"), outbound.amount, "ACAT transfer out has zero cash flow"
+    assert_equal "Transfer", inbound.entryable.investment_activity_label
+    assert_equal "Transfer", outbound.entryable.investment_activity_label
+  end
+
+  test "processes INTERNAL_ASSET_TRANSFER_IN and OUT as zero-cash asset trades" do
+    process_activities(
+      build_trade_activity(
+        id: "int_asset_in_001",
+        type: "INTERNAL_ASSET_TRANSFER_IN",
+        symbol: "VTI",
+        units: 25.0,
+        price: 220.0
+      ),
+      build_trade_activity(
+        id: "int_asset_out_001",
+        type: "INTERNAL_ASSET_TRANSFER_OUT",
+        symbol: "VXUS",
+        units: 15.0,
+        price: 60.0
+      )
+    )
+
+    inbound = snaptrade_entry("int_asset_in_001")
+    outbound = snaptrade_entry("int_asset_out_001")
+
+    assert_not_nil inbound
+    assert_not_nil outbound
+    assert inbound.entryable.is_a?(Trade)
+    assert outbound.entryable.is_a?(Trade)
+    assert_equal BigDecimal("25.0"), inbound.entryable.qty
+    assert_equal BigDecimal("-15.0"), outbound.entryable.qty
+    assert_equal BigDecimal("0"), inbound.amount, "internal asset transfer in has zero cash flow"
+    assert_equal BigDecimal("0"), outbound.amount, "internal asset transfer out has zero cash flow"
+    assert_equal "Transfer", inbound.entryable.investment_activity_label
+    assert_equal "Transfer", outbound.entryable.investment_activity_label
+  end
+
+  test "processes STOCK_MERGER as zero-cash trade preserving signed units" do
+    process_activities(
+      build_trade_activity(
+        id: "merger_retire",
+        type: "STOCK_MERGER",
+        symbol: "AAPL",
+        units: -100.0,
+        price: nil,
+        amount: nil
+      ),
+      build_trade_activity(
+        id: "merger_receive",
+        type: "STOCK_MERGER",
+        symbol: "MSFT",
+        units: 50.0,
+        price: nil,
+        amount: nil
+      )
+    )
+
+    retire = snaptrade_entry("merger_retire")
+    receive = snaptrade_entry("merger_receive")
+
+    assert_not_nil retire
+    assert_not_nil receive
+    assert retire.entryable.is_a?(Trade)
+    assert receive.entryable.is_a?(Trade)
+    assert_equal BigDecimal("-100.0"), retire.entryable.qty, "negative units must retire acquired shares"
+    assert_equal BigDecimal("50.0"), receive.entryable.qty, "positive units must add new shares"
+    assert_equal BigDecimal("0"), retire.amount
+    assert_equal BigDecimal("0"), receive.amount
+    assert_equal "Other", retire.entryable.investment_activity_label
+    assert_equal "Other", receive.entryable.investment_activity_label
+  end
+
+  test "processes STOCK_MERGER with cash-in-lieu or cash consideration preserving cash amount" do
+    process_activities(
+      build_trade_activity(
+        id: "merger_cash_in_lieu",
+        type: "STOCK_MERGER",
+        symbol: "AAPL",
+        units: -0.5,
+        price: nil,
+        amount: 45.00
+      )
+    )
+
+    entry = snaptrade_entry("merger_cash_in_lieu")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    assert_equal BigDecimal("-0.5"), entry.entryable.qty
+    assert_equal BigDecimal("-45.00"), entry.amount, "cash-in-lieu proceeds must be negative entry amount (money in)"
+    assert_equal BigDecimal("90.00"), entry.entryable.price
+  end
+
+  test "processes STOCK_MERGER with cash-only payload as a Transaction" do
+    process_activities(
+      build_cash_activity(
+        id: "merger_cash_only",
+        type: "STOCK_MERGER",
+        amount: 150.00,
+        settlement_date: Date.current.to_s
+      )
+    )
+
+    entry = snaptrade_entry("merger_cash_only")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Transaction)
+    assert_equal BigDecimal("-150.00"), entry.amount, "cash merger payout must be negative entry amount (money in)"
+    assert_equal "Other", entry.entryable.investment_activity_label
+  end
+
+  test "reclassifies pre-existing Transaction entry to Trade on resync without type collision error" do
+    # Simulate an account that previously synced a SPLIT activity under the old cash-only code
+    stale_entry = @account.entries.create!(
+      external_id: "split_reclass_test",
+      source: "snaptrade",
+      amount: 304071.61,
+      currency: "USD",
+      date: Date.current,
+      name: "DISTRIBUTION VANGUARD WORLD FD INF TECH ETF (VGT)",
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+    stale_entry_id = stale_entry.id
+
+    assert stale_entry.entryable.is_a?(Transaction)
+
+    # Re-sync with the updated ActivitiesProcessor
+    process_activities(
+      build_trade_activity(
+        id: "split_reclass_test",
+        type: "SPLIT",
+        symbol: "VGT",
+        units: 3010.014,
+        price: 0.0,
+        amount: 304071.61
+      )
+    )
+
+    reclassified_entry = snaptrade_entry("split_reclass_test")
+    assert_not_nil reclassified_entry
+    assert_not_equal stale_entry_id, reclassified_entry.id, "stale entry should be replaced with reclassified entry"
+    assert reclassified_entry.entryable.is_a?(Trade), "entry must be reclassified to Trade"
+    assert_equal BigDecimal("3010.014"), reclassified_entry.entryable.qty
+    assert_equal BigDecimal("0.0"), reclassified_entry.amount, "split trade must have zero cash amount"
+    assert_equal BigDecimal("0.0"), reclassified_entry.entryable.price
+    assert_nil snaptrade_debug_log("split_reclass_test", level: "error")
+  end
+
+  test "reclassifies pre-existing Trade entry to Transaction on resync without type collision error" do
+    # Simulate an entry previously imported as a Trade (e.g. stock merger with units)
+    security = Security.find_or_create_by!(ticker: "AAPL") { |s| s.name = "Apple Inc"; s.currency = "USD" }
+    stale_entry = @account.entries.create!(
+      external_id: "merger_reclass_test",
+      source: "snaptrade",
+      amount: 0.0,
+      currency: "USD",
+      date: Date.current,
+      name: "STOCK_MERGER AAPL",
+      entryable: Trade.new(security: security, qty: 10, price: 150.0, currency: "USD")
+    )
+    stale_entry_id = stale_entry.id
+
+    assert stale_entry.entryable.is_a?(Trade)
+
+    # Re-sync as a cash-only merger payout (0 units)
+    process_activities(
+      build_cash_activity(
+        id: "merger_reclass_test",
+        type: "STOCK_MERGER",
+        amount: 500.00,
+        settlement_date: Date.current.to_s
+      )
+    )
+
+    reclassified_entry = snaptrade_entry("merger_reclass_test")
+    assert_not_nil reclassified_entry
+    assert_not_equal stale_entry_id, reclassified_entry.id, "stale trade entry should be replaced"
+    assert reclassified_entry.entryable.is_a?(Transaction), "entry must be reclassified to Transaction"
+    assert_equal BigDecimal("-500.00"), reclassified_entry.amount
+    assert_nil snaptrade_debug_log("merger_reclass_test", level: "error")
+  end
+
+  test "skips reclassification and preserves existing entry when import_locked" do
+    # When user manually locked an entry, resync must not destroy or reclassify it
+    locked_entry = @account.entries.create!(
+      external_id: "locked_split_test",
+      source: "snaptrade",
+      amount: 0.0,
+      currency: "USD",
+      date: Date.current,
+      name: "DISTRIBUTION VGT (Manual Lock)",
+      import_locked: true,
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+    original_id = locked_entry.id
+
+    process_activities(
+      build_trade_activity(
+        id: "locked_split_test",
+        type: "SPLIT",
+        symbol: "VGT",
+        units: 3010.014,
+        price: 0.0,
+        amount: 304071.61
+      )
+    )
+
+    entry = snaptrade_entry("locked_split_test")
+    assert_not_nil entry
+    assert_equal original_id, entry.id, "locked entry ID must be preserved"
+    assert entry.entryable.is_a?(Transaction), "locked entry must not be converted to Trade"
+    assert_equal BigDecimal("0.0"), entry.amount
+
+    log = snaptrade_debug_log("locked_split_test", level: "warn")
+    assert_not_nil log
+    assert_includes log.message, "Skipping reclassification of protected entry"
+  end
+
+  test "skips reclassification and preserves existing entry when user_modified" do
+    user_entry = @account.entries.create!(
+      external_id: "user_modified_split_test",
+      source: "snaptrade",
+      amount: 0.0,
+      currency: "USD",
+      date: Date.current,
+      name: "Edited Split Entry",
+      user_modified: true,
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+    original_id = user_entry.id
+
+    process_activities(
+      build_trade_activity(
+        id: "user_modified_split_test",
+        type: "SPLIT",
+        symbol: "VGT",
+        units: 100.0,
+        price: 0.0,
+        amount: 10000.00
+      )
+    )
+
+    entry = snaptrade_entry("user_modified_split_test")
+    assert_not_nil entry
+    assert_equal original_id, entry.id, "user-modified entry ID must be preserved"
+    assert entry.entryable.is_a?(Transaction), "user-modified entry must not be converted"
+
+    log = snaptrade_debug_log("user_modified_split_test", level: "warn")
+    assert_not_nil log
+    assert_includes log.message, "Skipping reclassification of protected entry"
+  end
+
+  test "processes zero-amount trade types when price and amount are omitted" do
+    process_activities(
+      build_trade_activity(
+        id: "opt_exp_long",
+        type: "OPTIONEXPIRATION",
+        symbol: "AAPL",
+        units: -1.0,
+        price: nil,
+        amount: nil
+      ),
+      build_trade_activity(
+        id: "opt_exp_short",
+        type: "OPTIONEXPIRATION",
+        symbol: "MSFT",
+        units: 1.0,
+        price: nil,
+        amount: nil
+      )
+    )
+
+    long_entry = snaptrade_entry("opt_exp_long")
+    short_entry = snaptrade_entry("opt_exp_short")
+
+    assert_not_nil long_entry, "zero-amount trade types must import even when price and amount are omitted"
+    assert_not_nil short_entry
+    assert long_entry.entryable.is_a?(Trade)
+    assert short_entry.entryable.is_a?(Trade)
+    assert_equal BigDecimal("-1.0"), long_entry.entryable.qty, "negative units must close out expired long contract"
+    assert_equal BigDecimal("1.0"), short_entry.entryable.qty, "positive units must close out expired short contract"
+    assert_equal BigDecimal("0"), long_entry.entryable.price
+    assert_equal BigDecimal("0"), short_entry.entryable.price
+    assert_equal BigDecimal("0"), long_entry.amount
+    assert_equal BigDecimal("0"), short_entry.amount
+    assert_equal "Other", long_entry.entryable.investment_activity_label
+    assert_equal "Other", short_entry.entryable.investment_activity_label
+  end
+
+  test "processes share ADJUSTMENT as a zero-cash trade preserving signed units" do
+    process_activities(
+      build_trade_activity(
+        id: "share_adj_add",
+        type: "ADJUSTMENT",
+        symbol: "VTI",
+        units: 5.0,
+        price: nil,
+        amount: 500.00 # Notional value must not become cash flow
+      ),
+      build_trade_activity(
+        id: "share_adj_remove",
+        type: "ADJUSTMENT",
+        symbol: "VTI",
+        units: -3.0,
+        price: nil,
+        amount: -300.00
+      )
+    )
+
+    add_entry = snaptrade_entry("share_adj_add")
+    remove_entry = snaptrade_entry("share_adj_remove")
+
+    assert_not_nil add_entry
+    assert_not_nil remove_entry
+    assert add_entry.entryable.is_a?(Trade), "ADJUSTMENT with units must be imported as a Trade"
+    assert remove_entry.entryable.is_a?(Trade)
+
+    assert_equal BigDecimal("5.0"), add_entry.entryable.qty, "positive units represents shares added"
+    assert_equal BigDecimal("-3.0"), remove_entry.entryable.qty, "negative units represents shares removed"
+    assert_equal BigDecimal("0"), add_entry.entryable.price
+    assert_equal BigDecimal("0"), remove_entry.entryable.price
+    assert_equal BigDecimal("0"), add_entry.amount
+    assert_equal BigDecimal("0"), remove_entry.amount
+    assert_equal "Other", add_entry.entryable.investment_activity_label
+    assert_equal "Other", remove_entry.entryable.investment_activity_label
+  end
+
+  test "ignores cash activities with zero or nil amount" do
+    assert_no_difference -> { @account.entries.count } do
+      process_activities(
+        build_cash_activity(id: "zero_cash_001", type: "DIVIDEND", amount: 0.0, settlement_date: Date.current.to_s),
+        build_cash_activity(id: "nil_cash_001", type: "CONTRIBUTION", amount: nil, settlement_date: Date.current.to_s)
+      )
     end
   end
 

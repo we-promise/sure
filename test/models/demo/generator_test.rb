@@ -6,6 +6,29 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     @admin_user = create_user!(@family, "demo-admin@example.com")
   end
 
+  test "production sample reset includes Wallet in the normal accounts and transactions phases" do
+    Rails.stubs(:env).returns(ActiveSupport::EnvironmentInquirer.new("production"))
+    generator = Demo::Generator.new(seed: 42)
+    stub_non_wallet_activity(generator)
+    @family.expects(:sync_later)
+
+    generator.generate_new_user_data_for!(@family, email: @admin_user.email)
+
+    assert_wallet_demo_activity
+  end
+
+  test "production default demo includes Wallet in the normal accounts and transactions phases" do
+    Rails.stubs(:env).returns(ActiveSupport::EnvironmentInquirer.new("production"))
+    generator = Demo::Generator.new(seed: 42)
+    generator.stubs(:create_family_and_users!).returns(@family)
+    generator.stubs(:create_monitoring_api_key!)
+    stub_non_wallet_activity(generator)
+
+    generator.generate_default_data!(skip_clear: true)
+
+    assert_wallet_demo_activity
+  end
+
   test "monitoring api key creation reassigns stale demo monitoring key owned by another user" do
     stale_family = Family.create!(name: "Old Demo Family")
     stale_user = create_user!(stale_family, "old-demo-admin@example.com")
@@ -74,6 +97,13 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     assert mortgage.amortization_schedule.re_amortising?,
       "a recorded rate change must move the demo mortgage's repayment"
 
+    # The leverage card reads the loan's down payment; the cash-flow history
+    # records the deposit as a transaction. The two must be the same figure.
+    checking = generator.instance_variable_get(:@chase_checking)
+    deposit = checking.entries.find_by!(name: "Home Down Payment")
+    assert_equal deposit.amount, mortgage.down_payment,
+      "the mortgage's down payment must match the deposit the demo records"
+
     [ "Car Loan", "Student Loan" ].each do |name|
       loan = @family.accounts.find_by!(name: name).loan
       assert_not loan.variable_rate_type?, "#{name} should be fixed"
@@ -114,7 +144,66 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
       "the interest booked must be the schedule's interest, not a flat figure"
   end
 
+  # What the chart says about the demo loans follows
+  # from their balances. The mortgage and the car loan sit on their schedules,
+  # so each pays off on time; the student loan is ahead by its extra payment,
+  # so it pays off early. None of them is quoted early while it is not ahead.
+  test "demo loans project payoffs that match their balances" do
+    @family.update!(currency: "USD")
+    generator = Demo::Generator.new(seed: 42)
+    generator.send(:create_realistic_categories!, @family)
+    generator.send(:create_realistic_accounts!, @family)
+    generator.send(:generate_housing_transactions!)
+    generator.send(:generate_transportation_transactions!)
+    generator.send(:generate_major_purchases!)
+    generator.send(:generate_loan_payments!)
+    today = Date.current
+
+    projections = [ "Home Mortgage", "Car Loan", "Student Loan" ].to_h do |name|
+      account = @family.accounts.find_by!(name: name)
+      Sync.create!(syncable: account).perform
+      [ name, account.reload.loan.payoff_projection(as_of: today) ]
+    end
+
+    [ "Home Mortgage", "Car Loan" ].each do |name|
+      assert projections[name].converged?, "#{name} is on schedule, so its projection must clear the balance"
+      assert_equal 0, projections[name].months_saved, "#{name} is on schedule, so it must pay off on time"
+    end
+    assert projections["Student Loan"].converged?, "the student loan's projection must clear the balance"
+    assert_operator projections["Student Loan"].months_saved, :>, 0,
+      "the extra payment must bring the student loan's payoff forward"
+  end
+
   private
+    # Exercise the actual account/transaction orchestration without generating
+    # years of unrelated spending, securities, budgets and goals in each test.
+    def stub_non_wallet_activity(generator)
+      %i[load_securities! generate_salary_history! generate_housing_transactions!
+         generate_food_transactions! generate_transportation_transactions!
+         generate_entertainment_transactions! generate_shopping_transactions!
+         generate_healthcare_transactions! generate_travel_transactions!
+         generate_personal_care_transactions! generate_investment_transactions!
+         generate_major_purchases! generate_transfers_and_payments! generate_loan_payments!
+         generate_regular_expenses! generate_legacy_transactions! generate_crypto_and_misc_assets!
+         generate_budget_auto_fill! generate_goals! sync_family_accounts!].each do |step|
+        generator.stubs(step)
+      end
+    end
+
+    def assert_wallet_demo_activity
+      item = @family.financekit_items.find_by!(enrollment_id: Demo::FinancekitGenerator::ENROLLMENT_ID)
+      assert_equal [ "Apple Card", "Apple Cash", "Nancy's Apple Cash" ], item.accounts.order(:name).pluck(:name)
+      assert item.accounts.all?(&:linked?)
+      assert item.accounts.all? { |account| account.entries.exists? }
+      assert item.last_imported_at
+      card = item.accounts.find_by!(name: "Apple Card")
+      checking = @family.accounts.find_by!(name: "Chase Premier Checking")
+      assert_equal checking, card.entries.find_by!(name: "Apple Card Payment").entryable.transfer.from_account
+      assert item.accounts.find_by!(name: "Apple Cash").entries.exists?(name: "Apple Card Daily Cash")
+      assert item.accounts.find_by!(name: "Nancy's Apple Cash").entries.exists?(name: "Movie Theater")
+      assert_not @family.accounts.exists?(name: "Wallet Demo Checking")
+    end
+
     def create_user!(family, email)
       family.users.create!(
         first_name: "Demo",

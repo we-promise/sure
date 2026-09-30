@@ -2,6 +2,7 @@ require "test_helper"
 
 class TransactionsControllerTest < ActionDispatch::IntegrationTest
   include EntryableResourceInterfaceTest, EntriesTestHelper
+  include ActionView::RecordIdentifier
 
   setup do
     sign_in @user = users(:family_admin)
@@ -487,6 +488,63 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "application/json", response.media_type
     assert_equal I18n.t("accounts.not_authorized"), JSON.parse(response.body)["error"]
     assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint toggles a single tag and streams the row's tag UI" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ], locked_attributes: {})
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.reload.entryable.tag_ids.sort
+    assert @entry.entryable.locked?(:tag_ids)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, "tag_summary_desktop")
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, "tag_summary_mobile")
+    assert_select "turbo-stream[action=replace][target=?]", "#{dom_id(@entry, :tag_option)}_#{tags(:two).id}"
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal [ tags(:two).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint falls back to a redirect for plain HTML toggles" do
+    @entry.entryable.update!(tag_ids: [], locked_attributes: {})
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:one).id }
+
+    assert_redirected_to transaction_path(@entry)
+    assert_equal [ tags(:one).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint does not toggle tags from another family" do
+    other_tag = users(:empty).family.tags.create!(name: "Other family")
+    original_tag_ids = @entry.entryable.tag_ids
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: other_tag.id }, as: :turbo_stream
+
+    assert_response :not_found
+    assert_equal original_tag_ids, @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint does not toggle tags for read-only users" do
+    sign_in users(:family_member)
+    read_only_entry = entries(:transfer_in)
+    original_tag_ids = read_only_entry.entryable.tag_ids
+
+    patch tags_transaction_url(read_only_entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
+
+    assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
+  test "transaction rows show tags" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ])
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(@entry.entryable, "tag_summary_desktop")}", text: /#{tags(:one).name}/
+    assert_select "##{dom_id(@entry.entryable, "tag_summary_mobile")}", text: /#{tags(:one).name}/
   end
 
   test "split parent rows mark amount as privacy-sensitive" do
@@ -1572,6 +1630,61 @@ end
       "a member without access to the admin-only account must not reuse the admin's cached uncategorized count"
   ensure
     Rails.cache = original_cache
+  end
+
+  test "index with ai_status=current renders the AI filter badge" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    get transactions_url(q: { ai_status: [ "current" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with ai_status=history renders the AI history filter badge" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+
+    get transactions_url(q: { ai_status: [ "history" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI history", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with ai_status=current excludes history-only transactions" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+
+    get transactions_url(q: { ai_status: [ "current" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI", count: 1
+    assert_select "#entry_#{@entry.id}", count: 0
+  end
+
+  test "index ignores unsupported ai_status values without rendering a badge" do
+    get transactions_url(q: { ai_status: [ "bogus" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li", count: 0
+    assert_no_match(/translation missing/, response.body)
+
+    # The bogus value must be dropped entirely, not applied as a filter
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "clear_filter removes an ai_status value and redirects" do
+    delete clear_filter_transactions_url(
+      param_key: "ai_status",
+      param_value: "current",
+      q: { ai_status: [ "current" ] }
+    )
+
+    assert_response :redirect
+    assert_includes response.location, "filter_cleared=1"
+    assert_no_match(/ai_status/, response.location)
   end
 
   private

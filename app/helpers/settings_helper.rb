@@ -81,6 +81,9 @@ module SettingsHelper
     when "coinstats"
       return { status: :off } unless @coinstats_items&.any?
       sync_based_summary(key)
+    when "wise"
+      return { status: :off } unless @wise_items&.any?
+      sync_based_summary(key)
     when "mercury"
       return { status: :off } unless @mercury_items&.any?
       sync_based_summary(key)
@@ -98,6 +101,9 @@ module SettingsHelper
       sync_based_summary(key)
     when "kraken"
       return { status: :off } unless @kraken_items&.any?
+      sync_based_summary(key)
+    when "coinspot"
+      return { status: :off } unless @coinspot_items&.any?
       sync_based_summary(key)
     when "onchain_wallet"
       return { status: :off } unless @onchain_wallet_items&.any?
@@ -127,6 +133,18 @@ module SettingsHelper
     else
       { status: :off }
     end
+  end
+
+  def financekit_provider_summary(connections)
+    return { status: :off } if connections.empty?
+
+    items = connections.map { |connection| connection[:item] }
+    count = connections.flat_map { |connection| connection[:accounts].map(&:id) }.uniq.size
+    {
+      status: items.any? { |item| item.status == "repair_required" } ? :warn : :ok,
+      meta: t("settings.providers.financekit.linked_accounts", count: count),
+      last_synced_at: items.filter_map(&:last_imported_at).max
+    }
   end
 
   def settings_nav_footer
@@ -235,9 +253,9 @@ module SettingsHelper
 
       return { status: :err, meta: t("settings.providers.meta.sync_error"), last_synced_at: nil } if health[:error]
 
-      valid_items = @enable_banking_items&.select(&:session_valid?) || []
+      valid_items = @enable_banking_items&.reject(&:needs_authorization?) || []
 
-      # All items have expired/missing sessions — need re-authorization
+      # All items have expired, missing or rejected sessions — need re-authorization
       if valid_items.empty?
         return { status: :warn, meta: t("settings.providers.meta.reconsent_required"), last_synced_at: last_synced_at }
       end

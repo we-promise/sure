@@ -27,10 +27,6 @@ class MonobankAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
-    # Not deterministic: neither column is ever looked up by value, and an IBAN plus a
-    # partial card number are exactly the fields worth keeping opaque at rest.
-    encrypts :masked_pan
-    encrypts :iban
   end
 
   belongs_to :monobank_item
@@ -100,8 +96,6 @@ class MonobankAccount < ApplicationRecord
       account_id: snapshot[:id],
       account_kind: kind,
       account_type: account_type_for(snapshot, kind: kind),
-      masked_pan: Array(snapshot[:maskedPan]).first.presence,
-      iban: snapshot[:iban].presence,
       provider: "monobank",
       institution_metadata: {
         name: INSTITUTION_NAME,

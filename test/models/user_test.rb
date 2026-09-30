@@ -1,9 +1,11 @@
 require "test_helper"
+require "concurrent"
 
 class UserTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
-  uses_transaction :test_first_user_role_lock_makes_concurrent_family_creators_deterministic
+  uses_transaction :test_first_user_role_lock_makes_concurrent_family_creators_deterministic,
+    :"test_verify_otp?_claim_otp_time_step!_lets_only_one_of_two_racing_connections_claim_a_step"
 
   def setup
     @user = users(:family_admin)
@@ -224,6 +226,120 @@ class UserTest < ActiveSupport::TestCase
     assert_not user.verify_otp?("123456")
   end
 
+  # A code stays valid for its whole time step (and the 15s drift window), so
+  # without this anyone who saw it could sign in with it a second time.
+  test "verify_otp? accepts a TOTP code only once" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+    assert user.verify_otp?(code)
+    assert_not user.verify_otp?(code)
+    assert_not User.find(user.id).verify_otp?(code), "a freshly loaded user must reject it too"
+  end
+
+  test "verify_otp? accepts the next time step's code after one was used" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+
+    travel_to Time.zone.at(1_800_000_000) do
+      assert user.verify_otp?(totp.now)
+    end
+
+    travel_to Time.zone.at(1_800_000_000 + totp.interval) do
+      assert user.verify_otp?(totp.now)
+      assert_not user.verify_otp?(totp.at(1_800_000_000)), "an earlier step stays rejected"
+    end
+  end
+
+  # Two sign-in requests with the same code, both loaded before either records it.
+  test "verify_otp? lets only one of two concurrent uses of a code through" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+    first = User.find(user.id)
+    second = User.find(user.id)
+
+    assert first.verify_otp?(code)
+    assert_not second.verify_otp?(code)
+  end
+
+  # The test above checks two stale instances one after another. The gap
+  # between "verify" and "claim" is too small for real threads to land inside
+  # reliably, so it would not catch a regression that drops the conditional
+  # UPDATE in claim_otp_time_step! for an unconditional one: two connections
+  # racing the same claim on real, separately loaded (stale) instances must
+  # still let only one through, because Postgres serializes the two UPDATEs
+  # on the same row and the loser's WHERE no longer matches.
+  test "verify_otp? claim_otp_time_step! lets only one of two racing connections claim a step" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+    now = Time.current
+    time_step = totp.verify(totp.at(now), at: now)
+
+    first = User.find(user.id)
+    second = User.find(user.id)
+    latch = Concurrent::CountDownLatch.new(2)
+
+    results = [ first, second ].map do |instance|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          latch.count_down
+          latch.wait(5)
+          instance.send(:claim_otp_time_step!, time_step)
+        end
+      end
+    end.map(&:value)
+
+    assert_equal 1, results.count(true), "exactly one racing connection should claim the step"
+    assert_not_nil user.reload.otp_last_used_at
+  end
+
+  test "verify_otp tells a replayed code apart from an invalid one" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+    assert_equal :accepted, user.verify_otp(code)
+    assert_equal :replayed, user.verify_otp(code)
+    assert_equal :replayed, User.find(user.id).verify_otp(code), "a freshly loaded user must see the replay too"
+    assert_equal :invalid, user.verify_otp("invalid")
+    assert_equal :invalid, user.verify_otp("123456")
+  end
+
+  # A claim carried by a stale instance must not mark a time step as used on
+  # a factor enrolled after the secret changed underneath it.
+  test "verify_otp? claim_otp_time_step! does not claim across a replaced secret" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+    now = Time.current
+    time_step = totp.verify(totp.at(now), at: now)
+    stale = User.find(user.id)
+
+    user.disable_mfa!
+    user.setup_mfa!
+
+    assert_not stale.send(:claim_otp_time_step!, time_step)
+    assert_nil user.reload.otp_last_used_at, "the new factor must not inherit the old claim"
+  end
+
+  test "setting up or disabling MFA forgets the last used time step" do
+    user = users(:family_member)
+    user.setup_mfa!
+    assert user.verify_otp?(ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now)
+    assert_not_nil user.reload.otp_last_used_at
+
+    user.setup_mfa!
+    assert_nil user.reload.otp_last_used_at
+
+    assert user.verify_otp?(ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now)
+    user.disable_mfa!
+    assert_nil user.reload.otp_last_used_at
+  end
+
   test "verify_otp? does not check backup code digests for normal TOTP input" do
     user = users(:family_member)
     user.setup_mfa!
@@ -321,7 +437,7 @@ class UserTest < ActiveSupport::TestCase
   test "ai_available? returns true when openai access token set in settings" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
 
@@ -336,7 +452,7 @@ class UserTest < ActiveSupport::TestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
     @user.family.update!(assistant_type: "external")
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
       Setting.openai_access_token = nil
       assert @user.ai_available?
     end
@@ -348,7 +464,7 @@ class UserTest < ActiveSupport::TestCase
   test "ai_available? returns false when external assistant is configured but family type is builtin" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
     end
@@ -360,7 +476,7 @@ class UserTest < ActiveSupport::TestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
     @user.family.update!(assistant_type: "external")
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
     end
@@ -413,7 +529,7 @@ class UserTest < ActiveSupport::TestCase
   test "new member defaults show_ai_sidebar to false when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       user = User.new(
         family: families(:empty),
@@ -432,7 +548,7 @@ class UserTest < ActiveSupport::TestCase
   test "new admin defaults show_ai_sidebar to true even when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       user = User.new(
         family: families(:empty),
@@ -464,7 +580,7 @@ class UserTest < ActiveSupport::TestCase
   test "new guest defaults show_ai_sidebar to false when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       user = User.new(
         family: families(:empty),
@@ -718,6 +834,82 @@ class UserTest < ActiveSupport::TestCase
     assert_equal new_family, account.reload.family
     assert_equal new_family, plaid_item.reload.family
     assert_equal new_family, statement.reload.family
+
+    # The connection's owner has to follow it across, or it would be left
+    # pointing at a user in the family it just left.
+    assert_equal user, plaid_item.owner
+  end
+
+  test "transfer_to_family! moves unmapped FinanceKit items owned by the user" do
+    user = users(:family_member)
+    source_family = user.family
+    new_family = Family.create!(name: "Transferred FinanceKit Family")
+    user.update!(role: "admin", preferences: user.preferences.merge("preview_features_enabled" => true))
+    financekit_item = Financekit::Enrollment.create!(user, {
+      "enrollment_id" => SecureRandom.uuid,
+      "protocol_version" => Financekit::VERSION,
+      "consent" => {
+        "version" => 1,
+        "granted_at" => Time.current.iso8601,
+        "selected_source_account_ids" => [ SecureRandom.uuid ],
+        "upload_authorized" => true,
+        "family_visibility_acknowledged" => true,
+        "remote_processing_acknowledged" => true
+      }
+    }).item
+
+    user.transfer_to_family!(new_family, role: "admin")
+
+    assert_equal new_family, user.reload.family
+    assert_equal new_family, financekit_item.reload.family
+    assert financekit_item.pending_account_setup?
+    assert_not_equal source_family, financekit_item.family
+  end
+
+  test "transfer_to_family! rejects FinanceKit lineages mapped by another user" do
+    user = users(:family_member)
+    other_user = users(:family_admin)
+    source_family = user.family
+    new_family = Family.create!(name: "Rejected FinanceKit Family")
+    moved_account = Account.create!(family: source_family, owner: user, name: "Shared FinanceKit Checking",
+      balance: 100, currency: "USD", accountable: Depository.new(subtype: "checking"))
+    AccountShare.create!(account: moved_account, user: other_user, permission: "full_control")
+    other_user.update!(preferences: other_user.preferences.merge("preview_features_enabled" => true))
+    source_id = SecureRandom.uuid
+    financekit_item = Financekit::Enrollment.create!(other_user, {
+      "enrollment_id" => SecureRandom.uuid,
+      "protocol_version" => Financekit::VERSION,
+      "consent" => {
+        "version" => 1,
+        "granted_at" => Time.current.iso8601,
+        "selected_source_account_ids" => [ source_id ],
+        "upload_authorized" => true,
+        "family_visibility_acknowledged" => true,
+        "remote_processing_acknowledged" => true
+      }
+    }).item
+    FinancekitAccount.map!(financekit_item, source_id, {
+      "expected_version" => 0,
+      "action" => "link",
+      "account_id" => moved_account.id,
+      "name" => "Shared FinanceKit Checking",
+      "institution_name" => "Apple Wallet",
+      "currency" => "USD",
+      "accountable_type" => "Depository",
+      "subtype" => "checking",
+      "ledger_timezone" => "America/New_York"
+    })
+    financekit_item.activate!
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      user.transfer_to_family!(new_family, role: "admin")
+    end
+
+    assert_includes error.record.errors[:base], I18n.t("activerecord.errors.models.user.attributes.base.provider_item_has_other_accounts")
+    assert_equal source_family, user.reload.family
+    assert_equal source_family, moved_account.reload.family
+    assert_equal source_family, financekit_item.reload.family
+    assert_equal source_family, financekit_item.financekit_account_lineages.sole.reload.family
   end
 
   test "transfer_to_family! rejects provider items linked to accounts outside the transfer" do
