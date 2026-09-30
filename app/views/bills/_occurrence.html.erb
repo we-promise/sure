@@ -32,14 +32,10 @@
         piece of temporal context saying the same word twice. The colour still
         carries the state; the rail now carries the date the state is about.
 
-        Desktop-only: on a phone the subline says it in words instead. %>
+        Only from @lg. Below it the subline leads with the same date. %>
     <% if date_label %>
       <div class="hidden @lg:block w-14 shrink-0 text-xs <%= occurrence.derived_state == :overdue ? "text-destructive font-medium" : "text-secondary" %>">
-        <% if occurrence.due_on == Date.current %>
-          <%= t("bills.row_today") %>
-        <% else %>
-          <%= l(occurrence.due_on, format: "%b %-d") %>
-        <% end %>
+        <%= bills_row_date(occurrence) %>
       </div>
     <% end %>
 
@@ -67,6 +63,9 @@
       <%# In a dated section the subline says WHY this row needs attention,
           which is the whole point of pulling those rows out of the run. %>
       <p class="text-xs truncate <%= reason && occurrence.derived_state == :overdue ? "text-destructive" : "text-secondary" %>">
+        <% if date_label %>
+          <span class="@lg:hidden"><%= bills_row_date(occurrence) %> &middot;</span>
+        <% end %>
         <% if reason %>
           <%= reason %>
           <%# Two rows reading the same name and the same amount need telling

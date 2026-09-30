@@ -144,6 +144,43 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.month_pulse.pulse_overdue"), response.body
   end
 
+  # The date rail only shows from @lg, and below it (every phone, and a 1280px
+  # window with both sidebars open) the rail was the row's only date. The
+  # subline leads with the same text there instead.
+  test "a dated row states its due date below the rail's breakpoint too" do
+    travel_to Date.current.beginning_of_month + 9.days
+    due = Date.current + 12
+    declare_bill(name: "Rent", amount: 1200, due: due)
+    create_bill(name: "Water", amount: 40)
+    late = Date.current - 5
+    create_bill(name: "Gas", amount: 60, expected_day_of_month: late.day,
+                last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+
+    get bills_url
+
+    assert_response :success
+    subline_dates = css_select("p span[class~='@lg:hidden']").map { |span| span.text.squish }
+    assert_includes subline_dates, "#{I18n.l(due, format: :short)} ·"
+    assert_includes subline_dates, "#{I18n.t("bills.row_today")} ·"
+    # Needs attention, where the subline goes on to give the reason.
+    assert_includes subline_dates, "#{I18n.l(late, format: :short)} ·"
+    assert_match I18n.t("bills.attention.overdue", count: 5), response.body
+  end
+
+  # "%b %-d" is English order in every locale; fr, pl and ru put the day first.
+  test "the date rail and Next up print the locale's own short date" do
+    travel_to Date.current.beginning_of_month + 9.days
+    due = Date.current + 5
+    series = declare_bill(name: "Rent", amount: 1200, due: due)
+
+    get bills_url(locale: "fr")
+
+    assert_response :success
+    date = I18n.l(due, format: :short, locale: :fr)
+    assert_select "div[class~='@lg:block']", text: date
+    assert_select "a[href=?] p", bill_path(series), text: date
+  end
+
   # The summary answers one question in order: where am I this month, what is
   # late, what is due soon, what happens next. It used to be a big number, two
   # small ones and a ring reading 0%.
