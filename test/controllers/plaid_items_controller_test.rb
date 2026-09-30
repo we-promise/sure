@@ -78,6 +78,23 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/not enabled for the following products/, flash[:alert])
   end
 
+  test "edit breaks out of the modal frame so the alert is shown" do
+    plaid_item = plaid_items(:one)
+    error_body = {
+      "error_code" => "INVALID_PRODUCT",
+      "error_message" => "Your account is not enabled for the following products: [\"transactions\"]."
+    }.to_json
+    PlaidItem.any_instance.expects(:get_update_link_token).raises(
+      Plaid::ApiError.new(code: 400, response_body: error_body)
+    )
+
+    get edit_plaid_item_url(plaid_item), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", accounts_path
+    assert_match(/not enabled for the following products/, flash[:alert])
+  end
+
   test "edit enables account selection when adding accounts" do
     plaid_item = plaid_items(:one)
     PlaidItem.any_instance.expects(:get_update_link_token).with(

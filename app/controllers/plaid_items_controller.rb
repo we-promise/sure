@@ -160,11 +160,9 @@ class PlaidItemsController < ApplicationController
     def render_frame_redirect(path, alert:)
       flash[:alert] = alert
 
-      render html: helpers.content_tag(
-        "turbo-frame",
-        helpers.turbo_stream.action(:redirect, path),
-        id: turbo_frame_request_id
-      )
+      render html: helpers.turbo_frame_tag(turbo_frame_request_id) {
+        helpers.turbo_stream.action(:redirect, path)
+      }
     end
 
     def safe_parse_plaid_error(error)
