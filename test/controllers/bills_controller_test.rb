@@ -762,6 +762,28 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_nil I18n.t("bills.paycheck.obligations_line", default: nil)
   end
 
+  # The breakdown is the allocation bar's legend: each figure carries a swatch
+  # in its segment's colour, so the bar reads without a second key.
+  test "the paycheck breakdown keys each figure to its allocation bar segment" do
+    payday = Date.current + 3
+    declare_income(name: "Frito Lay", amount: -1200, payday: payday)
+    declare_bill(name: "Streaming", amount: 20, due: Date.current + 5)
+    declare_bill(name: "Insurance", amount: 1500, due: payday + 31)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    bars = css_select("section div.flex[role=img]")
+    assert_equal 2, bars.size
+
+    bars.each do |bar|
+      segment_colours = bar.css("div").map { |segment| segment["class"] }
+      swatch_colours = bar.ancestors("section").first.css("[data-paycheck-legend-swatch]").map { |swatch| swatch["class"][/bg-\S+/] }
+      assert_equal segment_colours, swatch_colours
+    end
+    assert_equal %w[bg-inverse bg-subdued bg-success], bars.first.css("div").map { |segment| segment["class"] }
+  end
+
   # The window before the first payday has no income to allocate, so it is
   # reported above the timeline as a warning rather than drawn as a pay period
   # with an empty paycheck. The shortfall names the obligation, not the slice
