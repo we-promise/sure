@@ -8,6 +8,7 @@ pt-PT:
         title: "Notificações push"
         requested_at: "Último teste pedido em %{time}"
         result_help: "A aceitação pelo APNs não confirma a entrega no dispositivo. Atualize para ver os resultados do worker. Os resultados são guardados durante 24 horas."
+        results_label: "Resultados do teste"
         device: "Dispositivo %{number}"
         pending: "Pendente"
         refresh: "Atualizar resultados"
@@ -79,6 +80,7 @@ pt-PT:
           run_checks: Executar verificações novamente
           last_checked: "As verificações em direto foram concluídas há %{time_ago}. Os resultados ficam em cache por breves instantes."
           not_checked_help: Abra diretamente o URL de estado da IA ou execute as verificações para confirmar que o serviço está operacional.
+          loading: "A executar as verificações em direto…"
           alerts:
             custom_openai:
               title: A verificação do armazenamento de vetores alojado falhou neste endpoint personalizado

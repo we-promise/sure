@@ -176,8 +176,7 @@ pl:
         completion: odpowiedź
         cost_by_model: Koszt wg modelu
         cost_by_operation: Koszt wg operacji
-        cost_estimates_description: Koszty są szacowane na podstawie opublikowanych
-          cenników dostawców, w tym cennika OpenAI z lipca 2026. Rzeczywiste koszty
+        cost_estimates_description: Koszty są szacowane na podstawie opublikowanych cenników dostawców, ostatnio zweryfikowanych %{date}. Rzeczywiste koszty
           mogą się różnić. Ceny podane są za 1 milion tokenów i zależą od modelu.
           Modele niestandardowe lub hostowane samodzielnie pokazują "N/D" i nie są
           wliczane do sum kosztów.
@@ -380,6 +379,7 @@ pl:
         api_secret_label: Sekret API
         api_secret_placeholder: Wklej swój sekret API Binance
         connect_button: Połącz Binance
+        disconnect: Rozłącz
         disconnect_confirm: Na pewno rozłączyć Binance?
         historical_import: Ustawienia importu historycznego
         ip_hint_body: 'Dodaj adres IP wyjściowy serwera aplikacji do białej listy
@@ -408,6 +408,7 @@ pl:
         api_secret_label: Sekret API
         api_secret_placeholder: Wprowadź sekret API Coinbase
         connect_button: Połącz Coinbase
+        disconnect: Rozłącz
         disconnect_confirm: Czy na pewno chcesz odłączyć to połączenie Coinbase? Twoje
           zsynchronizowane konta staną się kontami ręcznymi.
         setup_instructions: 'Aby połączyć Coinbase:'

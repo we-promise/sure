@@ -36,6 +36,15 @@ class UI::PeriodPickerTest < ViewComponent::TestCase
     assert_selector "button[aria-label='Time period: #{label}']"
   end
 
+  test "trigger accessible name follows the locale" do
+    I18n.with_locale(:de) do
+      render_inline(UI::PeriodPicker.new(selected: "last_90_days", url: "/"))
+
+      label = Period.from_key("last_90_days").label_short
+      assert_selector "button[aria-label='Zeitraum: #{label}']"
+    end
+  end
+
   test "extra_params are merged into every option href" do
     render_inline(UI::PeriodPicker.new(
       selected: "last_30_days",

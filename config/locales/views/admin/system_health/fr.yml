@@ -8,6 +8,7 @@ fr:
         title: "Notifications push"
         requested_at: "Dernier test demandé le %{time}"
         result_help: "L’acceptation par APNs ne confirme pas la réception sur votre appareil. Actualisez pour voir les résultats du worker. Les résultats sont conservés pendant 24 heures."
+        results_label: "Résultats du test"
         device: "Appareil %{number}"
         pending: "En attente"
         refresh: "Actualiser les résultats"
@@ -150,6 +151,7 @@ fr:
           llm:
             description: Les vérifications en direct contrôlent le modèle configuré, lui demandent un appel de fonction trivial comme le fait l'assistant, puis testent séparément l'extraction de texte et le traitement vision / natif à l'aide d'un PDF synthétique d'une page ne contenant aucune donnée client. Les valeurs des identifiants ne sont jamais affichées.
             title: LLM et traitement des PDF
+          loading: "Vérifications en direct en cours…"
           local_setup:
             description: Faites tourner le LLM via votre point de terminaison local compatible OpenAI, stockez les vecteurs de documents dans pgvector et faites pointer les paramètres d'embeddings vers un point de terminaison d'embeddings compatible OpenAI. L'image PostgreSQL doit inclure l'extension vector, et les dimensions d'embedding doivent correspondre au modèle sélectionné.
             title: Installation locale recommandée

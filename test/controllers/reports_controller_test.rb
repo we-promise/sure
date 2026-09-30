@@ -666,6 +666,17 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", reports_path(period_type: :monthly, start_date: next_start, end_date: next_end)
   end
 
+  test "period arrows carry their keyboard shortcuts" do
+    past_start = Date.current.beginning_of_month - 2.months
+    get reports_path(period_type: :monthly, start_date: past_start, end_date: past_start.end_of_month)
+    assert_response :ok
+
+    assert_select "a[aria-keyshortcuts='ArrowLeft'][data-hotkey='ArrowLeft']"
+    assert_select "a[aria-keyshortcuts='ArrowRight'][data-hotkey='ArrowRight']"
+    assert_select "[role='tooltip']", text: "Previous period (←)"
+    assert_select "[role='tooltip']", text: "Next period (→)"
+  end
+
   test "last 6 months next window extends to current month end when crossing boundary" do
     start_date = Date.current.beginning_of_month - 12.months
     end_date = start_date + 6.months - 1.day

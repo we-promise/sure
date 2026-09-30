@@ -110,7 +110,7 @@ zh-TW:
         failed: 已失敗
         no_usage_data: 所選期間內查無使用資料
         cost_estimates_title: 關於費用預估
-        cost_estimates_description: 費用是依各供應商公布的價格預估，其中 OpenAI 的價格以 2026 年 7 月為準。實際費用可能有所不同。價格以每 100 萬個 Token 計算，並依模型而異。自訂或自行代管的模型會顯示「N/A」，且不列入費用總計。
+        cost_estimates_description: 費用依各供應商公布的價格預估，最近核實日期為 %{date}。實際費用可能有所不同。價格以每 100 萬個 Token 計算，並依模型而異。自訂或自行代管的模型會顯示「N/A」，且不列入費用總計。
     ai_prompts:
       show:
         page_title: AI 提示詞
@@ -444,6 +444,7 @@ zh-TW:
         connect_button: 連結 Coinbase
         syncing: 同步中...
         sync: 同步
+        disconnect: 中斷連線
         disconnect_confirm: 確定要中斷這個 Coinbase 連線嗎？已同步的帳戶會變成手動帳戶。
       binance_panel:
         setup_instructions: 要連結 Binance，請建立一組唯讀 API 金鑰：
@@ -465,6 +466,7 @@ zh-TW:
         historical_import: 歷史資料匯入設定
         sync_start_date_label: 匯入資料起始日
         sync_start_date_help: 選擇要往回抓多久的歷史交易。
+        disconnect: 中斷連線
         disconnect_confirm: 確定要中斷 Binance 連線嗎？
       kraken_panel:
         step1_html: 前往 <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>
