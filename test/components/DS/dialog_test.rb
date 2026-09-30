@@ -1,9 +1,9 @@
 require "test_helper"
 
 class DS::DialogTest < ViewComponent::TestCase
-  # Turbo caches a page as it was left, and Back restores that copy. A drawer
-  # fetched into the page came back with it: stray and non-modal if it was still
-  # open, opened again if it had been closed.
+  # Turbo caches a page as it was left, and Back restores that copy. A drawer or
+  # modal fetched into the page came back with it: stray and non-modal if it was
+  # still open, opened again if it had been closed.
   test "a drawer fetched into its frame is left out of Turbo's page cache" do
     vc_test_request.headers["Turbo-Frame"] = "drawer"
     render_inline(DS::Dialog.new(frame: "drawer", responsive: true))
@@ -26,15 +26,10 @@ class DS::DialogTest < ViewComponent::TestCase
     assert_no_selector "dialog[data-turbo-temporary]"
   end
 
-  # The modal frame empties itself on close. It also opens with
-  # data-turbo-action (Lunch Flow's link), and then Turbo runs its cache step on
-  # the live page right after the frame renders, so a temporary modal would be
-  # removed as it opened.
-  test "a modal fetched into the modal frame stays in the cache" do
+  test "a modal fetched into the modal frame is left out of Turbo's page cache" do
     vc_test_request.headers["Turbo-Frame"] = "modal"
     render_inline(DS::Dialog.new)
 
-    assert_selector "turbo-frame#modal > dialog"
-    assert_no_selector "dialog[data-turbo-temporary]"
+    assert_selector "turbo-frame#modal > dialog[data-turbo-temporary]"
   end
 end
