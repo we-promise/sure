@@ -103,6 +103,7 @@ pl:
       connection_name_label: Nazwa połączenia
       connection_name_placeholder: Konto firmowe
       default_connection_name: Połączenie Mercury
+      disconnect: Rozłącz
       disconnect_confirm: Odłączyć %{name}?
       instructions:
         copy_token_html: Skopiuj <strong>pełny token</strong> (razem z przedrostkiem

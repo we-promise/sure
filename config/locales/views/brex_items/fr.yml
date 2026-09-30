@@ -114,15 +114,13 @@ fr:
       description: Connectez-vous en utilisant %{name}
       name: Brex-%{name}
     provider_panel:
-      accounts_link: Comptes
       add_connection: Ajouter une connexion Brex
       base_url_label: URL de base (facultatif)
       base_url_placeholder: https://api.brex.com
-      configured_html: Configuré et prêt à l'emploi. Visitez l'onglet %{accounts_link}
-        pour gérer et configurer des comptes.
       connection_name_label: Nom de la connexion
       connection_name_placeholder: Vérification commerciale
       default_connection_name: Connexion Brex
+      disconnect: Déconnecter
       disconnect_confirm: Déconnecter %{name} ?
       disconnect_label: Déconnecter %{name}
       encryption_warning:
@@ -142,13 +140,11 @@ fr:
         sign_in_html: Visitez %{link} et connectez-vous au compte que vous souhaitez
           connecter
       keep_token_placeholder: Laisser vide pour conserver le jeton actuel
-      not_configured: Non configuré
       sandbox_note_html: Utilisez une connexion nommée distincte pour chaque jeton
         d'entreprise/API Brex que vous souhaitez synchroniser. Laissez l’URL de base
         vide pour la production. La mise en scène est limitée aux tests approuvés
         par le Brex et ne fonctionne pas avec les jetons client.
       setup_accounts: Configurer des comptes
-      setup_title: 'Instructions de configuration :'
       sync: Synchroniser
       token_label: Jeton
       token_placeholder: Collez le jeton ici
