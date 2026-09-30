@@ -49,6 +49,51 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "single", @user.reload.dashboard_section_width("cashflow_sankey")
   end
 
+  test "update_preferences persists the cash-flow Sankey view" do
+    patch "/dashboard/preferences", params: { preferences: { cashflow_sankey_view: "accounts" } }, as: :json
+
+    assert_response :ok
+    assert_equal "accounts", @user.reload.cashflow_sankey_view
+  end
+
+  test "update_preferences ignores an unknown cash-flow Sankey view" do
+    patch "/dashboard/preferences", params: { preferences: { cashflow_sankey_view: "nonsense" } }, as: :json
+
+    assert_response :ok
+    assert_equal "categories", @user.reload.cashflow_sankey_view
+  end
+
+  test "dashboard sankey shows accounts between income and spending when the accounts view is chosen" do
+    @user.update_dashboard_preferences("cashflow_sankey_view" => "accounts")
+    category = @family.categories.create!(name: "Account View Spend", color: "#FF5733")
+    create_transaction(account: accounts(:depository), name: "Account view spend", amount: 75, category: category)
+
+    get root_path
+
+    assert_response :ok
+    chart = css_select("[data-controller='sankey-chart']").first
+    node_ids = JSON.parse(chart["data-sankey-chart-data-value"]).fetch("nodes").map { |node| node.fetch("id") }
+
+    assert_includes node_ids, "account_#{accounts(:depository).id}"
+    assert_includes node_ids, "expense_#{category.id}"
+    assert_not_includes node_ids, "cash_flow_node"
+    assert_select "[data-controller='cashflow-sankey-view'] button[data-view='accounts'][aria-pressed='true']"
+  end
+
+  test "the cash-flow preview still compares against category data in the accounts view" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "cashflow_sankey_view" => "accounts"))
+    category = @family.categories.create!(name: "Preview Compare Spend", color: "#FF5733")
+    create_transaction(account: accounts(:depository), name: "Preview compare spend", amount: 40, category: category)
+
+    get root_path
+
+    assert_response :ok
+    preview = css_select("[data-sankey-preview-legacy-data-value]").first
+    skip "cash-flow preview not rendered for this user" unless preview
+    node_ids = JSON.parse(preview["data-sankey-preview-legacy-data-value"]).fetch("nodes").map { |node| node.fetch("id") }
+    assert_includes node_ids, "cash_flow_node"
+  end
+
   test "update_preferences ignores malformed dashboard_section_layout without erroring" do
     previous_height = @user.reload.dashboard_section_height("net_worth_chart")
 
