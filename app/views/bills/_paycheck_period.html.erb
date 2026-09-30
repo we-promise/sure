@@ -54,19 +54,21 @@
     </div>
 
     <div>
+      <%# The breakdown is the bar's legend. A figure with no segment on the bar
+          keeps the swatch's space, labels wrap rather than truncate on a phone,
+          and each figure sits at its column's foot, so every column lines up. %>
       <div class="grid grid-cols-3 gap-3">
         <% legend.each do |key, label, amount, figure_class| %>
-          <div class="min-w-0">
-            <p class="flex items-center gap-1.5 text-xs text-secondary">
-              <%# A figure with no segment on the bar keeps the swatch's space, so the columns line up across periods. %>
+          <div class="min-w-0 flex flex-col justify-between">
+            <p class="flex gap-1.5 text-xs text-secondary">
               <% if segments.key?(key) %>
-                <span class="shrink-0 size-2 rounded-full <%= segment_class[key] %>" data-paycheck-legend-swatch aria-hidden="true"></span>
+                <span class="shrink-0 size-2 mt-1 rounded-full <%= segment_class[key] %>" data-paycheck-legend-swatch aria-hidden="true"></span>
               <% else %>
                 <span class="shrink-0 size-2" aria-hidden="true"></span>
               <% end %>
-              <span class="truncate"><%= label %></span>
+              <span class="min-w-0"><%= label %></span>
             </p>
-            <p class="text-sm tabular-nums privacy-sensitive <%= figure_class %>"><%= amount %></p>
+            <p class="pl-3.5 text-sm tabular-nums privacy-sensitive <%= figure_class %>"><%= amount %></p>
           </div>
         <% end %>
       </div>
