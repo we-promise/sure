@@ -171,14 +171,10 @@ class Transaction < ApplicationRecord
 
       next 0 if updated_ids.empty?
 
-      # UPDATE ... RETURNING captured exactly the rows it reassigned, so the
-      # entry touch covers the same set: a transaction entering the scope
-      # between a separate lock/touch and the update would be updated without
-      # its entry being touched, leaving report caches stale. The UPDATE takes
-      # row locks on `transactions` only (family scopes join entries and
-      # accounts) and taking them before the entry locks keeps our lock order
-      # the same as a normal save's. Sliced so a large merge doesn't build a
-      # single unbounded UPDATE on entries.
+      # Touch exactly the rows the UPDATE reassigned (RETURNING), so a
+      # transaction entering the scope mid-merge can't be updated without its
+      # entry being touched. Locks are taken transactions-first, matching a
+      # normal save; sliced to bound the entries UPDATE on large merges.
       updated_ids.each_slice(REASSIGN_TOUCH_BATCH_SIZE) do |batch|
         Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
       end

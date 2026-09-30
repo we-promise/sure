@@ -45,7 +45,7 @@ class CategoryTest < ActiveSupport::TestCase
     transaction = transactions(:one)
     before = @family.entries_cache_version
 
-    travel_to 1.minute.from_now do
+    travel 1.second do
       categories(:food_and_drink).destroy!
     end
 
