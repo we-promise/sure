@@ -27,6 +27,10 @@ class Trade::CreateForm
 
   validate :option_details_must_be_valid
 
+  def persisted?
+    false
+  end
+
   # Either creates a trade, transaction, or transfer based on type
   # Returns the model, regardless of success or failure
   def create
@@ -62,7 +66,7 @@ class Trade::CreateForm
     end
 
     def create_trade
-      return entry_with_form_errors if option_trade? && !valid?
+      return self if option_trade? && !valid?
 
       sec = option_trade? ? option_security : security
 
@@ -205,8 +209,13 @@ class Trade::CreateForm
       errors.add(:expiration_date, :invalid) unless parsed_expiration_date
       errors.add(:contract_multiplier, :greater_than, count: 0) unless contract_multiplier.to_s.match?(/\A[1-9]\d*\z/)
       errors.add(:qty, :greater_than, count: 0) unless decimal_value(qty)&.positive?
-      errors.add(:price, :greater_than_or_equal_to, count: 0) unless decimal_value(price)&.nonnegative?
-      errors.add(:fee, :greater_than_or_equal_to, count: 0) if fee.present? && !decimal_value(fee)&.nonnegative?
+      price_value = decimal_value(price)
+      errors.add(:price, :greater_than_or_equal_to, count: 0) unless price_value && price_value >= 0
+
+      if fee.present?
+        fee_value = decimal_value(fee)
+        errors.add(:fee, :greater_than_or_equal_to, count: 0) unless fee_value && fee_value >= 0
+      end
     end
 
     def decimal_value(value)
@@ -222,12 +231,6 @@ class Trade::CreateForm
       Date.iso8601(expiration_date.to_s)
     rescue Date::Error
       nil
-    end
-
-    def entry_with_form_errors
-      entry = account.entries.build(entryable: Trade.new)
-      errors.each { |error| entry.errors.add(error.attribute, error.message) }
-      entry
     end
 
     def trade_name(label, quantity, security)

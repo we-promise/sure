@@ -6,10 +6,13 @@ class TradesController < ApplicationController
   # Defaults to a buy trade
   def new
     @account = accessible_accounts.find_by(id: params[:account_id])
-    @model = Current.family.entries.new(
+    @model = Trade::CreateForm.new(
       account: @account,
       currency: @account ? @account.currency : Current.family.currency,
-      entryable: Trade.new
+      date: Date.current,
+      type: params[:type] || "buy",
+      option_type: "call",
+      contract_multiplier: 100
     )
   end
 
