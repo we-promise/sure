@@ -397,6 +397,7 @@ es:
         connect_button: Conectar Coinbase
         syncing: Sincronizando...
         sync: Sincronizar
+        disconnect: Desconectar
         disconnect_confirm: ¿Estás seguro de que deseas desconectar esta conexión de Coinbase? Tus cuentas sincronizadas pasarán a ser cuentas manuales.
       binance_panel:
         setup_instructions: 'Para conectar Binance, crea una clave API de solo lectura:'
@@ -418,6 +419,7 @@ es:
         historical_import: Ajustes de importación histórica
         sync_start_date_label: Importar datos desde
         sync_start_date_help: Selecciona hasta cuándo retroceder para obtener operaciones históricas.
+        disconnect: Desconectar
         disconnect_confirm: ¿Seguro que quieres desconectar Binance?
       kraken_panel:
         step1_html: Ve a los <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">ajustes de API de Kraken</a>

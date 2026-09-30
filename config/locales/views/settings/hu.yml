@@ -316,6 +316,7 @@ hu:
         connect_button: Coinbase csatlakoztatása
         syncing: Szinkronizálás...
         sync: Szinkronizálás
+        disconnect: Lecsatlakozás
         disconnect_confirm: Biztosan le szeretnéd választani ezt a Coinbase-kapcsolatot? A szinkronizált számlák manuális számlákká válnak.
       binance_panel:
         setup_instructions: "A Binance csatlakoztatásához hozz létre egy csak olvasási jogosultsággal rendelkező API-kulcsot:"
@@ -335,6 +336,7 @@ hu:
         connect_button: Binance csatlakoztatása
         syncing: Szinkronizálás...
         sync: Szinkronizálás
+        disconnect: Lecsatlakozás
         disconnect_confirm: "Biztosan le szeretnéd választani a Binance-t?"
       kraken_panel:
         step1_html: 'Nyisd meg a <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API-beállításait</a>'

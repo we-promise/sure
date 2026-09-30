@@ -490,6 +490,7 @@ uk:
         connect_button: Підключити Coinbase
         syncing: Синхронізація...
         sync: Синхронізувати
+        disconnect: Відключити
         disconnect_confirm: Ви впевнені, що хочете відключити це з'єднання Coinbase? Ваші синхронізовані рахунки стануть ручними.
       binance_panel:
         setup_instructions: "Щоб підключити Binance, створіть ключ API лише для читання:"
@@ -511,6 +512,7 @@ uk:
         historical_import: "Налаштування історичного імпорту"
         sync_start_date_label: "Імпортувати дані з"
         sync_start_date_help: "Виберіть, наскільки далеко назад отримувати історичні угоди."
+        disconnect: Відключити
         disconnect_confirm: "Ви впевнені, що хочете відключити Binance?"
       kraken_panel:
         step1_html: 'Перейдіть до <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Налаштування API Kraken</a>'
