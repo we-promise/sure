@@ -5,6 +5,7 @@ import parseLocaleFloat from "utils/parse_locale_float"
 // cannot be told apart from prose such as "fee 500" or "TAX 500" without
 // consulting the currency list itself, and a paste event has nothing to await,
 // so those pastes fall through to the browser untouched.
+// test/architecture/currency_paste_symbols_test.rb keeps this list in sync.
 const CURRENCY_SYMBOL = "[$£¥֏؋৳฿៛₡₦₨₩₪₫€₭₮₱₲₴₵₸₹₺₼₽₾₿﷼]"
 
 // Only the spaces that locales actually use to group digits ("1 234,56") are
