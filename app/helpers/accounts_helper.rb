@@ -79,6 +79,7 @@ module AccountsHelper
   # Turbo can match it, falling back to the base id for direct requests.
   def sparkline_response_frame_id(base_id)
     requested = turbo_frame_request_id.to_s
-    requested.match?(/\A[\w-]+\z/) && requested.include?(base_id) ? requested : base_id
+    pattern = /\A(?:mobile_)?(?:all|tab)_#{Regexp.escape(base_id)}_[0-9a-f]{12}\z/
+    requested.match?(pattern) ? requested : base_id
   end
 end

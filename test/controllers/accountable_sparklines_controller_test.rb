@@ -20,11 +20,11 @@ class AccountableSparklinesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show echoes the requesting sidebar frame id" do
-    get accountable_sparkline_url("depository"), headers: { "Turbo-Frame" => "mobile_tab_depository_sparkline_abc123" }
+    get accountable_sparkline_url("depository"), headers: { "Turbo-Frame" => "mobile_tab_depository_sparkline_0123456789ab" }
 
     assert_response :success
-    assert_select "turbo-frame#mobile_tab_depository_sparkline_abc123", count: 1
-    assert_select "#mobile_tab_depository_sparkline_abc123_chart", count: 1
+    assert_select "turbo-frame#mobile_tab_depository_sparkline_0123456789ab", count: 1
+    assert_select "#mobile_tab_depository_sparkline_0123456789ab_chart", count: 1
   end
 
   test "show renders an empty series without a trend" do

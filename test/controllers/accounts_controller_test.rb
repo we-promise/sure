@@ -575,7 +575,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "sparkline echoes the requesting sidebar frame id" do
-    frame_id = "mobile_all_#{dom_id(@account, :sparkline)}_abc123"
+    frame_id = "mobile_all_#{dom_id(@account, :sparkline)}_0123456789ab"
 
     get sparkline_account_url(@account), headers: { "Turbo-Frame" => frame_id }
 
@@ -592,12 +592,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "sparkline etag depends on the requesting frame" do
-    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "tab_#{dom_id(@account, :sparkline)}_v1" }
+    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "tab_#{dom_id(@account, :sparkline)}_0123456789ab" }
     etag = response.headers["ETag"]
 
-    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "all_#{dom_id(@account, :sparkline)}_v1", "If-None-Match" => etag }
+    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "tab_#{dom_id(@account, :sparkline)}_0123456789ab", "If-None-Match" => etag }
+    assert_response :not_modified
+
+    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "all_#{dom_id(@account, :sparkline)}_0123456789ab", "If-None-Match" => etag }
+    assert_response :success
+  end
+
+  test "sparkline ignores a frame id that only contains the sparkline id" do
+    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "other_#{dom_id(@account, :sparkline)}_0123456789ab" }
 
     assert_response :success
+    assert_select "turbo-frame##{dom_id(@account, :sparkline)}", count: 1
   end
 
   test "sidebar sparkline frames have unique ids and survive navigation" do
