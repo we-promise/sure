@@ -94,6 +94,18 @@ class SophtronItemsController < ApplicationController
 
     item = item_for_institution_connection(@sophtron_item)
     item.ensure_customer!
+    item.debug_log_event(
+      category: "sophtron_connection",
+      message: "Starting Sophtron institution connection",
+      source: self.class.name,
+      user: Current.user,
+      metadata: {
+        institution_id: params[:institution_id],
+        institution_name: params[:institution_name].presence,
+        connect_new_institution: connect_new_institution_flow?
+      }
+    )
+
     response = sophtron_response_data!(
       item.sophtron_provider.create_user_institution(
         institution_id: params[:institution_id],
@@ -122,9 +134,35 @@ class SophtronItemsController < ApplicationController
       status: :good
     )
 
+    item.debug_log_event(
+      category: "sophtron_connection",
+      message: "Sophtron institution connection started",
+      source: self.class.name,
+      user: Current.user,
+      metadata: {
+        job_id: job_id,
+        user_institution_id_present: user_institution_id.present?,
+        institution_id: params[:institution_id],
+        institution_name: params[:institution_name].presence
+      }
+    )
+
     redirect_to connection_status_sophtron_item_path(item, connection_context_params)
   rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron connect institution error: #{e.message}")
+    item&.debug_log_event(
+      category: "sophtron_connection",
+      level: "error",
+      message: "Sophtron institution connection failed to start",
+      source: self.class.name,
+      user: Current.user,
+      metadata: {
+        institution_id: params[:institution_id],
+        institution_name: params[:institution_name].presence,
+        error: e.message,
+        error_type: e.respond_to?(:error_type) ? e.error_type : nil
+      }
+    )
     redirect_to select_accounts_sophtron_items_path(connection_context_params), alert: t(".api_error", message: e.message)
   end
 
@@ -145,10 +183,19 @@ class SophtronItemsController < ApplicationController
       return
     end
 
+    previous_job = @sophtron_item.raw_job_payload
     job = sophtron_response_data!(@sophtron_item.sophtron_provider.get_job_information(@sophtron_item.current_job_id))
     @sophtron_item.upsert_job_snapshot!(job)
+    log_connection_job_state(@sophtron_item, previous_job, job, poll_attempt: @poll_attempt)
 
     if Provider::Sophtron.job_success?(job)
+      @sophtron_item.debug_log_event(
+        category: "sophtron_connection",
+        message: "Sophtron connection completed successfully",
+        source: self.class.name,
+        user: Current.user,
+        metadata: connection_job_metadata(job, poll_attempt: @poll_attempt, manual_sync: manual_sync_flow?)
+      )
       if manual_sync_flow?
         complete_manual_sync_from_job(job)
         return
@@ -163,6 +210,14 @@ class SophtronItemsController < ApplicationController
       render_account_selection(@sophtron_item, force_refresh: true)
     elsif Provider::Sophtron.job_requires_input?(job)
       @challenge = @sophtron_item.build_mfa_challenge(job)
+      @sophtron_item.debug_log_event(
+        category: "sophtron_mfa",
+        level: "warn",
+        message: "Sophtron MFA challenge displayed",
+        source: self.class.name,
+        user: Current.user,
+        metadata: connection_job_metadata(job, poll_attempt: @poll_attempt, manual_sync: manual_sync_flow?).merge(mfa_challenge_metadata(@challenge))
+      )
       prepare_connection_status_context
       render :mfa, layout: false
     elsif Provider::Sophtron.job_completed?(job)
@@ -172,9 +227,26 @@ class SophtronItemsController < ApplicationController
       end
 
       if post_mfa_polling?
-        return if render_account_selection_if_accounts_available(@sophtron_item)
+        if render_account_selection_if_accounts_available(@sophtron_item)
+          @sophtron_item.debug_log_event(
+            category: "sophtron_connection",
+            message: "Sophtron connection completed and accounts are ready for selection",
+            source: self.class.name,
+            user: Current.user,
+            metadata: connection_job_metadata(job, poll_attempt: @poll_attempt, post_mfa: true)
+          )
+          return
+        end
       end
 
+      @sophtron_item.debug_log_event(
+        category: "sophtron_connection",
+        level: "warn",
+        message: "Sophtron connection job completed before accounts were ready",
+        source: self.class.name,
+        user: Current.user,
+        metadata: connection_job_metadata(job, poll_attempt: @poll_attempt, post_mfa: post_mfa_polling?)
+      )
       render_pending_connection_status
     elsif Provider::Sophtron.job_failed?(job)
       failure_message = sophtron_connection_failure_message(job)
@@ -185,6 +257,14 @@ class SophtronItemsController < ApplicationController
         last_connection_error: failure_message,
         status: :requires_update
       )
+      @sophtron_item.debug_log_event(
+        category: "sophtron_connection",
+        level: "error",
+        message: "Sophtron connection failed",
+        source: self.class.name,
+        user: Current.user,
+        metadata: connection_job_metadata(job, poll_attempt: @poll_attempt, manual_sync: manual_sync_flow?).merge(error: failure_message)
+      )
       fail_manual_sync!(manual_sync_record, failure_message) if manual_sync_flow?
       render_institution_connection_error(failure_message)
     else
@@ -192,6 +272,14 @@ class SophtronItemsController < ApplicationController
     end
   rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron job polling error: #{e.message}")
+    @sophtron_item.debug_log_event(
+      category: "sophtron_connection",
+      level: "error",
+      message: "Sophtron connection polling failed",
+      source: self.class.name,
+      user: Current.user,
+      metadata: { job_id: @sophtron_item.current_job_id, poll_attempt: @poll_attempt, error: e.message, error_type: e.error_type }
+    )
     render_api_error(t(".api_error", message: e.message), accounts_path)
   end
 
@@ -203,6 +291,14 @@ class SophtronItemsController < ApplicationController
     when "security_answer"
       security_answers = normalized_security_answers
       unless security_answers
+        @sophtron_item.debug_log_event(
+          category: "sophtron_mfa",
+          level: "warn",
+          message: "Sophtron MFA submission rejected before provider call",
+          source: self.class.name,
+          user: Current.user,
+          metadata: { job_id: job_id, mfa_type: params[:mfa_type], reason: "invalid_security_answers" }
+        )
         redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params), alert: t(".invalid_security_answers")
         return
       end
@@ -217,13 +313,37 @@ class SophtronItemsController < ApplicationController
     when "captcha"
       sophtron_response_data!(provider.update_job_captcha(job_id, params[:captcha_input]))
     else
+      @sophtron_item.debug_log_event(
+        category: "sophtron_mfa",
+        level: "warn",
+        message: "Sophtron MFA submission used an unknown challenge type",
+        source: self.class.name,
+        user: Current.user,
+        metadata: { job_id: job_id, mfa_type: params[:mfa_type] }
+      )
       redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params), alert: t(".unknown_challenge")
       return
     end
 
+    @sophtron_item.debug_log_event(
+      category: "sophtron_mfa",
+      message: "Sophtron MFA submitted",
+      source: self.class.name,
+      user: Current.user,
+      metadata: { job_id: job_id, mfa_type: params[:mfa_type] }
+    )
+
     redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params.merge(post_mfa: true))
   rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron MFA submission error: #{e.message}")
+    @sophtron_item.debug_log_event(
+      category: "sophtron_mfa",
+      level: "error",
+      message: "Sophtron MFA submission failed",
+      source: self.class.name,
+      user: Current.user,
+      metadata: { job_id: job_id, mfa_type: params[:mfa_type], error: e.message, error_type: e.error_type }
+    )
     redirect_to connection_status_sophtron_item_path(@sophtron_item, connection_context_params), alert: t(".api_error", message: e.message)
   end
 
@@ -285,8 +405,29 @@ class SophtronItemsController < ApplicationController
     end
 
     item.start_initial_load_later if created_accounts.any?
+    item.debug_log_event(
+      category: "sophtron_account_registration",
+      message: "Sophtron account linking finished",
+      source: self.class.name,
+      user: Current.user,
+      metadata: {
+        selected_account_count: selected_account_ids.size,
+        created_count: created_accounts.size,
+        already_linked_count: already_linked_accounts.size,
+        invalid_count: invalid_accounts.size,
+        accountable_type: accountable_type
+      }
+    )
     redirect_after_account_link(return_to, created_accounts, already_linked_accounts, invalid_accounts)
   rescue Provider::Sophtron::Error => e
+    item&.debug_log_event(
+      category: "sophtron_account_registration",
+      level: "error",
+      message: "Sophtron account linking failed",
+      source: self.class.name,
+      user: Current.user,
+      metadata: { selected_account_count: selected_account_ids.size, error: e.message, error_type: e.error_type }
+    )
     redirect_to new_account_path, alert: t(".api_error", message: e.message)
   end
 
@@ -378,9 +519,27 @@ class SophtronItemsController < ApplicationController
     AccountProvider.create!(account: account, provider: sophtron_account)
     item.start_initial_load_later
 
+    item.debug_log_event(
+      category: "sophtron_account_registration",
+      message: "Sophtron account linked to an existing account",
+      source: self.class.name,
+      user: Current.user,
+      account: account,
+      account_provider: sophtron_account.account_provider,
+      metadata: { sophtron_account_id: sophtron_account.id, sophtron_account_external_id: sophtron_account.account_id }
+    )
+
     redirect_to return_to || accounts_path, notice: t(".success", account_name: account.name)
   rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron API error in link_existing_account: #{e.message}")
+    item&.debug_log_event(
+      category: "sophtron_account_registration",
+      level: "error",
+      message: "Sophtron existing-account linking failed",
+      source: self.class.name,
+      user: Current.user,
+      metadata: { account_id: account_id, sophtron_account_id: sophtron_account_id, error: e.message, error_type: e.error_type }
+    )
     redirect_to accounts_path, alert: t(".api_error", message: e.message)
   end
 
@@ -398,6 +557,13 @@ class SophtronItemsController < ApplicationController
         return
       end
 
+      @sophtron_item.debug_log_event(
+        category: "sophtron_configuration",
+        message: "Sophtron configuration created",
+        source: self.class.name,
+        user: Current.user
+      )
+
       render_sophtron_panel_success(:create)
     else
       render_sophtron_panel_error(:new, @sophtron_item.errors.full_messages.join(", "))
@@ -413,6 +579,13 @@ class SophtronItemsController < ApplicationController
         render_sophtron_panel_error(:edit, @sophtron_item.last_connection_error)
         return
       end
+
+      @sophtron_item.debug_log_event(
+        category: "sophtron_configuration",
+        message: "Sophtron configuration updated",
+        source: self.class.name,
+        user: Current.user
+      )
 
       render_sophtron_panel_success(:update)
     else
@@ -599,6 +772,18 @@ class SophtronItemsController < ApplicationController
     end
 
     @sophtron_item.start_initial_load_later if created_accounts.any?
+
+    @sophtron_item.debug_log_event(
+      category: "sophtron_account_registration",
+      message: "Sophtron account setup completed",
+      source: self.class.name,
+      user: Current.user,
+      metadata: {
+        created_count: created_accounts.size,
+        skipped_count: skipped_count,
+        submitted_count: account_types.size
+      }
+    )
 
     flash[:notice] = if created_accounts.any?
       t(".success", count: created_accounts.count)
@@ -937,11 +1122,71 @@ class SophtronItemsController < ApplicationController
 
       sophtron_response_data!(provider.health_check_auth)
       item.ensure_customer!(provider: provider)
+      item.debug_log_event(
+        category: "sophtron_configuration",
+        message: "Sophtron configuration verified",
+        source: self.class.name,
+        user: Current.user
+      )
       true
     rescue Provider::Sophtron::Error => e
       item.update(status: :requires_update, last_connection_error: e.message)
       Rails.logger.error("Sophtron customer provisioning failed: #{e.message}")
+      item.debug_log_event(
+        category: "sophtron_configuration",
+        level: "error",
+        message: "Sophtron configuration verification failed",
+        source: self.class.name,
+        user: Current.user,
+        metadata: { error: e.message, error_type: e.error_type }
+      )
       false
+    end
+
+    def log_connection_job_state(item, previous_job, current_job, poll_attempt:)
+      previous = previous_job.respond_to?(:with_indifferent_access) ? previous_job.with_indifferent_access : {}
+      current = current_job.with_indifferent_access
+
+      return if previous[:LastStatus].to_s == current[:LastStatus].to_s &&
+        previous[:LastStep].to_s == current[:LastStep].to_s &&
+        previous[:SuccessFlag] == current[:SuccessFlag]
+
+      item.debug_log_event(
+        category: "sophtron_connection",
+        message: "Sophtron connection status updated",
+        source: self.class.name,
+        user: Current.user,
+        metadata: connection_job_metadata(current_job, poll_attempt: poll_attempt).merge(
+          previous_status: previous[:LastStatus].presence || previous[:last_status].presence,
+          previous_step: previous[:LastStep].presence || previous[:last_step].presence,
+          previous_success_flag: previous.key?(:SuccessFlag) ? previous[:SuccessFlag] : previous[:success_flag]
+        )
+      )
+    end
+
+    def connection_job_metadata(job, **metadata)
+      payload = job.with_indifferent_access
+
+      metadata.merge(
+        job_id: payload[:JobID] || payload[:job_id] || @sophtron_item.current_job_id,
+        job_status: payload[:LastStatus] || payload[:last_status],
+        job_step: payload[:LastStep] || payload[:last_step],
+        success_flag: payload.key?(:SuccessFlag) ? payload[:SuccessFlag] : payload[:success_flag],
+        requires_input: Provider::Sophtron.job_requires_input?(payload),
+        failed: Provider::Sophtron.job_failed?(payload),
+        completed: Provider::Sophtron.job_completed?(payload),
+        successful: Provider::Sophtron.job_success?(payload)
+      ).compact
+    end
+
+    def mfa_challenge_metadata(challenge)
+      {
+        security_question_count: Array(challenge[:security_questions]).size,
+        token_method_count: Array(challenge[:token_methods]).size,
+        token_sent: challenge[:token_sent] == true,
+        token_read: challenge[:token_read].present?,
+        captcha_present: challenge[:captcha_image].present?
+      }
     end
 
     def render_sophtron_panel_success(action_name)
