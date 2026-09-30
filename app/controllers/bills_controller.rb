@@ -85,8 +85,9 @@ class BillsController < ApplicationController
     # Fresh detections wait here for confirm/dismiss. Reviewing them is bill
     # work, so the strip lives on this page as well as in Settings.
     # Loaded once: the view asks any?/none? and the partial counts and
-    # iterates, which would otherwise be separate queries.
-    @suggested_series = accessible_suggested_series.includes(:merchant).order(next_expected_date: :asc).load
+    # iterates, which would otherwise be separate queries. Rules ride along
+    # because each suggestion renders frequency_label.
+    @suggested_series = accessible_suggested_series.includes(:merchant, :recurrence_rules).order(next_expected_date: :asc).load
     @has_transaction_history = Current.family.entries.where(entryable_type: "Transaction").exists?
     @suggested_allocations = suggested_allocations
     # A row waiting on a match decision offers Review rather than Find.
@@ -459,12 +460,14 @@ class BillsController < ApplicationController
 
     def payable_occurrences
       # Price changes ride along because bills_attention_reason asks every
-      # row whether its amount changed recently.
+      # row whether its amount changed recently. Recurrence rules and the
+      # account ride along because every row renders frequency_label and
+      # bills_paid_from_label, which would otherwise query once per row.
       Current.family.recurring_occurrences
              .where(recurring_transaction_id: payable_series_ids)
              .where("due_on >= ? OR status = 'scheduled'", Date.current.beginning_of_month)
              .where("due_on <= ?", Date.current + 90)
-             .includes(recurring_transaction: [ :merchant, :recurring_price_changes ])
+             .includes(recurring_transaction: [ :merchant, :recurring_price_changes, :recurrence_rules, :account ])
              .to_a
     end
 
