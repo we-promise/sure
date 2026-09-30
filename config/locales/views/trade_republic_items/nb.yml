@@ -6,6 +6,7 @@ nb:
       connection_description: "Koble til en Trade Republic-investeringskonto via sikker nettpålogging"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Denne Trade Republic-kontoen er allerede koblet til. Den nye tilkoblingen ble fjernet."
     portfolio_categories:
       brokerage: "Meglerkonto"
       private_markets: "Private markeder"

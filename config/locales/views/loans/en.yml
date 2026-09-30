@@ -33,6 +33,13 @@ en:
       rate_change_remove: Remove
       start_date: Origination date
       start_date_hint: When the loan was drawn down. Leave blank to use the account's opening date.
+      down_payment: Down payment
+      insurance_rate: Insurance rate
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_hint: An annual rate, charged monthly alongside the repayment. Level term is charged on the original balance; decreasing on what is still owed.
+      insurance_rate_type: Insurance type
+      insurance_rate_type_decreasing_life: Decreasing
+      insurance_rate_type_level_term: Level term
     new:
       title: Enter loan details
     overview:
@@ -46,6 +53,14 @@ en:
       type: Type
       unknown: Unknown
     tabs:
+      repayment_progress:
+        instalment: Payment %{number} · %{date}
+        insurance: Insurance
+        interest: Interest
+        of_original: of %{amount}
+        principal: Principal
+        repaid: Repaid
+        total: Total
       schedule:
         date: Date
         description: Projected from the original balance, rate and term, starting %{start_date}. Extra payments are not reflected.
@@ -63,12 +78,21 @@ en:
         total_cost: Total Cost
         total_interest: Total Interest
       overview:
+        insurance_rate_only: "%{rate} a year"
         interest_rate: Interest Rate
+        leverage: Leverage
+        leverage_band_conservative: Conservative
+        leverage_band_high: High
+        leverage_band_moderate: Moderate
+        leverage_multiple: "%{ratio}x"
         monthly_payment: Monthly Payment
         not_applicable: N/A
         original_payoff_date: Original Payoff Date
         original_principal: Original Loan Amount
         remaining_principal: Remaining Loan Amount
+        total_cost: Total Cost
+        total_cost_with_insurance: Total Cost incl. Insurance
+        total_insurance: Insurance
         term: Term
         type: Type
         unknown: Unknown

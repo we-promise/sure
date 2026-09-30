@@ -11,6 +11,7 @@ en:
       private_markets: Private Markets
       interest_products: Interest Products
       crypto_wallet: Crypto Wallet
+    duplicate_connection: "This Trade Republic account is already connected. The new connection was removed."
     defaults:
       name: Trade Republic
     trade_republic_item:
@@ -73,6 +74,7 @@ en:
         title: Available account
         account_type_investment: Investment portfolio
         account_type_cash: Cash account
+        account_type_crypto: Crypto account
         account_summary: "%{account_type} • Balance: %{balance}"
         account_id: "Account ID: %{account_id}"
       link_existing:

@@ -48,6 +48,7 @@ pl:
     create:
       success: Trade Republic zapisano. Potwierdź logowanie w aplikacji Trade Republic,
         aby zakończyć łączenie.
+    duplicate_connection: "To konto Trade Republic jest już połączone. Nowe połączenie zostało usunięte."
     defaults:
       name: Trade Republic
     destroy:

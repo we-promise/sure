@@ -47,7 +47,7 @@ ru:
         notes_placeholder: Напоминание себе…
         target_amount: Целевая сумма
         target_date: Дата достижения
-        whole_balance: Весь баланс
+        whole_balance: "Пусто: весь баланс"
         target_mode: Как задаётся целевой баланс
         target_months: Месяцев расходов
         target_months_hint: Пересчитывается 1-го числа каждого месяца по медиане ваших ежемесячных расходов.
