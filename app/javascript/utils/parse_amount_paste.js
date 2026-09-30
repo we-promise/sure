@@ -13,6 +13,13 @@ const CURRENCY_SYMBOL = "[$£¥֏؋৳฿៛₡₦₨₩₪₫€₭₮₱₲₴
 // than concatenated into one amount.
 const GROUPED_NUMBER = /^([+-]?)(\d[\d.,\u0020\u00a0\u202f]*)$/
 
+// A single separator followed by exactly three digits ("1,234", "1.234") is
+// the one shape that reads both ways: a thousands group or three decimals. Any
+// other shape already says which separator is the decimal one, so a separator
+// hint is only applied here; forcing it onto "$1,234.56" pasted into a euro
+// field would read 1.23456.
+const AMBIGUOUS_SEPARATOR = /^[^.,]*[.,]\d{3}$/
+
 const stripCurrency = (value) =>
   value
     .replace(new RegExp(`^${CURRENCY_SYMBOL}\\s*`), "")
@@ -58,7 +65,11 @@ export default function parseAmountPaste(text, options = {}) {
   if (!match) return null
   if (match[1] === "-") negative = true
 
-  const parsed = parseLocaleFloat(match[2], options)
+  const { separator } = options
+  const parsed = parseLocaleFloat(
+    match[2],
+    AMBIGUOUS_SEPARATOR.test(match[2]) ? { separator } : {},
+  )
   if (!Number.isFinite(parsed)) return null
 
   return negative ? -Math.abs(parsed) : parsed

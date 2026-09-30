@@ -10,6 +10,7 @@ export default class extends Controller {
   static values = {
     precision: Number,
     step: String,
+    separator: String,
   };
 
   requestSequence = 0;
@@ -44,6 +45,7 @@ export default class extends Controller {
       }
 
       this.symbolTarget.innerText = currencyData.symbol;
+      this.separatorValue = currencyData.separator;
     }).catch(() => {
       // Catch prevents Unhandled Promise Rejection for network failures.
       // Silently ignored as they are unactionable by the user.
@@ -54,10 +56,11 @@ export default class extends Controller {
   // "1.234,56", "$1,234.56"), leaving the field blank. Intercept the paste,
   // parse the amount, and insert the plain number instead so copy/paste from
   // statements and spreadsheets just works. Text that is not an amount is left
-  // to the browser.
+  // to the browser. The selected currency's decimal separator settles pastes
+  // that read both ways, so "1,234" in a euro field is 1.234, not 1234.
   pasteAmount(event) {
     const text = (event.clipboardData || window.clipboardData)?.getData("text") ?? "";
-    const parsed = parseAmountPaste(text);
+    const parsed = parseAmountPaste(text, { separator: this.separatorValue });
     if (parsed === null) return;
 
     event.preventDefault();

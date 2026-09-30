@@ -9,6 +9,7 @@
 
 <div class="form-field <%= options[:container_class] %>"
      data-controller="money-field"
+     data-money-field-separator-value="<%= currency.separator %>"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>>
   <% if options[:label_tooltip] %>
