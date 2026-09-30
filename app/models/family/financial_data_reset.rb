@@ -293,7 +293,6 @@ class Family::FinancialDataReset
           tags: tag_scope,
           taggings: Tagging.where(tag_id: tag_scope.select(:id)),
           merchants: FamilyMerchant.where(family_id: family.id),
-          family_merchant_associations: FamilyMerchantAssociation.where(family_id: family.id),
           syncs: Sync.for_family(family)
         }
       end

@@ -3,6 +3,7 @@ class TransactionsController < ApplicationController
 
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
+  before_action :set_entry_for_merchant, only: :update_merchant
   before_action :store_params!, only: :index
 
   helper_method :new_transaction_idempotency_key
@@ -284,6 +285,36 @@ class TransactionsController < ApplicationController
     end
   end
 
+  def update_merchant
+    return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
+
+    merchant_id = params.dig(:merchant_update, :merchant_id)
+    merchant = if merchant_id.present?
+      Current.family.available_merchants_for(Current.user).find(merchant_id)
+    end
+
+    transaction = @entry.transaction
+    transaction.update!(merchant: merchant)
+    @entry.lock_saved_attributes!
+    @entry.mark_user_modified!
+    transaction.lock_attr!(:merchant_id)
+    @entry.sync_account_later
+
+    respond_to do |format|
+      format.html { redirect_back_or_to transaction_path(@entry) }
+      format.turbo_stream do
+        streams = %i[desktop mobile].map do |variant|
+          turbo_stream.replace(
+            dom_id(transaction, "merchant_picker_#{variant}"),
+            partial: "transactions/merchant_picker",
+            locals: { entry: @entry, variant: variant }
+          )
+        end
+        render turbo_stream: streams
+      end
+    end
+  end
+
   def merge_duplicate
     transaction = accessible_transactions.includes(entry: :account).find(params[:id])
 
@@ -520,8 +551,7 @@ class TransactionsController < ApplicationController
     #
     # Includes Family#recurring_transaction_merchants_version because the
     # cached records are preloaded with :merchant and rendered with its
-    # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
-    # doesn't touch `recurring_transactions`.
+    # name/logo, but editing a family merchant doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
       "transactions_projected_recurring/v5/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
         "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
@@ -665,6 +695,10 @@ class TransactionsController < ApplicationController
     end
 
     def set_entry_for_tags
+      set_entry
+    end
+
+    def set_entry_for_merchant
       set_entry
     end
 

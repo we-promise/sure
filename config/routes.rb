@@ -490,6 +490,7 @@ Rails.application.routes.draw do
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
       get :merge
+      get :picker_options
       post :perform_merge
       post :enhance
     end
@@ -569,6 +570,7 @@ Rails.application.routes.draw do
       post :dismiss_duplicate
       post :unlock
       patch :tags, action: :update_tags
+      patch :merchant, action: :update_merchant
     end
   end
 

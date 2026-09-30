@@ -155,13 +155,9 @@ class EnableBankingEntry::Processor
       merchant_name = merchant_name_candidate
       return nil if merchant_name.blank?
 
-      merchant_id = Digest::MD5.hexdigest(merchant_name.downcase)
-
       @merchant ||= begin
         import_adapter.find_or_create_merchant(
-          provider_merchant_id: "enable_banking_merchant_#{merchant_id}",
-          name: merchant_name,
-          source: "enable_banking"
+          name: merchant_name
         )
       rescue ActiveRecord::RecordInvalid => e
         Rails.logger.error "EnableBankingEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"

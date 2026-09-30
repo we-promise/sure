@@ -354,28 +354,25 @@ class Account::ProviderImportAdapter
     end
   end
 
-  # Finds or creates a merchant from provider data
+  # Finds or creates the family's merchant from provider data. Provider IDs are
+  # accepted for callers that still supply them, but identity is family-scoped
+  # and based on the merchant's name and website so there is one merchant model.
   #
-  # @param provider_merchant_id [String] Provider's merchant ID
   # @param name [String] Merchant name
-  # @param source [String] Provider name (e.g., "plaid", "simplefin")
   # @param website_url [String, nil] Optional merchant website
   # @param logo_url [String, nil] Optional merchant logo URL
-  # @return [ProviderMerchant, nil] The merchant object or nil if data is insufficient
-  def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil)
-    return nil unless provider_merchant_id.present? && name.present?
+  # @return [FamilyMerchant, nil] The merchant object or nil if there is no name
+  def find_or_create_merchant(name:, website_url: nil, logo_url: nil)
+    return nil unless name.present?
 
-    # First try to find by provider_merchant_id (stable identifier derived from normalized name)
-    # This handles case variations in merchant names (e.g., "ACME Corp" vs "Acme Corp")
-    merchant = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source)
-
-    # If not found by provider_merchant_id, try by exact name match (backwards compatibility)
-    merchant ||= ProviderMerchant.find_by(source: source, name: name)
+    family = account.family
+    website_url = website_url.to_s.strip.presence
+    merchant = family.merchants.find_by(name: name, website_url: website_url)
 
     if merchant
-      # Update logo if provided and merchant doesn't have one (or has a different one)
-      # Best-effort: don't fail transaction import if logo update fails
-      if logo_url.present? && merchant.logo_url != logo_url
+      # Provider logos are enrichment. Preserve an uploaded family logo and
+      # only fill a missing URL-based logo from provider data.
+      if logo_url.present? && merchant.logo_url.blank? && !merchant.logo_image.attached?
         begin
           merchant.update!(logo_url: logo_url)
         rescue StandardError => e
@@ -385,19 +382,17 @@ class Account::ProviderImportAdapter
       return merchant
     end
 
-    # Create new merchant
+    # There is one family-scoped merchant type. Source and provider IDs remain
+    # import metadata only and do not create a separate shared merchant record.
     begin
-      merchant = ProviderMerchant.create!(
-        source: source,
+      merchant = family.merchants.create!(
         name: name,
-        provider_merchant_id: provider_merchant_id,
         website_url: website_url,
         logo_url: logo_url
       )
     rescue ActiveRecord::RecordNotUnique
-      # Race condition - another process created the record
-      merchant = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) ||
-                 ProviderMerchant.find_by(source: source, name: name)
+      # Race condition - another sync created the same family merchant.
+      merchant = family.merchants.find_by!(name: name, website_url: website_url)
     end
 
     merchant

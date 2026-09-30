@@ -75,6 +75,7 @@ en:
         leave_empty: Leave empty
         account_label: Account
         name_label: Name
+        merchant_label: Merchant
         category_label: Category
         tags_label: Tags
         notes_label: Notes
@@ -253,6 +254,7 @@ en:
       account_type: "Account Type"
       account: "Account"
       category: "Category"
+      merchant: "Merchant"
       tag: "Tag"
     dry_run_resources:
       transactions: "Transactions"
@@ -274,6 +276,7 @@ en:
       date: "Date"
       amount: "Amount"
       name: "Name"
+      merchant: "Merchant"
       currency: "Currency"
       category: "Category"
       tags: "Tags"

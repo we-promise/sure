@@ -1,0 +1,27 @@
+<%# locals: (merchants:, selected_id:, include_blank:, view_helpers:, avatar: false, fallback_text: nil, avatar_size: :sm) %>
+<% if include_blank.present? %>
+  <% selected_blank = selected_id.blank? %>
+  <button type="button"
+          class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if selected_blank %>"
+          role="option"
+          aria-selected="<%= selected_blank %>"
+          tabindex="-1"
+          data-action="click->merchant-select#selectOption"
+          data-merchant-select-target="option"
+          data-merchant-id=""
+          data-merchant-name=""
+          data-merchant-website=""
+          data-filter-name="<%= include_blank %>">
+    <span class="check-icon w-5 shrink-0 <%= "hidden" unless selected_blank %>"><%= view_helpers.icon("check") %></span>
+    <% if avatar %>
+      <span data-merchant-select-avatar class="shrink-0">
+        <%= render DS::FilledIcon.new(variant: :text, text: fallback_text.presence || include_blank, size: avatar_size, rounded: true, description: include_blank) %>
+      </span>
+    <% end %>
+    <span class="text-secondary"><%= include_blank %></span>
+  </button>
+<% end %>
+<% merchants.each do |merchant| %>
+  <%= render partial: "DS/merchant_select/option",
+             locals: { merchant: merchant, selected: merchant.id.to_s == selected_id, view_helpers: view_helpers } %>
+<% end %>

@@ -3,9 +3,9 @@
 <tr class="border-b border-subdued last:border-0 hover:bg-surface-hover">
   <td class="py-3 px-4 text-sm text-primary">
     <div class="flex w-full items-center gap-2.5">
-      <% if family_merchant.logo_url %>
+      <% if family_merchant.display_logo_url %>
         <div class="w-8 h-8 rounded-full flex justify-center items-center">
-          <%= image_tag Setting.transform_brand_fetch_url(family_merchant.logo_url), class: "w-8 h-8 rounded-full", loading: "lazy" %>
+          <%= image_tag Setting.transform_brand_fetch_url(family_merchant.display_logo_url), class: "w-8 h-8 rounded-full", loading: "lazy" %>
         </div>
       <% else %>
         <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>

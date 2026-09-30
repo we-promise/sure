@@ -23,8 +23,6 @@ class SureImport::Preflight
       warnings.count { |warning| warning[:code] == "existing_taxonomy_collision" }
     end
 
-    # Shared ProviderMerchants that already exist with different details than the
-    # file carries. The existing record is kept as-is, so the user sees what differs.
     # Unnamed recurring transactions whose merchant is missing can't be imported
     # (a series needs a merchant or a name), so they are skipped rather than
     # imported without a merchant.
@@ -32,9 +30,6 @@ class SureImport::Preflight
       warnings.count { |warning| warning[:code] == "skipped_unnamed_recurring" }
     end
 
-    def provider_merchant_diff_warnings
-      warnings.select { |warning| warning[:code] == "provider_merchant_diff" }
-    end
   end
 
   REQUIRED_FIELDS = {
@@ -75,11 +70,8 @@ class SureImport::Preflight
 
   TAXONOMY_TYPES = { "Category" => :categories, "Tag" => :tags, "Merchant" => :merchants }.freeze
 
-  # ProviderMerchant shares the :merchants reference namespace with Merchant (a
-  # Transaction/RecurringTransaction's merchant_id can point at either), but it is
-  # a cross-family shared record, not family-owned taxonomy -- so it's deliberately
-  # excluded from TAXONOMY_TYPES, whose collision/duplicate-name checks assume
-  # family-scoped uniqueness.
+  # Legacy ProviderMerchant records share the merchant reference namespace in old
+  # backups. They are imported into the family's merchant collection.
   SOURCE_ID_TYPES = TAXONOMY_TYPES.merge(
     "ProviderMerchant" => :merchants,
     "Account" => :accounts,
@@ -123,7 +115,6 @@ class SureImport::Preflight
     validate_accountables
     validate_split_lines
     validate_references
-    validate_provider_merchant_diffs
     validate_duplicate_valuations
     Result.new(
       errors: @errors,
@@ -202,13 +193,19 @@ class SureImport::Preflight
     # than trying to create a second record with the same name.
     def validate_taxonomy_collisions
       TAXONOMY_TYPES.each do |type, association|
-        existing_names = family.public_send(association).pluck(:name).to_set
-        @records[type].each do |record|
+        records = type == "Merchant" ? @records[type] + @records["ProviderMerchant"] : @records[type]
+        existing_keys = if type == "Merchant"
+          family.public_send(association).pluck(:name, :website_url).to_set
+        else
+          family.public_send(association).pluck(:name).to_set
+        end
+        records.each do |record|
           name = record[:data]["name"].to_s
-          next if name.blank? || !existing_names.include?(name)
+          key = type == "Merchant" ? [ name, record[:data]["website_url"].presence ] : name
+          next if name.blank? || !existing_keys.include?(key)
           add_warning(
             :existing_taxonomy_collision,
-            "Line #{record[:line_number]} #{type} name #{name.inspect} already exists in this family and will be reused."
+            "Line #{record[:line_number]} #{type} #{name.inspect} already exists in this family and will be reused."
           )
         end
       end
@@ -216,10 +213,16 @@ class SureImport::Preflight
 
     def validate_duplicate_taxonomy_names
       TAXONOMY_TYPES.each_key do |type|
+        # Older exports may contain a family Merchant and a shared
+        # ProviderMerchant for the same brand. Both now resolve to one family
+        # record, so duplicate merchant identities are reusable rather than an
+        # invalid archive. Category and Tag duplicate names remain an error.
+        next if type == "Merchant"
+
         grouped = @records[type].group_by { |record| record[:data]["name"].to_s }
-        grouped.each do |name, records|
-          next if name.blank? || records.one?
-          lines = records.map { |record| record[:line_number] }.join(", ")
+        grouped.each do |name, duplicate_records|
+          next if name.blank? || duplicate_records.one?
+          lines = duplicate_records.map { |record| record[:line_number] }.join(", ")
           add_error(:duplicate_taxonomy_name, "#{type} name #{name.inspect} appears more than once in the NDJSON on lines #{lines}.")
         end
       end
@@ -377,28 +380,6 @@ class SureImport::Preflight
         else
           seen[key] = record[:line_number]
         end
-      end
-    end
-
-    def validate_provider_merchant_diffs
-      @records["ProviderMerchant"].each do |record|
-        data = record[:data]
-        source = data["source"].to_s
-        next unless ProviderMerchant.sources.key?(source)
-
-        diff = ProviderMerchant.find_by_import_data(data, source)&.import_diff(data)
-        next if diff.blank?
-
-        add_warning(
-          :provider_merchant_diff,
-          I18n.t(
-            "sure_import.preflight.provider_merchant_diff",
-            line: record[:line_number],
-            name: data["name"],
-            fields: diff.pluck(:field).join(", ")
-          ),
-          details: { merchant_name: data["name"], diff: diff }
-        )
       end
     end
 

@@ -7,11 +7,12 @@
         data-merchant-select-target="option"
         data-merchant-id="<%= merchant.id %>"
         data-merchant-name="<%= merchant.name %>"
-        data-filter-name="<%= merchant.name %>">
+        data-merchant-website="<%= merchant.website_url %>"
+        data-filter-name="<%= [merchant.name, merchant.website_url].compact.join(" ") %>">
   <span class="check-icon w-5 shrink-0 <%= "hidden" unless selected %>">
     <%= view_helpers.icon("check") %>
   </span>
-  <% logo_url = merchant.respond_to?(:logo_url) && merchant.logo_url.present? ? Setting.transform_brand_fetch_url(merchant.logo_url) : nil %>
+  <% logo_url = merchant.display_logo_url.present? ? Setting.transform_brand_fetch_url(merchant.display_logo_url) : nil %>
   <span data-merchant-select-avatar class="shrink-0">
     <% if logo_url %>
       <%= image_tag logo_url, class: "w-5 h-5 rounded-full border border-secondary", loading: "lazy" %>
@@ -19,5 +20,9 @@
       <%= render DS::FilledIcon.new(variant: :text, text: merchant.name, size: "sm", rounded: true) %>
     <% end %>
   </span>
-  <span data-merchant-select-name class="truncate"><%= merchant.name %></span>
+  <span data-merchant-select-name class="min-w-0 truncate"><%= merchant.name %></span>
+  <% if merchant.website_url.present? %>
+    <% display_website = merchant.website_url.sub(/\Ahttps?:\/\//, "").sub(/\Awww\./, "").sub(/\/$/, "") %>
+    <span class="ml-2 max-w-[45%] shrink-0 truncate text-xs text-secondary" title="<%= merchant.website_url %>"><%= display_website %></span>
+  <% end %>
 </button>

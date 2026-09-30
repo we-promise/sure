@@ -177,7 +177,7 @@ class Provider::Openai < Provider
   # Budget available for a one-shot (non-chat) request's full input,
   # excluding reserved response tokens AND the system/instructions prompt.
   # Drives the batch slicer for the auto_categorize / auto_detect_merchants /
-  # enhance_provider_merchants calls — each ships ~200–400 tokens of
+  # enhance_merchants calls — each ships ~200–400 tokens of
   # instructions + JSON schema that aren't counted in `fixed_tokens`.
   def max_input_tokens
     [ context_window - max_response_tokens - system_prompt_reserve, 256 ].max
@@ -278,19 +278,19 @@ class Provider::Openai < Provider
     end
   end
 
-  def enhance_provider_merchants(merchants: [], model: "", family: nil, json_mode: nil)
+  def enhance_merchants(merchants: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
       effective_model = model.presence || @default_model
 
       trace = create_langfuse_trace(
-        name: "openai.enhance_provider_merchants",
+        name: "openai.enhance_merchants",
         input: { merchants: merchants }
       )
 
       batches = slice_for_context(merchants)
 
       result = batches.flat_map do |batch|
-        ProviderMerchantEnhancer.new(
+        MerchantEnhancer.new(
           client,
           model: effective_model,
           merchants: batch,

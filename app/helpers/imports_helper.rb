@@ -4,7 +4,8 @@ module ImportsHelper
       "Import::AccountTypeMapping" => I18n.t("imports.mapping_labels.account_type"),
       "Import::AccountMapping" => I18n.t("imports.mapping_labels.account"),
       "Import::CategoryMapping" => I18n.t("imports.mapping_labels.category"),
-      "Import::TagMapping" => I18n.t("imports.mapping_labels.tag")
+      "Import::TagMapping" => I18n.t("imports.mapping_labels.tag"),
+      "Import::MerchantMapping" => I18n.t("imports.mapping_labels.merchant")
     }.fetch(mapping_class.name)
   end
 
@@ -13,6 +14,7 @@ module ImportsHelper
       date: I18n.t("imports.column_labels.date"),
       amount: I18n.t("imports.column_labels.amount"),
       name: I18n.t("imports.column_labels.name"),
+      merchant: I18n.t("imports.column_labels.merchant"),
       currency: I18n.t("imports.column_labels.currency"),
       category: I18n.t("imports.column_labels.category"),
       tags: I18n.t("imports.column_labels.tags"),

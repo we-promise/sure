@@ -97,12 +97,8 @@ class BrexEntry::Processor
       merchant_name = merchant_name.to_s.strip
       return @merchant = nil if merchant_name.blank?
 
-      merchant_id = Digest::MD5.hexdigest(merchant_name.downcase)
-
       @merchant = import_adapter.find_or_create_merchant(
-        provider_merchant_id: "brex_merchant_#{merchant_id}",
-        name: merchant_name,
-        source: "brex"
+        name: merchant_name
       )
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.error "BrexEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"

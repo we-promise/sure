@@ -22,8 +22,8 @@
                            nil %>
         <%= form.label :merchants, value: merchant.filter_value, class: "text-sm text-primary flex items-center gap-2" do %>
           <div class="hidden lg:flex">
-            <% if merchant.logo_url.present? %>
-              <%= image_tag Setting.transform_brand_fetch_url(merchant.logo_url),
+            <% if merchant.display_logo_url.present? %>
+              <%= image_tag Setting.transform_brand_fetch_url(merchant.display_logo_url),
                   class: "w-6 h-6 rounded-full border border-secondary",
                   loading: "lazy" %>
             <% else %>

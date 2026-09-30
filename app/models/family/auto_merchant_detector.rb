@@ -45,14 +45,8 @@ class Family::AutoMerchantDetector
           modified_count += 1 if was_modified
         end
 
-      elsif existing_merchant.is_a?(ProviderMerchant) && existing_merchant.source != "ai"
-        # Case 2: Has provider merchant (non-AI) - enhance it with AI data
-        if enhance_provider_merchant(existing_merchant, auto_detection)
-          transaction.lock_attr!(:merchant_id)
-          modified_count += 1
-        end
       end
-      # Case 3: AI merchant or FamilyMerchant - skip (already good or user-set)
+      # Existing family merchants are user-editable and are left as-is.
     end
 
     modified_count
@@ -107,24 +101,26 @@ class Family::AutoMerchantDetector
     def find_or_create_ai_merchant(auto_detection)
       # Strategy 1: Find existing merchant by website_url (most reliable for deduplication)
       if auto_detection.business_url.present?
-        existing = ProviderMerchant.find_by(website_url: auto_detection.business_url)
+        existing = family.merchants.find_by(
+          name: auto_detection.business_name,
+          website_url: auto_detection.business_url
+        )
         return existing if existing
       end
 
-      # Strategy 2: Find by exact name match
-      existing = ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
+      # Strategy 2: Find by exact name when no website is available.
+      existing = family.merchants.find_by(name: auto_detection.business_name, website_url: nil)
       return existing if existing
 
-      # Strategy 3: Create new merchant
-      ProviderMerchant.create!(
-        source: "ai",
+      # Provider and AI enrichment both land on the family's single merchant type.
+      family.merchants.create!(
         name: auto_detection.business_name,
         website_url: auto_detection.business_url,
         logo_url: build_logo_url(auto_detection.business_url)
       )
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
-      # Race condition: another process created the merchant between our find and create
-      ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
+      # Race condition: another process created the same family merchant.
+      family.merchants.find_by!(name: auto_detection.business_name, website_url: auto_detection.business_url)
     end
 
     def build_logo_url(business_url)
@@ -133,26 +129,4 @@ class Family::AutoMerchantDetector
       "#{default_logo_provider_url}/#{business_url}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
     end
 
-    def enhance_provider_merchant(merchant, auto_detection)
-      updates = {}
-
-      # Add website_url if missing
-      if merchant.website_url.blank? && auto_detection.business_url.present?
-        updates[:website_url] = auto_detection.business_url
-
-        # Add logo if BrandFetch is configured
-        if Setting.brand_fetch_client_id.present?
-          size = Setting.brand_fetch_logo_size
-          updates[:logo_url] = "#{default_logo_provider_url}/#{auto_detection.business_url}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
-        end
-      end
-
-      return false if updates.empty?
-
-      merchant.update!(updates)
-      true
-    rescue ActiveRecord::RecordInvalid => e
-      Rails.logger.error("Failed to enhance merchant #{merchant.id}: #{e.message}")
-      false
-    end
 end

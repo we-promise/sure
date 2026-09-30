@@ -2,14 +2,65 @@
 
 <div data-controller="color-avatar">
   <%= styled_form_with model: family_merchant, url: family_merchant.persisted? ? family_merchant_path(family_merchant) : family_merchants_path, class: "space-y-4" do |f| %>
+    <%= hidden_field_tag :entry_id, @entry.id if @entry %>
     <section class="space-y-4">
       <% if family_merchant.errors.any? %>
         <%= render "shared/form_errors", model: family_merchant %>
       <% end %>
 
-      <div class="w-fit m-auto mb-4">
-        <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>
-      </div>
+      <% unless family_merchant.is_a?(FamilyMerchant) %>
+        <div class="w-fit m-auto mb-4">
+          <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>
+        </div>
+      <% end %>
+      <% if family_merchant.is_a?(FamilyMerchant) %>
+        <% current_logo_url = family_merchant.display_logo_url %>
+        <div class="flex flex-col items-center gap-3"
+             data-controller="merchant-logo-preview"
+             data-merchant-logo-preview-fallback-url-value="<%= Setting.transform_brand_fetch_url(family_merchant.logo_url) %>"
+             data-merchant-logo-preview-uploaded-value="<%= family_merchant.logo_image.attached? %>">
+          <%= f.hidden_field :remove_logo_image, value: "0", data: { merchant_logo_preview_target: "removeField" } %>
+          <div class="relative">
+            <button type="button"
+                    class="<%= family_merchant.logo_image.attached? ? "" : "hidden" %> absolute -right-1 -bottom-1 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-secondary bg-container shadow-sm"
+                    aria-label="<%= t(".remove_logo") %>"
+                    data-merchant-logo-preview-target="clearButton"
+                    data-action="click->merchant-logo-preview#clearFileInput">
+              <%= icon "x", size: "sm" %>
+            </button>
+            <div class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-secondary">
+              <img src="<%= current_logo_url.present? ? Setting.transform_brand_fetch_url(current_logo_url) : "" %>"
+                   alt="<%= family_merchant.name %>"
+                   class="h-full w-full object-cover <%= current_logo_url.present? ? "" : "hidden" %>"
+                   data-merchant-logo-preview-target="image">
+              <div class="<%= current_logo_url.present? ? "hidden" : "" %>"
+                   data-merchant-logo-preview-target="fallback">
+                <% color = family_merchant.color %>
+                <span data-color-avatar-target="avatar"
+                      class="flex h-full w-full items-center justify-center rounded-full"
+                      style="background-color: color-mix(in srgb, <%= color %> 5%, white); border-color: color-mix(in srgb, <%= color %> 10%, white); color: <%= color %>">
+                  <%= family_merchant.name&.first || "?" %>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="text-center">
+            <%= f.label :logo_image,
+                        class: "px-3 py-2 rounded-lg text-sm hover:bg-surface-hover border border-secondary inline-flex items-center gap-2 cursor-pointer" do %>
+              <%= icon "image-plus" %>
+              <%= t(".logo_upload") %>
+            <% end %>
+            <%= f.file_field :logo_image,
+                             accept: "image/png,image/jpeg,image/webp",
+                             class: "hidden",
+                             data: {
+                               merchant_logo_preview_target: "input",
+                               action: "change->merchant-logo-preview#showFileInputPreview"
+                             } %>
+            <p class="mt-2 text-xs text-secondary"><%= t(".logo_hint") %></p>
+          </div>
+        </div>
+      <% end %>
       <div class="flex gap-2 items-center justify-center">
         <% FamilyMerchant::COLORS.each do |color| %>
           <label class="relative">
@@ -25,6 +76,16 @@
         <%= f.text_field :website_url, placeholder: t(".website_placeholder") %>
       </div>
       <p class="text-xs text-subdued"><%= t(".website_hint") %></p>
+      <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
+        <%= f.url_field :custom_logo_url,
+                        placeholder: t(".custom_logo_url_placeholder"),
+                        autocomplete: "url",
+                        data: {
+                          merchant_logo_preview_target: "customUrl",
+                          action: "input->merchant-logo-preview#previewCustomUrl"
+                        } %>
+      </div>
+      <p class="text-xs text-subdued"><%= t(".custom_logo_url_hint") %></p>
     </section>
 
     <section>

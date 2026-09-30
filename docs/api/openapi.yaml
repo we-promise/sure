@@ -1115,7 +1115,6 @@ components:
           type: string
           enum:
           - FamilyMerchant
-          - ProviderMerchant
         created_at:
           type: string
           format: date-time
