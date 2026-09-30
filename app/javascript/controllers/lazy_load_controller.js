@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import replaceUrl from "utils/replace_url";
 
 // Connects to data-controller="lazy-load"
 // Used with <details> elements to lazy-load content when expanded
@@ -19,7 +20,7 @@ export default class extends Controller {
         const newUrl = params.toString()
           ? `${window.location.pathname}?${params.toString()}${window.location.hash}`
           : `${window.location.pathname}${window.location.hash}`;
-        window.history.replaceState({}, "", newUrl);
+        replaceUrl(newUrl);
       }
     }
 

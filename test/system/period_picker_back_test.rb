@@ -17,6 +17,20 @@ class PeriodPickerBackTest < ApplicationSystemTestCase
     assert_current_path account_path(account)
   end
 
+  test "Back after a tab switch and a pick shows the tab and the previous period" do
+    account = accounts(:investment)
+    visit account_path(account)
+    find("[role='tab']", text: "Holdings").click
+    assert_current_path account_path(account, tab: "holdings")
+
+    pick_period "90D"
+    page.go_back
+
+    assert_selector "#{period_button("30D")}[aria-expanded='false']"
+    assert_selector "[role='tab'][aria-selected='true']", text: "Holdings"
+    assert_current_path account_path(account, tab: "holdings")
+  end
+
   test "Back from a page opened after a pick shows the pick, then the previous period" do
     pick_period "90D"
     click_link "Transactions"
