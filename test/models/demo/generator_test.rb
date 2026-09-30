@@ -97,6 +97,13 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     assert mortgage.amortization_schedule.re_amortising?,
       "a recorded rate change must move the demo mortgage's repayment"
 
+    # The leverage card reads the loan's down payment; the cash-flow history
+    # records the deposit as a transaction. The two must be the same figure.
+    checking = generator.instance_variable_get(:@chase_checking)
+    deposit = checking.entries.find_by!(name: "Home Down Payment")
+    assert_equal deposit.amount, mortgage.down_payment,
+      "the mortgage's down payment must match the deposit the demo records"
+
     [ "Car Loan", "Student Loan" ].each do |name|
       loan = @family.accounts.find_by!(name: name).loan
       assert_not loan.variable_rate_type?, "#{name} should be fixed"
