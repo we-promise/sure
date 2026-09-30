@@ -143,6 +143,8 @@ class Transaction::Search
       query.where(id: matching_ids)
     end
   end
+  # Automatic-categorization provenance filter values (used by the view)
+  AI_STATUSES = %w[current history].freeze
 
   attribute :search, :string
   attribute :amount, :string
@@ -156,6 +158,7 @@ class Transaction::Search
   attribute :categories, array: true
   attribute :merchants, array: true
   attribute :tags, array: true
+  attribute :ai_status, array: true
   attribute :active_accounts_only, :boolean, default: true
 
   attr_reader :family, :accessible_account_ids
@@ -182,6 +185,7 @@ class Transaction::Search
       query = apply_status_filter(query, status)
       query = self.class.apply_merchant_filter(query, merchants)
       query = self.class.apply_tag_filter(query, tags)
+      query = apply_ai_status_filter(query, ai_status)
       query = EntrySearch.apply_search_filter(query, search)
       query = EntrySearch.apply_date_filters(query, start_date, end_date)
       query = EntrySearch.apply_amount_filter(query, amount, amount_operator)
@@ -268,6 +272,34 @@ class Transaction::Search
       end
     end
 
+
+    # Filter by automatic-categorization provenance. Uses EXISTS so a
+    # transaction with both an ai and a bayes enrichment row can't be
+    # duplicated in the list or double-counted in totals (see #3174).
+    def apply_ai_status_filter(query, statuses)
+      wanted = Array(statuses) & AI_STATUSES
+      return query if wanted.empty?
+
+      case wanted.sort
+      when [ "current" ]
+        query.where(auto_enrichment_exists_sql("de.value = to_jsonb(transactions.category_id::text)"), sources: Transaction::AUTO_CATEGORY_SOURCES)
+      when [ "history" ]
+        query
+          .where(auto_enrichment_exists_sql, sources: Transaction::AUTO_CATEGORY_SOURCES)
+          .where.not(auto_enrichment_exists_sql("de.value = to_jsonb(transactions.category_id::text)"), sources: Transaction::AUTO_CATEGORY_SOURCES)
+      else
+        query.where(auto_enrichment_exists_sql, sources: Transaction::AUTO_CATEGORY_SOURCES)
+      end
+    end
+
+    # Correlated EXISTS predicate over the transaction's automatic category
+    # enrichments. to_jsonb(NULL::text) is NULL, so an uncategorized
+    # transaction never satisfies the "matches current category" variant.
+    def auto_enrichment_exists_sql(extra_condition = nil)
+      sql = "EXISTS (SELECT 1 FROM data_enrichments de WHERE de.enrichable_type = 'Transaction' AND de.enrichable_id = transactions.id AND de.attribute_name = 'category_id' AND de.source IN (:sources)"
+      sql += " AND #{extra_condition}" if extra_condition
+      sql + ")"
+    end
 
     # Filter transactions by status (pending or confirmed)
     def apply_status_filter(query, statuses)
