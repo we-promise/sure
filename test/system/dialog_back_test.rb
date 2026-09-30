@@ -36,6 +36,19 @@ class DialogBackTest < ApplicationSystemTestCase
     assert_no_selector "dialog[open]"
   end
 
+  # The modal frame is emptied as its dialog closes, however it closes. Escape
+  # closes it natively, without the controller's close.
+  test "a modal closed with Escape before leaving the list stays closed on Back" do
+    visit transactions_url
+    click_on I18n.t("transactions.index.new_transaction")
+    assert_selector "turbo-frame#modal dialog[open]"
+    page.send_keys(:escape)
+    assert_no_selector "dialog[open]"
+
+    leave_the_list_and_come_back
+    assert_no_selector "dialog[open]"
+  end
+
   # Visited directly, the drawer is the page, so Back has to bring it back.
   test "going back to a drawer visited directly restores it as a modal" do
     visit transfer_url(@transfer)

@@ -69,6 +69,8 @@ export default class extends Controller {
 
   close() {
     this.element.close();
+    // Now as well as on the close event: a reload-on-close visit can cache
+    // the page before that event fires.
     this.#clearParentModalFrame();
 
     if (this.reloadOnCloseValue) {
@@ -119,6 +121,8 @@ export default class extends Controller {
     if (prior && typeof prior.focus === "function" && document.body.contains(prior)) {
       prior.focus();
     }
+    // Escape closes the dialog natively, without close().
+    this.#clearParentModalFrame();
   }
 
   #focusables() {
