@@ -43,12 +43,14 @@ class Entry < ApplicationRecord
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
   }
 
+  # Trade order remains date/created_at/id because cost-basis relief is order-sensitive.
+  # Optional timestamps only order transactions, not trades or valuations.
   scope :chronological, -> {
     order(
       date: :asc,
       Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :asc,
-      Arel.sql("entries.transacted_at IS NULL") => :desc,
-      transacted_at: :asc,
+      Arel.sql("entries.entryable_type != 'Transaction' OR entries.transacted_at IS NULL") => :desc,
+      Arel.sql("CASE WHEN entries.entryable_type = 'Transaction' THEN entries.transacted_at END") => :asc,
       created_at: :asc,
       id: :asc
     )
@@ -58,8 +60,8 @@ class Entry < ApplicationRecord
     order(
       date: :desc,
       Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :desc,
-      Arel.sql("entries.transacted_at IS NULL") => :asc,
-      transacted_at: :desc,
+      Arel.sql("entries.entryable_type != 'Transaction' OR entries.transacted_at IS NULL") => :asc,
+      Arel.sql("CASE WHEN entries.entryable_type = 'Transaction' THEN entries.transacted_at END") => :desc,
       created_at: :desc,
       id: :desc
     )
@@ -322,7 +324,7 @@ class Entry < ApplicationRecord
     # HTML inputs can omit zero seconds. Keep
     # finer source precision (and the original DST occurrence) on an unchanged
     # local form value. Explicit offsets still identify an exact instant.
-    if parsed && !value.strip.match?(/(?:Z|[+-]\d{2}:\d{2})\z/) && parsed.usec.zero? &&
+    if parsed && !value.strip.match?(/(?:[Zz]|[+-]\d{2}:\d{2})\z/) && parsed.usec.zero? &&
        parsed.strftime("%Y-%m-%dT%H:%M:%S") == transacted_at_local
       return
     end

@@ -16,6 +16,7 @@ The ISO 8601 timestamp option accepts values such as
 `2026-09-17T14:48Z`, `2026-09-17T14:48:50Z` and
 `2026-09-17T16:48:50.123456+02:00`. An explicit timezone
 offset is required. Timestamp precision is retained up to six fractional digits.
+Lowercase `t` and `z` separators are accepted and normalized when parsing.
 Date-only formats must match the complete value; they cannot discard a time suffix.
 
 When the date column contains timestamps, choose how to derive the accounting date:
@@ -79,6 +80,13 @@ record and roll back the chunk. Legacy restores skip the entire invalid transact
 using their existing summary policy. Opaque string IDs from older backups remain
 supported, including after export and restore; invalid metadata is not silently
 discarded.
+
+Trade timestamps are preserved as metadata. Holdings and cost-basis calculations
+keep their existing accounting-date, creation-time and ID order, including when
+same-day trades mix known and unknown occurrence times. This feature does not
+reconstruct intraday market prices or infer whether a source time represents
+authorization, settlement, order placement or execution; use the meaning supplied
+by the bank, broker or receipt.
 
 Transaction API responses include a nullable, read-only `transacted_at` field in
 UTC ISO 8601 format. The existing `date` field keeps its meaning.

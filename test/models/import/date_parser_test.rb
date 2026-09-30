@@ -48,6 +48,19 @@ class Import::DateParserTest < ActiveSupport::TestCase
     assert_nil Import::DateParser.parse("2026-09-17", format: "%Y-%m-%d").timestamp
   end
 
+  test "lowercase timestamp separators detect and preserve offsets and precision" do
+    %w[2026-09-18t01:30z 2026-09-18t01:30:00.123456z 2026-09-18t01:30:00.123456+02:00].each do |value|
+      assert_equal "iso8601", Import::DateParser.detect([ value ]).format
+      parsed = Import::DateParser.parse(value, format: "iso8601")
+      expected = Import::DateParser.parse(value.upcase, format: "iso8601")
+      assert_equal expected.date, parsed.date
+      assert_equal expected.timestamp, parsed.timestamp
+      assert_equal expected.timestamp.utc_offset, parsed.timestamp.utc_offset
+    end
+
+    assert_equal Time.utc(2026, 9, 18, 1, 30), Entry::Timestamp.parse("2026-09-18t01:30", timezone: "UTC")
+  end
+
   test "minute-only offset timestamps detect and retain their source date" do
     [ "2026-09-18T01:30Z", "2026-09-18T01:30+02:00" ].each do |value|
       assert_equal "iso8601", Import::DateParser.detect([ value ]).format

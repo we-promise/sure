@@ -2,7 +2,7 @@ class Entry::Timestamp
   # ISO timestamps keep their supplied offset. Local form values must supply a
   # timezone explicitly; neither the server timezone nor today's date is inferred.
   def self.parse(value, timezone: nil)
-    text = value.to_s.strip
+    text = value.to_s.strip.tr("tz", "TZ")
     match = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?(Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?\z/.match(text)
     raise ArgumentError, "Invalid timestamp" unless match
     raise ArgumentError, "Timestamp requires a timezone" unless match[1] || timezone

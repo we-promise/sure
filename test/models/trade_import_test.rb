@@ -104,6 +104,26 @@ class TradeImportTest < ActiveSupport::TestCase
     assert_equal "complete", @import.status
   end
 
+  test "import parses a trade row's date and timestamp once" do
+    @import.update!(account: accounts(:investment),
+      raw_file_str: "date,ticker,qty,price,name\n2026-09-18T01:30:00.123456+02:00,AAPL,2,150,Timed trade\n",
+      date_col_label: "date", ticker_col_label: "ticker", qty_col_label: "qty",
+      price_col_label: "price", name_col_label: "name", date_format: "iso8601",
+      signage_convention: "inflows_positive")
+    @import.generate_rows_from_csv
+    row = @import.rows.first
+    parsed = Import::DateParser.parse(row.date, format: "iso8601")
+    @import.expects(:parse_row_date).with(row).once.returns(parsed)
+    Security::Resolver.any_instance.stubs(:resolve).returns(securities(:aapl))
+
+    @import.import!
+
+    entry = @import.entries.first
+    assert_equal parsed.date, entry.date
+    assert_equal parsed.timestamp, entry.transacted_at
+    assert_equal BigDecimal("300"), entry.amount
+  end
+
   test "auto-assigns investment activity labels to buy and sell trades" do
     aapl = securities(:aapl)
     aapl_resolver = mock

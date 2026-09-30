@@ -68,6 +68,18 @@ class TransactionTimestampsControllerTest < ActionDispatch::IntegrationTest
     assert_nil @entry.reload.transacted_at
   end
 
+  test "lowercase UTC suffix updates an instant even when it matches the previous local clock" do
+    @entry.update!(transacted_at: Time.utc(2026, 9, 17, 9))
+    accounting_date = @entry.date
+
+    patch transaction_url(@entry), params: { entry: { transacted_at_local: "2026-09-17t11:00:00z " } }
+
+    assert_response :redirect
+    assert_equal Time.utc(2026, 9, 17, 11), @entry.reload.transacted_at
+    assert_equal accounting_date, @entry.date
+    assert @entry.locked?(:transacted_at)
+  end
+
   test "read-only user cannot change occurrence time" do
     sign_in users(:family_member)
     entry = entries(:transfer_in)

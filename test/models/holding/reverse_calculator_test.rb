@@ -223,6 +223,39 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_in_delta 110.0, cost_basis_for(calc, security, buy_date).to_f, 1e-6
   end
 
+  test "mixed timed and untimed trades preserve same-day cost-basis relief order" do
+    security = Security.create!(ticker: "TIMEDBASIS", name: "Timestamp basis regression")
+    day = Date.current
+    create_trade(security, account: @account, qty: 10, price: 100, date: day - 1)
+    buy = create_trade(security, account: @account, qty: 10, price: 200, date: day)
+    buy.update!(created_at: day.to_time.change(hour: 9), transacted_at: day.to_time.change(hour: 9))
+    sell = create_trade(security, account: @account, qty: -20, price: 250, date: day)
+    sell.update!(created_at: day.to_time.change(hour: 10), source: "plaid", external_id: "timestamp-basis-sale")
+    rebuy = create_trade(security, account: @account, qty: 10, price: 300, date: day)
+    rebuy.update!(created_at: day.to_time.change(hour: 11))
+
+    calc = calculator_with_trades(security)
+
+    assert_equal BigDecimal("300"), cost_basis_for(calc, security, day)
+    scope = @account.entries.trades.where(date: day)
+    assert_equal [ buy.id, sell.id, rebuy.id ], scope.chronological.pluck(:id)
+    assert_equal [ rebuy.id, sell.id, buy.id ], scope.reverse_chronological.pluck(:id)
+  end
+
+  test "trade timestamps remain metadata rather than changing existing cost-basis order" do
+    security = Security.create!(ticker: "TIMEDORDER", name: "Timestamp order regression")
+    day = Date.current
+    buy = create_trade(security, account: @account, qty: 10, price: 100, date: day)
+    buy.update!(created_at: day.to_time.change(hour: 9), transacted_at: day.to_time.change(hour: 12))
+    sell = create_trade(security, account: @account, qty: -10, price: 150, date: day)
+    sell.update!(created_at: day.to_time.change(hour: 10), transacted_at: day.to_time.change(hour: 11))
+
+    calc = calculator_with_trades(security)
+
+    assert_nil cost_basis_for(calc, security, day)
+    assert_equal [ buy.id, sell.id ], @account.entries.trades.chronological.pluck(:id)
+  end
+
   test "cost_basis_for ignores sell trades" do
     security = Security.create!(ticker: "TST", name: "Test")
     buy_date  = 10.days.ago.to_date
