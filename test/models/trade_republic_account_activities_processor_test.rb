@@ -209,6 +209,24 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Withdrawal", entry.transaction.investment_activity_label
   end
 
+  test "sale proceeds on a Trade Republic cash account count as income" do
+    @tr_account.update!(kind: "cash")
+    @account.update!(accountable: Depository.new)
+    before = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range).income_money
+
+    import_event({
+      id: "evt_cash_sale_proceeds",
+      timestamp: Time.current.iso8601,
+      category: "POC_CREATED",
+      detail: { amount: "300.00", currency: @family.currency }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_cash_sale_proceeds")
+    after = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range).income_money
+    assert_equal "investment_withdrawal", entry.transaction.kind
+    assert_equal Money.new(300, @family.currency), after - before
+  end
+
   test "dividend maps to Dividend with negative amount" do
     import_event({
       id: "evt_dividend",

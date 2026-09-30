@@ -14,7 +14,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
     count_modified_resources(scope) do |txn|
       entry = txn.entry
-      unless txn.transfer?
+      unless txn.transfer.present?
         transfer = build_transfer(target_account, entry)
         Transfer.transaction do
           transfer.save!

@@ -261,11 +261,22 @@ class Account::ProviderImportAdapter
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
         auto_category = account.family.investment_contributions_category
-      elsif detected_label == "Withdrawal" && (account.investment? || account.crypto?)
+      elsif detected_label == "Withdrawal" && Transfer.investment_account?(account)
+        auto_kind = "investment_withdrawal"
+      elsif detected_label == "Withdrawal" && source == "trade_republic" && account.depository?
         auto_kind = "investment_withdrawal"
       elsif account.accountable_type == "Loan" && amount.negative?
         auto_kind = "loan_payment"
       end
+
+      if detected_label == "Withdrawal" && entry.entryable.is_a?(Transaction) && (transfer = entry.transaction.transfer)
+        transfer_kinds = Transfer.kinds_for(
+          source_account: transfer.from_account,
+          destination_account: transfer.to_account
+        )
+        auto_kind = transfer.outflow_transaction_id == entry.transaction.id ? transfer_kinds[:outflow] : transfer_kinds[:inflow]
+      end
+
       auto_kind ||= kind.presence
 
       # Set investment activity label, kind, and category if detected

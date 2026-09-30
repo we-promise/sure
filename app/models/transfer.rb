@@ -31,6 +31,10 @@ class Transfer < ApplicationRecord
       end
     end
 
+    def investment_account?(account)
+      account.investment? || account.crypto?
+    end
+
     # Returns the budget/reporting kind for each leg of a transfer. The outflow
     # kind is normally determined by the destination account; investment
     # withdrawals are the inverse case and mark the destination cash inflow.
@@ -42,7 +46,6 @@ class Transfer < ApplicationRecord
       end
 
       inflow_kind = if investment_account?(source_account) && destination_account.depository?
-        outflow_kind = "funds_movement"
         "investment_withdrawal"
       else
         "funds_movement"
@@ -51,10 +54,6 @@ class Transfer < ApplicationRecord
       { outflow: outflow_kind, inflow: inflow_kind }
     end
 
-    private
-      def investment_account?(account)
-        account.investment? || account.crypto?
-      end
   end
 
   def has_source_fee?

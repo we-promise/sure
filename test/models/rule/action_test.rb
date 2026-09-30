@@ -280,6 +280,22 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal category, transfer.outflow_transaction.category
   end
 
+  test "set_as_transfer_or_payment creates a pair for a standalone investment withdrawal" do
+    investment = accounts(:investment)
+    txn = create_transaction(account: investment, amount: 250, kind: "investment_withdrawal").transaction
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_as_transfer_or_payment",
+      value: @account.id
+    )
+
+    action.apply(Transaction.where(id: txn.id))
+
+    transfer = Transfer.find_by!(outflow_transaction_id: txn.id)
+    assert_equal "funds_movement", transfer.outflow_transaction.kind
+    assert_equal "investment_withdrawal", transfer.inflow_transaction.kind
+  end
+
   test "set_investment_activity_label ignores invalid values" do
     action = Rule::Action.new(
       rule: @transaction_rule,

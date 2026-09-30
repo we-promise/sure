@@ -160,11 +160,18 @@ class Demo::FinancekitGenerator
       unless inflow.transfer
         from = funding_account
         outflow = from.entries.create!(name: entry.name, date: entry.date, amount: -entry.amount,
-          currency: entry.currency, entryable: Transaction.new(kind: Transfer.kind_for_account(entry.account)))
+          currency: entry.currency, entryable: Transaction.new)
         Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow.entryable)
+        kinds = Transfer.kinds_for(source_account: from, destination_account: entry.account)
+        outflow.entryable.update!(kind: kinds[:outflow])
+        inflow.update!(kind: kinds[:inflow], category: nil)
         @funding_accounts_to_sync << from
+      else
+        transfer = inflow.transfer
+        kinds = Transfer.kinds_for(source_account: transfer.from_account, destination_account: transfer.to_account)
+        transfer.outflow_transaction.update!(kind: kinds[:outflow])
+        inflow.update!(kind: kinds[:inflow], category: nil)
       end
-      inflow.update!(kind: "funds_movement", category: nil)
     end
 
     def funding_account

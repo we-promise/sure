@@ -17,11 +17,10 @@ module IncomeStatement::ScopedTransactionsQuery
       "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN #{t}.kind = 'investment_withdrawal' OR ae.amount < 0 THEN 'income' ELSE 'expense' END"
     end
 
-    # Entry amount converted to the family currency at the day's exchange
-    # rate. Contribution/loan-payment outflows and investment withdrawals are
-    # absolute-valued so they add to their respective totals.
+    # Entry amount converted to family currency using the income/expense sign
+    # convention before rows are grouped and summed.
     def converted_amount_sql(t)
-      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment', 'investment_withdrawal') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END"
+      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) WHEN #{t}.kind = 'investment_withdrawal' THEN -ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END"
     end
 
     def entries_join_sql(t)
