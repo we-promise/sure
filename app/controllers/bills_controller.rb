@@ -26,16 +26,7 @@ class BillsController < ApplicationController
 
     @view = %w[all calendar paycheck].include?(params[:view]) ? params[:view] : "overview"
 
-    # An upgraded instance can arrive with series but no occurrence rows,
-    # because nothing under the old build ever materialized them. One inline,
-    # idempotent generation covers every view. The cache is a cost gate, not
-    # correctness -- the none? probe stays authoritative; the guard only stops
-    # an all-ended-series family from re-running generation on every GET.
-    cache_key = "bills:materialized:#{Current.family.id}"
-    if Current.family.recurring_occurrences.none? && !Rails.cache.read(cache_key)
-      materialize_missing_occurrences
-      Rails.cache.write(cache_key, true, expires_in: 12.hours)
-    end
+    RecurringOccurrence.materialize_missing_for(Current.family)
 
     case @view
     when "all"
@@ -597,12 +588,6 @@ class BillsController < ApplicationController
     # Family-wide, not user-scoped: occurrence materialization is the same
     # machinery the sync job runs, and a partial per-user generation would
     # leave the family half-materialized forever.
-    def materialize_missing_occurrences
-      Current.family.recurring_transactions.active.find_each do |series|
-        RecurringTransaction::OccurrenceGenerator.new(series).generate!
-      end
-    end
-
     def suggested_allocations
       RecurringAllocation
         .suggested

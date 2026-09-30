@@ -103,15 +103,34 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the bills card counts what is owed this month" do
+    next_month = Date.current.next_month.beginning_of_month
+    series = recurring_transactions(:netflix_subscription)
+    series.recurring_occurrences.create!(family: @user.family, original_due_on: next_month, due_on: next_month, currency: "USD")
+
     get plan_url
     assert_select "main p", text: I18n.t("plans.bills_card.nothing_owed")
 
-    recurring_transactions(:netflix_subscription).recurring_occurrences.create!(
-      family: @user.family, original_due_on: Date.current, due_on: Date.current, currency: "USD"
-    )
+    series.recurring_occurrences.create!(family: @user.family, original_due_on: Date.current, due_on: Date.current, currency: "USD")
 
     get plan_url
     assert_select "main p", text: I18n.t("plans.bills_card.owed_count", count: 1)
+  end
+
+  # An upgraded instance has series but no occurrence rows until something
+  # generates them, and Plan is now the way into Bills.
+  test "the bills card counts an upgraded family's bills before Bills was ever opened" do
+    @user.family.recurring_transactions.create!(
+      name: "Rent", account: accounts(:depository), amount: 1200, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current, status: "active", manual: true
+    )
+    @user.family.recurring_occurrences.delete_all
+
+    get plan_url
+
+    assert_response :success
+    assert_operator @user.family.recurring_occurrences.count, :>, 0
+    assert_select "main p", text: I18n.t("plans.bills_card.nothing_owed"), count: 0
   end
 
   # The card headers' trailing counts are the easiest strings to lose to a
