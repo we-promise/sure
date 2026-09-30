@@ -208,3 +208,17 @@ export function precisionFromStep(step) {
   const [, fraction = ""] = coefficient.split(".")
   return Math.max(0, fraction.length - Number(exponentText))
 }
+
+// The money field is a plain text input, so the browser no longer enforces
+// the min/max the old type="number" field carried (e.g. min: 0 on a trade's
+// price and fee). Checked against the amount as it will be submitted — i.e.
+// after rounding to the field's precision — so "0.001" on a 2-decimal field
+// with min 0.01 is caught, since it would be submitted as "0.00". Returns
+// "min" or "max" for the bound that is violated, or null when the amount is
+// within bounds (a missing/non-finite bound is not enforced).
+export function amountBoundViolation(amount, { min, max, precision = null } = {}) {
+  const submitted = precision === null ? amount : Number(amount.toFixed(precision))
+  if (Number.isFinite(min) && submitted < min) return "min"
+  if (Number.isFinite(max) && submitted > max) return "max"
+  return null
+}

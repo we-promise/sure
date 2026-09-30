@@ -5,12 +5,22 @@
                    elsif form.object && form.object.respond_to?(currency_method)
                      form.object.public_send(currency_method)
                    end
-   currency = Money::Currency.new(currency_value || options[:default_currency] || "USD") %>
+   currency = Money::Currency.new(currency_value || options[:default_currency] || "USD")
+   # A text input has no native min/max constraint, so the bounds the old
+   # number_field enforced (the caller's, or these defaults) are handed to
+   # money_field_controller, which checks the evaluated amount against them.
+   amount_min = options[:min] || -99999999999999
+   amount_max = options[:max] || 99999999999999 %>
 
 <div class="form-field group <%= options[:container_class] %>"
      data-controller="money-field"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
-     <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>>
+     <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>
+     data-money-field-min-value="<%= amount_min %>"
+     data-money-field-max-value="<%= amount_max %>"
+     data-money-field-invalid-message-value="<%= t(".invalid_amount") %>"
+     data-money-field-min-message-value="<%= t(".below_min", min: amount_min) %>"
+     data-money-field-max-message-value="<%= t(".above_max", max: amount_max) %>">
   <% if options[:label_tooltip] %>
     <div class="form-field__header">
       <%= form.label amount_method, class: "form-field__label" do %>

@@ -15,6 +15,9 @@ en:
       cancel: Cancel
       title: Are you sure?
     money_field:
+      above_max: Enter an amount of at most %{max}.
+      below_min: Enter an amount of at least %{min}.
+      invalid_amount: Enter a valid amount or expression.
       label: Amount
       operator_add: Add
       operator_subtract: Subtract

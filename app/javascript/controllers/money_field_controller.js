@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 import { CurrenciesService } from "services/currencies_service";
 import parseAmountPaste from "utils/parse_amount_paste";
 import evaluateAmountExpression, {
+  amountBoundViolation,
   formatAmountForDisplay,
   formatUnroundedAmount,
   precisionFromStep,
@@ -14,6 +15,11 @@ export default class extends Controller {
   static values = {
     precision: Number,
     step: String,
+    min: Number,
+    max: Number,
+    invalidMessage: String,
+    minMessage: String,
+    maxMessage: String,
   };
 
   requestSequence = 0;
@@ -52,6 +58,7 @@ export default class extends Controller {
     // it first.
     this.updateValidity = this.updateValidity.bind(this);
     this.amountTarget.addEventListener("input", this.updateValidity);
+    this.updateValidity();
   }
 
   disconnect() {
@@ -62,11 +69,36 @@ export default class extends Controller {
 
   // A blank field is left to the existing `required` attribute (if any) to
   // flag, not this — only non-empty text that fails to parse as an amount
-  // or expression is a typeMismatch-equivalent here.
+  // or expression is a typeMismatch-equivalent here. A parseable amount is
+  // also checked against the caller's min/max (rangeUnderflow/-Overflow
+  // equivalents), which the text input no longer enforces natively — e.g.
+  // a trade's price and fee (min: 0) would otherwise accept "-10". Since
+  // auto_submit_form submits via requestSubmit(), which runs constraint
+  // validation, an out-of-range value is blocked there too.
   updateValidity() {
     const raw = this.amountTarget.value.trim();
-    const invalid = raw !== "" && evaluateAmountExpression(raw) === null;
-    this.amountTarget.setCustomValidity(invalid ? "Enter a valid amount or expression." : "");
+    if (raw === "") {
+      this.amountTarget.setCustomValidity("");
+      return;
+    }
+
+    const result = evaluateAmountExpression(raw);
+    if (result === null) {
+      this.amountTarget.setCustomValidity(
+        this.invalidMessageValue || "Enter a valid amount or expression.",
+      );
+      return;
+    }
+
+    const violation = amountBoundViolation(result, {
+      min: this.hasMinValue ? this.minValue : undefined,
+      max: this.hasMaxValue ? this.maxValue : undefined,
+      precision: this.#fieldPrecision(),
+    });
+    const messages = { min: this.minMessageValue, max: this.maxMessageValue };
+    this.amountTarget.setCustomValidity(
+      violation ? messages[violation] || violation : "",
+    );
   }
 
   // Only guards plain typed characters (inputType "insertText"): paste has
@@ -130,6 +162,9 @@ export default class extends Controller {
       }
 
       this.symbolTarget.innerText = currencyData.symbol;
+      // The new currency's step can change the rounding the bounds are
+      // checked against, and assigning .value above fires no "input".
+      this.updateValidity();
     }).catch(() => {
       // Catch prevents Unhandled Promise Rejection for network failures.
       // Silently ignored as they are unactionable by the user.

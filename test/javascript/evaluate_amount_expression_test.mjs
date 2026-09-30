@@ -8,8 +8,12 @@ const MODULE_URL = new URL(
   import.meta.url,
 )
 
-const { default: evaluateAmountExpression, formatAmountForDisplay, precisionFromStep } =
-  await import(MODULE_URL)
+const {
+  default: evaluateAmountExpression,
+  amountBoundViolation,
+  formatAmountForDisplay,
+  precisionFromStep,
+} = await import(MODULE_URL)
 
 describe("evaluateAmountExpression", () => {
   describe("plain amounts (no operator)", () => {
@@ -476,5 +480,37 @@ describe("precisionFromStep", () => {
   it("returns null for an empty or missing step", () => {
     assert.equal(precisionFromStep(""), null)
     assert.equal(precisionFromStep(undefined), null)
+  })
+})
+
+describe("amountBoundViolation", () => {
+  it("flags an amount below min", () => {
+    assert.equal(amountBoundViolation(-10, { min: 0 }), "min")
+  })
+
+  it("flags an amount above max", () => {
+    assert.equal(amountBoundViolation(150, { min: 0, max: 100 }), "max")
+  })
+
+  it("accepts amounts on and within the bounds", () => {
+    assert.equal(amountBoundViolation(0, { min: 0, max: 100 }), null)
+    assert.equal(amountBoundViolation(100, { min: 0, max: 100 }), null)
+    assert.equal(amountBoundViolation(42.5, { min: 0, max: 100 }), null)
+  })
+
+  it("does not enforce missing or non-finite bounds", () => {
+    assert.equal(amountBoundViolation(-1e9), null)
+    assert.equal(amountBoundViolation(-5, { min: undefined, max: Number.NaN }), null)
+  })
+
+  it("checks the amount as rounded to the field's precision", () => {
+    // "0.001" on a 2-decimal field is submitted as "0.00", below a 0.01 min.
+    assert.equal(amountBoundViolation(0.001, { min: 0.01, precision: 2 }), "min")
+    // "-0.001" rounds to 0 and so satisfies min 0.
+    assert.equal(amountBoundViolation(-0.001, { min: 0, precision: 2 }), null)
+  })
+
+  it("checks the unrounded amount when the field has no precision", () => {
+    assert.equal(amountBoundViolation(-0.001, { min: 0, precision: null }), "min")
   })
 })
