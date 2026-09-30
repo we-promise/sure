@@ -2,11 +2,6 @@
 class Setting < RailsSettings::Base
   class ValidationError < StandardError; end
 
-  # Per-request memoization of dynamic ("dynamic:"-prefixed) settings
-  class DynamicValuesCache < ActiveSupport::CurrentAttributes
-    attribute :values
-  end
-
   cache_prefix { "v1" }
 
   # Third-party API keys
@@ -268,19 +263,25 @@ class Setting < RailsSettings::Base
       if respond_to?(key_str)
         public_send(key_str)
       else
-        # Fall back to dynamic entries, loaded once per request/cache cycle
-        # to avoid issuing one query per key (N+1).
-        dynamic_values[dynamic_key_name(key_str)]
+        # Fall back to dynamic entries, read from rails-settings-cached's
+        # shared settings cache (one query per cache cycle) instead of one
+        # query per key (N+1).
+        _all_settings[dynamic_key_name(key_str)]
       end
     end
 
-    # Also reset the per-request dynamic values cache whenever settings change.
-    # If the write happens inside a transaction that is later rolled back, the
-    # memoized values may contain uncommitted data, so reset again on rollback.
+    # The settings cache (request cache + Rails.cache) is shared by declared
+    # and dynamic fields. A write inside a transaction that is later rolled
+    # back can leave uncommitted values cached, so clear it again on rollback.
+    # The rollback hook is registered at most once per transaction.
     def clear_cache
-      DynamicValuesCache.reset
-      current_transaction.after_rollback { DynamicValuesCache.reset }
       super
+
+      transaction = current_transaction
+      if transaction.open? && !CacheRollbackTracker.registered?(transaction)
+        CacheRollbackTracker.register(transaction)
+        transaction.after_rollback { clear_cache }
+      end
     end
 
     def []=(key, value)
@@ -334,12 +335,25 @@ class Setting < RailsSettings::Base
       def dynamic_key_name(key_str)
         "dynamic:#{key_str}"
       end
+  end
 
-      # Loads all dynamic entries in a single query and memoizes them for the
-      # current request (reset automatically between requests/jobs).
-      def dynamic_values
-        DynamicValuesCache.values ||= where("var LIKE ?", "dynamic:%").to_h { |record| [ record.var, record.value ] }
-      end
+  # Tracks which transactions already have a settings-cache rollback hook, so
+  # repeated writes in one transaction don't register duplicate callbacks.
+  module CacheRollbackTracker
+    KEY = :setting_cache_rollback_transactions
+
+    def self.registered?(transaction)
+      transactions.any? { |t| t.equal?(transaction) }
+    end
+
+    def self.register(transaction)
+      transactions.select!(&:open?)
+      transactions << transaction
+    end
+
+    def self.transactions
+      ActiveSupport::IsolatedExecutionState[KEY] ||= []
+    end
   end
 
   # Validates OpenAI configuration requires model when custom URI base is set
