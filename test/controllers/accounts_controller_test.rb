@@ -16,6 +16,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "show filters account activity to uncategorized transactions" do
+    uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
+    categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))
+
+    get account_url(@account, q: { uncategorized: "1" })
+
+    assert_response :success
+    assert_select "input#q_uncategorized[checked]"
+    assert_match uncategorized.name, response.body
+    assert_no_match categorized.name, response.body
+  end
+
   test "index delegates whole-row account clicks to the account link" do
     get accounts_url
 

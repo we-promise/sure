@@ -39,6 +39,15 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <%# What the borrower put in up front. Not part of the amortisation --
+            the loan amortises what was lent -- but it is what makes the
+            leverage figure on the overview readable. %>
+        <%= loan_form.money_field :down_payment,
+                                 label: t("loans.form.down_payment"),
+                                 default_currency: Current.family.currency %>
+      </div>
+
+      <div class="flex items-center gap-2">
         <%= loan_form.date_field :start_date,
                                  label: t("loans.form.start_date"),
                                  max: Date.current %>
@@ -55,6 +64,22 @@
                                  min: 1,
                                  max: Loan::Simulator::MAX_PERIODS %>
       </div>
+
+      <div class="flex items-center gap-2">
+        <%# The premium many lenders quote beside the instalment. Charged
+            alongside it rather than inside it, so it moves the loan's total
+            cost without moving its repayment. %>
+        <%= loan_form.number_field :insurance_rate,
+                                 label: t("loans.form.insurance_rate"),
+                                 placeholder: t("loans.form.insurance_rate_placeholder"),
+                                 min: 0,
+                                 step: 0.005 %>
+        <%= loan_form.select :insurance_rate_type,
+                           loan_insurance_rate_type_options,
+                           { label: t("loans.form.insurance_rate_type"),
+                             include_blank: t("loans.form.none") } %>
+      </div>
+      <p class="text-xs text-secondary"><%= t("loans.form.insurance_rate_hint") %></p>
 
       <%# Rate changes only mean something for a loan whose rate can move. The
           section is rendered for every rate type, retained rows included, and
