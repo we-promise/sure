@@ -133,6 +133,38 @@ class TransactionQuickCategoryCreateTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Network.setBlockedURLs", urls: [])
   end
 
+  test "choosing a parent after a failed assignment does not reuse the top-level category" do
+    parent = categories(:food_and_drink)
+    visit transactions_url
+    open_quick_picker
+    assert_selector "turbo-frame#category_dropdown input[type='search']"
+
+    browser = page.driver.browser
+    browser.execute_cdp("Network.enable")
+    browser.execute_cdp("Network.setBlockedURLs", urls: [ "*/transactions/*/category*" ])
+
+    within "turbo-frame#category_dropdown" do
+      find("input[type='search']").fill_in with: "Top Level First"
+      click_button 'Create "Top Level First"'
+      assert_selector "[data-category-quick-create-target='error']", text: "couldn't assign it"
+    end
+
+    # A different choice for the same name is a new create, which the server
+    # rejects as a duplicate, instead of assigning the top-level category.
+    browser.execute_cdp("Network.setBlockedURLs", urls: [])
+    within "turbo-frame#category_dropdown" do
+      click_button "Add as a subcategory…"
+      find("button[data-parent-id='#{parent.id}']").click
+      assert_selector "[data-category-quick-create-target='error']", text: /taken/i
+    end
+
+    assert_equal 1, @user.family.categories.where(name: "Top Level First").count
+    assert_nil @user.family.categories.find_by(name: "Top Level First").parent
+    assert_not_equal "Top Level First", @entry.entryable.reload.category&.name
+  ensure
+    page.driver.browser.execute_cdp("Network.setBlockedURLs", urls: [])
+  end
+
   private
     def open_quick_picker
       within "##{dom_id(@entry.entryable, 'category_menu_desktop')}" do

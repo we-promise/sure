@@ -140,7 +140,7 @@ export default class extends Controller {
     try {
       // A retry after a failed assignment reuses the category created the
       // first time; posting it again would fail as a duplicate name.
-      let category = this.#createdCategory(name);
+      let category = this.#createdCategory(name, parentId);
       if (!category) {
         const result = await createCategory({
           url: this.createUrlValue,
@@ -155,7 +155,7 @@ export default class extends Controller {
           this.#showError(result.error || this.errorMessageValue);
           return;
         }
-        this.created = { name, id: category.id };
+        this.created = { name, parentId, id: category.id };
       }
 
       this.categoryIdFieldTarget.value = category.id;
@@ -190,8 +190,13 @@ export default class extends Controller {
     this.#showError(this.assignErrorMessageValue);
   }
 
-  #createdCategory(name) {
-    if (this.created?.name.toLocaleLowerCase() !== name.toLocaleLowerCase()) {
+  // Only the same choice (name and parent) is a retry; choosing a different
+  // parent for that name is a new create, which the server then validates.
+  #createdCategory(name, parentId) {
+    if (
+      this.created?.name.toLocaleLowerCase() !== name.toLocaleLowerCase() ||
+      this.created.parentId !== parentId
+    ) {
       return null;
     }
     return { id: this.created.id };
