@@ -7,6 +7,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
+  before_action :ensure_write_permission, only: [ :update, :destroy ]
 
   def index
     family = current_resource_owner.family
@@ -200,6 +201,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     }, status: :internal_server_error
   end
 
+  ANNOTATE_ONLY_PARAMS = %w[notes category_id merchant_id tag_ids].freeze
+
   private
 
     def set_transaction
@@ -216,6 +219,26 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         error: "not_found",
         message: "Transaction not found"
       }, status: :not_found
+    end
+
+    # Reading needs access to the account. Deleting or changing amount, date,
+    # name or currency needs full control; read_write members may only annotate
+    # (notes, category, merchant, tags), the same split the web UI applies in
+    # TransactionsController#permitted_entry_params. A refused request is a 403,
+    # not a silently trimmed update, so the client learns nothing was applied.
+    def ensure_write_permission
+      permission = @entry.account.permission_for(current_resource_owner)
+      return if permission.in?([ :owner, :full_control ])
+      return if action_name == "update" && permission == :read_write && annotate_only_update?
+
+      render json: {
+        error: "forbidden",
+        message: "You do not have permission to #{action_name == 'destroy' ? 'delete' : 'change'} this transaction"
+      }, status: :forbidden
+    end
+
+    def annotate_only_update?
+      (transaction_params.keys.map(&:to_s) - ANNOTATE_ONLY_PARAMS).empty?
     end
 
     def ensure_read_scope
