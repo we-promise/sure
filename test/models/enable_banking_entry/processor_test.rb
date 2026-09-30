@@ -232,6 +232,70 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_includes entry.notes, "POS          45,13 AT  D6   31.07. 10:27"
   end
 
+  test "uses ING card merchant from creditor address when creditor name is blank" do
+    tx = {
+      entry_reference: "ref_ing_card",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "12.34", currency: "PLN" },
+      creditor: {
+        name: nil,
+        postal_address: { address_line: [ "EXAMPLE MARKET 0042           TESTOWO" ] }
+      },
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Płatność kartą 01.01.2025 Nr karty 1234xx5678" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_ing_card")
+
+    assert_equal "EXAMPLE MARKET 0042 TESTOWO", entry.name
+    assert_equal "EXAMPLE MARKET 0042 TESTOWO", entry.transaction.merchant&.name
+    assert_includes entry.notes, "Płatność kartą 01.01.2025"
+  end
+
+  test "resolves a known merchant from an ING creditor address" do
+    @family.merchants.create!(name: "Example Market")
+
+    name = build_name_with_family(
+      credit_debit_indicator: "DBIT",
+      creditor: {
+        name: nil,
+        postal_address: { address_line: [ "EXAMPLE MARKET 0042           TESTOWO" ] }
+      },
+      remittance_information: [ "Płatność kartą 01.01.2025 Nr karty 1234xx5678" ]
+    )
+
+    assert_equal "Example Market", name
+  end
+
+  test "does not use a debtor postal address as the name of an incoming transaction" do
+    name = build_name(
+      credit_debit_indicator: "CRDT",
+      debtor: {
+        name: nil,
+        postal_address: { address_line: [ "EXAMPLE STREET 12", "00-001 TESTOWO" ] }
+      },
+      remittance_information: [ "Salary" ]
+    )
+
+    assert_equal "Salary", name
+  end
+
+  test "does not use a creditor postal address for an ordinary outgoing transfer" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: {
+        name: nil,
+        postal_address: { address_line: [ "MAIN STREET 12" ] }
+      },
+      remittance_information: [ "Invoice 12345" ]
+    )
+
+    assert_equal "Invoice 12345", name
+  end
+
   test "uses the family's known merchant name instead of the raw remittance line when it matches, and assigns the merchant" do
     @family.merchants.create!(name: "Billa")
 

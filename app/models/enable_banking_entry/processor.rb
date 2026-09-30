@@ -235,8 +235,25 @@ class EnableBankingEntry::Processor
       if credit_debit_indicator == "CRDT"
         data.dig(:debtor, :name).presence || data[:debtor_name].presence
       else
-        data.dig(:creditor, :name).presence || data[:creditor_name].presence
+        data.dig(:creditor, :name).presence ||
+          data[:creditor_name].presence ||
+          creditor_address_name
       end
+    end
+
+    # ING Bank Slaski leaves creditor.name blank for card payments and puts the
+    # merchant descriptor in the creditor's first postal address line instead.
+    def creditor_address_name
+      return unless remittance_information_lines.any? { |line| line.match?(/\Apłatność kartą\b/i) }
+
+      line = Array.wrap(data.dig(:creditor, :postal_address, :address_line))
+        .find { |value| value.to_s.strip.present? }
+        .to_s
+        .squish
+        .presence
+      return if line.blank?
+
+      matched_known_merchant_name(line) || strip_payment_processor_prefix(line)
     end
 
     def technical_card_counterparty?(value)
