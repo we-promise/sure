@@ -701,7 +701,8 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
 
   test "cannot unlink a match from one side when a fee sits in the other account" do
     transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
-    fee = attach_fee(transfer, account: member_loan)
+    writable_fee = attach_fee(transfer, account: accounts(:depository))
+    unwritable_fee = attach_fee(transfer, account: member_loan)
 
     assert_no_difference -> { Transfer.count } do
       patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
@@ -709,7 +710,9 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
-    assert Transaction.exists?(fee.id)
+    assert Transfer.exists?(transfer.id)
+    assert Transaction.exists?(writable_fee.id)
+    assert Transaction.exists?(unwritable_fee.id)
   end
 
   test "can reject a match from one side when its fees sit in a writable account" do
