@@ -112,13 +112,19 @@ class RecurringOccurrenceTest < ActiveSupport::TestCase
     end
   end
 
+  # Overdue, because a status change regenerates the future and would delete
+  # a row still to come before the summary ever got to filter it. Pausing
+  # stores inactive; paused only arrives by import or the v1 API.
   test "owed summary leaves out paused bills" do
     travel_to Date.new(2026, 9, 15) do
-      create_occurrence(due_on: Date.new(2026, 9, 25))
-      @series.update!(status: "inactive")
+      create_occurrence(due_on: Date.new(2026, 9, 1))
 
-      assert_equal({ owed_count: 0, overdue_count: 0 },
-                   RecurringOccurrence.owed_summary_for(users(:family_admin)))
+      %w[inactive paused].each do |status|
+        @series.update!(status: status)
+
+        assert_equal({ owed_count: 0, overdue_count: 0 },
+                     RecurringOccurrence.owed_summary_for(users(:family_admin)), status)
+      end
     end
   end
 

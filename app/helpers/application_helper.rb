@@ -77,16 +77,6 @@ module ApplicationHelper
     current_page?(path) || (request.path.start_with?(path) && path != "/")
   end
 
-  # Wraps a nav-item hash so a single call performs both halves of a
-  # preview-gated entry: returns `nil` for users without the flag (so the
-  # entry never reaches the rendered nav), and stamps `preview: true` on
-  # the hash for users with the flag (so the partial paints the violet
-  # dot on the icon). Use inside an `Array#compact` nav-items list.
-  def preview_gated_nav_item(item)
-    return nil unless preview_features_enabled?
-    item.merge(preview: true)
-  end
-
   # Budgets, Goals and Bills share one nav slot. Preview users get the
   # "Plan" hub entry fronting all three (it stays lit while browsing any
   # subpage, since page_active? is a path-prefix match and /budgets · /goals
