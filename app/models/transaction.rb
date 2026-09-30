@@ -114,6 +114,9 @@ class Transaction < ApplicationRecord
   # Providers that support pending transaction flags
   PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark financekit].freeze
 
+  # DataEnrichment sources that represent automatic category assignment
+  AUTO_CATEGORY_SOURCES = %w[ai bayes].freeze
+
   # Stored flag values that do not mark a transaction pending: the strings
   # ActiveModel::Type::Boolean casts to false, plus "" (which it casts to nil).
   # Any other present value is pending, as #pending? decides.
