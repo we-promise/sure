@@ -67,7 +67,7 @@ it:
         failed: "Fallita"
         no_usage_data: "Nessun dato di utilizzo trovato per il periodo selezionato"
         cost_estimates_title: "Informazioni sulle stime dei costi"
-        cost_estimates_description: "I costi sono stimati in base ai prezzi di OpenAI del 2025. I costi effettivi possono variare. I prezzi sono per 1 milione di token e variano per modello. I modelli personalizzati o self-hosted mostreranno \"N/A\" e non sono inclusi nei totali dei costi."
+        cost_estimates_description: "I costi sono stimati in base ai prezzi pubblicati dai fornitori, verificati l’ultima volta il %{date}. I costi effettivi possono variare. I prezzi sono per 1 milione di token e variano per modello. I modelli personalizzati o self-hosted mostreranno \"N/A\" e non sono inclusi nei totali dei costi."
     ai_prompts:
       show:
         page_title: Prompt AI
@@ -391,6 +391,7 @@ it:
         connect_button: Connetti Coinbase
         syncing: Sincronizzazione...
         sync: Sincronizza
+        disconnect: Disconnetti
         disconnect_confirm: Sei sicuro di voler disconnettere questa connessione Coinbase? I tuoi conti sincronizzati diventeranno conti manuali.
       binance_panel:
         setup_instructions: "Per connettere Binance, crea una chiave API in sola lettura:"
@@ -412,6 +413,7 @@ it:
         historical_import: "Impostazioni importazione storica"
         sync_start_date_label: "Importa dati da"
         sync_start_date_help: "Seleziona fino a quando indietro recuperare le operazioni storiche."
+        disconnect: Disconnetti
         disconnect_confirm: "Sei sicuro di voler disconnettere Binance?"
       kraken_panel:
         step1_html: 'Vai alle <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">impostazioni API Kraken</a>'
