@@ -114,7 +114,10 @@ class Import < ApplicationRecord
   validate :rows_to_skip_within_file_bounds
 
   has_many :rows, dependent: :destroy
-  has_many :mappings, dependent: :destroy
+  # Mapping STI types can outlive the code version that created them. These rows
+  # have no destroy callbacks, so delete them directly instead of instantiating
+  # each subtype when an import is removed.
+  has_many :mappings, dependent: :delete_all
   has_many :accounts, dependent: :destroy
   has_many :entries, dependent: :destroy
 
