@@ -251,7 +251,7 @@ class Security < ApplicationRecord
   def current_price
     @current_price ||= find_or_fetch_price
     return nil if @current_price.nil?
-    Money.new(@current_price.price, @current_price.currency)
+    Money.new(@current_price.price, Security::Price.normalized_currency(@current_price.currency))
   end
 
   def to_combobox_option

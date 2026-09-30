@@ -162,6 +162,31 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show warns when the latest sync skipped prices with invalid currencies" do
+    syncs(:account).update!(sync_stats: { "invalid_price_currency_count" => 1 })
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-testid='invalid-price-currency-warning']", count: 1
+    assert_select "[data-testid='invalid-price-currency-warning'] p",
+                  text: /A security has a price with an invalid currency/
+
+    @user.update!(locale: "zh-CN")
+    get account_url(@account)
+    assert_select "[data-testid='invalid-price-currency-warning'] p", text: /有 1 只证券的价格币种无效/
+  end
+
+  test "show clears an old invalid price warning after a clean sync" do
+    syncs(:account).update!(sync_stats: { "invalid_price_currency_count" => 1 })
+    @account.syncs.create!(status: "completed", completed_at: Time.current)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-testid='invalid-price-currency-warning']", count: 0
+  end
+
   test "show renders the balance chart as drag-selectable for a custom date range" do
     get account_url(@account)
 

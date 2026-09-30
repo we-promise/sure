@@ -36,4 +36,19 @@ class Account::SyncerTest < ActiveSupport::TestCase
 
     Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
   end
+
+  test "records invalid price currency warnings while still materializing balances" do
+    account = accounts(:depository)
+    sync = syncs(:account)
+    importer = mock("market data importer")
+    Account::MarketDataImporter.expects(:new).with(account).returns(importer)
+    importer.expects(:import_all)
+    importer.expects(:invalid_price_currency_count).returns(1)
+    Balance::Materializer.any_instance.expects(:materialize_balances).once
+
+    Account::Syncer.new(account).perform_sync(sync)
+
+    assert_equal 1, sync.reload.sync_stats["invalid_price_currency_count"]
+    assert sync.completed?
+  end
 end

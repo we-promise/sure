@@ -36,6 +36,98 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal [ 150, 155, 160 ], db_prices.map(&:price)
   end
 
+  test "does not persist provider prices without a known currency" do
+    @provider.stubs(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: Date.current, price: 210.44, currency: "")
+    ]))
+
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_no_difference "Security::Price.where(security: @security).count" do
+        result = Security::Price::Importer.new(
+          security: @security, security_provider: @provider,
+          start_date: Date.current, end_date: Date.current
+        ).import_provider_prices
+
+        assert_equal 0, result
+      end
+    end
+
+    warning = DebugLogEntry.order(:created_at).last
+    assert_equal "security_price_fetch", warning.category
+    assert_equal @security.id, warning.metadata["security_id"]
+    assert_equal [ "" ], warning.metadata["currencies"]
+  end
+
+  test "keeps valid prices when one provider date has an invalid currency" do
+    first_date = 1.day.ago.to_date
+    @provider.stubs(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: first_date, price: 100, currency: "USD"),
+      OpenStruct.new(date: Date.current, price: 200, currency: "")
+    ]))
+
+    assert_difference "DebugLogEntry.count", 1 do
+      Security::Price::Importer.new(
+        security: @security, security_provider: @provider,
+        start_date: first_date, end_date: Date.current
+      ).import_provider_prices
+    end
+
+    prices = Security::Price.where(security: @security, date: first_date..Date.current).order(:date)
+    assert_equal [ 100, 100 ], prices.map(&:price)
+    assert_equal [ "USD", "USD" ], prices.map(&:currency)
+  end
+
+  test "an invalid early currency does not advance the first provider price date" do
+    start_date = 2.days.ago.to_date
+    valid_date = 1.day.ago.to_date
+    @provider.stubs(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: start_date, price: 100, currency: ""),
+      OpenStruct.new(date: valid_date, price: 105, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security, security_provider: @provider,
+      start_date: start_date, end_date: valid_date
+    ).import_provider_prices
+
+    assert_nil @security.reload.first_provider_price_on,
+               "the invalid early quote must be retried on a later sync"
+    assert Security::Price.exists?(security: @security, date: valid_date, currency: "USD")
+  end
+
+  test "a legacy invalid early row does not advance the first provider price date" do
+    start_date = 2.days.ago.to_date
+    valid_date = 1.day.ago.to_date
+    bad_price = Security::Price.create!(security: @security, date: start_date, price: 100, currency: "USD")
+    bad_price.update_column(:currency, "")
+    @provider.stubs(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: valid_date, price: 105, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security, security_provider: @provider,
+      start_date: start_date, end_date: valid_date
+    ).import_provider_prices
+
+    assert_nil @security.reload.first_provider_price_on
+    assert Security::Price.exists?(security: @security, date: valid_date, currency: "USD")
+  end
+
+  test "a legacy blank-currency row does not prevent fetching a valid price" do
+    bad_price = Security::Price.create!(security: @security, date: Date.current, price: 100, currency: "USD")
+    bad_price.update_column(:currency, "")
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: Date.current, price: 110, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security, security_provider: @provider,
+      start_date: Date.current, end_date: Date.current
+    ).import_provider_prices
+
+    assert_equal 110, Security::Price.find_by!(security: @security, date: Date.current, currency: "USD").price
+  end
+
   test "syncs diff when some prices already exist" do
     Security::Price.delete_all
 

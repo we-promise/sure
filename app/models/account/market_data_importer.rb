@@ -3,6 +3,18 @@ class Account::MarketDataImporter
 
   def initialize(account)
     @account = account
+    @invalid_price_currency_security_ids = Set.new
+  end
+
+  def invalid_price_currency_count
+    invalid_persisted_ids = Security::Price
+      .where(security_id: security_ids, date: ..Date.current)
+      .where("UPPER(security_prices.currency) NOT IN (?)", Money::Currency.all.keys.map(&:upcase))
+      .group(:security_id)
+      .maximum(:date)
+      .filter_map { |security_id, date| security_id if date >= first_required_price_dates[security_id] }
+
+    (@invalid_price_currency_security_ids | invalid_persisted_ids).size
   end
 
   # Prices are imported first so their currencies are known when deciding
@@ -103,7 +115,10 @@ class Account::MarketDataImporter
         reopened ? Date.current : (holding_date || Date.current)
       end
 
-      security.import_provider_prices(start_date: start_dates[security_id], end_date: end_date)
+      _, provider_error = security.import_provider_prices(start_date: start_dates[security_id], end_date: end_date)
+      if provider_error == Security::Price::Importer::INVALID_CURRENCY_ERROR
+        @invalid_price_currency_security_ids.add(security_id)
+      end
       security.import_provider_details
     end
   end
@@ -122,7 +137,7 @@ class Account::MarketDataImporter
     # Currencies whose prices all predate the account's first required date are skipped.
     def security_price_currency_start_dates
       @security_price_currency_start_dates ||= begin
-        latest_foreign_price_dates = Security::Price.where(security_id: security_ids)
+        latest_foreign_price_dates = Security::Price.with_known_currency.where(security_id: security_ids)
                                                     .where.not(currency: account.currency)
                                                     .group(:security_id, :currency)
                                                     .maximum(:date)
@@ -130,6 +145,9 @@ class Account::MarketDataImporter
         latest_foreign_price_dates.each_with_object({}) do |((security_id, currency), latest_date), dates|
           start_date = first_required_price_dates[security_id]
           next if latest_date < start_date
+
+          currency = Security::Price.normalized_currency(currency)
+          next if currency == account.currency
 
           dates[currency] = [ dates[currency], start_date ].compact.min
         end

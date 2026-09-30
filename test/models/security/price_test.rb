@@ -51,7 +51,9 @@ class Security::PriceTest < ActiveSupport::TestCase
     )
 
     # Simulate the initial lookup losing a race to another price insert.
-    @security.prices.expects(:find_by).with(date: price_date).returns(nil)
+    valid_prices = mock("valid_prices")
+    @security.prices.expects(:with_known_currency).returns(valid_prices)
+    valid_prices.expects(:find_by).with(date: price_date).returns(nil)
     expect_provider_price(security: @security, price: provider_price, date: price_date)
 
     assert_no_difference "Security::Price.count" do
@@ -72,6 +74,75 @@ class Security::PriceTest < ActiveSupport::TestCase
              .returns(with_provider_response)
 
     assert_not @security.find_or_fetch_price(date: Date.current)
+  end
+
+  test "rejects an unsupported price currency" do
+    price = Security::Price.new(security: @security, date: Date.current, price: 100, currency: "INVALID")
+
+    assert_not price.valid?
+    assert price.errors[:currency].any?
+  end
+
+  test "normalizes a supported price currency before saving" do
+    price = Security::Price.create!(
+      security: @security, date: 10.days.ago.to_date, price: 100, currency: " usd "
+    )
+
+    assert_equal "USD", price.currency
+  end
+
+  test "updating a legacy lowercase price does not collide with an uppercase price" do
+    price_date = 11.days.ago.to_date
+    legacy = Security::Price.create!(security: @security, date: price_date, price: 100, currency: "USD")
+    legacy.update_column(:currency, "usd")
+    Security::Price.create!(security: @security, date: price_date, price: 101, currency: "USD")
+
+    legacy.update!(price: 102)
+
+    assert_equal "usd", legacy.reload.currency
+    assert_equal 102, legacy.price
+  end
+
+  test "ignores a legacy blank-currency price and fetches a valid replacement" do
+    price_date = 10.days.ago.to_date
+    bad_price = Security::Price.create!(security: @security, date: price_date, price: 100, currency: "USD")
+    bad_price.update_column(:currency, "")
+    expect_provider_price(
+      security: @security,
+      price: Security::Price.new(security: @security, date: price_date, price: 105, currency: "USD"),
+      date: price_date
+    )
+
+    replacement = @security.find_or_fetch_price(date: price_date)
+
+    assert_equal "USD", replacement.currency
+    assert_equal 105, replacement.price
+  end
+
+  test "does not return or cache a provider price with an unknown currency" do
+    price_date = 10.days.ago.to_date
+    expect_provider_price(
+      security: @security,
+      price: Security::Price.new(security: @security, date: price_date, price: 105, currency: ""),
+      date: price_date
+    )
+
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_no_difference "Security::Price.count" do
+        assert_nil @security.find_or_fetch_price(date: price_date)
+      end
+    end
+  end
+
+  test "current price accepts a normalized provider currency" do
+    @security.prices.where(date: Date.current).delete_all
+    expect_provider_price(
+      security: @security,
+      price: Security::Price.new(security: @security, date: Date.current, price: 105, currency: " usd "),
+      date: Date.current
+    )
+
+    assert_equal "USD", @security.current_price.currency.iso_code
   end
 
   private

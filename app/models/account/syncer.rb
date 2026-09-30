@@ -7,7 +7,7 @@ class Account::Syncer
 
   def perform_sync(sync)
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
-    import_market_data
+    import_market_data(sync)
     materialize_balances(window_start_date: sync.window_start_date)
     apply_provider_balance_overrides
   end
@@ -29,8 +29,13 @@ class Account::Syncer
     #
     # We rescue errors here because if this operation fails, we don't want to fail the entire sync since
     # we have reasonable fallbacks for missing market data.
-    def import_market_data
-      Account::MarketDataImporter.new(account).import_all
+    def import_market_data(sync)
+      importer = Account::MarketDataImporter.new(account)
+      importer.import_all
+
+      if (warning_count = importer.invalid_price_currency_count).positive?
+        sync.update!(sync_stats: sync.sync_stats.to_h.merge("invalid_price_currency_count" => warning_count))
+      end
     rescue => e
       Rails.logger.error("Error syncing market data for account #{account.id}: #{e.message}")
       Sentry.capture_exception(e)

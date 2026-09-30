@@ -83,6 +83,10 @@ class UI::AccountPage < ApplicationComponent
     @fx_coverage_start_date = result
   end
 
+  def invalid_price_currency_count
+    account.latest_sync_record&.sync_stats&.dig("invalid_price_currency_count").to_i
+  end
+
   # The controller's projection when it built one; otherwise built here, once
   # per render, for callers that construct the page without it.
   def loan_projection

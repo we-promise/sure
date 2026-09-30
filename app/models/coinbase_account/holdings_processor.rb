@@ -145,7 +145,7 @@ class CoinbaseAccount::HoldingsProcessor
 
       # Fall back to Security's latest price if available
       if (security = resolve_security)
-        latest_price = security.prices.order(date: :desc).first
+        latest_price = security.prices.with_known_currency.order(date: :desc).first
         return latest_price.price if latest_price.present?
       end
 

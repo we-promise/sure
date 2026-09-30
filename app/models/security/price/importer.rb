@@ -1,6 +1,7 @@
 class Security::Price::Importer
   MissingSecurityPriceError = Class.new(StandardError)
   MissingStartPriceError    = Class.new(StandardError)
+  INVALID_CURRENCY_ERROR   = "Provider returned prices with invalid currency".freeze
 
   PROVISIONAL_LOOKBACK_DAYS = 7
 
@@ -55,7 +56,7 @@ class Security::Price::Importer
           "advancing gapfill start to earliest valid provider date #{earliest_provider_price.date}"
         )
         prev_price_value        = earliest_provider_price.price
-        prev_currency           = earliest_provider_price.currency || prev_currency
+        prev_currency           = Security::Price.normalized_currency(earliest_provider_price.currency)
         @fill_start_date        = earliest_provider_price.date
         advanced_first_price_on = earliest_provider_price.date
       end
@@ -80,7 +81,7 @@ class Security::Price::Importer
       db_price_value       = db_price&.price
       provider_price       = provider_prices[date]
       provider_price_value = provider_price&.price
-      provider_currency    = provider_price&.currency
+      provider_currency    = Security::Price.normalized_currency(provider_price&.currency)
 
       has_provider_price = provider_price_value.present? && provider_price_value.to_f > 0
       has_db_price = db_price_value.present? && db_price_value.to_f > 0
@@ -93,7 +94,7 @@ class Security::Price::Importer
         [ provider_price_value, provider_currency ]
       elsif has_db_price
         # For non-provisional with valid DB price: preserve existing value (user edits)
-        [ db_price_value, db_price&.currency ]
+        [ db_price_value, Security::Price.normalized_currency(db_price&.currency) ]
       else
         # Fill gaps with provider data
         [ provider_price_value, provider_currency ]
@@ -121,7 +122,7 @@ class Security::Price::Importer
         security_id: security.id,
         date:        date,
         price:       chosen_price,
-        currency:    chosen_currency || "USD",
+        currency:    chosen_currency,
         provisional: provisional
       }
     end
@@ -140,6 +141,7 @@ class Security::Price::Importer
     # move the column forward from a previously-discovered earlier value,
     # since that would silently hide older rows already in the DB.
     if advanced_first_price_on.present? &&
+       !invalid_currency_price_on_or_before?(advanced_first_price_on) &&
        (security.first_provider_price_on.blank? ||
         advanced_first_price_on < security.first_provider_price_on)
       security.update_column(:first_provider_price_on, advanced_first_price_on)
@@ -183,7 +185,30 @@ class Security::Price::Importer
 
         if response.success?
           Security.clear_plan_restriction(security.id, provider: security_provider.class.name.demodulize)
-          response.data.index_by(&:date)
+          valid_prices, invalid_prices = response.data.partition do |price|
+            Security::Price.normalized_currency(price.currency).present?
+          end
+          @invalid_currency_dates = invalid_prices.filter_map(&:date)
+
+          if invalid_prices.any?
+            @provider_error = INVALID_CURRENCY_ERROR
+            DebugLogEntry.capture(
+              category: "security_price_fetch",
+              level: "warn",
+              message: "Ignored provider prices with invalid currency",
+              source: self.class.name,
+              provider: security_provider,
+              metadata: {
+                security_id: security.id,
+                ticker: security.ticker,
+                count: invalid_prices.size,
+                dates: invalid_prices.map(&:date).first(10),
+                currencies: invalid_prices.map(&:currency).uniq
+              }
+            )
+          end
+
+          valid_prices.index_by(&:date)
         else
           error_message = response.error.message
           Rails.logger.warn("#{security_provider.class.name} could not fetch prices for #{security.ticker} between #{provider_fetch_start_date} and #{end_date}. Provider error: #{error_message}")
@@ -218,7 +243,7 @@ class Security::Price::Importer
     end
 
     def db_prices
-      @db_prices ||= Security::Price.where(security_id: security.id, date: start_date..end_date)
+      @db_prices ||= Security::Price.with_known_currency.where(security_id: security.id, date: start_date..end_date)
                                     .order(:date)
                                     .to_a
                                     .index_by(&:date)
@@ -231,15 +256,15 @@ class Security::Price::Importer
       # don't perpetually trip the "expected_count mismatch" re-sync. Query
       # directly rather than via db_prices (which stays at the full range to
       # preserve any user-entered rows pre-listing).
-      persisted_count = Security::Price
+      persisted_count = Security::Price.with_known_currency
         .where(security_id: security.id, date: clamped_start_date..end_date)
-        .count
+        .distinct.count(:date)
 
       persisted_count == expected_count
     end
 
     def has_refetchable_provisional_prices?
-      Security::Price.where(security_id: security.id, date: start_date..end_date)
+      Security::Price.with_known_currency.where(security_id: security.id, date: start_date..end_date)
                      .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
                      .exists?
     end
@@ -271,7 +296,7 @@ class Security::Price::Importer
     def effective_start_date
       return start_date if clear_cache
 
-      refetchable_dates = Security::Price.where(security_id: security.id, date: clamped_start_date..end_date)
+      refetchable_dates = Security::Price.with_known_currency.where(security_id: security.id, date: clamped_start_date..end_date)
                                          .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
                                          .pluck(:date)
                                          .to_set
@@ -315,7 +340,7 @@ class Security::Price::Importer
 
       # Fall back to most recent DB price before cutoff
       currency = prev_price_currency || db_price_currency
-      Security::Price
+      Security::Price.with_known_currency
         .where(security_id: security.id)
         .where("date < ?", cutoff_date)
         .where("price > 0")
@@ -362,11 +387,21 @@ class Security::Price::Importer
     end
 
     def db_price_currency
-      db_prices.values.first&.currency
+      Security::Price.normalized_currency(db_prices.values.first&.currency)
     end
 
     def prev_price_currency
-      @prev_price_currency ||= provider_prices.values.first&.currency
+      @prev_price_currency ||= Security::Price.normalized_currency(provider_prices.values.first&.currency)
+    end
+
+    # An invalid earlier quote is not evidence that the instrument was unlisted.
+    # Keep retrying that date instead of clamping future syncs past it.
+    def invalid_currency_price_on_or_before?(date)
+      return true if Array(@invalid_currency_dates).any? { |invalid_date| invalid_date <= date }
+
+      Security::Price.where(security_id: security.id, date: start_date..date)
+                     .where("UPPER(currency) NOT IN (?)", Money::Currency.all.keys.map(&:upcase))
+                     .exists?
     end
 
     # Clamp to today (EST) so we never call our price API for a future date (our API is in EST/EDT timezone)

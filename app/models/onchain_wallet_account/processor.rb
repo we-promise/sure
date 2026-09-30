@@ -120,17 +120,17 @@ class OnchainWalletAccount::Processor
     end
 
     def priced_dates(security, dates)
-      @priced_dates ||= security.prices.where(date: dates.min..dates.max).pluck(:date).to_set
+      @priced_dates ||= security.prices.with_known_currency.where(date: dates.min..dates.max).pluck(:date).to_set
     end
 
     # The asset's price in the account's currency on (or most recently before)
     # a date, or nil when it isn't known. An asset with no price is tracked by
     # quantity and valued at zero rather than guessed at.
     def price_on(security, date)
-      price = security.prices.where(date: ..date).order(date: :desc).first
+      price = security.prices.with_known_currency.where(date: ..date).order(date: :desc).first
       return nil if price.nil?
 
-      convert(price.price.to_d, from: price.currency, date: date)
+      convert(price.price.to_d, from: Security::Price.normalized_currency(price.currency), date: date)
     end
 
     # Prices come from the crypto provider quoted in USD, so at most one
@@ -407,10 +407,10 @@ class OnchainWalletAccount::Processor
     # Trades need the price of that day, not the nearest one: valuing a
     # two-year-old transfer at today's price would invent a cost basis.
     def exact_price_on(security, date)
-      price = security.prices.find_by(date: date)
+      price = security.prices.with_known_currency.find_by(date: date)
       return nil if price.nil?
 
-      convert(price.price.to_d, from: price.currency, date: date)
+      convert(price.price.to_d, from: Security::Price.normalized_currency(price.currency), date: date)
     end
 
     # Stored payloads are written by this code, but a row that survived an older
