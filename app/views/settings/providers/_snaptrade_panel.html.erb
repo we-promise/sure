@@ -75,13 +75,15 @@
 
     <% if snaptrade_item&.persisted? && snaptrade_item.oauth_configured? %>
       <div class="border-t border-primary pt-4 mt-4">
+        <%# "Manage Connections" in the item menu links here with ?manage=1. %>
+        <%# The row's auto-open reads and drops it, so open from the server. %>
         <%= render DS::Disclosure.new(
           variant: :inline,
+          open: params[:manage] == "1",
           data: {
             controller: "lazy-load",
             action: "toggle->lazy-load#toggled",
-            lazy_load_url_value: connections_snaptrade_item_path(snaptrade_item),
-            lazy_load_auto_open_param_value: "manage"
+            lazy_load_url_value: connections_snaptrade_item_path(snaptrade_item)
           }
         ) do |disclosure| %>
           <% disclosure.with_summary_content do %>
