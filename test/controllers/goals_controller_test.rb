@@ -992,6 +992,40 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
         "the hint shown with no other claims should not mention earmarks")
     end
 
+    # Privacy mode sets `pointer-events: none` on bare .privacy-sensitive, so
+    # the per-account amount has to opt back in or it cannot be typed into.
+    test "each account's earmark is a money field that stays editable in privacy mode" do
+      account = unclaimed_account("Earmark Pot")
+
+      get new_goal_url
+
+      assert_response :success
+      assert_select "label[for=goal_allocations_#{account.id}]", text: /#{I18n.t("goals.form.fields.earmark_for", account: "Earmark Pot")}/
+      assert_select "input#goal_allocations_#{account.id}[name='goal[allocations][#{account.id}]']", count: 1 do |inputs|
+        input = inputs.first
+        assert_includes input["class"].split, "privacy-sensitive"
+        assert_includes input["class"].split, "privacy-sensitive-interactive"
+        assert_equal I18n.t("goals.form.fields.whole_balance"), input["placeholder"]
+        assert_equal "0", input["min"]
+        assert_nil input["value"]
+        assert_equal "allocationInput", input["data-goal-earmark-target"]
+        assert_equal "amount", input["data-money-field-target"]
+        assert_includes input["data-action"], "input->goal-earmark#refresh"
+      end
+    end
+
+    test "a fixed earmark is filled back into its account's field" do
+      account = unclaimed_account("Filled Pot")
+      goal = @user.family.goals.create!(name: "Filled", target_amount: 5_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 250)
+      end
+
+      get edit_goal_url(goal)
+
+      assert_response :success
+      assert_select "input#goal_allocations_#{account.id}[value='250.00']"
+    end
+
   private
 
     # A private account of another member, linked to the goal under test.
