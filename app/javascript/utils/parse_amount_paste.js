@@ -18,7 +18,9 @@ const GROUPED_NUMBER = /^([+-]?)(\d[\d.,\u0020\u00a0\u202f]*)$/
 // the one shape that reads both ways: a thousands group or three decimals. Any
 // other shape already says which separator is the decimal one, so a separator
 // hint is only applied here; forcing it onto "$1,234.56" pasted into a euro
-// field would read 1.23456.
+// field would read 1.23456. The unhinted heuristic in parse_locale_float.js is
+// narrower on purpose: it picks one reading (only a comma before three digits
+// is grouping), while this marks every shape a hint should settle.
 const AMBIGUOUS_SEPARATOR = /^[^.,]*[.,]\d{3}$/
 
 const stripCurrency = (value) =>
