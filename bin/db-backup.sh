@@ -5,5 +5,5 @@ if [ -x /usr/local/bin/sure-backup ]; then
   exec /usr/local/bin/sure-backup scheduled
 fi
 echo "[db-backup] ERROR: db-backup.sh was replaced by bin/sure-backup." >&2
-echo "[db-backup] Update the backup service from compose.example.yml; see docs/hosting/docker.md." >&2
+echo "[db-backup] Update the backup service from compose.example.yml; see 'Upgrading from the database-only backup service' in docs/hosting/docker.md." >&2
 exit 1

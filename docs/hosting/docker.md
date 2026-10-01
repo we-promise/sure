@@ -428,6 +428,19 @@ If your app has not been restarted since upgrading to a version that records its
 docker compose run --rm backup create --version 0.7.4
 ```
 
+### Upgrading from the database-only backup service (v0.7.5)
+
+Sure v0.7.5 shipped a `backup` service that ran `bin/db-backup.sh` and uploaded database dumps with rclone. It keeps working until you change it, but it does not back up uploaded files or config and cannot restore. To switch:
+
+1. Download `bin/sure-backup` (see [Step 2](#step-2-configure-your-docker-compose-file-and-environment)).
+2. Replace the `backup` service in your `compose.yml` with the one from the current [`compose.example.yml`](https://github.com/we-promise/sure/blob/main/compose.example.yml).
+3. Remove `BACKUP_OVERWRITE` from `.env`; backups are now always kept per version and date. `BACKUP_SCHEDULE`, `BACKUP_KEEP_DAYS`, `BACKUP_DESTINATION`, `INSTANCE_ID` and the `RCLONE_CONFIG_*` variables work as before.
+4. Restart it: `docker compose --profile backup up -d backup`.
+
+Off-site backups now go to `<BACKUP_DESTINATION>/<INSTANCE_ID>/<version>/<timestamp>-scheduled/` and include `.env`, so use an encrypted remote. Earlier `backup_*.sql.gz` files are left in place and are no longer pruned; delete them once you no longer need them. To restore one of them, stop `web` and `worker` and load it with `gunzip -c backup_<timestamp>.sql.gz | docker compose exec -T db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` into an empty database.
+
+If you download the new `bin/db-backup.sh` without updating the compose file, the backup service stops with an error that points here.
+
 ## Troubleshooting
 
 ### ActiveRecord::DatabaseConnectionError
