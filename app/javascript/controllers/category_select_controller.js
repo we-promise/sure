@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { createCategory } from "utils/category_create";
 
 export default class extends Controller {
   static targets = [
@@ -11,6 +12,12 @@ export default class extends Controller {
     "createForm",
     "createLabel",
     "createError",
+    "list",
+    "createAsSubcategory",
+    "parentPicker",
+    "parentPickerLabel",
+    "parentOption",
+    "parentOptionTemplate",
   ];
 
   static values = {
@@ -20,6 +27,7 @@ export default class extends Controller {
     autoSubmit: Boolean,
     createLabel: String,
     createErrorMessage: String,
+    parentPickerLabel: String,
   };
 
   connect() {
@@ -41,6 +49,7 @@ export default class extends Controller {
 
     this.searchTarget.value = "";
     this.filter();
+    this.hideParentPicker();
 
     requestAnimationFrame(() => this.searchTarget.focus());
   }
@@ -53,6 +62,8 @@ export default class extends Controller {
 
   filter() {
     this.clearCreateError();
+    // Editing the name returns to the list, so the picker never shows a stale name.
+    this.hideParentPicker();
 
     const rawQuery = this.searchTarget.value.trim();
     const query = rawQuery.toLowerCase();
@@ -72,6 +83,13 @@ export default class extends Controller {
 
     this.createFormTarget.classList.toggle("hidden", !canCreate);
     this.createFormTarget.classList.toggle("flex", canCreate);
+
+    if (this.hasCreateAsSubcategoryTarget) {
+      // Nesting needs at least one top-level category to nest under.
+      const canNest = canCreate && this.parentOptionTargets.length > 0;
+      this.createAsSubcategoryTarget.classList.toggle("hidden", !canNest);
+      this.createAsSubcategoryTarget.classList.toggle("flex", canNest);
+    }
 
     this.createLabelTarget.textContent =
       this.createLabelValue.replace("__CATEGORY_NAME__", rawQuery);
@@ -136,8 +154,40 @@ export default class extends Controller {
     }
   }
 
-  async createCategory() {
+  showParentPicker(event) {
+    event?.preventDefault();
+    if (!this.hasParentPickerTarget) return;
+
+    const name = this.searchTarget.value.trim();
+    if (!name) return;
+
+    this.parentPickerLabelTarget.textContent =
+      this.parentPickerLabelValue.replace("__CATEGORY_NAME__", name);
+
+    this.listTarget.classList.add("hidden");
+    this.parentPickerTarget.classList.remove("hidden");
+    this.parentPickerTarget.classList.add("flex");
+  }
+
+  hideParentPicker(event) {
+    event?.preventDefault();
+    if (!this.hasParentPickerTarget) return;
+
+    this.parentPickerTarget.classList.add("hidden");
+    this.parentPickerTarget.classList.remove("flex");
+    this.listTarget.classList.remove("hidden");
+  }
+
+  createUnderParent(event) {
+    event.preventDefault();
+    this.createCategory(event.currentTarget.dataset.parentId);
+  }
+
+  // Called directly as an action (receives an Event) or with a parent id.
+  async createCategory(parentIdOrEvent = null) {
     if (this.creating) return;
+    const parentId =
+      typeof parentIdOrEvent === "string" ? parentIdOrEvent : null;
 
     const name = this.searchTarget.value.trim();
     if (!name) return;
@@ -147,52 +197,61 @@ export default class extends Controller {
     this.clearCreateError();
 
     try {
-      const response = await fetch(this.createUrlValue, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-CSRF-Token": this.csrfToken,
-        },
-        body: JSON.stringify({
-          category: {
-            name,
-            color: this.defaultColorValue,
-          },
-        }),
+      const { category, error } = await createCategory({
+        url: this.createUrlValue,
+        name,
+        color: this.defaultColorValue,
+        parentId,
       });
 
-      const category = await response.json();
-
-      if (!response.ok) {
-        this.showCreateError(
-          category.errors?.join(", ") || category.error,
-        );
+      if (!category) {
+        this.hideParentPicker();
+        this.showCreateError(error);
         return;
       }
 
-      this.createFormTarget.insertAdjacentHTML(
-        "beforebegin",
-        category.html,
-      );
+      this.createFormTarget.insertAdjacentHTML("beforebegin", category.html);
 
       const newOption = this.optionTargets.find(
-        (option) =>
-        option.dataset.categoryId === String(category.id),
+        (option) => option.dataset.categoryId === String(category.id),
       );
 
       if (newOption) this.selectOption(newOption);
+      if (!parentId) this.#addParentOption(category, newOption);
 
       this.searchTarget.value = "";
       this.filter();
       this.close();
       this.submitForm();
-    } catch {
-      this.showCreateError();
     } finally {
       this.creating = false;
       this.createFormTarget.disabled = false;
     }
+  }
+
+  // A top-level category created inline can be a parent straight away,
+  // without reloading: add it to the parent picker in alphabetical order.
+  #addParentOption(category, option) {
+    if (!this.hasParentOptionTemplateTarget) return;
+
+    const row =
+      this.parentOptionTemplateTarget.content.firstElementChild.cloneNode(true);
+    row.dataset.parentId = String(category.id);
+    row.dataset.parentName = category.name;
+
+    const badge = option?.querySelector("[data-category-select-badge]");
+    const slot = row.querySelector("[data-category-select-parent-badge]");
+    if (badge && slot) slot.replaceWith(badge.cloneNode(true));
+
+    const name = category.name.toLocaleLowerCase();
+    const before = this.parentOptionTargets.find(
+      (existing) =>
+        (existing.dataset.parentName || "").toLocaleLowerCase() > name,
+    );
+    this.parentPickerTarget.insertBefore(
+      row,
+      before || this.parentOptionTemplateTarget,
+    );
   }
 
   async submitForm() {
@@ -218,11 +277,5 @@ export default class extends Controller {
       message || this.createErrorMessageValue;
 
     this.createErrorTarget.classList.remove("hidden");
-  }
-
-  get csrfToken() {
-    return document
-      .querySelector('meta[name="csrf-token"]')
-      ?.getAttribute("content");
   }
 }
