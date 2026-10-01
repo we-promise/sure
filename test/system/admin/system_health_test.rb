@@ -89,7 +89,7 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     Apns::Client.stubs(:configured?).returns(true)
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     visit admin_system_health_path
-    assert_selector "button[role='tab']", count: 2
+    assert_selector "button[role='tab']", count: 3
     assert_selector "button[role='tab'][aria-selected='true']", text: "Background jobs"
     assert_selector "h2", text: "Push notifications"
     assert_button "Send test push notification", disabled: true
@@ -118,6 +118,46 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
       assert_button "Send test push notification", disabled: false
       page.save_screenshot(Rails.root.join("tmp", "system-health-background-push-notifications.png"))
     end
+  end
+
+  test "configuration tab supports repeated selection and navigation without running AI probes" do
+    ApplicationMailer.stubs(:perform_deliveries).returns(true)
+    ApplicationMailer.stubs(:delivery_method).returns(:smtp)
+    ApplicationMailer.stubs(:smtp_settings).returns({ address: nil, port: 465 })
+    ApplicationMailer.stubs(:default).returns({ from: "Sure <sender@sure.local>" })
+    Rails.application.config.active_storage.stubs(:service).returns(:local)
+    Rails.application.config.active_storage.stubs(:service_configurations).returns({
+      local: { service: "Disk", root: Rails.root.join("storage") }
+    })
+    AiHealth.expects(:new).never
+    visit admin_system_health_path
+
+    2.times do
+      click_button "Configuration"
+      assert_current_path admin_system_health_path(tab: "configuration")
+      assert_selector "button[role='tab'][aria-selected='true']", text: "Configuration"
+      assert_selector "h2", text: "Email (SMTP)"
+      assert_selector "h2", text: "Market prices"
+      assert_selector "h2", text: "Foreign exchange rates"
+      assert_selector "h2", text: "File uploads and storage"
+      assert_no_selector "[data-testid='configuration-health'] input"
+      click_button "Background jobs"
+      assert_no_selector "[data-testid='configuration-health']"
+    end
+
+    click_button "Configuration"
+    click_link "Preferences", match: :first
+    assert_no_selector "[data-testid='system-health-tabs']"
+    page.go_back
+    assert_current_path admin_system_health_path(tab: "configuration")
+    assert_selector "h2", text: "File uploads and storage"
+    page.go_forward
+    assert_no_selector "[data-testid='system-health-tabs']"
+
+    visit admin_system_health_path(tab: "configuration")
+    assert_selector "button[role='tab'][aria-selected='true']", text: "Configuration"
+    assert_selector "h2", text: "Email (SMTP)"
+    page.save_screenshot(Rails.root.join("tmp", "system-health-configuration.png"))
   end
 
   private

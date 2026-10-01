@@ -46,11 +46,81 @@ de:
         body: "Dies ist eine Testbenachrichtigung für dein Sure-Konto."
       verify_worker_ai:
         queued: Die Worker-Prüfung wurde in die Warteschlange gestellt. Das Ergebnis erscheint unten, sobald ein Worker-Prozess die Prüfung übernimmt – normalerweise innerhalb weniger Sekunden.
+      configuration:
+        description: "Die für diesen Web-Prozess sichtbare Konfiguration. Diese Prüfungen versenden keine E-Mails, kontaktieren keine Anbieter und laden keine Dateien hoch oder herunter. Konfiguriert bedeutet, dass Einstellungen vorhanden sind. Zustellung, Anbieterzugriff und Speicherzugriff wurden damit nicht überprüft."
+        statuses:
+          configured: Konfiguriert (nicht getestet)
+          not_configured: Nicht konfiguriert
+          incomplete: Unvollständige Konfiguration
+          disabled: Deaktiviert
+          not_checked: Nicht überprüft
+        settings_needed: Zu prüfende Einstellungen
+        unknown_provider: Unbekannte Anbieterauswahl
+        provider_statuses:
+          configured: Konfiguriert (nicht getestet)
+          not_configured: API-Schlüssel fehlt
+          invalid: Ungültige Auswahl
+        configure_providers: Self-Hosting-Einstellungen öffnen
+        storage_backend: "Ausgewählter Speicher: %{backend}"
+        storage_backends:
+          local: Lokaler Datenträger
+          test: Test-Datenträger
+          amazon: Amazon S3
+          cloudflare: Cloudflare R2
+          generic_s3: S3-kompatibler Speicher
+          google: Google Cloud Storage
+          other: Benutzerdefinierter oder unbekannter Speicher
+        checks:
+          smtp:
+            title: E-Mail (SMTP)
+            statuses:
+              configured: "SMTP-Einstellungen sind vorhanden. Die E-Mail-Zustellung wurde nicht getestet."
+              not_configured: "SMTP ist nicht konfiguriert. Passwort-Zurücksetzungen, Einladungen und andere System-E-Mails können nicht über SMTP versendet werden."
+              incomplete: "Einige E-Mail-Einstellungen fehlen oder sind unvollständig. System-E-Mails oder darin enthaltene Links funktionieren möglicherweise nicht."
+              disabled: "Der E-Mail-Versand ist in der laufenden Mailer-Konfiguration deaktiviert."
+              not_checked: "Dieser Prozess verwendet eine andere Versandmethode als SMTP, beispielsweise eine Entwicklungsvorschau. Der SMTP-Versand wird nicht beurteilt."
+            guidance: "SMTP kann nicht in der Verwaltungsoberfläche konfiguriert werden. Setzen Sie die E-Mail-Umgebungsvariablen für den Web- und den Worker-Dienst und starten Sie beide neu. Für ein Relay ohne Authentifizierung können SMTP_USERNAME und SMTP_PASSWORD beide entfallen."
+            issues:
+              address: SMTP_ADDRESS
+              port: SMTP_PORT (eine Zahl von 1 bis 65535)
+              sender: EMAIL_SENDER (den Standard sender@sure.local ersetzen)
+              app_domain: APP_DOMAIN (für Links in E-Mails)
+              authentication: SMTP_USERNAME und SMTP_PASSWORD (beide oder keines angeben)
+          securities:
+            title: Marktpreise
+            statuses:
+              configured: "Alle aktivierten Marktpreisanbieter sind konfiguriert. Zugangsdaten, Abdeckung und tatsächliche Abfragen wurden nicht getestet."
+              not_configured: "Bei den aktivierten Marktpreisanbietern fehlen die API-Schlüssel. Automatische Wertpapiersuchen und Preisabfragen sind über diese Anbieter nicht verfügbar."
+              incomplete: "Bei mindestens einem aktivierten Marktpreisanbieter fehlt die Konfiguration oder die Auswahl ist ungültig. Zugeordnete Wertpapiere erhalten möglicherweise keine Preisaktualisierungen."
+              disabled: "Kein Marktpreisanbieter ist aktiviert. Automatische Wertpapiersuchen und Preisabfragen sind nicht verfügbar."
+            guidance: "Wählen Sie Anbieter und ergänzen Sie erforderliche API-Schlüssel in den Self-Hosting-Einstellungen oder in der Bereitstellungsumgebung. Umgebungsvariablen haben Vorrang. Öffentliche Anbieter benötigen keinen API-Schlüssel."
+          exchange_rates:
+            title: Wechselkurse
+            statuses:
+              configured: "Der ausgewählte Wechselkursanbieter ist konfiguriert. Zugangsdaten, Währungsabdeckung und tatsächliche Abfragen wurden nicht getestet."
+              not_configured: "Kein nutzbarer Wechselkursanbieter ist konfiguriert. Automatische Währungsumrechnung ist möglicherweise nicht verfügbar, wenn ein gespeicherter Kurs fehlt."
+              incomplete: "Die Auswahl des Wechselkursanbieters ist unbekannt. Automatische Kursabfragen sind nicht verfügbar."
+            guidance: "Wählen Sie einen Wechselkursanbieter und ergänzen Sie bei Bedarf dessen API-Schlüssel in den Self-Hosting-Einstellungen oder in der Bereitstellungsumgebung. EXCHANGE_RATE_PROVIDER und Umgebungsvariablen für API-Schlüssel haben Vorrang."
+          storage:
+            title: Datei-Uploads und Speicher
+            statuses:
+              configured: "Der ausgewählte Speicher ist konfiguriert. Lokaler Speicher benötigt keine Cloud-Zugangsdaten. Dateizugriff, Berechtigungen und dauerhafte Speicherung wurden nicht getestet."
+              not_configured: "Für den ausgewählten Speicher ist keine passende Konfiguration vorhanden. Datei-Uploads sind möglicherweise nicht verfügbar."
+              incomplete: "Erforderliche Speichereinstellungen fehlen oder sind unvollständig. Datei-Uploads oder Abrufe funktionieren möglicherweise nicht."
+              not_checked: "Dieser Speicher verwendet eine externe Zugangsdatenquelle oder eine benutzerdefinierte Konfiguration. Der Zugriff lässt sich allein anhand dieser Einstellungen nicht beurteilen."
+            guidance: "Prüfen Sie ACTIVE_STORAGE_SERVICE und die Bereitstellungseinstellungen des gewählten Speichers. Lokaler Speicher muss dauerhaft und für Web- und Worker-Dienst gemeinsam verfügbar sein. Ein Speicherwechsel verschiebt bestehende Dateien nicht; planen Sie eine Migration gesondert."
+            issues:
+              root: Stammverzeichnis des lokalen Speichers
+              bucket: Speicher-Bucket
+              region: Speicherregion
+              credentials: Zugriffsschlüssel und geheimer Schlüssel (beide angeben oder externe Zugangsdatenquelle verwenden)
+              endpoint: Speicher-Endpunkt (und CLOUDFLARE_ACCOUNT_ID für R2)
       show:
         title: Systemstatus
         tabs:
           background_jobs: Hintergrundaufgaben
           ai: KI-Status
+          configuration: Konfiguration
         alert:
           title: Hintergrundaufgaben werden nicht ausgeführt
         status_section_title: Sidekiq-Status

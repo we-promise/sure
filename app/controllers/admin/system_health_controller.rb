@@ -10,8 +10,9 @@ module Admin
     # snapshot up to `SidekiqHealth::CACHE_TTL` old. Also makes the page
     # work in managed mode, where `current_sidekiq_health` is nil.
     def show
-      tabs = %w[background_jobs ai]
+      tabs = %w[background_jobs ai configuration]
       @active_tab = params[:tab].presence_in(tabs) || "background_jobs"
+      @configuration_health = ConfigurationHealth.new
       if Apns::Client.hosted?
         @push_notification_test = PushNotificationTest.new(Current.user)
         @push_disabled_reason = @push_notification_test.disabled_reason
