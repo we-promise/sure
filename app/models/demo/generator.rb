@@ -302,6 +302,9 @@ class Demo::Generator
         accountable: Loan.new(
           subtype: "mortgage", rate_type: "adjustable", interest_rate: 6.25, term_months: 360,
           start_date: mortgage_start, initial_balance: 320_000,
+          # A deposit and a level-term policy, so the demo mortgage shows the
+          # leverage and insurance cards rather than hiding both.
+          down_payment: 70_000, insurance_rate: 0.36, insurance_rate_type: "level_term",
           rate_changes: [
             { effective_date: (mortgage_start >> 24).iso8601, rate: "5.5" },
             { effective_date: (mortgage_start >> 48).iso8601, rate: "6.75" }
@@ -311,7 +314,10 @@ class Demo::Generator
       )
       @car_loan = family.accounts.create!(
         accountable: Loan.new(subtype: "auto", rate_type: "fixed", interest_rate: 6.9, term_months: 60,
-                              start_date: loans_start, initial_balance: 24_000),
+                              start_date: loans_start, initial_balance: 24_000,
+                              # The other policy shape, on a fixed loan.
+                              down_payment: 4_000, insurance_rate: 0.5,
+                              insurance_rate_type: "decreasing_life"),
         name: "Car Loan", balance: 0, currency: "USD"
       )
       @student_loan = family.accounts.create!(
@@ -321,6 +327,9 @@ class Demo::Generator
       )
 
       @personal_loc  = family.accounts.create!(accountable: OtherLiability.new, name: "Personal Line of Credit", balance: 0, currency: "USD")
+
+      @financekit_generator = Demo::FinancekitGenerator.new(family, seed: seed)
+      @financekit_generator.create_accounts!
 
       # Other asset (USD)
       @jewelry = family.accounts.create!(accountable: OtherAsset.new, name: "Jewelry Collection", balance: 0, currency: "USD")
@@ -376,6 +385,9 @@ class Demo::Generator
 
       puts "   🔒 Generating crypto & misc asset transactions..."
       generate_crypto_and_misc_assets!
+
+      puts "   👛 Generating Apple Wallet transactions..."
+      @financekit_generator.create_transactions!
 
       puts "   ✅ Reconciling balances to target snapshot..."
       reconcile_balances!(family)

@@ -1,10 +1,123 @@
 require "application_system_test_case"
+require_relative "../../support/financekit_test_helper"
 
 class Settings::ProvidersTest < ApplicationSystemTestCase
+  include FinancekitTestHelper
   setup do
     @user = users(:family_admin)
     @family = families(:dylan_family)
     login_as @user
+  end
+
+  test "Wallet account links leave the provider frame and open transaction activity" do
+    financekit_setup(user: @user)
+    accept_and_apply
+
+    visit settings_providers_path
+    find("summary", text: "Apple Wallet").click
+    find("details", text: "Apple Wallet").native.save_screenshot(Rails.root.join("tmp", "apple-wallet-connected.png"))
+    within "details#financekit-connection" do
+      click_link "Test Wallet"
+    end
+
+    assert_current_path account_path(@source.account)
+    assert_selector "header h2", text: "Test Wallet"
+    assert_text "Synthetic shop"
+
+    visit accounts_path
+    within "#financekit-accounts" do
+      click_link "Test Wallet"
+    end
+    assert_current_path account_path(@source.account)
+    assert_text "Synthetic shop"
+  end
+
+  test "disconnecting from a connection row follows the redirect and shows its flash" do
+    item = mercury_items(:one)
+
+    visit settings_providers_path
+    find("summary", text: "Mercury").click
+    find("summary", text: item.name).click
+    find("form[action='#{mercury_item_path(item)}']:has(input[name='_method'][value='delete']) button").click
+    within("#confirm-dialog") { click_button "Confirm" }
+
+    assert_current_path accounts_path
+    assert_text I18n.t("mercury_items.destroy.success")
+  end
+
+  test "saving a connection from its row stays on the page for the next save" do
+    item = mercury_items(:one)
+
+    visit settings_providers_path
+    find("summary", text: "Mercury").click
+
+    [ "Renamed Mercury", "Renamed Mercury again" ].each do |name|
+      find("summary", text: item.reload.name).click
+      within("form[action='#{mercury_item_path(item)}']:has(input[name='_method'][value='patch'])") do
+        fill_in I18n.t("mercury_items.provider_panel.connection_name_label"), with: name
+        click_button I18n.t("mercury_items.provider_panel.update_connection")
+      end
+
+      assert_selector "summary", text: name
+      assert_current_path settings_providers_path
+    end
+    assert_equal "Renamed Mercury again", item.reload.name
+  end
+
+  test "syncing a connection from its row keeps the row open" do
+    item = mercury_items(:one)
+
+    visit settings_providers_path
+    find("summary", text: "Mercury").click
+    find("summary", text: item.name).click
+    find("form[action='#{sync_mercury_item_path(item, source: "panel")}'] button").click
+
+    # The toast arrives in the same stream as the panel, after it.
+    assert_text I18n.t("settings.providers.sync_provider_in_progress")
+    assert_selector "details#mercury-connection[open]"
+    assert_current_path settings_providers_path
+    assert item.reload.syncing?
+  end
+
+  test "Wallet advertises App Store availability without a web connection flow" do
+    visit settings_providers_path
+    find('[data-providers-filter-target="input"]').set("Apple Wallet")
+
+    within available_provider_cards_container do
+      assert_text "US / UK"
+      assert_text "Bank"
+      assert_button "App Store", disabled: true
+      assert_selector '[title="Coming soon!"]'
+      assert_no_selector "a[data-turbo-frame='drawer']", visible: true
+      find('[data-providers-filter-target="card"]', text: "Apple Wallet").native.save_screenshot(
+        Rails.root.join("tmp", "apple-wallet-available.png"))
+    end
+  end
+
+  test "Wallet unlink confirmation disconnects the publisher and keeps account activity" do
+    financekit_setup(user: @user)
+    accept_and_apply
+
+    visit accounts_path
+    within "#financekit-accounts" do
+      find("button[aria-haspopup='menu']").click
+      click_link "Unlink from provider"
+    end
+    dialog = find("dialog[open]")
+    within dialog do
+      assert_text I18n.t("accounts.confirm_unlink.warning_wallet_connection")
+      dialog.native.save_screenshot(Rails.root.join("tmp", "apple-wallet-unlink.png"))
+      click_on "Confirm and unlink"
+    end
+
+    assert_no_selector "dialog[open]"
+    assert_current_path accounts_path
+    within "#manual-accounts" do
+      click_link "Test Wallet"
+    end
+    assert_current_path account_path(@source.account)
+    assert_text "Synthetic shop"
+    assert_equal "revoked", @item.reload.status
   end
 
   test "shows status pill on section header for a configured provider" do

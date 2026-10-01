@@ -23,6 +23,7 @@ tr:
       placeholder: Kategori adı
       poor_contrast: Zayıf kontrast, daha koyu bir renk seçin veya
       unassigned: "(atanmamış)"
+      trigger_label: Renk ve simge seçin
     index:
       bootstrap: Varsayılanları kullan (önerilir)
       categories: Kategoriler
@@ -67,5 +68,5 @@ tr:
         empty: Hiç kategori bulunamadı
         expense: gider
         income: gelir
-        match_transfer: Eşleşen transfer/ödeme
+        match_transfer: Transfer/ödeme ile eşleştir
         one_time: Tek seferlik %{type}

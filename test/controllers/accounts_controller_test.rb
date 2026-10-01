@@ -16,6 +16,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "show filters account activity to uncategorized transactions" do
+    uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
+    categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))
+
+    get account_url(@account, q: { uncategorized: "1" })
+
+    assert_response :success
+    assert_select "input#q_uncategorized[checked]"
+    assert_match uncategorized.name, response.body
+    assert_no_match categorized.name, response.body
+  end
+
   test "index delegates whole-row account clicks to the account link" do
     get accounts_url
 
@@ -168,6 +180,13 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # checked option instead of the custom row.
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
+  end
+
+  test "show renders without missing translations" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_empty response.body.scan(/translation missing: [\w.]+/).uniq
   end
 
   test "sync all requests fresh Plaid transactions before syncing the family" do
@@ -421,6 +440,20 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "option[value=gains][selected]"
     assert_select "p", text: I18n.t("UI.account.chart.title.total_gains")
+  end
+
+  # The chart and the Schedule tab's forecast card read one projection. The
+  # chart used to build one and the Schedule partial a second, for the same
+  # date, on every render of a loan's page.
+  test "a loan account page builds its payoff projection once for the chart and the Schedule tab" do
+    loan_account = accounts(:loan)
+    projection = loan_account.loan.payoff_projection(as_of: Date.current)
+    Loan.any_instance.expects(:payoff_projection).once.returns(projection)
+
+    get account_url(loan_account)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("loans.tabs.schedule.forecasted_payoff_date")
   end
 
   test "remembers selected per_page across account navigation" do
