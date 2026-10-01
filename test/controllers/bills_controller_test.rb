@@ -176,6 +176,18 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.month_pulse.next_up"), body
     assert_match "Amazon Prime", body
 
+    # Next-up items and the calendar link carry the DS focus ring, and the
+    # items no longer bleed past the strip that clips them on phones.
+    assert_select "a.focus-ring", text: I18n.t("bills.month_pulse.view_calendar")
+    assert_select "a.w-36[href^='/bills/']", text: /Amazon Prime/ do |links|
+      links.each do |link|
+        classes = link["class"].split
+        assert_includes classes, "focus-ring"
+        assert_not_includes classes, "-mx-2"
+        assert_not_includes link.to_html, "group-hover:underline", "the tint is the one hover cue"
+      end
+    end
+
     assert_match I18n.t("bills.month_pulse.left_to_pay"), body
     assert_no_match(/ProgressRing|rounded-full[^"]*stroke/, body,
       "the donut is gone; progress is a rule, not a centrepiece")
