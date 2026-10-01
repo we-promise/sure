@@ -1102,11 +1102,24 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "index renders an empty state with no bills" do
-    get bills_url
+  test "a page without bill rows shows the empty state, not the month pulse or the AI prompts" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
 
+    get bills_url
     assert_response :success
     assert_match I18n.t("bills.index.empty.title"), response.body
+    # AI is available, so the prompts are missing for want of bills.
+    assert_match I18n.t("bills.index.review_with_ai"), response.body
+    assert_no_match I18n.t("bills.month_pulse.left_to_pay"), response.body
+    assert_no_match "due before my next paycheck", response.body
+
+    # A suggestion isn't a bill yet, so it doesn't bring them back.
+    create_suggested(name: "Riverside Climbing Gym", account: accounts(:depository))
+    get bills_url
+    assert_response :success
+    assert_match "Riverside Climbing Gym", response.body
+    assert_no_match I18n.t("bills.month_pulse.left_to_pay"), response.body
+    assert_no_match "due before my next paycheck", response.body
   end
 
   # A cancellation date does not stop the schedule, so the same bill can read
@@ -1446,6 +1459,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "AI chips and the review button need both consent and a provider" do
+    # The chips only render over bill rows.
+    create_bill(name: "Power Co", amount: 80)
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
     get bills_url
     assert_response :success
