@@ -16,13 +16,18 @@ if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
 
   # Record which version migrated the database so the backup sidecar
   # (bin/sure-backup) can label backups without access to the Docker API.
+  # A stale stamp would make the sidecar reject --version, so on any failure
+  # remove it rather than leave the previous boot's values behind.
   stamp="storage/.sure-runtime"
-  if ! {
-    echo "SURE_VERSION=$(tr -d '[:space:]' < .sure-version)"
+  sure_version=$(tr -d '[:space:]' 2>/dev/null < .sure-version || true)
+  sure_schema=$(sed -n 's/.*define(version: \([0-9_]*\)).*/\1/p' db/schema.rb 2>/dev/null | tr -d _ || true)
+  if [ -z "${sure_version}" ] || [ -z "${sure_schema}" ] || ! {
+    echo "SURE_VERSION=${sure_version}"
     echo "SURE_COMMIT=${BUILD_COMMIT_SHA}"
-    echo "SURE_SCHEMA_VERSION=$(sed -n 's/.*define(version: \([0-9_]*\)).*/\1/p' db/schema.rb | tr -d _)"
+    echo "SURE_SCHEMA_VERSION=${sure_schema}"
     echo "SURE_STAMPED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   } > "${stamp}.tmp" 2>/dev/null || ! mv "${stamp}.tmp" "${stamp}"; then
+    rm -f "${stamp}" "${stamp}.tmp" 2>/dev/null || true
     echo "WARNING: could not write ${stamp}; backups will need --version"
   fi
 fi
