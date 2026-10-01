@@ -1398,6 +1398,38 @@ end
     Rails.cache = original_cache
   end
 
+  test "index renders when the projected_recurring cache holds records from an older schema" do
+    # Regression: the cache used to hold whole RecurringTransaction objects. After
+    # an upgrade that added columns (e.g. payment_url in 0.7.5), the entry written
+    # by the previous version was still served and rendering raised
+    # ActiveModel::MissingAttributeError until the key rolled over the next day.
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    recurring = recurring_transactions(:netflix_subscription)
+
+    get transactions_url
+    assert_response :success
+
+    cache_keys = Rails.cache.instance_variable_get(:@data).keys.grep(/transactions_projected_recurring/)
+    assert_not_empty cache_keys, "the first request should populate the projected-recurring cache"
+
+    # Write the Marshal payload the previous version produced: the record's
+    # attributes without the columns that version did not have yet.
+    stale_payload = [ recurring.attributes_for_database.except("payment_url", "autopay", "notes"), false, [ [ :merchant, recurring.merchant ] ] ]
+    stale_record = RecurringTransaction.allocate
+    stale_record.define_singleton_method(:marshal_dump) { stale_payload }
+    cache_keys.each { |key| Rails.cache.write(key, [ stale_record ]) }
+    assert_raises(ActiveModel::MissingAttributeError) { Rails.cache.read(cache_keys.first).first.payment_url }
+
+    get transactions_url
+    assert_response :success
+    assert_match(/#{Regexp.escape(recurring.merchant.name)}/, response.body,
+      "the projected recurring transaction should still render from fresh records")
+  ensure
+    Rails.cache = original_cache
+  end
+
   test "index uncategorized_count cache reflects new transactions immediately" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
