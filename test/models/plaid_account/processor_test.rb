@@ -120,8 +120,8 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
   test "calculates balance using BalanceCalculator for investment accounts" do
     @plaid_account.update!(plaid_type: "investment")
 
-    # Balance is called twice: once for account.balance and once for set_current_balance
-    PlaidAccount::Investments::BalanceCalculator.any_instance.expects(:balance).returns(1000).twice
+    # Balance is computed once and used for both account.balance and the anchor
+    PlaidAccount::Investments::BalanceCalculator.any_instance.expects(:balance).returns(1000).once
     PlaidAccount::Investments::BalanceCalculator.any_instance.expects(:cash_balance).returns(1000).once
 
     PlaidAccount::Processor.new(@plaid_account).process
@@ -259,6 +259,28 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 100, account.cash_balance
   end
 
+  test "one holding dated ahead of today does not pull the anchor off the others' date" do
+    expect_investment_product_processor_calls
+    expect_depository_product_processor_calls
+    expect_no_liability_processor_calls
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:balance).returns(1000)
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:cash_balance).returns(100)
+
+    price_date = Date.current - 1
+    @plaid_account.update!(
+      plaid_type: "investment",
+      raw_holdings_payload: { "holdings" => [
+        { "security_id" => "sec_1", "quantity" => "10", "institution_price" => "90", "institution_price_as_of" => price_date.to_s },
+        { "security_id" => "sec_2", "quantity" => "1", "institution_price" => "10", "institution_price_as_of" => (Date.current + 1).to_s }
+      ] }
+    )
+
+    PlaidAccount::Processor.new(@plaid_account).process
+
+    current_anchor = @plaid_account.current_account.valuations.current_anchor.first
+    assert_equal price_date, current_anchor.entry.date
+  end
+
   test "an investment anchor falls back to today without a usable price date" do
     expect_investment_product_processor_calls
     expect_depository_product_processor_calls
@@ -297,10 +319,12 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     account = @plaid_account.current_account
     anchor = account.valuations.current_anchor.first
 
-    # The next snapshot is dated behind the anchor and carries an older total.
+    # The next snapshot is dated behind the anchor, carries an older total,
+    # and reports a different currency.
     PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:balance).returns(900)
     PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:cash_balance).returns(50)
     @plaid_account.update!(
+      currency: "EUR",
       raw_holdings_payload: { "holdings" => [ { "security_id" => "sec_1", "quantity" => "10", "institution_price" => "85", "institution_price_as_of" => (Date.current - 1).to_s } ] }
     )
 
@@ -314,6 +338,7 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 1000, anchor.entry.amount, "the anchor still describes now"
     assert_equal 1000, account.balance
     assert_equal 100, account.cash_balance
+    assert_equal "USD", account.currency, "the cached figures keep the denomination they were written in"
     historical = account.valuations.reconciliation.joins(:entry).find_by(entries: { date: Date.current - 1 })
     assert_equal 900, historical.entry.amount
   end
