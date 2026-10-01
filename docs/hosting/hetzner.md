@@ -292,6 +292,7 @@ df -h
 ```
 
 ### Restore from backup:
+On the same server (for example to undo an upgrade):
 ```bash
 cd /opt/sure
 docker compose run --rm backup list
@@ -299,6 +300,11 @@ docker compose stop web worker
 docker compose run --rm backup restore <version>/<backup>   # or "latest"
 # Set SURE_IMAGE_TAG in .env to the version printed by restore, then:
 docker compose up -d
+```
+
+On a new server, copy the backup folder over and run its `restore.sh` instead. It brings back the backup's `.env`, including `SECRET_KEY_BASE`, without which encrypted data can't be read:
+```bash
+sh /path/to/<backup>/restore.sh
 ```
 
 ## Security Features
@@ -351,8 +357,8 @@ df -h
 # Clean up Docker images
 docker system prune -a
 
-# Clean up old backups
-find /opt/sure/backups -name "*.sql" -mtime +7 -delete
+# Clean up old scheduled backups (backups you took by hand are kept)
+cd /opt/sure && docker compose run --rm backup prune
 ```
 
 **Application is slow:**

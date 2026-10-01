@@ -383,6 +383,8 @@ Each backup is a folder under `backups/<version>/<date>-<manual|scheduled>/` wit
 | `restore.sh` | Restores the backup into a new folder (see below) |
 | `SHA256SUMS` | Checksums, verified before every restore |
 
+`db.dump` is written with the PostgreSQL tools in the Sure image (version 17), which older tools can't read. Restore it with `sure-backup` (`restore`, `recover` or `restore.sh`), not with `pg_restore` from the `db` container.
+
 Uploaded files are backed up from the `app-storage` volume. If you store them in S3, Cloudflare R2, Google Cloud Storage or another bucket (`ACTIVE_STORAGE_SERVICE`), they are not in the backup; use your provider's versioning or replication for those.
 
 The version comes from the running app: every time `web` starts it records its version, and a backup is refused if the database schema no longer matches it.
@@ -429,7 +431,7 @@ sh 2026-10-01_080524-manual/restore.sh
 
 It verifies the backup and asks for a folder for the restored instance (new or empty; its name becomes the Compose project name). Then it:
 
-- refuses if Docker already has containers or volumes for that project name, so it can never overwrite another instance;
+- refuses if Docker already has containers or volumes for that project name, or if the copied compose files use storage outside the new folder (external volumes or networks, absolute host paths), so it can't overwrite another instance;
 - warns if other Sure instances are running on the machine, and offers to start the restored one without its `worker` (see below);
 - picks the next free port if the backup's `PORT` is taken;
 - stops with a list of files to copy over if your compose files mount local files that are not part of the backup (custom certificates, for example);
