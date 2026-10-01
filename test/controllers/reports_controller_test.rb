@@ -54,8 +54,10 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
                                        currency: "USD", accountable: Investment.new)
     security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
 
-    ExchangeRate.create!(from_currency: "EUR", to_currency: "GBP", date: date, rate: 0.8)
-    ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: date, rate: 1.25)
+    # On the first of the month `date` is today, and the fixtures already hold
+    # an EUR->GBP rate for today; set the rate rather than insist on creating it.
+    ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "GBP", date: date).update!(rate: 0.8)
+    ExchangeRate.find_or_initialize_by(from_currency: "GBP", to_currency: "USD", date: date).update!(rate: 1.25)
     account.holdings.create!(security: security, date: date, qty: 5, price: 150,
                              amount: BigDecimal(750), currency: "GBP", cost_basis: 100)
     create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR")
