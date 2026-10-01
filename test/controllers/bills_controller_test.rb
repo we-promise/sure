@@ -212,9 +212,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       I18n.t("bills.manage"),
       I18n.t("bills.month_pulse.view_calendar")
     ]
-    # One text link style: DS::Link's underlined text link.
+    # One text link style: DS::Link's underlined text link, kept at the
+    # compact text-xs the default variant does not set.
     text_links.each do |text|
-      assert_select "main a.text-link.underline.focus-ring", text: text
+      assert_select "main a.text-link.underline.focus-ring.text-xs", text: text
     end
     assert_select "main a[data-turbo-frame^='pane_']", minimum: 2
 
