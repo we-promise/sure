@@ -105,7 +105,20 @@ class I18nTest < ActiveSupport::TestCase
   end
 
   def test_short_with_year_follows_the_locale
-    assert_equal " 5. Jan 2027", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :de)
+    assert_equal "5. Jan 2027", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :de)
+    # The abbreviation takes no case suffix: "tammita" and "Urtk" aren't words.
+    assert_equal "05. tammi 2027", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :fi)
+    assert_equal "2027(e)ko Urt 5", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :eu)
+  end
+
+  # %e pads a single-digit day with a space: " 5. Jan 2027", "Jan  5, 2027".
+  def test_short_with_year_has_no_padding_space_on_a_single_digit_day
+    locales = Dir[File.expand_path("../config/locales/defaults/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    padded = locales.sort.select do |locale|
+      I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: locale).match?(/\A\s|\s\s/)
+    end
+
+    assert_empty padded, "short_with_year pads the day for: #{padded.join(", ")}"
   end
 
   def test_trade_republic_activity_labels_exist_for_each_locale

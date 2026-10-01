@@ -42,7 +42,7 @@ fi:
       default: "%-d.%-m.%Y"
       long: "%d. %Bta %Y"
       short: "%d. %b"
-      short_with_year: "%d. %bta %Y"
+      short_with_year: "%d. %b %Y"
     month_names:
     -
     - tammikuu

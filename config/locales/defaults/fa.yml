@@ -43,7 +43,7 @@ fa:
       default: "%Y/%m/%d"
       long: "%e %B %Y"
       short: "%m/%d"
-      short_with_year: "%e %b %Y"
+      short_with_year: "%-d %b %Y"
     month_names:
     -
     - ژانویه

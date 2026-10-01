@@ -42,7 +42,7 @@ el-CY:
       default: "%d/%m/%Y"
       long: "%e %B %Y"
       short: "%d %b"
-      short_with_year: "%e %b %Y"
+      short_with_year: "%-d %b %Y"
     month_names:
     -
     - Ιανουάριος

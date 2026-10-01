@@ -35,7 +35,7 @@ gl:
       default: "%e/%m/%Y"
       long: "%A %e de %B de %Y"
       short: "%e %b"
-      short_with_year: "%e de %b de %Y"
+      short_with_year: "%-d de %b de %Y"
     month_names:
     -
     - Xaneiro
