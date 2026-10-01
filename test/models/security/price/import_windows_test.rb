@@ -88,4 +88,55 @@ class Security::Price::ImportWindowsTest < ActiveSupport::TestCase
     assert_equal first_held_date, window.start_date
     assert_equal Date.current, window.end_date
   end
+  # Editing the closing trade reopens the position before holdings are
+  # rebuilt. The edit changes no buy, so only the trade's own update time shows it.
+  test "an edited closing trade reopens the position before holdings are rematerialized" do
+    account, security = closed_manual_position("EDITED")
+    sell = account.trades.find_by!(security: security, qty: -10)
+
+    travel 1.second do
+      sell.update!(qty: -5)
+      assert_equal Date.current, Security::Price::ImportWindows.new(account).to_h.fetch(security.id).end_date
+    end
+  end
+
+  # A short sale after a closed position: net quantity negative, so a check for
+  # a net-positive (long) reopen alone never fires.
+  test "a short sale after a closed position reopens it before rematerialization" do
+    account, security = closed_manual_position("SHORTED")
+
+    travel 1.second do
+      account.entries.create!(name: "Short", date: 2.days.ago.to_date, amount: -500, currency: "USD",
+                              entryable: Trade.new(security: security, qty: -5, price: 100, currency: "USD", investment_activity_label: "Sell"))
+      assert_equal Date.current, Security::Price::ImportWindows.new(account).to_h.fetch(security.id).end_date
+    end
+  end
+
+  # trades.qty is nullable in the schema even though Trade validates it; a
+  # legacy NULL must not abort the window for every other security.
+  test "a trade with no quantity does not abort the windows" do
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    security = Security.create!(ticker: "NULLQTY", exchange_operating_mic: "XNAS")
+    entry = account.entries.create!(name: "Buy", date: 10.days.ago.to_date, amount: 100, currency: "USD",
+                                    entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy"))
+    entry.entryable.update_column(:qty, nil)
+
+    assert_nothing_raised { Security::Price::ImportWindows.new(account).to_h }
+  end
+
+  private
+    # Bought 10, sold 10, and holdings already rebuilt to zero through today.
+    def closed_manual_position(ticker)
+      family = Family.create!(name: "Smith", currency: "USD")
+      account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+      security = Security.create!(ticker: ticker, exchange_operating_mic: "XNAS")
+      account.entries.create!(name: "Buy", date: 20.days.ago.to_date, amount: 1000, currency: "USD",
+                              entryable: Trade.new(security: security, qty: 10, price: 100, currency: "USD", investment_activity_label: "Buy"))
+      account.entries.create!(name: "Sell", date: 10.days.ago.to_date, amount: -1100, currency: "USD",
+                              entryable: Trade.new(security: security, qty: -10, price: 110, currency: "USD", investment_activity_label: "Sell"))
+      account.holdings.create!(security: security, date: 15.days.ago.to_date, qty: 10, price: 105, amount: 1050, currency: "USD")
+      account.holdings.create!(security: security, date: Date.current, qty: 0, price: 110, amount: 0, currency: "USD")
+      [ account, security ]
+    end
 end
