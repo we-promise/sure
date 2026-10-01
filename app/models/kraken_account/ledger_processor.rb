@@ -137,7 +137,8 @@ class KrakenAccount::LedgerProcessor
       # A crypto fee is paid in the units themselves, so it only reduces the
       # quantity; there is no second cash movement to split out.
       split_fee = fiat && SPLIT_FEE_TYPES.include?(type) && !raw_fee.zero?
-      abs_impact = split_fee ? raw_amount.abs : (raw_amount - raw_fee).abs
+      net        = raw_amount - raw_fee
+      abs_impact = split_fee ? raw_amount.abs : net.abs
 
       # A crypto row has no fee half to owe, so a quantity of nothing -- a
       # correction row, a movement the fee consumed whole, or a reward below
@@ -148,7 +149,7 @@ class KrakenAccount::LedgerProcessor
         process_crypto_ledger_entry(
           external_id: external_id, ledger_id: ledger_id, ledger: ledger, type: type,
           raw_asset: raw_asset, base_symbol: base_symbol, symbol: symbol,
-          qty: abs_impact, date: date
+          qty: abs_impact, outflow: net.negative?, date: date
         )
         return
       end
@@ -206,7 +207,7 @@ class KrakenAccount::LedgerProcessor
     # `amount` is deliberately zero: Balance::BaseCalculator classifies a trade by
     # its amount regardless of label, so anything else would reintroduce the
     # phantom cash. The units and their price carry the value instead.
-    def process_crypto_ledger_entry(external_id:, ledger_id:, ledger:, type:, raw_asset:, base_symbol:, symbol:, qty:, date:)
+    def process_crypto_ledger_entry(external_id:, ledger_id:, ledger:, type:, raw_asset:, base_symbol:, symbol:, qty:, outflow:, date:)
       # A crypto row carries its fee inside the quantity, so once it is in there
       # is no second half owed. The caller's early return lets deposits and
       # withdrawals through for the fee a fiat row may still need, which would
@@ -234,7 +235,12 @@ class KrakenAccount::LedgerProcessor
       return unless security
 
       price, price_missing = unit_price_on(security, base_symbol, date)
-      signed_qty = inflow?(type) ? qty.abs : -qty.abs
+      # The direction comes from the ledger's own signed figure, not from the
+      # type: a reversed withdrawal arrives, an earn migration leg can leave,
+      # and on a trade a wrong sign moves units the wrong way through every
+      # earlier holding. For a row that moves the way its type says, the two
+      # agree.
+      signed_qty = outflow ? -qty.abs : qty.abs
 
       Entry.transaction do
         legacy&.destroy!

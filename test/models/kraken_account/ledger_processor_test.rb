@@ -496,6 +496,22 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     assert_not trade.extra.dig("kraken", "price_missing")
   end
 
+  # Kraken's amounts are signed and some rows move against their type's usual
+  # direction; the quantity follows the figure, not the label.
+  test "a crypto row's direction follows the ledger's signed amount, not its type" do
+    set_ledgers(
+      "LREV01" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "0.05000000", fee: "0.00000000", time: 1_700_000_000),
+      "LMIG01" => ledger_entry(type: "earn", subtype: "migration", asset: "XXBT", amount: "-0.02000000", fee: "0.00000000", time: 1_700_000_100)
+    )
+
+    process
+
+    reversed = @account.entries.find_by(external_id: "kraken_ledger_LREV01", source: "kraken")
+    assert_in_delta 0.05, reversed.entryable.qty.to_f, 1e-8, "a reversed withdrawal brings the coins back"
+    migration = @account.entries.find_by(external_id: "kraken_ledger_LMIG01", source: "kraken")
+    assert_in_delta(-0.02, migration.entryable.qty.to_f, 1e-8, "a migration leg with a negative amount gives units up")
+  end
+
   test "a BTC withdrawal becomes a trade that gives up units" do
     set_ledgers(
       "LBTC02" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "-0.20000000", fee: "0.00000000", time: 1_700_000_000)
