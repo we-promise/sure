@@ -87,7 +87,7 @@ class BillsController < ApplicationController
     # Loaded once: the view asks any?/none? and the partial counts and
     # iterates, which would otherwise be separate queries. Rules ride along
     # because each suggestion renders frequency_label.
-    @suggested_series = accessible_suggested_series.includes(:merchant, :recurrence_rules).order(next_expected_date: :asc).load
+    @suggested_series = accessible_suggested_series.includes(:merchant).preload(:recurrence_rules).order(next_expected_date: :asc).load
     @has_transaction_history = Current.family.entries.where(entryable_type: "Transaction").exists?
     @suggested_allocations = suggested_allocations
     # A row waiting on a match decision offers Review rather than Find.
@@ -223,7 +223,7 @@ class BillsController < ApplicationController
                               .accessible_by(Current.user)
                               .where(bill_type: :income)
                               .where.not(status: %i[suggested ended])
-                              .includes(:merchant, :recurrence_rules)
+                              .preload(:merchant, :recurrence_rules)
                               .order(:name)
                               .to_a
       @next_income_by_series = planner.next_income_by_series
@@ -296,7 +296,8 @@ class BillsController < ApplicationController
       # monthly_equivalent_amount, which read the schedule.
       scope = Current.family.recurring_transactions
                      .accessible_by(Current.user)
-                     .includes(:merchant, :recurrence_rules)
+                     .includes(:merchant)
+                     .preload(:recurrence_rules)
 
       if (search = params.dig(:q, :search)).present?
         pattern = "%#{ActiveRecord::Base.sanitize_sql_like(search)}%"
@@ -472,7 +473,8 @@ class BillsController < ApplicationController
              .where(recurring_transaction_id: payable_series_ids)
              .where("due_on >= ? OR status = 'scheduled'", Date.current.beginning_of_month)
              .where("due_on <= ?", Date.current + 90)
-             .includes(recurring_transaction: [ :merchant, :recurring_price_changes, :recurrence_rules, :account ])
+             .includes(recurring_transaction: [ :merchant, :recurring_price_changes ])
+             .preload(recurring_transaction: [ :recurrence_rules, :account ])
              .to_a
     end
 
