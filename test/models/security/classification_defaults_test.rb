@@ -265,8 +265,10 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
   # `region` has no database constraint, so the model validation is the only
   # thing standing between REGION_KEYS and an allocation chart with a sixth
   # slice in it.
+  # No country, so the callback has nothing to refill: the nil branch is then
+  # what validation actually sees.
   test "a region outside the vocabulary is refused" do
-    security = securities(:aapl)
+    security = Security.create!(ticker: "NOWHERE", exchange_operating_mic: "XNAS")
 
     security.region = "atlantis"
     assert_not security.valid?
@@ -274,6 +276,33 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
 
     security.region = nil
     assert security.valid?, "nil is the honest answer for a country the config does not name"
+    assert_nil security.region
+  end
+
+  test "a lowercase country code still derives its region" do
+    assert_equal "north_america", Security.create!(ticker: "LOWER", exchange_operating_mic: "XNAS", country_code: "us").region
+  end
+
+  # A caller who corrects the country and states the region in the same save
+  # has said what the region is; the old-country agreement test must not undo it.
+  test "a region set in the same save as a country correction is kept" do
+    security = Security.create!(ticker: "XLIST", exchange_operating_mic: "XNAS", country_code: "US")
+    security.update_columns(region: "europe")
+
+    security.update!(country_code: "JP", region: "north_america")
+
+    assert_equal "north_america", security.reload.region
+  end
+
+  # How an existing security picks the defaults up: on its next write, with no
+  # backfill job.
+  test "an unclassified cash security is classified on an unrelated save" do
+    cash = Security.create!(ticker: "CASHUSD", kind: "cash")
+    cash.update_columns(asset_class: nil, asset_sub_class: nil, classification_source: nil)
+
+    cash.update!(name: "Cash (USD)")
+
+    assert_equal [ "liquidity", "cash" ], [ cash.reload.asset_class, cash.asset_sub_class ]
   end
 
   # A security carrying one half of a classification and not the other is not
