@@ -384,7 +384,7 @@ class Security < ApplicationRecord
 
       if region.blank?
         self.region = derived
-      elsif country_code_changed? && region == REGIONS.dig(country_code_was.to_s.upcase, "region")
+      elsif country_code_changed? && !region_changed? && region == REGIONS.dig(country_code_was.to_s.upcase, "region")
         # The country the region was read from has been corrected, and the
         # region still says exactly what the old country implied -- so this
         # callback is what put it there, and it is this callback's to move.
@@ -400,6 +400,9 @@ class Security < ApplicationRecord
         # fact contradicting each other: `region` frozen on the old country
         # while `development_status`, derived live from `country_code`, had
         # already moved to the new one.
+        #
+        # A region the caller set in this same save is theirs, not this
+        # callback's, so `region_changed?` leaves it alone.
         self.region = derived
       end
     end
