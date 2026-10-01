@@ -166,6 +166,7 @@ uk:
         card_refund: Повернення на картку
         tax_refund: Повернення податку
         round_up: Round up
+    duplicate_connection: "Цей рахунок Trade Republic уже підключено. Нове підключення видалено."
     defaults:
       name: Trade Republic
     sync_status:

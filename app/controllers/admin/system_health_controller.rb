@@ -12,7 +12,7 @@ module Admin
     def show
       tabs = %w[background_jobs ai]
       @active_tab = params[:tab].presence_in(tabs) || "background_jobs"
-      if Apns::Client.hosted? && @active_tab == "background_jobs"
+      if Apns::Client.hosted?
         @push_notification_test = PushNotificationTest.new(Current.user)
         @push_disabled_reason = @push_notification_test.disabled_reason
         @latest_push_test = @push_notification_test.latest
@@ -20,12 +20,15 @@ module Admin
       end
       SidekiqHealth.expire_cache!
       @health = SidekiqHealth.new
-      ai_tab = params[:tab] == "ai"
-      @ai_health = AiHealth.new(
-        run_probes: ai_tab,
-        force_probes: ai_tab && params[:refresh_ai_health] == "1"
-      )
-      @worker_ai_health_results = WorkerAiHealth.recent if ai_tab
+    end
+
+    # Each live probe can take up to AiHealth::Probe.timeout, so the page
+    # loads this into its AI tab through a lazy frame instead of waiting on
+    # the probes before it renders.
+    def ai_status
+      @ai_health = AiHealth.new(force_probes: params[:refresh_ai_health] == "1")
+      @worker_ai_health_results = WorkerAiHealth.recent
+      render layout: false
     end
 
     # Queues an asynchronous worker-side verification (see
@@ -34,7 +37,7 @@ module Admin
     # finishes, typically within a few seconds.
     def verify_worker_ai
       WorkerAiHealth.request_check!
-      redirect_to admin_system_health_path(tab: "ai"), notice: t(".queued")
+      redirect_to admin_system_health_path(tab: "ai", locale: locale_from_param), notice: t(".queued")
     end
 
     def send_test_push

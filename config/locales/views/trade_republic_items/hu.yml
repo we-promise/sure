@@ -6,6 +6,7 @@ hu:
       connection_description: "Trade Republic befektetési számla összekapcsolása biztonságos webes bejelentkezéssel"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Ez a Trade Republic-fiók már csatlakoztatva van. Az új kapcsolat törölve lett."
     portfolio_categories:
       brokerage: "Brókerszámla"
       private_markets: "Privát piacok"
