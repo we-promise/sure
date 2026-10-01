@@ -41,19 +41,19 @@ Make sure you are in the directory you just created and run the following comman
 # Download the sample compose.yml file from the GitHub repository
 curl --fail --location --silent --show-error --output compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
 
-# (Optional) If you plan to use the automated database backups feature:
+# (Optional) If you plan to use backups (recommended before upgrades):
 mkdir -p bin
-curl --fail --location --silent --show-error --output bin/db-backup.sh https://raw.githubusercontent.com/we-promise/sure/main/bin/db-backup.sh
-chmod +x bin/db-backup.sh
+curl --fail --location --silent --show-error --output bin/sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
+chmod +x bin/sure-backup
 ```
 
 This command will do the following:
 
 1. Fetch the sample docker compose file from our public Github repository
 2. Creates a file in your current directory called `compose.yml` with the contents of the example file
-3. (Optionally) Fetches the backup script to `bin/db-backup.sh` and makes it executable.
+3. (Optionally) Fetches the backup script to `bin/sure-backup` and makes it executable. See [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks).
 
-At this point, you should have `compose.yml` in your directory (and optionally `bin/db-backup.sh` generated alongside `compose.yml` when using backups).
+At this point, you should have `compose.yml` in your directory (and optionally `bin/sure-backup` alongside `compose.yml` when using backups).
 
 ### Step 3 (optional): Configure your environment
 
@@ -322,7 +322,7 @@ If you want to load sample/demo data on a small host:
 The mechanism that updates your self-hosted Sure app is the GHCR (Github Container Registry) Docker image that you see in the `compose.yml` file:
 
 ```yml
-image: ghcr.io/we-promise/sure:latest
+image: ghcr.io/we-promise/sure:${SURE_IMAGE_TAG:-stable}
 ```
 
 We recommend using one of the following images, but you can pin your app to whatever version you'd like (see [packages](https://github.com/we-promise/sure/pkgs/container/sure)):
@@ -330,29 +330,102 @@ We recommend using one of the following images, but you can pin your app to what
 - `ghcr.io/we-promise/sure:latest` (latest `alpha`)
 - `ghcr.io/we-promise/sure:stable` (latest release)
 
-By default, your app _will NOT_ automatically update. To update your self-hosted app, run the following commands in your terminal:
+By default, your app _will NOT_ automatically update. Take a backup first (see below), then run:
 
 ```bash
 cd ~/docker-apps/sure # Navigate to whatever directory you configured the app in
-docker compose pull # This pulls the "latest" published image from GHCR
-docker compose build # This rebuilds the app with updates
-docker compose up --no-deps -d web worker # This restarts the app using the newest version
+docker compose run --rm backup create # Back up the current version (optional, recommended)
+docker compose pull web worker # Pull the newest image for your tag
+docker compose up -d # Restart on the new version; database migrations run automatically
 ```
 
 ## How to change which updates your app receives
 
-If you'd like to pin the app to a specific version or tag, all you need to do is edit the `compose.yml` file:
-
-```yml
-image: ghcr.io/we-promise/sure:stable
-```
-
-After doing this, make sure and restart the app:
+Set `SURE_IMAGE_TAG` in your `.env` file to a channel (`stable`, `latest`) or a specific version (for example `0.7.4`):
 
 ```bash
-docker compose pull # This pulls the "latest" published image from GHCR
-docker compose build # This rebuilds the app with updates
-docker compose up --no-deps -d web worker # This restarts the app using the newest version
+SURE_IMAGE_TAG=0.7.4
+```
+
+After doing this, pull and restart the app:
+
+```bash
+docker compose pull web worker
+docker compose up -d
+```
+
+## Backups, upgrades and rollbacks
+
+The optional `backup` service in `compose.example.yml` runs `bin/sure-backup`. Each backup is a self-contained bundle with everything needed to bring the same version back up, on this machine or a new one:
+
+```text
+backups/
+  0.7.4/
+    2026-10-01_080524-manual/
+      manifest.json      # version, commit, image, schema version, ...
+      db.dump            # PostgreSQL dump (pg_dump custom format)
+      storage.tar.gz     # uploaded files (the app-storage volume)
+      config/            # .env, compose file(s) and bin/sure-backup
+      SHA256SUMS
+```
+
+The version comes from the running app: on every boot the web container records its version in the storage volume, and a backup is refused if the database schema no longer matches it.
+
+> [!WARNING]
+> `config/.env` contains `SECRET_KEY_BASE` and your API keys. Without `SECRET_KEY_BASE`, encrypted data in the database cannot be read. Keep the backup folder private and use an encrypted remote (for example [rclone crypt](https://rclone.org/crypt/)) for off-site copies.
+
+### Commands
+
+Run these from the directory that holds `compose.yml`:
+
+```bash
+docker compose run --rm backup create   # Take a backup now ("manual"; never pruned)
+docker compose run --rm backup list     # List backups, newest first
+docker compose run --rm backup restore 0.7.4/2026-10-01_080524-manual   # or "latest"
+docker compose run --rm backup prune    # Remove scheduled backups older than BACKUP_KEEP_DAYS
+```
+
+Backups are written to `./backups`; set `BACKUP_DIR` in `.env` to use another host folder.
+
+### Scheduled and off-site backups
+
+Start the service in the background to take a backup every day (`BACKUP_SCHEDULE`, cron syntax, default `0 2 * * *`):
+
+```bash
+docker compose --profile backup up -d backup
+```
+
+Scheduled backups older than `BACKUP_KEEP_DAYS` (default 7) are pruned; manual ones are kept until you delete them. Set `BACKUP_DESTINATION` (an [rclone](https://rclone.org/) remote such as `s3:my-bucket/sure`) and the matching `RCLONE_CONFIG_*` variables to also copy each scheduled backup off-site, under `<BACKUP_DESTINATION>/<INSTANCE_ID>/<version>/`. See `.env.example`.
+
+### Roll back an upgrade
+
+```bash
+docker compose stop web worker
+docker compose run --rm backup restore 0.7.4/2026-10-01_080524-manual
+# Set SURE_IMAGE_TAG=0.7.4 in .env (the restore prints the exact value)
+docker compose up -d
+```
+
+`restore` replaces the database and all uploaded files. It refuses while other clients are connected to the database, and asks you to type `restore` to confirm (pass `--yes` to skip in scripts).
+
+### Restore on a new machine
+
+1. Copy a backup bundle to the new machine.
+2. Copy the files in the bundle's `config/` folder (including `.env` and `bin/sure-backup`) into an empty directory, and put the bundle under `backups/<version>/` there.
+3. Set `SURE_IMAGE_TAG` in `.env` to the bundle's version, then run:
+
+```bash
+docker compose up -d db
+docker compose run --rm backup restore 0.7.4/2026-10-01_080524-manual --yes
+docker compose up -d
+```
+
+### Apps started before version stamping
+
+If your app has not been restarted since upgrading to a version that records its version, `create` asks for it explicitly:
+
+```bash
+docker compose run --rm backup create --version 0.7.4
 ```
 
 ## Troubleshooting

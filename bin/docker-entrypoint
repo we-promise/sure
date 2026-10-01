@@ -13,6 +13,18 @@ fi
 # If running the rails server then create or migrate existing database
 if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
   ./bin/rails db:prepare
+
+  # Record which version migrated the database so the backup sidecar
+  # (bin/sure-backup) can label backups without access to the Docker API.
+  stamp="storage/.sure-runtime"
+  if ! {
+    echo "SURE_VERSION=$(tr -d '[:space:]' < .sure-version)"
+    echo "SURE_COMMIT=${BUILD_COMMIT_SHA}"
+    echo "SURE_SCHEMA_VERSION=$(sed -n 's/.*define(version: \([0-9_]*\)).*/\1/p' db/schema.rb | tr -d _)"
+    echo "SURE_STAMPED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  } > "${stamp}.tmp" 2>/dev/null || ! mv "${stamp}.tmp" "${stamp}"; then
+    echo "WARNING: could not write ${stamp}; backups will need --version"
+  fi
 fi
 
 exec "${@}"
