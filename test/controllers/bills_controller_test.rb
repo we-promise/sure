@@ -740,6 +740,25 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("bills.index.detected_review", count: 1), response.body
   end
 
+  # The banner asks the user to check "the totals here", which leave income and
+  # internal transfers out, so neither may raise it over an empty overview.
+  test "detected income and savings transfers don't raise the review banner" do
+    create_bill(name: "ACME PAYROLL", amount: -2400, bill_type: "income", manual: false)
+    create_bill(name: "TO SAVINGS", amount: 500, destination_account: accounts(:connected), manual: false)
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.index.empty.title"), response.body
+    assert_no_match I18n.t("bills.index.detected_review", count: 1), response.body
+    assert_no_match I18n.t("bills.index.detected_review", count: 2), response.body
+
+    create_bill(name: "Rent", amount: 2150, manual: false)
+    get bills_url
+
+    assert_match I18n.t("bills.index.detected_review", count: 1), response.body
+  end
+
   # The page's whole job. A single "Bills $695.60" against $357.48 of visible
   # rows is a number nothing on screen can account for, so due and reserved
   # are stated apart and their sum is never shown at all.
@@ -1018,6 +1037,33 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "trial ends #{I18n.l(Date.current + 3, format: :long)}", response.body
     assert_match "changed price", response.body
+  end
+
+  # Notices speak for the bills the overview lists. A suggestion's price isn't
+  # news until it's a bill, and an income change belongs on the Income plan.
+  test "ended, suggested and income series raise no price notice" do
+    change_price = ->(series) do
+      series.recurring_price_changes.create!(
+        effective_on: Date.current - 5, previous_amount: series.amount - 5, new_amount: series.amount,
+        currency: "USD", source: "detected"
+      )
+    end
+    change_price.(create_bill(name: "Old Streaming", amount: 20, status: "ended", manual: false))
+    change_price.(create_bill(name: "ACME PAYROLL", amount: -2400, bill_type: "income"))
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.index.empty.title"), response.body
+    assert_no_match "changed price", response.body
+
+    # A suggestion takes the empty state's place with its own review strip, so
+    # it gets a page of its own.
+    @family.recurring_transactions.destroy_all
+    change_price.(create_suggested(name: "Maybe Gym", account: accounts(:depository)))
+    get bills_url
+
+    assert_no_match "changed price", response.body
   end
 
   test "the ical feed serves upcoming occurrences with a member token and rejects garbage" do
@@ -1503,6 +1549,26 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       response.body
     assert_no_match I18n.t("bills.index.suggestion_line", entry: "ACME PAYROLL", bill: "ACME PAYROLL"),
       response.body
+  end
+
+  # Ending a bill leaves its scheduled occurrences behind, and the matcher
+  # scores every scheduled occurrence, so it can still suggest a payment for a
+  # bill the user deleted. The queue asks only about bills the page lists.
+  test "a suggestion against an ended bill stays out of the payment review queue" do
+    due = Date.current - 3
+    bill = declare_bill(name: "OLD GYM", amount: 40, due: due)
+    RecurringTransaction::OccurrenceGenerator.new(bill).generate!
+    charge = create_transaction_entry(name: "OLD GYM", amount: 40, date: due)
+    RecurringTransaction::Allocator.new(bill.recurring_occurrences.order(:due_on).first).allocate_matched!(
+      entry: charge, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+    bill.update!(status: "ended")
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.index.empty.title"), response.body
+    assert_no_match I18n.t("bills.index.suggestion_line", entry: "OLD GYM", bill: "OLD GYM"), response.body
   end
 
 

@@ -552,7 +552,9 @@ class BillsController < ApplicationController
     def collect_notices
       today = Date.current
       window = today..(today + 14)
-      series_scope = Current.family.recurring_transactions.accessible_by(Current.user).active
+      # The bills the overview lists, so no notice speaks for a series the
+      # page doesn't show (income, transfers, suggestions, ended bills).
+      series_scope = Current.family.recurring_transactions.where(id: payable_series_ids).active
 
       notices = []
       series_scope.where(trial_ends_on: window).find_each do |series|
@@ -561,9 +563,7 @@ class BillsController < ApplicationController
       series_scope.where(renews_on: window).find_each do |series|
         notices << Notice.new(kind: :renewal, series: series, date: series.renews_on, detail: nil)
       end
-      RecurringPriceChange.joins(:recurring_transaction)
-                          .merge(RecurringTransaction.accessible_by(Current.user))
-                          .where(recurring_transactions: { family_id: Current.family.id })
+      RecurringPriceChange.where(recurring_transaction_id: series_scope.select(:id))
                           .where("effective_on >= ?", today - 30)
                           .includes(:recurring_transaction)
                           .find_each do |change|
@@ -589,7 +589,9 @@ class BillsController < ApplicationController
                                         .where(recurring_occurrences: { family_id: Current.family.id })
       return 0 if user_touched.exists?
 
-      series.where(manual: false, status: :active).count
+      # Only bills the overview lists: the banner points at its totals, which
+      # leave detected income and transfers out.
+      series.where(manual: false, status: :active, id: payable_series_ids).count
     end
 
     def accessible_suggested_series
@@ -612,7 +614,9 @@ class BillsController < ApplicationController
         .suggested
         .joins(recurring_occurrence: :recurring_transaction)
         .where(recurring_occurrences: { family_id: Current.family.id })
-        .merge(RecurringTransaction.accessible_by(Current.user))
+        # Ending or pausing a bill leaves its scheduled occurrences behind and
+        # the matcher still scores them, so the queue keeps to listed bills.
+        .where(recurring_occurrences: { recurring_transaction_id: payable_series_ids })
         # Income never reviews here: the matcher no longer suggests it, and
         # this filter also retires any suggestion written before that rule.
         .merge(RecurringTransaction.where.not(bill_type: "income"))
