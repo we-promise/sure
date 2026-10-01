@@ -72,7 +72,6 @@ class DemoFamilyRefreshJob < ApplicationJob
         Doorkeeper::AccessGrant.where(resource_owner_id: user.id, revoked_at: nil).update_all(revoked_at: Time.current)
         user.update_columns(active: false)
       end
-
     end
 
     def sessions_count_for(family, period_start:, period_end:)
