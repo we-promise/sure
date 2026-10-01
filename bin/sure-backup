@@ -9,7 +9,8 @@
 #     db.dump          pg_dump custom format
 #     storage.tar.gz   the app-storage volume (uploaded files)
 #     config/          the host's .env (contains secrets), compose file(s) and
-#                      bin/sure-backup: copy these to a new host to restore there
+#                      bin/sure-backup
+#     restore.sh       restores the bundle into a new folder (see `recover`)
 #     SHA256SUMS
 #
 # Usage (from the compose directory):
@@ -20,6 +21,10 @@
 #
 # With no arguments the container installs a cron entry for BACKUP_SCHEDULE
 # and runs `scheduled` (create + prune + optional rclone upload) on it.
+#
+# On the host, a bundle restores itself into a new project folder:
+#   sh <bundle>/restore.sh [--target DIR] [--port N] [--with-worker | --without-worker] [--yes]
+# which runs `sure-backup recover <bundle> ...`. It needs Docker with Compose.
 set -e
 
 # shellcheck disable=SC3040
@@ -193,10 +198,18 @@ cmd_create() {
     [ -f "${CONFIG_DIR}/${f}" ] && cp "${CONFIG_DIR}/${f}" "${tmp_dir}/config/${f}"
   done
   find "${tmp_dir}/config" -type f -exec chmod 0600 {} +
-  # This script, so a new host can restore from the bundle alone.
+  # This script and an entry point for it, so a bundle restores on its own.
   mkdir -p "${tmp_dir}/config/bin"
   cp "$0" "${tmp_dir}/config/bin/sure-backup"
   chmod 0755 "${tmp_dir}/config/bin/sure-backup"
+  cat > "${tmp_dir}/restore.sh" <<'EOF'
+#!/bin/sh
+# Restores this backup into a new folder as a separate Sure instance.
+# Run it with: sh restore.sh   (needs Docker with Compose; --help for options)
+dir=$(cd "$(dirname "$0")" && pwd)
+exec sh "$dir/config/bin/sure-backup" recover "$dir" "$@"
+EOF
+  chmod 0755 "${tmp_dir}/restore.sh"
 
   pg_server=$(psql_value "SHOW server_version")
   jq -n \
@@ -342,9 +355,261 @@ cmd_restore() {
     warn "Encrypted data will not decrypt until you use the backup's value (see ${dir#"${BACKUP_DIR}"/}/config/.env)."
   fi
 
+  if [ -f "${CONFIG_DIR}/compose.restore.yml" ]; then
+    # Set up by `recover`, which already pins the image and starts the app.
+    log "Restored Sure ${version}."
+    return 0
+  fi
   log "Restored Sure ${version}. Next, on the host:"
-  log "  1. In .env set SURE_IMAGE_TAG=${version}   (image: ${image}${image_by_commit:+, or ${image_by_commit} for non-release builds})"
+  log "  1. Run the app on ${image}${image_by_commit:+ (or ${image_by_commit} for non-release builds)}:"
+  log "     set SURE_IMAGE_TAG=${version} in .env, or the web/worker image in your compose file"
   log "  2. docker compose up -d"
+}
+
+# --- recover (runs on the host) -----------------------------------------------
+
+manifest_value() {
+  sed -n "s/^[[:space:]]*\"$2\": \"\([^\"]*\)\".*/\1/p" "$1/manifest.json" | head -n 1
+}
+
+# ask PROMPT DEFAULT: prints the answer, or DEFAULT on an empty line or EOF.
+ask() {
+  if [ "$assume_yes" = true ]; then
+    printf '%s\n' "$2"
+    return 0
+  fi
+  printf '%s%s: ' "$1" "${2:+ [$2]}" >&2
+  answer=""
+  read -r answer || true
+  printf '%s\n' "${answer:-$2}"
+}
+
+env_set() {
+  awk -v k="$2" -v v="$3" '
+    $0 ~ "^" k "=" { if (!done) print k "=" v; done = 1; next }
+    { print }
+    END { if (!done) print k "=" v }
+  ' "$1" > "$1.tmp"
+  mv "$1.tmp" "$1"
+  chmod 0600 "$1"
+}
+
+env_get() {
+  sed -n "s/^$2=//p" "$1" 2>/dev/null | tail -n 1 | sed -e 's/[[:space:]]*#.*$//' -e 's/^"\(.*\)"$/\1/'
+}
+
+port_in_use() {
+  docker ps --format '{{.Ports}}' 2>/dev/null | grep -q ":$1->" && return 0
+  if command -v nc >/dev/null 2>&1 && nc -z 127.0.0.1 "$1" >/dev/null 2>&1; then
+    return 0
+  fi
+  return 1
+}
+
+# Compose projects with a running Sure web or worker container.
+running_sure_projects() {
+  docker ps --format '{{.Label "com.docker.compose.project"}}|{{.Label "com.docker.compose.service"}}|{{.Image}}' 2>/dev/null \
+    | awk -F'|' '($2 == "web" || $2 == "worker") && $3 ~ /sure/ { print ($1 == "" ? "(not compose)" : $1) }' \
+    | sort -u
+}
+
+cmd_recover() {
+  bundle=""
+  target=""
+  port=""
+  worker=""
+  assume_yes=false
+  start=true
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --target) target=$2; shift 2 ;;
+      --port) port=$2; shift 2 ;;
+      --with-worker) worker=yes; shift ;;
+      --without-worker) worker=no; shift ;;
+      --yes) assume_yes=true; shift ;;
+      --no-start) start=false; shift ;;
+      -h | --help) usage; return 0 ;;
+      -*) die "unknown option for recover: $1" ;;
+      *) bundle=$1; shift ;;
+    esac
+  done
+
+  [ -n "$bundle" ] && [ -f "${bundle}/manifest.json" ] || die "recover needs a backup bundle folder (one with manifest.json)"
+  bundle=$(cd "$bundle" && pwd)
+  if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+    die "Docker with the Compose plugin is required (https://docs.docker.com/compose/install/)"
+  fi
+
+  version=$(manifest_value "$bundle" sure_version)
+  image=$(manifest_value "$bundle" image)
+  created=$(manifest_value "$bundle" created_at)
+  [ -n "$version" ] && [ -n "$image" ] || die "cannot read version and image from ${bundle}/manifest.json"
+  [ -f "${bundle}/config/.env" ] || die "the bundle has no config/.env; restore it by hand (see docs/hosting/docker.md)"
+  compose_file=""
+  for f in compose.yml compose.yaml docker-compose.yml docker-compose.yaml; do
+    [ -f "${bundle}/config/${f}" ] && { compose_file=$f; break; }
+  done
+  [ -n "$compose_file" ] || die "the bundle has no compose file; restore it by hand (see docs/hosting/docker.md)"
+
+  log "Backup: Sure ${version}, taken ${created:-at an unknown time} (${image})"
+  log "Verifying checksums..."
+  if command -v sha256sum >/dev/null 2>&1; then
+    (cd "$bundle" && sha256sum -c SHA256SUMS >/dev/null) || die "checksum verification failed"
+  elif command -v shasum >/dev/null 2>&1; then
+    (cd "$bundle" && shasum -a 256 -c SHA256SUMS >/dev/null) || die "checksum verification failed"
+  else
+    warn "no sha256sum or shasum; skipping checksum verification here (restore checks it again)"
+  fi
+
+  # Where to put the restored project. Its folder name becomes the Compose
+  # project name, which names its containers and data volumes.
+  [ -n "$target" ] || target=$(ask "Folder for the restored instance" "$(pwd)/sure-restore-${version}")
+  # A literal "~" typed at the prompt is not expanded by the shell.
+  # shellcheck disable=SC2088
+  case "$target" in
+    "~") target=$HOME ;;
+    "~/"*) target="${HOME}/${target#"~/"}" ;;
+  esac
+  if [ -e "$target" ] && [ -n "$(ls -A "$target" 2>/dev/null)" ]; then
+    die "${target} is not empty. Pick a new folder; to roll back an existing install, use 'restore' there instead."
+  fi
+  created_target=false
+  [ -d "$target" ] || created_target=true
+  mkdir -p "$target"
+  target=$(cd "$target" && pwd)
+  # On abort, remove the folder only if this run created it.
+  cleanup_target() { [ "$created_target" = true ] && rmdir "$target" 2>/dev/null; true; }
+
+  project=$(basename "$target" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_-' | sed 's/^[^a-z0-9]*//')
+  [ -n "$project" ] || project="sure-restore"
+  if [ -n "$(docker ps -aq --filter "label=com.docker.compose.project=${project}")" ] \
+    || [ -n "$(docker volume ls -q --filter "label=com.docker.compose.project=${project}")" ]; then
+    cleanup_target
+    die "Docker already has containers or volumes for a project named '${project}'. Pick a folder with another name, or this would overwrite that instance's data."
+  fi
+
+  # Other Sure instances on this machine.
+  others=$(running_sure_projects)
+  if [ -n "$others" ]; then
+    warn "Other Sure instances are running on this machine: $(echo "$others" | tr '\n' ' ')"
+    cat >&2 <<'EOF'
+If one of them holds the same data as this backup, running both at once means:
+  - Both workers sync the same bank connections. Some providers rotate access
+    tokens on every sync, so the copy can disconnect the original.
+  - Scheduled jobs, such as recurring transactions and emails, run twice.
+  - Signing in to both on the same host name (e.g. localhost on another port)
+    signs you out of the other, because browsers share cookies across ports.
+Starting the restored instance without its worker avoids the first two.
+EOF
+    [ -n "$worker" ] || case "$(ask "Start the restored worker too? (no = web only, abort = stop here)" "no")" in
+      y | yes) worker=yes ;;
+      abort | a | q) cleanup_target; die "aborted" ;;
+      *) worker=no ;;
+    esac
+  fi
+  [ -n "$worker" ] || worker=yes
+
+  backup_port=$(env_get "${bundle}/config/.env" PORT)
+  backup_port=${backup_port:-3000}
+  if [ -z "$port" ]; then
+    port=$backup_port
+    if port_in_use "$port"; then
+      suggestion=$port
+      while port_in_use "$suggestion"; do suggestion=$((suggestion + 1)); done
+      warn "port ${port} is already in use"
+      port=$(ask "Port for the restored instance" "$suggestion")
+    fi
+  fi
+  case "$port" in "" | *[!0-9]*) die "invalid port: ${port}" ;; esac
+  port_in_use "$port" && warn "port ${port} looks busy; the web container may fail to start"
+
+  log "Restoring into ${target} (project '${project}', port ${port})"
+  cp -R "${bundle}/config/." "${target}/"
+  # Use this copy of the script, which may be newer than the bundle's.
+  mkdir -p "${target}/bin"
+  cp "$0" "${target}/bin/sure-backup"
+  chmod 0755 "${target}/bin/sure-backup"
+  mkdir -p "${target}/backups/${version}"
+  cp -R "$bundle" "${target}/backups/${version}/"
+  name=$(basename "$bundle")
+
+  compose_files=$compose_file
+  for f in compose.override.yml compose.override.yaml docker-compose.override.yml docker-compose.override.yaml; do
+    [ -f "${target}/${f}" ] && compose_files="${compose_files}:${f}"
+  done
+  compose_files="${compose_files}:compose.restore.yml"
+
+  cat > "${target}/compose.restore.yml" <<EOF
+# Written by \`sure-backup recover\` from backup ${version}/${name}.
+# Pins web and worker to the backed-up version and adds the sure-backup
+# service; COMPOSE_FILE in .env loads it with the main compose file.
+# To upgrade later, change the image here (or remove it to follow the
+# compose file's tag) and run: docker compose pull && docker compose up -d
+services:
+  web:
+    image: ${image}
+  worker:
+    image: ${image}
+  sure-backup:
+    profiles: [sure-backup]
+    image: alpine:3.20
+    entrypoint: ["/usr/local/bin/sure-backup"]
+    volumes:
+      - ./bin/sure-backup:/usr/local/bin/sure-backup:ro
+      - ./backups:/backups
+      - app-storage:/rails/storage
+      - .:/config:ro
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: \${POSTGRES_USER:-sure_user}
+      POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-sure_password}
+      POSTGRES_DB: \${POSTGRES_DB:-sure_production}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sure_net
+EOF
+  env_set "${target}/.env" COMPOSE_PROJECT_NAME "$project"
+  env_set "${target}/.env" COMPOSE_FILE "$compose_files"
+  env_set "${target}/.env" PORT "$port"
+
+  if [ "$start" != true ]; then
+    log "Prepared ${target}. Start it with:"
+    log "  cd ${target} && docker compose up -d db redis && docker compose run --rm sure-backup restore ${version}/${name} --yes && docker compose up -d"
+    return 0
+  fi
+
+  cd "$target"
+  log "Starting the database..."
+  docker compose up -d db redis
+  log "Restoring the backup..."
+  docker compose run --rm sure-backup restore "${version}/${name}" --yes
+  if [ "$worker" = yes ]; then
+    log "Starting web and worker..."
+    docker compose up -d web worker
+  else
+    log "Starting web only (no worker)..."
+    docker compose up -d web
+  fi
+
+  url="http://localhost:${port}"
+  if command -v curl >/dev/null 2>&1; then
+    log "Waiting for ${url} ..."
+    tries=0
+    until curl -fsS -o /dev/null "${url}/up" 2>/dev/null; do
+      tries=$((tries + 1))
+      [ "$tries" -lt 60 ] || { warn "the app did not answer within 3 minutes; check: docker compose logs web"; break; }
+      sleep 3
+    done
+  fi
+
+  log ""
+  log "Restored Sure ${version} is running at ${url}"
+  log "  Folder:  ${target}"
+  log "  Manage:  cd ${target} && docker compose ps | logs web | down"
+  [ "$worker" = yes ] || log "  Worker:  not started; start it with 'docker compose up -d worker' once the original instance is stopped"
+  log "  Remove:  cd ${target} && docker compose down -v   (deletes this copy's data)"
 }
 
 # --- prune / offsite ----------------------------------------------------------
@@ -409,6 +674,7 @@ case "$command" in
   scheduled) cmd_scheduled ;;
   list) cmd_list ;;
   restore) cmd_restore "$@" ;;
+  recover) cmd_recover "$@" ;;
   prune) ensure_deps; cmd_prune ;;
   -h | --help | help) usage ;;
   *) usage; exit 1 ;;
