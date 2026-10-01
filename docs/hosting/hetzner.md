@@ -193,7 +193,7 @@ Sure ships a backup service that saves the database, uploaded files and your con
 ```bash
 cd /opt/sure
 mkdir -p bin
-curl -o bin/sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
+curl --fail --location --silent --show-error --output bin/sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
 chmod +x bin/sure-backup
 
 # Optional: change the defaults in .env
@@ -421,7 +421,7 @@ If you encounter issues:
 ## Security Reminders
 
 - Keep your server updated: `apt update && apt upgrade`
-- Monitor your logs regularly: `/var/log/sure-backup.log` and `/var/log/sure-health.log`
+- Monitor your logs regularly: `docker compose logs backup` and `/var/log/sure-health.log`
 - Use strong passwords for all accounts
 - Consider setting up SSH key authentication instead of password authentication
 - Regularly review your firewall rules: `ufw status`
