@@ -10,6 +10,8 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
   test "new only offers candidates from accounts the user can write to" do
     loan = accounts(:loan)
     loan.update!(owner: users(:family_member))
+    # Accessible but not writable: candidates must be filtered by write access
+    loan.account_shares.create!(user: @user, permission: "read_only")
 
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
     hidden_inflow = create_transaction(amount: -100, account: loan, name: "Hidden member inflow")

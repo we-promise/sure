@@ -529,6 +529,23 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal [ outflow.entryable_id ], candidates.map(&:outflow_transaction_id)
   end
 
+  test "does not auto-match cross-currency accounts no single member can write to" do
+    load_exchange_prices
+    # Same ownership as above; both linked so only the writer condition blocks the match.
+    @loan.update!(owner: users(:family_member))
+    link_account!(@loan)
+    link_account!(@credit_card)
+
+    outflow = create_transaction(date: Date.current, account: @loan, amount: 1000)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
   test "auto-matches across owners when a member can write to both accounts" do
     # family_member owns the loan and has full_control on the depository
     @loan.update!(owner: users(:family_member))
