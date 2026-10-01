@@ -1404,14 +1404,20 @@ end
     # by the previous version was still served and rendering raised
     # ActiveModel::MissingAttributeError until the key rolled over the next day.
     original_cache = Rails.cache
-    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    written_keys = []
+    Rails.cache = Class.new(ActiveSupport::Cache::MemoryStore) {
+      define_method(:write_entry) do |key, entry, **options|
+        written_keys << key
+        super(key, entry, **options)
+      end
+    }.new
 
     recurring = recurring_transactions(:netflix_subscription)
 
     get transactions_url
     assert_response :success
 
-    cache_keys = Rails.cache.instance_variable_get(:@data).keys.grep(/transactions_projected_recurring/)
+    cache_keys = written_keys.grep(/transactions_projected_recurring/).uniq
     assert_not_empty cache_keys, "the first request should populate the projected-recurring cache"
 
     # Write the Marshal payload the previous version produced: the record's
