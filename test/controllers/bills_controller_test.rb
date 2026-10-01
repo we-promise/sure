@@ -389,6 +389,32 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paid_from", account: accounts(:depository).name), response.body
   end
 
+  # Every row renders its frequency from the series' recurrence rules, so the
+  # rules must be preloaded rather than fetched one series at a time.
+  test "index does not load recurrence rules once per bill" do
+    bill_count = 4
+    bill_count.times { |i| create_bill(name: "Bill #{i}", amount: 10 + i) }
+
+    # First request materializes occurrences; measure a steady-state render.
+    get bills_url
+    assert_response :success
+
+    per_series_rule_queries = 0
+    callback = lambda do |*, payload|
+      sql = payload[:sql].to_s
+      if sql.include?('FROM "recurrence_rules"') && sql.include?('"recurrence_rules"."recurring_transaction_id" = $1')
+        per_series_rule_queries += 1
+      end
+    end
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get bills_url
+    end
+
+    assert_response :success
+    assert_operator per_series_rule_queries, :<, bill_count
+  end
+
   # Three concurrent subscriptions to one merchant, at different prices on
   # different days, are three real bills and render as three rows.
   test "index shows separate subscription tiers as separate rows" do
