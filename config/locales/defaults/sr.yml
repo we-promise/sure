@@ -42,6 +42,7 @@ sr:
       default: "%d/%m/%Y"
       long: "%B %e, %Y"
       short: "%e %b"
+      short_with_year: "%b %e, %Y"
     month_names:
     -
     - Јануар

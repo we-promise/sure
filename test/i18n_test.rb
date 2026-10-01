@@ -1,3 +1,4 @@
+require "test_helper"
 require "i18n/tasks"
 require "pathname"
 require "yaml"
@@ -90,6 +91,21 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty offenses,
                  "Duplicate keys found in locale files (the last occurrence silently wins):\n" \
                  "#{offenses.map { |offense| "  #{offense}" }.join("\n")}"
+  end
+
+  # Fallbacks would hand a locale without :short_with_year the English
+  # "%b %d, %Y", month first, so check each locale without them.
+  def test_short_with_year_date_format_exists_for_each_locale
+    locales = Dir[File.expand_path("../config/locales/defaults/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    missing = locales.sort.reject do |locale|
+      I18n.t("date.formats.short_with_year", locale: locale, fallback: false, default: nil)
+    end
+
+    assert_empty missing, "date.formats.short_with_year is missing for: #{missing.join(", ")}"
+  end
+
+  def test_short_with_year_follows_the_locale
+    assert_equal " 5. Jan 2027", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :de)
   end
 
   def test_trade_republic_activity_labels_exist_for_each_locale

@@ -35,6 +35,7 @@ rm:
       default: "%d.%m.%Y"
       long: "%e. %B %Y"
       short: "%e. %b"
+      short_with_year: "%e. %b %Y"
     month_names:
     -
     - schaner

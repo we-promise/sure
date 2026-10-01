@@ -52,6 +52,7 @@ de:
       short: "%e. %b"
       month_year: "%B %Y"
       short_month_year: "%b %Y"
+      short_with_year: '%e. %b %Y'
     month_names:
     -
     - Januar

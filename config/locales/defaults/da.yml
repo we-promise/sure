@@ -42,6 +42,7 @@ da:
       default: "%d.%m.%Y"
       long: "%e. %B %Y"
       short: "%e. %b %Y"
+      short_with_year: "%e. %b %Y"
     month_names:
     -
     - januar

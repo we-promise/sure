@@ -42,6 +42,7 @@ eu:
       default: "%Y/%m/%e"
       long: "%Y(e)ko %Bk %e"
       short: "%b %e"
+      short_with_year: "%Y(e)ko %bk %e"
     month_names:
     -
     - Urtarrila

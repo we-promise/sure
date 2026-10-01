@@ -42,6 +42,7 @@ km:
       default: "%d %B %Y"
       long: ថ្ងៃ%A ទី%e ខែ%B ឆ្នាំ%Y
       short: "%d %b"
+      short_with_year: ទី%e ខែ%b ឆ្នាំ%Y
     month_names:
     -
     - មករា
