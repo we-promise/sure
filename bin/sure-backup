@@ -1,0 +1,415 @@
+#!/bin/sh
+# Full-instance backups for a Docker Compose install of Sure.
+#
+# Runs inside the `backup` sidecar (see compose.example.yml). A backup bundle
+# holds everything needed to bring the same version back up elsewhere:
+#
+#   $BACKUP_DIR/<version>/<YYYY-MM-DD_HHMMSS>-<manual|scheduled>/
+#     manifest.json    version, commit, image tags, schema version, ...
+#     db.dump          pg_dump custom format
+#     storage.tar.gz   the app-storage volume (uploaded files)
+#     config/          the host's .env (contains secrets), compose file(s) and
+#                      bin/sure-backup: copy these to a new host to restore there
+#     SHA256SUMS
+#
+# Usage (from the compose directory):
+#   docker compose run --rm backup create [--version X] [--commit SHA]
+#   docker compose run --rm backup list
+#   docker compose run --rm backup restore <version/name | path | latest> [--yes] [--force]
+#   docker compose run --rm backup prune
+#
+# With no arguments the container installs a cron entry for BACKUP_SCHEDULE
+# and runs `scheduled` (create + prune + optional rclone upload) on it.
+set -e
+
+# shellcheck disable=SC3040
+if (set -o pipefail 2>/dev/null); then
+  set -o pipefail
+fi
+
+BACKUP_DIR=${BACKUP_DIR_IN_CONTAINER:-/backups}
+STORAGE_DIR=${SURE_STORAGE_DIR:-/rails/storage}
+CONFIG_DIR=${SURE_CONFIG_DIR:-/config}
+STAMP_FILE="${STORAGE_DIR}/.sure-runtime"
+IMAGE_REPO=${SURE_IMAGE_REPO:-ghcr.io/we-promise/sure}
+
+BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+BACKUP_KEEP_DAYS=${BACKUP_KEEP_DAYS:-7}
+BACKUP_DESTINATION=${BACKUP_DESTINATION:-}
+INSTANCE_ID=${INSTANCE_ID:-default}
+POSTGRES_PORT=${POSTGRES_PORT:-5432}
+
+log() { echo "[sure-backup] $*"; }
+warn() { echo "[sure-backup] WARNING: $*" >&2; }
+die() { echo "[sure-backup] ERROR: $*" >&2; exit 1; }
+
+usage() {
+  awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
+}
+
+# --- setup -------------------------------------------------------------------
+
+ensure_deps() {
+  missing=""
+  command -v pg_dump >/dev/null 2>&1 || missing="$missing postgresql16-client~=16"
+  command -v jq >/dev/null 2>&1 || missing="$missing jq~=1"
+  # BusyBox tar lacks --numeric-owner/--exclude semantics we rely on.
+  tar --version 2>/dev/null | grep -q "GNU tar" || missing="$missing tar~=1"
+  if [ -n "$BACKUP_DESTINATION" ] && ! command -v rclone >/dev/null 2>&1; then
+    missing="$missing rclone~=1.66"
+  fi
+  [ -z "$missing" ] && return 0
+
+  command -v apk >/dev/null 2>&1 || die "missing tools (${missing# }) and no apk to install them"
+  log "Installing:${missing}"
+  # shellcheck disable=SC2086
+  if ! apk_out=$(apk add --no-cache --quiet $missing 2>&1); then
+    echo "$apk_out" >&2
+    die "could not install required packages"
+  fi
+}
+
+check_db_env() {
+  if [ -z "$POSTGRES_DB" ] || [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$POSTGRES_HOST" ]; then
+    die "database connection variables are not fully set"
+  fi
+
+  case "${POSTGRES_HOST}${POSTGRES_PORT}${POSTGRES_DB}${POSTGRES_USER}${POSTGRES_PASSWORD}" in
+    *"
+"*)
+      die "database connection parameters must not contain newlines"
+      ;;
+  esac
+}
+
+check_keep_days() {
+  if ! [ "$BACKUP_KEEP_DAYS" -gt 0 ] 2>/dev/null; then
+    die "BACKUP_KEEP_DAYS must be a positive integer (got: ${BACKUP_KEEP_DAYS})"
+  fi
+}
+
+# Write a .pgpass with escaped fields so the password never hits argv.
+setup_pgpass() {
+  WORK_DIR=$(umask 077 && mktemp -d)
+  trap 'rm -rf "${WORK_DIR}"' EXIT INT TERM
+
+  pg_esc() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/:/\\:/g'; }
+
+  # "*" for the database so dropdb/createdb can use the maintenance database.
+  (umask 077 && printf '%s:%s:*:%s:%s\n' \
+    "$(pg_esc "$POSTGRES_HOST")" "$(pg_esc "$POSTGRES_PORT")" \
+    "$(pg_esc "$POSTGRES_USER")" "$(pg_esc "$POSTGRES_PASSWORD")" > "${WORK_DIR}/.pgpass")
+  export PGPASSFILE="${WORK_DIR}/.pgpass"
+  export PGHOST="$POSTGRES_HOST" PGPORT="$POSTGRES_PORT" PGUSER="$POSTGRES_USER"
+}
+
+psql_value() {
+  psql -X -q -t -A -v ON_ERROR_STOP=1 -d "${2:-$POSTGRES_DB}" -c "$1"
+}
+
+stamp_value() {
+  sed -n "s/^$1=//p" "$STAMP_FILE" 2>/dev/null | head -n 1
+}
+
+# --- create ------------------------------------------------------------------
+
+cmd_create() {
+  trigger=manual
+  version=""
+  commit=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --version) version=$2; shift 2 ;;
+      --commit) commit=$2; shift 2 ;;
+      --scheduled) trigger=scheduled; shift ;;
+      *) die "unknown option for create: $1" ;;
+    esac
+  done
+
+  check_db_env
+  ensure_deps
+  setup_pgpass
+
+  db_schema=$(psql_value "SELECT max(version) FROM schema_migrations" 2>/dev/null) \
+    || die "cannot read schema_migrations from ${POSTGRES_DB}; is the database initialized?"
+
+  # The web container stamps the version that migrated the database. Trust it
+  # only if the database is still at that schema, otherwise the stamp is stale
+  # (e.g. the image was swapped but web has not booted the new one yet).
+  if [ -f "$STAMP_FILE" ]; then
+    stamp_version=$(stamp_value SURE_VERSION)
+    stamp_schema=$(stamp_value SURE_SCHEMA_VERSION)
+    if [ -n "$version" ] && [ "$version" != "$stamp_version" ]; then
+      die "--version ${version} disagrees with the running app (${stamp_version}); drop --version"
+    fi
+    if [ "$stamp_schema" != "$db_schema" ]; then
+      die "database schema ${db_schema} does not match the app's stamped schema ${stamp_schema} (version ${stamp_version}). Start the web service so it re-stamps, then retry."
+    fi
+    version=$stamp_version
+    commit=${commit:-$(stamp_value SURE_COMMIT)}
+  elif [ -z "$version" ]; then
+    die "no version stamp at ${STAMP_FILE} (app image predates stamping). Pass --version, e.g. --version 0.7.4"
+  else
+    warn "no version stamp; trusting --version ${version}"
+  fi
+
+  case "$version" in
+    "" | *[!A-Za-z0-9._+-]*) die "invalid version: ${version}" ;;
+  esac
+
+  name="$(date -u +%Y-%m-%d_%H%M%S)-${trigger}"
+  final_dir="${BACKUP_DIR}/${version}/${name}"
+  [ -e "$final_dir" ] && die "${final_dir} already exists"
+
+  tmp_dir="${BACKUP_DIR}/.tmp-${name}-$$"
+  mkdir -p "$BACKUP_DIR"
+  (umask 077 && mkdir -p "${tmp_dir}/config")
+  trap 'rm -rf "${WORK_DIR}" "${tmp_dir}"' EXIT INT TERM
+
+  log "Backing up Sure ${version} to ${version}/${name}"
+
+  log "Dumping database ${POSTGRES_DB}..."
+  (umask 077 && pg_dump -Fc -d "$POSTGRES_DB" -f "${tmp_dir}/db.dump")
+
+  if [ -d "$STORAGE_DIR" ]; then
+    log "Archiving file storage..."
+    (umask 077 && tar -C "$STORAGE_DIR" --numeric-owner --exclude=./.sure-runtime -czf "${tmp_dir}/storage.tar.gz" .)
+  else
+    warn "${STORAGE_DIR} is not mounted; uploaded files are NOT included"
+  fi
+
+  if [ -f "${CONFIG_DIR}/.env" ]; then
+    cp "${CONFIG_DIR}/.env" "${tmp_dir}/config/.env"
+  else
+    warn "no .env in ${CONFIG_DIR}; it is NOT included"
+  fi
+  for f in compose.yml compose.yaml docker-compose.yml docker-compose.yaml; do
+    [ -f "${CONFIG_DIR}/${f}" ] || continue
+    cp "${CONFIG_DIR}/${f}" "${tmp_dir}/config/${f}"
+    compose_found=true
+  done
+  [ "${compose_found:-}" = true ] || warn "no compose file in ${CONFIG_DIR}; it is NOT included"
+  for f in compose.override.yml compose.override.yaml docker-compose.override.yml docker-compose.override.yaml; do
+    [ -f "${CONFIG_DIR}/${f}" ] && cp "${CONFIG_DIR}/${f}" "${tmp_dir}/config/${f}"
+  done
+  find "${tmp_dir}/config" -type f -exec chmod 0600 {} +
+  # This script, so a new host can restore from the bundle alone.
+  mkdir -p "${tmp_dir}/config/bin"
+  cp "$0" "${tmp_dir}/config/bin/sure-backup"
+  chmod 0755 "${tmp_dir}/config/bin/sure-backup"
+
+  pg_server=$(psql_value "SHOW server_version")
+  jq -n \
+    --arg version "$version" \
+    --arg commit "$commit" \
+    --arg image_repo "$IMAGE_REPO" \
+    --arg schema "$db_schema" \
+    --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg trigger "$trigger" \
+    --arg database "$POSTGRES_DB" \
+    --arg pg_server "$pg_server" \
+    --arg pg_dump "$(pg_dump --version)" \
+    --arg instance "$INSTANCE_ID" \
+    '{
+      format: 1,
+      sure_version: $version,
+      sure_commit: (if $commit == "" then null else $commit end),
+      image: "\($image_repo):\($version)",
+      image_by_commit: (if $commit == "" then null else "\($image_repo):sha-\($commit)" end),
+      schema_version: $schema,
+      created_at: $created_at,
+      trigger: $trigger,
+      instance_id: $instance,
+      database: $database,
+      postgres_server_version: $pg_server,
+      pg_dump_version: $pg_dump
+    }' > "${tmp_dir}/manifest.json"
+
+  (cd "$tmp_dir" && find . -type f | sort | xargs sha256sum > "${WORK_DIR}/SHA256SUMS")
+  mv "${WORK_DIR}/SHA256SUMS" "${tmp_dir}/SHA256SUMS"
+
+  mkdir -p "${BACKUP_DIR}/${version}"
+  mv "$tmp_dir" "$final_dir"
+  LAST_BUNDLE="$final_dir"
+  log "Done: ${final_dir} ($(du -sh "$final_dir" | cut -f1))"
+}
+
+# --- list --------------------------------------------------------------------
+
+bundles() {
+  # Newest first; the directory name starts with a sortable UTC timestamp.
+  find "$BACKUP_DIR" -mindepth 3 -maxdepth 3 -name manifest.json ! -path '*/.tmp-*' 2>/dev/null \
+    | while read -r m; do
+        d=$(dirname "$m")
+        printf '%s\t%s\n' "$(basename "$d")" "$d"
+      done | sort -r | cut -f2
+}
+
+cmd_list() {
+  ensure_deps
+  found=$(bundles)
+  if [ -z "$found" ]; then
+    log "No backups in ${BACKUP_DIR}"
+    return 0
+  fi
+  printf '%-40s %-10s %-8s %s\n' "BACKUP" "TRIGGER" "SIZE" "IMAGE"
+  echo "$found" | while read -r d; do
+    printf '%-40s %-10s %-8s %s\n' \
+      "${d#"${BACKUP_DIR}"/}" \
+      "$(jq -r .trigger "$d/manifest.json")" \
+      "$(du -sh "$d" | cut -f1)" \
+      "$(jq -r .image "$d/manifest.json")"
+  done
+}
+
+# --- restore -----------------------------------------------------------------
+
+resolve_bundle() {
+  case "$1" in
+    "") die "restore needs a backup id (see 'list'), a path, or 'latest'" ;;
+    latest) dir=$(bundles | head -n 1) ;;
+    /*) dir=$1 ;;
+    *) dir="${BACKUP_DIR}/$1" ;;
+  esac
+  [ -n "$dir" ] && [ -f "${dir}/manifest.json" ] || die "no backup found at ${dir:-$1}"
+  echo "$dir"
+}
+
+env_secret_hash() {
+  [ -f "$1" ] || return 0
+  sed -n 's/^SECRET_KEY_BASE=//p' "$1" | tail -n 1 | sha256sum | cut -c1-16
+}
+
+cmd_restore() {
+  target=""
+  assume_yes=false
+  force=false
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --yes) assume_yes=true; shift ;;
+      --force) force=true; shift ;;
+      -*) die "unknown option for restore: $1" ;;
+      *) target=$1; shift ;;
+    esac
+  done
+
+  check_db_env
+  ensure_deps
+  dir=$(resolve_bundle "$target")
+  setup_pgpass
+
+  log "Verifying checksums..."
+  (cd "$dir" && sha256sum -c -s SHA256SUMS) || die "checksum verification failed for ${dir}"
+
+  version=$(jq -r .sure_version "$dir/manifest.json")
+  image=$(jq -r .image "$dir/manifest.json")
+  image_by_commit=$(jq -r '.image_by_commit // empty' "$dir/manifest.json")
+
+  others=$(psql_value "SELECT count(*) FROM pg_stat_activity WHERE datname = '${POSTGRES_DB}' AND pid <> pg_backend_pid()" postgres)
+  if [ "$others" -gt 0 ] && [ "$force" != true ]; then
+    die "${others} other connection(s) to ${POSTGRES_DB}. Stop the app first: docker compose stop web worker (or pass --force)"
+  fi
+
+  if [ "$assume_yes" != true ]; then
+    if [ -t 0 ]; then
+      printf 'This REPLACES database %s and all uploaded files with %s. Type "restore" to continue: ' "$POSTGRES_DB" "${dir#"${BACKUP_DIR}"/}"
+      read -r answer
+      [ "$answer" = "restore" ] || die "aborted"
+    else
+      die "refusing to restore without a TTY; pass --yes"
+    fi
+  fi
+
+  log "Recreating database ${POSTGRES_DB}..."
+  dropdb --maintenance-db=postgres --if-exists --force "$POSTGRES_DB"
+  createdb --maintenance-db=postgres -O "$POSTGRES_USER" "$POSTGRES_DB"
+
+  log "Restoring database..."
+  pg_restore --no-owner --role="$POSTGRES_USER" --exit-on-error -d "$POSTGRES_DB" "${dir}/db.dump"
+
+  if [ -f "${dir}/storage.tar.gz" ]; then
+    [ -d "$STORAGE_DIR" ] || die "${STORAGE_DIR} is not mounted; cannot restore files"
+    log "Restoring file storage..."
+    find "$STORAGE_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+    tar -C "$STORAGE_DIR" --numeric-owner -xzpf "${dir}/storage.tar.gz"
+  else
+    warn "backup has no storage.tar.gz; file storage left untouched"
+  fi
+
+  if [ -f "${dir}/config/.env" ] && [ -f "${CONFIG_DIR}/.env" ] \
+    && [ "$(env_secret_hash "${dir}/config/.env")" != "$(env_secret_hash "${CONFIG_DIR}/.env")" ]; then
+    warn "SECRET_KEY_BASE in this backup differs from the current .env."
+    warn "Encrypted data will not decrypt until you use the backup's value (see ${dir#"${BACKUP_DIR}"/}/config/.env)."
+  fi
+
+  log "Restored Sure ${version}. Next, on the host:"
+  log "  1. In .env set SURE_IMAGE_TAG=${version}   (image: ${image}${image_by_commit:+, or ${image_by_commit} for non-release builds})"
+  log "  2. docker compose up -d"
+}
+
+# --- prune / offsite ----------------------------------------------------------
+
+cmd_prune() {
+  check_keep_days
+  minutes=$((BACKUP_KEEP_DAYS * 1440))
+  log "Pruning scheduled backups older than ${BACKUP_KEEP_DAYS} days (manual backups are kept)..."
+  find "$BACKUP_DIR" -mindepth 2 -maxdepth 2 -type d -name '*-scheduled' -mmin "+${minutes}" ! -path '*/.tmp-*' \
+    | while read -r d; do
+        log "  removing ${d#"${BACKUP_DIR}"/}"
+        rm -rf "$d"
+      done
+  # Version directories left empty by pruning.
+  find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.tmp-*' -empty -exec rmdir {} + 2>/dev/null || true
+  # Interrupted runs.
+  find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -name '.tmp-*' -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
+
+  if [ -n "$BACKUP_DESTINATION" ]; then
+    remote="${BACKUP_DESTINATION%/}/${INSTANCE_ID}"
+    log "Pruning remote scheduled backups in ${remote}..."
+    rclone delete "$remote" --min-age "${BACKUP_KEEP_DAYS}d" --include "/*/*-scheduled/**"
+    rclone rmdirs "$remote" --leave-root
+  fi
+}
+
+upload() {
+  [ -n "$BACKUP_DESTINATION" ] || return 0
+  rel=${1#"${BACKUP_DIR}"/}
+  remote="${BACKUP_DESTINATION%/}/${INSTANCE_ID}/${rel}"
+  log "Uploading ${rel} to ${remote} via rclone..."
+  rclone copy "$1" "$remote"
+}
+
+cmd_scheduled() {
+  check_keep_days
+  cmd_create --scheduled
+  upload "$LAST_BUNDLE"
+  cmd_prune
+}
+
+cmd_daemon() {
+  case "$BACKUP_SCHEDULE" in
+    *"
+"*) die "BACKUP_SCHEDULE must be a single line" ;;
+  esac
+  check_db_env
+  check_keep_days
+  ensure_deps
+  # BusyBox crond passes its environment to jobs; send output to the container log.
+  echo "${BACKUP_SCHEDULE} /usr/local/bin/sure-backup scheduled > /proc/1/fd/1 2>&1" > /etc/crontabs/root
+  log "Scheduled backups: '${BACKUP_SCHEDULE}' into ${BACKUP_DIR}${BACKUP_DESTINATION:+ and ${BACKUP_DESTINATION}}"
+  exec crond -f -d 8
+}
+
+command=${1:-daemon}
+[ $# -gt 0 ] && shift
+
+case "$command" in
+  daemon) cmd_daemon ;;
+  create) cmd_create "$@" ;;
+  scheduled) cmd_scheduled ;;
+  list) cmd_list ;;
+  restore) cmd_restore "$@" ;;
+  prune) ensure_deps; cmd_prune ;;
+  -h | --help | help) usage ;;
+  *) usage; exit 1 ;;
+esac
