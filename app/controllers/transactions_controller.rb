@@ -94,7 +94,8 @@ class TransactionsController < ApplicationController
     @projected_recurring = if projected_recurring_ids.empty?
       []
     else
-      Current.family.recurring_transactions.where(id: projected_recurring_ids).includes(:merchant).to_a
+      Current.family.recurring_transactions.accessible_by(Current.user)
+                    .where(id: projected_recurring_ids).includes(:merchant).to_a
     end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
