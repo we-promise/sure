@@ -142,6 +142,30 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 3000 + 5000, liability_groups.find { |ag| ag.name == OtherLiability.display_name }.total
   end
 
+  test "sorts accounts alphabetically ignoring case" do
+    user = users(:empty)
+    user.update!(default_account_order: "name_asc")
+    create_account(name: "cherry", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "Banana", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "apple", balance: 0, accountable: Depository.new, owner: user)
+
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal %w[apple Banana cherry], names
+  end
+
+  test "sorts accounts by balance converted to the family currency" do
+    user = users(:empty)
+    user.update!(default_account_order: "balance_desc")
+    ExchangeRate.stubs(:rates_for).returns({ "EUR" => 2 })
+    create_account(name: "Dollars", balance: 150, currency: "USD", accountable: Depository.new, owner: user)
+    create_account(name: "Euros", balance: 100, currency: "EUR", accountable: Depository.new, owner: user)
+
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal %w[Euros Dollars], names
+  end
+
   private
     def create_account(attributes = {})
       account = @family.accounts.create! name: "Test", currency: "USD", **attributes

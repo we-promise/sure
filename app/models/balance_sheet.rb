@@ -69,15 +69,19 @@ class BalanceSheet
 
       case order_key
       when "name_asc"
-        accounts.sort_by(&:name)
+        sort_by_name(accounts)
       when "name_desc"
-        accounts.sort_by(&:name).reverse
+        sort_by_name(accounts).reverse
       when "balance_asc"
-        accounts.sort_by(&:balance)
+        accounts.sort_by(&:converted_balance)
       when "balance_desc"
-        accounts.sort_by(&:balance).reverse
+        accounts.sort_by(&:converted_balance).reverse
       else
         accounts
       end
+    end
+
+    def sort_by_name(accounts)
+      accounts.sort_by { |account| account.name.to_s.downcase }
     end
 end
