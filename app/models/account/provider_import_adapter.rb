@@ -216,11 +216,16 @@ class Account::ProviderImportAdapter
         date
       end
 
-      entry.assign_attributes(
-        amount: amount,
-        currency: currency,
-        date: effective_date
-      )
+      # A date or amount the user changed without marking the entry user_modified
+      # (an API PATCH, for example) is still locked by lock_saved_attributes!.
+      # Respect that lock the way enrich_attribute does for name and category.
+      # Amount and currency only make sense together, so a lock on either keeps both.
+      financial_attributes = { amount: amount, currency: currency, date: effective_date }
+      if entry.persisted?
+        financial_attributes.delete(:date) if entry.locked?(:date)
+        financial_attributes.except!(:amount, :currency) if entry.locked?(:amount) || entry.locked?(:currency)
+      end
+      entry.assign_attributes(financial_attributes)
 
       # Use enrichment pattern to respect user overrides
       entry.enrich_attribute(:name, name, source: source)
