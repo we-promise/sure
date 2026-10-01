@@ -24,6 +24,10 @@
 # in BACKUP_SCHEDULE ("M H * * *", UTC). Off-site copies are made by the
 # separate `backup-offsite` service.
 #
+# Or on the host, from the folder with compose.yml, without a backup service
+# (works for any Sure version, including 0.7.5 and older):
+#   sh sure-backup create | list | restore <backup> | prune
+#
 # On the host, a bundle restores itself into a new project folder:
 #   sh <bundle>/restore.sh [--target DIR] [--port N] [--with-worker | --without-worker] [--yes]
 # which runs `sure-backup recover <bundle> ...`. It needs Docker with Compose.
@@ -159,6 +163,17 @@ cmd_create() {
     fi
     version=$stamp_version
     commit=${commit:-$(stamp_value SURE_COMMIT)}
+  elif [ -z "$version" ] && [ -f /rails/.sure-version ] && [ -f /rails/db/schema.rb ]; then
+    # Running in a Sure image that predates stamping: use the image's own
+    # version, but only if the database is at that version's schema.
+    image_version=$(tr -d '[:space:]' < /rails/.sure-version)
+    image_schema=$(sed -n 's/.*define(version: \([0-9_]*\)).*/\1/p' /rails/db/schema.rb | tr -d _)
+    if [ "$image_schema" != "$db_schema" ]; then
+      die "database schema ${db_schema} does not match this image (Sure ${image_version}, schema ${image_schema}). Run the backup with the image the app runs on, or pass --version."
+    fi
+    version=$image_version
+    commit=${commit:-${BUILD_COMMIT_SHA:-}}
+    log "No version stamp; using this image's version ${version} (database schema matches)"
   elif [ -z "$version" ]; then
     die "no version stamp at ${STAMP_FILE} (app image predates stamping). Pass --version, e.g. --version 0.7.4"
   else
@@ -714,8 +729,102 @@ cmd_daemon() {
   done
 }
 
+# --- host mode -----------------------------------------------------------------
+#
+# Run on the host from the folder with compose.yml, `create`, `restore`,
+# `prune` and `scheduled` start this script once in a container from the
+# exact image of the install's `web` container, with its uploaded-files
+# volume, network and database settings. No backup service needed, so it
+# also works for Sure 0.7.5 and older.
+
+on_host() {
+  [ ! -f /.dockerenv ] && [ ! -f /run/.containerenv ] && command -v docker >/dev/null 2>&1
+}
+
+host_run() {
+  docker compose version >/dev/null 2>&1 || die "Docker with the Compose plugin is required"
+  cid=$(docker compose ps -aq web 2>/dev/null | head -n 1)
+  [ -n "$cid" ] || die "no Sure 'web' container for the Compose project in $(pwd). Run this from the folder with your compose.yml; the app must have been started at least once."
+
+  # An idle app holds no database connections, so the in-container check can
+  # miss it; here Docker can tell whether the app is running.
+  if [ "$1" = restore ]; then
+    case " $* " in *" --force "*) ;; *)
+      if [ -n "$(docker compose ps -q --status running web worker 2>/dev/null)" ]; then
+        die "the app is running. Stop it first: docker compose stop web worker (or pass --force)"
+      fi
+    esac
+  fi
+
+  inspect() { docker inspect -f "$1" "$cid"; }
+  image=$(inspect '{{.Image}}')
+  workdir=$(inspect '{{index .Config.Labels "com.docker.compose.project.working_dir"}}')
+  workdir=${workdir:-$(pwd)}
+  # A Go template for docker inspect, not shell expansion.
+  # shellcheck disable=SC2016
+  network=$(inspect '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{"\n"}}{{end}}' | sed -n '1p')
+  storage=$(inspect '{{range .Mounts}}{{if eq .Destination "/rails/storage"}}{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{end}}{{end}}')
+  container_env=$(inspect '{{range .Config.Env}}{{println .}}{{end}}')
+  env_of() { printf '%s\n' "$container_env" | sed -n "s/^$1=//p" | tail -n 1; }
+
+  backups=$(env_get "${workdir}/.env" BACKUP_DIR)
+  backups=${backups:-./backups}
+  case "$backups" in /*) ;; *) backups="${workdir}/${backups#./}" ;; esac
+  mkdir -p "$backups"
+  script_path=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
+
+  # Database credentials go through a private env file, not the command line.
+  host_tmp=$(umask 077 && mktemp -d)
+  trap 'rm -rf "${host_tmp}"' EXIT INT TERM
+  {
+    echo "POSTGRES_HOST=$(env_of DB_HOST)"
+    echo "POSTGRES_PORT=$(env_of DB_PORT)"
+    echo "POSTGRES_USER=$(env_of POSTGRES_USER)"
+    echo "POSTGRES_PASSWORD=$(env_of POSTGRES_PASSWORD)"
+    echo "POSTGRES_DB=$(env_of POSTGRES_DB)"
+    echo "BUILD_COMMIT_SHA=$(env_of BUILD_COMMIT_SHA)"
+    for v in BACKUP_KEEP_DAYS INSTANCE_ID; do
+      val=$(env_get "${workdir}/.env" "$v")
+      [ -z "$val" ] || echo "${v}=${val}"
+    done
+  } > "${host_tmp}/env"
+
+  # Build `docker run [options] IMAGE SUBCOMMAND ARGS` by prepending to "$@".
+  set -- "$image" "$@"
+  set -- --entrypoint /usr/local/bin/sure-backup "$@"
+  set -- -v "${script_path}:/usr/local/bin/sure-backup:ro" "$@"
+  set -- -v "${workdir}:/config:ro" -v "${backups}:/backups" "$@"
+  if [ -n "$storage" ]; then
+    set -- -v "${storage}:/rails/storage" "$@"
+  else
+    warn "the web container has no /rails/storage mount; uploaded files are not included"
+  fi
+  [ -n "$network" ] && set -- --network "$network" "$@"
+  [ -t 0 ] && set -- -t "$@"
+  set -- --rm -i --user 0 --env-file "${host_tmp}/env" "$@"
+
+  host_status=0
+  docker run "$@" || host_status=$?
+  rm -rf "$host_tmp"
+  return "$host_status"
+}
+
 command=${1:-daemon}
 [ $# -gt 0 ] && shift
+
+# On the host, run the database work in a container (see host_run).
+if on_host; then
+  case "$command" in
+    create | restore | prune | scheduled)
+      host_run "$command" "$@"
+      exit $?
+      ;;
+    list)
+      dir=$(env_get .env BACKUP_DIR)
+      BACKUP_DIR=${dir:-./backups}
+      ;;
+  esac
+fi
 
 case "$command" in
   daemon) cmd_daemon ;;

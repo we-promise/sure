@@ -441,26 +441,26 @@ For scripts, pass the answers as options: `sh restore.sh --target ~/sure-restore
 > [!WARNING]
 > Don't run a restored copy with its `worker` while the original instance is still running. Both would sync the same bank connections (some providers rotate access tokens on every sync, so the copy can disconnect the original) and run scheduled jobs such as recurring transactions and emails twice. Signing in to both on `localhost` also signs you out of the other, because browsers share cookies across ports.
 
-### Sure 0.7.5 and older
+### Without the backup service (any version, including 0.7.5 and older)
 
-Images of Sure 0.7.5 and older don't include the backup script yet. Until you upgrade, download it once and mount it into the `backup` service:
+You can also run backups with the script on its own, without the `backup` service and without editing `compose.yml`. That's the way to back up and restore Sure 0.7.5 and older, whose images don't include the script, and it suits anyone who prefers to keep the script outside the image. Download it once next to `compose.yml`:
 
 ```bash
-mkdir -p bin
-curl --fail --location --silent --show-error --output bin/sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
-chmod +x bin/sure-backup
+curl --fail --location --silent --show-error --output sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
 ```
 
-```yaml
-  backup:
-    # ...as in compose.example.yml, plus:
-    entrypoint: ["/usr/local/bin/sure-backup"]
-    volumes:
-      - ./bin/sure-backup:/usr/local/bin/sure-backup:ro
-      # ...and the volumes from compose.example.yml
+Then, from that folder:
+
+```bash
+sh sure-backup create                   # Take a backup now
+sh sure-backup list                     # List backups
+sh sure-backup restore latest           # Roll back in place (stop web and worker first)
+sh sure-backup recover backups/<version>/<backup>   # Restore into a new folder
 ```
 
-These versions don't record their version either, so pass it when taking a backup: `docker compose run --rm backup create --version 0.7.5`. Backups taken before `restore.sh` existed can be restored with the downloaded script: `sh bin/sure-backup recover <backup folder>`.
+The script finds your `web` container and runs itself once in a container from that exact image, with your uploaded-files volume, network and database settings. It reads the version from the image and checks it against the database, so no `--version` is needed. Backups go to `./backups`, or `BACKUP_DIR` from `.env`. `restore` refuses while `web` or `worker` is running.
+
+To take a backup every day without the service, add a cron job on the host, for example `0 2 * * * cd /opt/sure && sh sure-backup scheduled`. That takes a backup and removes scheduled backups older than `BACKUP_KEEP_DAYS`.
 
 ### Upgrading from the database-only backup service (v0.7.5)
 
