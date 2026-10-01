@@ -621,6 +621,40 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.empty.title"), response.body
   end
 
+  # With no plan there is no paycheck and no period, so the chips would open a
+  # chat that can only say so. The review button proves AI is available, so
+  # the missing chips can't pass for want of AI.
+  test "the paycheck view offers its AI chips only with a plan" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    chips = %w[due_before_paycheck safe_to_spend].map { |key| ERB::Util.html_escape(I18n.t("bills.ai_prompts.#{key}")) }
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_match I18n.t("bills.paycheck.empty.title"), response.body
+    assert_match I18n.t("bills.index.review_with_ai"), response.body
+    chips.each { |chip| refute_includes response.body, chip }
+
+    # Paused income is listed but defines no paydays: still no plan, no chips.
+    income = declare_income(name: "Paycheck", amount: -1840, payday: Date.current + 3)
+    income.update!(status: "paused")
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_match "Paycheck", response.body
+    assert_match I18n.t("bills.paycheck.empty.title"), response.body
+    chips.each { |chip| refute_includes response.body, chip }
+
+    income.update!(status: "active")
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_no_match I18n.t("bills.paycheck.empty.title"), response.body
+    chips.each { |chip| assert_includes response.body, chip }
+  end
+
   # Income was addable only from inside the Income plan tab, so a family that
   # had declared none had no way to discover the planning half of Bills
   # existed. Both halves are addable from every view, but only the half the
