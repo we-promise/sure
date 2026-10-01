@@ -24,6 +24,17 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     AccountProvider.create!(account: @account, provider: @enable_banking_account)
   end
 
+  # Two id-less rows that share every hashed field and differ only in a note.
+  def distinguishable_collision_rows
+    base = {
+      "booking_date" => Date.current.to_s,
+      "transaction_amount" => { "amount" => "100.00", "currency" => "EUR" },
+      "credit_debit_indicator" => "CRDT",
+      "status" => "BOOK"
+    }
+    [ base.merge("note" => "first transfer"), base.merge("note" => "second transfer") ]
+  end
+
   # Minimal raw transaction payload hash matching the shape EnableBankingEntry::Processor expects
   def raw_pending_transaction(transaction_id:)
     {
@@ -172,6 +183,158 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
 
     expected_id = EnableBankingEntry::Processor.compute_external_id(tx)
     assert @account.entries.exists?(external_id: expected_id, source: "enable_banking")
+  end
+
+  # An ASPSP that sends only date, amount, currency and direction makes two
+  # same-day transfers of the same amount one content hash; the second used to
+  # update the first and the account silently lost a transaction.
+  test "imports two identical id-less rows from one batch as two transactions, once" do
+    tx = {
+      "booking_date" => Date.current.to_s,
+      "transaction_amount" => { "amount" => "100.00", "currency" => "EUR" },
+      "credit_debit_indicator" => "CRDT",
+      "status" => "BOOK"
+    }
+    @enable_banking_account.update!(raw_transactions_payload: [ tx, tx.dup ])
+
+    assert_difference "@account.entries.count", 2 do
+      result = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+      assert_equal 2, result[:imported]
+      assert_equal 0, result[:failed]
+    end
+
+    # The same response again adds nothing: both rows keep the ids they were given.
+    assert_no_difference "@account.entries.count" do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+
+    ids = @account.entries.where(source: "enable_banking").pluck(:external_id)
+    assert_includes ids, EnableBankingEntry::Processor.compute_external_id(tx), "the first keeps the bare hash"
+    assert_includes ids, EnableBankingEntry::Processor.compute_external_id(tx, suffix: "1")
+  end
+
+  # Two rows can collide on every hashed field and still differ in one the hash
+  # does not read. Each takes an id from its full content, so the next response
+  # can order them as it likes.
+  test "collision rows that differ in an unhashed field keep their identity when the response is reordered" do
+    first, second = distinguishable_collision_rows
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+    assert_difference "@account.entries.count", 2 do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+    before = @account.entries.where(source: "enable_banking").to_h { |e| [ e.external_id, e.notes ] }
+    assert_equal 2, before.size
+    assert_equal [ "first transfer", "second transfer" ], before.values.sort
+
+    @enable_banking_account.update!(raw_transactions_payload: [ second, first ])
+    assert_no_difference "@account.entries.count" do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+    after = @account.entries.where(source: "enable_banking").to_h { |e| [ e.external_id, e.notes ] }
+    assert_equal before, after, "each row must keep the id it had, and so its note"
+  end
+
+  # A row once seen beside a twin may arrive alone in a later response. It is a
+  # singleton then, but its full-content id is already in the ledger, so it
+  # keeps that rather than taking the bare hash and becoming its twin.
+  test "a collision row that later arrives alone keeps its identity" do
+    first, second = distinguishable_collision_rows
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    second_id = @account.entries.where(source: "enable_banking").find_by(notes: "second transfer").external_id
+
+    @enable_banking_account.update!(raw_transactions_payload: [ second ])
+    assert_no_difference "@account.entries.count" do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+
+    assert_equal second_id, @account.entries.where(source: "enable_banking").find_by(notes: "second transfer").external_id
+    assert_equal "first transfer", @account.entries.where(source: "enable_banking").where.not(external_id: second_id).first.notes, "the first is untouched"
+  end
+
+  # Resolving identities before assigning them: the ledger says which member a
+  # bare entry was made from, so a row first seen alone and later beside a
+  # distinguishable twin keeps its id, and only the twin is new.
+  test "a row first imported alone keeps its id when a distinguishable twin arrives" do
+    first, second = distinguishable_collision_rows
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    first_id = @account.entries.where(source: "enable_banking").sole.external_id
+    assert_equal EnableBankingEntry::Processor.compute_external_id(first), first_id, "alone, it carries the bare hash"
+
+    @enable_banking_account.update!(raw_transactions_payload: [ second, first ])
+    assert_difference "@account.entries.count", 1 do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+
+    by_note = @account.entries.where(source: "enable_banking").to_h { |e| [ e.notes, e.external_id ] }
+    assert_equal first_id, by_note["first transfer"], "the first keeps the id it had"
+    assert_not_equal first_id, by_note["second transfer"]
+  end
+
+  # The reverse transition: a group that was distinguishable is identical-only
+  # next time. Its members still carry the ids they were given.
+  test "members keep their ids when the group's shape changes between batches" do
+    first, second = distinguishable_collision_rows
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first, first.dup, second ])
+    assert_difference "@account.entries.count", 3 do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+    before = @account.entries.where(source: "enable_banking").pluck(:external_id).sort
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first, first.dup ])
+    assert_no_difference "@account.entries.count" do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+    assert_equal before, @account.entries.where(source: "enable_banking").pluck(:external_id).sort
+  end
+
+  # A collision row the user merged away is excluded by its id. Arriving alone
+  # later it must still be recognised as that id, or it comes back.
+  test "a merged collision row that later arrives alone is still excluded" do
+    first, second = distinguishable_collision_rows
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    second_entry = @account.entries.where(source: "enable_banking").find_by(notes: "second transfer")
+    second_id = second_entry.external_id
+
+    # As merge_with_duplicate! leaves things: the merged entry is gone, and the
+    # survivor records where it came from.
+    survivor = @account.entries.where(source: "enable_banking").find_by(notes: "first transfer")
+    survivor.transaction.update!(extra: { "manual_merge" => { "merged_from_external_id" => second_id, "merged_at" => Time.current.iso8601, "source" => "enable_banking" } })
+    second_entry.destroy!
+
+    @enable_banking_account.update!(raw_transactions_payload: [ second ])
+    assert_no_difference "@account.entries.count" do
+      result = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+      assert_equal 1, result[:skipped]
+    end
+  end
+
+  # A bare id already in the ledger with another row's fingerprint belongs to
+  # that row. A newcomer arriving alone must not take it and overwrite it.
+  test "a distinguishable row arriving alone does not overwrite the row that holds the bare id" do
+    first, second = distinguishable_collision_rows
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    first_entry = @account.entries.where(source: "enable_banking").sole
+
+    @enable_banking_account.update!(raw_transactions_payload: [ second ])
+    assert_difference "@account.entries.count", 1 do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+
+    assert_equal "first transfer", first_entry.reload.notes, "the first keeps its own data"
+    second_entry = @account.entries.where(source: "enable_banking").find_by(notes: "second transfer")
+    assert second_entry
+    assert_not_equal first_entry.external_id, second_entry.external_id
+    assert second_entry.external_id.start_with?("#{first_entry.external_id}_")
   end
 
   test "id-less transaction does not appear in failed count" do
