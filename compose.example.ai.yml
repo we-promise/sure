@@ -373,17 +373,19 @@ services:
 
   backup:
     # Full-instance backups (database, uploaded files, .env and compose.yml),
-    # organized as ${BACKUP_DIR}/<version>/<timestamp>-<trigger>/.
-    # Enable scheduled backups with `docker compose --profile backup up -d`,
-    # or run one-off commands, e.g. `docker compose run --rm backup create`.
+    # organized as <BACKUP_DIR>/<version>/<timestamp>-<trigger>/. Runs the same
+    # image as web/worker, so there is nothing to download.
+    #   Every day:  docker compose --profile backup up -d backup
+    #   Right now:  docker compose run --rm backup create
     # See docs/hosting/docker.md "Backups, upgrades and rollbacks".
     profiles:
       - backup
-    image: alpine:3.20
+    image: ghcr.io/we-promise/sure:${SURE_IMAGE_TAG:-stable}
+    # Root so it can write the host's backup folder; uploaded files keep their owner.
+    user: "0"
+    entrypoint: ["bin/sure-backup"]
     restart: unless-stopped
-    entrypoint: ["/usr/local/bin/sure-backup"]
     volumes:
-      - ./bin/sure-backup:/usr/local/bin/sure-backup:ro
       - ${BACKUP_DIR:-./backups}:/backups
       - app-storage:/rails/storage
       # The compose directory, so backups include .env and compose.yml
@@ -393,9 +395,38 @@ services:
       POSTGRES_HOST: db
       BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
-      BACKUP_DESTINATION: ${BACKUP_DESTINATION:-}
       INSTANCE_ID: ${INSTANCE_ID:-default}
-      # Rclone provider config, only needed with BACKUP_DESTINATION.
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sure_net
+
+  backup-offsite:
+    # Optional: copies the backup folder to any rclone remote (S3, R2, B2, SFTP,
+    # Google Drive, ...) every hour, and prunes old scheduled backups there.
+    #   docker compose --profile backup-offsite up -d backup-offsite
+    profiles:
+      - backup-offsite
+    image: rclone/rclone:1.71
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        : "$${BACKUP_DESTINATION:?set BACKUP_DESTINATION in .env}"
+        while true; do
+          rclone copy /backups "$${BACKUP_DESTINATION%/}/$${INSTANCE_ID}" --exclude ".tmp-*/**" \
+            && rclone delete "$${BACKUP_DESTINATION%/}/$${INSTANCE_ID}" --min-age "$${BACKUP_KEEP_DAYS}d" --include "/*/*-scheduled/**" \
+            && rclone rmdirs "$${BACKUP_DESTINATION%/}/$${INSTANCE_ID}" --leave-root \
+            || echo "backup-offsite: copy failed; retrying in an hour"
+          sleep 3600
+        done
+    volumes:
+      - ${BACKUP_DIR:-./backups}:/backups:ro
+    environment:
+      BACKUP_DESTINATION: ${BACKUP_DESTINATION:-}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+      INSTANCE_ID: ${INSTANCE_ID:-default}
       # By default we map the S3 variables. If you use a different provider (e.g., gdrive),
       # replace these with the equivalent variables you added to your .env file.
       RCLONE_CONFIG_S3_TYPE: ${RCLONE_CONFIG_S3_TYPE:-}
@@ -403,9 +434,6 @@ services:
       RCLONE_CONFIG_S3_ACCESS_KEY_ID: ${RCLONE_CONFIG_S3_ACCESS_KEY_ID:-}
       RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: ${RCLONE_CONFIG_S3_SECRET_ACCESS_KEY:-} # pipelock:ignore
       RCLONE_CONFIG_S3_ENDPOINT: ${RCLONE_CONFIG_S3_ENDPOINT:-}
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - sure_net
 

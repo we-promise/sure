@@ -40,20 +40,14 @@ Make sure you are in the directory you just created and run the following comman
 ```bash
 # Download the sample compose.yml file from the GitHub repository
 curl --fail --location --silent --show-error --output compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
-
-# (Optional) If you plan to use backups (recommended before upgrades):
-mkdir -p bin
-curl --fail --location --silent --show-error --output bin/sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
-chmod +x bin/sure-backup
 ```
 
 This command will do the following:
 
 1. Fetch the sample docker compose file from our public Github repository
 2. Creates a file in your current directory called `compose.yml` with the contents of the example file
-3. (Optionally) Fetches the backup script to `bin/sure-backup` and makes it executable. See [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks).
 
-At this point, you should have `compose.yml` in your directory (and optionally `bin/sure-backup` alongside `compose.yml` when using backups).
+At this point, you should have `compose.yml` in your directory. It includes an optional `backup` service; see [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks).
 
 ### Step 3 (optional): Configure your environment
 
@@ -356,54 +350,70 @@ docker compose up -d
 
 ## Backups, upgrades and rollbacks
 
-The optional `backup` service in `compose.example.yml` runs `bin/sure-backup`. Each backup is a self-contained bundle with everything needed to bring the same version back up, on this machine or a new one:
+The `backup` service in `compose.example.yml` takes full backups of your instance. It runs the same Sure image as `web` and `worker`, so there is nothing to install or download. Run these commands from the directory that holds `compose.yml`.
 
-```text
-backups/
-  0.7.4/
-    2026-10-01_080524-manual/
-      manifest.json      # version, commit, image, schema version, ...
-      db.dump            # PostgreSQL dump (pg_dump custom format)
-      storage.tar.gz     # uploaded files (the app-storage volume)
-      config/            # .env, compose file(s) and bin/sure-backup
-      restore.sh         # restores this bundle into a new folder
-      SHA256SUMS
-```
-
-The version comes from the running app: on every boot the web container records its version in the storage volume, and a backup is refused if the database schema no longer matches it.
-
-> [!WARNING]
-> `config/.env` contains `SECRET_KEY_BASE` and your API keys. Without `SECRET_KEY_BASE`, encrypted data in the database cannot be read. Keep the backup folder private and use an encrypted remote (for example [rclone crypt](https://rclone.org/crypt/)) for off-site copies.
-
-### Commands
-
-Run these from the directory that holds `compose.yml`:
+**Take a backup now** (do this before every upgrade):
 
 ```bash
-docker compose run --rm backup create   # Take a backup now ("manual"; never pruned)
-docker compose run --rm backup list     # List backups, newest first
-docker compose run --rm backup restore 0.7.4/2026-10-01_080524-manual   # or "latest"
-docker compose run --rm backup prune    # Remove scheduled backups older than BACKUP_KEEP_DAYS
+docker compose run --rm backup create
 ```
 
-Backups are written to `./backups`; set `BACKUP_DIR` in `.env` to use another host folder.
-
-### Scheduled and off-site backups
-
-Start the service in the background to take a backup every day (`BACKUP_SCHEDULE`, cron syntax, default `0 2 * * *`):
+**Take a backup every day** at 02:00 UTC, keeping the last 7 days of daily backups:
 
 ```bash
 docker compose --profile backup up -d backup
 ```
 
-Scheduled backups older than `BACKUP_KEEP_DAYS` (default 7) are pruned; manual ones are kept until you delete them. Set `BACKUP_DESTINATION` (an [rclone](https://rclone.org/) remote such as `s3:my-bucket/sure`) and the matching `RCLONE_CONFIG_*` variables to also copy each scheduled backup off-site, under `<BACKUP_DESTINATION>/<INSTANCE_ID>/<version>/`. See `.env.example`.
+**See your backups:**
+
+```bash
+docker compose run --rm backup list
+```
+
+### What a backup contains
+
+Each backup is a folder under `backups/<version>/<date>-<manual|scheduled>/` with everything needed to bring the same version back up, on this machine or a new one:
+
+| File | Contents |
+|---|---|
+| `db.dump` | The whole database: accounts, transactions, budgets, rules, users and settings |
+| `storage.tar.gz` | Uploaded files: transaction attachments, account statements and documents, imports and exports, profile pictures and account logos |
+| `config/.env`, `config/compose.yml` | Your configuration, including `SECRET_KEY_BASE` |
+| `manifest.json` | Sure version and image, database schema version, when it was taken |
+| `restore.sh` | Restores the backup into a new folder (see below) |
+| `SHA256SUMS` | Checksums, verified before every restore |
+
+Uploaded files are backed up from the `app-storage` volume. If you store them in S3, Cloudflare R2, Google Cloud Storage or another bucket (`ACTIVE_STORAGE_SERVICE`), they are not in the backup; use your provider's versioning or replication for those.
+
+The version comes from the running app: every time `web` starts it records its version, and a backup is refused if the database schema no longer matches it.
+
+> [!WARNING]
+> `config/.env` contains `SECRET_KEY_BASE` and your API keys. Without `SECRET_KEY_BASE`, encrypted data in the database cannot be read. Keep the backup folder private, and encrypt off-site copies (for example with [rclone crypt](https://rclone.org/crypt/)).
+
+### Settings
+
+Set these in `.env`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `BACKUP_DIR` | `./backups` | Host folder for backups |
+| `BACKUP_SCHEDULE` | `0 2 * * *` | Daily time for scheduled backups, as `minute hour * * *` in UTC |
+| `BACKUP_KEEP_DAYS` | `7` | Scheduled backups older than this are deleted; backups you take with `create` are kept |
+
+### Off-site copies
+
+The optional `backup-offsite` service copies the backup folder to any [rclone](https://rclone.org/) remote (S3, Cloudflare R2, Backblaze B2, SFTP, Google Drive, ...) every hour, under `<BACKUP_DESTINATION>/<INSTANCE_ID>/`, and removes scheduled backups there after `BACKUP_KEEP_DAYS`. Set `BACKUP_DESTINATION` and the `RCLONE_CONFIG_*` variables in `.env` (see `.env.example`), then:
+
+```bash
+docker compose --profile backup-offsite up -d backup-offsite
+```
 
 ### Roll back an upgrade
 
 ```bash
 docker compose stop web worker
-docker compose run --rm backup restore 0.7.4/2026-10-01_080524-manual
-# Set SURE_IMAGE_TAG=0.7.4 in .env (the restore prints the exact value)
+docker compose run --rm backup restore 0.7.4/2026-10-01_080524-manual   # or "latest"
+# Set SURE_IMAGE_TAG=0.7.4 in .env
 docker compose up -d
 ```
 
@@ -411,45 +421,56 @@ docker compose up -d
 
 ### Restore into a new folder or onto a new machine
 
-Every bundle contains `restore.sh`, so you don't need this repository to restore one. Copy the bundle folder to the machine (Docker with the Compose plugin is the only requirement), then run:
+Every backup contains `restore.sh`, so all you need is the backup folder and Docker:
 
 ```bash
 sh 2026-10-01_080524-manual/restore.sh
 ```
 
-It verifies the bundle and asks for a folder for the restored instance; that folder must be new or empty, and its name becomes the Compose project name. It then:
+It verifies the backup and asks for a folder for the restored instance (new or empty; its name becomes the Compose project name). Then it:
 
 - refuses if Docker already has containers or volumes for that project name, so it can never overwrite another instance;
-- warns if other Sure instances are running on the machine, and lets you start the restored one without its `worker` (see below);
+- warns if other Sure instances are running on the machine, and offers to start the restored one without its `worker` (see below);
 - picks the next free port if the backup's `PORT` is taken;
-- copies the configuration and the bundle in, writes `compose.restore.yml` to pin `web` and `worker` to the backed-up version, and sets `COMPOSE_FILE` in `.env` so plain `docker compose` commands use it;
-- restores the database and files and starts the app.
+- stops with a list of files to copy over if your compose files mount local files that are not part of the backup (custom certificates, for example);
+- copies the configuration and the backup in, pins `web` and `worker` to the backed-up version in `compose.restore.yml`, and sets `COMPOSE_FILE` in `.env` so plain `docker compose` commands use it;
+- restores the database and files, starts the app and prints its address.
 
 For scripts, pass the answers as options: `sh restore.sh --target ~/sure-restored --port 3001 --without-worker --yes`. Add `--no-start` to only prepare the folder.
 
 > [!WARNING]
 > Don't run a restored copy with its `worker` while the original instance is still running. Both would sync the same bank connections (some providers rotate access tokens on every sync, so the copy can disconnect the original) and run scheduled jobs such as recurring transactions and emails twice. Signing in to both on `localhost` also signs you out of the other, because browsers share cookies across ports.
 
-Bundles taken before `restore.sh` existed can be restored the same way with a current copy of the script: `sh bin/sure-backup recover <bundle folder>`.
+### Sure 0.7.5 and older
 
-### Apps started before version stamping
-
-If your app has not been restarted since upgrading to a version that records its version, `create` asks for it explicitly:
+Images of Sure 0.7.5 and older don't include the backup script yet. Until you upgrade, download it once and mount it into the `backup` service:
 
 ```bash
-docker compose run --rm backup create --version 0.7.4
+mkdir -p bin
+curl --fail --location --silent --show-error --output bin/sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
+chmod +x bin/sure-backup
 ```
+
+```yaml
+  backup:
+    # ...as in compose.example.yml, plus:
+    entrypoint: ["/usr/local/bin/sure-backup"]
+    volumes:
+      - ./bin/sure-backup:/usr/local/bin/sure-backup:ro
+      # ...and the volumes from compose.example.yml
+```
+
+These versions don't record their version either, so pass it when taking a backup: `docker compose run --rm backup create --version 0.7.5`. Backups taken before `restore.sh` existed can be restored with the downloaded script: `sh bin/sure-backup recover <backup folder>`.
 
 ### Upgrading from the database-only backup service (v0.7.5)
 
-Sure v0.7.5 shipped a `backup` service that ran `bin/db-backup.sh` and uploaded database dumps with rclone. It keeps working until you change it, but it does not back up uploaded files or config and cannot restore. To switch:
+Sure v0.7.5 shipped a `backup` service that ran `bin/db-backup.sh` and uploaded database dumps with rclone. It keeps working until you change it, but it does not back up uploaded files or configuration and cannot restore. To switch:
 
-1. Download `bin/sure-backup` (see [Step 2](#step-2-configure-your-docker-compose-file-and-environment)).
-2. Replace the `backup` service in your `compose.yml` with the one from the current [`compose.example.yml`](https://github.com/we-promise/sure/blob/main/compose.example.yml).
-3. Remove `BACKUP_OVERWRITE` from `.env`; backups are now always kept per version and date. `BACKUP_SCHEDULE`, `BACKUP_KEEP_DAYS`, `BACKUP_DESTINATION`, `INSTANCE_ID` and the `RCLONE_CONFIG_*` variables work as before.
-4. Restart it: `docker compose --profile backup up -d backup`.
+1. Replace the `backup` service in your `compose.yml` with the `backup` and `backup-offsite` services from the current [`compose.example.yml`](https://github.com/we-promise/sure/blob/main/compose.example.yml).
+2. In `.env`, remove `BACKUP_OVERWRITE`; backups are now kept per version and date. `BACKUP_SCHEDULE` must be a daily time (`minute hour * * *`). `BACKUP_DESTINATION`, `INSTANCE_ID` and the `RCLONE_CONFIG_*` variables now belong to `backup-offsite`.
+3. Start them: `docker compose --profile backup --profile backup-offsite up -d backup backup-offsite`.
 
-Off-site backups now go to `<BACKUP_DESTINATION>/<INSTANCE_ID>/<version>/<timestamp>-scheduled/` and include `.env`, so use an encrypted remote. Earlier `backup_*.sql.gz` files are left in place and are no longer pruned; delete them once you no longer need them. To restore one of them, stop `web` and `worker` and load it with `gunzip -c backup_<timestamp>.sql.gz | docker compose exec -T db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` into an empty database.
+Off-site backups now go to `<BACKUP_DESTINATION>/<INSTANCE_ID>/<version>/<date>-<trigger>/` and include `.env`, so use an encrypted remote. Earlier `backup_*.sql.gz` files are left in place and are no longer pruned; delete them once you no longer need them. To restore one of them, stop `web` and `worker` and load it with `gunzip -c backup_<timestamp>.sql.gz | docker compose exec -T db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` into an empty database.
 
 If you download the new `bin/db-backup.sh` without updating the compose file, the backup service stops with an error that points here.
 

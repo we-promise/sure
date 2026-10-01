@@ -188,17 +188,14 @@ For single-admin or tightly controlled deployments, set the onboarding mode to *
 
 ## Step 7: Set Up Automated Backups
 
-Sure ships a backup service that saves the database, uploaded files and your configuration together, organized by app version. Download the backup script next to `compose.yml`, then start the service:
+The `compose.yml` you downloaded includes a backup service that saves the database, uploaded files and your configuration together, organized by app version. It uses the same image as the app, so there is nothing to install. Start it to take a backup every day:
 
 ```bash
 cd /opt/sure
-mkdir -p bin
-curl --fail --location --silent --show-error --output bin/sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
-chmod +x bin/sure-backup
 
 # Optional: change the defaults in .env
 #   BACKUP_DIR=/opt/sure/backups   (default: ./backups)
-#   BACKUP_SCHEDULE="0 2 * * *"     (daily at 2 AM)
+#   BACKUP_SCHEDULE="0 2 * * *"     (daily at 02:00 UTC)
 #   BACKUP_KEEP_DAYS=7
 
 docker compose --profile backup up -d backup
