@@ -1340,6 +1340,26 @@ end
     Rails.cache = original_cache
   end
 
+  test "index ignores projected recurring records cached before payment links were added" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    legacy_cache_key = "transactions_projected_recurring/v5/#{@user.family.id}/#{@user.id}/#{Date.current}/" \
+      "#{@user.family.recurring_transactions_version}/#{@user.family.accounts_status_version}/" \
+      "#{@user.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
+    legacy_records = @user.family.recurring_transactions
+                          .active
+                          .select(RecurringTransaction.column_names - [ "payment_url" ])
+                          .to_a
+    Rails.cache.write(legacy_cache_key, legacy_records)
+
+    get transactions_url
+
+    assert_response :success
+  ensure
+    Rails.cache = original_cache
+  end
+
   test "index uncategorized_count cache reflects new transactions immediately" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new

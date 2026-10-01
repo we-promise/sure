@@ -492,7 +492,7 @@ class TransactionsController < ApplicationController
     # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
     # doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
-      "transactions_projected_recurring/v5/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
+      "transactions_projected_recurring/v6/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
         "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
         "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
     end
