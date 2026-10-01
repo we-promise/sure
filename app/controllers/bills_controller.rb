@@ -217,10 +217,13 @@ class BillsController < ApplicationController
       @plan = planner.plan.presence
       @plan_unconvertible = planner.unconvertible_count
 
+      # Rules (and the merchant, for unnamed series) ride along because each
+      # row renders frequency_label and display_name.
       @income_series = Current.family.recurring_transactions
                               .accessible_by(Current.user)
                               .where(bill_type: :income)
                               .where.not(status: %i[suggested ended])
+                              .includes(:merchant, :recurrence_rules)
                               .order(:name)
                               .to_a
       @next_income_by_series = planner.next_income_by_series
