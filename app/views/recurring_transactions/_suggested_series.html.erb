@@ -30,20 +30,10 @@
     </div>
   <% end %>
 
-  <%# Same reflow as Needs review: buttons under the text below @md, so a
-      long name reads in full on a phone. %>
-  <div class="@container bg-container rounded-lg divide-y divide-subdued">
+  <div class="bg-container rounded-lg divide-y divide-subdued">
     <% suggested.each do |suggestion| %>
-      <div class="flex flex-col items-start gap-3 @md:flex-row @md:items-center @md:justify-between @md:gap-4 px-4 py-3">
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-primary @md:truncate"><%= suggestion.display_name %></p>
-          <p class="text-xs text-secondary">
-            <span class="privacy-sensitive"><%= format_money(suggestion.amount_money.abs) %></span>
-            &middot; <%= frequency_label(suggestion) %>
-            &middot; <%= t("recurring_transactions.suggested.seen_count", count: suggestion.occurrence_count) %>
-          </p>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
+      <%= render DS::ReviewRow.new do |row| %>
+        <% row.with_actions do %>
           <%= render DS::Link.new(
             text: t("recurring_transactions.suggested.confirm"),
             variant: "primary",
@@ -56,8 +46,14 @@
             href: dismiss_recurring_transaction_path(suggestion),
             method: :post
           ) %>
-        </div>
-      </div>
+        <% end %>
+        <p class="text-sm font-medium text-primary @md:truncate"><%= suggestion.display_name %></p>
+        <p class="text-xs text-secondary">
+          <span class="privacy-sensitive"><%= format_money(suggestion.amount_money.abs) %></span>
+          &middot; <%= frequency_label(suggestion) %>
+          &middot; <%= t("recurring_transactions.suggested.seen_count", count: suggestion.occurrence_count) %>
+        </p>
+      <% end %>
     <% end %>
   </div>
 <% end %>
