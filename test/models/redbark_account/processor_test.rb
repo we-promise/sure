@@ -9,17 +9,16 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
   #
   #   fiskil (AU / CDR)   -> amount owed arrives NEGATIVE -> store as +amount
   #   plaid  (US / CA)    -> amount owed arrives POSITIVE -> store as-is
-  #   unknown / blank     -> keep fiskil's negation convention + log once
+  #   unknown / blank     -> keep fiskil's negation convention + log each sync
   #
   # The processor only invokes the helper for CreditCard and Loan accountable
   # types. Depository and Investment balances are passed through unchanged.
   setup do
     @redbark_item = redbark_items(:one)
     @family = @redbark_item.family
-    # The dylan_family fixture sets only `name` (no currency), so fall back to
-    # AUD — the pre-fix convention — to keep the tests hermetic. Use the
-    # family's currency only when the fixture actually supplies one.
-    @currency = @family.currency.presence || "AUD"
+    # Set explicitly, as the pre-fix tests did: `families.currency` defaults to
+    # USD, so reading it from the fixture family would not give AUD.
+    @currency = "AUD"
   end
 
   test "processor initializes with redbark_account" do
@@ -57,10 +56,21 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
   # fetch).
   test "processor skips update when current_balance is nil" do
     account, ra = link(CreditCard, provider: "plaid", balance: nil)
-    before = account.reload.balance
-    RedbarkAccount::Processor.new(ra).process
-    assert_equal before, account.reload.balance
-    assert_nil account.reload.valuations.where(valuationable: ra).first
+    # A non-zero starting balance, so a write of 0 would show.
+    account.update_columns(balance: 1234)
+
+    assert_no_difference -> { account.entries.where(entryable_type: "Valuation").count } do
+      RedbarkAccount::Processor.new(ra).process
+    end
+    assert_equal BigDecimal("1234"), account.reload.balance
+  end
+
+  test "processor skips processing when no linked account" do
+    _, ra = link(Depository, provider: "fiskil", balance: "100")
+    ra.account_provider.destroy
+    ra.reload
+
+    assert_nothing_raised { RedbarkAccount::Processor.new(ra).process }
   end
 
   # [Positive — Plaid] Plaid-sourced credit card: +19902.38 arrives as the
@@ -114,19 +124,6 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-19902.38"), after - before
   end
 
-  # [Mutation kill] A "no Plaid branch at all" implementation (i.e. the bug)
-  # would fail this test AND the Overpaid test AND the Self-heal test AND
-  # the Net-worth test. Together they prove the Plaid branch is required
-  # and cannot be dropped silently.
-  test "mutation check: dropping the Plaid passthrough would break Plaid-positive, self-heal, net-worth, and overpaid tests" do
-    # This test itself is a no-op — it documents the four other tests that
-    # would go red if the Plaid branch were removed. Its presence is so a
-    # reviewer can grep the file for 'processor stores Plaid-sourced' /
-    # 'manual correction' / 'reduces net worth' / 'overpaid Plaid credit card'
-    # and see the full kill set in one place.
-    assert true
-  end
-
   # [Control — CDR card] Fiskil credit card: -842.15 arrives as the amount
   # due (CDR convention). Stored as +842.15. This assertion catches a
   # "simply remove the CDR branch" mutant (QA minor note 2): the mutation
@@ -143,13 +140,6 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     RedbarkAccount::Processor.new(ra).process
     assert_equal BigDecimal("997672.00"), loan.reload.balance
   end
-
-  # [Mutation kill] A 'abs()' implementation would flip the sign on these
-  # CDR tests too (-842.15 -> 842.15 happens to agree with abs here, but the
-  # combination with the Plaid overpaid test — which expects -250.00, not
-  # 250.00 — kills abs()). Together the CDR tests + overpaid test kill both
-  # the branch-swap mutant and the abs() mutant.
-  # (documented above; no additional assertion)
 
   # [Unknown provider] An unrecognised provider string keeps the CDR
   # convention and records exactly one DebugLogEntry so support can confirm
@@ -168,6 +158,8 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     entry = entries.first
     assert_includes entry.provider_key.to_s, "akahu"
     assert_match /unrecognised or blank provider/i, entry.message
+    assert_equal card, entry.account
+    assert_equal ra.account_provider, entry.account_provider
   end
 
   # [Unknown provider — blank] A blank/missing provider also records one
@@ -200,8 +192,8 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 0, DebugLogEntry.where(category: "redbark_sync").count
   end
 
-  # [Existing test — transaction processor] Preserved verbatim from the
-  # pre-fix file; this verifies no regression in the transaction path.
+  # The transaction tests below are carried over from the pre-fix file, set up
+  # through `link` instead of the old shared fixture account.
   test "transactions processor creates entries from raw payload" do
     account, ra = link(Depository, provider: "fiskil", balance: "100")
     ra.update!(raw_transactions_payload: [
@@ -226,6 +218,49 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "AUD", entry.currency
   end
 
+  test "transactions processor stores pending flag in extra metadata" do
+    account, ra = link(Depository, provider: "fiskil", balance: "100")
+    ra.update!(raw_transactions_payload: [
+      {
+        "id" => "tx_002",
+        "status" => "pending",
+        "date" => Date.current.to_s,
+        "description" => "PENDING PURCHASE",
+        "amount" => "-10.00",
+        "direction" => "debit"
+      }
+    ])
+
+    RedbarkAccount::Transactions::Processor.new(ra).process
+
+    entry = account.entries.find_by(external_id: "redbark_tx_002", source: "redbark")
+    assert_not_nil entry
+    assert_equal true, entry.entryable.extra.dig("redbark", "pending")
+  end
+
+  test "transactions processor handles missing transaction id gracefully" do
+    _, ra = link(Depository, provider: "fiskil", balance: "100")
+    ra.update!(raw_transactions_payload: [
+      { "id" => nil, "amount" => "-50.00", "date" => Date.current.to_s }
+    ])
+
+    result = RedbarkAccount::Transactions::Processor.new(ra).process
+
+    assert result[:success]
+    assert_equal 1, result[:skipped]
+    assert_equal 0, result[:failed]
+  end
+
+  test "transactions processor returns empty result when no transactions" do
+    _, ra = link(Depository, provider: "fiskil", balance: "100")
+    ra.update!(raw_transactions_payload: [])
+
+    result = RedbarkAccount::Transactions::Processor.new(ra).process
+
+    assert result[:success]
+    assert_equal 0, result[:total]
+  end
+
   private
 
     def link(accountable_class, provider:, balance:)
@@ -240,7 +275,7 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
         name: account.name,
         currency: @currency,
         provider: provider,
-        account_type: accountable_class.underscore,
+        account_type: accountable_class.name.underscore,
         current_balance: balance.nil? ? nil : BigDecimal(balance)
       )
       redbark_account.ensure_account_provider!(account)
