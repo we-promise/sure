@@ -1,6 +1,8 @@
 class PlaidAccount::Processor
   include PlaidAccount::TypeMappable
 
+  BalanceError = Class.new(StandardError)
+
   attr_reader :plaid_account
 
   def initialize(plaid_account)
@@ -73,22 +75,20 @@ class PlaidAccount::Processor
           source: "plaid"
         )
 
+        balance = balance_calculator.balance
+        cash_balance = balance_calculator.cash_balance
         balance_date = self.balance_date
 
-        # A snapshot dated behind the anchor the account already holds is a
-        # correction to a day gone by, recorded on its own date below; the
-        # cached balance and cash stay as they are, since they describe now.
-        snapshot_behind_anchor = account.persisted? && account.has_current_anchor? &&
-          account.current_anchor_date > balance_date
-
-        attributes = { currency: plaid_account.currency }
-        unless snapshot_behind_anchor
-          attributes[:balance] = balance_calculator.balance
-          attributes[:cash_balance] = balance_calculator.cash_balance
-        end
-        account.assign_attributes(attributes)
-
         new_account = account.new_record?
+        if new_account
+          # A new account is saved with what Plaid reports; the anchor below
+          # is made in the same figures, under the lock.
+          account.assign_attributes(
+            currency: plaid_account.currency,
+            balance: balance,
+            cash_balance: cash_balance
+          )
+        end
         account.save!
 
         account.auto_share_with_family! if new_account && account.family.share_all_by_default?
@@ -107,7 +107,32 @@ class PlaidAccount::Processor
         # to properly track the holdings vs. cash breakdown, but for now we're only tracking
         # the total balance in the current anchor. The cash_balance field on the account model
         # is still being used for the breakdown.
-        account.set_current_balance(balance_calculator.balance, date: balance_date)
+        #
+        # One lock across the whole of it, as in IbkrAccount::Processor: which
+        # snapshot the account follows is decided by the anchor's date, and a
+        # sync running beside this one can move that anchor between any two of
+        # these writes. The currency, the anchor and the cash split are settled
+        # together, and follow the same snapshot. The manager is called directly;
+        # the Anchorable wrapper queues the sync, which belongs after the lock.
+        result = nil
+        account.with_lock do
+          manager = Account::CurrentBalanceManager.new(account)
+          behind_anchor = manager.has_current_anchor? && manager.current_date > balance_date
+
+          # A snapshot dated behind the anchor is a correction to a day gone
+          # by: the cached balance and cash describe now and stay as they are,
+          # in the denomination they were written in.
+          if !behind_anchor && account.currency != plaid_account.currency
+            account.update!(currency: plaid_account.currency)
+          end
+
+          result = manager.set_current_balance(balance, date: balance_date)
+          raise BalanceError, "Failed to set current balance: #{result.error}" unless result.success?
+
+          account.update!(cash_balance: cash_balance) unless result.historical?
+        end
+
+        account.sync_later
       end
     end
 
@@ -150,14 +175,14 @@ class PlaidAccount::Processor
     # set it against holdings later repriced for today, and the difference
     # would read as cash on every day in between -- the shift #3815 removed
     # from IBKR. The anchor goes on the newest date the holdings carry; a
-    # snapshot with no dated holdings, or one dated ahead of today, is today's.
+    # snapshot with no dated holdings is today's.
     def balance_date
       return Date.current unless plaid_account.plaid_type == "investment"
 
-      newest = holdings.filter_map { |holding| parse_date(holding["institution_price_as_of"]) }.max
-      return Date.current if newest.nil? || newest > Date.current
-
-      newest
+      # A holding dated ahead of today is discounted on its own, so one bad
+      # feed does not pull the anchor off the date the rest agree on.
+      dated = holdings.filter_map { |holding| parse_date(holding["institution_price_as_of"]) }
+      dated.reject { |date| date > Date.current }.max || Date.current
     end
 
     def holdings
