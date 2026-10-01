@@ -109,11 +109,6 @@ class KrakenAccount::LedgerProcessor
       return if type == "earn" && EARN_INTERNAL_SUBTYPES.include?(subtype)
 
       external_id = "kraken_ledger_#{ledger_id}"
-      # Already in, and nothing more to add for it: skip before any parsing. A
-      # split-fee type is the exception, checked further down once the fee is
-      # known -- its second entry may still be owed.
-      return if @existing_external_ids.include?(external_id) && !SPLIT_FEE_TYPES.include?(type)
-
       raw_asset  = ledger["asset"].to_s
       raw_amount = ledger["amount"].to_d
       raw_fee    = ledger["fee"].to_d
@@ -129,6 +124,15 @@ class KrakenAccount::LedgerProcessor
       symbol      = normalized[:symbol]
       base_symbol = normalized[:price_symbol]
       fiat        = fiat?(base_symbol)
+
+      # Already in, and nothing more to add for it. Two exceptions: a split-fee
+      # type, whose second entry may still be owed and is checked once the fee
+      # is known; and a crypto row still in an older shape -- a cash Transaction
+      # from before coin movements were trades, or a trade saved without a
+      # price -- which the sync heals whatever the ledger type.
+      if @existing_external_ids.include?(external_id) && !SPLIT_FEE_TYPES.include?(type)
+        return if fiat || !crypto_row_needs_healing?(external_id)
+      end
 
       # A crypto fee is paid in the units themselves, so it only reduces the
       # quantity; there is no second cash movement to split out.
@@ -209,11 +213,19 @@ class KrakenAccount::LedgerProcessor
       # otherwise bring this one back every sync -- unless what is in is the old
       # shape, which a sync should heal rather than keep.
       legacy = nil
+      legacy_fee = nil
       if @existing_external_ids.include?(external_id)
         return reprice_crypto_trade(external_id, base_symbol, date) if unpriced_trade?(external_id)
 
         legacy = legacy_crypto_transaction(external_id)
         return if legacy.nil?
+
+        # Before fees stayed inside a coin's quantity, a crypto deposit or
+        # withdrawal with a fee was written as two cash rows. The trade that
+        # replaces the principal already nets the fee, so the fee row would be
+        # left describing money that never moved; it goes with the principal,
+        # under the same rule -- edited or matched into a transfer, it stays.
+        legacy_fee = legacy_crypto_transaction("#{external_id}_fee")
       end
 
       # Resolved before anything is removed: a symbol this cannot place must
@@ -226,9 +238,11 @@ class KrakenAccount::LedgerProcessor
 
       Entry.transaction do
         legacy&.destroy!
+        legacy_fee&.destroy!
         create_crypto_trade(external_id, ledger_id, ledger, type, raw_asset, symbol, qty, signed_qty, security, price, price_missing, date)
       end
 
+      @existing_external_ids.delete("#{external_id}_fee") if legacy_fee
       @existing_external_ids << external_id
       @existing_principals[external_id] = [ build_name(type, qty, symbol), false, "Trade" ]
     end
@@ -260,14 +274,18 @@ class KrakenAccount::LedgerProcessor
     # row costs a query; a Trade is already the new shape and answers from the
     # preload.
     def legacy_crypto_transaction(external_id)
-      _name, user_modified, entryable_type = @existing_principals[external_id]
-      return nil unless entryable_type == "Transaction"
-      return nil if user_modified
+      return nil unless legacy_crypto_candidate?(external_id)
 
-      entry = account.entries.includes(:entryable).find_by(external_id: external_id)
+      entry = find_entry(external_id)
       return nil if entry.nil? || in_transfer?(entry.entryable)
 
       entry
+    end
+
+    # Answered from the preload; the row itself is only read when it is one.
+    def legacy_crypto_candidate?(external_id)
+      _name, user_modified, entryable_type = @existing_principals[external_id]
+      entryable_type == "Transaction" && !user_modified
     end
 
     def unpriced_trade?(external_id)
@@ -275,11 +293,19 @@ class KrakenAccount::LedgerProcessor
       entryable_type == "Trade" && price_missing == "true" && !user_modified
     end
 
+    def crypto_row_needs_healing?(external_id)
+      unpriced_trade?(external_id) || legacy_crypto_candidate?(external_id)
+    end
+
+    def find_entry(external_id)
+      account.entries.includes(:entryable).find_by(external_id: external_id)
+    end
+
     # A trade recorded before its price existed carries zero and the flag.
     # Pricing can fail on one sync and succeed on the next, so it is tried
     # again here and the trade is completed once a price is found.
     def reprice_crypto_trade(external_id, base_symbol, date)
-      entry = account.entries.includes(:entryable).find_by(external_id: external_id)
+      entry = find_entry(external_id)
       return if entry.nil?
 
       price, price_missing = unit_price_on(entry.entryable.security, base_symbol, date)

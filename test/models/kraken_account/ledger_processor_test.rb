@@ -372,6 +372,79 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
 
   # A row somebody has matched into a transfer, or edited, is theirs: it stays
   # as it is even though it is the old shape.
+  # The early return for rows already in fires before the ledger type is
+  # looked at; a row in an older shape has to get past it whatever its type.
+  test "a legacy crypto staking reward is replaced by the trade too" do
+    set_ledgers(
+      "LSTK10" => ledger_entry(type: "staking", asset: "XXBT", amount: "0.00100000", fee: "0.00000000", time: 1_700_000_000)
+    )
+    legacy = @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date, name: "Staking reward 0.001 BTC", amount: -40, currency: "EUR",
+      external_id: "kraken_ledger_LSTK10", source: "kraken",
+      entryable: Transaction.new(kind: "standard")
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_nil Entry.find_by(id: legacy.id)
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LSTK10", source: "kraken")
+    assert_equal "Trade", entry.entryable_type
+    assert_in_delta 0.001, entry.entryable.qty.to_f, 1e-8
+  end
+
+  test "a staking trade recorded without a price is priced on a later sync too" do
+    set_raw_payload_assets([])
+    set_ledgers(
+      "LSTK20" => ledger_entry(type: "staking", asset: "XXBT", amount: "0.00100000", fee: "0.00000000", time: 1_700_000_000)
+    )
+    process
+    trade = @account.entries.find_by(external_id: "kraken_ledger_LSTK20", source: "kraken").entryable
+    assert trade.extra.dig("kraken", "price_missing")
+
+    Security::Price.create!(security: trade.security, date: Time.zone.at(1_700_000_000).to_date, price: 40_000, currency: "USD")
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_in_delta 40_000.0, trade.reload.price.to_f, 0.01
+    assert_nil trade.extra.dig("kraken", "price_missing")
+  end
+
+  # Before fees stayed inside the quantity, a crypto withdrawal with a fee was
+  # two cash rows. The trade nets the fee, so the fee row must go with the
+  # principal or it is left describing money that never moved.
+  test "healing a legacy crypto withdrawal removes its split fee row as well" do
+    set_ledgers(
+      "LBTC40" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "-0.10000000", fee: "0.00050000", time: 1_700_000_000)
+    )
+    date = Time.zone.at(1_700_000_000).to_date
+    legacy = @account.entries.create!(
+      date: date, name: "Withdrawal 0.1 BTC", amount: 4_000, currency: "EUR",
+      external_id: "kraken_ledger_LBTC40", source: "kraken", entryable: Transaction.new(kind: "funds_movement")
+    )
+    legacy_fee = @account.entries.create!(
+      date: date, name: "Withdrawal fee 0.0005 BTC", amount: 20, currency: "EUR",
+      external_id: "kraken_ledger_LBTC40_fee", source: "kraken", entryable: Transaction.new(kind: "standard")
+    )
+
+    assert_difference "@account.entries.count", -1 do
+      process
+    end
+
+    assert_nil Entry.find_by(id: legacy.id)
+    assert_nil Entry.find_by(id: legacy_fee.id), "the fee row describes money the trade already accounts for"
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LBTC40", source: "kraken")
+    assert_equal "Trade", entry.entryable_type
+    assert_in_delta(-0.1005, entry.entryable.qty.to_f, 1e-8, "the fee left with the coins")
+
+    # Nothing to heal on the next pass.
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+  end
+
   test "a legacy crypto transaction in a transfer, or edited, is left alone" do
     set_ledgers(
       "LBTC11" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "-0.05000000", fee: "0.00000000", time: 1_700_000_000),
