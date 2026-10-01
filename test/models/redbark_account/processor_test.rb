@@ -225,23 +225,23 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
 
   private
 
-  def link(accountable_class, provider:, balance:)
-    account = @family.accounts.create!(
-      name: "Test #{accountable_class.name} (#{provider.inspect}) #{SecureRandom.hex(3)}",
-      balance: 0,
-      currency: @currency,
-      accountable: accountable_class.new
-    )
-    redbark_account = @redbark_item.redbark_accounts.create!(
-      redbark_account_id: "rb_test_#{SecureRandom.hex(4)}",
-      name: account.name,
-      currency: @currency,
-      provider: provider,
-      account_type: accountable_class.underscore,
-      current_balance: balance.nil? ? nil : BigDecimal(balance)
-    )
-    redbark_account.ensure_account_provider!(account)
-    redbark_account.reload
-    [account, redbark_account]
-  end
+    def link(accountable_class, provider:, balance:)
+      account = @family.accounts.create!(
+        name: "Test #{accountable_class.name} (#{provider.inspect}) #{SecureRandom.hex(3)}",
+        balance: 0,
+        currency: @currency,
+        accountable: accountable_class.new
+      )
+      redbark_account = @redbark_item.redbark_accounts.create!(
+        redbark_account_id: "rb_test_#{SecureRandom.hex(4)}",
+        name: account.name,
+        currency: @currency,
+        provider: provider,
+        account_type: accountable_class.underscore,
+        current_balance: balance.nil? ? nil : BigDecimal(balance)
+      )
+      redbark_account.ensure_account_provider!(account)
+      redbark_account.reload
+      [ account, redbark_account ]
+    end
 end
