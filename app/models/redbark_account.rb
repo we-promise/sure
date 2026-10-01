@@ -47,9 +47,9 @@ class RedbarkAccount < ApplicationRecord
   #     Pass through unchanged. This is what the bug in we-promise/sure#3747
   #     mis-applies a blind negation to, flipping every Plaid-sourced
   #     liability and double-inflating net worth.
-  #   * Any other recognised or blank `provider` keeps Fiskil's negation
-  #     convention (today's behaviour) AND records a single DebugLogEntry so
-  #     an operator can confirm or correct the convention for the new source.
+  #   * Any other or blank `provider` keeps Fiskil's negation convention
+  #     (today's behaviour) AND records a DebugLogEntry on every call, so an
+  #     operator can confirm or correct the convention for the new source.
   #
   # The check keys off `provider`, NOT the currency or institution country:
   # the reporter of we-promise/sure#3747 confirms that their Wise
@@ -75,12 +75,13 @@ class RedbarkAccount < ApplicationRecord
       balance
     else
       # Unknown / blank convention: keep the CDR convention (negate) and
-      # record one DebugLogEntry so support can flag the source. Following
+      # record a DebugLogEntry so support can flag the source. Following
       # docs/llm-guides/providers.md, include category, level, message,
       # source, provider_key and useful structured metadata, and attach
-      # family and account when available. DebugLogEntry#capture is a
-      # safe no-op on error (log! is wrapped in rescue), so a missing family
-      # or a capture failure cannot break a balance update.
+      # family, account and account provider when available.
+      # DebugLogEntry#capture is a safe no-op on error (log! is wrapped in
+      # rescue), so a missing family or a capture failure cannot break a
+      # balance update.
       DebugLogEntry.capture(
         category: "redbark_sync",
         level: "warn",
@@ -92,6 +93,7 @@ class RedbarkAccount < ApplicationRecord
         provider_key: provider.presence,
         family: redbark_item&.family,
         account: account,
+        account_provider: account_provider,
         metadata: {
           redbark_account_id: id,
           redbark_account_redbark_id: redbark_account_id,
@@ -143,7 +145,7 @@ class RedbarkAccount < ApplicationRecord
       provider: data[:provider],
       institution_metadata: {
         name: data[:institutionName] || connection[:institutionName],
-        logo: data[:institutionLogo]
+        logo: connection[:institutionLogo]
       }.compact,
       raw_payload: account_data
     )

@@ -59,7 +59,8 @@ class RedbarkAccount::Processor
       if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
         balance = redbark_account.normalized_liability_balance(
           accountable_type: account.accountable_type,
-          balance: balance
+          balance: balance,
+          account: account
         )
       end
 
