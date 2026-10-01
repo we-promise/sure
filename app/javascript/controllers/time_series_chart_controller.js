@@ -713,7 +713,12 @@ export default class extends Controller {
 
     // Keep zero in view when the balance is negative or sits close to zero,
     // so a near-zero account isn't floated off its natural baseline.
-    if (dataMin < 0 || (dataMin >= 0 && dataMin < avgValue * 0.1)) {
+    if (dataMin < 0) {
+      // Entirely/partly negative: clamp both bounds so zero stays on-chart.
+      yMin = Math.min(0, yMin);
+      yMax = Math.max(0, yMax);
+    } else if (dataMin < avgValue * 0.1) {
+      // Near-zero positive: pull the floor down to zero for context.
       yMin = Math.min(0, yMin);
     }
 
