@@ -27,6 +27,12 @@ export default class extends Controller {
   // point) that is enough to straddle two data points and navigate somewhere
   // the user never aimed at, so treat anything this small as a click.
   _dragSelectMinPx = 4;
+  // y-axis domain tuning. Both are relative to the data, so the scale is
+  // resolution-independent: a chart looks the same on a phone and a 4K
+  // display — only pixel density changes.
+  _yAxisPadding = 0.12;      // breathing room above and below the series
+  _yAxisMinRelSpan = 0.015;  // smallest movement allowed to fill the chart,
+                             // as a fraction of the average balance  
 
   connect() {
     this._install();
@@ -681,7 +687,7 @@ export default class extends Controller {
     const dataMin = d3.min(this._normalDataPoints, this._getDatumValue);
     const dataMax = d3.max(this._normalDataPoints, this._getDatumValue);
 
-    // Handle edge case where all values are the same
+    // All values identical: fall back to a fixed pad so the line sits centered.
     if (dataMin === dataMax) {
       const padding = dataMax === 0 ? 100 : Math.abs(dataMax) * 0.5;
       return d3
@@ -693,32 +699,25 @@ export default class extends Controller {
     const dataRange = dataMax - dataMin;
     const avgValue = (dataMax + dataMin) / 2;
 
-    // Calculate relative change as a percentage
-    const relativeChange = avgValue !== 0 ? dataRange / Math.abs(avgValue) : 1;
+    // Honesty floor: never let a movement smaller than _yAxisMinRelSpan of the
+    // average balance fill the chart. Trivial noise on a large balance stays
+    // visually flat; anything larger is shown at full amplitude. This replaces
+    // the previous "2x range below min / 0.5x above" padding, which squashed
+    // every small-but-real movement into a near-flat line regardless of size.
+    const minSpan = Math.abs(avgValue) * this._yAxisMinRelSpan;
+    const effectiveRange = Math.max(dataRange, minSpan);
 
-    // Dynamic baseline calculation
-    let yMin;
-    let yMax;
+    const padding = effectiveRange * this._yAxisPadding;
+    let yMin = avgValue - effectiveRange / 2 - padding;
+    let yMax = avgValue + effectiveRange / 2 + padding;
 
-    // For small relative changes (< 10%), use a tighter scale
-    if (relativeChange < 0.1 && dataMin > 0) {
-      // Start axis at a percentage below the minimum, not at 0
-      const baselinePadding = dataRange * 2; // Show 2x the data range below min
-      yMin = Math.max(0, dataMin - baselinePadding);
-      yMax = dataMax + dataRange * 0.5; // Add 50% padding above
-    } else {
-      // For larger changes or when data crosses zero, use more context
-      // Always include 0 when data is negative or close to 0
-      if (dataMin < 0 || (dataMin >= 0 && dataMin < avgValue * 0.1)) {
-        yMin = Math.min(0, dataMin * 1.1);
-      } else {
-        // Otherwise use dynamic baseline
-        yMin = dataMin - dataRange * 0.3;
-      }
-      yMax = dataMax + dataRange * 0.1;
+    // Keep zero in view when the balance is negative or sits close to zero,
+    // so a near-zero account isn't floated off its natural baseline.
+    if (dataMin < 0 || (dataMin >= 0 && dataMin < avgValue * 0.1)) {
+      yMin = Math.min(0, yMin);
     }
 
-    // Adjust padding for labels if needed
+    // Extra headroom when value labels are drawn above/below the line.
     if (this.useLabelsValue) {
       const extraPadding = (yMax - yMin) * 0.1;
       yMin -= extraPadding;
@@ -730,7 +729,7 @@ export default class extends Controller {
       .rangeRound([this._d3ContainerHeight, 0])
       .domain([yMin, yMax]);
   }
-
+  
   _setupResizeObserver() {
     this._resizeObserver = new ResizeObserver(() => {
       this._reinstall();
