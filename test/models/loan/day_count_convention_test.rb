@@ -121,6 +121,13 @@ class Loan::DayCountConventionTest < ActiveSupport::TestCase
     assert_not_equal on_actual, loan.total_insurance, "the two conventions should charge different premiums on this loan"
   end
 
+  # A period that ends before it starts is a caller's mistake. Under an actual
+  # convention it would charge negative interest, so it is refused instead.
+  test "a period that ends before it starts is refused on an actual convention" do
+    assert_raises(ArgumentError) { interest_for(Date.new(2026, 2, 1), Date.new(2026, 1, 1), :actual_365) }
+    assert_raises(ArgumentError) { interest_for(Date.new(2026, 2, 1), Date.new(2026, 1, 1), :actual_actual) }
+  end
+
   # The design decision that keeps the payment level. `level_payment` is an
   # annuity formula over one constant periodic rate; if the day count reached
   # the sizing, the rate would differ every month and :reamortize would rebuild
