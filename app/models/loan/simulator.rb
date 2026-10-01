@@ -262,6 +262,11 @@ class Loan
       def accrual_factor(period_start, period_end, annual_percentage)
         return monthly_rate(annual_percentage) if @day_count_convention == :thirty_360
 
+        # After the 30/360 return, so the default path stays bit-identical.
+        if period_end < period_start
+          raise ArgumentError, "period ends (#{period_end}) before it starts (#{period_start})"
+        end
+
         rate = BigDecimal(annual_percentage.to_s) / PERCENT
 
         if @day_count_convention == :actual_365
