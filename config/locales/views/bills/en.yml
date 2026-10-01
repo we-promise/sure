@@ -99,6 +99,7 @@ en:
     match:
       same_merchant: Same merchant
       name_matches: Name matches
+      same_transfer: Transfer to the same account
       exact_amount: Exact amount
       amount_off: "%{amount} off"
       due_date: Due-date match
