@@ -366,6 +366,7 @@ backups/
       db.dump            # PostgreSQL dump (pg_dump custom format)
       storage.tar.gz     # uploaded files (the app-storage volume)
       config/            # .env, compose file(s) and bin/sure-backup
+      restore.sh         # restores this bundle into a new folder
       SHA256SUMS
 ```
 
@@ -408,17 +409,28 @@ docker compose up -d
 
 `restore` replaces the database and all uploaded files. It refuses while other clients are connected to the database, and asks you to type `restore` to confirm (pass `--yes` to skip in scripts).
 
-### Restore on a new machine
+### Restore into a new folder or onto a new machine
 
-1. Copy a backup bundle to the new machine.
-2. Copy the files in the bundle's `config/` folder (including `.env` and `bin/sure-backup`) into an empty directory, and put the bundle under `backups/<version>/` there.
-3. Set `SURE_IMAGE_TAG` in `.env` to the bundle's version, then run:
+Every bundle contains `restore.sh`, so you don't need this repository to restore one. Copy the bundle folder to the machine (Docker with the Compose plugin is the only requirement), then run:
 
 ```bash
-docker compose up -d db
-docker compose run --rm backup restore 0.7.4/2026-10-01_080524-manual --yes
-docker compose up -d
+sh 2026-10-01_080524-manual/restore.sh
 ```
+
+It verifies the bundle and asks for a folder for the restored instance; that folder must be new or empty, and its name becomes the Compose project name. It then:
+
+- refuses if Docker already has containers or volumes for that project name, so it can never overwrite another instance;
+- warns if other Sure instances are running on the machine, and lets you start the restored one without its `worker` (see below);
+- picks the next free port if the backup's `PORT` is taken;
+- copies the configuration and the bundle in, writes `compose.restore.yml` to pin `web` and `worker` to the backed-up version, and sets `COMPOSE_FILE` in `.env` so plain `docker compose` commands use it;
+- restores the database and files and starts the app.
+
+For scripts, pass the answers as options: `sh restore.sh --target ~/sure-restored --port 3001 --without-worker --yes`. Add `--no-start` to only prepare the folder.
+
+> [!WARNING]
+> Don't run a restored copy with its `worker` while the original instance is still running. Both would sync the same bank connections (some providers rotate access tokens on every sync, so the copy can disconnect the original) and run scheduled jobs such as recurring transactions and emails twice. Signing in to both on `localhost` also signs you out of the other, because browsers share cookies across ports.
+
+Bundles taken before `restore.sh` existed can be restored the same way with a current copy of the script: `sh bin/sure-backup recover <bundle folder>`.
 
 ### Apps started before version stamping
 
