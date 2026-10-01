@@ -9,6 +9,7 @@ vi:
       page_title: Mã dự phòng
       title: Lưu mã dự phòng của bạn
     create:
+      code_already_used: Mã này đã được sử dụng. Vui lòng nhập mã tiếp theo từ ứng dụng xác thực của bạn.
       invalid_code: Mã xác minh không hợp lệ. Vui lòng thử lại.
     disable:
       success: Xác thực hai yếu tố đã bị tắt

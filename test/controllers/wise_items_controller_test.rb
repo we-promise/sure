@@ -14,6 +14,23 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     ]
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_wise_item_url(@wise_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "wise-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @wise_item.reload.syncing?
+  end
+
+  # The Accounts page's Sync button posts here too, without the panel's source.
+  test "sync from the Accounts page goes back to it" do
+    post sync_wise_item_url(@wise_item),
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml", "Referer" => accounts_url }
+
+    assert_redirected_to accounts_url
+  end
+
   # create redirects to select_profiles (Turbo requires a redirect from a standard
   # form submission) — the encrypted token travels via the session, not the response body.
 
@@ -48,6 +65,15 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     post wise_items_url, params: { wise_item: { token: "" } }
     assert_redirected_to settings_providers_path
     assert_nil session[:wise_pending_token]
+  end
+
+  test "create from the drawer shows a blank token error in the panel" do
+    post wise_items_url,
+         params: { wise_item: { token: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "wise-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Token can't be blank")
   end
 
   test "create redirects to providers when Wise API rejects the token" do
@@ -130,6 +156,26 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
     assert @wise_item.reload.sca_configured?
+  end
+
+  test "generate_sca_keypair from the page shows the new public key in place" do
+    WiseItem.any_instance.stubs(:sca_encryption_available?).returns(true)
+
+    post generate_sca_keypair_wise_item_url(@wise_item),
+         as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "wise-providers-panel"
+    assert_includes response.body, %(id="wise-providers-panel")
+    assert_includes response.body, @wise_item.reload.sca_public_key.lines.second.strip
+  end
+
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch wise_item_url(@wise_item),
+          params: { wise_item: { name: "Renamed Wise" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "wise-providers-panel"
+    assert_equal "Renamed Wise", @wise_item.reload.name
   end
 
   test "generate_sca_keypair replaces a previously generated keypair" do

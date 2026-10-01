@@ -24,9 +24,45 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
     assert @coinbase_item.scheduled_for_deletion?
   end
 
+  test "invalid create outside a frame redirects to the providers page with a 303" do
+    assert_no_difference "CoinbaseItem.count" do
+      post coinbase_items_url, params: { coinbase_item: { api_key: "", api_secret: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post coinbase_items_url,
+         params: { coinbase_item: { api_key: "", api_secret: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "coinbase-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("can't be blank")
+  end
+
+  test "invalid update outside a frame redirects to the providers page with a 303" do
+    patch coinbase_item_url(@coinbase_item), params: { coinbase_item: { api_key: "" } }
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
   test "should sync coinbase item" do
     post sync_coinbase_item_url(@coinbase_item)
     assert_response :redirect
+  end
+
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_coinbase_item_url(@coinbase_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "coinbase-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @coinbase_item.reload.syncing?
   end
 
   test "should show setup_accounts page" do

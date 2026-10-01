@@ -53,6 +53,36 @@ class ApplicationController < ActionController::Base
       end
     end
 
+    # Provider panels post from the page (connection row or drawer), so Turbo
+    # asks for a stream without sending a Turbo-Frame header.
+    def turbo_panel_request?
+      turbo_frame_request? || request.format.turbo_stream?
+    end
+
+    # Set by a panel form whose action also serves another page with the same
+    # Turbo request, such as a Sync that the Accounts page posts to as well.
+    def provider_panel_form?
+      params[:source] == "panel"
+    end
+
+    # Re-renders a Bank sync panel where it was posted from, with the alert in
+    # the panel or the notice as a flash. `key` is the panel's FAMILY_PANELS key.
+    # A request without Turbo is redirected with the flash instead.
+    def render_provider_panel(key, notice: nil, alert: nil, fallback_path: settings_providers_path, **locals)
+      return redirect_to(fallback_path, notice: notice, alert: alert, status: :see_other) unless turbo_panel_request?
+
+      panel = Settings::ProvidersController::FAMILY_PANELS_BY_KEY.fetch(key)
+      flash.now[:notice] = notice if notice
+      render turbo_stream: [
+        turbo_stream.replace(
+          "#{panel[:turbo_id]}-providers-panel",
+          partial: "settings/providers/#{panel[:partial]}",
+          locals: { error_message: alert, **locals }
+        ),
+        *flash_notification_stream_items
+      ], status: alert ? :unprocessable_entity : :ok
+    end
+
     def detect_os
       user_agent = request.user_agent
       @os = case user_agent

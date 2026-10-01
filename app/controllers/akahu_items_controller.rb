@@ -27,17 +27,17 @@ class AkahuItemsController < ApplicationController
 
     if @akahu_item.save
       @akahu_item.sync_later
-      render_provider_panel(:notice, t(".success"))
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      render_provider_panel_error(@akahu_item.errors.full_messages.join(", "))
+      render_provider_panel("akahu", alert: @akahu_item.errors.full_messages.join(", "))
     end
   end
 
   def update
     if @akahu_item.update(update_params)
-      render_provider_panel(:notice, t(".success"))
+      render_provider_panel("akahu", notice: t(".success"))
     else
-      render_provider_panel_error(@akahu_item.errors.full_messages.join(", "))
+      render_provider_panel("akahu", alert: @akahu_item.errors.full_messages.join(", "))
     end
   end
 
@@ -52,6 +52,7 @@ class AkahuItemsController < ApplicationController
 
   def sync
     @akahu_item.sync_later unless @akahu_item.syncing?
+    return render_provider_panel("akahu", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -306,36 +307,6 @@ class AkahuItemsController < ApplicationController
         },
         skip_initial_sync: true
       )
-    end
-
-    def render_provider_panel(flash_type, message)
-      if turbo_frame_request?
-        flash.now[flash_type] = message
-        @akahu_items = Current.family.akahu_items.active.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "akahu-providers-panel",
-            partial: "settings/providers/akahu_panel",
-            locals: { akahu_items: @akahu_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, { flash_type => message, status: :see_other }
-      end
-    end
-
-    def render_provider_panel_error(message)
-      @error_message = message
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "akahu-providers-panel",
-          partial: "settings/providers/akahu_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
     end
 
     def safe_return_to_path

@@ -34,6 +34,26 @@ class RedbarkItemsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post redbark_items_url,
+         params: { redbark_item: { api_key: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "redbark-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Api key can't be blank")
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch redbark_item_url(@redbark_item),
+          params: { redbark_item: { name: "Renamed Redbark" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "redbark-providers-panel"
+    assert_includes response.body, %(id="redbark-providers-panel")
+    assert_equal "Renamed Redbark", @redbark_item.reload.name
+  end
+
   test "update rotates the api key and clears requires_update" do
     @redbark_item.update!(status: :requires_update)
 

@@ -45,10 +45,10 @@ class Trading212ItemsControllerTest < ActionDispatch::IntegrationTest
           api_secret: "",
           environment: "live"
         }
-      }, headers: { "Turbo-Frame" => "modal" }
+      }, as: :turbo_stream
     end
 
-    assert_response :unprocessable_entity
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "trading212-providers-panel"
   end
 
   # === update ===
@@ -63,6 +63,16 @@ class Trading212ItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to accounts_path
+    assert_equal "demo", @item.reload.environment
+  end
+
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch trading212_item_url(@item),
+          params: { trading212_item: { api_key: "", api_secret: "", environment: "demo" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "trading212-providers-panel"
+    assert_includes response.body, %(id="trading212-providers-panel")
     assert_equal "demo", @item.reload.environment
   end
 
@@ -84,6 +94,15 @@ class Trading212ItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :redirect
+  end
+
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_trading212_item_url(@item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "trading212-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @item.reload.syncing?
   end
 
   # === complete_account_setup ===

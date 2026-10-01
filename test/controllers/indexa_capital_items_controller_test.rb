@@ -31,6 +31,44 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Name", @item.name
   end
 
+  test "invalid create outside a frame redirects to the providers page with a 303" do
+    assert_no_difference "IndexaCapitalItem.count" do
+      post indexa_capital_items_url, params: { indexa_capital_item: { name: "New Connection" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("activerecord.errors.models.indexa_capital_item.credentials_required"), flash[:alert]
+  end
+
+  test "invalid update outside a frame redirects to the providers page with a 303" do
+    patch indexa_capital_item_url(@item), params: { indexa_capital_item: { name: "" } }
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch indexa_capital_item_url(@item),
+          params: { indexa_capital_item: { name: "Updated Name" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "indexa_capital-providers-panel"
+    assert_includes response.body, %(id="indexa_capital-providers-panel")
+    assert_equal "Updated Name", @item.reload.name
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post indexa_capital_items_url,
+         params: { indexa_capital_item: { name: "New Connection" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "indexa_capital-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("activerecord.errors.models.indexa_capital_item.credentials_required"))
+  end
+
   test "should destroy indexa_capital_item" do
     assert_difference("IndexaCapitalItem.count", 0) do # doesn't delete immediately
       delete indexa_capital_item_url(@item)

@@ -49,6 +49,35 @@ class MonobankItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "monobank-personal-token", @monobank_item.access_token
   end
 
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch monobank_item_url(@monobank_item),
+          params: { monobank_item: { name: "Renamed Monobank", access_token: "" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "monobank-providers-panel"
+    assert_includes response.body, %(id="monobank-providers-panel")
+    assert_equal "Renamed Monobank", @monobank_item.reload.name
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post monobank_items_url,
+         params: { monobank_item: { name: "Second Monobank", access_token: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "monobank-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Access token can't be blank")
+  end
+
+  # The new connection belongs in Your connections, so the page reloads.
+  test "create from the page still reloads Bank sync" do
+    post monobank_items_url,
+         params: { monobank_item: { name: "Second Monobank", access_token: "another-token" } },
+         as: :turbo_stream
+
+    assert_redirected_to settings_providers_path
+  end
+
   test "setup_accounts renders the pending accounts with a preselected type" do
     MonobankItemsController.any_instance.stubs(:fetch_monobank_accounts_from_api).returns(nil)
 
@@ -142,6 +171,15 @@ class MonobankItemsControllerTest < ActionDispatch::IntegrationTest
     post sync_monobank_item_url(@monobank_item)
 
     assert_redirected_to accounts_path
+  end
+
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_monobank_item_url(@monobank_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "monobank-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @monobank_item.reload.syncing?
   end
 
   test "destroy schedules the connection for deletion" do
