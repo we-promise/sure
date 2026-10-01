@@ -11,20 +11,20 @@ class Security::Price::ImportWindows
     first_trade_dates = {}
     last_trade_dates = {}
     last_buy_dates = {}
-    last_buy_created_at = {}
+    last_trade_changed_at = {}
     trade_quantities = {}
     account.trades.group(:security_id).pluck(
       :security_id,
       Arel.sql("MIN(entries.date)"),
       Arel.sql("MAX(entries.date) FILTER (WHERE trades.qty <> 0)"),
       Arel.sql("MAX(entries.date) FILTER (WHERE trades.qty > 0)"),
-      Arel.sql("MAX(entries.created_at) FILTER (WHERE trades.qty > 0)"),
+      Arel.sql("MAX(GREATEST(entries.updated_at, trades.updated_at)) FILTER (WHERE trades.qty <> 0)"),
       Arel.sql("SUM(trades.qty)")
-    ).each do |security_id, first_date, last_date, last_buy_date, buy_created_at, qty|
+    ).each do |security_id, first_date, last_date, last_buy_date, trade_changed_at, qty|
       first_trade_dates[security_id] = first_date
       last_trade_dates[security_id] = last_date
       last_buy_dates[security_id] = last_buy_date
-      last_buy_created_at[security_id] = buy_created_at
+      last_trade_changed_at[security_id] = trade_changed_at
       trade_quantities[security_id] = qty
     end
 
@@ -52,15 +52,22 @@ class Security::Price::ImportWindows
       end
     end
 
-    # A manual buy can precede holding materialization. A zero holding recorded
-    # after the buy is authoritative even when raw trade quantities disagree
-    # (for example, after a reverse split). A newly entered, backdated buy can
-    # still reopen the position before holdings are rematerialized.
+    # A manual position can reopen before holdings are rematerialized: a new
+    # trade, a backdated one, or an edit to an existing one. Net quantity in
+    # either direction counts, because the materializer writes holdings with
+    # upsert_all, so a short is not stopped by Holding's qty >= 0 validation.
+    # A zero holding written after every trade change is authoritative even
+    # when raw trade quantities disagree (for example, after a reverse split).
+    # A deleted trade leaves no row to compare, so deleting a closing trade is
+    # picked up on the next sync, once holdings are rebuilt.
     manual_open_ids = trade_quantities.filter_map do |id, qty|
-      next unless qty.positive? && !provider_holding_ids.include?(id)
+      next if qty.nil? || qty.zero? || provider_holding_ids.include?(id)
 
       last_holding_date = last_holding_dates[id]
-      id if last_holding_date.nil? || last_buy_dates[id] > last_holding_date || last_buy_created_at[id] > last_holding_updated_at[id]
+      changed_at = last_trade_changed_at[id]
+      id if last_holding_date.nil? ||
+        (last_trade_dates[id] && last_trade_dates[id] > last_holding_date) ||
+        (changed_at && changed_at > last_holding_updated_at[id])
     end.to_set
     provider_reopened_ids = provider_holding_ids.filter_map do |id|
       id if last_buy_dates[id] && last_buy_dates[id] > last_provider_dates[id]
