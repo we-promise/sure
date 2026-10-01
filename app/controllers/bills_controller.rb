@@ -88,7 +88,7 @@ class BillsController < ApplicationController
     # iterates, which would otherwise be separate queries.
     @suggested_series = accessible_suggested_series.includes(:merchant).order(next_expected_date: :asc).load
     @has_transaction_history = Current.family.entries.where(entryable_type: "Transaction").exists?
-    @suggested_allocations = suggested_allocations
+    @suggested_allocations = suggested_allocations(occurrences)
     # A row waiting on a match decision offers Review rather than Find.
     # Already loaded for the queue above, so indexing is free.
     @suggestions_by_occurrence = @suggested_allocations.index_by(&:recurring_occurrence_id)
@@ -609,14 +609,17 @@ class BillsController < ApplicationController
       end
     end
 
-    def suggested_allocations
+    # Only occurrences the overview lists: open rows and this month's paid ones.
+    # Ending a bill leaves its scheduled occurrences behind and the matcher
+    # still scores them, and skipping closes an occurrence but keeps its
+    # suggestion, so neither may ask about a row the page doesn't show.
+    def suggested_allocations(occurrences)
+      listed_ids = occurrences.select { |occurrence| occurrence.scheduled? || occurrence.paid? }.map(&:id)
+
       RecurringAllocation
         .suggested
         .joins(recurring_occurrence: :recurring_transaction)
-        .where(recurring_occurrences: { family_id: Current.family.id })
-        # Ending or pausing a bill leaves its scheduled occurrences behind and
-        # the matcher still scores them, so the queue keeps to listed bills.
-        .where(recurring_occurrences: { recurring_transaction_id: payable_series_ids })
+        .where(recurring_occurrence_id: listed_ids)
         # Income never reviews here: the matcher no longer suggests it, and
         # this filter also retires any suggestion written before that rule.
         .merge(RecurringTransaction.where.not(bill_type: "income"))

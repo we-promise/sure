@@ -1571,6 +1571,25 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("bills.index.suggestion_line", entry: "OLD GYM", bill: "OLD GYM"), response.body
   end
 
+  # Skipping closes the occurrence but keeps its suggestion. Before this month
+  # the overview no longer lists the row, so the queue mustn't ask about it.
+  test "a suggestion against a skipped occurrence from last month stays out of the payment review queue" do
+    due = Date.current.beginning_of_month - 10
+    bill = declare_bill(name: "SKIPPED GYM", amount: 40, due: due)
+    RecurringTransaction::OccurrenceGenerator.new(bill).generate!
+    occurrence = bill.recurring_occurrences.find_by!(due_on: due)
+    charge = create_transaction_entry(name: "SKIPPED GYM", amount: 40, date: due)
+    RecurringTransaction::Allocator.new(occurrence).allocate_matched!(
+      entry: charge, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+    occurrence.skip!
+
+    get bills_url
+
+    assert_response :success
+    assert_no_match I18n.t("bills.index.suggestion_line", entry: "SKIPPED GYM", bill: "SKIPPED GYM"), response.body
+  end
+
 
   # The overview groups by calendar month, which is the wrong unit for anyone
   # paid weekly: four paychecks and four rent payments land in one list. The
