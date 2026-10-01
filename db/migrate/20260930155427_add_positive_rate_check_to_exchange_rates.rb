@@ -13,6 +13,13 @@
 # instead of a numeric 'Infinity' literal: casting to numeric requires 14+,
 # but casting to text is safe everywhere, since a rate can only render as the
 # string "Infinity" on servers that support storing it in the first place.
+#
+# The constraint is added NOT VALID so this migration only holds the
+# ACCESS EXCLUSIVE lock briefly: new and updated rows are checked right away,
+# while the full-table scan that validates existing rows runs in the next
+# migration (ValidatePositiveRateCheckOnExchangeRates), in its own transaction
+# and under a lighter SHARE UPDATE EXCLUSIVE lock that doesn't block reads or
+# writes.
 class AddPositiveRateCheckToExchangeRates < ActiveRecord::Migration[8.1]
   def up
     execute <<~SQL
@@ -22,7 +29,8 @@ class AddPositiveRateCheckToExchangeRates < ActiveRecord::Migration[8.1]
 
     add_check_constraint :exchange_rates,
       "rate > 0 AND rate <> 'NaN'::numeric AND rate::text <> 'Infinity'",
-      name: "chk_exchange_rates_rate_positive"
+      name: "chk_exchange_rates_rate_positive",
+      validate: false
   end
 
   # The deleted rows were unusable and are not restored.
