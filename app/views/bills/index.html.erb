@@ -61,12 +61,14 @@
         <p><%= @suggested_allocations.size %></p>
       </div>
 
-      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+      <%# Below @md the buttons drop under the text. Beside it they took most of
+          a phone row and cut the question down to "VERIZON …". %>
+      <div class="@container bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
         <% @suggested_allocations.each do |suggestion| %>
           <% series = suggestion.recurring_occurrence.recurring_transaction %>
-          <div class="flex items-center justify-between gap-4 px-4 py-3">
+          <div class="flex flex-col items-start gap-3 @md:flex-row @md:items-center @md:justify-between @md:gap-4 px-4 py-3">
             <div class="min-w-0">
-              <p class="text-sm text-primary truncate">
+              <p class="text-sm text-primary @md:truncate">
                 <%= t(".suggestion_line",
                       entry: suggestion.entry&.name.presence || t(".suggestion_unknown_entry"),
                       bill: series.display_name) %>
