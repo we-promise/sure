@@ -42,19 +42,22 @@ class Account::Syncer
     # calculator reads the difference as cash, on every day, in the amount of
     # the day's move (#3815 in IBKR, #3874 in Plaid). Nothing fails, so the only
     # place it can show is here, once every provider has written. One entry per
-    # distinct gap: the same pair of dates on the next sync adds nothing.
+    # account and gap: a shift that holds steady while both dates advance is
+    # one line, and a gap that changes is a new finding.
     def report_anchor_dated_away_from_holdings
       return unless account.linked? && account.has_current_anchor?
 
-      holdings_date = account.latest_provider_holdings_snapshot_date
-      return if holdings_date.nil?
+      newest_holding = account.holdings.where.not(account_provider_id: nil).order(date: :desc).first
+      return if newest_holding.nil?
 
+      holdings_date = newest_holding.date
       anchor_date = account.current_anchor_date
       return if anchor_date == holdings_date
-      return if anchor_gap_already_reported?(anchor_date, holdings_date)
 
       gap_days = (anchor_date - holdings_date).to_i
-      account_provider = account.account_providers.first
+      return if anchor_gap_already_reported?(gap_days)
+
+      account_provider = newest_holding.account_provider
 
       DebugLogEntry.capture(
         category: "provider_sync",
@@ -69,12 +72,13 @@ class Account::Syncer
       )
     rescue => e
       Rails.logger.error("Error checking anchor date for account #{account.id}: #{e.class} - #{e.message}")
+      Sentry.capture_exception(e)
     end
 
-    def anchor_gap_already_reported?(anchor_date, holdings_date)
+    def anchor_gap_already_reported?(gap_days)
       DebugLogEntry
         .where(account: account, category: "provider_sync", source: self.class.name)
-        .where("metadata->>'anchor_date' = ? AND metadata->>'holdings_date' = ?", anchor_date.to_s, holdings_date.to_s)
+        .where("metadata->>'gap_days' = ?", gap_days.to_s)
         .exists?
     end
 

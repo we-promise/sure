@@ -61,17 +61,20 @@ class Account::SyncerTest < ActiveSupport::TestCase
     assert_equal 1, entry.metadata["gap_days"]
     assert_match(/1 day\(s\) after/, entry.message)
 
-    # The same gap on the next sync is already on record.
+    # The next day both dates have moved on and the gap has not: the shift is
+    # already on record, whatever the dates now read.
+    account.set_current_balance(1000, date: Date.current + 1, schedule_sync: false)
+    provider_holding(account, account_provider, date: Date.current)
     assert_no_difference "DebugLogEntry.count" do
-      run_sync(account)
+      run_sync(Account.find(account.id))
     end
 
     # A different gap is a new finding.
-    account.set_current_balance(1000, date: Date.current + 1, schedule_sync: false)
+    account.set_current_balance(1000, date: Date.current + 3, schedule_sync: false)
     assert_difference "DebugLogEntry.count", 1 do
-      run_sync(account)
+      run_sync(Account.find(account.id))
     end
-    assert_equal 2, DebugLogEntry.order(:created_at).last.metadata["gap_days"]
+    assert_equal 3, DebugLogEntry.order(:created_at).last.metadata["gap_days"]
   end
 
   test "stays quiet when the anchor and the newest provider holding share a date" do
