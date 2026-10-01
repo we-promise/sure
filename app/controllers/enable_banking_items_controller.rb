@@ -13,63 +13,17 @@ class EnableBankingItemsController < ApplicationController
     @enable_banking_item.name ||= "Enable Banking Connection"
 
     if @enable_banking_item.save
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured Enable Banking.")
-        @enable_banking_items = Current.family.enable_banking_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "enable_banking-providers-panel",
-            partial: "settings/providers/enable_banking_panel",
-            locals: { enable_banking_items: @enable_banking_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @enable_banking_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "enable_banking-providers-panel",
-          partial: "settings/providers/enable_banking_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
+      render_provider_panel("enable_banking", alert: @enable_banking_item.errors.full_messages.join(", "))
     end
   end
 
   def update
     if @enable_banking_item.update(enable_banking_item_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully updated Enable Banking configuration.")
-        @enable_banking_items = Current.family.enable_banking_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "enable_banking-providers-panel",
-            partial: "settings/providers/enable_banking_panel",
-            locals: { enable_banking_items: @enable_banking_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("enable_banking", notice: t(".success"), enable_banking_items: Current.family.enable_banking_items.ordered)
     else
-      @error_message = @enable_banking_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "enable_banking-providers-panel",
-          partial: "settings/providers/enable_banking_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
+      render_provider_panel("enable_banking", alert: @enable_banking_item.errors.full_messages.join(", "))
     end
   end
 
@@ -88,6 +42,10 @@ class EnableBankingItemsController < ApplicationController
   def sync
     unless @enable_banking_item.syncing?
       @enable_banking_item.sync_later
+    end
+    if provider_panel_form?
+      return render_provider_panel("enable_banking", notice: t("settings.providers.sync_provider_in_progress"),
+                                   enable_banking_items: Current.family.enable_banking_items.ordered)
     end
 
     respond_to do |format|
