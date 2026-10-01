@@ -335,7 +335,7 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(@entry.account)
 
-    unless @entry.account.investment?
+    unless @entry.account.supports_trades?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
@@ -351,7 +351,7 @@ class TransactionsController < ApplicationController
     return unless require_account_permission!(@entry.account)
 
     # Pre-transaction validations
-    unless @entry.account.investment?
+    unless @entry.account.supports_trades?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
