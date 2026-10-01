@@ -430,10 +430,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("bills.partial_progress", paid: "$750.00", expected: "$2,000.00"), response.body
   end
 
-  # The row expansion described the SERIES definition while the drawer described
-  # the current occurrence, so an overdue bill greeted you with "Next payment"
-  # in one surface and "Overdue" in the other, at the same moment.
-  test "the row expansion and the drawer tell the same story about an overdue bill" do
+  # The row's detail once described the SERIES definition while the bill's
+  # detail described the current occurrence, so an overdue bill greeted you
+  # with "Next payment" in one surface and "Overdue" in the other.
+  test "the drawer and the bill's page tell the same story about an overdue bill" do
     overdue_day = 6.days.ago.to_date
     bill = create_bill(name: "Late Co", amount: 5.99,
                        expected_day_of_month: overdue_day.day,
@@ -446,13 +446,13 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     overdue_phrase = I18n.t("bills.due_label.overdue", count: days,
                             date: I18n.l(occurrence.effective_due_on, format: :short))
 
-    get bill_url(bill), headers: { "Turbo-Frame" => "drawer" }
+    get bill_url(bill)
     assert_response :success
-    assert_match overdue_phrase, response.body, "the drawer states the status"
+    assert_match overdue_phrase, response.body, "the page states the status"
 
-    get bill_url(bill, display: "pane", frame: "x"), headers: { "Turbo-Frame" => "x" }
+    get_bill_drawer(bill)
     assert_response :success
-    assert_match overdue_phrase, response.body, "and the expansion must state the same one"
+    assert_match overdue_phrase, response.body, "and the drawer must state the same one"
     assert_no_match I18n.t("bills.detail.next_payment"), response.body,
       "an overdue bill is not a next payment"
   end
@@ -508,7 +508,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       assert occurrence.reload.paid?, "each charge is inside tolerance and should settle the cycle"
     end
 
-    get bill_url(bill), headers: { "Turbo-Frame" => "drawer" }
+    get_bill_drawer(bill)
 
     assert_response :success
     assert_match "$77.00", response.body
@@ -648,11 +648,11 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("recurring_transactions.new.income_title"), response.body
   end
 
-  # The expansion is opened from one row, so it has to describe that row's
+  # The drawer is opened from one row, so it has to describe that row's
   # cycle. It used to ask the series for its current occurrence, which is the
-  # earliest still-open one, so expanding a settled row reported the NEXT cycle
-  # as unpaid directly underneath a row marked Paid.
-  test "expanding a row describes that row's cycle, not the series' next one" do
+  # earliest still-open one, so opening a settled row reported the NEXT cycle
+  # as unpaid beside a row marked Paid.
+  test "opening a row describes that row's cycle, not the series' next one" do
     bill = create_bill(name: "Streaming Plus", amount: 15.99)
     settled = bill.recurring_occurrences.order(:due_on).first
     entry = accounts(:depository).entries.create!(
@@ -666,7 +666,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil later, "the series has a later, unpaid cycle to be confused with"
     assert_not_equal settled.id, later.id
 
-    get bill_url(bill, display: "pane", frame: "pane_x", occurrence: settled.id)
+    get_bill_drawer(bill, occurrence: settled.id)
 
     assert_response :success
     assert_match I18n.t("bills.summary.paid_headline", amount: "$15.99"), response.body
@@ -675,10 +675,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Without an occurrence the page has no cycle in mind, so the series answers.
-  test "the bill page with no occurrence falls back to the series" do
+  test "a bill opened with no occurrence falls back to the series" do
     bill = create_bill(name: "Streaming Plus", amount: 15.99)
 
-    get bill_url(bill, display: "pane", frame: "pane_x")
+    get_bill_drawer(bill)
 
     assert_response :success
     assert_match I18n.t("bills.summary.remaining", amount: "$15.99"), response.body
@@ -691,7 +691,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     other = create_bill(name: "Gym", amount: 40)
     stranger = other.recurring_occurrences.order(:due_on).first
 
-    get bill_url(mine, display: "pane", frame: "pane_x", occurrence: stranger.id)
+    get_bill_drawer(mine, occurrence: stranger.id)
 
     assert_response :success
     assert_match I18n.t("bills.summary.remaining", amount: "$15.99"), response.body
@@ -878,30 +878,37 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("bills.paycheck.reserved_ahead"), response.body
   end
 
-  test "every overview row carries its own empty expansion frame" do
-    create_bill(name: "Rent", amount: 2150)
+  test "an overview row opens its bill in the drawer, for that row's cycle" do
+    # Overdue, because Next up lists nothing past due: the row is the only
+    # link to this cycle.
+    overdue_day = 6.days.ago.to_date
+    bill = create_bill(name: "Late Co", amount: 5.99, expected_day_of_month: overdue_day.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: overdue_day)
+    occurrence = bill.recurring_occurrences.detect(&:overdue?)
 
     get bills_url
 
     assert_response :success
-    assert_match(/<turbo-frame[^>]*id="pane_recurring_occurrence_/, response.body)
-    assert_match(/data-turbo-frame="pane_recurring_occurrence_/, response.body)
+    assert_select "a[data-turbo-frame=drawer][href=?]", bill_path(bill, display: "drawer", occurrence: occurrence.id), count: 1
   end
 
-  test "the expansion renders into the requesting row frame and can collapse" do
+  # Next up used to go to the bill's page, because opening the expansion of a
+  # row further down would have jumped the page. The drawer opens over the
+  # page, so Next up opens the same one the row does.
+  test "a Next up item opens the same drawer as its row" do
     bill = create_bill(name: "Rent", amount: 2150)
+    occurrence = bill.recurring_occurrences.find_by!(due_on: Date.current)
 
-    get bill_url(bill, display: "pane", frame: "pane_recurring_occurrence_abc123")
-    assert_response :success
-    assert_match(/<turbo-frame[^>]*id="pane_recurring_occurrence_abc123"/, response.body)
+    get bills_url
 
-    get bill_url(bill, display: "pane", frame: "pane_recurring_occurrence_abc123", close: 1)
     assert_response :success
-    assert_match(/<turbo-frame[^>]*id="pane_recurring_occurrence_abc123"><\/turbo-frame>/, response.body)
-    assert_no_match I18n.t("bills.detail.rules"), response.body
+    assert_select "a[data-turbo-frame=drawer][href=?]", bill_path(bill, display: "drawer", occurrence: occurrence.id),
+      { count: 2 }, "the row and its Next up item"
   end
 
-  test "the detail pane tells the bill's story inside its frame" do
+  # A bill opens over the list, the way a transaction or a budget category
+  # does, rather than expanding inline under its row.
+  test "a bill opens in the drawer and tells its story there" do
     bill = create_bill(name: "Rent", amount: 2150)
     occurrence = bill.recurring_occurrences.order(:due_on).first
     entry = accounts(:depository).entries.create!(
@@ -910,20 +917,63 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     )
     RecurringTransaction::Allocator.new(occurrence).allocate!(amount: "2150", entry: entry)
 
-    get bill_url(bill, display: "pane")
+    get_bill_drawer(bill)
 
     assert_response :success
-    assert_match(/<turbo-frame[^>]*id="bill_detail"/, response.body, "no frame param falls back to a stable id")
+    assert_select "turbo-frame#drawer dialog h2", text: "Rent"
     assert_match I18n.t("bills.detail.recent_payments"), response.body
     assert_match "WATSON PROPERTY", response.body
 
-    # The expansion answers "what is going on with this bill" and stops there.
+    # The drawer answers "what is going on with this bill" and stops there.
     # The matching rules and the per-year table are configuration and
     # reference material, and they belong to the bill's page.
     assert_no_match I18n.t("bills.detail.rules"), response.body,
-      "the expansion is not a second detail view"
+      "the drawer is not a second detail view"
     assert_no_match I18n.t("bills.detail.key_metrics"), response.body
-    assert_no_match(/<html/, response.body, "the pane renders frame-only, no layout")
+    assert_no_match(/<html/, response.body, "the drawer renders frame-only, no layout")
+  end
+
+  # A match waiting on a decision is the one thing that changes what the
+  # drawer asks of you: review it, rather than go looking for the payment.
+  test "a pending match makes the drawer's verb Review" do
+    bill = declare_bill(name: "CITY WATER", amount: 80, due: Date.current - 3)
+    charge = create_transaction_entry(name: "CITY WATER", amount: 85.50, date: Date.current - 3)
+    occurrence = bill.recurring_occurrences.order(:due_on).first
+    RecurringTransaction::Allocator.new(occurrence).allocate_matched!(
+      entry: charge, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+
+    get_bill_drawer(bill, occurrence: occurrence.id)
+
+    assert_response :success
+    assert_match I18n.t("bills.review_match"), response.body
+    assert_no_match I18n.t("bills.find_payment"), response.body
+  end
+
+  # A form inside a frame answers into that frame. Pause and Delete redirect to
+  # a whole page, so inside the drawer they would only empty it and leave the
+  # list behind them stale.
+  test "the drawer's pause and delete submit to the whole page" do
+    bill = create_bill(name: "Rent", amount: 2150)
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    [ toggle_status_recurring_transaction_path(bill), recurring_transaction_path(bill) ].each do |action|
+      assert_select "form[action=?] button[data-turbo-frame=_top]", action
+    end
+  end
+
+  # The row is a real link, so a cmd-click or a pasted URL arrives with no frame
+  # to render into. A bare dialog with no page around it never opens, which
+  # would leave a blank tab.
+  test "a drawer link opened outside the drawer lands on the bill's page" do
+    bill = create_bill(name: "Power Co", amount: 80)
+
+    get bill_url(bill, display: "drawer")
+
+    assert_response :success
+    assert_select "main h1", text: "Power Co"
   end
 
   test "the paycheck view lists declared income with an edit affordance" do
@@ -990,9 +1040,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # Trial and renewal are STATE: they change what you might do about the bill
     # today, so both routes to it must say so. Price history is the record of
     # how it got here, which is the page's job.
-    { "page" => bill_url(sub),
-      "expansion" => bill_url(sub, display: "pane", frame: "x") }.each do |label, url|
-      get url
+    { "page" => -> { get bill_url(sub) }, "drawer" => -> { get_bill_drawer(sub) } }.each do |label, request|
+      request.call
       assert_response :success
       assert_match I18n.t("bills.detail.trial_chip", date: I18n.l(Date.current + 5, format: :short)),
         response.body, "the #{label} lost the trial chip"
@@ -1160,15 +1209,16 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Dismissed", I18n.t("recurring_transactions.status.ended")
   end
 
-  # The expansion and the drawer used to be two templates over one action, so
-  # they drifted, and the fix made them render the SAME partial -- which traded
-  # a disagreement for a duplication: two surfaces answering one question.
+  # The row expansion and the old drawer used to be two templates over one
+  # action, so they drifted, and the fix made them render the SAME partial --
+  # which traded a disagreement for a duplication: two surfaces answering one
+  # question.
   #
   # They now answer different ones. What has to stay true is that nothing was
   # lost on the way, and that the shallower surface never quietly grows into
-  # the deeper one again. So: the expansion is a strict subset of the page, and
+  # the deeper one again. So: the drawer is a strict subset of the page, and
   # every section the old shared partial rendered still exists somewhere.
-  test "the expansion is a subset of the bill's page, and nothing was dropped" do
+  test "the drawer is a subset of the bill's page, and nothing was dropped" do
     bill = create_bill(name: "Power Co", amount: 80, notes: "Account 4821")
     past = bill.recurring_occurrences.create!(
       family: @family, original_due_on: 2.months.ago.to_date,
@@ -1188,9 +1238,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     page = response.body
 
-    get bill_url(bill, display: "pane", frame: "x"), headers: { "Turbo-Frame" => "x" }
+    get_bill_drawer(bill)
     assert_response :success
-    pane = response.body
+    drawer = response.body
 
     # Every section the shared partial used to render still has a home.
     everything = %w[rules history_title average annualized ytd upcoming
@@ -1199,14 +1249,14 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     homeless = everything.reject { |key| page.include?(I18n.t("bills.detail.#{key}")) }
     assert_empty homeless, "relocating the detail must not delete any of it"
 
-    # And the expansion adds nothing of its own that the page lacks.
-    shown_in_pane = everything.select { |key| pane.include?(I18n.t("bills.detail.#{key}")) }
-    assert_equal shown_in_pane, shown_in_pane & everything.select { |key| page.include?(I18n.t("bills.detail.#{key}")) },
-      "the expansion must stay a subset, never a second detail view"
+    # And the drawer adds nothing of its own that the page lacks.
+    shown_in_drawer = everything.select { |key| drawer.include?(I18n.t("bills.detail.#{key}")) }
+    assert_equal shown_in_drawer, shown_in_drawer & everything.select { |key| page.include?(I18n.t("bills.detail.#{key}")) },
+      "the drawer must stay a subset, never a second detail view"
 
     [ "POWER CO AUTOPAY", "$78.50" ].each do |fact|
       assert_includes page, fact, "the page is missing #{fact}"
-      assert_includes pane, fact, "the expansion is missing #{fact}"
+      assert_includes drawer, fact, "the drawer is missing #{fact}"
     end
     assert_includes page, "Account 4821", "notes belong to the page"
   end
@@ -1650,6 +1700,11 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
         next_expected_date: Date.current,
         status: "suggested", manual: false
       )
+    end
+
+    # What a row asks for: the drawer variant, fetched into the drawer frame.
+    def get_bill_drawer(bill, **params)
+      get bill_url(bill, display: "drawer", **params), headers: { "Turbo-Frame" => "drawer" }
     end
 
     def create_bill(name:, amount:, **overrides)

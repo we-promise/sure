@@ -1,0 +1,26 @@
+<%# Opened from a row, over the list, the way a transaction or a budget
+    category opens. The list stays where it was, so closing this lands back
+    on the same row.
+
+    Temporary, so Turbo leaves it out of the cached page: "View full bill"
+    navigates away with the drawer still open, and Back would otherwise bring
+    it back as a stray non-modal dialog. %>
+<%= render DS::Dialog.new(variant: :drawer, data: { turbo_temporary: true }) do |dialog| %>
+  <% dialog.with_header(title: @series.display_name) do %>
+    <% if @series.category %>
+      <%= render "categories/badge", category: @series.category %>
+    <% end %>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%# What is going on with this bill, and what to do about it. Everything
+        deeper -- the chart, the per-year totals, the price history, the
+        upcoming dates, the settled cycles -- lives on the bill's page. %>
+    <%= render "bills/summary",
+          series: @series,
+          current_occurrence: @current_occurrence,
+          analytics: @analytics,
+          recent_allocations: @recent_allocations,
+          suggestion: @drawer_suggestion %>
+  <% end %>
+<% end %>
