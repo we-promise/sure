@@ -120,7 +120,7 @@ module Family::Subscribeable
     def cancel_or_reject_active_subscription
       return unless subscription&.stripe_id.present?
       return if subscription.canceled? || subscription.incomplete_expired?
-      return if subscription.stripe_id == Demo::Generator::DEMO_STRIPE_SUBSCRIPTION_ID
+      return if subscription.synthetic?
 
       begin
         Provider::Registry.get_provider(:stripe).cancel_subscription(subscription.stripe_id)

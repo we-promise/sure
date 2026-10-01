@@ -110,7 +110,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
     Setting.demo_family_refresh_family_id = @demo_family.id.to_s
     Setting.demo_family_refresh_enabled = true
-    @demo_family.start_subscription!(Demo::Generator::DEMO_STRIPE_SUBSCRIPTION_ID)
+    @demo_family.start_subscription!(Subscription::DEMO_STRIPE_ID)
     session = Session.create!(user: @demo_user)
     app = Doorkeeper::Application.create!(name: "Demo Retirement Test", redirect_uri: "https://example.com/callback", confidential: false)
     token = Doorkeeper::AccessToken.create!( # pipelock:ignore Credential in URL

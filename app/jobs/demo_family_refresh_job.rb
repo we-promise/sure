@@ -73,10 +73,6 @@ class DemoFamilyRefreshJob < ApplicationJob
         user.update_columns(active: false)
       end
 
-      # The generator's synthetic subscription is not a real Stripe object.
-      # Mark it canceled so Family's destroy callback does not try Stripe.
-      subscription = family.subscription
-      subscription.update!(status: :canceled) if subscription&.stripe_id == Demo::Generator::DEMO_STRIPE_SUBSCRIPTION_ID
     end
 
     def sessions_count_for(family, period_start:, period_end:)

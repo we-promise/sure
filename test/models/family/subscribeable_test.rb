@@ -70,7 +70,7 @@ class Family::SubscribeableTest < ActiveSupport::TestCase
 
   test "destroying a family with the demo sentinel stripe ID does not call Stripe" do
     family = Family.create!(name: "Demo Family")
-    family.start_subscription!(Demo::Generator::DEMO_STRIPE_SUBSCRIPTION_ID)
+    family.start_subscription!(Subscription::DEMO_STRIPE_ID)
     Provider::Registry.expects(:get_provider).with(:stripe).never
 
     assert family.destroy

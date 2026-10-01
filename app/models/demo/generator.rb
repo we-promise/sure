@@ -1,10 +1,9 @@
 require "securerandom"
 
 class Demo::Generator
-  # Sentinel Stripe subscription ID used for demo families.  This is not a real
-  # Stripe object, so any code path that would call the Stripe API must guard
-  # against it before making a network request.
-  DEMO_STRIPE_SUBSCRIPTION_ID = "sub_demo_123"
+  # Alias the canonical sentinel from Subscription so callers that already
+  # reference Demo::Generator::DEMO_STRIPE_SUBSCRIPTION_ID keep working.
+  DEMO_STRIPE_SUBSCRIPTION_ID = Subscription::DEMO_STRIPE_ID
 
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
