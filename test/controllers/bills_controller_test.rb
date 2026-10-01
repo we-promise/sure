@@ -1155,7 +1155,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # Opacity on the whole row took the secondary text to about 2.7:1 in light
   # mode. The row recedes through the text tokens instead.
   test "an autopay row recedes through its text colour, not opacity" do
-    create_bill(name: "Handled bill", amount: 30, autopay: true)
+    create_bill(name: "Handled bill", amount: 30, autopay: true, notes: "Card ending 4242")
     create_bill(name: "Power Co", amount: 80)
 
     get bills_url
@@ -1165,6 +1165,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       assert_not_includes links.first.parent["class"].split, "opacity-70"
       assert_select links.first, "p.font-medium.text-secondary", text: /Handled bill/
       assert_select links.first, "p.font-medium.text-secondary.privacy-sensitive", text: /\$30\.00/
+      # text-subdued is about 2.7:1 on white; notes have to stay readable.
+      assert_select links.first, "p.text-secondary", text: "Card ending 4242"
     end
     assert_select "a[data-turbo-frame^='pane_']", text: /Power Co/ do |links|
       assert_select links.first, "p.font-medium.text-primary", text: /Power Co/
