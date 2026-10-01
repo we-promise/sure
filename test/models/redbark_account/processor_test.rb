@@ -16,7 +16,10 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
   setup do
     @redbark_item = redbark_items(:one)
     @family = @redbark_item.family
-    @currency = @family.currency
+    # The dylan_family fixture sets only `name` (no currency), so fall back to
+    # AUD — the pre-fix convention — to keep the tests hermetic. Use the
+    # family's currency only when the fixture actually supplies one.
+    @currency = @family.currency.presence || "AUD"
   end
 
   test "processor initializes with redbark_account" do
