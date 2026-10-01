@@ -63,7 +63,7 @@ class IncomeStatement::Totals
           c.id as category_id,
           c.parent_id as parent_category_id,
           #{classification_sql("at")} as classification,
-          ABS(SUM(#{converted_amount_sql("at")})) as total,
+          SUM(#{reported_amount_sql("at")}) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -88,7 +88,7 @@ class IncomeStatement::Totals
           c.id as category_id,
           c.parent_id as parent_category_id,
           #{classification_sql("at")} as classification,
-          ABS(SUM(#{converted_amount_sql("at")})) as total,
+          SUM(#{reported_amount_sql("at")}) as total,
           COUNT(ae.id) as entry_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at

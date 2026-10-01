@@ -66,7 +66,10 @@ export default class extends Controller {
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
     const series = ["income", "expense"];
-    const seriesColor = { expense: "var(--color-gray-400)", income: "var(--color-success)" };
+    const seriesColor = {
+      expense: "var(--color-gray-400)",
+      income: "var(--color-success)",
+    };
 
     const x0 = d3
       .scaleBand()
@@ -74,12 +77,26 @@ export default class extends Controller {
       .range([0, innerWidth])
       .padding(0.3);
 
-    const x1 = d3.scaleBand().domain(series).range([0, x0.bandwidth()]).padding(0.15);
+    const x1 = d3
+      .scaleBand()
+      .domain(series)
+      .range([0, x0.bandwidth()])
+      .padding(0.15);
 
-    const maxValue = d3.max(data, (d) => Math.max(d.income, d.expense)) || 1;
-    const y = d3.scaleLinear().domain([0, maxValue * 1.1]).range([innerHeight, 0]);
+    const maxValue = Math.max(
+      0,
+      d3.max(data, (d) => Math.max(d.income, d.expense)) || 0,
+    );
+    const minValue = Math.min(
+      0,
+      d3.min(data, (d) => Math.min(d.income, d.expense)) || 0,
+    );
+    const y = d3
+      .scaleLinear()
+      .domain([minValue * 1.1, maxValue * 1.1 || (minValue === 0 ? 1 : 0)])
+      .range([innerHeight, 0]);
     // Floor tiny-but-nonzero bars (e.g. an in-progress month) at 2px so they stay visible.
-    const barHeight = (v) => (v > 0 ? Math.max(2, innerHeight - y(v)) : 0);
+    const barHeight = (v) => (v !== 0 ? Math.max(2, Math.abs(y(v) - y(0))) : 0);
 
     const tooltip = d3
       .select(this.element)
@@ -114,7 +131,7 @@ export default class extends Controller {
       .data((d) => series.map((key) => ({ key, value: d[key], month: d })))
       .join("rect")
       .attr("x", (d) => x1(d.key))
-      .attr("y", (d) => innerHeight - barHeight(d.value))
+      .attr("y", (d) => (d.value >= 0 ? y(0) - barHeight(d.value) : y(0)))
       .attr("width", x1.bandwidth())
       .attr("height", (d) => barHeight(d.value))
       .attr("rx", 3)
@@ -130,7 +147,11 @@ export default class extends Controller {
       .call(d3.axisBottom(x0).tickSize(0))
       .call((g) => g.select(".domain").remove())
       .selectAll("text")
-      .attr("class", (_d, i) => (data[i].highlighted ? "text-primary fill-current" : "text-secondary fill-current"))
+      .attr("class", (_d, i) =>
+        data[i].highlighted
+          ? "text-primary fill-current"
+          : "text-secondary fill-current",
+      )
       .style("font-size", "12px")
       .style("font-weight", (_d, i) => (data[i].highlighted ? 600 : 500));
 
@@ -145,7 +166,8 @@ export default class extends Controller {
   _fitAxisLabels(labels, data, step) {
     if (labels.empty()) return;
 
-    const widest = () => d3.max(labels.nodes(), (node) => node.getComputedTextLength()) || 0;
+    const widest = () =>
+      d3.max(labels.nodes(), (node) => node.getComputedTextLength()) || 0;
     const fits = () => widest() <= step - LABEL_GAP_PX;
 
     if (fits()) return;
@@ -165,9 +187,11 @@ export default class extends Controller {
   }
 
   _tooltipTemplate(month, key) {
-    const label = key === "income" ? this.incomeLabelValue : this.expenseLabelValue;
+    const label =
+      key === "income" ? this.incomeLabelValue : this.expenseLabelValue;
     // Match the bar/legend palette — expenses render gray, not destructive red.
-    const color = key === "income" ? "var(--color-success)" : "var(--color-gray-400)";
+    const color =
+      key === "income" ? "var(--color-success)" : "var(--color-gray-400)";
 
     return `
       <div class="text-xs text-secondary mb-1">${month.label}</div>

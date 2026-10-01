@@ -92,6 +92,10 @@
                       </span>
                     <% end %>
 
+                    <% if transaction.refund? %>
+                      <%= render DS::Pill.new(label: t("transactions.transaction.refund"), tone: :neutral, marker: false, icon: "undo-2") %>
+                    <% end %>
+
                     <%# Pending indicator %>
                     <% if transaction.pending? %>
                       <%= render DS::Pill.new(

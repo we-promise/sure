@@ -98,6 +98,7 @@ class Family::DataImporter
     }
     @security_cache = {}
     @pending_replacements = {}
+    @refund_links = {}
     @created_accounts = []
     @created_entries = []
     @summary = Hash.new { |hash, key| hash[key] = empty_summary_bucket }
@@ -118,6 +119,7 @@ class Family::DataImporter
       import_provider_merchants(records["ProviderMerchant"] || [])
       import_recurring_transactions(records["RecurringTransaction"] || [])
       import_transactions(records["Transaction"] || [])
+      restore_refund_links
       # Bills: rules and occurrences need their series, allocations and the
       # rest also need transactions, so all of it replays here.
       import_recurrence_rules(records["RecurrenceRule"] || [])
@@ -957,6 +959,9 @@ class Family::DataImporter
         entry.save!
 
         map_source!(:transactions, old_id, transaction)
+        if data.key?("refund_of_id") && (data["refund_of_id"].present? || transaction.refund_of_id.present?)
+          @refund_links[transaction.id] = data["refund_of_id"]
+        end
         split_rows = importable_split_rows(data)
 
         if split_rows.any?
@@ -972,6 +977,40 @@ class Family::DataImporter
         end
 
         increment_summary("Transaction", created ? :created : :updated)
+      end
+    end
+
+    # Purchases can follow refunds in the archive, including nested split lines.
+    # Resolve references only after all transaction IDs have been mapped.
+    def restore_refund_links
+      @refund_links.each_slice(500) do |batch|
+        links = batch.map do |transaction_id, source_purchase_id|
+          purchase_id = if source_purchase_id.present?
+            mapped_id(:transactions, source_purchase_id, record_type: "Transaction")
+          end
+          [ transaction_id, purchase_id ]
+        end
+        # Keep family scoping and find's missing-record checks while sharing
+        # purchases and their validation associations across links in the batch.
+        records = @family.transactions.includes(entry: :account).find(links.flatten.compact.uniq).index_by(&:id)
+        links.each do |transaction_id, purchase_id|
+          transaction = records.fetch(transaction_id)
+          next if transaction.refund_of_id == purchase_id
+
+          purchase = purchase_id && records.fetch(purchase_id)
+          # An archive can hold a pairing today's rules no longer accept (a
+          # purchase excluded or re-marked pending after it was linked). The
+          # refund itself still imports; only the link is dropped, rather than
+          # failing every record in the archive over one stale pairing.
+          if purchase && !purchase.refundable_purchase?
+            Rails.logger.warn(
+              "Skipped refund link for transaction #{transaction.id}: purchase #{purchase.id} is no longer a linkable purchase"
+            )
+            next
+          end
+
+          transaction.update!(refund_of: purchase)
+        end
       end
     end
 
@@ -1003,7 +1042,8 @@ class Family::DataImporter
           excluded: boolean_import_value(row, "excluded", default: false),
           tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
-          kind: row["kind"]
+          kind: row["kind"],
+          refund_of_id: row["refund_of_id"]
         }
       end
     end
@@ -1034,6 +1074,7 @@ class Family::DataImporter
         end
 
         map_source!(:transactions, row[:old_id], transaction) if row[:old_id].present?
+        @refund_links[transaction.id] = row[:refund_of_id] if row[:refund_of_id].present?
         @created_entries << child_entry
       end
     end

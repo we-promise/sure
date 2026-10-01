@@ -15,6 +15,7 @@ class Transfer < ApplicationRecord
   validate :transfer_has_opposite_amounts
   validate :transfer_within_date_range
   validate :transfer_has_same_family
+  validate :transfer_has_no_refunds
 
   class << self
     def kind_for_account(account)
@@ -148,6 +149,14 @@ class Transfer < ApplicationRecord
   end
 
   private
+    def transfer_has_no_refunds
+      transactions = [ inflow_transaction, outflow_transaction ].compact
+      if transactions.any? { |transaction| transaction.refund? || transaction.refund_of_id.present? } ||
+          Transaction.where(refund_of_id: transactions.filter_map(&:id)).exists?
+        errors.add(:base, :refund_links_present)
+      end
+    end
+
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
       errors.add(:base, :different_accounts) if to_account == from_account

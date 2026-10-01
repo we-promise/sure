@@ -1,5 +1,5 @@
 class Transaction < ApplicationRecord
-  include Entryable, Transferable, Ruleable, Splittable
+  include Entryable, Transferable, Ruleable, Splittable, Refundable
 
   belongs_to :category, optional: true
   belongs_to :merchant, optional: true
@@ -68,6 +68,7 @@ class Transaction < ApplicationRecord
   public
 
   enum :kind, {
+    refund: "refund", # A purchase refund, reduces expenses without generating income
     standard: "standard", # A regular transaction, included in budget analytics
     funds_movement: "funds_movement", # Movement of funds between accounts, excluded from budget analytics
     cc_payment: "cc_payment", # A CC payment, excluded from budget analytics (CC payments offset the sum of expense transactions)

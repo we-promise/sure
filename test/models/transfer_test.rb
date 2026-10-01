@@ -74,6 +74,24 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "Must be from different accounts", transfer.errors.full_messages.first
   end
 
+  test "transfer validation rejects refunds and linked purchases" do
+    purchase = create_transaction(account: accounts(:depository), amount: 500)
+    credit = create_transaction(account: accounts(:credit_card), amount: -500)
+    refund = create_transaction(account: accounts(:depository), amount: -100)
+    refund.transaction.mark_as_refund!(purchase: purchase.transaction)
+    transfer = Transfer.new(inflow_transaction: credit.transaction, outflow_transaction: purchase.transaction)
+
+    assert_not transfer.valid?
+    assert transfer.errors.of_kind?(:base, :refund_links_present)
+
+    refund.transaction.clear_refund!
+    assert transfer.valid?
+
+    credit.transaction.mark_as_refund!
+    assert_not transfer.valid?
+    assert transfer.errors.of_kind?(:base, :refund_links_present)
+  end
+
   test "Transfer transactions must have opposite amounts" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -400)
