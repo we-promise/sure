@@ -75,6 +75,22 @@ class TradesTest < ApplicationSystemTestCase
     # min: 0 these fields request must be enforced by money_field_controller
     # instead of the browser. requestSubmit() from auto_submit_form runs
     # constraint validation, so an out-of-range value is never auto-saved.
+    # Count auto-submit attempts and the submit events they produce: an
+    # invalid form makes requestSubmit() return without dispatching "submit",
+    # so once the debounced attempt has happened, zero submit events proves
+    # nothing was sent, without guessing how long a request would take.
+    page.execute_script(<<~JS, find_field("Cost per Share"))
+      const form = arguments[0].form;
+      window.tradeFormSubmitAttempts = 0;
+      window.tradeFormSubmits = 0;
+      const requestSubmit = form.requestSubmit.bind(form);
+      form.requestSubmit = (...args) => {
+        window.tradeFormSubmitAttempts++;
+        return requestSubmit(...args);
+      };
+      form.addEventListener("submit", () => window.tradeFormSubmits++);
+    JS
+
     within "turbo-frame#drawer" do
       fill_in "Cost per Share", with: "-5"
       find_field("Cost per Share").send_keys(:tab)
@@ -87,8 +103,9 @@ class TradesTest < ApplicationSystemTestCase
         find_field("Transaction fee").evaluate_script("this.validationMessage")
     end
 
-    # Give a (wrongly) triggered auto-submit time to land before checking.
-    sleep 0.5
+    assert_eventually { page.evaluate_script("window.tradeFormSubmitAttempts") >= 1 }
+    assert_equal 0, page.evaluate_script("window.tradeFormSubmits")
+
     trade.reload
     assert_equal original_price, trade.price
     assert_equal original_fee, trade.fee
