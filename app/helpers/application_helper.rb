@@ -295,7 +295,8 @@ module ApplicationHelper
         i.entryable.is_a?(Transaction) &&
         i.entryable.transfer?
       end
-      total = items.sum(&money_method)
+      # Keep the group's currency when every entry is excluded from the total.
+      total = items.sum(Money.new(0, item.first.currency), &money_method)
       negate ? -total : total
     end
 end
