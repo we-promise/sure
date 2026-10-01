@@ -3,12 +3,15 @@
 <% expected = occurrence.resolved_expected_amount_money %>
 <% paid = occurrence.confirmed_allocated_money %>
 <% pane_frame = dom_id(occurrence, :pane) %>
+<% lead_tone = series.autopay? ? "text-secondary" : "text-primary" %>
 
 <%# SCAN. What is this, and does it need me?
     Everything past that question lives one tap deeper, in the expansion.
 
     An autopaying bill is still worth seeing and still counts toward the total,
-    but it recedes so the rows that want something from you carry the weight. %>
+    but it recedes so the rows that want something from you carry the weight.
+    It recedes through lead_tone, on the name and the amount: opacity on the
+    whole row took the secondary text below 3:1 in light mode. %>
 <div>
 <%# The row reads as interactive without dressing up as a button: a hover tint
     and the name underlining, the same cues the transaction list uses.
@@ -18,15 +21,17 @@
     the pointer was down in the expanded pane, and the lit band clipped against
     the pane's own fill. Hover still propagates from every child of the row, so
     the trailing action tints it exactly as before. %>
-<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 transition-colors hover:bg-surface-hover <%= "opacity-70" if series.autopay? %>">
+<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 transition-colors hover:bg-surface-hover">
   <%# The bulk of the row is the inspect control. Only the trailing verb sits
-      outside it, so there are no anchors inside anchors. %>
+      outside it, so there are no anchors inside anchors. The link has no
+      padding of its own, so its ring is pushed out into the row's: clear of
+      the date and the amount, and still inside the row. %>
   <%# Names the cycle it was opened from. Without it the expansion falls back to
       the series' current occurrence, so expanding a settled row described the
       NEXT one and reported it unpaid. %>
   <%= link_to bill_path(series, display: "pane", frame: pane_frame, occurrence: occurrence.id),
         data: { turbo_frame: pane_frame, turbo_prefetch: false },
-        class: "flex items-center gap-3 lg:gap-4 min-w-0 flex-1 group" do %>
+        class: "flex items-center gap-3 lg:gap-4 min-w-0 flex-1 group rounded-lg focus-ring outline-offset-4" do %>
     <%# A date rail, and only a date. It used to print "Overdue" beside a
         subline already reading "14 days overdue", which spent the row's one
         piece of temporal context saying the same word twice. The colour still
@@ -58,7 +63,7 @@
 
     <% reason = date_label ? bills_attention_reason(occurrence, suggestion: suggestion) : nil %>
     <div class="min-w-0 flex-1">
-      <p class="text-primary text-sm font-medium truncate group-hover:underline">
+      <p class="<%= lead_tone %> text-sm font-medium truncate group-hover:underline">
         <%= series.display_name %>
         <% if series.transfer? %>
           <span class="text-xs text-secondary font-normal"><%= t("bills.debt_payment") %></span>
@@ -94,7 +99,7 @@
         used to be printed twice: a coloured subline on the left and a figure
         on the right. %>
     <div class="shrink-0 text-right min-w-0">
-      <p class="text-sm font-medium text-primary privacy-sensitive whitespace-nowrap">
+      <p class="text-sm font-medium <%= lead_tone %> privacy-sensitive whitespace-nowrap">
         <% if occurrence.paid? %>
           <%= format_money(paid) %>
         <% elsif occurrence.partially_paid? %>

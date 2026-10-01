@@ -78,8 +78,12 @@
     <div class="pt-3 border-t border-subdued space-y-2">
       <div class="flex items-center justify-between gap-3">
         <p class="text-xs font-medium uppercase tracking-wide text-secondary"><%= t(".next_up") %></p>
-        <%= link_to t(".view_calendar"), bills_path(view: "calendar"),
-              class: "text-xs text-link hover:underline shrink-0 focus-ring rounded-sm" %>
+        <%= render DS::Link.new(
+              text: t(".view_calendar"),
+              variant: :default,
+              href: bills_path(view: "calendar"),
+              class: "shrink-0"
+            ) %>
       </div>
 
       <%# A horizontal strip where there is room, a scrollable one where there

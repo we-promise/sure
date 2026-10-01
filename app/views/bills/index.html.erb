@@ -11,8 +11,12 @@
       <p class="text-sm text-primary">
         <%= t(".detected_review", count: @detected_awaiting_review) %>
       </p>
-      <%= link_to t(".detected_review_action"), bills_path(view: "all"),
-            class: "text-xs text-secondary hover:text-primary shrink-0" %>
+      <%= render DS::Link.new(
+            text: t(".detected_review_action"),
+            variant: :default,
+            href: bills_path(view: "all"),
+            class: "shrink-0"
+          ) %>
     </div>
   <% end %>
 
