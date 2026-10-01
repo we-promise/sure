@@ -1581,6 +1581,58 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("bills.index.empty.title"), response.body
   end
 
+  # Dormant rows don't feed the pulse, so a page of paused bills would show
+  # a card of zeros and chips asking about bills nobody is paying.
+  test "a page of only paused bills shows the dormant section without the month pulse or the AI prompts" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    overdue_day = 5.days.ago.to_date
+    bill = create_bill(name: "Paused gym", amount: 40,
+                       expected_day_of_month: overdue_day.day,
+                       last_occurrence_date: 2.months.ago.to_date,
+                       next_expected_date: overdue_day)
+    bill.mark_inactive!
+    assert bill.recurring_occurrences.open_status.exists?, "the paused bill keeps its overdue occurrence"
+
+    get bills_url
+    assert_response :success
+    assert_match "Paused gym", response.body
+    assert_match I18n.t("bills.index.dormant"), response.body
+    assert_no_match I18n.t("bills.month_pulse.left_to_pay"), response.body
+    assert_no_match "due before my next paycheck", response.body
+    assert_no_match I18n.t("bills.ai_prompts.subscriptions_up"), response.body
+  end
+
+  test "a page of only bills due after this month keeps the month pulse" do
+    next_month = Date.current.next_month.beginning_of_month + 4
+    create_bill(name: "Next month rent", amount: 900,
+                expected_day_of_month: next_month.day,
+                next_expected_date: next_month)
+
+    get bills_url
+    assert_response :success
+    assert_match I18n.t("bills.index.later"), response.body
+    assert_match I18n.t("bills.month_pulse.left_to_pay"), response.body
+  end
+
+  test "a page whose only pulse row is a paid one keeps the month pulse" do
+    bill = create_bill(name: "Water Co", amount: 30)
+    settled = bill.recurring_occurrences.order(:due_on).first
+    entry = accounts(:depository).entries.create!(
+      date: settled.due_on, amount: 30, currency: "USD",
+      name: "WATER CO", entryable: Transaction.new
+    )
+    RecurringTransaction::Allocator.new(settled).allocate!(amount: "30", entry: entry)
+    assert settled.reload.paid?
+    # Paused after paying, so nothing is open: the paid row is all the pulse has.
+    bill.mark_inactive!
+
+    get bills_url
+    assert_response :success
+    assert_match "Water Co", response.body
+    assert_no_match I18n.t("bills.index.dormant"), response.body
+    assert_match I18n.t("bills.month_pulse.left_to_pay"), response.body
+  end
+
   test "AI chips and the review button need both consent and a provider" do
     # The chips only render over bill rows.
     create_bill(name: "Power Co", amount: 80)
