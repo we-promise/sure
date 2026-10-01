@@ -108,7 +108,7 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     before = BalanceSheet.new(@family).net_worth
     RedbarkAccount::Processor.new(ra).process
     after = BalanceSheet.new(@family).net_worth
-    assert_equal (BigDecimal("-19902.38") - before).to_s, (after - before).to_s
+    assert_equal BigDecimal("-19902.38"), after - before
   end
 
   # [Mutation kill] A "no Plaid branch at all" implementation (i.e. the bug)
@@ -237,7 +237,7 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
       name: account.name,
       currency: @currency,
       provider: provider,
-      account_type: accountable_class.underscorized,
+      account_type: accountable_class.underscore,
       current_balance: balance.nil? ? nil : BigDecimal(balance)
     )
     redbark_account.ensure_account_provider!(account)
