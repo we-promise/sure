@@ -15,7 +15,7 @@
      overdue: @past_due_total&.amount
    ) %>
 
-<div class="bg-container rounded-xl shadow-border-xs p-5 space-y-4">
+<div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
   <div class="flex items-baseline justify-between gap-3">
     <p class="text-xs font-medium uppercase tracking-wide text-secondary"><%= l(Date.current, format: "%B") %></p>
     <p class="text-xs text-secondary"><%= t(".bill_count", count: @month_bill_count) %></p>
@@ -79,7 +79,7 @@
       <div class="flex items-center justify-between gap-3">
         <p class="text-xs font-medium uppercase tracking-wide text-secondary"><%= t(".next_up") %></p>
         <%= link_to t(".view_calendar"), bills_path(view: "calendar"),
-              class: "text-xs text-link hover:underline shrink-0" %>
+              class: "text-xs text-link hover:underline shrink-0 focus-ring rounded-sm" %>
       </div>
 
       <%# A horizontal strip where there is room, a scrollable one where there
@@ -87,15 +87,16 @@
       <div class="flex gap-2 overflow-x-auto no-scrollbar sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-4">
         <% @next_up.each do |occurrence| %>
           <% series = occurrence.recurring_transaction %>
+          <%# Inset ring: on phones the scroll strip clips an outline drawn outside the item. %>
           <%= link_to bill_path(series),
-                class: "shrink-0 w-36 sm:w-auto rounded-lg px-2 py-1.5 -mx-2 hover:bg-surface-hover group" do %>
+                class: "shrink-0 w-36 sm:w-auto rounded-lg px-2 py-1.5 hover:bg-surface-hover focus-ring -outline-offset-2" do %>
             <p class="text-xs text-secondary truncate">
               <%= bills_next_up_date(occurrence) %>
               <% if series.autopay? %>
                 &middot; <%= t("recurring_transactions.pay_action.autopay") %>
               <% end %>
             </p>
-            <p class="text-sm text-primary truncate group-hover:underline"><%= series.display_name %></p>
+            <p class="text-sm text-primary truncate"><%= series.display_name %></p>
             <p class="text-sm font-medium text-primary privacy-sensitive">
               <% if occurrence.partially_paid? %>
                 <%= format_money(occurrence.remaining_amount_money) %>
