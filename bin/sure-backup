@@ -63,7 +63,15 @@ ensure_deps() {
   # The Sure image has all of these. The apk fallback keeps Alpine-based
   # backup services from v0.7.5 working.
   missing=""
-  command -v pg_dump >/dev/null 2>&1 || missing="$missing postgresql16-client~=16"
+  if ! command -v pg_dump >/dev/null 2>&1; then
+    # Prefer the client the Sure image ships (17); dumps it makes need a
+    # pg_restore at least that new. Older Alpine releases only have 16.
+    if apk search -q postgresql17-client 2>/dev/null | grep -qx postgresql17-client; then
+      missing="$missing postgresql17-client"
+    else
+      missing="$missing postgresql16-client~=16"
+    fi
+  fi
   # BusyBox tar lacks --numeric-owner/--exclude semantics we rely on.
   tar --version 2>/dev/null | grep -q "GNU tar" || missing="$missing tar~=1"
   [ -z "$missing" ] && return 0
@@ -121,6 +129,12 @@ json_str() {
 
 manifest_value() {
   sed -n "s/^[[:space:]]*\"$2\": \"\([^\"]*\)\".*/\1/p" "$1/manifest.json" | head -n 1
+}
+
+# The Sure image ships an empty /rails/storage, so "is a directory" is not
+# enough: the uploaded-files volume must actually be mounted there.
+storage_mounted() {
+  [ -d "$STORAGE_DIR" ] && awk -v d="$STORAGE_DIR" '$2 == d { found = 1 } END { exit !found }' /proc/mounts 2>/dev/null
 }
 
 stamp_value() {
@@ -198,13 +212,16 @@ cmd_create() {
   log "Dumping database ${POSTGRES_DB}..."
   (umask 077 && pg_dump -Fc -d "$POSTGRES_DB" -f "${tmp_dir}/db.dump")
 
-  storage_service=$(sed -n 's/^ACTIVE_STORAGE_SERVICE=//p' "${CONFIG_DIR}/.env" 2>/dev/null | tail -n 1 | tr -d '"'"'"' ')
+  storage_service=""
+  if [ -f "${CONFIG_DIR}/.env" ]; then
+    storage_service=$(sed -n 's/^ACTIVE_STORAGE_SERVICE=//p' "${CONFIG_DIR}/.env" | tail -n 1 | tr -d '"'"'"' ')
+  fi
   case "$storage_service" in
     "" | local) ;;
     *) warn "uploaded files are stored in '${storage_service}' (ACTIVE_STORAGE_SERVICE), not in this backup" ;;
   esac
 
-  if [ -d "$STORAGE_DIR" ]; then
+  if storage_mounted; then
     log "Archiving file storage..."
     (umask 077 && tar -C "$STORAGE_DIR" --numeric-owner --exclude=./.sure-runtime -czf "${tmp_dir}/storage.tar.gz" .)
   else
@@ -343,6 +360,20 @@ cmd_restore() {
   image=$(manifest_value "$dir" image)
   image_by_commit=$(manifest_value "$dir" image_by_commit)
 
+  # pg_restore can't read dumps made by a newer pg_dump; say so plainly.
+  dump_major=$(manifest_value "$dir" pg_dump_version | sed -n 's/.* \([0-9][0-9]*\)\..*/\1/p')
+  client_major=$(pg_restore --version | sed -n 's/.* \([0-9][0-9]*\)\..*/\1/p')
+  case "$client_major" in "" | *[!0-9]*) die "cannot read the pg_restore version" ;; esac
+  case "$dump_major" in *[!0-9]*) dump_major="" ;; esac
+  if [ -n "$dump_major" ] && [ "$dump_major" -gt "$client_major" ]; then
+    die "this backup was made with pg_dump ${dump_major}, but this pg_restore is ${client_major}. Restore it from the host with 'sh sure-backup restore', which runs in the Sure image, or with PostgreSQL ${dump_major} client tools."
+  fi
+
+  # Checked up front so a missing mount can't leave a half-restored instance.
+  if [ -f "${dir}/storage.tar.gz" ] && ! storage_mounted; then
+    die "${STORAGE_DIR} is not mounted; cannot restore uploaded files"
+  fi
+
   others=$(psql_value "SELECT count(*) FROM pg_stat_activity WHERE datname = '${POSTGRES_DB}' AND pid <> pg_backend_pid()" postgres)
   if [ "$others" -gt 0 ] && [ "$force" != true ]; then
     die "${others} other connection(s) to ${POSTGRES_DB}. Stop the app first: docker compose stop web worker (or pass --force)"
@@ -364,7 +395,6 @@ cmd_restore() {
 
   log "Restoring database..."
   server_major=$(( $(psql_value "SHOW server_version_num" postgres) / 10000 ))
-  client_major=$(pg_restore --version | sed -n 's/.* \([0-9][0-9]*\)\..*/\1/p')
   if [ "$client_major" -le "$server_major" ]; then
     pg_restore --no-owner --role="$POSTGRES_USER" --exit-on-error -d "$POSTGRES_DB" "${dir}/db.dump"
   else
@@ -377,7 +407,6 @@ cmd_restore() {
   fi
 
   if [ -f "${dir}/storage.tar.gz" ]; then
-    [ -d "$STORAGE_DIR" ] || die "${STORAGE_DIR} is not mounted; cannot restore files"
     log "Restoring file storage..."
     find "$STORAGE_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
     tar -C "$STORAGE_DIR" --numeric-owner -xzpf "${dir}/storage.tar.gz"
@@ -391,14 +420,18 @@ cmd_restore() {
     warn "Encrypted data will not decrypt until you use the backup's value (see ${dir#"${BACKUP_DIR}"/}/config/.env)."
   fi
 
-  if [ -f "${CONFIG_DIR}/compose.restore.yml" ]; then
-    # Set up by `recover`, which already pins the image and starts the app.
+  if [ "${SURE_RECOVER:-}" = 1 ]; then
+    # Called by `recover`, which pins the image and starts the app itself.
     log "Restored Sure ${version}."
     return 0
   fi
   log "Restored Sure ${version}. Next, on the host:"
   log "  1. Run the app on ${image}${image_by_commit:+ (or ${image_by_commit} for non-release builds)}:"
-  log "     set SURE_IMAGE_TAG=${version} in .env, or the web/worker image in your compose file"
+  if [ -f "${CONFIG_DIR}/compose.restore.yml" ]; then
+    log "     set the web and worker image in compose.restore.yml (it overrides SURE_IMAGE_TAG)"
+  else
+    log "     set SURE_IMAGE_TAG=${version} in .env, or the web/worker image in your compose file"
+  fi
   log "  2. docker compose up -d"
 }
 
@@ -607,6 +640,27 @@ EOF
   env_set "${target}/.env" COMPOSE_FILE "$compose_files"
   env_set "${target}/.env" PORT "$port"
 
+  # Values exported in the caller's shell override .env, and could point
+  # Compose at the original install. Pin every call below to this project.
+  export COMPOSE_PROJECT_NAME="$project" COMPOSE_FILE="$compose_files"
+  unset COMPOSE_PROFILES COMPOSE_PROJECT_DIR
+  cd "$target"
+  restore_cmd="docker compose run --rm -e SURE_RECOVER=1 sure-backup restore ${version}/${name} --yes"
+
+  # The copied compose files must not reach shared storage: external volumes
+  # or networks, or host paths outside this folder, could belong to the
+  # original install, whose database or files the restore would replace.
+  resolved=$(docker compose config 2>/dev/null) || die "docker compose cannot read the copied configuration in ${target}"
+  shared=$(printf '%s\n' "$resolved" | awk -v t="$target" '
+    /^[[:space:]]*external: true/ { print "  an external volume or network (external: true)" }
+    /^[[:space:]]*source: \// { if (index($2, t) != 1) print "  host path " $2 }
+  ' | sort -u)
+  if [ -n "$shared" ]; then
+    warn "the copied compose configuration uses storage outside ${target}:"
+    printf '%s\n' "$shared" >&2
+    die "restoring here could overwrite another instance's data. Make these local to ${target} in its compose files, then run there: docker compose up -d db redis && ${restore_cmd}"
+  fi
+
   # Local files the compose files mount (e.g. "- ./certs/ca.pem:/...") are not
   # part of the backup. Docker would create empty directories in their place
   # and the containers using them would fail to start.
@@ -628,15 +682,16 @@ EOF
   if [ "$start" != true ]; then
     log "Prepared ${target}. Start it with:"
     services="web worker"; [ "$worker" = yes ] || services="web"
-    log "  cd ${target} && docker compose up -d db redis && docker compose run --rm sure-backup restore ${version}/${name} --yes && docker compose up -d ${services}"
+    log "  cd ${target}"
+    log "  export COMPOSE_PROJECT_NAME=${project} COMPOSE_FILE=${compose_files}"
+    log "  docker compose up -d db redis && ${restore_cmd} && docker compose up -d ${services}"
     return 0
   fi
 
-  cd "$target"
   log "Starting the database..."
   docker compose up -d db redis
   log "Restoring the backup..."
-  docker compose run --rm sure-backup restore "${version}/${name}" --yes
+  docker compose run --rm -e SURE_RECOVER=1 sure-backup restore "${version}/${name}" --yes
   if [ "$worker" = yes ]; then
     log "Starting web and worker..."
     docker compose up -d web worker
