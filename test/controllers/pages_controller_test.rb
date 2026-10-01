@@ -49,6 +49,17 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "single", @user.reload.dashboard_section_width("cashflow_sankey")
   end
 
+  test "the Customize button is an icon named for screen readers" do
+    get root_path
+
+    assert_select "a[href='#{root_path(customize: true)}']", count: 2 do |links|
+      links.each do |link|
+        assert_equal I18n.t("pages.dashboard.customize.start"), link["aria-label"]
+        assert_empty link.text.strip
+      end
+    end
+  end
+
   test "dashboard leaves hidden sections out" do
     @user.update_dashboard_section_hidden("net_worth_chart", true)
 

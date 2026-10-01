@@ -22,8 +22,9 @@
           <%= render DS::Link.new(
             variant: "outline",
             icon: "layout-grid",
-            text: t("pages.dashboard.customize.start"),
             href: root_path(@dashboard_view_params.merge(customize: true)),
+            aria: { label: t("pages.dashboard.customize.start") },
+            title: t("pages.dashboard.customize.start"),
             class: "hidden lg:inline-flex"
           ) %>
 
@@ -31,7 +32,7 @@
             variant: "icon",
             icon: "layout-grid",
             href: root_path(@dashboard_view_params.merge(customize: true)),
-            aria_label: t("pages.dashboard.customize.start"),
+            aria: { label: t("pages.dashboard.customize.start") },
             class: "rounded-full lg:hidden"
           ) %>
         <% end %>
