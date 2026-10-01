@@ -289,9 +289,11 @@ class BillsController < ApplicationController
     # and sortable. This is the power-user surface; the overview stays a
     # worklist.
     def load_all_series
+      # Rules ride along because every row renders frequency_label and
+      # monthly_equivalent_amount, which read the schedule.
       scope = Current.family.recurring_transactions
                      .accessible_by(Current.user)
-                     .includes(:merchant)
+                     .includes(:merchant, :recurrence_rules)
 
       if (search = params.dig(:q, :search)).present?
         pattern = "%#{ActiveRecord::Base.sanitize_sql_like(search)}%"
