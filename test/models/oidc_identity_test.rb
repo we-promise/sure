@@ -180,6 +180,7 @@ class OidcIdentityTest < ActiveSupport::TestCase
   end
 
   test "creates from omniauth hash" do
+    AuthConfig.stubs(:sso_providers).returns([ { name: "google_oauth2", strategy: "google_oauth2" } ])
     auth = OmniAuth::AuthHash.new({
       provider: "google_oauth2",
       uid: "google-123456",
@@ -202,7 +203,66 @@ class OidcIdentityTest < ActiveSupport::TestCase
     assert_not_nil identity.last_authenticated_at
   end
 
+  test "does not accept an issuerless OIDC identity as matching the active provider" do
+    @oidc_identity.update!(issuer: nil)
+
+    assert_not @oidc_identity.issuer_matches_config?(
+      name: @oidc_identity.provider,
+      strategy: "openid_connect",
+      issuer: "https://idp.example.com"
+    )
+  end
+
+  test "does not create an OIDC identity without a verified issuer" do
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: "test_oidc", strategy: "openid_connect", issuer: "https://idp.example.com" }
+    ])
+    auth = OmniAuth::AuthHash.new(
+      provider: "test_oidc",
+      uid: "missing-issuer-uid",
+      info: { email: "test@example.com" },
+      extra: { raw_info: {} }
+    )
+
+    assert_no_difference "OidcIdentity.count" do
+      assert_raises(OidcIdentity::IssuerMismatch) { OidcIdentity.create_from_omniauth(auth, @user) }
+    end
+  end
+
+  test "does not create an identity after its provider is removed" do
+    AuthConfig.stubs(:sso_providers).returns([])
+    auth = OmniAuth::AuthHash.new(
+      provider: "removed_provider",
+      uid: "removed-provider-uid",
+      info: { email: "test@example.com" }
+    )
+
+    assert_no_difference "OidcIdentity.count" do
+      assert_raises(OidcIdentity::ProviderNotConfigured) { OidcIdentity.create_from_omniauth(auth, @user) }
+    end
+  end
+
+  test "does not rebind a legacy OIDC identity to a different local user" do
+    @oidc_identity.update!(issuer: nil)
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: @oidc_identity.provider, strategy: "openid_connect", issuer: "https://test.example.com" }
+    ])
+    auth = OmniAuth::AuthHash.new(
+      provider: @oidc_identity.provider,
+      uid: @oidc_identity.uid,
+      info: { email: "new@example.com" },
+      extra: { raw_info: { iss: "https://test.example.com" } }
+    )
+
+    assert_raises(OidcIdentity::LegacyIdentityRebindRejected) do
+      OidcIdentity.rebind_legacy_issuer_from_omniauth!(auth, users(:family_member))
+    end
+    assert_nil @oidc_identity.reload.issuer
+    assert_equal @user, @oidc_identity.user
+  end
+
   test "refuses to create an identity after it is blocked" do
+    AuthConfig.stubs(:sso_providers).returns([ { name: "google_oauth2", strategy: "google_oauth2" } ])
     auth = OmniAuth::AuthHash.new({
       provider: "google_oauth2",
       uid: "blocked-google-subject",
