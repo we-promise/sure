@@ -51,16 +51,7 @@
     </span>
   <% end %>
 <% elsif has_link %>
-  <%= render DS::Link.new(
-        text: t(".pay"),
-        href: recurring_transaction.payment_url,
-        icon: "external-link",
-        icon_position: :right,
-        variant: "accent",
-        size: "sm",
-        target: "_blank",
-        aria: { label: t(".pay_aria", name: recurring_transaction.display_name) }
-      ) %>
+  <%= render "recurring_transactions/pay_link", recurring_transaction: recurring_transaction %>
 <% elsif show_add %>
   <%# Dashed outline reads as "nothing here yet", the same cue the split editor uses
       for its add-another-split control. Suppressed on read-only forecasts, which

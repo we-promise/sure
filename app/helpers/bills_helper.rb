@@ -323,6 +323,34 @@ module BillsHelper
     t("bills.attention.overdue", count: (Date.current - occurrence.effective_due_on).to_i)
   end
 
+  # The row's one verb, or nil when the bill needs nothing from you now: it is
+  # settled, paused, not yet in its window, or on autopay and on schedule. The
+  # drawer is one tap away for everything else.
+  #
+  # drawer: true is the drawer's version of the same decision. It always offers
+  # a verb, because the drawer is the only way to unlink a payment, reopen a
+  # cycle or record one by hand. Pay has its own button there.
+  def bills_row_verb(occurrence, suggestion: nil, drawer: false)
+    if drawer
+      return :review_match if suggestion.present?
+      return :add_payment if occurrence.partially_paid?
+      return occurrence.scheduled? ? :find_payment : :manage_payments
+    end
+
+    series = occurrence.recurring_transaction
+    return nil unless series.active? && occurrence.scheduled?
+    return :review_match if suggestion.present?
+
+    state = occurrence.derived_state
+    return nil unless state.in?(%i[due overdue])
+    return :add_payment if occurrence.partially_paid?
+    # Overdue means the charge autopay promised never showed up, so from there
+    # it is chased like any other bill.
+    return nil if series.autopay? && state == :due
+
+    RecurringTransaction.valid_payment_url?(series.payment_url) ? :pay : :find_payment
+  end
+
   # The match score's own components, said in words.
   #
   # Deterministic: every phrase here corresponds to a key the matcher actually
