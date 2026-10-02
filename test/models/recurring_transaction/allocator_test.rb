@@ -366,6 +366,43 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert new_occurrence.reload.paid?
   end
 
+  test "a payment fully linked to an active bill cannot be re-linked to another active bill" do
+    # The ended-series exclusion must NOT weaken the double-allocation guard for
+    # allocations that belong to a still-active series: a payment already spent
+    # on an active bill stays spent.
+    payment = entry_for(2000)
+
+    @allocator.allocate!(entry: payment)
+    assert @occurrence.reload.paid?
+
+    # A second, still-active bill (the original @rent is left active).
+    other = @family.recurring_transactions.create!(
+      account: @account,
+      name: "Unrelated Active Bill",
+      amount: 2000,
+      currency: "USD",
+      expected_day_of_month: 29,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      manual: true,
+      dedup_scope: "unrelated"
+    )
+    other_occurrence = other.recurring_occurrences.create!(
+      family: @family,
+      original_due_on: (Date.current + 1.month).beginning_of_month + 9,
+      due_on: (Date.current + 1.month).beginning_of_month + 9,
+      currency: "USD"
+    )
+
+    # The entry is fully consumed by the active allocation, so there is no
+    # capacity left for another active bill.
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Allocator.new(other_occurrence).allocate!(entry: payment)
+    end
+    assert_not other_occurrence.reload.paid?
+  end
+
   private
 
     def foreign_entry(amount:, currency:)
