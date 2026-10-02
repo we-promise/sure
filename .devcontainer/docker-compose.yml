@@ -53,10 +53,22 @@ services:
       - redis-data:/data
     restart: unless-stopped
   
-  db:
-    image: postgres:16
+  db-version-check:
+    image: alpine:3.23
+    restart: "no"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/pgdata:ro
+      - ../bin/db-version-check.sh:/db-version-check.sh:ro
+    command: sh /db-version-check.sh /pgdata 18
+
+
+  db:
+    image: postgres:18
+    depends_on:
+      db-version-check:
+        condition: service_completed_successfully
+    volumes:
+      - postgres-data:/var/lib/postgresql
     ports:
       - "5432:5432"
     restart: unless-stopped
