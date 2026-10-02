@@ -81,6 +81,78 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "USD", @account.currency
   end
 
+  # The account is created, and anchored two years back, before any history
+  # is imported. A ledger older than that then starts before its own opening
+  # balance, and the reverse calculator pins the balance to the anchor and
+  # derives every earlier day from it with the flows running the wrong way.
+  test "moves the opening anchor before the first imported entry" do
+    old_trade = trade_payload("buy", "0.001", "50.00", "0.10").merge("time" => 3.years.ago.to_f)
+    kraken_account = @item.kraken_accounts.create!(
+      name: "Kraken (old)", account_id: "old", account_type: "combined", currency: "USD", current_balance: 50,
+      raw_payload: @kraken_account.raw_payload,
+      raw_transactions_payload: { "trades" => { "old_tx" => old_trade } }
+    )
+    account = Account.create_from_kraken_account(kraken_account)
+    AccountProvider.create!(account: account, provider: kraken_account)
+    assert_equal 2.years.ago.to_date, account.opening_anchor_date
+
+    KrakenAccount::Processor.new(kraken_account).process
+
+    # A fresh instance: the manager memoises the anchor it last read.
+    account = Account.find(account.id)
+    assert account.entries.exists?(external_id: "kraken_trade_old_tx"), "the old trade must have been imported"
+    assert_equal 3.years.ago.to_date.prev_day, account.opening_anchor_date
+    assert_equal 0, account.opening_anchor_balance
+  end
+
+  # A reconciliation older than the first trade is still an entry, so the date
+  # the anchor moves to has to clear it too -- the manager validates against
+  # every entry, not just the ones that are not valuations.
+  test "moves the opening anchor before an older valuation too" do
+    old_trade = trade_payload("buy", "0.001", "50.00", "0.10").merge("time" => 3.years.ago.to_f)
+    kraken_account = @item.kraken_accounts.create!(
+      name: "Kraken (valuation)", account_id: "val", account_type: "combined", currency: "USD", current_balance: 50,
+      raw_payload: @kraken_account.raw_payload,
+      raw_transactions_payload: { "trades" => { "old_tx" => old_trade } }
+    )
+    account = Account.create_from_kraken_account(kraken_account)
+    AccountProvider.create!(account: account, provider: kraken_account)
+    account.entries.create!(
+      date: 4.years.ago.to_date,
+      name: "Balance update",
+      amount: 0,
+      currency: account.currency,
+      entryable: Valuation.new(kind: "reconciliation")
+    )
+
+    KrakenAccount::Processor.new(kraken_account).process
+
+    # A fresh instance: the manager memoises the anchor it last read.
+    account = Account.find(account.id)
+    assert_equal 4.years.ago.to_date.prev_day, account.opening_anchor_date
+    assert_equal 0, account.opening_anchor_balance
+  end
+
+  # A manual account linked to the exchange later may carry an anchor somebody
+  # entered: "this much, on this day". Moving it would change what it says.
+  test "leaves an opening anchor with a balance where it is" do
+    old_trade = trade_payload("buy", "0.001", "50.00", "0.10").merge("time" => 3.years.ago.to_f)
+    kraken_account = @item.kraken_accounts.create!(
+      name: "Kraken (linked)", account_id: "linked", account_type: "combined", currency: "USD", current_balance: 50,
+      raw_payload: @kraken_account.raw_payload,
+      raw_transactions_payload: { "trades" => { "old_tx" => old_trade } }
+    )
+    account = Account.create_from_kraken_account(kraken_account)
+    AccountProvider.create!(account: account, provider: kraken_account)
+    account.set_opening_anchor_balance(balance: 250, date: 2.years.ago.to_date)
+
+    KrakenAccount::Processor.new(kraken_account).process
+
+    account = Account.find(account.id)
+    assert_equal 2.years.ago.to_date, account.opening_anchor_date
+    assert_equal 250, account.opening_anchor_balance
+  end
+
   private
 
     def trade_payload(type, volume, cost, fee)

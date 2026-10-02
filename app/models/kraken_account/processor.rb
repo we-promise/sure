@@ -16,6 +16,10 @@ class KrakenAccount::Processor
     process_account!
     process_trades
     KrakenAccount::LedgerProcessor.new(kraken_account).process
+
+    # The account was created, and anchored, before any of this history
+    # existed. Now that it does, the anchor has to precede it.
+    kraken_account.current_account.ensure_opening_anchor_precedes_entries
   end
 
   private
