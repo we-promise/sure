@@ -9,10 +9,16 @@ ru:
         home: Главная
         reports: Отчёты
         transactions: Операции
+        bills: Платежи
+        plan: Планирование
       privacy_mode: Переключить режим конфиденциальности
       resize_left_sidebar: Изменить ширину боковой панели счетов
       resize_right_sidebar: Изменить ширину боковой панели ассистента
       skip_to_main: Перейти к основному содержимому
+      insights: Инсайты
+      release_highlight:
+        title: Что нового
+        done: Понятно
     auth:
       existing_account: Уже есть аккаунт?
       no_account: Впервые в %{product_name}?
@@ -26,6 +32,10 @@ ru:
       footer:
         privacy_policy: Политика конфиденциальности
         terms_of_service: Условия использования
+      notification_tray:
+        download_complete: Загрузка завершена
+        download_failed: Не удалось скачать файл. Попробуйте ещё раз.
+        download_location: Файл находится в папке «Загрузки».
     trial:
       contribute: Внести вклад
       data_deleted_in_days: Данные будут удалены через %{days} дней

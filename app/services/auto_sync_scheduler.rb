@@ -10,6 +10,7 @@ class AutoSyncScheduler
     end
   end
 
+  # Schedule the configured local wall-clock time in its IANA zone so DST resolves per occurrence.
   def self.upsert_job
     time_str = Setting.auto_sync_time || "02:22"
     timezone_str = Setting.auto_sync_timezone || "UTC"

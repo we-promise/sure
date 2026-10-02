@@ -1,12 +1,12 @@
 require "test_helper"
+require "ostruct"
 
 class AutoSyncSchedulerTest < ActiveSupport::TestCase
   test "keeps the configured local sync time across daylight saving changes" do
     Setting.stubs(:auto_sync_time).returns("06:30")
     Setting.stubs(:auto_sync_timezone).returns("Europe/London")
 
-    job = Object.new
-    job.define_singleton_method(:valid?) { true }
+    job = OpenStruct.new(valid?: true)
 
     cron = "30 6 * * * Europe/London"
     Sidekiq::Cron::Job.expects(:create).with(

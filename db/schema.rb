@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -910,6 +910,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
 
   create_table "financekit_account_lineages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id"
+    t.string "account_origin"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
     t.string "status", default: "active", null: false
@@ -917,6 +918,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.index ["account_id"], name: "index_financekit_account_lineages_on_account_id"
     t.index ["family_id", "account_id"], name: "financekit_lineage_canonical_account", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["family_id"], name: "index_financekit_account_lineages_on_family_id"
+    t.check_constraint "account_origin IS NULL OR (account_origin::text = ANY (ARRAY['created'::character varying::text, 'linked'::character varying::text]))", name: "financekit_lineage_account_origin"
   end
 
   create_table "financekit_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1004,6 +1006,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.string "status", default: "open", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_financekit_conflicts_on_family_id"
+    t.index ["financekit_account_lineage_id", "details"], name: "financekit_conflicts_open_observation", unique: true, where: "(((status)::text = 'open'::text) AND ((kind)::text = 'balance_observation_conflict'::text))"
     t.index ["financekit_account_lineage_id"], name: "index_financekit_conflicts_on_lineage_id"
     t.index ["financekit_item_id", "status", "created_at"], name: "financekit_conflicts_status_created"
     t.index ["financekit_item_id"], name: "index_financekit_conflicts_on_financekit_item_id"
@@ -1027,6 +1030,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.bigint "next_sequence", default: 1, null: false
     t.string "predecessor_digest"
     t.uuid "publisher_id", null: false
+    t.datetime "purge_completed_at"
+    t.datetime "purge_requested_at"
     t.string "repair_reason"
     t.uuid "replaces_financekit_item_id"
     t.string "status", default: "pending_mapping", null: false
@@ -1036,6 +1041,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.index ["family_id", "enrollment_id"], name: "index_financekit_items_on_family_id_and_enrollment_id", unique: true
     t.index ["family_id"], name: "index_financekit_items_on_family_id"
     t.index ["publisher_id"], name: "index_financekit_items_on_publisher_id", unique: true
+    t.index ["purge_requested_at"], name: "financekit_items_pending_purge", where: "(purge_completed_at IS NULL)"
     t.index ["replaces_financekit_item_id"], name: "index_financekit_items_on_replaces_financekit_item_id"
     t.index ["user_id"], name: "index_financekit_items_on_user_id"
     t.check_constraint "generation > 0 AND next_sequence > 0", name: "financekit_items_positive_stream"
@@ -1573,7 +1579,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
 
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.decimal "down_payment", precision: 19, scale: 4
     t.decimal "initial_balance", precision: 19, scale: 4
+    t.decimal "insurance_rate", precision: 8, scale: 4
+    t.string "insurance_rate_type"
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
     t.string "rate_type"
@@ -1582,6 +1591,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
+    t.check_constraint "down_payment IS NULL OR down_payment >= 0::numeric", name: "chk_loans_down_payment_non_negative"
+    t.check_constraint "insurance_rate IS NULL OR insurance_rate >= 0::numeric", name: "chk_loans_insurance_rate_non_negative"
+    t.check_constraint "insurance_rate_type IS NULL OR (insurance_rate_type::text = ANY (ARRAY['level_term'::character varying, 'decreasing_life'::character varying]::text[]))", name: "chk_loans_insurance_rate_type"
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1723,10 +1735,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.string "currency", null: false
     t.decimal "current_balance", precision: 19, scale: 4
     t.datetime "history_synced_from"
-    t.string "iban"
     t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
-    t.string "masked_pan"
     t.uuid "monobank_item_id", null: false
     t.string "name", null: false
     t.string "provider"
@@ -1974,7 +1984,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
   end
 
   create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "account_number"
     t.string "account_status"
     t.string "account_type"
     t.boolean "activities_fetch_pending", default: false
@@ -2172,7 +2181,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
   end
 
   create_table "redbark_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "account_number"
     t.string "account_status"
     t.string "account_type"
     t.string "connection_id"
@@ -2649,6 +2657,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
   end
 
   create_table "trade_republic_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "brokerage_account_id"
     t.datetime "created_at", null: false
     t.string "currency"
     t.uuid "family_id", null: false
@@ -2661,6 +2670,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.text "session_blob"
     t.string "status", default: "good", null: false
     t.datetime "updated_at", null: false
+    t.index ["family_id", "brokerage_account_id"], name: "index_trade_republic_items_on_family_id_and_brokerage_account", unique: true, where: "((brokerage_account_id IS NOT NULL) AND (scheduled_for_deletion = false))"
     t.index ["family_id"], name: "index_trade_republic_items_on_family_id"
     t.index ["status"], name: "index_trade_republic_items_on_status"
   end
@@ -2814,6 +2824,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.string "locale"
     t.datetime "onboarded_at"
     t.string "otp_backup_codes", default: [], array: true
+    t.datetime "otp_last_used_at"
     t.boolean "otp_required", default: false, null: false
     t.string "otp_secret"
     t.string "password_digest"

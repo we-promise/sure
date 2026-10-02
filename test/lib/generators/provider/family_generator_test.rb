@@ -16,6 +16,22 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     flunk "generated invalid Ruby: #{e.message}\n\n#{source}"
   end
 
+  def render_template(name, **locals)
+    template = Rails.root.join("lib/generators/provider/family/templates", name).read
+    context = Struct.new(*locals.keys).new(*locals.values)
+    ERB.new(template, trim_mode: "-").result(context.instance_eval { binding })
+  end
+
+  test "the unlinking scaffold renders to valid Ruby and carries the disposition seam" do
+    rendered = render_template("unlinking_concern.rb.tt", class_name: "Gocardless", file_name: "gocardless")
+
+    assert_parses rendered
+    # A generated provider retains by default and refuses a discard it has not
+    # implemented, rather than accepting one and keeping the data.
+    assert_includes rendered, "disposition: ProviderDisconnectable::DEFAULT_DISPOSITION"
+    assert_includes rendered, "does not implement the #{'#{disposition}'} disposition"
+  end
+
   test "appends to a single-line enum" do
     result = append(<<~RUBY)
       class ProviderMerchant < Merchant
@@ -93,6 +109,88 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     result = append(%(enum :source, { plaid: "pl\\\\aid" }))
 
     assert_includes result, "pl\\\\aid"
+  end
+
+  # Row and drawer forms post from the page, so no request carries a Turbo-Frame
+  # header: saves and errors stream into the panel, and a new connection reloads.
+  test "the controller scaffold renders to valid Ruby and answers panel requests in place" do
+    rendered = render_template("controller.rb.tt", class_name: "Gocardless", file_name: "gocardless",
+                               table_name: "gocardless_items", parsed_fields: [ { name: "secret_id" } ])
+
+    assert_parses rendered
+    assert_not_includes rendered, "turbo_frame_request?"
+    assert_includes rendered, %(render_provider_panel("gocardless", alert: @gocardless_item.errors.full_messages.join(", ")))
+    assert_includes rendered, 'render_provider_panel("gocardless", notice: t(".success"'
+    assert_match(/if @gocardless_item\.save\n\s+redirect_to settings_providers_path, notice:/, rendered)
+  end
+
+  # Bank sync builds its connection rows and drawers from FAMILY_PANELS, so a
+  # section injected into show.html.erb would render outside both.
+  test "adds the provider to the family panels of the real providers controller" do
+    source = Rails.root.join("app/controllers/settings/providers_controller.rb").read
+    result = Provider::FamilyGenerator.append_family_panel_entry(source, key: "gocardless", title: "Gocardless")
+
+    assert_parses result
+    assert_includes result, %(      { key: "gocardless", title: "Gocardless", turbo_id: "gocardless", partial: "gocardless_panel" }\n    ].freeze)
+  end
+
+  test "separates the new family panel from the previous last entry" do
+    result = Provider::FamilyGenerator.append_family_panel_entry(<<~RUBY, key: "gocardless", title: "Gocardless")
+      FAMILY_PANELS = [
+        { key: "akahu", title: "Akahu", turbo_id: "akahu", partial: "akahu_panel" }
+      ].freeze
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(partial: "akahu_panel" },\n  { key: "gocardless")
+  end
+
+  test "returns nil when there are no family panels to update" do
+    assert_nil Provider::FamilyGenerator.append_family_panel_entry("class Foo\nend\n", key: "gocardless", title: "Gocardless")
+  end
+
+  # provider_summary leaves a key it doesn't know under Available, so a connected
+  # provider only moves to Your connections through its own case.
+  test "adds a provider_summary case to the real settings helper" do
+    source = Rails.root.join("app/helpers/settings_helper.rb").read
+    result = Provider::FamilyGenerator.append_provider_summary_case(source, key: "gocardless")
+
+    assert_parses result
+    assert_includes result[/def provider_summary\b.*?\n  end\n/m],
+                    %(    when "gocardless"\n      return { status: :off } unless @gocardless_items&.any?\n      sync_based_summary(key)\n    else\n      { status: :off }\n)
+  end
+
+  test "returns nil when there is no provider_summary to update" do
+    assert_nil Provider::FamilyGenerator.append_provider_summary_case("module Foo\nend\n", key: "gocardless")
+  end
+
+  # The row's sync status reads both maps, and its Sync button posts a key that
+  # Settings::ProvidersController#sync looks up in PANEL_SYNCABLE_TYPES.
+  test "adds the provider to the sync maps of the real providers controller" do
+    source = Rails.root.join("app/controllers/settings/providers_controller.rb").read
+    result = Provider::FamilyGenerator.append_panel_syncable_type(source, key: "gocardless", class_name: "Gocardless")
+    result = Provider::FamilyGenerator.append_family_panel_item(result, key: "gocardless")
+
+    assert_parses result
+    syncable = result[/PANEL_SYNCABLE_TYPES = \{\n(.*?)\n\s*\}\.freeze/m, 1].lines(chomp: true)
+    items = result[/def family_panel_items\n\s*\{\n(.*?)\n\s*\}\n/m, 1].lines(chomp: true)
+
+    assert_equal %("gocardless" => "GocardlessItem"), syncable.last.squish
+    assert_equal %("gocardless" => @gocardless_items), items.last.squish
+    # The arrows line up with the entry above, however long the longest key is.
+    assert_equal syncable[-2].index("=>"), syncable.last.index("=>")
+    assert_equal items[-2].index("=>"), items.last.index("=>")
+  end
+
+  test "keeps a space before the arrow when the new key is longer than the column" do
+    result = Provider::FamilyGenerator.append_panel_syncable_type(<<~RUBY, key: "gocardless_bank_data", class_name: "GocardlessBankData")
+      PANEL_SYNCABLE_TYPES = {
+        "up" => "UpItem"
+      }.freeze
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(  "up" => "UpItem",\n  "gocardless_bank_data" => "GocardlessBankDataItem"\n}.freeze)
   end
 
   test "reserved item columns exclude family but include family_id" do
