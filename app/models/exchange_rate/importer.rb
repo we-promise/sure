@@ -203,6 +203,7 @@ class ExchangeRate::Importer
         .max_by { |date, _| date }&.last&.rate
     end
 
+    # Avoid unsupported earlier history unless a requested backfill still needs verification.
     def clamped_start_date
       @clamped_start_date ||= begin
         if history_backfill_required?
@@ -222,6 +223,7 @@ class ExchangeRate::Importer
       @fill_start_date ||= [ provider_fetch_start_date, effective_start_date ].max
     end
 
+    # Apply history limits to the actual provider window, including provisional lookback.
     def provider_fetch_start_date
       @provider_fetch_start_date ||= begin
         base = effective_start_date - PROVISIONAL_LOOKBACK_DAYS.days

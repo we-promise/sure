@@ -3,6 +3,7 @@ class ExchangeRatePair < ApplicationRecord
 
   EARLIEST_PROVIDER_DATE_COLUMNS = %i[first_provider_rate_on provider_history_checked_from].freeze
 
+  # Reuse the shared pair and reset history only for the currently selected provider.
   def self.for_pair(from:, to:, provider_name: nil)
     pair = find_or_create_by!(from_currency: from, to_currency: to)
     current_provider = provider_name || resolve_provider_name
@@ -34,8 +35,7 @@ class ExchangeRatePair < ApplicationRecord
     record_earliest_provider_date_on(:first_provider_rate_on, from:, to:, date:, provider_name:, pair:)
   end
 
-  # Tracks the earliest date requested from this provider.
-  # Unlike first_provider_rate_on, this may precede the earliest returned rate.
+  # Track the earliest history supported by positive rates actually returned by this provider.
   def self.record_provider_history_checked_from(from:, to:, date:, provider_name: nil, pair: nil)
     record_earliest_provider_date_on(:provider_history_checked_from, from:, to:, date:, provider_name:, pair:)
   end

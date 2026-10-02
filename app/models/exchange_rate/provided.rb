@@ -2,6 +2,7 @@ module ExchangeRate::Provided
   extend ActiveSupport::Concern
 
   class_methods do
+    # Resolve the rate provider from the same snapshot used by import configuration.
     def provider
       provider_configuration.last
     end
