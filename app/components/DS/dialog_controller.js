@@ -9,6 +9,10 @@ const FOCUSABLE_SELECTOR = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(", ");
 
+// Where focus goes back to, left by a dialog replaced while still open for the
+// one that takes its place in the same frame.
+const returnFocusByFrame = new WeakMap();
+
 // Connects to data-controller="dialog"
 export default class extends Controller {
   static targets = ["content"]
@@ -21,6 +25,7 @@ export default class extends Controller {
 
   connect() {
     this._priorFocus = null;
+    this._frame = this.element.closest("turbo-frame");
     this._onKeydown = this.#onKeydown.bind(this);
     this._onClose = this.#onClose.bind(this);
 
@@ -29,7 +34,7 @@ export default class extends Controller {
 
     if (this.element.open) return;
     if (this.autoOpenValue) {
-      this._priorFocus = document.activeElement;
+      this._priorFocus = this.#returnFocusTarget();
       this.element.showModal();
       this.#focusInitial();
     }
@@ -38,6 +43,16 @@ export default class extends Controller {
   disconnect() {
     this.element.removeEventListener("keydown", this._onKeydown);
     this.element.removeEventListener("close", this._onClose);
+
+    // Replaced while still open: one drawer linking to the next inside the
+    // same frame. The link that did it left with this dialog, so focus would
+    // fall to <body> on close. The dialog connecting in its place, in this
+    // same mutation batch, inherits the way back instead.
+    if (this._priorFocus && this._frame) {
+      const frame = this._frame;
+      returnFocusByFrame.set(frame, this._priorFocus);
+      queueMicrotask(() => returnFocusByFrame.delete(frame));
+    }
   }
 
   // If the user clicks anywhere outside of the visible content, close the dialog
@@ -55,6 +70,14 @@ export default class extends Controller {
     if (this.reloadOnCloseValue) {
       Turbo.visit(window.location.href);
     }
+  }
+
+  // Whatever had focus as this opened, unless that went with the dialog this
+  // one replaced.
+  #returnFocusTarget() {
+    const active = document.activeElement;
+    if (active && active !== document.body) return active;
+    return returnFocusByFrame.get(this._frame) ?? active;
   }
 
   // Move focus to the first focusable child unless the dialog already

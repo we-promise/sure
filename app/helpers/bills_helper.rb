@@ -222,7 +222,7 @@ module BillsHelper
   # Which account the charge lands on. Worth showing only when it tells the rows
   # apart: on a single-account family it repeated the same name down every line,
   # which is nineteen copies of a fact carrying no information. The bill's
-  # expansion names the account regardless, so nothing is lost when it is quiet
+  # drawer names the account regardless, so nothing is lost when it is quiet
   # here.
   def bills_paid_from_label(bill)
     return "" if bill.account.blank?

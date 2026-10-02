@@ -40,6 +40,62 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
       "Expected the searchable data attribute to still include the bank name (existing name-search behavior)"
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_enable_banking_item_url(@item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "enable_banking-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @item.reload.syncing?
+  end
+
+  # The Accounts page's Sync button posts here too, without the panel's source.
+  test "sync from the Accounts page goes back to it" do
+    post sync_enable_banking_item_url(@item),
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml", "Referer" => accounts_url }
+
+    assert_redirected_to accounts_url
+  end
+
+  test "invalid create outside a frame redirects to the providers page with a 303" do
+    assert_no_difference "EnableBankingItem.count" do
+      post enable_banking_items_url, params: { enable_banking_item: { country_code: "", application_id: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
+  test "invalid update outside a frame redirects to the providers page with a 303" do
+    patch enable_banking_item_url(@item), params: { enable_banking_item: { country_code: "" } }
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+    assert_equal "DE", @item.reload.country_code
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch enable_banking_item_url(@item),
+          params: { enable_banking_item: { name: "Renamed Connection" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "enable_banking-providers-panel"
+    assert_includes response.body, %(id="enable_banking-providers-panel")
+    assert_equal "Renamed Connection", @item.reload.name
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post enable_banking_items_url,
+         params: { enable_banking_item: { country_code: "", application_id: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "enable_banking-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("can't be blank")
+  end
+
   test "authorize no longer blocks decoupled banks and proceeds to the hosted auth page" do
     Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
       aspsps: [

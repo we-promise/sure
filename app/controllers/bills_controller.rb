@@ -143,7 +143,7 @@ class BillsController < ApplicationController
                      .includes(:merchant)
                      .find(params[:id])
 
-    # A row expansion names the cycle it was opened from; the bill's own page
+    # The drawer names the cycle its row was opened from; the bill's own page
     # has no cycle in mind and asks the series. Looked up through the series, so
     # an id from another bill resolves to nothing rather than to someone else's
     # occurrence.
@@ -179,25 +179,15 @@ class BillsController < ApplicationController
       }
     end
 
-    if params[:display] == "pane"
-      # The expansion renders into whichever row frame asked for it; the id
-      # is reflected back sanitized. close returns the empty frame, which
-      # collapses the row.
-      @pane_frame_id = params[:frame].to_s.gsub(/[^a-zA-Z0-9_-]/, "").presence || "bill_detail"
-      if params[:close].present?
-        render :pane_close, layout: false
-        return
-      end
-    end
-
     load_summary_extras
 
-    if params[:display] == "pane"
-      # A pending suggestion is the one thing that changes what the expansion
+    # Outside a frame (a new tab, a pasted link) there is nothing to open the
+    # dialog into, so the same URL is the bill's page.
+    if params[:display] == "drawer" && turbo_frame_request?
+      # A pending suggestion is the one thing that changes what the drawer
       # should offer, so it is worth the one query.
-      @pane_suggestion = @current_occurrence && RecurringAllocation.suggested
-        .where(recurring_occurrence_id: @current_occurrence.id).first
-      render :pane, layout: false
+      @drawer_suggestion = @current_occurrence&.allocations&.suggested&.first
+      render :drawer, layout: false
       return
     end
 
@@ -243,7 +233,7 @@ class BillsController < ApplicationController
     end
     helper_method :paycheck_income_plans?
 
-    # What the expansion needs: the handful of payments that actually settled
+    # What the drawer needs: the handful of payments that actually settled
     # this bill lately. Cheap enough to run on every row someone opens.
     def load_summary_extras
       @recent_allocations = confirmed_allocations.includes(:entry).order(paid_on: :desc, created_at: :desc).limit(6)
@@ -251,7 +241,7 @@ class BillsController < ApplicationController
 
     # The bill's financial story: a year of payments by month, per-year totals,
     # and where the money last came from. Three grouped aggregates, which is
-    # why they no longer run every time a row is expanded.
+    # why they no longer run every time a row is opened.
     def load_deep_extras
       confirmed = confirmed_allocations
 
