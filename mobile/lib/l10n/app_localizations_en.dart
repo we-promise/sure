@@ -125,11 +125,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatListNewChat => 'New chat';
 
   @override
-  String get chatListEmpty => 'No chats yet';
+  String get chatListEmpty => 'AI is ready when you are';
 
   @override
   String get chatListEmptySubtitle =>
-      'Start a conversation with your AI assistant';
+      'Start a new conversation with Sure when you have a question about your finances.';
+
+  @override
+  String get chatAiDisabledMessage =>
+      'AI is not enabled yet for this account. Please contact support or an administrator to turn it on.';
+
+  @override
+  String get aiDisabledEmptyTitle => 'AI is not enabled yet';
+
+  @override
+  String get aiDisabledEmptySubtitle =>
+      'When AI is enabled for this account, your chats with Sure will appear here.';
 
   @override
   String get chatListDeleteTitle => 'Delete Chat';
@@ -909,22 +920,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatConversationLoadError => 'Failed to load chat';
-
-  @override
-  String get navEnableAiChatTitle => 'Turn on AI Chat?';
-
-  @override
-  String get navEnableAiChatContent =>
-      'AI Chat is currently disabled in your account settings. Would you like to turn it on now?';
-
-  @override
-  String get navEnableAiChatNotNow => 'Not now';
-
-  @override
-  String get navEnableAiChatConfirm => 'Turn on AI';
-
-  @override
-  String get navEnableAiChatFailed => 'Unable to enable AI right now.';
 
   @override
   String get transactionsListEditTooltip => 'Edit transaction';
