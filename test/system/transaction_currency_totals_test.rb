@@ -1,5 +1,6 @@
 require "application_system_test_case"
 
+# Verify native currency totals in the activity page rendered by a real browser.
 class TransactionCurrencyTotalsTest < ApplicationSystemTestCase
   include EntriesTestHelper
 

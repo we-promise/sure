@@ -1,5 +1,6 @@
 require "test_helper"
 
+# Cover transfer exclusions and zero-valued groups without changing currency formatting.
 class CurrencyTotalsTest < ActionView::TestCase
   include ApplicationHelper
 

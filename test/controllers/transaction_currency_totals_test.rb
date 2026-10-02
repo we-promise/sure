@@ -1,5 +1,6 @@
 require "test_helper"
 
+# Verify native currency totals through the authenticated transaction response.
 class TransactionCurrencyTotalsTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
 
