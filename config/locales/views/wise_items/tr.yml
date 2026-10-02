@@ -46,10 +46,7 @@ tr:
       description: "%{name} kullanarak bağlan"
       name: Wise — %{name}
     provider_panel:
-      accounts_link: Hesaplar
       add_connection: Wise bağlantısı ekle
-      configured_html: Bağlandı ve eşitleniyor. Hesaplarınızı yönetmek için %{accounts_link}
-        sekmesini ziyaret edin.
       connect: Wise'ı Bağla
       connection_name_label: Bağlantı adı
       connection_name_placeholder: Wise Bireysel
@@ -72,11 +69,9 @@ tr:
         open_tokens: Settings → Connect and manage apps → Developer tools → API tokens bölümüne gidin
         sign_in_html: "%{link} adresini ziyaret edin ve hesabınıza giriş yapın"
       keep_token_placeholder: Mevcut token'ı korumak için boş bırakın
-      not_configured: Yapılandırılmamış
       sandbox_note_html: Test için <strong>sandbox</strong> temel URL'sini (<code>https://api.sandbox.transferwise.tech</code>)
         kullanın. Ortamınızda <code>WISE_BASE_URL</code> değerini ayarlayın.
       setup_accounts: Hesapları kur
-      setup_title: 'Kurulum talimatları:'
       sync: Eşitle
       token_label: API token'ı
       token_placeholder: Wise kişisel API token'ınızı yapıştırın

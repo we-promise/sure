@@ -37,11 +37,15 @@ class Security::Resolver
       value.to_s
     end
 
+    # Create an offline fallback without demoting or relabeling an existing shared security.
     def offline_security
       security = Security.find_or_initialize_by_ticker_and_exchange(
         ticker: symbol,
         exchange_operating_mic: exchange_operating_mic
       )
+
+      # A lookup fallback must not demote or relabel a shared catalog record.
+      return security if security.persisted?
 
       security.assign_attributes(
         country_code: country_code,
@@ -95,6 +99,7 @@ class Security::Resolver
       find_or_create_provider_match!(match)
     end
 
+    # Rank close matches, rejecting unrelated tickers and exchanges when an exchange was requested.
     def close_match_from_provider
       filtered_candidates = provider_search_result
 
@@ -176,14 +181,17 @@ class Security::Resolver
       candidate_country.upcase == country_code.upcase
     end
 
+    # Compare provider tickers case-insensitively using the same rule in every match path.
     def ticker_matches?(candidate)
       candidate.ticker&.upcase.to_s == symbol
     end
 
+    # Apply the shared MIC equivalence rule to provider candidates.
     def exchange_matches?(candidate)
       exchange_operating_mics_equivalent?(candidate.exchange_operating_mic, exchange_operating_mic)
     end
 
+    # Compare canonical market MICs so segment aliases use one matching rule.
     def exchange_operating_mics_equivalent?(left, right)
       return false if left.blank? || right.blank?
 

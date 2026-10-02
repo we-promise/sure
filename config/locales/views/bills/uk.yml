@@ -82,7 +82,7 @@ uk:
       pulse_next_seven: наступні 7 днів
       pulse_bar_aria: Сплачено %{percent}% платежів цього місяця
       next_up: Найближчі
-      view_upcoming: Переглянути майбутні
+      view_calendar: Переглянути календар
       date_today: Сьогодні
       date_tomorrow: Завтра
       unconvertible:
@@ -94,8 +94,6 @@ uk:
       remaining: Залишилося %{amount}
       paid_headline: Сплачено %{amount}
       cost_line: У середньому %{average} за оплату, приблизно %{annualized} на рік
-    pane:
-      close: Згорнути деталі
     add_bill: Додати платіж
     manage: Керувати
     find_payment: Знайти оплату

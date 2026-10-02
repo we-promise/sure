@@ -98,6 +98,19 @@ class Security::ResolverTest < ActiveSupport::TestCase
     end
   end
 
+  test "an unrelated country-filtered result does not demote a shared online security" do
+    shared = Security.create!(ticker: "SAFE", exchange_operating_mic: "XNAS", country_code: "US", offline: false)
+    unrelated = Security.new(ticker: "OTHER", exchange_operating_mic: "XLON", country_code: "GB")
+    Security.expects(:search_provider).returns([ unrelated ])
+
+    assert_no_difference "Security.count" do
+      resolved = Security::Resolver.new("SAFE", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+      assert_equal shared, resolved
+    end
+    assert_not shared.reload.offline?
+    assert_equal "US", shared.country_code
+  end
+
   test "returns nil when symbol blank" do
     assert_raises(ArgumentError) { Security::Resolver.new(nil).resolve }
     assert_raises(ArgumentError) { Security::Resolver.new("").resolve }

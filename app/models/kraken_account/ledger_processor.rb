@@ -16,6 +16,10 @@ class KrakenAccount::LedgerProcessor
   # Ledger types we import as Transaction entries.
   SUPPORTED_TYPES = %w[deposit withdrawal staking earn fee].freeze
 
+  # Types whose fee is charged on top of a movement with an external counterparty,
+  # and so must stay a separate entry for transfer matching to work.
+  SPLIT_FEE_TYPES = %w[deposit withdrawal].freeze
+
   # Ledger types we intentionally ignore (handled elsewhere or out of scope).
   SKIP_TYPES = %w[trade transfer margin rollover settled adjustment].freeze
 
@@ -34,11 +38,14 @@ class KrakenAccount::LedgerProcessor
     # membership in memory, instead of an EXISTS query per ledger entry (a full
     # sync can carry up to ~10k entries — see MAX_LEDGER_PAGES in the importer).
     # Scoped to the kraken_ledger_ prefix so trade entries aren't loaded.
-    @existing_external_ids = account.entries
-                                    .where(source: "kraken")
-                                    .where("external_id LIKE 'kraken_ledger_%'")
-                                    .pluck(:external_id)
-                                    .to_set
+    # The name comes along so a principal already holding its fee can be told
+    # from one still owed it, without a lookup per ledger row.
+    existing = account.entries
+                      .where(source: "kraken")
+                      .where("external_id LIKE 'kraken_ledger_%'")
+                      .pluck(:external_id, :name, :user_modified)
+    @existing_external_ids = existing.map(&:first).to_set
+    @existing_principals = existing.to_h { |external_id, name, user_modified| [ external_id, [ name, user_modified ] ] }
 
     raw_ledgers.each do |ledger_id, ledger|
       process_ledger_entry(ledger_id, ledger)
@@ -86,20 +93,40 @@ class KrakenAccount::LedgerProcessor
       return if type == "earn" && EARN_INTERNAL_SUBTYPES.include?(subtype)
 
       external_id = "kraken_ledger_#{ledger_id}"
-      return if @existing_external_ids.include?(external_id)
+      # Already in, and nothing more to add for it: skip before any parsing. A
+      # split-fee type is the exception, checked further down once the fee is
+      # known -- its second entry may still be owed.
+      return if @existing_external_ids.include?(external_id) && !SPLIT_FEE_TYPES.include?(type)
 
       raw_asset  = ledger["asset"].to_s
       raw_amount = ledger["amount"].to_d
       raw_fee    = ledger["fee"].to_d
       date       = Time.zone.at(ledger["time"].to_d).to_date
 
-      # Compute the total balance impact: Kraken applies amount - fee to the balance.
-      # abs_impact captures the full magnitude of the cash movement for this event.
-      abs_impact = (raw_amount - raw_fee).abs
-      return if abs_impact.zero?
+      # Kraken applies amount - fee to the balance, and reports the two separately.
+      # Deposits and withdrawals are emitted as two entries so the movement keeps the
+      # figure the counterparty actually sees: a bank records the transfer net of
+      # Kraken's fee, and Transfer requires both legs to sum to zero, so folding the
+      # fee in here makes the entry permanently unmatchable. Other ledger types have
+      # no counterparty to reconcile against and keep the combined figure.
+      split_fee = SPLIT_FEE_TYPES.include?(type) && !raw_fee.zero?
+      abs_impact = split_fee ? raw_amount.abs : (raw_amount - raw_fee).abs
 
       normalized = normalizer.normalize(raw_asset)
       symbol     = normalized[:symbol]
+
+      # The principal is in from an earlier pass, or there is none: a correction
+      # row can carry a fee against a zero amount. Either way the fee is checked
+      # on its own external_id, so a later sync can still create the missing
+      # half -- pricing it can fail on one sync and succeed on the next --
+      # without duplicating the one it has.
+      if abs_impact.zero? || @existing_external_ids.include?(external_id)
+        if split_fee && !@existing_external_ids.include?("#{external_id}_fee") &&
+           principal_awaits_fee?(external_id, raw_amount, symbol)
+          process_ledger_fee(external_id, ledger_id, ledger, raw_fee, symbol, date)
+        end
+        return
+      end
 
       entry_amount, price_missing = resolve_amount(abs_impact, symbol, date)
       return if entry_amount.nil?
@@ -127,6 +154,64 @@ class KrakenAccount::LedgerProcessor
       )
 
       @existing_external_ids << external_id
+
+      process_ledger_fee(external_id, ledger_id, ledger, raw_fee, symbol, date) if split_fee
+    end
+
+    # Kraken's fee is always a cost, so it is an outflow whichever way the principal
+    # moved. Its own external_id keeps it idempotent alongside the principal entry.
+    # An entry written before fees were split holds the fee inside it: adding the
+    # fee entry now would charge it twice. Only a principal already standing on
+    # its own is owed one -- which happens when pricing the fee failed on an
+    # earlier sync. The two are told apart by the native quantity the entry was
+    # charged, which its name carries. Not by the stored amount: a crypto row is
+    # converted at the current spot price, so recomputing it later scales the
+    # candidates while the stored figure stays where it was, and after any real
+    # price move nearness decides nothing.
+    def principal_awaits_fee?(external_id, raw_amount, symbol)
+      stored_name, user_modified = @existing_principals[external_id]
+      return true if stored_name.nil? # no principal at all: a correction row carrying only a fee
+      return false if user_modified
+
+      charged = charged_quantity(stored_name, symbol)
+      return false if charged.nil?
+
+      charged == raw_amount.abs.round(8)
+    end
+
+    # The quantity out of "Withdrawal 0.501 BTC", compared as a number so a name
+    # written when the formatting differed -- "500.0" against today's "500" --
+    # still reads. Nil unless the name is one this class built for this symbol,
+    # which leaves a renamed entry alone.
+    def charged_quantity(name, symbol)
+      parts = name.to_s.split(" ")
+      return nil unless parts.length >= 3 && parts.last == symbol
+
+      BigDecimal(parts[-2], exception: false)&.round(8)
+    end
+
+    def process_ledger_fee(principal_external_id, ledger_id, ledger, raw_fee, symbol, date)
+      fee_external_id = "#{principal_external_id}_fee"
+      return if @existing_external_ids.include?(fee_external_id)
+
+      fee_amount, price_missing = resolve_amount(raw_fee.abs, symbol, date)
+      return if fee_amount.nil? || fee_amount.zero?
+
+      account.entries.create!(
+        date: date,
+        name: build_name("fee", raw_fee.abs, symbol),
+        amount: fee_amount.abs,
+        currency: target_currency,
+        external_id: fee_external_id,
+        source: "kraken",
+        entryable: Transaction.new(
+          kind: transaction_kind("fee"),
+          investment_activity_label: activity_label("fee"),
+          extra: build_extra(ledger_id, ledger, ledger["asset"].to_s, price_missing)
+        )
+      )
+
+      @existing_external_ids << fee_external_id
     end
 
     # Returns [family_currency_amount, price_missing_bool] or [nil, nil] on hard failure.
