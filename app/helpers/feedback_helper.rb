@@ -3,10 +3,6 @@ module FeedbackHelper
     Rails.env.production? || (Rails.env.development? && Rails.configuration.x.posthog.development_enabled)
   end
 
-  def daily_web_usage_enabled?
-    posthog_enabled? && Rails.configuration.x.posthog.try(:api_key).present?
-  end
-
   def feedback_config(feature)
     config = Rails.configuration.x.posthog
     destination = self_hosted? ? :self_hosted : :managed

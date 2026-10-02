@@ -140,36 +140,39 @@ people or installations across visits.
 
 ## Daily web preview adoption
 
-`web_app_opened_daily` records the first visible authenticated web opening for a
-browser/account on each browser-local calendar day. Ordinary browser tabs and
-installed PWAs both qualify. Its only explicit event property is the Boolean
-`preview_features_enabled`; the existing normal SDK supplies `sure_version` and
-its existing metadata. The account ID is used only in a local storage key and is
-not added to the event. No Rails Session, mobile API, or background-sync hook is
-involved.
+`web_ui_served_daily` records whether Rails served an authenticated user a
+successful full HTML UI response with `preview_features_enabled` true or false. It
+does not claim that the browser displayed the response or that someone was
+actively using it. Normal web visits and installed PWAs use the same UI route;
+API/JSON requests, AJAX/Turbo-frame requests, non-GET requests, redirects/errors,
+and prefetch/prerender requests are excluded. No browser script, storage marker, mobile API, or
+background-job hook is added.
 
-The event uses only the installation's normal `POSTHOG_KEY` / `POSTHOG_HOST`
-client, its environment gate and capture opt-out. A self-hosted installation
-with only the shared feedback client does not send this event. The shared
-feedback destination and its allowlist are unchanged.
+The existing normal server PostHog client uses `POSTHOG_KEY` / `POSTHOG_HOST`,
+with the existing production or explicit development gate. The separate shared
+self-hosted feedback client and `POSTHOG_FEEDBACK_ENABLED` are unchanged. Browser
+SDK opt-outs stored in localStorage and ad blockers cannot suppress this
+server-side event; Rails cannot read that browser-only state. This event follows
+the installation's analytics configuration.
 
-The first visible opening's preview state is remembered while the SDK loads or
-retries. Changing the preference later that day does not emit another event or
-replace that day's state; the next day can record the new state. Reloads, Turbo
-navigation, repeated SDK-ready notifications and foreground returns share the
-same local marker. Each account has its own marker, so switching accounts does
-not suppress the second account. Hidden tabs, cached Turbo previews and
-logged-out pages do not qualify. Returning to a visible tab on a later day can
-qualify even without signing in again.
+An atomic cache claim limits capture to one attempt per authenticated user per
+calendar day in the family's configured timezone (or the app timezone when
+unset/invalid), across browsers and sign-ins. The
+first claimed response supplies that day's preview state; later preference
+changes do not add another event that day. A shared Redis cache provides this
+deduplication across web workers; other cache stores can race or limit counting
+only within one process. Null-cache configurations skip capture; cache
+clearing/eviction can permit repeats, and cache/SDK failures can omit a day.
+SDK queue acceptance does not guarantee delivery. A qualifying full UI response
+can still be requested by a background tab or automation; browser-cached opens
+that never reach Rails cannot count.
 
-This is a sampled count of daily web openings, not all sessions or unique people.
-Blocked storage omits the event; clearing storage or using another browser or
-device can count again. Web Locks serialize simultaneous tabs where supported;
-older browsers without them can race. A closed tab between reservation and
-capture, or a failed storage rollback, can omit that day. Existing open pages
-use their last rendered account/preference until navigation refreshes it. SDK
-acceptance does not guarantee ingestion. Offline unit and browser tests use fake
-SDKs and never submit live events.
+The event includes the Boolean preview state and `sure_version`. Its required
+anonymous identifier is an application-keyed digest of the user and date: it is
+stable only for that user/day, contains no raw user ID, and does not identify a
+person across days. Person profiles and GeoIP enrichment are disabled for this
+event. No email, financial values, URLs, or IP addresses are added. Tests use an
+offline client and never submit live events.
 
 ## Privacy and extending the implementation
 

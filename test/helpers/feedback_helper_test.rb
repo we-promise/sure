@@ -64,30 +64,6 @@ class FeedbackHelperTest < ActionView::TestCase
     assert_not posthog_enabled?
   end
 
-  test "daily web usage requires the normal configured analytics client" do
-    @config.stubs(:api_key).returns(nil)
-    assert_not daily_web_usage_enabled?
-    @config.stubs(:api_key).returns(" ")
-    assert_not daily_web_usage_enabled?
-    @config.stubs(:api_key).returns("public-test-token")
-    assert daily_web_usage_enabled?
-
-    # The shared feedback project's token and opt-in cannot enable this event.
-    @config.stubs(:api_key).returns(nil)
-    assert_not daily_web_usage_enabled?
-  end
-
-  test "daily web usage follows the existing environment gate" do
-    @config.stubs(:api_key).returns("public-test-token")
-    Rails.env.stubs(:production?).returns(false)
-    Rails.env.stubs(:development?).returns(true)
-    assert_not daily_web_usage_enabled?
-    @config.stubs(:development_enabled).returns(true)
-    assert daily_web_usage_enabled?
-    Rails.env.stubs(:development?).returns(false)
-    assert_not daily_web_usage_enabled?
-  end
-
   test "self-hosted feedback stays disabled in tests or after operator opt-out" do
     stubs(:self_hosted?).returns(true)
     Rails.env.stubs(:production?).returns(false)
