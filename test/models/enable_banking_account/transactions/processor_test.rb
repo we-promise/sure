@@ -337,6 +337,26 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert second_entry.external_id.start_with?("#{first_entry.external_id}_")
   end
 
+  # An entry from before fingerprints were recorded, now shared by two rows
+  # that differ: it cannot be told which it was, so it is kept and the case
+  # is put where support can see it.
+  test "records an ambiguous legacy entry in the debug log and leaves it alone" do
+    first, second = distinguishable_collision_rows
+    legacy = @account.entries.create!(
+      date: Date.current, name: "Legacy", amount: -100, currency: "EUR",
+      external_id: EnableBankingEntry::Processor.compute_external_id(first), source: "enable_banking",
+      entryable: Transaction.new
+    )
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+    assert_difference "DebugLogEntry.where(level: \"warn\", provider_key: \"enable_banking\").count", 1 do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+
+    assert_equal "Legacy", legacy.reload.name, "the legacy entry is not overwritten"
+    assert_equal 3, @account.entries.where(source: "enable_banking").count
+  end
+
   test "id-less transaction does not appear in failed count" do
     tx = {
       "booking_date" => Date.current.to_s,

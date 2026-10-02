@@ -579,14 +579,7 @@ class EnableBankingItem::Importer
           end
         end
 
-        existing_ids = existing_transactions.map { |tx|
-          EnableBankingEntry::Processor.compute_external_id(tx)
-        }.compact.to_set
-
-        new_transactions = all_transactions.select do |tx|
-          ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
-          ext_id.present? && !existing_ids.include?(ext_id)
-        end
+        new_transactions = select_new_transactions(all_transactions, existing_transactions)
 
         if new_transactions.any? || removed_pending
           enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
@@ -615,12 +608,21 @@ class EnableBankingItem::Importer
     # the sole dedup criterion. Including it in the composite key preserves
     # legitimately distinct transactions with identical content but different
     # transaction_ids (e.g. two laundromat payments on the same day). (Issue #954)
+    #
+    # A row with neither transaction_id nor entry_reference is left alone. The
+    # duplicates this guards against carry different entry_references; two
+    # bare rows with the same content are, as far as the response can say, two
+    # transactions -- an ASPSP that sends only date, amount, currency and
+    # direction reports two same-day transfers of the same amount exactly that
+    # way, and collapsing them here lost one.
     def deduplicate_api_transactions(transactions)
       seen = {}
       duplicates_removed = 0
 
       result = transactions.select do |tx|
         tx = tx.with_indifferent_access
+        next true if bare_transaction?(tx)
+
         key = build_transaction_content_key(tx)
 
         if seen[key]
@@ -670,6 +672,68 @@ class EnableBankingItem::Importer
       direction = tx[:credit_debit_indicator]
 
       [ date, amount, currency, creditor, debtor, remittance_key, tid, direction ].map(&:to_s).join("\x1F")
+    end
+
+    def bare_transaction?(tx)
+      tx[:transaction_id].blank? && tx[:entry_reference].blank?
+    end
+
+    # The fetched rows not yet in the stored payload. A row with a provider id
+    # is new when its id is not stored, as before. Id-less rows are compared
+    # per content hash by count rather than by membership: the hash includes
+    # the date and the fetch covers whole dates, so if a date's fetch carries
+    # two rows of one hash and the payload holds one, the second is new. When
+    # some of the fetched rows differ in a field the hash does not read, the
+    # ones whose full content is not stored yet are the ones taken.
+    def select_new_transactions(fetched, stored)
+      stored_ids = Set.new
+      stored_groups = Hash.new { |h, k| h[k] = [] }
+      stored.each do |tx|
+        id = EnableBankingEntry::Processor.compute_external_id(tx)
+        next if id.blank?
+
+        if id.start_with?("enable_banking_content_")
+          stored_groups[id] << EnableBankingEntry::Processor.content_fingerprint(comparable_row(tx))
+        else
+          stored_ids << id
+        end
+      end
+
+      fetched_groups = Hash.new { |h, k| h[k] = [] }
+      selected = []
+      fetched.each do |tx|
+        id = EnableBankingEntry::Processor.compute_external_id(tx)
+        next if id.blank?
+
+        if id.start_with?("enable_banking_content_")
+          fetched_groups[id] << tx
+        elsif !stored_ids.include?(id)
+          selected << tx
+        end
+      end
+
+      fetched_groups.each do |id, rows|
+        missing = rows.size - stored_groups[id].size
+        next unless missing.positive?
+
+        unmatched = stored_groups[id].tally
+        fresh = rows.reject do |tx|
+          fingerprint = EnableBankingEntry::Processor.content_fingerprint(comparable_row(tx))
+          next false unless unmatched[fingerprint].to_i.positive?
+
+          unmatched[fingerprint] -= 1
+          true
+        end
+        selected.concat((fresh + rows).uniq(&:object_id).first(missing))
+      end
+
+      selected
+    end
+
+    # A stored row and a fetched one are the same row whatever the pending tag
+    # or the key style says.
+    def comparable_row(tx)
+      tx.to_h.deep_stringify_keys.except("_pending")
     end
 
     class PaginationTruncatedError < StandardError; end

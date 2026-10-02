@@ -179,6 +179,7 @@ class EnableBankingAccount::Transactions::Processor
       excluded = excluded_ids.to_set
 
       ids = {}
+      ambiguous = []
       groups.each do |base, members|
         ranks = {}
         members.sort_by { |i| [ fulls[i], i ] }.group_by { |i| fulls[i] }.each_value do |same|
@@ -203,6 +204,7 @@ class EnableBankingAccount::Transactions::Processor
             holders.first
           end
           ids[owner] = id if owner
+          ambiguous << id if owner.nil? && fingerprint.blank?
         end
 
         # 3. New identities for what is left, by the shape of the group. A bare
@@ -213,10 +215,12 @@ class EnableBankingAccount::Transactions::Processor
         identical = members.map { |i| fulls[i] }.uniq.size == 1
         remaining.each do |i|
           candidate = identical || members.size == 1 ? bare_id.call(i) : full_id.call(i)
-          candidate = full_id.call(i) if candidate == bare_id.call(i) && taken.call(candidate)
+          candidate = full_id.call(i) if candidate == bare_id.call(i) && (taken.call(candidate) || ids.value?(candidate))
           ids[i] = candidate
         end
       end
+
+      report_ambiguous_identities(ambiguous) if ambiguous.any?
 
       rows.each_index.map do |i|
         next [ nil, nil ] unless ids.key?(i)
@@ -225,6 +229,25 @@ class EnableBankingAccount::Transactions::Processor
         suffix = id == bases[i] ? nil : id.delete_prefix("#{bases[i]}_")
         [ suffix, fulls[i] ]
       end
+    end
+
+    # An entry from before fingerprints were recorded, whose content hash is now
+    # shared by rows that differ: which of them it was made from cannot be
+    # told, so it is left as it is and the rows import under their own ids.
+    # That leaves the account one visible duplicate, which support may be asked
+    # about, so it is recorded.
+    def report_ambiguous_identities(external_ids)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Enable Banking id-less entry could not be matched to one of several rows sharing its content hash; " \
+                 "kept as is, and the rows were imported under their own ids",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        account_provider: enable_banking_account.account_provider,
+        family: enable_banking_account.enable_banking_item&.family,
+        metadata: { external_ids: external_ids }
+      )
     end
 
     # The ids the ledger already holds for these content hashes, bare or

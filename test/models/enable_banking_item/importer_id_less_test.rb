@@ -85,6 +85,74 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
     assert_equal 2, @enable_banking_account.raw_transactions_payload.count
   end
 
+  # An ASPSP that sends only date, amount, currency and direction: two
+  # same-day transfers of the same amount are, as far as the response can say,
+  # two identical rows. Both must reach the payload and the ledger.
+  def bare_tx(amount: "100.00", date: Date.current.to_s)
+    {
+      booking_date: date,
+      transaction_amount: { amount: amount, currency: "RON" },
+      credit_debit_indicator: "CRDT",
+      status: "BOOK"
+    }
+  end
+
+  def stub_fetch(booked)
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns(booked)
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([])
+    @importer.stubs(:include_pending?).returns(false)
+    @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
+  end
+
+  test "keeps two identical bare rows from one response, end to end" do
+    stub_fetch([ bare_tx, bare_tx ])
+
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+    @enable_banking_account.reload
+    assert_equal 2, @enable_banking_account.raw_transactions_payload.count, "the in-response dedup must not collapse them"
+
+    assert_difference "@account.entries.where(source: \"enable_banking\").count", 2 do
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+  end
+
+  test "stores the second of two identical bare rows when it arrives on a later sync" do
+    stub_fetch([ bare_tx ])
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+    @enable_banking_account.reload
+    assert_equal 1, @enable_banking_account.raw_transactions_payload.count
+
+    # The day's second transfer shows up next time, beside the first.
+    stub_fetch([ bare_tx, bare_tx ])
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+    @enable_banking_account.reload
+    assert_equal 2, @enable_banking_account.raw_transactions_payload.count
+
+    # And a third sync of the same response adds nothing.
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+    @enable_banking_account.reload
+    assert_equal 2, @enable_banking_account.raw_transactions_payload.count
+  end
+
+  test "does not store an id-less row again when only a field the hash does not read has changed" do
+    stub_fetch([ bare_tx.merge(value_date: Date.current.to_s) ])
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    stub_fetch([ bare_tx.merge(value_date: 1.day.ago.to_date.to_s) ])
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal 1, @enable_banking_account.raw_transactions_payload.count
+  end
+
+  test "still collapses rows that differ only in entry_reference (issue #954)" do
+    stub_fetch([ bare_tx.merge(entry_reference: "ref_a"), bare_tx.merge(entry_reference: "ref_b") ])
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal 1, @enable_banking_account.raw_transactions_payload.count
+  end
+
   test "removes stored id-less pending entry when its booked counterpart arrives" do
     tx = id_less_tx(amount: "30.00", creditor: "Netflix")
     pending_tx = tx.merge(_pending: true)
