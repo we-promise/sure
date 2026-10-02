@@ -11,7 +11,9 @@ nb:
     create:
       code_already_used: Denne koden er allerede brukt. Skriv inn neste kode fra autentiseringsappen din.
       invalid_code: Ugyldig verifiseringskode. Prøv igjen.
+      setup_failed: Noe gikk galt under aktivering av to-faktor autentisering. Prøv igjen.
     disable:
+      failure: Noe gikk galt under deaktivering av to-faktor autentisering. Prøv igjen.
       success: To-faktor autentisering er deaktivert
     new:
       code_label: Verifiseringskode
