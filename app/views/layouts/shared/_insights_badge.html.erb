@@ -1,0 +1,8 @@
+<%# locals: (count:) %>
+<%# The wrapper stays at 0 so acknowledge/unacknowledge and GenerateInsightsJob
+    streams always have a target; `contents` keeps it out of layout so the chip
+    still positions against the lightbulb link. Targeted by attribute because
+    the layout renders the lightbulb twice (desktop header, mobile top nav).
+    Unread count stays a hand-rolled inverse chip — DS::Pill's filled neutral
+    tone is not theme-swapped and disappears on dark nav surfaces. %>
+<span data-insights-badge class="contents"><% if count.positive? %><span class="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-inverse text-inverse text-[10px] font-medium flex items-center justify-center pointer-events-none"><%= count > 9 ? "9+" : count %></span><% end %></span>
