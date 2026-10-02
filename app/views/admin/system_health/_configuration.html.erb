@@ -42,4 +42,6 @@
   <% if self_hosted? %>
     <%= link_to t(".configure_providers"), settings_hosting_path, class: "text-sm text-link underline" %>
   <% end %>
+
+  <%= render "optional_services", services: health.optional_services %>
 </div>

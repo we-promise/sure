@@ -46,6 +46,51 @@ en:
         body: "This is a test push notification for your Sure account."
       verify_worker_ai:
         queued: "Worker check queued. It will appear below once a worker process picks it up, usually within a few seconds."
+      optional_services:
+        title: Optional services
+        description: "Optional operator integrations. Unconfigured services are informational. These checks inspect settings only; they do not test connectivity, send test events, or change analytics consent. Expand a service for setup details."
+        missing_settings: "Missing settings: %{settings}"
+        statuses:
+          configured: Configured (not tested)
+          not_configured: Not configured (optional)
+          incomplete: Incomplete configuration
+          disabled: Disabled in this process
+          not_checked: Not verified
+        notes:
+          restart_required: "Environment settings are present but do not match an initialized configuration in this process. Restart the affected web and worker services after changing their environment."
+          environment_disabled: "The loaded integration is disabled for this Rails environment."
+          explicitly_disabled: "SKYLIGHT_ENABLED explicitly disables instrumentation."
+          skylight_not_loaded: "Skylight is not loaded in this process. A token or SKYLIGHT_ENABLED alone does not load or start the SDK."
+          self_hosted_checkout_disabled: "Subscription checkout and the billing portal are disabled in self-hosted mode. Stripe webhooks can still be configured; checkout price IDs are not required here."
+          browser_analytics_disabled: "Browser analytics are disabled for this environment. This does not disable the separately configured server client."
+          shared_feedback_configured: "Self-hosted feedback has a separate bundled project and is enabled by its configuration. It does not require an operator POSTHOG_KEY. Browser opt-out and SDK availability are not checked."
+          shared_feedback_disabled: "The separate self-hosted feedback project is disabled by its feedback or environment setting. This does not disable operator-owned analytics."
+          production_only: "This integration is used only in production by the application's current configuration."
+        services:
+          langfuse:
+            title: Langfuse
+            description: "Optional AI tracing and evaluation reporting. No traces or evaluation requests are sent by this check."
+            guidance: "Set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY together. LANGFUSE_HOST is optional. Restart the affected services after changing these settings."
+          sentry:
+            title: Sentry
+            description: "Optional error and performance reporting. The current initializer enables reporting only in production."
+            guidance: "Set SENTRY_DSN and restart the affected services. This checks the loaded SDK configuration without capturing an error or sending an event."
+          skylight:
+            title: Skylight
+            description: "Optional application performance instrumentation. Configuration presence does not confirm that the agent is running or reporting."
+            guidance: "Set SKYLIGHT_AUTHENTICATION and ensure Skylight is loaded in the intended Rails environment. SKYLIGHT_ENABLED=false disables instrumentation; the flag alone does not load the gem. Restart after changes."
+          stripe:
+            title: Stripe
+            description: "Optional subscription billing and payment webhooks. This check does not create a Stripe client, validate credentials, or make payment requests."
+            guidance: "Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET together. Managed subscription checkout also needs STRIPE_MONTHLY_PRICE_ID and STRIPE_ANNUAL_PRICE_ID."
+          posthog:
+            title: PostHog
+            description: "Optional operator-owned analytics, using the configuration loaded at boot. Configured does not mean that a user has consented to analytics."
+            guidance: "Set POSTHOG_KEY and a nonblank POSTHOG_HOST, or leave the host unset to use the default. Browser analytics require production or POSTHOG_DEVELOPMENT_ENABLED in development. POSTHOG_FEEDBACK_ENABLED controls separate self-hosted feedback, not operator analytics."
+          logtail:
+            title: Logtail
+            description: "Optional production log forwarding. When it is unconfigured, the application continues logging to standard output."
+            guidance: "Set LOGTAIL_API_KEY and LOGTAIL_INGESTING_HOST together and restart the affected services. No test log is emitted by this check."
       configuration:
         description: "Configuration visible to this web process. These checks do not send emails, contact providers, or upload or download files. Configured means settings are present, not that delivery, provider access, or storage access has been verified."
         statuses:

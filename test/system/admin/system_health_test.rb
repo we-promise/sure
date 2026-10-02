@@ -157,6 +157,15 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     visit admin_system_health_path(tab: "configuration")
     assert_selector "button[role='tab'][aria-selected='true']", text: "Configuration"
     assert_selector "h2", text: "Email (SMTP)"
+    within "[data-testid='optional-services']" do
+      assert_selector "h2", text: "Optional services"
+      assert_selector "details:not([open])", count: 6
+      find("summary", text: "Langfuse").click
+      assert_text "LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY"
+      find("summary", text: "Langfuse").click
+      assert_selector "details:not([open])", count: 6
+    end
+    page.current_window.resize_to(1400, 2000)
     page.save_screenshot(Rails.root.join("tmp", "system-health-configuration.png"))
   end
 

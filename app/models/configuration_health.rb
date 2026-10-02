@@ -20,6 +20,10 @@ class ConfigurationHealth
     @checks ||= [ smtp, securities, exchange_rates, storage ]
   end
 
+  def optional_services
+    @optional_services ||= OptionalServices.new.checks
+  end
+
   def smtp
     return check(:smtp, :disabled) unless ApplicationMailer.perform_deliveries
     return check(:smtp, :not_checked) unless ApplicationMailer.delivery_method == :smtp

@@ -1,0 +1,29 @@
+<%= render DS::Card.new(class: "gap-4", data: { testid: "optional-services" }) do %>
+  <div>
+    <h2 class="text-lg font-semibold text-primary"><%= t(".title") %></h2>
+    <p class="mt-1 text-sm text-secondary"><%= t(".description") %></p>
+  </div>
+
+  <% services.each do |service| %>
+    <%= render DS::Disclosure.new(data: { testid: "optional-service-#{service.key}" }) do |disclosure| %>
+      <% disclosure.with_summary_content do %>
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform" %>
+          <span class="font-medium text-sm text-primary"><%= t(".services.#{service.key}.title") %></span>
+        </div>
+        <%= render DS::Pill.new(label: t(".statuses.#{service.status}"), tone: service.tone, marker: false) %>
+      <% end %>
+
+      <div class="space-y-2 px-3 text-sm text-secondary">
+        <p><%= t(".services.#{service.key}.description") %></p>
+        <% service.notes.each do |note| %>
+          <p><%= t(".notes.#{note}") %></p>
+        <% end %>
+        <% if service.settings.any? %>
+          <p><%= t(".missing_settings", settings: service.settings.join(", ")) %></p>
+        <% end %>
+        <p><%= t(".services.#{service.key}.guidance") %></p>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
