@@ -22,6 +22,7 @@ class Holding::PortfolioCache
     end
   end
 
+  # Select usable cached prices without letting malformed currencies abort portfolio valuation.
   def get_price(security_id, date, source: nil)
     security = @security_cache[security_id]
     raise SecurityNotFound.new(security_id, account.id) unless security

@@ -23,7 +23,7 @@ class Security::Price::Importer
       return 0
     end
 
-    if provider_prices.empty?
+    if provider_prices.empty? && @invalid_currency_dates.blank?
       Rails.logger.warn("Could not fetch prices for #{security.ticker} between #{start_date} and #{end_date} because provider returned no prices")
       return 0
     end
@@ -136,11 +136,11 @@ class Security::Price::Importer
       row if price&.price.present? && price.price.to_f > 0 &&
         row[:price] == price.price && row[:currency] == Security::Price.normalized_currency(price.currency)
     end
-    recovered_quotes.each do |row|
+    recovered_quotes.group_by { |row| row[:currency] }.each do |currency, rows|
       # A replacement quote may use another currency. Remove only generated
       # retry fallbacks so they cannot compete with the recovered quote.
-      Security::Price.requiring_currency_retry.where(security: security, date: row[:date])
-        .where.not(currency: row[:currency]).delete_all
+      Security::Price.requiring_currency_retry.where(security: security, date: rows.map { |row| row[:date] })
+        .where.not(currency: currency).delete_all
     end
 
     # Persist the advanced start date so subsequent syncs can clamp
@@ -188,6 +188,7 @@ class Security::Price::Importer
       end
     end
 
+    # Normalize accepted quotes and track rejected dates within the provider fetch window.
     def provider_prices
       @provider_prices ||= begin
         response = security_provider.fetch_security_prices(
@@ -205,7 +206,9 @@ class Security::Price::Importer
           @invalid_currency_dates = invalid_prices.filter_map(&:date)
 
           if invalid_prices.any?
-            @provider_error = INVALID_CURRENCY_ERROR
+            if @invalid_currency_dates.any? { |date| date.between?(start_date, end_date) }
+              @provider_error = INVALID_CURRENCY_ERROR
+            end
             DebugLogEntry.capture(
               category: "security_price_fetch",
               level: "warn",
@@ -332,6 +335,7 @@ class Security::Price::Importer
       @fill_start_date ||= [ provider_fetch_start_date, effective_start_date ].max
     end
 
+    # Choose a recognized provider or stored quote as the carry-forward anchor.
     def start_price_value
       # When processing full range (first sync), use original behavior
       if fill_start_date == start_date
@@ -363,7 +367,7 @@ class Security::Price::Importer
         .where("date < ?", cutoff_date)
         .where("price > 0")
         .where(provisional: false)
-        .then { |q| currency.present? ? q.where(currency: currency) : q }
+        .then { |q| currency.present? ? q.in_currency(currency) : q }
         .order(date: :desc)
         .limit(1)
         .pick(:price)

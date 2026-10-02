@@ -46,6 +46,7 @@ class Api::V1::SecurityPricesController < Api::V1::BaseController
         .includes(:security)
     end
 
+    # Narrow visible recognized-currency quotes, including normalized legacy currency filters.
     def apply_filters(query)
       if params[:security_id].present?
         invalid_filter!("security_id must be a valid UUID") unless valid_uuid?(params[:security_id])
@@ -53,7 +54,7 @@ class Api::V1::SecurityPricesController < Api::V1::BaseController
         query = query.where(security_id: params[:security_id])
       end
 
-      query = query.where(currency: params[:currency].to_s.strip.upcase) if params[:currency].present?
+      query = query.in_currency(params[:currency]) if params[:currency].present?
       query = query.where("security_prices.date >= ?", parse_date_param(:start_date)) if params[:start_date].present?
       query = query.where("security_prices.date <= ?", parse_date_param(:end_date)) if params[:end_date].present?
       if params.key?(:provisional)

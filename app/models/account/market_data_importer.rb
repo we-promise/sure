@@ -76,6 +76,7 @@ class Account::MarketDataImporter
     end
   end
 
+  # Import required quotes and retain account-local diagnostics until rejected dates recover.
   def import_security_prices
     return unless Security.provider
 

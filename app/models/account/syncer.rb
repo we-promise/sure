@@ -5,6 +5,7 @@ class Account::Syncer
     @account = account
   end
 
+  # Sync provider data and materialize balances while preserving market-data warnings.
   def perform_sync(sync)
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data(sync)

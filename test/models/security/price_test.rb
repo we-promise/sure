@@ -83,6 +83,22 @@ class Security::PriceTest < ActiveSupport::TestCase
     assert price.errors[:currency].any?
   end
 
+  test "a validated edit settles a generated retry fallback" do
+    @security.prices.where(date: Date.current).delete_all
+    price = @security.prices.create!(date: Date.current, price: 100, currency: "USD",
+      provisional: true, currency_retry_required: true)
+
+    price.update!(price: 120)
+
+    assert_not price.reload.currency_retry_required?
+    assert_not price.provisional?
+    @provider.expects(:fetch_security_prices).never
+    result = Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: Date.current, end_date: Date.current).import_provider_prices
+    assert_equal 0, result
+    assert_equal 120, price.reload.price
+  end
+
   test "recovery is scoped to the same security and quote date" do
     date = 20.days.ago.to_date
     bad = @security.prices.create!(date: date, price: 100, currency: "USD")
@@ -113,7 +129,8 @@ class Security::PriceTest < ActiveSupport::TestCase
 
     legacy.update!(price: 102)
 
-    assert_equal "usd", legacy.reload.currency
+    assert_equal "usd", legacy.reload[:currency]
+    assert_equal "USD", legacy.currency
     assert_equal 102, legacy.price
   end
 
