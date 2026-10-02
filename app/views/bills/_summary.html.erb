@@ -85,7 +85,7 @@
       payment or reopening a cycle. %>
   <div class="flex flex-wrap items-center gap-2 pt-1">
     <% if current_occurrence %>
-      <%= render "bills/row_action", occurrence: current_occurrence, suggestion: suggestion, labelled: true %>
+      <%= render "bills/row_action", occurrence: current_occurrence, suggestion: suggestion, drawer: true %>
     <% end %>
 
     <%# Pay and Add link keep a home here, so the portal never leaves Bills

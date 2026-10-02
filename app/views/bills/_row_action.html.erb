@@ -1,4 +1,4 @@
-<%# locals: (occurrence:, suggestion: nil, labelled: false) %>
+<%# locals: (occurrence:, suggestion: nil, drawer: false) %>
 
 <%# The bill's one verb, picked by BillsHelper#bills_row_verb.
 
@@ -9,19 +9,18 @@
     room for the words (the row's slot is hidden below @lg). On a phone the
     subline already says why the row matters, and tapping it opens the drawer.
 
-    `labelled: true` is what the drawer passes. There the verb is always
-    present, at full size. %>
-<% verb = bills_row_verb(occurrence, suggestion: suggestion, drawer: labelled) %>
-<% icon = { review_match: "git-compare", add_payment: "plus", manage_payments: "receipt-text", find_payment: "search" }[verb] %>
+    `drawer: true` is what the drawer passes. There the verb comes from
+    bills_drawer_verb, is always present, and renders at full size. %>
+<% verb = drawer ? bills_drawer_verb(occurrence, suggestion: suggestion) : bills_row_verb(occurrence, suggestion: suggestion) %>
 
 <% if verb == :pay %>
   <%= render "recurring_transactions/pay_link", recurring_transaction: occurrence.recurring_transaction %>
 <% elsif verb %>
   <%= render DS::Link.new(
         text: t("bills.#{verb}"),
-        icon: icon,
-        variant: labelled ? "primary" : "outline",
-        size: labelled ? "md" : "sm",
+        icon: BillsHelper::VERB_ICONS[verb],
+        variant: drawer ? "primary" : "outline",
+        size: drawer ? "md" : "sm",
         href: recurring_occurrence_path(occurrence),
         frame: :drawer
       ) %>

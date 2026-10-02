@@ -323,20 +323,15 @@ module BillsHelper
     t("bills.attention.overdue", count: (Date.current - occurrence.effective_due_on).to_i)
   end
 
+  # The icons for the verbs below. Pay renders as the portal link instead
+  # (recurring_transactions/_pay_link).
+  VERB_ICONS = { review_match: "git-compare", add_payment: "plus",
+                 manage_payments: "receipt-text", find_payment: "search" }.freeze
+
   # The row's one verb, or nil when the bill needs nothing from you now: it is
   # settled, paused, not yet in its window, or on autopay and on schedule. The
   # drawer is one tap away for everything else.
-  #
-  # drawer: true is the drawer's version of the same decision. It always offers
-  # a verb, because the drawer is the only way to unlink a payment, reopen a
-  # cycle or record one by hand. Pay has its own button there.
-  def bills_row_verb(occurrence, suggestion: nil, drawer: false)
-    if drawer
-      return :review_match if suggestion.present?
-      return :add_payment if occurrence.partially_paid?
-      return occurrence.scheduled? ? :find_payment : :manage_payments
-    end
-
+  def bills_row_verb(occurrence, suggestion: nil)
     series = occurrence.recurring_transaction
     return nil unless series.active? && occurrence.scheduled?
     return :review_match if suggestion.present?
@@ -349,6 +344,16 @@ module BillsHelper
     return nil if series.autopay? && state == :due
 
     RecurringTransaction.valid_payment_url?(series.payment_url) ? :pay : :find_payment
+  end
+
+  # The drawer's verb. It always offers one, because the drawer is the only way
+  # to unlink a payment, reopen a cycle or record one by hand. Pay has its own
+  # button there.
+  def bills_drawer_verb(occurrence, suggestion: nil)
+    return :review_match if suggestion.present?
+    return :add_payment if occurrence.partially_paid?
+
+    occurrence.scheduled? ? :find_payment : :manage_payments
   end
 
   # The match score's own components, said in words.

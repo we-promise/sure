@@ -322,11 +322,14 @@ class BillsHelperTest < ActionView::TestCase
     assert_nil bills_row_verb(leftover, suggestion: RecurringAllocation.new)
   end
 
-  test "a settled row offers no verb" do
+  test "a settled row offers no verb, even with a pending match" do
     %w[paid skipped missed].each do |status|
       assert_nil bills_row_verb(build_occurrence(due_on: Date.current - 10, status: status)),
         "a #{status} row has nothing left to chase"
     end
+    # Needs review still asks about the match; the row doesn't.
+    assert_nil bills_row_verb(build_occurrence(due_on: Date.current - 10, status: "paid"),
+                              suggestion: RecurringAllocation.new)
   end
 
   test "a pending match is reviewed whatever the date" do
@@ -354,6 +357,14 @@ class BillsHelperTest < ActionView::TestCase
         assert_nil bills_row_verb(occurrence), "due #{due_on}, portal #{payment_url.inspect}"
       end
     end
+  end
+
+  test "a pending match or a partial payment outranks autopay" do
+    autopay = { autopay: true, payment_url: "https://pay.example.com" }
+
+    assert_equal :review_match, bills_row_verb(build_occurrence(due_on: Date.current, status: "scheduled", series: autopay),
+                                               suggestion: RecurringAllocation.new)
+    assert_equal :add_payment, bills_row_verb(build_partial(due_on: Date.current, series: autopay))
   end
 
   # Overdue means the charge autopay promised never showed up.
@@ -396,11 +407,11 @@ class BillsHelperTest < ActionView::TestCase
                               series: { payment_url: "https://pay.example.com" })
     leftover = build_occurrence(due_on: Date.current - 10, status: "scheduled", series: { status: "inactive" })
 
-    assert_equal :manage_payments, bills_row_verb(build_occurrence(due_on: Date.current - 10, status: "paid"), drawer: true)
-    assert_equal :review_match, bills_row_verb(upcoming, suggestion: RecurringAllocation.new, drawer: true)
-    assert_equal :add_payment, bills_row_verb(build_partial(due_on: Date.current + 20), drawer: true)
-    [ upcoming, autopay, portal, leftover ].each do |occurrence|
-      assert_equal :find_payment, bills_row_verb(occurrence, drawer: true), occurrence.recurring_transaction.name
+    assert_equal :manage_payments, bills_drawer_verb(build_occurrence(due_on: Date.current - 10, status: "paid"))
+    assert_equal :review_match, bills_drawer_verb(upcoming, suggestion: RecurringAllocation.new)
+    assert_equal :add_payment, bills_drawer_verb(build_partial(due_on: Date.current + 20))
+    { "upcoming" => upcoming, "autopay" => autopay, "portal" => portal, "paused" => leftover }.each do |label, occurrence|
+      assert_equal :find_payment, bills_drawer_verb(occurrence), label
     end
   end
 
@@ -417,23 +428,23 @@ class BillsHelperTest < ActionView::TestCase
 
     def build_occurrence(due_on:, status:, series: {})
       family = users(:family_admin).family
-      series = family.recurring_transactions.create!({
+      bill = family.recurring_transactions.create!({
         name: "Twitch #{status} #{due_on}", account: accounts(:depository),
         amount: 11.99, currency: "USD", expected_day_of_month: due_on.day,
         status: "active", bill_type: "subscription", manual: true,
         dedup_scope: "twitch-#{status}-#{due_on}-#{SecureRandom.hex(4)}",
         last_occurrence_date: due_on, next_expected_date: due_on
       }.merge(series))
-      series.recurring_occurrences.destroy_all
-      series.recurring_occurrences.create!(
+      bill.recurring_occurrences.destroy_all
+      bill.recurring_occurrences.create!(
         family: family, original_due_on: due_on, due_on: due_on,
         currency: "USD", expected_amount: 11.99, status: status,
         closed_at: (status == "scheduled" ? nil : Time.current)
       )
     end
 
-    def build_partial(due_on:)
-      occurrence = build_occurrence(due_on: due_on, status: "scheduled")
+    def build_partial(due_on:, series: {})
+      occurrence = build_occurrence(due_on: due_on, status: "scheduled", series: series)
       occurrence.allocations.create!(allocated_amount: 5, currency: "USD", source: "user_created")
       assert occurrence.partially_paid?, "precondition: partly paid"
       occurrence
