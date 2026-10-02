@@ -613,6 +613,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
   end
 
   test "incomplete history probes cool down without suppressing earlier requests or later retries" do
+    travel_to Time.current.change(hour: 12)
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     ExchangeRate.delete_all
     ExchangeRatePair.delete_all
@@ -644,8 +645,10 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     travel 23.hours do
       next_date = end_date + 1.day
       @provider.expects(:fetch_exchange_rates).once
-        .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(next_date), end_date: next_date)
-        .returns(provider_success_response([
+        .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(next_date), end_date: next_date) do |*|
+          travel 2.hours # The incremental response arrives after the historical cooldown expires.
+          true
+        end.returns(provider_success_response([
           OpenStruct.new(from: "USD", to: "EUR", date: next_date, rate: 1.2)
         ]))
       ExchangeRate::Importer.new(exchange_rate_provider: @provider, from: "USD", to: "EUR",

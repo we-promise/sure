@@ -258,13 +258,15 @@ class ExchangeRate::Importer
 
     # Retry an earlier requested range until returned data supports its coverage boundary.
     def history_backfill_required?
+      return @history_backfill_required if defined?(@history_backfill_required)
+
       pair = exchange_rate_pair
       checked_from = pair.provider_history_checked_from
       # Legacy pairs did not store a checked boundary; use the first returned
       # rate as a conservative baseline so an earlier account start gets probed.
       checked_from ||= pair.first_provider_rate_on
 
-      checked_from.present? && requested_history_start_date < checked_from &&
+      @history_backfill_required = checked_from.present? && requested_history_start_date < checked_from &&
         (clear_cache || !Rails.cache.read(history_probe_cache_key))
     end
 
