@@ -89,12 +89,25 @@ module SnaptradeAccount::DataHelpers
     end
 
     def extract_security_name(symbol_data, fallback_ticker)
+      # Options contract with underlying symbol details
+      if (opt_type = symbol_data[:option_type] || symbol_data["option_type"]).present?
+        underlying = extract_underlying_ticker(symbol_data)
+        strike = symbol_data[:strike_price] || symbol_data["strike_price"]
+        exp_date = symbol_data[:expiration_date] || symbol_data["expiration_date"]
+
+        if underlying.present? && strike.present?
+          formatted_strike = (strike.to_f % 1).zero? ? "$#{strike.to_i}" : "$#{strike}"
+          formatted_exp = parse_date(exp_date)&.to_s || exp_date
+          return "#{underlying} #{formatted_strike} #{opt_type.to_s.upcase}#{formatted_exp.present? ? " (#{formatted_exp})" : ""}"
+        end
+      end
+
       # Try various paths where the name might be
       name = symbol_data[:description] || symbol_data["description"]
 
-      # If description is missing or looks like a type description, use ticker
+      # If description is missing or looks like a type description, use ticker directly without titleize
       if name.blank? || name.is_a?(Hash) || name =~ /^(COMMON STOCK|CRYPTOCURRENCY|ETF|MUTUAL FUND)$/i
-        name = fallback_ticker
+        return fallback_ticker
       end
 
       # Titleize for readability if it's all caps
@@ -104,7 +117,9 @@ module SnaptradeAccount::DataHelpers
     end
 
     def extract_exchange(symbol_data)
-      exchange = symbol_data[:exchange] || symbol_data["exchange"]
+      underlying = extract_underlying_data(symbol_data)
+      exchange = underlying[:exchange] if underlying
+      exchange ||= symbol_data[:exchange] || symbol_data["exchange"]
       return exchange.presence if exchange.is_a?(String)
       return nil unless exchange.is_a?(Hash)
 
@@ -113,8 +128,10 @@ module SnaptradeAccount::DataHelpers
 
     def extract_country_code(symbol_data)
       # Try to extract country from currency or exchange
-      currency = symbol_data[:currency]
-      currency = currency.dig(:code) if currency.is_a?(Hash)
+      underlying = extract_underlying_data(symbol_data)
+      currency = underlying[:currency] if underlying
+      currency ||= symbol_data[:currency] || symbol_data["currency"]
+      currency = currency[:code] || currency["code"] if currency.is_a?(Hash)
 
       case currency
       when "USD"
@@ -127,6 +144,24 @@ module SnaptradeAccount::DataHelpers
         nil # Could be many countries
       else
         nil
+      end
+    end
+
+    def extract_underlying_data(symbol_data)
+      raw = symbol_data[:underlying_symbol] || symbol_data["underlying_symbol"]
+      raw.is_a?(Hash) ? raw.with_indifferent_access : nil
+    end
+
+    def extract_underlying_ticker(symbol_data)
+      raw = symbol_data[:underlying_symbol] || symbol_data["underlying_symbol"]
+      if raw.is_a?(Hash)
+        data = raw.with_indifferent_access
+        data[:symbol] || data[:raw_symbol]
+      elsif raw.is_a?(String)
+        raw.presence
+      else
+        sym = symbol_data[:symbol] || symbol_data["symbol"]
+        sym.is_a?(Hash) ? (sym[:symbol] || sym["symbol"]) : sym.presence
       end
     end
 
