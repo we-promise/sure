@@ -71,30 +71,8 @@
       <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
         <% @suggested_allocations.each do |suggestion| %>
           <% series = suggestion.recurring_occurrence.recurring_transaction %>
-          <div class="flex items-center justify-between gap-4 px-4 py-3">
-            <div class="min-w-0">
-              <p class="text-sm text-primary truncate">
-                <%= t(".suggestion_line",
-                      entry: suggestion.entry&.name.presence || t(".suggestion_unknown_entry"),
-                      bill: series.display_name) %>
-              </p>
-              <%# The matcher stores WHY it proposed each of these. This line
-                  used to show a bare percentage of that reasoning instead of
-                  the reasoning, which told nobody anything they could judge. %>
-              <% reasons = bills_match_reasons(
-                   suggestion.match_signals,
-                   currency: suggestion.recurring_occurrence.currency,
-                   expected: suggestion.recurring_occurrence.resolved_expected_amount,
-                   actual: suggestion.entry&.amount&.abs,
-                   due_on: suggestion.recurring_occurrence.effective_due_on,
-                   paid_on: suggestion.paid_on
-                 ) %>
-              <p class="text-xs text-secondary privacy-sensitive">
-                <%= format_money(suggestion.allocated_amount_money) %>
-                &middot; <%= l(suggestion.paid_on, format: :short_with_year) %><%= " · #{reasons.join(" · ")}" if reasons.any? %>
-              </p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
+          <%= render DS::ReviewRow.new do |row| %>
+            <% row.with_actions do %>
               <%= render DS::Link.new(
                     text: t("recurring_occurrences.show.link_payment"),
                     variant: "primary",
@@ -107,8 +85,28 @@
                     href: reject_recurring_allocation_path(suggestion),
                     method: :post
                   ) %>
-            </div>
-          </div>
+            <% end %>
+            <p class="text-sm text-primary @md:truncate">
+              <%= t(".suggestion_line",
+                    entry: suggestion.entry&.name.presence || t(".suggestion_unknown_entry"),
+                    bill: series.display_name) %>
+            </p>
+            <%# The matcher stores WHY it proposed each of these. This line
+                used to show a bare percentage of that reasoning instead of
+                the reasoning, which told nobody anything they could judge. %>
+            <% reasons = bills_match_reasons(
+                 suggestion.match_signals,
+                 currency: suggestion.recurring_occurrence.currency,
+                 expected: suggestion.recurring_occurrence.resolved_expected_amount,
+                 actual: suggestion.entry&.amount&.abs,
+                 due_on: suggestion.recurring_occurrence.effective_due_on,
+                 paid_on: suggestion.paid_on
+               ) %>
+            <p class="text-xs text-secondary privacy-sensitive">
+              <%= format_money(suggestion.allocated_amount_money) %>
+              &middot; <%= l(suggestion.paid_on, format: :short_with_year) %><%= " · #{reasons.join(" · ")}" if reasons.any? %>
+            </p>
+          <% end %>
         <% end %>
       </div>
     </div>
