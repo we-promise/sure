@@ -1,5 +1,0 @@
-<div hidden class="ph-no-capture"
-     data-controller="daily-web-usage"
-     data-daily-web-usage-account-id-value="<%= Current.user.id %>"
-     data-daily-web-usage-preview-features-enabled-value="<%= Current.user.preview_features_enabled? %>"
-     data-action="posthog:ready@document->daily-web-usage#track visibilitychange@document->daily-web-usage#track pageshow@window->daily-web-usage#resume turbo:load@document->daily-web-usage#resume turbo:before-cache@document->daily-web-usage#pause"></div>
