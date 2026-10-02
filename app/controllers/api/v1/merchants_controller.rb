@@ -8,20 +8,8 @@ module Api
 
       def index
         family = current_resource_owner.family
-        user = current_resource_owner
 
-        family_merchant_ids = family.merchants.select(:id)
-        accessible_account_ids = family.accounts.accessible_by(user).select(:id)
-        provider_merchant_ids = Transaction.joins(:entry)
-          .where(entries: { account_id: accessible_account_ids })
-          .where.not(merchant_id: nil)
-          .select(:merchant_id)
-
-        @merchants = Merchant
-          .where(id: family_merchant_ids)
-          .or(Merchant.where(id: provider_merchant_ids, type: "ProviderMerchant"))
-          .distinct
-          .alphabetically
+        @merchants = family.merchants.alphabetically
 
         render json: @merchants.map { |m| merchant_json(m) }
       rescue StandardError => e
@@ -31,13 +19,7 @@ module Api
 
       def show
         family = current_resource_owner.family
-        user = current_resource_owner
-
-        @merchant = family.merchants.find_by(id: params[:id]) ||
-                    Merchant.joins(transactions: :entry)
-                            .where(entries: { account_id: family.accounts.accessible_by(user).select(:id) })
-                            .distinct
-                            .find_by(id: params[:id])
+        @merchant = family.merchants.find_by(id: params[:id])
 
         if @merchant
           render json: merchant_json(@merchant)
@@ -93,7 +75,8 @@ module Api
           name = row[name_header].to_s.strip
           next if name.blank?
 
-          merchant = family.merchants.find_or_initialize_by(name: name)
+          website_url = row[website_url_header].to_s.strip.presence if website_url_header
+          merchant = family.merchants.find_or_initialize_by(name: name, website_url: website_url)
 
           if merchant.persisted?
             skipped << { name: name, reason: "already_exists" }
@@ -101,7 +84,7 @@ module Api
           end
 
           merchant.color = row[color_header].to_s.strip.presence if color_header
-          merchant.website_url = row[website_url_header].to_s.strip.presence if website_url_header
+          merchant.website_url = website_url
 
           if merchant.save
             imported << merchant

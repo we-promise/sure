@@ -19,11 +19,7 @@ class Demo::DataCleaner
       # Clear SSO audit logs first (they reference users)
       SsoAuditLog.destroy_all
 
-      # Rows whose foreign key blocks the cascade below and that no
-      # association removes: unlinked provider merchants (DataCleanerJob only
-      # drops them after 30 days) and the request logs of impersonation
-      # sessions.
-      FamilyMerchantAssociation.delete_all
+      # Request logs are not removed by the normal family association cascade.
       ImpersonationSessionLog.delete_all
 
       disarm_destroy_guards!

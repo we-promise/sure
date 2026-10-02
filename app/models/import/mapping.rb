@@ -10,6 +10,7 @@ class Import::Mapping < ApplicationRecord
   scope :creational, -> { where(create_when_empty: true, mappable: nil) }
   scope :categories, -> { where(type: "Import::CategoryMapping") }
   scope :tags, -> { where(type: "Import::TagMapping") }
+  scope :merchants, -> { where(type: "Import::MerchantMapping") }
   scope :accounts, -> { where(type: "Import::AccountMapping") }
   scope :account_types, -> { where(type: "Import::AccountTypeMapping") }
 

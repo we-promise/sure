@@ -190,12 +190,10 @@ class PlaidEntry::Processor
     # Built from the cleaned merchant name on its own path, so merchant grouping
     # and logos stay put even though #name now carries the description too.
     #
-    # @return [ProviderMerchant, nil] the merchant for this transaction
+    # @return [FamilyMerchant, nil] the family merchant for this transaction
     def merchant
       @merchant ||= import_adapter.find_or_create_merchant(
-        provider_merchant_id: plaid_transaction["merchant_entity_id"],
         name: plaid_transaction["merchant_name"],
-        source: SOURCE,
         website_url: plaid_transaction["website"],
         logo_url: plaid_transaction["logo_url"]
       )

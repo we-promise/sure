@@ -134,18 +134,12 @@ class SophtronEntry::Processor
     def merchant
       return nil unless data[:merchant].present?
 
-      # Create a stable merchant ID from the merchant name
-      # Using digest to ensure uniqueness while keeping it deterministic
       merchant_name = data[:merchant].to_s.strip
       return nil if merchant_name.blank?
 
-      merchant_id = Digest::MD5.hexdigest(merchant_name.downcase)
-
       @merchant ||= begin
         import_adapter.find_or_create_merchant(
-          provider_merchant_id: "sophtron_merchant_#{merchant_id}",
-          name: merchant_name,
-          source: "sophtron"
+          name: merchant_name
         )
       rescue ActiveRecord::RecordInvalid => e
         Rails.logger.error "SophtronEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"

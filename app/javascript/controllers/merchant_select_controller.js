@@ -12,14 +12,19 @@ export default class extends Controller {
     "createForm",
     "createError",
     "listbox",
+    "loading",
   ];
 
   static values = {
     createUrl: String,
+    createDialogUrl: String,
     fieldName: String,
     disabled: Boolean,
     autoSubmit: Boolean,
     menuPlacement: { type: String, default: "auto" },
+    fixedMenu: Boolean,
+    avatar: Boolean,
+    optionsUrl: String,
     offset: { type: Number, default: 6 },
     errorMessage: String,
   };
@@ -28,13 +33,14 @@ export default class extends Controller {
     this.creating = false;
     this.isOpen = false;
     this.selectedId = this.hiddenInputTarget.value || "";
+    this.optionsLoaded = !this.optionsUrlValue;
     if (this.disabledValue || !this.hasMenuTarget) return;
-    this.observeMenuResize();
   }
 
   disconnect() {
     this.stopAutoUpdate();
     if (this.resizeObserver) this.resizeObserver.disconnect();
+    window.removeEventListener("click", this.handleOutsideClick);
   }
 
   toggle(event) {
@@ -48,6 +54,8 @@ export default class extends Controller {
     this.isOpen = true;
     this.buttonTarget.setAttribute("aria-expanded", "true");
     this.menuTarget.classList.remove("hidden");
+    window.addEventListener("click", this.handleOutsideClick);
+    if (!this.resizeObserver) this.observeMenuResize();
     this.searchTarget.value = "";
     this.filter();
     this.startAutoUpdate();
@@ -62,11 +70,38 @@ export default class extends Controller {
       this.updatePosition();
       this.searchTarget.focus({ preventScroll: true });
     });
+
+    if (!this.optionsLoaded) this.loadOptions();
+  }
+
+  async loadOptions() {
+    try {
+      const response = await fetch(this.optionsUrlValue, {
+        headers: { Accept: "application/json" },
+      });
+      const result = await response.json();
+      if (!response.ok || !result.html) throw new Error(result.error || "Unable to load merchants");
+
+      this.listboxTarget.innerHTML = result.html;
+      this.optionsLoaded = true;
+      requestAnimationFrame(() => {
+        if (!this.element.isConnected) return;
+        this.filter();
+        this.updatePosition();
+      });
+    } catch {
+      if (this.hasLoadingTarget) this.loadingTarget.textContent = this.errorMessageValue;
+    }
   }
 
   close() {
     this.isOpen = false;
     this.stopAutoUpdate();
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    window.removeEventListener("click", this.handleOutsideClick);
     this.buttonTarget.setAttribute("aria-expanded", "false");
     this.menuTarget.classList.remove("opacity-100", "translate-y-0");
     this.menuTarget.classList.add(
@@ -111,7 +146,10 @@ export default class extends Controller {
   updateSelectionDisplay(option) {
     this.selectionContainerTarget.innerHTML = "";
 
-    Array.from(option.children).forEach((child) => {
+    const avatar = option.querySelector("[data-merchant-select-avatar]");
+    const children = this.avatarValue && avatar ? [avatar] : Array.from(option.children);
+
+    children.forEach((child) => {
       if (child.classList.contains("check-icon")) return;
       this.selectionContainerTarget.appendChild(child.cloneNode(true));
     });
@@ -124,11 +162,23 @@ export default class extends Controller {
     let hasExactMatch = false;
 
     this.optionTargets.forEach((option) => {
-      const name = (option.dataset.filterName || "").toLowerCase();
-      const isMatch = name.includes(query);
+      const name = (option.dataset.merchantName || "").toLowerCase();
+      const website = (option.dataset.merchantWebsite || "").toLowerCase();
+      const isMatch = name.includes(query) || website.includes(query);
       option.classList.toggle("hidden", !isMatch);
 
-      if (name === query) hasExactMatch = true;
+      const normalizedWebsite = website
+        .replace(/^https?:\/\//, "")
+        .replace(/^www\./, "")
+        .replace(/\/+$/, "");
+      const normalizedQuery = query
+        .replace(/^https?:\/\//, "")
+        .replace(/^www\./, "")
+        .replace(/\/+$/, "");
+
+      if (name === query || normalizedWebsite === normalizedQuery) {
+        hasExactMatch = true;
+      }
     });
 
     const canCreate = query.length > 0 && !hasExactMatch;
@@ -142,7 +192,8 @@ export default class extends Controller {
 
     if (!this.createFormTarget.classList.contains("hidden") && !this.creating) {
       event.preventDefault();
-      this.createMerchant();
+      if (this.avatarValue && this.hasCreateDialogUrlValue) this.openCreateDialog();
+      else this.createMerchant();
       return;
     }
 
@@ -207,9 +258,18 @@ export default class extends Controller {
     }
   }
 
-  handleOutsideClick(event) {
-    if (this.isOpen && !this.element.contains(event.target)) this.close();
+  openCreateDialog() {
+    if (!this.hasCreateDialogUrlValue) return;
+
+    const url = new URL(this.createDialogUrlValue, window.location.origin);
+    url.searchParams.set("name", this.searchTarget.value.trim());
+    const modalFrame = document.getElementById("modal");
+    if (modalFrame) modalFrame.src = url.toString();
   }
+
+  handleOutsideClick = (event) => {
+    if (this.isOpen && !this.element.contains(event.target)) this.close();
+  };
 
   handleKeydown(event) {
     if (!this.isOpen) return;
@@ -309,9 +369,28 @@ export default class extends Controller {
   updatePosition() {
     if (!this.hasButtonTarget || !this.hasMenuTarget || !this.isOpen) return;
 
+    const buttonRect = this.buttonTarget.getBoundingClientRect();
+    if (this.fixedMenuValue) {
+      const viewportWidth = document.documentElement.clientWidth;
+      const menuWidth = Math.min(Math.max(buttonRect.width, 256), viewportWidth - 16);
+      const left = Math.min(
+        Math.max(8, buttonRect.left),
+        viewportWidth - menuWidth - 8,
+      );
+      const top = buttonRect.bottom + this.offsetValue;
+
+      this.menuTarget.style.position = "fixed";
+      this.menuTarget.style.left = `${left}px`;
+      this.menuTarget.style.width = `${menuWidth}px`;
+      this.menuTarget.style.top = `${top}px`;
+      this.menuTarget.style.bottom = "";
+      this.menuTarget.style.overflowY = "auto";
+      this.menuTarget.style.maxHeight = `${Math.max(0, window.innerHeight - top - 8)}px`;
+      return;
+    }
+
     const container = this.getScrollParent(this.element);
     const containerRect = container.getBoundingClientRect();
-    const buttonRect = this.buttonTarget.getBoundingClientRect();
     const menuHeight = this.menuTarget.scrollHeight;
 
     const spaceBelow = containerRect.bottom - buttonRect.bottom;

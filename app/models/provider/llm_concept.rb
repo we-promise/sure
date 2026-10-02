@@ -15,8 +15,8 @@ module Provider::LlmConcept
 
   EnhancedMerchant = Data.define(:merchant_id, :business_url)
 
-  def enhance_provider_merchants(merchants)
-    raise NotImplementedError, "Subclasses must implement #enhance_provider_merchants"
+  def enhance_merchants(merchants)
+    raise NotImplementedError, "Subclasses must implement #enhance_merchants"
   end
 
   # One proposed recurring-bill configuration, inferred from charge history.

@@ -1,4 +1,4 @@
-class Provider::Anthropic::ProviderMerchantEnhancer
+class Provider::Anthropic::MerchantEnhancer
   include Provider::Anthropic::Concerns::UsageRecorder
 
   TOOL_NAME = "report_enhancements".freeze
@@ -14,7 +14,7 @@ class Provider::Anthropic::ProviderMerchantEnhancer
   end
 
   def enhance_merchants
-    span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
+    span = langfuse_trace&.span(name: "enhance_merchants_api_call", input: {
       model: model,
       merchants: merchants
     })
@@ -31,13 +31,13 @@ class Provider::Anthropic::ProviderMerchantEnhancer
     enhanced = extract_enhancements(response)
     result = build_response(enhanced)
 
-    record_usage(model, response.usage, operation: "enhance_provider_merchants", metadata: { merchant_count: merchants.size })
+    record_usage(model, response.usage, operation: "enhance_merchants", metadata: { merchant_count: merchants.size })
 
     span&.end(output: result.map(&:to_h), usage: usage_hash(response.usage))
     result
   rescue => e
     span&.end(output: { error: e.message }, level: "ERROR")
-    record_usage_error(model, operation: "enhance_provider_merchants", error: e, metadata: { merchant_count: merchants.size })
+    record_usage_error(model, operation: "enhance_merchants", error: e, metadata: { merchant_count: merchants.size })
     raise
   end
 

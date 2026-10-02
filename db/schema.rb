@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -897,17 +897,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.index ["family_id"], name: "index_family_exports_on_family_id"
   end
 
-  create_table "family_merchant_associations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.uuid "family_id", null: false
-    t.uuid "merchant_id", null: false
-    t.datetime "unlinked_at"
-    t.datetime "updated_at", null: false
-    t.index ["family_id", "merchant_id"], name: "idx_on_family_id_merchant_id_23e883e08f", unique: true
-    t.index ["family_id"], name: "index_family_merchant_associations_on_family_id"
-    t.index ["merchant_id"], name: "index_family_merchant_associations_on_merchant_id"
-  end
-
   create_table "financekit_account_lineages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id"
     t.string "account_origin"
@@ -1288,6 +1277,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.string "entity_type"
     t.string "exchange_operating_mic"
     t.uuid "import_id", null: false
+    t.string "merchant"
     t.string "merchant_color"
     t.string "merchant_website"
     t.string "name"
@@ -1374,6 +1364,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.jsonb "extracted_data"
     t.uuid "family_id", null: false
     t.uuid "import_session_id"
+    t.string "merchant_col_label"
     t.string "name_col_label"
     t.string "normalized_csv_str"
     t.string "notes_col_label"
@@ -1641,19 +1632,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
 
   create_table "merchants", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "color"
+    t.string "custom_logo_url"
     t.datetime "created_at", null: false
     t.uuid "family_id"
     t.string "logo_url"
     t.string "name", null: false
-    t.string "provider_merchant_id"
-    t.string "source"
     t.string "type", null: false
     t.datetime "updated_at", null: false
     t.string "website_url"
-    t.index ["family_id", "name"], name: "index_merchants_on_family_id_and_name", unique: true, where: "((type)::text = 'FamilyMerchant'::text)"
+    t.index "family_id, name, COALESCE(website_url, ''::character varying)", name: "index_family_merchants_on_name_and_website", unique: true
     t.index ["family_id"], name: "index_merchants_on_family_id"
-    t.index ["provider_merchant_id", "source"], name: "index_merchants_on_provider_merchant_id_and_source", unique: true, where: "((provider_merchant_id IS NOT NULL) AND ((type)::text = 'ProviderMerchant'::text))"
-    t.index ["source", "name"], name: "index_merchants_on_source_and_name", unique: true, where: "((type)::text = 'ProviderMerchant'::text)"
     t.index ["type"], name: "index_merchants_on_type"
   end
 
@@ -2974,8 +2962,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
   add_foreign_key "eval_samples", "eval_datasets"
   add_foreign_key "family_documents", "families"
   add_foreign_key "family_exports", "families"
-  add_foreign_key "family_merchant_associations", "families"
-  add_foreign_key "family_merchant_associations", "merchants"
   add_foreign_key "financekit_account_lineages", "accounts", on_delete: :nullify
   add_foreign_key "financekit_account_lineages", "families"
   add_foreign_key "financekit_accounts", "financekit_account_lineages"

@@ -32,11 +32,9 @@ class Demo::DataCleanerTest < ActiveSupport::TestCase
     assert_equal 0, User.count
   end
 
-  # Neither row has an association that removes it, and each one's foreign key
-  # stopped the cascade at the family or user it points to.
-  test "clears families that unlinked a merchant or were impersonated" do
-    FamilyMerchantAssociation.create!(family: families(:dylan_family), merchant: merchants(:netflix),
-                                      unlinked_at: 1.day.ago)
+  # Each row's foreign key stopped the cascade at the family or user it points to.
+  test "clears families with merchants or impersonation logs" do
+    families(:dylan_family).merchants.create!(name: "Demo cleanup merchant")
     impersonation_sessions(:in_progress).logs.create!(controller: "pages", action: "dashboard",
                                                       method: "GET", path: "/")
 

@@ -132,13 +132,8 @@ class AkahuEntry::Processor
     def merchant
       return nil unless merchant_name.present?
 
-      provider_merchant_id = merchant_data[:_id].presence || merchant_data[:id].presence
-      provider_merchant_id ||= "akahu_merchant_#{Digest::MD5.hexdigest(merchant_name.downcase)}"
-
       @merchant ||= import_adapter.find_or_create_merchant(
-        provider_merchant_id: provider_merchant_id,
         name: merchant_name,
-        source: "akahu",
         website_url: merchant_data[:website]
       )
     rescue ActiveRecord::RecordInvalid => e

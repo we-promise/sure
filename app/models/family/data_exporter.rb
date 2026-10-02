@@ -81,18 +81,19 @@ class Family::DataExporter
 
     def generate_transactions_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
+        csv << [ "date", "account_name", "amount", "name", "merchant", "category", "tags", "notes", "currency" ]
 
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)
         exportable_transactions
-          .includes(:category, :tags, entry: :account)
+          .includes(:category, :tags, :merchant, entry: :account)
           .find_each do |transaction|
             csv << [
               transaction.entry.date&.iso8601,
               transaction.entry.account.name,
               transaction.entry.amount.to_s,
               transaction.entry.name,
+              transaction.merchant&.name,
               transaction.category&.name,
               transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(","),
               transaction.entry.notes,
@@ -309,27 +310,6 @@ class Family::DataExporter
         lines << {
           type: "Merchant",
           data: merchant.as_json
-        }.to_json
-      end
-
-      # Export provider-assigned merchants (auto-detected by bank sync/AI enrichment)
-      # referenced by this family's transactions and recurring transactions. These
-      # are shared across every family on the instance, so only the ones actually
-      # in use here are included -- see #3113. ProviderMerchant does not support
-      # color, so none is exported for it.
-      referenced_provider_merchants.each do |merchant|
-        lines << {
-          type: "ProviderMerchant",
-          data: {
-            id: merchant.id,
-            name: merchant.name,
-            source: merchant.source,
-            provider_merchant_id: merchant.provider_merchant_id,
-            logo_url: merchant.logo_url,
-            website_url: merchant.website_url,
-            created_at: merchant.created_at,
-            updated_at: merchant.updated_at
-          }
         }.to_json
       end
 
@@ -588,16 +568,6 @@ class Family::DataExporter
       else
         parent_entry.child_entries.order(:created_at, :id).to_a
       end
-    end
-
-    def referenced_provider_merchants
-      @referenced_provider_merchants ||= ProviderMerchant.where(id: referenced_merchant_ids).to_a
-    end
-
-    def referenced_merchant_ids
-      transaction_ids = @family.transactions.where.not(merchant_id: nil).distinct.pluck(:merchant_id)
-      recurring_ids = @family.recurring_transactions.where.not(merchant_id: nil).distinct.pluck(:merchant_id)
-      (transaction_ids + recurring_ids).uniq
     end
 
     def family_transaction_ids

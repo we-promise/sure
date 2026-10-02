@@ -403,27 +403,19 @@ class Family < ApplicationRecord
   end
 
   def assigned_merchants
-    merchant_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
-    Merchant.where(id: merchant_ids)
+    merchant_ids = transactions.where.not(merchant_id: nil).select(:merchant_id)
+    merchants.where(id: merchant_ids)
   end
 
   def available_merchants
-    assigned_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
-    recently_unlinked_ids = FamilyMerchantAssociation
-      .where(family: self)
-      .recently_unlinked
-      .pluck(:merchant_id)
-    family_merchant_ids = merchants.pluck(:id)
-    Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
+    merchants
   end
 
-  # Merchant names already associated with this family (via any provider, or a
-  # manually created FamilyMerchant) -- used to recognize a merchant embedded in
-  # noisy provider text (e.g. Enable Banking's remittance lines) without
-  # inventing a new one from scratch. Deliberately excludes recently-unlinked
-  # merchants (unlike available_merchants), since those were explicitly removed.
+  # Merchant names already associated with this family -- used to recognize a
+  # merchant embedded in noisy provider text without inventing a new one from
+  # scratch.
   def known_merchant_names
-    (assigned_merchants.pluck(:name) + merchants.pluck(:name)).uniq
+    merchants.pluck(:name).uniq
   end
 
   def assigned_merchants_for(user)
@@ -432,21 +424,11 @@ class Family < ApplicationRecord
       .where.not(merchant_id: nil)
       .distinct
       .pluck(:merchant_id)
-    Merchant.where(id: merchant_ids)
+    merchants.where(id: merchant_ids)
   end
 
   def available_merchants_for(user)
-    assigned_ids = Transaction.joins(:entry)
-      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
-      .where.not(merchant_id: nil)
-      .distinct
-      .pluck(:merchant_id)
-    recently_unlinked_ids = FamilyMerchantAssociation
-      .where(family: self)
-      .recently_unlinked
-      .pluck(:merchant_id)
-    family_merchant_ids = merchants.pluck(:id)
-    Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
+    merchants
   end
 
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
@@ -669,11 +651,8 @@ class Family < ApplicationRecord
 
   # Used for invalidating caches that render merchant name/logo for recurring
   # transactions (e.g. the transactions index's projected recurring list).
-  # Recurring detection copies `transaction.merchant_id` (see
-  # RecurringTransaction::Identifier), which can point at either a
-  # family-owned FamilyMerchant or a shared ProviderMerchant -- editing either
-  # (e.g. a manual rename, or ProviderMerchant::Enhancer updating a shared
-  # provider merchant's name/logo) doesn't touch `recurring_transactions`.
+  # Recurring detection copies `transaction.merchant_id`; editing a family
+  # merchant does not touch `recurring_transactions`.
   # Scoped to only the merchants actually referenced by this family's
   # recurring transactions, rather than all family merchants, so unrelated
   # merchant edits don't bust the cache unnecessarily.

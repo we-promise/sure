@@ -96,18 +96,12 @@ class MercuryEntry::Processor
       counterparty_name = data[:counterpartyName].presence
       return nil unless counterparty_name.present?
 
-      # Create a stable merchant ID from the counterparty name
-      # Using digest to ensure uniqueness while keeping it deterministic
       merchant_name = counterparty_name.to_s.strip
       return nil if merchant_name.blank?
 
-      merchant_id = Digest::MD5.hexdigest(merchant_name.downcase)
-
       @merchant ||= begin
         import_adapter.find_or_create_merchant(
-          provider_merchant_id: "mercury_merchant_#{merchant_id}",
-          name: merchant_name,
-          source: "mercury"
+          name: merchant_name
         )
       rescue ActiveRecord::RecordInvalid => e
         Rails.logger.error "MercuryEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"

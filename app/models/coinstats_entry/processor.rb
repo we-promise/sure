@@ -286,9 +286,7 @@ class CoinstatsEntry::Processor
 
       # Use the coinstats_account ID to ensure consistent merchant per account
       @merchant ||= import_adapter.find_or_create_merchant(
-        provider_merchant_id: "coinstats_account_#{coinstats_account.id}",
         name: merchant_name,
-        source: "coinstats",
         logo_url: logo
       )
     rescue ActiveRecord::RecordInvalid => e

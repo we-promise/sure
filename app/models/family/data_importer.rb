@@ -60,7 +60,6 @@ class Family::DataImporter
     "Category" => "categories",
     "Tag" => "tags",
     "Merchant" => "merchants",
-    "ProviderMerchant" => "provider_merchants",
     "RecurringTransaction" => "recurring_transactions",
     "RecurrenceRule" => "recurrence_rules",
     "RecurringOccurrence" => "recurring_occurrences",
@@ -115,7 +114,7 @@ class Family::DataImporter
       import_categories(records["Category"] || [])
       import_tags(records["Tag"] || [])
       import_merchants(records["Merchant"] || [])
-      import_provider_merchants(records["ProviderMerchant"] || [])
+      import_legacy_provider_merchants(records["ProviderMerchant"] || [])
       import_recurring_transactions(records["RecurringTransaction"] || [])
       import_transactions(records["Transaction"] || [])
       # Bills: rules and occurrences need their series, allocations and the
@@ -484,67 +483,48 @@ class Family::DataImporter
         require_source_id!("Merchant", old_id)
 
         merchant = mapped_record(:merchants, old_id, @family.merchants, record_type: "Merchant")
-        merchant ||= @family.merchants.find_by(name: data["name"])
+        imported_website = data.key?("website_url") ? data["website_url"] : nil
+        merchant ||= @family.merchants.find_by(name: data["name"], website_url: imported_website)
         created = merchant.blank?
         merchant ||= @family.merchants.build
 
         merchant.assign_attributes(
           name: data["name"],
           color: data["color"],
-          logo_url: data["logo_url"]
+          logo_url: data["logo_url"],
+          custom_logo_url: data["custom_logo_url"]
         )
         # Older or hand-built files omit website_url; don't clear an existing one.
-        merchant.website_url = data["website_url"] if data.key?("website_url")
+        merchant.website_url = imported_website if data.key?("website_url")
         merchant.save!
         map_source!(:merchants, old_id, merchant)
         increment_summary("Merchant", created ? :created : :updated)
       end
     end
 
-    # ProviderMerchant rows share the :merchants id-mapping namespace with
-    # Merchant, so Transaction/RecurringTransaction merchant_id resolution below
-    # needs no changes to accept either source. A ProviderMerchant is shared
-    # across every family on the instance, so an existing match is reused as-is:
-    # an import never writes to a record it did not create.
-    def import_provider_merchants(records)
+    # Older exports stored provider merchants in a separate shared record type.
+    # Import those rows into the same family-scoped Merchant namespace so older
+    # backups remain readable after the provider/family split is removed.
+    def import_legacy_provider_merchants(records)
       records.each do |record|
         data = record["data"]
         old_id = data["id"]
 
         require_source_id!("ProviderMerchant", old_id)
 
-        source = data["source"].to_s
-        unless ProviderMerchant.sources.key?(source)
-          invalid_record!("ProviderMerchant", "source", data["source"])
-          next
-        end
-
-        merchant = ProviderMerchant.find_by_import_data(data, source)
-        merchant ||= create_provider_merchant(data, source)
-        created = merchant.previously_new_record?
+        website_url = data["website_url"].presence
+        merchant = @family.merchants.find_by(name: data["name"], website_url: website_url)
+        created = merchant.blank?
+        merchant ||= @family.merchants.create!(
+          name: data["name"],
+          website_url: website_url,
+          logo_url: data["logo_url"],
+          custom_logo_url: data["custom_logo_url"]
+        )
 
         map_source!(:merchants, old_id, merchant)
-        increment_summary("ProviderMerchant", created ? :created : :updated)
+        increment_summary("Merchant", created ? :created : :updated)
       end
-    end
-
-    # ProviderMerchant does not support color, so a color in the file is not read.
-    # The savepoint keeps a lost race from aborting the surrounding import transaction.
-    # A race usually surfaces as the name-uniqueness validation (RecordInvalid) rather
-    # than the index (RecordNotUnique); either way, reuse the winner if it exists and
-    # let anything else propagate.
-    def create_provider_merchant(data, source)
-      ProviderMerchant.transaction(requires_new: true) do
-        ProviderMerchant.create!(
-          name: data["name"],
-          source: source,
-          provider_merchant_id: data["provider_merchant_id"].presence,
-          logo_url: data["logo_url"],
-          website_url: data["website_url"]
-        )
-      end
-    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
-      ProviderMerchant.find_by_import_data(data, source) || raise
     end
 
     def import_recurring_transactions(records)

@@ -1,4 +1,4 @@
-class Provider::Openai::ProviderMerchantEnhancer
+class Provider::Openai::MerchantEnhancer
   include Provider::Openai::Concerns::UsageRecorder
 
   attr_reader :client, :model, :merchants, :custom_provider, :langfuse_trace, :family, :json_mode
@@ -98,7 +98,7 @@ class Provider::Openai::ProviderMerchantEnhancer
   private
 
     def enhance_merchants_native
-      span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
+    span = langfuse_trace&.span(name: "enhance_merchants_api_call", input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         merchants: merchants
       })
@@ -109,7 +109,7 @@ class Provider::Openai::ProviderMerchantEnhancer
         text: {
           format: {
             type: "json_schema",
-            name: "enhance_provider_merchants",
+            name: "enhance_merchants",
             strict: true,
             schema: json_schema
           }
@@ -124,7 +124,7 @@ class Provider::Openai::ProviderMerchantEnhancer
       record_usage(
         model.presence || Provider::Openai::DEFAULT_MODEL,
         response.dig("usage"),
-        operation: "enhance_provider_merchants",
+        operation: "enhance_merchants",
         metadata: { merchant_count: merchants.size }
       )
 
@@ -167,7 +167,7 @@ class Provider::Openai::ProviderMerchantEnhancer
     end
 
     def enhance_merchants_with_mode(mode)
-      span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
+    span = langfuse_trace&.span(name: "enhance_merchants_api_call", input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         merchants: merchants,
         json_mode: mode
@@ -186,7 +186,7 @@ class Provider::Openai::ProviderMerchantEnhancer
         params[:response_format] = {
           type: "json_schema",
           json_schema: {
-            name: "enhance_provider_merchants",
+            name: "enhance_merchants",
             strict: true,
             schema: json_schema
           }
@@ -204,7 +204,7 @@ class Provider::Openai::ProviderMerchantEnhancer
       record_usage(
         model.presence || Provider::Openai::DEFAULT_MODEL,
         response.dig("usage"),
-        operation: "enhance_provider_merchants",
+        operation: "enhance_merchants",
         metadata: { merchant_count: merchants.size, json_mode: mode }
       )
 

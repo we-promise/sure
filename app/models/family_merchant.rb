@@ -3,15 +3,31 @@ class FamilyMerchant < Merchant
 
   belongs_to :family
 
+  attr_accessor :remove_logo_image
+
   before_validation :set_default_color
   before_save :generate_logo_url_from_website, if: :should_generate_logo?
+  normalizes :website_url, with: ->(url) { url.to_s.strip.presence }
 
   validates :color, presence: true, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
-  validates :name, uniqueness: { scope: :family }
+  validates :name, uniqueness: { scope: %i[family_id website_url] }
+  validate :logo_image_type_and_size
 
   private
     def set_default_color
       self.color = COLORS.sample unless valid_hex_color?
+    end
+
+    def logo_image_type_and_size
+      return unless logo_image.attached?
+
+      unless logo_image.content_type.in?(%w[image/png image/jpeg image/webp])
+        errors.add(:logo_image, "must be a PNG, JPEG, or WebP image")
+      end
+
+      if logo_image.byte_size > 5.megabytes
+        errors.add(:logo_image, "must be 5 MB or smaller")
+      end
     end
 
     def valid_hex_color?
@@ -19,7 +35,7 @@ class FamilyMerchant < Merchant
     end
 
     def should_generate_logo?
-      website_url_changed? || (website_url.present? && logo_url.blank?)
+      (website_url_changed? && (!new_record? || logo_url.blank?)) || (website_url.present? && logo_url.blank?)
     end
 
     def generate_logo_url_from_website
