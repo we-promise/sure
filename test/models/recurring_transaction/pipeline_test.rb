@@ -72,6 +72,47 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
     end
   end
 
+  # The config key this test depends on, asserted against the FILE rather than
+  # the resolved connection.
+  #
+  # `database.yml` used to say `user:` where Rails' key is `username:`. The
+  # PostgreSQL adapter passes unrecognised keys through to libpq, which does
+  # understand `user`, so Rails connected fine and nothing looked wrong -- but
+  # `configuration_hash` carried no `:username`, the test below
+  # `.compact`-dropped the nil, and libpq fell back to the OS user. In the dev
+  # container that is `root`, which produced "password authentication failed
+  # for user root" on every local run, on every branch, for months.
+  #
+  # Asserting the resolved `configuration_hash` would NOT catch a regression:
+  # CI sets `DATABASE_URL` (ci.yml), and Rails then derives the connection from
+  # the URL rather than from this file, so `:username` is present whatever the
+  # file says. Reading the file is the only check that holds in both places.
+  #
+  # Deliberately NOT guarded with `config[:username] || config[:user]` in the
+  # test below: that would make it pass again if the key regressed, which is
+  # the failure mode that hid this in the first place.
+  test "database.yml uses the username key Rails documents, not user" do
+    default_block = File.read(Rails.root.join("config/database.yml"))[/^default: &default\n(?:[ \t]+.*\n|\n)*/]
+
+    assert_match(/^\s+username:/, default_block,
+                 "database.yml must use `username:` -- with `user:` libpq silently " \
+                 "falls back to the OS user, and DATABASE_URL hides it in CI")
+    refute_match(/^\s+user:/, default_block,
+                 "`user:` is not a Rails config key; use `username:`")
+  end
+
+  # The resolved view, which is what the lock test actually consumes. Skipped
+  # when DATABASE_URL is set, because Rails then builds the config from the URL
+  # and this asserts nothing about the file.
+  test "the resolved connection config exposes a username" do
+    skip "DATABASE_URL overrides database.yml" if ENV["DATABASE_URL"].present?
+
+    config = ActiveRecord::Base.connection_pool.db_config.configuration_hash
+
+    assert config.key?(:username), "the resolved config carries no :username"
+    refute config.key?(:user), "`user:` leaked into the resolved config"
+  end
+
   test "run_with_lock! refuses to stack on a held family lock" do
     key = Pipeline.advisory_lock_key(@family.id)
     # Transactional tests hand every checkout the same shared fixture

@@ -259,6 +259,7 @@ class OidcAccountsController < ApplicationController
       end
     end
 
+    # Reject deferred authentication if its provider or issuer is no longer trusted.
     def reject_invalid_pending_auth
       session.delete(:pending_oidc_auth)
       session.delete(:pending_oidc_legacy_relink)

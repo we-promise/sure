@@ -296,11 +296,14 @@ module Api
             identity = OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
             true
           end
-        rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+        rescue ActiveRecord::RecordInvalid => e
           # Expected persistence failures (e.g. a duplicate identity) roll the
           # whole onboarding back and return the error response. Unexpected
           # errors propagate so they surface instead of being hidden.
           user.errors.add(:base, e.message)
+        rescue ActiveRecord::RecordNotUnique
+          # PostgreSQL's message names the index and echoes the conflicting values.
+          user.errors.add(:base, "An account or sign-in identity with these details already exists")
         end
 
         if account_created
@@ -470,6 +473,7 @@ module Api
           )
         end
 
+        # Return the API error for deferred SSO authentication that is no longer valid.
         def render_invalid_sso_linking_code
           if params[:linking_code].present?
             Rails.cache.delete("mobile_sso_link:#{params[:linking_code]}")

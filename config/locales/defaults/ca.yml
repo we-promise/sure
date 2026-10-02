@@ -44,6 +44,7 @@ ca:
       month_year: "%B de %Y"
       short: "%d de %b"
       short_month_year: "%b de %Y"
+      short_with_year: '%d %b %Y'
     month_names:
     -
     - Gener
@@ -118,7 +119,7 @@ ca:
     messages:
       accepted: ha de ser acceptat
       blank: no pot estar en blanc
-      confirmation: no coincideix
+      confirmation: no coincideix amb %{attribute}
       empty: no pot estar buit
       equal_to: ha de ser igual a %{count}
       even: ha de ser parell
@@ -229,3 +230,10 @@ ca:
       long: "%d de %B de %Y %H:%M"
       short: "%d de %b %H:%M"
     pm: pm
+  mcp:
+    errors:
+      invalid_session_id: ID de sessió MCP no vàlid
+      unsupported_protocol_version: 'Versió del protocol MCP no compatible: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris ha d'utilitzar https, http de loopback o un esquema d'URI d'aplicació nativa

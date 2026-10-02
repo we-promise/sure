@@ -79,16 +79,23 @@ class TransactionsController < ApplicationController
       Current.accessible_entries.uncategorized_transactions.count
     end
 
-    # Load projected recurring transactions for next 10 days
-    @projected_recurring = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
+    # Load projected recurring transactions for next 10 days. Only the IDs are
+    # cached: cached ActiveRecord objects outlive schema changes across
+    # upgrades and raise MissingAttributeError for columns added since.
+    projected_recurring_ids = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
       Current.family.recurring_transactions
                     .accessible_by(Current.user)
                     .active
                     .where("next_expected_date <= ? AND next_expected_date >= ?",
                            10.days.from_now.to_date,
                            Date.current)
-                    .includes(:merchant)
-                    .to_a
+                    .pluck(:id)
+    end
+    @projected_recurring = if projected_recurring_ids.empty?
+      []
+    else
+      Current.family.recurring_transactions.accessible_by(Current.user)
+                    .where(id: projected_recurring_ids).includes(:merchant).to_a
     end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
@@ -242,15 +249,46 @@ class TransactionsController < ApplicationController
   def update_tags
     return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
 
-    tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
+    # The transaction-row tag picker toggles one tag at a time; the drawer's
+    # multiselect sends the full set.
+    if params[:toggle_tag_id].present?
+      @toggled_tag = Current.family.tags.find(params[:toggle_tag_id])
+      @entry.transaction.toggle_tag!(@toggled_tag)
+    else
+      @entry.transaction.tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
+    end
 
-    @entry.transaction.tag_ids = tag_ids
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
     @entry.sync_account_later
 
-    render json: { tag_ids: @entry.transaction.tag_ids }
+    respond_to do |format|
+      # JSON stays first so Accept: */* callers keep the original response.
+      format.json { render json: { tag_ids: @entry.transaction.tag_ids } }
+      # Without Turbo the row picker's button_to posts as plain HTML.
+      format.html { redirect_back_or_to transaction_path(@entry) }
+      format.turbo_stream do
+        transaction = @entry.transaction
+        streams = %i[desktop mobile].map do |variant|
+          turbo_stream.replace(
+            dom_id(transaction, "tag_summary_#{variant}"),
+            partial: "tags/summary",
+            locals: { transaction: transaction, variant: variant }
+          )
+        end
+        if @toggled_tag
+          # autofocus hands keyboard focus back to the re-rendered option,
+          # which Turbo focuses after the stream renders.
+          streams << turbo_stream.replace(
+            "#{dom_id(@entry, :tag_option)}_#{@toggled_tag.id}",
+            partial: "tag/dropdowns/row",
+            locals: { tag: @toggled_tag, entry: @entry, selected: transaction.tag_ids.include?(@toggled_tag.id), autofocus: true }
+          )
+        end
+        render turbo_stream: streams
+      end
+    end
   end
 
   def merge_duplicate
@@ -492,7 +530,7 @@ class TransactionsController < ApplicationController
     # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
     # doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
-      "transactions_projected_recurring/v5/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
+      "transactions_projected_recurring/v6/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
         "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
         "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
     end
@@ -677,13 +715,17 @@ class TransactionsController < ApplicationController
                 :start_date, :end_date, :search, :amount,
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
-                categories: [], merchants: [], types: [], tags: [], status: []
+                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: []
               )
               .to_h
               .compact_blank
 
       cleaned_params.delete(:amount_operator) unless cleaned_params[:amount].present?
 
+      if cleaned_params[:ai_status]
+        cleaned_params[:ai_status] &= Transaction::Search::AI_STATUSES
+        cleaned_params.delete(:ai_status) if cleaned_params[:ai_status].empty?
+      end
 
       cleaned_params
     end

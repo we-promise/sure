@@ -408,6 +408,7 @@ class SessionsController < ApplicationController
   end
 
   private
+    # Store the provider identity and trusted issuer for deferred account linking.
     def pending_oidc_auth(auth, issuer)
       {
         "provider" => auth.provider,
@@ -420,6 +421,7 @@ class SessionsController < ApplicationController
       }
     end
 
+    # Require explicit relinking when a legacy identity has no trusted issuer.
     def require_legacy_oidc_relink(auth, issuer)
       SsoAuditLog.log_login_failed!(
         provider: auth.provider,
@@ -441,6 +443,7 @@ class SessionsController < ApplicationController
       end
     end
 
+    # Reject the login and record its provider-specific diagnostic reason.
     def reject_sso_login(provider, reason:)
       SsoAuditLog.log_login_failed!(
         provider: provider,
@@ -533,6 +536,7 @@ class SessionsController < ApplicationController
       redirect_to "sure://sso/callback?code=#{code}", allow_other_host: true
     end
 
+    # Start mobile account onboarding with the authenticated provider and issuer.
     def handle_mobile_sso_onboarding(auth, issuer:)
       device_info = session.delete(:mobile_sso)
       email = auth.info&.email

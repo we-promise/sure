@@ -168,7 +168,7 @@
   <div class="mt-6">
     <%= render DS::Alert.new(
       title: t(".cost_estimates_title"),
-      message: t(".cost_estimates_description"),
+      message: t(".cost_estimates_description", date: l(LlmUsage::PRICING_VERIFIED_ON)),
       variant: :info
     ) %>
   </div>

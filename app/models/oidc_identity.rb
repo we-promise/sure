@@ -9,6 +9,7 @@ class OidcIdentity < ApplicationRecord
   validates :uid, presence: true, uniqueness: { scope: :provider }
   validates :user_id, presence: true
 
+  # Look up an authentication provider in the current enabled configuration.
   def self.provider_config_for(provider_name)
     config = AuthConfig.sso_providers&.find do |raw_config|
       normalized = raw_config.deep_symbolize_keys
@@ -24,6 +25,7 @@ class OidcIdentity < ApplicationRecord
     config
   end
 
+  # Identify a supported OIDC provider configuration with the requested name.
   def self.oidc_provider_config?(config, provider_name = nil)
     return false if config.blank?
 
@@ -43,6 +45,7 @@ class OidcIdentity < ApplicationRecord
     issuer
   end
 
+  # Read the issuer from the verified OmniAuth authentication result.
   def self.raw_issuer(auth)
     raw_info = auth.extra&.raw_info
     return unless raw_info

@@ -4884,7 +4884,8 @@ paths:
       - Auth
       description: Authenticates with email/password and links the SSO identity from
         a previously issued linking code. Creates an OidcIdentity, logs the link via
-        SsoAuditLog, and issues mobile OAuth tokens.
+        SsoAuditLog, and issues mobile OAuth tokens. The provider must remain enabled
+        and its trusted issuer must still match the linking code.
       parameters: []
       responses:
         '200':
@@ -4938,7 +4939,7 @@ paths:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/MfaRequiredResponse"
         '403':
-          description: SSO identity removed by an administrator
+          description: SSO identity removed, provider disabled, or issuer changed
           content:
             application/json:
               schema:
@@ -4971,9 +4972,10 @@ paths:
       - Auth
       description: Creates a new user and family from a previously issued linking
         code. Links the SSO identity via OidcIdentity, logs the JIT account creation
-        via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have
-        allow_account_creation enabled. The first user on a fresh instance is assigned
-        the super_admin role; later family creators are assigned an admin-capable
+        via SsoAuditLog, and issues mobile OAuth tokens. The provider must remain
+        enabled and its trusted issuer must match the linking code. The linking code
+        must have allow_account_creation enabled. The first user on a fresh instance
+        is assigned the super_admin role; later family creators are assigned an admin-capable
         role.
       parameters: []
       responses:
@@ -5026,7 +5028,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: SSO identity removed or account creation disabled
+          description: SSO identity removed, provider disabled, issuer changed, or
+            account creation disabled
           content:
             application/json:
               schema:
@@ -9483,7 +9486,9 @@ paths:
                     transfer_account_id:
                       type: string
                       format: uuid
-                      description: Destination/source account ID for linked transfers
+                      description: Destination/source account ID for linked transfers.
+                        Must be an account the user can write to; otherwise the request
+                        returns 404.
                   required:
                   - account_id
                   - date

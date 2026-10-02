@@ -40,18 +40,24 @@ ru:
     complete_account_setup:
       all_skipped: Все счета были пропущены. Счета не были созданы.
       creation_failed: 'Не удалось создать счета: %{error}'
-      creation_failed_count: Не удалось создать %{count} счёт(ов).
+      creation_failed_count:
+        one: "Не удалось создать %{count} счёт."
+        few: "Не удалось создать %{count} счёта."
+        many: "Не удалось создать %{count} счетов."
+        other: "Не удалось создать %{count} счёта."
       no_accounts: Нет счетов для настройки.
-      partial_skipped: Успешно создано %{created_count} счёт(ов); %{skipped_count}
-        счёт(ов) были пропущены.
-      partial_success: Успешно создано %{created_count} счёт(ов), но %{failed_count}
-        счёт(ов) не удалось создать.
-      success: Успешно создано %{count} счёт(ов).
+      partial_skipped: "Создано счетов: %{created_count}; пропущено: %{skipped_count}."
+      partial_success: "Создано счетов: %{created_count}; не удалось создать: %{failed_count}."
+      success:
+        one: "Успешно создан %{count} счёт."
+        few: "Успешно создано %{count} счёта."
+        many: "Успешно создано %{count} счетов."
+        other: "Успешно создано %{count} счёта."
       unexpected_error: Произошла непредвиденная ошибка.
     create:
       success: Подключение Brex успешно создано
     default_card_name: Карта Brex
-    default_cash_name: Наличные Brex %{id}
+    default_cash_name: Brex Cash %{id}
     default_connection_name: Подключение Brex
     destroy:
       success: Подключение Brex удалено
@@ -71,7 +77,7 @@ ru:
       one: "%{name}"
     kinds:
       card: Карта
-      cash: Наличные
+      cash: Денежный счёт
     link_accounts:
       all_already_linked:
         few: "%{count} выбранных счёта уже связаны: %{names}"
@@ -89,10 +95,8 @@ ru:
       no_accounts_selected: Пожалуйста, выберите хотя бы один счёт
       no_api_token: API токен Brex не найден. Пожалуйста, настройте его в настройках
         провайдера.
-      partial_invalid: Успешно связано %{created_count} счёт(ов), %{already_linked_count}
-        счёт(ов) уже были связаны, %{invalid_count} счёт(ов) имели недопустимые имена
-      partial_success: 'Успешно связано %{created_count} счёт(ов). %{already_linked_count}
-        счёт(ов) уже были связаны: %{already_linked_names}'
+      partial_invalid: "Привязано счетов: %{created_count}; уже были привязаны: %{already_linked_count}; с недопустимыми именами: %{invalid_count}"
+      partial_success: "Привязано счетов: %{created_count}. Уже были привязаны (%{already_linked_count}): %{already_linked_names}"
       select_connection: Выберите подключение Brex перед связыванием счетов.
       success:
         few: Успешно связаны %{count} счёта
@@ -120,15 +124,13 @@ ru:
       description: Подключитесь, используя %{name}
       name: Brex - %{name}
     provider_panel:
-      accounts_link: Счета
       add_connection: Добавить подключение Brex
       base_url_label: Базовый URL (необязательно)
       base_url_placeholder: https://api.brex.com
-      configured_html: Настроено и готово к использованию. Посетите вкладку %{accounts_link}
-        для управления и настройки счетов.
       connection_name_label: Имя подключения
       connection_name_placeholder: Бизнес-счёт
       default_connection_name: Подключение Brex
+      disconnect: Отключить
       disconnect_confirm: Отключить %{name}?
       disconnect_label: Отключить %{name}
       encryption_warning:
@@ -145,13 +147,11 @@ ru:
           которую хотите подключить
         sign_in_html: Посетите %{link} и войдите в аккаунт, который хотите подключить
       keep_token_placeholder: Оставьте пустым, чтобы сохранить текущий токен
-      not_configured: Не настроено
       sandbox_note_html: Используйте отдельное именованное подключение для каждой
         компании Brex/API токена, который вы хотите синхронизировать. Оставьте базовый
         URL пустым для продакшн. Стадия ограничена тестированием, одобренным Brex,
         и не работает с клиентскими токенами.
       setup_accounts: Настроить счета
-      setup_title: 'Инструкции по настройке:'
       sync: Синхронизировать
       token_label: Токен
       token_placeholder: Вставьте токен здесь
@@ -228,7 +228,7 @@ ru:
         other_asset: Дополнительные параметры для других активов не требуются.
       subtypes:
         depository:
-          cd: Депозитный сертификат
+          cd: Срочный вклад
           checking: Расчётный
           hsa: Счёт медицинских сбережений
           money_market: Денежный рынок

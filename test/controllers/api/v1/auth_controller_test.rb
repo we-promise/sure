@@ -1073,7 +1073,11 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       device_info: @device_info.stringify_keys,
       allow_account_creation: true
     }, expires_in: 10.minutes)
-    OidcIdentity.stubs(:create_from_omniauth).raises(ActiveRecord::RecordNotUnique, "duplicate identity")
+    OidcIdentity.stubs(:create_from_omniauth).raises(
+      ActiveRecord::RecordNotUnique,
+      'PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint "index_oidc_identities_on_provider_and_uid" ' \
+      "DETAIL:  Key (provider, uid)=(google_oauth2, google-uid-rollback) already exists."
+    )
 
     assert_no_difference([ "User.count", "OidcIdentity.count", "Family.count" ]) do
       post "/api/v1/auth/sso_create_account", params: {
@@ -1085,6 +1089,12 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_nil User.find_by(email: email)
+
+    # The database's own message names the index and echoes the values.
+    errors = JSON.parse(response.body)["errors"]
+    assert_equal [ "An account or sign-in identity with these details already exists" ], errors
+    assert_not_includes response.body, "index_oidc_identities"
+    assert_not_includes response.body, "google-uid-rollback"
   end
 
   test "sso_create_account linking_code single-use under race" do
