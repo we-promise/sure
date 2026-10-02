@@ -42,6 +42,26 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("plaid_items.errors.link_token_generic"), flash[:alert]
   end
 
+  test "new breaks out of the modal frame so the alert is shown" do
+    plaid_provider = mock
+    Provider::Registry.stubs(:plaid_provider_for_region).with(:us).returns(plaid_provider)
+
+    error_body = {
+      "error_code" => "INVALID_PRODUCT",
+      "error_message" => "Your account is not enabled for the following products: [\"transactions\"]."
+    }.to_json
+    plaid_provider.expects(:get_link_token).raises(
+      Plaid::ApiError.new(code: 400, response_body: error_body)
+    )
+
+    get new_plaid_item_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", accounts_path
+    assert_match(/not enabled for the following products/, flash[:alert])
+  end
+
   test "edit redirects with friendly alert when Plaid rejects update link_token request" do
     plaid_item = plaid_items(:one)
     error_body = {
@@ -55,6 +75,23 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     get edit_plaid_item_url(plaid_item)
 
     assert_redirected_to accounts_path
+    assert_match(/not enabled for the following products/, flash[:alert])
+  end
+
+  test "edit breaks out of the modal frame so the alert is shown" do
+    plaid_item = plaid_items(:one)
+    error_body = {
+      "error_code" => "INVALID_PRODUCT",
+      "error_message" => "Your account is not enabled for the following products: [\"transactions\"]."
+    }.to_json
+    PlaidItem.any_instance.expects(:get_update_link_token).raises(
+      Plaid::ApiError.new(code: 400, response_body: error_body)
+    )
+
+    get edit_plaid_item_url(plaid_item), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", accounts_path
     assert_match(/not enabled for the following products/, flash[:alert])
   end
 
