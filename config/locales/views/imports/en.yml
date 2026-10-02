@@ -459,6 +459,8 @@ en:
       finalize_upload: Please finalize your file upload.
       finalize_mappings: Please finalize your mappings before proceeding.
     ready:
+      synced_transaction_notice_title: Matching synced transactions keep their details
+      synced_transaction_notice_description: If a CSV row matches a synced transaction by account, date, amount and currency but has a different description, the synced transaction keeps its category, tags and notes. That row is skipped and reverting this import will not delete the synced transaction.
       description: Here's a summary of the new items that will be added to your account
         once you publish this import.
       title: Confirm your import data
