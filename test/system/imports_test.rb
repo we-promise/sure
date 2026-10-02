@@ -10,6 +10,7 @@ class ImportsTest < ApplicationSystemTestCase
     Security.stubs(:provider).returns(nil)
   end
 
+  # Exercise the import confirmation flow and explain retained provider metadata before publishing.
   test "transaction import" do
     visit new_import_path
 
