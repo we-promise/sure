@@ -20,6 +20,22 @@ For more detailed technical documentation, see [docs/TECHNICAL_GUIDE.md](docs/TE
 - 🔄 Token refresh for persistent sessions
 - 🔒 Two-factor authentication (MFA) support
 
+## Budget viewing
+
+Open **More → Budgets** to browse budgets and view budgeted, spent, and
+remaining amounts. Expand a category to see its spending and carried-over
+amounts. Budget creation and editing remain in the web app.
+
+This uses the read-only `/api/v1/budgets` and `/api/v1/budget_categories`
+endpoints. Both lists are paginated; calculated spending is fetched only when
+its budget or category is opened. Server-calculated remaining amounts are
+preserved for rollover and shared parent budgets. Privacy mode masks amounts
+and hides progress indicators. Older servers without these endpoints show an
+unavailable message.
+
+Screenshots with synthetic data: [light theme](docs/screenshots/budget-light.png)
+and [dark theme](docs/screenshots/budget-dark.png).
+
 ## Requirements
 
 - Flutter SDK >= 3.0.0
