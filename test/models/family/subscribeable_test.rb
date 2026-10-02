@@ -73,7 +73,37 @@ class Family::SubscribeableTest < ActiveSupport::TestCase
     family.start_subscription!(Subscription::DEMO_STRIPE_ID)
     Provider::Registry.expects(:get_provider).with(:stripe).never
 
-    assert family.destroy
+    subscription = family.subscription
+    family.destroy!
+
+    assert family.destroyed?
+    assert_not Subscription.exists?(subscription.id)
+  end
+
+  test "destroying a family cancels a real Stripe subscription" do
+    family = Family.create!(name: "Subscribed Family")
+    family.start_subscription!("sub_real_123")
+    stripe = mock
+    Provider::Registry.expects(:get_provider).with(:stripe).returns(stripe)
+    stripe.expects(:cancel_subscription).with("sub_real_123")
+
+    family.destroy!
+
+    assert family.destroyed?
+  end
+
+  test "failed Stripe cancellation prevents family and subscription deletion" do
+    family = Family.create!(name: "Subscribed Family")
+    family.start_subscription!("sub_real_123")
+    subscription = family.subscription
+    stripe = mock
+    Provider::Registry.expects(:get_provider).with(:stripe).returns(stripe)
+    stripe.expects(:cancel_subscription).with("sub_real_123").raises(Stripe::InvalidRequestError.new("No such subscription", "id"))
+
+    assert_not family.destroy
+    assert Family.exists?(family.id)
+    assert Subscription.exists?(subscription.id)
+    assert family.errors.added?(:base, :cannot_delete_with_active_subscription)
   end
 
   test "requires_data_archive? returns false with few transactions" do

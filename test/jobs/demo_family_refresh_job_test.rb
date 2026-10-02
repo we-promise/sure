@@ -106,7 +106,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     Setting.demo_family_refresh_family_id = nil
   end
 
-  test "self-hosted refresh revokes old credentials and disarms the synthetic subscription" do
+  test "self-hosted refresh revokes old credentials and allows deletion without Stripe" do
     Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
     Setting.demo_family_refresh_family_id = @demo_family.id.to_s
     Setting.demo_family_refresh_enabled = true
@@ -134,8 +134,13 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     assert key.reload.revoked?
     assert token.reload.revoked_at
     assert grant.reload.revoked_at
-    assert @demo_family.reload.subscription.canceled?
-    assert @demo_family.destroy
+    subscription = @demo_family.reload.subscription
+    assert subscription.active?
+
+    DestroyJob.perform_now(@demo_family)
+
+    assert_not Family.exists?(@demo_family.id)
+    assert_not Subscription.exists?(subscription.id)
   ensure
     Setting.demo_family_refresh_enabled = false
     Setting.demo_family_refresh_family_id = nil
