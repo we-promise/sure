@@ -59,6 +59,19 @@ class Loan
     PERCENT = BigDecimal("100")
     MONTHS_PER_YEAR = BigDecimal("12")
 
+    # How a period's interest is measured against a year.
+    #
+    # `thirty_360` is the default because it IS the flat 1/12 this engine has
+    # always charged -- 30/360 reduces to 1/12 exactly -- so a loan that does
+    # not choose a convention produces the schedule it produced before, row for
+    # row. `actual_actual` is NOT a substitute for that: it charges 31/365 in
+    # January and 28/365 in February, and only reaches 1/12 when a whole
+    # calendar year is summed.
+    DAY_COUNT_CONVENTIONS = %i[thirty_360 actual_365 actual_actual].freeze
+    DEFAULT_DAY_COUNT_CONVENTION = :thirty_360
+    DAYS_PER_YEAR = BigDecimal("365")
+    DAYS_PER_LEAP_YEAR = BigDecimal("366")
+
     def initialize(
       starting_balance:,
       accrual_start_date:,
@@ -68,7 +81,8 @@ class Loan
       re_amortisation_events: nil,
       payment_strategy: :reamortize,
       payment_amount: nil,
-      settle_at_schedule_end: true
+      settle_at_schedule_end: true,
+      day_count_convention: DEFAULT_DAY_COUNT_CONVENTION
     )
       @starting_balance = BigDecimal(starting_balance.to_s)
       @accrual_start_date = accrual_start_date
@@ -88,6 +102,7 @@ class Loan
         else BigDecimal(payment_amount.to_s)
         end
       @settle_at_schedule_end = settle_at_schedule_end
+      @day_count_convention = (day_count_convention || DEFAULT_DAY_COUNT_CONVENTION).to_sym
 
       raise ArgumentError, "payment schedule must not be empty" if @payment_schedule.empty?
       if @payment_schedule.length > MAX_PERIODS
@@ -100,6 +115,11 @@ class Loan
       end
       if (@payment_strategy == :scheduled) != @payment_amount.respond_to?(:call)
         raise ArgumentError, ":scheduled takes a callable payment_amount; the other strategies take a number"
+      end
+      unless DAY_COUNT_CONVENTIONS.include?(@day_count_convention)
+        raise ArgumentError,
+              "unsupported day-count convention: #{@day_count_convention.inspect} " \
+              "(expected one of #{DAY_COUNT_CONVENTIONS.join(', ')})"
       end
     end
 
@@ -116,7 +136,15 @@ class Loan
 
         # See the class comment: opening rate charges the period, closing rate
         # sizes the payment.
-        accrual_rate = monthly_rate(@accrual_rate_for.call(period_start))
+        #
+        # The day count applies to the charge, not to the sizing. `level_payment`
+        # is an annuity formula and assumes ONE constant periodic rate; a factor
+        # that moves with the length of the month would differ every period, so
+        # under :reamortize the payment would be recomputed every month and stop
+        # being level. Sizing therefore stays on the nominal monthly rate, which
+        # is also what the borrower's contracted payment is set from.
+        accrual_annual = @accrual_rate_for.call(period_start)
+        accrual_rate = accrual_factor(period_start, payment_date, accrual_annual)
         sizing_rate = monthly_rate(rate_on(payment_date))
 
         # Interest first, on the balance the period OPENED with: one charge per
@@ -163,7 +191,11 @@ class Loan
               monthly_rate: sizing_rate,
               remaining_payments: @payment_schedule.length - index,
               currency_precision: @currency_precision,
-              first_period_interest: (interest if sizing_rate != accrual_rate)
+              # "Did the rate move mid-period?", asked of the rates themselves.
+              # Comparing the derived factors would answer "yes" every month
+              # once a day count is in play, because January and February
+              # differ by length rather than by rate.
+              first_period_interest: (interest if sizing_rate != monthly_rate(accrual_annual))
             )
           end
         end
@@ -183,7 +215,9 @@ class Loan
 
         # Two rates on the row, named for what each did: `interest_rate` is
         # the one the interest column was computed with, so a reader who
-        # recomputes beginning_balance * rate / 12 gets this row's figure;
+        # recomputes the charge from beginning_balance, this rate and the
+        # period's day count (a flat twelfth under thirty_360) gets this row's
+        # figure;
         # `sizing_rate` is the one the payment was sized at. They differ only
         # on a row whose period straddles a rate change.
         payments << {
@@ -223,6 +257,47 @@ class Loan
       # `annual_percentage` is whatever the caller's rate callable returned --
       # an Integer in the tests, a BigDecimal from RateResolver -- so the
       # coercion at this boundary stays.
+      # 30/360 keeps the original two-step division untouched, so a default
+      # loan's figures are bit-identical rather than merely close.
+      def accrual_factor(period_start, period_end, annual_percentage)
+        return monthly_rate(annual_percentage) if @day_count_convention == :thirty_360
+
+        # After the 30/360 return, so the default path stays bit-identical.
+        if period_end < period_start
+          raise ArgumentError, "period ends (#{period_end}) before it starts (#{period_start})"
+        end
+
+        rate = BigDecimal(annual_percentage.to_s) / PERCENT
+
+        if @day_count_convention == :actual_365
+          return (rate * BigDecimal((period_end - period_start).to_i.to_s)) / DAYS_PER_YEAR
+        end
+
+        rate * actual_actual_year_fraction(period_start, period_end)
+      end
+
+      # actual/actual measures each calendar year's days against THAT year's
+      # own length, so a period crossing New Year is two fractions rather than
+      # one. Taking the opening year's denominator for the whole period would
+      # charge the days after 1 January at the wrong rate -- 15 December 2027
+      # to 15 January 2028 would put the 2028 days over 365 instead of 366.
+      def actual_actual_year_fraction(period_start, period_end)
+        fraction = BigDecimal("0")
+        cursor = period_start
+
+        while cursor < period_end
+          next_year_start = Date.new(cursor.year + 1, 1, 1)
+          segment_end = [ next_year_start, period_end ].min
+          days = BigDecimal((segment_end - cursor).to_i.to_s)
+          denominator = Date.leap?(cursor.year) ? DAYS_PER_LEAP_YEAR : DAYS_PER_YEAR
+
+          fraction += days / denominator
+          cursor = segment_end
+        end
+
+        fraction
+      end
+
       def monthly_rate(annual_percentage)
         (BigDecimal(annual_percentage.to_s) / PERCENT) / MONTHS_PER_YEAR
       end
