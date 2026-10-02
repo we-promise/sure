@@ -1,3 +1,4 @@
+require "test_helper"
 require "i18n/tasks"
 require "pathname"
 require "yaml"
@@ -23,6 +24,21 @@ class I18nTest < ActiveSupport::TestCase
       assert_nothing_raised do
         YAML.load_file(path, aliases: true)
       end
+    end
+  end
+
+  # The loan chart's labels, cards, table and accessible description all read
+  # this subtree. Fallbacks would show a German user English rather than a raw
+  # key, but the rest of UI.account.chart is translated, so a missing subtree
+  # is a gap and not a choice. Placeholders are compared too: a translation
+  # that drops %{projected_payoff_date} silently loses the figure it names.
+  def test_german_loan_chart_keys_and_placeholders_match_english
+    en = loan_chart_leaves("en")
+    de = loan_chart_leaves("de")
+
+    assert_equal en.keys.sort, de.keys.sort, "UI.account.chart.loan in de.yml must carry every key en.yml does"
+    en.each do |key, value|
+      assert_equal value.scan(/%\{\w+\}/).sort, de.fetch(key).to_s.scan(/%\{\w+\}/).sort, "placeholders differ for #{key}"
     end
   end
 
@@ -77,25 +93,68 @@ class I18nTest < ActiveSupport::TestCase
                  "#{offenses.map { |offense| "  #{offense}" }.join("\n")}"
   end
 
+  # Fallbacks would hand a locale without :short_with_year the English
+  # "%b %d, %Y", month first, so check each locale without them.
+  def test_short_with_year_date_format_exists_for_each_locale
+    locales = Dir[File.expand_path("../config/locales/defaults/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    missing = locales.sort.reject do |locale|
+      I18n.t("date.formats.short_with_year", locale: locale, fallback: false, default: nil)
+    end
+
+    assert_empty missing, "date.formats.short_with_year is missing for: #{missing.join(", ")}"
+  end
+
+  def test_short_with_year_follows_the_locale
+    assert_equal "5. Jan 2027", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :de)
+    # The abbreviation takes no case suffix: "tammita" and "Urtk" aren't words.
+    assert_equal "05. tammi 2027", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :fi)
+    assert_equal "2027(e)ko Urt 5", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :eu)
+  end
+
+  # %e pads a single-digit day with a space: " 5. Jan 2027", "Jan  5, 2027".
+  def test_short_with_year_has_no_padding_space_on_a_single_digit_day
+    locales = Dir[File.expand_path("../config/locales/defaults/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    padded = locales.sort.select do |locale|
+      I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: locale).match?(/\A\s|\s\s/)
+    end
+
+    assert_empty padded, "short_with_year pads the day for: #{padded.join(", ")}"
+  end
+
   def test_trade_republic_activity_labels_exist_for_each_locale
     required_labels = %w[
       contribution withdrawal interest dividend card_payment cash_withdrawal
-      card_fee card_refund tax_refund buy sell
+      card_fee card_refund tax_refund round_up
     ]
 
     Dir[File.expand_path("../config/locales/views/trade_republic_items/*.yml", __dir__)].sort.each do |file|
       locale = File.basename(file, ".yml")
-      labels = YAML.load_file(file, aliases: true)
-        .fetch(locale)
-        .dig("trade_republic_items", "activities", "labels")
+      translations = YAML.load_file(file, aliases: true).fetch(locale)
+      labels = translations.dig("trade_republic_items", "activities", "labels")
 
       assert labels.is_a?(Hash), "#{file} must define trade_republic_items.activities.labels"
       assert_empty required_labels - labels.keys,
                    "#{file} is missing Trade Republic activity labels"
+      assert translations.dig("trade_republic_items", "trade_republic_item", "data_quality", "pending_trade_details").present?,
+             "#{file} is missing trade_republic_item.data_quality.pending_trade_details"
     end
   end
 
   private
+    # { "months_saved.one" => "...", ... } for UI.account.chart.loan in one locale.
+    def loan_chart_leaves(locale)
+      tree = YAML.load_file(Pathname.pwd.join("config/locales/views/components/#{locale}.yml"), aliases: true)
+        .dig(locale, "UI", "account", "chart", "loan") || {}
+      flatten_leaves(tree)
+    end
+
+    def flatten_leaves(tree, prefix = nil)
+      tree.each_with_object({}) do |(key, value), leaves|
+        path = [ prefix, key ].compact.join(".")
+        value.is_a?(Hash) ? leaves.merge!(flatten_leaves(value, path)) : leaves[path] = value
+      end
+    end
+
     def german_locale_paths
       @german_locale_paths ||= locale_paths.select { |path| path.basename.to_s.match?(/(^|[._-])de\.yml\z/) }
     end

@@ -565,7 +565,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal (Date.current - start_date).to_i + 1, ExchangeRate.where(from_currency: "USD", to_currency: "EUR", date: start_date..Date.current).count
   end
 
-  test "does not repeat a successful history probe when no earlier rates exist" do
+  test "retries earlier history when a successful response does not establish earlier coverage" do
     ExchangeRate.delete_all
     ExchangeRatePair.delete_all
 
@@ -592,7 +592,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     )
 
     @provider.expects(:fetch_exchange_rates)
-             .once
+             .twice
              .with(from: "USD", to: "EUR", start_date: fetch_start, end_date: Date.current)
              .returns(provider_response)
 
@@ -608,8 +608,34 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
 
     pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
     assert_equal first_provider_rate_on, pair.first_provider_rate_on
-    assert_equal fetch_start, pair.provider_history_checked_from
+    assert_equal first_provider_rate_on, pair.provider_history_checked_from
     assert_not ExchangeRate.exists?(from_currency: "USD", to_currency: "EUR", date: start_date)
+  end
+
+  test "empty successful history does not prevent a later complete backfill" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+    start_date = 30.days.ago.to_date
+    previous_boundary = 10.days.ago.to_date
+    pair = ExchangeRatePair.create!(from_currency: "USD", to_currency: "EUR",
+      first_provider_rate_on: previous_boundary, provider_history_checked_from: previous_boundary,
+      provider_name: Setting.exchange_rate_provider.to_s)
+    @provider.expects(:fetch_exchange_rates).returns(provider_success_response([]))
+    importer = -> {
+      ExchangeRate::Importer.new(exchange_rate_provider: @provider, from: "USD", to: "EUR",
+        start_date: start_date, end_date: Date.current)
+    }
+    importer.call.import_provider_rates
+    assert_equal previous_boundary, pair.reload.provider_history_checked_from
+
+    fetch_start = get_provider_fetch_start_date(start_date)
+    @provider.expects(:fetch_exchange_rates).returns(provider_success_response(
+      (fetch_start..Date.current).map { |date| OpenStruct.new(from: "USD", to: "EUR", date: date, rate: 1.1) }
+    ))
+    importer.call.import_provider_rates
+    assert_equal fetch_start, pair.reload.provider_history_checked_from
+    assert ExchangeRate.exists?(from_currency: "USD", to_currency: "EUR", date: start_date)
+    assert ExchangeRate.exists?(from_currency: "EUR", to_currency: "USD", date: start_date)
   end
 
   test "does not advance checked history boundary when provider request fails" do
@@ -781,7 +807,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     ).import_provider_rates
 
     pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
-    assert_equal expected_start, pair.provider_history_checked_from
+    assert_equal Date.current, pair.provider_history_checked_from
   end
 
   private

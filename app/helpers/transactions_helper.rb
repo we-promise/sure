@@ -10,7 +10,8 @@ module TransactionsHelper
       { key: "amount_filter", label: t("transactions.search.filters.amount"), icon: "hash" },
       { key: "category_filter", label: t("transactions.search.filters.category"), icon: "shapes" },
       { key: "tag_filter", label: t("transactions.search.filters.tag"), icon: "tags" },
-      { key: "merchant_filter", label: t("transactions.search.filters.merchant"), icon: "store" }
+      { key: "merchant_filter", label: t("transactions.search.filters.merchant"), icon: "store" },
+      { key: "ai_filter", label: t("transactions.search.filters.ai"), icon: "sparkles" }
     ]
   end
 
@@ -33,6 +34,15 @@ module TransactionsHelper
   # @return [Boolean] whether to render this entry inside its split group
   def in_split_group?(entry, params_grouped)
     entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
+  end
+
+  # Whether the current user may annotate (e.g. re-tag) entries on this
+  # account. Memoized per request so list rows don't query per row.
+  def can_annotate_account?(account)
+    return false unless Current.user
+
+    @annotatable_account_ids ||= Account.annotatable_by(Current.user).pluck(:id).to_set
+    @annotatable_account_ids.include?(account.id)
   end
 
   # ---- Transaction extra details helpers ----

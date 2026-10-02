@@ -399,6 +399,20 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Date.new(2026, 1, 15), item.reload.sync_start_date.to_date
   end
 
+  # Redirecting back to Bank sync collapses the open connection row. The panel
+  # root carries the id, so it is replaced rather than nested inside itself.
+  test "update from the page re-renders the panel in place" do
+    item = create_onchain_wallet_item(family: @family)
+
+    patch onchain_wallet_item_url(item),
+          params: { onchain_wallet_item: { sync_start_date: "2026-01-15" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "onchain_wallet-providers-panel"
+    assert_includes response.body, %(id="onchain_wallet-providers-panel")
+    assert_equal Date.new(2026, 1, 15), item.reload.sync_start_date.to_date
+  end
+
   test "linking creates the single connection every wallet hangs off" do
     stub_wallet_with_token
     stub_wallet_with_token(address: OnchainTestHelper::FAKE_ADDRESS_ALT)

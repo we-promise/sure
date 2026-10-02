@@ -87,7 +87,7 @@ ca:
       subtitle: Selecciona quins comptes de broker d'IBKR vols enllaçar.
     sync_status:
       all_linked:
-        one: 1 compte enllaçat
+        one: '%{count} compte enllaçat'
         other: "%{count} comptes enllaçats"
       no_accounts: Encara no s'han descobert comptes d'IBKR
       partial: "%{linked} enllaçats, %{unlinked} necessiten configuració"

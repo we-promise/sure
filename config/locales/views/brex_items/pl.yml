@@ -126,15 +126,13 @@ pl:
       description: Połącz przez %{name}
       name: Brex - %{name}
     provider_panel:
-      accounts_link: Konta
       add_connection: Dodaj połączenie Brex
       base_url_label: Bazowy URL (opcjonalnie)
       base_url_placeholder: https://api.brex.com
-      configured_html: Skonfigurowane i gotowe do użycia. Przejdź do zakładki %{accounts_link},
-        aby zarządzać kontami.
       connection_name_label: Nazwa połączenia
       connection_name_placeholder: Firmowe konto
       default_connection_name: Połączenie Brex
+      disconnect: Rozłącz
       disconnect_confirm: Rozłączyć %{name}?
       disconnect_label: Rozłącz %{name}
       encryption_warning:
@@ -152,12 +150,10 @@ pl:
           połączyć
         sign_in_html: Odwiedź %{link} i zaloguj się na konto, które chcesz połączyć
       keep_token_placeholder: Pozostaw puste, aby zachować bieżący token
-      not_configured: Nieskonfigurowane
       sandbox_note_html: Użyj osobnego nazwanego połączenia dla każdej firmy/tokenu
         API Brex. Pozostaw bazowy URL pusty dla produkcji. Staging jest ograniczony
         do zatwierdzonych testów Brex.
       setup_accounts: Konfiguruj konta
-      setup_title: 'Instrukcje konfiguracji:'
       sync: Synchronizuj
       token_label: Token
       token_placeholder: Wklej token tutaj

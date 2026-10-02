@@ -29,6 +29,7 @@ class ExchangeRatePair < ApplicationRecord
     (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
   end
 
+  # Move the first actual provider-rate date earlier without overwriting a newer provider selection.
   def self.record_first_provider_rate_on(from:, to:, date:, provider_name: nil, pair: nil)
     record_earliest_provider_date_on(:first_provider_rate_on, from:, to:, date:, provider_name:, pair:)
   end
@@ -39,6 +40,7 @@ class ExchangeRatePair < ApplicationRecord
     record_earliest_provider_date_on(:provider_history_checked_from, from:, to:, date:, provider_name:, pair:)
   end
 
+  # Atomically ratchet a provider date backwards while preserving provider identity.
   def self.record_earliest_provider_date_on(column, from:, to:, date:, provider_name: nil, pair: nil)
     return if date.blank?
     return unless EARLIEST_PROVIDER_DATE_COLUMNS.include?(column)

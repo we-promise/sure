@@ -140,6 +140,7 @@ module ExchangeRate::Provided
     end
 
     private
+      # Return the provider and its name from one configuration snapshot.
       def provider_configuration
         provider_name = (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
         registry = Provider::Registry.for_concept(:exchange_rates)

@@ -4,6 +4,7 @@ class ExchangeRate::Importer
 
   PROVISIONAL_LOOKBACK_DAYS = 5
 
+  # Capture the provider identity so a settings change cannot commit stale-provider history.
   def initialize(exchange_rate_provider:, from:, to:, start_date:, end_date:, provider_name: nil, clear_cache: false)
     @exchange_rate_provider = exchange_rate_provider
     @current_provider_name = provider_name || ExchangeRatePair.resolve_provider_name
@@ -14,6 +15,7 @@ class ExchangeRate::Importer
     @clear_cache = clear_cache
   end
 
+  # Fill usable rates and commit both currency directions with their verified history metadata.
   def import_provider_rates
     return 0 unless provider_still_selected?
 
@@ -30,7 +32,8 @@ class ExchangeRate::Importer
     return 0 unless provider_still_selected?
 
     if rates.empty?
-      record_provider_history_checked_from(pair: pair) if provider_fetch_succeeded?
+      # Success alone cannot distinguish missing history from a partial response.
+      # Keep the previous boundary so this range remains retryable.
       Rails.logger.warn("Could not fetch rates for #{from} to #{to} between #{start_date} and #{end_date} because provider returned no rates")
       return
     end
@@ -142,6 +145,7 @@ class ExchangeRate::Importer
       @current_provider_name
     end
 
+    # Reject work if the configured provider changed after this import began.
     def provider_still_selected?
       current_provider_name == ExchangeRatePair.resolve_provider_name
     end
@@ -225,6 +229,7 @@ class ExchangeRate::Importer
       end
     end
 
+    # Clamp the requested historical probe to the selected provider coverage limit.
     def requested_history_start_date
       # Track the requested account range, not the earlier API lookback date.
       @requested_history_start_date ||= clamp_provider_fetch_start_date(
@@ -233,6 +238,7 @@ class ExchangeRate::Importer
       )
     end
 
+    # Apply provider history limits consistently to normal and backfill requests.
     def clamp_provider_fetch_start_date(base, log: true)
       max_days = exchange_rate_provider.respond_to?(:max_history_days) ? exchange_rate_provider.max_history_days : nil
       return base unless max_days && (end_date - base).to_i > max_days
@@ -247,6 +253,7 @@ class ExchangeRate::Importer
       clamped
     end
 
+    # Retry an earlier requested range until returned data supports its coverage boundary.
     def history_backfill_required?
       pair = exchange_rate_pair
       checked_from = pair.provider_history_checked_from
@@ -257,15 +264,16 @@ class ExchangeRate::Importer
       checked_from.present? && requested_history_start_date < checked_from
     end
 
-    def provider_fetch_succeeded?
-      @provider_fetch_succeeded == true
-    end
-
+    # Record only the earliest coverage supported by positive returned rates.
     def record_provider_history_checked_from(pair:)
+      earliest_returned_date = provider_rates.values
+        .select { |rate| rate.rate.present? && rate.rate.to_f > 0 }.map(&:date).min
+      return unless earliest_returned_date
+
       ExchangeRatePair.record_provider_history_checked_from(
         from: from,
         to: to,
-        date: provider_fetch_start_date,
+        date: [ provider_fetch_start_date, earliest_returned_date ].max,
         provider_name: current_provider_name,
         pair: pair
       )
@@ -285,8 +293,6 @@ class ExchangeRate::Importer
           start_date: provider_fetch_start_date,
           end_date: end_date
         )
-
-        @provider_fetch_succeeded = provider_response.success?
 
         if provider_response.success?
           Rails.logger.debug("Fetched #{provider_response.data.size} rates from #{exchange_rate_provider.class.name} for #{from}/#{to} between #{provider_fetch_start_date} and #{end_date}")
