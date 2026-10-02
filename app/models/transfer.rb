@@ -32,6 +32,15 @@ class Transfer < ApplicationRecord
     end
   end
 
+  scope :for_family, ->(family) {
+    transaction_ids = family.transactions.select(:id)
+    where(inflow_transaction_id: transaction_ids, outflow_transaction_id: transaction_ids)
+  }
+  scope :between_accounts, ->(account_ids) {
+    transaction_ids = Transaction.joins(:entry).where(entries: { account_id: account_ids }).select(:id)
+    where(inflow_transaction_id: transaction_ids, outflow_transaction_id: transaction_ids)
+  }
+
   def has_source_fee?
     derived_source_fee_amount > 0
   end

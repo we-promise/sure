@@ -1,0 +1,9 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        account_provider:
+          attributes:
+            account:
+              pending_deletion: is pending deletion and cannot be linked
