@@ -8,6 +8,7 @@
   <% tabs.with_nav do |nav| %>
     <% nav.with_btn(id: "background_jobs", label: t(".tabs.background_jobs")) %>
     <% nav.with_btn(id: "ai", label: t(".tabs.ai")) %>
+    <% nav.with_btn(id: "configuration", label: t(".tabs.configuration")) %>
   <% end %>
 
   <% tabs.with_panel(tab_id: "background_jobs") do %>
@@ -27,5 +28,9 @@
           loading: :lazy, target: "_top", refresh: :morph do %>
       <%= render "entries/loading", message: t(".ai.loading") %>
     <% end %>
+  <% end %>
+
+  <% tabs.with_panel(tab_id: "configuration") do %>
+    <%= render "configuration", health: @configuration_health %>
   <% end %>
 <% end %>
