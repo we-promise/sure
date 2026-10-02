@@ -1,6 +1,40 @@
 require "test_helper"
 
 class ImportTest < ActiveSupport::TestCase
+  test "parses a BOM-prefixed quoted datetime header" do
+    csv = Import.parse_csv_str("\uFEFF\"Datetime\",\"Amount\"\n\"2026-09-17T14:48:50Z\",-2.80\n")
+
+    assert_equal [ "Datetime", "Amount" ], csv.headers
+    assert_equal "2026-09-17T14:48:50Z", csv.first["Datetime"]
+  end
+
+  test "parses binary-encoded UTF-8 CSV with and without a BOM" do
+    [ "", "\uFEFF" ].each do |prefix|
+      csv = Import.parse_csv_str("#{prefix}Datetime,Amount,Name\n2026-09-17T14:48:50Z,-2.80,Café\n".b)
+
+      assert_equal [ "Datetime", "Amount", "Name" ], csv.headers
+      assert_equal "Café", csv.first["Name"]
+    end
+  end
+
+  test "parses a legacy-encoded CSV without replacing accented values" do
+    csv = Import.parse_csv_str("name\nCafé\n".encode("Windows-1252").b)
+
+    assert_equal "Café", csv.first["name"]
+  end
+
+  test "preflight retains a legacy-encoded CSV header" do
+    csv = "date,amount,name,Café\n2026-09-17,-2.80,Purchase,extra\n".encode("Windows-1252").b
+    response = Import::Preflight.new(
+      family: families(:dylan_family),
+      params: { type: "TransactionImport", raw_file_content: csv, account_id: accounts(:depository).id,
+                date_col_label: "date", amount_col_label: "amount", name_col_label: "name" }
+    ).call
+
+    assert_equal :ok, response.status
+    assert_equal [ "date", "amount", "name", "Café" ], response.payload[:data][:headers]
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

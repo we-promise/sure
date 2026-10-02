@@ -10,14 +10,20 @@ class Import::ConfigurationsController < ApplicationController
   end
 
   def update
+    @import.transaction do
+      @import.update!(import_params)
+      if @import.saved_changes.except("updated_at").any?
+        @import.rows.destroy_all
+        @import.update_column(:rows_count, 0)
+        @import.mappings.destroy_all
+      end
+    end
+
     if params[:refresh_only]
-      @import.update!(rows_to_skip: params.dig(:import, :rows_to_skip).to_i)
       redirect_to import_configuration_path(@import)
     else
-      @import.update!(import_params)
       @import.generate_rows_from_csv
       @import.reload.sync_mappings
-
       redirect_to import_clean_path(@import), notice: t(".success")
     end
   rescue ActiveRecord::RecordInvalid => e
@@ -31,6 +37,7 @@ class Import::ConfigurationsController < ApplicationController
     end
 
     def import_params
+      timestamp_keys = @import.is_a?(TransactionImport) ? %i[date_basis date_timezone] : []
       params.fetch(:import, {}).permit(
         :date_col_label,
         :amount_col_label,
@@ -46,12 +53,14 @@ class Import::ConfigurationsController < ApplicationController
         :notes_col_label,
         :currency_col_label,
         :date_format,
+        :timestamp_col_label,
         :number_format,
         :signage_convention,
         :amount_type_strategy,
         :amount_type_identifier_value,
         :amount_type_inflow_value,
-        :rows_to_skip
+        :rows_to_skip,
+        *timestamp_keys
       )
     end
 end

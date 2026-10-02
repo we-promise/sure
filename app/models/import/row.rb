@@ -7,6 +7,7 @@ class Import::Row < ApplicationRecord
   validate :date_valid
   validate :required_columns
   validate :currency_is_valid
+  validate :timestamp_valid
 
   scope :ordered, -> { order(:source_row_number, :id) }
 
@@ -19,7 +20,11 @@ class Import::Row < ApplicationRecord
   end
 
   def date_iso
-    Date.strptime(date, import.date_format).iso8601
+    import.parse_row_date(self).date.iso8601
+  end
+
+  def transacted_at_time
+    import.parse_row_date(self).timestamp
   end
 
   def signed_amount
@@ -135,7 +140,7 @@ class Import::Row < ApplicationRecord
     def date_valid
       return if date.blank?
 
-      parsed_date = Date.strptime(date, import.date_format) rescue nil
+      parsed_date = import.parse_row_date(self).date rescue nil
 
       if parsed_date.nil?
         errors.add(:date, "must exactly match the format: #{import.date_format}")
@@ -143,11 +148,19 @@ class Import::Row < ApplicationRecord
       end
 
       min_date = Entry.min_supported_date
-      max_date = Date.current
+      max_date = import.current_date_for_row(self)
 
       if parsed_date < min_date || parsed_date > max_date
         errors.add(:date, "must be between #{min_date} and #{max_date}")
       end
+    end
+
+    def timestamp_valid
+      return if transacted_at.blank?
+
+      Entry::Timestamp.parse(transacted_at)
+    rescue ArgumentError
+      errors.add(:transacted_at, :invalid)
     end
 
     def currency_is_valid

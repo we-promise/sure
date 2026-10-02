@@ -35,6 +35,26 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "CSV uploaded successfully.", flash[:notice]
   end
 
+  test "uploads a binary-encoded UTF-8 CSV with an accented value" do
+    csv = "\uFEFFDatetime,Amount,Name\n2026-09-17T14:48:50Z,-2.80,Café\n"
+    uploaded = Rack::Test::UploadedFile.new(StringIO.new(csv.b), "text/csv", original_filename: "transactions.csv")
+
+    patch import_upload_url(@import), params: { import: { import_file: uploaded, col_sep: "," } }
+
+    assert_redirected_to import_configuration_url(@import, template_hint: true)
+    assert_equal csv, @import.reload.raw_file_str
+  end
+
+  test "uploads a legacy-encoded CSV without changing accented values" do
+    csv = "Date,Amount,Name\n2026-09-17,-2.80,Café\n"
+    uploaded = Rack::Test::UploadedFile.new(StringIO.new(csv.encode("Windows-1252").b), "text/csv", original_filename: "transactions.csv")
+
+    patch import_upload_url(@import), params: { import: { import_file: uploaded, col_sep: "," } }
+
+    assert_redirected_to import_configuration_url(@import, template_hint: true)
+    assert_equal csv, @import.reload.raw_file_str
+  end
+
   test "account select does not leak unshared family accounts (#1803)" do
     sign_in users(:family_member)
 

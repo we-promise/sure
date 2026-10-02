@@ -884,6 +884,7 @@ RSpec.configure do |config|
             properties: {
               id: { type: :string, format: :uuid },
               date: { type: :string, format: :date },
+              transacted_at: { type: :string, format: :'date-time', nullable: true, readOnly: true, description: 'Optional occurrence timestamp in UTC, independent of the accounting date. Null when the time is unknown.' },
               amount: { type: :string },
               currency: { type: :string },
               name: { type: :string },

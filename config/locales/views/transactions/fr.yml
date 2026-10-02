@@ -1,6 +1,9 @@
 ---
 fr:
   transactions:
+    timestamp:
+      label: "Date et heure de la transaction (facultatif, %{timezone})"
+      help: Laissez ce champ vide si l'heure est inconnue. Il indique quand la transaction a eu lieu, indépendamment de sa date comptable.
     activity_labels:
       buy: Achat
       contribution: Contribution

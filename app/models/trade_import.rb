@@ -4,6 +4,7 @@ class TradeImport < Import
       mappings.each(&:create_mappable!)
 
       trades = rows.map do |row|
+        parsed_date = parse_row_date(row)
         mapped_account = if account
           account
         else
@@ -24,7 +25,8 @@ class TradeImport < Import
           investment_activity_label: investment_activity_label_for(row.qty),
           entry: Entry.new(
             account: mapped_account,
-            date: row.date_iso,
+            date: parsed_date.date,
+            transacted_at: parsed_date.timestamp,
             amount: row.signed_amount,
             name: row.name,
             currency: row.currency.presence || mapped_account.currency,
@@ -50,6 +52,7 @@ class TradeImport < Import
 
   def column_keys
     base = %i[date ticker exchange_operating_mic currency qty price name]
+    base.insert(1, :transacted_at) if timestamp_col_label.present?
     base.unshift(:account) if account.nil?
     base
   end

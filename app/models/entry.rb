@@ -33,6 +33,9 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
+  validate :transaction_timestamp_valid
+
+  after_update :sync_split_timestamps, if: :saved_change_to_transacted_at?
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
@@ -40,10 +43,14 @@ class Entry < ApplicationRecord
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
   }
 
+  # Trade order remains date/created_at/id because cost-basis relief is order-sensitive.
+  # Optional timestamps only order transactions, not trades or valuations.
   scope :chronological, -> {
     order(
       date: :asc,
       Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :asc,
+      Arel.sql("entries.entryable_type != 'Transaction' OR entries.transacted_at IS NULL") => :desc,
+      Arel.sql("CASE WHEN entries.entryable_type = 'Transaction' THEN entries.transacted_at END") => :asc,
       created_at: :asc,
       id: :asc
     )
@@ -53,6 +60,8 @@ class Entry < ApplicationRecord
     order(
       date: :desc,
       Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :desc,
+      Arel.sql("entries.entryable_type != 'Transaction' OR entries.transacted_at IS NULL") => :asc,
+      Arel.sql("CASE WHEN entries.entryable_type = 'Transaction' THEN entries.transacted_at END") => :desc,
       created_at: :desc,
       id: :desc
     )
@@ -295,6 +304,34 @@ class Entry < ApplicationRecord
   def lock_saved_attributes!
     super
     entryable.lock_saved_attributes!
+    lock_attr!(:transacted_at) if @lock_timestamp
+  end
+
+  def timestamp_timezone
+    Time.find_zone(account&.family&.timezone) || Time.zone
+  end
+
+  def transacted_at_local
+    return @transacted_at_local if @invalid_timestamp
+
+    transacted_at&.in_time_zone(timestamp_timezone)&.strftime("%Y-%m-%dT%H:%M:%S")
+  end
+
+  def transacted_at_local=(value)
+    @transacted_at_local = value
+    @invalid_timestamp = false
+    parsed = value.blank? ? nil : Timestamp.parse(value, timezone: timestamp_timezone)
+    # HTML inputs can omit zero seconds. Keep
+    # finer source precision (and the original DST occurrence) on an unchanged
+    # local form value. Explicit offsets still identify an exact instant.
+    if parsed && !value.strip.match?(/(?:[Zz]|[+-]\d{2}:\d{2})\z/) && parsed.usec.zero? &&
+       parsed.strftime("%Y-%m-%dT%H:%M:%S") == transacted_at_local
+      return
+    end
+    @lock_timestamp = transacted_at != parsed
+    self.transacted_at = parsed
+  rescue ArgumentError
+    @invalid_timestamp = true
   end
 
   def sync_account_later
@@ -454,16 +491,19 @@ class Entry < ApplicationRecord
     end
 
     self.class.transaction do
+      csv_metadata = entryable.extra&.dig("csv") if entryable.is_a?(Transaction)
       children = splits.map do |split_attrs|
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],
           merchant_id: entryable.try(:merchant_id),
-          kind: entryable.try(:kind)
+          kind: entryable.try(:kind),
+          extra: csv_metadata.present? ? { "csv" => csv_metadata.deep_dup } : {}
         )
 
         child_entries.create!(
           account: account,
           date: date,
+          transacted_at: transacted_at,
           name: split_attrs[:name],
           amount: split_attrs[:amount],
           currency: currency,
@@ -570,6 +610,25 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    def transaction_timestamp_valid
+      errors.add(:transacted_at_local, :invalid) if @invalid_timestamp
+      if split_child? && will_save_change_to_transacted_at? && transacted_at != parent_entry&.transacted_at
+        errors.add(:transacted_at, :must_match_parent)
+      end
+    end
+
+    def sync_split_timestamps
+      child_entries.update_all(transacted_at: transacted_at, updated_at: Time.current)
+      if entryable.is_a?(Transaction) && (csv_metadata = entryable.extra&.dig("csv"))
+        child_entries.includes(:entryable).find_each do |child|
+          missing = csv_metadata.except(*(child.transaction.extra["csv"] || {}).keys)
+          next if missing.empty?
+
+          child.transaction.update!(extra: child.transaction.extra.deep_merge("csv" => missing))
+        end
+      end
+    end
 
     def cannot_unexclude_split_parent
       return unless excluded_changed?(from: true, to: false) && split_parent?

@@ -6,6 +6,9 @@
     </div>
   <% end %>
   <% dialog.with_body do %>
+    <% if @entry.errors.any? %>
+      <%= render "shared/form_errors", model: @entry %>
+    <% end %>
     <%# Potential duplicate alert %>
     <% if @entry.transaction.has_potential_duplicate? %>
       <% potential_match = @entry.transaction.potential_duplicate_entry %>
@@ -98,6 +101,11 @@
     <% end %>
     <% dialog.with_section(title: t(".details")) do %>
       <div class="space-y-2">
+        <%= styled_form_with model: @entry, url: transaction_path(@entry),
+                             class: "space-y-2", data: { controller: "auto-submit-form" } do |f| %>
+          <%= render "transactions/timestamp_field", form: f, entry: @entry,
+                     disabled: !can_edit_entry? || @entry.split_child?, auto_submit: true %>
+        <% end %>
         <%= styled_form_with model: @entry,
               url: transaction_path(@entry),
               class: "space-y-2",

@@ -720,6 +720,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.datetime "reconciled_at"
     t.uuid "reconciled_by_statement_id"
     t.string "source"
+    t.datetime "transacted_at"
     t.datetime "updated_at", null: false
     t.boolean "user_modified", default: false, null: false
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
@@ -728,6 +729,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.index ["account_id", "idempotency_key"], name: "index_entries_on_account_and_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
     t.index ["account_id", "reconciled_at"], name: "index_entries_on_account_and_reconciled_at", where: "(reconciled_at IS NOT NULL)"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
+    t.index ["account_id", "transacted_at"], name: "index_entries_on_account_id_and_transacted_at", where: "(transacted_at IS NOT NULL)"
     t.index ["account_id"], name: "index_entries_on_account_id"
     t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
     t.index ["date"], name: "index_entries_on_date"
@@ -1298,6 +1300,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.integer "source_row_number", null: false
     t.string "tags"
     t.string "ticker"
+    t.string "transacted_at"
     t.datetime "updated_at", null: false
     t.index ["import_id", "source_row_number"], name: "index_import_rows_on_import_id_and_source_row_number", unique: true
     t.index ["import_id"], name: "index_import_rows_on_import_id"

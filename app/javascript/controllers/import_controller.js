@@ -76,6 +76,10 @@ export default class extends Controller {
     }, 500);
   }
 
+  cancelPendingRefresh() {
+    clearTimeout(this.refreshTimeout);
+  }
+
   #showAmountTypeValueTargets(amountTypeColumnKey) {
     const selectableValues = this.#uniqueValuesForColumn(amountTypeColumnKey);
 

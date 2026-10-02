@@ -230,6 +230,22 @@ fr:
       update:
         qif_uploaded: Fichier QIF téléchargé avec succès.
   imports:
+    timestamps:
+      iso8601: Date et heure ISO 8601 avec fuseau horaire
+      auto: Détecter automatiquement
+      detected: Un seul format de date et d'heure correspond à toutes les valeurs non vides. La détection automatique utilisera ce format ; vous pouvez aussi en sélectionner un manuellement.
+      ambiguous: Le format de date et d'heure est ambigu. Choisissez le bon format à l'aide des aperçus ou convertissez votre CSV dans un format pris en charge. Les années à deux chiffres nécessitent une confirmation.
+      unsupported: Aucun format pris en charge ne correspond à toutes les valeurs. Choisissez un format et corrigez les lignes invalides, ou convertissez votre CSV puis téléversez-le à nouveau.
+      column: Horodatage de la transaction
+      separate_column: Colonne d'horodatage distincte (facultatif)
+      separate_hint: À utiliser uniquement si le fichier contient une date comptable et un horodatage ISO 8601 avec fuseau horaire. La date comptable explicite sera conservée.
+      date_basis: Date comptable des horodatages
+      source_date: Conserver la date écrite dans le fichier
+      local_date: "Utiliser mon fuseau horaire Sure (%{timezone})"
+      preview: "Première valeur : date comptable %{date} ; date et heure de transaction %{time}."
+      unknown: non renseignées
+      invalid_preview: La première valeur ne correspond pas au format choisi. Sélectionnez un autre format ou corrigez les données.
+      ambiguous_match: "Ligne %{row} : l'horodatage ou l'identifiant Sure ne permet pas d'identifier une transaction de façon sûre. Vérifiez les transactions existantes avant de réimporter."
     apply_template:
       no_template_found: Aucun modèle trouvé, veuillez configurer manuellement votre importation.
       template_applied: Modèle appliqué.
