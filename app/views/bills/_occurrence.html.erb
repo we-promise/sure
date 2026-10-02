@@ -9,21 +9,15 @@
     An autopaying bill is still worth seeing and still counts toward the total,
     but it recedes so the rows that want something from you carry the weight. %>
 <%# The row reads as interactive without dressing up as a button: a hover tint
-    and the name underlining, the same cues the transaction list uses.
-
-    The tint hangs off this element rather than a group on the wrapper. The
-    wrapper also holds the expansion, so a group hover kept the row lit while
-    the pointer was down in the expanded pane, and the lit band clipped against
-    the pane's own fill. Hover still propagates from every child of the row, so
-    the trailing action tints it exactly as before. %>
+    and the name underlining, the same cues the transaction list uses. %>
 <div class="flex items-center gap-3 @lg:gap-4 px-4 py-3 transition-colors hover:bg-surface-hover <%= "opacity-70" if series.autopay? %>">
   <%# The bulk of the row is the inspect control. Only the trailing verb sits
       outside it, so there are no anchors inside anchors. %>
   <%# Names the cycle it was opened from. Without it the drawer falls back to
       the series' current occurrence, so opening a settled row described the
       NEXT one and reported it unpaid. %>
-  <%= link_to bill_path(series, display: "pane", frame: pane_frame, occurrence: occurrence.id),
-        data: { turbo_frame: pane_frame, turbo_prefetch: false },
+  <%= link_to bill_path(series, display: "drawer", occurrence: occurrence.id),
+        data: { turbo_frame: "drawer", turbo_prefetch: false },
         class: "flex items-center gap-3 @lg:gap-4 min-w-0 flex-1 group" do %>
     <%# A date rail, and only a date. It used to print "Overdue" beside a
         subline already reading "14 days overdue", which spent the row's one
