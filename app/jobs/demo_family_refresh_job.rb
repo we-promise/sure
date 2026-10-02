@@ -72,11 +72,6 @@ class DemoFamilyRefreshJob < ApplicationJob
         Doorkeeper::AccessGrant.where(resource_owner_id: user.id, revoked_at: nil).update_all(revoked_at: Time.current)
         user.update_columns(active: false)
       end
-
-      # The generator's synthetic subscription is not a real Stripe object.
-      # Mark it canceled so Family's destroy callback does not try Stripe.
-      subscription = family.subscription
-      subscription.update!(status: :canceled) if subscription&.stripe_id == "sub_demo_123"
     end
 
     def sessions_count_for(family, period_start:, period_end:)

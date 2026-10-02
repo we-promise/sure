@@ -79,16 +79,23 @@ class TransactionsController < ApplicationController
       Current.accessible_entries.uncategorized_transactions.count
     end
 
-    # Load projected recurring transactions for next 10 days
-    @projected_recurring = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
+    # Load projected recurring transactions for next 10 days. Only the IDs are
+    # cached: cached ActiveRecord objects outlive schema changes across
+    # upgrades and raise MissingAttributeError for columns added since.
+    projected_recurring_ids = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
       Current.family.recurring_transactions
                     .accessible_by(Current.user)
                     .active
                     .where("next_expected_date <= ? AND next_expected_date >= ?",
                            10.days.from_now.to_date,
                            Date.current)
-                    .includes(:merchant)
-                    .to_a
+                    .pluck(:id)
+    end
+    @projected_recurring = if projected_recurring_ids.empty?
+      []
+    else
+      Current.family.recurring_transactions.accessible_by(Current.user)
+                    .where(id: projected_recurring_ids).includes(:merchant).to_a
     end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
@@ -524,7 +531,7 @@ class TransactionsController < ApplicationController
     # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
     # doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
-      "transactions_projected_recurring/v5/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
+      "transactions_projected_recurring/v6/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
         "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
         "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
     end
