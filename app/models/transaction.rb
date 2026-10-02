@@ -73,17 +73,35 @@ class Transaction < ApplicationRecord
     cc_payment: "cc_payment", # A CC payment, excluded from budget analytics (CC payments offset the sum of expense transactions)
     loan_payment: "loan_payment", # A payment to a Loan account, treated as an expense in budgets
     one_time: "one_time", # A one-time expense/income, excluded from budget analytics
-    investment_contribution: "investment_contribution" # Transfer to investment/crypto account, treated as an expense in budgets
+    investment_contribution: "investment_contribution" # Transfer to investment/crypto account. Budget-tracked, but not consumption -- see NON_OPERATING_KINDS.
   }
 
   # All kinds where money moves between accounts (transfer? returns true).
   # Used for search filters, rule conditions, and UI display.
   TRANSFER_KINDS = %w[funds_movement cc_payment loan_payment investment_contribution].freeze
 
-  # Kinds excluded from budget/income-statement analytics.
-  # loan_payment and investment_contribution are intentionally NOT here —
-  # they represent real cash outflow from a budgeting perspective.
+  # Kinds excluded entirely from budget/income-statement analytics (the rows
+  # never appear in IncomeStatement query results at all). loan_payment and
+  # investment_contribution are intentionally NOT here -- the dashboard and
+  # the budget drilldown need to keep showing them as real, categorizable
+  # cash outflows (see #2592 and budget_categories_controller_test.rb).
   BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
+
+  # Kinds that are real, budget-tracked cash outflows but are NOT consumer
+  # spending: a transfer to an investment/crypto account reallocates net
+  # worth (cash -> another asset) rather than consuming it, so counting it
+  # as "expense" would corrupt net income, savings rate and spending-anomaly
+  # detection. IncomeStatement::ScopedTransactionsQuery#classification_sql
+  # gives it its own classification instead of folding it into "expense".
+  #
+  # loan_payment is deliberately NOT included here even though the same
+  # net-worth argument applies to loan principal: neither the provider
+  # import path (Account::ProviderImportAdapter) nor Transfer::Creator
+  # verify that a loan_payment transaction is principal-only, so a provider
+  # that bundles principal and interest into one posted payment would have
+  # its interest portion silently excluded from consumption too. Revisit
+  # once that invariant is established (see PR #3609 review).
+  NON_OPERATING_KINDS = %w[investment_contribution].freeze
 
   # Kinds that never belong in the "Uncategorized" bucket, whichever surface
   # asks for it (the Transactions category filter, the uncategorized badge

@@ -25,6 +25,7 @@ fr:
           deficit: "Déficit"
       cashflow_sankey:
         add_transaction: Ajouter une transaction
+        investment_contributions_note: "Plus %{amount} déplacés vers un compte d'investissement ou crypto — toujours à vous, pas une dépense."
         no_data_description: Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendez la période
         no_data_title: Aucune donnée de flux de trésorerie pour cette période
         title: Flux de trésorerie
