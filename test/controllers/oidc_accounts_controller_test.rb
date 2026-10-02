@@ -8,6 +8,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     ])
   end
 
+  # Build deferred authentication with an explicit trusted issuer for linking regressions.
   def pending_auth
     {
       "provider" => "openid_connect",

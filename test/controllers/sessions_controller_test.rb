@@ -42,6 +42,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Build authenticated claims that exercise provider and issuer checks in callbacks.
   def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil, issuer: "https://test.example.com")
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
