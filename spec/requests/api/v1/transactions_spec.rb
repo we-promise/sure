@@ -33,6 +33,26 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
   let(:'X-Api-Key') { api_key.plain_key }
 
+  let(:read_only_transaction) do
+    owner = family.users.create!(
+      email: 'api-owner@example.com',
+      password: 'password123',
+      password_confirmation: 'password123'
+    )
+    shared_account = Account.create!(
+      family: family,
+      owner: owner,
+      name: 'Shared Checking',
+      balance: 1000,
+      currency: 'USD',
+      accountable: Depository.new
+    )
+    shared_account.account_shares.create!(user: user, permission: 'read_only', include_in_finances: true)
+    shared_account.entries.create!(
+      name: 'Shared transaction', amount: 10, currency: 'USD', date: Date.current, entryable: Transaction.new
+    ).transaction
+  end
+
   let(:account) do
     Account.create!(
       family: family,
@@ -343,6 +363,14 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
+      response '403', 'account is shared with you without permission to change this transaction' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_transaction.id }
+
+        run_test!
+      end
+
       response '404', 'transaction not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -361,6 +389,14 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
       response '200', 'transaction deleted' do
         schema '$ref' => '#/components/schemas/DeleteResponse'
+
+        run_test!
+      end
+
+      response '403', 'account is shared with you without full control' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_transaction.id }
 
         run_test!
       end
