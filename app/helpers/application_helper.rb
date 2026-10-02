@@ -169,6 +169,7 @@ module ApplicationHelper
     Money.new(number_or_money).format(options)
   end
 
+  # Format each native-currency total independently, preserving order and transfer exclusions.
   def totals_by_currency(collection:, money_method:, separator: " | ", negate: false)
     collection.group_by(&:currency)
               .transform_values { |item| calculate_total(item, money_method, negate) }

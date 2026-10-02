@@ -31,10 +31,12 @@ class CurrencyTotalsTest < ActionView::TestCase
   end
 
   private
+    # Build an entry with an explicit currency and transaction kind for total regressions.
     def transaction_entry(currency, amount, kind = "standard")
       Entry.new(currency: currency, amount: amount, entryable: Transaction.new(kind: kind))
     end
 
+    # Exercise the public formatter with the same Money values used by the activity views.
     def total(entries, **options)
       totals_by_currency(collection: entries, money_method: :amount_money, **options)
     end
