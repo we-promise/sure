@@ -16,8 +16,8 @@
       <h1 class="text-xl font-medium text-primary"><%= @series.display_name %></h1>
       <p class="text-sm text-secondary">
         <%= frequency_label(@series) %>
-        <% if (progress = @series.installment_progress) %>
-          &middot; <%= t("bills.installment_progress", done_plus_one: [ progress.first + 1, progress.last ].min, total: progress.last) %>
+        <% if (progress = bills_installment_progress(@series)) %>
+          &middot; <%= progress %>
         <% end %>
         &middot; <%= t("recurring_transactions.status.#{@series.status}") %>
       </p>

@@ -119,8 +119,9 @@ ru:
         many: Через %{count} дней после срока
         other: Через %{count} дня после срока
     attention:
+      paused: Приостановлено
       needs_review: Совпадение требует проверки
-      partial: Частично · осталось %{amount}
+      partial: Частично
       amount_changed: Сумма изменилась
       overdue:
         one: Просрочено на %{count} день
@@ -134,7 +135,7 @@ ru:
     cancelled_still_scheduled: Вы отметили это как отменённое %{date}, но платёж всё ещё запланирован, поэтому будущие платежи продолжат появляться.
     paid_over: Оплачено %{paid} — больше ожидаемого
     remaining_label: осталось
-    debt_payment: · погашение долга
+    debt_payment: Погашение долга
     paid_from: со счёта %{account}
     amount_range: от %{min} до %{max}
     possible_duplicate: Возможный дубликат

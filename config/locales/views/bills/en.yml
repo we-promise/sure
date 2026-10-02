@@ -109,8 +109,9 @@ en:
         one: 1 day after due
         other: "%{count} days after due"
     attention:
+      paused: Paused
       needs_review: Match needs review
-      partial: "Partial · %{amount} remaining"
+      partial: Partial
       amount_changed: Amount changed
       overdue:
         one: 1 day overdue
@@ -122,7 +123,7 @@ en:
     cancelled_still_scheduled: "You marked this cancelled on %{date}, but it is still scheduled, so future bills will keep appearing."
     paid_over: "Paid %{paid}, more than expected"
     remaining_label: remaining
-    debt_payment: "· debt payment"
+    debt_payment: Debt payment
     paid_from: "from %{account}"
     amount_range: "ranges %{min} to %{max}"
     possible_duplicate: Possible duplicate

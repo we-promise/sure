@@ -119,7 +119,11 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Real bill", response.body
     assert_match "Card payment", response.body
-    assert_match I18n.t("bills.debt_payment"), response.body
+    # On the subline, not after the name, where it truncated to "· d…".
+    assert_select BILL_ROW_LINK, text: /Card payment/ do |links|
+      assert_select links.first, "p.font-medium", text: "Card payment"
+      assert_select links.first, "p.text-xs", text: /#{I18n.t("bills.debt_payment")}/
+    end
     assert_no_match "Salary deposit", response.body
     assert_no_match "Paused bill", response.body
     assert_no_match "Moved to savings", response.body
@@ -169,6 +173,71 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # Needs attention, where the subline goes on to give the reason.
     assert_includes subline_dates, "#{I18n.l(late, format: :short)} ·"
     assert_match I18n.t("bills.attention.overdue", count: 5), response.body
+  end
+
+  # The rail used to come only with Needs attention and This month, so in the
+  # stacked card This month's avatars sat about 70px right of the others'.
+  test "rows after this month and dormant rows carry the date rail too" do
+    next_month = Date.current.next_month.beginning_of_month + 4
+    later = create_bill(name: "Next month rent", amount: 900, manual: true, anchor_date: next_month,
+                        expected_day_of_month: next_month.day, next_expected_date: next_month)
+    late = 6.days.ago.to_date
+    paused = create_bill(name: "Paused gym", amount: 40, expected_day_of_month: late.day,
+                         last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    paused.mark_inactive!
+
+    get bills_url
+
+    assert_response :success
+    assert_equal [ later.id ], @controller.view_assigns["later"].map(&:recurring_transaction_id)
+    assert_equal [ paused.id ], @controller.view_assigns["dormant"].map(&:recurring_transaction_id)
+    [ later, paused ].each do |series|
+      occurrence = series.recurring_occurrences.open_status.order(:due_on).first
+      assert_select "a[href=?] div[class~='@lg:block']",
+        bill_path(series, display: "drawer", occurrence: occurrence.id),
+        text: /#{Regexp.escape(I18n.l(occurrence.due_on, format: :short))}/
+    end
+  end
+
+  # Pause stores inactive and keeps the open leftover, which read "Overdue by 6
+  # days" in red with nothing saying the bill was paused.
+  test "a paused bill's leftover reads Paused, with no overdue and no red" do
+    late = 6.days.ago.to_date
+    bill = create_bill(name: "Paused gym", amount: 40, autopay: true, expected_day_of_month: late.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    bill.mark_inactive!
+    occurrence = bill.recurring_occurrences.open_status.sole
+    assert occurrence.overdue?, "premise: the leftover is past its grace"
+
+    get bills_url
+
+    assert_response :success
+    assert_select "a[href=?]", bill_path(bill, display: "drawer", occurrence: occurrence.id) do |links|
+      assert_select links.first, "p.text-xs", text: /#{I18n.t("bills.attention.paused")}/
+      assert_select links.first, "div.text-secondary[class~='@lg:block']"
+      assert_select links.first, ".text-destructive", count: 0
+      assert_no_match(/overdue/i, links.first.text)
+      # A paused bill isn't charging.
+      assert_not_includes links.first.text, I18n.t("recurring_transactions.pay_action.autopay")
+    end
+  end
+
+  # On a phone the range squeezed the bill's name to "PG&E Ele…", so the row
+  # shows it only from @lg and the drawer carries it.
+  test "an estimated bill's range leaves the row on a phone and stays in the drawer" do
+    bill = create_bill(name: "Power Co", amount: 96.40, amount_strategy: "average", expected_amount_avg: 96.40,
+                       expected_amount_min: 71.12, expected_amount_max: 131.80)
+    range = I18n.t("bills.amount_range", min: "$71.12", max: "$131.80")
+
+    get bills_url
+    assert_response :success
+    assert_select BILL_ROW_LINK, text: /Power Co/ do |links|
+      assert_select links.first, "p[class~='hidden'][class~='@lg:block']", text: range
+    end
+
+    get_bill_drawer(bill)
+    assert_response :success
+    assert_match range, response.body
   end
 
   # "%b %-d" is English order in every locale; fr, pl and ru put the day first.
@@ -309,28 +378,6 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "a bill inside its grace period is still late, and late is not next"
 
     assert_includes next_up.map { |o| o.recurring_transaction.display_name }, "Soon Co"
-  end
-
-  # Three tiers of one subscription are three real bills that render as three
-  # identical rows. Only then does a row earn a second fact.
-  test "bills that would render identically gain something that tells them apart" do
-    day = 12.days.from_now.to_date
-    2.times do |i|
-      create_bill(name: "TWITCH", amount: 11.99, manual: true, dedup_scope: "tier#{i}",
-                  anchor_date: day, expected_day_of_month: day.day,
-                  last_occurrence_date: Date.current, next_expected_date: day)
-    end
-    create_bill(name: "Distinct Co", amount: 30, manual: true,
-                anchor_date: day, expected_day_of_month: day.day,
-                last_occurrence_date: Date.current, next_expected_date: day)
-
-    get bills_url
-    assert_response :success
-
-    # The pair carries its schedule; the bill nobody could confuse does not
-    # pay for their ambiguity.
-    twitch_rows = response.body.scan(/TWITCH/).size
-    assert_operator twitch_rows, :>=, 2
   end
 
   # Overdue rows used to sit inside the chronological month list, marked only by
@@ -499,13 +546,15 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    # What is left leads, and the row says it once. The subline carries the
-    # state and the figure; printing "$750.00 of $2,000.00 paid" again on the
-    # right was the same arithmetic twice, and it was squeezing the bill's own
-    # name out of the row.
-    assert_match I18n.t("bills.attention.partial", amount: "$1,250.00"), response.body
-    assert_match "$1,250", response.body
-    assert_no_match I18n.t("bills.partial_progress", paid: "$750.00", expected: "$2,000.00"), response.body
+    # What is left leads, and the row says it once: Partial on the left, the
+    # remainder on the right. The subline used to repeat "$1,250.00
+    # remaining", which squeezed the bill's own name out of the row.
+    assert_select BILL_ROW_LINK, text: /Rent/ do |links|
+      assert_select links.first, "p.text-xs", text: /#{I18n.t("bills.attention.partial")}/
+      assert_select links.first, "p.privacy-sensitive", text: "$1,250.00"
+      assert_select links.first, "p", text: I18n.t("bills.remaining_label")
+      assert_equal 1, links.first.text.scan("$1,250.00").size, "the remainder is printed once"
+    end
   end
 
   # The row's detail once described the SERIES definition while the bill's

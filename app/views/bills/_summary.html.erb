@@ -28,6 +28,15 @@
         <span class="privacy-sensitive"><%= t("bills.partial_progress", paid: format_money(paid), expected: format_money(expected)) %></span>
         &middot; <%= occurrence_due_label(current_occurrence) %>
       </p>
+      <%# The row shows the range only from @lg, so on a phone this is where
+          an estimate says how far it can swing. %>
+      <% if occurrence_amount_estimated?(current_occurrence) && series.has_amount_variance? %>
+        <p class="text-xs text-secondary privacy-sensitive">
+          <%= t("bills.amount_range",
+                min: format_money(series.expected_amount_min_money),
+                max: format_money(series.expected_amount_max_money)) %>
+        </p>
+      <% end %>
     </div>
   <% else %>
     <div class="space-y-0.5">

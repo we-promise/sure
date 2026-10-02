@@ -449,12 +449,13 @@ class BillsController < ApplicationController
 
     def payable_occurrences
       # Price changes ride along because bills_attention_reason asks every
-      # row whether its amount changed recently.
+      # row whether its amount changed recently, and recurrence rules because
+      # every row's subline names its schedule.
       Current.family.recurring_occurrences
              .where(recurring_transaction_id: payable_series_ids)
              .where("due_on >= ? OR status = 'scheduled'", Date.current.beginning_of_month)
              .where("due_on <= ?", Date.current + 90)
-             .includes(recurring_transaction: [ :merchant, :recurring_price_changes ])
+             .includes(recurring_transaction: [ :merchant, :recurring_price_changes, :recurrence_rules ])
              .to_a
     end
 
@@ -505,29 +506,18 @@ class BillsController < ApplicationController
     # the same news. Notices used to sort by date ascending, which put the
     # oldest and smallest first and buried the one thing you could still act on.
     TRIAL_URGENT_DAYS = 3
-    MATERIAL_PRICE_SHIFT = 0.10
 
     Notice = Data.define(:kind, :series, :date, :detail) do
       def urgent?
         case kind
         when :trial then date <= Date.current + TRIAL_URGENT_DAYS
-        when :price then price_shift >= MATERIAL_PRICE_SHIFT
+        when :price then detail.material?
         else false
         end
       end
 
-      # How far a price moved, as a fraction of what it was. A dollar on a
-      # ten-dollar subscription is worth saying; a dollar on the rent is not.
-      def price_shift
-        return 0 unless kind == :price && detail&.previous_amount.to_d.positive?
-
-        ((detail.new_amount - detail.previous_amount).abs / detail.previous_amount).to_f
-      end
-
       def price_percent
-        return 0 unless kind == :price && detail&.previous_amount.to_d.positive?
-
-        ((detail.new_amount - detail.previous_amount) / detail.previous_amount * 100).round
+        kind == :price ? (detail.shift * 100).round : 0
       end
 
       # Nearness to today in either direction: a change three days ago and a
