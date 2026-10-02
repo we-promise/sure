@@ -395,6 +395,7 @@ class EnableBankingItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
 
     # Filter out Enable Banking accounts that are already linked to any account
     # (either via account_provider or legacy account association)
@@ -411,6 +412,8 @@ class EnableBankingItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     enable_banking_account = EnableBankingAccount.find(params[:enable_banking_account_id])
 
     # Guard: only manual accounts can be linked (no existing provider links or legacy IDs)
@@ -435,10 +438,12 @@ class EnableBankingItemsController < ApplicationController
       return
     end
 
-    # Relink behavior: detach any legacy link and point provider link at the chosen account
-    Account.transaction do
-      enable_banking_account.lock!
+    # Relinking below moves the link off its current account and may queue
+    # that account for deletion.
+    return unless require_relinkable_provider_account!(enable_banking_account, @account)
 
+    # Relink behavior: detach any legacy link and point provider link at the chosen account
+    relinked = relinking(enable_banking_account, @account) do
       # Upsert the AccountProvider mapping deterministically
       ap = AccountProvider.find_or_initialize_by(provider: enable_banking_account)
       previous_account = ap.account
@@ -460,6 +465,7 @@ class EnableBankingItemsController < ApplicationController
         end
       end
     end
+    return unless relinked
 
     if turbo_frame_request?
       # Reload the item to ensure associations are fresh

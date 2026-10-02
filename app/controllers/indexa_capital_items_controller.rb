@@ -136,6 +136,8 @@ class IndexaCapitalItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     @indexa_capital_item = Current.family.indexa_capital_items.first
 
     unless @indexa_capital_item&.credentials_configured?
@@ -151,6 +153,8 @@ class IndexaCapitalItemsController < ApplicationController
 
   def link_existing_account
     account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(account)
+
     indexa_capital_item = Current.family.indexa_capital_items.first
 
     unless indexa_capital_item&.credentials_configured?
