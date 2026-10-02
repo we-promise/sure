@@ -16,9 +16,16 @@
     </div>
   <% end %>
 
-  <%= render "bills/month_pulse" %>
+  <% bill_rows_empty = [ @overdue, @month_rows, @later, @dormant ].all?(&:empty?) %>
 
-  <%= render "bills/ai_prompts", prompts: %w[due_before_paycheck subscriptions_up monthly_subscriptions] %>
+  <%# With no bill rows the pulse is a card of dashes and zeros, and the
+      prompts would start a chat about bills that don't exist. Suggestions
+      don't count: they aren't bills yet, and the pulse can't total them. %>
+  <% unless bill_rows_empty %>
+    <%= render "bills/month_pulse" %>
+
+    <%= render "bills/ai_prompts", prompts: %w[due_before_paycheck subscriptions_up monthly_subscriptions] %>
+  <% end %>
 
   <%# Changes worth knowing about, ranked by whether you can still do anything.
       Everything stays on the page: the quieter half collapses rather than
@@ -113,7 +120,7 @@
     <%= render "recurring_transactions/suggested_series", suggested: @suggested_series %>
   <% end %>
 
-  <% if [ @overdue, @month_rows, @later, @dormant ].all?(&:empty?) %>
+  <% if bill_rows_empty %>
     <% if @suggested_series.none? %>
       <div class="bg-container rounded-xl shadow-border-xs p-4">
         <%= render DS::EmptyState.new(

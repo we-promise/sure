@@ -29,6 +29,28 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     assert_wallet_demo_activity
   end
 
+  test "sample data generates loan payments before its transaction commits" do
+    generator = Demo::Generator.new(seed: 42)
+    stub_non_loan_activity(generator)
+    @family.expects(:sync_later)
+
+    generator.generate_new_user_data_for!(@family, email: @admin_user.email)
+
+    assert_demo_loan_payments
+  end
+
+  test "default demo generates loan payments inside a refresh transaction" do
+    generator = Demo::Generator.new(seed: 42)
+    generator.stubs(:create_family_and_users!).returns(@family)
+    generator.stubs(:create_monitoring_api_key!)
+    stub_non_loan_activity(generator)
+
+    ActiveRecord::Base.transaction do
+      generator.generate_default_data!(skip_clear: true, email: @admin_user.email)
+      assert_demo_loan_payments
+    end
+  end
+
   test "monitoring api key creation reassigns stale demo monitoring key owned by another user" do
     stale_family = Family.create!(name: "Old Demo Family")
     stale_user = create_user!(stale_family, "old-demo-admin@example.com")
@@ -175,6 +197,39 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
   end
 
   private
+    # Keep the actual loan terms, opening valuations and payment generation in
+    # the public orchestration. Unrelated history and provider syncs are omitted
+    # so this regression tests the transaction boundary without external calls.
+    def stub_non_loan_activity(generator)
+      %i[load_securities! generate_salary_history! generate_housing_transactions!
+         generate_food_transactions! generate_transportation_transactions!
+         generate_entertainment_transactions! generate_shopping_transactions!
+         generate_healthcare_transactions! generate_travel_transactions!
+         generate_personal_care_transactions! generate_investment_transactions!
+         generate_transfers_and_payments! generate_regular_expenses!
+         generate_legacy_transactions! generate_crypto_and_misc_assets!
+         generate_budget_auto_fill! generate_goals! sync_family_accounts!].each do |step|
+        generator.stubs(step)
+      end
+      Demo::FinancekitGenerator.any_instance.stubs(:create_accounts!)
+      Demo::FinancekitGenerator.any_instance.stubs(:create_transactions!)
+    end
+
+    def assert_demo_loan_payments
+      {
+        "Home Mortgage" => "Mortgage Payment",
+        "Student Loan" => "Student Loan Payment",
+        "Car Loan" => "Auto Loan Payment"
+      }.each do |name, memo|
+        account = @family.accounts.find_by!(name: name)
+        due = account.loan.amortization_schedule.payments.select { |payment| payment.date <= Date.current }
+        assert due.any?, "#{name} should have payments due"
+        payments = account.entries.transactions.where(name: memo)
+        assert_equal due.size, payments.count, "#{name} should record every scheduled payment"
+        assert_equal(-due.sum { |payment| payment.principal.amount }, payments.sum(:amount))
+      end
+    end
+
     # Exercise the actual account/transaction orchestration without generating
     # years of unrelated spending, securities, budgets and goals in each test.
     def stub_non_wallet_activity(generator)

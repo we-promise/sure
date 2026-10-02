@@ -287,6 +287,7 @@ module ApplicationHelper
       normalized.downcase
     end
 
+    # Exclude transfers while preserving the original group currency even when its total is zero.
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries
       # Only Entry objects have entryable transactions, Account objects don't

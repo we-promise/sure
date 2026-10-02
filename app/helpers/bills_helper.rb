@@ -7,6 +7,12 @@ module BillsHelper
     l(date, format: date.year == Date.current.year ? :short : :short_with_year)
   end
 
+  # The date a row in a dated section is about, as its date rail prints it and
+  # as its subline leads with where the rail is hidden.
+  def bills_row_date(occurrence)
+    occurrence.due_on == Date.current ? t("bills.row_today") : bills_upcoming_date(occurrence.due_on)
+  end
+
   # One-shot AI features (smart-fill, smart-configure) need both the user's
   # consent AND a resolvable LLM provider -- an unconfigured self-hosted
   # install renders no AI affordances at all, following the Rules registry's
@@ -222,7 +228,7 @@ module BillsHelper
   # Which account the charge lands on. Worth showing only when it tells the rows
   # apart: on a single-account family it repeated the same name down every line,
   # which is nineteen copies of a fact carrying no information. The bill's
-  # expansion names the account regardless, so nothing is lost when it is quiet
+  # drawer names the account regardless, so nothing is lost when it is quiet
   # here.
   def bills_paid_from_label(bill)
     return "" if bill.account.blank?
@@ -292,7 +298,7 @@ module BillsHelper
     case (occurrence.effective_due_on - Date.current).to_i
     when 0 then t("bills.month_pulse.date_today")
     when 1 then t("bills.month_pulse.date_tomorrow")
-    else l(occurrence.effective_due_on, format: "%b %-d")
+    else bills_upcoming_date(occurrence.effective_due_on)
     end
   end
 
