@@ -9,11 +9,13 @@
 
 <div class="form-field <%= options[:container_class] %>"
      data-controller="money-field"
+     data-money-field-separator-value="<%= currency.separator %>"
+     data-money-field-separator-currency-value="<%= currency.iso_code %>"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>>
   <% if options[:label_tooltip] %>
     <div class="form-field__header">
-      <%= form.label amount_method, class: "form-field__label" do %>
+      <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
         <%= options[:label] || t(".label") %>
         <% if options[:required] %>
           <span class="text-red-500 ml-0.5">*</span>
@@ -32,7 +34,7 @@
 
   <div class="form-field__body">
     <% unless options[:label_tooltip] %>
-      <%= form.label amount_method, class: "form-field__label" do %>
+      <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
         <%= options[:label] || t(".label") %>
         <% if options[:required] %>
           <span class="text-red-500 ml-0.5">*</span>
@@ -49,7 +51,7 @@
         <%= form.number_field amount_method,
           class: class_names("form-field__input", options[:input_class]),
           inline: true,
-          placeholder: "100",
+          placeholder: options[:placeholder] || "100",
           value: if options[:value]
             sprintf("%.#{options[:precision].presence || currency.default_precision}f", options[:value])
           elsif form.object && form.object.respond_to?(amount_method)

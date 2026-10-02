@@ -305,6 +305,40 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert Entry.exists?(synced.id), "reverting the CSV import must not delete a synced transaction"
   end
 
+  test "overlapping CSV imports preserve a synced transaction and its mapped details" do
+    account = accounts(:connected)
+    synced = create_transaction(account: account, date: Date.new(2024, 1, 1), amount: 100,
+                                name: "Provider description", external_id: "provider-overlap", source: "plaid")
+    synced.update!(notes: "Provider notes")
+    synced.transaction.update!(category: categories(:food_and_drink), tags: [ tags(:one) ])
+    original_category = synced.transaction.category_id
+    original_tags = synced.transaction.tag_ids
+
+    imports = [ @import, @import.dup.tap(&:save!) ]
+    imports.each do |import|
+      import.update!(account: account,
+        raw_file_str: "date,name,amount,category,tags,notes\n01/01/2024,CSV description,100,CSV category,CSV tag,CSV notes\n",
+        date_col_label: "date", amount_col_label: "amount", name_col_label: "name",
+        category_col_label: "category", tags_col_label: "tags", notes_col_label: "notes",
+        date_format: "%m/%d/%Y", amount_type_strategy: "signed_amount", signage_convention: "inflows_negative")
+      import.generate_rows_from_csv
+      import.mappings.create!(key: "CSV category", mappable: categories(:income), type: "Import::CategoryMapping")
+      import.mappings.create!(key: "CSV tag", create_when_empty: true, type: "Import::TagMapping")
+      assert_no_difference -> { Entry.count } do
+        import.publish
+      end
+      assert import.reload.complete?
+      assert_nil synced.reload.import_id
+      assert_not synced.import_locked?
+      assert_equal "Provider notes", synced.notes
+      assert_equal original_category, synced.transaction.reload.category_id
+      assert_equal original_tags.sort, synced.transaction.tag_ids.sort
+    end
+
+    imports.each(&:revert)
+    assert Entry.exists?(synced.id)
+  end
+
   test "one synced transaction only claims one of two identical CSV rows" do
     account = accounts(:connected)
     synced = create_transaction(account: account, date: Date.new(2024, 1, 1), amount: 100,

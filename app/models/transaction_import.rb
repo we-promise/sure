@@ -1,4 +1,5 @@
 class TransactionImport < Import
+  # Reconcile each file independently while preserving ownership of differing-name synced matches.
   def import!
     transaction do
       mappings.each(&:create_mappable!)
@@ -64,6 +65,8 @@ class TransactionImport < Import
         elsif provider_entry
           # The provider still owns this entry. Attaching it to the CSV import
           # would delete it on revert and import_locked would block later syncs.
+          # Preserve its category, tags and notes as well. Claims are per file:
+          # another import may reuse it to avoid creating the same duplicate.
           claimed_entry_ids.add(provider_entry.id)
         else
           # Create new transaction (no duplicate found)

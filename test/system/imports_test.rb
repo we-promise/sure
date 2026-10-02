@@ -46,6 +46,9 @@ class ImportsTest < ApplicationSystemTestCase
     assert_selector "h1", text: "Assign your accounts"
     click_on "Next"
 
+    assert_text "Matching synced transactions keep their details"
+    page.save_screenshot(Rails.root.join("tmp/screenshots/csv-synced-transaction-notice.png"))
+
     click_on "Publish import"
 
     assert_text "Import in progress"
