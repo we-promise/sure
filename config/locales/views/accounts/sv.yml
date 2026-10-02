@@ -1,0 +1,214 @@
+sv:
+  account:
+    entries:
+      destroy:
+        success: "Posten togs bort."
+  accounts:
+    not_authorized: "Du har inte behörighet att hantera det här kontot"
+    account:
+      complete_setup: Slutför konfiguration
+      edit: Redigera
+      link_lunchflow: Länka med Lunch Flow
+      link_provider: Länka med leverantör
+      unlink_provider: Ta bort länkning till leverantör
+      change_simplefin_account: Byt SimpleFIN-konto
+      troubleshoot: Felsök
+      enable: Aktivera konto
+      disable: Inaktivera konto
+      exclude_from_reports: Exkludera från alla rapporter
+      include_in_reports: Inkludera i rapporter
+      excluded_from_reports_indicator: Exkluderad från rapporter
+      set_default: Ange som standard
+      remove_default: Ta bort som standard
+      default_label: Standard
+      delete: Ta bort konto
+      sharing: Delning
+    chart:
+      data_not_available: Data saknas för den valda perioden
+    create:
+      success: "%{type}-konto skapades"
+    set_default:
+      depository_only: "Endast kontanter- och kreditkortskonton kan anges som standard."
+    destroy:
+      success: "%{type}-konto schemalagt för borttagning"
+      cannot_delete_linked: "Kan inte ta bort ett länkat konto. Ta bort länkningen först."
+      failed: "Borttagningen av resursen misslyckades. Försök igen senare."
+    empty:
+      empty_message: Lägg till ett konto genom att ansluta det, importera det eller ange det manuellt.
+      new_account: Nytt konto
+      no_accounts: Inga konton ännu
+    form:
+      balance: "Saldo per datum:"
+      opening_balance_date_label: Datum för ingående saldo
+      name_label: Kontonamn
+      name_placeholder: Exempel på kontonamn
+      additional_details: Ytterligare detaljer
+      institution_name_label: Institutionens namn
+      institution_name_placeholder: t.ex. Handelsbanken
+      institution_domain_label: Institutionens domän
+      institution_domain_placeholder: t.ex. handelsbanken.se
+      notes_label: Anteckningar
+      notes_placeholder: Spara ytterligare information som kontonummer, clearingnummer, IBAN, routingnummer osv.
+      exclude_from_reports: Exkludera från alla rapporter
+      enable_category_matcher_label: Aktivera kategorimatchning
+      enable_category_matcher_hint: När detta är aktiverat används leverantörens föreslagna kategori på importerade transaktioner. Inaktivera för att lämna nya transaktioner okategoriserade.
+    index:
+      accounts: Konton
+      financekit_accounts:
+        title: Apple Wallet
+        description: Hantera Apple Wallet-anslutningar och synkronisering i Sure-appen för iOS.
+      cancel_sync: Avbryt synkronisering
+      manual_accounts:
+        other_accounts: Övriga konton
+      new_account: Nytt konto
+      sync: Synkronisera alla
+    sync_all:
+      syncing: "Synkroniserar konton..."
+    new:
+      import_accounts: Importera konton
+      container:
+        select: Välj
+        navigate: Navigera
+        close: Stäng
+        next: Nästa
+        previous: Föregående
+      method_selector:
+        connected_entry: Länka konto
+        connected_entry_eu: Länka EU-konto
+        link_with_provider: "Länka med %{provider}"
+        lunchflow_entry: Länka Lunch Flow-konto
+        manual_entry: Ange kontosaldo
+        title: Hur vill du lägga till det?
+      title: Vad vill du lägga till?
+    show:
+      limited_fx_history_warning: "Historik för växelkurser finns endast tillgänglig från och med %{date}. Transaktioner före detta datum använder ungefärliga valutakonverteringar — detta kan hända när valutaleverantören endast erbjuder ett begränsat historiskt fönster."
+      tabs:
+        activity: Aktivitet
+        holdings: Innehav
+        overview: Översikt
+        schedule: Schema
+        statements: Kontoutdrag
+      activity:
+        amount: Belopp
+        balance: Saldo
+        confirmed: Bekräftad
+        date: Datum
+        entries: poster
+        entry: post
+        filter: Filtrera
+        new: Ny
+        new_activity: Ny aktivitet
+        new_balance: Nytt saldo
+        new_trade: Ny affär
+        new_transaction: Ny transaktion
+        new_transfer: Ny överföring
+        no_entries: Inga poster hittades
+        pending: Väntande
+        search:
+          placeholder: Sök poster efter namn
+        search_placeholder: Sök poster efter namn
+        status: Status
+        title: Aktivitet
+      chart:
+        balance: Saldo
+        owed: Skuldbelopp
+      header:
+        complete_setup: Slutför konfiguration
+      menu:
+        confirm_accept: Ta bort "%{name}"
+        confirm_body_html: "<p>Genom att ta bort det här kontot raderar du dess
+          värdehistorik, vilket påverkar flera delar av din totala ekonomi. Denna åtgärd
+          kommer att ha en direkt påverkan på dina beräkningar av nettoförmögenhet och
+          kontografer.</p><br /> <p>Efter borttagningen finns det inget sätt att
+          återställa kontoinformationen, eftersom du då behöver lägga till det som ett nytt konto.</p>"
+        confirm_title: Ta bort konto?
+        delete_account: Ta bort konto
+        edit: Redigera
+        import: Importera transaktioner
+        import_trades: Importera affärer
+        import_transactions: Importera transaktioner
+        manage: Hantera konton
+        sharing: Delning
+        statements: Kontoutdrag
+        exclude_from_reports: Exkludera från alla rapporter
+        include_in_reports: Inkludera i rapporter
+    update:
+      success: "%{type}-konto uppdaterades"
+    sidebar:
+      missing_data: Historisk data saknas
+      missing_data_description: "%{product} använder tredjepartsleverantörer för att hämta historiska växelkurser, värdepapperspriser med mera. Denna data krävs för att beräkna korrekta historiska kontosaldon."
+      configure_providers: Konfigurera dina leverantörer här.
+      tabs:
+        all: Alla
+        assets: Tillgångar
+        debts: Skulder
+      new_asset: Ny tillgång
+      new_debt: Ny skuld
+      new_account: Nytt konto
+      new_account_group: "Ny %{account_group}"
+      expand_all: Expandera alla
+      collapse_all: Fäll ihop alla
+    types:
+      depository: Kontanter
+      investment: Investering
+      crypto: Krypto
+      property: Fastighet
+      vehicle: Fordon
+      other_asset: Övrig tillgång
+      credit_card: Kreditkort
+      loan: Lån
+      other_liability: Övrig skuld
+    types_plural:
+      depository: Kontanter
+      investment: Investeringar
+      crypto: Krypto
+      property: Fastigheter
+      vehicle: Fordon
+      other_asset: Övriga tillgångar
+      credit_card: Kreditkort
+      loan: Lån
+      other_liability: Övriga skulder
+    tax_treatments:
+      taxable: Skattepliktig
+      tax_deferred: Uppskjuten skatt
+      tax_exempt: Skattefri
+      tax_advantaged: Skattegynnad
+    tax_treatment_descriptions:
+      taxable: Vinster beskattas när de realiseras
+      tax_deferred: Insättningar avdragsgilla, beskattas vid uttag
+      tax_exempt: Insättningar efter skatt, vinster beskattas inte
+      tax_advantaged: Särskilda skatteförmåner med villkor
+    subtype_regions:
+      us: USA
+      uk: Storbritannien
+      ca: Kanada
+      au: Australien
+      eu: Europa
+      in: Indien
+      generic: Allmän
+    confirm_unlink:
+      title: Ta bort länkning från leverantör?
+      description_html: "Du är på väg att ta bort länkningen mellan <strong>%{account_name}</strong> och <strong>%{provider_name}</strong>. Detta gör kontot till ett manuellt konto."
+      warning_title: Vad detta innebär
+      warning_wallet_connection: Alla konton i denna Apple Wallet-anslutning kommer att avlänkas. Deras transaktioner och saldon bevaras. Du kan återansluta via Sure-appen för iOS med en ny Wallet-konfiguration.
+      warning_no_sync: Kontot synkroniseras inte längre automatiskt med din leverantör
+      warning_manual_updates: Du behöver lägga till transaktioner och uppdatera saldon manuellt
+      warning_transactions_kept: Alla befintliga transaktioner och saldon bevaras
+      warning_can_delete: Efter avlänkningen kan du ta bort kontot om det behövs
+      confirm_button: Bekräfta och ta bort länkning
+    unlink:
+      success: "Kontots länkning togs bort. Det är nu ett manuellt konto."
+      not_linked: "Kontot är inte länkat till en leverantör"
+      error: "Det gick inte att ta bort länkningen: %{error}"
+      generic_error: "Ett oväntat fel uppstod. Försök igen."
+    select_provider:
+      title: Välj en leverantör att länka
+      description: "Välj vilken leverantör du vill använda för att länka %{account_name}"
+      already_linked: "Kontot är redan länkat till en leverantör"
+      no_providers: "Inga leverantörer är konfigurerade just nu"
+
+  email_confirmations:
+    new:
+      invalid_token: Ogiltig eller utgången bekräftelselänk.
+      success_login: Din e-postadress har bekräftats. Logga in med din nya
+        e-postadress.

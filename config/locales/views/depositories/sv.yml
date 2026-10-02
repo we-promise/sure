@@ -1,0 +1,29 @@
+---
+sv:
+  depositories:
+    edit:
+      edit: Redigera %{account}
+    form:
+      none: Ingen
+      subtype_prompt: Välj kontotyp
+    new:
+      title: Ange kontosaldo
+    subtypes:
+      cash:
+        long: Kontanter
+        short: Kontanter
+      cd:
+        long: Placeringskonto
+        short: PK
+      checking:
+        long: Transaktionskonto
+        short: Transaktionskonto
+      hsa:
+        long: Hälsosparkonto
+        short: HSA
+      money_market:
+        long: Penningmarknadskonto
+        short: PMK
+      savings:
+        long: Sparkonto
+        short: Sparande

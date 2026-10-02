@@ -1,0 +1,75 @@
+---
+sv:
+  coinstats_items:
+    create:
+      success: CoinStats-leverantörsanslutning konfigurerad.
+      default_name: CoinStats-anslutning
+      errors:
+        validation_failed: "Validering misslyckades: %{message}."
+    update:
+      success: CoinStats-leverantörsanslutning uppdaterad.
+      errors:
+        validation_failed: "Validering misslyckades: %{message}."
+    destroy:
+      success: CoinStats-leverantörsanslutning schemalagd för borttagning.
+    link_wallet:
+      success: "%{count} kryptoplånbok/plånböcker länkade."
+      missing_params: "Nödvändiga parametrar saknas: adress och blockchain."
+      failed: Länkning av kryptoplånbok misslyckades.
+      error: "Länkning av kryptoplånbok misslyckades: %{message}."
+    link_exchange:
+      success: "%{name}-börs länkad."
+      missing_params: Börs och autentiseringsuppgifter krävs.
+      invalid_exchange: Vald börs stöds inte längre.
+      failed: Kunde inte länka börsen.
+      error: "Kunde inte länka börsen: %{message}."
+    new:
+      title: Länka krypto med CoinStats
+      blockchain_fetch_error: Kunde inte hämta blockkedjor. Försök igen senare.
+      link_wallet_title: Länka plånboksadress
+      link_wallet_description: Spåra en självförvarande plånbok eller en enskild on-chain-adress via CoinStats.
+      address_label: Adress
+      address_placeholder: Obligatoriskt
+      blockchain_label: Blockkedja
+      blockchain_placeholder: Obligatoriskt
+      blockchain_select_blank: Välj en blockkedja
+      link_wallet_submit: Länka kryptoplånbok
+      link_exchange_title: Länka börs-API
+      link_exchange_description: Använd en skrivskyddad börs-API-nyckel så att CoinStats kan synkronisera saldon och transaktioner från Bitvavo, Binance och andra börser som stöds.
+      link_exchange_note: Om din börs kräver aktivering av API-nyckel eller e-postbekräftelse, slutför det steget innan du länkar här.
+      exchange_select_blank: Välj en börs
+      exchange_label: Börs
+      link_exchange_submit: Länka börs
+      not_configured_title: CoinStats-leverantörsanslutning ej konfigurerad
+      not_configured_message: För att länka en kryptoplånbok eller börs måste du först konfigurera CoinStats-leverantörsanslutningen.
+      not_configured_step1_html: Gå till <strong>Inställningar → Leverantörer</strong>
+      not_configured_step2_html: Hitta leverantören <strong>CoinStats</strong>
+      not_configured_step3_html: Följ de medföljande <strong>installationsinstruktionerna</strong> för att slutföra leverantörskonfigurationen
+      go_to_settings: Gå till leverantörsinställningar
+      setup_instructions: "Installationsinstruktioner:"
+      step1_html: Besök <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> för att skaffa en API-nyckel.
+      step2: Ange din API-nyckel nedan och klicka på Konfigurera.
+      step3_html: Efter en lyckad anslutning, besök fliken <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Konton</a> för att konfigurera dina kryptokonton.
+      api_key_label: API-nyckel
+      api_key_placeholder: Obligatoriskt
+      configure: Konfigurera
+      update_configuration: Konfigurera om
+      default_name: CoinStats-anslutning
+    coinstats_item:
+      deletion_in_progress: Kryptoplånboksdata tas bort…
+      provider_name: CoinStats
+      syncing: Synkroniserar…
+      sync_status:
+        no_accounts: Inga kryptoplånböcker hittades
+        all_synced:
+          one: "%{count} kryptoplånbok synkroniserad"
+          other: "%{count} kryptoplånböcker synkroniserade"
+        partial_sync: "%{linked_count} kryptoplånböcker synkroniserade, %{unlinked_count} behöver konfigureras"
+      reconnect: Återanslut
+      status: Senast synkroniserad för %{timestamp} sedan
+      status_never: Aldrig synkroniserad
+      status_with_summary: "Senast synkroniserad för %{timestamp} sedan • %{summary}"
+      update_api_key: Uppdatera API-nyckel
+      delete: Ta bort
+      no_wallets_title: Inga kryptoplånböcker anslutna
+      no_wallets_message: Inga kryptoplånböcker är just nu anslutna till CoinStats.

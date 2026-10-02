@@ -1,0 +1,8 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Rader för ränteändring behöver både ett datum och en ränta.
+          rate_change_before_origination: En ränteändring kan inte träda i kraft innan lånet beviljades.

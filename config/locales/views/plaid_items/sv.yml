@@ -1,0 +1,43 @@
+---
+sv:
+  plaid_items:
+    create:
+      success: Kontot länkades. Vänta medan kontona synkas.
+    destroy:
+      success: Kontona är schemalagda för borttagning.
+    errors:
+      link_token_generic: Vi kunde inte öppna Plaid just nu. Försök igen, och
+        om problemet kvarstår, kontrollera serverloggarna för detaljer.
+      link_token_with_message: "Plaid kunde inte öppna anslutningen: %{message}"
+    plaid_item:
+      add_accounts: Lägg till konton
+      add_new: Lägg till ny anslutning
+      confirm_accept: Ta bort institution
+      confirm_body: Detta tar permanent bort alla konton i den här gruppen och
+        all tillhörande data.
+      confirm_title: Ta bort institutionen?
+      connection_lost: Anslutningen förlorad
+      connection_lost_description: Den här anslutningen är inte längre giltig. Du behöver
+        ta bort den här anslutningen och lägga till den igen för att fortsätta synka data.
+      delete: Ta bort
+      deletion_in_progress: (borttagning pågår...)
+      error: Ett fel uppstod vid synkning av data
+      no_accounts_description: Vi kunde inte läsa in några konton från den här finansiella
+        institutionen.
+      no_accounts_title: Inga konton hittades
+      provider_name: Plaid
+      requires_update: Anslut igen
+      status: Senast synkad %{timestamp} sedan
+      status_never: Kräver datasynk
+      syncing: Synkar...
+      update: Uppdatera
+    select_existing_account:
+      no_available_accounts: Inga tillgängliga Plaid-konton att länka. Anslut ett nytt Plaid-konto först.
+      title: "Länka %{account_name} till Plaid"
+      description: Välj ett Plaid-konto att länka till ditt befintliga konto
+      cancel: Avbryt
+      link_account: Länka konto
+    link_existing_account:
+      invalid_account: Ogiltigt Plaid-konto valt
+      already_linked: Det här Plaid-kontot är redan länkat
+      success: Kontot har länkats till Plaid

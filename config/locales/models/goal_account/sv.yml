@@ -1,0 +1,9 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Detta konto är redan fullt öronmärkt för "%{goal_name}". Ange ett belopp för att dela upp det.

@@ -1,0 +1,53 @@
+---
+sv:
+  transfers:
+    create:
+      success: Överföring skapad
+      exchange_rate_unavailable: Växelkurs saknas för valda valutor och datum
+      date_invalid: är ogiltigt
+      stale_form: Detta formulär har redan skickats in med andra uppgifter. Uppdatera sidan och försök igen.
+    destroy:
+      success: Överföring borttagen
+    form:
+      amount: Belopp
+      bank_charges: Bankavgifter
+      outgoing_fee: Avgift för utgående överföring
+      incoming_fee: Avgift för inkommande överföring
+      date: Datum
+      destination_amount: Mottaget belopp
+      destination_amount_display: "Mottaget belopp: %{amount}"
+      exchange_rate_display: "Växelkurs: %{rate}"
+      expense: Utgift
+      from: Från
+      income: Inkomst
+      select_account: Välj konto
+      source_amount: Ursprungligt belopp
+      submit: Skapa överföring
+      to: Till
+      transfer: Överföring
+    new:
+      title: Ny överföring
+    show:
+      delete: Ta bort överföring
+      delete_subtitle: Detta tar bort överföringen. De underliggande transaktionerna raderas inte.
+      delete_title: Ta bort överföring?
+      details: Detaljer
+      mark_recurring: Markera som återkommande
+      mark_recurring_subtitle: Spåra denna överföring som ett återkommande mönster i flödet för kommande och sidan för återkommande.
+      mark_recurring_title: Markera överföring som återkommande
+      note_label: Anteckningar
+      note_placeholder: Lägg till en anteckning för denna överföring
+      overview: Översikt
+      settings: Inställningar
+      from: Från
+      to: Till
+      date: Datum
+      transfer_amount: Överföringsbelopp
+      total: Totalt
+      bank_charges: Bankavgifter
+      source_fee: Avgift vid källa
+      destination_fee: Avgift vid mottagning
+      category: Kategori
+      uncategorized: Okategoriserad
+    update:
+      success: Överföring uppdaterad

@@ -1,0 +1,27 @@
+sv:
+  invitations:
+    accept_choice:
+      create_account: Skapa nytt konto
+      joined_household: Du har gått med i hushållet.
+      message: "%{inviter} har bjudit in dig att gå med som %{role}."
+      sign_in_existing: Jag har redan ett konto
+      title: Gå med i %{family}
+    create:
+      existing_user_added: Användaren har lagts till i ditt hushåll.
+      existing_user_has_family_data: Den användaren äger redan ett hushåll med konton. De måste ta bort eller överföra dessa konton innan de kan gå med i ditt.
+      failure: Kunde inte skicka inbjudan
+      success: Inbjudan skickades
+    destroy:
+      failure: Det uppstod ett problem när inbjudan skulle tas bort.
+      not_authorized: Du har inte behörighet att hantera inbjudningar.
+      success: Inbjudan togs bort.
+    new:
+      email_label: E-postadress
+      email_placeholder: Ange e-postadress
+      role_admin: Administratör
+      role_guest: Gäst
+      role_label: Roll
+      role_member: Medlem
+      submit: Skicka inbjudan
+      subtitle: Skicka en inbjudan att gå med i ditt %{moniker}-konto på %{product_name}
+      title: Bjud in någon

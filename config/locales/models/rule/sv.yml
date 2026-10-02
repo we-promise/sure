@@ -1,0 +1,12 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        rule:
+          min_actions: "måste ha minst en åtgärd"
+          duplicate_actions: "Regeln kan inte ha dubbla åtgärder %{types}"
+          nested_conditions: "Sammansatta villkor kan inte nästlas"
+  rule:
+    conditions:
+      unsupported_label: "Stöds inte (%{type})"

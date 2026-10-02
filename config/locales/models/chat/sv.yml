@@ -1,0 +1,9 @@
+---
+sv:
+  chat:
+    errors:
+      rate_limited: "AI-leverantören har för hög belastning just nu. Försök igen om några minuter."
+      temporarily_unavailable: "AI-leverantören är tillfälligt otillgänglig just nu. Försök igen om några minuter."
+      misconfigured: "AI-leverantören är inte korrekt konfigurerad. Kontakta din administratör."
+      no_response: "Assistenten svarade inte. Bakgrundsarbetaren kan vara nedstängd eller AI kan vara felaktigt konfigurerad. Försök igen."
+      default: "Det gick inte att generera ett svar. Försök igen."

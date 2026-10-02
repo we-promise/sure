@@ -1,0 +1,17 @@
+---
+sv:
+  pdf_import_mailer:
+    next_steps:
+      greeting: "Hej %{name},"
+      intro: "Vi har slutfört analysen av PDF-dokumentet du laddade upp till %{product}."
+      document_type_label: Dokumenttyp
+      summary_label: AI-sammanfattning
+      transactions_note: Det här dokumentet verkar innehålla transaktioner. Du kan extrahera och granska dem nu.
+      document_stored_note: Det här dokumentet har sparats som referens. Det kan användas för att ge kontext i framtida AI-konversationer.
+      next_steps_label: Vad händer nu?
+      next_steps_intro: "Du har flera alternativ:"
+      option_extract_transactions: Extrahera transaktioner från det här utdraget
+      option_keep_reference: Behåll det här dokumentet som referens i framtida AI-konversationer
+      option_delete: Ta bort den här importen om du inte längre behöver den
+      view_import_button: Visa importdetaljer
+      footer_note: Det här är ett automatiskt meddelande. Svara inte direkt på det här e-postmeddelandet.

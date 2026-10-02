@@ -1,0 +1,795 @@
+---
+sv:
+  views:
+    settings:
+      payments:
+        renewal: "Ditt bidrag fortsätter %{date}."
+        cancellation: "Ditt bidrag upphör %{date}."
+  settings:
+    background_jobs:
+      show:
+        page_title: "Bakgrundsjobb"
+        title: "Arbetarstatus"
+        subtitle: "Aktuellt Sidekiq-körningstillstånd: arbetsprocesser, könivåer och retry/dead-set."
+        redis_unreachable: "Sidekiq-tillståndet är inte tillgängligt (Redis onåbart). Livstillstånd är okänt, så åtgärder är inaktiverade."
+        operations_title: "Pågående operationer"
+        operations_subtitle: "Synkroniseringar, importer och exporter över alla familjer som inte har nått en slutstatus. Operationer som varit inaktiva över 30 minuter utan synligt jobb antas vara förlorade och kan markeras som sådana."
+        empty: "Inga pågående operationer."
+        missing_value: "-"
+        stats:
+          workers: "Arbetare"
+          busy: "Upptagna"
+          enqueued: "Köade"
+          retries: "Omförsök"
+          scheduled: "Schemalagda"
+          dead: "Döda"
+          queue_label: "%{name}: %{size} · %{latency}s latens"
+        table:
+          type: "Operation"
+          family: "Familj"
+          status: "Status"
+          last_activity: "Senaste aktivitet"
+          liveness: "Livstillstånd"
+          action: "Åtgärd"
+      operation:
+        ago: "%{time} sedan"
+        sync_label: "Synk · %{type}"
+        running: "Körs"
+        queued: "Köad"
+        recent: "Nyligen"
+        unknown: "Okänd"
+        stuck: "Fastnat — antas förlorat"
+        confirm: "Markera denna operation som förlorad? Posten flyttas till en slutstatus så att den kan köras igen. Den underliggande datan påverkas inte."
+        missing_value: "-"
+        actions:
+          mark_stale: "Markera som inaktuell"
+          mark_failed: "Markera som misslyckad"
+          release_claim: "Släpp ägarskap"
+      cancel:
+        cancelled: "%{type} markerad som förlorad."
+        not_cancellable: "Denna operation kan inte ändras just nu — dess jobb kan fortfarande vara köat eller pågående. Försök igen när den har varit inaktiv i 30 minuter."
+        cancelled_error: "Markerad som misslyckad av en administratör — bakgrundsjobbet antogs vara förlorat."
+    debugs:
+      show:
+        page_title: "Felsökning"
+        title: "Felsökningslogg"
+        subtitle: "Betydelsefulla driftshändelser för superadministratörer. Senaste först."
+        empty: "Inga felsökningshändelser hittades."
+        missing_value: "-"
+        filters:
+          all: "Alla"
+          category: "Kategori"
+          level: "Nivå"
+          source: "Källa"
+          provider: "Leverantör"
+          start_date: "Från"
+          end_date: "Till"
+          family_id: "Familj-ID"
+          account_id: "Konto-ID"
+          user_id: "Användar-ID"
+          account_provider_id: "Kontoleverantör-ID"
+          submit: "Filtrera"
+          reset: "Återställ"
+        table:
+          time: "Tid"
+          level: "Nivå"
+          category: "Kategori"
+          source: "Källa"
+          message: "Meddelande"
+          context: "Kontext"
+          metadata: "Metadata"
+          view_metadata: "Visa"
+        context:
+          provider: "leverantör=%{value}"
+          family: "familj=%{value}"
+          account: "konto=%{value}"
+          user: "användare=%{value}"
+          account_provider: "kontoleverantör=%{value}"
+    llm_usages:
+      show:
+        page_title: "LLM-användning och kostnader"
+        subtitle: "Följ din AI-användning och uppskattade kostnader"
+        start_date: "Startdatum"
+        end_date: "Slutdatum"
+        filter: "Filtrera"
+        total_requests: "Totalt antal förfrågningar"
+        total_tokens: "Totalt antal tokens"
+        prompt: "prompt"
+        completion: "svar"
+        total_cost: "Total kostnad"
+        avg_cost_per_request: "Genomsnittlig kostnad/förfrågan"
+        based_on_requests: "Baserat på %{with_cost} av %{total} förfrågningar med kostnadsdata"
+        cost_by_operation: "Kostnad per operation"
+        cost_by_model: "Kostnad per modell"
+        recent_usage: "Senaste användning"
+        col_date: "Datum"
+        col_operation: "Operation"
+        col_model: "Modell"
+        col_tokens: "Tokens"
+        col_cost: "Kostnad"
+        failed: "Misslyckades"
+        no_usage_data: "Ingen användningsdata hittades för den valda perioden"
+        cost_estimates_title: "Om kostnadsuppskattningar"
+        cost_estimates_description: "Kostnader uppskattas utifrån publicerade leverantörspriser, inklusive OpenAI:s priser från juli 2026. Faktiska kostnader kan variera. Priser är per miljon tokens och varierar beroende på modell. Anpassade eller självhostade modeller visar \"N/A\" och räknas inte in i totalkostnaden."
+    ai_prompts:
+      prompt_field:
+        provider_label: Leverantör
+        prompt_label: Prompt
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Återställ till standard
+        reset_confirm_title: Återställ till standardprompt?
+        reset_confirm_body: Detta kommer att kasta bort din anpassade prompt och återställa de inbyggda standardinstruktionerna.
+        status_custom: Använder din anpassade prompt
+        status_default: Använder den inbyggda standarden
+        format_risk: 'Din %{provider}-prompt tappade bort exemplet {"%{key}": ...}. Varje förfrågan efterfrågar fortfarande den formen, så tolkningen håller vanligtvis, men en override som begär ett annat utdataformat kommer att gå sönder.'
+      show:
+        page_title: AI-prompter
+        disable_ai: Inaktivera AI-assistent
+        save: Spara prompter
+        save_confirm:
+          title: "Spara anpassade AI-prompter?"
+          body: "Anpassade promptöverstyrningar ersätter de inbyggda systeminstruktionerna och säkerhetsspärrarna (t.ex. begränsningar för finansiell rådgivning) för din familj."
+          dont_show_again: "Visa inte denna varning igen"
+          cancel: "Avbryt"
+          confirm: "Bekräfta"
+        main_system_prompt:
+          title: Huvudsystemprompt
+          subtitle: Grundinstruktioner som definierar hur AI-assistenten beter sig i alla chattkonversationer
+          label: Systemprompt för chatt
+        transaction_categorizer:
+          title: Transaktionskategoriserare
+          subtitle: AI kategoriserar automatiskt dina transaktioner utifrån dina definierade kategorier
+        merchant_detector:
+          title: Handlarigenkänning
+          subtitle: AI identifierar och kompletterar transaktionsdata med information om handlare
+      update:
+        success: AI-prompter uppdaterade
+        multiple_errors: "Flera prompter är för långa (max %{count} tecken)"
+    payments:
+      show:
+        page_title: Betalningar
+        subscription_subtitle: Uppdatera dina kortuppgifter
+        subscription_title: Hantera bidrag
+        currently_on_plan: "För närvarande på"
+        trialing: "Använder just nu den öppna demoversionen av %{product_name}"
+        trial_days_left:
+          one: "Data kommer att raderas om %{count} dag"
+          other: "Data kommer att raderas om %{count} dagar"
+        not_contributing_prefix: "Du bidrar för närvarande"
+        not_contributing_emphasis: "inte"
+        contributions_note: "Bidrag till %{product_name} visas här."
+        manage: "Hantera"
+        choose_level: "Välj nivå"
+        payment_via_stripe: "Betalning via Stripe"
+    appearances:
+      show:
+        page_title: Utseende
+        theme_title: Tema
+        theme_subtitle: Välj ett önskat tema för appen
+        theme_dark: Mörkt
+        theme_light: Ljust
+        theme_system: System
+        modals_title: Modaler
+        modals_subtitle: Anpassa modalbeteende
+        disable_modal_click_outside_title: Håll modaler öppna vid klick utanför
+        disable_modal_click_outside_description: Förhindra att modaler stängs vid klick utanför. Praktiskt för att undvika att av misstag förlora osparade ändringar.
+        transactions_title: Transaktioner
+        transactions_subtitle: Anpassa hur transaktioner visas
+        dashboard_title: Instrumentpanel
+        dashboard_subtitle: Anpassa hur instrumentpanelen visas
+        dashboard_two_column_title: Tvåkolumnslayout
+        dashboard_two_column_description: Visa instrumentpanelens widgetar i två kolumner på stora skärmar, med kontroller för bredd och höjd per widget i respektive rubrik. När det är av staplas widgetarna i en enda kolumn.
+        dashboard_account_groups_title: Starta expanderat som standard
+        dashboard_account_groups_description: Dessa kontosektioner startar expanderade på instrumentpanelen och i kontosidopanelen. Du kan fortfarande fälla ihop dem manuellt när du vill.
+        split_grouped_title: Gruppera delade transaktioner
+        split_grouped_description: Visa delade transaktioner grupperade under sin överordnade i transaktionslistan. När det är av visas delade delar som enskilda rader.
+    preferences:
+      show:
+        country: Land
+        currency: Valuta
+        date_format: Datumformat
+        general_subtitle: Konfigurera dina inställningar
+        general_title: Allmänt
+        default_period: Standardperiod
+        default_account_order: Standardkontoordning
+        language: Språk
+        language_auto: Webbläsarens språk
+        page_title: Inställningar
+        timezone: Tidszon
+        translations_notice: Observera att vi fortfarande arbetar med översättningar för olika språk.
+        budget_title: Budget
+        budget_subtitle: Konfigurera hur dina budgetar fungerar
+        month_start_day: Budgetmånaden börjar
+        month_start_day_hint: Ange när din budgetmånad börjar (t.ex. lönedag)
+        month_start_day_warning: Dina budgetar och MTD-beräkningar (månad till dags dato) kommer att använda denna anpassade startdag istället för den 1:a i varje månad.
+        personal_budgets: Personliga budgetar
+        personal_budgets_hint: Aktivera individuella budgetar för varje familjemedlem.
+        household_budget_enabled: Hushållsbudget
+        household_budget_enabled_hint: Behåll en delad hushållsbudget vid sidan av personliga budgetar. Stäng av för att endast använda personliga budgetar.
+        budget_sharing_title: Budgetdelning
+        budget_sharing_subtitle: Låt andra medlemmar visa eller redigera din personliga budget
+        budget_sharing_no_members: Inga andra medlemmar i din %{moniker} att dela med
+        budget_sharing_permission_label: "%{name}s åtkomst"
+        budget_sharing_permissions:
+          none: Ingen åtkomst
+          read_only: Endast visning
+          read_write: Kan redigera
+        currencies_title: "Valutor för %{moniker}"
+        currencies_subtitle: Välj vilka valutor som visas i beloppsfält för din %{moniker}
+        base_currency_label: Basvaluta
+        base_currency_badge: Basvaluta
+        additional_currencies_label: Ytterligare valutor
+        no_additional_currencies: Inga valda
+        currencies_more: "+%{count} till"
+        manage_currencies: Hantera valutor
+        manage_currencies_subtitle: Avmarkera valutor du aldrig använder, eller minska listan till bara några få.
+        select_all_currencies: Välj alla
+        select_base_only: Endast basvaluta
+        currency_search_placeholder: Sök valutor
+        no_matching_currencies: Inga valutor hittades
+        selected_currencies_count:
+          one: "%{count} vald"
+          other: "%{count} valda"
+        save_currencies: Spara valutor
+        sharing_title: "Delning för %{moniker}"
+        sharing_subtitle: "Styr hur konton delas i din %{moniker}"
+        sharing_default_label: Standarddelning för nya konton
+        sharing_shared: Dela med alla medlemmar
+        sharing_private: Håll privat som standard
+        preview:
+          title: Aktivera förhandsvisningsfunktioner
+          description: Prova funktioner under utveckling märkta preview eller canary.
+    budget_shares:
+      update:
+        success: Inställningar för budgetdelning uppdaterade
+    profiles:
+      destroy:
+        cannot_remove_self: Du kan inte ta bort dig själv från kontot.
+        member_owns_other_family_data: Denna medlem äger fortfarande konton i ett annat hushåll och kan inte tas bort. Flytta eller ta bort dessa konton först.
+        member_removal_failed: Det uppstod ett problem när medlemmen skulle tas bort.
+        member_removed: Medlemmen togs bort.
+        not_authorized: Du är inte behörig att ta bort medlemmar.
+      show:
+        confirm_delete:
+          body: Är du säker på att du vill radera ditt konto permanent? Denna åtgärd
+            går inte att ångra.
+          title: Radera konto?
+        confirm_reset:
+          body: Är du säker på att du vill återställa ditt konto? Detta raderar alla dina konton, kategorier, handlare, taggar och annan data. Denna åtgärd kan inte ångras.
+          title: Återställ konto?
+        confirm_reset_with_sample_data:
+          body: Är du säker på att du vill återställa ditt konto och läsa in exempeldata? Detta raderar din befintliga data och ersätter den med demodata så att du kan utforska Sure säkert.
+          title: Återställ konto och läs in exempeldata?
+        confirm_remove_invitation:
+          body: Är du säker på att du vill ta bort inbjudan för %{email}?
+          title: Ta bort inbjudan
+        confirm_remove_member:
+          body: Är du säker på att du vill ta bort %{name} från ditt konto?
+          title: Ta bort medlem
+        danger_zone_title: Farozon
+        delete_account: Radera konto
+        delete_account_warning: Att radera ditt konto tar permanent bort all
+          din data och kan inte ångras.
+        reset_account: Återställ konto
+        reset_account_warning: Att återställa ditt konto raderar alla dina konton, kategorier, handlare, taggar och annan data, men behåller ditt användarkonto intakt.
+        reset_account_with_sample_data: Återställ och förladda
+        reset_account_with_sample_data_warning: Radera all din befintliga data och läs sedan in färsk exempeldata så att du kan utforska med en förifylld miljö.
+        email: E-post
+        first_name: Förnamn
+        group_form_input_placeholder: Ange gruppnamn
+        group_form_label: Gruppnamn
+        group_title: Gruppmedlemmar
+        household_form_input_placeholder: Ange hushållsnamn
+        household_form_label: Hushållsnamn
+        household_subtitle: Inbjudna kan logga in på ditt %{moniker}-konto och komma åt delade resurser.
+        household_title: Hushåll
+        invitation_link: Inbjudningslänk
+        invite_member: Lägg till medlem
+        last_name: Efternamn
+        page_title: Profilinformation
+        pending: Väntande
+        profile_subtitle: Anpassa hur du visas på %{product_name}
+        profile_title: Personligt
+        remove_invitation: Ta bort inbjudan
+        remove_member: Ta bort medlem
+        resend_confirmation_link: begär ett nytt bekräftelsemejl
+        save: Spara
+        unconfirmed_email_notice_html: Du har begärt att ändra din e-post till %{email}. Gå till din e-post och bekräfta för att ändringen ska börja gälla. Om du inte har fått mejlet, kontrollera din skräppostmapp, eller %{resend_link}.
+    securities:
+      show:
+        page_title: Säkerhet
+        encryption_warning:
+          title: Krypteringsnycklar saknas
+          intro: "Känslig data (API-nycklar, leverantörstokens, MFA-hemligheter och personuppgifter) lagras okrypterat i vila. För att aktivera kryptering, sätt följande nycklar i dina miljövariabler eller Rails-credentials:"
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: "Generera ett set med: bin/rails db:encryption:init"
+        mfa_title: Tvåfaktorsautentisering
+        mfa_description: Lägg till ett extra säkerhetslager på ditt konto genom att kräva en kod från din autentiseringsapp när du loggar in
+        enable_mfa: Aktivera tvåfaktorsautentisering
+        disable_mfa: Inaktivera tvåfaktorsautentisering
+        disable_mfa_confirm: Är du säker på att du vill inaktivera tvåfaktorsautentisering?
+        sso_title: Anslutna konton
+        sso_subtitle: Hantera dina anslutningar för enkel inloggning (SSO)
+        sso_disconnect: Koppla bort
+        sso_last_used: Senast använd
+        sso_never: Aldrig
+        sso_no_email: Ingen e-post
+        sso_no_identities: Inga SSO-konton anslutna
+        sso_connect_hint: Logga ut och logga in med en SSO-leverantör för att ansluta ett konto.
+        sso_confirm_title: Koppla bort konto?
+        sso_confirm_body: Är du säker på att du vill koppla bort ditt %{provider}-konto? Du kan återansluta det senare genom att logga in med den leverantören igen.
+        sso_confirm_button: Koppla bort
+        sso_warning_message: Detta är din enda inloggningsmetod. Du bör sätta ett lösenord i dina säkerhetsinställningar innan du kopplar bort, annars kan du bli utelåst från ditt konto.
+    mcp:
+      show:
+        page_title: MCP-server
+        connect_title: Anslut en AI-assistent
+        connect_subtitle: Klistra in denna URL i Claude.ai (eller någon MCP-kompatibel klient) för att ansluta den till ditt Sure-konto.
+        copy_url: Kopiera
+        copied: Kopierat!
+        how_to_connect_title: Så ansluter du Claude
+        step_1: "Öppna Claude.ai och gå till Inställningar → Anpassa → Anslutningar."
+        step_2: Klicka på "Lägg till anslutning" och klistra in MCP-serverns URL ovan.
+        step_3: Klicka på Anslut — du omdirigeras till Sure för att logga in och godkänna åtkomst.
+        step_4: När det är godkänt kan Claude läsa dina konton, transaktioner och saldodata.
+        connected_title: Anslutna klienter
+        connected_subtitle: Dessa appar har för närvarande åtkomst till din Sure-data. Återkalla de du inte längre använder.
+        unknown_client: Okänd klient
+        connected_ago: "Ansluten %{time} sedan"
+        revoke: Återkalla
+        revoke_confirm: Återkalla åtkomst för denna klient?
+      revoke:
+        revoked: Anslutning återkallad.
+    settings_nav:
+      accounts_label: Konton
+      advanced_section_title: Avancerat
+      ai_prompts_label: AI-prompter
+      background_jobs_label: Bakgrundsjobb
+      api_key_label: API-nycklar
+      payment_label: Betalning
+      categories_label: Kategorier
+      feedback_label: Feedback
+      general_section_title: Allmänt
+      imports_label: Importer
+      exports_label: Exporter
+      llm_usage_label: LLM-användning
+      logout: Logga ut
+      merchants_label: Handlare
+      providers_label: Leverantörer
+      guides_label: Guider
+      other_section_title: Mer
+      preferences_label: Inställningar
+      profile_label: Profilinformation
+      recurring_transactions_label: Återkommande
+      rules_label: Regler
+      mcp_label: MCP
+      security_label: Säkerhet
+      self_hosting_label: Självhosting
+      sso_providers_label: SSO-leverantörer
+      statement_vault_label: Kontoutdragsarkiv
+      system_health_label: Systemhälsa
+      tags_label: Taggar
+      transactions_section_title: Transaktioner
+      users_label: Användare
+      whats_new_label: Nyheter
+      api_keys_label: API-nycklar
+      appearance_label: Utseende
+      bank_sync_label: Banksynk
+      debug_label: Felsökning
+    settings_nav_link_large:
+      next: Nästa
+      previous: Tillbaka
+    user_avatar_field:
+      accepted_formats: JPG eller PNG. Max 5 MB.
+      choose: Ladda upp foto
+      choose_label: (valfritt)
+      change: Byt foto
+    providers:
+      update:
+        updated_successfully: Leverantörsinställningar uppdaterade
+        no_changes: Inga ändringar gjordes
+      not_authorized: Ej behörig
+      bank_sync:
+        page_title: Banksynk
+        lede: Anslut externa konton så att transaktioner, saldon och innehav flödar in i Sure automatiskt.
+      status:
+        ok: Ansluten
+        warn: Åtgärd krävs
+        err: Fel
+        "off": Ej konfigurerad
+      maturity:
+        beta: Beta
+        alpha: Alfa
+      drawer_trust_statement: "Endast läsåtkomst. Sure kan aldrig flytta pengar, och dina uppgifter lagras krypterade."
+      drawer_trust_statement_encryption_unconfigured: "Endast läsåtkomst. Sure kan aldrig flytta pengar. Konfigurera explicita krypteringsnycklar innan du lagrar leverantörsuppgifter i produktion."
+      provider_setup_encryption_warning:
+        title: Krypteringsnycklar saknas
+        message: "Denna självhostade installation har inte konfigurerat explicita Active Record-krypteringsnycklar. Konfigurera primary_key, deterministic_key och key_derivation_salt innan du sparar leverantörsuppgifter i produktion."
+      setup_steps:
+        eyebrow: Konfiguration
+        need_help: "Behöver du hjälp?"
+      connect: Anslut
+      financekit:
+        app_store: App Store
+        coming_soon: Kommer snart!
+        description: "Hantera Apple Wallet-anslutningar i Sure-appen för iOS. Wallet-data synkroniseras medan appen är öppen; obevakad bakgrundssynkronisering är inte tillgänglig ännu."
+        summary: Wallet-synk
+        accounts: Länkade konton
+        linked_accounts:
+          one: 1 länkat konto
+          other: "%{count} länkade konton"
+        status:
+          active: Synk aktiv
+          repair_required: Reparation krävs — öppna Sure-appen för iOS
+        last_accepted_at: Senast accepterad av Sure
+        last_imported_at: Senast importerad till din familj
+        not_yet: Inte än
+      groups:
+        your_connections: Dina anslutningar
+        available: Tillgängliga
+        empty_available: Alla tillgängliga leverantörer är anslutna.
+      health_strip:
+        connected: anslutna
+        needs_attention: behöver åtgärd
+        accounts_syncing: konton synkroniseras
+        last_synced: Senast synkroniserad %{time} sedan
+      meta:
+        sync_error: Synkfel
+        no_recent_sync: Synk försenad
+        reconsent_required: Nytt samtycke krävs
+        reconsent_needed:
+          one: Nytt samtycke krävs inom 1 dag
+          other: Nytt samtycke krävs inom %{count} dagar
+        last_synced: Synkroniserad %{time} sedan
+      sync_all: Synka alla
+      sync_all_in_progress: Synkroniserar alla anslutna leverantörer…
+      sync_all_recently: Synkronisering pågår redan. Försök igen om en stund.
+      sync_provider: Synka nu
+      sync_provider_in_progress: Synkronisering startad.
+      recently_synced: Synkroniserad nyligen. Försök igen om en stund.
+      taglines:
+        financekit: Synka (vissa) FinanceKit-konton via Sure-appen för iOS.
+        akahu: Synka nyzeeländska finansinstitut via Akahu.
+        simplefin: Anslut amerikanska bankkonton via det öppna SimpleFIN-protokollet.
+        lunchflow: Anslut 20 000+ banker från 40+ länder (Storbritannien, EU, USA och mer!)
+        redbark: Synka australiska bankkonton via Redbark open banking.
+        monobank: Synka ukrainska Monobank-kort och sparpotter med en personlig API-token.
+        fio: Synka ett Fio banka-konto med en läsbehörig API-token.
+        enable_banking: Synka europeiska bankkonton via PSD2 open banking.
+        coinstats: Följ hela din kryptoportfölj över plånböcker och börser.
+        wise: Synka dina Wise-flervalutasaldon och internationella överföringar automatiskt.
+        mercury: Synka dina Mercury-företagsbankkonton automatiskt.
+        brex: Synka Brex kassa- och företagskortsaktivitet med läsbehörig åtkomst.
+        coinbase: Importera dina Coinbase-kryptoinnehav och följ utvecklingen.
+        binance: Synka dina Binance spotsaldon med en läsbehörig API-nyckel.
+        kraken: Synka Kraken-saldon och spotaffärer med en läsbehörig API-nyckel.
+        coinspot: Synka CoinSpot-saldon, AUD-värden, överföringar, insättningar, uttag och orderhistorik med en läsbehörig API-nyckel.
+        onchain_wallet: Följ egenförvarade Bitcoin-, EVM- och Solana-plånböcker via deras publika adresser.
+        snaptrade: Anslut depåer via SnapTrades aggregeringsnätverk.
+        trading212: Synka din Trading 212-investeringsportfölj med en läsbehörig API-nyckel.
+        trade_republic: Synka ditt Trade Republic-investeringskonto via säker läsbehörig webbinloggning.
+        ibkr: Synka Interactive Brokers-investeringskonton via Flex Query-importer.
+        questrade: Synka dina Questrade-investeringskonton direkt via Questrade-API:et.
+        indexa_capital: Följ din automatiserade investeringsportfölj hos Indexa Capital.
+        sophtron: Anslut amerikanska och kanadensiska banker och tjänster.
+        plaid: Anslut tusentals amerikanska finansinstitut via Plaid.
+        plaid_eu: Anslut europeiska finansinstitut via Plaid (PSD2/open banking).
+      search_filters:
+        aria_label: Sök leverantörer
+        placeholder: Sök leverantörer
+        chips:
+          all: Alla
+          bank: Banker
+          crypto: Krypto
+          investment: Investeringar
+      empty_filter: Inga leverantörer matchar ditt filter.
+      clear_filter: Rensa filter
+      encryption_error:
+        title: Krypteringsnycklar saknas
+        message: "Banksynk kräver att Active Record-kryptering är konfigurerad. Sätt primary_key, deterministic_key och key_derivation_salt i dina Rails-credentials eller miljövariabler."
+      provider_form:
+        save_and_connect: "Spara och anslut"
+      coinbase_panel:
+        setup_instructions: "För att ansluta Coinbase:"
+        step1_html: Gå till <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API-inställningar</a>
+        step2: Skapa en ny API-nyckel med läsbehörighet (visa konton, visa transaktioner)
+        step3: Kopiera din API-nyckel och API-hemlighet och klistra in dem nedan
+        api_key_label: API-nyckel
+        api_key_placeholder: Ange din Coinbase-API-nyckel
+        api_secret_label: API-hemlighet
+        api_secret_placeholder: Ange din Coinbase-API-hemlighet
+        connect_button: Anslut Coinbase
+        syncing: Synkroniserar...
+        sync: Synka
+        disconnect_confirm: Är du säker på att du vill koppla bort denna Coinbase-anslutning? Dina synkroniserade konton blir manuella konton.
+      binance_panel:
+        setup_instructions: "För att ansluta Binance, skapa en läsbehörig API-nyckel:"
+        step1_html: 'Gå till <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>'
+        step2: "Skapa en ny API-nyckel med endast läsbehörighet aktiverad"
+        step3: "Klistra in din API-nyckel och hemlighet nedan"
+        no_withdraw_title: "Endast läsbehörig nyckel"
+        no_withdraw_body: "Aktivera inte uttagsbehörighet när du skapar din Binance-API-nyckel. Sure behöver bara läsåtkomst."
+        ip_hint_title: "IP-vitlistning krävs"
+        ip_hint_body: "Lägg till appserverns utgående IP i Binance API-nyckelns vitlista:"
+        ip_hint_contact_admin: "Kontakta din administratör för att få appserverns utgående IP-adress."
+        api_key_label: API-nyckel
+        api_key_placeholder: Klistra in din Binance-API-nyckel
+        api_secret_label: API-hemlighet
+        api_secret_placeholder: Klistra in din Binance-API-hemlighet
+        connect_button: Anslut Binance
+        syncing: Synkroniserar...
+        sync: Synka
+        historical_import: "Inställningar för historisk import"
+        sync_start_date_label: "Importera data från"
+        sync_start_date_help: "Välj hur långt tillbaka historiska affärer ska hämtas."
+        disconnect_confirm: "Är du säker på att du vill koppla bort Binance?"
+      kraken_panel:
+        step1_html: 'Gå till <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API-inställningar</a>'
+        step2: "Skapa en API-nyckel med endast Query Funds och Query Closed Orders & Trades."
+        step3: "Klistra in API-nyckeln och den privata nyckeln nedan."
+        read_only_title: "Endast läsbehörig börssynk"
+        read_only_body: "Ge inte behörighet för handel, avbokning, uttag, export, huvudbok, Earn, staking eller överföring. Sure importerar endast saldon, innehav och spotaffärer."
+        default_connection_name: Kraken
+        add_connection: Lägg till Kraken-anslutning
+        update_connection: Uppdatera anslutning
+        connection_name_label: Anslutningsnamn
+        connection_name_placeholder: Huvud-Kraken
+        api_key_label: API-nyckel
+        api_key_placeholder: Klistra in din Kraken-API-nyckel
+        keep_api_key_placeholder: Lämna tomt för att behålla den befintliga API-nyckeln
+        api_secret_label: Privat nyckel
+        api_secret_placeholder: Klistra in din Kraken privata nyckel
+        keep_api_secret_placeholder: Lämna tomt för att behålla den befintliga privata nyckeln
+        setup_accounts: Sätt upp konto
+        syncing: Synkroniserar...
+        sync: Synka
+        disconnect: Koppla bort
+        disconnect_confirm: "Är du säker på att du vill koppla bort %{name}?"
+      coinspot_panel:
+        step1_html: 'Gå till <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API-inställningar</a>'
+        step2: "Skapa en API-nyckel med läsbehörig åtkomst till saldon och historik."
+        step3: "Klistra in API-nyckeln och hemligheten nedan."
+        read_only_title: "Endast läsbehörig börssynk"
+        read_only_body: "Ge inte behörighet för sändning, uttag, handel eller överföring. Sure importerar endast saldon, AUD-värden, överföringar, insättningar, uttag och genomförd orderhistorik."
+        default_connection_name: CoinSpot
+        add_connection: Lägg till CoinSpot-anslutning
+        update_connection: Uppdatera anslutning
+        connection_name_label: Anslutningsnamn
+        connection_name_placeholder: Huvud-CoinSpot
+        api_key_label: API-nyckel
+        api_key_placeholder: Klistra in din CoinSpot-API-nyckel
+        keep_api_key_placeholder: Lämna tomt för att behålla den befintliga API-nyckeln
+        api_secret_label: API-hemlighet
+        api_secret_placeholder: Klistra in din CoinSpot-API-hemlighet
+        keep_api_secret_placeholder: Lämna tomt för att behålla den befintliga API-hemligheten
+        setup_accounts: Sätt upp konto
+        syncing: Synkroniserar...
+        sync: Synka
+        disconnect: Koppla bort
+        disconnect_confirm: "Är du säker på att du vill koppla bort %{name}?"
+      onchain_wallet_panel:
+        add_wallet: Lägg till plånbok
+        advanced: Avancerat
+        disconnect_all: Koppla bort alla plånböcker
+        disconnect_all_confirm: Detta tar bort varje spårad adress och dess konton. Fortsätta?
+        etherscan_api_key_label: Etherscan API-nyckel (valfritt)
+        etherscan_api_key_placeholder: Klistra in en Etherscan-API-nyckel
+        etherscan_hint: Ethereum-läsningar fungerar utan en nyckel. Att lägga till en Etherscan-nyckel höjer bara hastighetsgränsen för Ethereum.
+        keep_etherscan_api_key: Lämna tomt för att behålla den befintliga nyckeln
+        manage_wallets: Hantera plånböcker
+        keyless_body: Sure läser bara publik kedjedata. Inga nycklar, seed-fraser eller signaturer är inblandade, och inget kan spenderas.
+        keyless_title: Endast läsning, ingen nyckel krävs
+        save: Spara
+        sync_start_date_hint: Överföringar före detta datum ignoreras. Lämna tomt för att importera allt som utforskaren rapporterar.
+        sync_start_date_label: Ignorera överföringar före
+      enable_banking_panel:
+        callback_url_instruction: "Använd %{callback_url} som callback-URL."
+        connection_error: Anslutningsfel
+        step_1_html: "Gå till %{link} och hämta dina utvecklaruppgifter."
+        step_2: "Välj ditt land och klistra in Application ID + klientcertifikat nedan."
+        step_3: "Spara, och använd sedan Lägg till anslutning för att länka din bank."
+        config_locked_title: "Konfigurationen är låst"
+        config_locked_message: "Koppla bort alla länkade banker innan du ändrar dessa uppgifter."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Ange application ID"
+        application_id_placeholder_update: "Ange nytt ID för att uppdatera"
+        client_certificate_label: "Klientcertifikat (med privat nyckel)"
+        save_and_connect: "Spara och anslut"
+        update_connection: "Uppdatera anslutning"
+        connected_bank: "Ansluten bank"
+        session_expires: "Sessionen upphör: %{date}"
+        unknown: "Okänd"
+        connection: "Anslutning"
+        session_expired_reconnect: "Sessionen har upphört - återanslut"
+        configured: "Konfigurerad"
+        ready_to_link: "Redo att länka konton"
+        sync: "Synka"
+        reconnect: "Återanslut"
+        connect_bank: "Anslut bank"
+        remove: "Ta bort"
+        remove_confirm: "Är du säker på att du vill ta bort denna anslutning?"
+        add_connection: "Lägg till anslutning"
+        syncing: "Synkroniserar"
+        select_country: "Välj land..."
+        country_label: "Land"
+      lunchflow_panel:
+        step_1_html: "Gå till %{link} och skapa en API-nyckel."
+        step_2: "Klistra in din nyckel nedan och anslut."
+        step_3: "Gå sedan till Konton för att länka dina synkroniserade konton."
+        api_key_label: "API-nyckel"
+        api_key_placeholder_new: "Klistra in API-nyckel här"
+        api_key_placeholder_update: "Ange ny API-nyckel för att uppdatera"
+        base_url_label: "Bas-URL (valfritt)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (standard)"
+        save_and_connect: "Spara och anslut"
+        update_connection: "Uppdatera anslutning"
+      akahu_panel:
+        step_1_html: "Gå till %{link} och skapa en personlig app."
+        step_2: "Kopiera din app-token och användartoken."
+        step_3: "Klistra in tokens nedan, spara, och länka sedan dina synkroniserade konton."
+      up_panel:
+        step_1_html: "Gå till %{link} och skapa en personlig åtkomsttoken."
+        step_2: "Kopiera din personliga åtkomsttoken."
+        step_3: "Klistra in token nedan, spara, och länka sedan dina synkroniserade konton."
+      monobank_panel:
+        step_1_html: "Gå till %{link}, logga in med Monobank-appen och skapa en personlig token."
+        step_2: "Kopiera token — den visas bara en gång."
+        step_3: "Klistra in token nedan, spara, och länka sedan de kort och sparpotter du vill följa."
+      fio_panel:
+        step_1_html: "Logga in på %{link} internetbank och öppna Inställningar → API."
+        step_2: 'Skapa en token med läsbehörig åtkomst ("Sledování účtu"). Den behöver stark auktorisering och är giltig upp till 180 dagar.'
+        step_3: "Klistra in token nedan och spara. En token räcker till ett konto, så lägg till en anslutning per Fio-konto."
+      simplefin_panel:
+        step_1_html: "Gå till %{link} för en engångs-uppsättningstoken."
+        step_2: "Klistra in token nedan och anslut."
+        step_3: "Gå sedan till Konton för att länka dina synkroniserade konton."
+        setup_token_label: "Uppsättningstoken"
+        setup_token_placeholder: "Klistra in SimpleFIN-uppsättningstoken"
+        save_and_connect: "Spara och anslut"
+      plaid_panel:
+        step_1_html: "Öppna %{link} och kopiera ditt klient-ID och hemliga nyckel."
+        step_2: "Välj en miljö. Använd sandbox för test och produktion för verkliga konton."
+        step_3: "Klistra in dina uppgifter nedan och anslut."
+      plaid_eu_panel:
+        step_1_html: "Öppna %{link} och kopiera ditt EU-klient-ID och hemliga nyckel."
+      not_found: Leverantör hittades inte.
+      sync_provider_no_items: Inga anslutningar tillgängliga att synkronisera.
+      ibkr_panel:
+        steps:
+          step_1: 'I din IBKR Client Portal, navigera till "Performance & Reports" > "Flex Queries".'
+          step_2: 'Klicka på "+"-ikonen i avsnittet "Activity Flex Query" för att skapa en ny fråga.'
+          step_3: 'Namnge din fråga (t.ex. "Sure Sync"), granska sedan Flex Query-detaljerna nedan och aktivera de listade avsnitten, fälten och konfigurationsalternativen.'
+          step_4: 'Spara frågan, notera ditt "Query ID", och använd sedan kugghjulsikonen i avsnittet "Flex Web Service Configuration" för att skapa en åtkomsttoken.'
+          step_5: "Klistra in ditt Query ID och Token nedan, spara konfigurationen och gå sedan till Konton för att länka upptäckta IBKR-konton."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Avsnitt, fält och konfiguration
+          summary: Expandera för att se exakt vilka avsnitt, fält och inställningar din IBKR Activity Flex Query måste inkludera.
+          sections_heading: Aktivera dessa avsnitt och fält
+          configuration_heading: Sätt dessa frågealternativ
+        sections:
+          account_information: "Kontoinformation: Konto-ID, valuta"
+          cash_report: "Kassarapport:"
+          cash_report_options: "Alternativ: Inga"
+          cash_report_fields: "Fält: Valuta, slutkassa"
+          cash_transactions: "Kontanttransaktioner:"
+          cash_transactions_options: "Alternativ: Utdelningar, insättningar och uttag, detaljer"
+          cash_transactions_fields: "Fält: Belopp, Conid, valuta, FX-kurs till bas, rapportdatum, transaktions-ID, typ"
+          change_in_position_value_summary: "Sammanfattning av förändring i positionsvärde: Valuta, slutvärde för perioden"
+          net_asset_value: "Nettoförmögenhetsvärde (NAV) i bas:"
+          net_asset_value_options: "Alternativ: Inga"
+          net_asset_value_fields: "Fält: Valuta, rapportdatum, totalt"
+          open_positions: "Öppna positioner:"
+          open_positions_options: "Alternativ: Sammanfattning"
+          open_positions_fields: "Fält: Tillgångsklass, Conid, anskaffningspris, valuta, FX-kurs till bas, marknadspris, kvantitet, rapportdatum, värdepappers-ID, typ av värdepappers-ID, sida, symbol"
+          trades: "Affärer:"
+          trades_options: "Alternativ: Genomförande"
+          trades_fields: "Fält: Tillgångsklass, köp/sälj, Conid, valuta, FX-kurs till bas, IB-provision, IB-provisionsvaluta, kvantitet, symbol, affärsdatum, affärs-ID, affärspris, transaktions-ID"
+        configuration:
+          models: "Modeller: Valfritt"
+          format: "Format: XML"
+          period: "Period: Senaste 365 kalenderdagar"
+          date_format: "Datumformat: yyyy-MM-dd"
+          time_format: "Tidsformat: HH:mm:ss"
+          date_time_separator: "Datum/tid-avgränsare: ; (semikolon)"
+          profit_and_loss: "Resultat: Standard"
+          all_other_options: 'Alla andra konfigurationsalternativ: "Nej"'
+        report_window_note: "IBKR Flex-rapporter begränsas till det frågefönster du konfigurerat i IBKR. Sure importerar fullständiga aktuella innehav plus upp till de senaste 365 dagarnas aktivitet från denna rapport."
+        sync: Synka
+        disconnect_confirm: Koppla bort Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Ange ditt IBKR Flex Query ID
+        query_id_placeholder_existing: Lämna tomt för att behålla det nuvarande Query ID:t
+        token_label: Token
+        token_placeholder_new: Ange din IBKR Flex Web Service-token
+        token_placeholder_existing: Lämna tomt för att behålla den nuvarande token
+        save_configuration: Spara konfiguration
+        update_configuration: Uppdatera konfiguration
+        status_configured_prefix: "%{summary}. Besök"
+        accounts_tab: Konton
+        status_configured_suffix: -fliken för att hantera upptäckta konton.
+        not_configured: Inte konfigurerad.
+      trade_republic_panel:
+        encryption_warning:
+          title: Kryptering är inte konfigurerad
+          message: Trade Republic-uppgifter och sessionsdata kan inte lagras säkert förrän Active Record Encryption är konfigurerad.
+        steps:
+          step_1: Ange telefonnumret och pinkoden eller lösenordet du använder för Trade Republic-appen, och spara.
+          step_2: Ange koden från din autentiseringsapp när det efterfrågas.
+          step_3: Godkänn inloggningen i din Trade Republic-app när det efterfrågas.
+        phone_number_label: Telefonnummer
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: Lämna tomt för att behålla det nuvarande telefonnumret
+        pin_label: Pinkod eller lösenord
+        pin_placeholder_new: Din Trade Republic-pinkod eller lösenord
+        pin_placeholder_existing: Lämna tomt för att behålla den nuvarande pinkoden eller lösenordet
+        currency_label: Kontovaluta
+        connect: Logga in
+        confirm_login: Kontrollera inloggning
+        complete_login: Fortsätt
+        authenticator_code_label: Autentiseringskod (om efterfrågad)
+        authenticator_code_placeholder: "6-siffrig kod"
+        push_login_notice: Godkänn inloggningen i din Trade Republic-app nu. Sure kontrollerar automatiskt i bakgrunden. Du kan också kontrollera statusen själv.
+        check_login_status: Kontrollera status nu
+        authenticator_code_notice: Ange koden från din autentiseringsapp.
+        approval_pending: Inloggning startad. Godkänn den i Trade Republic-appen; Sure kontrollerar automatiskt.
+        awaiting_confirmation: Godkännande i Trade Republic-appen väntar.
+        awaiting_authenticator_code: Autentiseringskod krävs.
+        login_expired: Godkännandeförfrågan har upphört.
+        restart_login: Starta inloggningen igen
+        connection_success:
+          title: Trade Republic anslutet
+          message: Din Trade Republic-anslutning är redo.
+          description: Sure synkroniserar nu din Trade Republic-data i bakgrunden.
+          close: Klart
+        qr_login: Logga in med QR-kod
+        qr_cancel: Avbryt QR-inloggning
+        qr_back_to_credentials: Tillbaka till telefonnummer och pinkod eller lösenord
+        qr_loading: Förbereder QR-kod …
+        qr_instruction: Skanna QR-koden med din Trade Republic-app och godkänn inloggningen.
+        qr_success: Inloggning godkänd. Sure uppdaterar leverantörssidan.
+        qr_error: QR-inloggning kunde inte startas. Försök igen.
+        save_configuration: Spara och starta inloggning
+        update_configuration: Uppdatera konfiguration
+        sync: Synka
+        disconnect: Koppla bort Trade Republic
+        disconnect_confirm: Koppla bort Trade Republic? Dina synkroniserade konton blir manuella konton.
+        status_configured_prefix: "Ansluten. Besök"
+        accounts_tab: Konton
+        setup_accounts: Sätt upp konton
+        accounts_discovered:
+          one: 1 Trade Republic-konto upptäckt.
+          other: "%{count} Trade Republic-konton upptäckta."
+        status_configured_suffix: -fliken för att hantera upptäckta konton.
+        not_configured: Inte konfigurerad.
+      trading212_panel:
+        steps:
+          step_1: Gå till Trading 212 → Inställningar → API (webb eller mobilapp).
+          step_2: Skapa en ny API-nyckel — Trading 212 visar ett API-ID och en hemlig nyckel.
+          step_3: Klistra in båda nedan, välj din miljö och kontovaluta, och spara sedan.
+        api_key_label: API-ID
+        api_key_placeholder_new: Klistra in ditt Trading 212 API-ID
+        api_key_placeholder_existing: Lämna tomt för att behålla det nuvarande API-ID:t
+        api_secret_label: Hemlig nyckel
+        api_secret_placeholder_new: Klistra in din Trading 212 hemliga nyckel
+        api_secret_placeholder_existing: Lämna tomt för att behålla den nuvarande hemliga nyckeln
+        environment_label: Miljö
+        environment_live: Skarpt konto
+        environment_demo: Demokonto
+        currency_label: Kontovaluta
+        save_configuration: Spara konfiguration
+        update_configuration: Uppdatera konfiguration
+        sync: Synka
+        syncing: Synkroniserar...
+        disconnect: Koppla bort Trading 212-konto
+        disconnect_confirm: Koppla bort Trading 212?
+        default_account_name: Trading 212-konto
+        add_account: Lägg till ett till konto
+        status_configured_prefix: "Konfigurerad. Besök"
+        accounts_tab: Konton
+        status_configured_suffix: -fliken för att hantera upptäckta konton.
+        not_configured: Inte konfigurerad.

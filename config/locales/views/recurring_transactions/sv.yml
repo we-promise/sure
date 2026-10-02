@@ -1,0 +1,208 @@
+---
+sv:
+  recurring_transactions:
+    title: Återkommande transaktioner
+    upcoming: Kommande återkommande transaktioner
+    projected: Prognostiserat
+    recurring: Återkommande
+    expected_today: "Förväntas idag"
+    expected_in:
+      one: "Förväntas inom %{count} dag"
+      other: "Förväntas inom %{count} dagar"
+    day_of_month: Dag %{day} i månaden
+    frequency_presets:
+      monthly: Månadsvis
+      weekly: Veckovis
+      biweekly: Var 2 veckor
+      semimonthly: Två gånger i månaden
+      quarterly: Kvartalsvis
+      semiannual: Var 6 månader
+      annual: Årligen
+      custom: Anpassat schema
+      interval: Anpassat intervall
+    frequency_interval_units:
+      weekly: veckor
+      monthly: månader
+      yearly: år
+    frequency:
+      monthly: "Månadsvis den %{day}"
+      weekly: "Veckovis på %{weekday}"
+      biweekly: "Var 2 veckor på %{weekday}"
+      semimonthly: "Två gånger i månaden, den %{first} och %{second}"
+      quarterly: "Kvartalsvis den %{day}"
+      semiannual: "Var 6 månader den %{day}"
+      annual: "Årligen den %{day} %{month}"
+      every_n_weeks: "Var %{interval} veckor på %{weekday}"
+      every_n_months: "Var %{interval} månader den %{day}"
+      every_n_years: "Var %{interval} år den %{day} %{month}"
+      custom: Anpassat schema
+      last_day: sista dagen
+    identify_patterns: Identifiera mönster
+    cleanup_stale: Rensa inaktuella
+    actions:
+      edit_payment_link: Redigera betalningslänk
+      pause: Pausa
+      resume: Återuppta
+      delete: Ta bort
+    pay_action:
+      pay: Betala
+      pay_aria: "Betala %{name} (öppnas i ny flik)"
+      add_link: Lägg till länk
+      add_link_aria: "Lägg till en betalningslänk för %{name}"
+      autopay: Autobetalning
+      autopay_aria: "%{name} betalas automatiskt, öppna dess portal i en ny flik"
+      open_site: Öppna betalningssida
+    new:
+      title: Lägg till en räkning
+      income_title: Lägg till inkomst
+      start_from_title: Börja från en återkommande avgift vi upptäckt
+      start_from_income_title: Börja från en återkommande insättning vi upptäckt
+      start_from_hint: Valfritt. Att välja en fyller bara i formuläret; du kan fortfarande ändra allt.
+      candidate_meta: "%{count}× · senast %{date}"
+      search_all_prompt: Hittar du inte det du letar efter?
+      search_all_cta: Sök bland alla dina transaktioner
+      pick_different: Börja från en annan transaktion
+      smart_fill: Smartfyll med AI
+      smart_fill_applied: AI föreslog dessa värden utifrån avgiftshistoriken. Granska innan du sparar.
+    smart_fills:
+      create:
+        failed: Det gick inte att analysera avgiftshistoriken just nu. Formuläret behöll transaktionens egna värden.
+    pick_entry:
+      title: Hitta en transaktion att börja från
+      income_title: Hitta en insättning att börja från
+      hint: Att välja en fyller bara i formuläret; du kan fortfarande ändra allt.
+      search_placeholder: Sök på namn, anteckningar eller handlare
+      back: Tillbaka till formuläret
+      showing_recent: Visar dina %{count} senaste. Sök för att smalna av.
+      no_results: Inget matchar "%{query}". Prova färre ord, eller gå tillbaka och fyll i formuläret själv.
+    picker_row:
+      claimed: Del av %{name}
+    create:
+      success: Räkning tillagd
+      success_income: Inkomst tillagd
+      due_date_required: "Ange räkningens nästa förfallodatum"
+      amount_invalid: "Ange beloppet som ett vanligt tal"
+      account_invalid: "Välj ett konto du kan lägga till räkningar på, eller lämna det tomt"
+      already_exists: "Denna räkning finns redan"
+    edit:
+      trigger_label: Redigera räkning
+      title: "Redigera %{name}"
+      income_title: "Redigera inkomst · %{name}"
+    form:
+      payment_url_label: Betalningslänk
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Där du går för att betala denna räkning. Öppnas i en ny flik från dina återkommande- och kommande-listor.
+      autopay_label: Betalas automatiskt
+      autopay_hint: Behåll den i din räkningslista, men sluta behandla den som något att göra.
+      more_options: Fler alternativ
+      notes_label: Anteckningar
+      notes_placeholder: Konto 4821, debiteras till Amex
+      notes_hint: Allt du vill ha framför dig vid betalning. Visas på räkningen.
+      apply_to_siblings:
+        one: "Använd även denna länk för den andra %{name}-räkningen"
+        other: "Använd även denna länk för de andra %{count} %{name}-räkningarna"
+      submit: Spara räkning
+      submit_income: Spara inkomst
+      income_name_label: Källa
+      income_name_placeholder: Arbetsgivare, kund, extrajobb
+      income_amount_label: Belopp per lönebesked
+      income_due_on_label: Nästa löningsdag
+      income_account_label: Sätts in på
+      income_frequency_hint: Hur ofta du får lön. Välj dagdetaljerna så att de matchar din löningsdag.
+      income_frequency_label: Hur ofta du får lön
+      income_frequency_new_hint: Löningsdagens detaljer kommer från datumet ovan. Du kan finjustera schemat efter att du sparat.
+      income_notes_placeholder: Autogiro, delas mellan två konton
+      income_notes_hint: Allt värt att komma ihåg om denna inkomst.
+      name_label: Namn
+      name_placeholder: Hyra, elräkning, Netflix
+      amount_label: Belopp
+      first_due_on_label: Nästa förfallodatum
+      account_label: Betalas från
+      account_blank: Vilket konto som helst
+      bill_type_label: Typ
+      installment_count_label: Antal betalningar
+      installment_count_hint: Planen avslutas efter så många betalningar och visar dess förlopp tills då.
+      renews_on_label: Förnyas
+      trial_ends_on_label: Provperioden slutar
+      amount_edit_hint: Gäller räkningar som förfaller från nu och framåt. Allt som redan förfallit behåller sitt tidigare belopp.
+      income_amount_edit_hint: Gäller löningsdagar från nu och framåt. Allt som redan förfallit behåller sitt tidigare belopp.
+      cancelled_on_label: Avslutad
+      cancelled_on_hint: Att registrera datumet är för din egen referens. Pausa räkningen för att stoppa framtida förekomster.
+      category_label: Kategori
+      category_blank: Ingen kategori
+      frequency_new_hint: Dagdetaljerna kommer från förfallodatumet ovan. Du kan finjustera schemat efter att du sparat.
+      frequency_label: Hur ofta
+      frequency_hint: Hur ofta denna räkning förfaller. Välj dagdetaljerna så att de matchar ditt utdrag.
+      frequency_day_label: På dag
+      frequency_interval_label: Upprepas var
+      frequency_interval_unit_label: Enhet
+      frequency_second_day_label: Och dag
+      frequency_weekday_label: "På"
+      frequency_month_label: "I"
+    update:
+      success: Räkning uppdaterad
+      success_with_siblings:
+        one: "Räkning uppdaterad, och betalningslänken kopierades till 1 annan räkning"
+        other: "Räkning uppdaterad, och betalningslänken kopierades till %{count} andra räkningar"
+    manage:
+      title: Dina räkningar finns på sidan Räkningar
+      description: Deklarera, redigera, pausa och betala allt därifrån. Denna sida styr identifieringen.
+      cta: Öppna alla räkningar
+    settings:
+      enable_label: Aktivera återkommande transaktioner
+      enable_description: Upptäck automatiskt återkommande transaktionsmönster och visa kommande prognostiserade transaktioner.
+    settings_updated: Inställningar för återkommande transaktioner uppdaterade
+    info:
+      title: Automatisk mönsteridentifiering
+      manual_description: Du kan manuellt identifiera mönster eller rensa inaktuella återkommande transaktioner med knapparna ovan.
+      automatic_description: "Automatisk identifiering körs även efter:"
+      triggers:
+        - CSV-importer slutförs (transaktioner, affärer, konton osv.)
+        - Alla leverantörssynkroniseringar slutförs (Plaid, SimpleFIN osv.)
+    identified: Identifierade %{count} återkommande transaktionsmönster
+    identify_already_running: Identifiering körs redan. Kolla igen om en stund.
+    cleaned_up: Rensade %{count} inaktuella återkommande transaktioner
+    marked_inactive: Pausad. Den visas inte igen förrän du återupptar den.
+    marked_active: Återupptagen.
+    deleted: Räkning borttagen. Dina transaktioner rördes inte.
+    deleted_income: Inkomst borttagen. Dina transaktioner rördes inte.
+    confirm_delete: "Ta bort %{name} från dina räkningar? Dina transaktioner förblir exakt som de är. Detta tar bara bort räkningen och dess betalningsschema."
+    confirm_delete_income: "Ta bort %{name} som inkomst? Dina transaktioner förblir exakt som de är. Detta tar bara bort inkomsten och dess schema."
+    marked_as_recurring: Transaktion markerad som återkommande
+    already_exists: En manuell återkommande transaktion finns redan för detta mönster
+    creation_failed: Det gick inte att skapa återkommande transaktion. Kontrollera transaktionsdetaljerna och försök igen.
+    unexpected_error: Ett oväntat fel uppstod när den återkommande transaktionen skapades
+    amount_range: "Intervall: %{min} till %{max}"
+    empty:
+      title: Inga återkommande transaktioner hittades
+      description: Klicka på "Identifiera mönster" för att automatiskt upptäcka återkommande transaktioner från din transaktionshistorik.
+    table:
+      merchant: Namn
+      amount: Belopp
+      frequency: Frekvens
+      next_date: Nästa datum
+      last_occurrence: Senaste förekomst
+      status: Status
+      actions: Åtgärder
+    status:
+      active: Aktiv
+      inactive: Pausad
+      suggested: Möjlig räkning
+      paused: Pausad
+      ended: Avfärdad
+    suggested:
+      title: Möjliga nya räkningar
+      seen_count:
+        one: "sedd en gång"
+        other: "sedd %{count} gånger"
+      collapsed_hint: Tryck för att granska
+      confirm: Lägg till räkning
+      dismiss: Inte en räkning
+    confirmed: Räkning tillagd i dina återkommande transaktioner
+    dismissed: "Avfärdad. Detta mönster kommer inte föreslås igen."
+    badges:
+      manual: Manuell
+    transfer_marked_as_recurring: Överföring markerad som återkommande
+    transfer_already_exists: En återkommande överföring finns redan för detta kontopar
+    transfer_creation_failed: Det gick inte att skapa återkommande överföring. Kontrollera överföringsdetaljerna och försök igen.
+    transfer_feature_disabled: Återkommande transaktioner är inaktiverade för denna familj
