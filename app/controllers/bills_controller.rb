@@ -79,7 +79,7 @@ class BillsController < ApplicationController
     # iterates, which would otherwise be separate queries.
     @suggested_series = accessible_suggested_series.includes(:merchant).order(next_expected_date: :asc).load
     @has_transaction_history = Current.family.entries.where(entryable_type: "Transaction").exists?
-    @suggested_allocations = suggested_allocations
+    @suggested_allocations = suggested_allocations(occurrences)
     # A row waiting on a match decision offers Review rather than Find.
     # Already loaded for the queue above, so indexing is free.
     @suggestions_by_occurrence = @suggested_allocations.index_by(&:recurring_occurrence_id)
@@ -539,7 +539,9 @@ class BillsController < ApplicationController
     def collect_notices
       today = Date.current
       window = today..(today + 14)
-      series_scope = Current.family.recurring_transactions.accessible_by(Current.user).active
+      # The bills the overview lists, so no notice speaks for a series the
+      # page doesn't show (income, transfers, suggestions, ended bills).
+      series_scope = Current.family.recurring_transactions.where(id: payable_series_ids).active
 
       notices = []
       series_scope.where(trial_ends_on: window).find_each do |series|
@@ -548,9 +550,7 @@ class BillsController < ApplicationController
       series_scope.where(renews_on: window).find_each do |series|
         notices << Notice.new(kind: :renewal, series: series, date: series.renews_on, detail: nil)
       end
-      RecurringPriceChange.joins(:recurring_transaction)
-                          .merge(RecurringTransaction.accessible_by(Current.user))
-                          .where(recurring_transactions: { family_id: Current.family.id })
+      RecurringPriceChange.where(recurring_transaction_id: series_scope.select(:id))
                           .where("effective_on >= ?", today - 30)
                           .includes(:recurring_transaction)
                           .find_each do |change|
@@ -576,7 +576,9 @@ class BillsController < ApplicationController
                                         .where(recurring_occurrences: { family_id: Current.family.id })
       return 0 if user_touched.exists?
 
-      series.where(manual: false, status: :active).count
+      # Only bills the overview lists: the banner points at its totals, which
+      # leave detected income and transfers out.
+      series.where(manual: false, status: :active, id: payable_series_ids).count
     end
 
     def accessible_suggested_series
@@ -588,12 +590,17 @@ class BillsController < ApplicationController
     # Family-wide, not user-scoped: occurrence materialization is the same
     # machinery the sync job runs, and a partial per-user generation would
     # leave the family half-materialized forever.
-    def suggested_allocations
+    # Only occurrences the overview lists: open rows and this month's paid ones.
+    # Ending a bill leaves its scheduled occurrences behind and the matcher
+    # still scores them, and skipping closes an occurrence but keeps its
+    # suggestion, so neither may ask about a row the page doesn't show.
+    def suggested_allocations(occurrences)
+      listed_ids = occurrences.select { |occurrence| occurrence.scheduled? || occurrence.paid? }.map(&:id)
+
       RecurringAllocation
         .suggested
         .joins(recurring_occurrence: :recurring_transaction)
-        .where(recurring_occurrences: { family_id: Current.family.id })
-        .merge(RecurringTransaction.accessible_by(Current.user))
+        .where(recurring_occurrence_id: listed_ids)
         # Income never reviews here: the matcher no longer suggests it, and
         # this filter also retires any suggestion written before that rule.
         .merge(RecurringTransaction.where.not(bill_type: "income"))
