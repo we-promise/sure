@@ -37,6 +37,16 @@ class Assistant::Function::GetBudget < Assistant::Function
         ```
       INSTRUCTIONS
     end
+
+    # NOT read-only, despite the name: the bootstrap path for the target
+    # month calls Budget.find_or_bootstrap, which does a real
+    # find_or_create! plus Budget::RolloverCalculator#recompute! when no
+    # budget exists yet for that month. A read-scoped MCP credential must
+    # not be able to trigger that write by calling get_budget for the
+    # current month, which is this tool's default and most common case.
+    def read_only?
+      false
+    end
   end
 
   def strict_mode?

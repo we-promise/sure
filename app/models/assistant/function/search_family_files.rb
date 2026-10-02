@@ -27,6 +27,12 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
         ```
       DESC
     end
+
+    # Deliberately left at the base class's false, unlike Sure's other Get*
+    # tools: #call performs no mutation, but it can surface excerpts from
+    # entire uploaded documents (tax returns, contracts...) on a free-text
+    # query, which is a larger data-exposure surface than MCP's read-only mode
+    # is meant to grant an external assistant. See docs/hosting/mcp.md#read-only-mode.
   end
 
   def strict_mode?

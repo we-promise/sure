@@ -36,6 +36,10 @@ class Assistant::Function::GetTransactions < Assistant::Function
         - `total_expenses`: The total expenses for the given filters
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?

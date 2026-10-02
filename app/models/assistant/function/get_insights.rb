@@ -19,6 +19,10 @@ class Assistant::Function::GetInsights < Assistant::Function
         mark insights read or acknowledged.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?

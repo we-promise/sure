@@ -29,6 +29,41 @@ class Settings::McpControllerTest < ActionDispatch::IntegrationTest
     assert_select "li", text: /Claude/
   end
 
+  test "shows the access level for a read-only vs a read-write connection" do
+    read_app = Doorkeeper::Application.create!(
+      name: "Read Client",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    Doorkeeper::AccessToken.create!(
+      application: read_app,
+      resource_owner_id: @user.id,
+      scopes: "read",
+      expires_in: 1.year
+    )
+    read_write_app = Doorkeeper::Application.create!(
+      name: "Read-Write Client",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    Doorkeeper::AccessToken.create!(
+      application: read_write_app,
+      resource_owner_id: @user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    get settings_mcp_path
+
+    assert_response :success
+    assert_select "li", text: /Read Client/ do
+      assert_select "span", text: "Read Only"
+    end
+    assert_select "li", text: /Read-Write Client/ do
+      assert_select "span", text: "Read/Write"
+    end
+  end
+
   test "revokes a token" do
     app = Doorkeeper::Application.create!(
       name: "Claude",

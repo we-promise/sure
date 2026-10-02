@@ -78,10 +78,18 @@ x-rails-env: &rails_env
   DB_PORT: 5432
   REDIS_URL: redis://redis:6379/1
   # MCP server endpoint — enables /mcp for external AI assistants (e.g. Claude, GPT).
-  # Set both values to activate. MCP_USER_EMAIL must match an existing user's email.
-  # External AI clients should connect via Pipelock (port 8889) for scanning.
+  # OAuth is the recommended way to connect a remote client (a client asks for
+  # the "read" or "read_write" scope at registration); MCP_API_TOKEN below is
+  # the static-token fallback. Set both values to activate it. MCP_USER_EMAIL
+  # must match an existing user's email. External AI clients should connect
+  # via Pipelock (port 8889) for scanning.
   MCP_API_TOKEN: ${MCP_API_TOKEN:-}
   MCP_USER_EMAIL: ${MCP_USER_EMAIL:-}
+  # Optional: restrict MCP_API_TOKEN itself to "read" or "read_write" (default
+  # read_write). See docs/hosting/mcp.md#read-only-mode.
+  MCP_API_TOKEN_SCOPE: ${MCP_API_TOKEN_SCOPE:-read_write}
+  # Optional: restrict every MCP connection to read-only tools (any auth method).
+  MCP_READ_ONLY: ${MCP_READ_ONLY:-false}
   # Route outbound HTTPS through Pipelock for clients that respect HTTPS_PROXY.
   # This applies tunnel-level controls; encrypted HTTPS bodies are not inspected
   # unless you separately configure TLS interception and trust its CA.
