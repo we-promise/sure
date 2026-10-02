@@ -25,6 +25,30 @@ class ReleaseHighlightsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", text: "Shiny new things"
   end
 
+  # The popup renders the same release-notes partial as the changelog, from a
+  # third-party API response, and it loads on every page of the app.
+  test "show does not render script tags from the release notes body" do
+    release_notes = {
+      avatar: nil,
+      username: "we-promise",
+      name: Sure.version.to_release_tag,
+      published_at: Date.current,
+      body: '<p>Shiny new things</p><script>alert(1)</script><script src="https://evil.example/x.js"></script>'
+    }
+    github_provider = mock
+    github_provider.expects(:fetch_release_notes).with(Sure.version.to_release_tag).returns(release_notes)
+    Provider::Registry.stubs(:get_provider).with(:github).returns(github_provider)
+
+    get release_highlight_path
+
+    assert_response :ok
+    # Rendered without a layout, so the response is the partial alone and any
+    # script element in it came from the release notes.
+    assert_no_match(/<script\b/i, response.body)
+    assert_no_match(/evil\.example/, response.body)
+    assert_select "p", text: "Shiny new things"
+  end
+
   test "show returns no content once the deployed release was seen" do
     @user.mark_release_seen!(Sure.version.to_release_tag)
 

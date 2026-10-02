@@ -5,7 +5,10 @@ class AccountImport < Import
     transaction do
       rows.each do |row|
         mapping = mappings.account_types.find_by(key: row.entity_type)
-        accountable_class = mapping.value.constantize
+        # The mapping value is user-supplied, so resolve it through the
+        # Accountable allow-list rather than constantize (CWE-470).
+        accountable_class = Accountable.from_type(mapping&.value)
+        raise ArgumentError, "Unsupported account type: #{mapping&.value.inspect}" unless accountable_class
 
         account = family.accounts.build(
           name: row.name,

@@ -2,9 +2,9 @@ class Import::MappingsController < ApplicationController
   before_action :set_import
 
   def update
-    mapping = @import.mappings.find(params[:id])
+    @mapping = @import.mappings.find(params[:id])
 
-    mapping.update! \
+    @mapping.update! \
       create_when_empty: create_when_empty,
       mappable: mappable,
       value: mapping_params[:value]
@@ -21,23 +21,18 @@ class Import::MappingsController < ApplicationController
       @import = Current.family.imports.find(params[:import_id])
     end
 
+    # The mapping row already declares what it maps to, so neither the target
+    # class nor the mapping class comes from request params any more. Both used
+    # to reach `constantize`, which resolves any constant in the application
+    # and then had class methods and constants looked up on it (CWE-470).
     def mappable
-      return nil unless mappable_class.present?
+      target_class = @mapping.mappable_class
+      return nil unless target_class
 
-      @mappable ||= mappable_class.find_by(id: mapping_params[:mappable_id], family: Current.family)
+      @mappable ||= target_class.find_by(id: mapping_params[:mappable_id], family: Current.family)
     end
 
     def create_when_empty
-      return false unless mapping_class.present?
-
-      mapping_params[:mappable_id] == mapping_class::CREATE_NEW_KEY
-    end
-
-    def mappable_class
-      mapping_params[:mappable_type]&.constantize
-    end
-
-    def mapping_class
-      mapping_params[:type]&.constantize
+      mapping_params[:mappable_id] == Import::Mapping::CREATE_NEW_KEY
     end
 end
