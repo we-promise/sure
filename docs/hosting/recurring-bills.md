@@ -57,7 +57,8 @@ anchors and never touch existing payment records.
 bin/rails "recurring:backfill_history[12]"
 
 # One-shot classification of auto-detected series still on defaults
-# (assigns bill/subscription/installment kind and a category)
+# (assigns bill/subscription/installment kind, a category, and autopay
+# where the descriptor says so)
 bin/rails recurring:classify_existing
 ```
 
