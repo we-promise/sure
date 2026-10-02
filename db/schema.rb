@@ -62,6 +62,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.decimal "match_confidence", precision: 5, scale: 4
     t.decimal "opening_balance", precision: 19, scale: 4
     t.decimal "parser_confidence", precision: 5, scale: 4
+    t.boolean "pdf_import_owned", default: false, null: false
     t.date "period_end_on"
     t.date "period_start_on"
     t.string "review_status", default: "unmatched", null: false
@@ -80,7 +81,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.index ["suggested_account_id"], name: "index_account_statements_on_suggested_account_id"
     t.check_constraint "account_last4_hint IS NULL OR char_length(account_last4_hint::text) <= 4", name: "chk_account_statements_account_last4_hint_length"
     t.check_constraint "account_name_hint IS NULL OR char_length(account_name_hint::text) <= 200", name: "chk_account_statements_account_name_hint_length"
-    t.check_constraint "byte_size <= 26214400", name: "chk_account_statements_byte_size_max"
     t.check_constraint "byte_size > 0", name: "chk_account_statements_byte_size_positive"
     t.check_constraint "char_length(checksum::text) <= 64", name: "chk_account_statements_checksum_length"
     t.check_constraint "char_length(content_type::text) <= 100", name: "chk_account_statements_content_type_length"

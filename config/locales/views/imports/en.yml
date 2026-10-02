@@ -320,6 +320,7 @@ en:
       no_template_found: "No template found, please manually configure your import."
     destroy:
       deleted: "Your import has been deleted."
+      not_deletable: "This import can't be deleted while it is importing or reverting. Wait for processing to finish. If it contains committed data, revert it before deleting."
     failure:
       title: Import failed
       description: Please check that your file format, for any errors and that all required fields are filled, then come back and try again.
@@ -384,10 +385,19 @@ en:
     table:
       title: Imports
       header:
+        select: Select
         date: Date
         operation: Operation
+        file_name: File name
         status: Status
         actions: Actions
+      import: import
+      imports: imports
+      selected: selected
+      select_all: Select all deletable imports
+      select_import: Select %{type} import
+      delete_selected: Delete selected imports
+      no_file_name: —
       row:
         type_labels:
           transaction_import: "Transaction"
@@ -418,6 +428,21 @@ en:
           mark_failed: Mark as failed
           confirm_mark_failed: This import has been inactive for a while and its background job was likely interrupted. Mark it as failed so you can try again? No imported data is kept.
       empty: No imports yet.
+    destroy_all:
+      deleted:
+        one: 1 import deleted.
+        other: "%{count} imports deleted."
+      unauthorized:
+        one: 1 import could not be deleted because you do not have permission to manage its statement.
+        other: "%{count} imports could not be deleted because you do not have permission to manage their statements."
+      not_deletable:
+        one: 1 import could not be deleted because it is still processing or has committed data. Wait for processing to finish or revert completed imports with committed data first.
+        other: "%{count} imports could not be deleted because they are still processing or have committed data. Wait for processing to finish or revert completed imports with committed data first."
+      failed:
+        one: 1 import could not be deleted because an unexpected error occurred.
+        other: "%{count} imports could not be deleted because unexpected errors occurred."
+      none_selected: No deletable imports were selected.
+      limit: Select no more than %{count} imports for deletion at once.
     new:
       description: Import from a financial tool or upload raw data files.
       tab_financial_tools: Financial Tools & Files
@@ -442,16 +467,33 @@ en:
       title: New Import
     create:
       file_too_large: File is too large. Maximum size is %{max_size}MB.
+      document_file_too_large: This file exceeds the %{max_size} MB per-file guideline. Confirm the size warning to continue.
+      batch_upload_warning: These files total more than %{size} MB. Please double-check your selection. Continue with the upload?
+      file_size_warning: One or more files exceed the %{size} MB per-file guideline. Continue with these files?
+      files_total_exceeds_max_size: The selected files cannot total more than %{max_size} MB.
       invalid_file_type: Invalid file type. Please upload a CSV file.
       csv_uploaded: CSV uploaded successfully.
       ndjson_uploaded: NDJSON file uploaded successfully.
-      pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
+      pdf_too_large: PDF file is larger than the %{max_size}MB guideline. Confirm the size warning to continue.
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
+      pdf_processing_failed: PDF processing could not be started.
+      pdf_processing_many:
+        one: 1 PDF is being processed. You will receive an email when analysis is complete.
+        other: "%{count} PDFs are being processed. You will receive an email when analysis is complete."
       invalid_pdf: The uploaded file is not a valid PDF.
       duplicate_pdf_unavailable: This PDF is already stored as a statement you cannot access.
+      duplicate_pdf_confirmation: This PDF is already stored in your family's shared imports and may have been added by another family member. Continue using the existing import?
+      duplicate_pdf_reused: This PDF was already stored for your family. Opening its existing import.
+      duplicate_pdf_reused_many:
+        one: 1 selected PDF was already stored for your family and was skipped.
+        other: "%{count} selected PDFs were already stored for your family and were skipped."
+      duplicate_pdf_unconfirmed: This PDF is already stored in your family's shared imports. Select it again and confirm the duplicate warning to continue.
       document_too_large: Document file is too large. Maximum size is %{max_size}MB.
       invalid_document_file_type: Invalid document file type for the active vector store.
       document_uploaded: Document uploaded successfully.
+      document_uploaded_many:
+        one: 1 document uploaded successfully.
+        other: "%{count} documents uploaded successfully."
       document_upload_failed: We couldn't upload the document to the vector store. Please try again.
       invalid_ndjson_file_type: Invalid file type or format. Please upload a valid .ndjson or .json export file.
       document_provider_not_configured: No vector store is configured for document uploads.
