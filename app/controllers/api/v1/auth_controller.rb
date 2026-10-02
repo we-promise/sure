@@ -232,6 +232,7 @@ module Api
         render json: token_response.merge(user: mobile_user_payload(user))
       end
 
+      # Create an SSO account only after revalidating the deferred provider and issuer.
       def sso_create_account
         linking_code = params[:linking_code]
         cached = validate_linking_code(linking_code)
@@ -482,6 +483,7 @@ module Api
           render json: { error: "SSO authentication is no longer valid" }, status: :forbidden
         end
 
+        # Load single-use deferred authentication and reject stale provider trust.
         def validate_linking_code(linking_code)
           if linking_code.blank?
             render json: { error: "Linking code is required" }, status: :bad_request

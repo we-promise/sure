@@ -6,6 +6,7 @@ class OidcAccountsController < ApplicationController
     with: :reject_invalid_pending_auth
   layout "auth"
 
+  # Offer linking only while the pending identity remains trusted.
   def link
     # Check if there's pending OIDC auth in session
     @pending_auth = session[:pending_oidc_auth]
@@ -27,6 +28,7 @@ class OidcAccountsController < ApplicationController
     @allow_account_creation = @pending_invitation.present? || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(@email))
   end
 
+  # Link to a password-verified account while enforcing current issuer continuity.
   def create_link
     @pending_auth = session[:pending_oidc_auth]
 
@@ -90,6 +92,7 @@ class OidcAccountsController < ApplicationController
     end
   end
 
+  # Offer account creation only for a currently trusted pending identity.
   def new_user
     # Check if there's pending OIDC auth in session
     @pending_auth = session[:pending_oidc_auth]
@@ -112,6 +115,7 @@ class OidcAccountsController < ApplicationController
     )
   end
 
+  # Create the account and OIDC identity using revalidated provider settings.
   def create_user
     @pending_auth = session[:pending_oidc_auth]
 
@@ -234,12 +238,14 @@ class OidcAccountsController < ApplicationController
 
   private
 
+    # Reject an identity removed while the linking flow waited for its lock.
     def reject_removed_identity_after_lock
       session.delete(:pending_oidc_auth)
       session.delete(:pending_oidc_legacy_relink)
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
     end
 
+    # Clear pending authentication when its linked identity is no longer available.
     def reject_removed_identity
       pending_auth = session[:pending_oidc_auth]
       return unless pending_auth.present?

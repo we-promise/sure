@@ -134,6 +134,7 @@ class SessionsController < ApplicationController
     redirect_to new_session_path, notice: t(".logout_successful")
   end
 
+  # Start the mobile OIDC flow using the currently enabled provider route.
   def mobile_sso_start
     provider = params[:provider].to_s
     configured_providers = AuthConfig.sso_providers.map { |p| p[:name].to_s }
@@ -240,6 +241,7 @@ class SessionsController < ApplicationController
     end
   end
 
+  # Validate live provider and issuer settings before completing web or mobile login.
   def openid_connect
     auth = request.env["omniauth.auth"]
 

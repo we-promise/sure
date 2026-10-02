@@ -137,6 +137,7 @@ class OmniauthProviderRegistryTest < ActiveSupport::TestCase
   end
 
   private
+    # Build one Rack app to verify provider changes take effect without rebuilding middleware.
     def dynamic_omniauth_app
       Rack::Builder.new do
         use Rack::Session::Cookie, secret: "a" * 64
@@ -152,6 +153,7 @@ class OmniauthProviderRegistryTest < ActiveSupport::TestCase
       end.to_app
     end
 
+    # Create an enabled custom-named database OIDC provider for dynamic route tests.
     def custom_oidc_provider
       {
         id: "authentik",
