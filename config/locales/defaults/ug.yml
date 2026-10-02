@@ -42,6 +42,7 @@ ug:
       default: "%Y-%m-%d"
       long: "%Y-%m-%d"
       short: "%b%d"
+      short_with_year: "%Y-%m-%d"
     month_names:
     -
     - يانۋار

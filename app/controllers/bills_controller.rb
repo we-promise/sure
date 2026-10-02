@@ -89,7 +89,7 @@ class BillsController < ApplicationController
     # because each suggestion renders frequency_label.
     @suggested_series = accessible_suggested_series.includes(:merchant).preload(:recurrence_rules).order(next_expected_date: :asc).load
     @has_transaction_history = Current.family.entries.where(entryable_type: "Transaction").exists?
-    @suggested_allocations = suggested_allocations
+    @suggested_allocations = suggested_allocations(occurrences)
     # A row waiting on a match decision offers Review rather than Find.
     # Already loaded for the queue above, so indexing is free.
     @suggestions_by_occurrence = @suggested_allocations.index_by(&:recurring_occurrence_id)
@@ -144,7 +144,7 @@ class BillsController < ApplicationController
                      .includes(:merchant)
                      .find(params[:id])
 
-    # A row expansion names the cycle it was opened from; the bill's own page
+    # The drawer names the cycle its row was opened from; the bill's own page
     # has no cycle in mind and asks the series. Looked up through the series, so
     # an id from another bill resolves to nothing rather than to someone else's
     # occurrence.
@@ -180,25 +180,15 @@ class BillsController < ApplicationController
       }
     end
 
-    if params[:display] == "pane"
-      # The expansion renders into whichever row frame asked for it; the id
-      # is reflected back sanitized. close returns the empty frame, which
-      # collapses the row.
-      @pane_frame_id = params[:frame].to_s.gsub(/[^a-zA-Z0-9_-]/, "").presence || "bill_detail"
-      if params[:close].present?
-        render :pane_close, layout: false
-        return
-      end
-    end
-
     load_summary_extras
 
-    if params[:display] == "pane"
-      # A pending suggestion is the one thing that changes what the expansion
+    # Outside a frame (a new tab, a pasted link) there is nothing to open the
+    # dialog into, so the same URL is the bill's page.
+    if params[:display] == "drawer" && turbo_frame_request?
+      # A pending suggestion is the one thing that changes what the drawer
       # should offer, so it is worth the one query.
-      @pane_suggestion = @current_occurrence && RecurringAllocation.suggested
-        .where(recurring_occurrence_id: @current_occurrence.id).first
-      render :pane, layout: false
+      @drawer_suggestion = @current_occurrence&.allocations&.suggested&.first
+      render :drawer, layout: false
       return
     end
 
@@ -247,7 +237,7 @@ class BillsController < ApplicationController
     end
     helper_method :paycheck_income_plans?
 
-    # What the expansion needs: the handful of payments that actually settled
+    # What the drawer needs: the handful of payments that actually settled
     # this bill lately. Cheap enough to run on every row someone opens.
     def load_summary_extras
       @recent_allocations = confirmed_allocations.includes(:entry).order(paid_on: :desc, created_at: :desc).limit(6)
@@ -255,7 +245,7 @@ class BillsController < ApplicationController
 
     # The bill's financial story: a year of payments by month, per-year totals,
     # and where the money last came from. Three grouped aggregates, which is
-    # why they no longer run every time a row is expanded.
+    # why they no longer run every time a row is opened.
     def load_deep_extras
       confirmed = confirmed_allocations
 
@@ -562,7 +552,9 @@ class BillsController < ApplicationController
     def collect_notices
       today = Date.current
       window = today..(today + 14)
-      series_scope = Current.family.recurring_transactions.accessible_by(Current.user).active
+      # The bills the overview lists, so no notice speaks for a series the
+      # page doesn't show (income, transfers, suggestions, ended bills).
+      series_scope = Current.family.recurring_transactions.where(id: payable_series_ids).active
 
       notices = []
       series_scope.where(trial_ends_on: window).find_each do |series|
@@ -571,9 +563,7 @@ class BillsController < ApplicationController
       series_scope.where(renews_on: window).find_each do |series|
         notices << Notice.new(kind: :renewal, series: series, date: series.renews_on, detail: nil)
       end
-      RecurringPriceChange.joins(:recurring_transaction)
-                          .merge(RecurringTransaction.accessible_by(Current.user))
-                          .where(recurring_transactions: { family_id: Current.family.id })
+      RecurringPriceChange.where(recurring_transaction_id: series_scope.select(:id))
                           .where("effective_on >= ?", today - 30)
                           .includes(:recurring_transaction)
                           .find_each do |change|
@@ -599,7 +589,9 @@ class BillsController < ApplicationController
                                         .where(recurring_occurrences: { family_id: Current.family.id })
       return 0 if user_touched.exists?
 
-      series.where(manual: false, status: :active).count
+      # Only bills the overview lists: the banner points at its totals, which
+      # leave detected income and transfers out.
+      series.where(manual: false, status: :active, id: payable_series_ids).count
     end
 
     def accessible_suggested_series
@@ -617,12 +609,17 @@ class BillsController < ApplicationController
       end
     end
 
-    def suggested_allocations
+    # Only occurrences the overview lists: open rows and this month's paid ones.
+    # Ending a bill leaves its scheduled occurrences behind and the matcher
+    # still scores them, and skipping closes an occurrence but keeps its
+    # suggestion, so neither may ask about a row the page doesn't show.
+    def suggested_allocations(occurrences)
+      listed_ids = occurrences.select { |occurrence| occurrence.scheduled? || occurrence.paid? }.map(&:id)
+
       RecurringAllocation
         .suggested
         .joins(recurring_occurrence: :recurring_transaction)
-        .where(recurring_occurrences: { family_id: Current.family.id })
-        .merge(RecurringTransaction.accessible_by(Current.user))
+        .where(recurring_occurrence_id: listed_ids)
         # Income never reviews here: the matcher no longer suggests it, and
         # this filter also retires any suggestion written before that rule.
         .merge(RecurringTransaction.where.not(bill_type: "income"))

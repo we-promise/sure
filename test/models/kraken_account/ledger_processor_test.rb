@@ -285,10 +285,13 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # BTC deposit (crypto → family currency conversion)
+  # crypto moves units, not cash
   # ---------------------------------------------------------------------------
 
-  test "creates a deposit entry for BTC using stored price" do
+  # A coin deposit is a position change with no cash leg. Recorded as a
+  # Transaction the quantity is lost, so the holdings calculator has nothing to
+  # reverse and the cash balance moves by an amount that never existed.
+  test "a BTC deposit becomes a trade carrying the quantity, not a cash entry" do
     set_ledgers(
       "LBTC01" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.10000000", fee: "0.00000000", time: 1_700_000_000)
     )
@@ -297,17 +300,251 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by(external_id: "kraken_ledger_LBTC01", source: "kraken")
     assert entry
-    assert entry.amount.negative?, "BTC deposit is an inflow — must be negative"
-    # 0.1 BTC × $50,000/BTC = $5,000 (family currency = USD, no conversion needed)
-    assert_in_delta(-5000.0, entry.amount.to_f, 1.0)
+    assert_equal "Trade", entry.entryable_type
+    assert_equal 0, entry.amount, "a coin movement has no cash leg"
+    assert_in_delta 0.1, entry.entryable.qty.to_f, 1e-8
+    assert_equal "CRYPTO:BTC", entry.entryable.security.ticker
+    # A coin arriving from outside has a cost nothing here knows.
+    assert_equal Trade::TRANSFER_LABEL, entry.entryable.investment_activity_label
     assert_match(/Deposit.*BTC/, entry.name)
+  end
+
+  test "a zero-quantity crypto row creates no trade" do
+    set_ledgers(
+      # A correction row, a deposit the fee consumed whole, and a staking
+      # reward below the eight decimals the qty column holds.
+      "LZERO1" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.00000000", fee: "0.00000000", time: 1_700_000_000),
+      "LZERO2" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.00010000", fee: "0.00010000", time: 1_700_000_100),
+      "LZERO3" => ledger_entry(type: "staking", asset: "DOT", amount: "0.0000000022", fee: "0.0000000006", time: 1_700_000_200)
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+  end
+
+  # Pricing can fail on one sync and succeed on the next. A trade recorded at
+  # zero with the flag is completed once the price on its date exists.
+  test "a crypto trade recorded without a price is priced on a later sync" do
+    set_raw_payload_assets([])
+    set_ledgers(
+      "LBTC20" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.10000000", fee: "0.00000000", time: 1_700_000_000)
+    )
+    process
+    trade = @account.entries.find_by(external_id: "kraken_ledger_LBTC20", source: "kraken").entryable
+    assert_equal 0, trade.price
+    assert trade.extra.dig("kraken", "price_missing"), "recorded without a price"
+
+    Security::Price.create!(security: trade.security, date: Time.zone.at(1_700_000_000).to_date, price: 40_000, currency: "USD")
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    trade.reload
+    assert_in_delta 40_000.0, trade.price.to_f, 0.01
+    assert_nil trade.extra.dig("kraken", "price_missing")
+  end
+
+  # An account synced before this change holds the coin movement as a
+  # Transaction: a cash leg that never existed, and a quantity the holdings never
+  # saw. A plain sync replaces it, so nobody has to re-import to be right.
+  test "a legacy crypto transaction is replaced by the trade on the next sync" do
+    set_ledgers(
+      "LBTC10" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.10000000", fee: "0.00000000", time: 1_700_000_000)
+    )
+    legacy = @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date, name: "Deposit 0.1 BTC", amount: -4_000, currency: "EUR",
+      external_id: "kraken_ledger_LBTC10", source: "kraken",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_nil Entry.find_by(id: legacy.id), "the old cash row must be gone"
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LBTC10", source: "kraken")
+    assert_equal "Trade", entry.entryable_type
+    assert_equal 0, entry.amount
+    assert_in_delta 0.1, entry.entryable.qty.to_f, 1e-8
+  end
+
+  # A row somebody has matched into a transfer, or edited, is theirs: it stays
+  # as it is even though it is the old shape.
+  # The early return for rows already in fires before the ledger type is
+  # looked at; a row in an older shape has to get past it whatever its type.
+  test "a legacy crypto staking reward is replaced by the trade too" do
+    set_ledgers(
+      "LSTK10" => ledger_entry(type: "staking", asset: "XXBT", amount: "0.00100000", fee: "0.00000000", time: 1_700_000_000)
+    )
+    legacy = @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date, name: "Staking reward 0.001 BTC", amount: -40, currency: "EUR",
+      external_id: "kraken_ledger_LSTK10", source: "kraken",
+      entryable: Transaction.new(kind: "standard")
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_nil Entry.find_by(id: legacy.id)
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LSTK10", source: "kraken")
+    assert_equal "Trade", entry.entryable_type
+    assert_in_delta 0.001, entry.entryable.qty.to_f, 1e-8
+  end
+
+  test "a staking trade recorded without a price is priced on a later sync too" do
+    set_raw_payload_assets([])
+    set_ledgers(
+      "LSTK20" => ledger_entry(type: "staking", asset: "XXBT", amount: "0.00100000", fee: "0.00000000", time: 1_700_000_000)
+    )
+    process
+    trade = @account.entries.find_by(external_id: "kraken_ledger_LSTK20", source: "kraken").entryable
+    assert trade.extra.dig("kraken", "price_missing")
+
+    Security::Price.create!(security: trade.security, date: Time.zone.at(1_700_000_000).to_date, price: 40_000, currency: "USD")
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_in_delta 40_000.0, trade.reload.price.to_f, 0.01
+    assert_nil trade.extra.dig("kraken", "price_missing")
+  end
+
+  # Before fees stayed inside the quantity, a crypto withdrawal with a fee was
+  # two cash rows. The trade nets the fee, so the fee row must go with the
+  # principal or it is left describing money that never moved.
+  test "healing a legacy crypto withdrawal removes its split fee row as well" do
+    set_ledgers(
+      "LBTC40" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "-0.10000000", fee: "0.00050000", time: 1_700_000_000)
+    )
+    date = Time.zone.at(1_700_000_000).to_date
+    legacy = @account.entries.create!(
+      date: date, name: "Withdrawal 0.1 BTC", amount: 4_000, currency: "EUR",
+      external_id: "kraken_ledger_LBTC40", source: "kraken", entryable: Transaction.new(kind: "funds_movement")
+    )
+    legacy_fee = @account.entries.create!(
+      date: date, name: "Withdrawal fee 0.0005 BTC", amount: 20, currency: "EUR",
+      external_id: "kraken_ledger_LBTC40_fee", source: "kraken", entryable: Transaction.new(kind: "standard")
+    )
+
+    assert_difference "@account.entries.count", -1 do
+      process
+    end
+
+    assert_nil Entry.find_by(id: legacy.id)
+    assert_nil Entry.find_by(id: legacy_fee.id), "the fee row describes money the trade already accounts for"
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LBTC40", source: "kraken")
+    assert_equal "Trade", entry.entryable_type
+    assert_in_delta(-0.1005, entry.entryable.qty.to_f, 1e-8, "the fee left with the coins")
+
+    # Nothing to heal on the next pass.
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+  end
+
+  test "a legacy crypto transaction in a transfer, or edited, is left alone" do
+    set_ledgers(
+      "LBTC11" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "-0.05000000", fee: "0.00000000", time: 1_700_000_000),
+      "LBTC12" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.02000000", fee: "0.00000000", time: 1_700_000_100)
+    )
+    outflow = @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date, name: "Withdrawal 0.05 BTC", amount: 2_000, currency: "EUR",
+      external_id: "kraken_ledger_LBTC11", source: "kraken", entryable: Transaction.new(kind: "funds_movement")
+    )
+    # A transfer needs the other leg on another account of the same family.
+    wallet = @account.family.accounts.create!(name: "Cold wallet", balance: 0, currency: "EUR", accountable: Depository.new)
+    inflow = wallet.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date, name: "Received 0.05 BTC", amount: -2_000, currency: "EUR",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    Transfer.create!(inflow_transaction: inflow.entryable, outflow_transaction: outflow.entryable)
+    edited = @account.entries.create!(
+      date: Time.zone.at(1_700_000_100).to_date, name: "Deposit 0.02 BTC", amount: -800, currency: "EUR",
+      external_id: "kraken_ledger_LBTC12", source: "kraken", user_modified: true,
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_equal "Transaction", outflow.reload.entryable_type
+    assert_equal 2_000, outflow.amount
+    assert_equal "Transaction", edited.reload.entryable_type
+    assert_equal(-800, edited.amount)
+  end
+
+  # The price is the one on the day the units moved, read from the prices
+  # already in the database; the provider is asked once per asset for the
+  # whole span, not once per entry.
+  test "a crypto trade is priced from the stored price on its date" do
+    security = Security.create!(ticker: "CRYPTO:BTC", name: "BTC")
+    Security::Price.create!(security: security, date: Time.zone.at(1_700_000_000).to_date, price: 40_000, currency: "USD")
+    Security.any_instance.expects(:find_or_fetch_price).never
+
+    set_ledgers(
+      "LBTC03" => ledger_entry(type: "staking", asset: "XXBT", amount: "0.00100000", fee: "0.00", time: 1_700_000_000)
+    )
+
+    process
+
+    trade = @account.entries.find_by(external_id: "kraken_ledger_LBTC03", source: "kraken").entryable
+    assert_in_delta 40_000.0, trade.price.to_f, 0.01
+    assert_not trade.extra.dig("kraken", "price_missing")
+  end
+
+  # Kraken's amounts are signed and some rows move against their type's usual
+  # direction; the quantity follows the figure, not the label.
+  test "a crypto row's direction follows the ledger's signed amount, not its type" do
+    set_ledgers(
+      "LREV01" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "0.05000000", fee: "0.00000000", time: 1_700_000_000),
+      "LMIG01" => ledger_entry(type: "earn", subtype: "migration", asset: "XXBT", amount: "-0.02000000", fee: "0.00000000", time: 1_700_000_100)
+    )
+
+    process
+
+    reversed = @account.entries.find_by(external_id: "kraken_ledger_LREV01", source: "kraken")
+    assert_in_delta 0.05, reversed.entryable.qty.to_f, 1e-8, "a reversed withdrawal brings the coins back"
+    migration = @account.entries.find_by(external_id: "kraken_ledger_LMIG01", source: "kraken")
+    assert_in_delta(-0.02, migration.entryable.qty.to_f, 1e-8, "a migration leg with a negative amount gives units up")
+  end
+
+  test "a BTC withdrawal becomes a trade that gives up units" do
+    set_ledgers(
+      "LBTC02" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "-0.20000000", fee: "0.00000000", time: 1_700_000_000)
+    )
+
+    process
+
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LBTC02", source: "kraken")
+    assert_equal "Trade", entry.entryable_type
+    assert_equal 0, entry.amount
+    assert_in_delta(-0.2, entry.entryable.qty.to_f, 1e-8)
+  end
+
+  # A fiat deposit still has a cash leg and stays a Transaction.
+  test "a fiat deposit is still a cash entry" do
+    set_ledgers(
+      "LUSD01" => ledger_entry(type: "deposit", asset: "ZUSD", amount: "250.00", fee: "0.00", time: 1_700_000_000)
+    )
+
+    process
+
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LUSD01", source: "kraken")
+    assert_equal "Transaction", entry.entryable_type
+    assert_in_delta(-250.0, entry.amount.to_f, 0.01)
   end
 
   # ---------------------------------------------------------------------------
   # staking
   # ---------------------------------------------------------------------------
 
-  test "creates a staking reward entry (negative = inflow)" do
+  # A staking reward pays coins, not euros. It is acquired at the market price
+  # on the day, which is both its basis and the income it represents.
+  test "a crypto staking reward becomes a trade that adds units" do
     set_ledgers(
       "LSTK01" => ledger_entry(type: "staking", asset: "XXBT", amount: "0.00050000", fee: "0.00", time: 1_700_000_000)
     )
@@ -318,10 +555,24 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by(external_id: "kraken_ledger_LSTK01", source: "kraken")
     assert entry
-    assert entry.amount.negative?, "staking reward is an inflow — must be negative"
+    assert_equal "Trade", entry.entryable_type
+    assert_equal 0, entry.amount
+    assert_in_delta 0.0005, entry.entryable.qty.to_f, 1e-9
     assert_match(/Staking reward.*BTC/, entry.name)
     assert_equal "Dividend", entry.entryable.investment_activity_label
-    assert_equal "standard",  entry.entryable.kind
+  end
+
+  test "a fiat staking reward is still a cash entry" do
+    set_ledgers(
+      "LSTK03" => ledger_entry(type: "staking", asset: "ZUSD", amount: "4.00", fee: "0.00", time: 1_700_000_000)
+    )
+
+    process
+
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LSTK03", source: "kraken")
+    assert_equal "Transaction", entry.entryable_type
+    assert_in_delta(-4.0, entry.amount.to_f, 0.01)
+    assert_equal "standard", entry.entryable.kind
   end
 
   # ---------------------------------------------------------------------------
@@ -372,6 +623,61 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     assert entry.amount.positive?, "fee is an outflow — must be positive"
     assert_in_delta 7.5, entry.amount.to_f, 0.01
     assert_equal "Fee", entry.entryable.investment_activity_label
+  end
+
+  # ---------------------------------------------------------------------------
+  # dust sweep
+  # ---------------------------------------------------------------------------
+
+  # "Convert small balances" emits a spend and a receive. Neither type was
+  # listed as supported or as skipped, so both fell through the guard and were
+  # dropped without a trace -- a swept position stayed on the books at its
+  # pre-sweep quantity forever.
+  test "imports both halves of a dust sweep" do
+    set_ledgers(
+      "LSWP01" => ledger_entry(type: "spend",   asset: "XXBT", amount: "-0.00010000", fee: "0.00", time: 1_700_000_000),
+      "LSWP02" => ledger_entry(type: "receive", asset: "XXBT", amount: "0.00004000",  fee: "0.00", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 2 do
+      process
+    end
+
+    spent = @account.entries.find_by(external_id: "kraken_ledger_LSWP01", source: "kraken")
+    assert_in_delta(-0.0001, spent.entryable.qty.to_f, 1e-9)
+    assert_match(/Converted/, spent.name)
+
+    received = @account.entries.find_by(external_id: "kraken_ledger_LSWP02", source: "kraken")
+    assert_in_delta 0.00004, received.entryable.qty.to_f, 1e-9
+    assert_match(/Received/, received.name)
+  end
+
+  # Both halves stay inside the exchange, so neither invents a cost basis.
+  test "a dust sweep is an internal movement on both sides" do
+    set_ledgers(
+      "LSWP03" => ledger_entry(type: "spend",   asset: "XXBT", amount: "-0.00010000", fee: "0.00", time: 1_700_000_000),
+      "LSWP04" => ledger_entry(type: "receive", asset: "XXBT", amount: "0.00004000",  fee: "0.00", time: 1_700_000_000)
+    )
+
+    process
+
+    %w[LSWP03 LSWP04].each do |id|
+      trade = @account.entries.find_by(external_id: "kraken_ledger_#{id}", source: "kraken").entryable
+      assert trade.internal_movement?, "#{id} must not create or relieve a cost basis"
+    end
+  end
+
+  # Kraken sweeps into crypto today, but a fiat half must not read as income.
+  test "a fiat half of a sweep is labelled as the internal movement it is" do
+    set_ledgers(
+      "LSWP05" => ledger_entry(type: "receive", asset: "ZUSD", amount: "3.00", fee: "0.00", time: 1_700_000_000)
+    )
+
+    process
+
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LSWP05", source: "kraken")
+    assert_equal "Transaction", entry.entryable_type
+    assert_equal "Sweep In", entry.entryable.investment_activity_label
   end
 
   # ---------------------------------------------------------------------------
