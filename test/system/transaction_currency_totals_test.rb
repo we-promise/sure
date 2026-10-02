@@ -3,6 +3,7 @@ require "application_system_test_case"
 class TransactionCurrencyTotalsTest < ApplicationSystemTestCase
   include EntriesTestHelper
 
+  # Verify the rendered activity total keeps the account currency through the browser flow.
   test "a transfer-only day shows a zero total in pounds" do
     user = users(:family_admin)
     user.family.update!(currency: "GBP")

@@ -3,6 +3,7 @@ require "test_helper"
 class TransactionCurrencyTotalsTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
 
+  # Verify the activity response preserves GBP after transfer exclusion empties a day.
   test "transfer-only daily total displays the transaction currency" do
     user = users(:family_admin)
     user.family.update!(currency: "GBP")
