@@ -156,6 +156,50 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     assert_nil security.development_status
   end
 
+  # KNOWN LIMITATION, pinned on purpose (owner decision on #233, option A).
+  # The guard above holds only while the row stays offline. The daily health
+  # check includes offline rows, prices them through `providers.first` and,
+  # on success, flips them online. On the save that does this, `offline?` no
+  # longer returns early, so the family's hint country becomes `region`, and
+  # `development_status` reads the same country.
+  # Assert after the WHOLE `run_check`, not after `handle_success`, because
+  # its `ensure` saves the row a second time. A guard keyed on the
+  # offline->online transition would see no change on that second save and
+  # fill the region anyway. Recording where `country_code` came from
+  # (option B) is the follow-up fix. Whoever lands it flips these
+  # expectations to nil on purpose.
+  test "a hint-country offline security takes a region from the hint once the health check brings it online" do
+    family = families(:dylan_family)
+    # Not the column default ("US"), so the region below can only come from
+    # the hint this test sets.
+    family.update_columns(country: "GB")
+
+    Security.expects(:search_provider).returns([])
+    security = Security::Resolver.new(
+      "REG-HINT", exchange_operating_mic: "XNAS", country_code: family.country
+    ).resolve
+
+    assert security.offline?, "precondition: the resolver created the row offline"
+    assert_equal "GB", security.country_code
+    region_before = security.reload.region
+    development_before = security.development_status
+
+    provider = mock
+    provider.expects(:fetch_security_price).returns(
+      Provider::Response.new(success?: true, data: OpenStruct.new(price: 100, date: Date.current, currency: "USD"), error: nil)
+    )
+    Security.any_instance.stubs(:price_data_provider).returns(provider)
+
+    Security::HealthChecker.new(security).run_check
+    security.reload
+
+    refute security.offline?, "the health check did not bring the row online"
+    assert_nil region_before
+    assert_nil development_before
+    assert_equal "europe", security.region
+    assert_equal "developed", security.development_status
+  end
+
   # Named for what it verifies, not for a path it never takes. There is no
   # provider match and no Security::Resolver here -- a plain create with
   # `offline: false` exercises the `offline?` guard in `apply_default_region`
