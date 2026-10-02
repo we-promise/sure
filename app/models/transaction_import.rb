@@ -1,3 +1,4 @@
+# Reconcile CSV transactions while preserving ownership of matched provider records.
 class TransactionImport < Import
   # Reconcile each file independently while preserving ownership of differing-name synced matches.
   def import!
@@ -96,6 +97,11 @@ class TransactionImport < Import
 
       # Bulk import new transactions
       Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
+
+      # Provider-only reconciliation owns no rows for the reaper to recognize.
+      # Commit its completion with reconciliation so worker interruption cannot
+      # turn a successful zero-write import into a retryable failure.
+      update!(status: :complete, error: nil) if new_transactions.empty? && updated_entries.empty? && claimed_entry_ids.any?
     end
   end
 

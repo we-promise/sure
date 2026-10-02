@@ -305,6 +305,31 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert Entry.exists?(synced.id), "reverting the CSV import must not delete a synced transaction"
   end
 
+  test "provider-only reconciliation remains complete after interruption before post-import sync" do
+    account = accounts(:connected)
+    synced = create_transaction(account: account, date: Date.new(2024, 1, 1), amount: 100,
+                                name: "Provider description", external_id: "provider-interruption", source: "plaid")
+    @import.update!(account: account, status: :importing,
+      raw_file_str: "date,name,amount\n01/01/2024,CSV description,100\n",
+      date_col_label: "date", amount_col_label: "amount", name_col_label: "name",
+      date_format: "%m/%d/%Y", amount_type_strategy: "signed_amount", signage_convention: "inflows_negative")
+    @import.generate_rows_from_csv
+    @import.family.stubs(:sync_later).raises(Interrupt)
+
+    assert_raises(Interrupt) { @import.publish }
+    assert @import.reload.complete?
+    assert_empty @import.entries
+    assert_nil synced.reload.import_id
+    assert_not synced.import_locked?
+    @import.update_columns(updated_at: 7.hours.ago)
+    Import.clean
+    assert @import.reload.complete?
+    @import.expects(:import!).never
+    @import.publish
+    @import.revert
+    assert Entry.exists?(synced.id)
+  end
+
   test "overlapping CSV imports preserve a synced transaction and its mapped details" do
     account = accounts(:connected)
     synced = create_transaction(account: account, date: Date.new(2024, 1, 1), amount: 100,
