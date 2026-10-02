@@ -14,6 +14,18 @@ module Transaction::Transferable
     transfer_as_inflow || transfer_as_outflow
   end
 
+  # Whether the UI shows the Transfer/Payment badge in place of the
+  # transaction's own category. An unconfirmed auto-match keeps its standard
+  # kind (see Transfer#confirm!) and still counts under its own category, so
+  # it keeps showing that category until the user confirms the match.
+  # Confirmed transfers linked without a transfer kind (e.g. Wise interbalance
+  # moves) keep showing the badge.
+  def shows_transfer_category?
+    return false if transfer.nil? || transfer.categorizable?
+
+    transfer? || transfer.confirmed?
+  end
+
   def transfer_match_candidates(
     date_window: 30,
     exchange_rate_tolerance: Family::AutoTransferMatchable.manual_match_exchange_rate_tolerance

@@ -72,15 +72,9 @@ module Family::AutoTransferMatchable
       exchange_rate_tolerance:,
       restrict_cross_currency_to_linked_accounts: true
     )
-    transaction_ids = candidates_scope.flat_map do |match|
-      [ match.inflow_transaction_id, match.outflow_transaction_id ]
-    end.uniq
-    transactions_by_id = Transaction.includes(entry: :account).where(id: transaction_ids).index_by(&:id)
 
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
-    investment_category = nil
-    investment_category_loaded = false
 
     Transfer.transaction do
       candidates_scope.each do |match|
@@ -88,30 +82,10 @@ module Family::AutoTransferMatchable
                used_transaction_ids.include?(match.outflow_transaction_id)
 
         # Skip this candidate when the transfer for this exact pair was not created
-        # (a concurrent sync claimed one of the transactions for a different pairing);
-        # marking it matched here would leave a transaction matched with no Transfer.
+        # (a concurrent sync claimed one of the transactions for a different pairing).
+        # A created transfer stays pending and leaves the transaction kinds untouched
+        # until the user confirms it (Transfer#confirm!).
         next unless find_or_create_transfer!(match)
-
-        inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
-        outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
-        destination_account = inflow_transaction.entry.account
-        transfer_kind = Transfer.kind_for_account(destination_account)
-
-        # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
-        inflow_transaction.update!(kind: "funds_movement")
-        outflow_transaction.update!(kind: transfer_kind)
-
-        # Assign Investment Contributions category for transfers to investment accounts
-        if transfer_kind == "investment_contribution"
-          outflow_txn = outflow_transaction
-          if outflow_txn.category_id.blank?
-            unless investment_category_loaded
-              investment_category = investment_contributions_category
-              investment_category_loaded = true
-            end
-            outflow_txn.update!(category: investment_category) if investment_category.present?
-          end
-        end
 
         used_transaction_ids << match.inflow_transaction_id
         used_transaction_ids << match.outflow_transaction_id

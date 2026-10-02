@@ -1052,7 +1052,8 @@ class Family::DataImporter
           transfer.status = transfer_status_for(data["status"])
           transfer.notes = data["notes"]
         end
-        apply_transfer_transaction_kinds!(transfer)
+        # Transfer kinds only apply once a transfer is confirmed (see Transfer#confirm!)
+        apply_transfer_transaction_kinds!(transfer) if transfer.confirmed?
         increment_summary("Transfer", transfer.previously_new_record? ? :created : :updated)
       end
     end

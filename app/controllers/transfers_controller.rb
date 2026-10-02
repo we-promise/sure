@@ -88,7 +88,10 @@ class TransfersController < ApplicationController
 
   def update
     outflow_account = @transfer.outflow_transaction.entry.account
+    inflow_account = @transfer.inflow_transaction.entry.account
     return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
+    # Confirming or rejecting rewrites the kind of both legs
+    return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
     Transfer.transaction do
       update_transfer_status
@@ -246,8 +249,14 @@ class TransfersController < ApplicationController
     end
 
     def update_transfer_details
-      @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
-      @transfer.update!(notes: transfer_update_params[:notes])
+      # Confirming from the transaction list sends only the status; leave the
+      # category and notes alone unless the form actually submitted them.
+      if transfer_update_params.key?(:category_id)
+        @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+      end
+      if transfer_update_params.key?(:notes)
+        @transfer.update!(notes: transfer_update_params[:notes])
+      end
     end
 
     def update_transfer_fees_and_amount

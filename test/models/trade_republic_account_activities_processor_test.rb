@@ -1187,6 +1187,10 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     deposit = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_funded").transaction
     assert_equal bank_outflow.transaction, deposit.transfer&.outflow_transaction
+    assert_equal "standard", deposit.reload.kind
+
+    deposit.transfer.confirm!
+
     assert_equal "funds_movement", deposit.reload.kind
   end
 
