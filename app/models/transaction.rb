@@ -112,7 +112,7 @@ class Transaction < ApplicationRecord
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
   # Providers that support pending transaction flags
-  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark financekit].freeze
+  PENDING_PROVIDERS = %w[simplefin plaid pluggy lunchflow enable_banking akahu up monobank mercury redbark financekit].freeze
 
   # DataEnrichment sources that represent automatic category assignment
   AUTO_CATEGORY_SOURCES = %w[ai bayes].freeze
