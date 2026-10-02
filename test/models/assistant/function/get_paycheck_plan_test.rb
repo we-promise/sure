@@ -159,9 +159,14 @@ class Assistant::Function::GetPaycheckPlanTest < ActiveSupport::TestCase
       series
     end
 
+    # Zeroes every cash account and parks the full amount on one Depository
+    # account, rather than dividing across N accounts: an uneven split (e.g.
+    # amount / 3 accounts) produces a repeating decimal whose rounded sum
+    # drifts a hair from the pinned total, failing exact-equality assertions.
     def set_cash(amount)
-      accounts = @family.accounts.where(accountable_type: "Depository")
-      accounts.update_all(balance: amount / accounts.count.to_d)
+      accounts = @family.accounts.where(accountable_type: %w[Depository PhysicalCash])
+      accounts.update_all(balance: 0)
+      accounts.where(accountable_type: "Depository").first.update!(balance: amount)
     end
 
     def declare_bridge_bill(amount:)
