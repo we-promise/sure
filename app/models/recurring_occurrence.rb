@@ -40,6 +40,10 @@ class RecurringOccurrence < ApplicationRecord
   # cost gate, not correctness -- the exists? probe stays authoritative; the
   # guard only stops an all-ended-series family from re-running generation on
   # every GET.
+  #
+  # Family-wide, not user-scoped: occurrence materialization is the same
+  # machinery the sync job runs, and a partial per-user generation would
+  # leave the family half-materialized forever.
   def self.materialize_missing_for(family)
     cache_key = "bills:materialized:#{family.id}"
     return if family.recurring_occurrences.exists? || Rails.cache.read(cache_key)

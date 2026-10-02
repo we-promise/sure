@@ -587,9 +587,6 @@ class BillsController < ApplicationController
              .suggested
     end
 
-    # Family-wide, not user-scoped: occurrence materialization is the same
-    # machinery the sync job runs, and a partial per-user generation would
-    # leave the family half-materialized forever.
     # Only occurrences the overview lists: open rows and this month's paid ones.
     # Ending a bill leaves its scheduled occurrences behind and the matcher
     # still scores them, and skipping closes an occurrence but keeps its
