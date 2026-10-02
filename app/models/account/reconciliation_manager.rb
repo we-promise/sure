@@ -9,6 +9,11 @@ class Account::ReconciliationManager
   def reconcile_balance(balance:, date: Date.current, dry_run: false, existing_valuation_entry: nil)
     old_balance_components = old_balance_components(reconciliation_date: date, existing_valuation_entry: existing_valuation_entry)
     prepared_valuation = prepare_reconciliation(balance, date, existing_valuation_entry)
+    cash_only = prepared_valuation.entryable.cash_anchor?
+    prepared_valuation.entryable.superseded_at = nil unless cash_only
+    if cash_only
+      prepared_valuation.entryable.cash_entry_total = Balance::SyncCache.new(account).cash_entry_total(prepared_valuation.date)
+    end
     # Captured before save!: the amount this valuation already had on disk
     # (nil when this reconciliation creates it). See valuation_contribution.
     prior_valuation_amount = prepared_valuation.amount_in_database
@@ -23,8 +28,8 @@ class Account::ReconciliationManager
       success?: true,
       old_cash_balance: old_balance_components[:cash_balance],
       old_balance: old_balance_components[:balance],
-      new_cash_balance: derived_cash_balance(date: date, total_balance: prepared_valuation.amount),
-      new_balance: prepared_valuation.amount,
+      new_cash_balance: cash_only ? prepared_valuation.amount : derived_cash_balance(date: date, total_balance: prepared_valuation.amount),
+      new_balance: cash_only ? prepared_valuation.amount + old_balance_components[:balance].to_d - old_balance_components[:cash_balance].to_d : prepared_valuation.amount,
       error_message: nil
     )
   rescue => e
@@ -80,9 +85,10 @@ class Account::ReconciliationManager
       valuation.amount.to_d - prior_balance.to_d
     end
 
+    # Keep total reconciliations distinct from cash anchors and reactivate explicit edits.
     def prepare_reconciliation(balance, date, existing_valuation)
       valuation_record = existing_valuation ||
-                         account.entries.valuations.find_by(date: date) || # In case of conflict, where existing valuation is not passed as arg, but one exists
+                         account.entries.valuations.where.not(entryable_id: Valuation.cash_anchor.select(:id)).find_by(date: date) ||
                          account.entries.build(
                                   name: Valuation.build_reconciliation_name(account.accountable_type),
                                   entryable: Valuation.new(kind: "reconciliation")

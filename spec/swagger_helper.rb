@@ -1416,6 +1416,24 @@ RSpec.configure do |config|
             type: :object,
             required: %w[id provider provider_type name status requires_update credentials_configured scheduled_for_deletion pending_account_setup institution accounts sync created_at updated_at],
             properties: {
+              bitcoin_wallets: {
+                type: :array,
+                description: "On-chain connections only. Watch-only Bitcoin status for accessible accounts; never includes public keys or address lists.",
+                items: {
+                  type: :object,
+                  required: %w[account_id provider_type status address_count source_count last_synced_at stale history_truncated],
+                  properties: {
+                    account_id: { type: :string, format: :uuid },
+                    provider_type: { type: :string, enum: [ "BitcoinWalletAccount" ] },
+                    status: { type: :string, enum: %w[discovering preview active failed] },
+                    address_count: { type: :integer },
+                    source_count: { type: :integer },
+                    last_synced_at: { type: :string, format: :'date-time', nullable: true },
+                    stale: { type: :boolean },
+                    history_truncated: { type: :boolean }
+                  }
+                }
+              },
               id: { type: :string, format: :uuid },
               provider: { type: :string },
               provider_type: { type: :string },

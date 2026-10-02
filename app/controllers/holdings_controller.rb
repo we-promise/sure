@@ -1,5 +1,6 @@
 class HoldingsController < ApplicationController
   include StreamExtensions
+  rescue_from Holding::ManagedPositionError, with: :reject_managed_position_change
 
   before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
   before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security sync_prices]
@@ -39,8 +40,9 @@ class HoldingsController < ApplicationController
     redirect_to account_path(@holding.account, tab: "holdings")
   end
 
+  # Delete only holdings whose complete journal may be removed by this account.
   def destroy
-    if @holding.account.can_delete_holdings?
+    if @holding.account.can_delete_holding?(@holding)
       @holding.destroy_holding_and_entries!
       flash[:notice] = t(".success")
     else
@@ -53,7 +55,13 @@ class HoldingsController < ApplicationController
     end
   end
 
+  # Remap editable securities and rebuild through the account's accounting strategy.
   def remap_security
+    if @holding.account.provider_managed_security?(@holding.security_id)
+      redirect_to account_path(@holding.account, tab: "holdings"), alert: t("holdings.remap_security.managed_position")
+      return
+    end
+
     # Combobox returns "TICKER|EXCHANGE|PROVIDER" format
     parsed = Security.parse_combobox_id(params[:security_id])
 
@@ -70,6 +78,10 @@ class HoldingsController < ApplicationController
       ticker: parsed[:ticker],
       exchange_operating_mic: parsed[:exchange_operating_mic]
     )
+    if @holding.account.provider_managed_security?(new_security.id)
+      reject_managed_position_change
+      return
+    end
 
     # Honor the user's provider choice (validated by model inclusion check on save)
     new_security.price_provider = parsed[:price_provider] if parsed[:price_provider].present?
@@ -89,7 +101,7 @@ class HoldingsController < ApplicationController
     # The around_action :switch_timezone already sets the family timezone
     # for this request, so Date.current is correct here.
     account = Account.find(@holding.account_id)
-    strategy = account.linked? ? :reverse : :forward
+    strategy = account.balance_calculation_strategy
     Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
 
     flash[:notice] = t(".success")
@@ -100,6 +112,7 @@ class HoldingsController < ApplicationController
     end
   end
 
+  # Refresh a quote and revalue the selected security without changing provider units.
   def sync_prices
     security = @holding.security
 
@@ -127,7 +140,7 @@ class HoldingsController < ApplicationController
       return
     end
 
-    strategy = @holding.account.linked? ? :reverse : :forward
+    strategy = @holding.account.balance_calculation_strategy
     Balance::Materializer.new(@holding.account, strategy: strategy, security_ids: [ @holding.security_id ]).materialize_balances
     @holding.reload
     @last_price_updated = @holding.security.prices.maximum(:updated_at)
@@ -149,6 +162,11 @@ class HoldingsController < ApplicationController
   end
 
   private
+
+    # Report the model's ownership guard through the existing holdings redirect.
+    def reject_managed_position_change
+      redirect_to account_path(@holding.account, tab: "holdings"), alert: t("holdings.remap_security.managed_position")
+    end
 
     def trade_republic_categories_for(account)
       provider = account.account_providers.includes(:provider).map(&:provider).find do |candidate|

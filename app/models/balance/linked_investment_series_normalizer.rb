@@ -42,8 +42,10 @@ class Balance::LinkedInvestmentSeriesNormalizer
     end
 
     private
+      # Limit complete-provider history without trimming accounts with cash anchors.
       def common_supported_history_start_date(account_ids)
         account_ids = Array(account_ids).compact
+        account_ids -= Account.where(id: account_ids).joins(:valuations).where(valuations: { kind: "cash_anchor" }).pluck(:id)
         return if account_ids.empty?
 
         activity_dates = Entry.where(account_id: account_ids)
@@ -92,7 +94,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
   # Trims points before supported provider history and prepends an anchor point at inception
   # if coarse sampling missed the opening date within the requested period.
   def normalize
-    return series unless account.linked? && account.balance_type == :investment
+    return series unless account.linked? && account.balance_type == :investment && !account.position_tracking?
 
     first_supported_history_date = supported_history_start_date
     return series unless first_supported_history_date.present?

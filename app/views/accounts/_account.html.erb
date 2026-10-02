@@ -72,6 +72,13 @@
       <% elsif !account.pending_deletion? %>
         <% permission = account.permission_for(Current.user) %>
         <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
+          <% if preview_features_enabled? && Current.user&.admin? && account.accountable_type == "Crypto" && permission.in?([ :owner, :full_control ]) %>
+            <% if account.bitcoin_wallet_account %>
+              <% menu.with_item(variant: "link", text: t("bitcoin_wallets.manage"), href: account_bitcoin_wallet_path(account), icon: "bitcoin", data: { turbo_frame: :modal }) %>
+            <% else %>
+              <% menu.with_item(variant: "link", text: t("bitcoin_wallets.connect_action"), href: new_account_bitcoin_wallet_path(account), icon: "bitcoin", data: { turbo_frame: :modal }) %>
+            <% end %>
+          <% end %>
           <% if permission.in?([ :owner, :full_control ]) %>
             <% menu.with_item(variant: "link", text: t("accounts.account.edit"), href: edit_account_path(account, return_to: return_to), icon: "pencil-line", data: { turbo_frame: :modal }) %>
           <% end %>

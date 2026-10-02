@@ -222,6 +222,45 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     assert_equal 1000, entry.amount
   end
 
+  test "stages a mixed account provider total on its statement date" do
+    statement_date = Date.current - 1.day
+    cash_anchor = @linked_account.entries.create!(
+      date: statement_date, name: "Cash baseline", amount: 100, currency: @linked_account.currency,
+      entryable: Valuation.new(kind: "cash_anchor")
+    )
+    cached_balance = @linked_account.balance
+
+    result = @linked_account.set_current_balance(1500, date: statement_date, provider_balance: true, schedule_sync: false)
+
+    assert result.success?, result.error
+    entry = @linked_account.valuations.current_anchor.first.entry
+    assert_equal statement_date, entry.date
+    assert_equal "provider_balance", entry.source
+    assert_equal 1500, entry.amount
+    assert_equal cached_balance, @linked_account.reload.balance
+    assert_equal 100, cash_anchor.reload.amount
+  end
+
+  test "an older mixed account provider total preserves the cash anchor" do
+    statement_date = Date.current - 1.day
+    cash_anchor = @linked_account.entries.create!(
+      date: statement_date, name: "Cash baseline", amount: 100, currency: @linked_account.currency,
+      entryable: Valuation.new(kind: "cash_anchor")
+    )
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    assert manager.set_current_balance(2000, provider_balance: true).success?
+
+    result = manager.set_current_balance(1500, date: statement_date, provider_balance: true)
+
+    assert result.success?, result.error
+    assert result.historical?
+    assert_equal 100, cash_anchor.reload.amount
+    assert cash_anchor.entryable.cash_anchor?
+    historical = @linked_account.entries.valuations.find_by!(date: statement_date, source: "provider_balance")
+    assert_equal 1500, historical.amount
+    assert_equal 2000, @linked_account.valuations.current_anchor.first.entry.amount
+  end
+
   # A statement older than the anchor is a correction to a day gone by. It is
   # recorded on that day, and the newer anchor -- with the newer figure, and the
   # balance the account reports -- is left alone. This also covers an account

@@ -5,11 +5,11 @@
 
       <%# Show menu if: manual (can add balance) OR non-crypto (can add transactions) %>
       <%# This hides the menu only for linked crypto accounts who have no actions %>
-      <% if !account.linked? || !account.crypto? %>
+      <% if account.manual_accounting? || !account.crypto? %>
         <%= render DS::Menu.new(variant: "button") do |menu| %>
           <% menu.with_button(text: t("accounts.show.activity.new"), variant: "secondary", icon: "plus") %>
 
-          <% unless account.linked? %>
+          <% if account.manual_accounting? %>
             <% menu.with_item(
                 variant: "link",
                 text: t("accounts.show.activity.new_balance"),
@@ -18,8 +18,8 @@
                 data: { turbo_frame: :modal }) %>
           <% end %>
 
-          <% unless account.crypto? %>
-            <% if account.investment? %>
+          <% if !account.crypto? || account.position_tracking? %>
+            <% if account.supports_trades? || account.position_tracking? %>
               <% menu.with_item(
                   variant: "link",
                   text: t("accounts.show.activity.new_activity"),

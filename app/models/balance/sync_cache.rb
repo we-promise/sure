@@ -21,8 +21,23 @@ class Balance::SyncCache
     @unconvertible_holding_count
   end
 
+  # Return an authoritative total valuation, excluding cash-only and superseded anchors.
   def get_valuation(date)
-    entries_by_date[date]&.find { |e| e.valuation? }
+    valuation = entries_by_date[date]&.find { |e| e.valuation? && !e.entryable.cash_anchor? }
+    cash_anchor = get_cash_anchor(date)
+    return if valuation && cash_anchor && valuation.entryable.superseded_at?
+
+    valuation
+  end
+
+  # Cash-only anchors are distinct from valuations of the entire account.
+  def get_cash_anchor(date)
+    entries_by_date[date]&.find { |e| e.valuation? && e.entryable.cash_anchor? }
+  end
+
+  # Reuse the standard pending, split and FX rules for an anchor's ledger baseline.
+  def cash_entry_total(date)
+    converted_entries.select { |entry| entry.date <= date && !entry.valuation? }.sum(&:amount)
   end
 
   def get_holdings_value(date)

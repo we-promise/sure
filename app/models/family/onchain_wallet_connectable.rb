@@ -27,8 +27,10 @@ module Family::OnchainWalletConnectable
     end
   end
 
+  # Count connected legacy and grouped wallets, excluding discovery-only drafts.
   def has_onchain_wallets?
-    onchain_wallet_items.active.joins(:onchain_wallet_accounts).exists?
+    onchain_wallet_items.active.joins(:onchain_wallet_accounts).exists? ||
+      BitcoinWalletAccount.linked.where(onchain_wallet_item: onchain_wallet_items.active).exists?
   end
 
   # True when an address is already tracked on this chain anywhere in the
@@ -37,10 +39,21 @@ module Family::OnchainWalletConnectable
   # nowhere, so counting it here would refuse the address with nothing to show
   # for it.
   def onchain_address_linked?(chain, address)
-    OnchainWalletAccount
+    legacy = OnchainWalletAccount
       .where(onchain_wallet_item: onchain_wallet_items.active)
       .for_wallet(chain, address)
       .linked
       .exists?
+    legacy || BitcoinWalletAddress.tracks?(family: self, chain: chain, address: address)
+  end
+
+  # Both address representations claim ownership under the same short lock.
+  def with_onchain_address_lock(chain, address)
+    canonical = Onchain::Chains.canonical_address(chain, address)
+    key = Digest::SHA256.digest("onchain-address:#{id}:#{chain}:#{canonical}").unpack1("q>")
+    self.class.transaction do
+      self.class.connection.execute("SELECT pg_advisory_xact_lock(#{key})")
+      yield
+    end
   end
 end

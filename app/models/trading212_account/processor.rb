@@ -21,6 +21,7 @@ class Trading212Account::Processor
       @account ||= trading212_account.current_account
     end
 
+    # Stage the reported total without directly replacing a mixed account's valuation.
     def update_account_balance!
       total_balance = trading212_account.current_balance || 0
       cash_balance = trading212_account.cash_balance || 0
@@ -31,6 +32,6 @@ class Trading212Account::Processor
         currency: trading212_account.currency
       )
       account.save!
-      account.set_current_balance(total_balance)
+      account.set_current_balance(total_balance, provider_balance: true)
     end
 end

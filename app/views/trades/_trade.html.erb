@@ -46,6 +46,7 @@
                         data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
                         class: "hover:underline" %>
             </div>
+            <%= render DS::Pill.new(label: t("bitcoin_wallets.pending"), tone: :amber) if trade.pending? %>
           <% end %>
         </div>
       </div>
