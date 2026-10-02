@@ -144,7 +144,7 @@ class BillsMobileTest < ApplicationSystemTestCase
     offsets = page.evaluate_script(<<~JS)
       (() => {
         const visibleChild = (el) => [...el.children].find((c) => c.getClientRects().length > 0);
-        return [...document.querySelectorAll("a[data-turbo-frame^='pane_recurring_occurrence_']")].map((link) => {
+        return [...document.querySelectorAll(".\\\\@container a[href*='display=drawer']")].map((link) => {
           const header = link.closest(".\\\\@container").previousElementSibling.querySelector("p");
           return Math.round(visibleChild(link).getBoundingClientRect().left - header.getBoundingClientRect().left);
         });
