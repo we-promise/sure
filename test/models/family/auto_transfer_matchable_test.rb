@@ -547,6 +547,17 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal category, outflow_entry.entryable.category
   end
 
+  test "auto-matched investment to cash marks only the cash inflow as investment withdrawal" do
+    investment = accounts(:investment)
+    outflow_entry = create_transaction(date: Date.current, account: investment, amount: 9876)
+    inflow_entry = create_transaction(date: Date.current, account: @depository, amount: -9876)
+
+    @family.auto_match_transfers!
+
+    assert_equal "funds_movement", outflow_entry.reload.entryable.kind
+    assert_equal "investment_withdrawal", inflow_entry.reload.entryable.kind
+  end
+
   test "auto-matched investment transfers reuse contribution category lookup" do
     investment = accounts(:investment)
     category = @family.investment_contributions_category

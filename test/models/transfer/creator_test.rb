@@ -43,6 +43,22 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_equal "Transfer from #{@source_account.name}", inflow.entry.name
   end
 
+  test "creates investment withdrawal when transferring from investment to depository" do
+    creator = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @destination_account.id,
+      destination_account_id: @source_account.id,
+      date: @date,
+      amount: @amount
+    )
+
+    transfer = creator.create
+
+    assert_equal "funds_movement", transfer.outflow_transaction.kind
+    assert_equal "investment_withdrawal", transfer.inflow_transaction.kind
+    assert transfer.inflow_transaction.transfer?
+  end
+
   test "creates basic transfer between depository accounts" do
     other_depository = @family.accounts.create!(name: "Savings", balance: 1000, currency: "USD", accountable: Depository.new)
 

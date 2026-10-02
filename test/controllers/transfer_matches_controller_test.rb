@@ -75,4 +75,19 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     category = @user.family.investment_contributions_category
     assert_equal category, outflow_txn.category
   end
+
+  test "assigns investment_withdrawal to cash inflow when matching from investment" do
+    outflow_entry = create_transaction(amount: 250, account: accounts(:investment))
+
+    post transaction_transfer_match_path(outflow_entry), params: {
+      transfer_match: {
+        method: "new",
+        target_account_id: accounts(:depository).id
+      }
+    }
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal "funds_movement", transfer.outflow_transaction.kind
+    assert_equal "investment_withdrawal", transfer.inflow_transaction.kind
+  end
 end

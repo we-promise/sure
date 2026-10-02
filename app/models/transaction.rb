@@ -73,16 +73,18 @@ class Transaction < ApplicationRecord
     cc_payment: "cc_payment", # A CC payment, excluded from budget analytics (CC payments offset the sum of expense transactions)
     loan_payment: "loan_payment", # A payment to a Loan account, treated as an expense in budgets
     one_time: "one_time", # A one-time expense/income, excluded from budget analytics
-    investment_contribution: "investment_contribution" # Transfer to investment/crypto account, treated as an expense in budgets
+    investment_contribution: "investment_contribution", # Transfer to investment/crypto account, treated as an expense in budgets
+    investment_withdrawal: "investment_withdrawal" # Transfer from investment/crypto account, treated as income in cashflow
   }
 
   # All kinds where money moves between accounts (transfer? returns true).
   # Used for search filters, rule conditions, and UI display.
-  TRANSFER_KINDS = %w[funds_movement cc_payment loan_payment investment_contribution].freeze
+  TRANSFER_KINDS = %w[funds_movement cc_payment loan_payment investment_contribution investment_withdrawal].freeze
 
   # Kinds excluded from budget/income-statement analytics.
   # loan_payment and investment_contribution are intentionally NOT here —
-  # they represent real cash outflow from a budgeting perspective.
+  # they represent real cash outflow; investment_withdrawal is the matching
+  # cash inflow and is included in cashflow totals.
   BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
 
   # Kinds that never belong in the "Uncategorized" bucket, whichever surface
@@ -93,7 +95,8 @@ class Transaction < ApplicationRecord
   #
   # This is deliberately neither of the two lists above:
   #   - vs TRANSFER_KINDS: loan_payment and investment_contribution are
-  #     budget-tracked outflows the dashboard counts under Uncategorized, so
+  #     budget-tracked outflows, and investment_withdrawal is a tracked inflow,
+  #     which the dashboard counts under Uncategorized, so
   #     hiding them left the dashboard figure unreproducible from the list
   #     with no way to find the transactions (see #2592).
   #   - vs BUDGET_EXCLUDED_KINDS: one_time is a real, categorizable
