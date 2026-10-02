@@ -179,7 +179,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     date = I18n.l(due, format: :short, locale: :fr)
     assert_select "div[class~='@lg:block']", text: date
     occurrence = series.recurring_occurrences.find_by!(due_on: due)
-    assert_select "a[href=?][data-turbo-frame=drawer] p",
+    assert_select "a[data-turbo-frame=drawer][href=?] p",
       bill_path(series, display: "drawer", occurrence: occurrence.id), text: date
   end
 
