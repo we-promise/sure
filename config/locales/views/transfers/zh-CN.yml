@@ -43,3 +43,4 @@ zh-CN:
       transfer_amount: 转账金额
     update:
       success: 转账已更新
+      already_resolved: 此转账已被确认或拒绝。

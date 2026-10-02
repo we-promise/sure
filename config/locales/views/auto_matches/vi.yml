@@ -1,0 +1,31 @@
+---
+vi:
+  auto_matches:
+    title: Tự động khớp lệnh chuyển khoản
+    settings:
+      enable_label: Bật tự động khớp lệnh
+      enable_description: Tự động phát hiện và đề xuất các giao dịch chuyển khoản trùng khớp giữa các tài khoản sau mỗi lần đồng bộ. Các đề xuất sẽ không được áp dụng cho đến khi bạn xác nhận bên dưới.
+    update_settings:
+      settings_updated: Đã cập nhật cài đặt tự động khớp lệnh
+    bulk_update:
+      invalid_selection: Chọn ít nhất một đề xuất để xác nhận hoặc từ chối
+      bulk_confirmed:
+        one: Đã xác nhận 1 giao dịch chuyển khoản
+        other: "Đã xác nhận %{count} giao dịch chuyển khoản"
+      bulk_rejected:
+        one: Đã từ chối 1 giao dịch chuyển khoản
+        other: "Đã từ chối %{count} giao dịch chuyển khoản"
+    empty:
+      title: Không có đề xuất khớp lệnh tự động nào đang chờ xử lý
+      description: Khi quá trình đồng bộ phát hiện một giao dịch chuyển khoản có khả năng xảy ra giữa hai tài khoản của bạn, nó sẽ hiển thị ở đây để xem xét.
+    table:
+      from: Từ
+      to: Đến
+      date: Ngày
+      actions: Hành động
+      separator: "·"
+    bulk_actions:
+      selected_label: đã chọn
+      confirm_selected: Xác nhận mục đã chọn
+      reject_selected: Từ chối mục đã chọn
+      select_all: Chọn tất cả

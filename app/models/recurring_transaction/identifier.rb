@@ -69,6 +69,10 @@ class RecurringTransaction
         .where("entries.date >= ?", lookback.ago.to_date)
         .where("entries.amount < 0")
         .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
+        # A pending auto-matched leg keeps kind == "standard" until confirmed
+        # (Transfer#confirm!), so the kind check above misses it.
+        .where.not(transactions: { id: Transfer.pending.select(:inflow_transaction_id) })
+        .where.not(transactions: { id: Transfer.pending.select(:outflow_transaction_id) })
         .includes(:entryable)
         .to_a
 
@@ -218,6 +222,11 @@ class RecurringTransaction
           .where("accounts.accountable_type IS NULL OR accounts.accountable_type NOT IN (?)", NON_BILLABLE_ACCOUNTABLE_TYPES)
           .where("entries.date >= ?", three_months_ago)
           .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
+          # A pending auto-matched leg keeps kind == "standard" until
+          # confirmed (Transfer#confirm!), so the kind check above misses it
+          # -- same reasoning as the transfer-kind skip above.
+          .where.not(transactions: { id: Transfer.pending.select(:inflow_transaction_id) })
+          .where.not(transactions: { id: Transfer.pending.select(:outflow_transaction_id) })
           .includes(:entryable)
           .to_a
 

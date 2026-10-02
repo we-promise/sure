@@ -53,3 +53,4 @@ ru:
       destination_fee: Комиссия на стороне получателя
     update:
       success: Перевод обновлён
+      already_resolved: Этот перевод уже подтверждён или отклонён.

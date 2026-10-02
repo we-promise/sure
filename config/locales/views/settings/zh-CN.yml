@@ -234,6 +234,7 @@ zh-CN:
       accounts_label: 账户
       advanced_section_title: 高级
       ai_prompts_label: AI 提示词
+      auto_matches_label: 自动匹配
       api_key_label: API 密钥
       payment_label: 付款
       categories_label: 分类

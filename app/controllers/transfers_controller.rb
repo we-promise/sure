@@ -88,7 +88,9 @@ class TransfersController < ApplicationController
 
   def update
     outflow_account = @transfer.outflow_transaction.entry.account
+    inflow_account = @transfer.inflow_transaction.entry.account
     return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
+    return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
     Transfer.transaction do
       update_transfer_status
@@ -99,6 +101,14 @@ class TransfersController < ApplicationController
     respond_to do |format|
       format.html { redirect_back_or_to transactions_url, notice: t(".success") }
       format.turbo_stream
+    end
+  rescue ActiveRecord::RecordNotFound
+    # confirm!/reject! raise this when a concurrent confirm/reject already
+    # resolved the transfer (see Transfer#confirm!, #reject!) -- surface it
+    # as a normal flash redirect instead of a raw 404 page.
+    respond_to do |format|
+      format.html { redirect_back_or_to transactions_url, alert: t(".already_resolved") }
+      format.turbo_stream { stream_redirect_back_or_to transactions_url, alert: t(".already_resolved") }
     end
   end
 
@@ -246,8 +256,12 @@ class TransfersController < ApplicationController
     end
 
     def update_transfer_details
-      @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
-      @transfer.update!(notes: transfer_update_params[:notes])
+      if transfer_update_params.key?(:category_id)
+        @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+      end
+      if transfer_update_params.key?(:notes)
+        @transfer.update!(notes: transfer_update_params[:notes])
+      end
     end
 
     def update_transfer_fees_and_amount

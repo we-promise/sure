@@ -264,6 +264,7 @@ it:
       accounts_label: Conti
       advanced_section_title: Avanzate
       ai_prompts_label: Prompt AI
+      auto_matches_label: Corrispondenze automatiche
       api_key_label: Chiave API
       payment_label: Pagamento
       categories_label: Categorie
