@@ -20,7 +20,7 @@ module Breadcrumbable
       ]
     end
 
-    # Trail prefix for pages living under the Plan hub (budgets, goals).
+    # Trail prefix for pages living under the Plan hub (budgets, goals, bills).
     # Preview users reach them through /plan, so their trail starts
     # Home > Plan; without the flag it's the plain Home prefix.
     def plan_breadcrumb_prefix

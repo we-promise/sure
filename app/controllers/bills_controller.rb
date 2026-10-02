@@ -26,16 +26,7 @@ class BillsController < ApplicationController
 
     @view = %w[all calendar paycheck].include?(params[:view]) ? params[:view] : "overview"
 
-    # An upgraded instance can arrive with series but no occurrence rows,
-    # because nothing under the old build ever materialized them. One inline,
-    # idempotent generation covers every view. The cache is a cost gate, not
-    # correctness -- the none? probe stays authoritative; the guard only stops
-    # an all-ended-series family from re-running generation on every GET.
-    cache_key = "bills:materialized:#{Current.family.id}"
-    if Current.family.recurring_occurrences.none? && !Rails.cache.read(cache_key)
-      materialize_missing_occurrences
-      Rails.cache.write(cache_key, true, expires_in: 12.hours)
-    end
+    RecurringOccurrence.materialize_missing_for(Current.family)
 
     case @view
     when "all"
@@ -198,6 +189,12 @@ class BillsController < ApplicationController
   end
 
   private
+    # Preview users reach Bills through the Plan hub, and Bills is
+    # preview-only, so the trail always runs Home > Plan > Bills.
+    def default_breadcrumbs
+      plan_breadcrumb_prefix + [ [ I18n.t("breadcrumbs.bills"), nil ] ]
+    end
+
     # The plan plus the income facts the page states alongside it. One planner
     # instance answers both, so the income list and the periods always agree.
     def load_paycheck_plan
@@ -588,15 +585,6 @@ class BillsController < ApplicationController
       Current.family.recurring_transactions
              .accessible_by(Current.user)
              .suggested
-    end
-
-    # Family-wide, not user-scoped: occurrence materialization is the same
-    # machinery the sync job runs, and a partial per-user generation would
-    # leave the family half-materialized forever.
-    def materialize_missing_occurrences
-      Current.family.recurring_transactions.active.find_each do |series|
-        RecurringTransaction::OccurrenceGenerator.new(series).generate!
-      end
     end
 
     # Only occurrences the overview lists: open rows and this month's paid ones.
