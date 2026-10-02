@@ -1,6 +1,10 @@
 require "test_helper"
 
 class BillsControllerTest < ActionDispatch::IntegrationTest
+  # A bill row's drawer link. The scope leaves out Next up, whose items open
+  # the same drawer URL from outside the lists.
+  BILL_ROW_LINK = "[class~='@container'] a[data-turbo-frame=drawer][href*='display=drawer']".freeze
+
   teardown do
     travel_back
   end
@@ -256,7 +260,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     text_links.each do |text|
       assert_select "main a.text-link.underline.focus-ring.text-xs", text: text
     end
-    assert_select "main a[data-turbo-frame^='pane_']", minimum: 2
+    # Premise: the rows are on the page, so the sweep below covers them.
+    assert_select "main #{BILL_ROW_LINK}", minimum: 2
 
     assert_select "main a, main summary" do |stops|
       stops.each do |stop|
@@ -1347,14 +1352,14 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
     assert_response :success
 
-    assert_select "a[data-turbo-frame^='pane_']", text: /Handled bill/ do |links|
+    assert_select BILL_ROW_LINK, text: /Handled bill/ do |links|
       assert_not_includes links.first.parent["class"].split, "opacity-70"
       assert_select links.first, "p.font-medium.text-secondary", text: /Handled bill/
       assert_select links.first, "p.font-medium.text-secondary.privacy-sensitive", text: /\$30\.00/
       # text-subdued is about 2.7:1 on white; notes have to stay readable.
       assert_select links.first, "p.text-secondary", text: "Card ending 4242"
     end
-    assert_select "a[data-turbo-frame^='pane_']", text: /Power Co/ do |links|
+    assert_select BILL_ROW_LINK, text: /Power Co/ do |links|
       assert_select links.first, "p.font-medium.text-primary", text: /Power Co/
       assert_select links.first, "p.font-medium.text-primary.privacy-sensitive", text: /\$80\.00/
     end
