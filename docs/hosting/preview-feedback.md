@@ -138,6 +138,42 @@ usage: blocked or opted-out analytics are absent. The self-hosted client uses an
 in-memory anonymous identity, so distinct IDs are not reliable counts of returning
 people or installations across visits.
 
+## Daily web preview adoption
+
+`web_ui_served_daily` records whether Rails served an authenticated user a
+successful full HTML UI response with `preview_features_enabled` true or false. It
+does not claim that the browser displayed the response or that someone was
+actively using it. Normal web visits and installed PWAs use the same UI route;
+API/JSON requests, AJAX/Turbo-frame requests, non-GET requests, redirects/errors,
+and prefetch/prerender requests are excluded. No browser script, storage marker, mobile API, or
+background-job hook is added.
+
+The existing normal server PostHog client uses `POSTHOG_KEY` / `POSTHOG_HOST`,
+with the existing production or explicit development gate. The separate shared
+self-hosted feedback client and `POSTHOG_FEEDBACK_ENABLED` are unchanged. Browser
+SDK opt-outs stored in localStorage and ad blockers cannot suppress this
+server-side event; Rails cannot read that browser-only state. This event follows
+the installation's analytics configuration.
+
+An atomic cache claim limits capture to one attempt per authenticated user per
+calendar day in the family's configured timezone (or the app timezone when
+unset/invalid), across browsers and sign-ins. The
+first claimed response supplies that day's preview state; later preference
+changes do not add another event that day. A shared Redis cache provides this
+deduplication across web workers; other cache stores can race or limit counting
+only within one process. Null-cache configurations skip capture; cache
+clearing/eviction can permit repeats, and cache/SDK failures can omit a day.
+SDK queue acceptance does not guarantee delivery. A qualifying full UI response
+can still be requested by a background tab or automation; browser-cached opens
+that never reach Rails cannot count.
+
+The event includes the Boolean preview state and `sure_version`. Its required
+anonymous identifier is an application-keyed digest of the user and date: it is
+stable only for that user/day, contains no raw user ID, and does not identify a
+person across days. Person profiles and GeoIP enrichment are disabled for this
+event. No email, financial values, URLs, or IP addresses are added. Tests use an
+offline client and never submit live events.
+
 ## Privacy and extending the implementation
 
 Usage properties must exclude amounts, account/category names or IDs, date
