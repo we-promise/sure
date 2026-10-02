@@ -711,15 +711,13 @@ export default class extends Controller {
     let yMin = avgValue - effectiveRange / 2 - padding;
     let yMax = avgValue + effectiveRange / 2 + padding;
 
-    // Keep zero in view when the balance is negative or sits close to zero,
-    // so a near-zero account isn't floated off its natural baseline.
-    if (dataMin < 0) {
-      // Entirely/partly negative: clamp both bounds so zero stays on-chart.
+    // Pull the nearer bound to zero only when the data sits close to zero
+    // relative to its own scale (within 10% of the average), so a balance far
+    // from zero — positive or negative — still fills the chart with its movement.
+    if (dataMin >= 0 && dataMin < avgValue * 0.1) {
       yMin = Math.min(0, yMin);
+    } else if (dataMax <= 0 && dataMax > avgValue * 0.1) {
       yMax = Math.max(0, yMax);
-    } else if (dataMin < avgValue * 0.1) {
-      // Near-zero positive: pull the floor down to zero for context.
-      yMin = Math.min(0, yMin);
     }
 
     // Extra headroom when value labels are drawn above/below the line.
@@ -734,7 +732,7 @@ export default class extends Controller {
       .rangeRound([this._d3ContainerHeight, 0])
       .domain([yMin, yMax]);
   }
-  
+
   _setupResizeObserver() {
     this._resizeObserver = new ResizeObserver(() => {
       this._reinstall();
