@@ -3,6 +3,7 @@ class ExchangeRate::Importer
   MissingStartRateError = Class.new(StandardError)
 
   PROVISIONAL_LOOKBACK_DAYS = 5
+  HISTORY_PROBE_COOLDOWN = 1.day
 
   # Capture the provider identity so a settings change cannot commit stale-provider history.
   def initialize(exchange_rate_provider:, from:, to:, start_date:, end_date:, provider_name: nil, clear_cache: false)
@@ -263,7 +264,8 @@ class ExchangeRate::Importer
       # rate as a conservative baseline so an earlier account start gets probed.
       checked_from ||= pair.first_provider_rate_on
 
-      checked_from.present? && requested_history_start_date < checked_from
+      checked_from.present? && requested_history_start_date < checked_from &&
+        (clear_cache || !Rails.cache.read(history_probe_cache_key))
     end
 
     # Record only the earliest coverage supported by positive returned rates.
@@ -279,6 +281,17 @@ class ExchangeRate::Importer
         provider_name: current_provider_name,
         pair: pair
       )
+
+      # Incomplete success does not prove earlier history is unavailable, but
+      # need not repeat the same large probe on every account sync.
+      if history_backfill_required? && requested_history_start_date < earliest_returned_date && provider_still_selected?
+        Rails.cache.write(history_probe_cache_key, true, expires_in: HISTORY_PROBE_COOLDOWN)
+      end
+    end
+
+    # Separate probe cooldowns by provider, pair and requested historical boundary.
+    def history_probe_cache_key
+      [ "exchange_rate_history_probe", current_provider_name, from, to, requested_history_start_date.to_s ]
     end
 
     def effective_start_date

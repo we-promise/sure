@@ -612,6 +612,53 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_not ExchangeRate.exists?(from_currency: "USD", to_currency: "EUR", date: start_date)
   end
 
+  test "incomplete history probes cool down without suppressing earlier requests or later retries" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+    end_date = Date.current
+    start_date = end_date - 30.days
+    first_date = end_date - 10.days
+    ExchangeRatePair.create!(from_currency: "USD", to_currency: "EUR",
+      first_provider_rate_on: first_date, provider_history_checked_from: first_date,
+      provider_name: Setting.exchange_rate_provider.to_s)
+    response = provider_success_response(
+      (first_date..end_date).map { |date| OpenStruct.new(from: "USD", to: "EUR", date: date, rate: 1.1) }
+    )
+    @provider.expects(:fetch_exchange_rates).times(3)
+      .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(start_date), end_date: end_date)
+      .returns(response)
+    @provider.expects(:fetch_exchange_rates).once
+      .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(start_date - 1.day), end_date: end_date)
+      .returns(response)
+    import = ->(requested_start) {
+      ExchangeRate::Importer.new(exchange_rate_provider: @provider, from: "USD", to: "EUR",
+        start_date: requested_start, end_date: end_date).import_provider_rates
+    }
+
+    import.call(start_date)
+    assert_nil import.call(start_date), "cached complete dates should skip another historical probe during cooldown"
+    import.call(start_date - 1.day)
+    ExchangeRate::Importer.new(exchange_rate_provider: @provider, from: "USD", to: "EUR",
+      start_date: start_date, end_date: end_date, clear_cache: true).import_provider_rates
+    travel 23.hours do
+      next_date = end_date + 1.day
+      @provider.expects(:fetch_exchange_rates).once
+        .with(from: "USD", to: "EUR", start_date: get_provider_fetch_start_date(next_date), end_date: next_date)
+        .returns(provider_success_response([
+          OpenStruct.new(from: "USD", to: "EUR", date: next_date, rate: 1.2)
+        ]))
+      ExchangeRate::Importer.new(exchange_rate_provider: @provider, from: "USD", to: "EUR",
+        start_date: start_date, end_date: next_date).import_provider_rates
+    end
+    travel 1.day + 1.second do
+      import.call(start_date)
+    end
+    pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+    assert_equal first_date, pair.provider_history_checked_from
+    assert_not ExchangeRate.exists?(from_currency: "USD", to_currency: "EUR", date: start_date)
+  end
+
   test "empty successful history does not prevent a later complete backfill" do
     ExchangeRate.delete_all
     ExchangeRatePair.delete_all
