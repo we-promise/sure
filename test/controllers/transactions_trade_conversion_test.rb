@@ -49,6 +49,7 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
         post create_trade_from_transaction_transaction_url(@entry.transaction), params: {
           security_id: securities(:aapl).id, qty: 2, price: 50, investment_activity_label: label
         }
+        assert_nil flash[:alert], flash[:alert]
       end
 
       assert_redirected_to account_path(@account)
@@ -102,6 +103,27 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
     end
     assert_redirected_to transactions_path
     assert_not @entry.reload.excluded?
+  end
+
+  test "a conversion completed during security lookup cannot be repeated" do
+    [ @account, accounts(:investment) ].each do |account|
+      entry = create_transaction(account: account)
+      security = securities(:aapl)
+      Security.expects(:find_by).with do |attributes|
+        if attributes == { id: security.id }
+          Entry.where(id: entry.id).update_all(excluded: true)
+          true
+        end
+      end.returns(security)
+
+      assert_no_difference "Trade.count" do
+        post create_trade_from_transaction_transaction_url(entry.transaction), params: {
+          security_id: security.id, qty: 2, price: 50, investment_activity_label: "Buy"
+        }
+      end
+      assert_redirected_to transactions_path
+      assert_equal I18n.t("transactions.convert_to_trade.errors.already_converted"), flash[:alert]
+    end
   end
 
   test "annotation-only and read-only shares cannot convert" do

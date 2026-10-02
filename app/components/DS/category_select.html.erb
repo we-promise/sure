@@ -99,13 +99,13 @@
           <% end %>
         <% end %>
 
-        <button type="button"
-                class="hidden text-primary text-sm cursor-pointer items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover"
-                data-category-select-target="createForm"
-                data-action="click->category-select#createCategory">
-          <%= helpers.icon("plus") %>
+        <%= render DS::ActionRow.new(
+              icon: "plus",
+              hidden: true,
+              data: { category_select_target: "createForm", action: "click->category-select#createCategory" }
+            ) do %>
           <span data-category-select-target="createLabel"></span>
-        </button>
+        <% end %>
 
         <p class="hidden px-3 py-1 text-xs text-destructive"
            data-category-select-target="createError"></p>

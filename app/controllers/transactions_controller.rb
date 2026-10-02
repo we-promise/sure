@@ -329,6 +329,7 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path
   end
 
+  # Offer transaction conversion only for account types that can own trades.
   def convert_to_trade
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
@@ -344,6 +345,7 @@ class TransactionsController < ApplicationController
     render :convert_to_trade
   end
 
+  # Lock and recheck the source entry before creating a trade and excluding the transaction.
   def create_trade_from_transaction
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
@@ -372,10 +374,19 @@ class TransactionsController < ApplicationController
     return if performed? # Early exit if redirect already happened
 
     activity_label = params[:investment_activity_label].presence
-    # Infer sell from amount sign: negative amount = money coming in = sell
-    is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount < 0)
-
+    # Serialize replacements on the source, including requests already in flight.
     ActiveRecord::Base.transaction do
+      # Entry#transaction is its delegated transaction record, so use an
+      # explicit DB transaction rather than ActiveRecord's instance with_lock.
+      @entry.lock!
+      if @entry.excluded?
+        flash[:alert] = t("transactions.convert_to_trade.errors.already_converted")
+        redirect_back_or_to transactions_path
+        next
+      end
+
+      # Infer sell from the refreshed source: negative amount means money in.
+      is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount < 0)
       # For trades: positive qty = buy (money out), negative qty = sell (money in)
       signed_qty = is_sell ? -qty : qty
       trade_amount = qty * price
@@ -412,6 +423,8 @@ class TransactionsController < ApplicationController
       # Mark original transaction as excluded (soft delete)
       @entry.update!(excluded: true)
     end
+
+    return if performed?
 
     flash[:notice] = t("transactions.convert_to_trade.success")
     redirect_to account_path(@entry.account), status: :see_other
