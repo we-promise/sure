@@ -119,6 +119,7 @@ class OnchainWalletAccount::Processor
       (dates + [ Date.current ]).uniq
     end
 
+    # Find dates with recognized-currency prices available for wallet valuation.
     def priced_dates(security, dates)
       @priced_dates ||= security.prices.with_known_currency.where(date: dates.min..dates.max).pluck(:date).to_set
     end

@@ -8958,6 +8958,8 @@ paths:
   "/api/v1/security_prices":
     get:
       summary: List security price history referenced by family investment data
+      description: Returns prices with recognized currency codes; legacy invalid-currency
+        records are omitted.
       tags:
       - Security Prices
       security:
@@ -9045,6 +9047,7 @@ paths:
         format: uuid
     get:
       summary: Retrieve a security price referenced by family investment data
+      description: Legacy invalid-currency records are unavailable and return 404.
       tags:
       - Security Prices
       security:

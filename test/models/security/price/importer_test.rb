@@ -128,6 +128,33 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal 110, Security::Price.find_by!(security: @security, date: Date.current, currency: "USD").price
   end
 
+  test "a lookback quote does not clear retry state outside the persisted range" do
+    earlier_date = 1.day.ago.to_date
+    fallback = @security.prices.create!(date: earlier_date, price: 100, currency: "USD",
+      currency_retry_required: true)
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: earlier_date, price: 200, currency: "EUR"),
+      OpenStruct.new(date: Date.current, price: 210, currency: "EUR")
+    ]))
+    Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: Date.current, end_date: Date.current).import_provider_prices
+    assert fallback.reload.currency_retry_required
+    assert_equal 100, fallback.price
+    assert_equal 210, @security.prices.find_by!(date: Date.current, currency: "EUR").price
+  end
+
+  test "a replacement currency settles all retry markers for the recovered date" do
+    fallback = @security.prices.create!(date: Date.current, price: 100, currency: "USD",
+      currency_retry_required: true)
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: Date.current, price: 200, currency: "EUR")
+    ]))
+    Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: Date.current, end_date: Date.current).import_provider_prices
+    assert_not Security::Price.exists?(fallback.id)
+    assert_equal 200, @security.prices.find_by!(date: Date.current, currency: "EUR").price
+  end
+
   test "syncs diff when some prices already exist" do
     Security::Price.delete_all
 
@@ -154,6 +181,52 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     db_prices = Security::Price.where(security: @security).order(:date)
     assert_equal 4, db_prices.count
     assert_equal [ 140, 145, 150, 150 ], db_prices.map(&:price)
+  end
+
+  test "retries an old rejected quote until a valid provider quote replaces its fallback" do
+    start_date = 30.days.ago.to_date
+    bad_date = start_date + 1.day
+    response = provider_success_response([
+      OpenStruct.new(date: start_date, price: 100, currency: "USD"),
+      OpenStruct.new(date: bad_date, price: 200, currency: "")
+    ])
+    @provider.expects(:fetch_security_prices).returns(response)
+    importer = -> {
+      Security::Price::Importer.new(security: @security, security_provider: @provider,
+        start_date: start_date, end_date: bad_date)
+    }
+    importer.call.import_provider_prices
+    fallback = @security.prices.find_by!(date: bad_date, currency: "USD")
+    assert_equal 100, fallback.price
+    assert fallback.currency_retry_required
+
+    # An incomplete successful response must not settle a rejected date.
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: start_date, price: 100, currency: "USD")
+    ]))
+    importer.call.import_provider_prices
+    assert fallback.reload.currency_retry_required
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: start_date, price: 100, currency: "USD"),
+      OpenStruct.new(date: bad_date, price: 200, currency: "USD")
+    ]))
+    importer.call.import_provider_prices
+    assert_equal 200, fallback.reload.price
+    assert_not fallback.currency_retry_required
+  end
+
+  test "legacy invalid currency in the lookback cannot establish a listing boundary" do
+    start_date = 30.days.ago.to_date
+    earlier_date = start_date - 2.days
+    bad = @security.prices.create!(date: earlier_date, price: 99, currency: "USD")
+    bad.update_column(:currency, "")
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: earlier_date, price: 105, currency: "USD")
+    ]))
+    Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: start_date, end_date: start_date).import_provider_prices
+    assert_nil @security.reload.first_provider_price_on
   end
 
   test "no provider calls when all prices exist" do

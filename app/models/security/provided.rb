@@ -187,6 +187,7 @@ module Security::Provided
     :ok
   end
 
+  # Reuse or fetch a price only when its currency is safe for monetary calculations.
   def find_or_fetch_price(date: Date.current, cache: true)
     price = prices.with_known_currency.find_by(date: date)
 

@@ -38,8 +38,10 @@ class Api::V1::SecurityPricesController < Api::V1::BaseController
       authorize_scope!(:read)
     end
 
+    # Expose only prices that can be represented safely as Money in API responses.
     def security_prices_scope
       Security::Price
+        .with_known_currency
         .where(security_id: scoped_security_ids)
         .includes(:security)
     end

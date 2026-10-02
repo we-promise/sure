@@ -70,20 +70,218 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # fee inclusion in amount
+  # fee handling
   # ---------------------------------------------------------------------------
 
-  test "includes the Kraken fee in the total withdrawal amount" do
-    # Kraken: balance_change = amount - fee = -500 - 1 = -501 total outflow
+  # A withdrawal has a counterparty. The receiving bank records 500, not 501,
+  # and `Transfer` requires both legs to sum to zero -- so a withdrawal carrying
+  # Kraken's fee can never be matched. The fee becomes its own entry instead;
+  # together the two still move the balance by the 501 Kraken applied.
+  test "a withdrawal fee is charged as its own entry" do
     set_ledgers(
       "LWIT02" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
     )
 
-    process
+    assert_difference "@account.entries.count", 2 do
+      process
+    end
 
-    entry = @account.entries.find_by(external_id: "kraken_ledger_LWIT02", source: "kraken")
-    assert entry
-    assert_in_delta 501.0, entry.amount.to_f, 0.01
+    principal = @account.entries.find_by(external_id: "kraken_ledger_LWIT02", source: "kraken")
+    assert principal
+    assert_in_delta 500.0, principal.amount.to_f, 0.01
+
+    fee = @account.entries.find_by(external_id: "kraken_ledger_LWIT02_fee", source: "kraken")
+    assert fee, "the fee must be its own entry"
+    assert_in_delta 1.0, fee.amount.to_f, 0.01
+    assert_equal "Fee 1 USD", fee.name, "a BigDecimal must not reach the name as 0.1e1"
+    assert_equal "Fee", fee.entryable.investment_activity_label
+    assert_in_delta 501.0, principal.amount.to_f + fee.amount.to_f, 0.01
+  end
+
+  # The fee is a cost whichever way the principal moved, so it is an outflow on
+  # a deposit too.
+  test "a deposit fee is charged as its own outflow" do
+    set_ledgers(
+      "LDEP02" => ledger_entry(type: "deposit", asset: "ZUSD", amount: "1000.00", fee: "2.00", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 2 do
+      process
+    end
+
+    principal = @account.entries.find_by(external_id: "kraken_ledger_LDEP02", source: "kraken")
+    assert_in_delta(-1000.0, principal.amount.to_f, 0.01)
+
+    fee = @account.entries.find_by(external_id: "kraken_ledger_LDEP02_fee", source: "kraken")
+    assert fee
+    assert fee.amount.positive?, "a fee is always an outflow"
+    assert_in_delta 2.0, fee.amount.to_f, 0.01
+  end
+
+  # Only deposits and withdrawals have a counterparty to reconcile against.
+  # Everything else keeps the combined figure.
+  test "a fee on a ledger type with no counterparty stays folded in" do
+    set_ledgers(
+      "LSTK02" => ledger_entry(type: "staking", asset: "ZUSD", amount: "10.00", fee: "1.00", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 1 do
+      process
+    end
+
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LSTK02", source: "kraken")
+    assert_in_delta(-9.0, entry.amount.to_f, 0.01)
+  end
+
+  # Pricing the fee can fail on one sync and succeed on the next. The principal
+  # being present must not stop the fee from being created later.
+  test "a fee missing after an earlier pass is created without duplicating the principal" do
+    @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date, name: "Withdrawal 500.0 USD", amount: 500, currency: "USD",
+      external_id: "kraken_ledger_LWIT05", source: "kraken",
+      entryable: Transaction.new(kind: "funds_movement", investment_activity_label: "Withdrawal")
+    )
+    set_ledgers(
+      "LWIT05" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 1 do
+      process
+    end
+
+    assert_equal 1, @account.entries.where(external_id: "kraken_ledger_LWIT05").count
+    fee = @account.entries.find_by(external_id: "kraken_ledger_LWIT05_fee", source: "kraken")
+    assert fee
+    assert_in_delta 1.0, fee.amount.to_f, 0.01
+  end
+
+  # A correction row can carry a fee against a zero principal. Before the fee
+  # was split out the combined figure kept it; now the fee is its own entry and
+  # a zero principal must not swallow it.
+  test "a fee-only ledger row still produces its fee entry" do
+    set_ledgers(
+      "LWIT06" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "0.00", fee: "0.50", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 1 do
+      process
+    end
+
+    assert_nil @account.entries.find_by(external_id: "kraken_ledger_LWIT06"), "no principal for a zero amount"
+    fee = @account.entries.find_by(external_id: "kraken_ledger_LWIT06_fee", source: "kraken")
+    assert fee
+    assert_in_delta 0.5, fee.amount.to_f, 0.01
+  end
+
+  # An account synced before fees were split carries the fee inside the
+  # withdrawal. An ordinary sync reaches it long before the re-import this
+  # change asks for, and must not charge the fee a second time.
+  test "a principal written with its fee inside it is left alone" do
+    set_ledgers(
+      "LWIT07" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
+    )
+    legacy = @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date,
+      name: "Withdrawal 501 USD",
+      amount: 501,
+      currency: "USD",
+      external_id: "kraken_ledger_LWIT07",
+      source: "kraken",
+      entryable: Transaction.new
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_nil @account.entries.find_by(external_id: "kraken_ledger_LWIT07_fee")
+    assert_equal 501, legacy.reload.amount
+  end
+
+  # The other reason a principal can stand alone: pricing the fee failed on an
+  # earlier sync. That one is still owed its other half.
+  test "a principal written without its fee still gets one" do
+    set_ledgers(
+      "LWIT08" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
+    )
+    @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date,
+      name: "Withdrawal 500 USD",
+      amount: 500,
+      currency: "USD",
+      external_id: "kraken_ledger_LWIT08",
+      source: "kraken",
+      entryable: Transaction.new
+    )
+
+    assert_difference "@account.entries.count", 1 do
+      process
+    end
+
+    fee = @account.entries.find_by(external_id: "kraken_ledger_LWIT08_fee", source: "kraken")
+    assert fee
+    assert_in_delta 1.0, fee.amount.to_f, 0.01
+  end
+
+  # A crypto principal is converted at the current spot price, so the stored
+  # figure and anything recomputed later drift apart as the price moves. The
+  # native quantity does not, which is why the classification reads that.
+  test "a crypto principal written with its fee inside it survives a price move" do
+    set_raw_payload_assets([ { "symbol" => "BTC", "price_usd" => "50000.00" } ])
+    set_ledgers(
+      "LWBTC1" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "-0.50000000", fee: "0.00100000", time: 1_700_000_000)
+    )
+    # As the old code wrote it: one entry for 0.501 BTC, priced at 50,000.
+    @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date,
+      name: "Withdrawal 0.501 BTC",
+      amount: 25_050,
+      currency: "USD",
+      external_id: "kraken_ledger_LWBTC1",
+      source: "kraken",
+      entryable: Transaction.new
+    )
+
+    # Upwards: the stored figure now sits nearer the fee-less candidate than the
+    # fee-inclusive one, which is what a comparison of converted amounts reads
+    # as "still owed its fee".
+    set_raw_payload_assets([ { "symbol" => "BTC", "price_usd" => "60000.00" } ])
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_nil @account.entries.find_by(external_id: "kraken_ledger_LWBTC1_fee")
+  end
+
+  # The legacy check must not cost a query per ledger row: the principal
+  # amounts are loaded with the external ids, in the same bulk read.
+  test "the legacy-principal check does not scale entries queries with ledger count" do
+    set_ledgers(
+      "LWQ1" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-100.00", fee: "1.00", time: 1_700_000_000),
+      "LWQ2" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-200.00", fee: "1.00", time: 1_700_000_100),
+      "LWQ3" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-300.00", fee: "1.00", time: 1_700_000_200)
+    )
+
+    process
+    queries = capture_sql_queries { process }
+    entries_selects = queries.count { |q| q.match?(/from "entries"/i) }
+    assert_equal 1, entries_selects,
+      "second pass should still issue exactly one bulk read, not one per split-fee row"
+  end
+
+  test "a split fee entry is not duplicated on reprocessing" do
+    set_ledgers(
+      "LWIT03" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 2 do
+      process
+    end
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
   end
 
   # ---------------------------------------------------------------------------

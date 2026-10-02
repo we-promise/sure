@@ -9,10 +9,10 @@
     that needs nothing from you now shows nothing.
 
     Below md the verb is an icon, which DS::Buttonish already gives a 44px
-    touch target via pointer-coarse. The labelled version lives in the row
-    expansion, which is one tap away and has room for words.
+    touch target via pointer-coarse. The labelled version lives in the bill's
+    drawer, which is one tap away and has room for words.
 
-    `labelled: true` is what the expansion passes to get the full-width,
+    `labelled: true` is what the drawer passes to get the full-width,
     spelled-out version of the same decision. %>
 
 <%
@@ -32,7 +32,7 @@
       RecurringTransaction.valid_payment_url?(series.payment_url) ? nil : { key: "find_payment", icon: "search" }
     end
 
-  # A row that needs nothing stays silent; the expansion never does, or
+  # A row that needs nothing stays silent; the drawer never does, or
   # unlinking, reopening and manual payment would be stranded.
   action ||= { key: "find_payment", icon: "search" } if labelled && occurrence.scheduled?
 %>

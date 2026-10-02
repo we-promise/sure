@@ -1,20 +1,25 @@
 class Account::MarketDataImporter
   attr_reader :account
 
+  # Track rejected provider quotes separately from existing shared price history.
   def initialize(account)
     @account = account
     @invalid_price_currency_security_ids = Set.new
   end
 
+  # Count unresolved quote currencies only for securities and dates this account needs.
   def invalid_price_currency_count
-    invalid_persisted_ids = Security::Price
+    invalid_persisted_ids = Security::Price.with_unrecovered_currency
       .where(security_id: security_ids, date: ..Date.current)
-      .where("UPPER(security_prices.currency) NOT IN (?)", Money::Currency.all.keys.map(&:upcase))
       .group(:security_id)
       .maximum(:date)
       .filter_map { |security_id, date| security_id if date >= first_required_price_dates[security_id] }
 
-    (@invalid_price_currency_security_ids | invalid_persisted_ids).size
+    retry_ids = Security::Price.requiring_currency_retry.where(security_id: security_ids, date: ..Date.current)
+      .group(:security_id).maximum(:date)
+      .filter_map { |security_id, date| security_id if date >= first_required_price_dates[security_id] }
+
+    (@invalid_price_currency_security_ids | invalid_persisted_ids | retry_ids).size
   end
 
   # Prices are imported first so their currencies are known when deciding

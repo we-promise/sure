@@ -83,6 +83,20 @@ class Security::PriceTest < ActiveSupport::TestCase
     assert price.errors[:currency].any?
   end
 
+  test "recovery is scoped to the same security and quote date" do
+    date = 20.days.ago.to_date
+    bad = @security.prices.create!(date: date, price: 100, currency: "USD")
+    bad.update_column(:currency, "")
+    other = securities(:msft)
+    other.prices.create!(date: date, price: 100, currency: "USD")
+    assert_includes Security::Price.with_unrecovered_currency, bad
+
+    replacement = @security.prices.create!(date: date, price: 105, currency: "USD", currency_retry_required: true)
+    assert_includes Security::Price.with_unrecovered_currency, bad
+    replacement.update!(currency_retry_required: false)
+    assert_not_includes Security::Price.with_unrecovered_currency, bad
+  end
+
   test "normalizes a supported price currency before saving" do
     price = Security::Price.create!(
       security: @security, date: 10.days.ago.to_date, price: 100, currency: " usd "

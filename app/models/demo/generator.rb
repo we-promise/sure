@@ -1084,7 +1084,10 @@ class Demo::Generator
         [ @student_loan, "Student Loan Payment", @interest_cat ],
         [ @car_loan, "Auto Loan Payment", @transportation_cat ]
       ].each do |account, memo, interest_category|
-        account.loan.amortization_schedule.payments.each do |payment|
+        # Loan's touch callback can cache a missing account while it is saved
+        # before its parent. Within a sample-data/refresh transaction, the
+        # after-commit cache reset has not run yet, so reload before scheduling.
+        account.loan.reload.amortization_schedule.payments.each do |payment|
           break if payment.date > Date.current
 
           make_loan_payment!(

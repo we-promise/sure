@@ -85,7 +85,7 @@ class Security::Price::Importer
 
       has_provider_price = provider_price_value.present? && provider_price_value.to_f > 0
       has_db_price = db_price_value.present? && db_price_value.to_f > 0
-      is_provisional = db_price&.provisional
+      is_provisional = db_price&.provisional || db_price&.currency_retry_required
 
       # Choose price and currency from the same source to avoid mismatches
       chosen_price, chosen_currency = if clear_cache || is_provisional
@@ -123,11 +123,25 @@ class Security::Price::Importer
         date:        date,
         price:       chosen_price,
         currency:    chosen_currency,
-        provisional: provisional
+        provisional: provisional,
+        currency_retry_required: !has_provider_price &&
+          (Array(@invalid_currency_dates).include?(date) ||
+           legacy_invalid_currency_dates.include?(date) || db_price&.currency_retry_required == true)
       }
     end
 
     result = upsert_rows(gapfilled_prices)
+    recovered_quotes = gapfilled_prices.filter_map do |row|
+      price = provider_prices[row[:date]]
+      row if price&.price.present? && price.price.to_f > 0 &&
+        row[:price] == price.price && row[:currency] == Security::Price.normalized_currency(price.currency)
+    end
+    recovered_quotes.each do |row|
+      # A replacement quote may use another currency. Remove only generated
+      # retry fallbacks so they cannot compete with the recovered quote.
+      Security::Price.requiring_currency_retry.where(security: security, date: row[:date])
+        .where.not(currency: row[:currency]).delete_all
+    end
 
     # Persist the advanced start date so subsequent syncs can clamp
     # expected_count and short-circuit via all_prices_exist? instead of
@@ -242,6 +256,7 @@ class Security::Price::Importer
       end
     end
 
+    # Load recognized-currency prices so legacy malformed rows cannot anchor gap filling.
     def db_prices
       @db_prices ||= Security::Price.with_known_currency.where(security_id: security.id, date: start_date..end_date)
                                     .order(:date)
@@ -249,7 +264,9 @@ class Security::Price::Importer
                                     .index_by(&:date)
     end
 
+    # Require usable prices and no unresolved currency retries across the requested range.
     def all_prices_exist?
+      return false if Security::Price.requiring_currency_retry.where(security: security, date: start_date..end_date).exists?
       return false if has_refetchable_provisional_prices?
 
       # Count only prices in the clamped range so pre-listing / pre-IPO gaps
@@ -263,6 +280,7 @@ class Security::Price::Importer
       persisted_count == expected_count
     end
 
+    # Check only recognized-currency provisional quotes within the retry window.
     def has_refetchable_provisional_prices?
       Security::Price.with_known_currency.where(security_id: security.id, date: start_date..end_date)
                      .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
@@ -302,7 +320,7 @@ class Security::Price::Importer
                                          .to_set
 
       (clamped_start_date..end_date).detect do |d|
-        !db_prices.key?(d) || refetchable_dates.include?(d)
+        !db_prices.key?(d) || refetchable_dates.include?(d) || db_prices[d].currency_retry_required
       end || end_date
     end
 
@@ -386,10 +404,12 @@ class Security::Price::Importer
       total_upsert_count
     end
 
+    # Return a recognized currency from the persisted prices used by this import.
     def db_price_currency
       Security::Price.normalized_currency(db_prices.values.first&.currency)
     end
 
+    # Use the first accepted provider quote currency as the gap-fill anchor.
     def prev_price_currency
       @prev_price_currency ||= Security::Price.normalized_currency(provider_prices.values.first&.currency)
     end
@@ -399,9 +419,15 @@ class Security::Price::Importer
     def invalid_currency_price_on_or_before?(date)
       return true if Array(@invalid_currency_dates).any? { |invalid_date| invalid_date <= date }
 
-      Security::Price.where(security_id: security.id, date: start_date..date)
-                     .where("UPPER(currency) NOT IN (?)", Money::Currency.all.keys.map(&:upcase))
+      Security::Price.with_unknown_currency
+                     .where(security_id: security.id, date: [ provider_fetch_start_date, start_date ].min..date)
                      .exists?
+    end
+
+    # Keep malformed legacy dates retryable until a real quote has replaced their fallback.
+    def legacy_invalid_currency_dates
+      @legacy_invalid_currency_dates ||= Security::Price.with_unrecovered_currency
+        .where(security: security, date: start_date..end_date).pluck(:date).to_set
     end
 
     # Clamp to today (EST) so we never call our price API for a future date (our API is in EST/EDT timezone)

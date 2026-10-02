@@ -89,6 +89,7 @@ RSpec.describe 'API V1 Security Prices', type: :request do
 
   path '/api/v1/security_prices' do
     get 'List security price history referenced by family investment data' do
+      description 'Returns prices with recognized currency codes; legacy invalid-currency records are omitted.'
       tags 'Security Prices'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -149,6 +150,7 @@ RSpec.describe 'API V1 Security Prices', type: :request do
               schema: { type: :string, format: :uuid }
 
     get 'Retrieve a security price referenced by family investment data' do
+      description 'Legacy invalid-currency records are unavailable and return 404.'
       tags 'Security Prices'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'

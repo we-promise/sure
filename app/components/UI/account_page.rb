@@ -83,6 +83,7 @@ class UI::AccountPage < ApplicationComponent
     @fx_coverage_start_date = result
   end
 
+  # Count securities whose latest sync still needs a recognized-currency quote.
   def invalid_price_currency_count
     account.latest_sync_record&.sync_stats&.dig("invalid_price_currency_count").to_i
   end
