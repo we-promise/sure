@@ -30,7 +30,7 @@
 
     <div class="col-span-2 text-right">
       <%= render "holdings/cost_basis_cell", holding: holding, editable: false %>
-      <%= tag.p t(".per_share"), class: "font-normal text-secondary" %>
+      <%= tag.p t(holding.security.option_contract? ? ".per_contract" : ".per_share"), class: "font-normal text-secondary" %>
     </div>
 
     <div class="col-span-2 text-right">
@@ -39,7 +39,7 @@
       <% else %>
         <%= tag.p "--", class: "text-secondary" %>
       <% end %>
-      <%= tag.p t(".shares", qty: format_quantity(holding.qty, exact: crypto)), class: "font-normal text-secondary privacy-sensitive" %>
+      <%= tag.p t(holding.security.option_contract? ? ".contracts" : ".shares", qty: format_quantity(holding.qty, exact: crypto)), class: "font-normal text-secondary privacy-sensitive" %>
     </div>
 
     <div class="col-span-2 text-right">

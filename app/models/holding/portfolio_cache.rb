@@ -57,6 +57,10 @@ class Holding::PortfolioCache
     @security_cache.map { |_, v| v[:security] }
   end
 
+  def security_contract_multiplier(security_id)
+    @security_cache.dig(security_id, :security)&.contract_multiplier || 1
+  end
+
   private
     PriceWithPriority = Data.define(:price, :priority, :source)
 

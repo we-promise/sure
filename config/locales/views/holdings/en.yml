@@ -29,17 +29,23 @@ en:
     cost_basis_cell:
       unknown: "--"
       set: Set
-      set_cost_basis_header: "Set cost basis for %{ticker} (%{qty} shares)"
+      set_cost_basis_header: "Set cost basis for %{ticker} (%{qty} %{unit})"
+      shares: shares
+      contracts: contracts
       total_cost_basis_label: Total cost basis
       or_per_share_label: "Or enter per share:"
+      or_per_contract_label: "Or enter per contract:"
       per_share: per share
+      per_contract: per contract
       cancel: Cancel
       save: Save
       overwrite_confirm_title: Overwrite cost basis?
       overwrite_confirm_body: "This will replace the current cost basis of %{current}."
     holding:
       per_share: per share
+      per_contract: per contract
       shares: "%{qty} shares"
+      contracts: "%{qty} contracts"
       unknown: "--"
       no_cost_basis: No cost basis
     index:
@@ -60,6 +66,12 @@ en:
     show:
       avg_cost_label: Average Cost
       current_market_price_label: Current Market Price
+      current_contract_price_label: Current contract value
+      underlying_label: Underlying
+      contract_type_label: Option type
+      strike_price_label: Strike price
+      expiration_date_label: Expiration date
+      contract_multiplier_label: Shares per contract
       delete: Delete
       delete_subtitle: This will delete the holding and all your associated trades
         on this account.  This action cannot be undone.
@@ -89,6 +101,7 @@ en:
       reset_confirm_body: "This will change the security from %{current} back to %{original} and move all associated trades."
       ticker_label: Ticker
       trade_history_entry: "%{qty} shares of %{security} at %{price}"
+      option_trade_history_entry: "%{qty} contracts of %{security} at %{price} per share (%{multiplier} shares per contract)"
       total_return_label: Total Return
       unknown: Unknown
       cost_basis_locked_label: Cost basis is locked
@@ -97,6 +110,7 @@ en:
       unlock_confirm_title: Unlock cost basis?
       unlock_confirm_body: This will allow the cost basis to be updated by provider syncs or trade calculations.
       shares_label: Shares
+      contracts_label: Contracts
       book_value_label: Book Value
       market_value_label: Market Value
       market_data_label: Market data

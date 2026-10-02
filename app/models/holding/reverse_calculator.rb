@@ -75,7 +75,7 @@ class Holding::ReverseCalculator
           qty: qty,
           price: price.price,
           currency: price.currency,
-          amount: qty * price.price,
+          amount: qty * price.price * portfolio_cache.security_contract_multiplier(security_id),
           cost_basis: cost_basis_for(security_id, date),
           cost_basis_unknown: transferred_by?(security_id, date)
         )

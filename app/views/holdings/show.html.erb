@@ -36,6 +36,15 @@
             ) %>
           </div>
         <% end %>
+        <% if @holding.security.option_contract? %>
+          <dl class="space-y-2 px-3 py-2 text-sm">
+            <div class="flex items-center justify-between"><dt class="text-secondary"><%= t(".underlying_label") %></dt><dd class="text-primary"><%= @holding.security.underlying_ticker %></dd></div>
+            <div class="flex items-center justify-between"><dt class="text-secondary"><%= t(".contract_type_label") %></dt><dd class="text-primary"><%= t("trades.form.#{@holding.security.option_type}") %></dd></div>
+            <div class="flex items-center justify-between"><dt class="text-secondary"><%= t(".strike_price_label") %></dt><dd class="text-primary"><%= format_money Money.new(@holding.security.strike_price, @holding.currency) %></dd></div>
+            <div class="flex items-center justify-between"><dt class="text-secondary"><%= t(".expiration_date_label") %></dt><dd class="text-primary"><%= l(@holding.security.expiration_date, format: :long) if @holding.security.expiration_date %></dd></div>
+            <div class="flex items-center justify-between"><dt class="text-secondary"><%= t(".contract_multiplier_label") %></dt><dd class="text-primary"><%= @holding.security.contract_multiplier %></dd></div>
+          </dl>
+        <% end %>
         <dl class="space-y-3 px-3 py-2">
           <div data-controller="holding-security-remap">
             <div class="flex items-center justify-between text-sm">
@@ -81,10 +90,12 @@
             </div>
           </div>
           <div class="flex items-center justify-between text-sm">
-            <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
+            <dt class="text-secondary"><%= t(@holding.security.option_contract? ? ".current_contract_price_label" : ".current_market_price_label") %></dt>
             <dd id="<%= dom_id(@holding, :current_market_price) %>" class="text-primary">
               <% begin %>
-                <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t(".unknown") %>
+                <% current_price = @holding.security.current_price %>
+                <% current_price *= @holding.security.contract_multiplier if current_price && @holding.security.option_contract? %>
+                <%= current_price ? format_money(current_price) : t(".unknown") %>
                 <% rescue ActiveRecord::RecordInvalid %>
                 <%= t(".unknown") %>
                 <% rescue StandardError => e %>
@@ -95,7 +106,7 @@
             </dd>
           </div>
           <div class="flex items-center justify-between text-sm">
-            <dt class="text-secondary"><%= t(".shares_label") %></dt>
+            <dt class="text-secondary"><%= t(@holding.security.option_contract? ? ".contracts_label" : ".shares_label") %></dt>
             <dd id="<%= dom_id(@holding, :shares) %>" class="text-primary"><%= format_quantity(@holding.qty, exact: true) %></dd>
           </div>
           <div class="flex items-center justify-between text-sm">
@@ -141,7 +152,7 @@
                     class: "space-y-3",
                     data: drawer_form_data do |f| %>
                 <p class="text-xs text-secondary mb-2">
-                  <%= t("holdings.cost_basis_cell.set_cost_basis_header", ticker: @holding.ticker, qty: format_quantity(@holding.qty, exact: true)) %>
+                  <%= t("holdings.cost_basis_cell.set_cost_basis_header", ticker: @holding.ticker, qty: format_quantity(@holding.qty, exact: true), unit: t(@holding.security.option_contract? ? "holdings.cost_basis_cell.contracts" : "holdings.cost_basis_cell.shares")) %>
                 </p>
                 <!-- Total cost basis input -->
                 <div class="form-field">
@@ -162,11 +173,11 @@
                   </div>
                 </div>
                 <p class="text-xs text-secondary -mt-2">
-                  = <%= currency.symbol %><span data-drawer-cost-basis-target="perShareValue"><%= number_with_precision(current_per_share, precision: 2) || "0.00" %></span> <%= t("holdings.cost_basis_cell.per_share") %>
+                  = <%= currency.symbol %><span data-drawer-cost-basis-target="perShareValue"><%= number_with_precision(current_per_share, precision: 2) || "0.00" %></span> <%= t(@holding.security.option_contract? ? "holdings.cost_basis_cell.per_contract" : "holdings.cost_basis_cell.per_share") %>
                 </p>
                 <!-- Per-share input -->
                 <div class="pt-2 border-t border-tertiary">
-                  <label class="text-xs text-secondary block mb-1"><%= t("holdings.cost_basis_cell.or_per_share_label") %></label>
+                  <label class="text-xs text-secondary block mb-1"><%= t(@holding.security.option_contract? ? "holdings.cost_basis_cell.or_per_contract_label" : "holdings.cost_basis_cell.or_per_share_label") %></label>
                   <div class="flex items-center gap-1">
                     <span class="text-secondary text-sm font-medium"><%= currency.symbol %></span>
                     <input type="number" step="any"
@@ -230,10 +241,11 @@
                   <div>
                     <p class="text-secondary text-xs uppercase"><%= l(trade_entry.date, format: :long) %></p>
                     <p class="text-primary"><%= t(
-                      ".trade_history_entry",
-                      qty: trade_entry.trade.qty,
+                      trade_entry.trade.security.option_contract? ? ".option_trade_history_entry" : ".trade_history_entry",
+                      qty: trade_entry.trade.qty.abs,
                       security: trade_entry.trade.security.ticker,
-                      price: trade_entry.trade.price_money.format
+                      price: trade_entry.trade.price_money.format,
+                      multiplier: trade_entry.trade.contract_multiplier
                     ) %></p>
                   </div>
                 </li>
