@@ -1,6 +1,10 @@
 require "test_helper"
 
 class BillsControllerTest < ActionDispatch::IntegrationTest
+  # A bill row's drawer link. The scope leaves out Next up, whose items open
+  # the same drawer URL from outside the lists.
+  BILL_ROW_LINK = "[class~='@container'] a[data-turbo-frame=drawer][href*='display=drawer']".freeze
+
   teardown do
     travel_back
   end
@@ -230,6 +234,41 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.month_pulse.left_to_pay"), body
     assert_no_match(/ProgressRing|rounded-full[^"]*stroke/, body,
       "the donut is gone; progress is a rule, not a centrepiece")
+  end
+
+  # A raw link_to falls back to the browser's own focus outline: blue, square,
+  # and drawn tight against the text. Every stop on the page shows the DS ring.
+  test "every link on the overview shows the DS focus ring" do
+    # Never confirmed, so the detection banner shows its "Review them" link.
+    gym = create_bill(name: "Gym", amount: 90)
+    gym.recurring_price_changes.create!(effective_on: 5.days.ago.to_date,
+      previous_amount: 80, new_amount: 90, currency: "USD", source: "detected")
+    soon = 3.days.from_now.to_date
+    create_bill(name: "Amazon Prime", amount: 16.23, expected_day_of_month: soon.day,
+                next_expected_date: soon)
+
+    get bills_url
+    assert_response :success
+
+    text_links = [
+      I18n.t("bills.index.detected_review_action"),
+      I18n.t("bills.manage"),
+      I18n.t("bills.month_pulse.view_calendar")
+    ]
+    # One text link style: DS::Link's underlined text link, kept at the
+    # compact text-xs the default variant does not set.
+    text_links.each do |text|
+      assert_select "main a.text-link.underline.focus-ring.text-xs", text: text
+    end
+    # Premise: the rows are on the page, so the sweep below covers them.
+    assert_select "main #{BILL_ROW_LINK}", minimum: 2
+
+    assert_select "main a, main summary" do |stops|
+      stops.each do |stop|
+        assert_includes stop["class"].to_s.split, "focus-ring",
+          "falls back to the browser outline: #{stop.to_html.squish.truncate(160)}"
+      end
+    end
   end
 
   # Something already past its due date is not "coming up" -- it is the thing
@@ -1302,6 +1341,28 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "autopay is a state; the row's one action position belongs to a verb"
     assert_includes response.body, "https://example.com/pay",
       "the portal stays reachable, just not as the row's headline action"
+  end
+
+  # Opacity on the whole row took the secondary text to about 2.7:1 in light
+  # mode. The row recedes through the text tokens instead.
+  test "an autopay row recedes through its text colour, not opacity" do
+    create_bill(name: "Handled bill", amount: 30, autopay: true, notes: "Card ending 4242")
+    create_bill(name: "Power Co", amount: 80)
+
+    get bills_url
+    assert_response :success
+
+    assert_select BILL_ROW_LINK, text: /Handled bill/ do |links|
+      assert_not_includes links.first.parent["class"].split, "opacity-70"
+      assert_select links.first, "p.font-medium.text-secondary", text: /Handled bill/
+      assert_select links.first, "p.font-medium.text-secondary.privacy-sensitive", text: /\$30\.00/
+      # text-subdued is about 2.7:1 on white; notes have to stay readable.
+      assert_select links.first, "p.text-secondary", text: "Card ending 4242"
+    end
+    assert_select BILL_ROW_LINK, text: /Power Co/ do |links|
+      assert_select links.first, "p.font-medium.text-primary", text: /Power Co/
+      assert_select links.first, "p.font-medium.text-primary.privacy-sensitive", text: /\$80\.00/
+    end
   end
 
   # Pause, inactive and paused were three words for one thing, and the filter
