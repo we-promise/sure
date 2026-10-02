@@ -454,6 +454,7 @@ class EnableBankingItem::Importer
     end
 
     def fetch_and_store_transactions(enable_banking_account)
+      @truncated_statuses = Set.new
       start_date = determine_sync_start_date(enable_banking_account)
       include_pending = include_pending?
 
@@ -579,7 +580,7 @@ class EnableBankingItem::Importer
           end
         end
 
-        new_transactions = select_new_transactions(all_transactions, existing_transactions)
+        new_transactions = select_new_transactions(all_transactions, existing_transactions, truncated_statuses: @truncated_statuses)
 
         if new_transactions.any? || removed_pending
           enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
@@ -680,12 +681,22 @@ class EnableBankingItem::Importer
 
     # The fetched rows not yet in the stored payload. A row with a provider id
     # is new when its id is not stored, as before. Id-less rows are compared
-    # per content hash by count rather than by membership: the hash includes
-    # the date and the fetch covers whole dates, so if a date's fetch carries
-    # two rows of one hash and the payload holds one, the second is new. When
-    # some of the fetched rows differ in a field the hash does not read, the
-    # ones whose full content is not stored yet are the ones taken.
-    def select_new_transactions(fetched, stored)
+    # per content hash, matching full contents against the stored ones:
+    #
+    # - a complete response covers whole dates, and the hash includes the date,
+    #   so a group is new by however many rows it grew. Among the fetched rows,
+    #   those whose full content is not stored yet are the ones taken; a row
+    #   whose unhashed fields merely changed has not grown the group and is
+    #   not stored twice.
+    # - a truncated response may leave stored rows out, so the group's size
+    #   says nothing. Every fetched row whose full content is not stored is
+    #   taken: at worst an edited row is stored twice, a visible duplicate,
+    #   where counting would silently lose a new one.
+    #
+    # Booked and pending rows come from separate fetches, either of which can
+    # be cut short, so the two are compared apart, each by its own fetch's
+    # completeness.
+    def select_new_transactions(fetched, stored, truncated_statuses: Set.new)
       stored_ids = Set.new
       stored_groups = Hash.new { |h, k| h[k] = [] }
       stored.each do |tx|
@@ -693,7 +704,7 @@ class EnableBankingItem::Importer
         next if id.blank?
 
         if id.start_with?("enable_banking_content_")
-          stored_groups[id] << EnableBankingEntry::Processor.content_fingerprint(comparable_row(tx))
+          stored_groups[[ id, row_status(tx) ]] << EnableBankingEntry::Processor.content_fingerprint(comparable_row(tx))
         else
           stored_ids << id
         end
@@ -706,17 +717,15 @@ class EnableBankingItem::Importer
         next if id.blank?
 
         if id.start_with?("enable_banking_content_")
-          fetched_groups[id] << tx
+          fetched_groups[[ id, row_status(tx) ]] << tx
         elsif !stored_ids.include?(id)
           selected << tx
         end
       end
 
-      fetched_groups.each do |id, rows|
-        missing = rows.size - stored_groups[id].size
-        next unless missing.positive?
-
-        unmatched = stored_groups[id].tally
+      fetched_groups.each do |(id, status), rows|
+        stored_fingerprints = stored_groups[[ id, status ]]
+        unmatched = stored_fingerprints.tally
         fresh = rows.reject do |tx|
           fingerprint = EnableBankingEntry::Processor.content_fingerprint(comparable_row(tx))
           next false unless unmatched[fingerprint].to_i.positive?
@@ -724,10 +733,21 @@ class EnableBankingItem::Importer
           unmatched[fingerprint] -= 1
           true
         end
-        selected.concat((fresh + rows).uniq(&:object_id).first(missing))
+
+        if truncated_statuses.include?(status)
+          selected.concat(fresh)
+        else
+          missing = rows.size - stored_fingerprints.size
+          selected.concat((fresh + rows).uniq(&:object_id).first(missing)) if missing.positive?
+        end
       end
 
       selected
+    end
+
+    def row_status(tx)
+      tx = tx.with_indifferent_access
+      tx[:_pending] || tx.dig(:extra, :enable_banking, :pending) ? "PDNG" : "BOOK"
     end
 
     # A stored row and a fetched one are the same row whatever the pending tag
@@ -790,6 +810,7 @@ class EnableBankingItem::Importer
             transactions_kept: all_transactions.count,
             error: e
           )
+          (@truncated_statuses ||= Set.new) << transaction_status
           break
         end
 
@@ -812,6 +833,7 @@ class EnableBankingItem::Importer
       # Log as warning and return collected partial data instead of failing entirely.
       # This ensures accounts with huge history don't lose all synced data.
       Rails.logger.warn(e.message)
+      (@truncated_statuses ||= Set.new) << transaction_status
       all_transactions
     end
 

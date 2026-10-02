@@ -145,6 +145,59 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
     assert_equal 1, @enable_banking_account.raw_transactions_payload.count
   end
 
+  # A truncated response may leave a stored row out. If it carries a new row
+  # with the same content hash in its place, the group has not grown, and
+  # counting alone would skip the new row for good.
+  test "stores a new row from a truncated response even when the group did not grow" do
+    stored = bare_tx.merge(note: "first transfer")
+    @enable_banking_account.update!(raw_transactions_payload: [ stored ])
+
+    page1 = { transactions: [ bare_tx.merge(note: "second transfer") ], continuation_key: "next" }
+    truncation = Provider::EnableBanking::EnableBankingError.new("transactionStatus in request is not the same as in continuationKey", :validation_error)
+    @mock_provider.stubs(:get_account_transactions).returns(page1).then.raises(truncation)
+    @importer.stubs(:include_pending?).returns(false)
+    @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
+    @enable_banking_item.stubs(:build_psu_headers).returns({})
+
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    @enable_banking_account.reload
+    notes = @enable_banking_account.raw_transactions_payload.map { |tx| tx["note"] }
+    assert_equal [ "first transfer", "second transfer" ], notes.sort
+  end
+
+  # Booked and pending rows come from separate fetches. A pending fetch cut
+  # short must not loosen the rule for booked rows from a complete fetch.
+  test "a truncated pending fetch does not let an edited booked row be stored twice" do
+    @enable_banking_account.update!(raw_transactions_payload: [ bare_tx.merge(note: "first transfer") ])
+
+    edited = { transactions: [ bare_tx.merge(note: "first transfer, edited") ], continuation_key: nil }
+    pending_page = { transactions: [ bare_tx(amount: "7.00") ], continuation_key: "next" }
+    truncation = Provider::EnableBanking::EnableBankingError.new("transactionStatus in request is not the same as in continuationKey", :validation_error)
+    @mock_provider.stubs(:get_account_transactions).with(has_entry(transaction_status: "BOOK")).returns(edited)
+    @mock_provider.stubs(:get_account_transactions).with(has_entry(transaction_status: "PDNG")).returns(pending_page).then.raises(truncation)
+    @importer.stubs(:include_pending?).returns(true)
+    @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
+    @enable_banking_item.stubs(:build_psu_headers).returns({})
+
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    @enable_banking_account.reload
+    booked = @enable_banking_account.raw_transactions_payload.reject { |tx| tx["_pending"] }
+    assert_equal 1, booked.count, "the edited booked row is the stored one, not a second transaction"
+  end
+
+  test "a complete response still does not store an edited row twice" do
+    stored = bare_tx.merge(note: "first transfer")
+    @enable_banking_account.update!(raw_transactions_payload: [ stored ])
+
+    stub_fetch([ bare_tx.merge(note: "first transfer, edited") ])
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal 1, @enable_banking_account.raw_transactions_payload.count
+  end
+
   test "still collapses rows that differ only in entry_reference (issue #954)" do
     stub_fetch([ bare_tx.merge(entry_reference: "ref_a"), bare_tx.merge(entry_reference: "ref_b") ])
     @importer.send(:fetch_and_store_transactions, @enable_banking_account)
