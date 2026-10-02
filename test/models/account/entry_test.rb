@@ -73,13 +73,13 @@ class EntryTest < ActiveSupport::TestCase
     categorized = create_transaction(account: account, name: "Has a category", category: categories(:food_and_drink))
     transfer_leg = create_transaction(account: account, name: "Transfer leg", category: nil, kind: "funds_movement")
 
-    ids = account.entries.search(uncategorized: true).pluck(:id)
+    ids = account.entries.search({ categories: [ Category::UNCATEGORIZED_FILTER_VALUE ] }, account.family).pluck(:id)
 
     assert_includes ids, uncategorized.id
     assert_not_includes ids, categorized.id
     assert_not_includes ids, transfer_leg.id
 
-    assert_includes account.entries.search(uncategorized: false).pluck(:id), categorized.id
+    assert_includes account.entries.search({ categories: [ categories(:food_and_drink).name ] }, account.family).pluck(:id), categorized.id
   end
 
   test "status filter matches pending transactions for every supported provider via EntrySearch" do

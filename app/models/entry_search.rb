@@ -5,13 +5,25 @@ class EntrySearch
   attribute :search, :string
   attribute :amount, :string
   attribute :amount_operator, :string
-  attribute :types, :string
+  attribute :types, array: true
   attribute :status, array: true
-  attribute :uncategorized, :boolean
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
   attribute :end_date, :string
+  attribute :categories, array: true
+  attribute :tags, array: true
+  attribute :merchants, array: true
+
+  attr_reader :family
+
+  # `family` is only required to scope the category-name lookup in
+  # Transaction::Search.apply_category_filter (see #1480); every other filter
+  # here works without it.
+  def initialize(filters = {}, family: nil)
+    @family = family
+    super(filters)
+  end
 
   class << self
     def apply_search_filter(scope, search)
@@ -59,15 +71,6 @@ class EntrySearch
       query
     end
 
-    # Uncategorized means what it means everywhere else (the Transactions
-    # "Uncategorized" filter, the uncategorized badge, Quick Categorize):
-    # Entry.uncategorized_transactions, which skips transfers and excluded entries.
-    def apply_uncategorized_filter(scope, uncategorized)
-      return scope unless uncategorized
-
-      scope.where(id: Entry.uncategorized_transactions.select(:id))
-    end
-
     def apply_status_filter(scope, statuses)
       return scope unless statuses.present?
       return scope if statuses.uniq.sort == %w[confirmed pending] # Both selected = no filter
@@ -111,7 +114,27 @@ class EntrySearch
     query = self.class.apply_amount_filter(query, amount, amount_operator)
     query = self.class.apply_accounts_filter(query, accounts, account_ids)
     query = self.class.apply_status_filter(query, status)
-    query = self.class.apply_uncategorized_filter(query, uncategorized)
+
+    if transaction_specific_filters?
+      # Only Transaction entries have a category/merchant/type/tags, so this
+      # join is skipped unless one of those filters is active. Most of
+      # Transaction::Search's apply_* methods exclude non-Transaction entries
+      # as a side effect of their own conditions, but apply_type_filter
+      # doesn't when every type is selected (it's a no-op then) — so exclude
+      # non-Transaction entries explicitly here instead of relying on that.
+      query = query.joins("LEFT JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      query = query.where(entries: { entryable_type: "Transaction" })
+      query = Transaction::Search.apply_category_filter(query, categories, family)
+      query = Transaction::Search.apply_type_filter(query, types)
+      query = Transaction::Search.apply_merchant_filter(query, merchants)
+      query = Transaction::Search.apply_tag_filter(query, tags)
+    end
+
     query
   end
+
+  private
+    def transaction_specific_filters?
+      categories.present? || types.present? || merchants.present? || tags.present?
+    end
 end

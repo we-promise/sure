@@ -671,6 +671,7 @@ Rails.application.routes.draw do
       get :select_provider
       get :confirm_unlink
       delete :unlink
+      delete :clear_filter
     end
 
     collection do
