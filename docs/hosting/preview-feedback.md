@@ -138,6 +138,39 @@ usage: blocked or opted-out analytics are absent. The self-hosted client uses an
 in-memory anonymous identity, so distinct IDs are not reliable counts of returning
 people or installations across visits.
 
+## Daily web preview adoption
+
+`web_app_opened_daily` records the first visible authenticated web opening for a
+browser/account on each browser-local calendar day. Ordinary browser tabs and
+installed PWAs both qualify. Its only explicit event property is the Boolean
+`preview_features_enabled`; the existing normal SDK supplies `sure_version` and
+its existing metadata. The account ID is used only in a local storage key and is
+not added to the event. No Rails Session, mobile API, or background-sync hook is
+involved.
+
+The event uses only the installation's normal `POSTHOG_KEY` / `POSTHOG_HOST`
+client, its environment gate and capture opt-out. A self-hosted installation
+with only the shared feedback client does not send this event. The shared
+feedback destination and its allowlist are unchanged.
+
+The first visible opening's preview state is remembered while the SDK loads or
+retries. Changing the preference later that day does not emit another event or
+replace that day's state; the next day can record the new state. Reloads, Turbo
+navigation, repeated SDK-ready notifications and foreground returns share the
+same local marker. Each account has its own marker, so switching accounts does
+not suppress the second account. Hidden tabs, cached Turbo previews and
+logged-out pages do not qualify. Returning to a visible tab on a later day can
+qualify even without signing in again.
+
+This is a sampled count of daily web openings, not all sessions or unique people.
+Blocked storage omits the event; clearing storage or using another browser or
+device can count again. Web Locks serialize simultaneous tabs where supported;
+older browsers without them can race. A closed tab between reservation and
+capture, or a failed storage rollback, can omit that day. Existing open pages
+use their last rendered account/preference until navigation refreshes it. SDK
+acceptance does not guarantee ingestion. Offline unit and browser tests use fake
+SDKs and never submit live events.
+
 ## Privacy and extending the implementation
 
 Usage properties must exclude amounts, account/category names or IDs, date
