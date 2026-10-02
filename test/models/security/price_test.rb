@@ -86,11 +86,12 @@ class Security::PriceTest < ActiveSupport::TestCase
   test "a validated edit settles a generated retry fallback" do
     @security.prices.where(date: Date.current).delete_all
     price = @security.prices.create!(date: Date.current, price: 100, currency: "USD",
-      provisional: true, currency_retry_required: true)
+      provisional: true, currency_retry_required: true, currency_retry_generated: true)
 
     price.update!(price: 120)
 
     assert_not price.reload.currency_retry_required?
+    assert_not price.currency_retry_generated?
     assert_not price.provisional?
     @provider.expects(:fetch_security_prices).never
     result = Security::Price::Importer.new(security: @security, security_provider: @provider,

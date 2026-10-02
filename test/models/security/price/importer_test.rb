@@ -131,7 +131,7 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
   test "a lookback quote does not clear retry state outside the persisted range" do
     earlier_date = 1.day.ago.to_date
     fallback = @security.prices.create!(date: earlier_date, price: 100, currency: "USD",
-      currency_retry_required: true)
+      currency_retry_required: true, currency_retry_generated: true)
     @provider.expects(:fetch_security_prices).returns(provider_success_response([
       OpenStruct.new(date: earlier_date, price: 200, currency: "EUR"),
       OpenStruct.new(date: Date.current, price: 210, currency: "EUR")
@@ -145,7 +145,7 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
 
   test "a replacement currency settles all retry markers for the recovered date" do
     fallback = @security.prices.create!(date: Date.current, price: 100, currency: "USD",
-      currency_retry_required: true)
+      currency_retry_required: true, currency_retry_generated: true)
     @provider.expects(:fetch_security_prices).returns(provider_success_response([
       OpenStruct.new(date: Date.current, price: 200, currency: "EUR")
     ]))
@@ -168,7 +168,7 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal 110, @security.prices.find_by!(date: Date.current).price
   end
 
-  test "an all-invalid response marks a carried-forward quote for later recovery" do
+  test "an all-invalid response retries without replacing an authoritative stored quote" do
     price = @security.prices.create!(date: Date.current, price: 100, currency: "USD")
     @provider.expects(:fetch_security_prices).returns(provider_success_response([
       OpenStruct.new(date: Date.current, price: 200, currency: "")
@@ -176,14 +176,52 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     Security::Price::Importer.new(security: @security, security_provider: @provider,
       start_date: Date.current, end_date: Date.current, clear_cache: true).import_provider_prices
     assert price.reload.currency_retry_required?
+    assert_not price.currency_retry_generated?
 
     @provider.expects(:fetch_security_prices).returns(provider_success_response([
-      OpenStruct.new(date: Date.current, price: 200, currency: "USD")
+      OpenStruct.new(date: Date.current, price: 200, currency: "EUR")
     ]))
     Security::Price::Importer.new(security: @security, security_provider: @provider,
       start_date: Date.current, end_date: Date.current).import_provider_prices
     assert_not price.reload.currency_retry_required?
-    assert_equal 200, price.price
+    assert_equal 100, price.price
+    assert_equal "USD", price.currency
+    assert_equal 1, @security.prices.where(date: Date.current).count
+  end
+
+  test "currency recovery rolls back replacement writes if fallback cleanup fails" do
+    fallback = @security.prices.create!(date: Date.current, price: 100, currency: "USD",
+      currency_retry_required: true, currency_retry_generated: true)
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: Date.current, price: 200, currency: "EUR")
+    ]))
+    importer = Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: Date.current, end_date: Date.current)
+    importer.expects(:remove_recovered_fallbacks).raises(RuntimeError, "interrupted recovery")
+
+    assert_raises(RuntimeError) { importer.import_provider_prices }
+    assert_equal 100, fallback.reload.price
+    assert fallback.currency_retry_required?
+    assert_not @security.prices.exists?(date: Date.current, currency: "EUR")
+  end
+
+  test "recovery reloads quotes changed by another importer during the provider request" do
+    fallback = @security.prices.create!(date: Date.current, price: 100, currency: "USD",
+      currency_retry_required: true, currency_retry_generated: true)
+    @provider.expects(:fetch_security_prices).with do |*|
+      @security.prices.create!(date: Date.current, price: 200, currency: "EUR")
+      fallback.delete
+      true
+    end.returns(provider_success_response([
+      OpenStruct.new(date: Date.current, price: 300, currency: "")
+    ]))
+    Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: Date.current, end_date: Date.current).import_provider_prices
+
+    assert_not @security.prices.exists?(date: Date.current, currency: "USD")
+    recovered = @security.prices.find_by!(date: Date.current, currency: "EUR")
+    assert_equal 200, recovered.price
+    assert_not recovered.currency_retry_generated?
   end
 
   test "syncs diff when some prices already exist" do

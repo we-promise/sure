@@ -55,6 +55,7 @@ class Security::Price < ApplicationRecord
       return unless will_save_change_to_price? || will_save_change_to_currency?
 
       self.currency_retry_required = false
+      self.currency_retry_generated = false
       self.provisional = false
     end
 
