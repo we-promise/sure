@@ -249,7 +249,7 @@ class Account::ProviderImportAdapter
       # Auto-detect investment activity labels for investment accounts
       detected_label = investment_activity_label
       if account.investment? && detected_label.nil? && entry.entryable.is_a?(Transaction)
-        detected_label = detect_activity_label(name, amount)
+        detected_label = detect_activity_label(name, entry.amount)
       end
 
       # Determine the transaction kind. Activity-label and account-type classification
@@ -266,7 +266,7 @@ class Account::ProviderImportAdapter
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
         auto_category = account.family.investment_contributions_category
-      elsif account.accountable_type == "Loan" && amount.negative?
+      elsif account.accountable_type == "Loan" && entry.amount.negative?
         auto_kind = "loan_payment"
       end
       auto_kind ||= kind.presence

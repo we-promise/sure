@@ -146,6 +146,35 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "Provider Name", updated_entry.name
   end
 
+  test "classifies a re-imported loan entry by its locked amount, not the provider's" do
+    loan_adapter = Account::ProviderImportAdapter.new(accounts(:loan))
+    entry = loan_adapter.import_transaction(
+      external_id: "plaid_loan_locked_amount",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "plaid"
+    )
+    assert_equal "loan_payment", entry.transaction.kind
+
+    entry.update!(amount: 50.00)
+    entry.lock_saved_attributes!
+    entry.transaction.update!(kind: "standard")
+
+    loan_adapter.import_transaction(
+      external_id: "plaid_loan_locked_amount",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "plaid"
+    )
+
+    assert_equal 50.00, entry.reload.amount
+    assert_equal "standard", entry.transaction.kind
+  end
+
   test "updates an unlocked amount while keeping a locked date" do
     entry = @adapter.import_transaction(
       external_id: "plaid_locked_date_only",
