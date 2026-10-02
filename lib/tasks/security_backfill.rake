@@ -42,6 +42,12 @@ namespace :security do
     # Note: otp_backup_codes excluded - it's a PostgreSQL array column incompatible with AR encryption
     results[:users] = backfill_model(User, %i[otp_secret email unconfirmed_email first_name last_name], batch_size, dry_run)
 
+    # IBAN fields (accounts/merchants are new columns, so no legacy plaintext
+    # rows exist there yet; enable_banking_accounts.iban is added to its
+    # existing entry below since it previously stored plaintext)
+    results[:accounts] = backfill_model(Account, %i[iban], batch_size, dry_run)
+    results[:merchants] = backfill_model(Merchant, %i[iban], batch_size, dry_run)
+
     # Invitation tokens and email
     results[:invitations] = backfill_model(Invitation, %i[token email], batch_size, dry_run)
 
@@ -64,7 +70,7 @@ namespace :security do
     results[:plaid_accounts] = backfill_model(PlaidAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload], batch_size, dry_run)
     results[:simplefin_accounts] = backfill_model(SimplefinAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
     results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload iban], batch_size, dry_run)
     results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload], batch_size, dry_run)
     results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
@@ -112,6 +118,12 @@ namespace :security do
           # validations/callbacks that might read other encrypted fields)
           encryptor = model_class.new
           plaintext_values.each do |field, value|
+            # EnableBankingAccount#iban is the one legacy-plaintext IBAN column
+            # here; Account/Merchant#iban are new columns with no legacy rows.
+            # Normalizing on write, bypassing validations/callbacks as above,
+            # matches the normalize_iban callback so find_by(iban:) with a
+            # canonical value still matches a formatted/lowercase legacy row.
+            value = IbanNormalizable.normalize(value) if field == :iban
             encryptor.send("#{field}=", value)
           end
 

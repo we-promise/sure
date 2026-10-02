@@ -328,7 +328,8 @@ class Family::DataImporter
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
-          status: importable_account_status(data["status"])
+          status: importable_account_status(data["status"]),
+          iban: data["iban"]
         )
 
         account.save!
@@ -491,7 +492,8 @@ class Family::DataImporter
         merchant.assign_attributes(
           name: data["name"],
           color: data["color"],
-          logo_url: data["logo_url"]
+          logo_url: data["logo_url"],
+          iban: data["iban"]
         )
         # Older or hand-built files omit website_url; don't clear an existing one.
         merchant.website_url = data["website_url"] if data.key?("website_url")
