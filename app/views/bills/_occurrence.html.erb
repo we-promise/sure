@@ -2,14 +2,12 @@
 <% series = occurrence.recurring_transaction %>
 <% expected = occurrence.resolved_expected_amount_money %>
 <% paid = occurrence.confirmed_allocated_money %>
-<% pane_frame = dom_id(occurrence, :pane) %>
 
 <%# SCAN. What is this, and does it need me?
-    Everything past that question lives one tap deeper, in the expansion.
+    Everything past that question lives one tap deeper, in the drawer.
 
     An autopaying bill is still worth seeing and still counts toward the total,
     but it recedes so the rows that want something from you carry the weight. %>
-<div>
 <%# The row reads as interactive without dressing up as a button: a hover tint
     and the name underlining, the same cues the transaction list uses.
 
@@ -21,8 +19,8 @@
 <div class="flex items-center gap-3 @lg:gap-4 px-4 py-3 transition-colors hover:bg-surface-hover <%= "opacity-70" if series.autopay? %>">
   <%# The bulk of the row is the inspect control. Only the trailing verb sits
       outside it, so there are no anchors inside anchors. %>
-  <%# Names the cycle it was opened from. Without it the expansion falls back to
-      the series' current occurrence, so expanding a settled row described the
+  <%# Names the cycle it was opened from. Without it the drawer falls back to
+      the series' current occurrence, so opening a settled row described the
       NEXT one and reported it unpaid. %>
   <%= link_to bill_path(series, display: "pane", frame: pane_frame, occurrence: occurrence.id),
         data: { turbo_frame: pane_frame, turbo_prefetch: false },
@@ -32,14 +30,10 @@
         piece of temporal context saying the same word twice. The colour still
         carries the state; the rail now carries the date the state is about.
 
-        Desktop-only: on a phone the subline says it in words instead. %>
+        Only from @lg. Below it the subline leads with the same date. %>
     <% if date_label %>
       <div class="hidden @lg:block w-14 shrink-0 text-xs <%= occurrence.derived_state == :overdue ? "text-destructive font-medium" : "text-secondary" %>">
-        <% if occurrence.due_on == Date.current %>
-          <%= t("bills.row_today") %>
-        <% else %>
-          <%= l(occurrence.due_on, format: "%b %-d") %>
-        <% end %>
+        <%= bills_row_date(occurrence) %>
       </div>
     <% end %>
 
@@ -67,6 +61,9 @@
       <%# In a dated section the subline says WHY this row needs attention,
           which is the whole point of pulling those rows out of the run. %>
       <p class="text-xs truncate <%= reason && occurrence.derived_state == :overdue ? "text-destructive" : "text-secondary" %>">
+        <% if date_label %>
+          <span class="@lg:hidden"><%= bills_row_date(occurrence) %> &middot;</span>
+        <% end %>
         <% if reason %>
           <%= reason %>
           <%# Two rows reading the same name and the same amount need telling
@@ -130,9 +127,4 @@
   <div class="shrink-0 flex items-center gap-2">
     <%= render "bills/row_action", occurrence: occurrence, suggestion: suggestion %>
   </div>
-</div>
-
-<%# The row's expansion: empty until the row is clicked, then the bill's
-    current state slides in under the line item. %>
-<%= turbo_frame_tag pane_frame %>
 </div>

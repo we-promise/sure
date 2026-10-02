@@ -99,11 +99,16 @@ class BillsMobileTest < ApplicationSystemTestCase
     all("summary", text: I18n.t("bills.paycheck.reserved_ahead")).each(&:click)
     assert_no_horizontal_scroll("the paycheck view with reserved amounts open")
 
-    # And with a row expanded, which is the widest the page ever gets.
+    # And a bill opened in its drawer, back at phone width.
+    page.driver.browser.manage.window.resize_to(*PHONE)
     visit bills_url
-    find("a[data-turbo-frame^='pane_recurring_occurrence_']", match: :first).click
-    assert_text bill.display_name
-    assert_no_horizontal_scroll("the overview with a row expanded")
+    find("a[data-turbo-frame='drawer']", text: bill.display_name, match: :first).click
+    within("dialog[open]") do
+      assert_selector "h2", text: bill.display_name
+      # A phone has no Esc key, so the way out has to be on screen.
+      assert_selector "button[aria-label='#{I18n.t("ds.dialog.close")}']", visible: true
+    end
+    assert_no_horizontal_scroll("the bill drawer")
   end
 
   # Bill rows padded 12px under a 16px section header, so every card had a 4px
@@ -183,6 +188,28 @@ class BillsMobileTest < ApplicationSystemTestCase
     assert_raises(Minitest::Assertion) { assert_no_horizontal_scroll("a deliberately wide element") }
   end
 
+  # The same proof for a drawer, which sits outside #main where the document
+  # measurement cannot see it.
+  test "the overflow check sees inside an open drawer" do
+    bill = @family.recurring_transactions.create!(
+      name: "CITY WATER", account: accounts(:depository), amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    visit recurring_occurrence_url(bill.recurring_occurrences.order(:due_on).first)
+    assert_no_horizontal_scroll("the payment drawer")
+
+    page.execute_script(<<~JS)
+      const wide = document.createElement("div");
+      wide.style.width = "3000px";
+      wide.style.height = "1px";
+      document.querySelector("dialog[open] [data-DS--dialog-target='content'] > .overflow-auto").appendChild(wide);
+    JS
+
+    assert_raises(Minitest::Assertion) { assert_no_horizontal_scroll("a deliberately wide drawer") }
+  end
+
   test "the payment drawer is escapable on a phone" do
     bill = @family.recurring_transactions.create!(
       name: "CITY WATER", account: accounts(:depository), amount: 80, currency: "USD",
@@ -205,19 +232,23 @@ class BillsMobileTest < ApplicationSystemTestCase
 
   private
     # The document must never be wider than the viewport, and neither must the
-    # scroll container inside it.
+    # scroll container inside it. An open drawer sits outside #main, in a scroll
+    # container of its own.
     def assert_no_horizontal_scroll(label)
       overflow = page.evaluate_script(<<~JS)
         (() => {
           const main = document.querySelector("#main");
+          const drawer = document.querySelector("dialog[open] [data-DS--dialog-target='content'] > .overflow-auto");
           return {
             doc: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-            main: main ? main.scrollWidth - main.clientWidth : 0
+            main: main ? main.scrollWidth - main.clientWidth : 0,
+            drawer: drawer ? drawer.scrollWidth - drawer.clientWidth : 0
           };
         })()
       JS
 
       assert_operator overflow["doc"], :<=, 1, "#{label} scrolls the document sideways"
       assert_operator overflow["main"], :<=, 1, "#{label} scrolls its main content sideways"
+      assert_operator overflow["drawer"], :<=, 1, "#{label} scrolls its drawer sideways"
     end
 end
