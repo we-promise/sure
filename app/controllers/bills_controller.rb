@@ -449,12 +449,13 @@ class BillsController < ApplicationController
 
     def payable_occurrences
       # Price changes ride along because bills_attention_reason asks every
-      # row whether its amount changed recently.
+      # row whether its amount changed recently. Recurrence rules ride along
+      # because frequency_label reads them for every row.
       Current.family.recurring_occurrences
              .where(recurring_transaction_id: payable_series_ids)
              .where("due_on >= ? OR status = 'scheduled'", Date.current.beginning_of_month)
              .where("due_on <= ?", Date.current + 90)
-             .includes(recurring_transaction: [ :merchant, :recurring_price_changes ])
+             .includes(recurring_transaction: [ :merchant, :recurring_price_changes, :recurrence_rules ])
              .to_a
     end
 
