@@ -15,7 +15,7 @@ class Provider::Anthropic::AutoMerchantDetector
   end
 
   def auto_detect_merchants
-    span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
+    span = langfuse_trace&.generation(name: "auto_detect_merchants_api_call", model: model, input: {
       model: model,
       transactions: transactions,
       user_merchants: user_merchants
@@ -181,14 +181,5 @@ class Provider::Anthropic::AutoMerchantDetector
 
     def block_input(block)
       block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
-    end
-
-    def usage_hash(raw_usage)
-      return {} unless raw_usage
-      {
-        "input_tokens" => raw_usage.input_tokens.to_i,
-        "output_tokens" => raw_usage.output_tokens.to_i,
-        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i
-      }
     end
 end
