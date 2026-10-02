@@ -15,7 +15,7 @@
   <% end %>
 <% end %>
 
-<script>
+<script nonce="<%= content_security_policy_nonce %>">
   window.onload = function () {
     document.forms['redirect_form'].submit();
   };
