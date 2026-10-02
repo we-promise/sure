@@ -74,6 +74,34 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @security.id, response_data.dig("security", "id")
   end
 
+  test "legacy invalid currencies are omitted from index and unavailable through show" do
+    @security_price.update_column(:currency, "")
+
+    get api_v1_security_prices_url, headers: api_headers(@api_key)
+    assert_response :success
+    ids = JSON.parse(response.body)["security_prices"].map { |price| price["id"] }
+    assert_not_includes ids, @security_price.id
+    assert_includes ids, @eur_price.id
+
+    get api_v1_security_price_url(@security_price), headers: api_headers(@api_key)
+    assert_response :not_found
+    assert_equal "record_not_found", JSON.parse(response.body)["error"]
+  end
+
+  test "legacy currency formatting is safely normalized in filtered index and show" do
+    @security_price.update_column(:currency, " \tusd\n ")
+
+    get api_v1_security_prices_url, params: { currency: "USD" }, headers: api_headers(@api_key)
+    assert_response :success
+    price = JSON.parse(response.body)["security_prices"].find { |row| row["id"] == @security_price.id }
+    assert_equal "USD", price.fetch("currency")
+
+    get api_v1_security_price_url(@security_price), headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal "USD", JSON.parse(response.body)["currency"]
+    assert_equal " \tusd\n ", @security_price.reload[:currency]
+  end
+
   test "returns not found for another family's security price" do
     get api_v1_security_price_url(@other_price), headers: api_headers(@api_key)
 

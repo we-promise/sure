@@ -192,6 +192,79 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     Account::MarketDataImporter.new(account).import_exchange_rates
   end
 
+  test "does not fetch exchange rates for a legacy blank price currency" do
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(
+      name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new
+    )
+    security = Security.create!(ticker: "INVALIDPRICE", exchange_operating_mic: "XNAS")
+    trade_date = 10.days.ago.to_date
+    account.entries.create!(
+      name: "Buy INVALIDPRICE", date: trade_date, amount: 100, currency: "USD",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+    bad_price = Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+    bad_price.update_column(:currency, "")
+
+    @provider.expects(:fetch_exchange_rates).never
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
+  test "counts securities with provider quotes rejected for invalid currency" do
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    security = Security.create!(ticker: "BADQUOTE", exchange_operating_mic: "XNAS")
+    trade_date = 10.days.ago.to_date
+    account.entries.create!(
+      name: "Buy BADQUOTE", date: trade_date, amount: 100, currency: "USD",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+    @provider.stubs(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: trade_date, price: 100, currency: "")
+    ]))
+    @provider.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Bad Quote", logo_url: nil)))
+
+    importer = Account::MarketDataImporter.new(account)
+    importer.import_security_prices
+
+    assert_equal 1, importer.invalid_price_currency_count
+  end
+
+  test "counts a security with a legacy invalid price currency" do
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    security = Security.create!(ticker: "OLDQUOTE", exchange_operating_mic: "XNAS")
+    trade_date = 10.days.ago.to_date
+    account.entries.create!(
+      name: "Buy OLDQUOTE", date: trade_date, amount: 100, currency: "USD",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+    bad_price = Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+    bad_price.update_column(:currency, "")
+
+    assert_equal 1, Account::MarketDataImporter.new(account).invalid_price_currency_count
+  end
+
+  test "does not warn about an invalid price before the account first held the security" do
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    security = Security.create!(ticker: "OLDHISTORY", exchange_operating_mic: "XNAS")
+    trade_date = 10.days.ago.to_date
+    account.entries.create!(
+      name: "Earlier cash activity", date: trade_date - 20.days, amount: 10, currency: "USD",
+      entryable: Transaction.new
+    )
+    account.entries.create!(
+      name: "Buy OLDHISTORY", date: trade_date, amount: 100, currency: "USD",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+    bad_price = Security::Price.create!(security: security, date: trade_date - 10.days, price: 100, currency: "USD")
+    bad_price.update_column(:currency, "")
+
+    assert_equal 0, Account::MarketDataImporter.new(account).invalid_price_currency_count
+  end
+
   test "syncs security prices for securities traded by the account" do
     family = Family.create!(name: "Smith", currency: "USD")
 
