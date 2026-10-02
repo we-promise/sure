@@ -1,6 +1,10 @@
 require "securerandom"
 
 class Demo::Generator
+  # Alias the canonical sentinel from Subscription so callers that already
+  # reference Demo::Generator::DEMO_STRIPE_SUBSCRIPTION_ID keep working.
+  DEMO_STRIPE_SUBSCRIPTION_ID = Subscription::DEMO_STRIPE_ID
+
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
   #
@@ -165,7 +169,7 @@ class Demo::Generator
         date_format: "%m-%d-%Y"
       )
 
-      family.start_subscription!("sub_demo_123") if subscribed
+      family.start_subscription!(DEMO_STRIPE_SUBSCRIPTION_ID) if subscribed
 
       # Admin user
       family.users.create!(
