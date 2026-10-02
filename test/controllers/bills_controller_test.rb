@@ -178,7 +178,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     date = I18n.l(due, format: :short, locale: :fr)
     assert_select "div[class~='@lg:block']", text: date
-    assert_select "a[href=?] p", bill_path(series), text: date
+    occurrence = series.recurring_occurrences.find_by!(due_on: due)
+    assert_select "a[data-turbo-frame=drawer][href=?] p",
+      bill_path(series, display: "drawer", occurrence: occurrence.id), text: date
   end
 
   # The summary answers one question in order: where am I this month, what is
