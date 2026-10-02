@@ -152,6 +152,7 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     account.account_providers.create!(provider: coinstats_account)
 
     opening_date = 8.days.ago.to_date
+    account.family.update!(date_format: "%Y-%m-%d")
     account.set_opening_anchor_balance(balance: 500, date: opening_date)
     account.entries.create!(
       name: "Trade",
@@ -174,12 +175,16 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
       favorable_direction: account.favorable_direction
     )
 
-    normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series)
-    normalized = normalizer.normalize
+    normalized = I18n.with_locale(:en) do
+      Current.stubs(:family).returns(account.family)
+
+      Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series).normalize
+    end
 
     assert_equal opening_date, normalized.start_date
     assert_equal [ opening_date, 3.days.ago.to_date, Date.current ], normalized.values.map(&:date)
     assert_equal Money.new(500, "USD"), normalized.values.first.value
+    assert_equal opening_date.strftime("%Y-%m-%d"), normalized.values.first.date_formatted
   end
 
   test "normalizer does not duplicate anchor point when coarse sample lands on exact opening date" do

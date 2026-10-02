@@ -120,7 +120,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
       opening_money = Money.new(initial_amount, currency)
       anchor_value = Series::Value.new(
         date: first_supported_history_date,
-        date_formatted: I18n.l(first_supported_history_date, format: :long),
+        date_formatted: Series.format_date(first_supported_history_date),
         value: opening_money,
         trend: Trend.new(
           current: opening_money,
