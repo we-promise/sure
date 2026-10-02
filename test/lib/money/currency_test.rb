@@ -31,4 +31,16 @@ class Money::CurrencyTest < ActiveSupport::TestCase
   test "step returns the smallest value of the currency" do
     assert_equal 0.01, @currency.step
   end
+
+  test "includes ethereum metadata" do
+    currency = Money::Currency.new(:eth)
+
+    assert_equal "ETH", currency.iso_code
+    assert_equal "Ethereum", currency.name
+    assert_equal "Ξ", currency.symbol
+    assert_equal "Wei", currency.minor_unit
+    assert_equal 1000000000000000000, currency.minor_unit_conversion
+    assert_equal 8, currency.default_precision
+    assert_equal 0.00000001, currency.step
+  end
 end
