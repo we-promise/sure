@@ -22,6 +22,8 @@ The interactive chat where users ask questions about their finances. Routes thro
 - **Builtin** (default): Uses the OpenAI-compatible provider configured via `OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`. Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
 - **External**: Delegates the entire conversation to a remote AI agent. The agent calls back to Sure via MCP to access financial data. Set `ASSISTANT_TYPE=external` as a global override, or configure each family's assistant type in Settings.
 
+Each user can also keep **assistant notes** under Settings → Preferences: standing facts and preferences (for example, which accounts aren't theirs) that the builtin assistant should keep in mind. Notes are limited to 2,000 characters and are appended to the session context of every builtin assistant reply for that user, after the cached static instructions, so a change applies from the next message. They are sent in full even when a small context window shrinks the account and category lists. The external assistant does not receive them, and the card is hidden when it is in use.
+
 ### 2. Auto-Categorization and Merchant Detection (background)
 
 Background jobs that classify transactions and detect merchants. These **always** use the OpenAI-compatible provider (`OPENAI_ACCESS_TOKEN`), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.

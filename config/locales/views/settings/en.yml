@@ -240,6 +240,15 @@ en:
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.
+        assistant_notes:
+          title: Assistant notes
+          subtitle: Things the AI assistant should keep in mind in every chat
+          label: Notes for the assistant
+          placeholder: "e.g. The trust accounts are managed for family members and aren't mine. Keep answers short."
+          hint: Sent to the AI provider with every assistant reply. Other members of your household can't see them. Up to %{limit} characters.
+          save: Save notes
+      update:
+        assistant_notes_saved: Assistant notes saved
     budget_shares:
       update:
         success: Budget sharing settings updated
