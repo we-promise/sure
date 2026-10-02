@@ -48,6 +48,22 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     assert_instance_of Provider::TwelveData::RateLimitError, result.error
   end
 
+  # we-promise/sure#1187: the exchange_rate endpoint occasionally answers with
+  # a zero rate, which used to be stored and zeroed converted balances.
+  test "treats a zero rate from the single exchange rate endpoint as a failed lookup" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({ "symbol" => "CHF/CNY", "rate" => 0.0, "timestamp" => Time.current.to_i }.to_json)
+
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.fetch_exchange_rate(from: "CHF", to: "CNY", date: Date.current)
+
+    assert_not result.success?
+    assert_instance_of Provider::TwelveData::Error, result.error
+  end
+
   test "does not fall through to cross API when rate limited" do
     rate_limit_body = {
       "code" => 429,
