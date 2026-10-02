@@ -1604,12 +1604,16 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
   test "a page of only bills due after this month keeps the month pulse" do
     next_month = Date.current.next_month.beginning_of_month + 4
-    create_bill(name: "Next month rent", amount: 900,
+    # Manual and anchored next month, or generation also writes this month's
+    # cycle and the pulse stays up without the later row.
+    create_bill(name: "Next month rent", amount: 900, manual: true, anchor_date: next_month,
                 expected_day_of_month: next_month.day,
                 next_expected_date: next_month)
 
     get bills_url
     assert_response :success
+    assert_empty @controller.view_assigns["overdue"] + @controller.view_assigns["month_rows"],
+      "premise: the later row is the only one"
     assert_match I18n.t("bills.index.later"), response.body
     assert_match I18n.t("bills.month_pulse.left_to_pay"), response.body
   end
