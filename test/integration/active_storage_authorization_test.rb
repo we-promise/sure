@@ -362,6 +362,29 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "user can access pdf import file linked to a statement they can view" do
+    statement = AccountStatement.create_from_upload!(
+      family: @user_a.family,
+      account: accounts(:depository),
+      file: uploaded_file(
+        filename: "viewable_import_statement.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 Viewable Import Statement"
+      )
+    )
+    import = imports(:pdf)
+    import.update!(account_statement: statement)
+    import.pdf_file.attach(io: StringIO.new("%PDF-1.4 Viewable Import"), filename: "import.pdf", content_type: "application/pdf")
+
+    sign_in @user_a
+
+    get rails_blob_path(import.pdf_file)
+
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+  end
+
   test "user cannot access sure import file from a different family" do
     import = SureImport.create!(family: @user_a.family)
     import.ndjson_file.attach(io: StringIO.new("{}\n"), filename: "import.ndjson", content_type: "application/x-ndjson")
