@@ -369,10 +369,6 @@ class TransactionsController < ApplicationController
     security = resolve_security_for_conversion
     return if performed? # Early exit if redirect already happened
 
-    # Validate and calculate qty/price before transaction
-    qty, price = calculate_qty_and_price
-    return if performed? # Early exit if redirect already happened
-
     activity_label = params[:investment_activity_label].presence
     # Serialize replacements on the source, including requests already in flight.
     ActiveRecord::Base.transaction do
@@ -384,6 +380,11 @@ class TransactionsController < ApplicationController
         redirect_back_or_to transactions_path
         next
       end
+
+      # Infer missing values from the locked source amount, including edits
+      # committed while the security was being resolved.
+      qty, price = calculate_qty_and_price
+      next if performed?
 
       # Infer sell from the refreshed source: negative amount means money in.
       is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount < 0)
@@ -773,6 +774,7 @@ class TransactionsController < ApplicationController
 
     # Helper methods for convert_to_trade
 
+    # Resolve the allowed ticker/provider before locking the source, avoiding network calls under its lock.
     def resolve_security_for_conversion
       user_country = Current.family.country
 
@@ -841,6 +843,7 @@ class TransactionsController < ApplicationController
       end
     end
 
+    # Validate submitted trade values and infer a missing value from the locked amount.
     def calculate_qty_and_price
       amount = @entry.amount.abs
       qty = params[:qty].present? ? params[:qty].to_d.abs : nil

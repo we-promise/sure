@@ -126,6 +126,34 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "inferred conversion values use an amount edited before the source lock" do
+    [ @account, accounts(:investment) ].each do |account|
+      [ { qty: 2 }, { price: 50 } ].each do |trade_params|
+        entry = create_transaction(account: account, amount: 100)
+        security = securities(:aapl)
+        Security.expects(:find_by).with do |attributes|
+          if attributes == { id: security.id }
+            Entry.where(id: entry.id).update_all(amount: -200)
+            true
+          end
+        end.returns(security)
+
+        assert_difference "Trade.count", 1 do
+          post create_trade_from_transaction_transaction_url(entry.transaction),
+            params: trade_params.merge(security_id: security.id)
+        end
+        assert_nil flash[:alert]
+        assert_redirected_to account_path(account)
+        trade_entry = account.entries.where(entryable_type: "Trade").order(:created_at).last
+        assert_equal(-200, trade_entry.amount)
+        assert_equal "Sell", trade_entry.trade.investment_activity_label
+        assert_equal trade_params[:qty] ? -2 : -4, trade_entry.trade.qty
+        assert_equal trade_params[:qty] ? 100 : 50, trade_entry.trade.price
+        assert entry.reload.excluded?
+      end
+    end
+  end
+
   test "annotation-only and read-only shares cannot convert" do
     member = users(:family_member)
     share = @account.account_shares.create!(user: member, permission: "read_write")
