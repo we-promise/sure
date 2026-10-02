@@ -77,6 +77,36 @@ class Account::SyncerTest < ActiveSupport::TestCase
     assert_equal 3, DebugLogEntry.order(:created_at).last.metadata["gap_days"]
   end
 
+  # A gap that closes and later returns is a new finding, not one already on
+  # record; the closing itself is noted at info level.
+  test "notes the dates lining up again, and warns when the same gap returns" do
+    account, account_provider = linked_investment_account
+    provider_holding(account, account_provider, date: Date.current - 1)
+
+    account.set_current_balance(1000, date: Date.current, schedule_sync: false)
+    assert_difference "DebugLogEntry.where(level: \"warn\").count", 1 do
+      run_sync(Account.find(account.id))
+    end
+
+    # Aligned, as the next sync would leave it: holdings catch up with the
+    # anchor. One info entry, then nothing while it stays aligned.
+    account.holdings.create!(security: securities(:msft), qty: 1, price: 10, amount: 10, currency: "CHF",
+                             date: Date.current, account_provider_id: account_provider.id)
+    assert_difference "DebugLogEntry.where(level: \"info\").count", 1 do
+      run_sync(Account.find(account.id))
+    end
+    assert_no_difference "DebugLogEntry.count" do
+      run_sync(Account.find(account.id))
+    end
+
+    # The same one-day gap again, a day later.
+    account.set_current_balance(1000, date: Date.current + 1, schedule_sync: false)
+    assert_difference "DebugLogEntry.where(level: \"warn\").count", 1 do
+      run_sync(Account.find(account.id))
+    end
+    assert_equal 1, DebugLogEntry.order(:created_at).last.metadata["gap_days"]
+  end
+
   test "stays quiet when the anchor and the newest provider holding share a date" do
     account, account_provider = linked_investment_account
     account.set_current_balance(1000, date: Date.current - 1, schedule_sync: false)
