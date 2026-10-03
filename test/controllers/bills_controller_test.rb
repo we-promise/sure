@@ -1,6 +1,10 @@
 require "test_helper"
 
 class BillsControllerTest < ActionDispatch::IntegrationTest
+  # A bill row's drawer link. The scope leaves out Next up, whose items open
+  # the same drawer URL from outside the lists.
+  BILL_ROW_LINK = "[class~='@container'] a[data-turbo-frame=drawer][href*='display=drawer']".freeze
+
   teardown do
     travel_back
   end
@@ -230,6 +234,41 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.month_pulse.left_to_pay"), body
     assert_no_match(/ProgressRing|rounded-full[^"]*stroke/, body,
       "the donut is gone; progress is a rule, not a centrepiece")
+  end
+
+  # A raw link_to falls back to the browser's own focus outline: blue, square,
+  # and drawn tight against the text. Every stop on the page shows the DS ring.
+  test "every link on the overview shows the DS focus ring" do
+    # Never confirmed, so the detection banner shows its "Review them" link.
+    gym = create_bill(name: "Gym", amount: 90)
+    gym.recurring_price_changes.create!(effective_on: 5.days.ago.to_date,
+      previous_amount: 80, new_amount: 90, currency: "USD", source: "detected")
+    soon = 3.days.from_now.to_date
+    create_bill(name: "Amazon Prime", amount: 16.23, expected_day_of_month: soon.day,
+                next_expected_date: soon)
+
+    get bills_url
+    assert_response :success
+
+    text_links = [
+      I18n.t("bills.index.detected_review_action"),
+      I18n.t("bills.manage"),
+      I18n.t("bills.month_pulse.view_calendar")
+    ]
+    # One text link style: DS::Link's underlined text link, kept at the
+    # compact text-xs the default variant does not set.
+    text_links.each do |text|
+      assert_select "main a.text-link.underline.focus-ring.text-xs", text: text
+    end
+    # Premise: the rows are on the page, so the sweep below covers them.
+    assert_select "main #{BILL_ROW_LINK}", minimum: 2
+
+    assert_select "main a, main summary" do |stops|
+      stops.each do |stop|
+        assert_includes stop["class"].to_s.split, "focus-ring",
+          "falls back to the browser outline: #{stop.to_html.squish.truncate(160)}"
+      end
+    end
   end
 
   # Something already past its due date is not "coming up" -- it is the thing
@@ -1304,6 +1343,28 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "the portal stays reachable, just not as the row's headline action"
   end
 
+  # Opacity on the whole row took the secondary text to about 2.7:1 in light
+  # mode. The row recedes through the text tokens instead.
+  test "an autopay row recedes through its text colour, not opacity" do
+    create_bill(name: "Handled bill", amount: 30, autopay: true, notes: "Card ending 4242")
+    create_bill(name: "Power Co", amount: 80)
+
+    get bills_url
+    assert_response :success
+
+    assert_select BILL_ROW_LINK, text: /Handled bill/ do |links|
+      assert_not_includes links.first.parent["class"].split, "opacity-70"
+      assert_select links.first, "p.font-medium.text-secondary", text: /Handled bill/
+      assert_select links.first, "p.font-medium.text-secondary.privacy-sensitive", text: /\$30\.00/
+      # text-subdued is about 2.7:1 on white; notes have to stay readable.
+      assert_select links.first, "p.text-secondary", text: "Card ending 4242"
+    end
+    assert_select BILL_ROW_LINK, text: /Power Co/ do |links|
+      assert_select links.first, "p.font-medium.text-primary", text: /Power Co/
+      assert_select links.first, "p.font-medium.text-primary.privacy-sensitive", text: /\$80\.00/
+    end
+  end
+
   # Pause, inactive and paused were three words for one thing, and the filter
   # asked for the one the button never writes.
   test "a bill you paused is findable under Paused" do
@@ -1440,6 +1501,58 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "the quiet ones collapse behind a count"
     # Collapsed, not dropped: a hidden notice is still a dead end.
     3.times { |i| assert_match "Utility #{i}", response.body }
+  end
+
+  # The cards above the bill list each looked different. Needs review had the
+  # bill sections' inset shell and heading, Possible new bills was an inset
+  # panel 12px narrower with a pill for its count, and the notices had no
+  # heading, with a grey box for their quieter half.
+  test "the notices, both review queues and the bill sections share one recipe" do
+    trial = create_bill(name: "Streamflix", amount: 20)
+    trial.update!(bill_type: "subscription", trial_ends_on: Date.current + 1)
+    2.times do |i|
+      quiet = create_bill(name: "Utility #{i}", amount: 60 + i)
+      quiet.recurring_price_changes.create!(effective_on: (20 + i).days.ago.to_date,
+        previous_amount: 60 + i, new_amount: 61 + i, currency: "USD", source: "detected")
+    end
+    water = declare_bill(name: "CITY WATER", amount: 80, due: Date.current - 3)
+    charge = create_transaction_entry(name: "CITY WATER", amount: 85.50, date: Date.current - 3)
+    RecurringTransaction::Allocator.new(water.recurring_occurrences.order(:due_on).first).allocate_matched!(
+      entry: charge, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+    create_suggested(name: "Hulu", account: accounts(:depository))
+
+    get bills_url
+    assert_response :success
+
+    shells = css_select(".rounded-xl.bg-container-inset.p-1")
+    headings = shells.flat_map { |shell| css_select(shell, "div.uppercase") }
+    [ "#{I18n.t("bills.index.notices_heading")} · 3", "#{I18n.t("bills.index.needs_review")} · 1",
+      "#{I18n.t("recurring_transactions.suggested.title")} · 1", "#{I18n.t("bills.index.this_month")} · " ].each do |heading|
+      assert headings.any? { |node| node.text.squish.start_with?(heading) },
+        "no inset shell heads with #{heading.inspect}: #{headings.map { |node| node.text.squish }.inspect}"
+    end
+    # One heading row, not copies that drift apart.
+    rows = headings.map { |node| node.parent["class"] }.uniq
+    assert_equal 1, rows.size, "the shells' heading rows differ: #{rows.inspect}"
+    # Each card sits straight in its shell, so they all have one width.
+    shells.each do |shell|
+      cards = css_select(shell, ".bg-container.rounded-lg.shadow-border-xs")
+      assert cards.any?, "a shell without its card"
+      cards.each do |card|
+        assert card.parent == shell || card.parent["class"].blank?, "a card is inset by #{card.parent["class"].inspect}"
+      end
+    end
+
+    # Possible new bills still collapses and remembers it, inside the shell.
+    assert_select ".rounded-xl.bg-container-inset.p-1 > details[data-controller='persisted-disclosure'][data-persisted-disclosure-key-value='bills-suggested']"
+    # Needs review can't run long, so it doesn't collapse.
+    assert_select "details", text: /#{I18n.t("bills.index.needs_review")}/, count: 0
+    # The quieter notices fold behind a row of the card, padded like the notices
+    # and with no surface of its own: it used to read as a grey box.
+    routine = ".bg-container.rounded-lg > details > summary"
+    assert_select "#{routine} .px-4.py-2\\.5", text: /#{I18n.t("bills.index.notices_routine", count: 2)}/
+    assert_select "#{routine}[class^='bg-'], #{routine}[class*=' bg-']", count: 0
   end
 
   test "a price notice says how big the change was" do
