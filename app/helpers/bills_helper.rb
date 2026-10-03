@@ -7,10 +7,12 @@ module BillsHelper
     l(date, format: date.year == Date.current.year ? :short : :short_with_year)
   end
 
-  # The date a row in a dated section is about, as its date rail prints it and
-  # as its subline leads with where the rail is hidden.
+  # The date a bill row is about. The subline leads with it below @lg, and the
+  # rail prints it from there up (bills_rail_date). Snooze-aware, like
+  # derived_state and Next up.
   def bills_row_date(occurrence)
-    occurrence.due_on == Date.current ? t("bills.row_today") : bills_upcoming_date(occurrence.due_on)
+    date = occurrence.effective_due_on
+    date == Date.current ? t("bills.row_today") : bills_upcoming_date(date)
   end
 
   # One-shot AI features (smart-fill, smart-configure) need both the user's
@@ -21,31 +23,23 @@ module BillsHelper
     Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider.present?
   end
 
-  # Two bills can be genuinely indistinguishable on a row -- same merchant,
-  # same amount, three tiers of one subscription. The keys returned here mark
-  # exactly those collisions, so only the rows that need a second fact get one.
-  def bills_ambiguous_row_keys(occurrences)
-    occurrences.group_by { |o| [ o.recurring_transaction.display_name, o.resolved_expected_amount ] }
-               .select { |_, group| group.size > 1 }
-               .keys.to_set
-  end
-
   # Pay-period markers keyed by the id of the FIRST occurrence inside each
   # period, so the section template can drop a marker between groups without
   # pre-bucketing the rows. Each marker carries its period and the summed
-  # obligations due inside it.
+  # obligations due inside it. Dated like the rail, so a snoozed row counts
+  # toward the period it sits in.
   def bills_pay_period_markers(occurrences, pay_periods)
     return {} if pay_periods.blank?
 
     seen = Set.new
     occurrences.each_with_object({}) do |occurrence, markers|
-      index = pay_periods.index { |p| occurrence.due_on.between?(p.starts_on, p.ends_on) }
+      index = pay_periods.index { |p| occurrence.effective_due_on.between?(p.starts_on, p.ends_on) }
       next unless index && seen.add?(index)
 
       period = pay_periods[index]
       markers[occurrence.id] = {
         period: period,
-        due_total: occurrences.select { |o| o.due_on.between?(period.starts_on, period.ends_on) }
+        due_total: occurrences.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
                               .sum { |o| o.resolved_expected_amount.abs }
       }
     end
@@ -231,18 +225,17 @@ module BillsHelper
   # drawer names the account regardless, so nothing is lost when it is quiet
   # here.
   def bills_paid_from_label(bill)
-    return "" if bill.account.blank?
-    return "" unless bills_span_multiple_accounts?
+    return if bill.account.blank?
+    return unless bills_span_multiple_accounts?
 
-    " · #{t('bills.paid_from', account: bill.account.name)}"
+    t("bills.paid_from", account: bill.account.name)
   end
 
   # Autopay is a state, not a task, so it reads on the bill's own line rather
-  # than in the slot where the row keeps its verb.
+  # than in the slot where the row keeps its verb. A paused bill isn't
+  # charging, so it doesn't claim autopay.
   def bills_autopay_label(bill)
-    return "" unless bill.autopay?
-
-    " · #{t('recurring_transactions.pay_action.autopay')}"
+    t("recurring_transactions.pay_action.autopay") if bill.autopay? && bill.active?
   end
 
   # Memoized so this costs one query per request rather than one per row.
@@ -265,6 +258,13 @@ module BillsHelper
     # directly beside its own "$11.99 of $11.99 paid" total. Once a cycle is
     # closed the only useful fact left is when it had been due.
     return t("bills.due_label.settled", date: date) unless occurrence.scheduled?
+
+    # Nobody is paying a bill that isn't active, so its leftover isn't late.
+    # The label leads with the bill's status instead, as its page does.
+    series = occurrence.recurring_transaction
+    unless series.active?
+      return safe_join([ t("recurring_transactions.status.#{series.status}"), t("bills.due_label.due_since", date: date) ], " · ")
+    end
 
     # Overdue is the occurrence's own judgement, not a sign test on the date.
     # RecurringOccurrence#derived_state only calls a cycle overdue once its
@@ -302,25 +302,65 @@ module BillsHelper
     end
   end
 
-  # Why this row is in the Needs attention section.
+  # Why this row needs a look, if it does.
   #
-  # The section used to say "Overdue" against every row, which is alarming
+  # Needs attention used to say "Overdue" against every row, which is alarming
   # without being actionable: it names the symptom every row already shares
   # instead of the thing that differs. First true wins, most specific first.
+  # Paused leads: nobody is paying that bill, so nothing after it applies.
+  # Partial stays bare, because the amount column already says what's left.
   def bills_attention_reason(occurrence, suggestion: nil)
+    series = occurrence.recurring_transaction
+    return t("bills.attention.paused") unless series.active?
     return t("bills.attention.needs_review") if suggestion.present?
+    return t("bills.attention.partial") if occurrence.partially_paid?
 
-    if occurrence.partially_paid?
-      return t("bills.attention.partial", amount: format_money(occurrence.remaining_amount_money))
+    if occurrence.overdue?
+      return t("bills.attention.overdue", count: (Date.current - occurrence.effective_due_on).to_i)
     end
 
-    if occurrence.recurring_transaction.recurring_price_changes.any? { |change| change.effective_on >= 30.days.ago.to_date }
-      return t("bills.attention.amount_changed")
-    end
+    recently_changed = series.recurring_price_changes.any? { |change| change.effective_on >= 30.days.ago.to_date && change.material? }
+    t("bills.attention.amount_changed") if recently_changed
+  end
 
-    return nil unless occurrence.derived_state == :overdue
+  # A paused or dismissed bill's leftover is past its date, but nobody is
+  # paying it, so it isn't late: no red on its row, its drawers or its page.
+  def bills_overdue?(occurrence)
+    occurrence.recurring_transaction.active? && occurrence.overdue?
+  end
 
-    t("bills.attention.overdue", count: (Date.current - occurrence.effective_due_on).to_i)
+  # A bill row's one line of context, in the same order in every section. It
+  # truncates from the end, so the facts you can most do without come last.
+  # The red sits on the reason alone.
+  def bills_row_subline(occurrence, suggestion: nil)
+    series = occurrence.recurring_transaction
+    reason = bills_attention_reason(occurrence, suggestion: suggestion)
+    reason = tag.span(reason, class: "text-destructive") if reason && bills_overdue?(occurrence)
+
+    safe_join([
+      bills_autopay_label(series),
+      reason,
+      bills_installment_progress(series),
+      (t("bills.debt_payment") if series.transfer?),
+      frequency_label(series),
+      bills_paid_from_label(series)
+    ].compact_blank, " · ")
+  end
+
+  # The payment the plan is on, capped at its last: a plan settled in full
+  # still lists its final row this month.
+  def bills_installment_progress(series)
+    done, total = series.installment_progress
+    t("bills.installment_progress", done_plus_one: [ done + 1, total ].min, total: total) if total
+  end
+
+  # The rail is 56px wide, too narrow for "Jan 03, 2027", which wrapped
+  # mid-date. Another year's date puts the year on a line of its own.
+  def bills_rail_date(occurrence)
+    date = occurrence.effective_due_on
+    return bills_row_date(occurrence) if date.year == Date.current.year
+
+    safe_join([ l(date, format: :short), tag.span(date.year, class: "block text-subdued") ])
   end
 
   # The match score's own components, said in words.

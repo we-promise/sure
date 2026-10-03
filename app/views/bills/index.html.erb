@@ -11,8 +11,12 @@
       <p class="text-sm text-primary">
         <%= t(".detected_review", count: @detected_awaiting_review) %>
       </p>
-      <%= link_to t(".detected_review_action"), bills_path(view: "all"),
-            class: "text-xs text-secondary hover:text-primary shrink-0" %>
+      <%= render DS::Link.new(
+            text: t(".detected_review_action"),
+            variant: :default,
+            href: bills_path(view: "all"),
+            class: "text-xs shrink-0"
+          ) %>
     </div>
   <% end %>
 
@@ -71,30 +75,8 @@
       <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
         <% @suggested_allocations.each do |suggestion| %>
           <% series = suggestion.recurring_occurrence.recurring_transaction %>
-          <div class="flex items-center justify-between gap-4 px-4 py-3">
-            <div class="min-w-0">
-              <p class="text-sm text-primary truncate">
-                <%= t(".suggestion_line",
-                      entry: suggestion.entry&.name.presence || t(".suggestion_unknown_entry"),
-                      bill: series.display_name) %>
-              </p>
-              <%# The matcher stores WHY it proposed each of these. This line
-                  used to show a bare percentage of that reasoning instead of
-                  the reasoning, which told nobody anything they could judge. %>
-              <% reasons = bills_match_reasons(
-                   suggestion.match_signals,
-                   currency: suggestion.recurring_occurrence.currency,
-                   expected: suggestion.recurring_occurrence.resolved_expected_amount,
-                   actual: suggestion.entry&.amount&.abs,
-                   due_on: suggestion.recurring_occurrence.effective_due_on,
-                   paid_on: suggestion.paid_on
-                 ) %>
-              <p class="text-xs text-secondary privacy-sensitive">
-                <%= format_money(suggestion.allocated_amount_money) %>
-                &middot; <%= l(suggestion.paid_on, format: :short_with_year) %><%= " · #{reasons.join(" · ")}" if reasons.any? %>
-              </p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
+          <%= render DS::ReviewRow.new do |row| %>
+            <% row.with_actions do %>
               <%= render DS::Link.new(
                     text: t("recurring_occurrences.show.link_payment"),
                     variant: "primary",
@@ -107,8 +89,28 @@
                     href: reject_recurring_allocation_path(suggestion),
                     method: :post
                   ) %>
-            </div>
-          </div>
+            <% end %>
+            <p class="text-sm text-primary @md:truncate">
+              <%= t(".suggestion_line",
+                    entry: suggestion.entry&.name.presence || t(".suggestion_unknown_entry"),
+                    bill: series.display_name) %>
+            </p>
+            <%# The matcher stores WHY it proposed each of these. This line
+                used to show a bare percentage of that reasoning instead of
+                the reasoning, which told nobody anything they could judge. %>
+            <% reasons = bills_match_reasons(
+                 suggestion.match_signals,
+                 currency: suggestion.recurring_occurrence.currency,
+                 expected: suggestion.recurring_occurrence.resolved_expected_amount,
+                 actual: suggestion.entry&.amount&.abs,
+                 due_on: suggestion.recurring_occurrence.effective_due_on,
+                 paid_on: suggestion.paid_on
+               ) %>
+            <p class="text-xs text-secondary privacy-sensitive">
+              <%= format_money(suggestion.allocated_amount_money) %>
+              &middot; <%= l(suggestion.paid_on, format: :short_with_year) %><%= " · #{reasons.join(" · ")}" if reasons.any? %>
+            </p>
+          <% end %>
         <% end %>
       </div>
     </div>
@@ -172,14 +174,13 @@
         <%= render "bills/occurrence_section",
                    title: t(".needs_attention"),
                    occurrences: @overdue,
-                   date_labels: true,
                    suggestions: @suggestions_by_occurrence,
                    meta: (@past_due_total && @past_due_total.amount.positive? ? t(".attention_overdue_total", amount: format_money(@past_due_total)) : nil) %>
       </div>
     <% end %>
 
     <div class="rounded-xl bg-container-inset space-y-1 p-1">
-      <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @month_rows, date_labels: true, suggestions: @suggestions_by_occurrence, pay_periods: @month_pay_periods %>
+      <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @month_rows, suggestions: @suggestions_by_occurrence, pay_periods: @month_pay_periods %>
       <%= render "bills/occurrence_section", title: t(".later"), occurrences: @later, suggestions: @suggestions_by_occurrence %>
       <%= render "bills/occurrence_section", title: t(".dormant"), occurrences: @dormant, suggestions: @suggestions_by_occurrence %>
     </div>
