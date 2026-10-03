@@ -719,9 +719,11 @@ class SimplefinItem::Importer
 
       # Protocol v2 uses `errlist`; retain legacy `errors` compatibility.
       # Prefer the structured v2 list if a transitional server returns both.
-      provider_errors = accounts_data[:errlist].presence || accounts_data[:errors]
+      structured_errors = accounts_data[:errlist].presence
+      provider_errors = structured_errors || accounts_data[:errors]
       if provider_errors.present?
-        if accounts_data[:accounts].to_a.any?
+        general_v2_error = structured_errors&.any? { |error| general_provider_error?(error) }
+        if accounts_data[:accounts].to_a.any? && !general_v2_error
           # Partial failure: record errors for visibility but continue processing accounts
           record_errors(provider_errors)
         else
@@ -1081,6 +1083,10 @@ class SimplefinItem::Importer
       else
         "other"
       end
+    end
+
+    def general_provider_error?(error)
+      !error.is_a?(String) && error[:code].to_s.start_with?("gen.")
     end
 
     def item_auth_error?(error)
