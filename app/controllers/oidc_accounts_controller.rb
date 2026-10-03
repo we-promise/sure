@@ -33,7 +33,7 @@ class OidcAccountsController < ApplicationController
     end
 
     # Verify user's password to confirm identity
-    user = User.authenticate_by(email: params[:email], password: params[:password])
+    user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
     if user&.active?
       linked = user.transaction do

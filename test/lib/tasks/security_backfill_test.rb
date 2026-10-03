@@ -70,4 +70,26 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     assert_match(/"p":/, account.read_attribute_before_type_cast(:raw_payload).to_s,
       "the stored value must be an encryption envelope, not plaintext {}")
   end
+
+  test "covers every provider item and account model, not just the original subset" do
+    out, _err = capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "true") }
+    results = JSON.parse(out.lines.last)["results"]
+
+    # Sanity check for models that were missing from this task's coverage
+    # entirely before this change (would leave plaintext data with no
+    # remediation path even after the encryption_ready? gating bug is fixed).
+    %w[
+      akahu_items binance_items brex_items coinbase_items coinstats_items
+      ibkr_items indexa_capital_items kraken_items mercury_items
+      onchain_wallet_items questrade_items redbark_items snaptrade_items
+      sophtron_items trading212_items up_items wise_items
+      akahu_accounts binance_accounts brex_accounts ibkr_accounts
+      indexa_capital_accounts kraken_accounts onchain_wallet_accounts
+      questrade_accounts redbark_accounts sophtron_accounts
+      trading212_accounts up_accounts wise_accounts
+      api_keys sso_providers sso_identity_blocks
+    ].each do |key|
+      assert results.key?(key), "expected security:backfill_encryption to cover #{key}"
+    end
+  end
 end
