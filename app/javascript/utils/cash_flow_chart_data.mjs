@@ -26,9 +26,14 @@ export function cashFlowChartData(body) {
       typeof node.id !== "string" ||
       ids.has(node.id) ||
       typeof node.name !== "string" ||
-      !["income", "expense", "cash_flow", "surplus", "deficit"].includes(
-        node.kind,
-      )
+      ![
+        "income",
+        "expense",
+        "cash_flow",
+        "surplus",
+        "deficit",
+        "invested",
+      ].includes(node.kind)
     ) {
       throw new Error("Invalid cash flow node");
     }

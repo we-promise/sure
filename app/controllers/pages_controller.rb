@@ -261,7 +261,8 @@ class PagesController < ApplicationController
         dashboard_net_totals,
         dashboard_income_statement.income_totals(period: @period),
         dashboard_income_statement.expense_totals(period: @period),
-        Current.family.currency
+        Current.family.currency,
+        invested_total: dashboard_income_statement.invested_total(period: @period)
       )
     end
 
@@ -330,7 +331,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency)
+    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, invested_total: nil)
       nodes = []
       links = []
       node_indices = {}
@@ -375,8 +376,16 @@ class PagesController < ApplicationController
         flow_direction: :outbound
       )
 
+      # Money moved into investments, for a family that does not count it as spending
+      total_invested = invested_total&.amount.to_f.round(2)
+      if total_invested.positive?
+        percentage = total_income.zero? ? 0 : (total_invested / total_income * 100).round(1)
+        idx = add_node.call("invested_node", t("pages.dashboard.cashflow_preview.node_labels.invested"), total_invested, percentage, IncomeStatement::Sankey::INVESTED_COLOR)
+        links << { source: cash_flow_idx, target: idx, value: total_invested, color: IncomeStatement::Sankey::INVESTED_COLOR, percentage: percentage }
+      end
+
       # Surplus/Deficit
-      net = (total_income - total_expense).round(2)
+      net = (total_income - total_expense - total_invested).round(2)
       if net.positive?
         percentage = total_income.zero? ? 0 : (net / total_income * 100).round(1)
         idx = add_node.call("surplus_node", "Surplus", net, percentage, "var(--color-success)")

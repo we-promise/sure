@@ -240,6 +240,7 @@ class Family < ApplicationRecord
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
+  validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
@@ -503,6 +504,15 @@ class Family < ApplicationRecord
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
   # This is used for auto-categorizing transfers to investment accounts.
   # Always uses the family's locale to ensure consistent category naming across all users.
+  # Transaction kinds left out of spending/income lists. With
+  # investment_contributions_as_spending off, money moved into investment
+  # accounts is reported as invested rather than spent.
+  def analytics_excluded_kinds
+    return Transaction::BUDGET_EXCLUDED_KINDS if investment_contributions_as_spending?
+
+    Transaction::BUDGET_EXCLUDED_KINDS + [ "investment_contribution" ]
+  end
+
   def investment_contributions_category
     # Find ALL legacy categories (created under old request-locale behavior)
     legacy = categories.where(name: Category.all_investment_contributions_names).order(:created_at).to_a
