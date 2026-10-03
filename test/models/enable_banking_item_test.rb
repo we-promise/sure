@@ -1,13 +1,15 @@
 require "test_helper"
 
 class EnableBankingItemTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @item = EnableBankingItem.new(
       family: families(:dylan_family),
       name: "Test",
       country_code: "DE",
       application_id: "app",
-      client_certificate: "cert"
+      client_certificate: "cert", sync_start_date: 3.months.ago.to_date
     )
   end
 
@@ -136,7 +138,7 @@ class EnableBankingItemTest < ActiveSupport::TestCase
   test "with_stale_psu_ip matches items whose session has expired" do
     expired = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Expired", country_code: "DE",
-      application_id: "app", client_certificate: "cert",
+      application_id: "app", client_certificate: "cert", sync_start_date: 3.months.ago.to_date,
       last_psu_ip: "1.2.3.4", session_id: "sess", session_expires_at: 1.day.ago
     )
 
@@ -146,7 +148,7 @@ class EnableBankingItemTest < ActiveSupport::TestCase
   test "with_stale_psu_ip excludes items with a still-valid session" do
     active = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Active", country_code: "DE",
-      application_id: "app", client_certificate: "cert",
+      application_id: "app", client_certificate: "cert", sync_start_date: 3.months.ago.to_date,
       last_psu_ip: "1.2.3.4", session_id: "sess", session_expires_at: 1.day.from_now
     )
 
@@ -156,7 +158,7 @@ class EnableBankingItemTest < ActiveSupport::TestCase
   test "with_stale_psu_ip matches abandoned authorizations once the configured window elapses" do
     abandoned = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Abandoned", country_code: "DE",
-      application_id: "app", client_certificate: "cert", last_psu_ip: "1.2.3.4"
+      application_id: "app", client_certificate: "cert", sync_start_date: 3.months.ago.to_date, last_psu_ip: "1.2.3.4"
     )
     abandoned.update_column(:updated_at, (Rails.configuration.x.enable_banking.consent_days + 1).days.ago)
 
@@ -166,7 +168,7 @@ class EnableBankingItemTest < ActiveSupport::TestCase
   test "with_stale_psu_ip matches abandoned authorizations whose accepted consent duration has passed, even before the configured window elapses" do
     abandoned = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Abandoned short consent", country_code: "DE",
-      application_id: "app", client_certificate: "cert", last_psu_ip: "1.2.3.4",
+      application_id: "app", client_certificate: "cert", sync_start_date: 3.months.ago.to_date, last_psu_ip: "1.2.3.4",
       requested_consent_valid_until: 1.day.ago
     )
 
@@ -176,7 +178,7 @@ class EnableBankingItemTest < ActiveSupport::TestCase
   test "with_stale_psu_ip excludes abandoned authorizations whose accepted consent duration hasn't passed yet" do
     abandoned = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Abandoned still within consent", country_code: "DE",
-      application_id: "app", client_certificate: "cert", last_psu_ip: "1.2.3.4",
+      application_id: "app", client_certificate: "cert", sync_start_date: 3.months.ago.to_date, last_psu_ip: "1.2.3.4",
       requested_consent_valid_until: 1.day.from_now
     )
     abandoned.update_column(:updated_at, (Rails.configuration.x.enable_banking.consent_days + 1).days.ago)
@@ -187,7 +189,7 @@ class EnableBankingItemTest < ActiveSupport::TestCase
   test "with_stale_psu_ip excludes items without a stored last_psu_ip" do
     clean = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Clean", country_code: "DE",
-      application_id: "app", client_certificate: "cert",
+      application_id: "app", client_certificate: "cert", sync_start_date: 3.months.ago.to_date,
       session_id: "sess", session_expires_at: 1.day.ago
     )
 
@@ -197,7 +199,7 @@ class EnableBankingItemTest < ActiveSupport::TestCase
   test "revoke_session clears last_psu_ip along with the session" do
     item = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Revoked", country_code: "DE",
-      application_id: "app", client_certificate: "cert",
+      application_id: "app", client_certificate: "cert", sync_start_date: 3.months.ago.to_date,
       last_psu_ip: "1.2.3.4", session_id: "sess", session_expires_at: 1.day.from_now,
       authorization_id: "auth"
     )
@@ -217,7 +219,7 @@ class EnableBankingItemTest < ActiveSupport::TestCase
   test "revoke_session clears last_psu_ip even when the provider raises" do
     item = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Revoked despite provider error", country_code: "DE",
-      application_id: "app", client_certificate: "cert",
+      application_id: "app", client_certificate: "cert", sync_start_date: 3.months.ago.to_date,
       last_psu_ip: "1.2.3.4", session_id: "sess", session_expires_at: 1.day.from_now,
       authorization_id: "auth"
     )
@@ -233,5 +235,136 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     assert_nil item.session_expires_at
     assert_nil item.authorization_id
     assert_nil item.last_psu_ip
+  end
+
+  test "sync_strategy defaults to date" do
+    assert @item.date?
+    assert_not @item.longest?
+  end
+
+  test "is valid without sync_start_date before setup collects it" do
+    # create/authorize build the connection before the setup modal asks for
+    # sync_start_date, so a blank value must not block those paths.
+    @item.sync_start_date = nil
+
+    assert @item.valid?
+  end
+
+  test "is invalid when a stored sync_start_date is cleared" do
+    @item.save!
+    @item.sync_start_date = nil
+
+    assert_not @item.valid?
+    assert_includes @item.errors[:sync_start_date], "can't be blank"
+  end
+
+  test "is invalid when sync_start_date is a malformed value that Rails coerces to nil" do
+    @item.sync_start_date = "not-a-date"
+
+    assert_not @item.valid?
+    assert_includes @item.errors[:sync_start_date], "is not a valid date"
+  end
+
+  test "is invalid when sync_strategy is date and sync_start_date is in the future" do
+    @item.sync_start_date = 1.day.from_now.to_date
+
+    assert_not @item.valid?
+    assert_includes @item.errors[:sync_start_date], "must be within the last 2 years"
+  end
+
+  test "is invalid when sync_strategy is date and sync_start_date is more than 2 years ago" do
+    @item.sync_start_date = 2.years.ago.to_date - 1.day
+
+    assert_not @item.valid?
+    assert_includes @item.errors[:sync_start_date], "must be within the last 2 years"
+  end
+
+  test "is valid when sync_strategy is longest even without sync_start_date" do
+    @item.sync_strategy = "longest"
+    @item.sync_start_date = nil
+
+    assert @item.valid?
+  end
+
+  test "does not revalidate sync_start_date bounds on unrelated updates once it ages past 2 years" do
+    @item.save!
+    @item.update_column(:sync_start_date, 2.years.ago.to_date - 1.day)
+    @item.reload
+
+    assert @item.valid?
+    assert @item.update(status: :requires_update)
+  end
+
+  test "is invalid when sync_start_date is edited to a date outside the bounds" do
+    @item.save!
+    @item.update_column(:sync_start_date, 2.years.ago.to_date - 1.day)
+    @item.reload
+
+    @item.sync_start_date = 3.years.ago.to_date
+
+    assert_not @item.valid?
+    assert_includes @item.errors[:sync_start_date], "must be within the last 2 years"
+  end
+
+  test "sync_start_date_shortfall? is false when sync_strategy is longest" do
+    @item.sync_strategy = "longest"
+    @item.sync_start_date = nil
+
+    assert_not @item.sync_start_date_shortfall?
+  end
+
+  test "sync_start_date_shortfall? is false when no effective_sync_start_date has been recorded yet" do
+    @item.sync_start_date = 1.year.ago.to_date
+    @item.effective_sync_start_date = nil
+
+    assert_not @item.sync_start_date_shortfall?
+  end
+
+  test "sync_start_date_shortfall? is false when the bank honored the requested date" do
+    @item.sync_start_date = 90.days.ago.to_date
+    @item.effective_sync_start_date = 90.days.ago.to_date
+
+    assert_not @item.sync_start_date_shortfall?
+  end
+
+  test "sync_start_date_shortfall? is true when the bank granted a materially newer date than requested" do
+    @item.sync_start_date = 1.year.ago.to_date
+    @item.effective_sync_start_date = 90.days.ago.to_date
+
+    assert @item.sync_start_date_shortfall?
+  end
+
+  test "sync_start_date_shortfall? is false when an account simply has no early transactions despite the bank honoring the date" do
+    @item.sync_start_date = 1.year.ago.to_date
+    @item.effective_sync_start_date = 1.year.ago.to_date
+    @item.save!
+    enable_banking_account = @item.enable_banking_accounts.create!(uid: "uid_1", name: "Acct", currency: "USD")
+    account = Account.create!(family: @item.family, name: "Linked", balance: 0, cash_balance: 0, currency: "USD", accountable: Depository.new)
+    AccountProvider.create!(account: account, provider: enable_banking_account)
+    create_transaction(account: account, date: 90.days.ago.to_date)
+
+    assert_not @item.sync_start_date_shortfall?
+  end
+
+  test "changing sync_start_date clears a stale effective_sync_start_date" do
+    @item.sync_start_date = 1.year.ago.to_date
+    @item.save!
+    # Mirrors how the importer actually sets this - via update_column, after
+    # the record already exists, never bundled into the same save as a
+    # sync_start_date change.
+    @item.update_column(:effective_sync_start_date, 90.days.ago.to_date)
+
+    @item.update!(sync_start_date: 6.months.ago.to_date)
+
+    assert_nil @item.effective_sync_start_date
+  end
+
+  test "saving without changing sync_start_date preserves effective_sync_start_date" do
+    @item.save!
+    @item.update_column(:effective_sync_start_date, 90.days.ago.to_date)
+
+    @item.update!(name: "Renamed")
+
+    assert_equal 90.days.ago.to_date, @item.reload.effective_sync_start_date
   end
 end

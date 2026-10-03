@@ -1,0 +1,7 @@
+<label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
+  <%= form.radio_button method, value, **radio_button_opts %>
+  <span class="min-w-0">
+    <span class="block text-sm font-medium text-primary"><%= label %></span>
+    <span class="block text-xs text-secondary"><%= hint %></span>
+  </span>
+</label>
