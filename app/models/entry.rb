@@ -40,10 +40,25 @@ class Entry < ApplicationRecord
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
   }
 
+  # Same-day tie-break: an opening_anchor Valuation is a pre-entry baseline, so
+  # it sorts as the EARLIEST entry of its date. Other Valuations (reconciliation,
+  # current_anchor) are point-in-time snapshots that already include same-day
+  # activity, so they keep sorting as the LATEST entry of their date.
+  SAME_DAY_ORDER_SQL = <<~SQL.squish
+    CASE
+      WHEN entries.entryable_type = 'Valuation' AND EXISTS (
+        SELECT 1 FROM valuations WHERE valuations.id = entries.entryable_id AND valuations.kind = 'opening_anchor'
+      ) THEN -1
+      WHEN entries.entryable_type = 'Valuation' THEN 1
+      ELSE 0
+    END
+  SQL
+  private_constant :SAME_DAY_ORDER_SQL
+
   scope :chronological, -> {
     order(
       date: :asc,
-      Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :asc,
+      Arel.sql(SAME_DAY_ORDER_SQL) => :asc,
       created_at: :asc,
       id: :asc
     )
@@ -52,7 +67,7 @@ class Entry < ApplicationRecord
   scope :reverse_chronological, -> {
     order(
       date: :desc,
-      Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :desc,
+      Arel.sql(SAME_DAY_ORDER_SQL) => :desc,
       created_at: :desc,
       id: :desc
     )
