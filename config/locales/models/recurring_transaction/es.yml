@@ -5,3 +5,13 @@ es:
       models:
         recurring_transaction:
           merchant_or_name_required: Debe indicarse el comercio o el nombre
+  recurring_transactions:
+    allocator:
+      missing_rate: sin tipo de cambio de %{from} a %{to}; introduzca una cantidad
+        explícitamente
+      unmeasurable: esta transacción conlleva una asignación que no se puede convertir
+        a %{currency}, por lo que lo que queda no se puede medir. Agregue un tipo
+        de cambio para %{date} o elimine primero el pago existente
+      over_allocated: la asignación de %{amount} excede el %{capacity} %{currency}
+        restante de la transacción
+      exceeds_remaining: "%{amount} excede el %{remaining} restante en este ciclo"

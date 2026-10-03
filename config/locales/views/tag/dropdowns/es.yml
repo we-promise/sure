@@ -1,0 +1,9 @@
+---
+es:
+  tag:
+    dropdowns:
+      show:
+        empty: Todavía no hay etiquetas
+        manage: Gestionar etiquetas
+        no_tags: No se encontraron etiquetas
+        search_placeholder: Buscar
