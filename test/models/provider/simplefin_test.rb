@@ -135,6 +135,16 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
     @provider.get_accounts(@access_url, pending: nil)
   end
 
+  test "get_accounts requests protocol version 2" do
+    mock_response = OpenStruct.new(code: 200, body: '{"accounts": []}')
+
+    Provider::Simplefin.expects(:get)
+      .with { |url| URI.parse(url).query.split("&").include?("version=2") }
+      .returns(mock_response)
+
+    @provider.get_accounts(@access_url)
+  end
+
   test "claim_access_url retries on network errors" do
     setup_token = Base64.encode64("https://example.com/claim")
     mock_response = OpenStruct.new(code: 200, body: "https://example.com/access")
