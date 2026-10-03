@@ -4,56 +4,54 @@
 
     Collapsible because this sits above the bills the user actually came to
     see. Someone who is not ready to triage nine guesses should be able to fold
-    them away and still find their rent, and have that stick. %>
-<%= render DS::Disclosure.new(
-  variant: :card_inset,
-  open: true,
-  data: {
-    controller: "persisted-disclosure",
-    persisted_disclosure_key_value: "bills-suggested"
-  }
-) do |disclosure| %>
-  <% disclosure.with_summary_content do %>
-    <div class="flex items-center gap-2 select-none">
-      <%= icon "chevron-right", size: "sm",
-                class: "transition-transform group-open:rotate-90" %>
+    them away and still find their rent, and have that stick.
 
-      <p class="text-xs font-medium text-secondary uppercase">
-        <%= t("recurring_transactions.suggested.title") %>
-      </p>
+    Built like the overview's other stacked surfaces: an inset shell, their
+    heading as the summary, and a full-width card. %>
+<div class="rounded-xl bg-container-inset p-1">
+  <%= render DS::Disclosure.new(
+    variant: :inline,
+    open: true,
+    summary_class: "list-none cursor-pointer focus-ring rounded-lg select-none",
+    body_class: nil,
+    data: {
+      controller: "persisted-disclosure",
+      persisted_disclosure_key_value: "bills-suggested"
+    }
+  ) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <%= render "shared/section_heading",
+                 title: t("recurring_transactions.suggested.title"),
+                 count: suggested.size,
+                 chevron: true,
+                 aside: tag.p(t("recurring_transactions.suggested.collapsed_hint"), class: "text-xs text-subdued group-open:hidden") %>
+    <% end %>
 
-      <%= render DS::Pill.new(label: suggested.size.to_s, tone: :neutral, marker: false) %>
-
-      <p class="ml-auto text-xs text-subdued group-open:hidden">
-        <%= t("recurring_transactions.suggested.collapsed_hint") %>
-      </p>
+    <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+      <% suggested.each do |suggestion| %>
+        <%= render DS::ReviewRow.new do |row| %>
+          <% row.with_actions do %>
+            <%= render DS::Link.new(
+              text: t("recurring_transactions.suggested.confirm"),
+              variant: "primary",
+              href: confirm_recurring_transaction_path(suggestion),
+              method: :post
+            ) %>
+            <%= render DS::Link.new(
+              text: t("recurring_transactions.suggested.dismiss"),
+              variant: "ghost",
+              href: dismiss_recurring_transaction_path(suggestion),
+              method: :post
+            ) %>
+          <% end %>
+          <p class="text-sm font-medium text-primary @md:truncate"><%= suggestion.display_name %></p>
+          <p class="text-xs text-secondary">
+            <span class="privacy-sensitive"><%= format_money(suggestion.amount_money.abs) %></span>
+            &middot; <%= frequency_label(suggestion) %>
+            &middot; <%= t("recurring_transactions.suggested.seen_count", count: suggestion.occurrence_count) %>
+          </p>
+        <% end %>
+      <% end %>
     </div>
   <% end %>
-
-  <div class="bg-container rounded-lg divide-y divide-subdued">
-    <% suggested.each do |suggestion| %>
-      <%= render DS::ReviewRow.new do |row| %>
-        <% row.with_actions do %>
-          <%= render DS::Link.new(
-            text: t("recurring_transactions.suggested.confirm"),
-            variant: "primary",
-            href: confirm_recurring_transaction_path(suggestion),
-            method: :post
-          ) %>
-          <%= render DS::Link.new(
-            text: t("recurring_transactions.suggested.dismiss"),
-            variant: "ghost",
-            href: dismiss_recurring_transaction_path(suggestion),
-            method: :post
-          ) %>
-        <% end %>
-        <p class="text-sm font-medium text-primary @md:truncate"><%= suggestion.display_name %></p>
-        <p class="text-xs text-secondary">
-          <span class="privacy-sensitive"><%= format_money(suggestion.amount_money.abs) %></span>
-          &middot; <%= frequency_label(suggestion) %>
-          &middot; <%= t("recurring_transactions.suggested.seen_count", count: suggestion.occurrence_count) %>
-        </p>
-      <% end %>
-    <% end %>
-  </div>
-<% end %>
+</div>

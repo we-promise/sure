@@ -260,6 +260,7 @@ tr:
         one: İşlemlerinizde %{count} yinelenen ödeme bulduk. Buradaki toplamların gerçekte ödediğinizle eşleşmesi için gözden geçirin.
         other: İşlemlerinizde %{count} yinelenen ödeme bulduk. Buradaki toplamların gerçekte ödediğinizle eşleşmesi için gözden geçirin.
       detected_review_action: Gözden geçir
+      notices_heading: Değişiklikler
       needs_review: İnceleme gerekiyor
       notice_trial: '%{name} deneme süresi %{date} tarihinde bitiyor'
       notice_renewal: '%{name} %{date} tarihinde yenileniyor'

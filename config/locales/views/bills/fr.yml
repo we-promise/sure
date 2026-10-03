@@ -145,6 +145,7 @@ fr:
         one: 1 requiert votre attention
         other: "%{count} requièrent votre attention"
       needs_attention: Requiert votre attention
+      notices_heading: Changements
       needs_review: À vérifier
       notice_price: "%{name} a changé de prix : %{from} → %{to} (%{percent})"
       notice_renewal: "%{name} se renouvelle le %{date}"

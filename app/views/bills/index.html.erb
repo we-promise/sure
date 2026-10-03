@@ -34,43 +34,45 @@
   <%# Changes worth knowing about, ranked by whether you can still do anything.
       Everything stays on the page: the quieter half collapses rather than
       being capped, so nothing becomes a dead end and nothing pushes the
-      worklist off screen. %>
+      worklist off screen. Same shell and heading as the bill sections. %>
   <% if @notices.any? %>
     <% urgent, routine = @notices.partition(&:urgent?) %>
-    <div class="bg-container rounded-xl shadow-border-xs divide-y divide-subdued">
-      <% urgent.each do |notice| %>
-        <%= render "bills/notice", notice: notice, urgent: true %>
-      <% end %>
+    <div class="rounded-xl bg-container-inset p-1">
+      <%= render "shared/section_heading", title: t(".notices_heading"), count: @notices.size %>
 
-      <% if routine.any? %>
-        <div class="px-4 py-2">
-          <% if urgent.any? %>
-            <%= render DS::Disclosure.new(title: t(".notices_routine", count: routine.size), align: "left") do %>
-              <div class="divide-y divide-subdued">
-                <% routine.each do |notice| %>
-                  <%= render "bills/notice", notice: notice, urgent: false %>
-                <% end %>
+      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+        <% urgent.each do |notice| %>
+          <%= render "bills/notice", notice: notice, urgent: true %>
+        <% end %>
+
+        <% if routine.any? && urgent.any? %>
+          <%# A row of the card like the notices around it. Its old grey
+              summary read as a box inside the card. %>
+          <%= render DS::Disclosure.new(variant: :inline, body_class: nil) do |disclosure| %>
+            <% disclosure.with_summary_content do %>
+              <div class="flex items-center gap-2 px-4 py-2.5 text-sm text-secondary">
+                <%= icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90" %>
+                <span><%= t(".notices_routine", count: routine.size) %></span>
               </div>
             <% end %>
-          <% else %>
-            <div class="divide-y divide-subdued">
+            <div class="divide-y divide-subdued border-t border-subdued">
               <% routine.each do |notice| %>
                 <%= render "bills/notice", notice: notice, urgent: false %>
               <% end %>
             </div>
           <% end %>
-        </div>
-      <% end %>
+        <% else %>
+          <% routine.each do |notice| %>
+            <%= render "bills/notice", notice: notice, urgent: false %>
+          <% end %>
+        <% end %>
+      </div>
     </div>
   <% end %>
 
   <% if @suggested_allocations.any? %>
-    <div class="rounded-xl bg-container-inset space-y-1 p-1">
-      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
-        <p><%= t(".needs_review") %></p>
-        <span class="text-subdued">&middot;</span>
-        <p><%= @suggested_allocations.size %></p>
-      </div>
+    <div class="rounded-xl bg-container-inset p-1">
+      <%= render "shared/section_heading", title: t(".needs_review"), count: @suggested_allocations.size %>
 
       <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
         <% @suggested_allocations.each do |suggestion| %>

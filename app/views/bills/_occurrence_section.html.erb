@@ -9,16 +9,10 @@
 <% markers = bills_pay_period_markers(occurrences, pay_periods) %>
 
 <div>
-  <div class="flex items-baseline justify-between gap-3 px-4 py-2">
-    <div class="flex items-center gap-1.5 text-xs font-medium uppercase <%= tone == :destructive ? "text-destructive" : "text-secondary" %>">
-      <p><%= title %></p>
-      <span class="text-subdued">&middot;</span>
-      <p><%= occurrences.size %></p>
-    </div>
-    <% if meta %>
-      <p class="text-xs text-secondary privacy-sensitive shrink-0"><%= meta %></p>
-    <% end %>
-  </div>
+  <%= render "shared/section_heading",
+             title: title,
+             count: occurrences.size,
+             aside: (tag.p(meta, class: "text-xs text-secondary privacy-sensitive shrink-0") if meta) %>
 
   <%# The divider is half its old weight: the rows are separated by a hairline
       and by the hover state, not by a rule competing with the content. %>

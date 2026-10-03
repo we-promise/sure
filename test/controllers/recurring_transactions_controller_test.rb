@@ -1047,6 +1047,21 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert suggestion.reload.suggested?
   end
 
+  # The suggestion strip is shared with the Bills overview, whose section
+  # recipe it now follows.
+  test "settings list the suggestions under the overview's heading, collapsible" do
+    create_series(name: "Maybe A Bill", status: "suggested")
+
+    get recurring_transactions_url
+    assert_response :success
+
+    assert_select ".bg-container-inset > details[data-persisted-disclosure-key-value='bills-suggested']" do
+      assert_select "summary div.uppercase", text: /#{I18n.t("recurring_transactions.suggested.title")}\s*·\s*1/
+      assert_select ".bg-container.rounded-lg", text: /Maybe A Bill/
+      assert_select "a", text: I18n.t("recurring_transactions.suggested.confirm")
+    end
+  end
+
   test "the pre-bills settings actions stay reachable without the preview flag" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
 

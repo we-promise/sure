@@ -145,7 +145,7 @@ class BillsMobileTest < ApplicationSystemTestCase
       (() => {
         const visibleChild = (el) => [...el.children].find((c) => c.getClientRects().length > 0);
         return [...document.querySelectorAll(".\\\\@container a[href*='display=drawer']")].map((link) => {
-          const header = link.closest(".\\\\@container").previousElementSibling.querySelector("p");
+          const header = link.closest(".\\\\@container").previousElementSibling.querySelector("h2");
           return Math.round(visibleChild(link).getBoundingClientRect().left - header.getBoundingClientRect().left);
         });
       })()
