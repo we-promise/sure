@@ -16,7 +16,6 @@ class Goal < ApplicationRecord
   # `completed` belongs here for the same reason `archived` does: completing a
   # goal hands back the earmark, so its links must stop reserving too.
   RELEASED_STATES = %w[archived completed].freeze
-
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
 

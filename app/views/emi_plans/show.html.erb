@@ -1,0 +1,81 @@
+<%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
+  <% dialog.with_header(custom_header: true) do %>
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-semibold text-primary"><%= t("emi_plans.show.title") %></h2>
+        <p class="text-sm text-secondary"><%= @entry.name %></p>
+      </div>
+      <%= dialog.close_button %>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <div class="px-4 space-y-4">
+      <div class="grid grid-cols-3 gap-3">
+        <%= render DS::Card.new(class: "text-center") do %>
+          <p class="text-xs text-secondary uppercase tracking-wide"><%= t("emi_plans.show.principal") %></p>
+          <p class="text-sm font-semibold text-primary mt-1"><%= format_money(@plan.principal_amount_money) %></p>
+        <% end %>
+        <%= render DS::Card.new(class: "text-center") do %>
+          <p class="text-xs text-secondary uppercase tracking-wide"><%= t("emi_plans.show.interest_rate") %></p>
+          <p class="text-sm font-semibold text-primary mt-1"><%= number_to_percentage(@plan.interest_rate, precision: 2) %></p>
+        <% end %>
+        <%= render DS::Card.new(class: "text-center") do %>
+          <p class="text-xs text-secondary uppercase tracking-wide"><%= t("emi_plans.show.tenure") %></p>
+          <p class="text-sm font-semibold text-primary mt-1"><%= t("emi_plans.show.months", count: @plan.tenure_months) %></p>
+        <% end %>
+      </div>
+
+      <div class="flex items-center justify-between p-3 rounded-lg bg-surface-inset text-sm">
+        <span class="text-secondary"><%= t("emi_plans.show.total_payable") %></span>
+        <span class="font-semibold text-primary"><%= format_money(@plan.total_payable) %></span>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-medium text-primary mb-2"><%= t("emi_plans.show.schedule") %></h3>
+        <div class="space-y-1.5">
+          <% @plan.installment_entries.each do |installment| %>
+            <div class="flex items-center justify-between p-2.5 rounded-lg border border-primary <%= "opacity-60" if installment.date > Date.current %>">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-medium text-secondary w-6"><%= installment.emi_installment_number %></span>
+                <div>
+                  <p class="text-sm text-primary"><%= I18n.l(installment.date, format: :long) %></p>
+                  <% if installment.date > Date.current %>
+                    <p class="text-xs text-secondary"><%= t("emi_plans.show.upcoming") %></p>
+                  <% else %>
+                    <p class="text-xs text-success"><%= t("emi_plans.show.posted") %></p>
+                  <% end %>
+                </div>
+              </div>
+              <p class="text-sm font-medium text-primary"><%= format_money(installment.amount_money) %></p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <% if @plan.active? && @plan.remaining_installments.any? %>
+        <div class="flex items-center justify-between gap-4 p-3 border-t border-primary pt-4">
+          <div class="text-sm space-y-1">
+            <h4 class="text-primary"><%= t("emi_plans.show.foreclose_title") %></h4>
+            <p class="text-secondary"><%= t("emi_plans.show.foreclose_description") %></p>
+          </div>
+          <%= render DS::Button.new(
+            text: t("emi_plans.show.foreclose_button"),
+            icon: "undo-2",
+            variant: :outline_destructive,
+            size: :sm,
+            href: transaction_emi_plan_path(@entry),
+            method: :delete,
+            confirm: CustomConfirm.new(
+              title: t("emi_plans.show.foreclose_title"),
+              body: t("emi_plans.show.foreclose_confirm"),
+              btn_text: t("emi_plans.show.foreclose_button"),
+              destructive: true
+            ),
+            frame: "_top"
+          ) %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
