@@ -353,6 +353,19 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     assert_column_not_plaintext(MonobankAccount, account.id, :raw_transactions_payload, "tx_probe")
   end
 
+  test "snaptrade account_number is encrypted" do
+    skip "No snaptrade accounts in fixtures" unless SnaptradeAccount.any?
+
+    account = SnaptradeAccount.first
+    account.update!(account_number: "9988776655")
+    account.reload
+
+    assert_equal "9988776655", account.account_number
+
+    # A brokerage account number is exactly the kind of field worth proving opaque.
+    assert_column_not_plaintext(SnaptradeAccount, account.id, :account_number, "9988776655")
+  end
+
   # ============================================================================
   # DATABASE VERIFICATION TESTS
   # ============================================================================
