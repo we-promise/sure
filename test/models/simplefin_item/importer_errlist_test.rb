@@ -52,6 +52,19 @@ class SimplefinItem::ImporterErrlistTest < ActiveSupport::TestCase
     assert_equal "requires_update", @item.reload.status
   end
 
+  test "general auth with cached accounts still invalidates the access url" do
+    importer = importer_with(
+      accounts: [ { id: "acct-1", name: "Checking" } ],
+      errlist: [ { code: "gen.auth", msg: "Credentials rejected" } ]
+    )
+
+    assert_raises(Provider::Simplefin::SimplefinError) do
+      importer.send(:fetch_accounts_data, start_date: 30.days.ago)
+    end
+
+    assert_equal "requires_update", @item.reload.status
+  end
+
   test "prefers errlist when a transitional server also returns legacy errors" do
     importer = importer_with(
       accounts: [ { id: "acct-1", name: "Checking" } ],
