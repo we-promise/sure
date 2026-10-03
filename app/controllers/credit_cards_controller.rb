@@ -16,6 +16,7 @@ class CreditCardsController < ApplicationController
     # a failed update renders :edit and must not persist the flag.
     if response.redirect?
       update_enable_banking_settings
+      update_lunchflow_settings
       update_simplefin_settings
     end
   end
@@ -34,6 +35,18 @@ class CreditCardsController < ApplicationController
         # Re-sync so the balance is reinterpreted right away instead of on the next scheduled sync
         provider_account.enable_banking_item.sync_later
       end
+    end
+
+    def update_lunchflow_settings
+      lunchflow_params = params.permit(account: { lunchflow: [ :treat_balance_as_available_credit ] })
+        .dig(:account, :lunchflow)
+      return if lunchflow_params.blank?
+
+      update_provider_setting(
+        provider_type: "LunchflowAccount",
+        attribute: :treat_balance_as_available_credit,
+        value: ActiveModel::Type::Boolean.new.cast(lunchflow_params[:treat_balance_as_available_credit])
+      ) { |provider_account| provider_account.lunchflow_item.sync_later }
     end
 
     def update_simplefin_settings
