@@ -1,6 +1,15 @@
 <% unless @transfer.destroyed? %>
-  <%= turbo_stream.replace @transfer.inflow_transaction.entry %>
-  <%= turbo_stream.replace @transfer.outflow_transaction.entry %>
+  <% @transfer_legs.each do |leg| %>
+    <% if @is_compact %>
+      <%= turbo_stream.replace(
+            dom_id(leg[:entry]),
+            partial: "transactions/compact_transaction",
+            locals: { entry: leg[:entry], view_ctx: @view_ctx || "global", in_split_group: leg[:in_split_group], running_balance: leg[:running_balance], hide_balance: leg[:hide_balance] }
+          ) %>
+    <% else %>
+      <%= turbo_stream.replace leg[:entry] %>
+    <% end %>
+  <% end %>
 
   <%= turbo_stream.replace dom_id(@transfer.inflow_transaction, "category_menu_mobile"),
                           partial: "transactions/transaction_category",

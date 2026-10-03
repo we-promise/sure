@@ -1,6 +1,7 @@
 require "test_helper"
 
 class TransfersControllerTest < ActionDispatch::IntegrationTest
+  include ActionView::RecordIdentifier
   setup do
     sign_in users(:family_admin)
   end
@@ -667,6 +668,55 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "turbo_stream update replaces both legs with the compact partial when compact preview is enabled" do
+    users(:family_admin).update!(preferences: { "preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false })
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer),
+      params: { view_ctx: "account", is_filtered: "0", transfer: { notes: "Compact legs" } },
+      as: :turbo_stream
+
+    assert_response :success
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      stream = transfer_leg_stream(entry)
+      assert stream.present?, "Expected a turbo-stream replacing leg #{entry.id}"
+      # Compact rows render a flex row with an inline date column; the
+      # full-size partial renders a grid-cols-12 row with an icon instead.
+      assert_no_match(/grid-cols-12/, stream.to_html)
+      assert_match(/w-\[110px\]/, stream.to_html)
+    end
+  end
+
+  test "turbo_stream update hides balance on compact legs when filtered" do
+    users(:family_admin).update!(preferences: { "preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false })
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer),
+      params: { view_ctx: "account", is_filtered: "1", transfer: { notes: "Filtered legs" } },
+      as: :turbo_stream
+
+    assert_response :success
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      assert_no_match(/justify-end px-2/, transfer_leg_stream(entry).to_html)
+    end
+  end
+
+  test "turbo_stream update replaces both legs with the full-size partial when compact preview is disabled" do
+    users(:family_admin).update!(preferences: { "preview_features_enabled" => false, "transactions_compact" => true, "transactions_group_by_date" => false })
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer),
+      params: { view_ctx: "account", is_filtered: "0", transfer: { notes: "Full-size legs" } },
+      as: :turbo_stream
+
+    assert_response :success
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      stream = transfer_leg_stream(entry)
+      assert stream.present?, "Expected a turbo-stream replacing leg #{entry.id}"
+      assert_match(/grid-cols-12/, stream.to_html)
+    end
+  end
+
   test "mark_as_recurring creates a recurring transfer" do
     transfer = transfers(:one)
     family = users(:family_admin).family
@@ -710,4 +760,12 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
     assert_equal I18n.t("recurring_transactions.transfer_feature_disabled"), flash[:alert]
   end
+
+  private
+    # Extracts a leg row's turbo-stream from an update response, so compact
+    # vs full-size row rendering can be asserted per leg.
+    def transfer_leg_stream(entry)
+      doc = Nokogiri::HTML::Document.parse(response.body)
+      doc.css("turbo-stream[action='replace']").find { |s| s["target"] == dom_id(entry) }
+    end
 end
