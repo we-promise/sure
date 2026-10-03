@@ -16,6 +16,7 @@ pl:
     confirm_delete_income: Usunąć %{name} jako przychód? Twoje transakcje pozostaną
       bez zmian. To usuwa tylko przychód i jego harmonogram.
     confirmed: Rachunek dodany do Twoich transakcji cyklicznych
+    confirmed_income: Przychód dodany do Twoich transakcji cyklicznych
     create:
       account_invalid: Wybierz konto, do którego możesz dodawać rachunki, albo zostaw
         puste
@@ -204,6 +205,10 @@ pl:
         one: widziano raz
         other: widziano %{count} razy
       title: Możliwe nowe rachunki
+    suggested_income:
+      confirm: Dodaj przychód
+      dismiss: To nie przychód
+      title: Możliwe nowe przychody
     table:
       actions: Akcje
       amount: Kwota
