@@ -328,6 +328,12 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      if (ApiConfig.customCertificateBytes != null) {
+        _errorMessage =
+            'Single sign-on is unavailable while an app-managed CA certificate is configured. Install the CA at the operating-system level and remove it from the app to use browser sign-in.';
+        return;
+      }
+
       final deviceInfo = await _deviceService.getDeviceInfo();
       final ssoUrl = _authService.buildSsoUrl(
         provider: provider,

@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'api_config.dart';
+import 'api_http_client.dart';
 
 class UserService {
   Future<Map<String, dynamic>> resetAccount({
@@ -9,7 +9,7 @@ class UserService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/users/reset');
 
-      final response = await http.delete(
+      final response = await ApiHttpClient.instance.delete(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
@@ -42,7 +42,7 @@ class UserService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/users/me');
 
-      final response = await http.delete(
+      final response = await ApiHttpClient.instance.delete(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
