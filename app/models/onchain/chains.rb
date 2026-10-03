@@ -102,6 +102,14 @@ module Onchain
     # Provider::AvalanchePChain).
     AVALANCHE_P = "avalanche_p"
 
+    # AVAX/token balances on Avalanche's actual EVM chain — not part of the
+    # EVM array above because that array assumes every entry can share
+    # Onchain::EvmAdapter's Blockscout-backed balance/token reads, and no
+    # Blockscout instance exists for Avalanche C-Chain (see
+    # Onchain::AvalancheCChainAdapter, which reads Avalanche's own public RPC
+    # instead).
+    AVALANCHE_C = "avalanche_c"
+
     BUILTIN = [
       Definition.new(
         key: BITCOIN,
@@ -149,6 +157,13 @@ module Onchain
         native: NativeAsset.new(symbol: "AVAX", name: "Avalanche", decimals: 9),
         token_kind: nil,
         adapter_class_name: "Onchain::AvalanchePChainAdapter",
+        adapter_options: {}
+      ),
+      Definition.new(
+        key: AVALANCHE_C,
+        native: NativeAsset.new(symbol: "AVAX", name: "Avalanche", decimals: 18),
+        token_kind: nil,
+        adapter_class_name: "Onchain::AvalancheCChainAdapter",
         adapter_options: {}
       ),
       # A single Solana stake account, separate from the `solana` wallet
