@@ -239,7 +239,7 @@ class Provider::Questrade
         message: "Questrade API #{reason} (#{response.code})",
         source: self.class.name,
         provider_key: "questrade",
-        metadata: { status: response.code, body: response.body.to_s.first(1000) }
+        metadata: { status: response.code }
       )
     end
 

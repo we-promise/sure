@@ -152,7 +152,7 @@ class OnchainWalletItem::Importer
         source: self.class.name,
         provider_key: "onchain_wallet",
         family: onchain_wallet_item.family,
-        metadata: { onchain_wallet_item_id: onchain_wallet_item.id, chain: chain, address: address }
+        metadata: { onchain_wallet_item_id: onchain_wallet_item.id, chain: chain }
       )
     end
 
@@ -176,7 +176,6 @@ class OnchainWalletItem::Importer
         metadata: {
           onchain_wallet_item_id: onchain_wallet_item.id,
           chain: chain,
-          address: address,
           history_truncated: snapshot.history_truncated?,
           assets_truncated: snapshot.assets_truncated?,
           max_pages: Onchain::HistoryBudget.pages,

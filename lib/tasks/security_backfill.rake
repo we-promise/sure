@@ -70,6 +70,14 @@ namespace :security do
     results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
 
+    # Support-visible diagnostics. Historic rows predate the write-time key
+    # redaction in DebugLogEntry.log!, so re-apply it here before encrypting —
+    # otherwise sensitive values stay readable to support after decryption.
+    results[:debug_log_entries] = backfill_model(
+      DebugLogEntry, %i[metadata], batch_size, dry_run,
+      transforms: { metadata: ->(value) { DebugLogEntry.normalize_metadata(value) } }
+    )
+
     puts({
       ok: true,
       dry_run: dry_run,
@@ -78,7 +86,9 @@ namespace :security do
     }.to_json)
   end
 
-  def backfill_model(model_class, fields, batch_size, dry_run, &filter_block)
+  # transforms: optional { field => callable } applied to the plaintext value
+  # before it is encrypted (e.g. redaction of historic rows).
+  def backfill_model(model_class, fields, batch_size, dry_run, transforms: {}, &filter_block)
     processed = 0
     updated = 0
     failed = []
@@ -103,7 +113,10 @@ namespace :security do
           plaintext_values = {}
           fields.each do |field|
             value = safe_read_field(record, field)
-            plaintext_values[field] = value unless value.nil?
+            next if value.nil?
+
+            value = transforms[field].call(value) if transforms[field]
+            plaintext_values[field] = value
           end
 
           next if plaintext_values.empty?

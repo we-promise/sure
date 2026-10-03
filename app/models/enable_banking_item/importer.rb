@@ -336,9 +336,6 @@ class EnableBankingItem::Importer
       metadata = {
         enable_banking_item_id: enable_banking_item.id,
         enable_banking_account_id: enable_banking_account.id,
-        uid: enable_banking_account.uid,
-        api_account_id: enable_banking_account.api_account_id,
-        previous_current_balance: enable_banking_account.current_balance,
         error_class: error.class.name,
         error_message: sanitized_error_message(error)
       }
@@ -378,7 +375,6 @@ class EnableBankingItem::Importer
         metadata: {
           enable_banking_item_id: enable_banking_item.id,
           enable_banking_account_id: enable_banking_account.id,
-          uid: enable_banking_account.uid,
           transaction_status: transaction_status,
           pages_kept: pages_kept,
           transactions_kept: transactions_kept,
@@ -404,7 +400,6 @@ class EnableBankingItem::Importer
         metadata: {
           enable_banking_item_id: enable_banking_item.id,
           enable_banking_account_id: enable_banking_account.id,
-          uid: enable_banking_account.uid,
           error_type: error.error_type.to_s,
           provider_error: sanitized_provider_error(error)
         }

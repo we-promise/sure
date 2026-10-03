@@ -1,7 +1,31 @@
 # frozen_string_literal: true
 
 class DebugLogEntry < ApplicationRecord
+  include Encryptable
+
   LEVELS = %w[debug info warn error].freeze
+
+  # Key names redacted anywhere in metadata (any nesting depth), regardless of which
+  # call site wrote them — a safety net for the many capture(...) sites across provider
+  # importers that this class has no direct visibility into, on top of the individual
+  # sites that were audited and fixed not to pass these in the first place.
+  SENSITIVE_METADATA_KEY_PATTERN = /amount|balance|address|\bbody\b|qty|\buid\b|api_account_id|api_key|access_token|refresh_token|password|authorization|secret|iban|account_number|email/i
+
+  # Credential shapes redacted inside string values (e.g. an error_message that
+  # embeds an Authorization header or a serialized JSON fragment) — key-based
+  # redaction alone cannot catch secrets hiding in innocuously named keys.
+  # The sensitive-key alternative consumes quoted strings, unquoted scalars
+  # (42.5, null, true) and complete compound values — `compound` recurses via
+  # \g<compound> so nested objects/arrays like {"body":{"note":"..."}} are
+  # swallowed whole rather than leaking everything past the opening brace.
+  SENSITIVE_METADATA_VALUE_PATTERNS = [
+    /\b(?:Bearer|Basic)\s+[A-Za-z0-9\-._~+\/=]+/i,
+    /"[^"]*(?:#{SENSITIVE_METADATA_KEY_PATTERN.source})[^"]*"\s*(?::|=>)\s*(?:"[^"]*"|(?<compound>[\{\[](?:[^{}\[\]"]|"(?:\\.|[^"\\])*"|\g<compound>)*[\}\]])|[^,}\]\s"]+)/i
+  ].freeze
+
+  if encryption_ready?
+    encrypts :metadata
+  end
 
   belongs_to :family, optional: true
   belongs_to :account, optional: true
@@ -42,12 +66,29 @@ class DebugLogEntry < ApplicationRecord
       nil
     end
 
-    private
-      def normalize_metadata(metadata)
-        return {} if metadata.blank?
-        return metadata.deep_stringify_keys if metadata.respond_to?(:deep_stringify_keys)
+    # Public because the security:backfill_encryption task must run the same
+    # redaction over pre-existing plaintext rows before re-encrypting them.
+    def normalize_metadata(metadata)
+      return {} if metadata.blank?
+      return { value: metadata.to_s } unless metadata.respond_to?(:deep_stringify_keys)
 
-        { value: metadata.to_s }
+      redact_sensitive(metadata.deep_stringify_keys)
+    end
+
+    private
+      def redact_sensitive(value)
+        case value
+        when Hash
+          value.each_with_object({}) do |(key, v), result|
+            result[key] = key.to_s.match?(SENSITIVE_METADATA_KEY_PATTERN) ? "[REDACTED]" : redact_sensitive(v)
+          end
+        when Array
+          value.map { |v| redact_sensitive(v) }
+        when String
+          SENSITIVE_METADATA_VALUE_PATTERNS.reduce(value) { |result, pattern| result.gsub(pattern, "[REDACTED]") }
+        else
+          value
+        end
       end
 
       def normalize_provider_key(provider_key, provider)

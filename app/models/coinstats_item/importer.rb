@@ -160,7 +160,8 @@ class CoinstatsItem::Importer
         message: "CoinStats bulk balance fetch failed",
         metadata: {
           coinstats_item_id: coinstats_item.id,
-          wallets: wallets.map { |wallet| "#{wallet[:blockchain]}:#{wallet[:address]}" },
+          wallet_count: wallets.size,
+          blockchains: wallets.map { |wallet| wallet[:blockchain] }.uniq,
           error_class: e.class.name,
           error_message: e.message
         }
@@ -272,7 +273,6 @@ class CoinstatsItem::Importer
           metadata: {
             coinstats_item_id: coinstats_item.id,
             coinstats_account_id: coinstats_account.id,
-            wallet_address: address,
             blockchain: blockchain,
             reason: "bulk_balance_data_missing"
           }
@@ -285,7 +285,6 @@ class CoinstatsItem::Importer
           metadata: {
             coinstats_item_id: coinstats_item.id,
             coinstats_account_id: coinstats_account.id,
-            wallet_address: address,
             blockchain: blockchain,
             reason: "wallet_missing_from_bulk_response"
           }
