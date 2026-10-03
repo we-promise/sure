@@ -17,6 +17,7 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     @provider.stubs(:get_trades_history).returns({ "count" => 0, "trades" => {} })
     @provider.stubs(:get_ledgers).returns({ "ledger" => {}, "count" => 0 })
     @provider.stubs(:get_ticker).returns(nil)
+    @provider.stubs(:get_earn_allocations).returns({ "items" => [] })
   end
 
   test "creates a combined kraken account from BalanceEx" do
@@ -40,6 +41,41 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     btc = account.raw_payload["assets"].find { |asset| asset["symbol"] == "BTC" }
     assert_equal "0.75", btc["available"]
     assert_equal "0.25", btc["hold_trade"]
+  end
+
+  test "merges Earn allocated balances alongside spot assets" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        {
+          "native_asset" => "XXBT",
+          "amount_allocated" => { "total" => { "native" => "2.0", "converted" => "100000.0" } }
+        }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    account = @item.kraken_accounts.first
+    earn_btc = account.raw_payload["assets"].find { |asset| asset["symbol"] == "BTC" && asset["source"] == "earn" }
+    assert_not_nil earn_btc
+    assert_equal "2.0", earn_btc["balance"]
+    assert_equal "0", earn_btc["available"]
+    assert_in_delta 100_000, earn_btc["amount_usd"].to_f, 0.01
+    assert_in_delta 150_050, account.current_balance, 0.01
+  end
+
+  test "degrades gracefully when Earn Allocations permission is denied" do
+    @provider.stubs(:get_asset_info).returns({})
+    @provider.stubs(:get_extended_balance).returns({})
+    @provider.stubs(:get_earn_allocations).raises(Provider::Kraken::PermissionError, "EGeneral:Permission denied")
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
   end
 
   test "preserves suffix assets in metadata and marks missing prices" do

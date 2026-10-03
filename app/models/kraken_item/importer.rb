@@ -5,6 +5,7 @@ class KrakenItem::Importer
   TRADE_PAGE_SIZE = 50
   MAX_LEDGER_PAGES = 200
   LEDGER_PAGE_SIZE = 50
+  MAX_EARN_PAGES = 50
 
   attr_reader :kraken_item, :kraken_provider
 
@@ -20,6 +21,7 @@ class KrakenItem::Importer
     pair_metadata = kraken_provider.get_asset_pairs || {}
     balances = kraken_provider.get_extended_balance || {}
     assets = parse_assets(balances, asset_metadata)
+    assets += parse_earn_assets(fetch_earn_allocations, asset_metadata)
     trades = fetch_trades
     ledgers = fetch_ledgers
 
@@ -82,6 +84,76 @@ class KrakenItem::Importer
           source: "spot"
         )
       end
+    end
+
+    # Earn's allocated principal (staking/bonding) lives in a sub-ledger
+    # BalanceEx never reports -- see Provider::Kraken#get_earn_allocations.
+    # Without this, only Earn's reward payouts (ordinary Ledgers entries,
+    # handled in KrakenAccount::LedgerProcessor) were ever visible; the
+    # locked balance itself was invisible to holdings.
+    def parse_earn_assets(items, asset_metadata)
+      normalizer = KrakenAccount::AssetNormalizer.new(asset_metadata)
+
+      items.filter_map do |item|
+        raw_asset = item["native_asset"] || item[:native_asset]
+        next if raw_asset.blank?
+
+        balance = item.dig("amount_allocated", "total", "native").to_d
+        next if balance.zero?
+
+        parsed = normalizer.normalize(raw_asset)
+        price_usd, price_status = price_for(parsed[:price_symbol])
+        amount_usd = price_usd ? (balance * price_usd).round(2) : 0.to_d
+
+        parsed.merge(
+          balance: balance.to_s("F"),
+          available: "0", # bonded/pending in Earn, not spendable like a spot balance
+          hold_trade: balance.to_s("F"),
+          price_usd: price_usd&.to_s("F"),
+          amount_usd: amount_usd.to_s("F"),
+          price_status: price_status,
+          source: "earn"
+        )
+      rescue StandardError => e
+        Rails.logger.warn "KrakenItem::Importer - could not parse Earn allocation #{item.inspect}: #{e.message}"
+        nil
+      end
+    end
+
+    def fetch_earn_allocations
+      cursor = nil
+      all_items = []
+
+      MAX_EARN_PAGES.times do
+        result = kraken_provider.get_earn_allocations(cursor: cursor).to_h
+        items = result["items"] || []
+        all_items.concat(items)
+
+        cursor = result["next_cursor"].presence
+        break if cursor.blank?
+      end
+
+      all_items
+    rescue Provider::Kraken::PermissionError => e
+      # Key may not have Earn Allocations permission; degrade gracefully --
+      # the regular spot balance still imports.
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Earn Allocations permission denied; skipping Earn balance import: #{e.message}",
+        source: self.class.name,
+        provider_key: "kraken",
+        family: kraken_item.family,
+        metadata: { kraken_item_id: kraken_item.id }
+      )
+      []
+    rescue Provider::Kraken::ApiError => e
+      # Earn/Allocations is a newer endpoint than the rest of this
+      # integration -- an account region/tier that doesn't support it (or a
+      # transient error) must not fail the whole sync over a feature the
+      # spot balance never depended on.
+      Rails.logger.warn "KrakenItem::Importer - could not fetch Earn allocations: #{e.message}"
+      []
     end
 
     def price_for(symbol)

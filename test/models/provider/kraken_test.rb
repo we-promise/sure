@@ -93,6 +93,39 @@ class Provider::KrakenTest < ActiveSupport::TestCase
     @provider.get_ledgers(start: Time.zone.at(1609459200), type: "deposit", offset: 50)
   end
 
+  test "get_earn_allocations sends request to Earn/Allocations endpoint" do
+    earn_payload = {
+      "converted_asset" => "USD",
+      "total_allocated" => "100.0",
+      "total_rewarded" => "1.0",
+      "items" => [
+        {
+          "native_asset" => "DOT",
+          "amount_allocated" => { "total" => { "native" => "10.0", "converted" => "100.0" } },
+          "amount_earned" => { "total" => { "native" => "0.1", "converted" => "1.0" } }
+        }
+      ]
+    }
+    response = mock_httparty_response(200, { "error" => [], "result" => earn_payload })
+
+    Provider::Kraken.expects(:post)
+      .with("/0/private/Earn/Allocations", has_entries(body: includes("hide_zero_allocations=true")))
+      .returns(response)
+
+    result = @provider.get_earn_allocations
+    assert_equal earn_payload, result
+  end
+
+  test "get_earn_allocations forwards cursor param" do
+    response = mock_httparty_response(200, { "error" => [], "result" => { "items" => [] } })
+
+    Provider::Kraken.expects(:post)
+      .with("/0/private/Earn/Allocations", has_entries(body: includes("cursor=abc123")))
+      .returns(response)
+
+    @provider.get_earn_allocations(cursor: "abc123")
+  end
+
   test "handle response returns result on success" do
     response = mock_httparty_response(200, { "error" => [], "result" => { "XXBT" => { "balance" => "1.0" } } })
 
