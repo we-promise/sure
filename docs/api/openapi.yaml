@@ -3269,6 +3269,10 @@ components:
           type: string
         net_savings:
           type: string
+        invested:
+          type: string
+          description: Money moved into investment accounts, shown as its own node.
+            Zero unless the family does not count investing as spending
         nodes:
           type: array
           items:
@@ -3297,6 +3301,7 @@ components:
                 - cash_flow
                 - surplus
                 - deficit
+                - invested
               value:
                 type: string
                 description: Nonnegative decimal in envelope currency

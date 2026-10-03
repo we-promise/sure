@@ -284,6 +284,25 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
   end
 
+  test "dashboard sankey shows investment contributions as invested when they are not spending" do
+    @family.update!(investment_contributions_as_spending: false)
+    category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    income_category = @family.categories.create!(name: "Salary", color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Payday", amount: -1000, category: income_category)
+    create_transaction(account: @family.accounts.first, name: "Shopping trip", amount: 100, category: category)
+    create_transaction(account: @family.accounts.first, name: "To ISA", amount: 400, category: nil, kind: "investment_contribution")
+
+    get root_path
+    assert_response :ok
+
+    chart = css_select("[data-controller='sankey-chart']").first
+    nodes = JSON.parse(chart["data-sankey-chart-data-value"]).fetch("nodes").index_by { |node| node.fetch("id") }
+
+    assert_equal 400.0, nodes.fetch("invested_node").fetch("value")
+    assert_equal I18n.t("pages.dashboard.cashflow_preview.node_labels.invested"), nodes.fetch("invested_node").fetch("name")
+    assert nodes.keys.none? { |id| id.start_with?("expense_") && nodes[id].fetch("value") == 400.0 }
+  end
+
   test "dashboard sankey nodes carry a stable filter_value, including opposite-direction subcategories" do
     parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
     subcategory = @family.categories.create!(name: "Rebate Program", parent: parent_category, color: "#33FF57")

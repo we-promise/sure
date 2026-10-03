@@ -124,7 +124,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
       income_data = income_statement.income_totals(period: period)
       expense_data = income_statement.expense_totals(period: period)
 
-      {
+      result = {
         currency: family.currency,
         period: {
           start_date: period.start_date,
@@ -140,6 +140,11 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         },
         insights: get_insights(income_data, expense_data)
       }
+      # Families that do not count investing as spending: say where that money went.
+      unless family.investment_contributions_as_spending?
+        result[:invested] = { total: format_money(income_statement.invested_total(period: period).amount) }
+      end
+      result
     end
 
     # Category rollups and family stats are family-wide by construction, so a
