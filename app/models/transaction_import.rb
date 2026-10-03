@@ -79,6 +79,11 @@ class TransactionImport < Import
 
       # Bulk import new transactions
       Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
+
+      # Existing accounts often have an opening_anchor valuation. Forward balance
+      # calc resets absolute balance on that date, wiping effects of imported txs
+      # that predate it (same fix QIF already applies — #2826).
+      adjust_opening_anchors_if_needed!
     end
   end
 
@@ -116,4 +121,33 @@ class TransactionImport < Import
     csv.delete("account") if account.present?
     csv
   end
+
+  private
+    def adjust_opening_anchors_if_needed!
+      earliest_date_by_account.each do |mapped_account, earliest|
+        manager = Account::OpeningBalanceManager.new(mapped_account)
+        next unless manager.has_opening_anchor?
+        next unless earliest < manager.opening_date
+
+        manager.set_opening_balance(
+          balance: manager.opening_balance,
+          date: earliest - 1.day
+        )
+      end
+    end
+
+    def earliest_date_by_account
+      rows.each_with_object({}) do |row, earliest_by_account|
+        mapped_account = if account
+          account
+        else
+          mappings.accounts.mappable_for(row.account)
+        end
+        next if mapped_account.nil?
+
+        date = Date.iso8601(row.date_iso)
+        current = earliest_by_account[mapped_account]
+        earliest_by_account[mapped_account] = current.nil? || date < current ? date : current
+      end
+    end
 end
