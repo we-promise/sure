@@ -1762,11 +1762,12 @@ RSpec.configure do |config|
             properties: {
               basis: { type: :string, enum: [ 'net_by_category' ] },
               income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
+              invested: { type: :string, description: "Money moved into investment accounts, shown as its own node. Zero unless the family does not count investing as spending" },
               nodes: { type: :array, items: {
                 type: :object, required: %w[id name kind value percentage category_id filter_value color],
                 properties: {
                   id: { type: :string, description: 'Stable direction-prefixed category identifier or structural identifier' },
-                  name: { type: :string }, kind: { type: :string, enum: %w[income expense cash_flow surplus deficit] },
+                  name: { type: :string }, kind: { type: :string, enum: %w[income expense cash_flow surplus deficit invested] },
                   value: { type: :string, description: 'Nonnegative decimal in envelope currency' },
                   percentage: { type: :string, description: 'Percentage of parent, or side total for root categories; structural balancing nodes use central capacity' },
                   category_id: { type: :string, format: :uuid, nullable: true },
