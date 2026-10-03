@@ -22,7 +22,7 @@ ru:
       no_accounts_message: Ваш портфель Binance появится здесь после синхронизации.
       no_accounts_title: Счета не найдены
       provider_name: Binance
-      reconnect: Требуется обновление данных
+      reconnect: Требуется обновить учётные данные
       setup_action: Импортировать счёт
       setup_description: Выберите, какие портфели Binance вы хотите отслеживать.
       setup_needed: Счёт готов к импорту
@@ -50,6 +50,7 @@ ru:
         many: Импортировано %{count} счетов
         one: Импортирован %{count} счёт
         other: Импортированы %{count} счёта
+      invalid_sync_start_date: Дата начала синхронизации должна быть действительной датой в прошлом.
     create:
       default_name: Binance
       success: Успешно подключено к Binance! Ваш счёт синхронизируется.

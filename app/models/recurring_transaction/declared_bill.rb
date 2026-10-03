@@ -51,6 +51,8 @@ class RecurringTransaction
         occurrence_count: 0
       )
       recurring.frequency_preset = attrs[:frequency_preset]
+      recurring.frequency_interval = attrs[:frequency_interval]
+      recurring.frequency_interval_unit = attrs[:frequency_interval_unit]
       recurring.first_due_on = attrs[:first_due_on]
 
       # A chosen account that does not resolve to something writable is said
@@ -81,7 +83,9 @@ class RecurringTransaction
         preset: attrs[:frequency_preset],
         day_of_month: due.day,
         weekday: due.wday,
-        month_of_year: due.month
+        month_of_year: due.month,
+        interval: attrs[:frequency_interval],
+        interval_unit: attrs[:frequency_interval_unit]
       )
 
       recurring
