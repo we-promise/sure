@@ -20,6 +20,11 @@
   <% end %>
 
   <% dialog.with_body do %>
+    <% if @entry.transaction.pending? %>
+      <div class="mb-3">
+        <%= render DS::Alert.new(variant: :warning, message: t("splits.new.pending_warning")) %>
+      </div>
+    <% end %>
     <%= form_with(
           url: transaction_split_path(@entry),
           scope: :split,
