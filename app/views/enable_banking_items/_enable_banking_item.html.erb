@@ -61,6 +61,23 @@
             <% end %>
 
             <%= render DS::Menu.new do |menu| %>
+              <% unless enable_banking_item.requires_update? %>
+                <%# Always-available manual reconnect, independent of the automatic
+                    requires_update detection above. Enable Banking sometimes rejects
+                    individual account requests (401 Invalid credentials or expired JWT)
+                    while the session-level check still reports valid, so syncs keep
+                    failing silently with no way to force a fresh consent short of
+                    disconnecting and re-adding the connection. %>
+                <% menu.with_item(
+                  variant: "button",
+                  text: t(".reconnect"),
+                  icon: "refresh-cw",
+                  href: reauthorize_enable_banking_item_path(enable_banking_item),
+                  method: :post,
+                  data: { turbo: false }
+                ) %>
+                <% menu.with_item(variant: "divider") %>
+              <% end %>
               <% menu.with_item(
                 variant: "button",
                 text: t(".delete"),
