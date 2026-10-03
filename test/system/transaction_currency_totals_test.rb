@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
 # Verify native currency totals in the activity page rendered by a real browser.
-class TransactionCurrencyTotalsTest < ApplicationSystemTestCase
+class TransactionCurrencyTotalsSystemTest < ApplicationSystemTestCase
   include EntriesTestHelper
 
   # Verify the rendered activity total keeps the account currency through the browser flow.
