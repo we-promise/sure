@@ -31,7 +31,7 @@
 
         Every section has it, so the avatars line up down the stacked card.
         Only from @lg. Below it the subline leads with the same date. %>
-    <div class="hidden @lg:block w-14 shrink-0 text-xs <%= bills_row_overdue?(occurrence) ? "text-destructive font-medium" : "text-secondary" %>">
+    <div class="hidden @lg:block w-14 shrink-0 text-xs <%= bills_overdue?(occurrence) ? "text-destructive font-medium" : "text-secondary" %>">
       <%= bills_rail_date(occurrence) %>
     </div>
 

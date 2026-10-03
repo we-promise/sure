@@ -300,11 +300,27 @@ class BillsHelperTest < ActionView::TestCase
     reason = I18n.t("bills.attention.overdue", count: 30)
 
     assert_includes bills_row_subline(occurrence), %(<span class="text-destructive">#{reason}</span>)
-    assert bills_row_overdue?(occurrence)
+    assert bills_overdue?(occurrence)
 
     occurrence.recurring_transaction.status = "inactive"
     assert_not_includes bills_row_subline(occurrence), "text-destructive"
-    assert_not bills_row_overdue?(occurrence)
+    assert_not bills_overdue?(occurrence)
+  end
+
+  # The drawer, the bill's page and the payment drawer print this label, and
+  # said "Overdue by 30 days" in red beside a row that reads Paused. A
+  # dismissed bill's page reads Dismissed, so its label does too.
+  test "a leftover of a bill that isn't active leads with the bill's status, not overdue" do
+    occurrence = build_occurrence(due_on: Date.current - 30, status: "scheduled")
+
+    %w[inactive ended].each do |status|
+      occurrence.recurring_transaction.status = status
+      label = occurrence_due_label(occurrence)
+
+      assert label.start_with?(I18n.t("recurring_transactions.status.#{status}")), label
+      assert_includes label, bills_upcoming_date(Date.current - 30)
+      assert_no_match(/overdue/i, label)
+    end
   end
 
   # The rail is 56px wide, so "Jan 03, 2027" wrapped mid-date there.
@@ -317,6 +333,20 @@ class BillsHelperTest < ActionView::TestCase
       assert_equal I18n.l(Date.new(2027, 1, 3), format: :short), rail.children.first.text.strip
       assert_equal "2027", rail.at_css("span.block.text-subdued")&.text
       assert_equal I18n.l(Date.new(2026, 11, 3), format: :short), bills_rail_date(this_year)
+    end
+  end
+
+  # derived_state, the overdue count and Next up all judge a snoozed bill by
+  # the date it was snoozed to. The rail read due_on, so it kept the old day.
+  test "a snoozed row shows the date it was snoozed to" do
+    travel_to Date.new(2026, 12, 28) do
+      occurrence = build_occurrence(due_on: Date.current, status: "scheduled")
+      occurrence.snoozed_until = Date.new(2027, 1, 4)
+
+      assert_equal I18n.l(Date.new(2027, 1, 4), format: :short_with_year), bills_row_date(occurrence)
+      rail = Nokogiri::HTML.fragment(bills_rail_date(occurrence))
+      assert_equal I18n.l(Date.new(2027, 1, 4), format: :short), rail.children.first.text.strip
+      assert_equal "2027", rail.at_css("span.block.text-subdued")&.text
     end
   end
 
@@ -351,6 +381,22 @@ class BillsHelperTest < ActionView::TestCase
     assert_equal [ "one" ], markers.keys
     assert_equal 2230, markers["one"][:due_total]
     assert_equal period, markers["one"][:period]
+  end
+
+  # The list is in rail order, so a bill snoozed into the next pay period sits
+  # under that period's marker and counts toward its total.
+  test "a snoozed row's pay period is the one it was snoozed into" do
+    this_week = OpenStruct.new(starts_on: Date.new(2026, 9, 15), ends_on: Date.new(2026, 9, 21))
+    next_week = OpenStruct.new(starts_on: Date.new(2026, 9, 22), ends_on: Date.new(2026, 9, 28))
+    rent = stub_occurrence("Rent", 900, id: "rent", due_on: Date.new(2026, 9, 16))
+    snoozed = stub_occurrence("Gym", 40, id: "gym", due_on: Date.new(2026, 9, 17), effective_due_on: Date.new(2026, 9, 24))
+    power = stub_occurrence("Power", 80, id: "power", due_on: Date.new(2026, 9, 25))
+
+    markers = bills_pay_period_markers([ rent, snoozed, power ], [ this_week, next_week ])
+
+    assert_equal %w[rent gym], markers.keys
+    assert_equal 900, markers["rent"][:due_total]
+    assert_equal 120, markers["gym"][:due_total]
   end
 
   test "no pay periods means no markers" do
@@ -418,10 +464,11 @@ class BillsHelperTest < ActionView::TestCase
 
   private
 
-    def stub_occurrence(name, amount, id:, due_on: Date.current)
+    def stub_occurrence(name, amount, id:, due_on: Date.current, effective_due_on: due_on)
       OpenStruct.new(
         id: id,
         due_on: due_on,
+        effective_due_on: effective_due_on,
         resolved_expected_amount: amount,
         recurring_transaction: OpenStruct.new(display_name: name)
       )

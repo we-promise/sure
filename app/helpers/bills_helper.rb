@@ -8,9 +8,11 @@ module BillsHelper
   end
 
   # The date a bill row is about. The subline leads with it below @lg, and the
-  # rail prints it from there up (bills_rail_date).
+  # rail prints it from there up (bills_rail_date). Snooze-aware, like
+  # derived_state and Next up.
   def bills_row_date(occurrence)
-    occurrence.due_on == Date.current ? t("bills.row_today") : bills_upcoming_date(occurrence.due_on)
+    date = occurrence.effective_due_on
+    date == Date.current ? t("bills.row_today") : bills_upcoming_date(date)
   end
 
   # One-shot AI features (smart-fill, smart-configure) need both the user's
@@ -24,19 +26,20 @@ module BillsHelper
   # Pay-period markers keyed by the id of the FIRST occurrence inside each
   # period, so the section template can drop a marker between groups without
   # pre-bucketing the rows. Each marker carries its period and the summed
-  # obligations due inside it.
+  # obligations due inside it. Dated like the rail, so a snoozed row counts
+  # toward the period it sits in.
   def bills_pay_period_markers(occurrences, pay_periods)
     return {} if pay_periods.blank?
 
     seen = Set.new
     occurrences.each_with_object({}) do |occurrence, markers|
-      index = pay_periods.index { |p| occurrence.due_on.between?(p.starts_on, p.ends_on) }
+      index = pay_periods.index { |p| occurrence.effective_due_on.between?(p.starts_on, p.ends_on) }
       next unless index && seen.add?(index)
 
       period = pay_periods[index]
       markers[occurrence.id] = {
         period: period,
-        due_total: occurrences.select { |o| o.due_on.between?(period.starts_on, period.ends_on) }
+        due_total: occurrences.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
                               .sum { |o| o.resolved_expected_amount.abs }
       }
     end
@@ -256,6 +259,13 @@ module BillsHelper
     # closed the only useful fact left is when it had been due.
     return t("bills.due_label.settled", date: date) unless occurrence.scheduled?
 
+    # Nobody is paying a bill that isn't active, so its leftover isn't late.
+    # The label leads with the bill's status instead, as its page does.
+    series = occurrence.recurring_transaction
+    unless series.active?
+      return safe_join([ t("recurring_transactions.status.#{series.status}"), t("bills.due_label.due_since", date: date) ], " · ")
+    end
+
     # Overdue is the occurrence's own judgement, not a sign test on the date.
     # RecurringOccurrence#derived_state only calls a cycle overdue once its
     # grace period has run out, and every other surface honours that: the
@@ -313,9 +323,9 @@ module BillsHelper
     t("bills.attention.amount_changed") if recently_changed
   end
 
-  # A paused bill's leftover is past its date, but nobody is paying it, so it
-  # isn't late: no red on its rail or its reason.
-  def bills_row_overdue?(occurrence)
+  # A paused or dismissed bill's leftover is past its date, but nobody is
+  # paying it, so it isn't late: no red on its row, its drawers or its page.
+  def bills_overdue?(occurrence)
     occurrence.recurring_transaction.active? && occurrence.overdue?
   end
 
@@ -325,7 +335,7 @@ module BillsHelper
   def bills_row_subline(occurrence, suggestion: nil)
     series = occurrence.recurring_transaction
     reason = bills_attention_reason(occurrence, suggestion: suggestion)
-    reason = tag.span(reason, class: "text-destructive") if reason && bills_row_overdue?(occurrence)
+    reason = tag.span(reason, class: "text-destructive") if reason && bills_overdue?(occurrence)
 
     safe_join([
       bills_autopay_label(series),
@@ -347,7 +357,7 @@ module BillsHelper
   # The rail is 56px wide, too narrow for "Jan 03, 2027", which wrapped
   # mid-date. Another year's date puts the year on a line of its own.
   def bills_rail_date(occurrence)
-    date = occurrence.due_on
+    date = occurrence.effective_due_on
     return bills_row_date(occurrence) if date.year == Date.current.year
 
     safe_join([ l(date, format: :short), tag.span(date.year, class: "block text-subdued") ])

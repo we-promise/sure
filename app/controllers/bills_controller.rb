@@ -62,20 +62,20 @@ class BillsController < ApplicationController
     active_open, @dormant = open_occurrences.partition { |occurrence| occurrence.recurring_transaction.active? }
 
     @overdue, upcoming = active_open.partition { |occurrence| occurrence.derived_state == :overdue }
-    this_month, later = upcoming.partition { |occurrence| occurrence.due_on <= month_end }
-    @this_month = this_month.sort_by(&:due_on)
-    @overdue = @overdue.sort_by(&:due_on)
-    @dormant = @dormant.sort_by(&:due_on)
+    # Snooze-aware, like the rail (bills_row_date): rows list in rail order,
+    # and a bill snoozed past the month's end belongs after it.
+    @this_month, later = upcoming.partition { |occurrence| occurrence.effective_due_on <= month_end }
+    @overdue = @overdue.sort_by(&:effective_due_on)
+    @dormant = @dormant.sort_by(&:effective_due_on)
 
     # Beyond this month, one row per series: a weekly bill's next six
     # occurrences are not six separate things to think about yet.
     @later = later.group_by(&:recurring_transaction_id)
                   .values
-                  .map { |group| group.min_by(&:due_on) }
-                  .sort_by(&:due_on)
+                  .map { |group| group.min_by(&:effective_due_on) }
+                  .sort_by(&:effective_due_on)
 
     @paid_this_month = closed.select { |occurrence| occurrence.paid? && occurrence.due_on >= today.beginning_of_month }
-                             .sort_by(&:due_on)
 
     compute_kpis(today, month_end)
 
@@ -96,7 +96,7 @@ class BillsController < ApplicationController
 
     # The month as one chronological list, paid rows in place under a check.
     # Overdue rows are excluded: they get their own section.
-    @month_rows = (@this_month + @paid_this_month).sort_by(&:due_on)
+    @month_rows = (@this_month + @paid_this_month).sort_by(&:effective_due_on)
 
     # Next up filters on the DATE, not derived_state: a bill two days late is
     # still :due within its grace period, and nothing already past its due date

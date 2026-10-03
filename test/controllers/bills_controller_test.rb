@@ -222,6 +222,86 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # The row calls the leftover Paused, and the drawer it opens, the bill's page
+  # and the payment drawer said "Overdue by 6 days" in red.
+  test "a paused bill's drawer, page and payment drawer say Paused, not overdue" do
+    late = 6.days.ago.to_date
+    bill = create_bill(name: "Paused gym", amount: 40, expected_day_of_month: late.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    bill.mark_inactive!
+    occurrence = bill.recurring_occurrences.open_status.sole
+    assert occurrence.overdue?, "premise: the leftover is past its grace"
+
+    paused = I18n.t("recurring_transactions.status.inactive")
+
+    [ -> { get_bill_drawer(bill) }, -> { get bill_url(bill) }, -> { get recurring_occurrence_url(occurrence) } ].each do |visit|
+      visit.call
+
+      assert_response :success
+      assert_select "p.text-secondary", text: /#{paused} · /
+      assert_select ".text-destructive", text: /#{paused}/, count: 0
+      assert_no_match(/Overdue by/, response.body)
+    end
+
+    # The payment drawer's ring takes the same tone.
+    get recurring_occurrence_url(occurrence)
+    assert_no_match "var(--color-destructive)", response.body
+  end
+
+  # Rows after this month said "Snoozed until …". The rail that replaced that
+  # line printed the old day, and the list kept the old order.
+  test "a snoozed row sits at the date it was snoozed to" do
+    next_month = Date.current.next_month.beginning_of_month
+    snoozed = create_bill(name: "Snoozed gym", amount: 40, manual: true, anchor_date: next_month + 3,
+                          expected_day_of_month: (next_month + 3).day, next_expected_date: next_month + 3)
+    create_bill(name: "Next month rent", amount: 900, manual: true, anchor_date: next_month + 7,
+                expected_day_of_month: (next_month + 7).day, next_expected_date: next_month + 7)
+    occurrence = snoozed.recurring_occurrences.open_status.order(:due_on).first
+    occurrence.snooze!(next_month + 12)
+
+    get bills_url
+
+    assert_response :success
+    assert_equal [ "Next month rent", "Snoozed gym" ], @controller.view_assigns["later"].map { |o| o.recurring_transaction.name }
+    assert_select "a[href=?] div[class~='@lg:block']",
+      bill_path(snoozed, display: "drawer", occurrence: occurrence.id),
+      text: /#{Regexp.escape(I18n.l(next_month + 12, format: :short))}/
+  end
+
+  # The app snoozes a week. An overdue bill snoozed mid-month moves down This
+  # month to its new date, after a bill due sooner.
+  test "a bill snoozed a week lists at its new date" do
+    travel_to Date.current.beginning_of_month + 9.days
+    create_bill(name: "Soon Co", amount: 20, manual: true, anchor_date: Date.current + 3,
+                expected_day_of_month: (Date.current + 3).day, next_expected_date: Date.current + 3)
+    late = 6.days.ago.to_date
+    bill = create_bill(name: "Late Co", amount: 30, expected_day_of_month: late.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    bill.recurring_occurrences.open_status.order(:due_on).first.snooze!(Date.current + 7)
+
+    get bills_url
+
+    assert_response :success
+    assert_equal [ "Soon Co", "Late Co" ], @controller.view_assigns["month_rows"].map { |o| o.recurring_transaction.name }
+  end
+
+  # Snoozed past the month's end, the bill was left at the bottom of This
+  # month with next month's date on its rail.
+  test "a bill snoozed past the month's end moves after this month" do
+    travel_to Date.current.end_of_month - 2.days
+    late = 6.days.ago.to_date
+    bill = create_bill(name: "Late Co", amount: 30, expected_day_of_month: late.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    occurrence = bill.recurring_occurrences.open_status.order(:due_on).first
+    occurrence.snooze!(Date.current + 7)
+
+    get bills_url
+
+    assert_response :success
+    assert_empty @controller.view_assigns["month_rows"]
+    assert_equal [ occurrence.id ], @controller.view_assigns["later"].map(&:id)
+  end
+
   # On a phone the range squeezed the bill's name to "PG&E Ele…", so the row
   # shows it only from @lg and the drawer carries it.
   test "an estimated bill's range leaves the row on a phone and stays in the drawer" do
