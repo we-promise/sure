@@ -213,6 +213,10 @@ class RedbarkAccount::LoanDetailsProcessor
       return nil if from.nil? || to.nil? || to <= from
 
       months = ((to.year - from.year) * 12) + (to.month - from.month)
+      # An end date before the origination day in its month has not reached the
+      # anniversary, so that month is not complete (as in
+      # PlaidAccount::Liabilities::StudentLoanProcessor#term_months).
+      months -= 1 if from + months.months > to
       return nil unless months.positive?
 
       # The longest term the loan form accepts. A bank reporting an end date
@@ -233,7 +237,11 @@ class RedbarkAccount::LoanDetailsProcessor
     def parse_decimal(value)
       return nil if value.blank?
 
-      BigDecimal(value.to_s)
+      amount = BigDecimal(value.to_s)
+      # Only a positive finite figure is a principal: Loan#original_balance
+      # reads a zero or negative one as unrecorded, so storing it would show the
+      # form a balance the loan itself ignores.
+      amount if amount.finite? && amount.positive?
     rescue ArgumentError, TypeError
       nil
     end
@@ -251,7 +259,13 @@ class RedbarkAccount::LoanDetailsProcessor
     def write(attrs)
       return if attrs.blank?
 
-      loan.enrich_attributes(attrs, source: SOURCE)
+      # Enrichable logs the DataEnrichment before it saves, and a refused save
+      # does not roll that row back. The outer transaction does, so provenance
+      # never says Redbark supplied a value the loan rejected.
+      ActiveRecord::Base.transaction do
+        loan.enrich_attributes(attrs, source: SOURCE)
+        raise ActiveRecord::Rollback if loan.errors.any?
+      end
       return if loan.errors.empty?
 
       capture(

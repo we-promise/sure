@@ -289,6 +289,63 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
     assert_equal Loan::Simulator::MAX_PERIODS, @loan.reload.term_months
   end
 
+  # A term is whole months. An end date before the origination day in its month
+  # has not reached the anniversary, so the last month is not complete: counting
+  # it overstates the term by one, as Plaid's student loan term does not.
+  test "a term stops at the last complete month" do
+    @loan.update!(start_date: nil, initial_balance: nil, term_months: nil)
+    detail(
+      lendingRate: "0.0675",
+      loanDetails: { "originalStartDate" => "2024-01-15", "loanEndDate" => "2025-01-10" }
+    )
+
+    process
+
+    assert_equal 11, @loan.reload.term_months,
+                 "an end date four days short of the anniversary was counted as a full twelfth month"
+  end
+
+  test "a term ending on the anniversary day counts that month" do
+    @loan.update!(start_date: nil, initial_balance: nil, term_months: nil)
+    detail(
+      lendingRate: "0.0675",
+      loanDetails: { "originalStartDate" => "2024-01-15", "loanEndDate" => "2025-01-15" }
+    )
+
+    process
+
+    assert_equal 12, @loan.reload.term_months
+  end
+
+  # `Loan#original_balance` reads a zero or negative initial balance as
+  # unrecorded and falls back to the first valuation, while the form would still
+  # show the stored figure. A principal that is not a positive finite number is
+  # not stored at all.
+  test "a principal that is not positive is not stored" do
+    [ "0", "-400000", "NaN", "Infinity" ].each do |amount|
+      @loan.update!(initial_balance: nil)
+      detail(lendingRate: "0.0675", loanDetails: { "originalLoanAmount" => amount })
+
+      process
+
+      assert_nil @loan.reload.initial_balance, "an originalLoanAmount of #{amount} was stored as the principal"
+    end
+  end
+
+  # `enrich_attributes` logs the enrichment inside its transaction and then
+  # calls `save`, which returns false on a refusal without rolling back, so the
+  # row that says Redbark supplied the value would outlive a loan that rejected
+  # it.
+  test "a refused write leaves no provenance behind" do
+    @loan.update_columns(start_date: nil)
+    @account.set_opening_anchor_balance(balance: 400_000, date: Date.new(2024, 1, 1))
+    detail(lendingRate: "0.0675", loanDetails: { "originalStartDate" => "3000-01-01" })
+
+    assert_no_difference -> { DataEnrichment.where(enrichable: @loan, attribute_name: "start_date").count } do
+      process
+    end
+  end
+
   # Terms are applied BEFORE the rate, and `enrich_attributes` leaves a refused
   # value assigned on the loan. A start date in the future is refused by the
   # model, and left assigned it would make the rate write that follows fail
