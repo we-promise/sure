@@ -1,0 +1,239 @@
+suite: extraEnvFrom rendering tests
+templates:
+  - templates/web-deployment.yaml
+  - templates/worker-deployment.yaml
+  - templates/migrate-job.yaml
+  - templates/cronjobs.yaml
+
+tests:
+  # ===== Web Deployment Tests =====
+  - it: web deployment renders rails.extraEnvFrom when set
+    template: templates/web-deployment.yaml
+    set:
+      rails:
+        extraEnvFrom:
+          - secretRef:
+              name: sure-demo
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].envFrom
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].secretRef.name
+          value: sure-demo
+
+  - it: web deployment renders web.extraEnvFrom when set
+    template: templates/web-deployment.yaml
+    set:
+      web:
+        extraEnvFrom:
+          - configMapRef:
+              name: app-config
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].envFrom
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].configMapRef.name
+          value: app-config
+
+  - it: web deployment renders both rails.extraEnvFrom and web.extraEnvFrom
+    template: templates/web-deployment.yaml
+    set:
+      rails:
+        extraEnvFrom:
+          - secretRef:
+              name: sure-demo
+      web:
+        extraEnvFrom:
+          - configMapRef:
+              name: app-config
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].envFrom
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].secretRef.name
+          value: sure-demo
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[1].configMapRef.name
+          value: app-config
+
+  - it: web deployment has no envFrom when extraEnvFrom is not set
+    template: templates/web-deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].envFrom
+
+  # ===== Worker Deployment Tests =====
+  - it: worker deployment renders rails.extraEnvFrom when set
+    template: templates/worker-deployment.yaml
+    set:
+      rails:
+        extraEnvFrom:
+          - secretRef:
+              name: sure-demo
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].envFrom
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].secretRef.name
+          value: sure-demo
+
+  - it: worker deployment renders worker.extraEnvFrom when set
+    template: templates/worker-deployment.yaml
+    set:
+      worker:
+        extraEnvFrom:
+          - configMapRef:
+              name: worker-config
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].envFrom
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].configMapRef.name
+          value: worker-config
+
+  - it: worker deployment renders both rails.extraEnvFrom and worker.extraEnvFrom
+    template: templates/worker-deployment.yaml
+    set:
+      rails:
+        extraEnvFrom:
+          - secretRef:
+              name: sure-demo
+      worker:
+        extraEnvFrom:
+          - configMapRef:
+              name: worker-config
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].envFrom
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].secretRef.name
+          value: sure-demo
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[1].configMapRef.name
+          value: worker-config
+
+  - it: worker deployment has no envFrom when extraEnvFrom is not set
+    template: templates/worker-deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].envFrom
+
+  # ===== Migrate Job Tests =====
+  - it: migrate job renders rails.extraEnvFrom when set
+    template: templates/migrate-job.yaml
+    set:
+      migrations:
+        strategy: job
+      rails:
+        extraEnvFrom:
+          - secretRef:
+              name: sure-demo
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].envFrom
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].secretRef.name
+          value: sure-demo
+
+  - it: migrate job has no envFrom when extraEnvFrom is not set
+    template: templates/migrate-job.yaml
+    set:
+      migrations:
+        strategy: job
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].envFrom
+
+  - it: migrate job is not rendered when strategy is initContainer
+    template: templates/migrate-job.yaml
+    set:
+      migrations:
+        strategy: initContainer
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ===== CronJobs Tests =====
+  - it: cronjobs render rails.extraEnvFrom when set
+    template: templates/cronjobs.yaml
+    set:
+      cronjobs:
+        enabled: true
+        items:
+          - name: test-cron
+            schedule: "0 0 * * *"
+            command: ["echo", "test"]
+      rails:
+        extraEnvFrom:
+          - secretRef:
+              name: sure-demo
+    asserts:
+      - exists:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom[0].secretRef.name
+          value: sure-demo
+
+  - it: cronjobs render per-job envFrom when set
+    template: templates/cronjobs.yaml
+    set:
+      cronjobs:
+        enabled: true
+        items:
+          - name: test-cron
+            schedule: "0 0 * * *"
+            command: ["echo", "test"]
+            envFrom:
+              - configMapRef:
+                  name: cron-config
+    asserts:
+      - exists:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom[0].configMapRef.name
+          value: cron-config
+
+  - it: cronjobs render both rails.extraEnvFrom and per-job envFrom
+    template: templates/cronjobs.yaml
+    set:
+      cronjobs:
+        enabled: true
+        items:
+          - name: test-cron
+            schedule: "0 0 * * *"
+            command: ["echo", "test"]
+            envFrom:
+              - configMapRef:
+                  name: cron-config
+      rails:
+        extraEnvFrom:
+          - secretRef:
+              name: sure-demo
+    asserts:
+      - exists:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom[0].secretRef.name
+          value: sure-demo
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom[1].configMapRef.name
+          value: cron-config
+
+  - it: cronjobs are not rendered when disabled
+    template: templates/cronjobs.yaml
+    set:
+      cronjobs:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: cronjobs are not rendered when items is empty
+    template: templates/cronjobs.yaml
+    set:
+      cronjobs:
+        enabled: true
+        items: []
+    asserts:
+      - hasDocuments:
+          count: 0
