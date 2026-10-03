@@ -15,6 +15,7 @@ class Settings::HostingsController < ApplicationController
   guard_feature unless: -> { self_hosted? }
 
   before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
+  before_action :ensure_instance_settings_manager, only: [ :update, :disconnect_external_assistant ]
   before_action :ensure_super_admin_for_onboarding, only: :update
 
   def show
@@ -476,6 +477,13 @@ class Settings::HostingsController < ApplicationController
 
     def ensure_admin
       redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.admin?
+    end
+
+    # Everything under params[:setting] is stored in the global Setting and
+    # applies to every family; params[:family] only touches Current.family.
+    def ensure_instance_settings_manager
+      return unless action_name == "disconnect_external_assistant" || params.key?(:setting)
+      redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.manages_instance_settings?
     end
 
     def ensure_super_admin_for_onboarding

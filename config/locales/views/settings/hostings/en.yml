@@ -33,6 +33,7 @@ en:
         invites: Invite Codes
         title: Self-Hosting
         danger_zone: Danger Zone
+        instance_settings_restricted: Provider, AI and sync settings apply to every family on this instance, so only a super admin can change them.
         clear_cache: Clear data cache
         clear_cache_warning: Clearing the data cache will remove all exchange rates, security prices, account balances, and other data. This will not delete accounts, transactions, categories, or other user-owned data.
         confirm_clear_cache:

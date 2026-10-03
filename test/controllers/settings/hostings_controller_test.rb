@@ -5,6 +5,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   include ProviderTestHelper
 
   setup do
+    # setting[...] values are instance-wide, so saving them takes a super
+    # admin. Promote the fixture admin rather than switching users so the
+    # family-scoped assertions below keep using dylan_family.
+    users(:family_admin).update!(role: :super_admin)
     sign_in users(:family_admin)
 
     @provider = mock
@@ -41,6 +45,78 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
     patch settings_hosting_url, params: { setting: { onboarding_state: "invite_only" } }
     assert_response :forbidden
+  end
+
+  test "a family admin cannot change instance-wide settings on an instance with several families" do
+    with_self_hosting do
+      sign_in users(:empty)
+
+      patch settings_hosting_url, params: { setting: {
+        openai_access_token: "attacker-token",
+        openai_uri_base: "https://attacker.example/v1",
+        openai_model: "gpt-4.1",
+        external_assistant_url: "https://attacker.example/agent"
+      } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+      assert_nil Setting.openai_access_token
+      assert_nil Setting.external_assistant_url
+      assert_not_equal "https://attacker.example/v1", Setting.openai_uri_base
+    end
+  end
+
+  test "a family admin can still change their own family's assistant type" do
+    with_self_hosting do
+      sign_in users(:empty)
+
+      patch settings_hosting_url, params: { family: { assistant_type: "external" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "external", users(:empty).family.reload.assistant_type
+    end
+  end
+
+  test "a family admin cannot disconnect the instance's external assistant" do
+    Setting.external_assistant_url = "https://agent.example/v1"
+
+    with_self_hosting do
+      sign_in users(:empty)
+
+      delete disconnect_external_assistant_settings_hosting_url
+
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+      assert_equal "https://agent.example/v1", Setting.external_assistant_url
+    end
+  end
+
+  test "a family admin sees why instance-wide settings are not offered" do
+    with_self_hosting do
+      sign_in users(:empty)
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_includes response.body, I18n.t("settings.hostings.show.instance_settings_restricted")
+      assert_select "form input[name^='setting[']", count: 0
+      assert_select "select[name='family[assistant_type]']"
+    end
+  end
+
+  test "the admin of the only family on a self-hosted instance can change instance-wide settings" do
+    with_self_hosting do
+      Family.stubs(:count).returns(1)
+      sign_in users(:empty)
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "own-key" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "own-key", Setting.twelve_data_api_key
+
+      get settings_hosting_url
+      refute_includes response.body, I18n.t("settings.hostings.show.instance_settings_restricted")
+    end
   end
 
   test "should get edit when self hosting is enabled" do
