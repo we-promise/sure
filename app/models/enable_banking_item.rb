@@ -2,6 +2,7 @@ class EnableBankingItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
+  enum :sync_strategy, { date: "date", longest: "longest" }, default: :date
 
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
@@ -70,6 +71,37 @@ class EnableBankingItem < ApplicationRecord
     return if psu_type.blank? || aspsp_psu_types.blank?
     unless aspsp_psu_types.include?(psu_type)
       errors.add(:psu_type, "must be one of the ASPSP supported types")
+    end
+  end
+
+  # sync_start_date has no bearing once sync_strategy is "longest" (the
+  # importer requests full available history instead), so the presence/bounds
+  # check below only applies to the "date" strategy. Bounds mirror the
+  # setup_accounts form's client-side min/max, now also enforced server-side.
+  validate :sync_start_date_within_bounds, if: :date?
+
+  def sync_start_date_within_bounds
+    if sync_start_date.blank?
+      # A nonblank value that failed date coercion is cast to nil by Rails,
+      # which would otherwise be indistinguishable from intentional absence.
+      if sync_start_date_before_type_cast.present?
+        errors.add(:sync_start_date, "is not a valid date")
+        return
+      end
+
+      # A brand-new connection is created before the setup modal collects
+      # sync_start_date (EnableBankingItemsController#create/#authorize), and
+      # the importer falls back to its 3-month default until the field is
+      # set. Blank is therefore only invalid once a value has been stored -
+      # this guards against clearing it later, not the pre-setup window.
+      errors.add(:sync_start_date, "can't be blank") if sync_start_date_in_database.present?
+      return
+    end
+
+    return unless new_record? || will_save_change_to_sync_start_date? || will_save_change_to_sync_strategy?
+
+    if sync_start_date > Date.current || sync_start_date < 2.years.ago.to_date
+      errors.add(:sync_start_date, "must be within the last 2 years")
     end
   end
 
@@ -267,6 +299,18 @@ class EnableBankingItem < ApplicationRecord
 
   def has_completed_initial_setup?
     accounts.any?
+  end
+
+  # True when the ASPSP couldn't honor the requested sync_start_date and the
+  # actual earliest imported transaction is materially newer than what the
+  # user asked for (e.g. the bank only exposes 90 days of history). Used to
+  # surface a non-blocking notice; a small buffer avoids false positives from
+  # ordinary banking-day gaps around the requested date.
+  def sync_start_date_shortfall?
+    return false unless date? && sync_start_date.present?
+
+    earliest_imported = accounts.joins(:entries).minimum("entries.date")
+    earliest_imported.present? && earliest_imported > sync_start_date + 3.days
   end
 
   def linked_accounts_count
