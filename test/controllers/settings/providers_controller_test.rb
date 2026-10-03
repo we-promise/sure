@@ -33,8 +33,8 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "[data-provider-name='apple wallet']", count: 0
-    assert_select "turbo-frame#financekit-providers-panel" do
-      assert_select "a[href=?][data-turbo-frame='_top']", account_path(@source.account), text: "Test Wallet"
+    assert_select "details#financekit-connection" do
+      assert_select "a[href=?]", account_path(@source.account), text: "Test Wallet"
       assert_select "span", text: "Sync active"
       assert_select "dt", text: "Last accepted by Sure"
       assert_select "dt", text: "Last imported into your family"
@@ -53,7 +53,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     get settings_providers_url
 
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel" do
+    assert_select "details#financekit-connection" do
       assert_select "span", text: "Repair required — open the Sure iOS app"
       assert_select "dd", text: "Not yet", count: 2
       assert_select "a", text: "Test Wallet"
@@ -68,7 +68,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     get settings_providers_url
 
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "details#financekit-connection", count: 0
     assert_select "[data-provider-name='apple wallet'] button[disabled]", text: "App Store"
   end
 
@@ -84,7 +84,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       get settings_providers_url
 
       assert_response :success
-      assert_select "turbo-frame#financekit-providers-panel"
+      assert_select "details#financekit-connection"
       connections = @controller.view_assigns.values_at("connected", "needs_attention").flatten
       assert_equal [ "financekit" ], connections.map { |entry| entry[:provider_key] }
       assert_select "form[action=?]", sync_all_settings_providers_path, count: 0
@@ -101,12 +101,12 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     @source.account.update!(status: "disabled")
     get settings_providers_url
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel a[href=?]", account_path(@source.account)
+    assert_select "details#financekit-connection a[href=?]", account_path(@source.account)
 
     @source.account.update!(status: "pending_deletion")
     get settings_providers_url
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "details#financekit-connection", count: 0
     assert_select "a[href=?]", account_path(@source.account), count: 0
     assert_select "[data-provider-name='apple wallet']"
   end
@@ -117,7 +117,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     get settings_providers_url
 
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "details#financekit-connection", count: 0
     assert_select "[data-provider-name='apple wallet']"
   end
 
@@ -129,7 +129,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     get settings_providers_url
 
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "details#financekit-connection", count: 0
     assert_select "[data-provider-name='apple wallet']"
   end
 
@@ -191,6 +191,64 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("settings.providers.taglines.brex")
     assert_includes response.body, connect_form_settings_providers_path(provider_key: "brex")
     refute_includes response.body, "Test Brex Connection"
+  end
+
+  test "lists active Wise and CoinSpot connections under your connections" do
+    get settings_providers_url
+
+    assert_response :success
+    %w[wise coinspot].each do |key|
+      assert_select "details##{key}-connection"
+      assert_select "a[href=?]", connect_form_settings_providers_path(provider_key: key), count: 0
+    end
+  end
+
+  # Row panels used to sit in a frame of their own. A redirect to a page
+  # without that frame showed "Content missing", and a stream to
+  # "<key>-providers-panel" replaced the frame when the two shared that id.
+  test "connection rows post from the page and leave panel ids unique" do
+    get settings_providers_url
+
+    assert_response :success
+    assert_operator css_select("details[id$='-connection']").size, :>, 1
+    assert_select "details[id$='-connection'] turbo-frame", count: 0
+
+    panel_ids = css_select("[id$='-providers-panel']").map { |element| element["id"] }
+    assert_equal panel_ids.uniq, panel_ids
+  end
+
+  # Saves and errors from a row or the drawer re-render the panel by replacing
+  # "<turbo_id>-providers-panel", and EnableBankingItem::SyncCompleteEvent does
+  # the same when a sync finishes. SnapTrade never streams to it.
+  test "every streamed panel renders the root its streams replace" do
+    Settings::ProvidersController::FAMILY_PANELS.reject { |panel| panel[:key] == "snaptrade" }.each do |panel|
+      get connect_form_settings_providers_url(provider_key: panel[:key])
+
+      assert_response :success
+      assert_select "##{panel[:turbo_id]}-providers-panel", 1, "#{panel[:key]} panel root"
+    end
+  end
+
+  test "lists Wise and CoinSpot as available when the family has no connections" do
+    sign_in users(:empty)
+
+    get settings_providers_url
+
+    assert_response :success
+    %w[wise coinspot].each do |key|
+      assert_select "details##{key}-connection", count: 0
+      assert_select "a[href=?]", connect_form_settings_providers_path(provider_key: key)
+    end
+  end
+
+  # The provider card reads its tagline with `default: nil`, so a missing key
+  # renders a bare name rather than failing. Up shipped that way.
+  test "every family panel provider has an English tagline" do
+    missing = Settings::ProvidersController::FAMILY_PANEL_KEYS.reject do |key|
+      I18n.exists?("settings.providers.taglines.#{key}", :en)
+    end
+
+    assert_empty missing
   end
 
   test "sync all control submits with POST" do

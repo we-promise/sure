@@ -89,14 +89,15 @@ class AccountsController < ApplicationController
     # date beside a table shaded against another.
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
-    @q = params.fetch(:q, {}).permit(:search, :start_date, :end_date, :amount, :amount_operator, status: [], categories: [], merchants: [], tags: [], types: [])
+    @q = params.fetch(:q, {}).permit(:search, :uncategorized, :start_date, :end_date, :amount, :amount_operator, status: [], categories: [], merchants: [], tags: [], types: [])
     # Base entries for the account
     entries = @account.entries.excluding_split_parents
-    # Search / date / amount / status via EntrySearch
+    # Search / date / amount / status / uncategorized via EntrySearch
     entries = EntrySearch.apply_search_filter(entries, @q[:search])
     entries = EntrySearch.apply_date_filters(entries, @q[:start_date], @q[:end_date])
     entries = EntrySearch.apply_amount_filter(entries, @q[:amount], @q[:amount_operator])
     entries = EntrySearch.apply_status_filter(entries, @q[:status])
+    entries = EntrySearch.apply_uncategorized_filter(entries, @q[:uncategorized])
     # Category / merchant / tag / type filters use Transaction::Search scoped to this account
     if @q["categories"].present? || @q["merchants"].present? || @q["tags"].present? || @q["types"].present?
       txn_entry_ids = Transaction::Search.new(Current.family, filters: @q.slice("categories", "merchants", "tags", "types").to_h.merge("active_accounts_only" => false), accessible_account_ids: [ @account.id ]).transactions_scope.pluck("entries.id")

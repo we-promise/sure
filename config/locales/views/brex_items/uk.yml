@@ -102,14 +102,13 @@ uk:
       total: "Всього"
       unlinked: "Неприв'язано"
     provider_panel:
-      accounts_link: "Рахунки"
       add_connection: "Додати підключення Brex"
       base_url_label: "Базова URL-адреса (необов'язково)"
       base_url_placeholder: "https://api.brex.com"
-      configured_html: "Налаштовано та готово до використання. Перейдіть на вкладку %{accounts_link}, щоб керувати та налаштовувати рахунки."
       connection_name_label: "Назва підключення"
       connection_name_placeholder: "Бізнес-рахунок"
       default_connection_name: "Підключення Brex"
+      disconnect: Відключити
       disconnect_label: "Від'єднати %{name}"
       disconnect_confirm: "Від'єднати %{name}?"
       encryption_warning:
@@ -121,10 +120,8 @@ uk:
         open_tokens: "Перейдіть до налаштувань токенів розробника/API Brex для компанії, яку ви хочете підключити"
         sign_in_html: "Перейдіть на %{link} та увійдіть до облікового запису, який ви хочете підключити"
       keep_token_placeholder: "Залиште порожнім, щоб зберегти поточний токен"
-      not_configured: "Не налаштовано"
       sandbox_note_html: "Використовуйте окреме іменоване підключення для кожної компанії/токену API Brex, яку ви хочете синхронізувати. Залиште базову URL-адресу порожньою для виробництва. Тестове середовище обмежене тестуванням, схваленим Brex, і не працює з токенами клієнтів."
       setup_accounts: "Налаштувати рахунки"
-      setup_title: "Інструкції з налаштування:"
       sync: "Синхронізувати"
       token_label: "Токен"
       token_placeholder: "Вставте токен тут"

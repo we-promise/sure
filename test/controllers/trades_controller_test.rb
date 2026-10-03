@@ -129,6 +129,56 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to @entry.account
   end
 
+  # A deposit or withdrawal books an entry on the other account too, so that
+  # account needs write permission, not just the investment account.
+  test "a withdrawal cannot book into an account the member may only read" do
+    sign_in_as_member_with_writable_investment
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      post trades_url(account_id: @investment.id), params: {
+        model: { type: "withdrawal", date: Date.current, amount: 10, currency: "USD", transfer_account_id: accounts(:credit_card).id }
+      }
+    end
+
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "a deposit cannot draw from another member's private account" do
+    sign_in_as_member_with_writable_investment
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      post trades_url(account_id: @investment.id), params: {
+        model: { type: "deposit", date: Date.current, amount: 10, currency: "USD", transfer_account_id: accounts(:connected).id }
+      }
+    end
+
+    assert_response :not_found
+  end
+
+  test "a member can still book a withdrawal into an account shared with full control" do
+    sign_in_as_member_with_writable_investment
+
+    assert_difference -> { Transfer.count } => 1 do
+      post trades_url(account_id: @investment.id), params: {
+        model: { type: "withdrawal", date: Date.current, amount: 10, currency: "USD", transfer_account_id: accounts(:depository).id }
+      }
+    end
+
+    assert_redirected_to @investment
+  end
+
+  test "the transfer account picker only offers accounts the member may write to" do
+    sign_in_as_member_with_writable_investment
+
+    get new_trade_url(account_id: @investment.id, type: "withdrawal")
+
+    assert_response :success
+    assert_select "input[type=hidden][name='model[transfer_account_id]']"
+    assert_select "[role=option][data-value='#{accounts(:depository).id}']"
+    assert_select "[role=option][data-value='#{accounts(:credit_card).id}']", count: 0
+    assert_select "[role=option][data-value='#{accounts(:connected).id}']", count: 0
+  end
+
   test "creates withdrawal entry" do
     to_account = accounts(:depository) # Account the withdrawal is going to
 
@@ -605,5 +655,14 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
       stream = doc.css("turbo-stream[action='replace']").find { |s| s["target"] == dom_id(entry) }
       assert stream.present?, "Expected a turbo-stream replacing the entry row"
       stream.to_html
+    end
+
+    # family_member gets the investment account with full control; fixtures
+    # already share depository with full control and credit_card read-only,
+    # and leave connected private to family_admin.
+    def sign_in_as_member_with_writable_investment
+      @investment = accounts(:investment)
+      @investment.account_shares.create!(user: users(:family_member), permission: "full_control")
+      sign_in users(:family_member)
     end
 end

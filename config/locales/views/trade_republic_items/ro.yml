@@ -6,6 +6,7 @@ ro:
       connection_description: "Conectează un cont de investiții Trade Republic prin autentificare web securizată"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Acest cont Trade Republic este deja conectat. Noua conexiune a fost eliminată."
     portfolio_categories:
       brokerage: "Cont de brokeraj"
       private_markets: "Piețe private"

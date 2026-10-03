@@ -82,7 +82,7 @@ ru:
       pulse_next_seven: в ближайшие 7 дней
       pulse_bar_aria: Оплачено %{percent}% платежей этого месяца
       next_up: Ближайшие
-      view_upcoming: Посмотреть предстоящие
+      view_calendar: Посмотреть календарь
       date_today: Сегодня
       date_tomorrow: Завтра
       unconvertible:
@@ -94,8 +94,6 @@ ru:
       remaining: Осталось %{amount}
       paid_headline: Оплачено %{amount}
       cost_line: В среднем %{average} за платёж, около %{annualized} в год
-    pane:
-      close: Свернуть подробности
     add_bill: Добавить платёж
     manage: Управлять
     find_payment: Найти оплату

@@ -108,7 +108,7 @@
                       <div>
                         <% if filtered? %>
                           <%= render DS::Link.new(
-                            text: t("transactions.search.menu.clear_filters"),
+                            text: t("transactions.searches.menu.clear_filters"),
                             variant: "ghost",
                             href: helpers.account_path(account, tab: "activity"),
                           ) %>
@@ -116,19 +116,32 @@
                       </div>
 
                       <div class="flex gap-2">
-                        <%= render DS::Button.new(text: t("transactions.search.menu.cancel"), type: "button", variant: "ghost", data: { action: "DS--popover#close" }) %>
-                        <%= render DS::Button.new(text: t("transactions.search.menu.apply"), type: :submit) %>
+                        <%= render DS::Button.new(text: t("transactions.searches.menu.cancel"), type: "button", variant: "ghost", data: { action: "DS--popover#close" }) %>
+                        <%= render DS::Button.new(text: t("transactions.searches.menu.apply"), type: :submit) %>
                       </div>
                     </div>
                   </div>
                 </div>
               <% end %>
+              <div class="p-3 space-y-3 border-t border-secondary">
+                <p class="text-xs font-medium text-secondary uppercase"><%= t("accounts.show.activity.category") %></p>
+                <div class="flex items-center gap-3">
+                  <%= check_box_tag "q[uncategorized]",
+                                    "1",
+                                    params.dig(:q, :uncategorized) == "1",
+                                    id: "q_uncategorized",
+                                    class: "checkbox checkbox--light",
+                                    form: "entries-search",
+                                    onchange: "document.getElementById('entries-search').requestSubmit()" %>
+                  <%= label_tag "q_uncategorized", t("accounts.show.activity.uncategorized_only"), class: "text-sm text-primary" %>
+                </div>
+              </div>
             <% end %>
           <% end %>
       <% end %>
       <%= button_tag type: "button",
             id: "toggle-checkboxes-button",
-            aria: { label: t(".toggle_selection_checkboxes") },
+            aria: { label: t("UI.account.activity_feed.toggle_selection_checkboxes") },
             class: "lg:hidden font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
             data: {
               action: "click->checkbox-toggle#toggle",
