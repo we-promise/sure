@@ -3,7 +3,18 @@ en:
   depositories:
     edit:
       edit: Edit %{account}
+    fixed_return:
+      interest_entry_name: Interest
     form:
+      fixed_return_frequency: Pays interest
+      fixed_return_hint: For accounts that pay a known rate no bank feed reports, Sure can credit the interest itself. Leave the rate blank to turn this off.
+      fixed_return_rate: Interest rate
+      fixed_return_rate_placeholder: '3.25'
+      fixed_return_start_date: Interest starts
+      frequencies:
+        annually: Annually
+        monthly: Monthly
+        quarterly: Quarterly
       none: None
       subtype_prompt: Select account type
     new:
