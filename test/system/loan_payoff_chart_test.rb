@@ -97,6 +97,31 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
     end
   end
 
+  # we-promise/sure#3958: stopped on a scheduled payment, the tooltip says what
+  # that payment is made of. The first stop is origination, the amount
+  # borrowed rather than a payment, so it has no split; the second is the
+  # first payment.
+  test "the tooltip splits a scheduled payment into principal and interest" do
+    travel_to TODAY do
+      account = on_contract_loan_account
+      first_payment = account.loan.amortization_schedule.payments.first
+
+      visit account_path(account, period: "all_time")
+      svg = find("[data-controller='loan-payoff-chart'] svg")
+      principal_label = I18n.t("loans.tabs.schedule.principal")
+
+      svg.send_keys(:arrow_right)
+      tooltip = find("[data-controller='loan-payoff-chart'] div[aria-live='polite']", visible: :all)
+      assert_not_includes tooltip.text(:all), principal_label, "origination is not a payment"
+
+      svg.send_keys(:arrow_right)
+      money = ->(value) { page.evaluate_script("new Intl.NumberFormat('en', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(#{value})") }
+      expected = "#{principal_label}: #{money.(first_payment.principal.amount.to_f)} · " \
+                 "#{I18n.t('loans.tabs.schedule.interest')}: #{money.(first_payment.interest.amount.to_f)}"
+      assert_includes tooltip.text(:all), expected
+    end
+  end
+
   # The tooltip formats its date and its money in the request's locale, which
   # the payload carries because the layout hard-codes `lang="en"`. Asserted
   # against what the browser's own Intl produces for German, so the expected
