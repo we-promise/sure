@@ -95,10 +95,10 @@ class Holding::ForwardCalculator
           if trade.qty.positive?
             @transferred_security_ids << security_id
           else
-            @cost_basis_trackers[security_id].apply(converted_trade_price(trade), trade.qty)
+            @cost_basis_trackers[security_id].apply(converted_trade_price(trade, trade_entry.date), trade.qty)
           end
         else
-          @cost_basis_trackers[security_id].apply(converted_trade_price(trade), trade.qty)
+          @cost_basis_trackers[security_id].apply(converted_trade_price(trade, trade_entry.date), trade.qty)
         end
 
         portfolio[security_id] = previous_quantity + trade.qty

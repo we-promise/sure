@@ -347,6 +347,34 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_nil cost_basis_for(calc, security, Date.current)
   end
 
+  # A foreign-currency trade is converted at the rate on its own date, so the
+  # cost basis does not drift as today's rate moves.
+  test "converts a foreign-currency trade at the trade-date rate" do
+    security = Security.create!(ticker: "SAP", name: "SAP SE")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 3.days.ago.to_date, rate: 1.1)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, currency: "EUR", date: 3.days.ago.to_date)
+    end
+
+    # 100 EUR x 1.1 (trade-date rate) = 110 USD, not x 1.5 (today).
+    assert_in_delta 110.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
+  end
+
+  # A rate carried on the trade itself is preferred over a stored daily rate.
+  test "prefers a trade's own exchange rate over a stored daily rate" do
+    security = Security.create!(ticker: "SAP", name: "SAP SE")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 3.days.ago.to_date, rate: 1.1)
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, currency: "EUR", exchange_rate: 1.25, date: 3.days.ago.to_date)
+    end
+
+    # 100 EUR x 1.25 (the trade's own rate) = 125 USD, not x 1.1 (the DB rate).
+    assert_in_delta 125.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
