@@ -35,47 +35,55 @@ namespace :security do
       exit 1
     end
 
+    # Invalidate any previous completion flag before this run starts (not just
+    # on failure at the end): if a prior run already completed successfully
+    # and this run then fails or aborts partway through, leaving the old flag
+    # in place would let ActiveRecordEncryptionConfig.backfill_completed?
+    # report "complete" while this run's still-plaintext rows are unencrypted.
+    Setting.encryption_backfill_completed_version = nil unless dry_run
+
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
-    # User fields (MFA + PII)
-    # Note: otp_backup_codes excluded - it's a PostgreSQL array column incompatible with AR encryption
-    results[:users] = backfill_model(User, %i[otp_secret email unconfirmed_email first_name last_name], batch_size, dry_run)
+    # Note: otp_backup_codes excluded from User's fields below - it's a
+    # PostgreSQL array column incompatible with AR encryption.
+    #
+    # Field lists live in ActiveRecordEncryptionConfig::BACKFILL_MANIFEST
+    # (lib/active_record_encryption_config.rb), the single source of truth
+    # kept in sync with each model's `encrypts` declarations by
+    # test/lib/tasks/security_backfill_test.rb - update the manifest, not
+    # this loop, to add or change coverage.
+    ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.each do |key, (model_class_name, fields)|
+      results[key] = backfill_model(model_class_name.constantize, fields, batch_size, dry_run)
+    end
 
-    # Invitation tokens and email
-    results[:invitations] = backfill_model(Invitation, %i[token email], batch_size, dry_run)
-
-    # InviteCode tokens
-    results[:invite_codes] = backfill_model(InviteCode, %i[token], batch_size, dry_run)
-
-    # Session user_agent (encryption) and ip_address_digest (hashing)
+    # Session user_agent (encryption) and ip_address_digest (hashing) - not
+    # part of BACKFILL_MANIFEST, see its comment for why.
     results[:sessions] = backfill_sessions(batch_size, dry_run)
 
-    # MobileDevice device_id
-    results[:mobile_devices] = backfill_model(MobileDevice, %i[device_id], batch_size, dry_run)
+    all_succeeded = results.values.all? { |r| r[:failed_count].zero? }
 
-    # Provider items
-    results[:plaid_items] = backfill_model(PlaidItem, %i[access_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:simplefin_items] = backfill_model(SimplefinItem, %i[access_url raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:lunchflow_items] = backfill_model(LunchflowItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:enable_banking_items] = backfill_model(EnableBankingItem, %i[client_certificate session_id raw_payload raw_institution_payload], batch_size, dry_run)
-
-    # Provider accounts
-    results[:plaid_accounts] = backfill_model(PlaidAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload], batch_size, dry_run)
-    results[:simplefin_accounts] = backfill_model(SimplefinAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
-    results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload], batch_size, dry_run)
-    results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    # Only mark the backfill complete on a clean, non-dry-run pass: a partial
+    # failure leaves some rows still plaintext, and flipping the flag would
+    # disable the legacy-plaintext fallback (config/initializers/
+    # active_record_encryption.rb) for models that still need it, turning a
+    # readable row into a boot-time ActiveRecord::Encryption::Errors::Decryption.
+    if !dry_run && all_succeeded
+      Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+    end
 
     puts({
-      ok: true,
+      ok: all_succeeded,
       dry_run: dry_run,
       batch_size: batch_size,
       results: results
     }.to_json)
+
+    # An operator or deployment automation checking only the process exit
+    # code must be able to tell a partial failure apart from real success -
+    # ok: false in the JSON above isn't enough on its own since nothing
+    # forces anyone to parse it.
+    exit 1 unless all_succeeded
   end
 
   def backfill_model(model_class, fields, batch_size, dry_run, &filter_block)
