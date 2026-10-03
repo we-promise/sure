@@ -34,6 +34,7 @@ en:
       budget_at_risk: Budget
       budget_on_track: Budget
       maintained_goal_depleted: Reserve
+      balance_discrepancy: Balance check
     meta:
       next_n_days:
         one: Next day
@@ -54,6 +55,9 @@ en:
       idle_days:
         one: idle %{count} day
         other: idle %{count} days
+      days_open:
+        one: "%{count} day"
+        other: "%{count} days"
     actions:
       spending_anomaly: View %{category} transactions
       cash_flow_warning: Review recurring transactions
@@ -63,6 +67,7 @@ en:
       idle_cash: Go to account
       budget: View budget
       maintained_goal_depleted: View reserve
+      balance_discrepancy: Go to account
     titles:
       spending_anomaly:
         above: "%{category} spending is trending up"
@@ -81,6 +86,7 @@ en:
         one: One category needs attention in your budget
         other: "%{count} categories need attention in your budget"
       budget_on_track: Your budget is on track
+      balance_discrepancy: "Possible missing transaction in %{account}"
     templates:
       spending_anomaly:
         above: You're on pace to spend %{projected_spend} on %{category} this month, about %{deviation_pct}% more than your recent monthly average of %{baseline_spend}.
@@ -100,3 +106,8 @@ en:
         over: "%{categories} went over budget this month. You've used %{budget_spent_pct}% of your total budget so far."
         near: "%{categories} are close to their limits this month. You've used %{budget_spent_pct}% of your total budget so far."
       budget_on_track: You've spent %{spent} of your %{budgeted} budget (%{budget_spent_pct}%) and everything is within its limit.
+      balance_discrepancy: >
+        The balance of %{account} doesn't match its transaction history — off by %{difference}
+        since %{since} (%{days_open} days). This usually means a transaction is missing or was
+        entered twice. Check your bank statement around that date for anything that doesn't
+        appear in Sure, or that appears twice.
