@@ -16,7 +16,7 @@ namespace :simplefin do
     pending_entries = Entry.joins(
       "INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'"
     ).where(source: "simplefin")
-     .where("transactions.extra -> 'simplefin' ->> 'pending' = ?", "true")
+     .where(Transaction.pending_sql("transactions", providers: %w[simplefin]))
      .includes(:account)
 
     puts "Found #{pending_entries.count} pending SimpleFIN transactions"
@@ -35,7 +35,7 @@ namespace :simplefin do
        .where(currency: pending_entry.currency)
        .where(date: pending_entry.date..(pending_entry.date + date_window.days)) # Posted must be ON or AFTER pending
        .where.not(id: pending_entry.id)
-       .where("transactions.extra -> 'simplefin' ->> 'pending' != ? OR transactions.extra -> 'simplefin' ->> 'pending' IS NULL", "true")
+       .where(Transaction.not_pending_sql("transactions", providers: %w[simplefin]))
        .first
 
       if posted_match
@@ -136,7 +136,7 @@ namespace :simplefin do
     pending_entries = Entry.joins(
       "INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'"
     ).where(source: "simplefin")
-     .where("transactions.extra -> 'simplefin' ->> 'pending' = ?", "true")
+     .where(Transaction.pending_sql("transactions", providers: %w[simplefin]))
      .includes(:account)
      .order(date: :desc)
 
