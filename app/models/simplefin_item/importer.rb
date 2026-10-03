@@ -717,14 +717,16 @@ class SimplefinItem::Importer
         Rails.logger.debug("SimpleFIN raw: #{accounts_data.inspect}")
       end
 
-      # Handle errors if present in response
-      if accounts_data[:errors] && accounts_data[:errors].any?
+      # Protocol v2 uses `errlist`; retain legacy `errors` compatibility.
+      # Prefer the structured v2 list if a transitional server returns both.
+      provider_errors = accounts_data[:errlist].presence || accounts_data[:errors]
+      if provider_errors.present?
         if accounts_data[:accounts].to_a.any?
           # Partial failure: record errors for visibility but continue processing accounts
-          record_errors(accounts_data[:errors])
+          record_errors(provider_errors)
         else
           # Global failure: no accounts were returned; treat as fatal
-          handle_errors(accounts_data[:errors])
+          handle_errors(provider_errors)
           return nil
         end
       end
@@ -1013,37 +1015,18 @@ class SimplefinItem::Importer
       )
 
       arr.each do |error|
-        msg = if error.is_a?(String)
-          error
-        else
-          error[:description] || error[:message] || error[:error] || error.to_s
-        end
-        down = msg.to_s.downcase
-        category = if down.include?("timeout") || down.include?("timed out")
-          "network"
-        elsif down.include?("auth") || down.include?("reauth") || down.include?("forbidden") || down.include?("unauthorized") || down.include?("2fa") || down.include?("two-factor")
-          "auth"
-        elsif down.include?("429") || down.include?("rate limit")
-          "api"
-        else
-          "other"
-        end
-        register_error(message: msg, category: category)
+        register_error(
+          message: provider_error_message(error),
+          category: provider_error_category(error)
+        )
       end
     end
 
     def handle_errors(errors)
-      error_messages = errors.map { |error| error.is_a?(String) ? error : (error[:description] || error[:message]) }.join(", ")
+      error_messages = errors.map { |error| provider_error_message(error) }.join(", ")
 
       # Mark item as requiring update for authentication-related errors
-      needs_update = errors.any? do |error|
-        if error.is_a?(String)
-          error.downcase.include?("reauthenticate") || error.downcase.include?("authentication")
-        else
-          error[:code] == "auth_failure" || error[:code] == "token_expired" ||
-          error[:type] == "authentication_error"
-        end
-      end
+      needs_update = errors.any? { |error| item_auth_error?(error) }
 
       if needs_update
         Rails.logger.warn("SimpleFin: marking item ##{simplefin_item.id} requires_update due to fatal auth error(s): #{error_messages}")
@@ -1075,6 +1058,40 @@ class SimplefinItem::Importer
         "SimpleFin API errors: #{error_messages}",
         :api_error
       )
+    end
+
+    def provider_error_message(error)
+      return error if error.is_a?(String)
+
+      error[:msg] || error[:description] || error[:message] || error[:error] || error.to_s
+    end
+
+    def provider_error_category(error)
+      code = error.is_a?(String) ? "" : error[:code].to_s
+      return "auth" if code.end_with?(".auth") || [ "auth_failure", "token_expired" ].include?(code)
+      return "api" if code == "gen.api"
+
+      message = provider_error_message(error).to_s.downcase
+      if message.include?("timeout") || message.include?("timed out")
+        "network"
+      elsif message.include?("auth") || message.include?("reauth") || message.include?("forbidden") || message.include?("unauthorized") || message.include?("2fa") || message.include?("two-factor")
+        "auth"
+      elsif message.include?("429") || message.include?("rate limit")
+        "api"
+      else
+        "other"
+      end
+    end
+
+    def item_auth_error?(error)
+      if error.is_a?(String)
+        message = error.downcase
+        return message.include?("reauthenticate") || message.include?("authentication")
+      end
+
+      code = error[:code].to_s
+      code == "gen.auth" || code == "auth_failure" || code == "token_expired" ||
+        error[:type] == "authentication_error"
     end
 
     # Classify exceptions into simple buckets for UI stats

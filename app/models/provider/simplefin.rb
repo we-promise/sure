@@ -54,7 +54,7 @@ class Provider::Simplefin
 
   def get_accounts(access_url, start_date: nil, end_date: nil, pending: nil)
     # Build query parameters
-    query_params = {}
+    query_params = { "version" => "2" }
 
     # SimpleFin expects Unix timestamps for dates
     if start_date
