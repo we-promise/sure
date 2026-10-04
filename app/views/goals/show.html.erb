@@ -91,6 +91,7 @@
     </div>
   </header>
 
+  <%= render "goals/currency_warning", goal: @goal %>
   <%= render "status_callout", goal: @goal %>
 
   <% @open_pledges.each do |pledge| %>

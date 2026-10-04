@@ -1,0 +1,6 @@
+<%# locals: (goal:) %>
+<% if goal.currency_conversion_incomplete? %>
+  <%= render DS::Alert.new(variant: "warning", title: t("goals.currency_warning.title")) do %>
+    <p class="text-secondary"><%= t("goals.currency_warning.body", currency: goal.currency) %></p>
+  <% end %>
+<% end %>

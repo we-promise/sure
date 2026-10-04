@@ -51,6 +51,8 @@
   <%# flex-wrap + gap so the account label and the footer line wrap onto
       separate lines under a gap when cramped, instead of butting together
       (the "1 accountcatch up" run-on at narrow card widths). %>
+  <%= render "goals/currency_warning", goal: goal %>
+
   <div class="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
     <div class="flex items-center gap-2 min-w-0">
       <%= render Goals::AccountStackComponent.new(accounts: linked_accounts, color_map: goal.account_color_map) %>

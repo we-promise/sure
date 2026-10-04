@@ -1,6 +1,9 @@
 ---
 en:
   goals:
+    currency_warning:
+      title: Some amounts could not be converted
+      body: "Calculations exclude amounts with unavailable exchange rates. Add rates to %{currency} to include them."
     color_picker:
       trigger_label: Choose color and icon
       color_heading: Color
@@ -106,6 +109,7 @@ en:
       submit: Record it
       success: "%{amount} recorded as used."
       errors:
+        missing_exchange_rate: Add the missing exchange rate before recording this spending.
         non_positive: Enter an amount greater than zero.
         maintained: A reserve is drawn down and refilled, not spent — its shortfall already shows on the goal.
         exceeds_target: That is more than this goal ever set out to save.
@@ -139,6 +143,7 @@ en:
       funding_accounts_heading: Funding accounts
       funding_accounts:
         earmarked_of: "%{earmarked} earmarked of %{balance}"
+        converted: "In goal currency: %{amount}"
         empty:
           heading: No funding accounts linked yet
           body: Edit the goal to link the depository accounts you save into.
@@ -336,6 +341,7 @@ en:
         whole_balance: "Blank: whole balance"
         earmark_for: Earmark amount for %{account}
         earmark_hint: Leave an amount blank to dedicate that account's whole balance.
+        currency_conversion_hint: "Accounts can use different currencies. Totals are converted to %{currency}; account earmarks stay in each account’s currency."
       subtypes:
         checking: Checking
         savings: Savings

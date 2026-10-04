@@ -58,7 +58,7 @@ class GoalsController < ApplicationController
   def create
     @goal = Current.family.goals.new(goal_params)
     accounts = lookup_accounts(params.dig(:goal, :account_ids))
-    @goal.currency = (accounts.first&.currency || Current.family.primary_currency_code) if @goal.currency.blank?
+    @goal.currency = Current.family.primary_currency_code if @goal.currency.blank?
 
     allocations = submitted_allocations
     Goal.transaction do
@@ -173,11 +173,13 @@ class GoalsController < ApplicationController
 
   def record_consumption
     txn = consumption_transaction
-    amount = txn ? txn.entry.amount.to_d : params[:amount].to_d
+    amount = txn ? @goal.convert_money!(txn.entry.amount_money, date: txn.entry.date).amount : params[:amount].to_d
 
     @goal.consume!(amount, account: consumption_account(txn), transaction: txn)
     redirect_to goal_path(@goal),
                 notice: t("goals.consume.success", amount: Money.new(amount, @goal.currency).format)
+  rescue Money::ConversionError
+    redirect_to goal_path(@goal), alert: t("goals.consume.errors.missing_exchange_rate")
   rescue Goal::ConsumptionRefused => e
     redirect_to goal_path(@goal), alert: t("goals.consume.errors.#{e.reason}")
   rescue ActiveRecord::RecordInvalid => e

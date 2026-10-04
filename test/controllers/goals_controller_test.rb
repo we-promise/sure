@@ -256,22 +256,64 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_not_empty @goal.reload.goal_accounts
   end
 
-  test "update rejects a cross-currency account attachment" do
-    # Regression: sync_linked_accounts! used to call goal_accounts.create!
-    # directly, bypassing Goal#linked_accounts_must_match_goal_currency.
+  test "update accepts a foreign-currency account and converts its backing" do
     eur_account = Account.create!(
-      family: @goal.family,
-      accountable: Depository.new,
-      name: "EUR Checking",
-      currency: "EUR",
-      balance: 100
+      family: @goal.family, accountable: Depository.new,
+      name: "EUR Checking", currency: "EUR", balance: 100
     )
-    before_ids = @goal.goal_accounts.pluck(:account_id).sort
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
 
     patch goal_url(@goal), params: { goal: { account_ids: [ eur_account.id ] } }
 
-    assert_response :unprocessable_entity
-    assert_equal before_ids, @goal.reload.goal_accounts.pluck(:account_id).sort
+    assert_redirected_to goal_path(@goal)
+    assert_equal [ eur_account.id ], @goal.reload.goal_accounts.pluck(:account_id)
+    assert_equal "USD", @goal.currency
+    assert_equal 120, Goal.find(@goal.id).current_balance
+  end
+
+  test "create with mixed currencies uses the currency shown for the target" do
+    usd = unclaimed_account("USD pot")
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "EUR pot", currency: "EUR", balance: 100)
+    post goals_url, params: { goal: { name: "Mixed", target_amount: 1_000, account_ids: [ eur.id, usd.id ] } }
+
+    goal = Goal.order(created_at: :desc).first
+    assert_redirected_to goal_path(goal)
+    assert_equal @user.family.primary_currency_code, goal.currency
+    assert_equal [ eur.id, usd.id ].sort, goal.linked_accounts.pluck(:id).sort
+  end
+
+  test "show and plan disclose an unavailable account conversion" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "EUR reserve", currency: "EUR", balance: 100)
+    @goal.goal_accounts.build(account: eur)
+    @goal.save!
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get goal_url(@goal)
+    assert_response :success
+    assert_select "p", text: I18n.t("goals.currency_warning.body", currency: @goal.currency)
+    get plan_url
+    assert_response :success
+    assert_match I18n.t("goals.currency_warning.title"), response.body
+  end
+
+  test "detected foreign spending is converted on its date and releases native units" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "EUR spending", currency: "EUR", balance: 1_000)
+    @goal.goal_accounts.build(account: eur, allocated_amount: 500)
+    @goal.save!
+    date = 20.days.ago.to_date
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 2)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 3)
+    entry = eur.entries.create!(name: "Travel", date: date, amount: 100, currency: "EUR", entryable: Transaction.new)
+
+    post consume_goal_url(@goal), params: { transaction_id: entry.entryable_id }
+
+    assert_redirected_to goal_path(@goal)
+    assert_equal 200, @goal.reload.consumed_amount
+    assert_equal 400, @goal.goal_accounts.find_by!(account: eur).allocated_amount
+    assert_equal @goal.id, entry.entryable.reload.extra.dig("goal", "consumed_goal_id")
   end
 
   test "pause/resume/complete/archive/unarchive flow" do

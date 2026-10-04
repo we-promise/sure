@@ -17,7 +17,9 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
         account: account,
         backing: backing,
         backing_money: Money.new(backing, goal.currency),
-        balance_money: Money.new(account.balance.to_d, goal.currency),
+        balance_money: Money.new(account.balance.to_d, account.currency),
+        native_backing_money: goal.account_native_backing(account),
+        converted: account.currency != goal.currency,
         earmarked: goal_account&.allocated_amount.present?,
         last_30_money: Money.new(totals[:last_30], goal.currency),
         last_90_money: Money.new(totals[:last_90], goal.currency)
@@ -79,11 +81,12 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
           .where(account_id: account_ids, date: TREND_WINDOW_DAYS.days.ago.to_date..Date.current)
           .where(excluded: false)
           .merge(Transaction.excluding_pending)
-          .pluck(:account_id, :date, :amount)
+          .pluck(:account_id, :date, :amount, :currency)
 
         result = Hash.new { |h, k| h[k] = { last_30: 0.to_d, last_90: 0.to_d } }
-        rows.each do |aid, date, amount|
-          inflow = (-amount.to_d).clamp(0..)
+        accounts_by_id = goal.linked_accounts.index_by(&:id)
+        rows.each do |aid, date, amount, currency|
+          inflow = goal.convert_money(Money.new((-amount.to_d).clamp(0..), currency.presence || accounts_by_id.fetch(aid).currency), date: date).amount
           result[aid][:last_90] += inflow
           result[aid][:last_30] += inflow if date >= cutoff_30
         end

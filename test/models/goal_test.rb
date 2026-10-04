@@ -176,7 +176,7 @@ class GoalTest < ActiveSupport::TestCase
     assert_includes new_goal.errors[:linked_accounts], "Linked accounts must belong to the same family as the goal."
   end
 
-  test "linked accounts must share currency with goal" do
+  test "linked accounts may use a different currency from the goal" do
     eur_account = Account.create!(
       family: @family,
       accountable: Depository.new,
@@ -186,8 +186,7 @@ class GoalTest < ActiveSupport::TestCase
     )
     new_goal = @family.goals.new(name: "T", target_amount: 100, currency: "USD")
     new_goal.goal_accounts.build(account: eur_account)
-    assert_not new_goal.valid?
-    assert_includes new_goal.errors[:linked_accounts], "All linked accounts must share the same currency."
+    assert new_goal.valid?
   end
 
   test "currency can't change once linked accounts exist" do

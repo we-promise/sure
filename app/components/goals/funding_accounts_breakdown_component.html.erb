@@ -32,11 +32,14 @@
               <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
               <p class="text-sm text-subdued tabular-nums privacy-sensitive">
                 <% if row[:earmarked] %>
-                  <%= t("goals.show.funding_accounts.earmarked_of", earmarked: row[:backing_money].format(precision: 0), balance: row[:balance_money].format(precision: 0)) %>
+                  <%= t("goals.show.funding_accounts.earmarked_of", earmarked: row[:native_backing_money].format(precision: 0), balance: row[:balance_money].format(precision: 0)) %>
                 <% else %>
-                  <%= accountable_label(account) %> · <%= row[:backing_money].format(precision: 0) %>
+                  <%= accountable_label(account) %> · <%= row[:native_backing_money].format(precision: 0) %>
                 <% end %>
               </p>
+              <% if row[:converted] %>
+                <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= t("goals.show.funding_accounts.converted", amount: row[:backing_money].format(precision: 0)) %></p>
+              <% end %>
             </div>
 
             <% if rows.size > 1 %>

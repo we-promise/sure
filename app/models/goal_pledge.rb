@@ -73,13 +73,16 @@ class GoalPledge < ApplicationRecord
     latest = [ created_at.to_date + MATCH_DATE_TOLERANCE_DAYS.days, expires_at.to_date ].max
     return false unless entry.date >= earliest && entry.date <= latest
 
-    txn_amount = (is_valuation ? valuation_delta.to_d : entry.amount.to_d).abs
+    native_amount = (is_valuation ? valuation_delta.to_d : entry.amount.to_d).abs
+    txn_amount = goal.convert_money!(Money.new(native_amount, entry.currency.presence || account.currency), date: entry.date).amount
     pledge_amount = amount.to_d
     diff_abs = (txn_amount - pledge_amount).abs
 
     return true if diff_abs <= MATCH_AMOUNT_TOLERANCE_ABSOLUTE
     return true if pledge_amount.positive? && (diff_abs / pledge_amount) <= MATCH_AMOUNT_TOLERANCE_RATIO
 
+    false
+  rescue Money::ConversionError
     false
   end
 

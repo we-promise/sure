@@ -64,6 +64,38 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal expected, builder.balance_series.map { |v| v.value.amount }
   end
 
+  test "strict currency conversion refuses a missing rate instead of assuming one" do
+    account = accounts(:depository)
+    account.balances.destroy_all
+    create_balance(account: account, date: Date.current, balance: 100)
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ], currency: "EUR",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      strict_currency_conversion: true
+    )
+
+    error = assert_raises(Money::ConversionError) { builder.balance_series }
+    assert_equal "USD", error.from_currency
+    assert_equal "EUR", error.to_currency
+  end
+
+  test "strict currency conversion uses historical rates without changing native balances" do
+    account = accounts(:depository)
+    account.balances.destroy_all
+    create_balance(account: account, date: 1.day.ago.to_date, balance: 100)
+    create_balance(account: account, date: Date.current, balance: 100)
+    ExchangeRate.create!(date: 1.day.ago.to_date, from_currency: "USD", to_currency: "EUR", rate: 2)
+    ExchangeRate.create!(date: Date.current, from_currency: "USD", to_currency: "EUR", rate: 3)
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ], currency: "EUR",
+      period: Period.custom(start_date: 1.day.ago.to_date, end_date: Date.current),
+      strict_currency_conversion: true
+    )
+
+    assert_equal [ 200, 300 ], builder.balance_series.map { |value| value.value.amount }
+    assert_equal [ 100, 100 ], account.balances.order(:date).pluck(:end_balance)
+  end
+
   test "combines asset and liability accounts properly" do
     asset_account = accounts(:depository)
     liability_account = accounts(:credit_card)

@@ -92,17 +92,41 @@ Locales:
 
 A goal records a name, target amount, optional target date, color, optional
 icon, optional notes, currency, and an AASM `state` (`active` / `paused` /
-`completed` / `archived`). It links to depository accounts via the join
+`completed` / `archived`). It links cash and investment accounts via the join
 table `goal_accounts`.
 
-The goal's *progress* is the live balance of every linked account. There
-is no ledger of contributions. `Goal#current_balance` reads
-`linked_accounts.sum(:balance)` at request time.
+The goal's *progress* is its allocated share of linked accounts, converted to
+its currency at request time. `Goal#current_balance` preserves native account
+allocations and shared-pool limits before conversion. Investment-backed goals
+default to contribution progress, excluding cumulative market gains from their
+backing; `market_value_money` separately shows the current market value.
 
 A `GoalPledge` is an intent: amount, account, kind, status, expires_at.
 The status enum is `open` / `matched` / `cancelled` / `expired`. The kind
 enum is `transfer` / `manual_save`; kind is decided at create time from
 the selected account's connection state.
+
+## Currencies and account allocations
+
+A goal can link cash and investment accounts in different currencies. New goals
+use the family's display currency, matching the target field; an existing goal's
+currency remains locked. Target, progress, consumed amount and pledges use goal
+currency. Each `GoalAccount#allocated_amount` remains in its account's currency.
+Shared-pool allocation and pro-rata scaling happen before conversion, so goals
+with different currencies cannot double-count the same account.
+
+`Goal::CurrencyConverter` uses `ExchangeRate.find_or_fetch_rate` through `Money`,
+with a request-scoped rate cache shared by prepared goals. Current backing uses
+today's rate; pace, funding inflows and pledge matches use the entry date. Budget
+cash reservations convert native earmarks directly to budget currency rather
+than going through an intermediate goal currency. Consumption converts the
+entered goal-currency amount back into native units before releasing an earmark.
+
+Unavailable rates never become 1:1 conversions. Read surfaces show the known
+subtotal and a missing-rate warning; writes that require conversion are refused,
+and pledge matches wait for a rate. Goal history charts opt into strict currency
+conversion and omit the saved line when it cannot be converted. Existing stored
+balances and transactions are unchanged; no migration is required.
 
 ## Status semantics
 
@@ -277,10 +301,9 @@ calls it. Things to watch:
 
 ## Gotchas
 
-The same depository account can fund two goals. Both will read the
-full balance and double-count progress toward their targets. This is a
-known limitation; an allocation primitive that splits the balance
-proportionally (or by explicit user weights) would be the way out.
+Accounts can fund multiple goals using fixed native-currency allocations.
+Whole-account links are exclusive while their goal remains active or paused;
+completed and archived goals release their reservation.
 
 `Goal#pace` includes paychecks, rent, debit-card spend — anything on
 the linked account. For a goal linked to primary checking, the metric
