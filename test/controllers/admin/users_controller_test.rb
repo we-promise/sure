@@ -11,7 +11,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     get admin_users_url
 
     assert_response :success
-    assert_no_match I18n.t("admin.users.index.summary.trials_expiring_7_days"), response.body
+    assert_no_match I18n.t("admin.system_health.hosted_usage.summary.trials_expiring_soon_count", raise: true), response.body
     assert_select "select[name='trial_status'] option[value='expiring_soon']"
   end
 

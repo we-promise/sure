@@ -44,7 +44,7 @@ class Admin::SystemHealthHostedUsageTest < ApplicationSystemTestCase
     label_screenshot_fixtures
     visit admin_users_path
 
-    assert_no_text I18n.t("admin.users.index.summary.trials_expiring_7_days")
+    assert_no_text I18n.t("admin.system_health.hosted_usage.summary.trials_expiring_soon_count", raise: true)
     assert_selector "h1", text: I18n.t("admin.users.index.title")
     page.save_screenshot(Rails.root.join("tmp", "admin-users-without-trial-summary.png"))
   end
