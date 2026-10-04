@@ -291,6 +291,8 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  # Regression: the sync window must start at the old date, or the incremental
+  # balance calculation counts the moved transaction twice.
   test "moving a transaction later syncs from its original date" do
     original_date = 5.days.ago.to_date
     @entry.update!(date: original_date)
