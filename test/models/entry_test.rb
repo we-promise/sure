@@ -30,6 +30,7 @@ class EntryTest < ActiveSupport::TestCase
     original_date = entry.date
 
     entry.update!(date: 2.days.ago.to_date)
+    entry.update!(date: 1.day.ago.to_date)
     entry.lock_saved_attributes!
     entry.mark_user_modified!
 
