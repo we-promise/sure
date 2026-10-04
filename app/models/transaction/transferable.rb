@@ -2,6 +2,13 @@ module Transaction::Transferable
   extend ActiveSupport::Concern
 
   included do
+    # inverse_of is load-bearing, not cosmetic: Transfer#categorizable? calls
+    # from_account on every transfer row of the transactions index, which walks
+    # transfer.outflow_transaction.entry.account. The index only preloads the
+    # counterparty (inflow) leg, so without the inverse each outflow row
+    # re-queries its own transaction, entry and account (an N+1 that
+    # TransactionsControllerTest "index preloads transfer counterparty entry
+    # and account to avoid N+1" catches).
     has_one :transfer_as_inflow, class_name: "Transfer", foreign_key: "inflow_transaction_id", inverse_of: :inflow_transaction, dependent: :destroy
     has_one :transfer_as_outflow, class_name: "Transfer", foreign_key: "outflow_transaction_id", inverse_of: :outflow_transaction, dependent: :destroy
 

@@ -31,6 +31,28 @@ class Transactions::TransactionCategoryViewTest < ActionView::TestCase
     assert_includes html, "category_dropdown"
   end
 
+  test "renders the category picker for an investment-contribution inflow leg" do
+    outflow_tx = Transaction.create!(kind: "investment_contribution")
+    Entry.create!(
+      account: accounts(:depository), entryable: outflow_tx,
+      name: "Contribution", amount: 500, currency: "USD", date: Date.today
+    )
+
+    inflow_tx = Transaction.create!(kind: "funds_movement")
+    Entry.create!(
+      account: accounts(:investment), entryable: inflow_tx,
+      name: "Contribution", amount: -500, currency: "USD", date: Date.today
+    )
+
+    Transfer.create!(inflow_transaction: inflow_tx, outflow_transaction: outflow_tx, status: "confirmed")
+
+    html = render(partial: "transactions/transaction_category", locals: {
+      transaction: inflow_tx, variant: "desktop", in_split_group: false
+    })
+
+    assert_includes html, "category_dropdown"
+  end
+
   test "renders the transfer badge instead of a picker for a regular funds-movement transfer" do
     outflow_tx = Transaction.create!(kind: "funds_movement")
     Entry.create!(
