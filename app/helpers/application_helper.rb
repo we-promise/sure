@@ -173,9 +173,7 @@ module ApplicationHelper
   # individual liability accounts. Asset values, liability totals, cash flows,
   # history series and canonical API values keep their existing signs.
   def balance_for_account_display(account, money = account.balance_money)
-    return money unless account.liability? && Current.user&.negative_liability_balances?
-
-    money * -1
+    AccountBalancePresentation.balance_for_account_display(account, money)
   end
 
   def totals_by_currency(collection:, money_method:, separator: " | ", negate: false)
