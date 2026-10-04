@@ -405,19 +405,26 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    TRADE_REPUBLIC_ACCOUNT_TYPES = {
+      "portfolio" => [ "Investment", "brokerage", "Trade Republic Portfolio" ],
+      "cash" => [ "Depository", "checking", "Trade Republic Cash" ],
+      # The exchange subtype is the Crypto subtype that supports trades.
+      "crypto" => [ "Crypto", "exchange", "Trade Republic Crypto" ]
+    }.freeze
+
     def create_from_trade_republic_account(trade_republic_account)
       family = trade_republic_account.trade_republic_item.family
-      is_cash = trade_republic_account.cash?
+      accountable_type, subtype, default_name = TRADE_REPUBLIC_ACCOUNT_TYPES.fetch(trade_republic_account.kind)
 
       attributes = {
         family: family,
-        name: trade_republic_account.name.presence || (is_cash ? "Trade Republic Cash" : "Trade Republic Portfolio"),
+        name: trade_republic_account.name.presence || default_name,
         balance: 0,
         cash_balance: 0,
         currency: trade_republic_account.currency.presence || family.currency,
-        accountable_type: is_cash ? "Depository" : "Investment",
+        accountable_type: accountable_type,
         accountable_attributes: {
-          subtype: is_cash ? "checking" : "brokerage"
+          subtype: subtype
         }
       }
 

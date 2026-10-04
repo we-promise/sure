@@ -76,7 +76,7 @@ tr:
       pulse_next_seven: önümüzdeki 7 gün
       pulse_bar_aria: Bu ayın faturalarının yüzde %{percent} kadarı ödendi
       next_up: Sıradaki
-      view_upcoming: Yaklaşanları görüntüle
+      view_calendar: Takvimi görüntüle
       date_today: Bugün
       date_tomorrow: Yarın
       unconvertible:
@@ -86,8 +86,6 @@ tr:
       remaining: '%{amount} kaldı'
       paid_headline: '%{amount} ödendi'
       cost_line: Ödeme başına ortalama %{average}, yılda yaklaşık %{annualized}
-    pane:
-      close: Ayrıntıları daralt
     add_bill: Fatura ekle
     manage: Yönet
     find_payment: Ödeme bul
