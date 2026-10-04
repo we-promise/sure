@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import replaceUrl from "utils/replace_url";
 
 // Connects to data-controller="tabs--components"
 export default class extends Controller {
@@ -37,12 +38,9 @@ export default class extends Controller {
     if (this.urlParamKeyValue) {
       const url = new URL(window.location.href);
       url.searchParams.set(this.urlParamKeyValue, selectedTabId);
-      // Keep Turbo's entry in the state: without it, Turbo ignores the
-      // popstate when Back returns here and the other page stays on screen.
-      window.history.replaceState(window.history.state, "", url);
+      replaceUrl(url);
     }
 
-    // Update URL with the selected tab
     if (this.sessionKeyValue) {
       this.#updateSessionPreference(selectedTabId);
     }

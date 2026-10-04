@@ -258,8 +258,6 @@ pl:
     paid_label: Opłacone
     paid_over: Zapłacono %{paid}, więcej niż oczekiwano
     paid_over_short: Opłacone, więcej
-    pane:
-      close: Zwiń szczegóły
     partial_progress: Zapłacono %{paid} z %{expected}
     pay_period:
       before_next_paycheck: Przed następną wypłatą
