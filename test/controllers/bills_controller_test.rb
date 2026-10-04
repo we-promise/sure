@@ -1494,6 +1494,12 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   test "an autopay row recedes through its text colour, not opacity" do
     create_bill(name: "Handled bill", amount: 30, autopay: true, notes: "Card ending 4242")
     create_bill(name: "Power Co", amount: 80)
+    # A paused bill wants nothing from you either, autopay or not. Pausing
+    # drops future occurrences, so the Dormant row is one already due.
+    late = 6.days.ago.to_date
+    paused = { expected_day_of_month: late.day, last_occurrence_date: 2.months.ago.to_date, next_expected_date: late }
+    create_bill(name: "Paused manual", amount: 15, **paused).mark_inactive!
+    create_bill(name: "Paused autopay", amount: 25, autopay: true, **paused).mark_inactive!
 
     get bills_url
     assert_response :success
@@ -1508,6 +1514,12 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_select BILL_ROW_LINK, text: /Power Co/ do |links|
       assert_select links.first, "p.font-medium.text-primary", text: /Power Co/
       assert_select links.first, "p.font-medium.text-primary.privacy-sensitive", text: /\$80\.00/
+    end
+    { "Paused manual" => /\$15\.00/, "Paused autopay" => /\$25\.00/ }.each do |name, amount|
+      assert_select BILL_ROW_LINK, text: /#{name}/ do |links|
+        assert_select links.first, "p.font-medium.text-secondary", text: /#{name}/
+        assert_select links.first, "p.font-medium.text-secondary.privacy-sensitive", text: amount
+      end
     end
   end
 
