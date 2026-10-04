@@ -25,7 +25,15 @@ class Onchain::AvalanchePChainAdapter
   # length range as Onchain::BitcoinAdapter's BECH32_PATTERN (checksum isn't
   # verified here either) and the same excluded characters (bech32 drops
   # 1, b, i, o from the data part).
-  ADDRESS_PATTERN = /\AP-avax1[ac-hj-np-z02-9]{20,60}\z/i
+  #
+  # "P-" is Avalanche's own chain-context prefix, not part of the address's
+  # cryptographic data - the same bech32 payload is shared with the X-Chain
+  # (prefixed "X-" there), so many wallets/explorers display or export the
+  # bare "avax1..." form with no chain prefix at all. The prefix is optional
+  # here for exactly that reason; canonical_address below always adds it
+  # back, since the provider's RPC calls require it to know which chain to
+  # query, and dedupe needs one spelling regardless of how a user pastes it.
+  ADDRESS_PATTERN = /\A(?:P-)?avax1[ac-hj-np-z02-9]{20,60}\z/i
 
   def initialize(credentials: {})
     @credentials = credentials
@@ -35,9 +43,11 @@ class Onchain::AvalanchePChainAdapter
     ADDRESS_PATTERN.match?(address.to_s.strip)
   end
 
-  # Bech32 is case-insensitive and canonically lowercase.
+  # Bech32 is case-insensitive and canonically lowercase; the chain-context
+  # prefix is restored if the input omitted it (see ADDRESS_PATTERN above).
   def canonical_address(address)
-    address.to_s.strip.downcase
+    value = address.to_s.strip.downcase
+    value.start_with?("p-") ? value : "p-#{value}"
   end
 
   def fetch_snapshot(address)
