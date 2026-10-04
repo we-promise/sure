@@ -5,6 +5,12 @@ class Goal::CurrencyConverter
     @rates = {}
   end
 
+  # Convert money into a target currency using the requested date and cached FX.
+  # @param money [Money] amount with its original currency
+  # @param to [String, Money::Currency] destination currency
+  # @param date [Date] valuation date; defaults to today
+  # @return [Money] converted amount, preserving zero without a rate lookup
+  # @raise [Money::ConversionError] if a positive exchange rate is unavailable
   def convert(money, to:, date: Date.current)
     to = Money::Currency.new(to).iso_code
     return Money.new(0, to) if money.zero?
@@ -13,6 +19,9 @@ class Goal::CurrencyConverter
   end
 
   private
+    # Resolve and memoize a positive rate for a source, target and date tuple.
+    # @return [BigDecimal, Numeric] exchange multiplier, or one for the same currency
+    # @raise [Money::ConversionError] if no usable cached or provider rate exists
     def rate_for(from, to, date)
       return 1.to_d if from == to
 

@@ -8,6 +8,8 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
 
   attr_reader :goal
 
+  # Build funding rows with native account amounts and goal-currency shares.
+  # @return [Array<Hash>] backing, display amounts and dated inflow totals
   def rows
     @rows ||= goal.linked_accounts.sort_by { |a| -goal.account_backing(a).amount.to_d }.map do |account|
       totals = inflow_totals_for(account)
@@ -69,6 +71,8 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
       inflow_totals_map[account.id] || { last_30: 0.to_d, last_90: 0.to_d }
     end
 
+    # Aggregate positive inflows in goal currency using each entry date.
+    # @return [Hash<String, Hash>] account IDs mapped to 30- and 90-day totals
     def inflow_totals_map
       @inflow_totals_map ||= begin
         account_ids = goal.linked_accounts.map(&:id)

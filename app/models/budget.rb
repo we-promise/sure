@@ -240,6 +240,8 @@ class Budget < ApplicationRecord
     end
   end
 
+  # Evaluate cash and report whether unavailable FX excluded any balance.
+  # @return [Boolean] true when the cash totals are known subtotals
   def cash_conversion_incomplete?
     available_cash
     @missing_cash_currencies&.any? || false

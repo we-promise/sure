@@ -29,14 +29,21 @@ export default class extends Controller {
   // the preview was based on.
   static ALLOCATION_PATTERN = /^\d+(?:[.,]\d+)?$/;
 
+  /** Initialize the account allocation hints when the form is mounted. */
   connect() {
     this.refresh();
   }
 
+  /** Recompute hints for every visible native-currency allocation input. */
   refresh() {
     this.allocationInputTargets.forEach((input) => this.#refreshRow(input));
   }
 
+  /**
+   * Update one account hint from its checkbox, native balance and earmark.
+   * @param {HTMLInputElement} input The account allocation field.
+   * @returns {void}
+   */
   #refreshRow(input) {
     const row = input.closest("[data-balance]");
     if (!row) return;
@@ -97,15 +104,23 @@ export default class extends Controller {
     }
   }
 
+  /** Show a localized hint without interpreting its contents as HTML. */
   #show(element, text) {
     element.textContent = text;
     element.classList.remove("hidden");
   }
 
+  /** Hide the hint for an unchecked account or an invalid allocation. */
   #hide(element) {
     element.classList.add("hidden");
   }
 
+  /**
+   * Format a native account amount using the application locale.
+   * @param {number} value The native-currency amount.
+   * @param {string} currency The account ISO code, falling back to the form currency.
+   * @returns {string} A localized amount or a readable fallback.
+   */
   #money(value, currency = this.currencyValue || "USD") {
     try {
       return new Intl.NumberFormat(this.localeValue || undefined, {

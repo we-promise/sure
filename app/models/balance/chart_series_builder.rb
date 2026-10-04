@@ -1,4 +1,8 @@
 class Balance::ChartSeriesBuilder
+  # Configure account scope, display currency and the historical chart window.
+  # @param account_ids [Array<String>] account IDs to aggregate
+  # @param currency [String] ISO code used for chart amounts
+  # @param strict_currency_conversion [Boolean] refuse missing or invalid FX rates
   def initialize(account_ids:, currency:, period: Period.last_30_days, interval: nil,
                  favorable_direction: "up", account_active_until_dates: {}, strict_currency_conversion: false)
     @strict_currency_conversion = strict_currency_conversion
@@ -69,6 +73,10 @@ class Balance::ChartSeriesBuilder
       @interval || period.interval
     end
 
+    # Build monetary series values and trends from the aggregated balance rows.
+    # @param column [Symbol] requested end-balance column
+    # @return [Series] dated values in the chart currency
+    # @raise [Money::ConversionError] when strict conversion has an unavailable rate
     def build_series_for(column)
       values = query_data.map do |datum|
         if @strict_currency_conversion && datum[:missing_currency].present?
@@ -147,10 +155,14 @@ class Balance::ChartSeriesBuilder
       favorable_direction == "down" ? -1 : 1
     end
 
+    # Choose the fixed SQL rate expression for strict or legacy conversion.
+    # @return [String] strict rates or the existing non-strict 1:1 fallback
     def balance_rate_sql
       @strict_currency_conversion ? "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END" : "COALESCE(er.rate, 1)"
     end
 
+    # Build the historical balance query with bound account and currency inputs.
+    # @return [String] SQL including carry-forward balances and missing-rate metadata
     def query
       <<~SQL
         WITH dates AS (

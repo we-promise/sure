@@ -428,10 +428,14 @@ class Goal < ApplicationRecord
     one_off? && active? && backing_within(account_ids).to_d.positive?
   end
 
+  # Convert this goal's allocated account share into goal currency.
+  # @return [Money] known backing; missing rates produce zero and a warning flag
   def account_backing(account)
     convert_money(account_native_backing(account))
   end
 
+  # Apply shared-pool allocation and the progress basis in account currency.
+  # @return [Money] this goal's native share, before currency conversion
   def account_native_backing(account)
     Money.new(account_amount_for(account), account.currency)
   end
@@ -459,10 +463,14 @@ class Goal < ApplicationRecord
     Money.new(0, to)
   end
 
+  # Collect source currencies omitted from this instance's evaluated calculations.
+  # @return [Set<String>] ISO codes requiring an available exchange rate
   def missing_exchange_rate_currencies
     @missing_exchange_rate_currencies ||= Set.new
   end
 
+  # Evaluate current backing and report omissions from missing exchange rates.
+  # @return [Boolean] whether a known subtotal or projection needs a warning
   def currency_conversion_incomplete?
     current_balance
     missing_exchange_rate_currencies.any?
@@ -1173,12 +1181,17 @@ class Goal < ApplicationRecord
       @pooled_pace ||= self.class.pace_for(family)
     end
 
+    # Warm required FX before account-claim locks and validate a complete snapshot.
+    # @return [void] adds a validation error when completion would omit backing
     def prepare_completion_conversion
       linked_accounts.each { |account| convert_money!(account_native_backing(account)) }
     rescue Money::ConversionError
       errors.add(:base, :missing_exchange_rate)
     end
 
+    # Persist a converted completion snapshot or thaw one on restoration.
+    # Runs only after the goal's state change has been saved.
+    # @return [void] updates frozen progress metadata and state-dependent caches
     def apply_state_change_side_effects
       previous_state, next_state = saved_change_to_state
 
@@ -1324,6 +1337,8 @@ class Goal < ApplicationRecord
       end
     end
 
+    # Read strictly converted history for the goal's projection chart.
+    # @return [Array<Series::Value>] dated balances, or no saved line on conversion failure
     def balance_series_values
       return [] if linked_accounts.empty?
 

@@ -204,17 +204,24 @@ class Goal::CurrencyConversionTest < ActiveSupport::TestCase
   end
 
   private
+    # Create an unclaimed test depository account in its native currency.
+    # @return [Account] account with the requested balance
     def cash(currency, balance)
       @family.accounts.create!(name: "#{currency} #{SecureRandom.hex(3)}", accountable: Depository.new,
                                currency: currency, balance: balance)
     end
 
+    # Build a test goal with explicit native-currency allocations per account.
+    # @param accounts [Array<Array>] pairs of account and native earmark (nil is whole balance)
+    # @return [Goal] persisted goal in the requested target currency
     def goal_on(currency, accounts, target: 5_000)
       @family.goals.create!(name: "Mixed goal", target_amount: target, currency: currency) do |goal|
         accounts.each { |account, amount| goal.goal_accounts.build(account: account, allocated_amount: amount) }
       end
     end
 
+    # Store a deterministic dated exchange rate for conversion assertions.
+    # @return [ExchangeRate] the source-to-target test rate
     def rate(from, to, value, date: Date.current)
       ExchangeRate.create!(from_currency: from, to_currency: to, rate: value, date: date)
     end

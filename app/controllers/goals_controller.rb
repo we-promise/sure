@@ -55,6 +55,9 @@ class GoalsController < ApplicationController
     ]
   end
 
+  # Create a family-scoped goal with native-currency account earmarks.
+  # The target uses the family currency displayed in the form.
+  # @return [void] renders validation errors or redirects to the saved goal
   def create
     @goal = Current.family.goals.new(goal_params)
     accounts = lookup_accounts(params.dig(:goal, :account_ids))
@@ -171,6 +174,9 @@ class GoalsController < ApplicationController
     @consumption_accounts = eligible_consumption_accounts
   end
 
+  # Attribute an eligible outflow or declaration to this goal in goal currency.
+  # Transaction amounts are converted at their entry date before releasing earmarks.
+  # @return [void] redirects with the recorded amount or a conversion error
   def record_consumption
     txn = consumption_transaction
     amount = txn ? @goal.convert_money!(txn.entry.amount_money, date: txn.entry.date).amount : params[:amount].to_d
