@@ -273,8 +273,11 @@ class RecurringTransaction
       end
 
       # Outflow transaction id => the account its transfer pays into, for the
-      # transfers leaving the given accounts in the window.
+      # transfers leaving the given accounts in the window. Every entry
+      # candidate collection scores is in that window, so once this has run the
+      # map is complete and a missing entry is simply not a transfer outflow.
       def preload_transfer_destinations(account_ids, dates)
+        @transfer_destinations_complete = true
         return if account_ids.empty?
 
         Transfer
@@ -290,10 +293,11 @@ class RecurringTransaction
       end
 
       # The account the entry pays into when it is the outflow of a transfer.
-      # Looked up on demand for explain, which scores one entry at a time.
+      # Read from the preload during candidate collection; looked up on demand
+      # for explain and orphan repair, which handle one entry at a time.
       def transfer_destination(entry)
         transaction_id = entry.entryable_id
-        return transfer_destinations[transaction_id] if transfer_destinations.key?(transaction_id)
+        return transfer_destinations[transaction_id] if transfer_destinations.key?(transaction_id) || @transfer_destinations_complete
 
         transfer_destinations[transaction_id] = Transfer
           .where(outflow_transaction_id: transaction_id)
@@ -332,6 +336,10 @@ class RecurringTransaction
       # keeps the merchant when it has one, and its name stays kin to the old
       # descriptor rather than equal to it.
       def repair_identity?(series, entry)
+        # A transfer leg's name is generic ("Transfer", a bank reference), so
+        # the account pair is the identity here too, as in identity_matches?.
+        return transfer_destination(entry) == series.destination_account_id if series.transfer?
+
         if series.merchant_id.present? && entry.entryable.merchant_id.present?
           return entry.entryable.merchant_id == series.merchant_id
         end

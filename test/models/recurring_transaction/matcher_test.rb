@@ -201,6 +201,35 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert_equal replacement.id, allocation.reload.entry_id
   end
 
+  test "repair re-attaches a recurring transfer's payment by its account pair, not its name" do
+    series = create_series(name: "Payment to Loan", amount: 500, day_offset: 0, destination: accounts(:loan))
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    original = create_transfer(amount: 500, date: Date.current, to: accounts(:loan), name: "LOAN DD 1234")
+    @matcher.run!
+    allocation = occurrence.allocations.sole
+
+    original.destroy!
+    assert_nil allocation.reload.entry_id
+
+    create_transfer(amount: 500, date: allocation.paid_on, to: accounts(:credit_card), name: "LOAN DD 1234")
+    replacement = create_transfer(amount: 500, date: allocation.paid_on, to: accounts(:loan), name: "REF 998877")
+    Matcher.new(@family).repair_orphans!
+
+    assert_equal replacement.id, allocation.reload.entry_id
+  end
+
+  test "candidate collection looks up no transfer per ordinary charge" do
+    create_series(name: "Payment to Loan", amount: 500, day_offset: 0, destination: accounts(:loan))
+    create_transfer(amount: 500, date: Date.current, to: accounts(:loan))
+    3.times { |i| create_entry(amount: 500, date: Date.current - i, name: "charge #{i}") }
+
+    lookups = 0
+    count_lookups = ->(*, payload) { lookups += 1 if payload[:sql].match?(/FROM "transfers".*LIMIT/m) }
+    ActiveSupport::Notifications.subscribed(count_lookups, "sql.active_record") { @matcher.run! }
+
+    assert_equal 0, lookups, "the batch preload already answers every entry in the window"
+  end
+
   test "manually attaching an alien-named entry teaches an alias" do
     series = create_series(name: "Watson Property", amount: 2150, day_offset: 5)
     occurrence = series.recurring_occurrences.order(:due_on).first
