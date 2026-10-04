@@ -5,26 +5,31 @@ class DailyWebUsageTest < ActionDispatch::IntegrationTest
     travel_to Time.utc(2026, 10, 2, 12)
     @user = users(:family_admin)
     @user.family.update!(timezone: "Etc/UTC")
-    @previous_client = $posthog
+    @previous_client = $posthog_feedback
+    @previous_normal_client = $posthog
     events = @events = []
     @client = Object.new
     @client.define_singleton_method(:capture) { |event| events << event; true }
-    $posthog = @client
+    $posthog_feedback = @client
+    $posthog = mock("normal analytics client")
+    $posthog.expects(:capture).never
     @cache = ActiveSupport::Cache::MemoryStore.new
     Rails.stubs(:cache).returns(@cache)
     Rails.env.stubs(:production?).returns(true)
     @config = Rails.configuration.x.posthog
-    @config.stubs(:api_key).returns("public-test-key")
+    @config.stubs(:api_key).returns(nil)
+    @config.stubs(:feedback_enabled).returns(true)
     sign_in @user
   end
 
   teardown do
-    $posthog = @previous_client
+    $posthog_feedback = @previous_client
+    $posthog = @previous_normal_client
     travel_back
   end
 
   test "successful UI responses capture the first preview state once per user and day" do
-    get settings_preferences_url
+    get settings_preferences_url, headers: { "REMOTE_ADDR" => "203.0.113.42" }
     assert_response :success
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
     get settings_preferences_url
@@ -33,10 +38,25 @@ class DailyWebUsageTest < ActionDispatch::IntegrationTest
     event = @events.first
     assert_equal "web_ui_served_daily", event[:event]
     assert_equal({ preview_features_enabled: false, sure_version: Sure.version.to_s,
-                   "$process_person_profile" => false, "$geoip_disable" => true }, event[:properties])
+                   "$process_person_profile" => false, "$geoip_disable" => false,
+                   "$ip" => "203.0.113.42" }, event[:properties])
     assert_match(/\A[0-9a-f]{64}\z/, event[:distinct_id])
     assert_not_includes event.to_json, @user.id
     assert_not_includes event.to_json, @user.email
+  end
+
+  test "GeoIP uses the client address Rails resolves through trusted proxies" do
+    [
+      { forwarded: "198.51.100.9, 203.0.113.42, 10.0.0.1", remote: "10.0.0.2", expected: "203.0.113.42" },
+      { forwarded: "2001:db8::123, fd00::1", remote: "::1", expected: "2001:db8::123" }
+    ].each do |example|
+      @cache.clear
+      get settings_preferences_url, headers: { "X-Forwarded-For" => example[:forwarded], "REMOTE_ADDR" => example[:remote] }
+
+      assert_response :success
+      assert_equal example[:expected], @events.last[:properties]["$ip"]
+      assert_equal false, @events.last[:properties]["$geoip_disable"]
+    end
   end
 
   test "another browser session for the same user shares the daily claim" do
@@ -124,14 +144,33 @@ class DailyWebUsageTest < ActionDispatch::IntegrationTest
     assert_empty @events
   end
 
-  test "missing normal configuration or server client skips capture" do
-    @config.stubs(:api_key).returns(nil)
+  test "both hosting modes send only to shared feedback without operator analytics configuration" do
+    %w[managed self_hosted].each do |mode|
+      @cache.clear
+      Rails.configuration.stubs(:app_mode).returns(mode.inquiry)
+      get settings_preferences_url
+      assert_response :success
+    end
+
+    assert_equal 2, @events.size
+  end
+
+  test "shared feedback opt-out or missing server client skips capture" do
+    @config.stubs(:feedback_enabled).returns(false)
     get settings_preferences_url
-    @config.stubs(:api_key).returns("public-test-key")
-    $posthog = nil
+    @config.stubs(:feedback_enabled).returns(true)
+    $posthog_feedback = nil
     get settings_preferences_url
 
     assert_empty @events
+  end
+
+  test "configured operator analytics does not receive a duplicate" do
+    @config.stubs(:api_key).returns("public-test-key")
+    get settings_preferences_url
+
+    assert_response :success
+    assert_equal 1, @events.size
   end
 
   test "the existing environment gate requires explicit development opt-in" do

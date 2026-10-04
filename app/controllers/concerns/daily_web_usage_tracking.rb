@@ -11,7 +11,7 @@ module DailyWebUsageTracking
       return if controller_path.start_with?("api/")
       return if request.xhr? || turbo_frame_request?
       return if %w[Purpose Sec-Purpose X-Sec-Purpose].any? { |header| request.headers[header].to_s.match?(/prefetch|prerender/i) }
-      return unless helpers.posthog_enabled? && Rails.configuration.x.posthog.try(:api_key).present? && $posthog
+      return unless helpers.posthog_enabled? && Rails.configuration.x.posthog.feedback_enabled && $posthog_feedback
       return if Rails.cache.is_a?(ActiveSupport::Cache::NullStore)
 
       # A daily pseudonym supports counting without sending an account ID or
@@ -25,14 +25,15 @@ module DailyWebUsageTracking
       # web workers share one attempt per user/day. Cache loss can permit repeats.
       return unless Rails.cache.write([ "daily-web-usage", daily_id ], true, expires_in: 2.days, unless_exist: true)
 
-      $posthog.capture(
+      $posthog_feedback.capture(
         distinct_id: daily_id,
         event: "web_ui_served_daily",
         properties: {
           preview_features_enabled: Current.user.preview_features_enabled?,
           sure_version: Sure.version.to_s,
           "$process_person_profile" => false,
-          "$geoip_disable" => true
+          "$geoip_disable" => false,
+          "$ip" => request.remote_ip
         }
       )
     rescue StandardError => error

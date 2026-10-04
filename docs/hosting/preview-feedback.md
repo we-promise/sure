@@ -148,18 +148,26 @@ API/JSON requests, AJAX/Turbo-frame requests, non-GET requests, redirects/errors
 and prefetch/prerender requests are excluded. No browser script, storage marker, mobile API, or
 background-job hook is added.
 
-The existing normal server PostHog client uses `POSTHOG_KEY` / `POSTHOG_HOST`,
-with the existing production or explicit development gate. The separate shared
-self-hosted feedback client and `POSTHOG_FEEDBACK_ENABLED` are unchanged. Browser
-SDK opt-outs stored in localStorage and ad blockers cannot suppress this
-server-side event; Rails cannot read that browser-only state. This event follows
-the installation's analytics configuration.
+The server event uses the bundled shared feedback project, the same destination
+as self-hosted Sankey feedback, in both managed and self-hosted deployments.
+It does not require `POSTHOG_KEY` / `POSTHOG_HOST` or duplicate the event to an
+installation's normal analytics project. `POSTHOG_FEEDBACK_ENABLED=false`
+disables it. Collection requires production or the existing explicit development
+opt-in (`POSTHOG_DEVELOPMENT_ENABLED=true`); automated tests remain disabled.
+Browser SDK opt-outs stored in localStorage and ad blockers cannot suppress this
+server-side event; Rails cannot read that browser-only state.
+
+Sankey's browser capture and routing remain unchanged: managed Sankey events use
+their configured normal analytics project, while self-hosted Sankey events use
+the shared feedback project. Browser and server events have different identities
+and opt-out behavior. The shared destination and GeoIP support aggregate location
+cohorts, not matching people or sessions between the two event streams.
 
 An atomic cache claim limits capture to one attempt per authenticated user per
 calendar day in the family's configured timezone (or the app timezone when
 unset/invalid), across browsers and sign-ins. The
-first claimed response supplies that day's preview state; later preference
-changes do not add another event that day. A shared Redis cache provides this
+first claimed response supplies that day's preview state and IP; later preference
+or network changes do not add another event that day. A shared Redis cache provides this
 deduplication across web workers; other cache stores can race or limit counting
 only within one process. Null-cache configurations skip capture; cache
 clearing/eviction can permit repeats, and cache/SDK failures can omit a day.
@@ -167,12 +175,20 @@ SDK queue acceptance does not guarantee delivery. A qualifying full UI response
 can still be requested by a background tab or automation; browser-cached opens
 that never reach Rails cannot count.
 
-The event includes the Boolean preview state and `sure_version`. Its required
-anonymous identifier is an application-keyed digest of the user and date: it is
-stable only for that user/day, contains no raw user ID, and does not identify a
-person across days. Person profiles and GeoIP enrichment are disabled for this
-event. No email, financial values, URLs, or IP addresses are added. Tests use an
-offline client and never submit live events.
+The event includes the Boolean preview state, `sure_version`, and the visitor IP
+that Rails resolves through `request.remote_ip`, sent as `$ip`. GeoIP enrichment
+is explicitly allowed with `$geoip_disable: false`, subject to the destination
+project's settings. Correct visitor geography depends on the deployment's proxy
+headers and Rails trusted-proxy configuration; a proxy, VPN, or shared network
+can affect the result. The event uses Rails' resolved address, not an unparsed
+forwarding header. This change does not modify proxy trust settings.
+
+The required distinct identifier is an application-keyed digest of the user and
+date: it is stable only for that user/day and contains no raw user ID. Person
+profiles remain disabled. However, an IP address can identify or correlate people,
+so the event is not anonymous. No names, emails, financial values, or URLs are
+added. Tests use synthetic addresses and an offline client and never submit live
+events.
 
 ## Privacy and extending the implementation
 
@@ -181,10 +197,10 @@ ranges, server URLs, and graph payloads. Ask users to omit private financial
 details from voluntary text. The feature and feedback form are excluded from
 autocapture and session recording.
 
-Managed deployments retain their existing SDK metadata. The dedicated self-hosted
-client disables automatic tracking, pageviews, session recording, and person
+Managed Sankey events retain their existing SDK metadata. The dedicated self-hosted
+browser client disables automatic tracking, pageviews, session recording, and person
 profiles; it strips incidental URL, referrer, and device metadata. Opting out of
-either client suppresses capture. GeoIP enrichment is enabled using the browser
+either browser client suppresses Sankey capture. GeoIP enrichment is enabled using the browser
 connection's IP address, allowing PostHog to add approximate location properties
 to these events without creating person profiles. The destination project must also allow GeoIP enrichment.
 
