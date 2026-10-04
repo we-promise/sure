@@ -79,10 +79,6 @@
       </div>
     <% end %>
 
-    <% goals.each do |goal| %>
-      <%= render "goals/currency_warning", goal: goal %>
-    <% end %>
-
     <p class="mt-6 mb-1 text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".active_goals") %></p>
     <div class="flex-1">
       <% shown_goals = goals.first(5) %>
@@ -118,6 +114,10 @@
         <% end %>
       <% end %>
     </div>
+
+    <% goals.each do |goal| %>
+      <%= render "goals/currency_warning", goal: goal %>
+    <% end %>
 
   <% end %>
 
