@@ -243,7 +243,8 @@ class BillsHelperTest < ActionView::TestCase
     assert_equal I18n.t("bills.attention.partial"), bills_attention_reason(occurrence)
 
     occurrence.cached_confirmed_allocated = 0
-    assert_equal I18n.t("bills.attention.overdue", count: 30), bills_attention_reason(occurrence)
+    assert_equal %(<span class="text-destructive">#{I18n.t("bills.attention.overdue", count: 30)}</span>),
+      bills_attention_reason(occurrence)
   end
 
   # The notices file anything under a tenth as a smaller change, so the row
@@ -292,15 +293,25 @@ class BillsHelperTest < ActionView::TestCase
     assert_nil bills_installment_progress(OpenStruct.new(installment_progress: nil))
   end
 
-  # The red sits on the reason, not the whole line, and never on a paused
-  # bill's leftover: nobody is paying it, so it isn't late.
-  test "only an active overdue row's reason is red" do
+  # The red sits on the overdue reason, not the whole line. On a late bill a
+  # match to review or a partial payment outranks it, and in red they read as
+  # the problem themselves. Never on a paused bill's leftover: nobody is
+  # paying it, so it isn't late.
+  test "only the overdue reason is red" do
     stubs(:bills_span_multiple_accounts?).returns(false)
     occurrence = build_occurrence(due_on: Date.current - 30, status: "scheduled")
     reason = I18n.t("bills.attention.overdue", count: 30)
 
     assert_includes bills_row_subline(occurrence), %(<span class="text-destructive">#{reason}</span>)
     assert bills_overdue?(occurrence)
+
+    assert_includes bills_row_subline(occurrence, suggestion: :pending), I18n.t("bills.attention.needs_review")
+    assert_not_includes bills_row_subline(occurrence, suggestion: :pending), "text-destructive"
+
+    occurrence.cached_confirmed_allocated = 5
+    assert_includes bills_row_subline(occurrence), I18n.t("bills.attention.partial")
+    assert_not_includes bills_row_subline(occurrence), "text-destructive"
+    occurrence.cached_confirmed_allocated = 0
 
     occurrence.recurring_transaction.status = "inactive"
     assert_not_includes bills_row_subline(occurrence), "text-destructive"

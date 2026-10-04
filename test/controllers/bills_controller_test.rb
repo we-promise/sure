@@ -173,6 +173,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # Needs attention, where the subline goes on to give the reason.
     assert_includes subline_dates, "#{I18n.l(late, format: :short)} ·"
     assert_match I18n.t("bills.attention.overdue", count: 5), response.body
+    # Red like the rail, because the reason after it isn't always Overdue: a
+    # match to review or a partial payment outranks it, uncoloured.
+    assert_select "p span.text-destructive[class~='@lg:hidden']", count: 1,
+      text: "#{I18n.l(late, format: :short)} ·"
   end
 
   # The rail used to come only with Needs attention and This month, so in the
@@ -246,6 +250,19 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # The payment drawer's ring takes the same tone.
     get recurring_occurrence_url(occurrence)
     assert_no_match "var(--color-destructive)", response.body
+  end
+
+  # The row drops Autopay once a bill is paused, and the drawer's schedule
+  # line still claimed it.
+  test "a paused bill's drawer schedule leaves out autopay" do
+    bill = create_bill(name: "Paused gym", amount: 40, autopay: true)
+    bill.mark_inactive!
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    frequency = ApplicationController.helpers.frequency_label(bill)
+    assert_select "p", text: /\A#{Regexp.escape(frequency)}\s*·\s*#{Regexp.escape(bill.account.name)}\z/
   end
 
   # Rows after this month said "Snoozed until …". The rail that replaced that

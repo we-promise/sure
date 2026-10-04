@@ -309,6 +309,9 @@ module BillsHelper
   # instead of the thing that differs. First true wins, most specific first.
   # Paused leads: nobody is paying that bill, so nothing after it applies.
   # Partial stays bare, because the amount column already says what's left.
+  # Only Overdue is red. A late bill with a match to review or a partial
+  # payment gives that reason instead, uncoloured: in red it read as the
+  # problem itself. The row's date still says the bill is late.
   def bills_attention_reason(occurrence, suggestion: nil)
     series = occurrence.recurring_transaction
     return t("bills.attention.paused") unless series.active?
@@ -316,7 +319,8 @@ module BillsHelper
     return t("bills.attention.partial") if occurrence.partially_paid?
 
     if occurrence.overdue?
-      return t("bills.attention.overdue", count: (Date.current - occurrence.effective_due_on).to_i)
+      days = (Date.current - occurrence.effective_due_on).to_i
+      return tag.span(t("bills.attention.overdue", count: days), class: "text-destructive")
     end
 
     recently_changed = series.recurring_price_changes.any? { |change| change.effective_on >= 30.days.ago.to_date && change.material? }
@@ -331,15 +335,12 @@ module BillsHelper
 
   # A bill row's one line of context, in the same order in every section. It
   # truncates from the end, so the facts you can most do without come last.
-  # The red sits on the reason alone.
   def bills_row_subline(occurrence, suggestion: nil)
     series = occurrence.recurring_transaction
-    reason = bills_attention_reason(occurrence, suggestion: suggestion)
-    reason = tag.span(reason, class: "text-destructive") if reason && bills_overdue?(occurrence)
 
     safe_join([
       bills_autopay_label(series),
-      reason,
+      bills_attention_reason(occurrence, suggestion: suggestion),
       bills_installment_progress(series),
       (t("bills.debt_payment") if series.transfer?),
       frequency_label(series),

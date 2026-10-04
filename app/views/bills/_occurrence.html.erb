@@ -30,7 +30,8 @@
         carries the state; the rail now carries the date the state is about.
 
         Every section has it, so the avatars line up down the stacked card.
-        Only from @lg. Below it the subline leads with the same date. %>
+        Only from @lg. Below it the subline leads with the same date, in the
+        same colour. %>
     <div class="hidden @lg:block w-14 shrink-0 text-xs <%= bills_overdue?(occurrence) ? "text-destructive font-medium" : "text-secondary" %>">
       <%= bills_rail_date(occurrence) %>
     </div>
@@ -56,7 +57,7 @@
           facts. The schedule is always on it, which is also what tells
           subscription tiers with one name and one amount apart. %>
       <p class="text-xs text-secondary truncate">
-        <span class="@lg:hidden"><%= bills_row_date(occurrence) %> &middot;</span>
+        <span class="@lg:hidden <%= "text-destructive" if bills_overdue?(occurrence) %>"><%= bills_row_date(occurrence) %> &middot;</span>
         <%= bills_row_subline(occurrence, suggestion: suggestion) %>
       </p>
       <% if series.notes.present? %>

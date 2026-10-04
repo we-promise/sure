@@ -53,7 +53,7 @@
   <p class="text-xs text-secondary">
     <%= frequency_label(series) %>
     <% if series.account %>&middot; <%= series.account.name %><% end %>
-    <% if series.autopay? %>&middot; <%= t("recurring_transactions.pay_action.autopay") %><% end %>
+    <% if (autopay = bills_autopay_label(series)) %>&middot; <%= autopay %><% end %>
   </p>
 
   <%# Subscription state is state, not depth, so it stays here. %>
