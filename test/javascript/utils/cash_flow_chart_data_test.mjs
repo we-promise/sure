@@ -55,6 +55,19 @@ test("accepts an invested node", () => {
   assert.equal(graph.nodes[2].kind, "invested");
   assert.equal(graph.nodes[2].color, "#0d9488");
 });
+test("an invested node without a colour falls back to its own colour", () => {
+  const body = payload();
+  body.sankey.nodes.push({
+    id: "invested_node",
+    name: "Invested",
+    kind: "invested",
+    value: "5",
+    percentage: "40.5",
+  });
+  body.sankey.links.push({ source: 1, target: 2, value: "5", percentage: "40.5" });
+  const graph = cashFlowChartData(body);
+  assert.equal(graph.nodes[2].color, "#0d9488");
+});
 test("accepts empty graphs", () => {
   assert.deepEqual(
     cashFlowChartData({

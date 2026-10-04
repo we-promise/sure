@@ -345,9 +345,12 @@ class PagesController < ApplicationController
 
       total_income = net_totals.total_net_income.to_f.round(2)
       total_expense = net_totals.total_net_expense.to_f.round(2)
+      total_invested = invested_total&.amount.to_f.round(2)
 
-      # Central Cash Flow node
-      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income, 100.0, "var(--color-success)")
+      # Central Cash Flow node, sized to whichever side is larger so a deficit
+      # (outflows above income) still balances, as IncomeStatement::Sankey does
+      capacity = [ total_income, (total_expense + total_invested).round(2) ].max
+      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", capacity, 100.0, "var(--color-success)")
 
       # Build netted subcategory data from raw totals
       net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals)
@@ -377,7 +380,6 @@ class PagesController < ApplicationController
       )
 
       # Money moved into investments, for a family that does not count it as spending
-      total_invested = invested_total&.amount.to_f.round(2)
       if total_invested.positive?
         percentage = total_income.zero? ? 0 : (total_invested / total_income * 100).round(1)
         idx = add_node.call("invested_node", t("pages.dashboard.cashflow_preview.node_labels.invested"), total_invested, percentage, IncomeStatement::Sankey::INVESTED_COLOR)
@@ -390,6 +392,11 @@ class PagesController < ApplicationController
         percentage = total_income.zero? ? 0 : (net / total_income * 100).round(1)
         idx = add_node.call("surplus_node", "Surplus", net, percentage, "var(--color-success)")
         links << { source: cash_flow_idx, target: idx, value: net, color: "var(--color-success)", percentage: percentage }
+      elsif net.negative?
+        deficit = net.abs
+        percentage = capacity.zero? ? 0 : (deficit / capacity * 100).round(1)
+        idx = add_node.call("deficit_node", t("pages.dashboard.cashflow_preview.node_labels.deficit"), deficit, percentage, "var(--color-destructive)")
+        links << { source: idx, target: cash_flow_idx, value: deficit, color: "var(--color-destructive)", percentage: percentage }
       end
 
       { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency).symbol }

@@ -303,6 +303,34 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert nodes.keys.none? { |id| id.start_with?("expense_") && nodes[id].fetch("value") == 400.0 }
   end
 
+  test "dashboard sankey balances a deficit when outflows exceed income" do
+    @family.update!(investment_contributions_as_spending: false)
+    category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    income_category = @family.categories.create!(name: "Salary", color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Payday", amount: -1000, category: income_category)
+    create_transaction(account: @family.accounts.first, name: "Shopping trip", amount: 700, category: category)
+    create_transaction(account: @family.accounts.first, name: "To ISA", amount: 500, category: nil, kind: "investment_contribution")
+
+    get root_path
+    assert_response :ok
+
+    data = JSON.parse(css_select("[data-controller='sankey-chart']").first["data-sankey-chart-data-value"])
+    nodes = data.fetch("nodes")
+    index = nodes.each_with_index.to_h { |node, i| [ node.fetch("id"), i ] }
+    links = data.fetch("links")
+    center = index.fetch("cash_flow_node")
+
+    assert_not index.key?("surplus_node")
+    deficit = nodes[index.fetch("deficit_node")]
+    assert_equal I18n.t("pages.dashboard.cashflow_preview.node_labels.deficit"), deficit.fetch("name")
+    inflow = links.select { |link| link.fetch("target") == center }.sum { |link| link.fetch("value") }
+    outflow = links.select { |link| link.fetch("source") == center }.sum { |link| link.fetch("value") }
+    assert_in_delta outflow, inflow, 0.01, "the Cash Flow node must balance"
+    assert links.any? { |link| link.fetch("source") == index.fetch("deficit_node") && link.fetch("target") == center },
+      "the deficit flows into Cash Flow"
+    assert_operator deficit.fetch("value"), :>=, 200.0, "at least the 200 by which this month's new outflows exceed the payday"
+  end
+
   test "dashboard sankey nodes carry a stable filter_value, including opposite-direction subcategories" do
     parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
     subcategory = @family.categories.create!(name: "Rebate Program", parent: parent_category, color: "#33FF57")
