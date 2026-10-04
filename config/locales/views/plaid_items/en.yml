@@ -1,7 +1,12 @@
 ---
 en:
   plaid_items:
+    auto_link_opener:
+      create_failed: We couldn't confirm this connection was added. Reload the page to
+        check before trying again.
     create:
+      already_connected: You already have a connection for this institution, so this
+        one wasn't added.
       exchange_failed: We couldn't add this connection. Try again, and if the problem
         continues, check the server logs.
       success: Account linked successfully.  Please wait for accounts to sync.

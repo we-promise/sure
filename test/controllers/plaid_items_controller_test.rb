@@ -776,6 +776,17 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Link can leave the institution id out. With no id to compare, the name is the only
+  # evidence left, so it decides even for a connection whose id is known.
+  test "create matches on name when Link reports no institution_id" do
+    create_plaid_item(name: "Chase", institution_id: "ins_56", owner: users(:family_admin))
+    stub_plaid_provider.expects(:exchange_public_token).never
+
+    post_link(institution_id: nil, institution_name: "Chase")
+
+    assert_duplicate_warning
+  end
+
   test "create exchanges when the matching connection is scheduled for deletion" do
     item = create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
     item.update!(scheduled_for_deletion: true)
@@ -961,6 +972,27 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
     assert_equal I18n.t("plaid_items.create.exchange_failed"), flash[:alert]
+  end
+
+  # create answers plain HTML as well as streams, and a page can't render the
+  # warning's stream. A held request that wants HTML goes back to Accounts with the
+  # reason instead, and still exchanges nothing.
+  test "create redirects a plain HTML request when the institution is already connected" do
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+    stub_plaid_provider.expects(:exchange_public_token).never
+
+    assert_no_difference("PlaidItem.count") do
+      post plaid_items_url, params: {
+        plaid_item: {
+          public_token: HELD_TOKEN,
+          region: "us",
+          metadata: { institution: { name: "Example Bank", institution_id: "ins_example" } }
+        }
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("plaid_items.create.already_connected"), flash[:alert]
   end
 
   # A hidden field has no nil: an institution id Link never reported comes back from

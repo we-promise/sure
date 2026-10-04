@@ -179,11 +179,12 @@ class PlaidItemsController < ApplicationController
       scope.ordered
     end
 
-    # Matches on institution_id, falling back to the stored institution name for items
-    # whose first sync never landed and so carry no institution_id yet -- a broken
-    # connection is exactly what a user tries to re-link. The fallback is restricted
-    # to those rows on purpose: once an id is known and differs, a shared display name
-    # is a false positive rather than a match.
+    # Matches on institution_id when both sides have one, and otherwise on the
+    # institution name: for items whose first sync never landed and so carry no
+    # institution_id yet -- a broken connection is exactly what a user tries to
+    # re-link -- and for Link metadata that leaves the id out. Only two known ids
+    # that differ rule the name out; then a shared display name is a false positive
+    # rather than a match.
     #
     # `plaid_items.name` is written once at create from Link's institution metadata and
     # never overwritten (there is no update route, and upsert_plaid_institution_snapshot!
@@ -193,8 +194,8 @@ class PlaidItemsController < ApplicationController
       name = normalized_institution_name(institution_name)
 
       connected_plaid_items(region).includes(:plaid_accounts).select do |item|
-        if item.institution_id.present?
-          institution_id.present? && item.institution_id == institution_id
+        if institution_id.present? && item.institution_id.present?
+          item.institution_id == institution_id
         else
           name.present? && normalized_institution_name(item.name) == name
         end
@@ -206,24 +207,31 @@ class PlaidItemsController < ApplicationController
     end
 
     # A stream that swaps the Link opener in the modal frame for the warning. The
-    # public token rides along in the warning's "Add new connection" form, because
-    # nothing is exchanged unless the user asks for the connection after all.
+    # public token rides along in the warning's "Confirm this connection" form,
+    # because nothing is exchanged unless the user asks for the connection after all.
+    # A page can't render that stream, so a request that wants HTML goes back to
+    # Accounts with the reason instead, and its token is never exchanged.
     def render_duplicate_warning(duplicate_items)
-      render turbo_stream: turbo_stream.replace(
-        "modal",
-        partial: "plaid_items/duplicate_warning",
-        locals: {
-          duplicate_items: duplicate_items,
-          account_overlap: PlaidItem::AccountOverlap.new(
-            link_accounts: plaid_item_params.dig(:metadata, :accounts),
-            plaid_items: duplicate_items
-          ),
-          public_token: plaid_item_params[:public_token],
-          region: normalized_region(plaid_item_params[:region]).to_s,
-          institution_name: item_name,
-          institution_id: institution_id
-        }
-      )
+      respond_to do |format|
+        format.html { redirect_to accounts_path, alert: t("plaid_items.create.already_connected") }
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.replace(
+            "modal",
+            partial: "plaid_items/duplicate_warning",
+            locals: {
+              duplicate_items: duplicate_items,
+              account_overlap: PlaidItem::AccountOverlap.new(
+                link_accounts: plaid_item_params.dig(:metadata, :accounts),
+                plaid_items: duplicate_items
+              ),
+              public_token: plaid_item_params[:public_token],
+              region: normalized_region(plaid_item_params[:region]).to_s,
+              institution_name: item_name,
+              institution_id: institution_id
+            }
+          )
+        end
+      end
     end
 
     # A held public token can expire while the duplicate warning sits open -- Plaid
@@ -250,7 +258,7 @@ class PlaidItemsController < ApplicationController
         }
       )
 
-      alert = token_expired ? t(".token_expired") : t(".exchange_failed")
+      alert = token_expired ? t("plaid_items.create.token_expired") : t("plaid_items.create.exchange_failed")
 
       respond_to do |format|
         format.html { redirect_to accounts_path, alert: alert }
