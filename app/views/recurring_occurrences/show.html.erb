@@ -22,7 +22,7 @@
         <h2 id="<%= dialog.title_id %>" class="text-lg font-medium text-primary truncate">
           <%= series.display_name %>
         </h2>
-        <p class="text-sm <%= bills_overdue?(@occurrence) ? "text-destructive" : "text-secondary" %>">
+        <p class="text-sm <%= @occurrence.overdue? ? "text-destructive" : "text-secondary" %>">
           <%= occurrence_due_label(@occurrence) %>
         </p>
       </div>
@@ -66,7 +66,7 @@
           <%= render DS::ProgressRing.new(
                 percent: percent,
                 size: 56,
-                tone: @occurrence.paid? ? :success : (bills_overdue?(@occurrence) ? :destructive : :neutral)
+                tone: @occurrence.paid? ? :success : (@occurrence.overdue? ? :destructive : :neutral)
               ) %>
         </div>
       </div>
