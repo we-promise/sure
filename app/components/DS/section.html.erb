@@ -2,7 +2,7 @@
   <div class="flex items-center justify-between gap-3 px-4 py-2">
     <div class="flex items-center gap-1.5 text-xs font-medium uppercase text-secondary">
       <% if collapsible %>
-        <%= helpers.icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90" %>
+        <%= helpers.disclosure_chevron %>
       <% end %>
       <h2><%= title %></h2>
       <span class="text-subdued" aria-hidden="true">&middot;</span>

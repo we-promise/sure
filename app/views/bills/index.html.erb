@@ -48,7 +48,7 @@
         <%= render DS::Disclosure.new(variant: :inline, body_class: nil) do |disclosure| %>
           <% disclosure.with_summary_content do %>
             <div class="flex items-center gap-2 px-4 py-2.5 text-sm text-secondary">
-              <%= icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90" %>
+              <%= disclosure_chevron %>
               <span><%= t(".notices_routine", count: routine.size) %></span>
             </div>
           <% end %>

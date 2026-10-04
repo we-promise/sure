@@ -1553,6 +1553,11 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     routine = ".bg-container.rounded-lg > details > summary"
     assert_select "#{routine} .px-4.py-2\\.5", text: /#{I18n.t("bills.index.notices_routine", count: 2)}/
     assert_select "#{routine}[class^='bg-'], #{routine}[class*=' bg-']", count: 0
+    # One chevron for both folds, not copies that drift apart.
+    chevron = "svg[class*='group-open:rotate-90']"
+    chevrons = css_select("[data-persisted-disclosure-key-value='bills-suggested'] > summary #{chevron}, #{routine} #{chevron}")
+    assert_equal 2, chevrons.size
+    assert_equal 1, chevrons.map(&:to_html).uniq.size, "the folds' chevrons differ: #{chevrons.map { |svg| svg["class"] }.inspect}"
   end
 
   test "a price notice says how big the change was" do
