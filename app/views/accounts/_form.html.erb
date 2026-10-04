@@ -15,8 +15,9 @@
       <%= form.money_field :balance, label: t(".balance"), required: true, default_currency: Current.family.currency %>
     <% end %>
 
-    <% if account.persisted? && account.simplefin_account.present? %>
-      <% currency_codes = Current.family.enabled_currency_codes(extra: [account.currency, account.simplefin_account.currency]) %>
+    <% if account.persisted? && account.simplefin_linked_account.present? %>
+      <% simplefin_account = account.simplefin_linked_account %>
+      <% currency_codes = Current.family.enabled_currency_codes(extra: [account.currency, simplefin_account.currency]) %>
       <%= form.select :currency,
                       currency_codes.map { |code| [code, code] },
                       { label: t(".currency"), selected: account.currency } %>

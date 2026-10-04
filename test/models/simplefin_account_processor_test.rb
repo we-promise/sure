@@ -63,6 +63,19 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "USD", acct.reload.currency
   end
 
+  test "AccountProvider-only link honors a pinned currency in full processing" do
+    sfin_acct = SimplefinAccount.create!(simplefin_item: @item, name: "Checking", account_id: "currency_pin_ap_only", currency: "USD", account_type: "checking", current_balance: BigDecimal("100"))
+    acct = accounts(:depository)
+    acct.update!(currency: "CAD")
+    AccountProvider.create!(account: acct, provider: sfin_acct)
+    acct.lock_attr!(:currency)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal "CAD", acct.reload.currency
+    assert_equal "USD", sfin_acct.reload.currency
+  end
+
   test "unlocking currency allows the provider currency to apply again" do
     sfin_acct = SimplefinAccount.create!(simplefin_item: @item, name: "Checking", account_id: "currency_reset", currency: "CAD", account_type: "checking", current_balance: BigDecimal("100"))
     acct = accounts(:depository)
