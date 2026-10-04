@@ -101,6 +101,7 @@ module AccountableResource
         return
       end
     end
+    update_params[:currency] = requested_currency if simplefin_account.present? && account_params.key?(:currency) && !reset_currency_to_provider
 
     # The balance change and the attribute update are one form, so they commit
     # or roll back as one. `set_current_balance` writes a valuation and the

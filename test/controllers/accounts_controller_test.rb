@@ -125,6 +125,17 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     refute @account.locked?(:currency)
   end
 
+  test "SimpleFIN account currency input is stored canonically" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_lowercase", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account, currency: "USD")
+
+    patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "cad" } }
+
+    assert_redirected_to account_url(@account)
+    assert_equal "CAD", @account.reload.currency
+  end
+
   test "SimpleFIN account currency rejects unsupported codes without changing state" do
     item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
     simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_invalid", currency: "USD", account_type: "checking", current_balance: 100)
