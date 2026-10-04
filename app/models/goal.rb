@@ -399,6 +399,8 @@ class Goal < ApplicationRecord
     @current_balance ||= linked_accounts.sum { |account| account_backing(account).amount }
   end
 
+  # Wrap the allocated backing or frozen completion snapshot in goal currency.
+  # @return [Money] this goal's current backing subtotal
   def current_balance_money
     @current_balance_money ||= Money.new(current_balance, currency)
   end
@@ -779,6 +781,8 @@ class Goal < ApplicationRecord
     end
   end
 
+  # Wrap the historical monthly net-inflow estimate in goal currency.
+  # @return [Money] dated 90-day net inflow divided by three
   def pace_money
     @pace_money ||= Money.new(pace, currency)
   end
@@ -1162,21 +1166,26 @@ class Goal < ApplicationRecord
       goal_accounts.find { |ga| ga.account_id == account.id }&.allocated_amount
     end
 
-    # Family-wide map of non-archived goal earmarks. Injected once per request
-    # by the controller on index (one query for the whole page); falls back to
-    # a single query for the standalone (show) case.
+    # Reuse dated FX results for this instance, or the shared prepared-goal page.
+    # @return [Goal::CurrencyConverter] converter caching rates and missing-rate lookups
     def currency_converter
       @currency_converter ||= CurrencyConverter.new
     end
 
+    # Load active-family account earmarks, retaining native allocation units.
+    # @return [Hash] account IDs mapped to competing goals and their native earmarks
     def pooled_allocations
       @pooled_allocations ||= self.class.pooled_allocations_for(family)
     end
 
+    # Load cumulative native market gain/loss for linked investment accounts.
+    # @return [Hash] account IDs mapped to net market flows
     def market_flows
       @market_flows ||= self.class.market_flows_for(family)
     end
 
+    # Load shared dated ledger aggregates used to compute converted goal pace.
+    # @return [Hash] account IDs mapped to currency, date and amount entries
     def pooled_pace
       @pooled_pace ||= self.class.pace_for(family)
     end

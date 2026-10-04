@@ -29,10 +29,15 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
     end
   end
 
+  # Sum the known converted account shares for the distribution bar.
+  # @return [BigDecimal, Numeric] backing subtotal in goal currency
   def total
     @total ||= rows.sum { |r| r[:backing].to_d }
   end
 
+  # Compute a funding account's rounded share of the known subtotal.
+  # @param backing [Numeric] backing already expressed in goal currency
+  # @return [Integer] percentage, or zero when the subtotal is zero
   def percent_for(backing)
     return 0 if total.zero?
     ((backing.to_d / total) * 100).round
@@ -67,6 +72,8 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
     # Per-account net inflow for both windows in one pass over the 90-day
     # entries set. Entry amount sign in Sure: inflow is negative; flip and
     # clamp ≥ 0.
+    # Read one account's dated inflow aggregates without another ledger query.
+    # @return [Hash] goal-currency totals for the 30- and 90-day windows
     def inflow_totals_for(account)
       inflow_totals_map[account.id] || { last_30: 0.to_d, last_90: 0.to_d }
     end

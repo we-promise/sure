@@ -209,6 +209,8 @@ class Budget < ApplicationRecord
     end
   end
 
+  # Sum reportable depository balances in the budget currency.
+  # @return [BigDecimal, Numeric] known cash subtotal excluding unavailable conversions
   def available_cash
     @available_cash ||= cash_accounts.sum { |account| convert_to_budget_currency(account.balance, account.currency) }
   end
@@ -247,6 +249,8 @@ class Budget < ApplicationRecord
     @missing_cash_currencies&.any? || false
   end
 
+  # Subtract goal reservations from known cash without altering budget allocations.
+  # @return [BigDecimal, Numeric] nonnegative spendable cash subtotal
   def free_cash
     [ available_cash - earmarked_for_goals, 0 ].max
   end
