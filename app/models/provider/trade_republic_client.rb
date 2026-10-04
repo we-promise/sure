@@ -327,10 +327,12 @@ class Provider::TradeRepublicClient
       connected = websocket.receive
       raise TransientProviderError, "Trade Republic WebSocket handshake was rejected" unless connected == "connected"
 
-      cash = available_cash = nil
+      cash = nil
       begin
+        # "cash" is the booked balance. "availableCash" additionally subtracts
+        # funds reserved for open (e.g. limit) orders, which have not left the
+        # account yet, so it must not be used as the account balance.
         cash = subscribe(websocket, type: "cash")
-        available_cash = optional_subscribe(websocket, type: "availableCash")
         raise MalformedResponse, "Trade Republic cash response did not contain an amount" if money_amount(cash).nil?
         domain_statuses["cash"] = "success"
       rescue MalformedResponse, ProviderUnavailable => e
@@ -396,8 +398,7 @@ class Provider::TradeRepublicClient
         "account" => { "brokerage_account_id" => account["securitiesAccountNumber"].to_s, "currency" => account["currency"] },
         "cash" => (cash && {
           "amount" => decimal_string(money_amount(cash)),
-          "available_amount" => decimal_string(money_amount(available_cash)),
-          "currency" => money_currency(available_cash) || money_currency(cash)
+          "currency" => money_currency(cash)
         }.compact),
         "positions" => positions,
         "events" => events,

@@ -29,22 +29,16 @@ uk:
         needs_setup: 'Рахунків, що потребують налаштування: %{count}...'
       success: Синхронізацію розпочато
     panel:
-      setup_instructions: 'Інструкції з налаштування:'
       step_1: Створіть ключ API на app.redbark.com у розділі Settings
       step_2: Введіть ключ API нижче та натисніть кнопку «Зберегти»
       step_3: Після успішного підключення перейдіть на вкладку «Рахунки», щоб налаштувати нові рахунки
-      field_descriptions: 'Опис полів:'
       optional: (необов'язково)
-      required: (обов'язково)
       optional_with_default: (необов'язково, за замовчуванням %{default_value})
       save_button: Зберегти конфігурацію
       update_button: Оновити конфігурацію
-      status_configured_html: Налаштовано й готово до використання. Перейдіть на вкладку <a href="%{accounts_path}" class="link">Рахунки</a>, щоб керувати рахунками та налаштовувати їх.
-      status_not_configured: Не налаштовано
       fields:
         api_key:
           label: Ключ API
-          description: Ваш ключ API Redbark (починається з rbk_live_)
           placeholder_new: rbk_live_...
           placeholder_update: Введіть новий ключ API, щоб оновити
     create:

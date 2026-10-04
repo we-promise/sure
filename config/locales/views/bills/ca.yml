@@ -76,7 +76,7 @@ ca:
       pulse_next_seven: pròxims 7 dies
       pulse_bar_aria: '%{percent}% de les factures d''aquest mes pagades'
       next_up: A continuació
-      view_upcoming: Mostra les properes
+      view_calendar: Mostra el calendari
       date_today: Avui
       date_tomorrow: Demà
       unconvertible:
@@ -86,8 +86,6 @@ ca:
       remaining: '%{amount} pendents'
       paid_headline: '%{amount} pagats'
       cost_line: Una mitjana de %{average} per pagament, uns %{annualized} l'any
-    pane:
-      close: Amaga els detalls
     add_bill: Afegeix una factura
     manage: Gestiona
     find_payment: Cerca el pagament

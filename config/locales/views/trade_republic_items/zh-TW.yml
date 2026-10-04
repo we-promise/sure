@@ -6,6 +6,7 @@ zh-TW:
       connection_description: "透過安全的網頁登入連結 Trade Republic 投資帳戶"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "此 Trade Republic 帳戶已連結。新的連結已被移除。"
     portfolio_categories:
       brokerage: "經紀帳戶"
       private_markets: "私人市場"

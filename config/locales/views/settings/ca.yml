@@ -119,7 +119,7 @@ ca:
         completion: resposta
         cost_by_model: Cost per model
         cost_by_operation: Cost per operació
-        cost_estimates_description: 'Els costos s’estimen segons els preus publicats pels proveïdors, inclosos els preus d’OpenAI de juliol de 2026. Els costos reals poden variar. El preu és per cada milió de tokens i varia segons el model. Els models personalitzats o amb self hosting mostraran "N/A" i no s’inclouen als totals de cost.'
+        cost_estimates_description: 'Els costos s’estimen segons els preus publicats pels proveïdors, verificats per darrera vegada el %{date}. Els costos reals poden variar. El preu és per cada milió de tokens i varia segons el model. Els models personalitzats o amb self hosting mostraran "N/A" i no s’inclouen als totals de cost.'
         cost_estimates_title: Sobre les estimacions de cost
         end_date: Data de fi
         failed: Errades
@@ -280,6 +280,7 @@ ca:
         api_secret_label: Secret de l'API
         api_secret_placeholder: Enganxa el teu secret de l'API de Binance
         connect_button: Connecta Binance
+        disconnect: Desconnecta
         disconnect_confirm: Segur que vols desconnectar Binance?
         ip_hint_body: 'Afegeix la IP de sortida del servidor de l''aplicació a la
           llista blanca de la clau API de Binance:'
@@ -307,6 +308,7 @@ ca:
         api_secret_label: Secret de l'API
         api_secret_placeholder: Introdueix el teu secret de l'API de Coinbase
         connect_button: Connecta Coinbase
+        disconnect: Desconnecta
         disconnect_confirm: Segur que vols desconnectar aquesta connexió de Coinbase?
           Els teus comptes sincronitzats passaran a ser comptes manuals.
         setup_instructions: 'Per connectar Coinbase:'
@@ -667,11 +669,16 @@ ca:
         qr_instruction: Escaneja el codi QR amb l'aplicació de Trade Republic i aprova l'inici de sessió.
         qr_success: Inici de sessió aprovat. Sure està actualitzant la pàgina del proveïdor.
         qr_error: No s'ha pogut iniciar la sessió amb QR. Torna-ho a provar.
+        add_account: "Afegeix una altra connexió"
         save_configuration: Desa i inicia sessió
         update_configuration: Actualitza la configuració
         sync: Sincronitza
+        syncing: "Sincronitzant..."
         disconnect: Desconnecta Trade Republic
         disconnect_confirm: Vols desconnectar Trade Republic? Els comptes sincronitzats passaran a ser comptes manuals.
+        disconnect_confirm_with_identifier: "Vols desconnectar la connexió de Trade Republic acabada en %{last4}? Els comptes sincronitzats passaran a ser comptes manuals."
+        identifier_phone: Telèfon
+        identifier_account: Compte
         status_configured_prefix: Connectat. Ves a la pestanya
         accounts_tab: Comptes
         setup_accounts: Configura els comptes
