@@ -27,6 +27,9 @@ export default class extends Controller {
     this.boundUpdate = this.update.bind(this);
     this.addEventListeners();
     this.startAutoUpdate();
+    // Every menu renders closed, so one that connects open is a copy Turbo
+    // cached while it was open, brought back by Back.
+    this.close();
   }
 
   // Derived from the content element's own class rather than tracked as
