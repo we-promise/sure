@@ -164,6 +164,33 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
     process
 
     assert_nil @loan.reload.interest_rate
+    assert_empty schedule, "a locked blank rate was routed around through the schedule"
+  end
+
+  # A refused first sighting is not a stalled loan. The rate is still blank, so
+  # the next sync is a first sighting again and retries the base rate -- it
+  # must not fall through to recording a change dated on a day nothing moved.
+  test "a refused first sighting writes no schedule row and is retried next sync" do
+    @loan.update!(interest_rate: nil)
+    # Any validation failure refuses the whole save; a future start date is
+    # one the model rejects without touching the rate.
+    @loan.update_columns(start_date: Date.new(3000, 1, 1))
+    detail lendingRate: "0.0675"
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      process
+    end
+
+    assert_nil @loan.reload.interest_rate, "the refused base rate was stored"
+    assert_empty schedule, "a refused first sighting was recorded as a change instead"
+
+    # The next sync loads the loan afresh; reloading stands in for that.
+    @loan.update_columns(start_date: Date.new(2024, 1, 1))
+    @redbark_account.reload
+    process
+
+    assert_equal 6.75, @loan.reload.interest_rate.to_f, "the first sighting was not retried"
+    assert_empty schedule, "the retried first sighting recorded a change"
   end
 
   # Row 11.

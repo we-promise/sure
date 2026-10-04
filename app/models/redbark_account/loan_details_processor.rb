@@ -153,6 +153,13 @@ class RedbarkAccount::LoanDetailsProcessor
     # A loan whose rate was never recorded is not a loan whose rate just moved.
     # Setting the base rate is the honest reading; a schedule row would claim a
     # change happened on a day nothing is known to have happened.
+    #
+    # TRUE WHETHER OR NOT THE WRITE STUCK, deliberately. A blank rate that stays
+    # blank is either locked, which the user asked for and which must not be
+    # routed around through the schedule, or refused, in which case the rate is
+    # still blank next sync, so the next sync is a first sighting again and
+    # retries it. Falling through to `record_change` would date a change on a
+    # day nothing moved.
     def record_first_sighting
       return false if loan.interest_rate.present?
 
