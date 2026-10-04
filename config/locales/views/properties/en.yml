@@ -25,6 +25,7 @@ en:
     avm_providers:
       rentcast: RentCast
       realie: Realie
+      terrascoutx: TerraScoutX
     new:
       title: Enter property manually
       next: "Next"

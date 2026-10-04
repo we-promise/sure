@@ -15,3 +15,8 @@ en:
         no_valuation: Realie did not return a valuation for this property.
         not_found: Realie could not find a property matching this address.
         location_mismatch: Realie matched a property in a different city or ZIP code. Please double-check the address.
+    terrascoutx:
+      errors:
+        no_property: TerraScoutX could not find a property matching this address.
+        no_valuation: TerraScoutX did not return a value for this property.
+        location_mismatch: TerraScoutX matched a property with a different house number or ZIP code. Please double-check the address.
