@@ -45,6 +45,11 @@ ru:
           few: '%{count} неизвестные операции'
           many: '%{count} неизвестных операций'
           other: '%{count} неизвестные операции'
+        pending_trade_details:
+          one: '%{count} инвестиционная операция ожидает деталей'
+          few: '%{count} инвестиционные операции ожидают деталей'
+          many: '%{count} инвестиционных операций ожидают деталей'
+          other: '%{count} инвестиционной операции ожидают деталей'
         expenses:
           one: '%{count} трата за последние 30 дней (%{amount})'
           few: '%{count} траты за последние 30 дней (%{amount})'
@@ -122,7 +127,7 @@ ru:
     initiate_login:
       verification_required: "Вход начат. Подтвердите его через %{method}, затем нажмите «Подтвердить вход»."
       not_configured: Trade Republic не настроен.
-      pin_required: Введите PIN-код Trade Republic, чтобы начать новый вход.
+      pin_required: Введите PIN-код или пароль Trade Republic, чтобы начать новый вход.
     complete_login:
       approval_pending: "Ещё не подтверждено. Одобрите вход в приложении Trade Republic и повторите попытку."
       success: "Trade Republic успешно подключён."
@@ -160,8 +165,8 @@ ru:
         card_fee: Комиссия по карте
         card_refund: Возврат на карту
         tax_refund: Налоговый возврат
-        buy: Покупка
-        sell: Продажа
+        round_up: Round up
+    duplicate_connection: "Этот счёт Trade Republic уже подключён. Новое подключение удалено."
     defaults:
       name: Trade Republic
     sync_status:
@@ -176,7 +181,7 @@ ru:
       success: Trade Republic сохранён. Подтвердите вход в приложении Trade Republic, чтобы завершить подключение.
     update:
       success: Конфигурация Trade Republic успешно обновлена.
-      pin_required: Введите PIN-код Trade Republic для повторной аутентификации.
+      pin_required: Введите PIN-код или пароль Trade Republic для повторной аутентификации.
     destroy:
       success: Подключение Trade Republic запланировано на удаление.
       unlink_failed: Не удалось полностью отключить Trade Republic. Подключение сохранено, чтобы можно было безопасно повторить попытку.

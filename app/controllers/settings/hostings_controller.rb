@@ -65,6 +65,29 @@ class Settings::HostingsController < ApplicationController
       Setting.onboarding_state = onboarding_state
     end
 
+    if hosting_params.key?(:demo_family_refresh_enabled) || hosting_params.key?(:demo_family_refresh_family_id)
+      unless Current.user.super_admin?
+        return redirect_to settings_hosting_path, alert: t(".not_authorized")
+      end
+      if hosting_params.key?(:demo_family_refresh_family_id)
+        family_id = hosting_params[:demo_family_refresh_family_id].presence
+        demo_email = Rails.application.config_for(:demo).with_indifferent_access.fetch(:email)
+        unless family_id.nil? || User.admin.exists?(family_id: family_id, email: demo_email) && !User.super_admin.exists?(family_id: family_id)
+          raise Setting::ValidationError, t(".invalid_demo_family")
+        end
+        if family_id.nil? && Setting.demo_family_refresh_enabled && hosting_params[:demo_family_refresh_enabled] != "0"
+          raise Setting::ValidationError, t(".select_demo_family")
+        end
+        Setting.demo_family_refresh_family_id = family_id
+      end
+      if hosting_params.key?(:demo_family_refresh_enabled)
+        if hosting_params[:demo_family_refresh_enabled] == "1" && Setting.demo_family_refresh_family_id.blank?
+          raise Setting::ValidationError, t(".select_demo_family")
+        end
+        Setting.demo_family_refresh_enabled = hosting_params[:demo_family_refresh_enabled] == "1"
+      end
+    end
+
     if hosting_params.key?(:require_email_confirmation)
       Setting.require_email_confirmation = hosting_params[:require_email_confirmation]
     end
@@ -300,7 +323,7 @@ class Settings::HostingsController < ApplicationController
     # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
     end
 
     def load_external_assistant_models

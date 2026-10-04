@@ -3,7 +3,7 @@
     due in the window, and an expandable footer for what is held for later. %>
 
 <%
-  segments = paycheck_allocation_segments(period)
+  segments = paycheck_allocation_segments(period).to_h
   segment_class = {
     due: "bg-inverse",
     reserved: "bg-subdued",
@@ -14,6 +14,12 @@
   safe_tone = period.short? ? "text-destructive" : "text-primary"
   safe_amount = format_money(Money.new(period.short? ? period.shortfall : period.remaining, currency))
   safe_label = period.short? ? t("bills.paycheck.short_after_bills") : t("bills.paycheck.safe_after_bills")
+  safe_key = period.short? ? :short : :safe
+  legend = [
+    [ :due, t("bills.paycheck.due_this_period"), format_money(Money.new(period.due_total, currency)), "text-secondary" ],
+    [ :reserved, t("bills.paycheck.reserved_ahead"), format_money(Money.new(period.reserved_total, currency)), "text-secondary" ],
+    [ safe_key, period.short? ? t("bills.paycheck.short_short") : t("bills.paycheck.safe_short"), safe_amount, "font-medium #{safe_tone}" ]
+  ]
 %>
 
 <section class="flex gap-3 px-4 sm:px-5">
@@ -42,29 +48,33 @@
       </div>
 
       <div class="text-right shrink-0">
-        <p class="text-lg font-medium leading-7 tabular-nums privacy-sensitive <%= safe_tone %>"><%= safe_amount %></p>
+        <p class="text-2xl font-medium leading-8 tabular-nums privacy-sensitive <%= safe_tone %>"><%= safe_amount %></p>
         <p class="text-xs text-secondary"><%= safe_label %></p>
       </div>
     </div>
 
     <div>
+      <%# The breakdown is the bar's legend. A figure with no segment on the bar
+          keeps the swatch's space, labels wrap rather than truncate on a phone,
+          and each figure sits at its column's foot, so every column lines up. %>
       <div class="grid grid-cols-3 gap-3">
-        <div class="min-w-0">
-          <p class="text-xs text-secondary truncate"><%= t("bills.paycheck.due_this_period") %></p>
-          <p class="text-sm font-medium text-primary tabular-nums privacy-sensitive"><%= format_money(Money.new(period.due_total, currency)) %></p>
-        </div>
-        <div class="min-w-0">
-          <p class="text-xs text-secondary truncate"><%= t("bills.paycheck.reserved_ahead") %></p>
-          <p class="text-sm font-medium text-primary tabular-nums privacy-sensitive"><%= format_money(Money.new(period.reserved_total, currency)) %></p>
-        </div>
-        <div class="min-w-0">
-          <p class="text-xs text-secondary truncate"><%= period.short? ? t("bills.paycheck.short_short") : t("bills.paycheck.safe_short") %></p>
-          <p class="text-sm font-medium tabular-nums privacy-sensitive <%= safe_tone %>"><%= safe_amount %></p>
-        </div>
+        <% legend.each do |key, label, amount, figure_class| %>
+          <div class="min-w-0 flex flex-col justify-between">
+            <p class="flex gap-1.5 text-xs text-secondary">
+              <% if segments.key?(key) %>
+                <span class="shrink-0 size-2 mt-1 rounded-full <%= segment_class[key] %>" data-paycheck-legend-swatch aria-hidden="true"></span>
+              <% else %>
+                <span class="shrink-0 size-2" aria-hidden="true"></span>
+              <% end %>
+              <span class="min-w-0"><%= label %></span>
+            </p>
+            <p class="pl-3.5 text-sm tabular-nums privacy-sensitive <%= figure_class %>"><%= amount %></p>
+          </div>
+        <% end %>
       </div>
 
       <% if segments.any? %>
-        <div class="flex h-0.5 rounded-full overflow-hidden bg-surface-inset mt-2"
+        <div class="flex h-1.5 rounded-full overflow-hidden bg-surface-inset mt-2"
              role="img"
              aria-label="<%= paycheck_allocation_aria(period, currency) %>">
           <% segments.each do |key, percent| %>

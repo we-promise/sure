@@ -213,30 +213,30 @@ ru:
         format: "%n %u"
         units:
           billion:
-            few: миллиардов
+            few: миллиарда
             many: миллиардов
             one: миллиард
-            other: миллиардов
+            other: миллиарда
           million:
-            few: миллионов
+            few: миллиона
             many: миллионов
             one: миллион
-            other: миллионов
+            other: миллиона
           quadrillion:
-            few: квадриллионов
+            few: квадриллиона
             many: квадриллионов
             one: квадриллион
-            other: квадриллионов
+            other: квадриллиона
           thousand:
-            few: тысяч
+            few: тысячи
             many: тысяч
             one: тысяча
-            other: тысяч
+            other: тысячи
           trillion:
-            few: триллионов
+            few: триллиона
             many: триллионов
             one: триллион
-            other: триллионов
+            other: триллиона
           unit: ''
       format:
         delimiter: ''
@@ -282,4 +282,4 @@ ru:
       unsupported_protocol_version: 'Неподдерживаемая версия протокола MCP: %{version}'
   oauth:
     registration:
-      invalid_redirect_uris: redirect_uris должны использовать https, loopback http или URI-схему нативного приложения
+      invalid_redirect_uris: redirect_uris должны использовать HTTPS, HTTP для loopback-адреса или URI-схему нативного приложения

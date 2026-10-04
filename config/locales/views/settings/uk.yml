@@ -109,7 +109,7 @@ uk:
         failed: "Не вдалося"
         no_usage_data: "Даних про використання за вибраний період не знайдено"
         cost_estimates_title: "Про оцінку вартості"
-        cost_estimates_description: "Витрати оцінюються на основі опублікованих цін постачальників, включаючи ціни OpenAI станом на липень 2026 року. Фактичні витрати можуть відрізнятися. Ціни вказані за 1 мільйон токенів і залежать від моделі. Користувацькі або самостійно розміщені моделі показуватимуть \"Н/Д\" і не включатимуться до загальної вартості."
+        cost_estimates_description: "Витрати оцінюються на основі опублікованих цін постачальників, востаннє перевірених %{date}. Фактичні витрати можуть відрізнятися. Ціни вказані за 1 мільйон токенів і залежать від моделі. Користувацькі або самостійно розміщені моделі показуватимуть \"Н/Д\" і не включатимуться до загальної вартості."
     ai_prompts:
       show:
         page_title: Промпти ШІ
@@ -490,6 +490,7 @@ uk:
         connect_button: Підключити Coinbase
         syncing: Синхронізація...
         sync: Синхронізувати
+        disconnect: Відключити
         disconnect_confirm: Ви впевнені, що хочете відключити це з'єднання Coinbase? Ваші синхронізовані рахунки стануть ручними.
       binance_panel:
         setup_instructions: "Щоб підключити Binance, створіть ключ API лише для читання:"
@@ -511,6 +512,7 @@ uk:
         historical_import: "Налаштування історичного імпорту"
         sync_start_date_label: "Імпортувати дані з"
         sync_start_date_help: "Виберіть, наскільки далеко назад отримувати історичні угоди."
+        disconnect: Відключити
         disconnect_confirm: "Ви впевнені, що хочете відключити Binance?"
       kraken_panel:
         step1_html: 'Перейдіть до <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Налаштування API Kraken</a>'
@@ -707,15 +709,15 @@ uk:
           title: Шифрування не налаштовано
           message: Облікові дані та дані сеансу Trade Republic не можна безпечно зберігати, доки не налаштовано шифрування Active Record.
         steps:
-          step_1: Введіть номер телефону та PIN-код, які ви використовуєте в застосунку Trade Republic, потім збережіть.
+          step_1: Введіть номер телефону та PIN-код або пароль, які ви використовуєте в застосунку Trade Republic, потім збережіть.
           step_2: Коли з'явиться запит, введіть код із застосунку-автентифікатора.
           step_3: Коли з'явиться запит, підтвердьте вхід у застосунку Trade Republic.
         phone_number_label: Номер телефону
         phone_number_placeholder_new: +49 170 1234567
         phone_number_placeholder_existing: Залиште порожнім, щоб зберегти поточний номер телефону
-        pin_label: PIN-код
-        pin_placeholder_new: PIN-код вашого застосунку Trade Republic
-        pin_placeholder_existing: Залиште порожнім, щоб зберегти поточний PIN-код
+        pin_label: PIN-код або пароль
+        pin_placeholder_new: PIN-код або пароль вашого застосунку Trade Republic
+        pin_placeholder_existing: Залиште порожнім, щоб зберегти поточний PIN-код або пароль
         currency_label: Валюта рахунку
         connect: Увійти
         confirm_login: Перевірити вхід
@@ -737,16 +739,21 @@ uk:
           close: Готово
         qr_login: Увійти за QR-кодом
         qr_cancel: Скасувати вхід за QR-кодом
-        qr_back_to_credentials: Назад до номера телефону та PIN-коду
+        qr_back_to_credentials: Назад до номера телефону та PIN-коду або пароля
         qr_loading: Підготовка QR-коду…
         qr_instruction: Відскануйте QR-код у застосунку Trade Republic і підтвердьте вхід.
         qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.
         qr_error: Не вдалося розпочати вхід за QR-кодом. Спробуйте ще раз.
+        add_account: "Додати ще одне підключення"
         save_configuration: Зберегти й увійти
         update_configuration: Оновити конфігурацію
         sync: Синхронізувати
+        syncing: "Синхронізація..."
         disconnect: Відключити Trade Republic
         disconnect_confirm: Відключити Trade Republic? Ваші синхронізовані рахунки стануть ручними.
+        disconnect_confirm_with_identifier: "Відключити підключення Trade Republic, що закінчується на %{last4}? Ваші синхронізовані рахунки стануть ручними."
+        identifier_phone: Телефон
+        identifier_account: Рахунок
         status_configured_prefix: Підключено. Перейдіть на вкладку
         accounts_tab: Рахунки
         setup_accounts: Налаштувати рахунки

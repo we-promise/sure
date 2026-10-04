@@ -24,63 +24,17 @@ class <%= class_name %>ItemsController < ApplicationController
     @<%= file_name %>_item.name ||= "<%= class_name %> Connection"
 
     if @<%= file_name %>_item.save
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured <%= class_name %>.")
-        @<%= table_name %> = Current.family.<%= table_name %>.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "<%= file_name %>-providers-panel",
-            partial: "settings/providers/<%= file_name %>_panel",
-            locals: { <%= file_name %>_items: @<%= table_name %> }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @<%= file_name %>_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "<%= file_name %>-providers-panel",
-          partial: "settings/providers/<%= file_name %>_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
+      render_provider_panel("<%= file_name %>", alert: @<%= file_name %>_item.errors.full_messages.join(", "))
     end
   end
 
   def update
     if @<%= file_name %>_item.update(<%= file_name %>_item_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully updated <%= class_name %> configuration.")
-        @<%= table_name %> = Current.family.<%= table_name %>.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "<%= file_name %>-providers-panel",
-            partial: "settings/providers/<%= file_name %>_panel",
-            locals: { <%= file_name %>_items: @<%= table_name %> }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("<%= file_name %>", notice: t(".success"))
     else
-      @error_message = @<%= file_name %>_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "<%= file_name %>-providers-panel",
-          partial: "settings/providers/<%= file_name %>_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
+      render_provider_panel("<%= file_name %>", alert: @<%= file_name %>_item.errors.full_messages.join(", "))
     end
   end
 

@@ -42,6 +42,7 @@ oc:
       default: "%e/%m/%Y"
       long: Lo %e %B de %Y
       short: "%e %b"
+      short_with_year: Lo %-d %b de %Y
     month_names:
     -
     - de genièr
