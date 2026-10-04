@@ -35,6 +35,7 @@ class Entry < ApplicationRecord
   validate :split_child_date_matches_parent
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
+  after_save :track_earliest_saved_date, if: :saved_change_to_date?
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -298,7 +299,12 @@ class Entry < ApplicationRecord
   end
 
   def sync_account_later
-    sync_start_date = [ date_previously_was, date ].compact.min unless destroyed?
+    # Later saves (lock_saved_attributes!, mark_user_modified!) reset
+    # date_previously_was, so also use the earliest date tracked across saves.
+    # Starting the window after the old date would seed the incremental
+    # balance calculation from a balance that still includes this entry.
+    sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed?
+    @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
   end
 
@@ -570,6 +576,10 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    def track_earliest_saved_date
+      @earliest_saved_date = [ @earliest_saved_date, date_before_last_save ].compact.min
+    end
 
     def cannot_unexclude_split_parent
       return unless excluded_changed?(from: true, to: false) && split_parent?

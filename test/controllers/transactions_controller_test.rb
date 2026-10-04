@@ -291,6 +291,19 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "moving a transaction later syncs from its original date" do
+    original_date = 5.days.ago.to_date
+    @entry.update!(date: original_date)
+
+    Account.any_instance.expects(:sync_later).with(window_start_date: original_date)
+
+    patch transaction_url(@entry), params: {
+      entry: { date: 2.days.ago.to_date, entryable_type: @entry.entryable_type }
+    }
+
+    assert_equal 2.days.ago.to_date, @entry.reload.date
+  end
+
   test "updates with transaction details" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       patch transaction_url(@entry), params: {
