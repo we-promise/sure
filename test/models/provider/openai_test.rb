@@ -150,6 +150,19 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "normalize_reasoning_effort accepts supported values case-insensitively and rejects others" do
+    assert_equal "low", Provider::Openai.normalize_reasoning_effort(" Low ")
+    assert_nil Provider::Openai.normalize_reasoning_effort("turbo")
+    assert_nil Provider::Openai.normalize_reasoning_effort(nil)
+    assert_nil Provider::Openai.normalize_reasoning_effort("")
+  end
+
+  test "apply_reasoning_effort raises on an unknown api" do
+    with_env_overrides("OPENAI_REASONING_EFFORT" => "low") do
+      assert_raises(ArgumentError) { Provider::Openai.apply_reasoning_effort({}, api: :bogus) }
+    end
+  end
+
   test "apply_reasoning_effort leaves params unchanged when unset" do
     Setting.stubs(:openai_reasoning_effort).returns(nil)
     with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do

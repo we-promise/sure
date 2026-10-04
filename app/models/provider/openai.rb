@@ -49,11 +49,16 @@ class Provider::Openai < Provider
     raw = ENV["OPENAI_REASONING_EFFORT"].presence || Setting.openai_reasoning_effort.presence
     return nil if raw.nil?
 
-    value = raw.to_s.strip.downcase
-    return value if REASONING_EFFORTS.include?(value)
+    normalize_reasoning_effort(raw) || begin
+      Rails.logger.warn("Ignoring unsupported OPENAI_REASONING_EFFORT #{raw.inspect}; expected one of #{REASONING_EFFORTS.join(', ')}")
+      nil
+    end
+  end
 
-    Rails.logger.warn("Ignoring unsupported OPENAI_REASONING_EFFORT #{raw.inspect}; expected one of #{REASONING_EFFORTS.join(', ')}")
-    nil
+  # Normalizes a user/ENV-supplied effort value; nil when blank or unsupported.
+  def self.normalize_reasoning_effort(raw)
+    value = raw.to_s.strip.downcase
+    value if REASONING_EFFORTS.include?(value)
   end
 
   # Merges the configured effort into a request params hash. api: :chat adds
@@ -66,7 +71,7 @@ class Provider::Openai < Provider
     case api
     when :chat then params.merge(reasoning_effort: effort)
     when :responses then params.merge(reasoning: { effort: effort })
-    else params
+    else raise ArgumentError, "Unknown OpenAI API: #{api.inspect}"
     end
   end
 
