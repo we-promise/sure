@@ -118,6 +118,17 @@ class LunchflowAccountProcessorTest < ActiveSupport::TestCase
       "available credit must never be recorded as debt"
   end
 
+  test "still syncs the currency in available credit mode when no card limit is set" do
+    lf_acct, acct = create_linked_credit_card(current_balance: BigDecimal("4983.83"), available_credit: nil)
+    lf_acct.update!(treat_balance_as_available_credit: true, currency: "EUR")
+
+    LunchflowAccount::Processor.new(lf_acct).send(:process_account!)
+
+    acct.reload
+    assert_equal "EUR", acct.currency, "only the balance write is skipped, as in Enable Banking"
+    assert_equal BigDecimal("300"), acct.balance
+  end
+
   private
     def create_linked_credit_card(current_balance:, available_credit: nil)
       lf_acct = @item.lunchflow_accounts.create!(
