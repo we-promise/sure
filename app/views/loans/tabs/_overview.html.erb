@@ -11,7 +11,7 @@
   <% end %>
 
   <%= summary_card title: t(".remaining_principal") do %>
-    <%= format_money account.balance_money %>
+    <%= format_money balance_for_account_display(account) %>
   <% end %>
 
   <%# The rate in force today, not the one the loan was written at. On a

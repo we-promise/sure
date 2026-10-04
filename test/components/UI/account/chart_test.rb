@@ -21,6 +21,22 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     refute component.view_balance_display.start_with?("+")
   end
 
+  test "renders a liability hero balance unchanged by default and negative when opted in" do
+    liability = accounts(:credit_card)
+    user = users(:family_admin)
+    Current.session = sessions(:one)
+
+    render_inline(UI::Account::Chart.new(account: liability))
+    assert_selector "p", exact_text: liability.balance_money.format
+
+    user.update!(preferences: { "negative_liability_balances" => true })
+    render_inline(UI::Account::Chart.new(account: liability))
+    assert_selector "p", exact_text: (liability.balance_money * -1).format
+    assert_equal 1_000, liability.reload.balance
+  ensure
+    Current.reset
+  end
+
   test "negative gains keep plain money formatting" do
     create_holding(cost_basis: 110)
 

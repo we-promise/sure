@@ -95,7 +95,7 @@
                         </div>
 
                         <div class="w-24 shrink-0">
-                          <p class="privacy-sensitive"><%= format_money(account.balance_money, precision: 0) %></p>
+                          <p class="privacy-sensitive"><%= format_money(balance_for_account_display(account), precision: 0) %></p>
                         </div>
                       </div>
                     </div>

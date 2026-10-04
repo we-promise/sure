@@ -292,3 +292,21 @@
     </label>
   <% end %>
 <% end %>
+
+<%= settings_section do %>
+  <%= form_with url: settings_preferences_path, method: :patch,
+        data: { controller: "auto-submit-form" } do |f| %>
+    <label for="user_negative_liability_balances" class="flex cursor-pointer items-center gap-4 justify-between">
+      <div class="text-sm space-y-1">
+        <p class="text-primary font-medium"><%= t(".negative_liability_balances.title") %></p>
+        <p class="text-secondary"><%= t(".negative_liability_balances.description") %></p>
+      </div>
+      <%= render DS::Toggle.new(
+            id: "user_negative_liability_balances",
+            name: "user[negative_liability_balances]",
+            checked: @user.negative_liability_balances?,
+            data: { auto_submit_form_target: "auto" }
+      ) %>
+    </label>
+  <% end %>
+<% end %>

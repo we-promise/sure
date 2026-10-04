@@ -28,6 +28,34 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match categorized.name, response.body
   end
 
+  test "index renders a negative liability row while keeping its group total positive" do
+    liability = accounts(:other_liability)
+
+    get accounts_url
+
+    assert_response :success
+    document = Nokogiri::HTML::Document.parse(response.body)
+    row = document.at_css("turbo-frame##{dom_id(liability)}")
+    assert_not_nil row
+    assert_includes row.text, liability.balance_money.format
+
+    @user.update!(preferences: { "negative_liability_balances" => true })
+    get accounts_url
+
+    assert_response :success
+    document = Nokogiri::HTML::Document.parse(response.body)
+    row = document.at_css("turbo-frame##{dom_id(liability)}")
+    assert_not_nil row
+    assert_includes row.text, (liability.balance_money * -1).format
+
+    group = row.ancestors.find do |element|
+      element.name == "div" && element["class"].to_s.split.include?("bg-container-inset") &&
+        element.at_css("p.ml-auto.privacy-sensitive")
+    end
+    assert_not_nil group
+    assert_equal liability.balance_money.format, group.at_css("p.ml-auto.privacy-sensitive").text
+  end
+
   test "index delegates whole-row account clicks to the account link" do
     get accounts_url
 

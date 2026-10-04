@@ -741,6 +741,10 @@ class User < ApplicationRecord
     preferences&.dig("preview_features_enabled") == true
   end
 
+  def negative_liability_balances?
+    preferences&.dig("negative_liability_balances") == true
+  end
+
   private
     def apply_ui_layout_defaults
       self.ui_layout = (ui_layout.presence || self.class.default_ui_layout)

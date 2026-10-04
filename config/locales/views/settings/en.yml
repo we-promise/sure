@@ -240,6 +240,9 @@ en:
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.
+        negative_liability_balances:
+          title: Display liability balances as negative
+          description: Negates each liability account's displayed balance, including credits or overpayments. Group totals, historical charts, reports, and API values keep their existing signs.
     budget_shares:
       update:
         success: Budget sharing settings updated

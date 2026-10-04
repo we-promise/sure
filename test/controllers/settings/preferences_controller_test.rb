@@ -51,6 +51,35 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_not user.reload.preview_features_enabled?
   end
 
+  test "liability balance sign preference is opt-in and isolated to the signed-in user" do
+    user = users(:family_admin)
+    other_user = users(:family_member)
+    assert_not user.negative_liability_balances?
+    assert_not other_user.negative_liability_balances?
+
+    patch settings_preferences_url, params: { user: { negative_liability_balances: "1" } }
+
+    assert_redirected_to settings_preferences_url
+    assert user.reload.negative_liability_balances?
+    assert_not other_user.reload.negative_liability_balances?
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[negative_liability_balances]'][checked]", count: 1
+  end
+
+  test "disabling liability balance sign preference preserves other preferences" do
+    user = users(:family_admin)
+    user.update!(preferences: { "preview_features_enabled" => true, "negative_liability_balances" => true })
+
+    patch settings_preferences_url, params: { user: { negative_liability_balances: "0" } }
+
+    assert_redirected_to settings_preferences_url
+    assert_not user.reload.negative_liability_balances?
+    assert user.preview_features_enabled?
+  end
+
   test "household budget toggle and sharing card only render once personal_budgets is on" do
     user = users(:family_admin)
     user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))

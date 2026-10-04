@@ -20,7 +20,7 @@
 
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-2">
-            <span class="font-medium privacy-sensitive"><%= end_balance_money.format %></span>
+            <span class="font-medium privacy-sensitive"><%= helpers.balance_for_account_display(account, end_balance_money).format %></span>
             <%= render DS::Tooltip.new(text: t("UI.account.activity_date.balance_tooltip"), placement: "left", size: "sm", as: :span) %>
           </div>
           <%= helpers.icon "chevron-down", class: "group-open:rotate-180" %>

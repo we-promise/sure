@@ -104,13 +104,13 @@ class UI::Account::Chart < ApplicationComponent
   # Formatted main indicator. Gains are signed explicitly (e.g. "+€79.53") since
   # a gain of zero-or-more is otherwise indistinguishable from a balance.
   def view_balance_display
-    signed_format(view_balance_money)
+    signed_format(helpers.balance_for_account_display(account, view_balance_money))
   end
 
   # Formatted family-currency amount for foreign-currency accounts, signed the
   # same way as the main indicator. Nil when no conversion applies.
   def converted_balance_display
-    converted_balance_money&.then { |money| signed_format(money) }
+    converted_balance_money&.then { |money| signed_format(helpers.balance_for_account_display(account, money)) }
   end
 
   # Label displayed above the main indicator, based on account type and chart view.
