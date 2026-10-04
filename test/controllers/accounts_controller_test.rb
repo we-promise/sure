@@ -16,6 +16,70 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "unlinked account editor keeps the existing manual balance form" do
+    get edit_depository_url(@account)
+
+    assert_response :success
+    assert_select "input#account_balance"
+    assert_select "input#account_pin_currency", count: 0
+    assert_select "input#account_use_provider_currency", count: 0
+  end
+
+  test "SimpleFIN account editor exposes supported currencies and pin/reset controls" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account)
+
+    get edit_depository_url(@account)
+
+    assert_response :success
+    assert_select "select#account_currency option[value='USD']"
+    assert_select "input#account_pin_currency[type=checkbox]"
+    assert_select "input#account_use_provider_currency[type=checkbox]"
+  end
+
+  test "unrelated linked account edit does not pin currency" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_unrelated", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account, currency: "USD")
+
+    patch depository_url(@account), params: { account: { name: "Renamed checking", accountable_type: "Depository", currency: "USD", pin_currency: "0", use_provider_currency: "0" } }
+
+    assert_redirected_to account_url(@account)
+    refute @account.reload.locked?(:currency)
+  end
+
+  test "SimpleFIN currency selection pins an equal current value; provider reset unlocks and syncs" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_update", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account, currency: "USD")
+
+    patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "USD", pin_currency: "1", use_provider_currency: "0" } }
+
+    assert_redirected_to account_url(@account)
+    assert @account.reload.locked?(:currency)
+
+    assert_enqueued_with(job: SyncJob) do
+      patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "CAD", pin_currency: "0", use_provider_currency: "1" } }
+    end
+
+    assert_redirected_to account_url(@account)
+    assert_equal "USD", @account.reload.currency
+    refute @account.locked?(:currency)
+  end
+
+  test "SimpleFIN account currency rejects unsupported codes without changing state" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_invalid", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account, currency: "USD")
+
+    patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "ZZZ", pin_currency: "1" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "USD", @account.reload.currency
+    refute @account.locked?(:currency)
+  end
+
   test "show filters account activity to uncategorized transactions" do
     uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
     categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))
