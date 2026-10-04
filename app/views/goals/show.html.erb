@@ -91,7 +91,6 @@
     </div>
   </header>
 
-  <%= render "goals/currency_warning", goal: @goal %>
   <%= render "status_callout", goal: @goal %>
 
   <% @open_pledges.each do |pledge| %>
@@ -178,6 +177,8 @@
       <%= render Goals::FundingAccountsBreakdownComponent.new(goal: @goal) %>
     <% end %>
   <% end %>
+
+  <%= render "goals/currency_warning", goal: @goal %>
 
   <% if @goal.notes.present? %>
     <%= render DS::Card.new do %>

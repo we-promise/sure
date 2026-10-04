@@ -187,7 +187,7 @@ class Balance::ChartSeriesBuilder
           d.date,
           MIN(accounts.currency) FILTER (
             WHERE accounts.currency <> :target_currency
-              AND last_bal.end_balance IS NOT NULL AND (er.rate IS NULL OR er.rate <= 0)
+              AND last_bal.end_balance <> 0 AND (er.rate IS NULL OR er.rate <= 0)
           ) AS missing_currency,
           -- Use flows_factor: already handles asset (+1) vs liability (-1)
           COALESCE(SUM(last_bal.end_balance * last_bal.flows_factor * #{balance_rate_sql} * :sign_multiplier::integer), 0) AS end_balance,

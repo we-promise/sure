@@ -298,6 +298,23 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("goals.currency_warning.title"), response.body
   end
 
+  test "show warns when current backing converts but a historical funding entry cannot" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "EUR reserve", currency: "EUR", balance: 100)
+    @goal.goal_accounts.build(account: eur)
+    @goal.save!
+    ExchangeRate.stubs(:provider).returns(nil)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
+    eur.entries.create!(name: "Reserve deposit", date: 20.days.ago.to_date, amount: -100,
+                        currency: "EUR", entryable: Transaction.new)
+    assert_not @goal.currency_conversion_incomplete?, "current backing has a usable rate"
+
+    get goal_url(@goal)
+
+    assert_response :success
+    assert_select "p", text: I18n.t("goals.currency_warning.body", currency: @goal.currency)
+  end
+
   test "detected foreign spending is converted on its date and releases native units" do
     eur = Account.create!(family: @user.family, accountable: Depository.new,
                           name: "EUR spending", currency: "EUR", balance: 1_000)
