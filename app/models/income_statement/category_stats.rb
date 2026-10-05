@@ -41,7 +41,7 @@ class IncomeStatement::CategoryStats
             c.id as category_id,
             date_trunc(:interval, ae.date) as period,
             #{classification_sql("t")} as classification,
-            COALESCE(SUM(#{converted_amount_sql("t")}), 0) as total
+            SUM(#{converted_amount_sql("t")}) as total
           FROM transactions t
           #{entries_join_sql("t")}
           #{accounts_join_sql}
