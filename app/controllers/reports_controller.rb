@@ -618,7 +618,12 @@ class ReportsController < ApplicationController
         # its own figure carries.
         realized_by_trade = trades.each_with_object({}) do |t, memo|
           gain = t.realized_gain_loss
-          next if gain.nil?
+          if gain.nil?
+            # A sale with no rate between its own two currencies is left out
+            # too, and counted; one with no cost basis never had a figure.
+            unconverted += 1 if t.realized_gain_unconvertible?
+            next
+          end
 
           converted = convert_trade.call(gain.value, gain.value.currency.iso_code, t.entry.date)
           if converted.nil?

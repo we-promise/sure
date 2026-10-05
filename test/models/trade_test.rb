@@ -30,12 +30,23 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(10), sell.realized_gain_loss.value.amount
   end
 
-  # No rate for that date means the gain is unknown, not zero and not the
-  # figure a rate of 1.0 would produce.
-  test "a cross-currency disposal with no rate for its date has no figure" do
+  # No rate for that date: the nearest stored one, as every other conversion
+  # does, not no figure at all.
+  test "a cross-currency disposal with no rate for its date uses the nearest stored rate" do
     sell = cross_currency_disposal(rate: 1.5, rate_date: Date.new(2026, 3, 9))
 
-    assert_nil sell.realized_gain_loss, "a neighbouring day's rate is not this day's"
+    assert_equal BigDecimal(250), sell.realized_gain_loss.value.amount
+    assert_not sell.realized_gain_unconvertible?
+  end
+
+  # No rate on any date means the gain is unknown, not zero and not the figure
+  # a rate of 1.0 would produce, and the caller can tell why.
+  test "a cross-currency disposal with no rate at all has no figure and says why" do
+    sell = cross_currency_disposal(rate: 1.5)
+    ExchangeRate.where(from_currency: "EUR", to_currency: "USD").delete_all
+
+    assert_nil sell.realized_gain_loss
+    assert sell.realized_gain_unconvertible?
   end
 
   # `ExchangeRate` validates presence only -- no positivity at the model, and

@@ -101,6 +101,27 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/\$100,000\.00/, response.body, "nor is it in any total")
   end
 
+  # A sale priced in EUR from a USD position, with no EUR->USD rate on any
+  # date: Trade has no figure for it. The card used to skip it as though it
+  # had no cost basis, so its total was partial without saying so.
+  test "a sale with no rate between its own currencies is counted as left out" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    date = Date.current.beginning_of_month
+    account = @family.accounts.create!(name: "Brokerage USD", balance: 10_000,
+                                       currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
+    ExchangeRate.where(from_currency: "EUR", to_currency: "USD").delete_all
+
+    account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                             amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+    create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR")
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "[data-testid='unconverted-gains-note']", text: /1 gain is not included/
+  end
+
   # The same for an open position: a JPY holding showing a ¥250,000 gain with
   # no JPY->USD rate is not $250,000 of unrealised gain. At parity the gains
   # card and the Total Return card both read $250,010.00, the yen figure plus
