@@ -44,6 +44,15 @@ en:
       sections_aria_label: "Dashboard sections"
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
+      customize:
+        start: "Customize"
+        done: "Done"
+        hide: "Hide %{title}"
+        hidden_title: "Hidden widgets"
+        hidden_description: "Add a widget back to the dashboard."
+        none_hidden: "Every widget is shown. Hide one with its eye button."
+        all_hidden_title: "Every widget is hidden"
+        all_hidden_description: "Customize the dashboard to add widgets back."
       widget_size:
         label: "Adjust size"
         width_label: "Width"

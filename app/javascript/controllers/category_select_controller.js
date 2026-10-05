@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { createCategory } from "utils/category_create";
 
 export default class extends Controller {
   static targets = [
@@ -147,38 +148,21 @@ export default class extends Controller {
     this.clearCreateError();
 
     try {
-      const response = await fetch(this.createUrlValue, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-CSRF-Token": this.csrfToken,
-        },
-        body: JSON.stringify({
-          category: {
-            name,
-            color: this.defaultColorValue,
-          },
-        }),
+      const { category, error } = await createCategory({
+        url: this.createUrlValue,
+        name,
+        color: this.defaultColorValue,
       });
 
-      const category = await response.json();
-
-      if (!response.ok) {
-        this.showCreateError(
-          category.errors?.join(", ") || category.error,
-        );
+      if (!category) {
+        this.showCreateError(error);
         return;
       }
 
-      this.createFormTarget.insertAdjacentHTML(
-        "beforebegin",
-        category.html,
-      );
+      this.createFormTarget.insertAdjacentHTML("beforebegin", category.html);
 
       const newOption = this.optionTargets.find(
-        (option) =>
-        option.dataset.categoryId === String(category.id),
+        (option) => option.dataset.categoryId === String(category.id),
       );
 
       if (newOption) this.selectOption(newOption);
@@ -187,8 +171,6 @@ export default class extends Controller {
       this.filter();
       this.close();
       this.submitForm();
-    } catch {
-      this.showCreateError();
     } finally {
       this.creating = false;
       this.createFormTarget.disabled = false;
@@ -218,11 +200,5 @@ export default class extends Controller {
       message || this.createErrorMessageValue;
 
     this.createErrorTarget.classList.remove("hidden");
-  }
-
-  get csrfToken() {
-    return document
-      .querySelector('meta[name="csrf-token"]')
-      ?.getAttribute("content");
   }
 }

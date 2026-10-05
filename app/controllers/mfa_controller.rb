@@ -10,9 +10,20 @@ class MfaController < ApplicationController
   end
 
   def create
-    if Current.user.verify_otp?(params[:code])
+    # A duplicate submit of the enrollment form lands here again after the
+    # first one already enabled MFA; it (or any stray POST) must not fall
+    # through to disable_mfa! and tear a finished setup down.
+    return redirect_to root_path if Current.user.otp_required?
+
+    case Current.user.verify_otp(params[:code])
+    when :accepted
       @backup_codes = Current.user.enable_mfa!
       render :backup_codes
+    when :replayed
+      # Correct code, but its time step was already claimed by a concurrent
+      # submit. Keep the pending secret so the user can enter the next code
+      # instead of restarting setup.
+      redirect_to new_mfa_path, alert: t(".code_already_used")
     else
       Current.user.disable_mfa!
       redirect_to new_mfa_path, alert: t(".invalid_code")
