@@ -633,6 +633,18 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal({ "JPY" => 30.days.ago.to_date }, family.stale_exchange_rate_dates)
   end
 
+  # A trade can be priced in a currency neither its entry nor its account
+  # uses, and holding cost converts that currency.
+  test "currencies_without_exchange_rate includes currencies only a trade uses" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Brokerage", balance: 1, currency: family.currency, accountable: Investment.new)
+    security = Security.create!(ticker: "SEK#{SecureRandom.hex(2)}", name: "Stockholm Listed")
+    account.entries.create!(name: "Buy", date: Date.current, amount: 100, currency: family.currency,
+                            entryable: Trade.new(security: security, qty: 1, price: 1000, currency: "SEK"))
+
+    assert_equal %w[SEK], family.currencies_without_exchange_rate
+  end
+
   private
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))

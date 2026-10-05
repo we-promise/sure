@@ -747,7 +747,8 @@ class Family < ApplicationRecord
   private
     def currencies_in_use
       @currencies_in_use ||= (
-        accounts.distinct.pluck(:currency) + entries.distinct.pluck(:currency) + holdings.distinct.pluck(:currency)
+        accounts.distinct.pluck(:currency) + entries.distinct.pluck(:currency) +
+          trades.distinct.pluck(:currency) + holdings.distinct.pluck(:currency)
       ).compact.uniq
     end
 

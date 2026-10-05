@@ -306,7 +306,7 @@ class Holding < ApplicationRecord
       total_cost, total_qty, unconverted = trades.pick(
         bind.call("SUM(trades.price * trades.qty * #{rate})"),
         Arel.sql("SUM(trades.qty)"),
-        bind.call("COUNT(*) FILTER (WHERE #{rate} IS NULL)")
+        bind.call("COUNT(*) FILTER (WHERE trades.price <> 0 AND #{rate} IS NULL)")
       )
 
       # Return nil when no trades exist - cost basis is genuinely unknown
@@ -315,7 +315,9 @@ class Holding < ApplicationRecord
 
       # A purchase in a currency with no rate at all has no known cost here.
       # Counting it at 1 priced it wrongly (#3640), and leaving it out would
-      # spread the other purchases' cost over units they did not buy.
+      # spread the other purchases' cost over units they did not buy. A free
+      # one (a grant, a bonus share) costs 0 in any currency, so it does not
+      # count.
       return nil if unconverted.positive?
 
       Money.new(total_cost / total_qty, currency)

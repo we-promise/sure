@@ -78,6 +78,15 @@ class HoldingTest < ActiveSupport::TestCase
 
   # A purchase with no rate at all has no known cost in the account's
   # currency. Counted at 1 it priced 10 CAD shares as USD (#3640).
+  # A free share (a grant, a bonus issue) costs 0 in any currency, so a
+  # missing rate does not make it unknown.
+  test "a free purchase with no rate does not make the average cost unknown" do
+    create_trade(@amzn.security, account: @account, qty: 5, price: 0, date: 1.day.ago.to_date, currency: "CAD")
+    create_trade(@amzn.security, account: @account, qty: 15, price: 200.00, date: Date.current)
+
+    assert_equal Money.new(BigDecimal(3000) / 20, "USD"), @amzn.avg_cost
+  end
+
   test "average cost is unknown when a purchase's currency has no rate" do
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current)

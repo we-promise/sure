@@ -895,6 +895,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dashboard shows no exchange rate notes when every rate is current" do
+    @family.accounts.create!(name: "EUR Savings", balance: 100, currency: "EUR", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: Date.current, rate: 1.1)
+
     get root_path
     assert_response :ok
 
