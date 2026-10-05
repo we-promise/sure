@@ -13,7 +13,7 @@
     whole row took the secondary text below 3:1 in light mode. %>
 <%# The row reads as interactive without dressing up as a button: a hover tint
     and the name underlining, the same cues the transaction list uses. %>
-<div class="flex items-center gap-3 @lg:gap-4 px-4 py-3 transition-colors hover:bg-surface-hover <%= "opacity-70" if series.autopay? %>">
+<div class="flex items-center gap-3 @lg:gap-4 px-4 py-3 transition-colors hover:bg-surface-hover">
   <%# The bulk of the row is the inspect control. Only the trailing verb sits
       outside it, so there are no anchors inside anchors. The link has no
       padding of its own, so its ring is pushed out into the row's: clear of
