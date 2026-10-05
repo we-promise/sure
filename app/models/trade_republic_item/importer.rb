@@ -53,53 +53,116 @@ class TradeRepublicItem::Importer
   private
 
     def upsert_account(data, domain_statuses:)
-      account_info = data["account"] || {}
       unless domain_statuses["account_metadata"] == "success"
         raise Provider::TradeRepublicClient::MalformedResponse,
           "Trade Republic account metadata was not fetched successfully"
       end
 
-      account_id = account_info["brokerage_account_id"].presence
+      # Anti-duplication: the client returns per-envelope `accounts` and still
+      # mirrors the default envelope under the legacy singular keys. Only
+      # synthesise a legacy envelope when `accounts` is absent, otherwise the
+      # default portfolio would be upserted twice per sync.
+      envelopes = data["accounts"].presence || [ legacy_envelope(data, domain_statuses: domain_statuses) ]
+
+      envelopes.each do |envelope|
+        upsert_envelope(envelope, data, domain_statuses)
+      end
+
+      default_envelope = envelopes.find { |envelope| envelope["kind"] == "portfolio" } || envelopes.first
+      upsert_crypto_account(
+        default_envelope["brokerage_account_id"],
+        default_envelope["currency"].presence || trade_republic_item.currency.presence || trade_republic_item.family.currency,
+        domain_statuses
+      )
+    end
+
+    # One securities envelope and its cash pocket. The TR timeline is user-wide,
+    # so each envelope is fed only the events routed to it (see envelope_events)
+    # and the per-envelope statuses decide which slices may be overwritten.
+    def upsert_envelope(envelope, data, domain_statuses)
+      kind = envelope["kind"]
+      account_id = envelope["brokerage_account_id"].presence
       if account_id.blank?
         raise Provider::TradeRepublicClient::MalformedResponse,
           "Trade Republic response did not contain a brokerage account ID"
       end
-      currency = account_info["currency"].presence ||
+
+      currency = envelope["currency"].presence ||
                  trade_republic_item.currency.presence ||
                  trade_republic_item.family.currency
-      portfolio_account = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      events = envelope_events(envelope, data["events"])
+      statuses = {
+        "portfolio" => envelope["positions_status"].presence || domain_statuses["portfolio"],
+        "cash" => envelope["cash_status"].presence || domain_statuses["cash"],
+        "timeline" => domain_statuses["timeline"]
+      }
+      existing = trade_republic_item.trade_republic_accounts.find_by(kind: kind)
 
+      # The PEA keeps its cash pocket inside the securities account (French law
+      # keeps sale proceeds and interest in the wrapper), so it has no separate
+      # cash account; its cash balance rides on the same row.
       upsert_kind(
-        kind: "portfolio",
+        kind: kind,
         external_id: account_id,
-        name: build_account_name(account_id, kind: "portfolio"),
+        name: build_account_name(account_id, kind: kind),
         currency: currency,
-        current_balance: portfolio_balance(data, fallback: portfolio_account&.current_balance),
-        cash_balance: 0,
-        positions: Array(data["positions"]),
-        events: data["events"],
+        current_balance: positions_value(Array(envelope["positions"]), fallback: existing&.current_balance),
+        cash_balance: kind == "pea" ? cash_balance(envelope["cash"]) : 0,
+        positions: Array(envelope["positions"]),
+        events: events,
         instrument_symbols: data["instrument_symbols"],
         unresolved_symbol_isins: data["unresolved_symbol_isins"],
-        warnings: position_warnings(data),
-        domain_statuses: domain_statuses
+        warnings: Array(envelope["position_warnings"]),
+        domain_statuses: statuses
       )
-      # Pass every event into the cash merge, including orderExecution. Filtering
-      # happens after merge so a newly categorized savings-plan event can replace
-      # and remove its older unmapped cash copy.
+
+      return if kind == "pea"
+
+      # Default envelope: cash settles on its own Depository account. Pass every
+      # routed event into the cash merge, including orderExecution, so a newly
+      # categorized savings-plan event can replace its older unmapped cash copy.
       upsert_kind(
         kind: "cash",
         external_id: "cash:#{account_id}",
         name: build_account_name(account_id, kind: "cash"),
         currency: currency,
-        current_balance: cash_balance(data),
-        cash_balance: cash_balance(data),
+        current_balance: cash_balance(envelope["cash"]),
+        cash_balance: cash_balance(envelope["cash"]),
         positions: [],
-        events: Array(data["events"]),
+        events: events,
         instrument_symbols: data["instrument_symbols"],
         warnings: [],
-        domain_statuses: domain_statuses
+        domain_statuses: statuses
       )
-      upsert_crypto_account(account_id, currency, domain_statuses)
+    end
+
+    # Events carry the envelope they settled on. Unroutable events (no
+    # envelope_kind) stay on the default portfolio so a single-envelope login
+    # keeps storing the whole timeline under the same account as before.
+    def envelope_events(envelope, events)
+      kind = envelope["kind"]
+      Array(events).select do |event|
+        next false unless event.is_a?(Hash)
+
+        routed = event["envelope_kind"].presence || event[:envelope_kind].presence
+        routed.present? ? routed == kind : kind == "portfolio"
+      end
+    end
+
+    # Rebuilds the legacy singular payload as one portfolio envelope so older
+    # provider responses and already-stored shapes flow through the same
+    # per-envelope path.
+    def legacy_envelope(data, domain_statuses:)
+      {
+        "kind" => "portfolio",
+        "brokerage_account_id" => data.dig("account", "brokerage_account_id"),
+        "currency" => data.dig("account", "currency"),
+        "positions" => Array(data["positions"]),
+        "position_warnings" => position_warnings(data),
+        "positions_status" => domain_statuses["portfolio"],
+        "cash_status" => domain_statuses["cash"],
+        "cash" => data["cash"]
+      }
     end
 
     # Crypto gets its own account because Sure has a Crypto account type.
@@ -141,22 +204,21 @@ class TradeRepublicItem::Importer
     def upsert_kind(kind:, external_id:, name:, currency:, current_balance:, cash_balance:, positions:, events:, instrument_symbols:, warnings:, domain_statuses:, unresolved_symbol_isins: [])
       tr_account = trade_republic_item.trade_republic_accounts.find_by(trade_republic_account_id: external_id) ||
                     trade_republic_item.trade_republic_accounts.find_or_initialize_by(kind: kind)
-      portfolio_status = domain_statuses["portfolio"]
-      cash_status = domain_statuses["cash"]
+      securities_kind = TradeRepublicAccount::SECURITIES_KINDS.include?(kind)
+      payload_status = domain_statuses[securities_kind ? "portfolio" : "cash"]
       timeline_status = domain_statuses["timeline"]
-      domain_status = kind == "portfolio" ? portfolio_status : cash_status
       attrs = {
         trade_republic_account_id: external_id,
         name: name,
         currency: currency
       }
 
-      if domain_status != "failed"
-        if kind == "portfolio"
-          attrs[:current_balance] = portfolio_status == "success" ? current_balance : tr_account.current_balance
+      if payload_status != "failed"
+        if securities_kind
+          attrs[:current_balance] = payload_status == "success" ? current_balance : tr_account.current_balance
           attrs[:cash_balance] = cash_balance
           attrs[:raw_positions_payload] = merge_position_prices(tr_account.raw_positions_payload, positions)
-          attrs[:holdings_snapshot_complete] = portfolio_status == "success" && Array(warnings).empty?
+          attrs[:holdings_snapshot_complete] = payload_status == "success" && Array(warnings).empty?
           attrs[:last_positions_sync] = Time.current
         else
           attrs[:current_balance] = current_balance
@@ -170,7 +232,7 @@ class TradeRepublicItem::Importer
         stamp_symbol_lookup_attempts!(merged, unresolved_symbol_isins)
         # Drop order executions before the size cap so they never crowd out
         # cash events on the cash account.
-        merged = merged.reject { |event| event_category(event) == "orderExecution" } if kind == "cash"
+        merged = merged.reject { |event| event_category(event) == "orderExecution" } if TradeRepublicAccount::CASH_KINDS.include?(kind)
         attrs[:raw_timeline_payload] = merged.last(MAX_TIMELINE_EVENTS)
       end
 
@@ -213,21 +275,25 @@ class TradeRepublicItem::Importer
       # A previous implementation could persist the newest cursor while
       # dropping the actual event payload. Force one full timeline fetch in
       # that state so historical data can be recovered instead of remaining
-      # permanently invisible.
-      portfolio_accounts = trade_republic_item.trade_republic_accounts.select(&:portfolio?)
-      return if portfolio_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
+      # permanently invisible. A newly seen PEA envelope is blank too, and its
+      # history sits behind the same user-wide timeline cursor.
+      securities_accounts = trade_republic_item.trade_republic_accounts.select do |account|
+        %w[portfolio pea].include?(account.kind)
+      end
+      return if securities_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
 
       trade_republic_item.newest_event_id
     end
 
     # Incomplete trade-detail events and complete trades still missing a share
     # price (stored before execution price/fees were parsed). Oldest first so
-    # repeated syncs progressively drain historical starvation.
+    # repeated syncs progressively drain historical starvation. Trades routed
+    # to a PEA envelope are stored on the pea account, so both are scanned.
     def events_needing_detail_enrichment
-      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
-      return [] unless portfolio
+      events = securities_timeline_events
+      return [] if events.empty?
 
-      Array(portfolio.raw_timeline_payload)
+      events
         .select do |event|
           Provider::TradeRepublicClient.incomplete_trade_detail_event?(event) ||
             Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(event)
@@ -240,10 +306,7 @@ class TradeRepublicItem::Importer
     # lack an exchange ticker. Incremental syncs stop at newest_event_id, so
     # these must be passed explicitly for instrument lookup.
     def isins_needing_symbol_lookup
-      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
-      return [] unless portfolio
-
-      Array(portfolio.raw_timeline_payload).filter_map do |event|
+      securities_timeline_events.filter_map do |event|
         next unless event.is_a?(Hash)
         next unless Provider::TradeRepublicClient.requires_trade_detail?(event)
         next unless Provider::TradeRepublicTimelineEvent.importable?(event)
@@ -266,12 +329,28 @@ class TradeRepublicItem::Importer
     end
 
     # Exchange tickers stored by earlier syncs; the client skips the
-    # instrument subscription for these positions.
+    # instrument subscription for these positions. PEA positions are stored on
+    # their own account, so both envelopes must contribute or their tickers are
+    # re-resolved on every sync.
     def stored_instrument_symbols
-      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
-      return {} unless portfolio
+      positions = trade_republic_accounts_for_securities.flat_map do |account|
+        Array(account.raw_positions_payload)
+      end
+      return {} if positions.empty?
 
-      Provider::TradeRepublicClient.instrument_symbols_from_positions(portfolio.raw_positions_payload)
+      Provider::TradeRepublicClient.instrument_symbols_from_positions(positions)
+    end
+
+    # Portfolio and PEA store their own positions and routed trades; the
+    # default portfolio and the PEA wrapper are separate securities envelopes.
+    def trade_republic_accounts_for_securities
+      trade_republic_item.trade_republic_accounts.where(kind: %w[portfolio pea])
+    end
+
+    def securities_timeline_events
+      trade_republic_accounts_for_securities.flat_map do |account|
+        Array(account.raw_timeline_payload)
+      end
     end
 
     def event_timestamp(event)
@@ -403,16 +482,11 @@ class TradeRepublicItem::Importer
       event[:category].to_s
     end
 
-    # Exact decimal math: cash + Σ(quantity × price). Positions lacking a
-    # validated price remain visible in the raw payload but contribute zero
-    # until Trade Republic provides a current quote.
-    def cash_balance(data)
-      parse_decimal(data.dig("cash", "amount")) ||
-        parse_decimal(data.dig("cash", "value")) || BigDecimal("0")
-    end
-
-    def portfolio_balance(data, fallback: nil)
-      positions_value(Array(data["positions"]), fallback: fallback)
+    # Exact decimal math. Cash comes from the envelope's cash pocket, not the
+    # singular top-level payload.
+    def cash_balance(cash)
+      parse_decimal(cash&.dig("amount")) ||
+        parse_decimal(cash&.dig("value")) || BigDecimal("0")
     end
 
     def positions_value(positions, fallback: nil)
@@ -433,7 +507,7 @@ class TradeRepublicItem::Importer
 
     def build_account_name(account_id, kind:)
       base = I18n.t("trade_republic_items.defaults.name")
-      suffix = { "cash" => "Cash", "crypto" => "Crypto" }.fetch(kind, "Portfolio")
+      suffix = { "cash" => "Cash", "crypto" => "Crypto", "pea" => "PEA" }.fetch(kind, "Portfolio")
       account_id.present? ? "#{base} #{suffix} (#{account_id})" : "#{base} #{suffix}"
     end
 
