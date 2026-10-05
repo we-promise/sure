@@ -86,33 +86,52 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     # Trade Republic settles trades directly against the cash balance. The
-    # importer keeps order executions on the portfolio payload only, so the
-    # cash account reads them from there to book the settlement. Portfolio
-    # copies come first so they win the dedupe: a cash snapshot retained from
-    # a failed timeline update can still hold an order execution whose
-    # portfolio copy has since been deleted.
+    # importer keeps order executions on the securities payload only, so the
+    # cash account reads them from its envelope's securities sibling to book
+    # the settlement. Sibling copies come first so they win the dedupe: a cash
+    # snapshot retained from a failed timeline update can still hold an order
+    # execution whose securities copy has since been deleted.
+    # The timeline is user-wide, so every account only books events of its own
+    # envelope (`envelope_kind`): portfolio stores the full timeline, pea its
+    # PEA subset, and the cash accounts their envelope's movements. Scoping
+    # here keeps a PEA trade or cash movement off the DEFAULT CTO account.
     # The Crypto account stores no timeline of its own: it takes the crypto
-    # events from the portfolio's.
+    # events from the DEFAULT portfolio's.
     def timeline_events
       @timeline_events ||= begin
         events = if @trade_republic_account.crypto?
-          portfolio_timeline_events.select { |event| event.is_a?(Hash) && crypto_event?(event.with_indifferent_access) }
+          envelope_events(securities_sibling_events, "portfolio").select { |event| event.is_a?(Hash) && crypto_event?(event.with_indifferent_access) }
         else
-          Array(@trade_republic_account.raw_timeline_payload)
+          envelope_events(Array(@trade_republic_account.raw_timeline_payload), @trade_republic_account.envelope_kind)
         end
-        events = portfolio_order_execution_events + events if @trade_republic_account.cash?
+        events = envelope_order_execution_events + events if @trade_republic_account.cash_like?
         events.uniq { |event| event.is_a?(Hash) ? (event["id"] || event[:id]).presence || event : event }
       end
     end
 
-    def portfolio_order_execution_events
-      portfolio_timeline_events.select do |event|
+    # Events routed to one envelope by the importer. Events stored before
+    # envelope routing carry no marker and belong to the DEFAULT envelope, so
+    # existing DEFAULT data keeps importing unchanged.
+    def envelope_events(events, envelope)
+      Array(events).select do |event|
+        next false unless event.is_a?(Hash)
+
+        event_envelope = (event["envelope_kind"] || event[:envelope_kind]).presence || "portfolio"
+        event_envelope == envelope
+      end
+    end
+
+    # A cash account stores no order executions; it takes its envelope's from
+    # the securities sibling (portfolio for CTO, pea for the PEA) to book the
+    # settlement and link the trade.
+    def envelope_order_execution_events
+      envelope_events(securities_sibling_events, @trade_republic_account.envelope_kind).select do |event|
         event.is_a?(Hash) && event_category(event.with_indifferent_access) == CATEGORY_ORDER_EXECUTION
       end
     end
 
-    def portfolio_timeline_events
-      Array(@trade_republic_account.sibling("portfolio")&.raw_timeline_payload)
+    def securities_sibling_events
+      Array(@trade_republic_account.sibling(@trade_republic_account.securities_sibling_kind)&.raw_timeline_payload)
     end
 
     # Matches the positions the Crypto account holds: an XF000 pseudo-ISIN,
@@ -162,7 +181,10 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       category = event[:category].to_s
       return category == CATEGORY_ORDER_EXECUTION if @trade_republic_account.crypto?
-      return category == CATEGORY_ORDER_EXECUTION if linked_cash_account_present? && @trade_republic_account.portfolio?
+      # With a linked cash sibling the securities account only books trades;
+      # the cash sibling books every movement, including the settlement. This
+      # applies to the PEA exactly like the DEFAULT CTO.
+      return category == CATEGORY_ORDER_EXECUTION if linked_cash_account_present? && @trade_republic_account.holds_securities?
 
       true
     end
@@ -189,7 +211,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       case event_category(event)
       when CATEGORY_ORDER_EXECUTION
         return nil if duplicate_savings_plan_invoice?(event, detail, date)
-        return import_order_settlement(event, detail, external_id, date) ? :transaction : nil if @trade_republic_account.cash?
+        return import_order_settlement(event, detail, external_id, date) ? :transaction : nil if @trade_republic_account.cash_like?
 
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       when CATEGORY_DEPOSIT
@@ -414,7 +436,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         notes: event[:subtitle].presence,
         source: "trade_republic",
         category_id: category_for(event, label)&.id,
-        kind: kind || (transfer_event?(event) && !@trade_republic_account.cash? ? "funds_movement" : nil),
+        kind: kind || (transfer_event?(event) && !@trade_republic_account.cash_like? ? "funds_movement" : nil),
         investment_activity_label: activity_label,
         extra: {
           trade_republic: {
@@ -511,7 +533,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     # so they carry none either; a Contribution label would make the adapter
     # book them as investment_contribution.
     def activity_label_for(label_key)
-      return nil if @trade_republic_account.cash? && CASH_UNLABELED_KEYS.include?(label_key)
+      return nil if @trade_republic_account.cash_like? && CASH_UNLABELED_KEYS.include?(label_key)
 
       ACTIVITY_LABELS_BY_KEY[label_key]
     end
@@ -554,7 +576,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     # the kind earlier syncs stored.
     def legacy_cash_kinds
       @legacy_cash_kinds ||=
-        if @trade_republic_account.cash?
+        if @trade_republic_account.cash_like?
           Transaction.where(kind: %w[investment_contribution funds_movement])
             .joins(:entry)
             .where(entries: { account_id: account.id, source: "trade_republic" })
@@ -610,9 +632,13 @@ class TradeRepublicAccount::ActivitiesProcessor
       end
     end
 
+    # A securities account whose envelope's cash sibling is linked must not
+    # keep the cash movements it imported before the split: they now belong to
+    # the cash account. Crypto books trades only, never cash movements, so it
+    # is excluded.
     def reconcile_split_portfolio_transactions!
-      return unless @trade_republic_account.portfolio? && linked_cash_account_present?
-      cash_account = @trade_republic_account.trade_republic_item.trade_republic_accounts.find_by(kind: "cash")
+      return unless (@trade_republic_account.portfolio? || @trade_republic_account.pea?) && linked_cash_account_present?
+      cash_account = @trade_republic_account.trade_republic_item.trade_republic_accounts.find_by(kind: @trade_republic_account.cash_sibling_kind)
       return unless cash_account
 
       cash_event_ids = Array(cash_account.raw_timeline_payload).filter_map do |event|
@@ -630,7 +656,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       DebugLogEntry.capture(
         category: "sync",
         level: "info",
-        message: "Removed #{removed_count} legacy cash transaction(s) from split Trade Republic portfolio",
+        message: "Removed #{removed_count} legacy cash transaction(s) from split Trade Republic securities account",
         source: "trade_republic",
         family: @trade_republic_account.trade_republic_item.family,
         provider_key: "trade_republic",
@@ -643,7 +669,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     # linked, remove those leftover cash entries only after the portfolio
     # replacement trade exists, and unless the user edited or split them.
     def reconcile_stale_saveback_cash_transactions!
-      return unless @trade_republic_account.cash?
+      return unless @trade_republic_account.cash_like?
       return if linked_securities_accounts.empty?
 
       saveback_event_ids = Array(@trade_republic_account.raw_timeline_payload).filter_map do |event|
@@ -728,10 +754,16 @@ class TradeRepublicAccount::ActivitiesProcessor
       )
     end
 
-    # The Portfolio and Crypto accounts whose trades the Cash account settles.
+    # The securities accounts whose envelope this cash account settles: the
+    # envelope's securities sibling, plus Crypto, which only the DEFAULT
+    # envelope's cash account settles.
     def linked_securities_accounts
-      @linked_securities_accounts ||= %w[portfolio crypto].filter_map do |kind|
-        @trade_republic_account.sibling(kind)&.usable_account
+      @linked_securities_accounts ||= begin
+        kinds = [ @trade_republic_account.securities_sibling_kind ]
+        kinds << "crypto" if @trade_republic_account.envelope_kind == "portfolio"
+        kinds.uniq.filter_map do |kind|
+          @trade_republic_account.sibling(kind)&.usable_account
+        end
       end
     end
 
@@ -747,7 +779,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     # run removed stale trades: a counterpart without both would put cash on
     # the portfolio again.
     def reconcile_settlement_counterparts!
-      return unless @trade_republic_account.cash?
+      return unless @trade_republic_account.cash_like?
 
       settlement_ids = account.entries
         .where(source: "trade_republic", entryable_type: "Transaction")
@@ -928,7 +960,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     def linked_cash_account_present?
       @trade_republic_account.trade_republic_item.trade_republic_accounts
-        .where(kind: "cash")
+        .where(kind: @trade_republic_account.cash_sibling_kind)
         .joins(:account_provider)
         .exists?
     end
