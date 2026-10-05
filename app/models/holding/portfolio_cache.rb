@@ -71,10 +71,15 @@ class Holding::PortfolioCache
   # How many shares one share held at the close of `from` has become by the
   # close of `to`: the product of the ratios of the splits in between. 1 when
   # there are none, so a caller can multiply unconditionally.
+  #
+  # Reads every split up to today, not only those within the account's
+  # history: a provider snapshot can be older than the account's first entry
+  # (an account with no entries starts yesterday), and a split between the
+  # snapshot and that start still changed the count it reported.
   def split_factor_between(security_id, from, to)
     return Rational(1) if from.nil? || to.nil? || from >= to
 
-    splits.reduce(Rational(1)) do |factor, split|
+    splits_through_today.reduce(Rational(1)) do |factor, split|
       next factor unless split.security_id == security_id
       next factor unless split.ex_date > from && split.ex_date <= to
 
@@ -91,6 +96,14 @@ class Holding::PortfolioCache
     def splits
       @splits ||= Security::Split
         .where(security_id: @security_cache.keys, ex_date: account.start_date..Date.current)
+        .order(:ex_date)
+        .to_a
+    end
+
+    # Every split up to today, however early, for carrying a snapshot forward.
+    def splits_through_today
+      @splits_through_today ||= Security::Split
+        .where(security_id: @security_cache.keys, ex_date: ..Date.current)
         .order(:ex_date)
         .to_a
     end

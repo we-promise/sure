@@ -440,6 +440,34 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_equal 10, holdings[2.days.ago.to_date].qty, "the day the provider actually reported"
   end
 
+  # An account with no entries starts yesterday, so its own history has no
+  # splits before then. A provider snapshot from ten days ago, before a split
+  # five days ago, still has to be brought through that split: the provider's
+  # 10 shares are 20 today.
+  test "a provider snapshot older than the account's history is still brought through a split" do
+    security = Security.create!(ticker: "PRE", name: "Pre-start Split")
+    Security::Price.create!(security: security, date: 1.day.ago.to_date, price: 50)
+    Security::Price.create!(security: security, date: Date.current, price: 50)
+
+    coinstats_item = @account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+    @account.holdings.create!(
+      security: security, date: 10.days.ago.to_date, qty: 10, price: 100, amount: 1000,
+      currency: "USD", account_provider: account_provider
+    )
+    add_split(security, ex_date: 5.days.ago.to_date, numerator: 2, denominator: 1)
+    assert_equal 1.day.ago.to_date, @account.start_date, "the split is before the account's history"
+
+    holdings = Holding::ReverseCalculator
+      .new(@account, portfolio_snapshot: Holding::PortfolioSnapshot.new(@account))
+      .calculate
+      .select { |h| h.security_id == security.id }
+      .index_by(&:date)
+
+    assert_equal 20, holdings[Date.current].qty
+  end
+
   test "walking back past a 1-for-3 reverse split of one share gives exactly three" do
     security = split_security(before: 10, after: 30)
     create_trade(security, qty: 3, date: 4.days.ago.to_date, price: 10, account: @account)
