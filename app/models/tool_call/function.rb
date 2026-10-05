@@ -2,6 +2,8 @@ class ToolCall::Function < ToolCall
   validates :function_name, :function_result, presence: true
   validates :function_arguments, presence: true, allow_blank: true
 
+  attr_accessor :extra_content
+
   class << self
     # Translates an "LLM Concept" provider's FunctionRequest into a ToolCall::Function
     def from_function_request(function_request, result)
@@ -11,7 +13,9 @@ class ToolCall::Function < ToolCall
         function_name: function_request.function_name,
         function_arguments: function_request.function_args,
         function_result: result
-      )
+      ).tap do |call|
+        call.extra_content = function_request.extra_content if function_request.respond_to?(:extra_content)
+      end
     end
 
     # Serializes tool-call arguments to the JSON-encoded string OpenAI requires.
@@ -29,7 +33,8 @@ class ToolCall::Function < ToolCall
       call_id: provider_call_id,
       name: function_name,
       arguments: function_arguments,
-      output: function_result
+      output: function_result,
+      extra_content: extra_content
     }
   end
 
@@ -38,7 +43,7 @@ class ToolCall::Function < ToolCall
     # OpenAI-compatible endpoints reject an object payload with a 400.
     arguments = self.class.serialize_arguments(function_arguments)
 
-    {
+    call = {
       id: provider_call_id,
       type: "function",
       function: {
@@ -46,5 +51,7 @@ class ToolCall::Function < ToolCall
         arguments: arguments
       }
     }
+    call[:extra_content] = extra_content if extra_content.present?
+    call
   end
 end

@@ -53,4 +53,34 @@ class ToolCall::FunctionTest < ActiveSupport::TestCase
 
     assert_equal({ "currency" => "USD" }, tool_call.to_result[:arguments])
   end
+
+  test "from_function_request preserves extra_content and includes it in to_result and to_tool_call" do
+    extra = { "google" => { "thought_signature" => "sig_123" } }
+    request = Provider::LlmConcept::ChatFunctionRequest.new(
+      id: "resp_1",
+      call_id: "call_1",
+      function_name: "get_net_worth",
+      function_args: '{"currency":"USD"}',
+      extra_content: extra
+    )
+
+    tool_call = ToolCall::Function.from_function_request(request, { "amount" => 10000 })
+
+    assert_equal extra, tool_call.extra_content
+    assert_equal extra, tool_call.to_result[:extra_content]
+    assert_equal extra, tool_call.to_tool_call[:extra_content]
+  end
+
+  test "to_tool_call omits extra_content when not set" do
+    tool_call = ToolCall::Function.new(
+      provider_id: "resp_1",
+      provider_call_id: "call_1",
+      function_name: "get_net_worth",
+      function_arguments: '{"currency":"USD"}',
+      function_result: { "amount" => 10000 }
+    )
+
+    assert_nil tool_call.extra_content
+    assert_not_includes tool_call.to_tool_call.keys, :extra_content
+  end
 end
