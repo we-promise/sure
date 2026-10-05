@@ -30,16 +30,8 @@ class EnableBankingEntry::Processor
   #   transaction_amount: { amount, currency },
   #   creditor_name, debtor_name, remittance_information, ...
   # }
-  #
-  # suffix: set by the batch processor for an id-less row that shares its
-  # content hash with another row of the same response. Some ASPSPs send none
-  # of the fields below but date, amount, currency and direction, so two
-  # transfers of the same amount on the same day are one hash, and the second
-  # silently updated the first. A row without a suffix hashes exactly as
-  # before, so rows already imported keep their ids; a row carrying a provider
-  # id never needs one.
-  def self.compute_external_id(raw_transaction_data = nil, suffix: nil, **row_keywords)
-    data = (raw_transaction_data || row_keywords).with_indifferent_access
+  def self.compute_external_id(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
     id = data[:transaction_id].presence || data[:entry_reference].presence
     return "enable_banking_#{id}" if id
 
@@ -59,25 +51,7 @@ class EnableBankingEntry::Processor
     content = [ date, amount, currency, direction, creditor, debtor, remittance_key ].map(&:to_s).join("\x1F")
     return nil if content.gsub("\x1F", "").blank?
 
-    id = "enable_banking_content_#{Digest::MD5.hexdigest(content)}"
-    suffix.present? ? "#{id}_#{suffix}" : id
-  end
-
-  # A digest of the whole row, every field, keys sorted: what tells apart two
-  # rows that share the hashed fields above. Recorded on the imported
-  # transaction so a later batch can tell which row an entry was made from.
-  def self.content_fingerprint(raw_transaction_data)
-    Digest::MD5.hexdigest(JSON.generate(deep_sort(raw_transaction_data)))
-  rescue StandardError
-    Digest::MD5.hexdigest(raw_transaction_data.to_s)
-  end
-
-  def self.deep_sort(value)
-    case value
-    when Hash  then value.map { |k, v| [ k.to_s, deep_sort(v) ] }.sort.to_h
-    when Array then value.map { |v| deep_sort(v) }
-    else value
-    end
+    "enable_banking_content_#{Digest::MD5.hexdigest(content)}"
   end
 
   # known_merchant_names: optional pre-fetched Family#known_merchant_names, so a
@@ -85,25 +59,17 @@ class EnableBankingEntry::Processor
   # EnableBankingAccount::Transactions::Processor) can compute it once instead of
   # once per row -- same pattern as the shared import_adapter. Falls back to
   # fetching it lazily per-instance when not provided (e.g. in isolation/tests).
-  #
-  # id_suffix: see compute_external_id; the batch processor works it out over
-  # the whole response and passes each row its own.
-  # content_fingerprint: recorded in extra for an id-less row (see
-  # content_fingerprint above), so the row an entry was made from can be told
-  # later; nil for a row that carries a provider id.
-  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil, id_suffix: nil, content_fingerprint: nil)
+  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil)
     @enable_banking_transaction = enable_banking_transaction
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
     @known_merchant_names = known_merchant_names
-    @id_suffix = id_suffix
-    @content_fingerprint = content_fingerprint
   end
 
   def process
     # Cache a safe diagnostic id upfront — used in all logging paths so rescue
     # blocks never call the potentially-raising private external_id method.
-    safe_id = self.class.compute_external_id(@enable_banking_transaction, suffix: @id_suffix) || "unknown"
+    safe_id = self.class.compute_external_id(@enable_banking_transaction) || "unknown"
 
     unless account.present?
       Rails.logger.warn "EnableBankingEntry::Processor - No linked account for enable_banking_account #{enable_banking_account.id}, skipping transaction #{safe_id}"
@@ -152,7 +118,7 @@ class EnableBankingEntry::Processor
     end
 
     def external_id
-      id = self.class.compute_external_id(data, suffix: @id_suffix)
+      id = self.class.compute_external_id(data)
       raise ArgumentError, "Enable Banking transaction missing required identifier (transaction_id, entry_reference, or identifiable content)" unless id
       id
     end
@@ -229,7 +195,6 @@ class EnableBankingEntry::Processor
 
       eb[:merchant_category_code] = data[:merchant_category_code] if data[:merchant_category_code].present?
       eb[:pending] = true if data[:_pending] == true
-      eb[:content_fingerprint] = @content_fingerprint if @content_fingerprint.present?
 
       eb.compact!
       eb.empty? ? nil : { enable_banking: eb }
@@ -378,7 +343,7 @@ class EnableBankingEntry::Processor
     end
 
     def log_invalid_currency(currency_value)
-      safe_id = self.class.compute_external_id(data, suffix: @id_suffix) || "unknown"
+      safe_id = self.class.compute_external_id(data) || "unknown"
       Rails.logger.warn("Invalid currency code '#{currency_value}' in Enable Banking transaction #{safe_id}, falling back to account currency")
     end
 
