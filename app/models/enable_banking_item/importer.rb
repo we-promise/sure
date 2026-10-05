@@ -454,6 +454,7 @@ class EnableBankingItem::Importer
     end
 
     def fetch_and_store_transactions(enable_banking_account)
+      @truncated_statuses = Set.new
       start_date = determine_sync_start_date(enable_banking_account)
       include_pending = include_pending?
 
@@ -579,14 +580,7 @@ class EnableBankingItem::Importer
           end
         end
 
-        existing_ids = existing_transactions.map { |tx|
-          EnableBankingEntry::Processor.compute_external_id(tx)
-        }.compact.to_set
-
-        new_transactions = all_transactions.select do |tx|
-          ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
-          ext_id.present? && !existing_ids.include?(ext_id)
-        end
+        new_transactions = select_new_transactions(all_transactions, existing_transactions, truncated_statuses: @truncated_statuses)
 
         if new_transactions.any? || removed_pending
           enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
@@ -615,12 +609,21 @@ class EnableBankingItem::Importer
     # the sole dedup criterion. Including it in the composite key preserves
     # legitimately distinct transactions with identical content but different
     # transaction_ids (e.g. two laundromat payments on the same day). (Issue #954)
+    #
+    # A row with neither transaction_id nor entry_reference is left alone. The
+    # duplicates this guards against carry different entry_references; two
+    # bare rows with the same content are, as far as the response can say, two
+    # transactions -- an ASPSP that sends only date, amount, currency and
+    # direction reports two same-day transfers of the same amount exactly that
+    # way, and collapsing them here lost one.
     def deduplicate_api_transactions(transactions)
       seen = {}
       duplicates_removed = 0
 
       result = transactions.select do |tx|
         tx = tx.with_indifferent_access
+        next true if bare_transaction?(tx)
+
         key = build_transaction_content_key(tx)
 
         if seen[key]
@@ -670,6 +673,87 @@ class EnableBankingItem::Importer
       direction = tx[:credit_debit_indicator]
 
       [ date, amount, currency, creditor, debtor, remittance_key, tid, direction ].map(&:to_s).join("\x1F")
+    end
+
+    def bare_transaction?(tx)
+      tx[:transaction_id].blank? && tx[:entry_reference].blank?
+    end
+
+    # The fetched rows not yet in the stored payload. A row with a provider id
+    # is new when its id is not stored, as before. Id-less rows are compared
+    # per content hash, matching full contents against the stored ones:
+    #
+    # - a complete response covers whole dates, and the hash includes the date,
+    #   so a group is new by however many rows it grew. Among the fetched rows,
+    #   those whose full content is not stored yet are the ones taken; a row
+    #   whose unhashed fields merely changed has not grown the group and is
+    #   not stored twice.
+    # - a truncated response may leave stored rows out, so the group's size
+    #   says nothing. Every fetched row whose full content is not stored is
+    #   taken: at worst an edited row is stored twice, a visible duplicate,
+    #   where counting would silently lose a new one.
+    #
+    # Booked and pending rows come from separate fetches, either of which can
+    # be cut short, so the two are compared apart, each by its own fetch's
+    # completeness.
+    def select_new_transactions(fetched, stored, truncated_statuses: Set.new)
+      stored_ids = Set.new
+      stored_groups = Hash.new { |h, k| h[k] = [] }
+      stored.each do |tx|
+        id = EnableBankingEntry::Processor.compute_external_id(tx)
+        next if id.blank?
+
+        if id.start_with?("enable_banking_content_")
+          stored_groups[[ id, row_status(tx) ]] << EnableBankingEntry::Processor.content_fingerprint(comparable_row(tx))
+        else
+          stored_ids << id
+        end
+      end
+
+      fetched_groups = Hash.new { |h, k| h[k] = [] }
+      selected = []
+      fetched.each do |tx|
+        id = EnableBankingEntry::Processor.compute_external_id(tx)
+        next if id.blank?
+
+        if id.start_with?("enable_banking_content_")
+          fetched_groups[[ id, row_status(tx) ]] << tx
+        elsif !stored_ids.include?(id)
+          selected << tx
+        end
+      end
+
+      fetched_groups.each do |(id, status), rows|
+        stored_fingerprints = stored_groups[[ id, status ]]
+        unmatched = stored_fingerprints.tally
+        fresh = rows.reject do |tx|
+          fingerprint = EnableBankingEntry::Processor.content_fingerprint(comparable_row(tx))
+          next false unless unmatched[fingerprint].to_i.positive?
+
+          unmatched[fingerprint] -= 1
+          true
+        end
+
+        if truncated_statuses.include?(status)
+          selected.concat(fresh)
+        else
+          missing = rows.size - stored_fingerprints.size
+          selected.concat((fresh + rows).uniq(&:object_id).first(missing)) if missing.positive?
+        end
+      end
+
+      selected
+    end
+
+    def row_status(tx)
+      tx = tx.with_indifferent_access
+      tx[:_pending] || tx.dig(:extra, :enable_banking, :pending) ? "PDNG" : "BOOK"
+    end
+
+    # A stored row and a fetched one are the same row whatever the pending tag
+    # or the key style says.
+    def comparable_row(tx)
+      tx.to_h.deep_stringify_keys.except("_pending")
     end
 
     class PaginationTruncatedError < StandardError; end
@@ -726,6 +810,7 @@ class EnableBankingItem::Importer
             transactions_kept: all_transactions.count,
             error: e
           )
+          (@truncated_statuses ||= Set.new) << transaction_status
           break
         end
 
@@ -748,6 +833,7 @@ class EnableBankingItem::Importer
       # Log as warning and return collected partial data instead of failing entirely.
       # This ensures accounts with huge history don't lose all synced data.
       Rails.logger.warn(e.message)
+      (@truncated_statuses ||= Set.new) << transaction_status
       all_transactions
     end
 
