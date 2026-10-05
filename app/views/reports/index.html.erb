@@ -128,6 +128,8 @@
 <% end %>
 
 <div class="w-full space-y-6 lg:pb-6">
+  <%= render "shared/missing_exchange_rates", family: Current.family %>
+
   <% if Current.family.transactions.any? %>
     <%# Summary Dashboard - Always visible, not collapsible %>
     <section>

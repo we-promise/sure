@@ -1736,6 +1736,16 @@ end
     assert_no_match(/ai_status/, response.location)
   end
 
+  test "index says which currencies are left out of its totals" do
+    family = @user.family
+    family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+
+    get transactions_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", text: /no exchange rate from KRW to USD/
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }

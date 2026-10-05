@@ -599,6 +599,17 @@ class Family < ApplicationRecord
     (requires_exchange_rates_data_provider? && ExchangeRate.provider.nil?)
   end
 
+  # Currencies the family's accounts, entries or holdings use that have no
+  # exchange rate into the family currency on any date. Amounts in them are
+  # left out of every converted total rather than counted at 1 (#3640), and
+  # the pages that show those totals say so.
+  def currencies_without_exchange_rate
+    @currencies_without_exchange_rate ||= ExchangeRate.currencies_without_rate(
+      accounts.distinct.pluck(:currency) + entries.distinct.pluck(:currency) + holdings.distinct.pluck(:currency),
+      to: currency
+    )
+  end
+
   # Returns securities with plan restrictions for a specific provider
   # @param provider [String] The provider name (e.g., "TwelveData")
   # @return [Array<Hash>] Array of hashes with ticker, name, required_plan, provider

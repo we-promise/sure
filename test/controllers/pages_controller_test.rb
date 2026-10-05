@@ -885,6 +885,22 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "dashboard says which currencies are left out of its totals" do
+    @family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", text: /no exchange rate from KRW to USD/
+  end
+
+  test "dashboard shows no missing-rate note when every currency has a rate" do
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
+  end
+
   private
     def money_flow_bars
       JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])

@@ -102,10 +102,9 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # The same for an open position: a JPY holding showing a ¥250,000 gain with
-  # no JPY->USD rate today is not $250,000 of unrealised gain. At parity the
-  # treatment's totals read $250,010.00, the yen figure plus the fixtures' $10.
-  # Only the gains card: the Portfolio Value and Total Return cards above it
-  # come from InvestmentStatement, which still converts at 1.
+  # no JPY->USD rate is not $250,000 of unrealised gain. At parity the gains
+  # card and the Total Return card both read $250,010.00, the yen figure plus
+  # the fixtures' $10, and Portfolio Value read $1,020,000.00.
   test "a holding with no rate into family currency is left out of unrealised gains" do
     ExchangeRate.stubs(:provider).returns(nil)
     account = @family.accounts.create!(name: "Brokerage JPY", balance: 1_000_000,
@@ -119,9 +118,10 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     get reports_path
     assert_response :ok
 
-    gains = css_select("[data-testid='tax-treatment-gains']").map(&:text).join
-    assert_no_match(/\$250,0\d\d\.\d\d/, gains, "the yen gain is in a total, converted at parity")
+    assert_no_match(/\$250,0\d\d\.\d\d/, response.body, "the yen gain is in a total, converted at parity")
+    assert_no_match(/\$1,020,000\.00/, response.body, "the yen account is in Portfolio Value, converted at parity")
     assert_select "[data-testid='unconverted-gains-note']", text: /1 gain is not included/
+    assert_select "[data-testid='missing-exchange-rates']", text: /no exchange rate from JPY to USD/
   end
 
   # The rates a page of disposals needs come from one query, not one per

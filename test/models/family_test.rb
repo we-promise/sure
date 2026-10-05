@@ -612,6 +612,17 @@ class FamilyTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { family.resolved_categorization_provider }
   end
 
+  # The currencies whose amounts every converted total leaves out (#3640).
+  test "currencies_without_exchange_rate names used currencies with no rate on any date" do
+    family = families(:empty)
+    family.accounts.create!(name: "JPY", balance: 1, currency: "JPY", accountable: Depository.new)
+    family.accounts.create!(name: "KRW", balance: 1, currency: "KRW", accountable: Depository.new)
+    family.accounts.create!(name: "Home", balance: 1, currency: family.currency, accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 400.days.ago.to_date, rate: 0.009)
+
+    assert_equal %w[KRW], family.currencies_without_exchange_rate
+  end
+
   private
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
