@@ -558,11 +558,18 @@ class ReportsController < ApplicationController
       to_numeric = ->(value) { value.is_a?(Money) ? value.amount : value }
 
       # Unrealized gains mark holdings to market, so convert at today's FX.
+      # Both conversions return nil when there is no rate. Converting at 1
+      # instead reported a ¥1,000,000 gain as $1,000,000 (#3640); a figure that
+      # cannot be converted is left out of the total and counted, so the card
+      # can say the total is partial.
       foreign_holding_currencies = current_holdings.map(&:currency).compact.uniq.reject { |c| c == currency }
       holding_rates = ExchangeRate.rates_for(foreign_holding_currencies, to: currency, date: Date.current)
       convert_current = ->(amount, from) {
         numeric = to_numeric.call(amount)
-        from == currency ? numeric : numeric * (holding_rates[from] || 1)
+        next numeric if from == currency
+
+        rate = holding_rates[from]
+        rate && numeric * rate
       }
 
       # Realized gains are locked at trade time, so convert each at its own
@@ -584,7 +591,10 @@ class ReportsController < ApplicationController
       end
       convert_trade = ->(amount, from, date) {
         numeric = to_numeric.call(amount)
-        from == currency ? numeric : numeric * (rates_by_trade_date.dig(date, from) || 1)
+        next numeric if from == currency
+
+        rate = rates_by_trade_date.dig(date, from)
+        rate && numeric * rate
       }
 
       # Build metrics per treatment
@@ -592,10 +602,16 @@ class ReportsController < ApplicationController
         holdings = holdings_by_treatment[treatment] || []
         trades = trades_by_treatment[treatment] || []
 
-        # Sum unrealized gains from holdings (only those with known cost basis)
+        # Sum unrealized gains from holdings (only those with known cost basis
+        # and a rate into family currency)
+        unconverted = 0
         unrealized = holdings.sum do |h|
           trend = h.trend
-          trend ? convert_current.call(trend.value, h.currency) : 0
+          next 0 unless trend
+
+          converted = convert_current.call(trend.value, h.currency)
+          unconverted += 1 if converted.nil?
+          converted || 0
         end
 
         # Sum realized gains from sell trades, each converted from the currency
@@ -605,6 +621,11 @@ class ReportsController < ApplicationController
           next if gain.nil?
 
           converted = convert_trade.call(gain.value, gain.value.currency.iso_code, t.entry.date)
+          if converted.nil?
+            unconverted += 1
+            next
+          end
+
           memo[t.id] = Money.new(converted, currency)
         end
 
@@ -622,6 +643,8 @@ class ReportsController < ApplicationController
           # and the card's own total are the same arithmetic. The partial used
           # to re-label `gain.value` as family currency without converting it.
           realized_gain_by_trade: realized_by_trade,
+          # Holdings and sells left out of the totals for want of a rate.
+          unconverted_count: unconverted,
           total_gain: Money.new(unrealized + realized, currency)
         }
       end

@@ -38,7 +38,8 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     create_investment_account(balance: 1921.92, currency: "USD")
     create_investment_account(balance: 1000, currency: "EUR")
 
-    # No ExchangeRate row → rates_for defaults to 1
+    # No ExchangeRate row: rates_for leaves EUR out and the statement's own
+    # conversion falls back to 1
     assert_in_delta 2921.92, @statement.portfolio_value, 0.001
   end
 

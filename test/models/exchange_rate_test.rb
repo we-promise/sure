@@ -82,6 +82,23 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal friday, result.date
   end
 
+  # A pair with no rate anywhere -- not stored, not within the lookback, not
+  # from the provider -- is left out. It used to come back as 1, which every
+  # caller read as parity: a ¥1,000,000 gain reported as $1,000,000 (#3640).
+  test "rates_for leaves out a currency it has no rate for, rather than returning 1" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.08)
+    ExchangeRate.where(from_currency: "JPY", to_currency: "USD").delete_all
+
+    @provider.expects(:fetch_exchange_rate)
+             .with(from: "JPY", to: "USD", date: Date.current)
+             .returns(provider_error_response(StandardError.new("no rate")))
+
+    rates = ExchangeRate.rates_for(%w[EUR JPY], to: "USD", date: Date.current)
+
+    assert_equal({ "EUR" => 1.08 }, rates.transform_values(&:to_f))
+    assert_not rates.key?("JPY")
+  end
+
   test "does not reuse cached rate outside lookback window" do
     old_date = (ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS + 1).days.ago.to_date
     ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: old_date, rate: 140.0)

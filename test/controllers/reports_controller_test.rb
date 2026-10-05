@@ -73,6 +73,57 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/\$40\.00/, line, "$40.00 is the GBP figure converted at parity")
   end
 
+  # No JPY->USD rate for the day of a disposal in a JPY account. The gain is
+  # ¥100,000 and there is nothing to convert it with: converted at 1 it read
+  # as $100,000.00 (#3640). It is left out of the total, its own line shows no
+  # figure, and the card says a gain is missing.
+  test "a disposal with no rate into family currency is left out and the card says so" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    date = Date.current.beginning_of_month
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 1_000_000,
+                                       currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPX#{SecureRandom.hex(3)}", name: "Tokyo Listed")
+    ExchangeRate.where(from_currency: "JPY", to_currency: "USD").delete_all
+
+    account.holdings.create!(security: security, date: date, qty: 5, price: 150_000,
+                             amount: BigDecimal(750_000), currency: "JPY", cost_basis: 100_000)
+    create_trade(security, account: account, qty: -2, date: date, price: 150_000, currency: "JPY")
+
+    get reports_path
+    assert_response :ok
+
+    line = css_select("[data-testid='realized-gain-line']").map(&:text)
+                                                           .find { |text| text.include?(security.ticker) }
+
+    assert line, "the disposal must be listed at all, or this proves nothing"
+    assert_no_match(/\$100,000\.00/, line, "$100,000.00 is the yen figure converted at parity")
+    assert_select "[data-testid='unconverted-gains-note']", text: /no exchange rate to USD/
+    assert_no_match(/\$100,000\.00/, response.body, "nor is it in any total")
+  end
+
+  # The same for an open position: a JPY holding showing a ¥250,000 gain with
+  # no JPY->USD rate today is not $250,000 of unrealised gain. At parity the
+  # treatment's totals read $250,010.00, the yen figure plus the fixtures' $10.
+  # Only the gains card: the Portfolio Value and Total Return cards above it
+  # come from InvestmentStatement, which still converts at 1.
+  test "a holding with no rate into family currency is left out of unrealised gains" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 1_000_000,
+                                       currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPX#{SecureRandom.hex(3)}", name: "Tokyo Listed")
+    ExchangeRate.where(from_currency: "JPY", to_currency: "USD").delete_all
+
+    account.holdings.create!(security: security, date: Date.current, qty: 5, price: 150_000,
+                             amount: BigDecimal(750_000), currency: "JPY", cost_basis: 100_000)
+
+    get reports_path
+    assert_response :ok
+
+    gains = css_select("[data-testid='tax-treatment-gains']").map(&:text).join
+    assert_no_match(/\$250,0\d\d\.\d\d/, gains, "the yen gain is in a total, converted at parity")
+    assert_select "[data-testid='unconverted-gains-note']", text: /1 gain is not included/
+  end
+
   # The rates a page of disposals needs come from one query, not one per
   # foreign disposal. The conversion itself is covered in TradeTest, which
   # counts the queries directly; what has to hold HERE is that the card asks

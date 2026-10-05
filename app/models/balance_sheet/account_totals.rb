@@ -103,7 +103,10 @@ class BalanceSheet::AccountTotals
     def converted_balance_for(account)
       return account.balance if account.currency == family.currency
 
-      rate = exchange_rates[account.currency]
+      # Still parity when no rate is known, as before rates_for stopped
+      # supplying it; what the balance sheet should show instead is #3640's
+      # open question, not this change's.
+      rate = exchange_rates[account.currency] || 1
       account.balance * rate
     end
 end
