@@ -502,6 +502,33 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     end
   end
 
+  # The seed walk starts from the same position as the holdings walk: the
+  # snapshot brought forward to today. Here the provider reported 10 shares the
+  # day before a 2-for-1 split, so today is 20. Read as today's count, 10 was
+  # halved back through the split to 5 and the seed came out at -5. The sale of
+  # the transferred-in units then went from 0 to -5, never crossed zero, and the
+  # rebuy stayed unknown for good.
+  test "a provider snapshot older than the split seeds the cost-basis replay from today's count" do
+    security = Security.create!(ticker: "STSD", name: "Stale Seed")
+    transfer_date = 9.days.ago.to_date
+    close_date    = 8.days.ago.to_date
+    rebuy_date    = 7.days.ago.to_date
+
+    transfer_in = create_trade(security, account: @account, qty: 5, price: 120, date: transfer_date)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    create_trade(security, account: @account, qty: -5, price: 130, date: close_date)
+    create_trade(security, account: @account, qty: 10, price: 150, date: rebuy_date)
+    add_split(security, ex_date: 4.days.ago.to_date, numerator: 2, denominator: 1)
+
+    snapshot = OpenStruct.new(to_h: { security.id => 10 }, effective_dates: { security.id => 6.days.ago.to_date })
+    calc = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot)
+    calc.send(:precompute_cost_basis)
+
+    assert_nil cost_basis_for(calc, security, transfer_date)
+    assert_in_delta 150.0, cost_basis_for(calc, security, rebuy_date).to_f, 1e-6
+    assert_in_delta 75.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
+  end
+
   # The provider reports nothing held today: the whole post-split position was
   # sold on the ex-date (Production Readiness Review on #253). Walking back, the
   # sale is undone first, in post-split shares, and then the split.

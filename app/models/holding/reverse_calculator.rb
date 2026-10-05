@@ -62,13 +62,15 @@ class Holding::ReverseCalculator
     def starting_portfolio
       # A snapshot that reports no dates is read as current, which is what this
       # did before there were any.
-      dates = portfolio_snapshot.effective_dates || {}
+      @starting_portfolio ||= begin
+        dates = portfolio_snapshot.effective_dates || {}
 
-      portfolio_snapshot.to_h.to_h do |security_id, qty|
-        factor = portfolio_cache.split_factor_between(security_id, dates[security_id], Date.current)
-        next [ security_id, qty ] if factor == 1
+        portfolio_snapshot.to_h.to_h do |security_id, qty|
+          factor = portfolio_cache.split_factor_between(security_id, dates[security_id], Date.current)
+          next [ security_id, qty ] if factor == 1
 
-        [ security_id, Security::Split.scale(qty, factor) ]
+          [ security_id, Security::Split.scale(qty, factor) ]
+        end
       end
     end
 
@@ -140,7 +142,9 @@ class Holding::ReverseCalculator
       # trade and split, so "position back at zero" reflects the real position,
       # not just the trades we happen to have. Across a split, "snapshot minus
       # net trades" is not that: the trades before it are in pre-split shares.
-      snapshot = portfolio_snapshot.to_h
+      # The walk undoes every split up to today, so it starts from the snapshot
+      # brought forward to today, as #calculate_holdings does.
+      snapshot = starting_portfolio
       positions = Hash.new(0)
       trades.each { |te| positions[te.entryable.security_id] = snapshot[te.entryable.security_id] || 0 }
       events.reverse_each do |event|
