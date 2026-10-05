@@ -96,8 +96,11 @@ class TradeRepublicAccount < ApplicationRecord
     pea? ? nil : "cash"
   end
 
+  # Account whose stored timeline this account reads: the default cash account
+  # and the Crypto account both take their events from the portfolio. The PEA
+  # reads its own timeline.
   def securities_sibling_kind
-    cash? ? "portfolio" : nil
+    cash? || crypto? ? "portfolio" : nil
   end
 
   # Crypto moves to its own account once the user linked the Crypto account.
