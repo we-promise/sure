@@ -118,6 +118,39 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
                  EnableBankingEntry::Processor.compute_external_id(tx)
   end
 
+  # Some ASPSPs send only date, amount, currency and direction; two transfers of
+  # the same amount on one day then hash alike, and the second overwrote the
+  # first. The batch processor hands a repeat a suffix; the first hashes as before.
+  test "compute_external_id appends the suffix the batch processor gives a repeated id-less row" do
+    tx = {
+      booking_date: "2026-01-15",
+      transaction_amount: { amount: "100.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT"
+    }
+    base = EnableBankingEntry::Processor.compute_external_id(tx)
+    assert base.start_with?("enable_banking_content_")
+    assert_equal "#{base}_1", EnableBankingEntry::Processor.compute_external_id(tx, suffix: "1")
+    assert_equal "#{base}_abc", EnableBankingEntry::Processor.compute_external_id(tx.dup, suffix: "abc")
+    assert_equal base, EnableBankingEntry::Processor.compute_external_id(tx, suffix: nil)
+  end
+
+  # Pinned on purpose: every id-less row already imported holds this digest for
+  # its content. If an unsuffixed row ever hashed differently, every such row
+  # would be re-imported as a duplicate.
+  test "compute_external_id leaves an unsuffixed row's digest exactly as it was" do
+    tx = {
+      booking_date: "2026-01-15",
+      transaction_amount: { amount: "100.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT"
+    }
+    assert_equal "enable_banking_content_df9c4dcdcc8c891c4f44b1e9a391bcd4", EnableBankingEntry::Processor.compute_external_id(tx)
+  end
+
+  test "compute_external_id ignores the suffix for a row that carries a provider id" do
+    assert_equal "enable_banking_txn_abc", EnableBankingEntry::Processor.compute_external_id({ transaction_id: "txn_abc" }, suffix: "1")
+    assert_equal "enable_banking_ref_1", EnableBankingEntry::Processor.compute_external_id({ entry_reference: "ref_1" }, suffix: "1")
+  end
+
   test "compute_external_id returns nil for transaction with no identifiable content" do
     assert_nil EnableBankingEntry::Processor.compute_external_id({})
     assert_nil EnableBankingEntry::Processor.compute_external_id(transaction_id: nil, entry_reference: nil)
