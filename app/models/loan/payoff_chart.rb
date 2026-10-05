@@ -74,6 +74,9 @@ class Loan
         # hard-codes `lang="en"`, so the document cannot tell the chart.
         locale: I18n.locale.to_s,
         currency: currency,
+        # The split is shown to the currency's own precision, as the Schedule
+        # tab shows it. Intl's default can differ from the app's (BTC).
+        currency_precision: Money::Currency.new(currency).default_precision || 2,
         domain_start: domain_start.iso8601,
         domain_end: domain_end.iso8601,
         **series,

@@ -115,10 +115,13 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
       assert_not_includes tooltip.text(:all), principal_label, "origination is not a payment"
 
       svg.send_keys(:arrow_right)
-      money = ->(value) { page.evaluate_script("new Intl.NumberFormat('en', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(#{value})") }
-      expected = "#{principal_label}: #{money.(first_payment.principal.amount.to_f)} · " \
-                 "#{I18n.t('loans.tabs.schedule.interest')}: #{money.(first_payment.interest.amount.to_f)}"
+      # The split at the currency's precision (cents for USD), so a small
+      # component never shows as zero; the balance stays in whole units.
+      money = ->(value, digits) { page.evaluate_script("new Intl.NumberFormat('en', { style: 'currency', currency: 'USD', minimumFractionDigits: #{digits}, maximumFractionDigits: #{digits} }).format(#{value})") }
+      expected = "#{principal_label}: #{money.(first_payment.principal.amount.to_f, 2)} · " \
+                 "#{I18n.t('loans.tabs.schedule.interest')}: #{money.(first_payment.interest.amount.to_f, 2)}"
       assert_includes tooltip.text(:all), expected
+      assert_includes tooltip.text(:all), money.(first_payment.ending_balance.amount.to_f, 0)
     end
   end
 

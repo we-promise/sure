@@ -380,6 +380,18 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     end
   end
 
+  # CodeRabbit on #305: the split is shown at the currency's own precision, as
+  # the Schedule tab shows it, so a small component never rounds to zero. The
+  # payload carries that precision because Intl's default can differ from the
+  # app's (BTC is 8 here, 2 to Intl).
+  test "the payload carries the loan currency's precision for the split" do
+    loan = on_contract_loan
+    assert_equal 2, Loan::PayoffChart.new(loan, as_of: @today).payload[:currency_precision]
+
+    loan.account.update_columns(currency: "JPY")
+    assert_equal 0, Loan::PayoffChart.new(loan.reload, as_of: @today).payload[:currency_precision]
+  end
+
   # The tooltip names the figures with the Schedule tab's own column labels.
   test "the payload labels the split with the schedule table's own words" do
     payload = Loan::PayoffChart.new(on_contract_loan, as_of: @today).payload

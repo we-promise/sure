@@ -379,6 +379,22 @@ export default class extends Controller {
       }
     })();
     const money = (value) => formatter.format(value);
+    // The balance reads in whole units; the principal/interest split keeps the
+    // currency's minor units so a small component never rounds to nothing.
+    const splitFormatter = (() => {
+      const digits = data.currency_precision ?? 2;
+      try {
+        return new Intl.NumberFormat(locale, {
+          style: "currency",
+          currency: data.currency || "USD",
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits,
+        });
+      } catch {
+        return formatter;
+      }
+    })();
+    const splitMoney = (value) => splitFormatter.format(value);
 
     const showAt = (date) => {
       const px = x(date);
@@ -392,8 +408,8 @@ export default class extends Controller {
           // What the scheduled payment on this date is made of (#3958).
           const split =
             point.principal != null && point.interest != null
-              ? `${data.labels?.principal || "Principal"}: ${money(point.principal)} · ` +
-                `${data.labels?.interest || "Interest"}: ${money(point.interest)}`
+              ? `${data.labels?.principal || "Principal"}: ${splitMoney(point.principal)} · ` +
+                `${data.labels?.interest || "Interest"}: ${splitMoney(point.interest)}`
               : null;
           return {
             label: data.labels?.[s.key] || s.key,
