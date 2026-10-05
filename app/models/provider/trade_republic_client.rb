@@ -59,6 +59,10 @@ class Provider::TradeRepublicClient
     "bonds" => "interest_products",
     "cryptos" => "crypto_wallet"
   }.freeze
+  # One login can hold several securities envelopes: the default account and,
+  # in France, a PEA tax wrapper. Positions and cash are per envelope, so each
+  # is imported as its own provider account.
+  ENVELOPE_KINDS = { "DEFAULT" => "portfolio", "TAX_WRAPPER" => "pea" }.freeze
   TICKER_EXCHANGES = %w[LSX BHS TUB SGL BVT].freeze
   CRYPTO_TICKER_EXCHANGES = %w[BHS TUB SGL BVT LSX].freeze
   # Prefer real venues over Trade Republic's synthetic LSX feed. Skip symbols
@@ -327,39 +331,18 @@ class Provider::TradeRepublicClient
       connected = websocket.receive
       raise TransientProviderError, "Trade Republic WebSocket handshake was rejected" unless connected == "connected"
 
-      cash = nil
-      begin
-        # "cash" is the booked balance. "availableCash" additionally subtracts
-        # funds reserved for open (e.g. limit) orders, which have not left the
-        # account yet, so it must not be used as the account balance.
-        cash = subscribe(websocket, type: "cash")
-        raise MalformedResponse, "Trade Republic cash response did not contain an amount" if money_amount(cash).nil?
-        domain_statuses["cash"] = "success"
-      rescue MalformedResponse, ProviderUnavailable => e
-        raise if e.is_a?(TransientProviderError)
-        warnings << "cash fetch failed: #{e.message}"
+      envelopes = discover_envelopes(websocket, account["securitiesAccountNumber"], account["currency"], warnings)
+      envelopes.each do |envelope|
+        fetch_envelope_cash(websocket, envelope, warnings)
+        fetch_envelope_positions(websocket, envelope, known_instrument_symbols, warnings)
       end
 
-      positions = []
-      position_warnings = []
-      begin
-        portfolio = subscribe(websocket, type: "compactPortfolioByType", secAccNo: account["securitiesAccountNumber"])
-        raise MalformedResponse, "Trade Republic portfolio response did not contain categories" unless portfolio.is_a?(Hash) && portfolio.key?("categories")
-        positions, position_warnings = normalize_positions(
-          websocket,
-          portfolio,
-          sec_acc_no: account["securitiesAccountNumber"],
-          known_instrument_symbols: known_instrument_symbols
-        )
-        warnings.concat(position_warnings)
-        domain_statuses["portfolio"] = "success"
-        domain_statuses["instrument_metadata"] = position_warnings.empty? ? "success" : "partial"
-      rescue MalformedResponse, ProviderUnavailable => e
-        raise if e.is_a?(TransientProviderError)
-        warnings << "portfolio fetch failed: #{e.message}"
-      end
+      all_positions = envelopes.flat_map { |envelope| envelope["positions"] || [] }
+      domain_statuses["cash"] = aggregate_envelope_status(envelopes.map { |envelope| envelope["cash_status"] })
+      domain_statuses["portfolio"] = aggregate_envelope_status(envelopes.map { |envelope| envelope["positions_status"] })
+      domain_statuses["instrument_metadata"] = all_position_warnings(envelopes).empty? ? "success" : "partial"
 
-      known_symbols = self.class.instrument_symbols_from_positions(positions)
+      known_symbols = self.class.instrument_symbols_from_positions(all_positions)
       instrument_symbols = known_symbols.dup
       unresolved_symbol_isins = []
 
@@ -391,16 +374,17 @@ class Provider::TradeRepublicClient
         warnings << "timeline fetch failed: #{e.message}"
       end
 
+      assign_envelope_kinds!(events, envelopes)
+      default_envelope = envelopes.find { |envelope| envelope["kind"] == "portfolio" } || envelopes.first
+
       Result.new(data: {
         "status" => domain_statuses.values.all? { |status| status == "success" } ? "ok" : "partial",
         "session_txt" => session.cookies_blob,
         "domain_statuses" => domain_statuses,
-        "account" => { "brokerage_account_id" => account["securitiesAccountNumber"].to_s, "currency" => account["currency"] },
-        "cash" => (cash && {
-          "amount" => decimal_string(money_amount(cash)),
-          "currency" => money_currency(cash)
-        }.compact),
-        "positions" => positions,
+        "accounts" => envelopes.map { |envelope| envelope_result(envelope) },
+        "account" => { "brokerage_account_id" => default_envelope["securities_account_number"].to_s, "currency" => default_envelope["currency"] },
+        "cash" => envelope_cash(default_envelope),
+        "positions" => default_envelope["positions"] || [],
         "events" => events,
         "instrument_symbols" => instrument_symbols,
         "unresolved_symbol_isins" => unresolved_symbol_isins,
@@ -408,7 +392,7 @@ class Provider::TradeRepublicClient
         "timeline_pagination_complete" => timeline_complete,
         "detail_backfill_count" => detail_backfill_count,
         "warnings" => warnings,
-        "position_warnings" => position_warnings
+        "position_warnings" => default_envelope["position_warnings"] || []
       })
     ensure
       websocket.close
@@ -737,6 +721,160 @@ class Provider::TradeRepublicClient
           nil
         end
       end.join
+    end
+
+    # Every securities envelope behind the login. Trade Republic exposes them
+    # through the accountPairs feed; a login without the feed (or an older
+    # payload) falls back to the single account from /api/v2/auth/account.
+    def discover_envelopes(websocket, default_sec_acc_no, default_currency, warnings)
+      pairs = optional_subscribe(websocket, type: "accountPairs")
+      pairs_accounts = pairs.is_a?(Hash) ? Array(pairs["accounts"]) : []
+      envelopes = pairs_accounts.filter_map do |entry|
+        next unless entry.is_a?(Hash)
+
+        product_type = entry["productType"].to_s
+        kind = ENVELOPE_KINDS[product_type]
+        unless kind
+          warnings << "unsupported Trade Republic account product type #{product_type.presence || entry["securitiesAccountNumber"]}"
+          next
+        end
+
+        securities_account_number = entry["securitiesAccountNumber"].to_s.presence
+        unless securities_account_number
+          warnings << "Trade Republic account entry without a securities account number for #{product_type}"
+          next
+        end
+
+        {
+          "kind" => kind,
+          "product_type" => product_type,
+          "securities_account_number" => securities_account_number,
+          "cash_account_number" => entry["cashAccountNumber"].to_s.presence,
+          "currency" => entry["currency"].presence || default_currency
+        }
+      end
+
+      if envelopes.empty?
+        warnings << "Trade Republic accountPairs returned no envelopes; querying the default account only" if pairs.is_a?(Hash)
+        envelopes << default_envelope(default_sec_acc_no, default_currency)
+      end
+
+      unless envelopes.any? { |envelope| envelope["kind"] == "portfolio" }
+        envelopes << default_envelope(default_sec_acc_no, default_currency)
+      end
+
+      envelopes.uniq { |envelope| envelope["kind"] }
+    end
+
+    def default_envelope(sec_acc_no, currency)
+      {
+        "kind" => "portfolio",
+        "product_type" => "DEFAULT",
+        "securities_account_number" => sec_acc_no.to_s,
+        "cash_account_number" => nil,
+        "currency" => currency
+      }
+    end
+
+    def fetch_envelope_cash(websocket, envelope, warnings)
+      # "cash" is the booked balance. "availableCash" additionally subtracts
+      # funds reserved for open (e.g. limit) orders, which have not left the
+      # account yet, so it must not be used as the account balance.
+      # `cash`/`availableCash` are scoped by the cash account number; without it
+      # every envelope would receive the default pocket's balance. (The timeline
+      # is the opposite: user-wide, so it is fetched once and routed by event.)
+      payload = { type: "cash" }
+      payload[:accountNumber] = envelope["cash_account_number"] if envelope["cash_account_number"].present?
+      cash = subscribe(websocket, payload)
+      raise MalformedResponse, "Trade Republic cash response did not contain an amount" if money_amount(cash).nil?
+
+      envelope["raw_cash"] = cash
+      envelope["cash_status"] = "success"
+    rescue MalformedResponse, ProviderUnavailable => e
+      raise if e.is_a?(TransientProviderError)
+
+      envelope["cash_status"] = "failed"
+      warnings << "cash fetch failed for #{envelope["kind"]}: #{e.message}"
+    end
+
+    def fetch_envelope_positions(websocket, envelope, known_instrument_symbols, warnings)
+      sec_acc_no = envelope["securities_account_number"]
+      raise MalformedResponse, "Trade Republic securities account number is missing" if sec_acc_no.blank?
+
+      portfolio = subscribe(websocket, type: "compactPortfolioByType", secAccNo: sec_acc_no)
+      raise MalformedResponse, "Trade Republic portfolio response did not contain categories" unless portfolio.is_a?(Hash) && portfolio.key?("categories")
+
+      positions, account_warnings = normalize_positions(
+        websocket,
+        portfolio,
+        sec_acc_no: sec_acc_no,
+        known_instrument_symbols: known_instrument_symbols
+      )
+      envelope["positions"] = positions
+      envelope["position_warnings"] = account_warnings
+      envelope["positions_status"] = "success"
+      warnings.concat(account_warnings)
+    rescue MalformedResponse, ProviderUnavailable => e
+      raise if e.is_a?(TransientProviderError)
+
+      envelope["positions"] = []
+      envelope["position_warnings"] = []
+      envelope["positions_status"] = "failed"
+      warnings << "portfolio fetch failed for #{envelope["kind"]}: #{e.message}"
+    end
+
+    def envelope_cash(envelope)
+      cash = envelope["raw_cash"]
+      return nil unless cash
+
+      { "amount" => decimal_string(money_amount(cash)), "currency" => money_currency(cash) }.compact
+    end
+
+    def envelope_result(envelope)
+      {
+        "kind" => envelope["kind"],
+        "brokerage_account_id" => envelope["securities_account_number"],
+        "product_type" => envelope["product_type"],
+        "cash_account_number" => envelope["cash_account_number"],
+        "currency" => envelope["currency"],
+        "positions" => envelope["positions"] || [],
+        "position_warnings" => envelope["position_warnings"] || [],
+        "positions_status" => envelope["positions_status"] || "failed",
+        "cash_status" => envelope["cash_status"] || "failed",
+        "cash" => envelope_cash(envelope)
+      }
+    end
+
+    def aggregate_envelope_status(statuses)
+      statuses = Array(statuses).compact
+      return "failed" if statuses.empty?
+      return "success" if statuses.all? { |status| status == "success" }
+
+      statuses.any? { |status| status == "success" } ? "partial" : "failed"
+    end
+
+    def all_position_warnings(envelopes)
+      envelopes.flat_map { |envelope| envelope["position_warnings"] || [] }
+    end
+
+    # The timeline cannot be subscribed per securities account, so each event is
+    # routed to its envelope from the cash account it settled on.
+    def assign_envelope_kinds!(events, envelopes)
+      kind_by_cash = envelopes.each_with_object({}) do |envelope, map|
+        map[envelope["cash_account_number"]] = envelope["kind"] if envelope["cash_account_number"].present?
+      end
+      kind_by_sec = envelopes.each_with_object({}) do |envelope, map|
+        map[envelope["securities_account_number"]] = envelope["kind"] if envelope["securities_account_number"].present?
+      end
+
+      Array(events).each do |event|
+        next unless event.is_a?(Hash)
+
+        kind = kind_by_cash[event["cashAccountNumber"].to_s.presence] ||
+               kind_by_sec[event["securitiesAccountNumber"].to_s.presence]
+        event["envelope_kind"] = kind if kind
+      end
+      events
     end
 
     # `known_instrument_symbols` are exchange tickers stored by earlier syncs;
@@ -1333,7 +1471,10 @@ class Provider::TradeRepublicClient
       }.compact
       detail ||= {}
       detail = event_detail.merge(detail) if event_detail.present?
-      event = item.slice("id", "timestamp", "title", "subtitle", "eventType")
+      # cashAccountNumber/securitiesAccountNumber let the importer route an
+      # event to the envelope it belongs to (Trade Republic's timeline is
+      # user-wide and cannot be subscribed per securities account).
+      event = item.slice("id", "timestamp", "title", "subtitle", "eventType", "cashAccountNumber", "securitiesAccountNumber")
         .merge("category" => category, "detail" => detail.presence)
 
       Provider::TradeRepublicTimelineEvent::LIFECYCLE_KEYS.each do |key|
