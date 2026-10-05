@@ -407,6 +407,7 @@ class Account < ApplicationRecord
 
     TRADE_REPUBLIC_ACCOUNT_TYPES = {
       "portfolio" => [ "Investment", "brokerage", "Trade Republic Portfolio" ],
+      "pea" => [ "Investment", "pea", "Trade Republic PEA" ],
       "cash" => [ "Depository", "checking", "Trade Republic Cash" ],
       # The exchange subtype is the Crypto subtype that supports trades.
       "crypto" => [ "Crypto", "exchange", "Trade Republic Crypto" ]

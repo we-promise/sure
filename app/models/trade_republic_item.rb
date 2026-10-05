@@ -73,7 +73,7 @@ class TradeRepublicItem < ApplicationRecord
     # settlement counterpart left halfway through a move.
     linked_trade_republic_accounts
       .includes(account_provider: :account)
-      .order(Arel.sql("CASE kind WHEN 'portfolio' THEN 0 WHEN 'crypto' THEN 1 WHEN 'cash' THEN 2 ELSE 3 END"), :id)
+      .order(Arel.sql("CASE kind WHEN 'portfolio' THEN 0 WHEN 'pea' THEN 1 WHEN 'crypto' THEN 2 WHEN 'cash' THEN 3 ELSE 4 END"), :id)
       .each_with_object([]) do |tr_account, results|
       account = tr_account.current_account
       next unless account
@@ -168,8 +168,8 @@ class TradeRepublicItem < ApplicationRecord
   end
 
   def data_quality_summary
-    positions = trade_republic_accounts.where(kind: "portfolio").flat_map { |account| Array(account.raw_positions_payload) }
-    portfolio_events = trade_republic_accounts.where(kind: "portfolio").flat_map { |account| Array(account.raw_timeline_payload) }
+    positions = trade_republic_accounts.where(kind: %w[portfolio pea]).flat_map { |account| Array(account.raw_positions_payload) }
+    portfolio_events = trade_republic_accounts.where(kind: %w[portfolio pea]).flat_map { |account| Array(account.raw_timeline_payload) }
     cash_events = trade_republic_accounts.where(kind: "cash").flat_map { |account| Array(account.raw_timeline_payload) }
     unique_events = TradeRepublicAccount::DataHelpers.unique_timeline_events(portfolio_events, cash_events)
     hash_positions = positions.select { |position| position.is_a?(Hash) }

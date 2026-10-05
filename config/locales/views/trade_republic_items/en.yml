@@ -73,6 +73,7 @@ en:
       available_accounts:
         title: Available account
         account_type_investment: Investment portfolio
+        account_type_pea: PEA
         account_type_cash: Cash account
         account_type_crypto: Crypto account
         account_summary: "%{account_type} • Balance: %{balance}"

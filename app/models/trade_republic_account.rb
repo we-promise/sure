@@ -13,10 +13,15 @@ class TradeRepublicAccount < ApplicationRecord
   # development schema cache has refreshed after a migration. Declaring the
   # type explicitly keeps the enum valid in that reload window as well.
   attribute :kind, :string, default: "portfolio"
-  enum :kind, { portfolio: "portfolio", cash: "cash", crypto: "crypto" }, default: :portfolio
+  enum :kind, { portfolio: "portfolio", cash: "cash", crypto: "crypto", pea: "pea" }, default: :portfolio
 
   # Trade Republic lists crypto under pseudo-ISINs starting with XF000.
   CRYPTO_ISIN_PREFIX = "XF000"
+
+  # Kinds that hold securities. The PEA holds its own cash too (French law keeps
+  # sale proceeds and interest inside the wrapper), so it has no cash sibling.
+  SECURITIES_KINDS = %w[portfolio pea crypto].freeze
+  CASH_KINDS = %w[cash].freeze
 
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :account, through: :account_provider, source: :account
@@ -63,10 +68,36 @@ class TradeRepublicAccount < ApplicationRecord
     end
   end
 
-  # Portfolio and Crypto accounts hold securities; the Cash account settles
-  # their trades.
+  # Portfolio, PEA and Crypto accounts hold securities; the cash accounts
+  # settle their trades.
   def holds_securities?
-    portfolio? || crypto?
+    SECURITIES_KINDS.include?(kind)
+  end
+
+  def cash_like?
+    CASH_KINDS.include?(kind)
+  end
+
+  # DEFAULT envelope (CTO) vs the French PEA tax wrapper. Positions and trades
+  # belong to one envelope each because the TR timeline is user-wide.
+  def envelope_kind
+    pea? ? "pea" : "portfolio"
+  end
+
+  # Accounts whose displayed cash comes from a dedicated cash pocket. The PEA
+  # keeps its cash inside the securities account, so it is included here.
+  def cash_holding?
+    cash_like? || pea?
+  end
+
+  # Sibling that settles this account's trades. PEA settles internally, so it
+  # returns nil and its trades/cash movements both book on the PEA account.
+  def cash_sibling_kind
+    pea? ? nil : "cash"
+  end
+
+  def securities_sibling_kind
+    cash? ? "portfolio" : nil
   end
 
   # Crypto moves to its own account once the user linked the Crypto account.
@@ -82,6 +113,8 @@ class TradeRepublicAccount < ApplicationRecord
     case kind
     when "crypto"
       Array(sibling("portfolio")&.raw_positions_payload).select { |position| self.class.crypto_position?(position) }
+    when "pea"
+      Array(raw_positions_payload)
     when "portfolio"
       positions = Array(raw_positions_payload)
       crypto_split? ? positions.reject { |position| self.class.crypto_position?(position) } : positions
@@ -96,10 +129,14 @@ class TradeRepublicAccount < ApplicationRecord
 
   # current_balance on the portfolio values the whole snapshot, crypto
   # included, so a split portfolio leaves out what the Crypto account holds.
+  # Sure reads an account's balance as the total, holdings plus cash (see
+  # UI::Account::Chart#holdings_value_money), so the PEA - which keeps its cash
+  # inside the account - reports snapshot value plus that cash pocket.
   def account_balance
-    return current_balance unless portfolio? && crypto_split?
+    return (current_balance || 0).to_d - (sibling("crypto").current_balance || 0).to_d if portfolio? && crypto_split?
+    return (current_balance || 0).to_d + (cash_balance || 0).to_d if pea?
 
-    (current_balance || 0).to_d - (sibling("crypto").current_balance || 0).to_d
+    current_balance
   end
 
   def ensure_account_provider!(account = nil)
