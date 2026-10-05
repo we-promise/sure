@@ -216,6 +216,7 @@ class Balance::ChartSeriesBuilder
              WHERE er.from_currency = accounts.currency
                AND er.to_currency = :target_currency
                AND er.date <= d.date
+               AND er.rate > 0
              ORDER BY er.date DESC
              LIMIT 1),
             (SELECT er.rate
@@ -223,6 +224,7 @@ class Balance::ChartSeriesBuilder
              WHERE er.from_currency = accounts.currency
                AND er.to_currency = :target_currency
                AND er.date > d.date
+               AND er.rate > 0
              ORDER BY er.date ASC
              LIMIT 1)
           ) AS rate
@@ -306,6 +308,7 @@ class Balance::ChartSeriesBuilder
                WHERE er.from_currency = last_h.currency
                  AND er.to_currency = :target_currency
                  AND er.date <= d.date
+                 AND er.rate > 0
                ORDER BY er.date DESC
                LIMIT 1),
               (SELECT er.rate
@@ -313,6 +316,7 @@ class Balance::ChartSeriesBuilder
                WHERE er.from_currency = last_h.currency
                  AND er.to_currency = :target_currency
                  AND er.date > d.date
+                 AND er.rate > 0
                ORDER BY er.date ASC
                LIMIT 1)
             ) AS rate

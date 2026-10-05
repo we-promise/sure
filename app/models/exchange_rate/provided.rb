@@ -63,19 +63,23 @@ module ExchangeRate::Provided
     # than given 1: "no rate" and "parity" are different facts, and a caller
     # that cannot tell them apart reports a ¥1,000,000 gain as $1,000,000
     # (#3640). Each caller decides what an absent rate means for its figure.
+    #
+    # A stored rate of zero or below is no rate: multiplying by it books an
+    # amount as nothing, or flips its sign. `to` itself converts at 1.
     def rates_for(currencies, to:, date: Date.current)
-      unique_currencies = currencies.uniq
-      return {} if unique_currencies.empty?
+      unique_currencies = currencies.uniq - [ to ]
+      same = currencies.include?(to) ? { to => 1 } : {}
+      return same if unique_currencies.empty?
 
       # Batch-load exact-date matches in a single query
-      exact_rates = where(from_currency: unique_currencies, to_currency: to, date: date)
+      exact_rates = usable_rates.where(from_currency: unique_currencies, to_currency: to, date: date)
                       .index_by(&:from_currency)
 
       missing = unique_currencies - exact_rates.keys
 
       # For currencies without an exact match, batch-load the nearest recent rate
       nearest_rates = if missing.any?
-        where(from_currency: missing, to_currency: to)
+        usable_rates.where(from_currency: missing, to_currency: to)
           .where(date: (date - NEAREST_RATE_LOOKBACK_DAYS)..date)
           .order(date: :desc)
           .to_a
@@ -91,14 +95,14 @@ module ExchangeRate::Provided
       # Only hit the provider for currencies with no cached rate at all
       fetched_rates = still_missing.each_with_object({}) do |currency, map|
         rate = find_or_fetch_rate(from: currency, to: to, date: date)
-        map[currency] = rate if rate
+        map[currency] = rate if rate&.rate.to_d.positive?
       end
 
       # A rate from any distance is closer to the truth than 1.
       unfetched = still_missing - fetched_rates.keys
       stored_rates = unfetched.any? ? any_stored_rates(unfetched, to: to, date: date) : {}
 
-      unique_currencies.each_with_object({}) do |currency, result|
+      unique_currencies.each_with_object(same) do |currency, result|
         rate = exact_rates[currency] || nearest_rates[currency] || fetched_rates[currency] || stored_rates[currency]
         if rate.nil?
           Rails.logger.warn("No exchange rate found for #{currency}/#{to} on #{date}")
@@ -122,13 +126,21 @@ module ExchangeRate::Provided
       <<~SQL.squish
         CASE WHEN #{from} = #{to} THEN 1 ELSE COALESCE(
           (SELECT fx.rate FROM exchange_rates fx
-            WHERE fx.from_currency = #{from} AND fx.to_currency = #{to} AND fx.date <= #{on}
+            WHERE fx.from_currency = #{from} AND fx.to_currency = #{to} AND fx.date <= #{on} AND fx.rate > 0
             ORDER BY fx.date DESC LIMIT 1),
           (SELECT fx.rate FROM exchange_rates fx
-            WHERE fx.from_currency = #{from} AND fx.to_currency = #{to} AND fx.date > #{on}
+            WHERE fx.from_currency = #{from} AND fx.to_currency = #{to} AND fx.date > #{on} AND fx.rate > 0
             ORDER BY fx.date ASC LIMIT 1)
         ) END
       SQL
+    end
+
+    # The stored rate #rate_sql would use for one pair, without the provider:
+    # the latest on or before `date`, else the earliest after it, else nil.
+    def nearest_stored_rate(from:, to:, date:)
+      return 1 if from == to
+
+      any_stored_rates([ from ], to: to, date: date)[from]&.rate
     end
 
     # Of `currencies`, those with no stored rate into `to` on any date. These
@@ -137,7 +149,7 @@ module ExchangeRate::Provided
       candidates = currencies.compact.uniq - [ to ]
       return [] if candidates.empty?
 
-      candidates - where(from_currency: candidates, to_currency: to).distinct.pluck(:from_currency)
+      candidates - usable_rates.where(from_currency: candidates, to_currency: to).distinct.pluck(:from_currency)
     end
 
     # Of `currencies`, those whose newest stored rate into `to` is older than
@@ -148,7 +160,7 @@ module ExchangeRate::Provided
       candidates = currencies.compact.uniq - [ to ]
       return {} if candidates.empty?
 
-      where(from_currency: candidates, to_currency: to)
+      usable_rates.where(from_currency: candidates, to_currency: to)
         .group(:from_currency)
         .maximum(:date)
         .select { |_, date| date < as_of - NEAREST_RATE_LOOKBACK_DAYS }
@@ -195,16 +207,22 @@ module ExchangeRate::Provided
     end
 
     private
+      # Rows a conversion may use. ExchangeRate validates presence only, so a
+      # provider or an import can leave a 0 behind.
+      def usable_rates
+        where("exchange_rates.rate > 0")
+      end
+
       # The latest stored rate on or before `date` for each currency, else the
       # earliest after it, in two queries.
       def any_stored_rates(currencies, to:, date:)
-        before = where(from_currency: currencies, to_currency: to).where("date <= ?", date)
+        before = usable_rates.where(from_currency: currencies, to_currency: to).where("date <= ?", date)
                    .select("DISTINCT ON (from_currency) *").order(:from_currency, date: :desc)
                    .index_by(&:from_currency)
         rest = currencies - before.keys
         return before if rest.empty?
 
-        after = where(from_currency: rest, to_currency: to).where("date > ?", date)
+        after = usable_rates.where(from_currency: rest, to_currency: to).where("date > ?", date)
                   .select("DISTINCT ON (from_currency) *").order(:from_currency, :date)
                   .index_by(&:from_currency)
         before.merge(after)

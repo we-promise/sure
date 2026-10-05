@@ -154,6 +154,30 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal({ "JPY" => 30.days.ago.to_date }, stale, "CAD is current, KRW has no rate at all, USD needs none")
   end
 
+  # A stored 0 or negative is no rate: multiplying by it books an amount as
+  # nothing or flips its sign. The usable rate behind it is used instead.
+  test "rates_for and rate_sql skip a stored rate of zero or below" do
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 3.days.ago.to_date, rate: 0.0067)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 1.day.ago.to_date, rate: -1)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0)
+    ExchangeRate.create!(from_currency: "KRW", to_currency: "USD", date: Date.current, rate: 0)
+    @provider.stubs(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no rate")))
+
+    assert_equal({ "JPY" => 0.0067 }, ExchangeRate.rates_for(%w[JPY KRW], to: "USD").transform_values(&:to_f))
+
+    sql = ExchangeRate.rate_sql(from: ":from", to: "'USD'", on: "CURRENT_DATE")
+    rate = ->(from) { ActiveRecord::Base.connection.select_value(ActiveRecord::Base.sanitize_sql_array([ "SELECT #{sql}", { from: from } ]))&.to_d }
+    assert_equal BigDecimal("0.0067"), rate.call("JPY")
+    assert_nil rate.call("KRW")
+    assert_equal %w[KRW], ExchangeRate.currencies_without_rate(%w[JPY KRW], to: "USD")
+  end
+
+  test "rates_for converts the target currency itself at 1" do
+    @provider.expects(:fetch_exchange_rate).never
+
+    assert_equal({ "USD" => 1 }, ExchangeRate.rates_for(%w[USD], to: "USD"))
+  end
+
   test "does not reuse cached rate outside lookback window" do
     old_date = (ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS + 1).days.ago.to_date
     ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: old_date, rate: 140.0)
