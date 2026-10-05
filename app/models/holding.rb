@@ -301,15 +301,12 @@ class Holding < ApplicationRecord
         Trade::INTERNAL_MOVEMENT_LABELS
       )
 
-      rate = ExchangeRate.rate_sql(
-        from: "trades.currency",
-        to: ActiveRecord::Base.connection.quote(account.currency),
-        on: "entries.date"
-      )
+      rate = ExchangeRate.rate_sql(from: "trades.currency", to: ":account_currency", on: "entries.date")
+      bind = ->(sql) { Arel.sql(ActiveRecord::Base.sanitize_sql_array([ sql, { account_currency: account.currency } ])) }
       total_cost, total_qty, unconverted = trades.pick(
-        Arel.sql("SUM(trades.price * trades.qty * #{rate})"),
+        bind.call("SUM(trades.price * trades.qty * #{rate})"),
         Arel.sql("SUM(trades.qty)"),
-        Arel.sql("COUNT(*) FILTER (WHERE #{rate} IS NULL)")
+        bind.call("COUNT(*) FILTER (WHERE #{rate} IS NULL)")
       )
 
       # Return nil when no trades exist - cost basis is genuinely unknown
