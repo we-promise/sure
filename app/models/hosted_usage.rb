@@ -122,7 +122,7 @@ class HostedUsage
           sessions_created_in_window_count: recent.fetch(family_id, 0),
           latest_session_created_at: latest[family_id],
           cleanup_eligible: eligible.include?(family_id),
-          synthetic_demo: stripe_id == "sub_demo_123"
+          synthetic_demo: stripe_id == Subscription::DEMO_STRIPE_ID
         )
       end
     end
@@ -135,7 +135,7 @@ class HostedUsage
         CleanupCandidate.new(
           family_id:, family_name:, status:, trial_ends_at:,
           reason: subscription_id ? :expired_trial_grace_elapsed : :no_subscription_grace_elapsed,
-          synthetic_demo: stripe_id == "sub_demo_123"
+          synthetic_demo: stripe_id == Subscription::DEMO_STRIPE_ID
         )
       end
     end
