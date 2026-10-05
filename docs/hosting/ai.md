@@ -153,7 +153,7 @@ You can connect to Google Gemini either directly via Google AI Studio's OpenAI-c
 
 - `gemini-3.8-flash` - Best all-around choice; fast, strong reasoning, and reliable tool calling for chat and finance tools
 - `gemini-3.5-flash-lite` - Ultra-low cost and fast; ideal for background categorization and merchant detection
-- `gemini-3.1-pro` - Best for complex financial analysis, portfolio queries, and multi-year trends
+- `gemini-3.1-pro-preview` - Best for complex financial analysis, portfolio queries, and multi-year trends
 - `gemini-2.5-flash` - Previous-generation budget model; fast and dependable fallback
 - `gemini-2.5-pro` - Previous-generation model for complex financial analysis
 
