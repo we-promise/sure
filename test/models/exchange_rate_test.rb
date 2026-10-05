@@ -99,6 +99,49 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_not rates.key?("JPY")
   end
 
+  # Outside the 5-day lookback and with nothing from the provider, the last
+  # stored rate is still a better answer than 1.
+  test "rates_for falls back to the latest stored rate however old" do
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 90.days.ago.to_date, rate: 0.0067)
+    @provider.expects(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no rate")))
+
+    assert_equal 0.0067, ExchangeRate.rates_for(%w[JPY], to: "USD", date: Date.current)["JPY"].to_f
+  end
+
+  # A date before the pair's first stored rate takes that first rate, as the
+  # balance chart already does.
+  test "rates_for falls back to the earliest later rate when there is none before" do
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 10.days.ago.to_date, rate: 0.0068)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 5.days.ago.to_date, rate: 0.0069)
+    @provider.expects(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no rate")))
+
+    assert_equal 0.0068, ExchangeRate.rates_for(%w[JPY], to: "USD", date: 30.days.ago.to_date)["JPY"].to_f
+  end
+
+  test "rate_sql is 1 for the same currency, the latest earlier rate, else the earliest later, else NULL" do
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 10.days.ago.to_date, rate: 0.0068)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 5.days.ago.to_date, rate: 0.0069)
+
+    rate_on = ->(from, on) {
+      sql = ExchangeRate.rate_sql(from: ":from", to: ":to", on: "CAST(:on AS date)")
+      ActiveRecord::Base.connection.select_value(
+        ActiveRecord::Base.sanitize_sql_array([ "SELECT #{sql}", { from: from, to: "USD", on: on } ])
+      )&.to_d
+    }
+
+    assert_equal 1, rate_on.call("USD", Date.current)
+    assert_equal BigDecimal("0.0069"), rate_on.call("JPY", Date.current)
+    assert_equal BigDecimal("0.0068"), rate_on.call("JPY", 7.days.ago.to_date)
+    assert_equal BigDecimal("0.0068"), rate_on.call("JPY", 30.days.ago.to_date)
+    assert_nil rate_on.call("KRW", Date.current)
+  end
+
+  test "currencies_without_rate names the currencies with no stored rate on any date" do
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 400.days.ago.to_date, rate: 0.009)
+
+    assert_equal %w[KRW], ExchangeRate.currencies_without_rate(%w[USD JPY KRW KRW] + [ nil ], to: "USD")
+  end
+
   test "does not reuse cached rate outside lookback window" do
     old_date = (ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS + 1).days.ago.to_date
     ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: old_date, rate: 140.0)

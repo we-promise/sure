@@ -56,11 +56,13 @@ module ExchangeRate::Provided
     end
 
     # Batch-fetches exchange rates for multiple source currencies.
-    # Returns a hash mapping each currency to its numeric rate. A currency with
-    # no rate is left out rather than given 1: "no rate" and "parity" are
-    # different facts, and a caller that cannot tell them apart reports a
-    # ¥1,000,000 gain as $1,000,000. Each caller decides what an absent rate
-    # means for its own figure.
+    # Returns a hash mapping each currency to its numeric rate: the day's,
+    # then a recent one, then the provider's, then the latest stored one
+    # however old, then the earliest stored one after the day (as the balance
+    # chart does). A currency with no stored rate at all is left out rather
+    # than given 1: "no rate" and "parity" are different facts, and a caller
+    # that cannot tell them apart reports a ¥1,000,000 gain as $1,000,000
+    # (#3640). Each caller decides what an absent rate means for its figure.
     def rates_for(currencies, to:, date: Date.current)
       unique_currencies = currencies.uniq
       return {} if unique_currencies.empty?
@@ -92,8 +94,12 @@ module ExchangeRate::Provided
         map[currency] = rate if rate
       end
 
+      # A rate from any distance is closer to the truth than 1.
+      unfetched = still_missing - fetched_rates.keys
+      stored_rates = unfetched.any? ? any_stored_rates(unfetched, to: to, date: date) : {}
+
       unique_currencies.each_with_object({}) do |currency, result|
-        rate = exact_rates[currency] || nearest_rates[currency] || fetched_rates[currency]
+        rate = exact_rates[currency] || nearest_rates[currency] || fetched_rates[currency] || stored_rates[currency]
         if rate.nil?
           Rails.logger.warn("No exchange rate found for #{currency}/#{to} on #{date}")
           next
@@ -102,6 +108,36 @@ module ExchangeRate::Provided
         end
         result[currency] = rate.rate
       end
+    end
+
+    # SQL for the rate that converts `from` into `to` on `on`, by the same rule
+    # as #rates_for without the provider: 1 for the same currency, else the
+    # latest stored rate on or before the day, else the earliest after it, else
+    # NULL. Amounts multiplied by a NULL rate drop out of a SUM, which is the
+    # point: an amount with no rate is left out, never counted at parity.
+    #
+    # Arguments are SQL expressions, so a caller passes column names or named
+    # binds (`:target_currency`), not values.
+    def rate_sql(from:, to:, on:)
+      <<~SQL.squish
+        CASE WHEN #{from} = #{to} THEN 1 ELSE COALESCE(
+          (SELECT fx.rate FROM exchange_rates fx
+            WHERE fx.from_currency = #{from} AND fx.to_currency = #{to} AND fx.date <= #{on}
+            ORDER BY fx.date DESC LIMIT 1),
+          (SELECT fx.rate FROM exchange_rates fx
+            WHERE fx.from_currency = #{from} AND fx.to_currency = #{to} AND fx.date > #{on}
+            ORDER BY fx.date ASC LIMIT 1)
+        ) END
+      SQL
+    end
+
+    # Of `currencies`, those with no stored rate into `to` on any date. These
+    # are the amounts #rates_for and #rate_sql leave out.
+    def currencies_without_rate(currencies, to:)
+      candidates = currencies.compact.uniq - [ to ]
+      return [] if candidates.empty?
+
+      candidates - where(from_currency: candidates, to_currency: to).distinct.pluck(:from_currency)
     end
 
     # @return [Integer] The number of exchange rates synced
@@ -143,5 +179,21 @@ module ExchangeRate::Provided
         Rails.cache.delete(lock_key) if Rails.cache.read(lock_key) == lock_token
       end
     end
+
+    private
+      # The latest stored rate on or before `date` for each currency, else the
+      # earliest after it, in two queries.
+      def any_stored_rates(currencies, to:, date:)
+        before = where(from_currency: currencies, to_currency: to).where("date <= ?", date)
+                   .select("DISTINCT ON (from_currency) *").order(:from_currency, date: :desc)
+                   .index_by(&:from_currency)
+        rest = currencies - before.keys
+        return before if rest.empty?
+
+        after = where(from_currency: rest, to_currency: to).where("date > ?", date)
+                  .select("DISTINCT ON (from_currency) *").order(:from_currency, :date)
+                  .index_by(&:from_currency)
+        before.merge(after)
+      end
   end
 end
