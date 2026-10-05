@@ -94,8 +94,6 @@ ru:
       remaining: Осталось %{amount}
       paid_headline: Оплачено %{amount}
       cost_line: В среднем %{average} за платёж, около %{annualized} в год
-    pane:
-      close: Свернуть подробности
     add_bill: Добавить платёж
     manage: Управлять
     find_payment: Найти оплату
