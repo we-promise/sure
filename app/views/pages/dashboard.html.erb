@@ -58,7 +58,7 @@
 <% end %>
 
 <%= turbo_frame_tag "dashboard_sections", target: "_top" do %>
-  <%= render "shared/missing_exchange_rates", family: Current.family, classes: "mb-4" %>
+  <%= render "shared/exchange_rate_notes", family: Current.family, classes: "mb-4" %>
 
   <% if accessible_accounts.any? %>
     <div class="flex items-center justify-end mb-4">

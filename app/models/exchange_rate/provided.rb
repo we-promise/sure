@@ -140,6 +140,20 @@ module ExchangeRate::Provided
       candidates - where(from_currency: candidates, to_currency: to).distinct.pluck(:from_currency)
     end
 
+    # Of `currencies`, those whose newest stored rate into `to` is older than
+    # the lookback #rates_for treats as current, with that rate's date. Today's
+    # figures in them convert at that older rate. A currency with no rate at
+    # all is not here; see #currencies_without_rate.
+    def stale_rate_dates(currencies, to:, as_of: Date.current)
+      candidates = currencies.compact.uniq - [ to ]
+      return {} if candidates.empty?
+
+      where(from_currency: candidates, to_currency: to)
+        .group(:from_currency)
+        .maximum(:date)
+        .select { |_, date| date < as_of - NEAREST_RATE_LOOKBACK_DAYS }
+    end
+
     # @return [Integer] The number of exchange rates synced
     def import_provider_rates(from:, to:, start_date:, end_date:, clear_cache: false)
       unless provider.present?

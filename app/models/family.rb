@@ -604,10 +604,14 @@ class Family < ApplicationRecord
   # left out of every converted total rather than counted at 1 (#3640), and
   # the pages that show those totals say so.
   def currencies_without_exchange_rate
-    @currencies_without_exchange_rate ||= ExchangeRate.currencies_without_rate(
-      accounts.distinct.pluck(:currency) + entries.distinct.pluck(:currency) + holdings.distinct.pluck(:currency),
-      to: currency
-    )
+    @currencies_without_exchange_rate ||= ExchangeRate.currencies_without_rate(currencies_in_use, to: currency)
+  end
+
+  # Currencies in use whose newest rate into the family currency is too old to
+  # count as today's, mapped to that rate's date. Today's totals use it, and
+  # the same pages say so.
+  def stale_exchange_rate_dates
+    @stale_exchange_rate_dates ||= ExchangeRate.stale_rate_dates(currencies_in_use, to: currency)
   end
 
   # Returns securities with plan restrictions for a specific provider
@@ -741,6 +745,12 @@ class Family < ApplicationRecord
   end
 
   private
+    def currencies_in_use
+      @currencies_in_use ||= (
+        accounts.distinct.pluck(:currency) + entries.distinct.pluck(:currency) + holdings.distinct.pluck(:currency)
+      ).compact.uniq
+    end
+
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
     # `tax_advantaged_account_ids`. Joins `depositories` and filters by
     # `Depository::TAX_ADVANTAGED_SUBTYPES` (currently `%w[hsa]`). Extracted

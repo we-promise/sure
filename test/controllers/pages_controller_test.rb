@@ -894,10 +894,23 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='missing-exchange-rates']", text: /no exchange rate from KRW to USD/
   end
 
-  test "dashboard shows no missing-rate note when every currency has a rate" do
+  test "dashboard shows no exchange rate notes when every rate is current" do
     get root_path
     assert_response :ok
 
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
+    assert_select "[data-testid='stale-exchange-rates']", count: 0
+  end
+
+  test "dashboard says when today's totals use an out-of-date rate" do
+    rate_date = 30.days.ago.to_date
+    @family.accounts.create!(name: "JPY Savings", balance: 1_000_000, currency: "JPY", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: rate_date, rate: 0.0067)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='stale-exchange-rates']", text: /JPY from #{Regexp.escape(I18n.l(rate_date, format: :long))}/
     assert_select "[data-testid='missing-exchange-rates']", count: 0
   end
 

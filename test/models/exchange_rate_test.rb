@@ -142,6 +142,18 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal %w[KRW], ExchangeRate.currencies_without_rate(%w[USD JPY KRW KRW] + [ nil ], to: "USD")
   end
 
+  # Older than the lookback rates_for treats as current: today's figures use
+  # a rate from some other day. Within it (a weekend, a holiday) is current.
+  test "stale_rate_dates names currencies whose newest rate is older than the lookback" do
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 30.days.ago.to_date, rate: 0.0067)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS.days.ago.to_date, rate: 0.73)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 40.days.ago.to_date, rate: 0.71)
+
+    stale = ExchangeRate.stale_rate_dates(%w[USD JPY CAD KRW], to: "USD")
+
+    assert_equal({ "JPY" => 30.days.ago.to_date }, stale, "CAD is current, KRW has no rate at all, USD needs none")
+  end
+
   test "does not reuse cached rate outside lookback window" do
     old_date = (ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS + 1).days.ago.to_date
     ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: old_date, rate: 140.0)

@@ -623,6 +623,16 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal %w[KRW], family.currencies_without_exchange_rate
   end
 
+  test "stale_exchange_rate_dates names used currencies whose newest rate is out of date" do
+    family = families(:empty)
+    family.accounts.create!(name: "JPY", balance: 1, currency: "JPY", accountable: Depository.new)
+    family.accounts.create!(name: "CAD", balance: 1, currency: "CAD", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: family.currency, date: Date.current, rate: 0.73)
+
+    assert_equal({ "JPY" => 30.days.ago.to_date }, family.stale_exchange_rate_dates)
+  end
+
   private
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
