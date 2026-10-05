@@ -1780,7 +1780,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
   end
 
   test "fetch_envelope_cash records a failure without aborting the sync" do
-    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+    @client.define_singleton_method(:subscribe) do |_websocket, _payload|
       raise Provider::TradeRepublicClient::ProviderUnavailable, "cash feed down"
     end
     envelope = { "kind" => "pea" }
@@ -1794,7 +1794,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
   end
 
   test "fetch_envelope_cash re-raises transient provider errors" do
-    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+    @client.define_singleton_method(:subscribe) do |_websocket, _payload|
       raise Provider::TradeRepublicClient::TransientProviderError, "retry"
     end
 

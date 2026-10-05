@@ -3,6 +3,7 @@ require "test_helper"
 class AccountTradeRepublicCreationTest < ActiveSupport::TestCase
   setup do
     @item = trade_republic_items(:no_session_item)
+    @item.trade_republic_accounts.destroy_all
   end
 
   test "maps each Trade Republic kind to a Sure accountable and subtype" do
@@ -28,11 +29,12 @@ class AccountTradeRepublicCreationTest < ActiveSupport::TestCase
   end
 
   test "TRADE_REPUBLIC_ACCOUNT_TYPES tags the PEA as an Investment pea wrapper" do
-    assert_equal [ "Investment", "pea", "Trade Republic PEA" ], Account::TRADE_REPUBLIC_ACCOUNT_TYPES["pea"]
-    assert_equal [ "Investment", "brokerage", "Trade Republic Portfolio" ], Account::TRADE_REPUBLIC_ACCOUNT_TYPES["portfolio"]
-    assert_equal [ "Depository", "checking", "Trade Republic Cash" ], Account::TRADE_REPUBLIC_ACCOUNT_TYPES["cash"]
-    assert_equal [ "Crypto", "exchange", "Trade Republic Crypto" ], Account::TRADE_REPUBLIC_ACCOUNT_TYPES["crypto"]
-    assert_equal "brokerage", Account::TRADE_REPUBLIC_ACCOUNT_TYPES["portfolio"][1]
+    account_types = Account.singleton_class.const_get(:TRADE_REPUBLIC_ACCOUNT_TYPES)
+    assert_equal [ "Investment", "pea", "Trade Republic PEA" ], account_types["pea"]
+    assert_equal [ "Investment", "brokerage", "Trade Republic Portfolio" ], account_types["portfolio"]
+    assert_equal [ "Depository", "checking", "Trade Republic Cash" ], account_types["cash"]
+    assert_equal [ "Crypto", "exchange", "Trade Republic Crypto" ], account_types["crypto"]
+    assert_equal "brokerage", account_types["portfolio"][1]
   end
 
   test "uses the provider account name when it is present" do

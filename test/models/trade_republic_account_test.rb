@@ -3,6 +3,7 @@ require "test_helper"
 class TradeRepublicAccountTest < ActiveSupport::TestCase
   setup do
     @item = trade_republic_items(:no_session_item)
+    @item.trade_republic_accounts.destroy_all
     @family = @item.family
   end
 
