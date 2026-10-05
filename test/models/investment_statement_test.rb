@@ -34,13 +34,22 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 2083.92, @statement.holdings_value, 0.001
   end
 
-  test "portfolio_value falls back to 1:1 when FX rate is missing" do
+  # At 1 the EUR account added 1,000 and portfolio_value read 2,921.92 (#3640).
+  test "portfolio_value leaves out an account in a currency with no rate at all" do
+    ExchangeRate.stubs(:provider).returns(nil)
     create_investment_account(balance: 1921.92, currency: "USD")
     create_investment_account(balance: 1000, currency: "EUR")
 
-    # No ExchangeRate row: rates_for leaves EUR out and the statement's own
-    # conversion falls back to 1
-    assert_in_delta 2921.92, @statement.portfolio_value, 0.001
+    assert_in_delta 1921.92, @statement.portfolio_value, 0.001
+  end
+
+  test "portfolio_value uses the latest stored rate however old" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 60.days.ago.to_date, rate: 1.1)
+    create_investment_account(balance: 1921.92, currency: "USD")
+    create_investment_account(balance: 1000, currency: "EUR")
+
+    assert_in_delta 3021.92, @statement.portfolio_value, 0.001
   end
 
   test "current_holdings includes holdings from every investment account regardless of currency" do
@@ -461,6 +470,21 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.dividends
     assert_equal Money.new(0, "USD"), totals.interest
     assert_equal 0, totals.trades_count
+  end
+
+  # A buy in a currency with no rate is not a $1-per-unit contribution (#3640).
+  test "totals leave out a trade in a currency with no rate at all" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    usd_account = create_investment_account(balance: 500)
+    krw_account = create_investment_account(balance: 500_000, currency: "KRW")
+
+    create_trade(account: usd_account, qty: 2, amount: 120, date: period.start_date)
+    create_trade(account: krw_account, qty: 1, amount: 500_000, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(120, "USD"), totals.contributions
+    assert_equal 2, totals.trades_count
   end
 
   test "totals aggregate directly from trade entries" do

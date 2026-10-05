@@ -175,14 +175,9 @@ class InvestmentStatement
     absolute_return = ActiveRecord::Base.connection.select_value(
       ActiveRecord::Base.sanitize_sql_array([
         <<~SQL.squish,
-          SELECT COALESCE(SUM(b.net_market_flows * COALESCE(er.rate, 1)), 0)
+          SELECT COALESCE(SUM(b.net_market_flows * #{ExchangeRate.rate_sql(from: "b.currency", to: ":currency", on: "b.date")}), 0)
           FROM balances b
           JOIN accounts a ON a.id = b.account_id
-          LEFT JOIN exchange_rates er ON (
-            er.date = b.date
-            AND er.from_currency = b.currency
-            AND er.to_currency = :currency
-          )
           WHERE a.id IN (:account_ids)
             AND a.family_id = :family_id
             AND a.status IN ('draft', 'active')
@@ -207,14 +202,9 @@ class InvestmentStatement
     start_value = ActiveRecord::Base.connection.select_value(
       ActiveRecord::Base.sanitize_sql_array([
         <<~SQL.squish,
-          SELECT COALESCE(SUM(b.end_balance * COALESCE(er.rate, 1)), 0)
+          SELECT COALESCE(SUM(b.end_balance * #{ExchangeRate.rate_sql(from: "b.currency", to: ":currency", on: ":period_start")}), 0)
           FROM accounts a
           INNER JOIN balances b ON b.account_id = a.id
-          LEFT JOIN exchange_rates er ON (
-            er.date = :period_start
-            AND er.from_currency = b.currency
-            AND er.to_currency = :currency
-          )
           INNER JOIN (
             SELECT b2.account_id, MAX(b2.date) AS max_date
             FROM balances b2
@@ -288,12 +278,16 @@ class InvestmentStatement
     # `Money * numeric` preserves the source currency — so multiplying a
     # foreign-currency Money by a rate would FX-scale the amount but keep the
     # wrong currency label, corrupting downstream sums.
+    #
+    # A currency with no rate at all converts to 0: the amount is left out of
+    # every sum here rather than counted at 1 (#3640). Both sides of a trend
+    # come from the same holding, so they drop out together.
     def convert_to_family_currency(amount, from_currency)
       return amount if amount.nil?
       numeric = amount.is_a?(Money) ? amount.amount : amount
       return numeric if from_currency == family.currency
-      rate = exchange_rates[from_currency] || 1
-      numeric * rate
+      rate = exchange_rates[from_currency]
+      rate ? numeric * rate : 0
     end
 
     def all_time_totals
