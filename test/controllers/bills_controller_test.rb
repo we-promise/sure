@@ -1332,15 +1332,18 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "autopay reads on the bill's line rather than in the action slot" do
-    create_bill(name: "Netflix", amount: 15.99, autopay: true,
-                payment_url: "https://example.com/pay")
+    bill = create_bill(name: "Netflix", amount: 15.99, autopay: true,
+                       payment_url: "https://example.com/pay")
 
     get bills_url
     assert_includes response.body, I18n.t("recurring_transactions.pay_action.autopay")
     refute_includes response.body, "refresh-cw",
       "autopay is a state; the row's one action position belongs to a verb"
-    assert_includes response.body, "https://example.com/pay",
-      "the portal stays reachable, just not as the row's headline action"
+    refute_includes response.body, "https://example.com/pay",
+      "an autopay bill on schedule needs nothing from you, so its row offers no portal"
+
+    get_bill_drawer(bill)
+    assert_includes response.body, "https://example.com/pay", "the portal stays one tap away"
   end
 
   # Opacity on the whole row took the secondary text to about 2.7:1 in light
