@@ -21,6 +21,7 @@ export default class extends Controller {
     autoSubmit: Boolean,
     createLabel: String,
     createErrorMessage: String,
+    locked: Boolean,
   };
 
   connect() {
@@ -69,7 +70,7 @@ export default class extends Controller {
       if (name === query) exactMatch = true;
     });
 
-    const canCreate = rawQuery.length > 0 && !exactMatch;
+    const canCreate = !this.lockedValue && rawQuery.length > 0 && !exactMatch;
 
     this.createFormTarget.classList.toggle("hidden", !canCreate);
     this.createFormTarget.classList.toggle("flex", canCreate);
@@ -138,7 +139,7 @@ export default class extends Controller {
   }
 
   async createCategory() {
-    if (this.creating) return;
+    if (this.creating || this.lockedValue) return;
 
     const name = this.searchTarget.value.trim();
     if (!name) return;
