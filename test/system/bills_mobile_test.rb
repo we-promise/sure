@@ -230,6 +230,27 @@ class BillsMobileTest < ApplicationSystemTestCase
     assert_no_horizontal_scroll("the payment drawer")
   end
 
+  # A row's verb needs @lg of list to sit beside the bill's name. Below it the
+  # subline says why the row matters, and the drawer spells the verb out.
+  test "a phone row carries no verb, and tapping it opens the drawer with one" do
+    [ [ "CITY WATER", nil ], [ "COMCAST", "https://pay.example.com" ] ].each do |name, payment_url|
+      @family.recurring_transactions.create!(
+        name: name, account: accounts(:depository), amount: 80, currency: "USD",
+        expected_day_of_month: Date.current.day, anchor_date: Date.current,
+        last_occurrence_date: Date.current, next_expected_date: Date.current,
+        status: "active", manual: true, payment_url: payment_url
+      )
+    end
+
+    visit bills_url
+    assert_text "COMCAST"
+    assert_no_link I18n.t("bills.find_payment")
+    assert_no_selector "a[href='https://pay.example.com']"
+
+    find("a[data-turbo-frame='drawer']", text: "CITY WATER", match: :first).click
+    within("dialog[open]") { assert_link I18n.t("bills.find_payment") }
+  end
+
   private
     # The document must never be wider than the viewport, and neither must the
     # scroll container inside it. An open drawer sits outside #main, in a scroll
