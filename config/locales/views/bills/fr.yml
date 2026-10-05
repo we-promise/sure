@@ -300,10 +300,8 @@ fr:
         trigger: Laisser l'IA configurer
         uncategorized: Sans catégorie
     summary:
-      cost_line: En moyenne %{average} par paiement, soit environ %{annualized} par an
       paid_headline: "%{amount} payés"
       remaining: "%{amount} restants"
-    view_full_bill: Voir la facture complète
     views:
       all: Toutes les factures
       aria_label: Vues des factures

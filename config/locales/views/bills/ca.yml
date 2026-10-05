@@ -85,7 +85,6 @@ ca:
     summary:
       remaining: '%{amount} pendents'
       paid_headline: '%{amount} pagats'
-      cost_line: Una mitjana de %{average} per pagament, uns %{annualized} l'any
     add_bill: Afegeix una factura
     manage: Gestiona
     find_payment: Cerca el pagament
@@ -93,7 +92,6 @@ ca:
     review_match: Revisa la coincidència
     resolve: Resol
     manage_payments: Gestiona els pagaments
-    view_full_bill: Mostra la factura completa
     match:
       same_merchant: Mateix comerç
       name_matches: El nom coincideix

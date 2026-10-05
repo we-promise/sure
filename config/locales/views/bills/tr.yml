@@ -85,7 +85,6 @@ tr:
     summary:
       remaining: '%{amount} kaldı'
       paid_headline: '%{amount} ödendi'
-      cost_line: Ödeme başına ortalama %{average}, yılda yaklaşık %{annualized}
     add_bill: Fatura ekle
     manage: Yönet
     find_payment: Ödeme bul
@@ -93,7 +92,6 @@ tr:
     review_match: Eşleşmeyi incele
     resolve: Düzelt
     manage_payments: Ödemeleri yönet
-    view_full_bill: Faturanın tamamını görüntüle
     match:
       same_merchant: Aynı satıcı
       name_matches: Ad eşleşiyor

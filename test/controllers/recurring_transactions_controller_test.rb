@@ -297,6 +297,20 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert Entry.exists?(entry.id), "removing a bill must never delete ledger entries"
   end
 
+  # A bill visited at its own URL opens in the drawer over the overview, so
+  # going back there after removing it would reopen it, or 404 on it.
+  test "deleting a bill from its own URL lands on the overview" do
+    bill = @family.recurring_transactions.create!(
+      name: "City Water", account: accounts(:depository), amount: 45, currency: "USD",
+      expected_day_of_month: 5, last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current, status: "active", manual: true
+    )
+
+    delete recurring_transaction_url(bill), headers: { "HTTP_REFERER" => bill_url(bill) }
+
+    assert_redirected_to bills_url
+  end
+
   # Which kind this is was settled by the entry point that opened the dialog.
   # The checkbox asked it again, and ticking it reshaped nothing: you filled in
   # bill-shaped labels, pressed Save bill, and got an income record.

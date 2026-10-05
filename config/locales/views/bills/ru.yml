@@ -93,7 +93,6 @@ ru:
     summary:
       remaining: Осталось %{amount}
       paid_headline: Оплачено %{amount}
-      cost_line: В среднем %{average} за платёж, около %{annualized} в год
     add_bill: Добавить платёж
     manage: Управлять
     find_payment: Найти оплату
@@ -101,7 +100,6 @@ ru:
     review_match: Проверить совпадение
     resolve: Решить
     manage_payments: Управлять оплатами
-    view_full_bill: Открыть платёж полностью
     match:
       same_merchant: Тот же продавец
       name_matches: Совпадает название

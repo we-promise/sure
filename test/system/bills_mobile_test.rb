@@ -78,10 +78,15 @@ class BillsMobileTest < ApplicationSystemTestCase
       assert_no_horizontal_scroll("the #{view} view")
     end
 
-    # The bill's own page: chart, history and configuration in one column.
+    # A bill visited directly: its drawer over the overview, with the chart and
+    # the per-year totals loaded into it.
     visit bill_url(bill)
-    assert_text bill.display_name
-    assert_no_horizontal_scroll("the bill page")
+    within("dialog[open]") do
+      assert_selector "h2", text: bill.display_name
+      scroll_to find("turbo-frame[src*='display=history']")
+      assert_text(/#{I18n.t("bills.detail.history_title")}/i)
+    end
+    assert_no_horizontal_scroll("the bill drawer")
 
     # The control for the reflow above: given its width back, the container
     # query must bring the table back, or the check proved only that a table

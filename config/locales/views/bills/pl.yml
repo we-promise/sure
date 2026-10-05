@@ -367,10 +367,8 @@ pl:
         trigger: Pozwól AI skonfigurować
         uncategorized: Bez kategorii
     summary:
-      cost_line: Średnio %{average} za płatność, około %{annualized} rocznie
       paid_headline: Zapłacono %{amount}
       remaining: Pozostało %{amount}
-    view_full_bill: Zobacz pełny rachunek
     views:
       all: Wszystkie rachunki
       aria_label: Widoki rachunków

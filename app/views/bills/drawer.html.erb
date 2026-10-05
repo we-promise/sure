@@ -1,22 +1,73 @@
-<%# Opened from a row, over the list, the way a transaction or a budget
-    category opens. The list stays where it was, so closing this lands back
-    on the same row. %>
+<%# Everything about one bill, in the drawer, the way a transaction or a
+    budget category opens. Opened from a row, the list stays where it was, so
+    closing this lands back on the same row. There is no separate bill page:
+    a direct visit renders the overview with this drawer already open. %>
 <%= render DS::Dialog.new(variant: :drawer) do |dialog| %>
-  <% dialog.with_header(title: @series.display_name) do %>
-    <% if @series.category %>
-      <%= render "categories/badge", category: @series.category %>
-    <% end %>
+  <% dialog.with_header(custom_header: true) do %>
+    <div class="flex items-start justify-between gap-2">
+      <div class="min-w-0 space-y-1.5">
+        <% if @series.category %>
+          <%= render "categories/badge", category: @series.category %>
+        <% end %>
+        <h2 id="<%= dialog.title_id %>" class="text-lg font-medium text-primary"><%= @series.display_name %></h2>
+      </div>
+
+      <div class="flex items-center gap-1 shrink-0">
+        <%# Pause and remove answer with the whole page, so they leave the
+            drawer's frame. Edit and AI open as modals over the drawer. %>
+        <%= render DS::Menu.new do |menu| %>
+          <% menu.with_item(
+               variant: "link",
+               text: t("bills.show.edit"),
+               icon: "pencil",
+               href: edit_recurring_transaction_path(@series),
+               data: { turbo_frame: :modal }) %>
+          <% if bills_one_shot_ai_available? %>
+            <% menu.with_item(
+                 variant: "link",
+                 text: t("bills.smart_configurations.show.trigger"),
+                 icon: "sparkles",
+                 href: smart_configuration_bill_path(@series),
+                 data: { turbo_frame: :modal }) %>
+          <% end %>
+          <% menu.with_item(
+               variant: "button",
+               text: @series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+               icon: @series.active? ? "pause" : "play",
+               href: toggle_status_recurring_transaction_path(@series),
+               method: :post,
+               frame: "_top") %>
+          <% menu.with_item(
+               variant: "button",
+               text: t("recurring_transactions.actions.delete"),
+               icon: "trash-2",
+               href: recurring_transaction_path(@series),
+               method: :delete,
+               destructive: true,
+               frame: "_top",
+               confirm: t(@series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: @series.display_name)) %>
+        <% end %>
+        <%= dialog.close_button %>
+      </div>
+    </div>
   <% end %>
 
   <% dialog.with_body do %>
-    <%# What is going on with this bill, and what to do about it. Everything
-        deeper -- the chart, the per-year totals, the price history, the
-        upcoming dates, the settled cycles -- lives on the bill's page. %>
-    <%= render "bills/summary",
-          series: @series,
-          current_occurrence: @current_occurrence,
-          analytics: @analytics,
-          recent_allocations: @recent_allocations,
-          suggestion: @drawer_suggestion %>
+    <div class="space-y-4">
+      <%= render "bills/summary",
+            series: @series,
+            current_occurrence: @current_occurrence,
+            recent_allocations: @recent_allocations,
+            suggestion: @drawer_suggestion %>
+
+      <%# The chart, the per-year totals, the price history, the upcoming
+          dates and the settled cycles. Lazy, so opening a bill costs no more
+          than its summary; refresh: :morph, or a morph refresh would empty it. %>
+      <%= turbo_frame_tag dom_id(@series, :history),
+            src: bill_path(@series, display: "history"),
+            loading: :lazy,
+            refresh: :morph,
+            class: "block border-t border-subdued pt-4" %>
+    </div>
   <% end %>
 <% end %>

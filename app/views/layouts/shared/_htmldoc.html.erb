@@ -24,7 +24,13 @@
     <% end %>
 
     <%= turbo_frame_tag "modal" %>
-    <%= turbo_frame_tag "drawer" %>
+    <%# A page can open the drawer on arrival by naming what goes in it
+        (bills#show visited directly renders the overview around the bill). %>
+    <% if content_for?(:drawer_src) %>
+      <%= turbo_frame_tag "drawer", src: yield(:drawer_src), refresh: :morph %>
+    <% else %>
+      <%= turbo_frame_tag "drawer" %>
+    <% end %>
 
     <%# Custom overrides for browser's confirm API  %>
     <%= render "layouts/shared/confirm_dialog" %>
