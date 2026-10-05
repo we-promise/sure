@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div id="simplefin-providers-panel" class="space-y-4">
   <%
     sf_link = link_to("SimpleFIN Bridge", "https://beta-bridge.simplefin.org", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")
   %>
@@ -9,8 +9,9 @@
                t("settings.providers.simplefin_panel.step_3")
              ] %>
 
-  <% if defined?(@error_message) && @error_message.present? %>
-    <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
   <% end %>
 
   <%= styled_form_with model: SimplefinItem.new,
@@ -19,6 +20,8 @@
                        method: :post,
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
+    <%# The new-connection modal posts to the same action but shows errors in its own template. %>
+    <%= hidden_field_tag :source, "panel" %>
     <%= form.text_field :setup_token,
                         label: t("settings.providers.simplefin_panel.setup_token_label"),
                         placeholder: t("settings.providers.simplefin_panel.setup_token_placeholder"),

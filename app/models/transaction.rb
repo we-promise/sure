@@ -118,6 +118,9 @@ class Transaction < ApplicationRecord
   # statement size when a merge or category destroy hits many transactions.
   REASSIGN_TOUCH_BATCH_SIZE = 5_000
 
+  # DataEnrichment sources that represent automatic category assignment
+  AUTO_CATEGORY_SOURCES = %w[ai bayes].freeze
+
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
   PENDING_CHECK_SQL = PENDING_PROVIDERS

@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div id="enable_banking-providers-panel" class="space-y-4">
   <%
     eb_link = link_to("Enable Banking", "https://enablebanking.com", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")
   %>
@@ -148,10 +148,9 @@
                 icon: "refresh-cw",
                 variant: :outline,
                 size: :sm,
-                href: sync_enable_banking_item_path(item),
+                href: sync_enable_banking_item_path(item, source: "panel"),
                 method: :post,
-                disabled: item.syncing?,
-                data: { turbo: false }
+                disabled: item.syncing?
               ) %>
             <% elsif item.session_expired? %>
               <%= render DS::Button.new(

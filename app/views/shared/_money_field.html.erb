@@ -9,6 +9,8 @@
 
 <div class="form-field <%= options[:container_class] %>"
      data-controller="money-field"
+     data-money-field-separator-value="<%= currency.separator %>"
+     data-money-field-separator-currency-value="<%= currency.iso_code %>"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>>
   <% if options[:label_tooltip] %>
@@ -71,7 +73,12 @@
 
       <% unless options[:hide_currency] %>
         <div>
-          <% currency_data = (options[:currency_data] || {}).merge({
+          <%# Callers pass symbol keys (e.g. `action:`), so stringify first:
+              otherwise delete("action") below misses the caller's action and
+              both an :action and an "action" key get rendered, and the
+              browser keeps only the first data-action attribute, dropping
+              money-field#handleCurrencyChange. %>
+          <% currency_data = (options[:currency_data] || {}).stringify_keys.merge({
                "money-field-target": "currency",
                "auto-submit-form-target": ("auto" if options[:auto_submit])
              }.compact)
