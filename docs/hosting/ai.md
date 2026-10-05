@@ -162,7 +162,7 @@ You can connect to Google Gemini either directly via Google AI Studio's OpenAI-c
 [Google AI Studio](https://aistudio.google.com/) provides direct API access to Gemini models with a free tier and an OpenAI-compatible endpoint:
 
 ```bash
-OPENAI_ACCESS_TOKEN=your-google-ai-studio-api-key
+OPENAI_ACCESS_TOKEN=your-google-ai-studio-api-key # pipelock:ignore
 OPENAI_URI_BASE=https://generativelanguage.googleapis.com/v1beta/openai
 OPENAI_MODEL=gemini-3.8-flash
 ```
