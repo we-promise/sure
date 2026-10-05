@@ -20,6 +20,10 @@
       </span>
     <% end %>
   </p>
-  <%= link_to t("bills.manage"), bill_path(notice.series),
-        class: "text-xs text-link hover:underline shrink-0" %>
+  <%= render DS::Link.new(
+        text: t("bills.manage"),
+        variant: :default,
+        href: bill_path(notice.series),
+        class: "text-xs shrink-0"
+      ) %>
 </div>
