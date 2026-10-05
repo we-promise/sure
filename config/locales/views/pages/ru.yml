@@ -9,6 +9,18 @@ ru:
           cash_flow: "Денежный поток"
           surplus: "Профицит"
           deficit: "Дефицит"
+        title: Новая диаграмма Sankey
+        preview: Предпросмотр
+        preview_tooltip: Эта диаграмма заменит визуализацию выше, так как использует новый общий API с мобильным клиентом на Swift.
+        feedback_prompt: Сравните эту диаграмму с исходной выше и сообщите нам, если она отличается чем-то, кроме сортировки.
+        positive: Всё верно
+        negative: Что-то не так
+        feedback_title: Отзыв о диаграмме денежного потока
+        feedback_loading: Загрузка формы отзыва…
+        feedback_unavailable: Отзыв сейчас недоступен. Попробуйте позже.
+        feedback_thanks: Спасибо, что помогаете улучшить диаграмму!
+        feedback_privacy: Ваш ответ отправляется в PostHog. Опишите проблему, не указывая номера счетов, балансы и другие личные финансовые данные.
+        feedback_submit: Отправить отзыв
       balance_sheet:
         add_accounts: Добавьте счета %{name}, чтобы увидеть разбивку
         add_asset_accounts: Добавьте счета активов
@@ -23,12 +35,17 @@ ru:
         title: Баланс
         value: Сумма
         weight: Доля
+        expand_all: Развернуть все
+        collapse_all: Свернуть все
       cashflow_sankey:
         add_transaction: Добавить операцию
         no_data_description: Добавьте операции или измените период
         no_data_title: Нет данных за период
         title: Денежный поток
         zoom_out: Показать весь поток
+        loading: Загрузка денежного потока…
+        load_error: Не удалось загрузить денежный поток. Попробуйте ещё раз.
+        retry: Повторить
       drag_to_reorder: Перетащите для изменения порядка
       investment_summary:
         add_investment: Добавьте инвестиционный счёт для отслеживания портфеля
@@ -45,7 +62,7 @@ ru:
         withdrawals: Выводы
       net_worth_chart:
         data_not_available: Нет данных за выбранный период
-        title: Свободные средства
+        title: Чистая стоимость
       new: Новое
       no_account_empty_state:
         new_account: Новый счёт
@@ -74,6 +91,34 @@ ru:
         label: Размер
         tall: Высокий
         width_label: Ширина
+      insights_feed:
+        title: Инсайты
+      money_flow:
+        title: Доходы / расходы
+        date_range: '%{start_date} – %{end_date}'
+        month_picker_aria_label: Выбрать месяц
+        filter_accounts: Фильтр счетов (%{count})
+        filter_accounts_all: Все счета
+        period_scope_hint: Показывает месяцы, выбранные здесь, — независимо от периода панели вверху.
+        search_accounts: Поиск счетов
+        apply: Применить
+        balance: Сальдо операций
+        chart_span:
+          one: Последний %{count} месяц
+          few: Последние %{count} месяца
+          many: Последние %{count} месяцев
+          other: Последние %{count} месяца
+        income: Доходы
+        expenses: Расходы
+      spending_trend:
+        title: Расходы
+        date_range: '%{start_date} – %{end_date}'
+        date_range_short: '%{start_date} – %{end_day}, %{year}'
+        date_range_short_single: '%{date} %{year}'
+        month_picker_aria_label: Выбрать месяц
+        period_scope_hint: Показывает месяц, выбранный здесь, — независимо от периода панели вверху.
+        no_data: Нет данных о расходах за этот месяц
+        previous_comparison_days: (1–%{end_day})
     feedback:
       bug_report: Сообщить об ошибке
       description: Сообщите нам, если у вас есть замечания. Можно приложить ссылки

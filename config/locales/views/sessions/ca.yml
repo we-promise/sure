@@ -5,6 +5,7 @@ ca:
       invalid_credentials: Correu electrònic o contrasenya incorrectes.
       local_login_disabled: L'inici de sessió amb contrasenya local està desactivat.
         Utilitza l'inici de sessió únic.
+      account_deactivated: Aquest compte s'ha desactivat. Contacta amb un administrador.
     destroy:
       logout_successful: Has tancat la sessió correctament.
     failure:
@@ -34,6 +35,8 @@ ca:
       password_placeholder: Introdueix la teva contrasenya
       submit: Inicia sessió
       title: Sure
+      passkey_button: Inicia sessió amb una clau d'accés
+      passkey_unsupported: Aquest navegador no admet claus d'accés.
     openid_connect:
       account_linked: Compte enllaçat correctament a %{provider}
       failed: No s'ha pogut autenticar mitjançant OpenID Connect.

@@ -2,12 +2,72 @@
 en:
   admin:
     system_health:
+      hosted_usage:
+        loading: "Loading hosted usage…"
+        title: "Hosted usage"
+        snapshot: "Read-only database snapshot as of %{time}"
+        summary:
+          trial_households_count: "Trial households (last 30 days)"
+          trial_members_count: "Current trial member accounts"
+          trials_expiring_soon_count: "Trials expiring in next 7 days"
+          cleanup_eligible_count: "Cleanup-eligible households"
+          active_supporter_households_count: "Active supporter households (local)"
+          supporter_subscription_count: "Stripe-linked subscription rows"
+        summary_help: "Trial totals cover subscriptions recorded in the last 30 days. Expiring-trial, cleanup and supporter totals cover all matching current rows, without the table limits."
+        limitations_title: "What these numbers can tell us"
+        limitations: "Current tables do not retain full trial, payment or session-activity history. Subscription creation can reflect imports. Member accounts are not verified unique people. This view changes no household or subscription data. Shared-demo resets remove old households and sessions, so visitor history cannot be reconstructed."
+        trials:
+          title: "Recent trial households"
+          description: "Subscriptions recorded since %{date} that retain a trial end date, including converted trials. Showing up to %{limit} households."
+          sessions_help: "Sessions are retained sign-in records for enabled users, not currently online users or visits. Signing out deletes a record. The latest creation time is not a last-seen time."
+          empty: "No trial households recorded in this window"
+        cleanup:
+          title: "Cleanup eligibility"
+          description: "Matches the existing cleanup scope: a paused or trialing subscription ended more than 14 days ago, or no subscription and a household older than 45 + 14 days. Showing up to %{limit} households."
+          eligibility_help: "Recent logins do not prevent a match. Eligibility does not confirm deletion; 90 days is archive retention, not the trial-cleanup threshold."
+          disabled: "Scheduled trial cleanup is disabled outside managed mode. These are scope matches only."
+          empty: "No households match the cleanup scope"
+          reasons:
+            expired_trial_grace_elapsed: "Trial ended; 14-day grace elapsed"
+            no_subscription_grace_elapsed: "No subscription; 45 + 14 days elapsed"
+        supporters:
+          title: "Local supporter status"
+          description: "Current local subscription rows with Stripe-shaped customer and subscription IDs; the synthetic demo subscription is excluded. Statuses do not verify payments received or first-payment dates. No Stripe request is made."
+          empty: "No Stripe-linked subscription rows"
+        columns:
+          household: "Household ID"
+          recorded_at: "Subscription recorded"
+          trial_ends_at: "Trial ends"
+          status: "Current status"
+          members: "Member accounts"
+          retained_sessions: "Retained sign-in sessions"
+          recent_sessions: "Retained sessions created in last 30 days"
+          latest_session: "Latest retained sign-in"
+          cleanup_eligible: "Cleanup eligible"
+          cleanup_reason: "Reason"
+          subscription_rows: "Subscription rows"
+        statuses:
+          unknown: "Unknown"
+          incomplete: "Incomplete"
+          incomplete_expired: "Incomplete, expired"
+          trialing: "Trialing"
+          active: "Active"
+          past_due: "Past due"
+          canceled: "Canceled"
+          unpaid: "Unpaid"
+          paused: "Paused"
+          no_subscription: "No subscription"
+        not_recorded: "Not recorded"
+        eligible: "Eligible"
+        not_eligible: "Not eligible"
+        synthetic_demo: "Synthetic demo"
       push_notifications:
         send_test: "Send test push notification"
         queueing: "Queueing…"
         title: "Push notifications"
         requested_at: "Latest test requested at %{time}"
         result_help: "APNs acceptance does not confirm delivery to your device. Refresh to see worker results. Results are retained for 24 hours."
+        results_label: "Test results"
         device: "Device %{number}"
         pending: "Pending"
         refresh: "Refresh results"
@@ -48,6 +108,7 @@ en:
       show:
         title: System health
         tabs:
+          hosted_usage: "Hosted usage"
           background_jobs: Background jobs
           ai: AI status
         alert:
@@ -81,6 +142,7 @@ en:
           run_checks: Run checks again
           last_checked: "Live checks completed %{time_ago} ago. Results are cached briefly."
           not_checked_help: Open the AI status URL directly or run the checks to verify service liveness.
+          loading: "Running live checks…"
           alerts:
             custom_openai:
               title: The hosted vector-store check failed at this custom endpoint
