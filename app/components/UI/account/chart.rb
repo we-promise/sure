@@ -103,8 +103,10 @@ class UI::Account::Chart < ApplicationComponent
 
   # Formatted main indicator. Gains are signed explicitly (e.g. "+€79.53") since
   # a gain of zero-or-more is otherwise indistinguishable from a balance.
+  # Only "balance" is an account balance snapshot; gains/holdings/cash figures
+  # keep their own signs regardless of the liability-display preference.
   def view_balance_display
-    signed_format(AccountBalancePresentation.balance_for_account_display(account, view_balance_money))
+    signed_format(view == "balance" ? AccountBalancePresentation.balance_for_account_display(account, view_balance_money) : view_balance_money)
   end
 
   # Formatted family-currency amount for foreign-currency accounts, signed the
