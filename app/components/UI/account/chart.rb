@@ -112,7 +112,10 @@ class UI::Account::Chart < ApplicationComponent
   # Formatted family-currency amount for foreign-currency accounts, signed the
   # same way as the main indicator. Nil when no conversion applies.
   def converted_balance_display
-    converted_balance_money&.then { |money| signed_format(AccountBalancePresentation.balance_for_account_display(account, money)) }
+    return nil if converted_balance_money.nil?
+
+    value = view == "balance" ? AccountBalancePresentation.balance_for_account_display(account, converted_balance_money) : converted_balance_money
+    signed_format(value)
   end
 
   # Label displayed above the main indicator, based on account type and chart view.
