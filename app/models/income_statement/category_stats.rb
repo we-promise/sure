@@ -41,12 +41,11 @@ class IncomeStatement::CategoryStats
             c.id as category_id,
             date_trunc(:interval, ae.date) as period,
             #{classification_sql("t")} as classification,
-            SUM(#{converted_amount_sql("t")}) as total
+            COALESCE(SUM(#{converted_amount_sql("t")}), 0) as total
           FROM transactions t
           #{entries_join_sql("t")}
           #{accounts_join_sql}
           LEFT JOIN categories c ON c.id = t.category_id
-          #{exchange_rates_join_sql}
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
             AND ae.excluded = false

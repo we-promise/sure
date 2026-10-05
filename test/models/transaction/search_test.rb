@@ -422,9 +422,10 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     search = Transaction::Search.new(@family)
     totals = search.totals
 
+    # Still counted as a transaction, but its amount is left out of the
+    # totals: at 1 it read as $100 (#3640).
     assert_equal 1, totals.count
-    # Should use rate of 1 when exchange rate is missing
-    assert_equal Money.new(100, "USD"), totals.expense_money # EUR 100 * 1
+    assert_equal Money.new(0, "USD"), totals.expense_money
     assert_equal Money.new(0, "USD"), totals.income_money
   end
 

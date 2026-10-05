@@ -63,14 +63,13 @@ class IncomeStatement::Totals
           c.id as category_id,
           c.parent_id as parent_category_id,
           #{classification_sql("at")} as classification,
-          ABS(SUM(#{converted_amount_sql("at")})) as total,
+          ABS(COALESCE(SUM(#{converted_amount_sql("at")}), 0)) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
         #{entries_join_sql("at")}
         #{accounts_join_sql}
         LEFT JOIN categories c ON c.id = at.category_id
-        #{exchange_rates_join_sql}
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           AND ae.excluded = false
           AND a.family_id = :family_id
@@ -88,14 +87,13 @@ class IncomeStatement::Totals
           c.id as category_id,
           c.parent_id as parent_category_id,
           #{classification_sql("at")} as classification,
-          ABS(SUM(#{converted_amount_sql("at")})) as total,
+          ABS(COALESCE(SUM(#{converted_amount_sql("at")}), 0)) as total,
           COUNT(ae.id) as entry_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
         #{entries_join_sql("at")}
         #{accounts_join_sql}
         LEFT JOIN categories c ON c.id = at.category_id
-        #{exchange_rates_join_sql}
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           #{investment_activity_label_sql("at")}
           AND ae.excluded = false

@@ -63,20 +63,26 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@nvda.security, account: @account, qty: 5, price: 128.00, date: 1.day.ago.to_date, currency: "CAD")
     create_trade(@nvda.security, account: @account, qty: 30, price: 124.00, date: Date.current, currency: "CAD")
 
-    # compute expected: sum(price * qty * rate) / sum(qty)
-    amzn_total_usd = BigDecimal("10") * BigDecimal("212.00") * BigDecimal("1") +
-                     BigDecimal("15") * BigDecimal("216.00") * BigDecimal("1")
-    amzn_qty = BigDecimal("10") + BigDecimal("15")
-    expected_amzn_usd = amzn_total_usd / amzn_qty
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 0.7)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 0.75)
 
-    nvda_total_usd = BigDecimal("5") * BigDecimal("128.00") * BigDecimal("1") +
-                     BigDecimal("30") * BigDecimal("124.00") * BigDecimal("1")
-    nvda_qty = BigDecimal("5") + BigDecimal("30")
-    expected_nvda_usd = nvda_total_usd / nvda_qty
+    # sum(price * qty * the trade day's rate) / sum(qty)
+    expected_amzn_usd = (BigDecimal("10") * BigDecimal("212.00") * BigDecimal("0.7") +
+                         BigDecimal("15") * BigDecimal("216.00") * BigDecimal("0.75")) / 25
+    expected_nvda_usd = (BigDecimal("5") * BigDecimal("128.00") * BigDecimal("0.7") +
+                         BigDecimal("30") * BigDecimal("124.00") * BigDecimal("0.75")) / 35
 
-    ExchangeRate.stubs(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1))
-    assert_equal Money.new(expected_amzn_usd, "CAD").exchange_to("USD"), @amzn.avg_cost
-    assert_equal Money.new(expected_nvda_usd, "CAD").exchange_to("USD"), @nvda.avg_cost
+    assert_equal Money.new(expected_amzn_usd, "USD"), @amzn.avg_cost
+    assert_equal Money.new(expected_nvda_usd, "USD"), @nvda.avg_cost
+  end
+
+  # A purchase with no rate at all has no known cost in the account's
+  # currency. Counted at 1 it priced 10 CAD shares as USD (#3640).
+  test "average cost is unknown when a purchase's currency has no rate" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+    create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current)
+
+    assert_nil @amzn.avg_cost
   end
 
   test "calculates total return trend" do

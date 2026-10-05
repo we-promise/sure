@@ -143,6 +143,13 @@ class Balance::ChartSeriesBuilder
       favorable_direction == "down" ? -1 : 1
     end
 
+    # 1 for an account already in the target currency, else the rate the
+    # lateral join below found. NULL when the currency has no rate at all, so
+    # the account drops out of the day's sum rather than counting at 1 (#3640).
+    def balance_rate_sql
+      "CASE WHEN accounts.currency = :target_currency THEN 1 ELSE er.rate END"
+    end
+
     def query
       <<~SQL
         WITH dates AS (
@@ -166,23 +173,23 @@ class Balance::ChartSeriesBuilder
         SELECT
           d.date,
           -- Use flows_factor: already handles asset (+1) vs liability (-1)
-          COALESCE(SUM(last_bal.end_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * :sign_multiplier::integer), 0) AS end_balance,
-          COALESCE(SUM(last_bal.end_cash_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * :sign_multiplier::integer), 0) AS end_cash_balance,
+          COALESCE(SUM(last_bal.end_balance * last_bal.flows_factor * #{balance_rate_sql} * :sign_multiplier::integer), 0) AS end_balance,
+          COALESCE(SUM(last_bal.end_cash_balance * last_bal.flows_factor * #{balance_rate_sql} * :sign_multiplier::integer), 0) AS end_cash_balance,
           -- Holdings only for assets (flows_factor = 1)
           COALESCE(SUM(
             CASE WHEN last_bal.flows_factor = 1
               THEN last_bal.end_non_cash_balance
               ELSE 0
-            END * COALESCE(er.rate, 1) * :sign_multiplier::integer
+            END * #{balance_rate_sql} * :sign_multiplier::integer
           ), 0) AS end_holdings_balance,
           -- Previous balances
-          COALESCE(SUM(last_bal.start_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * :sign_multiplier::integer), 0) AS start_balance,
-          COALESCE(SUM(last_bal.start_cash_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * :sign_multiplier::integer), 0) AS start_cash_balance,
+          COALESCE(SUM(last_bal.start_balance * last_bal.flows_factor * #{balance_rate_sql} * :sign_multiplier::integer), 0) AS start_balance,
+          COALESCE(SUM(last_bal.start_cash_balance * last_bal.flows_factor * #{balance_rate_sql} * :sign_multiplier::integer), 0) AS start_cash_balance,
           COALESCE(SUM(
             CASE WHEN last_bal.flows_factor = 1
               THEN last_bal.start_non_cash_balance
               ELSE 0
-            END * COALESCE(er.rate, 1) * :sign_multiplier::integer
+            END * #{balance_rate_sql} * :sign_multiplier::integer
           ), 0) AS start_holdings_balance
         FROM dates d
         LEFT JOIN selected_accounts accounts
@@ -260,7 +267,7 @@ class Balance::ChartSeriesBuilder
             COALESCE(SUM(
               CASE
                 WHEN last_basis.cost_basis IS NOT NULL
-                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
+                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * CASE WHEN last_h.currency = :target_currency THEN 1 ELSE er.rate END
                 ELSE 0
               END
             ), 0) AS gains
