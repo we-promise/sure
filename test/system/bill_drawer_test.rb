@@ -70,6 +70,9 @@ class BillDrawerTest < ApplicationSystemTestCase
 
   # The payment drawer's "View full bill" leaves the same way.
   test "going back from the bill's page shows the list, not a leftover payment drawer" do
+    # Rows carry their verb only from @lg, and at 1400 both sidebars leave the
+    # list just short of it.
+    page.current_window.resize_to(1440, 1400)
     visit bills_url
 
     find(@find_payment_link).click
