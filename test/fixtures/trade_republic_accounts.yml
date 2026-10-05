@@ -30,3 +30,14 @@ cash_account:
   cash_balance: 500.0000
   raw_positions_payload: []
   raw_timeline_payload: []
+
+pea_account:
+  trade_republic_item: configured_item
+  name: "Trade Republic PEA (PEA1234)"
+  kind: pea
+  trade_republic_account_id: "PEA1234"
+  currency: EUR
+  current_balance: 4000.0000
+  cash_balance: 250.0000
+  raw_positions_payload: []
+  raw_timeline_payload: []

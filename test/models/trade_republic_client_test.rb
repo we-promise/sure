@@ -1626,4 +1626,293 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "ABN", symbols.dig("NL0000303709", "symbol")
     assert_equal "XETR", symbols.dig("NL0000303709", "exchange_slug")
   end
+
+  test "discover_envelopes maps DEFAULT and TAX_WRAPPER to portfolio and pea" do
+    requested = []
+    @client.define_singleton_method(:optional_subscribe) do |_websocket, **payload|
+      requested << payload
+      {
+        "accounts" => [
+          {
+            "productType" => "DEFAULT",
+            "securitiesAccountNumber" => "SEC-CTO",
+            "cashAccountNumber" => "CASH-CTO",
+            "currency" => "EUR"
+          },
+          {
+            "productType" => "TAX_WRAPPER",
+            "securitiesAccountNumber" => "SEC-PEA",
+            "cashAccountNumber" => "CASH-PEA",
+            "currency" => "EUR"
+          }
+        ]
+      }
+    end
+    warnings = []
+
+    envelopes = @client.send(:discover_envelopes, Object.new, "SEC-FALLBACK", "EUR", warnings)
+
+    assert_equal [ { type: "accountPairs" } ], requested
+    assert_equal %w[portfolio pea], envelopes.map { |envelope| envelope["kind"] }
+    portfolio, pea = envelopes
+    assert_equal "SEC-CTO", portfolio["securities_account_number"]
+    assert_equal "CASH-CTO", portfolio["cash_account_number"]
+    assert_equal "DEFAULT", portfolio["product_type"]
+    assert_equal "SEC-PEA", pea["securities_account_number"]
+    assert_equal "CASH-PEA", pea["cash_account_number"]
+    assert_equal "TAX_WRAPPER", pea["product_type"]
+    assert_empty warnings
+  end
+
+  test "discover_envelopes always keeps a default portfolio behind a PEA-only feed" do
+    @client.define_singleton_method(:optional_subscribe) do |_websocket, **_payload|
+      {
+        "accounts" => [
+          {
+            "productType" => "TAX_WRAPPER",
+            "securitiesAccountNumber" => "SEC-PEA",
+            "cashAccountNumber" => "CASH-PEA",
+            "currency" => "EUR"
+          }
+        ]
+      }
+    end
+    warnings = []
+
+    envelopes = @client.send(:discover_envelopes, Object.new, "SEC-DEFAULT", "EUR", warnings)
+
+    assert_equal %w[pea portfolio], envelopes.map { |envelope| envelope["kind"] }
+    default = envelopes.last
+    assert_equal "SEC-DEFAULT", default["securities_account_number"]
+    assert_equal "DEFAULT", default["product_type"]
+    assert_empty warnings
+  end
+
+  test "discover_envelopes falls back to the account endpoint when the pairs feed is empty" do
+    @client.define_singleton_method(:optional_subscribe) do |_websocket, **_payload|
+      { "accounts" => [] }
+    end
+    warnings = []
+
+    envelopes = @client.send(:discover_envelopes, Object.new, "SEC-FALLBACK", "EUR", warnings)
+
+    assert_equal [ "portfolio" ], envelopes.map { |envelope| envelope["kind"] }
+    assert_equal "SEC-FALLBACK", envelopes.first["securities_account_number"]
+    assert_equal "EUR", envelopes.first["currency"]
+    assert_includes warnings,
+      "Trade Republic accountPairs returned no envelopes; querying the default account only"
+  end
+
+  test "discover_envelopes falls back to the account endpoint when the pairs feed is unavailable" do
+    @client.define_singleton_method(:optional_subscribe) { |_websocket, **_payload| nil }
+    warnings = []
+
+    envelopes = @client.send(:discover_envelopes, Object.new, "SEC-FALLBACK", "EUR", warnings)
+
+    assert_equal [ "portfolio" ], envelopes.map { |envelope| envelope["kind"] }
+    assert_equal "SEC-FALLBACK", envelopes.first["securities_account_number"]
+    assert_empty warnings
+  end
+
+  test "discover_envelopes skips unsupported product types with a warning" do
+    @client.define_singleton_method(:optional_subscribe) do |_websocket, **_payload|
+      {
+        "accounts" => [
+          { "productType" => "MYSTERY", "securitiesAccountNumber" => "SEC-X", "currency" => "EUR" },
+          {
+            "productType" => "DEFAULT",
+            "securitiesAccountNumber" => "SEC-CTO",
+            "cashAccountNumber" => "CASH-CTO",
+            "currency" => "EUR"
+          }
+        ]
+      }
+    end
+    warnings = []
+
+    envelopes = @client.send(:discover_envelopes, Object.new, "SEC-DEFAULT", "EUR", warnings)
+
+    assert_equal [ "portfolio" ], envelopes.map { |envelope| envelope["kind"] }
+    assert_includes warnings, "unsupported Trade Republic account product type MYSTERY"
+  end
+
+  test "discover_envelopes warns for an entry without a securities account number" do
+    @client.define_singleton_method(:optional_subscribe) do |_websocket, **_payload|
+      { "accounts" => [ { "productType" => "TAX_WRAPPER", "currency" => "EUR" } ] }
+    end
+    warnings = []
+
+    envelopes = @client.send(:discover_envelopes, Object.new, "SEC-DEFAULT", "EUR", warnings)
+
+    assert_includes warnings,
+      "Trade Republic account entry without a securities account number for TAX_WRAPPER"
+    assert_equal [ "portfolio" ], envelopes.map { |envelope| envelope["kind"] }
+  end
+
+  test "fetch_envelope_cash scopes the subscription by the envelope cash account" do
+    subscribed = []
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      subscribed << payload
+      { "amount" => "123.45", "currency" => "EUR" }
+    end
+    envelope = { "kind" => "pea", "cash_account_number" => "CASH-PEA" }
+    warnings = []
+
+    @client.send(:fetch_envelope_cash, Object.new, envelope, warnings)
+
+    assert_equal [ { type: "cash", accountNumber: "CASH-PEA" } ], subscribed
+    assert_equal({ "amount" => "123.45", "currency" => "EUR" }, @client.send(:envelope_cash, envelope))
+    assert_equal "success", envelope["cash_status"]
+    assert_empty warnings
+  end
+
+  test "fetch_envelope_cash omits the account number when the envelope has no cash pocket" do
+    subscribed = []
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      subscribed << payload
+      { "amount" => "10.00", "currency" => "EUR" }
+    end
+    envelope = { "kind" => "portfolio" }
+
+    @client.send(:fetch_envelope_cash, Object.new, envelope, [])
+
+    assert_equal [ { type: "cash" } ], subscribed
+  end
+
+  test "fetch_envelope_cash records a failure without aborting the sync" do
+    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+      raise Provider::TradeRepublicClient::ProviderUnavailable, "cash feed down"
+    end
+    envelope = { "kind" => "pea" }
+    warnings = []
+
+    @client.send(:fetch_envelope_cash, Object.new, envelope, warnings)
+
+    assert_equal "failed", envelope["cash_status"]
+    assert_nil envelope["raw_cash"]
+    assert_equal [ "cash fetch failed for pea: cash feed down" ], warnings
+  end
+
+  test "fetch_envelope_cash re-raises transient provider errors" do
+    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+      raise Provider::TradeRepublicClient::TransientProviderError, "retry"
+    end
+
+    assert_raises(Provider::TradeRepublicClient::TransientProviderError) do
+      @client.send(:fetch_envelope_cash, Object.new, { "kind" => "cash" }, [])
+    end
+  end
+
+  test "fetch_envelope_positions fetches the envelope portfolio and records warnings" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      requested << payload
+      { "categories" => [] }
+    end
+    @client.define_singleton_method(:normalize_positions) do |_websocket, _portfolio, sec_acc_no:, **_|
+      [ [ { "isin" => "US0378331005", "quantity" => "1", "price" => "10" } ],
+        [ "price unavailable for #{sec_acc_no}" ] ]
+    end
+    envelope = { "kind" => "portfolio", "securities_account_number" => "SEC-CTO" }
+    warnings = []
+
+    @client.send(:fetch_envelope_positions, Object.new, envelope, {}, warnings)
+
+    assert_equal "compactPortfolioByType", requested.first[:type]
+    assert_equal "SEC-CTO", requested.first[:secAccNo]
+    assert_equal "success", envelope["positions_status"]
+    assert_equal [ "US0378331005" ], envelope["positions"].map { |position| position["isin"] }
+    assert_equal [ "price unavailable for SEC-CTO" ], envelope["position_warnings"]
+    assert_equal [ "price unavailable for SEC-CTO" ], warnings
+  end
+
+  test "fetch_envelope_positions marks a failed envelope without aborting the sync" do
+    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+      raise Provider::TradeRepublicClient::ProviderUnavailable, "portfolio down"
+    end
+    envelope = { "kind" => "pea", "securities_account_number" => "SEC-PEA" }
+    warnings = []
+
+    @client.send(:fetch_envelope_positions, Object.new, envelope, {}, warnings)
+
+    assert_equal "failed", envelope["positions_status"]
+    assert_equal [], envelope["positions"]
+    assert_equal [], envelope["position_warnings"]
+    assert_equal [ "portfolio fetch failed for pea: portfolio down" ], warnings
+  end
+
+  test "envelope_result exposes the per-envelope payload with safe defaults" do
+    envelope = {
+      "kind" => "pea",
+      "securities_account_number" => "SEC-PEA",
+      "product_type" => "TAX_WRAPPER",
+      "cash_account_number" => "CASH-PEA",
+      "currency" => "EUR",
+      "positions" => [ { "isin" => "US0378331005" } ],
+      "position_warnings" => [],
+      "positions_status" => "success",
+      "cash_status" => "success",
+      "raw_cash" => { "amount" => "42.00", "currency" => "EUR" }
+    }
+
+    result = @client.send(:envelope_result, envelope)
+
+    assert_equal "pea", result["kind"]
+    assert_equal "SEC-PEA", result["brokerage_account_id"]
+    assert_equal "TAX_WRAPPER", result["product_type"]
+    assert_equal "CASH-PEA", result["cash_account_number"]
+    assert_equal "42.00", result.dig("cash", "amount")
+    assert_equal "EUR", result.dig("cash", "currency")
+    assert_equal "success", result["cash_status"]
+
+    empty = @client.send(:envelope_result, { "kind" => "portfolio", "securities_account_number" => "SEC" })
+    assert_equal "failed", empty["positions_status"]
+    assert_equal "failed", empty["cash_status"]
+    assert_equal [], empty["positions"]
+    assert_nil empty["cash"]
+  end
+
+  test "aggregate_envelope_status collapses per-envelope statuses" do
+    assert_equal "failed", @client.send(:aggregate_envelope_status, [])
+    assert_equal "success", @client.send(:aggregate_envelope_status, %w[success success])
+    assert_equal "partial", @client.send(:aggregate_envelope_status, [ "success", "failed" ])
+    assert_equal "failed", @client.send(:aggregate_envelope_status, %w[failed failed])
+    assert_equal "success", @client.send(:aggregate_envelope_status, [ "success", nil ])
+    assert_equal "failed", @client.send(:aggregate_envelope_status, [ "failed", "partial", nil ])
+  end
+
+  test "assign_envelope_kinds tags events by cash or securities account" do
+    envelopes = [
+      { "kind" => "portfolio", "securities_account_number" => "SEC-CTO", "cash_account_number" => "CASH-CTO" },
+      { "kind" => "pea", "securities_account_number" => "SEC-PEA", "cash_account_number" => "CASH-PEA" }
+    ]
+    events = [
+      { "id" => "by-cash", "cashAccountNumber" => "CASH-PEA" },
+      { "id" => "by-sec", "securitiesAccountNumber" => "SEC-CTO" },
+      { "id" => "unknown", "cashAccountNumber" => "CASH-OTHER" },
+      { "id" => "none" },
+      "not-an-event"
+    ]
+
+    @client.send(:assign_envelope_kinds!, events, envelopes)
+
+    assert_equal "pea", events[0]["envelope_kind"]
+    assert_equal "portfolio", events[1]["envelope_kind"]
+    assert_nil events[2]["envelope_kind"]
+    assert_nil events[3]["envelope_kind"]
+  end
+
+  test "assign_envelope_kinds prefers the cash account mapping over the securities mapping" do
+    envelopes = [
+      { "kind" => "pea", "securities_account_number" => "SEC-CTO", "cash_account_number" => "CASH-PEA" }
+    ]
+    events = [
+      { "id" => "e", "cashAccountNumber" => "CASH-PEA", "securitiesAccountNumber" => "SEC-CTO" }
+    ]
+
+    @client.send(:assign_envelope_kinds!, events, envelopes)
+
+    assert_equal "pea", events.first["envelope_kind"]
+  end
 end
