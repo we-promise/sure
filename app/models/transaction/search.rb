@@ -62,7 +62,7 @@ class Transaction::Search
       # the old logic would keep being served (same cache_key_base) after
       # deploy, disagreeing with the (uncached) transactions_scope list
       # until entries_cache_version next changes for that family.
-      Rails.cache.fetch("transaction_search_totals/v3/#{cache_key_base}") do
+      Rails.cache.fetch("transaction_search_totals/v3/#{ExchangeRate::CONVERSION_CACHE_VERSION}/#{cache_key_base}") do
         scope = transactions_scope
 
         # Exclude tax-advantaged accounts from totals calculation
