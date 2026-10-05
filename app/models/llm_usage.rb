@@ -12,7 +12,7 @@ class LlmUsage < ApplicationRecord
 
   # Last complete review of every listed model, not a provider price-change date.
   # Sources, dated changes and estimation limits: docs/hosting/ai.md#cost-considerations
-  PRICING_VERIFIED_ON = Date.new(2026, 9, 29).freeze
+  PRICING_VERIFIED_ON = Date.new(2026, 10, 4).freeze
 
   # Standard USD pricing per 1M tokens, excluding regional and service-tier modifiers.
   # Source: https://developers.openai.com/api/docs/pricing
@@ -91,6 +91,25 @@ class LlmUsage < ApplicationRecord
     },
     # Source: https://ai.google.dev/gemini-api/docs/pricing
     "google" => {
+      # Gemini 3 models
+      # Flash series promotion through 2026-12-31: $0.75 / $3.75 ($1.50 / $7.50 starting 2027)
+      "gemini-3.8-flash" => { prompt: 0.75, completion: 3.75 },
+      "gemini-3.7-flash" => { prompt: 0.75, completion: 3.75 },
+      "gemini-3.6-flash" => { prompt: 0.75, completion: 3.75 },
+      "gemini-3.5-flash" => { prompt: 1.50, completion: 9.00 },
+      "gemini-3.5-flash-lite" => { prompt: 0.30, completion: 2.50 },
+      "gemini-3.1-flash-lite" => { prompt: 0.25, completion: 1.50 },
+      "gemini-3.1-pro" => {
+        prompt: 2.00, completion: 12.00,
+        long_context: { threshold: 200_000, prompt: 4.00, completion: 18.00 }
+      },
+      "gemini-3.1-pro-preview" => {
+        prompt: 2.00, completion: 12.00,
+        long_context: { threshold: 200_000, prompt: 4.00, completion: 18.00 }
+      },
+      "gemini-3-flash" => { prompt: 0.50, completion: 3.00 },
+      "gemini-3-flash-preview" => { prompt: 0.50, completion: 3.00 },
+      # Gemini 2.5 models
       "gemini-2.5-pro" => {
         prompt: 1.25, completion: 10.00,
         long_context: { threshold: 200_000, prompt: 2.50, completion: 15.00 }
@@ -179,6 +198,7 @@ class LlmUsage < ApplicationRecord
     # correct even when we can't compute a per-token rate (custom endpoints
     # bill via their own provider, not Anthropic directly).
     return "anthropic" if model.start_with?("anthropic.", "anthropic/")
+    return "google" if model.start_with?("gemini-", "google/")
 
     # Check each provider to see if they have pricing for this model
     PRICING.each do |provider_name, provider_pricing|
