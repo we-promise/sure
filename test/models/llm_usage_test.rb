@@ -222,11 +222,14 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_in_delta 0.80, cost_3_flash, 0.0001
   end
 
-  test "find_pricing and calculate_cost normalize google/ prefix for OpenRouter models" do
+  test "find_pricing and calculate_cost normalize provider prefix for OpenRouter models" do
     pricing = LlmUsage.find_pricing("google", "google/gemini-3.8-flash")
     assert_not_nil pricing
     assert_equal 0.75, pricing[:prompt]
     assert_equal 3.75, pricing[:completion]
+
+    assert_equal 2.00, LlmUsage.find_pricing("openai", "openai/gpt-4.1")[:prompt]
+    assert_equal 3.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-sonnet-4-5")[:prompt]
 
     cost = LlmUsage.calculate_cost(
       model: "google/gemini-3.8-flash",
