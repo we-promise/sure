@@ -83,4 +83,24 @@ class ToolCall::FunctionTest < ActiveSupport::TestCase
     assert_nil tool_call.extra_content
     assert_not_includes tool_call.to_tool_call.keys, :extra_content
   end
+
+  test "extra_content is persisted in the database and reloaded across turns" do
+    extra = { "google" => { "thought_signature" => "sig_persisted_123" } }
+    message = messages(:chat1_assistant_response)
+
+    tool_call = ToolCall::Function.create!(
+      message: message,
+      provider_id: "resp_1",
+      provider_call_id: "call_1",
+      function_name: "get_net_worth",
+      function_arguments: '{"currency":"USD"}',
+      function_result: { "amount" => 10000 },
+      extra_content: extra
+    )
+
+    reloaded = ToolCall::Function.find(tool_call.id)
+    assert_equal extra, reloaded.extra_content
+    assert_equal extra, reloaded.to_tool_call[:extra_content]
+    assert_equal extra, reloaded.to_result[:extra_content]
+  end
 end

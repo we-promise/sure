@@ -222,6 +222,20 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_in_delta 0.80, cost_3_flash, 0.0001
   end
 
+  test "find_pricing and calculate_cost normalize google/ prefix for OpenRouter models" do
+    pricing = LlmUsage.find_pricing("google", "google/gemini-3.8-flash")
+    assert_not_nil pricing
+    assert_equal 0.75, pricing[:prompt]
+    assert_equal 3.75, pricing[:completion]
+
+    cost = LlmUsage.calculate_cost(
+      model: "google/gemini-3.8-flash",
+      prompt_tokens: 1_000_000,
+      completion_tokens: 100_000
+    )
+    assert_in_delta 1.125, cost, 0.0001
+  end
+
   test "calculate_cost uses lower pricing for Haiku" do
     cost = LlmUsage.calculate_cost(model: "claude-haiku-4-5", prompt_tokens: 1_000_000, completion_tokens: 1_000_000)
 

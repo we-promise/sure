@@ -2,8 +2,6 @@ class ToolCall::Function < ToolCall
   validates :function_name, :function_result, presence: true
   validates :function_arguments, presence: true, allow_blank: true
 
-  attr_accessor :extra_content
-
   class << self
     # Translates an "LLM Concept" provider's FunctionRequest into a ToolCall::Function
     def from_function_request(function_request, result)
@@ -12,10 +10,9 @@ class ToolCall::Function < ToolCall
         provider_call_id: function_request.call_id,
         function_name: function_request.function_name,
         function_arguments: function_request.function_args,
-        function_result: result
-      ).tap do |call|
-        call.extra_content = function_request.extra_content if function_request.respond_to?(:extra_content)
-      end
+        function_result: result,
+        extra_content: function_request.respond_to?(:extra_content) ? function_request.extra_content : nil
+      )
     end
 
     # Serializes tool-call arguments to the JSON-encoded string OpenAI requires.
