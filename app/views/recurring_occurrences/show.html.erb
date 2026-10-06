@@ -305,7 +305,8 @@
                 text: t(".view_bill"),
                 variant: "default",
                 href: bill_path(series, occurrence: @occurrence.id),
-                frame: :drawer
+                frame: :drawer,
+                data: { turbo_prefetch: false }
               ) %>
           <%= render "recurring_transactions/pay_action", recurring_transaction: series, show_add: false %>
         </div>

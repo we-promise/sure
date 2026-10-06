@@ -149,8 +149,7 @@ class BillsController < ApplicationController
     # the layout's drawer frame loads the bill. A redirect back to this same
     # URL (Pause on any drawer opened since) refreshes the list, not the bill.
     unless turbo_frame_request?
-      back = url_from(request.referer)
-      unless back && URI(back).path == request.path
+      unless came_from?(request.path)
         @drawer_src = bill_path(@series, display: "drawer", occurrence: params[:occurrence].presence)
       end
       index

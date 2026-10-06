@@ -1319,6 +1319,18 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.index.title"), response.body
   end
 
+  test "a bill visited directly opens over whichever bills view it names" do
+    bill = create_bill(name: "Power Co", amount: 80)
+    occurrence = bill.recurring_occurrences.order(:due_on).first
+
+    %w[all calendar paycheck].each do |view|
+      get bill_url(bill, view: view, occurrence: occurrence.id)
+
+      assert_response :success
+      assert_select "turbo-frame#drawer[src=?]", bill_path(bill, display: "drawer", occurrence: occurrence.id)
+    end
+  end
+
   # Pause from any drawer opened since redirects back to the visited URL. That
   # refresh is for the list; opening the visited bill again would swap the
   # drawer someone was using for one they had already closed.

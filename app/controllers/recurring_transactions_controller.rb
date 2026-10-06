@@ -244,7 +244,7 @@ class RecurringTransactionsController < ApplicationController
 
     flash[:notice] = t(income ? "recurring_transactions.deleted_income" : "recurring_transactions.deleted")
     # Back to a visited /bills/:id would reopen, or 404 on, what was just removed.
-    if (back = url_from(request.referer)) && URI(back).path == bill_path(@recurring_transaction)
+    if came_from?(bill_path(@recurring_transaction))
       redirect_to bills_path
     else
       redirect_back_or_to bills_path

@@ -24,10 +24,11 @@
     <% end %>
 
     <%= turbo_frame_tag "modal" %>
-    <%# A page can open the drawer on arrival by naming what goes in it
-        (bills#show visited directly renders the overview around the bill). %>
-    <% if content_for?(:drawer_src) %>
-      <%= turbo_frame_tag "drawer", src: yield(:drawer_src), refresh: :morph %>
+    <%# A controller can open the drawer on arrival by setting @drawer_src
+        (bills#show visited directly renders a bills view around the bill),
+        whichever template renders the page. %>
+    <% if @drawer_src %>
+      <%= turbo_frame_tag "drawer", src: @drawer_src, refresh: :morph %>
     <% else %>
       <%= turbo_frame_tag "drawer" %>
     <% end %>

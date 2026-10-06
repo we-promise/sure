@@ -48,6 +48,14 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?] button[data-turbo-frame=_top]", toggle_status_recurring_transaction_path(@series)
   end
 
+  # Like every other link into the bill's drawer, a hover doesn't render the
+  # bill ahead of a click that may never come.
+  test "View bill swaps to the bill's drawer without a hover prefetch" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_select "a[href=?][data-turbo-frame=drawer][data-turbo-prefetch=false]", bill_path(@series, occurrence: @occurrence.id)
+  end
+
   test "recurring occurrence feedback is localized in German" do
     @user.update!(locale: "de")
 
