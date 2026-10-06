@@ -1,16 +1,16 @@
 <%# locals: (entry:, balance_trend: nil, view_ctx: "global", is_filtered: false, in_split_group: false, running_balance: nil, hide_balance: false, flat: false) %>
 <% transaction = entry.entryable %>
-<% has_running_balance = defined?(running_balance) && running_balance.present? %>
-<% show_date = flat || has_running_balance %>
+<% show_date = flat %>
+<% show_balance = flat && view_ctx == "account" && !hide_balance %>
 <% drawer_params = { view_ctx: view_ctx, is_filtered: is_filtered } %>
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
-    <%= render DS::CompactRow.new(show_date: show_date, show_balance: has_running_balance && view_ctx == "account" && !hide_balance, indent: in_split_group) do |row| %>
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, indent: in_split_group) do |row| %>
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
-            class: "checkbox checkbox--light",
+            class: "checkbox checkbox--light hidden lg:block",
             data: {
               id: entry.id,
               entry_type: entry.entryable_type,
@@ -88,12 +88,14 @@
               <% if transaction.merchant&.present? %>
                 <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
               <% end %>
-              <span class="text-secondary hidden lg:inline">
-                <%= link_to entry.account.name,
-                    account_path(entry.account, tab: "transactions"),
-                    data: { turbo_frame: "_top" },
-                    class: "hover:underline" %>
-              </span>
+              <% if view_ctx != "account" %>
+                <span class="text-secondary hidden lg:inline">
+                  <%= link_to entry.account.name,
+                      account_path(entry.account, tab: "transactions"),
+                      data: { turbo_frame: "_top" },
+                      class: "hover:underline" %>
+                </span>
+              <% end %>
               <div class="flex min-w-0 items-center gap-1">
                 <%= render "categories/category_name_mobile", transaction: transaction %>
                 <% if transaction.merchant&.present? %>
@@ -130,9 +132,13 @@
             class: ["privacy-sensitive text-sm font-medium truncate", "text-success": entry.amount.negative?, "opacity-50": entry.excluded] %>
       <% end %>
 
-      <% if has_running_balance && view_ctx == "account" && !hide_balance %>
+      <% if show_balance %>
         <% row.with_balance do %>
-          <span class="privacy-sensitive text-sm font-medium text-primary truncate" title="<%= format_money(running_balance) %>"><%= format_money(running_balance) %></span>
+          <% if running_balance.present? %>
+            <span class="privacy-sensitive text-sm font-medium text-primary truncate" title="<%= format_money(running_balance) %>"><%= format_money(running_balance) %></span>
+          <% else %>
+            <span class="text-secondary/40 text-sm" title="<%= t("transactions.show.balance_unavailable") %>">—</span>
+          <% end %>
         <% end %>
       <% end %>
     <% end %>

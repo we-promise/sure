@@ -74,6 +74,7 @@ en:
       transfer: Transfer
       account_label: Account
       amount: Amount
+      balance_unavailable: Balance not available yet
       category_label: Category
       date_label: Date
       delete: Delete

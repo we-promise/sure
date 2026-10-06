@@ -1847,9 +1847,11 @@ end
     get transactions_url
 
     assert_response :success
-    # compact grouped header is px-3 py-2 grid, standard is px-5 py-3
-    assert_select "div.grid-cols-12.bg-container-inset.rounded-xl.px-3.py-2", count: 1
-    assert_select "div.bg-container-inset.rounded-xl.px-2.py-2", count: 0
+    # Both compact headers (grouped and flat) now render through the same
+    # DS::CompactRow(header: true) shell, so only the date column's presence
+    # (flat-only) distinguishes them — not the wrapper's own classes.
+    assert_select "div.bg-container-inset.rounded-xl.px-2.py-2", count: 1
+    assert_no_match(/w-\[110px\]/, response.body)
   end
 
   test "compact flat list renders when preview enabled and group_by_date disabled" do
@@ -1866,7 +1868,7 @@ end
 
     assert_response :success
     assert_select "div.bg-container-inset.rounded-xl.px-2.py-2", count: 1
-    assert_select "div.grid-cols-12.bg-container-inset.rounded-xl.px-3.py-2", count: 0
+    assert_match(/w-\[110px\]/, response.body)
   end
 
   test "compact flat list renders each internal transfer once" do

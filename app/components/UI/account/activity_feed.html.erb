@@ -167,38 +167,40 @@
 
         <% if compact? %>
           <% if !group_by_date %>
-            <div class="bg-container-inset rounded-xl px-2 py-2 text-xs uppercase font-medium text-secondary items-center mb-2 flex gap-2 lg:gap-3">
-              <div class="hidden lg:flex w-8 shrink-0 justify-center">
-                <%= check_box_tag "selection_entry",
-                                  class: "checkbox checkbox--light",
-                                  data: {
-                                    action: "bulk-select#togglePageSelection",
-                                    checkbox_toggle_target: "selectionEntry"
-                                  } %>
-              </div>
-              <p class="hidden lg:block w-[110px] shrink-0"><%= t("transactions.show.date_label") %></p>
-              <p class="flex-[2] min-w-0"><%= t("transactions.list.transaction") %></p>
-              <p class="hidden lg:block flex-[2] min-w-0"><%= t("transactions.show.notes") %></p>
-              <p class="hidden md:block flex-[1] min-w-0"><%= t("transactions.form.category_label") %></p>
-              <p class="w-[120px] shrink-0 text-right"><%= t("transactions.show.amount") %></p>
-              <% unless filtered? %>
-                <p class="hidden lg:block w-[120px] shrink-0 text-right"><%= t("accounts.show.activity.balance") %></p>
+            <div class="bg-container-inset rounded-xl px-2 py-2 mb-2">
+              <%= render DS::CompactRow.new(header: true, show_date: true, show_balance: !filtered?) do |row| %>
+                <% row.with_checkbox do %>
+                  <%= check_box_tag "selection_entry",
+                                    class: "checkbox checkbox--light hidden lg:block",
+                                    data: {
+                                      action: "bulk-select#togglePageSelection",
+                                      checkbox_toggle_target: "selectionEntry"
+                                    } %>
+                <% end %>
+                <% row.with_date { t("transactions.show.date_label") } %>
+                <% row.with_primary { t("transactions.list.transaction") } %>
+                <% row.with_notes { t("transactions.show.notes") } %>
+                <% row.with_category { t("transactions.form.category_label") } %>
+                <% row.with_amount { t("transactions.show.amount") } %>
+                <% row.with_balance { t("accounts.show.activity.balance") } unless filtered? %>
               <% end %>
             </div>
           <% else %>
-            <div class="bg-container-inset rounded-xl px-2 py-2 text-xs uppercase font-medium text-secondary items-center mb-2 flex gap-2 lg:gap-3">
-              <div class="hidden lg:flex w-8 shrink-0 justify-center">
-                <%= check_box_tag "selection_entry",
-                                  class: "checkbox checkbox--light",
-                                  data: {
-                                    action: "bulk-select#togglePageSelection",
-                                    checkbox_toggle_target: "selectionEntry"
-                                  } %>
-              </div>
-              <p class="flex-[2] min-w-0"><%= t("transactions.list.transaction") %></p>
-              <p class="hidden lg:block flex-[2] min-w-0"><%= t("transactions.show.notes") %></p>
-              <p class="hidden md:block flex-[1] min-w-0"><%= t("transactions.form.category_label") %></p>
-              <p class="w-[120px] shrink-0 text-right"><%= t("transactions.show.amount") %></p>
+            <div class="bg-container-inset rounded-xl px-2 py-2 mb-2">
+              <%= render DS::CompactRow.new(header: true) do |row| %>
+                <% row.with_checkbox do %>
+                  <%= check_box_tag "selection_entry",
+                                    class: "checkbox checkbox--light hidden lg:block",
+                                    data: {
+                                      action: "bulk-select#togglePageSelection",
+                                      checkbox_toggle_target: "selectionEntry"
+                                    } %>
+                <% end %>
+                <% row.with_primary { t("transactions.list.transaction") } %>
+                <% row.with_notes { t("transactions.show.notes") } %>
+                <% row.with_category { t("transactions.form.category_label") } %>
+                <% row.with_amount { t("transactions.show.amount") } %>
+              <% end %>
             </div>
           <% end %>
         <% else %>
@@ -221,7 +223,7 @@
           <% if compact? && !group_by_date %>
             <div class="bg-container-inset rounded-xl p-1">
               <div class="bg-container shadow-border-xs rounded-lg">
-                <% flat_entries = activity_dates.flat_map(&:entries) %>
+                <% flat_entries = helpers.dedupe_transfer_entries(activity_dates.flat_map(&:entries)) %>
                 <% if Current.user.show_split_grouped? %>
                   <% helpers.group_split_entries(flat_entries, feed_data.split_parents).each do |item| %>
                     <% if item.is_a?(EntriesHelper::SplitGroup) %>
