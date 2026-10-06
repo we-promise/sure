@@ -36,7 +36,9 @@
       <div class="w-8 shrink-0 hidden md:block"></div>
     <% end %>
   </div>
-  <div class="flex flex-wrap md:flex-nowrap items-end gap-2 mt-2">
+  <%# Equal grid columns (not fixed-width flex items) so the three pickers always share the
+      row's width instead of overflowing the dialog. %>
+  <div class="grid grid-cols-1 md:grid-cols-3 items-end gap-2 mt-2">
     <%= render "splits/category_select",
                name: "split[splits][#{index}][category_id]",
                categories: categories,

@@ -375,6 +375,34 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_includes action.errors[:value], "split #1 share must be a positive number"
   end
 
+  test "split_transaction rejects rows that are not objects without raising" do
+    [ [ nil, nil ], [ "A", "B" ], [ { type: "percentage", name: "A", share: "100" }, 42 ] ].each do |rows|
+      action = Rule::Action.new(
+        rule: @transaction_rule,
+        action_type: "split_transaction",
+        value: { splits: rows }.to_json
+      )
+
+      assert_not action.valid?, "expected #{rows.inspect} to be invalid"
+      assert_includes action.errors[:value], "must be a valid split configuration"
+    end
+  end
+
+  test "split_transaction rejects non-finite shares" do
+    [ "NaN", "Infinity", "-Infinity" ].each do |share|
+      action = Rule::Action.new(
+        rule: @transaction_rule,
+        action_type: "split_transaction",
+        value: {
+          splits: [ { type: "fixed", name: "A", share: share }, { type: "percentage", name: "B", share: "100" } ]
+        }.to_json
+      )
+
+      assert_not action.valid?, "expected share #{share} to be invalid"
+      assert_includes action.errors[:value], "split #1 share must be a positive number"
+    end
+  end
+
   test "split_transaction rejects a category from another family" do
     other_category = families(:empty).categories.create!(name: "Foreign category")
 

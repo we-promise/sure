@@ -57,6 +57,40 @@ class RulesTest < ApplicationSystemTestCase
     assert_text "Nicht unterstützt (name)"
   end
 
+  test "fixed split summary follows edits to the exact amount condition" do
+    rule = @user.family.rules.create!(
+      name: "Fixed split",
+      resource_type: "transaction",
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_amount", operator: "=", value: "100")
+      ],
+      actions: [
+        Rule::Action.new(
+          action_type: "split_transaction",
+          value: {
+            splits: [
+              { type: "fixed", name: "A", share: "70" },
+              { type: "fixed", name: "B", share: "30" }
+            ]
+          }.to_json
+        )
+      ]
+    )
+
+    visit edit_rule_path(rule)
+
+    within "dialog" do
+      summary = find("[data-rule--split-action-target='summary']")
+      assert_selector "[data-rule--split-action-target='summary'].text-success", text: "100.00 / 100.00"
+
+      find("[data-rules-target='conditionsList'] input[name$='[value]']").fill_in(with: "120")
+
+      assert_selector "[data-rule--split-action-target='summary'].text-destructive", text: "100.00 / 120.00"
+      assert_no_selector "[data-rule--split-action-target='summary'].text-success"
+      assert_equal "100.00 / 120.00", summary.text
+    end
+  end
+
   test "creates a transaction rule through the modal with dynamically added condition and action" do
     visit new_rule_path(resource_type: "transaction")
 

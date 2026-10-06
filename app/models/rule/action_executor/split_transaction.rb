@@ -109,6 +109,13 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       total_percentage = 0
       has_percentage = false
 
+      # Rows come from a JSON blob, so a crafted request can put anything here (e.g. null).
+      # Reject non-object rows up front rather than raising on split["name"] below.
+      unless splits.all? { |split| split.is_a?(Hash) }
+        errors << [ :invalid_config, {} ]
+        return errors
+      end
+
       splits.each_with_index do |split, index|
         name = split["name"]
         type = split["type"]
@@ -154,6 +161,7 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       config = parse_config_strict(value)
       return nil unless config
       return nil unless config["splits"].is_a?(Array) && config["splits"].size >= MIN_SPLITS
+      return nil unless config["splits"].all? { |split| split.is_a?(Hash) }
 
       config
     end
@@ -267,10 +275,13 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
         nil
       end
 
+      # Non-finite values ("NaN", "Infinity") parse fine but can never be a real share, and NaN
+      # slips past `share <= 0`, so treat them as unparseable.
       def parse_decimal(value)
         return nil if value.blank?
 
-        BigDecimal(value.to_s)
+        decimal = BigDecimal(value.to_s)
+        decimal.finite? ? decimal : nil
       rescue ArgumentError, TypeError
         nil
       end

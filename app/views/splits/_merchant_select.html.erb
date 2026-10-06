@@ -3,7 +3,7 @@
   selected_merchant = merchants.find { |m| m.id == selected_id }
 %>
 
-<div class="merchant-select-container relative flex-1 md:flex-none md:w-44" data-controller="select list-filter form-dropdown" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="merchant-select-container relative min-w-0" data-controller="select list-filter form-dropdown" data-action="dropdown:select->form-dropdown#onSelect">
   <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.merchant_label") %></label>
   <input type="hidden"
          name="<%= name %>"

@@ -17,6 +17,13 @@ export default class extends Controller {
 
   connect() {
     this.updateSummary();
+    this.#observeConditions();
+  }
+
+  disconnect() {
+    this.conditionsObserver?.disconnect();
+    this.form?.removeEventListener("input", this.boundUpdateSummary);
+    this.form?.removeEventListener("change", this.boundUpdateSummary);
   }
 
   addRow(e) {
@@ -113,6 +120,30 @@ export default class extends Controller {
 
     this.summaryTarget.classList.toggle("text-destructive", !balanced);
     this.summaryTarget.classList.toggle("text-success", balanced);
+  }
+
+  // A pure-fixed summary compares against the rule's "Amount = X" condition, which lives
+  // outside this controller's element. Re-run the summary when any form field changes, and
+  // when condition rows are added, removed (hidden) or re-rendered (e.g. a new value field
+  // after switching the operator), so the live feedback never goes stale.
+  #observeConditions() {
+    this.form = this.element.closest("form");
+    if (!this.form) return;
+
+    this.boundUpdateSummary = () => this.updateSummary();
+    this.form.addEventListener("input", this.boundUpdateSummary);
+    this.form.addEventListener("change", this.boundUpdateSummary);
+
+    const conditionsList = this.form.querySelector("[data-rules-target='conditionsList']");
+    if (!conditionsList) return;
+
+    this.conditionsObserver = new MutationObserver(this.boundUpdateSummary);
+    this.conditionsObserver.observe(conditionsList, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
   }
 
   // Looks across the whole form (not just this controller's element) for a

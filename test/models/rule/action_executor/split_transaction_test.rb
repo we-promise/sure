@@ -197,6 +197,15 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     assert_equal 2, already_split.reload.child_entries.count
   end
 
+  test "does nothing for a stored config whose rows are not objects" do
+    entry = create_transaction(amount: 100, name: "Malformed rows", account: @account)
+    action = Rule::Action.new(rule: @rule, action_type: "split_transaction", value: { splits: [ nil, nil ] }.to_json)
+
+    assert_equal 0, action.apply(@rule_scope)
+    assert_equal "", action.value_display
+    refute entry.reload.split_parent?
+  end
+
   test "ignores a category id that doesn't belong to the family" do
     other_family_category = families(:empty).categories.create!(name: "Other family category")
     entry = create_transaction(amount: 100, name: "Bundle", account: @account)

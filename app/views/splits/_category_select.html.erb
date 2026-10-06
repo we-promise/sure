@@ -3,7 +3,7 @@
   selected_category = categories.find { |c| c.id == selected_id }
 %>
 
-<div class="category-select-container relative flex-1 md:flex-initial md:w-auto md:min-w-44 md:max-w-72" data-controller="select list-filter form-dropdown category-badge-select" data-action="dropdown:select->form-dropdown#onSelect dropdown:select->category-badge-select#updateButton">
+<div class="category-select-container relative min-w-0" data-controller="select list-filter form-dropdown category-badge-select" data-action="dropdown:select->form-dropdown#onSelect dropdown:select->category-badge-select#updateButton">
   <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.category_label") %></label>
   <input type="hidden"
          name="<%= name %>"
