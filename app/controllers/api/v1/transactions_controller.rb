@@ -90,7 +90,11 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    account = family.accounts.writable_by(current_resource_owner).find(account_id_param)
+    account = family.accounts.writable_by(current_resource_owner).find_by(id: account_id_param)
+    unless account
+      render json: { error: "not_found", message: "Account not found" }, status: :not_found
+      return
+    end
 
     if idempotency_key_requested? && (existing_entry = existing_idempotent_entry(account))
       return render_existing_idempotent_entry(existing_entry)

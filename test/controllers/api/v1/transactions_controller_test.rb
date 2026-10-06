@@ -894,7 +894,30 @@ end
     assert_empty queries.grep(/SELECT "accounts"\.\* FROM "accounts" WHERE "accounts"\."id" =/)
   end
 
+  test "member cannot create transaction on read_only shared account" do
+    assert_no_difference("Entry.count") do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: accounts(:credit_card).id, date: Date.current, amount: 5, name: "Nope", nature: "expense" } },
+           headers: api_headers(member_api_key)
+    end
+    assert_response :not_found
+  end
+
   private
+
+    def member_api_key
+      @member_api_key ||= begin
+        member = users(:family_member)
+        member.api_keys.active.destroy_all
+        ApiKey.create!(
+          user: member,
+          name: "Member Read-Write Key",
+          scopes: [ "read_write" ],
+          source: "web",
+          display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+        ).tap { |key| Redis.new.del("api_rate_limit:#{key.id}") }
+      end
+    end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }

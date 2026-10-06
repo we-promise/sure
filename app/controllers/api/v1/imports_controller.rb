@@ -73,6 +73,17 @@ class Api::V1::ImportsController < Api::V1::BaseController
     @import = family.imports.build(import_config_params.merge(type: type))
     @import.account_id = params[:account_id] if params[:account_id].present?
 
+    # Cross-family ids are rejected by Import#account_belongs_to_family; a
+    # family account also needs write access (owner/full_control share).
+    if @import.account&.family_id == family.id &&
+        !family.accounts.writable_by(current_resource_owner).exists?(id: @import.account_id)
+      return render json: {
+        error: "validation_failed",
+        message: "Import could not be created",
+        errors: [ "Account not found" ]
+      }, status: :unprocessable_entity
+    end
+
     # 3. Attach the uploaded file if present (with validation)
     if params[:file].present?
       file = params[:file]

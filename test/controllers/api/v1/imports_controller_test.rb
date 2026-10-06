@@ -1380,6 +1380,49 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
   end
 
+  test "should not create import for account the user cannot write" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Member Read-Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    [ accounts(:credit_card), accounts(:investment) ].each do |account|
+      assert_no_difference("Import.count") do
+        post api_v1_imports_url,
+             params: {
+               raw_file_content: csv_content,
+               date_col_label: "date",
+               amount_col_label: "amount",
+               name_col_label: "name",
+               account_id: account.id
+             },
+             headers: api_headers(member_key)
+      end
+      assert_response :unprocessable_entity
+      assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
+    end
+
+    assert_difference("Import.count", 1) do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: accounts(:depository).id
+           },
+           headers: api_headers(member_key)
+    end
+    assert_response :created
+  end
+
   private
 
     def build_ndjson(records)
