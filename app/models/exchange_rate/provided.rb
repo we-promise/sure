@@ -161,8 +161,9 @@ module ExchangeRate::Provided
       any_stored_rates([ from ], to: to, date: date)[from]&.rate
     end
 
-    # Of `currencies`, those with no stored rate into `to` on any date. These
-    # are the amounts #rates_for and #rate_sql leave out.
+    # Of `currencies`, those with no stored rate into `to` on any date. #rate_sql
+    # leaves these amounts out; #rates_for does too unless the provider
+    # supplies a rate.
     def currencies_without_rate(currencies, to:)
       candidates = currencies.compact.uniq - [ to ]
       return [] if candidates.empty?

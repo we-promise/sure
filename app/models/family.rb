@@ -600,9 +600,10 @@ class Family < ApplicationRecord
   end
 
   # Currencies the family's accounts, entries or holdings use that have no
-  # exchange rate into the family currency on any date. Amounts in them are
-  # left out of every converted total rather than counted at 1 (#3640), and
-  # the pages that show those totals say so.
+  # stored exchange rate into the family currency on any date. Totals built on
+  # #rate_sql leave amounts in them out rather than counting them at 1 (#3640);
+  # totals built on #rates_for include them only if the provider supplies a
+  # rate, which is then stored. The pages that show those totals say so.
   def currencies_without_exchange_rate
     @currencies_without_exchange_rate ||= ExchangeRate.currencies_without_rate(currencies_in_use, to: currency)
   end

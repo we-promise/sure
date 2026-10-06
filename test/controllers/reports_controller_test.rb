@@ -142,7 +142,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/\$250,0\d\d\.\d\d/, response.body, "the yen gain is in a total, converted at parity")
     assert_no_match(/\$1,020,000\.00/, response.body, "the yen account is in Portfolio Value, converted at parity")
     assert_select "[data-testid='unconverted-gains-note']", text: /1 gain is not included/
-    assert_select "[data-testid='missing-exchange-rates']", text: /no exchange rate from JPY to USD/
+    assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from JPY to USD is stored yet, so some totals may leave out amounts in JPY/
   end
 
   # The rates a page of disposals needs come from one query, not one per
