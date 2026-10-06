@@ -775,6 +775,11 @@ class Provider::TradeRepublicClient
         # rather than zero. Other categories keep the unpriced warning.
         price = decimal_string(position["averageBuyIn"] || position["avgCost"]) if price.blank? && private_market
 
+        # Bond tickers are quoted in percent of par (e.g. 84.04 = 84.04%),
+        # while netSize is the nominal amount in currency units. Convert to a
+        # per-unit price so quantity * price yields the market value.
+        price = bond_unit_price(price) if price.present? && position["categoryType"].to_s == "bonds"
+
         if price.present?
           prices[isin] = price
         else
@@ -810,6 +815,10 @@ class Provider::TradeRepublicClient
         }.compact
       end
       [ positions, warnings ]
+    end
+
+    def bond_unit_price(percent_price)
+      (BigDecimal(percent_price.to_s) / 100).to_s("F")
     end
 
     def position_price(websocket, isin, category_type)

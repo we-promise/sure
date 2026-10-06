@@ -408,6 +408,30 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "private_markets", positions.first["category"]
   end
 
+  test "converts bond ticker prices from percent of par to a per-unit price" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
+      { "last" => { "price" => "84.04" } }
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "bonds", "positions" => [
+          {
+            "instrumentId" => "IT0005377152",
+            "name" => "Italy 3.1% Mar 2040",
+            "netSize" => "2677.95",
+            "averageBuyIn" => "0.93"
+          }
+        ] }
+      ]
+    })
+
+    assert_empty warnings
+    assert_equal "0.8404", positions.first["price"]
+    assert_equal "2677.95", positions.first["quantity"]
+    assert_equal "interest_products", positions.first["category"]
+  end
+
   test "prefers homeInstrumentExchange ticker before the hardcoded exchange list" do
     requested = []
     @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
