@@ -138,12 +138,18 @@
     </section>
 
     <%# Collapsible & Reorderable Sections %>
-    <div data-controller="reports-sortable" data-action="dragover->reports-sortable#dragOver drop->reports-sortable#drop" role="list" aria-label="Reports sections">
+    <div data-controller="sortable-list"
+         data-sortable-list-url-value="<%= update_preferences_reports_path %>"
+         data-sortable-list-param-value="preferences.reports_section_order"
+         data-action="dragover->sortable-list#dragOver drop->sortable-list#drop"
+         role="list"
+         aria-label="<%= t("reports.index.sections_aria") %>">
       <% @reports_sections.each do |section| %>
         <% next unless section[:visible] %>
         <section
           class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
-          data-reports-sortable-target="section"
+          data-sortable-list-target="item"
+          data-sortable-list-id="<%= section[:key] %>"
           data-section-key="<%= section[:key] %>"
           data-controller="reports-section"
           data-reports-section-section-key-value="<%= section[:key] %>"
@@ -154,12 +160,12 @@
           aria-grabbed="false"
           aria-label="<%= t(section[:title]) %> section. Press Enter or Space to grab for reordering, then use arrow keys to move."
           data-action="
-            dragstart->reports-sortable#dragStart
-            dragend->reports-sortable#dragEnd
-            touchstart->reports-sortable#touchStart
-            touchmove->reports-sortable#touchMove
-            touchend->reports-sortable#touchEnd
-            keydown->reports-sortable#handleKeyDown">
+            dragstart->sortable-list#dragStart
+            dragend->sortable-list#dragEnd
+            touchstart->sortable-list#touchStart
+            touchmove->sortable-list#touchMove
+            touchend->sortable-list#touchEnd
+            keydown->sortable-list#handleKeyDown">
           <div class="px-4 py-2 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <button

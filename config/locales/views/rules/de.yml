@@ -75,6 +75,8 @@ de:
       rule_name_label: Regelname (optional)
       rule_name_placeholder: Gib dieser Regel einen Namen
       starting_from: Ab dem
+      stop_processing_description: Weiter unten stehende Regeln ändern die Transaktionen nicht mehr, die diese Regel trifft.
+      stop_processing_label: Danach keine weiteren Regeln anwenden
       then: DANN
     index:
       ai_cost_warning: Regelaktionen mit KI kosten Geld. Filtere so eng wie möglich, damit keine unnötigen Kosten entstehen.
@@ -82,12 +84,10 @@ de:
       new_rule: Neue Regel
       no_rules_description: Mit Regeln bearbeitest du Transaktionen und andere Daten automatisch bei jedem Konto-Sync.
       no_rules_title: Noch keine Regeln
+      order_hint: Regeln laufen von oben nach unten. Setzt eine Regel ein Feld einer Transaktion, ändern weiter unten stehende Regeln dieses Feld nicht mehr. Tags ergänzt jede passende Regel. Ziehe Regeln, um die Reihenfolge zu ändern.
       page_title: Regeln
+      reorder_rule: "Regel %{name} verschieben. Mit Enter oder Leertaste greifen, dann mit den Pfeiltasten verschieben."
       rules_heading: Regeln
-      sort_by: 'Sortieren nach:'
-      sort_name: Name
-      sort_updated_at: Geändert am
-      toggle_sort_direction: Sortierrichtung umschalten
     rule:
       action_label_to: "%{label} auf %{value}"
       all_past_and_future: Alle bisherigen und künftigen %{resource}
@@ -101,6 +101,8 @@ de:
       edit: Bearbeiten
       on_or_after: "%{resource} ab dem %{date}"
       re_apply_rule: Regel erneut anwenden
+      stop_processing: Stopp
+      stop_processing_hint: Weiter unten stehende Regeln ändern die Transaktionen nicht mehr, die diese Regel trifft.
       then: DANN
     update:
       success: Regel aktualisiert

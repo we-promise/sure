@@ -10,6 +10,11 @@ class Rule < ApplicationRecord
   accepts_nested_attributes_for :actions, allow_destroy: true
 
   before_validation :normalize_name
+  before_create :assign_next_position
+
+  # Rules run top to bottom. created_at breaks ties, e.g. for rules created at
+  # the same moment before anyone reordered them.
+  scope :ordered, -> { order(:position, :created_at, :id) }
 
   validates :resource_type, presence: true
   validates :name, length: { minimum: 1 }, allow_nil: true
@@ -37,15 +42,44 @@ class Rule < ApplicationRecord
   end
 
   def affected_resource_count
-    matching_resources_scope.count
+    matching_scope.count
   end
 
-  # Public wrapper around the private matching scope so callers can read the
-  # currently-matching transaction ids WITHOUT running executors (e.g. the
-  # notification baseline pre-seed). Mirrors total_affected_resource_count,
-  # which also reaches matching_resources_scope.
+  # Reads the currently-matching transaction ids WITHOUT running executors
+  # (e.g. the notification baseline pre-seed).
   def matching_transaction_ids
-    matching_resources_scope.pluck(:id)
+    matching_scope.pluck(:id)
+  end
+
+  # Sets the run order of all rules of a family. ordered_ids must list every
+  # rule of the family exactly once, so a stale page (a rule added or deleted
+  # meanwhile) cannot leave rules with clashing or missing positions.
+  def self.update_positions!(family, ordered_ids)
+    ordered_ids = Array(ordered_ids).map(&:to_s)
+    family_rule_ids = family.rules.pluck(:id)
+
+    unless ordered_ids.size == family_rule_ids.size && ordered_ids.sort == family_rule_ids.sort
+      raise ArgumentError, "ordered_ids must list every rule of the family exactly once"
+    end
+
+    return if ordered_ids.empty?
+
+    encoder = PG::TextEncoder::Array.new
+    sql = sanitize_sql_array([ <<~SQL.squish, encoder.encode(ordered_ids), encoder.encode((1..ordered_ids.size).to_a), family.id ])
+      UPDATE rules SET position = new_positions.position
+      FROM unnest(?::uuid[], ?::integer[]) AS new_positions(id, position)
+      WHERE rules.id = new_positions.id AND rules.family_id = ?
+    SQL
+    with_connection { |connection| connection.update(sql, "Rule Update Positions") }
+  end
+
+  # Excludes transaction ids with one array parameter. where.not(id: ids) sends
+  # one bind per id, which breaks beyond PostgreSQL's 65,535 bind limit when a
+  # broad rule claims or stops many transactions.
+  def self.excluding_transaction_ids(scope, ids)
+    return scope if ids.empty?
+
+    scope.where.not("transactions.id = ANY(?::uuid[])", PG::TextEncoder::Array.new.encode(ids.to_a))
   end
 
   # Creates a categorization rule for the Quick Categorize Wizard.
@@ -69,19 +103,25 @@ class Rule < ApplicationRecord
     # Collect all unique transaction IDs matched by any rule
     transaction_ids = Set.new
     rules.each do |rule|
-      transaction_ids.merge(rule.send(:matching_resources_scope).pluck(:id))
+      transaction_ids.merge(rule.matching_scope.pluck(:id))
     end
 
     transaction_ids.size
   end
 
-  def apply(ignore_attribute_locks: false, rule_run: nil)
+  # scope: the transactions to act on. Rule::Runner passes the matches minus
+  # transactions a rule higher up stopped. claimed_ids maps an attribute to the
+  # transaction ids a rule higher up already set it for; an action leaves those
+  # transactions alone ("top rule wins").
+  def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {})
     total_modified = 0
     total_async_jobs = 0
     has_async = false
 
     actions.each do |action|
-      result = action.apply(matching_resources_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
+      excluded_ids = action.claimed_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
+      action_scope = Rule.excluding_transaction_ids(scope, excluded_ids)
+      result = action.apply(action_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
 
       if result.is_a?(Hash) && result[:async]
         has_async = true
@@ -127,21 +167,27 @@ class Rule < ApplicationRecord
     end
   end
 
+  def matching_scope
+    scope = registry.resource_scope
+
+    # 1. Prepare the query with joins required by conditions
+    conditions.each do |condition|
+      scope = condition.prepare(scope)
+    end
+
+    # 2. Apply the conditions to the query
+    conditions.each do |condition|
+      scope = condition.apply(scope)
+    end
+
+    scope
+  end
+
   private
-    def matching_resources_scope
-      scope = registry.resource_scope
+    def assign_next_position
+      return if position.to_i.positive?
 
-      # 1. Prepare the query with joins required by conditions
-      conditions.each do |condition|
-        scope = condition.prepare(scope)
-      end
-
-      # 2. Apply the conditions to the query
-      conditions.each do |condition|
-        scope = condition.apply(scope)
-      end
-
-      scope
+      self.position = family.rules.maximum(:position).to_i + 1
     end
 
     def min_actions

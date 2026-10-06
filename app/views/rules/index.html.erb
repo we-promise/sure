@@ -55,28 +55,35 @@
           <span class="text-subdued">&middot;</span>
           <p><%= @rules.count %></p>
         </div>
-        <div class="flex items-center gap-1">
-          <span class="text-secondary"><%= t(".sort_by") %></span>
-          <%= form_with url: rules_path, method: :get, local: true, class: "flex items-center", data: { controller: "auto-submit-form" } do |form| %>
-            <%= form.select :sort_by,
-                      options_for_select([[t(".sort_name"), "name"], [t(".sort_updated_at"), "updated_at"]], @sort_by),
-                      {},
-                      class: "min-w-[120px] bg-transparent rounded border-none cursor-pointer text-primary uppercase text-xs w-auto",
-                      data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
-            <%= form.hidden_field :direction, value: @direction %>
-          <% end %>
-          <%= render DS::Link.new(
-            href: rules_path(direction: @direction == "asc" ? "desc" : "asc", sort_by: @sort_by),
-            variant: "icon",
-            icon: "arrow-up-down",
-            size: :sm,
-            title: t(".toggle_sort_direction")
-          ) %>
-        </div>
       </div>
+      <p class="px-4 pb-2 text-sm text-secondary"><%= t(".order_hint") %></p>
       <div class="p-1">
-        <div class="flex flex-col bg-container rounded-lg shadow-border-xs">
-          <%= render partial: "rule", collection: @rules, spacer_template: "shared/ruler" %>
+        <div class="flex flex-col bg-container rounded-lg shadow-border-xs divide-y divide-subdued"
+             data-controller="sortable-list"
+             data-sortable-list-url-value="<%= reorder_rules_path %>"
+             data-sortable-list-param-value="rule_ids"
+             data-action="dragover->sortable-list#dragOver drop->sortable-list#drop"
+             role="list"
+             aria-label="<%= t(".rules_heading") %>">
+          <% @rules.each do |rule| %>
+            <div class="flex items-center"
+                 data-sortable-list-target="item"
+                 data-sortable-list-id="<%= rule.id %>"
+                 draggable="true"
+                 role="listitem"
+                 aria-grabbed="false"
+                 data-action="dragstart->sortable-list#dragStart dragend->sortable-list#dragEnd">
+              <button type="button"
+                      class="self-stretch flex items-center pl-3 cursor-grab active:cursor-grabbing text-secondary hover:text-primary rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      aria-label="<%= t(".reorder_rule", name: rule.name.presence || rule.primary_condition_title) %>"
+                      data-action="touchstart->sortable-list#touchStart touchmove->sortable-list#touchMove touchend->sortable-list#touchEnd keydown->sortable-list#handleKeyDown">
+                <%= icon("grip-vertical", size: "sm") %>
+              </button>
+              <div class="grow min-w-0">
+                <%= render "rule", rule: rule %>
+              </div>
+            </div>
+          <% end %>
         </div>
       </div>
     </div>

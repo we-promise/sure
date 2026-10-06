@@ -32,10 +32,6 @@ zh-CN:
       new_rule: 新建规则
       ai_cost_warning: 启用 AI 的规则操作会产生费用。请务必尽可能精确地筛选，以避免不必要的成本。
       rules_heading: 规则
-      sort_by: 排序方式：
-      sort_name: 名称
-      sort_updated_at: 更新时间
-      toggle_sort_direction: 切换排序方向
       no_rules_title: 还没有规则
       no_rules_description: 设置规则后，您每次账户同步时都可以对交易和其他数据执行操作。
     confirm:

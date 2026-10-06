@@ -32,10 +32,6 @@ hu:
       new_rule: Új szabály
       ai_cost_warning: Az AI-t igénybe vevő szabályakciók pénzbe kerülnek. Szűrj minél szűkebbre a felesleges költségek elkerülése érdekében.
       rules_heading: Szabályok
-      sort_by: "Rendezés:"
-      sort_name: Név szerint
-      sort_updated_at: Módosítás dátuma szerint
-      toggle_sort_direction: Rendezési irány váltása
       no_rules_title: Még nincsenek szabályok
       no_rules_description: Állíts be szabályokat, amelyek minden fiókszinkronizáláskor automatikusan elvégzik a megadott műveleteket a tranzakciókon és egyéb adatokon.
     confirm:

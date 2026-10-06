@@ -7,6 +7,10 @@ class Rule::ActionExecutor::SetTransactionCategory < Rule::ActionExecutor
     Category::Group.select_options(family.categories, indent: false)
   end
 
+  def claimed_attributes
+    [ :category_id ]
+  end
+
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     category = family.categories.find_by_id(value)
     return 0 unless category

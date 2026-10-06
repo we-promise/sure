@@ -102,10 +102,6 @@ fr:
       no_rules_title: Pas encore de règles
       page_title: Règles
       rules_heading: Règles
-      sort_by: 'Trier par :'
-      sort_name: Nom
-      sort_updated_at: Mis à jour à
-      toggle_sort_direction: Changer le sens du tri
     no_action: Aucune action
     no_condition: Aucune condition
     recent_runs:

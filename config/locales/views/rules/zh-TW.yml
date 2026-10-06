@@ -32,10 +32,6 @@ zh-TW:
       new_rule: 新增規則
       ai_cost_warning: 使用 AI 的規則動作會產生費用。請盡可能縮小篩選條件的範圍，以免產生不必要的花費。
       rules_heading: 自動化規則
-      sort_by: 排序依據：
-      sort_name: 名稱
-      sort_updated_at: 更新時間
-      toggle_sort_direction: 切換排序方向
       no_rules_title: 還沒有任何規則
       no_rules_description: 設定規則，就能在每次帳戶同步時對您的交易與其他資料執行動作。
     confirm:

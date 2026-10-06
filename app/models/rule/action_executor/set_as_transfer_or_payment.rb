@@ -7,6 +7,10 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     family.accounts.alphabetically.pluck(:name, :id)
   end
 
+  def claimed_attributes
+    [ :transfer ]
+  end
+
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     target_account = family.accounts.find_by_id(value)
     return 0 unless target_account

@@ -21,6 +21,21 @@ class Rule::ActionExecutor
     nil
   end
 
+  # Attributes this action sets. When several rules set the same attribute on
+  # a transaction, the rule highest in the list wins (see Rule::Runner), so the
+  # action skips transactions a rule above already claimed. Additive actions
+  # such as tags claim nothing.
+  def claimed_attributes
+    []
+  end
+
+  # Whether matching this action keeps rules further down from setting
+  # claimed_attributes. False for actions that only fill a field later and not
+  # for every match, so a broad one doesn't silently block the rules below it.
+  def reserves_claimed_attributes?
+    true
+  end
+
   def execute(scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     raise NotImplementedError, "Action executor #{self.class.name} must implement #execute"
   end
