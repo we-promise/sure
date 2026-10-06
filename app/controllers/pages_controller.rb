@@ -19,7 +19,8 @@ class PagesController < ApplicationController
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
     "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
-    "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
+    "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
+    "liquidity"          => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
   }.freeze
 
   # Number of consecutive months (ending at the selected month) shown as
@@ -30,6 +31,10 @@ class PagesController < ApplicationController
   # anywhere. Customize mode carries them through its links and hide/add
   # buttons so the widgets don't jump back to their defaults.
   DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [] } ].freeze
+
+  # Widgets only preview users see; for everyone else they are left out of
+  # the section list, including the hidden list.
+  PREVIEW_DASHBOARD_SECTIONS = %w[insights_feed liquidity].freeze
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -80,6 +85,13 @@ class PagesController < ApplicationController
     # users on the widget they just changed.
     changed = hidden ? { hidden_section: section_key } : { shown_section: section_key }
     redirect_to root_path(dashboard_view_params.merge(customize: true, **changed)), status: :see_other
+  end
+
+  # Hides the one-time "please check how your accounts were classified"
+  # hint in the availability widget.
+  def dismiss_liquidity_review
+    Current.user.dismiss_liquidity_review!
+    redirect_to root_path(dashboard_view_params), status: :see_other
   end
 
   def changelog
@@ -222,7 +234,8 @@ class PagesController < ApplicationController
             visible: @accounts.any?,
             collapsible: true
           }
-        }
+        },
+        "liquidity" => -> { liquidity_section }
       }
     end
 
@@ -232,7 +245,7 @@ class PagesController < ApplicationController
     # investment summary never has anything to show, and without insights
     # neither does the feed.
     def hidden_dashboard_section(key)
-      return nil if key == "insights_feed" && !preview_features_enabled?
+      return nil if key.in?(PREVIEW_DASHBOARD_SECTIONS) && !preview_features_enabled?
 
       visible = case key
       when "investment_summary" then investment_summary_available?
@@ -280,6 +293,22 @@ class PagesController < ApplicationController
         layout: section_layout("insights_feed"),
         locals: { insights: insights },
         visible: insights.any?,
+        collapsible: true
+      }
+    end
+
+    # Available vs. locked wealth and when locked money is released
+    # (Account::Liquidity). Preview-gated like the insights feed.
+    def liquidity_section
+      return nil unless preview_features_enabled?
+
+      {
+        key: "liquidity",
+        title: "pages.dashboard.liquidity.title",
+        partial: "pages/dashboard/liquidity",
+        layout: section_layout("liquidity"),
+        locals: { balance_sheet: @balance_sheet, period: @period },
+        visible: @accounts.any?,
         collapsible: true
       }
     end

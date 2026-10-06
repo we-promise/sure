@@ -15,6 +15,10 @@ module Accountable
     include Enrichable
 
     has_one :account, as: :accountable, touch: true
+
+    # Subtype changes made outside the account form (provider syncs update the
+    # accountable directly) still move the account to the new default.
+    after_update :refresh_account_liquidity, if: :saved_change_to_subtype?
   end
 
   class_methods do
@@ -52,6 +56,28 @@ module Accountable
     # Convenience method for getting the long label
     def long_subtype_label_for(subtype)
       subtype_label_for(subtype, format: :long)
+    end
+
+    # Default availability for an account of this type and subtype. Override
+    # per accountable; see Account::Liquidity.
+    def default_liquidity_for(_subtype)
+      "immediate"
+    end
+
+    # Tax treatment a subtype brings with it, nil when the type has none.
+    def default_tax_treatment_for(_subtype)
+      nil
+    end
+
+    def rules_for(subtype)
+      subtype = subtype.presence
+
+      Accountable::Rules.new(
+        accountable_type: name,
+        subtype: subtype,
+        liquidity: default_liquidity_for(subtype).to_s,
+        tax_treatment: default_tax_treatment_for(subtype)
+      )
     end
 
     def subtype_options_for_select
@@ -132,4 +158,9 @@ module Accountable
   def classification
     self.class.classification
   end
+
+  private
+    def refresh_account_liquidity
+      account&.refresh_default_liquidity! if account&.persisted?
+    end
 end

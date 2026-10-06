@@ -330,6 +330,7 @@ class Family::DataImporter
           notes: data["notes"],
           status: importable_account_status(data["status"])
         )
+        assign_imported_liquidity(account, data)
 
         account.save!
 
@@ -349,6 +350,46 @@ class Family::DataImporter
         @created_accounts << account if created
         increment_summary("Account", created ? :created : :updated)
       end
+    end
+
+    # Availability (Account::Liquidity). A level the user picked travels as
+    # the exported lock and stays manual; without one the account takes its
+    # subtype's default, as a new account would. Out-of-range values were
+    # already reported by SureImport::Preflight and are ignored here, so they
+    # leave an already imported account's value alone, as does a field missing
+    # from the record (an export from before availability existed). A blank
+    # value clears the field.
+    def assign_imported_liquidity(account, data)
+      level = data["liquidity"].to_s
+      if level.in?(Account::Liquidity::LEVELS)
+        manual = data.dig("locked_attributes", "liquidity").present?
+        account.liquidity_choice = manual ? level : Account::Liquidity::AUTOMATIC
+      end
+
+      assign_importable(account, :available_on, data) { |value| parse_import_date(value) }
+      assign_importable(account, :renewal_term_months, data) do |value|
+        importable_integer(value, 1..Account::Liquidity::MAX_RENEWAL_TERM_MONTHS)
+      end
+      if data.key?("auto_renew") || data.key?("renewal_term_months")
+        renew = data.key?("auto_renew") ? ActiveModel::Type::Boolean.new.cast(data["auto_renew"]) == true : account.auto_renew?
+        account.auto_renew = account.renewal_term_months.present? && renew
+      end
+    end
+
+    def assign_importable(account, attribute, data)
+      key = attribute.to_s
+      return unless data.key?(key)
+
+      raw = data[key]
+      value = raw.blank? ? nil : yield(raw)
+      return if raw.present? && value.nil?
+
+      account.public_send("#{key}=", value)
+    end
+
+    def importable_integer(value, range)
+      integer = Integer(value.to_s, exception: false)
+      integer if integer && range.cover?(integer)
     end
 
     def importable_account_status(status)
@@ -1075,6 +1116,7 @@ class Family::DataImporter
       return "loan_payment" if destination_account.loan?
       return "cc_payment" if destination_account.liability?
       return "investment_contribution" if investment_account?(destination_account) && !investment_account?(source_account)
+      return "investment_contribution" if Transfer.saving_into?(destination_account, source: source_account, date: transfer.outflow_transaction.entry.date)
 
       "funds_movement"
     end

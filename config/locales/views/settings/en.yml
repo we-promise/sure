@@ -237,6 +237,17 @@ en:
         sharing_default_label: Default sharing for new accounts
         sharing_shared: Share with all members
         sharing_private: Keep private by default
+        account_release:
+          title: Release reminders
+          subtitle: Hear when money locked in a term deposit or similar account becomes available or is about to renew.
+          channel_label: How do you want to be told?
+          channels:
+            insight: In the insights feed
+            email: By e-mail
+            both: Insights feed and e-mail
+            "off": Not at all
+          lead_days_label: Days in advance
+          hint: You get a reminder this many days before the release date or the last day to give notice, and again when the money is released. The insights feed is shared with your household.
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.

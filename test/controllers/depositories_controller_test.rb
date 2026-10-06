@@ -66,6 +66,66 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='account[enable_category_matcher]']", 0
   end
 
+  # --- availability (Account::Liquidity) ------------------------------------
+
+  test "create takes the subtype default without treating it as a manual choice" do
+    post depositories_path, params: {
+      account: { name: "Term deposit", currency: "USD", balance: 100, subtype: "cd", accountable_type: "Depository" }
+    }
+
+    account = Account.order(:created_at).last
+    assert_equal "locked", account.liquidity
+    assert_not account.liquidity_manual?
+  end
+
+  test "update stores a manual availability with its release date" do
+    patch depository_path(@account), params: {
+      account: { liquidity_choice: "locked", available_on: "2030-03-31" }
+    }
+
+    @account.reload
+    assert_equal "locked", @account.liquidity
+    assert @account.liquidity_manual?
+    assert_equal Date.new(2030, 3, 31), @account.available_on
+  end
+
+  test "update can hand availability back to the subtype" do
+    @account.update!(liquidity_choice: "long_term")
+
+    patch depository_path(@account), params: { account: { liquidity_choice: "automatic" } }
+
+    assert_equal "immediate", @account.reload.liquidity
+    assert_not @account.liquidity_manual?
+  end
+
+  test "the availability fields are preview only" do
+    set_preview(false)
+    get edit_account_url(@account)
+    assert_select "select[name='account[liquidity_choice]']", 0
+
+    set_preview(true)
+    get edit_account_url(@account)
+    assert_select "select[name='account[liquidity_choice]']", 1
+    assert_select "input[name='account[available_on]']", 1
+  end
+
+  test "the account page shows availability and the details tab only with preview" do
+    @account.update!(subtype: "cd", available_on: Date.new(2030, 3, 31))
+
+    set_preview(false)
+    get account_url(@account)
+    assert_response :success
+    assert_select "[data-testid='account-rule-details']", 0
+    assert_no_match I18n.t("accounts.liquidity.badge.locked_until", date: I18n.l(Date.new(2030, 3, 31), format: :long)), response.body
+
+    set_preview(true)
+    get account_url(@account, tab: "details")
+    assert_response :success
+    assert_select "[data-testid='account-rule-details']", 1
+    assert_match I18n.t("accounts.liquidity.badge.locked_until", date: I18n.l(Date.new(2030, 3, 31), format: :long)), response.body
+    assert_match I18n.t("accounts.liquidity.details.sources.subtype", subtype: @account.long_subtype_label), response.body
+  end
+
   # --- member-owned connections (issue #3579) ------------------------------
 
   test "a member sees only member-connectable providers in the method selector" do
@@ -105,4 +165,9 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href=?]", new_depository_path, count: 1
   end
+
+  private
+    def set_preview(enabled)
+      @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => enabled))
+    end
 end

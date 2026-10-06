@@ -1117,6 +1117,23 @@ class GoalTest < ActiveSupport::TestCase
     assert_nil goal.reload.target_date
   end
 
+  test "a reserve flags linked accounts whose money is locked" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+    account = goal.linked_accounts.first
+    account.update!(subtype: "cd", available_on: Date.current + 60)
+
+    assert_equal [ account ], goal.reload.unavailable_linked_accounts
+    assert_empty goal.unavailable_linked_accounts(Date.current + 60)
+  end
+
+  test "a one-off goal may sit on locked money without a warning" do
+    account = standoff_account
+    account.update!(subtype: "cd", available_on: Date.current + 60)
+    goal = whole_account_goal("Trip 2027", account)
+
+    assert_empty goal.unavailable_linked_accounts
+  end
+
   test "a drained reserve gets a status callout telling it what is missing" do
     goal = reserve_goal(balance: 4_000, target: 6_000)
 

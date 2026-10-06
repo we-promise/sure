@@ -17,19 +17,48 @@ class Transfer < ApplicationRecord
   validate :transfer_has_same_family
 
   class << self
-    def kind_for_account(account)
+    # Kind of the outflow leg for a transfer into `account`. `source` and
+    # `date` are the other leg's account and the booking date; they decide
+    # whether money moved into a bound account counts as saving.
+    def kind_for_account(account, source: nil, date: nil)
       if account.loan?
         "loan_payment"
       elsif account.credit_card?
         "cc_payment"
-      elsif account.investment? || account.crypto?
+      elsif (account.investment? || account.crypto?) && (source.nil? || !savings_account?(source, date))
         "investment_contribution"
       elsif account.liability?
         "cc_payment"
+      elsif saving_into?(account, source: source, date: date)
+        "investment_contribution"
       else
         "funds_movement"
       end
     end
+
+    # Money moved from available money into a bank account that is locked or
+    # long-term on the booking date (term deposit, building savings, HSA)
+    # counts as saving, like a contribution to a brokerage account. Property,
+    # vehicles and other assets stay out: a down payment or money lent to a
+    # friend is not saving. A locked account past its release date is
+    # available again, so a transfer into it stays a plain funds movement.
+    # Moving money between two savings accounts is not new saving either, and
+    # neither is borrowed money (a loan or credit card as the source).
+    def saving_into?(destination, source: nil, date: nil)
+      return false unless bound_savings_account?(destination, date)
+      return true if source.nil?
+
+      source.available_on?(date || source.liquidity_today) && !savings_account?(source, date)
+    end
+
+    def savings_account?(account, date = nil)
+      account.investment? || account.crypto? || bound_savings_account?(account, date)
+    end
+
+    private
+      def bound_savings_account?(account, date)
+        account.depository? && !account.available_on?(date || account.liquidity_today)
+      end
   end
 
   def has_source_fee?

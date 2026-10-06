@@ -1,0 +1,23 @@
+---
+en:
+  account_availability_mailer:
+    release_digest:
+      account: Account
+      balance: Balance
+      cta: View accounts
+      heading:
+        one: 1 locked account needs your attention
+        other: "%{count} locked accounts need your attention"
+      intro: "These accounts hold money that is locked until a date:"
+      lines:
+        cancel_hint: "To get the money out, cancel before then."
+        released: "Available since %{date}"
+        renewal: "Renews automatically on %{date}."
+        upcoming:
+          one: "Available on %{date} (in %{count} day)"
+          other: "Available on %{date} (in %{count} days)"
+      settings_hint: You can change how and when you get these reminders in your settings.
+      subject:
+        one: 1 release reminder on %{product_name}
+        other: "%{count} release reminders on %{product_name}"
+      what: What happens

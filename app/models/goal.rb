@@ -447,6 +447,16 @@ class Goal < ApplicationRecord
     kind == "maintained"
   end
 
+  # Linked accounts whose money cannot be reached on `date`
+  # (Account::Liquidity). Only a reserve cares: a one-off goal saving for a
+  # trip in 2027 may sit on a term deposit that matures before then, but an
+  # emergency fund on one is not there when the emergency comes.
+  def unavailable_linked_accounts(date = Account.liquidity_today_for(family))
+    return [] unless maintained?
+
+    linked_accounts.reject { |account| account.available_on?(date) }
+  end
+
   def months_of_expenses_target?
     target_mode == "months_of_expenses"
   end

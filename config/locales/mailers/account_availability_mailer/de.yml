@@ -1,0 +1,23 @@
+---
+de:
+  account_availability_mailer:
+    release_digest:
+      account: Konto
+      balance: Saldo
+      cta: Konten ansehen
+      heading:
+        one: 1 gebundenes Konto braucht deine Aufmerksamkeit
+        other: "%{count} gebundene Konten brauchen deine Aufmerksamkeit"
+      intro: "Auf diesen Konten liegt Geld, das bis zu einem Datum gebunden ist:"
+      lines:
+        cancel_hint: "Wenn du das Geld brauchst, kündige vorher."
+        released: "Verfügbar seit %{date}"
+        renewal: "Verlängert sich am %{date} automatisch."
+        upcoming:
+          one: "Verfügbar am %{date} (in %{count} Tag)"
+          other: "Verfügbar am %{date} (in %{count} Tagen)"
+      settings_hint: Wie und wann du diese Hinweise bekommst, stellst du in den Einstellungen ein.
+      subject:
+        one: 1 Freigabe-Hinweis auf %{product_name}
+        other: "%{count} Freigabe-Hinweise auf %{product_name}"
+      what: Was passiert

@@ -742,6 +742,40 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
   end
 
+  test "availability period change ignores deposits released after today" do
+    travel_to Date.new(2026, 10, 5) do
+      @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+      deposit = @family.accounts.create!(name: "Term deposit", balance: 10_000, currency: "USD",
+                                         accountable: Depository.new(subtype: "cd"),
+                                         liquidity_choice: "locked", available_on: Date.new(2026, 10, 20))
+      Date.new(2026, 10, 1).upto(Date.current) do |date|
+        deposit.balances.create!(date: date, balance: 10_000, cash_balance: 10_000, currency: "USD",
+                                 start_cash_balance: 10_000, start_non_cash_balance: 0, flows_factor: 1)
+      end
+
+      get reports_path(period_type: :monthly, start_date: "2026-10-01", end_date: "2026-10-31")
+
+      assert_response :ok
+      assert_select "#liquidity", text: /\$0\.00 in this period/
+    end
+  end
+
+  test "reports show the availability section only with preview features" do
+    @family.accounts.create!(name: "Term deposit", balance: 2_500, currency: "USD",
+                             accountable: Depository.new(subtype: "cd"),
+                             liquidity_choice: "locked", available_on: Date.current + 400)
+
+    get reports_path
+    assert_response :ok
+    assert_select "#liquidity", count: 0
+
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get reports_path
+    assert_response :ok
+    assert_select "#liquidity-releases td", text: /Term deposit/
+  end
+
   private
     # n EUR-priced disposals in a USD account, each on its own date with its
     # own rate row, so every one needs a distinct lookup.

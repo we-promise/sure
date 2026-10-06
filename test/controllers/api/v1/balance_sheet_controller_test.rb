@@ -43,6 +43,38 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "should return availability with upcoming releases" do
+    deposit = @family.accounts.create!(name: "Term deposit", balance: 2_500, currency: "USD",
+                                       accountable: Depository.new(subtype: "cd"),
+                                       liquidity_choice: "locked", available_on: Date.current + 30)
+
+    get "/api/v1/balance_sheet", headers: api_headers(@auth)
+
+    assert_response :success
+    availability = JSON.parse(response.body).fetch("availability")
+
+    %w[available_net_worth available_assets bound_assets short_term_liabilities].each do |field|
+      assert availability[field].key?("amount"), "#{field} should have amount"
+    end
+
+    release = availability["upcoming_releases"].find { |r| r["account_id"] == deposit.id }
+    assert_equal (Date.current + 30).iso8601, release["date"]
+    assert_equal false, release["auto_renew"]
+  end
+
+  test "availability does not list another member's unshared accounts" do
+    @family.accounts.create!(name: "Private deposit", balance: 1_000, currency: "USD",
+                             owner: users(:family_member),
+                             accountable: Depository.new(subtype: "cd"),
+                             liquidity_choice: "locked", available_on: Date.current + 30)
+
+    get "/api/v1/balance_sheet", headers: api_headers(@auth)
+
+    assert_response :success
+    names = JSON.parse(response.body).dig("availability", "upcoming_releases").map { |release| release["account_name"] }
+    assert_not_includes names, "Private deposit"
+  end
+
   private
 
     def api_headers(auth)

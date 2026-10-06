@@ -157,6 +157,100 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository))
   end
 
+  test "kind_for_account counts a transfer into a locked account as saving" do
+    term_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
+
+    assert_equal "investment_contribution",
+      Transfer.kind_for_account(term_deposit, source: accounts(:depository), date: Date.current)
+  end
+
+  test "kind_for_account counts a transfer into a long-term asset as saving" do
+    hsa = families(:dylan_family).accounts.create!(
+      name: "HSA", balance: 0, currency: "USD", accountable: Depository.new(subtype: "hsa")
+    )
+    assert_equal "long_term", hsa.liquidity
+
+    assert_equal "investment_contribution",
+      Transfer.kind_for_account(hsa, source: accounts(:depository), date: Date.current)
+  end
+
+  test "kind_for_account treats a locked account past its release date as available" do
+    term_deposit = create_term_deposit(available_on: 1.month.ago.to_date)
+
+    assert_equal "funds_movement",
+      Transfer.kind_for_account(term_deposit, source: accounts(:depository), date: Date.current)
+    assert_equal "investment_contribution",
+      Transfer.kind_for_account(term_deposit, source: accounts(:depository), date: 2.months.ago.to_date)
+  end
+
+  test "kind_for_account keeps a renewing term deposit locked after its first date" do
+    term_deposit = create_term_deposit(available_on: 1.month.ago.to_date, auto_renew: true, renewal_term_months: 12)
+
+    assert_equal "investment_contribution",
+      Transfer.kind_for_account(term_deposit, source: accounts(:depository), date: Date.current)
+  end
+
+  test "kind_for_account does not count moves between savings accounts as saving" do
+    term_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
+    building_savings = families(:dylan_family).accounts.create!(
+      name: "Building savings", balance: 0, currency: "USD", accountable: Depository.new(subtype: "building_savings")
+    )
+
+    assert_equal "funds_movement",
+      Transfer.kind_for_account(term_deposit, source: accounts(:investment), date: Date.current)
+    assert_equal "funds_movement",
+      Transfer.kind_for_account(term_deposit, source: building_savings, date: Date.current)
+  end
+
+  test "kind_for_account keeps money moved from a locked account into investments neutral" do
+    term_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
+
+    assert_equal "funds_movement",
+      Transfer.kind_for_account(accounts(:investment), source: term_deposit, date: Date.current)
+    assert_equal "funds_movement",
+      Transfer.kind_for_account(accounts(:crypto), source: accounts(:investment), date: Date.current)
+    assert_equal "investment_contribution",
+      Transfer.kind_for_account(accounts(:investment), source: accounts(:depository), date: Date.current)
+    assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:investment))
+  end
+
+  test "kind_for_account does not count borrowed money as saving" do
+    term_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
+
+    assert_equal "funds_movement",
+      Transfer.kind_for_account(term_deposit, source: accounts(:loan), date: Date.current)
+    assert_equal "funds_movement",
+      Transfer.kind_for_account(term_deposit, source: accounts(:credit_card), date: Date.current)
+  end
+
+  test "kind_for_account keeps instant-access savings and money coming back neutral" do
+    savings = families(:dylan_family).accounts.create!(
+      name: "Savings", balance: 0, currency: "USD", accountable: Depository.new(subtype: "savings")
+    )
+    term_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
+
+    assert_equal "funds_movement", Transfer.kind_for_account(savings, source: accounts(:depository), date: Date.current)
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository), source: term_deposit, date: Date.current)
+  end
+
+  test "kind_for_account keeps transfers into property and other assets neutral" do
+    assert_equal "long_term", accounts(:property).liquidity
+    assert_equal "long_term", accounts(:other_asset).liquidity
+
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:property), source: accounts(:depository), date: Date.current)
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:other_asset), source: accounts(:depository), date: Date.current)
+  end
+
+  test "kind_for_account follows a manual availability choice" do
+    savings = families(:dylan_family).accounts.create!(
+      name: "Savings", balance: 0, currency: "USD", accountable: Depository.new(subtype: "savings"),
+      liquidity_choice: "long_term"
+    )
+
+    assert_equal "investment_contribution",
+      Transfer.kind_for_account(savings, source: accounts(:depository), date: Date.current)
+  end
+
   test "has_source_fee? returns true when source fee present" do
     transfer = transfers(:one)
     entry = accounts(:depository).entries.create!(name: "Fee", date: Date.current, amount: 5, currency: "USD", entryable: Transaction.new(kind: "standard"))
@@ -185,4 +279,12 @@ class TransferTest < ActiveSupport::TestCase
     transfer.fee_transactions << entry1.entryable << entry2.entryable
     assert_equal 5, transfer.total_fee
   end
+
+  private
+    def create_term_deposit(available_on:, auto_renew: false, renewal_term_months: nil)
+      families(:dylan_family).accounts.create!(
+        name: "Term deposit", balance: 0, currency: "USD", accountable: Depository.new(subtype: "cd"),
+        available_on: available_on, auto_renew: auto_renew, renewal_term_months: renewal_term_months
+      )
+    end
 end

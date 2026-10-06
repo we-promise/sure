@@ -112,6 +112,19 @@ class IncomeStatement
     )
   end
 
+  # Part of the period's expenses that is really saving: transfers into
+  # brokerage, crypto, locked and long-term bank accounts (kind
+  # investment_contribution). Budgets count these as spending; a savings rate
+  # adds them back. Same account scoping and currency conversion as the
+  # expense totals.
+  def savings_contributions_total(period: Period.current_month)
+    scope = family.transactions.visible.excluding_pending.in_period(period).where(kind: "investment_contribution")
+
+    totals_query(transactions_scope: scope, date_range: period.date_range)
+      .select { |t| t.classification == "expense" }
+      .sum(&:total)
+  end
+
   # Income/expense totals for an arbitrary period, optionally scoped to a
   # subset of accounts (e.g. a dashboard widget's account filter). Unlike
   # `income_totals`/`expense_totals`, this isn't memoized per-period since

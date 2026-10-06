@@ -260,9 +260,15 @@ class RecurringTransaction
       def cash_on_hand
         return @cash_on_hand if defined?(@cash_on_hand)
 
-        accounts = family.accounts.visible
-                         .where(accountable_type: "Depository")
-                         .merge(Account.accessible_by(user))
+        accounts = family.accounts.visible.merge(Account.accessible_by(user))
+        # Preview: money that is actually reachable this month
+        # (Account::Liquidity), so a term deposit locked past payday no longer
+        # pays the rent on paper.
+        accounts = if user&.preview_features_enabled?
+          accounts.immediate_assets_on(Account.liquidity_today_for(family))
+        else
+          accounts.where(accountable_type: "Depository")
+        end
 
         excluded = family.tax_advantaged_account_ids
         accounts = accounts.where.not(id: excluded) if excluded.present?

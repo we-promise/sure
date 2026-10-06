@@ -48,4 +48,15 @@ class Assistant::Function::GetBalanceSheetTest < ActiveSupport::TestCase
 
     assert_equal "too_many_points", result[:error]
   end
+  test "returns available and locked wealth with upcoming releases" do
+    @user.family.accounts.create!(name: "Term deposit", balance: 2_500, currency: "USD",
+                                  accountable: Depository.new(subtype: "cd"),
+                                  liquidity_choice: "locked", available_on: Date.current + 30)
+
+    availability = @fn.call[:availability]
+
+    assert availability[:available_net_worth].present?
+    assert availability[:locked_assets].present?
+    assert_includes availability[:upcoming_releases].map { |release| release[:account] }, "Term deposit"
+  end
 end

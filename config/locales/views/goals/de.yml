@@ -218,6 +218,9 @@ de:
         body: Setz es fort, um den Fortschritt weiter zu verfolgen.
         resume_cta: Ziel fortsetzen
         title: Dieses Ziel ist pausiert
+      unavailable_accounts_banner:
+        body: "%{accounts} ist nicht kurzfristig verfügbar und hilft im Notfall daher nicht. Halte eine Rücklage auf Geld, an das du sofort herankommst."
+        title: Ein Teil dieser Rücklage ist gerade nicht verfügbar
       pending_pledge:
         body_manual: Bestätigt sich, sobald du den Saldo das nächste Mal selbst anpasst.
         body_transfer: Bestätigt sich automatisch, sobald Sure beim nächsten Sync eine passende Einzahlung findet.
