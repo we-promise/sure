@@ -613,6 +613,14 @@ class SimplefinItem::Importer
           end
         end
 
+        # A response with provider errors is not a complete upstream inventory.
+        # Keep the accounts that were returned, but do not prune or repair
+        # linkages from a list that may omit a failed connection or account.
+        if partial_provider_response?(discovery_data)
+          Rails.logger.info("SimpleFin discovery: skipping inventory reconciliation because the response was partial")
+          return
+        end
+
         # Clean up orphaned SimplefinAccount records whose account_id no longer exists upstream.
         # This handles the case where a user deletes and re-adds an institution in SimpleFIN,
         # which generates new account IDs. Without this cleanup, both old (stale) and new
@@ -722,10 +730,13 @@ class SimplefinItem::Importer
       structured_errors = accounts_data[:errlist].presence
       provider_errors = structured_errors || accounts_data[:errors]
       if provider_errors.present?
+        # `gen.*` errors apply to the response as a whole. Any accounts returned
+        # alongside them may be stale or incomplete, so they cannot be imported
+        # as a successful partial response. Only `gen.auth` invalidates the item.
         general_v2_error = structured_errors&.any? { |error| general_provider_error?(error) }
         if accounts_data[:accounts].to_a.any? && !general_v2_error
           # Partial failure: record errors for visibility but continue processing accounts
-          record_errors(provider_errors)
+          record_errors(provider_errors, connections: accounts_data[:connections])
         else
           # Global failure: no accounts were returned; treat as fatal
           handle_errors(provider_errors)
@@ -736,7 +747,7 @@ class SimplefinItem::Importer
       # Some servers return a top-level message/string rather than an errors array
       if accounts_data[:error].present?
         if accounts_data[:accounts].to_a.any?
-          record_errors([ accounts_data[:error] ])
+          record_errors([ accounts_data[:error] ], connections: accounts_data[:connections])
         else
           handle_errors([ accounts_data[:error] ])
           return nil
@@ -1005,7 +1016,7 @@ class SimplefinItem::Importer
     # requires_update - that would block sync for every other institution on
     # the same connection. The top-level handle_errors path is the correct
     # place to flag the item when the SimpleFIN token itself is dead.
-    def record_errors(errors)
+    def record_errors(errors, connections: nil)
       arr = Array(errors)
       return if arr.empty?
 
@@ -1017,9 +1028,12 @@ class SimplefinItem::Importer
       )
 
       arr.each do |error|
+        context = provider_error_context(error, connections)
         register_error(
           message: provider_error_message(error),
-          category: provider_error_category(error)
+          category: provider_error_category(error),
+          account_id: context[:account_id],
+          name: context[:name]
         )
       end
     end
@@ -1065,7 +1079,7 @@ class SimplefinItem::Importer
     def provider_error_message(error)
       return error if error.is_a?(String)
 
-      error[:msg] || error[:description] || error[:message] || error[:error] || error.to_s
+      error[:msg].presence || error[:description].presence || error[:message].presence || error[:error].presence || error.to_s
     end
 
     def provider_error_category(error)
@@ -1087,6 +1101,25 @@ class SimplefinItem::Importer
 
     def general_provider_error?(error)
       !error.is_a?(String) && error[:code].to_s.start_with?("gen.")
+    end
+
+    def partial_provider_response?(accounts_data)
+      accounts_data[:errlist].present? || accounts_data[:errors].present? || accounts_data[:error].present?
+    end
+
+    def provider_error_context(error, connections)
+      return {} if error.is_a?(String)
+
+      code = error[:code].to_s
+      if code.start_with?("act.")
+        { account_id: error[:account_id] }
+      elsif code.start_with?("con.")
+        connection_id = error[:conn_id]
+        connection = Array(connections).find { |candidate| candidate[:conn_id].to_s == connection_id.to_s }
+        { name: connection&.dig(:name).presence || connection_id }
+      else
+        {}
+      end
     end
 
     def item_auth_error?(error)
