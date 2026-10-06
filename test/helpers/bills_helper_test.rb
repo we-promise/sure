@@ -467,6 +467,16 @@ class BillsHelperTest < ActionView::TestCase
     assert_equal covered, sections[:bridge_note]
   end
 
+  test "a bridge with unknown cash renders neither cash-dependent state" do
+    unknown = build_period(income: 0, due: 50, reserved: 0, leading: true,
+                           cash_on_hand: nil, items: [ :a_bill ])
+
+    sections = paycheck_plan_sections([ unknown ])
+
+    assert_nil sections[:shortfall]
+    assert_nil sections[:bridge_note]
+  end
+
   test "no plan yields empty sections" do
     assert_empty paycheck_plan_sections(nil)
   end
