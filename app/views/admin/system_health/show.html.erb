@@ -8,6 +8,9 @@
   <% tabs.with_nav do |nav| %>
     <% nav.with_btn(id: "background_jobs", label: t(".tabs.background_jobs")) %>
     <% nav.with_btn(id: "ai", label: t(".tabs.ai")) %>
+    <% if @hosted_usage_available %>
+      <% nav.with_btn(id: "hosted_usage", label: t(".tabs.hosted_usage")) %>
+    <% end %>
   <% end %>
 
   <% tabs.with_panel(tab_id: "background_jobs") do %>
@@ -26,6 +29,16 @@
           src: ai_status_admin_system_health_path(refresh_ai_health: params[:refresh_ai_health].presence_in(%w[1]), locale: locale_from_param),
           loading: :lazy, target: "_top", refresh: :morph do %>
       <%= render "entries/loading", message: t(".ai.loading") %>
+    <% end %>
+  <% end %>
+
+  <% if @hosted_usage_available %>
+    <% tabs.with_panel(tab_id: "hosted_usage") do %>
+      <%= turbo_frame_tag "hosted_usage",
+            src: hosted_usage_admin_system_health_path(locale: locale_from_param),
+            loading: :lazy, target: "_top", refresh: :morph do %>
+        <%= render "entries/loading", message: t("admin.system_health.hosted_usage.loading") %>
+      <% end %>
     <% end %>
   <% end %>
 <% end %>

@@ -16,6 +16,7 @@ class MarketDataScheduler < CronScheduler
           name: JOB_NAME,
           cron: cron,
           class: "ImportMarketDataJob",
+          active_job: true, # see config/schedule.yml
           queue: "scheduled",
           args: { mode: "full", clear_cache: false },
           description: "Imports market data daily (Mon-Fri) at the configured time"

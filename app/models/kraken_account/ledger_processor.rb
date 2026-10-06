@@ -8,13 +8,26 @@
 # sub-account transfers (type="transfer") and margin events (type="margin",
 # "rollover", "settled") are also skipped.
 #
-# Sign convention (Sure): negative = inflow/income, positive = outflow/expense.
-# Deposits and rewards are negative; withdrawals and fees are positive.
+# Fiat entries are cash and become Transactions, with Sure's sign convention:
+# negative = inflow/income, positive = outflow/expense, so deposits and rewards
+# are negative and withdrawals and fees positive.
+#
+# Crypto entries are not cash. They move units, so they become Trades carrying a
+# quantity and the price on the day, with a zero amount -- see
+# process_crypto_ledger_entry.
 class KrakenAccount::LedgerProcessor
   include KrakenAccount::UsdConverter
 
-  # Ledger types we import as Transaction entries.
-  SUPPORTED_TYPES = %w[deposit withdrawal staking earn fee].freeze
+  # Ledger types we import. `spend` and `receive` are the two halves of Kraken's
+  # dust sweep -- "convert small balances" -- and they move units like any other
+  # entry. Left out they were not skipped but dropped, silently, by the guard
+  # below, so a swept position stayed on the books at its pre-sweep quantity
+  # forever.
+  SUPPORTED_TYPES = %w[deposit withdrawal staking earn fee spend receive].freeze
+
+  # Types whose fee is charged on top of a movement with an external counterparty,
+  # and so must stay a separate entry for transfer matching to work.
+  SPLIT_FEE_TYPES = %w[deposit withdrawal].freeze
 
   # Ledger types we intentionally ignore (handled elsewhere or out of scope).
   SKIP_TYPES = %w[trade transfer margin rollover settled adjustment].freeze
@@ -34,11 +47,21 @@ class KrakenAccount::LedgerProcessor
     # membership in memory, instead of an EXISTS query per ledger entry (a full
     # sync can carry up to ~10k entries — see MAX_LEDGER_PAGES in the importer).
     # Scoped to the kraken_ledger_ prefix so trade entries aren't loaded.
-    @existing_external_ids = account.entries
-                                    .where(source: "kraken")
-                                    .where("external_id LIKE 'kraken_ledger_%'")
-                                    .pluck(:external_id)
-                                    .to_set
+    # The name comes along so a principal already holding its fee can be told
+    # from one still owed it, and a trade's price_missing flag so one recorded
+    # before its price existed can be priced later -- all without a lookup per
+    # ledger row. The flag lives on the trade, read here by subselect so this
+    # stays one query on entries.
+    existing = account.entries
+                      .where(source: "kraken")
+                      .where("external_id LIKE 'kraken_ledger_%'")
+                      .pluck(:external_id, :name, :user_modified, :entryable_type,
+                             Arel.sql("(SELECT trades.extra -> 'kraken' ->> 'price_missing' FROM trades " \
+                                      "WHERE entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id)"))
+    @existing_external_ids = existing.map(&:first).to_set
+    @existing_principals = existing.to_h { |external_id, *rest| [ external_id, rest ] }
+
+    warm_crypto_prices
 
     raw_ledgers.each do |ledger_id, ledger|
       process_ledger_entry(ledger_id, ledger)
@@ -86,20 +109,63 @@ class KrakenAccount::LedgerProcessor
       return if type == "earn" && EARN_INTERNAL_SUBTYPES.include?(subtype)
 
       external_id = "kraken_ledger_#{ledger_id}"
-      return if @existing_external_ids.include?(external_id)
-
       raw_asset  = ledger["asset"].to_s
       raw_amount = ledger["amount"].to_d
       raw_fee    = ledger["fee"].to_d
       date       = Time.zone.at(ledger["time"].to_d).to_date
 
-      # Compute the total balance impact: Kraken applies amount - fee to the balance.
-      # abs_impact captures the full magnitude of the cash movement for this event.
-      abs_impact = (raw_amount - raw_fee).abs
-      return if abs_impact.zero?
+      # Kraken applies amount - fee to the balance, and reports the two separately.
+      # Deposits and withdrawals are emitted as two entries so the movement keeps the
+      # figure the counterparty actually sees: a bank records the transfer net of
+      # Kraken's fee, and Transfer requires both legs to sum to zero, so folding the
+      # fee in here makes the entry permanently unmatchable. Other ledger types have
+      # no counterparty to reconcile against and keep the combined figure.
+      normalized  = normalizer.normalize(raw_asset)
+      symbol      = normalized[:symbol]
+      base_symbol = normalized[:price_symbol]
+      fiat        = fiat?(base_symbol)
 
-      normalized = normalizer.normalize(raw_asset)
-      symbol     = normalized[:symbol]
+      # Already in, and nothing more to add for it. Two exceptions: a split-fee
+      # type, whose second entry may still be owed and is checked once the fee
+      # is known; and a crypto row still in an older shape -- a cash Transaction
+      # from before coin movements were trades, or a trade saved without a
+      # price -- which the sync heals whatever the ledger type.
+      if @existing_external_ids.include?(external_id) && !SPLIT_FEE_TYPES.include?(type)
+        return if fiat || !crypto_row_needs_healing?(external_id)
+      end
+
+      # A crypto fee is paid in the units themselves, so it only reduces the
+      # quantity; there is no second cash movement to split out.
+      split_fee = fiat && SPLIT_FEE_TYPES.include?(type) && !raw_fee.zero?
+      net        = raw_amount - raw_fee
+      abs_impact = split_fee ? raw_amount.abs : net.abs
+
+      # A crypto row has no fee half to owe, so a quantity of nothing -- a
+      # correction row, a movement the fee consumed whole, or a reward below
+      # the eight decimals trades.qty holds -- has nothing to record.
+      unless fiat
+        return if abs_impact.round(8).zero?
+
+        process_crypto_ledger_entry(
+          external_id: external_id, ledger_id: ledger_id, ledger: ledger, type: type,
+          raw_asset: raw_asset, base_symbol: base_symbol, symbol: symbol,
+          qty: abs_impact, outflow: net.negative?, date: date
+        )
+        return
+      end
+
+      # The principal is in from an earlier pass, or there is none: a correction
+      # row can carry a fee against a zero amount. Either way the fee is checked
+      # on its own external_id, so a later sync can still create the missing
+      # half -- pricing it can fail on one sync and succeed on the next --
+      # without duplicating the one it has.
+      if abs_impact.zero? || @existing_external_ids.include?(external_id)
+        if split_fee && !@existing_external_ids.include?("#{external_id}_fee") &&
+           principal_awaits_fee?(external_id, raw_amount, symbol)
+          process_ledger_fee(external_id, ledger_id, ledger, raw_fee, symbol, date)
+        end
+        return
+      end
 
       entry_amount, price_missing = resolve_amount(abs_impact, symbol, date)
       return if entry_amount.nil?
@@ -127,6 +193,275 @@ class KrakenAccount::LedgerProcessor
       )
 
       @existing_external_ids << external_id
+
+      process_ledger_fee(external_id, ledger_id, ledger, raw_fee, symbol, date) if split_fee
+    end
+
+    # Crypto moves units, not cash. A staking reward does not put euros in the
+    # account -- it puts coins in it -- and a deposit or withdrawal of coin is a
+    # position change with no cash leg at all. Recorded as a Transaction the
+    # quantity is lost entirely, so Holding::ReverseCalculator has nothing to
+    # reverse and carries today's position backwards through history, while the
+    # cash balance moves by an amount that never existed.
+    #
+    # `amount` is deliberately zero: Balance::BaseCalculator classifies a trade by
+    # its amount regardless of label, so anything else would reintroduce the
+    # phantom cash. The units and their price carry the value instead.
+    def process_crypto_ledger_entry(external_id:, ledger_id:, ledger:, type:, raw_asset:, base_symbol:, symbol:, qty:, outflow:, date:)
+      # A crypto row carries its fee inside the quantity, so once it is in there
+      # is no second half owed. The caller's early return lets deposits and
+      # withdrawals through for the fee a fiat row may still need, which would
+      # otherwise bring this one back every sync -- unless what is in is the old
+      # shape, which a sync should heal rather than keep.
+      legacy = nil
+      legacy_fee = nil
+      if @existing_external_ids.include?(external_id)
+        return reprice_crypto_trade(external_id, base_symbol, date) if unpriced_trade?(external_id)
+
+        legacy = legacy_crypto_transaction(external_id)
+        return if legacy.nil?
+
+        # Before fees stayed inside a coin's quantity, a crypto deposit or
+        # withdrawal with a fee was written as two cash rows. The trade that
+        # replaces the principal already nets the fee, so the fee row would be
+        # left describing money that never moved; it goes with the principal,
+        # under the same rule -- edited or matched into a transfer, it stays.
+        legacy_fee = legacy_crypto_transaction("#{external_id}_fee")
+      end
+
+      # Resolved before anything is removed: a symbol this cannot place must
+      # leave the old row standing rather than take it away and put nothing back.
+      security = resolve_security(base_symbol)
+      return unless security
+
+      price, price_missing = unit_price_on(security, base_symbol, date)
+      # The direction comes from the ledger's own signed figure, not from the
+      # type: a reversed withdrawal arrives, an earn migration leg can leave,
+      # and on a trade a wrong sign moves units the wrong way through every
+      # earlier holding. For a row that moves the way its type says, the two
+      # agree.
+      signed_qty = outflow ? -qty.abs : qty.abs
+
+      Entry.transaction do
+        legacy&.destroy!
+        legacy_fee&.destroy!
+        create_crypto_trade(external_id, ledger_id, ledger, type, raw_asset, symbol, qty, signed_qty, security, price, price_missing, date)
+      end
+
+      @existing_external_ids.delete("#{external_id}_fee") if legacy_fee
+      @existing_external_ids << external_id
+      @existing_principals[external_id] = [ build_name(type, qty, symbol), false, "Trade" ]
+    end
+
+    def create_crypto_trade(external_id, ledger_id, ledger, type, raw_asset, symbol, qty, signed_qty, security, price, price_missing, date)
+      account.entries.create!(
+        date: date,
+        name: build_name(type, qty, symbol),
+        amount: 0,
+        currency: target_currency,
+        external_id: external_id,
+        source: "kraken",
+        entryable: Trade.new(
+          security: security,
+          qty: signed_qty,
+          price: price,
+          currency: target_currency,
+          investment_activity_label: crypto_activity_label(type),
+          extra: build_extra(ledger_id, ledger, raw_asset, price_missing)
+        )
+      )
+    end
+
+    # An account synced before crypto rows became trades holds this row as a
+    # Transaction: a cash movement that never happened, carrying a quantity the
+    # holdings never saw. Replaced on the next sync, so an install does not have
+    # to re-import to be right -- unless somebody has edited the row or matched
+    # it into a transfer, in which case it is theirs and stays. Only a legacy
+    # row costs a query; a Trade is already the new shape and answers from the
+    # preload.
+    def legacy_crypto_transaction(external_id)
+      return nil unless legacy_crypto_candidate?(external_id)
+
+      entry = find_entry(external_id)
+      return nil if entry.nil? || in_transfer?(entry.entryable)
+
+      entry
+    end
+
+    # Answered from the preload; the row itself is only read when it is one.
+    def legacy_crypto_candidate?(external_id)
+      _name, user_modified, entryable_type = @existing_principals[external_id]
+      entryable_type == "Transaction" && !user_modified
+    end
+
+    def unpriced_trade?(external_id)
+      _name, user_modified, entryable_type, price_missing = @existing_principals[external_id]
+      entryable_type == "Trade" && price_missing == "true" && !user_modified
+    end
+
+    def crypto_row_needs_healing?(external_id)
+      unpriced_trade?(external_id) || legacy_crypto_candidate?(external_id)
+    end
+
+    def find_entry(external_id)
+      account.entries.includes(:entryable).find_by(external_id: external_id)
+    end
+
+    # A trade recorded before its price existed carries zero and the flag.
+    # Pricing can fail on one sync and succeed on the next, so it is tried
+    # again here and the trade is completed once a price is found.
+    def reprice_crypto_trade(external_id, base_symbol, date)
+      entry = find_entry(external_id)
+      return if entry.nil?
+
+      price, price_missing = unit_price_on(entry.entryable.security, base_symbol, date)
+      return if price_missing
+
+      trade = entry.entryable
+      extra = trade.extra.deep_dup
+      extra["kraken"]&.delete("price_missing")
+      trade.update!(price: price, extra: extra)
+      @existing_principals[external_id][3] = nil
+    end
+
+    # A transfer records its two legs on its own row; the transaction's own
+    # transfer_id is only set by some paths, so both are checked.
+    def in_transfer?(transaction)
+      return true if transaction.transfer_id.present?
+
+      Transfer.where(inflow_transaction_id: transaction.id).or(Transfer.where(outflow_transaction_id: transaction.id)).exists?
+    end
+
+    # A coin arriving from outside has a cost nothing here knows, so it is a
+    # Transfer and the basis becomes unknown from that date -- the same treatment
+    # an inbound share transfer already gets. A reward is acquired at the market
+    # price on the day, which is both its basis and the income it represents.
+    def crypto_activity_label(type)
+      case type
+      when "deposit", "withdrawal" then Trade::TRANSFER_LABEL
+      when "staking"               then "Dividend"
+      when "earn"                  then "Interest"
+      when "fee"                   then "Fee"
+      # A dust sweep exchanges one asset for another inside the exchange. Both
+      # halves are internal movements, so neither invents a cost basis.
+      when "spend"                 then "Sweep Out"
+      when "receive"               then "Sweep In"
+      end
+    end
+
+    def fiat?(base_symbol)
+      KrakenAccount::FIAT_CURRENCIES.include?(base_symbol.to_s.upcase)
+    end
+
+    # One bulk request per asset for the span the ledger covers, the same call
+    # MarketDataImporter makes, so that the per-entry lookup below is a
+    # database read. Left to find_or_fetch_price it was one provider request
+    # per entry -- thousands on a first import.
+    def warm_crypto_prices
+      spans = {}
+      raw_ledgers.each_value do |ledger|
+        next unless SUPPORTED_TYPES.include?(ledger["type"].to_s.downcase)
+
+        base_symbol = normalizer.normalize(ledger["asset"].to_s)[:price_symbol]
+        next if base_symbol.blank? || fiat?(base_symbol)
+
+        date = Time.zone.at(ledger["time"].to_d).to_date
+        span = (spans[base_symbol] ||= [ date, date ])
+        span[0] = date if date < span[0]
+        span[1] = date if date > span[1]
+      end
+
+      spans.each do |base_symbol, (from, to)|
+        security = resolve_security(base_symbol)
+        security&.import_provider_prices(start_date: from, end_date: to)
+      rescue StandardError => e
+        Rails.logger.warn "KrakenAccount::LedgerProcessor - could not warm prices for #{base_symbol}: #{e.message}"
+      end
+    end
+
+    def resolve_security(base_symbol)
+      KrakenAccount::SecurityResolver.resolve("CRYPTO:#{base_symbol}", base_symbol)
+    end
+
+    # The price on the day the units moved, not the price today. Falls back to
+    # the balance snapshot's price, which is what the whole processor used to
+    # use, and flags the entry so the staleness is visible in `extra`.
+    def unit_price_on(security, base_symbol, date)
+      price = security.prices.find_by(date: date)
+      if price&.price.present?
+        converted = Money.new(price.price, price.currency).exchange_to(target_currency).amount
+        return [ converted, false ]
+      end
+
+      [ spot_price_fallback(base_symbol, date), true ]
+    rescue StandardError
+      [ spot_price_fallback(base_symbol, date), true ]
+    end
+
+    # The spot price as a last resort. It cannot be allowed to raise: it is
+    # also what the rescue above reaches for, and an exception there would
+    # escape it and lose the ledger row for this sync.
+    def spot_price_fallback(base_symbol, date)
+      fallback, = resolve_amount(1.to_d, base_symbol, date)
+      fallback || 0
+    rescue StandardError
+      0
+    end
+
+    # Kraken's fee is always a cost, so it is an outflow whichever way the principal
+    # moved. Its own external_id keeps it idempotent alongside the principal entry.
+    # An entry written before fees were split holds the fee inside it: adding the
+    # fee entry now would charge it twice. Only a principal already standing on
+    # its own is owed one -- which happens when pricing the fee failed on an
+    # earlier sync. The two are told apart by the native quantity the entry was
+    # charged, which its name carries. Not by the stored amount: a crypto row is
+    # converted at the current spot price, so recomputing it later scales the
+    # candidates while the stored figure stays where it was, and after any real
+    # price move nearness decides nothing.
+    def principal_awaits_fee?(external_id, raw_amount, symbol)
+      stored_name, user_modified = @existing_principals[external_id]
+      return true if stored_name.nil? # no principal at all: a correction row carrying only a fee
+      return false if user_modified
+
+      charged = charged_quantity(stored_name, symbol)
+      return false if charged.nil?
+
+      charged == raw_amount.abs.round(8)
+    end
+
+    # The quantity out of "Withdrawal 0.501 BTC", compared as a number so a name
+    # written when the formatting differed -- "500.0" against today's "500" --
+    # still reads. Nil unless the name is one this class built for this symbol,
+    # which leaves a renamed entry alone.
+    def charged_quantity(name, symbol)
+      parts = name.to_s.split(" ")
+      return nil unless parts.length >= 3 && parts.last == symbol
+
+      BigDecimal(parts[-2], exception: false)&.round(8)
+    end
+
+    def process_ledger_fee(principal_external_id, ledger_id, ledger, raw_fee, symbol, date)
+      fee_external_id = "#{principal_external_id}_fee"
+      return if @existing_external_ids.include?(fee_external_id)
+
+      fee_amount, price_missing = resolve_amount(raw_fee.abs, symbol, date)
+      return if fee_amount.nil? || fee_amount.zero?
+
+      account.entries.create!(
+        date: date,
+        name: build_name("fee", raw_fee.abs, symbol),
+        amount: fee_amount.abs,
+        currency: target_currency,
+        external_id: fee_external_id,
+        source: "kraken",
+        entryable: Transaction.new(
+          kind: transaction_kind("fee"),
+          investment_activity_label: activity_label("fee"),
+          extra: build_extra(ledger_id, ledger, ledger["asset"].to_s, price_missing)
+        )
+      )
+
+      @existing_external_ids << fee_external_id
     end
 
     # Returns [family_currency_amount, price_missing_bool] or [nil, nil] on hard failure.
@@ -213,8 +548,8 @@ class KrakenAccount::LedgerProcessor
     # True when the ledger event represents money flowing INTO the account.
     def inflow?(type)
       case type
-      when "deposit", "staking", "earn" then true
-      when "withdrawal", "fee"          then false
+      when "deposit", "staking", "earn", "receive" then true
+      when "withdrawal", "fee", "spend"            then false
       else false
       end
     end
@@ -227,6 +562,8 @@ class KrakenAccount::LedgerProcessor
       when "staking"    then "Staking reward #{qty} #{symbol}"
       when "earn"       then "Earn reward #{qty} #{symbol}"
       when "fee"        then "Fee #{qty} #{symbol}"
+      when "spend"      then "Converted #{qty} #{symbol}"
+      when "receive"    then "Received #{qty} #{symbol}"
       else "#{type.capitalize} #{qty} #{symbol}"
       end
     end
@@ -238,6 +575,8 @@ class KrakenAccount::LedgerProcessor
       when "staking"    then "Dividend"
       when "earn"       then "Interest"
       when "fee"        then "Fee"
+      when "spend"      then "Sweep Out"
+      when "receive"    then "Sweep In"
       end
     end
 

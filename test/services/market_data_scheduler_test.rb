@@ -18,6 +18,7 @@ class MarketDataSchedulerTest < ActiveSupport::TestCase
       name: MarketDataScheduler::JOB_NAME,
       cron: "0 18 * * 1-5 Etc/UTC",
       class: "ImportMarketDataJob",
+      active_job: true,
       queue: "scheduled",
       args: { mode: "full", clear_cache: false },
       description: "Imports market data daily (Mon-Fri) at the configured time"

@@ -17,6 +17,7 @@ class AutoSyncSchedulerTest < ActiveSupport::TestCase
       name: AutoSyncScheduler::JOB_NAME,
       cron: "22 2 * * *",
       class: "SyncAllJob",
+      active_job: true,
       queue: "scheduled",
       description: "Syncs all accounts for all families"
     ).returns(@job)

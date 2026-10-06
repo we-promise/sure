@@ -39,8 +39,6 @@ ru:
           member: Участник
           super_admin: Суперадминистратор
         section_title: Семьи / Группы
-        summary:
-          trials_expiring_7_days: Пробные периоды истекают в течение 7 дней
         table:
           family_accounts: Семейные счета
           family_transactions: Семейные операции
