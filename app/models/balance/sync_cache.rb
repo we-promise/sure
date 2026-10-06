@@ -75,7 +75,7 @@ class Balance::SyncCache
       @converted_entries ||= begin
         missing_rate_pairs = []
 
-        converted = account.entries.excluding_pending.excluding_split_parents.includes(:entryable).order(:date).to_a.filter_map do |e|
+        converted = account.entries.excluding_pending.excluding_split_parents.excluding_emi_purchases.includes(:entryable).order(:date).to_a.filter_map do |e|
           custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 
           # Use Money#exchange_to with custom rate if available, standard lookup otherwise.

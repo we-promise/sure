@@ -5,6 +5,7 @@ en:
       success: Entry created
     destroy:
       success: Entry deleted
+      failure: This entry can't be deleted.
     empty:
       description: Try adding an entry, editing filters or refining your search
       title: No entries found
