@@ -21,8 +21,6 @@ it:
           trial_expiring_soon: "In scadenza in 7 giorni"
           trial_trialing: "In prova"
           submit: "Filtra"
-        summary:
-          trials_expiring_7_days: "Prove in scadenza nei prossimi 7 giorni"
         table:
           user: "Utente"
           trial_ends_at: "Prova scade"

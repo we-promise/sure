@@ -2,23 +2,28 @@
 <% series = occurrence.recurring_transaction %>
 <% expected = occurrence.resolved_expected_amount_money %>
 <% paid = occurrence.confirmed_allocated_money %>
+<% lead_tone = series.autopay? ? "text-secondary" : "text-primary" %>
 
 <%# SCAN. What is this, and does it need me?
     Everything past that question lives one tap deeper, in the drawer.
 
     An autopaying bill is still worth seeing and still counts toward the total,
-    but it recedes so the rows that want something from you carry the weight. %>
+    but it recedes so the rows that want something from you carry the weight.
+    It recedes through lead_tone, on the name and the amount: opacity on the
+    whole row took the secondary text below 3:1 in light mode. %>
 <%# The row reads as interactive without dressing up as a button: a hover tint
     and the name underlining, the same cues the transaction list uses. %>
-<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 transition-colors hover:bg-surface-hover <%= "opacity-70" if series.autopay? %>">
+<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 transition-colors hover:bg-surface-hover">
   <%# The bulk of the row is the inspect control. Only the trailing verb sits
-      outside it, so there are no anchors inside anchors. %>
+      outside it, so there are no anchors inside anchors. The link has no
+      padding of its own, so its ring is pushed out into the row's: clear of
+      the date and the amount, and still inside the row. %>
   <%# Names the cycle it was opened from. Without it the drawer falls back to
       the series' current occurrence, so opening a settled row described the
       NEXT one and reported it unpaid. %>
   <%= link_to bill_path(series, display: "drawer", occurrence: occurrence.id),
         data: { turbo_frame: "drawer", turbo_prefetch: false },
-        class: "flex items-center gap-3 lg:gap-4 min-w-0 flex-1 group" do %>
+        class: "flex items-center gap-3 lg:gap-4 min-w-0 flex-1 group rounded-lg focus-ring outline-offset-4" do %>
     <%# A date rail, and only a date. It used to print "Overdue" beside a
         subline already reading "14 days overdue", which spent the row's one
         piece of temporal context saying the same word twice. The colour still
@@ -46,7 +51,7 @@
 
     <% reason = date_label ? bills_attention_reason(occurrence, suggestion: suggestion) : nil %>
     <div class="min-w-0 flex-1">
-      <p class="text-primary text-sm font-medium truncate group-hover:underline">
+      <p class="<%= lead_tone %> text-sm font-medium truncate group-hover:underline">
         <%= series.display_name %>
         <% if series.transfer? %>
           <span class="text-xs text-secondary font-normal"><%= t("bills.debt_payment") %></span>
@@ -77,7 +82,7 @@
         <% end %>
       </p>
       <% if series.notes.present? %>
-        <p class="text-xs text-subdued truncate"><%= series.notes %></p>
+        <p class="text-xs text-secondary truncate"><%= series.notes %></p>
       <% end %>
     </div>
 
@@ -85,7 +90,7 @@
         used to be printed twice: a coloured subline on the left and a figure
         on the right. %>
     <div class="shrink-0 text-right min-w-0">
-      <p class="text-sm font-medium text-primary privacy-sensitive whitespace-nowrap">
+      <p class="text-sm font-medium <%= lead_tone %> privacy-sensitive whitespace-nowrap">
         <% if occurrence.paid? %>
           <%= format_money(paid) %>
         <% elsif occurrence.partially_paid? %>
@@ -118,7 +123,12 @@
     </div>
   <% end %>
 
-  <div class="shrink-0 flex items-center gap-2">
+  <%# The verb's slot. From @lg every row reserves it, verb or not, so the
+      amounts share one right edge. It fits the widest English verb, Review
+      match (about 130px). min-w rather than w, so a longer locale widens the
+      slot instead of overflowing it. Below @lg there is no verb: tapping the
+      row opens the drawer, which spells it out. %>
+  <div class="hidden @lg:flex shrink-0 min-w-36 justify-end">
     <%= render "bills/row_action", occurrence: occurrence, suggestion: suggestion %>
   </div>
 </div>
