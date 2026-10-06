@@ -172,6 +172,8 @@ class LlmUsage < ApplicationRecord
   def self.find_pricing(provider, model)
     return nil unless PRICING.key?(provider)
 
+    model = model.delete_prefix("google/") if provider == "google"
+
     provider_pricing = PRICING[provider]
 
     # Try exact match first
