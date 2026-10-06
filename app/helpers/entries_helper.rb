@@ -24,22 +24,18 @@ module EntriesHelper
   end
 
   def dedupe_transfer_entries(entries)
-    transfer_groups = entries.group_by do |entry|
-      # Only check for transfer if it's a transaction
-      next nil unless entry.entryable_type == "Transaction"
-      entry.entryable.transfer&.id
-    end
+    # For a more intuitive UX, we do not want to show the same transfer twice
+    # in the list. We count occurrences by transfer id first (without
+    # reordering the entries) so we only need to decide, per entry, whether
+    # it's the inflow side of a transfer that appears more than once.
+    transfer_counts = entries.filter_map do |entry|
+      entry.entryable.transfer&.id if entry.entryable_type == "Transaction"
+    end.tally
 
-    # For a more intuitive UX, we do not want to show the same transfer twice in the list
-    transfer_groups.flat_map do |transfer_id, grouped_entries|
-      if transfer_id.nil? || grouped_entries.size == 1
-        grouped_entries
-      else
-        grouped_entries.reject do |e|
-          e.entryable_type == "Transaction" &&
-          e.entryable.transfer_as_inflow.present?
-        end
-      end
+    entries.reject do |entry|
+      entry.entryable_type == "Transaction" &&
+        transfer_counts[entry.entryable.transfer&.id].to_i > 1 &&
+        entry.entryable.transfer_as_inflow.present?
     end
   end
 
