@@ -54,7 +54,7 @@
   <% if recent_allocations.any? %>
     <div class="space-y-1">
       <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.recent_payments") %></p>
-      <div class="bg-container rounded-lg divide-y divide-subdued">
+      <div class="bg-container-inset rounded-lg divide-y divide-subdued">
         <% recent_allocations.first(3).each do |allocation| %>
           <div class="flex items-center justify-between gap-3 px-3 py-2">
             <div class="min-w-0">
@@ -79,13 +79,13 @@
     </p>
   <% end %>
 
-  <%# The next step, spelled out. The row shows this as an icon on a phone;
-      here there is room for the words. It is present on a settled occurrence
-      too, because the drawer is the only route in the app to unlinking a
+  <%# The next step, spelled out. The row shows it only when the bill needs you
+      now, and never on a phone. Here it is always present, settled occurrences
+      included, because the drawer is the only route in the app to unlinking a
       payment or reopening a cycle. %>
   <div class="flex flex-wrap items-center gap-2 pt-1">
     <% if current_occurrence %>
-      <%= render "bills/row_action", occurrence: current_occurrence, suggestion: suggestion, labelled: true %>
+      <%= render "bills/row_action", occurrence: current_occurrence, suggestion: suggestion, drawer: true %>
     <% end %>
 
     <%# Pay and Add link keep a home here, so the portal never leaves Bills
@@ -101,7 +101,8 @@
           ) %>
 
       <%# Edit, pause and remove stayed two clicks from the Overview rather
-          than moving to the page and becoming four. %>
+          than moving to the page and becoming four. Pause and remove answer
+          with the whole page, so they leave the drawer's frame. %>
       <%= render DS::Menu.new do |menu| %>
         <% menu.with_item(
              variant: "link",
@@ -122,7 +123,8 @@
              text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
              icon: series.active? ? "pause" : "play",
              href: toggle_status_recurring_transaction_path(series),
-             method: :post) %>
+             method: :post,
+             frame: "_top") %>
         <% menu.with_item(
              variant: "button",
              text: t("recurring_transactions.actions.delete"),
@@ -130,6 +132,7 @@
              href: recurring_transaction_path(series),
              method: :delete,
              destructive: true,
+             frame: "_top",
              confirm: t(series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: series.display_name)) %>
       <% end %>
     </div>

@@ -212,8 +212,6 @@ fr:
     paid_label: Payé
     paid_over: Payé %{paid}, plus que prévu
     paid_over_short: Payé, dépassement
-    pane:
-      close: Réduire les détails
     partial_progress: "%{paid} sur %{expected} payés"
     pay_period:
       before_next_paycheck: Avant votre prochaine paie

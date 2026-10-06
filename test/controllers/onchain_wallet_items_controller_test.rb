@@ -86,6 +86,26 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?]", enable_crypto_prices_onchain_wallet_items_path
   end
 
+  # The one-click fix is a form of its own. Rendered inside the token review
+  # form, it closed that form early and left "Track selected assets" submitting
+  # nothing at all.
+  test "the one-click fix does not swallow the token review form" do
+    Rails.configuration.stubs(:app_mode).returns(ActiveSupport::StringInquirer.new("self_hosted"))
+    stub_wallet_with_token
+
+    post preview_wallet_onchain_wallet_items_url, params: {
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      chain: OnchainTestHelper::FAKE_CHAIN
+    }
+
+    assert_response :success
+    assert_select "form[action=?]", enable_crypto_prices_onchain_wallet_items_path
+    assert_select "form[action=?]", link_wallet_onchain_wallet_items_path do
+      assert_select "input[name='assets[]']", 2
+      assert_select "button[type=submit]", 1
+    end
+  end
+
   test "enable_crypto_prices adds the crypto provider without disabling the others" do
     Rails.configuration.stubs(:app_mode).returns(ActiveSupport::StringInquirer.new("self_hosted"))
     Setting.securities_providers = "twelve_data"
