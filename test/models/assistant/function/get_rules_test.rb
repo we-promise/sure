@@ -64,4 +64,41 @@ class Assistant::Function::GetRulesTest < ActiveSupport::TestCase
     assert_equal "not_found", @fn.call("rule_id" => other.id)[:error]
     assert_not_includes @fn.call[:rules].map { |r| r[:id] }, other.id
   end
+
+  test "paginates" do
+    3.times do |i|
+      @family.rules.create!(
+        name: "Paged #{i}",
+        resource_type: "transaction",
+        conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "paged #{i}" } ],
+        actions_attributes: [ { action_type: "exclude_transaction" } ]
+      )
+    end
+    total = @family.rules.count
+
+    first = @fn.call("page_size" => 2)
+    assert_equal 2, first[:rules].size
+    assert_equal total, first[:total_results]
+    assert_equal (total / 2.0).ceil, first[:total_pages]
+
+    all_ids = (1..first[:total_pages]).flat_map { |page| @fn.call("page_size" => 2, "page" => page)[:rules].map { |r| r[:id] } }
+    assert_equal @family.rules.pluck(:id).sort, all_ids.sort
+  end
+
+  test "search matches names, condition values including grouped ones, action values and category names" do
+    unnamed = @family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ {
+        condition_type: "compound", operator: "or",
+        sub_conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Tesco Express" } ]
+      } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Groceries run" } ]
+    )
+
+    assert_equal [ unnamed.id ], @fn.call("search" => "tesco")[:rules].map { |r| r[:id] }
+    assert_equal [ unnamed.id ], @fn.call("search" => "groceries run")[:rules].map { |r| r[:id] }
+    assert_equal [ @rule.id ], @fn.call("search" => "coff")[:rules].map { |r| r[:id] }
+    assert_includes @fn.call("search" => @category.name)[:rules].map { |r| r[:id] }, @rule.id
+    assert_equal 0, @fn.call("search" => "100%")[:total_results]
+  end
 end

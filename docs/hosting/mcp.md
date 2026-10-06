@@ -151,7 +151,7 @@ At the time of writing, `tools/list` includes:
 | `create_category` / `update_category` | Manage categories |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
 | `update_budget` | Update budget allocations for a month |
-| `get_rules` / `get_rule_options` | Transaction rules in readable form (ids resolved to names, latest run), and the condition and action types a rule can use |
+| `get_rules` / `get_rule_options` | Transaction rules in readable form (ids resolved to names, latest run; paginated, with a text search), and the condition and action types a rule can use |
 | `preview_rule` | Match count and a sample of matching transactions for a saved rule or an unsaved definition, without changing anything |
 | `create_rule` / `update_rule` | Save a rule definition. Rules are always saved inactive, and changing an active rule's conditions or actions deactivates it. AI-backed actions are not available |
 | `apply_rule` | Activate a rule and apply it. Requires `expected_count` from a preview and refuses if the matches have changed; keeps hand-set values unless `override_locked: true` |
