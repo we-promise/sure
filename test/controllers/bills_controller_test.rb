@@ -1097,8 +1097,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_nil I18n.t("bills.paycheck.obligations_line", default: nil)
   end
 
-  # The breakdown is the allocation bar's legend: each figure carries a swatch
-  # in its segment's colour, so the bar reads without a second key.
+  # The breakdown is the allocation bar's legend: in a period that isn't short,
+  # each figure carries a swatch in its segment's colour, so the bar reads
+  # without a second key.
   test "the paycheck breakdown keys each figure to its allocation bar segment" do
     payday = Date.current + 3
     declare_income(name: "Frito Lay", amount: -1200, payday: payday)
@@ -1117,6 +1118,23 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       assert_equal segment_colours, swatch_colours
     end
     assert_equal %w[bg-inverse bg-subdued bg-success], bars.first.css("div").map { |segment| segment["class"] }
+  end
+
+  # A short period's bar splits into what the paycheck covers and what it is
+  # short. Only the shortfall is a figure in the breakdown, so only it gets a
+  # swatch; the covered part stays unlabelled.
+  test "a short paycheck keys only its shortfall to the allocation bar" do
+    payday = Date.current + 3
+    declare_income(name: "Frito Lay", amount: -1200, payday: payday)
+    declare_bill(name: "Rent", amount: 2000, due: payday + 1)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    bar = css_select("section div.flex[role=img]").first
+    assert_equal %w[bg-subdued bg-destructive], bar.css("div").map { |segment| segment["class"] }
+    swatches = bar.ancestors("section").first.css("[data-paycheck-legend-swatch]")
+    assert_equal %w[bg-destructive], swatches.map { |swatch| swatch["class"][/bg-\S+/] }
   end
 
   # The window before the first payday has no income to allocate, so it is
