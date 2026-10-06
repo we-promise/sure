@@ -2,14 +2,15 @@
 <% series = occurrence.recurring_transaction %>
 <% expected = occurrence.resolved_expected_amount_money %>
 <% paid = occurrence.confirmed_allocated_money %>
-<% lead_tone = series.autopay? ? "text-secondary" : "text-primary" %>
+<% lead_tone = series.autopay? || !series.active? ? "text-secondary" : "text-primary" %>
 
 <%# SCAN. What is this, and does it need me?
     Everything past that question lives one tap deeper, in the drawer.
 
     An autopaying bill is still worth seeing and still counts toward the total,
     but it recedes so the rows that want something from you carry the weight.
-    It recedes through lead_tone, on the name and the amount: opacity on the
+    A paused bill recedes too, autopay or not: it wants nothing from you.
+    Both recede through lead_tone, on the name and the amount: opacity on the
     whole row took the secondary text below 3:1 in light mode. %>
 <%# The row reads as interactive without dressing up as a button: a hover tint
     and the name underlining, the same cues the transaction list uses. %>
