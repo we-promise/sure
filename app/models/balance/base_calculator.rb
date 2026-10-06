@@ -83,9 +83,30 @@ class Balance::BaseCalculator
       change_holdings_value = end_of_day_holdings_value - start_of_day_holdings_value
       net_buy_sell_value = flows[:non_cash_inflows] - flows[:non_cash_outflows]
 
-      change_holdings_value - net_buy_sell_value
+      change_holdings_value - net_buy_sell_value - asset_adjustments_for_date(date, flows)
     end
 
+    # Coverage reconciliations change units without creating market profit.
+    def asset_adjustments_for_date(date, flows)
+      return 0 unless account.balance_type == :investment
+
+      if sync_cache.get_cash_anchor(date)
+        return holdings_value_for_date(date) - holdings_value_for_date(date.prev_day) - flows[:non_cash_inflows] + flows[:non_cash_outflows]
+      end
+
+      sync_cache.get_entries(date).select { |entry| entry.trade? && entry.entryable.balance_adjustment? }
+        .sum { |entry| asset_flow_value(entry) }
+    end
+
+    # Cash-neutral transfers still carry an asset value in the account currency.
+    def asset_flow_value(entry)
+      trade = entry.entryable
+      trade.price_money.exchange_to(account.currency, date: entry.date, custom_rate: trade.exchange_rate).amount * trade.qty
+    rescue Money::ConversionError
+      0
+    end
+
+    # Separate cash, quantity trades, income and cash-neutral asset transfers.
     def flows_for_date(date)
       entries = sync_cache.get_entries(date)
 
@@ -100,7 +121,8 @@ class Balance::BaseCalculator
       # Separate regular trades (buy/sell, affecting holdings) from income-only
       # trades (interest/dividend with qty=0, which are cash-only events and
       # must not produce spurious non_cash_outflows in the flow breakdown).
-      regular_trades = entries.select { |e| e.trade? && e.entryable.qty != 0 }
+      regular_trades = entries.select { |e| e.trade? && e.entryable.qty != 0 && !e.entryable.internal_movement? }
+      asset_transfers = entries.select { |e| e.trade? && e.entryable.internal_movement? && !e.entryable.balance_adjustment? }
       income_trades   = entries.select { |e| e.trade? && e.entryable.qty == 0 }
 
       trade_cash_inflow_sum = regular_trades.select { |e| e.amount < 0 }.sum(&:amount)
@@ -119,6 +141,11 @@ class Balance::BaseCalculator
         # Trades are inverse (a "buy" is outflow of cash, but "inflow" of non-cash, aka "holdings")
         non_cash_outflows = trade_cash_inflow_sum.abs
         non_cash_inflows = trade_cash_outflow_sum
+        asset_transfers.each do |entry|
+          value = asset_flow_value(entry)
+          non_cash_inflows += value if value.positive?
+          non_cash_outflows += value.abs if value.negative?
+        end
       end
 
       {

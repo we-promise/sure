@@ -1,4 +1,5 @@
 class Holding < ApplicationRecord
+  class ManagedPositionError < ArgumentError; end
   include Monetizable, Gapfillable
 
   monetize :amount
@@ -85,13 +86,34 @@ class Holding < ApplicationRecord
     account.entries.where(entryable: account.trades.where(security: security)).reverse_chronological
   end
 
+  # Protect managed journals; cash-anchor accounts remove manual derived series.
   def destroy_holding_and_entries!
+    raise ManagedPositionError, "A provider manages this position" unless account.can_delete_holding?(self)
+
     transaction do
       account.entries.where(entryable: account.trades.where(security: security)).destroy_all
-      destroy
+      if account.accounting_start_date
+        account.holdings.where(security: security, account_provider_id: nil).destroy_all
+      else
+        destroy
+      end
     end
 
     account.sync_later
+  end
+
+  # A manually asserted quantity may predate its trade journal. Record only
+  # the missing units so forward accounting can preserve that dated position.
+  def reconcile_trade_quantity!
+    recorded = account.trades.where(security: security).joins(:entry).where(entries: { date: ..date }).sum(:qty)
+    difference = qty - recorded
+    return if difference.zero?
+
+    entry = Account::ProviderImportAdapter.new(account).import_trade(security: security,
+      quantity: difference, price: price, amount: 0, currency: currency, date: date,
+      source: "manual_position_reconciliation", external_id: "position_#{id}_#{SecureRandom.uuid}",
+      name: I18n.t("holdings.quantity_reconciliation", locale: account.family.locale), activity_label: Trade::TRANSFER_LABEL)
+    entry.entryable.update!(extra: { "balance_adjustment" => true })
   end
 
   # Returns the priority level for the current source (higher = better)
@@ -146,6 +168,10 @@ class Holding < ApplicationRecord
   # Also moves all trades for the old security to the new security
   # If the target security already has holdings on some dates, merge by combining qty/amount
   def remap_security!(new_security)
+    if account.provider_managed_security?(security_id) || account.provider_managed_security?(new_security.id)
+      raise ManagedPositionError, "A provider manages this position"
+    end
+
     return if new_security.id == security_id
 
     old_security = security
@@ -217,6 +243,10 @@ class Holding < ApplicationRecord
   # typically be for real tickers not CUSTOM: ones. A more robust solution would track which
   # trades were moved during remap, but that adds significant complexity for an edge case.
   def reset_security_to_provider!
+    if account.provider_managed_security?(security_id) || account.provider_managed_security?(provider_security_id)
+      raise ManagedPositionError, "A provider manages this position"
+    end
+
     return unless provider_security_id.present?
 
     current_security = security

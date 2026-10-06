@@ -38,12 +38,16 @@ module Account::Linkable
   def provider
     return nil unless linked?
 
-    @provider ||= account_providers.first&.adapter
+    account_providers.first&.adapter
   end
 
   # Returns all provider adapters for this account
   def providers
-    @providers ||= account_providers.map(&:adapter).compact
+    if accounting_start_date
+      AccountProvider.where(account_id: id).includes(:provider).map(&:adapter).compact
+    else
+      @providers ||= account_providers.map(&:adapter).compact
+    end
   end
 
   # Returns the provider adapter for a specific provider type
@@ -93,5 +97,46 @@ module Account::Linkable
     return true if unlinked?
 
     providers.all?(&:can_delete_holdings?)
+  end
+
+  # Deleting any dated row removes its journal, so protect the whole managed
+  # security while retaining deletion rights for unrelated manual positions.
+  def can_delete_holding?(holding)
+    return false if provider_managed_security?(holding.security_id)
+
+    providers.reject(&:position_only?).all?(&:can_delete_holdings?)
+  end
+
+  # A position publisher owns selected securities rather than the account total.
+  def position_tracking?
+    providers.any?(&:position_only?)
+  end
+
+  # Cash and other securities remain editable when every link publishes positions.
+  def manual_accounting?
+    return plaid_account_id.nil? && simplefin_account_id.nil? && providers.all?(&:position_only?) if accounting_start_date
+
+    unlinked? || (plaid_account_id.nil? && simplefin_account_id.nil? && providers.all?(&:position_only?))
+  end
+
+  # Scope quantity ownership to a security and, for dated edits, its connection.
+  def provider_managed_security?(security_id, date: nil)
+    providers.any? do |adapter|
+      adapter.position_only? && adapter.managed_security_ids.include?(security_id) &&
+        (date.nil? || adapter.position_start_date.nil? || date >= adapter.position_start_date)
+    end
+  end
+
+  # Cash anchors require forward accounting even after the publisher disconnects.
+  def balance_calculation_strategy
+    manual_accounting? || position_tracking? || accounting_start_date ? :forward : :reverse
+  end
+
+  # Preserve existing dated snapshots before moving their publishers to a ledger.
+  def reconcile_position_journals!
+    ids = providers.select(&:position_only?).flat_map(&:managed_security_ids).uniq
+    holdings.where(security_id: ids, date: ..Date.current)
+      .select("DISTINCT ON (security_id) holdings.*").order(:security_id, date: :desc)
+      .each(&:reconcile_trade_quantity!)
   end
 end

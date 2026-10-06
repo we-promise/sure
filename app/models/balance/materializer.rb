@@ -6,16 +6,20 @@ class Balance::Materializer
 
   attr_reader :account, :strategy, :security_ids
 
+  # Choose an incremental window that preserves earlier imported account history.
   def initialize(account, strategy:, security_ids: nil, window_start_date: nil)
     @account = account
     @strategy = strategy
     @security_ids = security_ids
-    @window_start_date = window_start_date
+    @window_start_date = account.materialization_window(window_start_date)
   end
 
+  # Serialize mixed-account publication and persist holdings and balances atomically.
   def materialize_balances
     Balance.transaction do
+      account.lock! if account.accounting_start_date
       materialize_holdings
+      capture_provider_cash
       calculate_balances
 
       Rails.logger.info("Persisting #{@balances.size} balances")
@@ -30,8 +34,40 @@ class Balance::Materializer
   end
 
   private
+    # Convert full-provider totals to cash after their holdings are imported,
+    # excluding positions managed by separate publishers from the subtraction.
+    def capture_provider_cash
+      return unless (start_date = account.accounting_start_date)
+
+      full_ids = account.account_providers.reject { |link| link.adapter&.position_only? }.map(&:id)
+      cache = Balance::SyncCache.new(account)
+      reported = account.entries.valuations.where(source: "provider_balance", date: start_date..Date.current).includes(:entryable)
+      reported.each do |entry|
+        amount = entry.amount_money.exchange_to(account.currency, date: entry.date).amount
+        holdings_value = account.holdings.where(account_provider_id: full_ids, date: entry.date).sum do |holding|
+          holding.amount_money.exchange_to(account.currency, date: entry.date).amount
+        end
+        existing = account.entries.valuations.find_by(date: entry.date, entryable_id: Valuation.cash_anchor.select(:id))
+        if existing
+          existing.update!(amount: amount - holdings_value, currency: account.currency, source: "provider_cash")
+          existing.entryable.update!(cash_entry_total: nil)
+          entry.destroy!
+        else
+          entry.entryable.update!(kind: :cash_anchor, cash_entry_total: nil)
+          entry.update!(amount: amount - holdings_value, currency: account.currency, source: "provider_cash",
+            name: I18n.t("valuations.cash_anchor", locale: account.family.locale))
+        end
+      end
+      account.valuations.cash_anchor.where(cash_entry_total: nil).includes(:entry).each do |anchor|
+        anchor.update!(cash_entry_total: cache.cash_entry_total(anchor.entry.date))
+      end
+      account.reset_current_anchor_cache!
+    end
+
+    # Pass the same security filter and history window to the shared holding materializer.
     def materialize_holdings
-      @holdings = Holding::Materializer.new(account, strategy: strategy, security_ids: security_ids).materialize_holdings
+      @holdings = Holding::Materializer.new(account, strategy: strategy, security_ids: security_ids,
+        window_start_date: @window_start_date).materialize_holdings
     end
 
     def update_account_info
@@ -58,8 +94,10 @@ class Balance::Materializer
       )
     end
 
+    # Retain only calculated rows in the requested mixed-account write window.
     def calculate_balances
       @balances = calculator.calculate
+      @balances.select! { |balance| balance.date >= @window_start_date } if account.accounting_start_date && @window_start_date
     end
 
     def persist_balances
@@ -72,6 +110,7 @@ class Balance::Materializer
       end
     end
 
+    # Remove stale tails while preserving valid history before an incremental window.
     def purge_stale_balances
       if @balances.empty?
         # In incremental forward-sync, even when no balances were calculated for the window
@@ -98,7 +137,9 @@ class Balance::Materializer
       # (from entries dated before the opening anchor) are not deleted.
       # We ask the calculator whether it actually ran incrementally — it may have
       # fallen back to a full recalculation, in which case we use the normal bound.
-      oldest_valid_date = if strategy == :forward && calculator.incremental?
+      oldest_valid_date = if account.accounting_start_date
+        account.balances.minimum(:date) || oldest_balance.date
+      elsif strategy == :forward && calculator.incremental?
         calculator.calculation_start_date
       else
         oldest_balance.date

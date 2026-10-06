@@ -3,9 +3,12 @@ class Holding::ForwardCalculator
 
   attr_reader :account
 
-  def initialize(account, security_ids: nil)
+  # Track journal basis before the requested window and carry dated untraded snapshots.
+  def initialize(account, security_ids: nil, window_start_date: nil)
     @account = account
     @security_ids = security_ids
+    @window_start_date = window_start_date
+    @carry_holdings = account.accounting_start_date.present?
     # Track weighted-average cost basis per security, relieving sells so the
     # figure stays correct after a position is fully sold and repurchased.
     @cost_basis_trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
@@ -15,16 +18,23 @@ class Holding::ForwardCalculator
     @transferred_security_ids = Set.new
   end
 
+  # Seed earlier trades, then emit positions only inside the materialization window.
   def calculate
     Rails.logger.tagged("Holding::ForwardCalculator") do
       current_portfolio = generate_starting_portfolio
       next_portfolio = {}
       holdings = []
 
-      account.start_date.upto(Date.current).each do |date|
+      first_date = @window_start_date || account.start_date
+      portfolio_cache.get_trades.select { |entry| entry.date < first_date }.each do |entry|
+        current_portfolio = apply_trades(current_portfolio, [ entry ])
+      end
+
+      first_date.upto(Date.current).each do |date|
         trades = portfolio_cache.get_trades(date: date)
         next_portfolio = apply_trades(current_portfolio, trades)
         holdings.concat(build_holdings(next_portfolio, date))
+        holdings.concat(untraded_holdings(date)) if @carry_holdings
         current_portfolio = next_portfolio
       end
 
@@ -33,8 +43,36 @@ class Holding::ForwardCalculator
   end
 
   private
+    # Allow known snapshot prices to support accounts using shared cash anchors.
     def portfolio_cache
-      @portfolio_cache ||= Holding::PortfolioCache.new(account, security_ids: @security_ids)
+      @portfolio_cache ||= Holding::PortfolioCache.new(account, security_ids: @security_ids,
+        use_holdings: @carry_holdings, carry_forward_prices: @carry_holdings)
+    end
+
+    # Carry only snapshots already established on this date, preserving their
+    # basis metadata while repricing; complete-provider omissions stay omitted.
+    def untraded_holdings(date)
+      @untraded_snapshots ||= begin
+        traded_ids = account.trades.distinct.pluck(:security_id)
+        scope = account.holdings.where.not(security_id: traded_ids).order(:date)
+        scope = scope.where(security_id: @security_ids) if @security_ids
+        @active_provider_security_ids = account.current_holdings.pluck(:security_id).to_set
+        scope.to_a.group_by(&:security_id)
+      end
+
+      @untraded_snapshots.filter_map do |security_id, snapshots|
+        index = snapshots.bsearch_index { |holding| holding.date > date }
+        snapshot = index ? (snapshots[index - 1] if index.positive?) : snapshots.last
+        next unless snapshot
+        next if snapshot.account_provider_id && !@active_provider_security_ids.include?(security_id)
+
+        price = portfolio_cache.get_price(security_id, date, currency: snapshot.currency)
+        next unless price
+
+        Holding::HoldingData.new(account_id: account.id, security_id: security_id, date: date,
+          qty: snapshot.qty, price: price.price, currency: price.currency,
+          amount: snapshot.qty * price.price, snapshot: snapshot)
+      end
     end
 
     def empty_portfolio

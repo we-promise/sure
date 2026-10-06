@@ -52,13 +52,13 @@ class CoinstatsAccount::Processor
       currency = parse_currency(coinstats_account.currency) || account.currency || "USD"
       cash_balance = coinstats_account.inferred_cash_balance
 
-      account.update!(
+      account.apply_provider_balance!(
         balance: balance,
         cash_balance: cash_balance,
         currency: currency
       )
 
-      account.set_current_balance(balance)
+      account.set_current_balance(balance) unless account.accounting_start_date
     end
 
     # Delegates transaction processing to the specialized processor.

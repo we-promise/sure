@@ -63,7 +63,7 @@ class CoinbaseAccount::Processor
         "#{native_value} #{native_currency} (#{coinbase_account.current_balance} #{coinbase_account.currency})"
       )
 
-      account.update!(
+      account.apply_provider_balance!(
         balance: native_value,
         cash_balance: 0, # Crypto accounts have no cash, all value is in holdings
         currency: native_currency

@@ -52,6 +52,7 @@ class SnaptradeAccount::Processor
 
   private
 
+    # Calculate the provider total and preserve separately published account positions.
     def update_account_balance(account)
       # Calculate total balance and cash balance from SnapTrade data
       total_balance = calculate_total_balance
@@ -69,7 +70,7 @@ class SnaptradeAccount::Processor
 
       # Create or update the current balance anchor valuation for linked accounts
       # This is critical for reverse sync to work correctly
-      account.set_current_balance(total_balance)
+      account.set_current_balance(total_balance, provider_balance: true)
     end
 
     def calculate_total_balance

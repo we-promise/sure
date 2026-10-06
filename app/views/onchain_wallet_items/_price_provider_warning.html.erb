@@ -1,13 +1,14 @@
 <%# Shown before linking, not after: with either of these missing, every wallet %>
 <%# is valued at zero, which reads as a broken sync rather than a setting the %>
 <%# user never made. %>
-<% missing = Onchain::Pricing.missing_for(Current.family.currency) %>
+<%# locals: (currency: Current.family.currency, retains_valuation: false) %>
+<% missing = Onchain::Pricing.missing_for(currency) %>
 <% if missing.any? %>
   <% if missing.include?(:crypto_provider) %>
     <%= render DS::Alert.new(
           variant: :warning,
           title: t("onchain_wallet_items.price_provider_warning.title"),
-          message: t("onchain_wallet_items.price_provider_warning.body")
+          message: t(retains_valuation ? "bitcoin_wallets.pricing_warning" : "onchain_wallet_items.price_provider_warning.body")
         ) %>
   <% end %>
 
@@ -15,7 +16,7 @@
     <%= render DS::Alert.new(
           variant: :warning,
           title: t("onchain_wallet_items.price_provider_warning.exchange_rate_title"),
-          message: t("onchain_wallet_items.price_provider_warning.exchange_rate_body", currency: Current.family.currency)
+          message: t(retains_valuation ? "bitcoin_wallets.exchange_rate_warning" : "onchain_wallet_items.price_provider_warning.exchange_rate_body", currency: currency)
         ) %>
   <% end %>
 

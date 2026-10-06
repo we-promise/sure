@@ -10,6 +10,8 @@ class SyncJob < ApplicationJob
       Rails.logger.warn("SyncJob: failed to attach balances_only? flag: #{e.class} - #{e.message}")
     end
 
-    sync.perform
+    syncable = sync.syncable
+    family = syncable.is_a?(Family) ? syncable : syncable&.try(:family)
+    Time.use_zone(Time.find_zone(family&.timezone) || Time.zone) { sync.perform }
   end
 end

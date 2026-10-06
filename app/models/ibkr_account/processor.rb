@@ -22,6 +22,7 @@ class IbkrAccount::Processor
       @account ||= ibkr_account.current_account
     end
 
+    # Import IBKR's reported total through the shared provider valuation boundary.
     def update_account_balance!
       total_balance = ibkr_account.current_balance || ibkr_account.cash_balance || 0
       cash_balance = ibkr_account.cash_balance || 0
@@ -51,7 +52,7 @@ class IbkrAccount::Processor
         # prices, and the cash plug absorbs the difference -- a phantom balance
         # the size of whatever the holdings moved that day, on every day of the
         # account's history.
-        result = manager.set_current_balance(total_balance, date: balance_date)
+        result = manager.set_current_balance(total_balance, date: balance_date, provider_balance: true)
 
         # The manager rescues and reports failure through its result, and its
         # own lock joined this transaction rather than opening one -- so what

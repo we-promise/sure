@@ -409,7 +409,9 @@ class Account::ProviderImportAdapter
   # @param cash_balance [BigDecimal, Numeric] Cash balance (for investment accounts)
   # @param source [String] Provider name (for logging/debugging)
   def update_balance(balance:, cash_balance: nil, source: nil)
-    account.update!(
+    return if account.accounting_start_date && account.balance_type == :investment && cash_balance.nil?
+
+    account.apply_provider_balance!(
       balance: balance,
       cash_balance: cash_balance || balance
     )
@@ -709,6 +711,7 @@ class Account::ProviderImportAdapter
       trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
       trade_attributes[:fee] = fee unless fee.nil?
 
+      entry.entryable.provider_importing = true
       entry.entryable.assign_attributes(trade_attributes)
 
       entry.assign_attributes(

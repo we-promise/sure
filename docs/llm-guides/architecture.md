@@ -60,7 +60,12 @@ Entry delegates to one of the three [Entryable types](../../app/models/entryable
 with a date, amount and currency:
 
 - [Valuation](../../app/models/valuation.rb) is an absolute account value or debt
-  at a date, not an income or expense.
+  at a date, not an income or expense. A `cash_anchor` records only the absolute
+  cash component when an account begins position tracking. Its `cash_entry_total`
+  retains the ledger baseline so later manual edits and imports are reflected
+  without counting preconnection cash movements twice. A same-day older total
+  valuation can be marked `superseded_at`; monetary edits or an explicit new
+  reconciliation reactivate it. Notes alone do not change its precedence.
 - [Transaction](../../app/models/transaction.rb) changes the account balance and
   can have a category, merchant and tags; rules can enrich or classify it.
 - [Trade](../../app/models/trade.rb) represents a security movement with quantity
@@ -98,6 +103,20 @@ internal accounts and entries through [Account::ProviderImportAdapter](../../app
 provider records. [Import](../../app/models/import.rb) supports manual import
 sessions, including CSV mapping and transformations. Plaid is one of many supported
 provider integrations.
+
+A provider adapter can declare `position_only?`, `managed_security_ids` and
+`position_start_date`. Such a connection publishes authoritative current units
+for its securities while shared holding and balance materializers calculate the
+mixed account. It does not make unrelated manual entries read-only. Preserve
+authoritative current quantities when repricing, and derive corrected historical
+quantities from the journal for RBF/reorgs. Manual holdings without a complete
+journal can contribute explicit cash-neutral quantity reconciliations.
+
+Provider processors should use `Account#apply_provider_balance!` when they know
+the cash component, or `set_current_balance(..., provider_balance: true)` for a
+reported provider portfolio total. On position-tracked accounts, shared
+materialization captures the provider cash baseline after imported entries and
+holdings are available, instead of overwriting the entire mixed account.
 
 [Syncable](../../app/models/concerns/syncable.rb) schedules background syncs and
 [Sync](../../app/models/sync.rb) records their state, hierarchy and errors.

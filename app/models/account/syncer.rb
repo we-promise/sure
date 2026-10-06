@@ -5,8 +5,9 @@ class Account::Syncer
     @account = account
   end
 
+  # Import prices and run the account's shared accounting over the requested window.
   def perform_sync(sync)
-    Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
+    Rails.logger.info("Processing balances (#{account.balance_calculation_strategy})")
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)
     apply_provider_balance_overrides
@@ -17,8 +18,9 @@ class Account::Syncer
   end
 
   private
+    # Materialize every security using provider capabilities rather than wallet-specific math.
     def materialize_balances(window_start_date: nil)
-      strategy = account.linked? ? :reverse : :forward
+      strategy = account.balance_calculation_strategy
       Balance::Materializer.new(account, strategy: strategy, window_start_date: window_start_date).materialize_balances
     end
 
@@ -36,7 +38,10 @@ class Account::Syncer
       Sentry.capture_exception(e)
     end
 
+    # Retain legacy IBKR overrides only outside cash-anchor accounting.
     def apply_provider_balance_overrides
+      return if account.accounting_start_date
+
       return unless account.linked_to?("IbkrAccount")
 
       ibkr_account = account.account_providers.find_by(provider_type: "IbkrAccount")&.provider

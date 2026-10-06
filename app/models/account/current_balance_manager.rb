@@ -33,12 +33,14 @@ class Account::CurrentBalanceManager
     end
   end
 
+  # Stage provider totals for cash capture while manual totals retain reconciliation.
   # `date` is the day the balance describes, for a provider whose figures are
   # as of a statement rather than of this moment. It only applies to a linked
   # account: a manual one has no statement, and its strategies reconcile against
   # today by design.
-  def set_current_balance(balance, date: nil)
-    if account.linked?
+  def set_current_balance(balance, date: nil, provider_balance: false)
+    @provider_balance = provider_balance && account.accounting_start_date.present?
+    if @provider_balance || !account.manual_accounting?
       set_current_balance_for_linked_account(balance, date || Date.current)
     else
       result = set_current_balance_for_manual_account(balance)
@@ -78,7 +80,7 @@ class Account::CurrentBalanceManager
       if account.balance_type == :cash && account.valuations.reconciliation.empty?
         adjust_opening_balance_with_delta(new_balance: balance, old_balance: account.balance)
       else
-        existing_reconciliation = account.entries.valuations.find_by(date: Date.current)
+        existing_reconciliation = account.entries.valuations.where.not(entryable_id: Valuation.cash_anchor.select(:id)).find_by(date: Date.current)
 
         result = reconciliation_manager.reconcile_balance(balance: balance, date: Date.current, existing_valuation_entry: existing_reconciliation)
 
@@ -138,7 +140,7 @@ class Account::CurrentBalanceManager
           end
 
           # Update cache field so changes appear immediately to the user
-          account.update!(balance: balance)
+          account.update!(balance: balance) unless @provider_balance
         end
       end
 
@@ -150,10 +152,19 @@ class Account::CurrentBalanceManager
     end
 
     def record_historical_balance(balance, date)
+      entry = account.entries.valuations.where.not(entryable_id: Valuation.cash_anchor.select(:id)).find_by(date: date)
+      if @provider_balance
+        entry ||= account.entries.build(
+          name: Valuation.build_reconciliation_name(account.accountable_type),
+          entryable: Valuation.new(kind: "reconciliation")
+        )
+        entry.source = "provider_balance"
+      end
+
       result = reconciliation_manager.reconcile_balance(
         balance: balance,
         date: date,
-        existing_valuation_entry: account.entries.valuations.find_by(date: date)
+        existing_valuation_entry: entry
       )
 
       Result.new(success?: result.success?, changes_made?: result.success?, error: result.error_message)
@@ -182,12 +193,14 @@ class Account::CurrentBalanceManager
       @current_anchor_valuation = nil
     end
 
+    # Tag imported totals so shared materialization can isolate their reported cash.
     def create_current_anchor(balance, date)
       account.entries.create!(
         date: date,
         name: Valuation.build_current_anchor_name(account.accountable_type),
         amount: balance,
         currency: account.currency,
+        source: @provider_balance ? "provider_balance" : nil,
         entryable: Valuation.new(kind: "current_anchor")
       )
 
@@ -195,11 +208,13 @@ class Account::CurrentBalanceManager
       @current_anchor_valuation = nil
     end
 
+    # Update the total anchor without prematurely replacing a mixed account's balance.
     def update_current_anchor(balance, date)
       changes_made = false
 
       # Update associated entry attributes
       entry = current_anchor_valuation.entry
+      entry.source = @provider_balance ? "provider_balance" : nil
 
       if entry.amount != balance
         entry.amount = balance

@@ -28,6 +28,7 @@ class PlaidAccount::Processor
       @security_resolver ||= PlaidAccount::Investments::SecurityResolver.new(plaid_account)
     end
 
+    # Persist provider account metadata and mark imported totals for shared cash capture.
     def process_account!
       PlaidAccount.transaction do
         # Find existing account through account_provider or legacy plaid_account_id
@@ -98,7 +99,7 @@ class PlaidAccount::Processor
         # to properly track the holdings vs. cash breakdown, but for now we're only tracking
         # the total balance in the current anchor. The cash_balance field on the account model
         # is still being used for the breakdown.
-        account.set_current_balance(balance_calculator.balance)
+        account.set_current_balance(balance_calculator.balance, provider_balance: true)
       end
     end
 

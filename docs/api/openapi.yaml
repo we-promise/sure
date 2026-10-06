@@ -2601,6 +2601,48 @@ components:
       - created_at
       - updated_at
       properties:
+        bitcoin_wallets:
+          type: array
+          description: On-chain connections only. Watch-only Bitcoin status for accessible
+            accounts; never includes public keys or address lists.
+          items:
+            type: object
+            required:
+            - account_id
+            - provider_type
+            - status
+            - address_count
+            - source_count
+            - last_synced_at
+            - stale
+            - history_truncated
+            properties:
+              account_id:
+                type: string
+                format: uuid
+              provider_type:
+                type: string
+                enum:
+                - BitcoinWalletAccount
+              status:
+                type: string
+                enum:
+                - discovering
+                - preview
+                - active
+                - failed
+              address_count:
+                type: integer
+              source_count:
+                type: integer
+              last_synced_at:
+                type: string
+                format: date-time
+                nullable: true
+              stale:
+                type: boolean
+              history_truncated:
+                type: boolean
         id:
           type: string
           format: uuid
@@ -8121,7 +8163,8 @@ paths:
       summary: Lists provider connection status summaries
       description: List safe provider connection status metadata for the authenticated
         user's family without exposing credentials, raw provider payloads, or raw
-        sync errors.
+        sync errors. On-chain connections include aggregated Bitcoin wallet status
+        for accessible accounts, without extended public keys or address lists.
       tags:
       - Provider Connections
       security:
