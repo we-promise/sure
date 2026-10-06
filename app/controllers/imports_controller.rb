@@ -3,6 +3,11 @@ class ImportsController < ApplicationController
 
   before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
+  before_action :reject_guest_family_config_import!, only: %i[create publish]
+
+  # Imports that write family-wide configuration (categories, tags, rules,
+  # merchants), which guests may view but not change.
+  FAMILY_CONFIG_IMPORT_TYPES = %w[CategoryImport MerchantImport RuleImport SureImport].freeze
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -170,6 +175,11 @@ class ImportsController < ApplicationController
 
     def import_params
       params.require(:import).permit(:import_file)
+    end
+
+    def reject_guest_family_config_import!
+      type = @import ? @import.type : params.dig(:import, :type).to_s
+      require_non_guest! if FAMILY_CONFIG_IMPORT_TYPES.include?(type)
     end
 
     def require_statement_import_permission!

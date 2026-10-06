@@ -56,6 +56,20 @@ class GuestReadOnlyConfigTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("shared.require_non_guest"), flash[:alert]
   end
 
+  test "guest cannot import family configuration" do
+    assert_no_difference("Import.count") do
+      %w[CategoryImport MerchantImport RuleImport SureImport].each do |type|
+        post imports_path, params: { import: { type: type } }
+        assert_equal I18n.t("shared.require_non_guest"), flash[:alert]
+      end
+    end
+
+    import = family_guest.family.imports.create!(type: "MerchantImport")
+    Import.any_instance.expects(:publish_later).never
+    post publish_import_path(import)
+    assert_equal I18n.t("shared.require_non_guest"), flash[:alert]
+  end
+
   test "guest does not see controls to change family configuration" do
     get categories_path
     assert_select "a[href=?]", new_category_path, count: 0
