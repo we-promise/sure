@@ -247,7 +247,7 @@ en:
             both: Insights feed and e-mail
             "off": Not at all
           lead_days_label: Days in advance
-          hint: You get a reminder this many days before the release date or the last day to give notice, and again when the money is released. The insights feed is shared with your household.
+          hint: You get a reminder this many days before the release or renewal date, and again when the money is released. The insights feed is shared with your household.
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.

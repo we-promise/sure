@@ -78,7 +78,7 @@ de:
             both: Hinweise und E-Mail
             "off": Gar nicht
           lead_days_label: Tage vorher
-          hint: Du bekommst so viele Tage vor dem Freigabedatum bzw. dem letzten Kündigungstag einen Hinweis und noch einmal, sobald das Geld frei ist. Die Hinweise sieht dein ganzer Haushalt.
+          hint: Du bekommst so viele Tage vor dem Freigabe- bzw. Verlängerungsdatum einen Hinweis und noch einmal, sobald das Geld frei ist. Die Hinweise sieht dein ganzer Haushalt.
         preview:
           description: Schalte Funktionen frei, die noch in Arbeit sind und als Preview oder Canary gekennzeichnet sind.
           title: Vorschaufunktionen aktivieren
