@@ -221,7 +221,7 @@ class RecurringTransactionsController < ApplicationController
     respond_to do |format|
       format.html do
         flash[:notice] = message
-        redirect_to recurring_transactions_path
+        redirect_back_or_to recurring_transactions_path
       end
     end
   end
@@ -243,7 +243,12 @@ class RecurringTransactionsController < ApplicationController
     end
 
     flash[:notice] = t(income ? "recurring_transactions.deleted_income" : "recurring_transactions.deleted")
-    redirect_back_or_to bills_path
+    # Back to a visited /bills/:id would reopen, or 404 on, what was just removed.
+    if came_from?(bill_path(@recurring_transaction))
+      redirect_to bills_path
+    else
+      redirect_back_or_to bills_path
+    end
   end
 
   protected

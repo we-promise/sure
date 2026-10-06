@@ -32,3 +32,6 @@
       element is emitted by the shared dashboard loop and carries no id. %>
   <%= turbo_stream.remove_all "[data-section-key='insights_feed']" %>
 <% end %>
+
+<%# Lightbulb badge in both layout copies (desktop header, mobile top nav). %>
+<%= turbo_stream.replace_all "[data-insights-badge]", partial: "layouts/shared/insights_badge", locals: { count: @unread_ids.size } %>

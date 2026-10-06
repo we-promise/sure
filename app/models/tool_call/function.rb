@@ -10,7 +10,8 @@ class ToolCall::Function < ToolCall
         provider_call_id: function_request.call_id,
         function_name: function_request.function_name,
         function_arguments: function_request.function_args,
-        function_result: result
+        function_result: result,
+        extra_content: function_request.respond_to?(:extra_content) ? function_request.extra_content : nil
       )
     end
 
@@ -29,7 +30,8 @@ class ToolCall::Function < ToolCall
       call_id: provider_call_id,
       name: function_name,
       arguments: function_arguments,
-      output: function_result
+      output: function_result,
+      extra_content: extra_content
     }
   end
 
@@ -38,7 +40,7 @@ class ToolCall::Function < ToolCall
     # OpenAI-compatible endpoints reject an object payload with a 400.
     arguments = self.class.serialize_arguments(function_arguments)
 
-    {
+    call = {
       id: provider_call_id,
       type: "function",
       function: {
@@ -46,5 +48,7 @@ class ToolCall::Function < ToolCall
         arguments: arguments
       }
     }
+    call[:extra_content] = extra_content if extra_content.present?
+    call
   end
 end
