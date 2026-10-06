@@ -7,6 +7,12 @@ module BillsHelper
     l(date, format: date.year == Date.current.year ? :short : :short_with_year)
   end
 
+  # The date a row in a dated section is about, as its date rail prints it and
+  # as its subline leads with where the rail is hidden.
+  def bills_row_date(occurrence)
+    occurrence.due_on == Date.current ? t("bills.row_today") : bills_upcoming_date(occurrence.due_on)
+  end
+
   # One-shot AI features (smart-fill, smart-configure) need both the user's
   # consent AND a resolvable LLM provider -- an unconfigured self-hosted
   # install renders no AI affordances at all, following the Rules registry's
@@ -292,7 +298,7 @@ module BillsHelper
     case (occurrence.effective_due_on - Date.current).to_i
     when 0 then t("bills.month_pulse.date_today")
     when 1 then t("bills.month_pulse.date_tomorrow")
-    else l(occurrence.effective_due_on, format: "%b %-d")
+    else bills_upcoming_date(occurrence.effective_due_on)
     end
   end
 
@@ -315,6 +321,39 @@ module BillsHelper
     return nil unless occurrence.derived_state == :overdue
 
     t("bills.attention.overdue", count: (Date.current - occurrence.effective_due_on).to_i)
+  end
+
+  # The icons for the verbs below. Pay renders as the portal link instead
+  # (recurring_transactions/_pay_link).
+  VERB_ICONS = { review_match: "git-compare", add_payment: "plus",
+                 manage_payments: "receipt-text", find_payment: "search" }.freeze
+
+  # The row's one verb, or nil when the bill needs nothing from you now: it is
+  # settled, paused, not yet in its window, or on autopay and on schedule. The
+  # drawer is one tap away for everything else.
+  def bills_row_verb(occurrence, suggestion: nil)
+    series = occurrence.recurring_transaction
+    return nil unless series.active? && occurrence.scheduled?
+    return :review_match if suggestion.present?
+
+    state = occurrence.derived_state
+    return nil unless state.in?(%i[due overdue])
+    return :add_payment if occurrence.partially_paid?
+    # Overdue means the charge autopay promised never showed up, so from there
+    # it is chased like any other bill.
+    return nil if series.autopay? && state == :due
+
+    RecurringTransaction.valid_payment_url?(series.payment_url) ? :pay : :find_payment
+  end
+
+  # The drawer's verb. It always offers one, because the drawer is the only way
+  # to unlink a payment, reopen a cycle or record one by hand. Pay has its own
+  # button there.
+  def bills_drawer_verb(occurrence, suggestion: nil)
+    return :review_match if suggestion.present?
+    return :add_payment if occurrence.partially_paid?
+
+    occurrence.scheduled? ? :find_payment : :manage_payments
   end
 
   # The match score's own components, said in words.

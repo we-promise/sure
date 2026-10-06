@@ -32,7 +32,11 @@ export default class extends Controller {
     this.element.addEventListener("keydown", this._onKeydown);
     this.element.addEventListener("close", this._onClose);
 
-    if (this.element.open) return;
+    if (this.element.matches(":modal")) return;
+    // Back restores a dialog cached open as a plain open one: no backdrop, no
+    // focus trap. Put it back as it was rendered, closed and with no close
+    // event for listeners to act on, and let auto-open show it as a modal.
+    if (this.element.open) this.element.removeAttribute("open");
     if (this.autoOpenValue) {
       this._priorFocus = this.#returnFocusTarget();
       this.element.showModal();
@@ -65,6 +69,8 @@ export default class extends Controller {
 
   close() {
     this.element.close();
+    // Now as well as on the close event: a reload-on-close visit can cache
+    // the page before that event fires.
     this.#clearParentModalFrame();
 
     if (this.reloadOnCloseValue) {
@@ -115,6 +121,8 @@ export default class extends Controller {
     if (prior && typeof prior.focus === "function" && document.body.contains(prior)) {
       prior.focus();
     }
+    // Escape closes the dialog natively, without close().
+    this.#clearParentModalFrame();
   }
 
   #focusables() {
