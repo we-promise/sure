@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1581,7 +1581,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
 
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.decimal "down_payment", precision: 19, scale: 4
     t.decimal "initial_balance", precision: 19, scale: 4
+    t.decimal "insurance_rate", precision: 8, scale: 4
+    t.string "insurance_rate_type"
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
     t.string "rate_type"
@@ -1590,6 +1593,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
+    t.check_constraint "down_payment IS NULL OR down_payment >= 0::numeric", name: "chk_loans_down_payment_non_negative"
+    t.check_constraint "insurance_rate IS NULL OR insurance_rate >= 0::numeric", name: "chk_loans_insurance_rate_non_negative"
+    t.check_constraint "insurance_rate_type IS NULL OR (insurance_rate_type::text = ANY (ARRAY['level_term'::character varying::text, 'decreasing_life'::character varying::text]))", name: "chk_loans_insurance_rate_type"
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1731,10 +1737,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.string "currency", null: false
     t.decimal "current_balance", precision: 19, scale: 4
     t.datetime "history_synced_from"
-    t.string "iban"
     t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
-    t.string "masked_pan"
     t.uuid "monobank_item_id", null: false
     t.string "name", null: false
     t.string "provider"
@@ -1982,7 +1986,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
   end
 
   create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "account_number"
     t.string "account_status"
     t.string "account_type"
     t.boolean "activities_fetch_pending", default: false
@@ -2180,7 +2183,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
   end
 
   create_table "redbark_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "account_number"
     t.string "account_status"
     t.string "account_type"
     t.string "connection_id"
@@ -2625,6 +2627,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
 
   create_table "tool_calls", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.jsonb "extra_content"
     t.jsonb "function_arguments"
     t.string "function_name"
     t.jsonb "function_result"
@@ -2824,6 +2827,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.string "locale"
     t.datetime "onboarded_at"
     t.string "otp_backup_codes", default: [], array: true
+    t.datetime "otp_last_used_at"
     t.boolean "otp_required", default: false, null: false
     t.string "otp_secret"
     t.string "password_digest"

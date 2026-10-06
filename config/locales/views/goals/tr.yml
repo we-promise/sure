@@ -50,7 +50,7 @@ tr:
         notes_placeholder: Gelecekteki siz için bir hatırlatma…
         target_amount: Hedef tutar
         target_date: Hedef tarihi
-        whole_balance: Tüm bakiye
+        whole_balance: "Boş: tüm bakiye"
         target_mode: Hedef bakiye nasıl belirlenir
         target_months: Kaç aylık gider
         target_months_hint: Her ayın 1'inde medyan aylık harcamanıza göre yeniden hesaplanır.

@@ -67,8 +67,10 @@ class EnableBankingItem < ApplicationRecord
     session_id.present? && session_expires_at.present? && session_expires_at <= Time.current
   end
 
+  # A session-level 401/404 flags the item requires_update while its session
+  # can still look unexpired.
   def needs_authorization?
-    !session_valid?
+    !session_valid? || requires_update?
   end
 
   validate :psu_type_in_aspsp_types

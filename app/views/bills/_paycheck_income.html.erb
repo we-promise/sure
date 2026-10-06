@@ -30,7 +30,7 @@
       <div class="flex items-center justify-between gap-3 py-2">
         <div class="min-w-0">
           <p class="text-sm text-primary truncate">
-            <%= link_to series.display_name, bill_path(series), class: "hover:underline" %>
+            <%= link_to series.display_name, bill_path(series), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "hover:underline" %>
           </p>
           <p class="text-xs text-secondary truncate">
             <%= frequency_label(series) %>
