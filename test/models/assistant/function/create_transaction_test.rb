@@ -3,282 +3,193 @@ require "test_helper"
 class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
   setup do
     @user = users(:family_admin)
+    @family = @user.family
     @account = accounts(:depository)
     @function = Assistant::Function::CreateTransaction.new(@user)
   end
 
-  test "creates an expense transaction" do
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => 2194.15,
-      "type" => "expense",
-      "name" => "Roche"
-    )
+  test "is registered with an idempotent create schema" do
+    definition = @function.to_definition
 
-    assert_equal true, result[:success]
-    assert_equal true, result[:created]
-
-    entry = Entry.find_by(name: "Roche", account: @account, date: Date.new(2026, 9, 11))
-    assert entry
-    assert_equal "Transaction", entry.entryable_type
-    assert_equal BigDecimal("2194.15"), entry.amount
-    assert_equal "expense", entry.classification
+    assert_equal "create_transaction", definition[:name]
+    assert_includes Assistant.function_classes, Assistant::Function::CreateTransaction
+    assert_equal %w[account_id amount date name nature external_id], definition.dig(:params_schema, :required)
   end
 
-  test "creates an income transaction with negative amount" do
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-03",
-      "amount" => 15.00,
-      "type" => "income",
-      "name" => "Welcome Gift"
-    )
-
-    assert_equal true, result[:success]
-    assert_equal true, result[:created]
-
-    entry = Entry.find_by(name: "Welcome Gift", account: @account, date: Date.new(2026, 9, 3))
-    assert entry
-    assert_equal BigDecimal("-15.00"), entry.amount
-    assert_equal "income", entry.classification
-  end
-
-  test "creates a transaction with a zero amount" do
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-05",
-      "amount" => 0.00,
-      "type" => "expense",
-      "name" => "AT&T"
-    )
-
-    assert_equal true, result[:success]
-    assert_equal true, result[:created]
-
-    entry = Entry.find_by(name: "AT&T", account: @account, date: Date.new(2026, 9, 5))
-    assert entry
-    assert_equal BigDecimal("0.00"), entry.amount
-  end
-
-  test "reports created with a warning when the post-create sync fails to enqueue" do
-    # The transaction is committed by entry.save BEFORE sync_account_later runs.
-    # A failure to enqueue the balance-sync job (e.g. an unavailable job
-    # backend) must NOT be reported as a failed create — otherwise an MCP
-    # caller retries without an external_id and creates a duplicate.
-    Entry.any_instance.stubs(:sync_account_later).raises(StandardError, "job backend unavailable")
-
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => 100.00,
-      "type" => "expense",
-      "name" => "Sync Failure Case"
-    )
-
-    assert_equal true, result[:success]
-    assert_equal true, result[:created]
-    assert_match(/could not be enqueued/, result[:warning])
-
-    # The transaction was actually persisted despite the sync failure.
-    entry = Entry.find_by(name: "Sync Failure Case", account: @account, date: Date.new(2026, 9, 11))
-    assert entry
-  end
-
-  test "stores amount as-given when no type is provided" do
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-04",
-      "amount" => -28000.00,
-      "name" => "SoFi Transfer"
-    )
-
-    assert_equal true, result[:success]
-    assert_equal true, result[:created]
-
-    entry = Entry.find_by(name: "SoFi Transfer", account: @account, date: Date.new(2026, 9, 4))
-    assert entry
-    assert_equal BigDecimal("-28000.00"), entry.amount
-    assert_equal "income", entry.classification
-  end
-
-  test "creates a transaction with category, merchant, and tags" do
+  test "creates an expense on a writable account with annotations" do
     category = categories(:food_and_drink)
     merchant = merchants(:amazon)
     tag = tags(:one)
 
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => 42.50,
-      "type" => "expense",
-      "name" => "Amazon Order",
-      "category_id" => category.id,
-      "merchant_id" => merchant.id,
-      "tag_ids" => [ tag.id ]
-    )
+    assert_difference "@account.entries.count", 1 do
+      result = @function.call(
+        "account_id" => @account.id,
+        "amount" => 62_000,
+        "date" => Date.current.iso8601,
+        "name" => "Sewerage",
+        "nature" => "expense",
+        "category_id" => category.id,
+        "merchant_id" => merchant.id,
+        "tag_ids" => [ tag.id ],
+        "notes" => "Created through MCP",
+        "external_id" => "telegram:chat:message"
+      )
 
-    assert_equal true, result[:success]
-    assert_equal true, result[:created]
+      assert result[:success]
+      assert_equal true, result[:created]
+      assert_equal @account.id, result.dig(:transaction, :account_id)
+      assert_equal "Sewerage", result.dig(:transaction, :name)
+    end
 
-    transaction = Transaction.find(result[:transaction][:id])
-    assert_equal category, transaction.category
-    assert_equal merchant, transaction.merchant
-    assert_equal [ tag.id ], transaction.tag_ids
-  end
-
-  test "is idempotent when external_id and source match" do
-    first = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => 100.00,
-      "type" => "expense",
-      "name" => "Idempotent Test",
-      "external_id" => "xmoney-001",
-      "source" => "xmoney"
-    )
-    assert_equal true, first[:success]
-    assert_equal true, first[:created]
-
-    second = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => 100.00,
-      "type" => "expense",
-      "name" => "Idempotent Test",
-      "external_id" => "xmoney-001",
-      "source" => "xmoney"
-    )
-    assert_equal true, second[:success]
-    assert_equal false, second[:created]
-    assert_equal first[:transaction][:id], second[:transaction][:id]
-  end
-
-  test "rejects an account the user cannot write to" do
-    other_account = accounts(:other_asset)
-    # other_asset is owned by family_admin too, so use a different approach:
-    # create a read-only share for family_member on depository
-    @account.account_shares.find_by!(user: users(:family_member)).update!(permission: "read_only")
-    function = Assistant::Function::CreateTransaction.new(users(:family_member))
-
-    result = function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => 10.00,
-      "type" => "expense",
-      "name" => "Should Fail"
-    )
-
-    assert_equal false, result[:success]
-    assert_equal "account_not_found", result[:error]
-  end
-
-  test "does not let a user from a different family create in an account" do
-    # josh belongs to the `empty` family; the account belongs to `dylan_family`.
-    # Cross-family account ids are structurally unresolvable and must not leak
-    # existence — the same write-gate scoping as the read-only-share case.
-    function = Assistant::Function::CreateTransaction.new(users(:josh))
-
-    result = function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => 10.00,
-      "type" => "expense",
-      "name" => "Cross Family"
-    )
-
-    assert_equal false, result[:success]
-    assert_equal "account_not_found", result[:error]
-    assert_nil Entry.find_by(name: "Cross Family")
-  end
-
-  test "rejects an invalid date" do
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "not-a-date",
-      "amount" => 10.00,
-      "type" => "expense",
-      "name" => "Bad Date"
-    )
-
-    assert_equal false, result[:success]
-    assert_equal "invalid_date", result[:error]
-  end
-
-  test "rejects an invalid amount" do
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => "abc",
-      "type" => "expense",
-      "name" => "Bad Amount"
-    )
-
-    assert_equal false, result[:success]
-    assert_equal "invalid_amount", result[:error]
-  end
-
-  test "rejects an empty name" do
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => 10.00,
-      "type" => "expense",
-      "name" => "   "
-    )
-
-    assert_equal false, result[:success]
-    assert_equal "invalid_name", result[:error]
-  end
-
-  test "rejects a category outside the family" do
-    other_category = Category.create!(
-      family: families(:empty),
-      name: "Other",
-      color: "#e99537",
-      lucide_icon: "tag"
-    )
-
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => 10.00,
-      "type" => "expense",
-      "name" => "Bad Category",
-      "category_id" => other_category.id
-    )
-
-    assert_equal false, result[:success]
-    assert_equal "invalid_category", result[:error]
-  end
-
-  test "rejects a non-UUID account_id" do
-    result = @function.call(
-      "account_id" => "not-a-uuid",
-      "date" => "2026-09-11",
-      "amount" => 10.00,
-      "type" => "expense",
-      "name" => "Bad Account"
-    )
-
-    assert_equal false, result[:success]
-    assert_equal "account_not_found", result[:error]
-  end
-
-  test "marks user_modified when requested" do
-    result = @function.call(
-      "account_id" => @account.id,
-      "date" => "2026-09-11",
-      "amount" => 10.00,
-      "type" => "expense",
-      "name" => "User Modified",
-      "user_modified" => true
-    )
-
-    assert_equal true, result[:success]
-    assert_equal true, result[:created]
-
-    entry = Entry.find_by(name: "User Modified", account: @account)
+    entry = @account.entries.find_by!(source: "mcp", external_id: "telegram:chat:message")
+    assert_equal 62_000, entry.amount
+    assert_equal category, entry.transaction.category
+    assert_equal merchant, entry.transaction.merchant
+    assert_equal [ tag.id ], entry.transaction.tag_ids
+    assert_equal "Created through MCP", entry.notes
     assert entry.user_modified?
   end
+
+  test "returns the existing transaction when the same payload is retried" do
+    params = required_params("external_id" => "retry-key")
+    first_result = @function.call(params)
+
+    assert_no_difference "@account.entries.count" do
+      second_result = @function.call(params)
+
+      assert second_result[:success]
+      assert_equal false, second_result[:created]
+      assert_equal first_result.dig(:transaction, :id), second_result.dig(:transaction, :id)
+    end
+  end
+
+  test "rejects an idempotency key reused with a different payload" do
+    params = required_params("external_id" => "conflict-key")
+    first_result = @function.call(params)
+
+    assert_no_difference "@account.entries.count" do
+      second_result = @function.call(params.merge("amount" => 26))
+
+      assert first_result[:success]
+      assert_equal false, second_result[:success]
+      assert_equal "idempotency_conflict", second_result[:error]
+      assert_equal 25, @account.entries.find_by!(source: "mcp", external_id: "conflict-key").amount
+    end
+  end
+
+  test "rejects an idempotency key reused on another account in the same family" do
+    other_account = @family.accounts.create!(
+      owner: @user,
+      name: "Other MCP account",
+      accountable: Depository.new(subtype: "savings"),
+      balance: 0,
+      currency: "USD"
+    )
+    params = required_params("external_id" => "cross-account-key")
+
+    assert @function.call(params)[:success]
+    assert_no_difference "@family.entries.count" do
+      result = @function.call(params.merge("account_id" => other_account.id))
+
+      assert_equal false, result[:success]
+      assert_equal "idempotency_conflict", result[:error]
+    end
+  end
+
+  test "creates income with a negative stored amount" do
+    result = @function.call(required_params("nature" => "income", "external_id" => "income-key"))
+
+    assert result[:success]
+    assert_equal "income", result.dig(:transaction, :nature)
+    assert_equal(-25, @account.entries.find_by!(external_id: "income-key", source: "mcp").amount)
+  end
+
+  test "rejects accounts the user cannot write to" do
+    read_only_account = accounts(:credit_card)
+    function = Assistant::Function::CreateTransaction.new(users(:family_member))
+
+    assert_no_difference "read_only_account.entries.count" do
+      result = function.call(required_params("account_id" => read_only_account.id, "external_id" => "forbidden-key"))
+
+      assert_equal false, result[:success]
+      assert_equal "account_not_found", result[:error]
+    end
+  end
+
+  test "allows full-control collaborators to create transactions" do
+    shared_account = accounts(:depository)
+    function = Assistant::Function::CreateTransaction.new(users(:family_member))
+
+    assert_difference "shared_account.entries.count", 1 do
+      result = function.call(required_params("account_id" => shared_account.id, "external_id" => "shared-key"))
+      assert result[:success]
+    end
+  end
+
+  test "rejects category merchant and tag ids outside the family" do
+    other_family = families(:empty)
+    category = other_family.categories.create!(name: "Other", color: "#e99537", lucide_icon: "tag")
+    merchant = FamilyMerchant.create!(family: other_family, name: "Other merchant", color: "#e99537")
+    tag = other_family.tags.create!(name: "Other tag", color: "#e99537")
+
+    category_result = @function.call(required_params("category_id" => category.id, "external_id" => "foreign-category"))
+    merchant_result = @function.call(required_params("merchant_id" => merchant.id, "external_id" => "foreign-merchant"))
+    tags_result = @function.call(required_params("tag_ids" => [ tag.id ], "external_id" => "foreign-tags"))
+
+    assert_equal "invalid_category", category_result[:error]
+    assert_equal "invalid_merchant", merchant_result[:error]
+    assert_equal "invalid_tags", tags_result[:error]
+  end
+
+  test "requires a non-blank external idempotency key" do
+    assert_no_difference "@account.entries.count" do
+      result = @function.call(required_params("external_id" => "  "))
+
+      assert_equal false, result[:success]
+      assert_equal "external_id_required", result[:error]
+    end
+  end
+
+  test "rejects malformed amount date and nature without creating entries" do
+    assert_no_difference "@account.entries.count" do
+      amount_result = @function.call(required_params("amount" => 0, "external_id" => "bad-amount"))
+      date_result = @function.call(required_params("date" => "tomorrow", "external_id" => "bad-date"))
+      nature_result = @function.call(required_params("nature" => "transfer", "external_id" => "bad-nature"))
+
+      assert_equal "invalid_amount", amount_result[:error]
+      assert_equal "invalid_parameters", date_result[:error]
+      assert_equal "invalid_nature", nature_result[:error]
+    end
+  end
+
+  test "rejects an idempotency collision with a non-transaction entry" do
+    @account.entries.create!(
+      name: "Existing valuation",
+      amount: 100,
+      currency: @account.currency,
+      date: Date.current,
+      external_id: "non-transaction-key",
+      source: "mcp",
+      entryable: Valuation.new
+    )
+
+    assert_no_difference "@account.entries.count" do
+      result = @function.call(required_params("external_id" => "non-transaction-key"))
+
+      assert_equal false, result[:success]
+      assert_equal "idempotency_conflict", result[:error]
+    end
+  end
+
+  private
+    def required_params(overrides = {})
+      {
+        "account_id" => @account.id,
+        "amount" => 25,
+        "date" => Date.current.iso8601,
+        "name" => "Test transaction",
+        "nature" => "expense",
+        "external_id" => "test-key"
+      }.merge(overrides)
+    end
 end

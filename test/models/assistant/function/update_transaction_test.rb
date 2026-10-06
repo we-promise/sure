@@ -7,6 +7,27 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     @function = Assistant::Function::UpdateTransaction.new(@user)
   end
 
+  test "updates amount date and nature on a standard transaction" do
+    target_date = Date.current - 7.days
+
+    result = @function.call(
+      "id" => @transaction.id,
+      "amount" => 42.5,
+      "date" => target_date.iso8601,
+      "nature" => "income"
+    )
+
+    assert_equal true, result[:success]
+
+    entry = @transaction.reload.entry
+    assert_equal(-42.5, entry.amount)
+    assert_equal target_date, entry.date
+    assert entry.user_modified?
+    assert_equal "income", result.dig(:transaction, :nature)
+    assert_equal 42.5, result.dig(:transaction, :amount)
+    assert_equal entry.currency, result.dig(:transaction, :currency)
+  end
+
   test "updates category notes and tags" do
     category = categories(:subcategory)
     tag = tags(:one)
@@ -89,5 +110,12 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     assert_equal false, rename_result[:success]
     assert_equal "not_authorized", rename_result[:error]
     assert_equal "Payment received from checking account", transaction.reload.entry.name
+  end
+
+  test "rejects malformed dates" do
+    result = @function.call("id" => @transaction.id, "date" => "tomorrow")
+
+    assert_equal false, result[:success]
+    assert_equal "invalid_date", result[:error]
   end
 end
