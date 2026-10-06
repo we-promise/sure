@@ -82,6 +82,7 @@ pl:
       manual_payment: Płatność ręczna
       next_payment: Następna płatność
       notes: Notatki
+      overview: Przegląd
       payment_count:
         few: "%{count} płatności"
         many: "%{count} płatności"
@@ -90,7 +91,6 @@ pl:
       price_change_line: "%{from} → %{to}"
       price_changes: Zmiany cen
       range: od %{min} do %{max}
-      recent_payments: Ostatnie płatności
       renews_chip: Odnawia się %{date}
       rule_aliases: Pasuje też do %{names}
       rule_amount_range: od %{min} do %{max}

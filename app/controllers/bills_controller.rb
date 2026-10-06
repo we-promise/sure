@@ -161,7 +161,7 @@ class BillsController < ApplicationController
     # bill costs no more than its summary, and the aggregates behind the chart
     # and the per-year totals run only once it is scrolled to.
     if params[:display] == "history"
-      @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(:allocations)
+      @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(allocations: :entry)
       @upcoming = @series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3)
       @analytics = paid_analytics
       load_deep_extras
@@ -178,8 +178,6 @@ class BillsController < ApplicationController
       else
         @series.current_occurrence
       end
-
-    load_summary_extras
 
     # A pending suggestion is the one thing that changes what the drawer
     # should offer, so it is worth the one query.
@@ -222,12 +220,6 @@ class BillsController < ApplicationController
       series.active? && series.manual?
     end
     helper_method :paycheck_income_plans?
-
-    # What the drawer needs: the handful of payments that actually settled
-    # this bill lately. Cheap enough to run on every row someone opens.
-    def load_summary_extras
-      @recent_allocations = confirmed_allocations.includes(:entry).order(paid_on: :desc, created_at: :desc).limit(6)
-    end
 
     # What each settled cycle actually cost. The frozen `expected_amount` is an
     # estimate, so reading it here would report averages of estimates beside the

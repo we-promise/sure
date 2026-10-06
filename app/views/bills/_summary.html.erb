@@ -1,10 +1,9 @@
-<%# locals: (series:, current_occurrence:, recent_allocations:, suggestion: nil) %>
+<%# locals: (series:, current_occurrence:, suggestion: nil) %>
 
 <%# INSPECT. What is going on with this bill, and what to do about it?
 
-    The top of the bill's drawer. The twelve-month chart, the per-year table,
-    the price history, the upcoming dates and the settled cycles follow it in
-    bills/_detail, loaded lazily. %>
+    The top of the bill's drawer. Its sections (Overview, Coming up, History
+    and Notes) follow it in bills/_detail, loaded lazily. %>
 
 <div class="space-y-4">
   <%= render "bills/cancelled_notice", series: series %>
@@ -59,26 +58,6 @@
 
   <%# Subscription state is state, not depth, so it stays here. %>
   <%= render "bills/state_chips", series: series %>
-
-  <%# What has actually paid this lately. %>
-  <% if recent_allocations.any? %>
-    <div class="space-y-1">
-      <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.recent_payments") %></p>
-      <div class="bg-container-inset rounded-lg divide-y divide-subdued">
-        <% recent_allocations.each do |allocation| %>
-          <div class="flex items-center justify-between gap-3 px-3 py-2">
-            <div class="min-w-0">
-              <p class="text-sm text-primary truncate"><%= allocation.entry&.name.presence || t("bills.detail.manual_payment") %></p>
-              <% if allocation.paid_on %>
-                <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short_with_year) %></p>
-              <% end %>
-            </div>
-            <p class="text-sm text-primary privacy-sensitive shrink-0"><%= format_money(allocation.allocated_amount_money) %></p>
-          </div>
-        <% end %>
-      </div>
-    </div>
-  <% end %>
 
   <%# The next step, spelled out. The row shows it only when the bill needs you
       now, and never on a phone. Here it is always present, settled occurrences

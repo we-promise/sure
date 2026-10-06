@@ -57,17 +57,16 @@
       <%= render "bills/summary",
             series: @series,
             current_occurrence: @current_occurrence,
-            recent_allocations: @recent_allocations,
             suggestion: @drawer_suggestion %>
 
-      <%# The chart, the per-year totals, the price history, the upcoming
-          dates and the settled cycles. Lazy, so opening a bill costs no more
-          than its summary; refresh: :morph, or a morph refresh would empty it. %>
+      <%# The collapsible sections: Overview, Coming up, History and Notes.
+          Lazy, so opening a bill costs no more than its summary;
+          refresh: :morph, or a morph refresh would empty it. %>
       <%= turbo_frame_tag dom_id(@series, :history),
             src: bill_path(@series, display: "history"),
             loading: :lazy,
             refresh: :morph,
-            class: "block border-t border-subdued pt-4" %>
+            class: "block" %>
     </div>
   <% end %>
 <% end %>

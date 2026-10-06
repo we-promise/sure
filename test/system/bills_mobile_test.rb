@@ -79,12 +79,15 @@ class BillsMobileTest < ApplicationSystemTestCase
     end
 
     # A bill visited directly: its drawer over the overview, with the chart and
-    # the per-year totals loaded into it.
+    # the per-year totals loaded into it. Every section opened, or a closed one
+    # would hide whatever it pushes sideways.
     visit bill_url(bill)
     within("dialog[open]") do
       assert_selector "h2", text: bill.display_name
       scroll_to find("turbo-frame[src*='display=history']")
       assert_text(/#{I18n.t("bills.detail.history_title")}/i)
+      all("details:not([open]) > summary").each(&:click)
+      assert_text bill.notes
     end
     assert_no_horizontal_scroll("the bill drawer")
 

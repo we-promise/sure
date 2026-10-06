@@ -37,6 +37,7 @@ en:
       current: Current
       next_payment: Next payment
       around: "around %{date}"
+      overview: Overview
       rules: How this bill is matched
       rule_named: "%{name}"
       rule_amount_range: "from %{min} to %{max}"
@@ -54,7 +55,6 @@ en:
       ytd: Paid this year
       last_account: Last account used
       upcoming: Coming up
-      recent_payments: Recent payments
       manual_payment: Manual payment
       history: History
       payment_count:

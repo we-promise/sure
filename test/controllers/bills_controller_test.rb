@@ -1261,16 +1261,17 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "turbo-frame#drawer dialog h2", text: "Rent"
-    assert_match I18n.t("bills.detail.recent_payments"), response.body
-    assert_match "WATSON PROPERTY", response.body
-
-    # The drawer answers "what is going on with this bill" and stops there.
-    # The matching rules and the per-year table are configuration and
-    # reference material, and they belong to the bill's page.
-    assert_no_match I18n.t("bills.detail.rules"), response.body,
-      "the drawer is not a second detail view"
-    assert_no_match I18n.t("bills.detail.key_metrics"), response.body
     assert_no_match(/<html/, response.body, "the drawer renders frame-only, no layout")
+
+    # The drawer answers "what is going on with this bill" up front. Its
+    # sections, the matching rules and the per-year table among them, load
+    # into the lazy frame below, and History names the payment next to the
+    # cycle it paid.
+    assert_no_match I18n.t("bills.detail.rules"), response.body
+    assert_no_match I18n.t("bills.detail.key_metrics"), response.body
+
+    get_bill_history(bill)
+    assert_match "WATSON PROPERTY", response.body
   end
 
   # A match waiting on a decision is the one thing that changes what the
@@ -1653,9 +1654,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Dismissed", I18n.t("recurring_transactions.status.ended")
   end
 
-  # The bill's page folded into its drawer: the summary on top, the deep part
+  # The bill's page folded into its drawer: the summary on top, the sections
   # in a lazy frame below. Every section the page had must still be in one of
-  # the two, and none in both, or the drawer says the same thing twice.
+  # the two, and none in both, or the drawer says the same thing twice. The
+  # page's recent payments went into History, next to the cycles they paid.
   test "the drawer and its history keep every section, once" do
     bill = create_bill(name: "Power Co", amount: 80, notes: "Account 4821")
     past = bill.recurring_occurrences.create!(
@@ -1680,8 +1682,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     history = response.body
 
-    everything = %w[rules history_title average annualized ytd upcoming
-                    recent_payments history notes last_account key_metrics
+    everything = %w[overview rules history_title average annualized ytd
+                    upcoming history notes last_account key_metrics
                     price_changes]
     homeless = everything.reject { |key| (drawer + history).include?(I18n.t("bills.detail.#{key}")) }
     assert_empty homeless, "folding the page in must not delete any of it"
@@ -1689,9 +1691,45 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     twice = everything.select { |key| drawer.include?(I18n.t("bills.detail.#{key}")) && history.include?(I18n.t("bills.detail.#{key}")) }
     assert_empty twice, "the summary and the history must not repeat each other"
 
-    assert_includes drawer, "POWER CO AUTOPAY"
-    assert_includes drawer, "$78.50"
+    assert_includes history, "POWER CO AUTOPAY"
+    assert_includes history, "$78.50"
     assert_includes history, "Account 4821"
+
+    # Collapsible, like a transaction's or a budget category's drawer: the
+    # overview opens, the rest wait for a click.
+    assert_select "details[open] > summary", text: I18n.t("bills.detail.overview")
+    %w[upcoming history notes].each do |key|
+      assert_select "details:not([open]) > summary", text: I18n.t("bills.detail.#{key}")
+    end
+  end
+
+  # History names what paid each cycle: the payment when there was one, a
+  # count when it took several. A match still waiting on review paid nothing,
+  # so it is neither named nor counted.
+  test "history names what paid each settled cycle" do
+    bill = create_bill(name: "Power Co", amount: 80)
+    single, split = [ 3, 2 ].map do |months_ago|
+      due = months_ago.months.ago.to_date
+      bill.recurring_occurrences.create!(family: @family, original_due_on: due, due_on: due, currency: "USD")
+    end
+    autopay = create_transaction_entry(name: "POWER CO AUTOPAY", amount: 80, date: single.due_on)
+    RecurringTransaction::Allocator.new(single).allocate!(amount: "80", entry: autopay)
+    single.allocations.create!(
+      entry: create_transaction_entry(name: "POWER CO REFUND", amount: 80, date: single.due_on),
+      allocated_amount: 80, currency: "USD", state: "suggested", source: "auto_matched"
+    )
+    2.times { RecurringTransaction::Allocator.new(split).allocate!(amount: "40") }
+    assert [ single, split ].all? { |occurrence| occurrence.reload.paid? }, "both cycles must be settled to be history"
+
+    get_bill_history(bill)
+
+    # The cycle's own line, since the overview's "Also matches" names the
+    # payee too.
+    assert_response :success
+    paid = I18n.t("recurring_occurrences.history_status.paid")
+    assert_select "p", text: /\A#{paid}\s*·\s*POWER CO AUTOPAY\z/
+    assert_select "p", text: /\A#{paid}\s*·\s*#{I18n.t("bills.detail.payment_count", count: 2)}\z/
+    assert_no_match "POWER CO REFUND", response.body, "a pending match paid nothing"
   end
 
   # "Something changed" is only useful if the thing you can still act on is
