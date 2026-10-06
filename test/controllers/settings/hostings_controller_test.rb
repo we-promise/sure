@@ -1053,6 +1053,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         assert_response :success
         assert_select "input[name='setting[ai_health_probe_timeout]'][value='45'][disabled='disabled']"
       end
+
+      # A non-positive env value is ignored by the probes, so it must not lock the field either.
+      with_env_overrides("AI_HEALTH_PROBE_TIMEOUT" => "0") do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "input[name='setting[ai_health_probe_timeout]'][value='30']:not([disabled])"
+      end
     end
   ensure
     Setting.ai_health_probe_timeout = nil
