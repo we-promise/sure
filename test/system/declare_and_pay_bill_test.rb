@@ -71,7 +71,11 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
 
     # Linking lands back on the worklist, and the row must say the bill is
     # partly paid rather than settled: $537.50 against $2,150 is not rent.
-    assert_text I18n.t("bills.attention.partial", amount: "$1,612.50")
+    within(find("[class~='@container'] a[data-turbo-frame=drawer]", text: I18n.t("bills.attention.partial"))) do
+      assert_text "Watson Property"
+      assert_text "$1,612.50"
+      assert_text I18n.t("bills.remaining_label")
+    end
 
     # Journey C picks up exactly where that leaves off. The bill is still ten
     # days out, so its row stays quiet; the drawer's verb has become Add
