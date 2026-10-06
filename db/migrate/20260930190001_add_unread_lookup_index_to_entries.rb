@@ -7,6 +7,7 @@ class AddUnreadLookupIndexToEntries < ActiveRecord::Migration[8.1]
     add_index :entries, [ :account_id, :created_at ],
               where: "entryable_type = 'Transaction'",
               name: "index_entries_on_account_id_and_created_at_transactions",
-              algorithm: :concurrently
+              algorithm: :concurrently,
+              if_not_exists: true
   end
 end
