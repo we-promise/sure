@@ -90,6 +90,12 @@ class IncomeStatement::SpendingComparison
         Row.new(category: child, total: child_total, normal: child_normal, subcategories: [])
       end
 
+      # Refunds can push a subcategory's net below zero, which lowers the
+      # parent total but is clamped out of the subcategories. When the rest
+      # then add up to more than the parent, show the parent as one box so
+      # the treemap never overstates it.
+      subcategories = [] if subcategories.sum(&:total) > total
+
       direct_total = [ total - subcategories.sum(&:total), 0 ].max
       direct_normal = normal && [ normal - subcategories.sum { |s| s.normal || 0 }, 0 ].max
       if direct_total.positive? || direct_normal&.positive?
