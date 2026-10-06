@@ -17,9 +17,10 @@ class AccountStatement < ApplicationRecord
   end
   InvalidUploadError = Class.new(StandardError)
 
-  PreparedUpload = Data.define(:content, :filename, :content_type, :byte_size, :checksum, :content_sha256)
+  PreparedUpload = Data.define(:content, :filename, :content_type, :byte_size, :checksum, :content_sha256, :large_pdf_override)
 
   MAX_FILE_SIZE = 25.megabytes
+  MAX_LARGE_PDF_SIZE = 100.megabytes
   READ_CHUNK_SIZE = 1.megabyte
   ALLOWED_EXTENSION_CONTENT_TYPES = {
     ".pdf" => %w[application/pdf],
@@ -32,6 +33,8 @@ class AccountStatement < ApplicationRecord
   belongs_to :family
   belongs_to :account, optional: true
   belongs_to :suggested_account, class_name: "Account", optional: true
+
+  attr_accessor :large_pdf_override
 
   has_many :pdf_imports, -> { where(type: "PdfImport").ordered }, class_name: "PdfImport", dependent: :restrict_with_error
   has_one_attached :original_file, dependent: :purge_later
@@ -47,7 +50,8 @@ class AccountStatement < ApplicationRecord
   before_validation :sync_review_status
 
   validates :filename, :content_type, :checksum, presence: true
-  validates :byte_size, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: MAX_FILE_SIZE }
+  validates :byte_size, presence: true, numericality: { greater_than: 0 }
+  validate :file_size_within_limit
   validates :content_type, inclusion: { in: ALLOWED_CONTENT_TYPES }
   validates :content_sha256,
             format: { with: /\A[0-9a-f]{64}\z/ },
@@ -76,12 +80,12 @@ class AccountStatement < ApplicationRecord
       user&.admin? || user&.member?
     end
 
-    def create_from_upload!(family:, account:, file:)
-      prepared_upload = prepare_upload!(file)
+    def create_from_upload!(family:, account:, file:, allow_large_pdf: false)
+      prepared_upload = prepare_upload!(file, allow_large_pdf: allow_large_pdf)
       create_from_prepared_upload!(family: family, account: account, prepared_upload: prepared_upload)
     end
 
-    def create_from_prepared_upload!(family:, account:, prepared_upload:)
+    def create_from_prepared_upload!(family:, account:, prepared_upload:, pdf_import_owned: false)
       statement = nil
       duplicate = duplicate_for(family, prepared_upload)
       raise DuplicateUploadError, duplicate if duplicate
@@ -91,6 +95,7 @@ class AccountStatement < ApplicationRecord
         filename: prepared_upload.filename,
         content_type: prepared_upload.content_type,
         byte_size: prepared_upload.byte_size,
+        pdf_import_owned: pdf_import_owned,
         checksum: prepared_upload.checksum,
         content_sha256: prepared_upload.content_sha256,
         source: :manual_upload,
@@ -98,6 +103,7 @@ class AccountStatement < ApplicationRecord
         review_status: account.present? ? :linked : :unmatched,
         currency: account&.currency || family.currency
       )
+      statement.large_pdf_override = prepared_upload.large_pdf_override
 
       statement.original_file.attach(
         io: StringIO.new(prepared_upload.content),
@@ -132,15 +138,17 @@ class AccountStatement < ApplicationRecord
       end
     end
 
-    def prepare_upload!(file)
+    def prepare_upload!(file, allow_large_pdf: false)
       filename = file.original_filename.to_s
-      content = read_upload_content!(file)
+      allow_large_pdf &&= pdf_upload_candidate?(file)
+      content = read_upload_content!(file, allow_large_pdf: allow_large_pdf)
       byte_size = content.bytesize
       raise InvalidUploadError if byte_size.zero?
 
       content_type = detected_content_type(content:, filename:, declared_content_type: file.content_type)
       raise InvalidUploadError unless allowed_upload?(filename:, content_type:)
       raise InvalidUploadError if content_type == "application/pdf" && !valid_pdf_content?(content)
+      raise InvalidUploadError if byte_size > MAX_FILE_SIZE && !(allow_large_pdf && content_type == "application/pdf")
 
       PreparedUpload.new(
         content: content,
@@ -148,8 +156,13 @@ class AccountStatement < ApplicationRecord
         content_type: content_type,
         byte_size: byte_size,
         checksum: Digest::MD5.base64digest(content),
-        content_sha256: Digest::SHA256.hexdigest(content)
+        content_sha256: Digest::SHA256.hexdigest(content),
+        large_pdf_override: allow_large_pdf && content_type == "application/pdf"
       )
+    end
+
+    def pdf_upload_candidate?(file)
+      file.content_type == "application/pdf" || File.extname(file.original_filename.to_s).casecmp?(".pdf")
     end
 
     def detected_content_type(content:, filename:, declared_content_type:)
@@ -193,17 +206,18 @@ class AccountStatement < ApplicationRecord
       ->(date, currency) { balances_by_key[[ date, currency ]] }
     end
 
-    def read_upload_content!(file)
+    def read_upload_content!(file, allow_large_pdf: false)
+      limit = allow_large_pdf ? MAX_LARGE_PDF_SIZE : MAX_FILE_SIZE
       declared_size = declared_upload_size(file)
-      raise InvalidUploadError if declared_size.present? && declared_size > MAX_FILE_SIZE
+      raise InvalidUploadError if declared_size.present? && declared_size > limit
 
       content = +"".b
       loop do
         chunk = file.read(READ_CHUNK_SIZE)
         break if chunk.nil? || chunk.empty?
+        raise InvalidUploadError if content.bytesize + chunk.bytesize > limit
 
         content << chunk
-        raise InvalidUploadError if content.bytesize > MAX_FILE_SIZE
       end
 
       file.rewind if file.respond_to?(:rewind)
@@ -452,7 +466,8 @@ class AccountStatement < ApplicationRecord
     def original_file_constraints
       if original_file.byte_size.zero?
         errors.add(:original_file, :blank)
-      elsif original_file.byte_size > MAX_FILE_SIZE
+      elsif original_file.byte_size > MAX_FILE_SIZE &&
+          !large_pdf_override_valid?(file_size: original_file.byte_size, file_content_type: original_file.content_type)
         errors.add(:original_file, :too_large, max_mb: MAX_FILE_SIZE / 1.megabyte)
       end
 
@@ -463,5 +478,19 @@ class AccountStatement < ApplicationRecord
 
     def original_file_attached
       errors.add(:original_file, :blank) unless original_file.attached?
+    end
+
+    def file_size_within_limit
+      return if byte_size.blank? || byte_size <= MAX_FILE_SIZE
+      return if large_pdf_override_valid?(file_size: byte_size, file_content_type: content_type)
+
+      errors.add(:byte_size, :less_than_or_equal_to, count: MAX_FILE_SIZE)
+    end
+
+    def large_pdf_override_valid?(file_size:, file_content_type:)
+      return false unless file_content_type == "application/pdf" && file_size <= MAX_LARGE_PDF_SIZE
+      return true if large_pdf_override
+
+      persisted? && pdf_import_owned?
     end
 end

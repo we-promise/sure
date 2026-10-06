@@ -1,8 +1,18 @@
 class PdfImport < Import
+  DuplicateUploadError = Class.new(StandardError) do
+    attr_reader :statement
+
+    def initialize(statement = nil)
+      @statement = statement
+      super("PDF has already been uploaded")
+    end
+  end
+
   has_one_attached :pdf_file, dependent: :purge_later
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
   validate :account_statement_matches_import
+  after_destroy_commit :enqueue_orphaned_import_owned_statement_cleanup
 
   class << self
     # PdfImport's importing status doubles as a processing claim: the AI
@@ -60,18 +70,88 @@ class PdfImport < Import
       family.sync_later if needs_sync
     end
 
-    def create_from_upload!(family:, file:, user:)
+    def create_from_upload!(family:, file:, allow_large_pdf: false, allow_duplicate_upload: false)
+      prepared_upload = AccountStatement.prepare_upload!(file, allow_large_pdf: allow_large_pdf)
+      family.with_lock do
+        create_from_upload_locked!(
+          family: family,
+          prepared_upload: prepared_upload,
+          allow_duplicate_upload: allow_duplicate_upload
+        )
+      end
+    end
+
+    # Serialize duplicate lookup and import creation with orphan cleanup, which
+    # takes the same family lock before it removes an unused source statement.
+    def create_from_upload_locked!(family:, prepared_upload:, allow_duplicate_upload:)
+      if duplicate_upload?(family, prepared_upload)
+        duplicate_statement = AccountStatement.duplicate_for(family, prepared_upload)
+        if duplicate_statement
+          reusable_import = importing_reusable_import_for(duplicate_statement)
+          return reusable_import if reusable_import
+
+          if allow_duplicate_upload && duplicate_statement.manageable_by?(Current.user)
+            return create_from_statement!(statement: duplicate_statement)
+          end
+
+          raise DuplicateUploadError, duplicate_statement
+        end
+
+        raise DuplicateUploadError
+      end
+
       statement = AccountStatement.create_from_prepared_upload!(
         family: family,
         account: nil,
-        prepared_upload: AccountStatement.prepare_upload!(file)
+        prepared_upload: prepared_upload,
+        pdf_import_owned: true
       )
 
       create_from_statement!(statement: statement)
-    rescue AccountStatement::DuplicateUploadError => e
-      raise unless e.statement.manageable_by?(user)
+    rescue AccountStatement::DuplicateUploadError => error
+      if duplicate_upload?(family, prepared_upload)
+        reusable_import = importing_reusable_import_for(error.statement)
+        return reusable_import if reusable_import
 
-      create_from_statement!(statement: e.statement)
+        if allow_duplicate_upload && error.statement.manageable_by?(Current.user)
+          return create_from_statement!(statement: error.statement)
+        end
+
+        raise DuplicateUploadError, error.statement
+      end
+
+      if error.statement.account_id.blank? && !error.statement.pdf_imports.exists?
+        error.statement.update!(pdf_import_owned: true)
+      end
+
+      create_from_statement!(statement: error.statement)
+    end
+    private :create_from_upload_locked!
+
+    def duplicate_upload?(family, prepared_upload)
+      return true if AccountStatement.duplicate_for(family, prepared_upload)
+
+      legacy_blob_ids = joins(pdf_file_attachment: :blob)
+        .where(family_id: family.id, active_storage_blobs: { checksum: prepared_upload.checksum })
+        .pluck("active_storage_blobs.id")
+      legacy_statement_blob_ids = joins(account_statement: { original_file_attachment: :blob })
+        .where(family_id: family.id, account_statements: { content_sha256: nil, checksum: prepared_upload.checksum })
+        .pluck("active_storage_blobs.id")
+
+      (legacy_blob_ids + legacy_statement_blob_ids).uniq.any? do |blob_id|
+        Digest::SHA256.hexdigest(ActiveStorage::Blob.find(blob_id).download) == prepared_upload.content_sha256
+      end
+    end
+
+    def importing_reusable_import_for(statement)
+      return unless statement.manageable_by?(Current.user)
+
+      reusable_import = statement.latest_reusable_pdf_import
+      return unless reusable_import&.importing?
+      return unless reusable_import.account_id == statement.account_id &&
+                    reusable_import.date_format == statement.family.date_format
+
+      reusable_import
     end
 
     def create_from_statement!(statement:)
@@ -189,11 +269,19 @@ class PdfImport < Import
   # but committed nothing of its own, and the user may well have picked the
   # wrong account.
   def reassignable?
-    !data_committed? && !importing? && !reverting?
+    !entries.exists? && !importing? && !reverting?
   end
 
   def pdf_uploaded?
     statement_backed? || pdf_file.attached?
+  end
+
+  def data_committed?
+    super || reconciled_entries.exists?
+  end
+
+  def file_name
+    pdf_filename
   end
 
   def ai_processed?
@@ -370,7 +458,7 @@ class PdfImport < Import
   # a history, not a queue. Memoized mostly for data_committed?, which is two
   # more EXISTS queries every time it is asked.
   def awaiting_review_count
-    @awaiting_review_count ||= data_committed? ? 0 : rows_count
+    @awaiting_review_count ||= entries.exists? ? 0 : rows_count
   end
 
   # No query: extracted_data is already in memory.
@@ -455,6 +543,12 @@ class PdfImport < Import
 
   private
 
+    def enqueue_orphaned_import_owned_statement_cleanup
+      CleanupOrphanedPdfImportStatementJob.perform_later(account_statement_id) if account_statement_id.present?
+    rescue StandardError => error
+      Rails.logger.error("Could not enqueue source statement cleanup for PDF import #{id}: #{error.class}: #{error.message}")
+    end
+
     # A statement's posting date routinely differs by a day or two from the date
     # a provider recorded for the same transaction, so matching allows a small
     # window rather than demanding an exact date.
@@ -534,7 +628,7 @@ class PdfImport < Import
     # fully-matched import sits at pending with no rows, which renders as the
     # processing screen forever and cannot be restarted.
     def refresh_status_after_regeneration!
-      return if data_committed?
+      return if entries.exists?
       return unless pending? || complete?
 
       target = statement_with_transactions? && rows_count > 0 ? "pending" : "complete"
