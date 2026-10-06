@@ -211,7 +211,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
                        last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
     bill.mark_inactive!
     occurrence = bill.recurring_occurrences.open_status.sole
-    assert occurrence.overdue?, "premise: the leftover is past its grace"
+    assert_equal :overdue, occurrence.derived_state, "premise: the leftover is past its grace"
 
     get bills_url
 
@@ -234,7 +234,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
                        last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
     bill.mark_inactive!
     occurrence = bill.recurring_occurrences.open_status.sole
-    assert occurrence.overdue?, "premise: the leftover is past its grace"
+    assert_equal :overdue, occurrence.derived_state, "premise: the leftover is past its grace"
 
     paused = I18n.t("recurring_transactions.status.inactive")
 
@@ -534,6 +534,31 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Late Co", response.body, "lifecycle filtering still works"
   end
 
+  # Payment state is what is late and what is still owed, and nobody owes a
+  # paused bill's leftover. The Paused filter is where it lives.
+  test "the all view's overdue and due filters leave out a paused bill's leftover" do
+    late_day = 10.days.ago.to_date
+    late = create_bill(name: "Paused late", amount: 75, expected_day_of_month: late_day.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late_day)
+    grace_day = 2.days.ago.to_date
+    in_grace = create_bill(name: "Paused grace", amount: 76, expected_day_of_month: grace_day.day,
+                           last_occurrence_date: 2.months.ago.to_date, next_expected_date: grace_day)
+    assert late.current_occurrence.overdue?, "Paused late must be overdue before the pause"
+    assert in_grace.current_occurrence.due?, "Paused grace must be due before the pause"
+    [ late, in_grace ].each(&:mark_inactive!)
+
+    %w[overdue due].each do |status|
+      get bills_url(view: "all", q: { status: status })
+      assert_response :success
+      assert_no_match "Paused late", response.body, status
+      assert_no_match "Paused grace", response.body, status
+    end
+
+    get bills_url(view: "all", q: { status: "paused" })
+    assert_match "Paused late", response.body
+    assert_match "Paused grace", response.body
+  end
+
   test "index cannot see another family's bills" do
     families(:empty).recurring_transactions.create!(
       name: "Someone else's rent",
@@ -782,6 +807,27 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Paid on time", response.body
     assert_match "Still owed", response.body
     assert_match Date.current.strftime("%B %Y"), response.body
+  end
+
+  # The calendar loads paused bills too, and painted a paused bill's leftover
+  # as a red overdue chip.
+  test "the calendar paints a paused bill's leftover neutral" do
+    travel_to Date.current.beginning_of_month + 14 do
+      late_day = Date.current.beginning_of_month + 4
+      active = create_bill(name: "Active late", amount: 60, expected_day_of_month: late_day.day,
+                           last_occurrence_date: 2.months.ago.to_date, next_expected_date: late_day)
+      paused = create_bill(name: "Paused late", amount: 61, expected_day_of_month: late_day.day,
+                           last_occurrence_date: 2.months.ago.to_date, next_expected_date: late_day)
+      paused.mark_inactive!
+
+      get bills_url(view: "calendar")
+
+      assert_response :success
+      chip = ->(series) { recurring_occurrence_path(series.recurring_occurrences.find_by!(due_on: late_day)) }
+      assert_select "a.text-destructive[href=?]", chip.(active)
+      assert_select "a.text-primary[href=?]", chip.(paused)
+      assert_select "a.text-destructive[href=?]", chip.(paused), count: 0
+    end
   end
 
   test "the calendar materializes a far-future month on demand" do

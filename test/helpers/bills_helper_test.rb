@@ -303,7 +303,6 @@ class BillsHelperTest < ActionView::TestCase
     reason = I18n.t("bills.attention.overdue", count: 30)
 
     assert_includes bills_row_subline(occurrence), %(<span class="text-destructive">#{reason}</span>)
-    assert bills_overdue?(occurrence)
 
     assert_includes bills_row_subline(occurrence, suggestion: :pending), I18n.t("bills.attention.needs_review")
     assert_not_includes bills_row_subline(occurrence, suggestion: :pending), "text-destructive"
@@ -315,7 +314,6 @@ class BillsHelperTest < ActionView::TestCase
 
     occurrence.recurring_transaction.status = "inactive"
     assert_not_includes bills_row_subline(occurrence), "text-destructive"
-    assert_not bills_overdue?(occurrence)
   end
 
   # The drawer, the bill's page and the payment drawer print this label, and

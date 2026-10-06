@@ -327,12 +327,6 @@ module BillsHelper
     t("bills.attention.amount_changed") if recently_changed
   end
 
-  # A paused or dismissed bill's leftover is past its date, but nobody is
-  # paying it, so it isn't late: no red on its row, its drawers or its page.
-  def bills_overdue?(occurrence)
-    occurrence.recurring_transaction.active? && occurrence.overdue?
-  end
-
   # A bill row's one line of context, in the same order in every section. It
   # truncates from the end, so the facts you can most do without come last.
   def bills_row_subline(occurrence, suggestion: nil)

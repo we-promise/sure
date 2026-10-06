@@ -326,7 +326,7 @@ class BillsController < ApplicationController
 
         case status
         when "overdue" then occurrence.overdue?
-        when "due"     then occurrence.derived_state == :due
+        when "due"     then occurrence.due?
         when "partial" then occurrence.partially_paid?
         when "paid"    then occurrence.paid?
         else false

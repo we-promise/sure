@@ -24,7 +24,7 @@
           <%= t("bills.summary.remaining", amount: format_money(current_occurrence.remaining_amount_money)) %>
         <% end %>
       </p>
-      <p class="text-xs <%= bills_overdue?(current_occurrence) ? "text-destructive" : "text-secondary" %>">
+      <p class="text-xs <%= current_occurrence.overdue? ? "text-destructive" : "text-secondary" %>">
         <span class="privacy-sensitive"><%= t("bills.partial_progress", paid: format_money(paid), expected: format_money(expected)) %></span>
         &middot; <%= occurrence_due_label(current_occurrence) %>
       </p>
