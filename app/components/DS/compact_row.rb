@@ -1,8 +1,8 @@
 class DS::CompactRow < DesignSystemComponent
   # Shared flex/fixed-width shell for the compact transaction/trade/valuation/
-  # split-parent rows. Extracted so the date, lock-icon, and balance columns
-  # stay pixel-aligned across every row type instead of being hand-copied
-  # (and drifting) in each partial.
+  # split-parent rows (and their matching column header). Extracted so the
+  # date, lock-icon, and balance columns stay pixel-aligned across every row
+  # type instead of being hand-copied (and drifting) in each partial.
   #
   #   <%= render DS::CompactRow.new(show_date: has_running_balance, show_balance: show_balance) do |row| %>
   #     <% row.with_checkbox { check_box_tag(...) } %>
@@ -13,6 +13,17 @@ class DS::CompactRow < DesignSystemComponent
   #     <% row.with_amount { ... } %>
   #     <% row.with_balance { format_money(running_balance) } %>
   #   <% end %>
+  #
+  # Pass `header: true` to render the same column shell as an uppercase,
+  # secondary-colored label row (used for the list's column headers), so
+  # header labels can never drift out of alignment with the data rows below
+  # them — both are built from the exact same column widths.
+  #
+  #   <%= render DS::CompactRow.new(header: true, show_date: true) do |row| %>
+  #     <% row.with_date { t("transactions.show.date_label") } %>
+  #     <% row.with_primary { t("transactions.list.transaction") } %>
+  #     ...
+  #   <% end %>
   renders_one :checkbox
   renders_one :date
   renders_one :primary
@@ -21,25 +32,33 @@ class DS::CompactRow < DesignSystemComponent
   renders_one :amount
   renders_one :balance
 
-  def initialize(show_date: false, show_balance: false, muted: false, indent: false, class: nil)
+  def initialize(show_date: false, show_balance: false, muted: false, indent: false, header: false, class: nil)
     @show_date = show_date
     @show_balance = show_balance
     @muted = muted
     @indent = indent
+    @header = header
     @extra_class = binding.local_variable_get(:class)
   end
 
   def row_classes
     class_names(
-      "group flex items-center gap-2 lg:gap-3 text-sm font-medium py-2 px-3",
-      @indent ? "pl-6 lg:pl-8" : nil,
-      @muted ? "opacity-50 text-secondary" : "text-primary",
+      "flex items-center gap-2 lg:gap-3",
+      @header ? "text-xs uppercase font-medium text-secondary" : row_type_classes,
       @extra_class
     )
   end
 
+  def checkbox_wrapper_classes
+    class_names(
+      "w-8 shrink-0 justify-center hidden lg:flex",
+      @header ? nil : "has-[input:not(.hidden)]:flex"
+    )
+  end
+
   erb_template <<~ERB
-      <div class="w-8 shrink-0 justify-center hidden lg:flex has-[input:not(.hidden)]:flex">
+    <div class="<%= row_classes %>">
+      <div class="<%= checkbox_wrapper_classes %>">
         <%= checkbox %>
       </div>
 
@@ -78,4 +97,13 @@ class DS::CompactRow < DesignSystemComponent
       <% end %>
     </div>
   ERB
+
+  private
+    def row_type_classes
+      class_names(
+        "group text-sm font-medium py-2 px-3",
+        @indent ? "pl-6 lg:pl-8" : nil,
+        @muted ? "opacity-50 text-secondary" : "text-primary"
+      )
+    end
 end
