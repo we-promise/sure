@@ -187,8 +187,9 @@ module Security::Provided
     :ok
   end
 
+  # Reuse or fetch a price only when its currency is safe for monetary calculations.
   def find_or_fetch_price(date: Date.current, cache: true)
-    price = prices.find_by(date: date)
+    price = prices.with_known_currency.find_by(date: date)
 
     return price if price.present?
 
@@ -206,10 +207,23 @@ module Security::Provided
     return nil unless response.success? # Provider error
 
     price = response.data
+    currency = Security::Price.normalized_currency(price.currency)
+    unless currency
+      DebugLogEntry.capture(
+        category: "security_price_fetch",
+        level: "warn",
+        message: "Ignored provider price with invalid currency",
+        source: self.class.name,
+        provider: price_data_provider,
+        metadata: { security_id: id, ticker: ticker, date: price.date, currency: price.currency }
+      )
+      return nil
+    end
+
     Security::Price.find_or_create_by!(
       security_id: self.id,
       date: price.date,
-      currency: price.currency
+      currency: currency
     ) { |record| record.price = price.price } if cache
     price
   end

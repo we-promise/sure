@@ -123,6 +123,7 @@ class CoinbaseAccount::HoldingsProcessor
         crypto_code
     end
 
+    # Choose a recognized-currency quote before calculating the holding value.
     def fetch_current_price
       # Try to get price from Coinbase's native_balance (USD equivalent) if available
       native_amount = coinbase_account.raw_payload&.dig("native_balance", "amount")
@@ -145,7 +146,7 @@ class CoinbaseAccount::HoldingsProcessor
 
       # Fall back to Security's latest price if available
       if (security = resolve_security)
-        latest_price = security.prices.order(date: :desc).first
+        latest_price = security.prices.with_known_currency.order(date: :desc).first
         return latest_price.price if latest_price.present?
       end
 

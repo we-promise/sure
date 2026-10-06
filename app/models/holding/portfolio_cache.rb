@@ -22,6 +22,7 @@ class Holding::PortfolioCache
     end
   end
 
+  # Select usable cached prices without letting malformed currencies abort portfolio valuation.
   def get_price(security_id, date, source: nil)
     security = @security_cache[security_id]
     raise SecurityNotFound.new(security_id, account.id) unless security
@@ -37,7 +38,7 @@ class Holding::PortfolioCache
     price = price_with_priority.price
     return nil unless price
 
-    price_money = Money.new(price.price, price.currency)
+    price_money = Money.new(price.price, Security::Price.normalized_currency(price.currency))
 
     begin
       converted_amount = price_money.exchange_to(account.currency, date: date).amount
@@ -157,7 +158,26 @@ class Holding::PortfolioCache
           []
         end
 
-        all_prices = db_prices + trade_prices + holding_prices
+        all_prices, invalid_prices = (db_prices + trade_prices + holding_prices).partition do |candidate|
+          Security::Price.normalized_currency(candidate.price.currency).present?
+        end
+
+        if invalid_prices.any?
+          DebugLogEntry.capture(
+            category: "security_price_fetch",
+            level: "warn",
+            message: "Ignored portfolio prices with invalid currency",
+            source: self.class.name,
+            account: account,
+            metadata: {
+              security_id: security.id,
+              ticker: security.ticker,
+              count: invalid_prices.size,
+              dates: invalid_prices.map { |candidate| candidate.price.date }.uniq.first(10),
+              sources: invalid_prices.map(&:source).uniq
+            }
+          )
+        end
 
         # Index by date for O(1) lookup in get_price instead of O(N) linear scan
         prices_by_date = all_prices.group_by { |p| p.price.date }

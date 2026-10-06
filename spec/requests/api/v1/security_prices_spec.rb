@@ -89,6 +89,7 @@ RSpec.describe 'API V1 Security Prices', type: :request do
 
   path '/api/v1/security_prices' do
     get 'List security price history referenced by family investment data' do
+      description 'Returns prices with recognized currency codes, normalized for legacy formatting; invalid-currency records are omitted.'
       tags 'Security Prices'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -100,7 +101,7 @@ RSpec.describe 'API V1 Security Prices', type: :request do
                 description: 'Filter by security ID',
                 schema: { type: :string, format: :uuid }
       parameter name: :currency, in: :query, required: false,
-                description: 'Filter by currency code',
+                description: 'Filter by normalized currency code, including legacy formatting',
                 schema: { type: :string }
       parameter name: :start_date, in: :query, required: false,
                 description: 'Filter prices from this date',
@@ -149,6 +150,7 @@ RSpec.describe 'API V1 Security Prices', type: :request do
               schema: { type: :string, format: :uuid }
 
     get 'Retrieve a security price referenced by family investment data' do
+      description 'Recognized legacy currency formatting is normalized in the response. Invalid-currency records are unavailable and return 404.'
       tags 'Security Prices'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'

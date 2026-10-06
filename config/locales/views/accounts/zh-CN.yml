@@ -70,6 +70,8 @@ zh-CN:
         title: 您希望如何添加？
       title: 您想添加什么？
     show:
+      invalid_price_currency_warning:
+        other: 有 %{count} 只证券的价格币种无效；账户估值可能使用旧价格或缺少相应证券的价值。请检查证券价格或联系管理员。
       limited_fx_history_warning: 汇率历史仅从 %{date} 起可用。该日期之前的交易将使用近似货币换算——当外汇提供商仅提供有限历史窗口时会出现这种情况。
       tabs:
         activity: 活动
