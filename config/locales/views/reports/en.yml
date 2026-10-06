@@ -139,6 +139,31 @@ en:
       total_liabilities: Liabilities
       no_assets: No assets
       no_liabilities: No liabilities
+    spending_vs_normal:
+      title: Spending vs normal
+      summary: "%{total} spent in this period. Normal for a period this long is %{normal}, based on %{baseline_start} to %{baseline_end}."
+      no_history: "%{total} spent in this period. There isn't enough earlier history yet to say what's normal."
+      no_history_short: Not enough earlier history to compare against yet.
+      no_spending: No spending in this period.
+      no_changes: Spending matched normal in every category.
+      treemap_title: Where it went
+      treemap_aria: Spending by category for the period, sized by amount and coloured by change against normal. Select a box to see its transactions.
+      changes_title: What changed
+      change_title: "%{category}: %{total} this period, normal %{normal}"
+      tooltip:
+        normal: "Normal:"
+        more: "More than normal by"
+        less: "Less than normal by"
+        no_normal: No earlier history to compare against
+        open: Select to see these transactions
+      legend:
+        much_less: 100%+ less
+        less: 50–100% less
+        slightly_less: 15–50% less
+        normal: About normal
+        slightly_more: 15–50% more
+        more: 50–100% more
+        much_more: 100%+ more
     investment_performance:
       title: Investment Performance
       portfolio_value: Portfolio Value
