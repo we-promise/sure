@@ -5,6 +5,7 @@ module Api
     class MerchantsController < BaseController
       before_action -> { authorize_scope!(:read) }, only: [ :index, :show ]
       before_action -> { authorize_scope!(:write) }, only: [ :create ]
+      before_action :reject_guest_writes!, only: [ :create ]
 
       def index
         family = current_resource_owner.family

@@ -54,6 +54,19 @@ class ApplicationController < ActionController::Base
       end
     end
 
+    # Guests are read-only by design (see ConnectorAuthorizable): they may view
+    # family-wide configuration but not change it.
+    def require_non_guest!
+      return unless Current.user&.guest?
+
+      respond_to do |format|
+        format.html { redirect_back_or_to root_path, alert: t("shared.require_non_guest") }
+        format.turbo_stream { head :forbidden }
+        format.json { head :forbidden }
+        format.any { head :forbidden }
+      end
+    end
+
     # Provider panels post from the page (connection row or drawer), so Turbo
     # asks for a stream without sending a Turbo-Frame header.
     def turbo_panel_request?

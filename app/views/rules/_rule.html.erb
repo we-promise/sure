@@ -64,18 +64,20 @@
   </div>
   <div class="flex items-center gap-4">
     <%= styled_form_with model: rule, namespace: "rule_#{rule.id}", data: { controller: "auto-submit-form" } do |f| %>
-      <%= f.toggle :active, { data: { auto_submit_form_target: "auto" } } %>
+      <%= f.toggle :active, { disabled: Current.user&.guest?, data: { auto_submit_form_target: "auto" } } %>
     <% end %>
-    <%= render DS::Menu.new do |menu| %>
-      <% menu.with_item(variant: "link", text: t(".edit"), href: edit_rule_path(rule), icon: "pencil", data: { turbo_frame: "modal" }) %>
-      <% menu.with_item(variant: "link", text: t(".re_apply_rule"), href: confirm_rule_path(rule), icon: "refresh-cw", data: { turbo_frame: "modal" }) %>
-      <% menu.with_item(
-        variant: "button",
-        text: t(".delete"),
-        href: rule_path(rule),
-        icon: "trash-2",
-        method: :delete,
-        confirm: CustomConfirm.for_resource_deletion("rule")) %>
+    <% unless Current.user&.guest? %>
+      <%= render DS::Menu.new do |menu| %>
+        <% menu.with_item(variant: "link", text: t(".edit"), href: edit_rule_path(rule), icon: "pencil", data: { turbo_frame: "modal" }) %>
+        <% menu.with_item(variant: "link", text: t(".re_apply_rule"), href: confirm_rule_path(rule), icon: "refresh-cw", data: { turbo_frame: "modal" }) %>
+        <% menu.with_item(
+          variant: "button",
+          text: t(".delete"),
+          href: rule_path(rule),
+          icon: "trash-2",
+          method: :delete,
+          confirm: CustomConfirm.for_resource_deletion("rule")) %>
+      <% end %>
     <% end %>
   </div>
 </div>

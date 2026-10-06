@@ -31,6 +31,7 @@ de:
     preview: Vorschau
     dot_separator: "·"
     require_admin: Das dürfen nur Admins
+    require_non_guest: Gäste können das nicht ändern
     sync_toast:
       message: Neue Daten verfügbar
       refresh: Aktualisieren

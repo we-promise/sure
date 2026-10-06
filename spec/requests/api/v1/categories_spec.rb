@@ -147,7 +147,7 @@ RSpec.describe 'API V1 Categories', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - api key missing read_write scope' do
+      response '403', 'forbidden - api key missing read_write scope, or guest user' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:read_only_api_key) do

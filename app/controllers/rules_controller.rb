@@ -1,6 +1,7 @@
 class RulesController < ApplicationController
   include StreamExtensions
 
+  before_action :require_non_guest!, except: :index
   before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index

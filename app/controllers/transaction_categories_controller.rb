@@ -55,6 +55,7 @@ class TransactionCategoriesController < ApplicationController
     end
 
     def needs_rule_notification?(transaction)
+      return false if Current.user.guest?
       return false if Current.user.rule_prompts_disabled
       return false if transaction.category_id.blank?
 

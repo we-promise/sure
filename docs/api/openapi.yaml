@@ -5592,7 +5592,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or guest user
           content:
             application/json:
               schema:
@@ -8070,6 +8070,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guest users cannot import merchants
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: missing file or invalid CSV
           content:
@@ -9211,6 +9217,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TagDetail"
+        '403':
+          description: guest users cannot modify tags
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: validation error - missing name
           content:

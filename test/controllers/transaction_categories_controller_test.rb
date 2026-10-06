@@ -30,4 +30,22 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_nil @transaction.reload.category_id
     assert_nil category.reload.last_used_at
   end
+
+  test "offers to create a rule after a category change" do
+    patch transaction_category_url(@entry),
+      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: categories(:income).id } } }
+
+    assert_equal "category_rule", flash[:cta][:type]
+  end
+
+  test "does not offer guests to create a rule they cannot save" do
+    @entry.account.update!(owner: family_guest)
+    sign_in family_guest
+
+    patch transaction_category_url(@entry),
+      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: categories(:income).id } } }
+
+    assert_equal categories(:income).id, @transaction.reload.category_id
+    assert_nil flash[:cta]
+  end
 end

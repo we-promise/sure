@@ -85,6 +85,24 @@ RSpec.describe 'API V1 Merchants', type: :request do
         run_test!
       end
 
+      response '403', 'guest users cannot import merchants' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:user) do
+          family.users.create!(
+            email: 'api-guest@example.com',
+            password: 'password123',
+            password_confirmation: 'password123',
+            role: 'guest'
+          )
+        end
+        let(:file) do
+          Rack::Test::UploadedFile.new(StringIO.new("name\nCoffee Shop"), 'text/csv', true, original_filename: 'merchants.csv')
+        end
+
+        run_test!
+      end
+
       response '422', 'missing file or invalid CSV' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:file) { nil }

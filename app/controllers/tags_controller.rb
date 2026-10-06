@@ -1,4 +1,5 @@
 class TagsController < ApplicationController
+  before_action :require_non_guest!, except: :index
   before_action :set_tag, only: %i[edit update destroy]
 
   def index
