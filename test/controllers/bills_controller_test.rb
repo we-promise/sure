@@ -100,6 +100,32 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Rent", response.body
   end
 
+  # Every row renders its frequency label, which reads the series'
+  # recurrence rules; they must be preloaded rather than fetched per row.
+  test "index loads recurrence rules once, not per bill" do
+    create_bill(name: "Rent", amount: 1200)
+    create_bill(name: "Internet", amount: 60)
+    create_bill(name: "Gym", amount: 40)
+
+    # The first visit materializes occurrences; measure a steady-state render.
+    get bills_url
+    assert_response :success
+
+    rule_queries = []
+    callback = lambda do |_name, _started, _finished, _unique_id, payload|
+      next if payload[:cached]
+      rule_queries << payload[:sql] if payload[:sql].match?(/SELECT "recurrence_rules"\.\*/)
+    end
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get bills_url
+    end
+
+    assert_response :success
+    assert_operator rule_queries.size, :<=, 1,
+      "expected recurrence_rules to be preloaded, got #{rule_queries.size} queries"
+  end
+
   # A bill is something you owe. Income is not owed, an internal transfer is not owed,
   # and a paused row was explicitly set aside, so none of them belong on the list.
   test "index excludes income and inactive rows but shows debt payments" do
