@@ -36,6 +36,13 @@ class Rule::ActionExecutor
     true
   end
 
+  # Whether this action can change anything with the given value. An action
+  # that cannot (e.g. its category was deleted) claims nothing, so it doesn't
+  # keep the rules below it from setting the field.
+  def actionable?(value)
+    true
+  end
+
   def execute(scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     raise NotImplementedError, "Action executor #{self.class.name} must implement #execute"
   end

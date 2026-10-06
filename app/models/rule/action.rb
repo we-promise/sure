@@ -57,7 +57,7 @@ class Rule::Action < ApplicationRecord
   end
 
   def reserves_claimed_attributes?
-    executor.reserves_claimed_attributes?
+    executor.reserves_claimed_attributes? && executor.actionable?(value)
   end
 
   def value_display

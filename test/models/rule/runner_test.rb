@@ -55,6 +55,27 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal "Whole Foods", @whole_foods.entry.name
   end
 
+  test "a rule above whose category was deleted does not claim the field" do
+    deleted = @family.categories.create!(name: "Deleted")
+    create_rule("Top", "Whole Foods", category: deleted)
+    create_rule("Bottom", "Whole Foods", category: @dining)
+    deleted.destroy!
+
+    run_active_rules
+
+    assert_equal @dining, @whole_foods.reload.category
+  end
+
+  test "a rule above with a blank name does not claim the name" do
+    top = create_rule("Top", "Whole Foods", name: "Placeholder")
+    top.actions.first.update_column(:value, "")
+    create_rule("Bottom", "Whole", name: "Whole Foods")
+
+    run_active_rules
+
+    assert_equal "Whole Foods", @whole_foods.reload.entry.name
+  end
+
   test "stop processing keeps rules further down away from matched transactions" do
     create_rule("Top", "Whole Foods", category: @groceries, stop_processing: true)
     create_rule("Bottom", "o", name: "Renamed")

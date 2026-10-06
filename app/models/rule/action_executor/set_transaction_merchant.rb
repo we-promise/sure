@@ -11,6 +11,10 @@ class Rule::ActionExecutor::SetTransactionMerchant < Rule::ActionExecutor
     [ :merchant_id ]
   end
 
+  def actionable?(value)
+    family.merchants.exists?(id: value)
+  end
+
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     merchant = family.merchants.find_by_id(value)
     return 0 unless merchant
