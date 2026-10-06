@@ -44,7 +44,10 @@ class DS::CompactRow < DesignSystemComponent
   def row_classes
     class_names(
       "flex items-center gap-2 lg:gap-3",
-      @header ? "text-xs uppercase font-medium text-secondary" : row_type_classes,
+      # Header labels must start at the same x as row content: the header
+      # sits in an outer px-2 wrapper, so the header shell needs its own
+      # px-2 to reach the 16px inset of data rows (outer p-1 + row px-3).
+      @header ? "text-xs uppercase font-medium text-secondary px-2" : row_type_classes,
       @extra_class
     )
   end

@@ -63,7 +63,53 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     assert checkbox.visible?, "row checkbox should become visible after tapping the toggle button"
   end
 
+  test "flat header labels align with row columns on desktop transactions page" do
+    @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
+    page.current_window.resize_to(1400, 900)
+
+    visit transactions_url
+
+    offsets = header_row_offsets("transactions", dom_id(@entry))
+
+    assert_in_delta offsets["headerDate"], offsets["rowDate"], 1.0, "DATE header label is not aligned with row dates"
+    assert_in_delta offsets["headerTxn"], offsets["rowTxn"], 1.0, "TRANSACTION header label is not aligned with row names"
+  end
+
+  test "flat header labels align with row columns on desktop account activity" do
+    @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
+    page.current_window.resize_to(1400, 900)
+
+    visit account_url(accounts(:depository), tab: "activity")
+
+    frame_id = dom_id(accounts(:depository), "entries")
+    offsets = header_row_offsets(frame_id, dom_id(@entry))
+
+    assert_in_delta offsets["headerDate"], offsets["rowDate"], 1.0, "DATE header label is not aligned with row dates"
+    assert_in_delta offsets["headerTxn"], offsets["rowTxn"], 1.0, "TRANSACTION header label is not aligned with row names"
+  end
+
   private
+    # Measures the left x-position of the DATE / TRANSACTION header labels
+    # and of the first data row's date cell / name link, so we can assert
+    # the header columns line up with the rows below them. Label matching
+    # is case-insensitive because the header uppercases via CSS.
+    def header_row_offsets(root_id, row_frame_id)
+      page.evaluate_script(<<~JS, root_id, row_frame_id)
+        ((rootId, frameId) => {
+          const root = document.getElementById(rootId);
+          const up = (el) => el.textContent.trim().toUpperCase();
+          const dateCells = [...root.querySelectorAll('div[class*="w-[110px]"]')];
+          const headerDate = dateCells.find((el) => up(el) === "DATE");
+          const header = headerDate.closest("div.uppercase");
+          const headerTxn = [...header.querySelectorAll("div")].find((el) => el.children.length === 0 && up(el) === "TRANSACTION");
+          const rowDate = dateCells.find((el) => el !== headerDate && /\\d/.test(el.textContent));
+          const rowLink = document.querySelector(`turbo-frame#${frameId} a`);
+          const left = (el) => el.getBoundingClientRect().left;
+          return { headerDate: left(headerDate), rowDate: left(rowDate), headerTxn: left(headerTxn), rowTxn: left(rowLink) };
+        })(arguments[0], arguments[1])
+      JS
+    end
+
     def ensure_tailwind_build
       return if self.class.instance_variable_defined?(:@tailwind_css_built)
 
