@@ -89,7 +89,7 @@ class AccountsController < ApplicationController
     # date beside a table shaded against another.
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
-    @q = params.fetch(:q, {}).permit(:search, :uncategorized, :start_date, :end_date, :amount, :amount_operator, status: [], categories: [], merchants: [], tags: [], types: [])
+    @q = params.fetch(:q, {}).permit(:search, :uncategorized, :start_date, :end_date, :amount, :amount_operator, status: [], categories: [], merchants: [], tags: [], types: [], ai_status: [])
     # Base entries for the account
     entries = @account.entries.excluding_split_parents
     # Search / date / amount / status / uncategorized via EntrySearch
