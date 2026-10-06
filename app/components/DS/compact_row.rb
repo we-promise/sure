@@ -32,9 +32,10 @@ class DS::CompactRow < DesignSystemComponent
   renders_one :amount
   renders_one :balance
 
-  def initialize(show_date: false, show_balance: false, muted: false, indent: false, header: false, class: nil)
+  def initialize(show_date: false, show_balance: false, show_notes: true, muted: false, indent: false, header: false, class: nil)
     @show_date = show_date
     @show_balance = show_balance
+    @show_notes = show_notes
     @muted = muted
     @indent = indent
     @header = header
@@ -73,13 +74,15 @@ class DS::CompactRow < DesignSystemComponent
         <%= primary %>
       </div>
 
-      <div class="hidden lg:flex min-w-0 flex-[2] px-2">
-        <% if notes? %>
-          <%= notes %>
-        <% else %>
-          <span class="text-secondary/40 text-sm">—</span>
-        <% end %>
-      </div>
+      <% if @show_notes %>
+        <div class="hidden lg:flex min-w-0 flex-[2] px-2">
+          <% if notes? %>
+            <%= notes %>
+          <% else %>
+            <span class="text-secondary/40 text-sm">—</span>
+          <% end %>
+        </div>
+      <% end %>
 
       <div class="hidden md:flex min-w-0 items-center gap-1 flex-[1]">
         <% if category? %>

@@ -2,11 +2,12 @@
 <% trade = entry.entryable %>
 <% show_date = flat %>
 <% show_balance = flat && view_ctx == "account" && !hide_balance %>
+<% show_notes = Current.user.transactions_show_notes? %>
 <% drawer_params = { view_ctx: view_ctx, is_filtered: is_filtered } %>
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(trade) do %>
-    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, indent: in_split_group, muted: entry.excluded) do |row| %>
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, indent: in_split_group, muted: entry.excluded) do |row| %>
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             class: "checkbox checkbox--light hidden lg:block",
@@ -42,7 +43,7 @@
         </div>
       <% end %>
 
-      <% if entry.notes.present? %>
+      <% if show_notes && entry.notes.present? %>
         <% row.with_notes do %>
           <span class="truncate block text-sm text-secondary privacy-sensitive" title="<%= entry.notes %>"><%= entry.notes %></span>
         <% end %>

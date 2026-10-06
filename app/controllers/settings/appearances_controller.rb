@@ -40,6 +40,10 @@ class Settings::AppearancesController < ApplicationController
         updated_prefs["transactions_group_by_date"] = params.dig(:user, :transactions_group_by_date) == "1"
       end
 
+      if params.dig(:user, :transactions_show_notes)
+        updated_prefs["transactions_show_notes"] = params.dig(:user, :transactions_show_notes) == "1"
+      end
+
       if params.dig(:user, :transactions_per_page)
         per_page = params.dig(:user, :transactions_per_page).to_i
         allowed = [ 10, 20, 30, 50, 100 ]

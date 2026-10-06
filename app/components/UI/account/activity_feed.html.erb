@@ -168,7 +168,7 @@
         <% if compact? %>
           <% if !group_by_date %>
             <div class="bg-container-inset rounded-xl px-2 py-2 mb-2">
-              <%= render DS::CompactRow.new(header: true, show_date: true, show_balance: !filtered?) do |row| %>
+              <%= render DS::CompactRow.new(header: true, show_date: true, show_balance: !filtered?, show_notes: Current.user.transactions_show_notes?) do |row| %>
                 <% row.with_checkbox do %>
                   <%= check_box_tag "selection_entry",
                                     class: "checkbox checkbox--light hidden lg:block",
@@ -179,7 +179,7 @@
                 <% end %>
                 <% row.with_date { t("transactions.show.date_label") } %>
                 <% row.with_primary { t("transactions.list.transaction") } %>
-                <% row.with_notes { t("transactions.show.notes") } %>
+                <% row.with_notes { t("transactions.show.notes") } if Current.user.transactions_show_notes? %>
                 <% row.with_category { t("transactions.form.category_label") } %>
                 <% row.with_amount { t("transactions.show.amount") } %>
                 <% row.with_balance { t("accounts.show.activity.balance") } unless filtered? %>
@@ -187,7 +187,7 @@
             </div>
           <% else %>
             <div class="bg-container-inset rounded-xl px-2 py-2 mb-2">
-              <%= render DS::CompactRow.new(header: true) do |row| %>
+              <%= render DS::CompactRow.new(header: true, show_notes: Current.user.transactions_show_notes?) do |row| %>
                 <% row.with_checkbox do %>
                   <%= check_box_tag "selection_entry",
                                     class: "checkbox checkbox--light hidden lg:block",
@@ -197,7 +197,7 @@
                                     } %>
                 <% end %>
                 <% row.with_primary { t("transactions.list.transaction") } %>
-                <% row.with_notes { t("transactions.show.notes") } %>
+                <% row.with_notes { t("transactions.show.notes") } if Current.user.transactions_show_notes? %>
                 <% row.with_category { t("transactions.form.category_label") } %>
                 <% row.with_amount { t("transactions.show.amount") } %>
               <% end %>

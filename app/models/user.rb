@@ -726,6 +726,10 @@ class User < ApplicationRecord
     preferences&.dig("transactions_group_by_date") != false
   end
 
+  def transactions_show_notes?
+    preferences&.dig("transactions_show_notes") == true
+  end
+
   def transactions_per_page
     value = preferences&.dig("transactions_per_page").to_i
     [ 10, 20, 30, 50, 100 ].include?(value) ? value : nil

@@ -67,4 +67,14 @@ class DS::CompactRowTest < ViewComponent::TestCase
 
     assert_text "$100.00"
   end
+
+  test "skips the notes column entirely when show_notes is false" do
+    render_inline(DS::CompactRow.new(show_notes: false)) do |row|
+      row.with_primary { "Coffee" }
+      row.with_amount { "$5.00" }
+    end
+
+    # Only the category placeholder remains; the notes column is gone.
+    assert_selector "span.text-secondary\\/40", text: "—", count: 1
+  end
 end
