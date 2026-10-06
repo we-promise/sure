@@ -76,7 +76,7 @@ en:
       pulse_next_seven: next 7 days
       pulse_bar_aria: "%{percent}% of this month's bills paid"
       next_up: Next up
-      view_upcoming: View upcoming
+      view_calendar: View calendar
       # The strip has a column to itself, so the date stands alone rather than
       # reading as a sentence the way the row sublines do.
       date_today: Today
@@ -88,8 +88,6 @@ en:
       remaining: "%{amount} remaining"
       paid_headline: "%{amount} paid"
       cost_line: "Averages %{average} a payment, about %{annualized} a year"
-    pane:
-      close: Collapse details
     add_bill: Add bill
     manage: Manage
     find_payment: Find payment

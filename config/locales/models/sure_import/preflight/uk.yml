@@ -1,0 +1,6 @@
+---
+uk:
+  sure_import:
+    preflight:
+      missing_reference: 'Рядок %{line}: %{type} посилається на відсутнє значення %{field} %{value}.'
+      skipped_missing_reference: 'Рядок %{line}: %{type} посилається на відсутнє значення %{field} %{value}. Його буде пропущено під час імпорту.'

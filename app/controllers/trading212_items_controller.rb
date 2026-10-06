@@ -10,30 +10,9 @@ class Trading212ItemsController < ApplicationController
     if @trading212_item.save
       @trading212_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        render turbo_stream: [
-          turbo_stream.replace(
-            "trading212-providers-panel",
-            partial: "settings/providers/trading212_panel"
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @trading212_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "trading212-providers-panel",
-          partial: "settings/providers/trading212_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("trading212", alert: @trading212_item.errors.full_messages.join(", "))
     end
   end
 
@@ -45,30 +24,9 @@ class Trading212ItemsController < ApplicationController
     if @trading212_item.update(attrs.merge(status: :good))
       @trading212_item.sync_later unless @trading212_item.syncing?
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        render turbo_stream: [
-          turbo_stream.replace(
-            "trading212-providers-panel",
-            partial: "settings/providers/trading212_panel"
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("trading212", notice: t(".success"), fallback_path: accounts_path)
     else
-      @error_message = @trading212_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "trading212-providers-panel",
-          partial: "settings/providers/trading212_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("trading212", alert: @trading212_item.errors.full_messages.join(", "))
     end
   end
 
@@ -80,6 +38,7 @@ class Trading212ItemsController < ApplicationController
 
   def sync
     @trading212_item.sync_later unless @trading212_item.syncing?
+    return render_provider_panel("trading212", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }

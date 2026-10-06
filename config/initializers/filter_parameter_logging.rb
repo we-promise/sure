@@ -8,6 +8,12 @@ Rails.application.config.filter_parameters += [
   :client_id, :consumer_key, :snaptrade_user_id, :snaptrade_user_secret,
   :oauth_access_token, :oauth_refresh_token, :code_verifier, :code_challenge,
   /\Apin\z/i,
+  # One-time codes that act as credentials: MFA TOTP/backup codes, OAuth and
+  # bank authorization codes and the desktop SSO exchange all arrive as
+  # "code". Anchored so currency_code, country_code and postal_code stay
+  # readable. linking_code binds a mobile SSO login to an account,
+  # invite_code opens registration, and access_url is SimpleFIN's credential.
+  /\Acode\z/i, :linking_code, :invite_code, :access_url,
   # A device code redeems into tokens on its own, so it is a bearer credential in
   # transit; verification_uri_complete embeds the user code, hence all three.
   :device_code, :user_code, :verification_uri_complete,

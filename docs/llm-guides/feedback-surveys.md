@@ -5,7 +5,7 @@ deployment behavior, privacy boundaries, and the first implementation's event
 catalog and counting rules.
 
 Use `feedback_config(:feature_name)` from `FeedbackHelper` to select a survey.
-Project routing belongs in this helper and `config/initializers/posthog.rb`;
+Project routing belongs in this helper and `config/initializers/00_posthog.rb`;
 question wording, response mapping, UI, and events belong to the feature.
 
 ## Configuration

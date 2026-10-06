@@ -1,14 +1,14 @@
 require "posthog"
 
 Rails.configuration.x.posthog = ActiveSupport::OrderedOptions.new
-# Explicit opt-in for local browser testing; production behavior is unchanged.
+# Explicit opt-in for local analytics testing; production remains enabled.
 Rails.configuration.x.posthog.development_enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch("POSTHOG_DEVELOPMENT_ENABLED", "false"))
 Rails.configuration.x.posthog.api_key = ENV["POSTHOG_KEY"].presence
 # .presence (not .fetch) so an explicitly-blank POSTHOG_HOST="" still falls
 # back to the default instead of reaching PostHog::Client as an empty string.
 Rails.configuration.x.posthog.host = ENV["POSTHOG_HOST"].presence || "https://us.i.posthog.com"
 Rails.configuration.x.posthog.feedback_enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch("POSTHOG_FEEDBACK_ENABLED", "true"))
-# Public client configuration for the shared self-hosted feedback project.
+# Public client configuration for shared feedback, including self-hosted Sankey.
 # This write-only project token is safe to distribute; it is not an admin key.
 # https://posthog.com/docs/api
 Rails.configuration.x.posthog.self_hosted_feedback_project = {
@@ -55,4 +55,15 @@ if Rails.configuration.x.posthog.enabled
     host: Rails.configuration.x.posthog.host,
     on_error: Proc.new { |status, msg| puts "PostHog error: #{status} - #{msg}" }
   })
+end
+
+# Daily UI usage shares the bundled feedback destination, independently of any
+# installation-owned analytics project. Capture also checks these gates.
+feedback_config = Rails.configuration.x.posthog
+if feedback_config.feedback_enabled && (Rails.env.production? || (Rails.env.development? && feedback_config.development_enabled))
+  $posthog_feedback = PostHog::Client.new(
+    feedback_config.self_hosted_feedback_project.merge(
+      on_error: Proc.new { |status, _msg| Rails.logger.debug("PostHog feedback capture failed (status #{status})") }
+    )
+  )
 end
