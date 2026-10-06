@@ -1,16 +1,23 @@
-<%# locals: (suggested:) %>
+<%# locals: (suggested:, income: false) %>
 <%# Detection proposes, the user disposes. Rendered from both the Bills
     overview and Settings -> Recurring, so every key is absolutely scoped.
 
     Collapsible because this sits above the bills the user actually came to
     see. Someone who is not ready to triage nine guesses should be able to fold
     them away and still find their rent, and have that stick. %>
+<%
+  title, confirm, dismiss = if income
+    [ t("recurring_transactions.suggested_income.title"), t("recurring_transactions.suggested_income.confirm"), t("recurring_transactions.suggested_income.dismiss") ]
+  else
+    [ t("recurring_transactions.suggested.title"), t("recurring_transactions.suggested.confirm"), t("recurring_transactions.suggested.dismiss") ]
+  end
+%>
 <%= render DS::Disclosure.new(
   variant: :card_inset,
   open: true,
   data: {
     controller: "persisted-disclosure",
-    persisted_disclosure_key_value: "bills-suggested"
+    persisted_disclosure_key_value: income ? "income-suggested" : "bills-suggested"
   }
 ) do |disclosure| %>
   <% disclosure.with_summary_content do %>
@@ -19,7 +26,7 @@
                 class: "transition-transform group-open:rotate-90" %>
 
       <p class="text-xs font-medium text-secondary uppercase">
-        <%= t("recurring_transactions.suggested.title") %>
+        <%= title %>
       </p>
 
       <%= render DS::Pill.new(label: suggested.size.to_s, tone: :neutral, marker: false) %>
@@ -43,13 +50,13 @@
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <%= render DS::Link.new(
-            text: t("recurring_transactions.suggested.confirm"),
+            text: confirm,
             variant: "primary",
             href: confirm_recurring_transaction_path(suggestion),
             method: :post
           ) %>
           <%= render DS::Link.new(
-            text: t("recurring_transactions.suggested.dismiss"),
+            text: dismiss,
             variant: "ghost",
             href: dismiss_recurring_transaction_path(suggestion),
             method: :post
