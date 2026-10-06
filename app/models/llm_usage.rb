@@ -172,7 +172,7 @@ class LlmUsage < ApplicationRecord
   def self.find_pricing(provider, model)
     return nil unless PRICING.key?(provider)
 
-    model = model.delete_prefix("google/") if provider == "google"
+    model = model.delete_prefix("#{provider}/")
 
     provider_pricing = PRICING[provider]
 
