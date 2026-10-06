@@ -107,8 +107,9 @@ tr:
         one: Son ödeme tarihinden %{count} gün sonra
         other: Son ödeme tarihinden %{count} gün sonra
     attention:
+      paused: Duraklatıldı
       needs_review: Eşleşme incelenmeli
-      partial: Kısmi · %{amount} kaldı
+      partial: Kısmi
       amount_changed: Tutar değişti
       overdue:
         one: '%{count} gün gecikmiş'
@@ -120,7 +121,7 @@ tr:
     cancelled_still_scheduled: Bunu %{date} tarihinde iptal edildi olarak işaretlediniz, ancak hâlâ planlı olduğu için gelecekteki faturalar görünmeye devam edecek.
     paid_over: '%{paid} ödendi, beklenenden fazla'
     remaining_label: kalan
-    debt_payment: ' · borç ödemesi'
+    debt_payment: Borç ödemesi
     paid_from: '%{account} hesabından'
     amount_range: '%{min} ile %{max} arasında değişir'
     possible_duplicate: Olası mükerrer

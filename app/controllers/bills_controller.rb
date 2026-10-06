@@ -53,20 +53,20 @@ class BillsController < ApplicationController
     active_open, @dormant = open_occurrences.partition { |occurrence| occurrence.recurring_transaction.active? }
 
     @overdue, upcoming = active_open.partition { |occurrence| occurrence.derived_state == :overdue }
-    this_month, later = upcoming.partition { |occurrence| occurrence.due_on <= month_end }
-    @this_month = this_month.sort_by(&:due_on)
-    @overdue = @overdue.sort_by(&:due_on)
-    @dormant = @dormant.sort_by(&:due_on)
+    # Snooze-aware, like the rail (bills_row_date): rows list in rail order,
+    # and a bill snoozed past the month's end belongs after it.
+    @this_month, later = upcoming.partition { |occurrence| occurrence.effective_due_on <= month_end }
+    @overdue = @overdue.sort_by(&:effective_due_on)
+    @dormant = @dormant.sort_by(&:effective_due_on)
 
     # Beyond this month, one row per series: a weekly bill's next six
     # occurrences are not six separate things to think about yet.
     @later = later.group_by(&:recurring_transaction_id)
                   .values
-                  .map { |group| group.min_by(&:due_on) }
-                  .sort_by(&:due_on)
+                  .map { |group| group.min_by(&:effective_due_on) }
+                  .sort_by(&:effective_due_on)
 
     @paid_this_month = closed.select { |occurrence| occurrence.paid? && occurrence.due_on >= today.beginning_of_month }
-                             .sort_by(&:due_on)
 
     compute_kpis(today, month_end)
 
@@ -87,7 +87,7 @@ class BillsController < ApplicationController
 
     # The month as one chronological list, paid rows in place under a check.
     # Overdue rows are excluded: they get their own section.
-    @month_rows = (@this_month + @paid_this_month).sort_by(&:due_on)
+    @month_rows = (@this_month + @paid_this_month).sort_by(&:effective_due_on)
 
     # Next up filters on the DATE, not derived_state: a bill two days late is
     # still :due within its grace period, and nothing already past its due date
@@ -446,12 +446,13 @@ class BillsController < ApplicationController
 
     def payable_occurrences
       # Price changes ride along because bills_attention_reason asks every
-      # row whether its amount changed recently.
+      # row whether its amount changed recently, and recurrence rules because
+      # every row's subline names its schedule.
       Current.family.recurring_occurrences
              .where(recurring_transaction_id: payable_series_ids)
              .where("due_on >= ? OR status = 'scheduled'", Date.current.beginning_of_month)
              .where("due_on <= ?", Date.current + 90)
-             .includes(recurring_transaction: [ :merchant, :recurring_price_changes ])
+             .includes(recurring_transaction: [ :merchant, :recurring_price_changes, :recurrence_rules ])
              .to_a
     end
 
@@ -502,29 +503,18 @@ class BillsController < ApplicationController
     # the same news. Notices used to sort by date ascending, which put the
     # oldest and smallest first and buried the one thing you could still act on.
     TRIAL_URGENT_DAYS = 3
-    MATERIAL_PRICE_SHIFT = 0.10
 
     Notice = Data.define(:kind, :series, :date, :detail) do
       def urgent?
         case kind
         when :trial then date <= Date.current + TRIAL_URGENT_DAYS
-        when :price then price_shift >= MATERIAL_PRICE_SHIFT
+        when :price then detail.material?
         else false
         end
       end
 
-      # How far a price moved, as a fraction of what it was. A dollar on a
-      # ten-dollar subscription is worth saying; a dollar on the rent is not.
-      def price_shift
-        return 0 unless kind == :price && detail&.previous_amount.to_d.positive?
-
-        ((detail.new_amount - detail.previous_amount).abs / detail.previous_amount).to_f
-      end
-
       def price_percent
-        return 0 unless kind == :price && detail&.previous_amount.to_d.positive?
-
-        ((detail.new_amount - detail.previous_amount) / detail.previous_amount * 100).round
+        kind == :price ? (detail.shift * 100).round : 0
       end
 
       # Nearness to today in either direction: a change three days ago and a
