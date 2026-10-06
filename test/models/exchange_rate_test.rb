@@ -172,6 +172,21 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal %w[KRW], ExchangeRate.currencies_without_rate(%w[JPY KRW], to: "USD")
   end
 
+  # A stored 0 on the day, or within the lookback, used to be returned as
+  # found, so the provider was never asked and the currency fell out of totals
+  # though a usable rate was one call away. The provider's answer also replaces
+  # the unusable row.
+  test "find_or_fetch_rate asks the provider past a stored rate of zero or below, and repairs it" do
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 2.days.ago.to_date, rate: -1)
+    @provider.expects(:fetch_exchange_rate).once.returns(
+      provider_success_response(OpenStruct.new(from: "JPY", to: "USD", date: Date.current, rate: 0.0067))
+    )
+
+    assert_equal 0.0067, ExchangeRate.rates_for(%w[JPY], to: "USD")["JPY"].to_f
+    assert_equal BigDecimal("0.0067"), ExchangeRate.find_by(from_currency: "JPY", to_currency: "USD", date: Date.current).rate
+  end
+
   test "rates_for converts the target currency itself at 1" do
     @provider.expects(:fetch_exchange_rate).never
 

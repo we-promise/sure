@@ -11,8 +11,11 @@ module ExchangeRate::Provided
     # Maximum number of days to look back for a cached rate before calling the provider.
     NEAREST_RATE_LOOKBACK_DAYS = 5
 
+    # A stored rate of zero or below is skipped, as everywhere else (see
+    # #usable_rates), so the provider is still asked; its answer replaces the
+    # unusable row rather than leaving it to be skipped on every request.
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
-      rate = find_by(from_currency: from, to_currency: to, date: date)
+      rate = usable_rates.find_by(from_currency: from, to_currency: to, date: date)
       return rate if rate.present?
 
       # Reuse the nearest recently-cached rate before hitting the provider.
@@ -20,7 +23,7 @@ module ExchangeRate::Provided
       # (e.g. Friday for a Saturday request) and save it under that date, so
       # subsequent requests for the weekend date always miss the exact lookup
       # and trigger redundant API calls.
-      nearest = where(from_currency: from, to_currency: to)
+      nearest = usable_rates.where(from_currency: from, to_currency: to)
                   .where(date: (date - NEAREST_RATE_LOOKBACK_DAYS)..date)
                   .order(date: :desc)
                   .first
@@ -34,13 +37,16 @@ module ExchangeRate::Provided
 
       rate = response.data
       begin
-        ExchangeRate.find_or_create_by!(
-          from_currency: rate.from,
-          to_currency: rate.to,
-          date: rate.date
-        ) do |exchange_rate|
-          exchange_rate.rate = rate.rate
-        end if cache
+        if cache
+          stored = ExchangeRate.find_or_create_by!(
+            from_currency: rate.from,
+            to_currency: rate.to,
+            date: rate.date
+          ) do |exchange_rate|
+            exchange_rate.rate = rate.rate
+          end
+          stored.update!(rate: rate.rate) if !stored.rate.to_d.positive? && rate.rate.to_d.positive?
+        end
       rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
         # Race condition: another process inserted between our SELECT and INSERT.
         # RecordNotUnique = DB unique constraint; RecordInvalid = model uniqueness
