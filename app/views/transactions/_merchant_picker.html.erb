@@ -1,0 +1,37 @@
+<%# locals: (entry:, variant:) %>
+<% transaction = entry.transaction %>
+<% size = variant == "mobile" ? :sm : :lg %>
+<% wrapper_classes = variant == "mobile" ? "absolute -bottom-1 -right-1 z-10" : "relative shrink-0" %>
+
+<%= turbo_frame_tag dom_id(transaction, "merchant_picker_#{variant}"), class: wrapper_classes do %>
+  <% if can_annotate_account?(entry.account) && !transaction.transfer? %>
+    <%= form_with url: merchant_transaction_path(entry), method: :patch,
+                  scope: :merchant_update,
+                  data: { controller: "auto-submit-form" } do |form| %>
+      <%= render DS::MerchantSelect.new(
+            form: form,
+            method: :merchant_id,
+            merchants: [],
+            selected_id: transaction.merchant_id,
+            selected_merchant: transaction.merchant,
+            options_url: picker_options_family_merchants_path(entry_id: entry.id, selected_id: transaction.merchant_id, avatar_size: size),
+            include_blank: t("transactions.form.none"),
+            auto_submit: true,
+            variant: :avatar,
+            menu_placement: :down,
+            fallback_text: transaction.merchant&.name || entry.name,
+            size: size,
+            entry_id: entry.id
+          ) %>
+    <% end %>
+  <% elsif transaction.merchant&.display_logo_url.present? %>
+    <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.display_logo_url),
+                  class: "#{size == :sm ? "w-5 h-5" : "w-9 h-9"} rounded-full border border-secondary",
+                  title: [ transaction.merchant.name, transaction.merchant.website_url.presence ].compact.join(" · "),
+                  loading: "lazy" %>
+  <% else %>
+    <%= render DS::FilledIcon.new(variant: :text, text: transaction.merchant&.name || entry.name,
+                                  size: size, rounded: true,
+                                  description: transaction.merchant&.name || t("transactions.form.none")) %>
+  <% end %>
+<% end %>

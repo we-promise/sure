@@ -148,18 +148,18 @@ class Provider::Anthropic < Provider
     end
   end
 
-  def enhance_provider_merchants(merchants: [], model: "", family: nil, json_mode: nil)
+  def enhance_merchants(merchants: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
       raise Error, "Too many merchants to enhance. Max is 25 per request." if merchants.size > 25
 
       effective_model = model.presence || @default_model
 
       trace = create_langfuse_trace(
-        name: "anthropic.enhance_provider_merchants",
+        name: "anthropic.enhance_merchants",
         input: { merchants: merchants }
       )
 
-      result = ProviderMerchantEnhancer.new(
+      result = MerchantEnhancer.new(
         client,
         model: effective_model,
         merchants: merchants,

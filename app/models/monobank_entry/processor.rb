@@ -131,12 +131,8 @@ class MonobankEntry::Processor
       merchant_name = data[:description].to_s.strip.presence
       return nil unless merchant_name
 
-      provider_merchant_id = "monobank_merchant_#{Digest::MD5.hexdigest(merchant_name.downcase)}"
-
       @merchant ||= import_adapter.find_or_create_merchant(
-        provider_merchant_id: provider_merchant_id,
-        name: merchant_name,
-        source: "monobank"
+        name: merchant_name
       )
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.error "MonobankEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"

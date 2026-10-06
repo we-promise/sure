@@ -36,16 +36,9 @@ The Merchants API allows external applications to retrieve and bulk-import merch
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components, and security definitions.
 
-## Merchant types
+## Merchant ownership
 
-Sure supports two types of merchants:
-
-| Type | Description |
-| --- | --- |
-| `FamilyMerchant` | Merchants created and owned by the family. |
-| `ProviderMerchant` | Merchants from external providers (e.g., Plaid) assigned to transactions. |
-
-The `GET /api/v1/merchants` endpoint returns both types: all family merchants plus any provider merchants that are assigned to the family's transactions.
+Merchants are family-owned records. A merchant first discovered during a provider sync is added to that family's merchant collection and can be edited, merged, exported, and assigned just like a merchant created by a family member. Provider data may be used as an intermediate handoff during sync, but it does not become a separate persisted merchant record. Provider IDs and provider-specific merchant types are not exposed as separate merchant records.
 
 ## Merchant object
 
@@ -84,7 +77,7 @@ Example response:
   {
     "id": "550e8400-e29b-41d4-a716-446655440002",
     "name": "Starbucks",
-    "type": "ProviderMerchant",
+    "type": "FamilyMerchant",
     "created_at": "2024-01-12T14:30:00Z",
     "updated_at": "2024-01-12T14:30:00Z"
   }
@@ -110,7 +103,7 @@ When creating or updating transactions, you can assign a merchant using the `mer
 
 ## Importing merchants via CSV
 
-`POST /api/v1/merchants` accepts a `multipart/form-data` upload and bulk-creates `FamilyMerchant` records. Existing merchants with the same name are skipped (no update, no error).
+`POST /api/v1/merchants` accepts a `multipart/form-data` upload and bulk-creates family-owned merchant records. Existing merchants with the same name and website are reused (no update, no error).
 
 ### Request
 
@@ -166,7 +159,7 @@ Bookstore,,
 }
 ```
 
-`skipped` counts rows where a merchant with that name already exists for the family.
+`skipped` counts rows where a merchant with that name and website already exists for the family.
 
 ### Error responses for CSV import
 

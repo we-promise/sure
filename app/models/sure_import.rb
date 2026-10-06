@@ -65,7 +65,9 @@ class SureImport < Import
 
     def dry_run_totals_from_line_type_counts(counts)
       IMPORTABLE_NDJSON_TYPES.to_h do |record_type, entity_key|
-        [ entity_key, counts[record_type] || 0 ]
+        count = counts[record_type] || 0
+        count += counts["ProviderMerchant"] || 0 if record_type == "Merchant"
+        [ entity_key, count ]
       end
     end
 

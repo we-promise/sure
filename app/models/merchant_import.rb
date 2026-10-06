@@ -5,11 +5,12 @@ class MerchantImport < Import
         merchant_name = row.name.to_s.strip
         next if merchant_name.blank?
 
-        merchant = family.merchants.find_or_initialize_by(name: merchant_name)
+        merchant_website = row.merchant_website.presence
+        merchant = family.merchants.find_or_initialize_by(name: merchant_name, website_url: merchant_website)
         next unless merchant.new_record?
 
         merchant.color = row.merchant_color.presence || FamilyMerchant::COLORS.sample
-        merchant.website_url = row.merchant_website.presence
+        merchant.website_url = merchant_website
         merchant.save!
       end
     end

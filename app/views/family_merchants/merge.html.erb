@@ -27,8 +27,8 @@
                    data-filter-name="<%= merchant.name %>">
               <%= check_box_tag "source_ids[]", merchant.id, false, class: "rounded border-secondary" %>
               <div class="hidden lg:flex">
-                <% if merchant.logo_url.present? %>
-                  <%= image_tag Setting.transform_brand_fetch_url(merchant.logo_url),
+                <% if merchant.display_logo_url.present? %>
+                  <%= image_tag Setting.transform_brand_fetch_url(merchant.display_logo_url),
                       class: "w-6 h-6 rounded-full border border-secondary",
                       loading: "lazy" %>
                 <% else %>
@@ -42,9 +42,6 @@
                 <% end %>
               </div>
               <span class="text-sm text-primary"><%= merchant.name %></span>
-              <% if merchant.is_a?(ProviderMerchant) %>
-                <span class="text-xs text-subdued">(<%= merchant.source&.titleize %>)</span>
-              <% end %>
             </label>
           <% end %>
         </div>

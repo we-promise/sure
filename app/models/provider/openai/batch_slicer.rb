@@ -3,7 +3,7 @@ class Provider::Openai::BatchSlicer
 
   # Splits `items` into sub-batches that respect both a hard item cap and a
   # token-budget cap. Used by auto_categorize / auto_detect_merchants /
-  # enhance_provider_merchants so callers can pass larger batches and have the
+  # enhance_merchants so callers can pass larger batches and have the
   # provider fan them out to fit small-context models.
   def self.call(items, max_items:, max_tokens:, fixed_tokens: 0)
     items = Array(items)

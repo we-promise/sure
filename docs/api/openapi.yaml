@@ -1115,7 +1115,6 @@ components:
           type: string
           enum:
           - FamilyMerchant
-          - ProviderMerchant
         created_at:
           type: string
           format: date-time
@@ -3533,7 +3532,6 @@ components:
           - tags
           - taggings
           - merchants
-          - family_merchant_associations
           - provider_items
           - active_storage_attachments
           - plaid_items
@@ -3626,9 +3624,6 @@ components:
               type: integer
               minimum: 0
             merchants:
-              type: integer
-              minimum: 0
-            family_merchant_associations:
               type: integer
               minimum: 0
             provider_items:

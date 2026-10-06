@@ -25,11 +25,7 @@ class Merchant::Merger
     end
 
     def family_merchant_ids
-      @family_merchant_ids ||= begin
-        family_ids = family.merchants.pluck(:id)
-        assigned_ids = family.assigned_merchants.pluck(:id)
-        (family_ids + assigned_ids).uniq
-      end
+      @family_merchant_ids ||= family.merchants.pluck(:id)
     end
 
   public
@@ -49,8 +45,7 @@ class Merchant::Merger
         # Reassign family's transactions to target
         scope.update_all(merchant_id: target_merchant.id)
 
-        # Delete FamilyMerchant, keep ProviderMerchant (it may be used by other families)
-        source.destroy! if source.is_a?(FamilyMerchant)
+        source.destroy!
 
         @merged_count += 1
       end

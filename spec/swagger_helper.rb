@@ -628,7 +628,7 @@ RSpec.configure do |config|
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
-              type: { type: :string, enum: %w[FamilyMerchant ProviderMerchant] },
+              type: { type: :string, enum: %w[FamilyMerchant] },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' }
             }

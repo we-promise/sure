@@ -191,9 +191,7 @@ class FioEntry::Processor
       return nil if merchant_name.blank?
 
       import_adapter.find_or_create_merchant(
-        provider_merchant_id: "fio_merchant_#{Digest::MD5.hexdigest(merchant_name.downcase)}",
-        name: merchant_name,
-        source: "fio"
+        name: merchant_name
       )
     end
 

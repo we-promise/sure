@@ -1,64 +1,79 @@
 class FamilyMerchantsController < ApplicationController
   before_action :set_merchant, only: %i[edit update destroy]
+  before_action :set_entry_for_picker_options, only: :picker_options
+  before_action :set_entry_for_merchant_creation, only: %i[new create]
+
+  def picker_options
+    merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
+    render json: {
+      html: render_to_string(
+        partial: "DS/merchant_select/options",
+        formats: [ :html ],
+        locals: {
+          merchants: merchants,
+          selected_id: params[:selected_id].to_s,
+          include_blank: t("transactions.form.none"),
+          view_helpers: helpers,
+          avatar: true,
+          fallback_text: @entry.name,
+          avatar_size: %w[sm md lg].include?(params[:avatar_size]) ? params[:avatar_size].to_sym : :sm
+        }
+      )
+    }
+  end
 
   def index
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.merchants"), nil ] ]
 
-    # Show all merchants for this family
+    # There is one family-scoped merchant collection, including records first
+    # discovered through a provider sync.
     @all_family_merchants = Current.family.merchants.alphabetically
-    @all_provider_merchants = Current.family.assigned_merchants_for(Current.user).where(type: "ProviderMerchant").alphabetically
 
     family_scope = @all_family_merchants
-    if params[:family_search].is_a?(String) && params[:family_search].strip.present?
-      family_scope = family_scope.where("LOWER(name) LIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:family_search].strip.downcase)}%")
+    search = params[:family_search].presence || params[:provider_search]
+    if search.is_a?(String) && search.strip.present?
+      family_scope = family_scope.where("LOWER(name) LIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(search.strip.downcase)}%")
     end
 
-    provider_scope = @all_provider_merchants
-    if params[:provider_search].is_a?(String) && params[:provider_search].strip.present?
-      provider_scope = provider_scope.where("LOWER(name) LIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:provider_search].strip.downcase)}%")
-    end
-
-    # Show recently unlinked ProviderMerchants (within last 30 days)
-    # Exclude merchants that are already assigned to transactions (they appear in provider_merchants)
-    recently_unlinked_ids = FamilyMerchantAssociation
-      .where(family: Current.family)
-      .recently_unlinked
-      .pluck(:merchant_id)
-    assigned_ids = @all_provider_merchants.pluck(:id)
-    @unlinked_merchants = ProviderMerchant.where(id: recently_unlinked_ids - assigned_ids).alphabetically
-
-    @enhanceable_count = @all_provider_merchants.where(website_url: [ nil, "" ]).count
+    @enhanceable_count = @all_family_merchants.where(website_url: [ nil, "" ]).count
     @llm_available = Provider::Registry.get_provider(:openai).present?
 
     @pagy_family_merchants, @family_merchants = pagy(family_scope, page_param: :family_page, limit: safe_per_page)
-    @pagy_provider_merchants, @provider_merchants = pagy(provider_scope, page_param: :provider_page, limit: safe_per_page)
 
     render layout: "settings"
   end
 
   def new
-    @family_merchant = FamilyMerchant.new(family: Current.family)
+    @family_merchant = FamilyMerchant.new(family: Current.family, name: params[:name])
+    render layout: false if turbo_frame_request?
   end
 
   def create
     @family_merchant = FamilyMerchant.new(merchant_params.merge(family: Current.family))
 
     if @family_merchant.save
+      assign_created_merchant_to_entry if @entry
+
       respond_to do |format|
         format.html { redirect_to family_merchants_path, notice: t(".success") }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+        format.turbo_stream do
+          if @entry
+            render turbo_stream: merchant_assignment_streams
+          else
+            render turbo_stream: turbo_stream.action(:redirect, family_merchants_path)
+          end
+        end
         format.json { render json: merchant_json(@family_merchant), status: :created }
       end
     else
       respond_to do |format|
-        # No explicit format.turbo_stream branch: Turbo's form submissions send an
-        # Accept header that prefers turbo-stream, but forcing that format here would
-        # lock the response's Content-Type to turbo-stream while still rendering the
-        # plain :new HTML template — Turbo's client then sees a turbo-stream
-        # Content-Type with no <turbo-stream> tags in the body and does nothing.
-        # Leaving turbo-stream undeclared lets Rails' content negotiation fall back to
-        # format.html below, which renders :new with the correct text/html type.
-        format.html { render :new, status: :unprocessable_entity }
+        # Preserve the dialog in its modal frame on validation errors for both HTML
+        # frame submissions and Turbo Stream form submissions.
+        format.html { render :new, status: :unprocessable_entity, layout: turbo_frame_request? ? false : nil }
+        format.turbo_stream do
+          dialog = render_to_string(:new, formats: [ :html ], layout: false)
+          render turbo_stream: turbo_stream.replace("modal", dialog), status: :unprocessable_entity
+        end
         format.json { render json: { errors: @family_merchant.errors.full_messages }, status: :unprocessable_entity }
       end
     end
@@ -68,24 +83,12 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def update
-    if @merchant.is_a?(ProviderMerchant)
-      if merchant_params[:name].present? && merchant_params[:name] != @merchant.name
-        # Name changed — convert ProviderMerchant to FamilyMerchant for this family only
-        @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, merchant_params)
-        respond_to do |format|
-          format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
-          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
-        end
-      else
-        # Only website changed — update the ProviderMerchant directly
-        @merchant.update!(merchant_params.slice(:website_url))
-        @merchant.generate_logo_url_from_website!
-        respond_to do |format|
-          format.html { redirect_to family_merchants_path, notice: t(".success") }
-          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
-        end
-      end
-    elsif @merchant.update(merchant_params)
+    attributes = merchant_params
+    remove_logo_image = ActiveModel::Type::Boolean.new.cast(attributes.delete(:remove_logo_image))
+
+    if @merchant.update(attributes)
+      @merchant.logo_image.purge_later if remove_logo_image && @merchant.logo_image.attached?
+
       respond_to do |format|
         format.html { redirect_to family_merchants_path, notice: t(".success") }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
@@ -99,18 +102,12 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def destroy
-    if @merchant.is_a?(ProviderMerchant)
-      # Unlink from family's transactions only (don't delete the global merchant)
-      @merchant.unlink_from_family(Current.family)
-      redirect_to family_merchants_path, notice: t(".unlinked_success")
-    else
-      @merchant.destroy!
-      redirect_to family_merchants_path, notice: t(".success")
-    end
+    @merchant.destroy!
+    redirect_to family_merchants_path, notice: t(".success")
   end
 
   def enhance
-    cache_key = "enhance_provider_merchants:#{Current.family.id}"
+    cache_key = "enhance_family_merchants:#{Current.family.id}"
 
     already_running = !Rails.cache.write(cache_key, true, expires_in: 10.minutes, unless_exist: true)
 
@@ -118,7 +115,7 @@ class FamilyMerchantsController < ApplicationController
       return redirect_to family_merchants_path, alert: t(".already_running")
     end
 
-    EnhanceProviderMerchantsJob.perform_later(Current.family)
+    EnhanceFamilyMerchantsJob.perform_later(Current.family)
     redirect_to family_merchants_path, notice: t(".success")
   end
 
@@ -127,7 +124,6 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def perform_merge
-    # Scope lookups to merchants valid for this family (FamilyMerchants + assigned ProviderMerchants)
     valid_merchants = all_family_merchants
 
     target = valid_merchants.find_by(id: params[:target_id])
@@ -156,17 +152,51 @@ class FamilyMerchantsController < ApplicationController
   end
 
   private
+    def set_entry_for_picker_options
+      @entry = Current.accessible_entries
+        .where(entryable_type: "Transaction")
+        .find(params[:entry_id])
+      require_account_permission!(@entry.account, :annotate)
+    end
+
+    def set_entry_for_merchant_creation
+      return if params[:entry_id].blank?
+
+      @entry = Current.accessible_entries
+        .where(entryable_type: "Transaction")
+        .find(params[:entry_id])
+      require_account_permission!(@entry.account, :annotate)
+    end
+
+    def assign_created_merchant_to_entry
+      transaction = @entry.transaction
+      transaction.update!(merchant: @family_merchant)
+      @entry.lock_saved_attributes!
+      @entry.mark_user_modified!
+      transaction.lock_attr!(:merchant_id)
+      @entry.sync_account_later
+    end
+
+    def merchant_assignment_streams
+      transaction = @entry.transaction
+      streams = %i[desktop mobile].map do |variant|
+        turbo_stream.replace(
+          helpers.dom_id(transaction, "merchant_picker_#{variant}"),
+          partial: "transactions/merchant_picker",
+          locals: { entry: @entry, variant: variant }
+        )
+      end
+      streams << turbo_stream.replace("modal", helpers.turbo_frame_tag("modal"))
+      streams
+    end
+
     def set_merchant
-      # Find merchant that either belongs to family OR is assigned to family's transactions
-      @merchant = Current.family.merchants.find_by(id: params[:id]) ||
-                  Current.family.assigned_merchants.find(params[:id])
+      @merchant = Current.family.merchants.find(params[:id])
       @family_merchant = @merchant # For backwards compatibility with views
     end
 
     def merchant_params
-      # Handle both family_merchant and provider_merchant param keys
-      key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color, :website_url)
+      params.require(:family_merchant).permit(:name, :color, :website_url, :custom_logo_url, :logo_image, :remove_logo_image)
     end
 
     def merchant_json(merchant)
@@ -180,11 +210,6 @@ class FamilyMerchantsController < ApplicationController
     end
 
     def all_family_merchants
-      family_merchant_ids = Current.family.merchants.pluck(:id)
-      provider_merchant_ids = Current.family.assigned_merchants.where(type: "ProviderMerchant").pluck(:id)
-      combined_ids = (family_merchant_ids + provider_merchant_ids).uniq
-
-      Merchant.where(id: combined_ids)
-              .order(Arel.sql("LOWER(COALESCE(name, ''))"))
+      Current.family.merchants.order(Arel.sql("LOWER(COALESCE(name, ''))"))
     end
 end

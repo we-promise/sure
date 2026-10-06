@@ -150,12 +150,8 @@ class RedbarkAccount::Transactions::Processor
       merchant_name = data[:merchantName].to_s.strip
       return nil if merchant_name.blank?
 
-      merchant_id = Digest::SHA256.hexdigest(merchant_name.downcase)[0, 32]
-
       import_adapter.find_or_create_merchant(
-        provider_merchant_id: "redbark_merchant_#{merchant_id}",
-        name: merchant_name,
-        source: "redbark"
+        name: merchant_name
       )
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.error "RedbarkAccount::Transactions::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"
