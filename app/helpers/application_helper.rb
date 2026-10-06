@@ -169,6 +169,13 @@ module ApplicationHelper
     Money.new(number_or_money).format(options)
   end
 
+  # Presentation only: when opted in, mathematically negate balances for
+  # individual liability accounts. Asset values, liability totals, cash flows,
+  # history series and canonical API values keep their existing signs.
+  def balance_for_account_display(account, money = account.balance_money)
+    AccountBalancePresentation.balance_for_account_display(account, money)
+  end
+
   def totals_by_currency(collection:, money_method:, separator: " | ", negate: false)
     collection.group_by(&:currency)
               .transform_values { |item| calculate_total(item, money_method, negate) }

@@ -13,7 +13,7 @@ class Settings::PreferencesController < ApplicationController
   # UsersController#update flow (which expects a full user form payload).
   def update
     @user = Current.user
-    user_params = params.permit(user: [ :preview_features_enabled ]).fetch(:user, {})
+    user_params = params.permit(user: [ :preview_features_enabled, :negative_liability_balances ]).fetch(:user, {})
 
     @user.transaction do
       @user.lock!
@@ -21,6 +21,10 @@ class Settings::PreferencesController < ApplicationController
       if user_params.key?(:preview_features_enabled)
         updated_prefs["preview_features_enabled"] =
           ActiveModel::Type::Boolean.new.cast(user_params[:preview_features_enabled])
+      end
+      if user_params.key?(:negative_liability_balances)
+        updated_prefs["negative_liability_balances"] =
+          ActiveModel::Type::Boolean.new.cast(user_params[:negative_liability_balances])
       end
       @user.update!(preferences: updated_prefs)
     end

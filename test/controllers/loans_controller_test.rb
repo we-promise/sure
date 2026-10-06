@@ -228,6 +228,30 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_match "Total Interest", response.body
   end
 
+  test "the schedule changes liability ending balance sign without changing movements" do
+    payment = @account.loan.amortization_schedule.payments.first
+    assert payment, "the fixture loan must have a projected payment"
+    assert_operator payment.ending_balance.amount, :>, 0,
+      "the default projected liability balance is positive"
+    assert_not @user.negative_liability_balances?
+
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    default_cells = css_select("table tbody tr").first.css("td").map { |cell| cell.text.strip }
+    assert_equal format_money(payment.ending_balance), default_cells[5]
+
+    @user.update!(preferences: (@user.preferences || {}).merge("negative_liability_balances" => true))
+
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    opted_in_cells = css_select("table tbody tr").first.css("td").map { |cell| cell.text.strip }
+    assert_equal format_money(payment.ending_balance * -1), opted_in_cells[5]
+    assert_equal default_cells[2..4], opted_in_cells[2..4],
+      "payment, principal, and interest movements keep their existing signs"
+  end
+
   # A variable loan IS amortizable since #104, and a provider's own rate type
   # reads as variable since #100 decision 8, so the unamortizable case is now
   # a loan with no rate type at all.

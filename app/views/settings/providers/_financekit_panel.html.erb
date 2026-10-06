@@ -26,7 +26,7 @@
         <% connection[:accounts].each do |account| %>
           <li class="flex flex-wrap items-center justify-between gap-2 text-sm">
             <%= link_to account.name, account_path(account), class: "text-primary underline" %>
-            <span class="text-secondary"><%= format_money(account.balance_money) %></span>
+            <span class="text-secondary"><%= format_money balance_for_account_display(account) %></span>
           </li>
         <% end %>
       </ul>

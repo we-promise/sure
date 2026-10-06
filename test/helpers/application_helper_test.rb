@@ -104,6 +104,24 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "-$3.00 | €7.00", totals_by_currency(collection: [ @account1, @account2, @account3 ], money_method: :balance_money, negate: true)
   end
 
+  test "liability balance presentation negates only individual liability amounts for the current user" do
+    liability = accounts(:credit_card)
+    asset = accounts(:depository)
+    liability.update_column(:balance, -25)
+
+    Current.session = sessions(:one)
+    refute Current.user.negative_liability_balances?
+    assert_equal liability.balance_money, balance_for_account_display(liability)
+    assert_equal asset.balance_money, balance_for_account_display(asset)
+
+    Current.user.update!(preferences: { "negative_liability_balances" => true })
+    assert_equal liability.balance_money * -1, balance_for_account_display(liability)
+    assert_equal asset.balance_money, balance_for_account_display(asset)
+    assert_equal(-25, liability.reload.balance)
+  ensure
+    Current.reset
+  end
+
   test "#currency_picker_options_for_family returns enabled family currencies" do
     family = families(:dylan_family)
     family.update!(currency: "SGD", enabled_currencies: [ "USD" ])

@@ -25,6 +25,12 @@ class UI::Account::BalanceReconciliation < ApplicationComponent
     end
   end
 
+  def display_value(item)
+    return item[:value] unless item[:style].in?([ :start, :subtotal, :final ])
+
+    helpers.balance_for_account_display(account, item[:value])
+  end
+
   private
 
     def t_label(key)

@@ -58,7 +58,7 @@
         <div class="w-16 h-6 bg-loader rounded-full animate-pulse"></div>
       <% else %>
         <p class="text-sm font-medium privacy-sensitive <%= account.active? ? "text-primary" : "text-subdued" %>">
-          <%= format_money account.balance_money %>
+          <%= format_money balance_for_account_display(account) %>
         </p>
       <% end %>
 
