@@ -107,8 +107,9 @@ ca:
         one: '%{count} dia després del venciment'
         other: '%{count} dies després del venciment'
     attention:
+      paused: En pausa
       needs_review: Cal revisar la coincidència
-      partial: Parcial · %{amount} pendents
+      partial: Parcial
       amount_changed: L'import ha canviat
       overdue:
         one: Vençuda fa %{count} dia
@@ -120,7 +121,7 @@ ca:
     cancelled_still_scheduled: La vas marcar com a cancel·lada el %{date}, però encara està programada, així que continuaran apareixent factures futures.
     paid_over: Pagats %{paid}, més del previst
     remaining_label: pendents
-    debt_payment: · pagament de deute
+    debt_payment: Pagament de deute
     paid_from: des de %{account}
     amount_range: entre %{min} i %{max}
     possible_duplicate: Possible duplicat

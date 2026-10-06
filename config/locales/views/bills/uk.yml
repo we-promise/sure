@@ -119,8 +119,9 @@ uk:
         many: Через %{count} днів після строку
         other: Через %{count} дня після строку
     attention:
+      paused: Призупинено
       needs_review: Зіставлення потребує перевірки
-      partial: Частково · залишилося %{amount}
+      partial: Частково
       amount_changed: Сума змінилася
       overdue:
         one: Прострочено на %{count} день
@@ -134,7 +135,7 @@ uk:
     cancelled_still_scheduled: Ви позначили це як скасоване %{date}, але розклад досі активний, тому нові платежі й далі з'являтимуться.
     paid_over: Сплачено %{paid}, більше за очікуване
     remaining_label: залишилося
-    debt_payment: · погашення боргу
+    debt_payment: Погашення боргу
     paid_from: з рахунку %{account}
     amount_range: від %{min} до %{max}
     possible_duplicate: Можливий дублікат

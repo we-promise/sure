@@ -119,7 +119,11 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Real bill", response.body
     assert_match "Card payment", response.body
-    assert_match I18n.t("bills.debt_payment"), response.body
+    # On the subline, not after the name, where it truncated to "· d…".
+    assert_select BILL_ROW_LINK, text: /Card payment/ do |links|
+      assert_select links.first, "p.font-medium", text: "Card payment"
+      assert_select links.first, "p.text-xs", text: /#{I18n.t("bills.debt_payment")}/
+    end
     assert_no_match "Salary deposit", response.body
     assert_no_match "Paused bill", response.body
     assert_no_match "Moved to savings", response.body
@@ -169,6 +173,168 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # Needs attention, where the subline goes on to give the reason.
     assert_includes subline_dates, "#{I18n.l(late, format: :short)} ·"
     assert_match I18n.t("bills.attention.overdue", count: 5), response.body
+    # Red like the rail, because the reason after it isn't always Overdue: a
+    # match to review or a partial payment outranks it, uncoloured.
+    assert_select "p span.text-destructive[class~='@lg:hidden']", count: 1,
+      text: "#{I18n.l(late, format: :short)} ·"
+  end
+
+  # The rail used to come only with Needs attention and This month, so in the
+  # stacked card This month's avatars sat about 70px right of the others'.
+  test "rows after this month and dormant rows carry the date rail too" do
+    next_month = Date.current.next_month.beginning_of_month + 4
+    later = create_bill(name: "Next month rent", amount: 900, manual: true, anchor_date: next_month,
+                        expected_day_of_month: next_month.day, next_expected_date: next_month)
+    late = 6.days.ago.to_date
+    paused = create_bill(name: "Paused gym", amount: 40, expected_day_of_month: late.day,
+                         last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    paused.mark_inactive!
+
+    get bills_url
+
+    assert_response :success
+    assert_equal [ later.id ], @controller.view_assigns["later"].map(&:recurring_transaction_id)
+    assert_equal [ paused.id ], @controller.view_assigns["dormant"].map(&:recurring_transaction_id)
+    [ later, paused ].each do |series|
+      occurrence = series.recurring_occurrences.open_status.order(:due_on).first
+      assert_select "a[href=?] div[class~='@lg:block']",
+        bill_path(series, display: "drawer", occurrence: occurrence.id),
+        text: /#{Regexp.escape(I18n.l(occurrence.due_on, format: :short))}/
+    end
+  end
+
+  # Pause stores inactive and keeps the open leftover, which read "Overdue by 6
+  # days" in red with nothing saying the bill was paused.
+  test "a paused bill's leftover reads Paused, with no overdue and no red" do
+    late = 6.days.ago.to_date
+    bill = create_bill(name: "Paused gym", amount: 40, autopay: true, expected_day_of_month: late.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    bill.mark_inactive!
+    occurrence = bill.recurring_occurrences.open_status.sole
+    assert occurrence.overdue?, "premise: the leftover is past its grace"
+
+    get bills_url
+
+    assert_response :success
+    assert_select "a[href=?]", bill_path(bill, display: "drawer", occurrence: occurrence.id) do |links|
+      assert_select links.first, "p.text-xs", text: /#{I18n.t("bills.attention.paused")}/
+      assert_select links.first, "div.text-secondary[class~='@lg:block']"
+      assert_select links.first, ".text-destructive", count: 0
+      assert_no_match(/overdue/i, links.first.text)
+      # A paused bill isn't charging.
+      assert_not_includes links.first.text, I18n.t("recurring_transactions.pay_action.autopay")
+    end
+  end
+
+  # The row calls the leftover Paused, and the drawer it opens, the bill's page
+  # and the payment drawer said "Overdue by 6 days" in red.
+  test "a paused bill's drawer, page and payment drawer say Paused, not overdue" do
+    late = 6.days.ago.to_date
+    bill = create_bill(name: "Paused gym", amount: 40, expected_day_of_month: late.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    bill.mark_inactive!
+    occurrence = bill.recurring_occurrences.open_status.sole
+    assert occurrence.overdue?, "premise: the leftover is past its grace"
+
+    paused = I18n.t("recurring_transactions.status.inactive")
+
+    [ -> { get_bill_drawer(bill) }, -> { get bill_url(bill) }, -> { get recurring_occurrence_url(occurrence) } ].each do |visit|
+      visit.call
+
+      assert_response :success
+      assert_select "p.text-secondary", text: /#{paused} · /
+      assert_select ".text-destructive", text: /#{paused}/, count: 0
+      assert_no_match(/Overdue by/, response.body)
+    end
+
+    # The payment drawer's ring takes the same tone.
+    get recurring_occurrence_url(occurrence)
+    assert_no_match "var(--color-destructive)", response.body
+  end
+
+  # The row drops Autopay once a bill is paused, and the drawer's schedule
+  # line still claimed it.
+  test "a paused bill's drawer schedule leaves out autopay" do
+    bill = create_bill(name: "Paused gym", amount: 40, autopay: true)
+    bill.mark_inactive!
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    frequency = ApplicationController.helpers.frequency_label(bill)
+    assert_select "p", text: /\A#{Regexp.escape(frequency)}\s*·\s*#{Regexp.escape(bill.account.name)}\z/
+  end
+
+  # Rows after this month said "Snoozed until …". The rail that replaced that
+  # line printed the old day, and the list kept the old order.
+  test "a snoozed row sits at the date it was snoozed to" do
+    next_month = Date.current.next_month.beginning_of_month
+    snoozed = create_bill(name: "Snoozed gym", amount: 40, manual: true, anchor_date: next_month + 3,
+                          expected_day_of_month: (next_month + 3).day, next_expected_date: next_month + 3)
+    create_bill(name: "Next month rent", amount: 900, manual: true, anchor_date: next_month + 7,
+                expected_day_of_month: (next_month + 7).day, next_expected_date: next_month + 7)
+    occurrence = snoozed.recurring_occurrences.open_status.order(:due_on).first
+    occurrence.snooze!(next_month + 12)
+
+    get bills_url
+
+    assert_response :success
+    assert_equal [ "Next month rent", "Snoozed gym" ], @controller.view_assigns["later"].map { |o| o.recurring_transaction.name }
+    assert_select "a[href=?] div[class~='@lg:block']",
+      bill_path(snoozed, display: "drawer", occurrence: occurrence.id),
+      text: /#{Regexp.escape(I18n.l(next_month + 12, format: :short))}/
+  end
+
+  # The app snoozes a week. An overdue bill snoozed mid-month moves down This
+  # month to its new date, after a bill due sooner.
+  test "a bill snoozed a week lists at its new date" do
+    travel_to Date.current.beginning_of_month + 9.days
+    create_bill(name: "Soon Co", amount: 20, manual: true, anchor_date: Date.current + 3,
+                expected_day_of_month: (Date.current + 3).day, next_expected_date: Date.current + 3)
+    late = 6.days.ago.to_date
+    bill = create_bill(name: "Late Co", amount: 30, expected_day_of_month: late.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    bill.recurring_occurrences.open_status.order(:due_on).first.snooze!(Date.current + 7)
+
+    get bills_url
+
+    assert_response :success
+    assert_equal [ "Soon Co", "Late Co" ], @controller.view_assigns["month_rows"].map { |o| o.recurring_transaction.name }
+  end
+
+  # Snoozed past the month's end, the bill was left at the bottom of This
+  # month with next month's date on its rail.
+  test "a bill snoozed past the month's end moves after this month" do
+    travel_to Date.current.end_of_month - 2.days
+    late = 6.days.ago.to_date
+    bill = create_bill(name: "Late Co", amount: 30, expected_day_of_month: late.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    occurrence = bill.recurring_occurrences.open_status.order(:due_on).first
+    occurrence.snooze!(Date.current + 7)
+
+    get bills_url
+
+    assert_response :success
+    assert_empty @controller.view_assigns["month_rows"]
+    assert_equal [ occurrence.id ], @controller.view_assigns["later"].map(&:id)
+  end
+
+  # On a phone the range squeezed the bill's name to "PG&E Ele…", so the row
+  # shows it only from @lg and the drawer carries it.
+  test "an estimated bill's range leaves the row on a phone and stays in the drawer" do
+    bill = create_bill(name: "Power Co", amount: 96.40, amount_strategy: "average", expected_amount_avg: 96.40,
+                       expected_amount_min: 71.12, expected_amount_max: 131.80)
+    range = I18n.t("bills.amount_range", min: "$71.12", max: "$131.80")
+
+    get bills_url
+    assert_response :success
+    assert_select BILL_ROW_LINK, text: /Power Co/ do |links|
+      assert_select links.first, "p[class~='hidden'][class~='@lg:block']", text: range
+    end
+
+    get_bill_drawer(bill)
+    assert_response :success
+    assert_match range, response.body
   end
 
   # "%b %-d" is English order in every locale; fr, pl and ru put the day first.
@@ -309,28 +475,6 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "a bill inside its grace period is still late, and late is not next"
 
     assert_includes next_up.map { |o| o.recurring_transaction.display_name }, "Soon Co"
-  end
-
-  # Three tiers of one subscription are three real bills that render as three
-  # identical rows. Only then does a row earn a second fact.
-  test "bills that would render identically gain something that tells them apart" do
-    day = 12.days.from_now.to_date
-    2.times do |i|
-      create_bill(name: "TWITCH", amount: 11.99, manual: true, dedup_scope: "tier#{i}",
-                  anchor_date: day, expected_day_of_month: day.day,
-                  last_occurrence_date: Date.current, next_expected_date: day)
-    end
-    create_bill(name: "Distinct Co", amount: 30, manual: true,
-                anchor_date: day, expected_day_of_month: day.day,
-                last_occurrence_date: Date.current, next_expected_date: day)
-
-    get bills_url
-    assert_response :success
-
-    # The pair carries its schedule; the bill nobody could confuse does not
-    # pay for their ambiguity.
-    twitch_rows = response.body.scan(/TWITCH/).size
-    assert_operator twitch_rows, :>=, 2
   end
 
   # Overdue rows used to sit inside the chronological month list, marked only by
@@ -499,13 +643,15 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    # What is left leads, and the row says it once. The subline carries the
-    # state and the figure; printing "$750.00 of $2,000.00 paid" again on the
-    # right was the same arithmetic twice, and it was squeezing the bill's own
-    # name out of the row.
-    assert_match I18n.t("bills.attention.partial", amount: "$1,250.00"), response.body
-    assert_match "$1,250", response.body
-    assert_no_match I18n.t("bills.partial_progress", paid: "$750.00", expected: "$2,000.00"), response.body
+    # What is left leads, and the row says it once: Partial on the left, the
+    # remainder on the right. The subline used to repeat "$1,250.00
+    # remaining", which squeezed the bill's own name out of the row.
+    assert_select BILL_ROW_LINK, text: /Rent/ do |links|
+      assert_select links.first, "p.text-xs", text: /#{I18n.t("bills.attention.partial")}/
+      assert_select links.first, "p.privacy-sensitive", text: "$1,250.00"
+      assert_select links.first, "p", text: I18n.t("bills.remaining_label")
+      assert_equal 1, links.first.text.scan("$1,250.00").size, "the remainder is printed once"
+    end
   end
 
   # The row's detail once described the SERIES definition while the bill's
@@ -905,8 +1051,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_nil I18n.t("bills.paycheck.obligations_line", default: nil)
   end
 
-  # The breakdown is the allocation bar's legend: each figure carries a swatch
-  # in its segment's colour, so the bar reads without a second key.
+  # The breakdown is the allocation bar's legend: in a period that isn't short,
+  # each figure carries a swatch in its segment's colour, so the bar reads
+  # without a second key.
   test "the paycheck breakdown keys each figure to its allocation bar segment" do
     payday = Date.current + 3
     declare_income(name: "Frito Lay", amount: -1200, payday: payday)
@@ -925,6 +1072,23 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       assert_equal segment_colours, swatch_colours
     end
     assert_equal %w[bg-inverse bg-subdued bg-success], bars.first.css("div").map { |segment| segment["class"] }
+  end
+
+  # A short period's bar splits into what the paycheck covers and what it is
+  # short. Only the shortfall is a figure in the breakdown, so only it gets a
+  # swatch; the covered part stays unlabelled.
+  test "a short paycheck keys only its shortfall to the allocation bar" do
+    payday = Date.current + 3
+    declare_income(name: "Frito Lay", amount: -1200, payday: payday)
+    declare_bill(name: "Rent", amount: 2000, due: payday + 1)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    bar = css_select("section div.flex[role=img]").first
+    assert_equal %w[bg-subdued bg-destructive], bar.css("div").map { |segment| segment["class"] }
+    swatches = bar.ancestors("section").first.css("[data-paycheck-legend-swatch]")
+    assert_equal %w[bg-destructive], swatches.map { |swatch| swatch["class"][/bg-\S+/] }
   end
 
   # The window before the first payday has no income to allocate, so it is

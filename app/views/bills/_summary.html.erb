@@ -24,10 +24,19 @@
           <%= t("bills.summary.remaining", amount: format_money(current_occurrence.remaining_amount_money)) %>
         <% end %>
       </p>
-      <p class="text-xs <%= current_occurrence.overdue? ? "text-destructive" : "text-secondary" %>">
+      <p class="text-xs <%= bills_overdue?(current_occurrence) ? "text-destructive" : "text-secondary" %>">
         <span class="privacy-sensitive"><%= t("bills.partial_progress", paid: format_money(paid), expected: format_money(expected)) %></span>
         &middot; <%= occurrence_due_label(current_occurrence) %>
       </p>
+      <%# The row shows the range only from @lg, so on a phone this is where
+          an estimate says how far it can swing. %>
+      <% if occurrence_amount_estimated?(current_occurrence) && series.has_amount_variance? %>
+        <p class="text-xs text-secondary privacy-sensitive">
+          <%= t("bills.amount_range",
+                min: format_money(series.expected_amount_min_money),
+                max: format_money(series.expected_amount_max_money)) %>
+        </p>
+      <% end %>
     </div>
   <% else %>
     <div class="space-y-0.5">
@@ -44,7 +53,7 @@
   <p class="text-xs text-secondary">
     <%= frequency_label(series) %>
     <% if series.account %>&middot; <%= series.account.name %><% end %>
-    <% if series.autopay? %>&middot; <%= t("recurring_transactions.pay_action.autopay") %><% end %>
+    <% if (autopay = bills_autopay_label(series)) %>&middot; <%= autopay %><% end %>
   </p>
 
   <%# Subscription state is state, not depth, so it stays here. %>

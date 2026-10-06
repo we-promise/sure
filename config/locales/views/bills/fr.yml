@@ -52,7 +52,8 @@ fr:
       overdue:
         one: 1 jour de retard
         other: "%{count} jours de retard"
-      partial: Partiel · %{amount} restant
+      partial: Partiel
+      paused: En pause
     calendar:
       empty_month: Aucune facture à payer ce mois-ci.
       month_totals: "%{expected} prévu · %{paid} payé"
@@ -62,7 +63,7 @@ fr:
       subscribe_ical: S'abonner (iCal)
       today: Aujourd'hui
     cancelled_still_scheduled: "Vous l'avez marquée comme annulée le %{date}, mais elle reste programmée : de nouvelles factures continueront donc d'apparaître."
-    debt_payment: "· remboursement de dette"
+    debt_payment: Remboursement de dette
     detail:
       annualized: Par an
       around: vers le %{date}

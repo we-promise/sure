@@ -54,7 +54,8 @@ pl:
         many: Zaległe od %{count} dni
         one: Zaległe od 1 dnia
         other: Zaległe od %{count} dni
-      partial: Częściowo · pozostało %{amount}
+      partial: Częściowo
+      paused: Wstrzymane
     calendar:
       empty_month: Brak rachunków z terminem w tym miesiącu.
       month_totals: "%{expected} oczekiwane · %{paid} opłacone"
@@ -65,7 +66,7 @@ pl:
       today: Dziś
     cancelled_still_scheduled: Oznaczono to jako anulowane %{date}, ale nadal jest
       zaplanowane, więc kolejne rachunki będą się pojawiać.
-    debt_payment: "· spłata zadłużenia"
+    debt_payment: Spłata zadłużenia
     detail:
       annualized: Rocznie
       around: około %{date}
