@@ -2,11 +2,19 @@
 <% transaction = entry.entryable %>
 <% show_date = flat %>
 <% show_balance = flat && view_ctx == "account" && !hide_balance %>
+<% show_notes = Current.user.transactions_show_notes? %>
 <% drawer_params = { view_ctx: view_ctx, is_filtered: is_filtered } %>
+<% if transaction.transfer? %>
+  <% transfer_counterpart = transaction.transfer.present? ? (transaction.transfer_as_outflow.present? ? transaction.transfer.to_account : transaction.transfer.from_account) : nil %>
+  <% transfer_counterpart = nil unless transfer_counterpart.present? && @accessible_account_ids&.include?(transfer_counterpart.id) %>
+  <% transfer_type = transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %>
+  <% transfer_arrow = transaction.transfer_as_outflow.present? ? "→" : "←" %>
+  <% transfer_tooltip = transfer_counterpart.present? ? t("transactions.show.transfer_tooltip", type: transfer_type, from_account: entry.account.name, arrow: transfer_arrow, to_account: transfer_counterpart.name) : t("transactions.show.transfer_tooltip_account_only", type: transfer_type, account: entry.account.name) %>
+<% end %>
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
-    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, indent: in_split_group) do |row| %>
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, indent: in_split_group) do |row| %>
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
@@ -29,12 +37,16 @@
           <div class="flex items-center gap-1 min-w-0">
             <div class="truncate">
               <% if transaction.transfer? %>
-                <%= link_to(
-                      entry.name,
-                      transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry, drawer_params),
-                      data: { turbo_frame: "drawer", turbo_prefetch: false },
-                      class: "hover:underline truncate"
-                    ) %>
+                <%= render DS::Tooltip.new(text: transfer_tooltip) do |tooltip| %>
+                  <% tooltip.with_trigger do %>
+                    <%= link_to(
+                          entry.name,
+                          transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry, drawer_params),
+                          data: { turbo_frame: "drawer", turbo_prefetch: false },
+                          class: "hover:underline truncate"
+                        ) %>
+                  <% end %>
+                <% end %>
               <% else %>
                 <%= link_to(
                       entry.name,
@@ -65,26 +77,8 @@
           </div>
 
           <div class="text-secondary text-xs font-normal">
-            <span class="lg:hidden shrink-0"><%= format_date(entry.date) %> • </span>
-            <% if transaction.transfer? %>
-              <span class="text-secondary">
-                <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> •
-                <% if transaction.transfer.present? %>
-                  <% counterpart = transaction.transfer_as_outflow.present? ? transaction.transfer.to_account : transaction.transfer.from_account %>
-                  <% if counterpart.present? && @accessible_account_ids&.include?(counterpart.id) %>
-                    <% if transaction.transfer_as_outflow.present? %>
-                      <%= link_to entry.account.name, account_path(entry.account, tab: "transactions"), data: { turbo_frame: "_top" }, class: "hover:underline" %> → <%= link_to counterpart.name, account_path(counterpart, tab: "transactions"), data: { turbo_frame: "_top" }, class: "hover:underline" %>
-                    <% else %>
-                      <%= link_to entry.account.name, account_path(entry.account, tab: "transactions"), data: { turbo_frame: "_top" }, class: "hover:underline" %> ← <%= link_to counterpart.name, account_path(counterpart, tab: "transactions"), data: { turbo_frame: "_top" }, class: "hover:underline" %>
-                    <% end %>
-                  <% else %>
-                    <%= link_to entry.account.name, account_path(entry.account, tab: "transactions"), data: { turbo_frame: "_top" }, class: "hover:underline" %>
-                  <% end %>
-                <% else %>
-                  <%= link_to entry.account.name, account_path(entry.account, tab: "transactions"), data: { turbo_frame: "_top" }, class: "hover:underline" %>
-                <% end %>
-              </span>
-            <% else %>
+            <span class="lg:hidden shrink-0"><%= format_date(entry.date) %><%= " •" unless transaction.transfer? %></span>
+            <% unless transaction.transfer? %>
               <% if transaction.merchant&.present? %>
                 <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
               <% end %>
@@ -107,7 +101,7 @@
         </div>
       <% end %>
 
-      <% if entry.notes.present? %>
+      <% if show_notes && entry.notes.present? %>
         <% row.with_notes do %>
           <span class="truncate block text-sm text-secondary privacy-sensitive" title="<%= entry.notes %>"><%= entry.notes %></span>
         <% end %>

@@ -1890,6 +1890,55 @@ end
     assert_not_includes rendered_ids, transfer.inflow_transaction.entry.id.to_s
   end
 
+  test "compact list hides the notes column by default" do
+    family = families(:empty)
+    sign_in users(:empty)
+    @user = users(:empty)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    create_transaction(account: account, notes: "NOTEVISMARKER hidden by default")
+
+    get transactions_url
+
+    assert_response :success
+    assert_no_match(/NOTEVISMARKER/, response.body)
+  end
+
+  test "compact list shows the notes column when show notes is enabled" do
+    family = families(:empty)
+    sign_in users(:empty)
+    @user = users(:empty)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false, "transactions_show_notes" => true))
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    create_transaction(account: account, notes: "NOTEVISMARKER shown when enabled")
+
+    get transactions_url
+
+    assert_response :success
+    assert_match(/NOTEVISMARKER/, response.body)
+  end
+
+  test "compact transfer row keeps from-to info in the name tooltip instead of a subtitle" do
+    family = families(:empty)
+    sign_in users(:empty)
+    user = users(:empty)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+    family.accounts.each { |a| a.entries.delete_all }
+    from_account = family.accounts.create! name: "From", balance: 0, currency: "USD", accountable: Depository.new
+    to_account = family.accounts.create! name: "To", balance: 0, currency: "USD", accountable: Depository.new
+    create_transfer(from_account: from_account, to_account: to_account, amount: 25, date: Date.current)
+
+    get transactions_url(per_page: 50)
+
+    assert_response :success
+    # No visible "Transfer • from → to" subtitle line under the name...
+    assert_no_match(/Transfer •/, response.body)
+    # ...the from→to detail lives in the name tooltip instead.
+    assert_match(/Transfer: From → To/, response.body)
+  end
+
   test "group_by_date toggle only affects compact view" do
     family = families(:empty)
     sign_in users(:empty)
