@@ -107,7 +107,7 @@
                                     id: "q_uncategorized",
                                     class: "checkbox checkbox--light",
                                     form: "entries-search",
-                                    onchange: "document.getElementById('entries-search').requestSubmit()" %>
+                                    data: { controller: "submit-form", submit_form_form_id_value: "entries-search", action: "change->submit-form#submit" } %>
                   <%= label_tag "q_uncategorized", t("accounts.show.activity.uncategorized_only"), class: "text-sm text-primary" %>
                 </div>
               </div>
