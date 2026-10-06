@@ -50,14 +50,16 @@ class Account::RunningBalanceCalculator
 
     # Fallback for accounts where the non-cash (holdings) balance can't be
     # meaningfully attributed to a single entry — same per-day lookup that
-    # was used previously.
+    # was used previously. Returns `nil` (not a fabricated $0) when no
+    # `Balance` row exists yet for that date (e.g. a trade recorded today,
+    # before the account's daily balance sync has run) so callers can render
+    # an "unknown" state instead of a misleading zero balance.
     def per_day_balances(account, account_entries)
       dates = account_entries.map(&:date).uniq
       balances_by_date = account.balances.where(date: dates, currency: account.currency).index_by(&:date)
 
       account_entries.each_with_object({}) do |entry, hash|
-        bal = balances_by_date[entry.date]
-        hash[entry.id] = bal ? bal.end_balance_money : Money.new(0, account.currency)
+        hash[entry.id] = balances_by_date[entry.date]&.end_balance_money
       end
     end
 

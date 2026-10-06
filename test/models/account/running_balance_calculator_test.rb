@@ -119,15 +119,38 @@ class Account::RunningBalanceCalculatorTest < ActiveSupport::TestCase
     )
 
     Holding::Materializer.any_instance.stubs(:materialize_holdings).returns([])
-    Balance::Materializer.new(account, strategy: :forward).materialize_balances
 
     entry_1 = account.entries.create!(name: "Deposit", date: date, amount: -100, currency: "USD", entryable: Transaction.new)
     entry_2 = account.entries.create!(name: "Withdrawal", date: date, amount: 50, currency: "USD", entryable: Transaction.new)
+
+    # Materialize balances after the entries exist, so a real `Balance` row
+    # exists for `date` (otherwise the per-day fallback has nothing to look
+    # up and both entries would correctly resolve to `nil`, covered below).
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
 
     running_balances = Account::RunningBalanceCalculator.new([ entry_1, entry_2 ]).running_balances
 
     # Both entries share the same calendar day, so the (intentional) per-day fallback
     # gives them the same end-of-day figure, unlike the cash-only path above.
     assert_equal running_balances[entry_1.id].amount, running_balances[entry_2.id].amount
+  end
+
+  test "investment accounts return nil (not a fabricated $0) when no balance row exists yet for the date" do
+    date = Date.current
+
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: date - 1.day, balance: 1000 }
+      ]
+    )
+
+    # No Balance::Materializer run — simulates a trade recorded today, before
+    # the account's daily balance sync has had a chance to run.
+    entry = account.entries.create!(name: "Buy", date: date, amount: -100, currency: "USD", entryable: Transaction.new)
+
+    running_balances = Account::RunningBalanceCalculator.new([ entry ]).running_balances
+
+    assert_nil running_balances[entry.id]
   end
 end
