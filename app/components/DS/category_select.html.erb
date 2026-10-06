@@ -48,7 +48,8 @@
 
   <% unless disabled %>
     <div class="absolute z-50 p-1.5 w-full min-w-48 rounded-lg shadow-lg bg-container mt-1.5 hidden"
-         data-category-select-target="menu">
+         data-category-select-target="menu"
+         data-action="keydown.esc->category-select#escape">
 
       <%= render DS::SearchInput.new(
         variant: :embedded,
@@ -58,8 +59,6 @@
           action: "input->category-select#filter keydown->category-select#handleSearchKeydown"
         }
       ) %>
-
-      <% parent_options = categories.select { |category| category.parent_id.nil? }.sort_by { |category| category.name.downcase } %>
 
       <div class="flex flex-col gap-1 max-h-64 overflow-auto mt-1"
            id="<%= menu_id %>"
@@ -127,36 +126,44 @@
 
       <%# Shown in place of the list after "Add as a subcategory…": pick a top-level parent. %>
       <%# Only top-level categories can be parents (categories are at most two levels deep). %>
-      <div class="hidden flex-col gap-1 max-h-64 overflow-auto mt-1"
-           data-category-select-target="parentPicker">
-        <p class="px-3 py-1 text-xs text-secondary"
-           data-category-select-target="parentPickerLabel"></p>
-
-        <% parent_options.each do |parent| %>
+      <div class="hidden flex-col gap-1 mt-1"
+           data-category-select-target="parentPicker"
+           role="group"
+           aria-labelledby="<%= parent_label_id %>">
+        <%# Back and the label sit above the scrolling rows, so Back stays in reach with many parents. %>
+        <div class="flex flex-col">
           <%= render DS::ActionRow.new(
+                text: helpers.t("transactions.form.back_to_categories"),
+                icon: "arrow-left",
                 tone: :secondary,
-                data: { category_select_target: "parentOption", parent_id: parent.id, parent_name: parent.name, action: "click->category-select#createUnderParent" }
-              ) do %>
-            <%= render partial: "categories/badge", locals: { category: parent } %>
-          <% end %>
-        <% end %>
+                data: { category_select_target: "parentBack", action: "click->category-select#hideParentPicker" }
+              ) %>
+          <p id="<%= parent_label_id %>"
+             class="px-3 py-1 text-xs text-secondary"
+             data-category-select-target="parentPickerLabel"></p>
+        </div>
 
-        <%# Cloned for a top-level category created inline, so it can be a parent straight away. %>
-        <template data-category-select-target="parentOptionTemplate">
-          <%= render DS::ActionRow.new(
-                tone: :secondary,
-                data: { category_select_target: "parentOption", action: "click->category-select#createUnderParent" }
-              ) do %>
-            <span data-category-select-parent-badge></span>
+        <div class="flex flex-col gap-1 max-h-64 overflow-auto"
+             data-category-select-target="parentRows">
+          <% parent_options.each do |parent| %>
+            <%= render DS::ActionRow.new(
+                  tone: :secondary,
+                  data: { category_select_target: "parentOption", parent_id: parent.id, parent_name: parent.name, action: "click->category-select#createUnderParent" }
+                ) do %>
+              <%= render partial: "categories/badge", locals: { category: parent } %>
+            <% end %>
           <% end %>
-        </template>
 
-        <%= render DS::ActionRow.new(
-              text: helpers.t("transactions.form.back_to_categories"),
-              icon: "arrow-left",
-              tone: :secondary,
-              data: { action: "click->category-select#hideParentPicker" }
-            ) %>
+          <%# Cloned for a top-level category created inline, so it can be a parent straight away. %>
+          <template data-category-select-target="parentOptionTemplate">
+            <%= render DS::ActionRow.new(
+                  tone: :secondary,
+                  data: { category_select_target: "parentOption", action: "click->category-select#createUnderParent" }
+                ) do %>
+              <span data-category-select-parent-badge></span>
+            <% end %>
+          </template>
+        </div>
       </div>
     </div>
   <% end %>

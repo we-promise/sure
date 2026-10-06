@@ -18,6 +18,8 @@ export default class extends Controller {
     "parentPickerLabel",
     "parentOption",
     "parentOptionTemplate",
+    "parentRows",
+    "parentBack",
   ];
 
   static values = {
@@ -96,21 +98,35 @@ export default class extends Controller {
   }
 
   handleSearchKeydown(event) {
-    if (event.key === "Escape") {
+    // With the parent picker open, Enter moves into it instead of creating a
+    // top-level category (or submitting the surrounding form).
+    if (event.key === "Enter" && this.#parentPickerOpen()) {
       event.preventDefault();
-      this.close();
-      this.buttonTarget.focus();
+      this.parentOptionTargets[0]?.focus();
       return;
     }
 
     if (
       event.key === "Enter" &&
       !this.createFormTarget.classList.contains("hidden") &&
+      !this.#parentPickerOpen() &&
       !this.creating
     ) {
       event.preventDefault();
       this.createCategory();
     }
+  }
+
+  // Escape from anywhere in the menu: leave the parent picker first, then
+  // close the menu, keeping focus where the keyboard user can carry on.
+  escape(event) {
+    event.preventDefault();
+    if (this.#parentPickerOpen()) {
+      this.hideParentPicker(event);
+      return;
+    }
+    this.close();
+    this.buttonTarget.focus();
   }
 
   selectCategory(event) {
@@ -167,33 +183,43 @@ export default class extends Controller {
     this.listTarget.classList.add("hidden");
     this.parentPickerTarget.classList.remove("hidden");
     this.parentPickerTarget.classList.add("flex");
+
+    // The button that opened the picker is now hidden; move focus into it.
+    this.parentOptionTargets[0]?.focus();
   }
 
+  // From Back or Escape (an event) focus returns to the search; when filter()
+  // or open() reset the picker, focus is left alone.
   hideParentPicker(event) {
     event?.preventDefault();
     if (!this.hasParentPickerTarget) return;
 
+    const wasOpen = this.#parentPickerOpen();
     this.parentPickerTarget.classList.add("hidden");
     this.parentPickerTarget.classList.remove("flex");
     this.listTarget.classList.remove("hidden");
+
+    if (event && wasOpen) this.searchTarget.focus();
   }
 
   createUnderParent(event) {
     event.preventDefault();
-    this.createCategory(event.currentTarget.dataset.parentId);
+    this.#create(event.currentTarget.dataset.parentId);
   }
 
-  // Called directly as an action (receives an Event) or with a parent id.
-  async createCategory(parentIdOrEvent = null) {
+  createCategory(event) {
+    event?.preventDefault();
+    this.#create(null);
+  }
+
+  async #create(parentId) {
     if (this.creating) return;
-    const parentId =
-      typeof parentIdOrEvent === "string" ? parentIdOrEvent : null;
 
     const name = this.searchTarget.value.trim();
     if (!name) return;
 
     this.creating = true;
-    this.createFormTarget.disabled = true;
+    this.#setCreating(true);
     this.clearCreateError();
 
     try {
@@ -210,7 +236,10 @@ export default class extends Controller {
         return;
       }
 
-      this.createFormTarget.insertAdjacentHTML("beforebegin", category.html);
+      // A subcategory goes at the end of its parent's group, not the list.
+      const anchor = parentId ? this.#lastOptionInGroup(parentId) : null;
+      if (anchor) anchor.insertAdjacentHTML("afterend", category.html);
+      else this.createFormTarget.insertAdjacentHTML("beforebegin", category.html);
 
       const newOption = this.optionTargets.find(
         (option) => option.dataset.categoryId === String(category.id),
@@ -225,8 +254,36 @@ export default class extends Controller {
       this.submitForm();
     } finally {
       this.creating = false;
-      this.createFormTarget.disabled = false;
+      this.#setCreating(false);
     }
+  }
+
+  #parentPickerOpen() {
+    return (
+      this.hasParentPickerTarget &&
+      !this.parentPickerTarget.classList.contains("hidden")
+    );
+  }
+
+  // Disable every way of creating while a request runs, so a slow POST
+  // visibly can't be repeated from the picker either.
+  #setCreating(creating) {
+    this.createFormTarget.disabled = creating;
+    for (const row of this.parentOptionTargets) row.disabled = creating;
+  }
+
+  #lastOptionInGroup(parentId) {
+    let node = this.optionTargets.find(
+      (option) => option.dataset.categoryId === String(parentId),
+    );
+    while (
+      node?.nextElementSibling?.querySelector?.(
+        "[data-testid=category-select-subcategory-indicator]",
+      )
+    ) {
+      node = node.nextElementSibling;
+    }
+    return node;
   }
 
   // A top-level category created inline can be a parent straight away,
@@ -248,7 +305,7 @@ export default class extends Controller {
       (existing) =>
         (existing.dataset.parentName || "").toLocaleLowerCase() > name,
     );
-    this.parentPickerTarget.insertBefore(
+    this.parentRowsTarget.insertBefore(
       row,
       before || this.parentOptionTemplateTarget,
     );
