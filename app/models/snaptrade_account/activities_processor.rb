@@ -206,7 +206,7 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       # Resolve security
-      security = resolve_security(ticker, symbol_data)
+      security = resolve_security(ticker, symbol_data, account: account)
       unless security
         capture_skipped_trade("unresolved_security", "security could not be resolved",
                               external_id: external_id, activity_type: activity_type, ticker: ticker)
