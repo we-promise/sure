@@ -96,7 +96,6 @@ tr:
       add_link_aria: '%{name} için bir ödeme bağlantısı ekle'
       autopay: Otomatik ödeme
       autopay_aria: '%{name} otomatik olarak ödeniyor, portalını yeni sekmede açın'
-      open_site: Fatura sitesini aç
     new:
       title: Fatura ekle
       income_title: Gelir ekle

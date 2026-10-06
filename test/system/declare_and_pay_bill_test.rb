@@ -73,9 +73,12 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
     # partly paid rather than settled: $537.50 against $2,150 is not rent.
     assert_text I18n.t("bills.attention.partial", amount: "$1,612.50")
 
-    # Journey C picks up exactly where that leaves off: the row's verb has
-    # become Add payment, and the rest is settled from the drawer.
-    click_on I18n.t("bills.add_payment"), match: :first
+    # Journey C picks up exactly where that leaves off. The bill is still ten
+    # days out, so its row stays quiet; the drawer's verb has become Add
+    # payment, and the rest is settled from there.
+    find("a[data-turbo-frame='drawer']", text: "Watson Property", match: :first).click
+    within("dialog[open]") { click_on I18n.t("bills.add_payment") }
+    within("dialog[open]") { assert_link I18n.t("recurring_occurrences.show.mark_paid") }
     assert_text I18n.t("recurring_occurrences.show.remaining", amount: "$1,612.50")
 
     click_on I18n.t("recurring_occurrences.show.mark_paid")
