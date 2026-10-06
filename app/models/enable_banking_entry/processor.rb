@@ -430,11 +430,13 @@ class EnableBankingEntry::Processor
       return if content_id.blank? || !identifierless_external_ids.include?(content_id)
 
       # Already stored under its own identifier: nothing to claim, and re-keying
-      # would collide with it. This is also what keeps two genuinely identical
-      # charges apart -- the second finds the predecessor already taken and
-      # imports as its own row, the property build_transaction_content_key exists
-      # to protect. Only reached once a predecessor has been found, so it costs a
-      # query per claim rather than one per transaction.
+      # would collide with it. This also keeps two genuinely identical charges
+      # apart within this mechanism -- the second finds the predecessor already
+      # taken and imports as its own row. (Such charges only get this far when
+      # they differ in transaction_id: EnableBankingItem::Importer's content-level
+      # dedup collapses them otherwise, see #2720.) Only reached once a
+      # predecessor has been found, so it costs a query per claim rather than one
+      # per transaction.
       return if account.entries.exists?(source: "enable_banking", external_id: incoming)
 
       predecessor = account.entries.find_by(source: "enable_banking", external_id: content_id)

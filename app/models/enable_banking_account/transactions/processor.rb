@@ -128,8 +128,11 @@ class EnableBankingAccount::Transactions::Processor
 
           # An identifierless row just stored under its content hash becomes
           # claimable by the same movement appearing later in this very batch
-          # carrying the identifier the ASPSP has since assigned.
-          if ext_id && EnableBankingEntry::Processor.identifierless?(transaction_data)
+          # carrying the identifier the ASPSP has since assigned. Pending rows stay
+          # out, as they do in identifierless_external_ids_for: their settlement
+          # belongs to ProviderImportAdapter's pending->booked reconciliation.
+          if ext_id && EnableBankingEntry::Processor.identifierless?(transaction_data) &&
+             !EnableBankingEntry::Processor.pending_payload?(transaction_data)
             shared_identifierless_external_ids.add(ext_id)
           end
         end

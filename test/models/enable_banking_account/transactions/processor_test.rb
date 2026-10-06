@@ -78,6 +78,24 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert @account.entries.exists?(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
   end
 
+  test "a pending identifierless row earlier in the same batch is left to pending->booked reconciliation" do
+    pending_raw = raw_identifierless_transaction(amount: "33.00").merge(status: "PDNG", _pending: true)
+    settled = raw_identifierless_transaction(amount: "33.00").merge(entry_reference: "2026-02-02.3")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ pending_raw, settled ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    entries = @account.entries.where(source: "enable_banking")
+    assert_equal 1, entries.count
+    entry = entries.first
+    assert_equal EnableBankingEntry::Processor.compute_external_id(settled), entry.external_id
+    assert_not entry.transaction.pending?
+    # The claim would have recorded the content hash it superseded; the adapter's
+    # pending match does not. Which mechanism settled the row is the point here.
+    assert_not entry.transaction.extra.to_h.key?("superseded_external_ids"),
+               "the same-batch claim set must not offer a pending row as a predecessor"
+  end
+
   test "does not re-import a pending transaction whose external_id was manually merged" do
     pending_ext_id = "enable_banking_PDNG_MERGED"
 
