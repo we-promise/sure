@@ -73,6 +73,24 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://api-staging.brex.com", @second_item.base_url
   end
 
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch brex_item_url(@second_item),
+          params: { brex_item: { name: "Renamed Business Brex" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "brex-providers-panel"
+    assert_includes response.body, %(id="brex-providers-panel")
+    assert_equal "Renamed Business Brex", @second_item.reload.name
+  end
+
+  test "create from the page still moves on to accounts" do
+    post brex_items_url,
+         params: { brex_item: { name: "Joint Brex", token: "joint_brex_token" } },
+         as: :turbo_stream
+
+    assert_redirected_to accounts_path
+  end
+
   test "update rejects arbitrary brex base url" do
     patch brex_item_url(@second_item), params: {
       brex_item: {
@@ -406,6 +424,15 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :redirect
+  end
+
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_brex_item_url(@second_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "brex-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @second_item.reload.syncing?
   end
 
   test "complete account setup ignores unsupported account type and subtype params" do

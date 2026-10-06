@@ -163,7 +163,6 @@ pl:
       add_link_aria: Dodaj link do płatności dla %{name}
       autopay: Autopłatność
       autopay_aria: "%{name} płatne automatycznie, otwórz portal w nowej karcie"
-      open_site: Otwórz stronę rachunku
       pay: Zapłać
       pay_aria: Zapłać %{name} (otwiera się w nowej karcie)
     pick_entry:

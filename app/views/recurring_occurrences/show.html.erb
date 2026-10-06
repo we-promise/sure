@@ -291,7 +291,8 @@
               <% menu.with_item(variant: "button",
                     text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
                     icon: series.active? ? "pause" : "play",
-                    href: toggle_status_recurring_transaction_path(series), method: :post) %>
+                    href: toggle_status_recurring_transaction_path(series), method: :post,
+                    frame: "_top") %>
             <% end %>
           </div>
         <% else %>
