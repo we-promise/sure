@@ -66,6 +66,16 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <%# How the lender measures a period against a year. The default charges
+            a flat twelfth, which is what every existing loan was built on, so
+            leaving this alone changes nothing about the schedule. %>
+        <%= loan_form.select :day_count_convention,
+                           loan_day_count_convention_options,
+                           { label: t("loans.form.day_count_convention") } %>
+      </div>
+      <p class="text-xs text-secondary"><%= t("loans.form.day_count_convention_hint") %></p>
+
+      <div class="flex items-center gap-2">
         <%# The premium many lenders quote beside the instalment. Charged
             alongside it rather than inside it, so it moves the loan's total
             cost without moving its repayment. %>
@@ -80,16 +90,6 @@
                              include_blank: t("loans.form.none") } %>
       </div>
       <p class="text-xs text-secondary"><%= t("loans.form.insurance_rate_hint") %></p>
-
-      <div class="flex items-center gap-2">
-        <%# How the lender measures a period against a year. The default charges
-            a flat twelfth, which is what every existing loan was built on, so
-            leaving this alone changes nothing about the schedule. %>
-        <%= loan_form.select :day_count_convention,
-                           loan_day_count_convention_options,
-                           { label: t("loans.form.day_count_convention") } %>
-      </div>
-      <p class="text-xs text-secondary"><%= t("loans.form.day_count_convention_hint") %></p>
 
       <%# Rate changes only mean something for a loan whose rate can move. The
           section is rendered for every rate type, retained rows included, and
