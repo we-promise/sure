@@ -408,9 +408,9 @@
                 <div class="flex items-center justify-between gap-2 text-sm">
                   <div>
                     <%= link_to occurrence.recurring_transaction.display_name,
-                                bill_path(occurrence.recurring_transaction),
+                                bill_path(occurrence.recurring_transaction, occurrence: occurrence.id),
                                 class: "text-primary font-medium hover:underline",
-                                data: { turbo_frame: "_top" } %>
+                                data: { turbo_frame: "drawer", turbo_prefetch: false } %>
                     <p class="text-secondary text-xs privacy-sensitive">
                       <%= t(".applied_to_detail",
                             amount: format_money(allocation.allocated_amount_money),

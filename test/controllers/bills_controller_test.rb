@@ -262,7 +262,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     frequency = ApplicationController.helpers.frequency_label(bill)
-    assert_select "p", text: /\A#{Regexp.escape(frequency)}\s*·\s*#{Regexp.escape(bill.account.name)}\z/
+    status = I18n.t("recurring_transactions.status.#{bill.status}")
+    assert_select "p", text: /\A#{Regexp.escape(frequency)}\s*·\s*#{Regexp.escape(status)}\s*·\s*#{Regexp.escape(bill.account.name)}\z/
   end
 
   # Rows after this month said "Snoozed until …". The rail that replaced that
@@ -695,21 +696,16 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     overdue_phrase = I18n.t("bills.due_label.overdue", count: days,
                             date: I18n.l(occurrence.effective_due_on, format: :short))
 
-    get bill_url(bill)
-    assert_response :success
-    assert_match overdue_phrase, response.body, "the page states the status"
-
     get_bill_drawer(bill)
     assert_response :success
-    assert_match overdue_phrase, response.body, "and the drawer must state the same one"
+    assert_match overdue_phrase, response.body, "the drawer states the status"
     assert_no_match I18n.t("bills.detail.next_payment"), response.body,
       "an overdue bill is not a next payment"
   end
 
-  # A bill's own page is where the depth lives now. It used to be a drawer
-  # dialog rendered over an empty settings layout, which is how the app ended
-  # up with three renderings of a bill's detail and no page at all.
-  test "show renders the bill page with history and analytics" do
+  # The depth loads lazily inside the drawer, so opening a bill costs no more
+  # than its summary.
+  test "the drawer loads the bill's history and analytics lazily" do
     bill = create_bill(name: "Power Co", amount: 80)
     past = bill.recurring_occurrences.create!(
       family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
@@ -718,35 +714,39 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     RecurringTransaction::Allocator.new(past).allocate!(amount: "78.50")
     past.reload
 
-    get bill_url(bill)
-
+    get_bill_drawer(bill)
     assert_response :success
-    assert_select "main h1", text: "Power Co"
+    assert_select "turbo-frame[loading=lazy][src=?]", bill_path(bill, display: "history")
+    assert_no_match I18n.t("bills.detail.ytd"), response.body, "the aggregates wait for the frame"
+
+    get_bill_history(bill)
+    assert_response :success
+    assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(bill, :history)}"
     assert_match I18n.t("bills.detail.history"), response.body
     assert_match I18n.t("bills.detail.ytd"), response.body
     assert_match "$78.50", response.body
   end
 
-  # The drawer slot belongs to resolving a payment. If a bill's page claimed it
-  # too, the page and the payment surface would compete for one frame id and
-  # whichever lost would render nothing at all.
-  test "the bill page leaves the drawer frame to the payment surface" do
+  # There is no bill page: everything about a bill is in its drawer, and its
+  # actions sit in the drawer's header.
+  test "the drawer is the whole bill, actions included" do
     bill = create_bill(name: "Power Co", amount: 80)
 
-    get bill_url(bill)
+    get_bill_drawer(bill)
 
     assert_response :success
-    assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size,
-      "only the layout's own empty drawer frame"
-    assert_match recurring_occurrence_path(bill.recurring_occurrences.order(:due_on).first), response.body,
-      "and the page still offers the way in to it"
+    assert_select "dialog header", text: /Power Co/
+    assert_select "dialog header form[action=?]", toggle_status_recurring_transaction_path(bill)
+    assert_select "dialog header form[action=?] [data-turbo-frame=_top]", recurring_transaction_path(bill)
+    assert_select "dialog header a[href=?]", edit_recurring_transaction_path(bill)
+    assert_select "a[href=?]", bill_path(bill), count: 0
   end
 
   # The average sat beside per-year totals that are sums of real payments, so
   # reading estimates here put two disagreeing numbers about the same money in
   # one panel. Expected $80 twice, really charged $76 and $78: the average is
   # $77, a figure that appears nowhere if the estimates are averaged instead.
-  test "drawer analytics average what was charged, not what was expected" do
+  test "bill analytics average what was charged, not what was expected" do
     bill = create_bill(name: "Power Co", amount: 80)
 
     [ [ 3, 76 ], [ 2, 78 ] ].each do |months_ago, charged|
@@ -757,7 +757,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       assert occurrence.reload.paid?, "each charge is inside tolerance and should settle the cycle"
     end
 
-    get_bill_drawer(bill)
+    get_bill_history(bill)
 
     assert_response :success
     assert_match "$77.00", response.body
@@ -1262,16 +1262,17 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "turbo-frame#drawer dialog h2", text: "Rent"
-    assert_match I18n.t("bills.detail.recent_payments"), response.body
-    assert_match "WATSON PROPERTY", response.body
-
-    # The drawer answers "what is going on with this bill" and stops there.
-    # The matching rules and the per-year table are configuration and
-    # reference material, and they belong to the bill's page.
-    assert_no_match I18n.t("bills.detail.rules"), response.body,
-      "the drawer is not a second detail view"
-    assert_no_match I18n.t("bills.detail.key_metrics"), response.body
     assert_no_match(/<html/, response.body, "the drawer renders frame-only, no layout")
+
+    # The drawer answers "what is going on with this bill" up front. Its
+    # sections, the matching rules and the per-year table among them, load
+    # into the lazy frame below, and History names the payment next to the
+    # cycle it paid.
+    assert_no_match I18n.t("bills.detail.rules"), response.body
+    assert_no_match I18n.t("bills.detail.key_metrics"), response.body
+
+    get_bill_history(bill)
+    assert_match "WATSON PROPERTY", response.body
   end
 
   # A match waiting on a decision is the one thing that changes what the
@@ -1305,16 +1306,53 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # The row is a real link, so a cmd-click or a pasted URL arrives with no frame
-  # to render into. A bare dialog with no page around it never opens, which
-  # would leave a blank tab.
-  test "a drawer link opened outside the drawer lands on the bill's page" do
+  # The row is a real link, so a cmd-click, a pasted URL or a notification
+  # arrives with no frame to render into. A bare dialog with no page around it
+  # never opens, so the overview renders and its drawer frame loads the bill.
+  test "a bill visited directly opens over the overview" do
     bill = create_bill(name: "Power Co", amount: 80)
+    occurrence = bill.recurring_occurrences.order(:due_on).first
 
-    get bill_url(bill, display: "drawer")
+    get bill_url(bill, display: "drawer", occurrence: occurrence.id)
 
     assert_response :success
-    assert_select "main h1", text: "Power Co"
+    assert_select "turbo-frame#drawer[src=?]", bill_path(bill, display: "drawer", occurrence: occurrence.id)
+    assert_select "dialog#drawer, turbo-frame#drawer dialog", count: 0
+    assert_match I18n.t("bills.index.title"), response.body
+  end
+
+  test "a bill visited directly opens over whichever bills view it names" do
+    bill = create_bill(name: "Power Co", amount: 80)
+    occurrence = bill.recurring_occurrences.order(:due_on).first
+
+    %w[all calendar paycheck].each do |view|
+      get bill_url(bill, view: view, occurrence: occurrence.id)
+
+      assert_response :success
+      assert_select "turbo-frame#drawer[src=?]", bill_path(bill, display: "drawer", occurrence: occurrence.id)
+    end
+  end
+
+  # Pause from any drawer opened since redirects back to the visited URL. That
+  # refresh is for the list; opening the visited bill again would swap the
+  # drawer someone was using for one they had already closed.
+  test "a redirect back to a visited bill's URL does not reopen it" do
+    bill = create_bill(name: "Power Co", amount: 80)
+
+    get bill_url(bill), headers: { "HTTP_REFERER" => bill_url(bill) }
+
+    assert_response :success
+    assert_select "turbo-frame#drawer[src]", count: 0
+  end
+
+  test "a bill from another family is not found, even directly" do
+    other = families(:empty).recurring_transactions.create!(
+      name: "Elsewhere", amount: 10, currency: "USD", expected_day_of_month: 1,
+      last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current, status: "active"
+    )
+
+    get bill_url(other)
+    assert_response :not_found
   end
 
   test "the paycheck view lists declared income with an edit affordance" do
@@ -1379,20 +1417,18 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     )
 
     # Trial and renewal are STATE: they change what you might do about the bill
-    # today, so both routes to it must say so. Price history is the record of
-    # how it got here, which is the page's job.
-    { "page" => -> { get bill_url(sub) }, "drawer" => -> { get_bill_drawer(sub) } }.each do |label, request|
-      request.call
-      assert_response :success
-      assert_match I18n.t("bills.detail.trial_chip", date: I18n.l(Date.current + 5, format: :short)),
-        response.body, "the #{label} lost the trial chip"
-      assert_match I18n.t("bills.detail.renews_chip", date: I18n.l(Date.current + 30, format: :short)),
-        response.body, "the #{label} lost the renewal date"
-    end
+    # today, so the drawer's summary says so. Price history is the record of
+    # how it got here, which is the lazy history's job.
+    get_bill_drawer(sub)
+    assert_response :success
+    assert_match I18n.t("bills.detail.trial_chip", date: I18n.l(Date.current + 5, format: :short)),
+      response.body, "the drawer lost the trial chip"
+    assert_match I18n.t("bills.detail.renews_chip", date: I18n.l(Date.current + 30, format: :short)),
+      response.body, "the drawer lost the renewal date"
 
-    get bill_url(sub)
+    get_bill_history(sub)
     assert_match I18n.t("bills.detail.price_changes"), response.body,
-      "the bill's page keeps the price history"
+      "the history keeps the price history"
   end
 
   test "notices surface trials, renewals and price changes" do
@@ -1502,7 +1538,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
                        cancelled_on: 3.days.ago.to_date)
     assert bill.cancelled_on.present? && bill.active?, "premise: cancelled yet still running"
 
-    get bill_url(bill)
+    get_bill_drawer(bill)
     assert_response :success
     assert_includes response.body,
       I18n.t("bills.cancelled_still_scheduled", date: I18n.l(bill.cancelled_on, format: :short))
@@ -1512,7 +1548,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   test "a paused bill does not repeat the cancellation notice" do
     bill = create_bill(name: "Streamly", amount: 15, bill_type: "subscription",
                        cancelled_on: 3.days.ago.to_date, status: "paused")
-    get bill_url(bill)
+    get_bill_drawer(bill)
     assert_response :success
     refute_includes response.body,
       I18n.t("bills.cancelled_still_scheduled", date: I18n.l(bill.cancelled_on, format: :short))
@@ -1619,16 +1655,11 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Dismissed", I18n.t("recurring_transactions.status.ended")
   end
 
-  # The row expansion and the old drawer used to be two templates over one
-  # action, so they drifted, and the fix made them render the SAME partial --
-  # which traded a disagreement for a duplication: two surfaces answering one
-  # question.
-  #
-  # They now answer different ones. What has to stay true is that nothing was
-  # lost on the way, and that the shallower surface never quietly grows into
-  # the deeper one again. So: the drawer is a strict subset of the page, and
-  # every section the old shared partial rendered still exists somewhere.
-  test "the drawer is a subset of the bill's page, and nothing was dropped" do
+  # The bill's page folded into its drawer: the summary on top, the sections
+  # in a lazy frame below. Every section the page had must still be in one of
+  # the two, and none in both, or the drawer says the same thing twice. The
+  # page's recent payments went into History, next to the cycles they paid.
+  test "the drawer and its history keep every section, once" do
     bill = create_bill(name: "Power Co", amount: 80, notes: "Account 4821")
     past = bill.recurring_occurrences.create!(
       family: @family, original_due_on: 2.months.ago.to_date,
@@ -1644,31 +1675,62 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD", source: "detected"
     )
 
-    get bill_url(bill)
-    assert_response :success
-    page = response.body
-
     get_bill_drawer(bill)
     assert_response :success
     drawer = response.body
 
-    # Every section the shared partial used to render still has a home.
-    everything = %w[rules history_title average annualized ytd upcoming
-                    recent_payments history notes last_account key_metrics
+    get_bill_history(bill)
+    assert_response :success
+    history = response.body
+
+    everything = %w[overview rules history_title average annualized ytd
+                    upcoming history notes last_account key_metrics
                     price_changes]
-    homeless = everything.reject { |key| page.include?(I18n.t("bills.detail.#{key}")) }
-    assert_empty homeless, "relocating the detail must not delete any of it"
+    homeless = everything.reject { |key| (drawer + history).include?(I18n.t("bills.detail.#{key}")) }
+    assert_empty homeless, "folding the page in must not delete any of it"
 
-    # And the drawer adds nothing of its own that the page lacks.
-    shown_in_drawer = everything.select { |key| drawer.include?(I18n.t("bills.detail.#{key}")) }
-    assert_equal shown_in_drawer, shown_in_drawer & everything.select { |key| page.include?(I18n.t("bills.detail.#{key}")) },
-      "the drawer must stay a subset, never a second detail view"
+    twice = everything.select { |key| drawer.include?(I18n.t("bills.detail.#{key}")) && history.include?(I18n.t("bills.detail.#{key}")) }
+    assert_empty twice, "the summary and the history must not repeat each other"
 
-    [ "POWER CO AUTOPAY", "$78.50" ].each do |fact|
-      assert_includes page, fact, "the page is missing #{fact}"
-      assert_includes drawer, fact, "the drawer is missing #{fact}"
+    assert_includes history, "POWER CO AUTOPAY"
+    assert_includes history, "$78.50"
+    assert_includes history, "Account 4821"
+
+    # Collapsible, like a transaction's or a budget category's drawer: the
+    # overview opens, the rest wait for a click.
+    assert_select "details[open] > summary", text: I18n.t("bills.detail.overview")
+    %w[upcoming history notes].each do |key|
+      assert_select "details:not([open]) > summary", text: I18n.t("bills.detail.#{key}")
     end
-    assert_includes page, "Account 4821", "notes belong to the page"
+  end
+
+  # History names what paid each cycle: the payment when there was one, a
+  # count when it took several. A match still waiting on review paid nothing,
+  # so it is neither named nor counted.
+  test "history names what paid each settled cycle" do
+    bill = create_bill(name: "Power Co", amount: 80)
+    single, split = [ 3, 2 ].map do |months_ago|
+      due = months_ago.months.ago.to_date
+      bill.recurring_occurrences.create!(family: @family, original_due_on: due, due_on: due, currency: "USD")
+    end
+    autopay = create_transaction_entry(name: "POWER CO AUTOPAY", amount: 80, date: single.due_on)
+    RecurringTransaction::Allocator.new(single).allocate!(amount: "80", entry: autopay)
+    single.allocations.create!(
+      entry: create_transaction_entry(name: "POWER CO REFUND", amount: 80, date: single.due_on),
+      allocated_amount: 80, currency: "USD", state: "suggested", source: "auto_matched"
+    )
+    2.times { RecurringTransaction::Allocator.new(split).allocate!(amount: "40") }
+    assert [ single, split ].all? { |occurrence| occurrence.reload.paid? }, "both cycles must be settled to be history"
+
+    get_bill_history(bill)
+
+    # The cycle's own line, since the overview's "Also matches" names the
+    # payee too.
+    assert_response :success
+    paid = I18n.t("recurring_occurrences.history_status.paid")
+    assert_select "p", text: /\A#{paid}\s*·\s*POWER CO AUTOPAY\z/
+    assert_select "p", text: /\A#{paid}\s*·\s*#{I18n.t("bills.detail.payment_count", count: 2)}\z/
+    assert_no_match "POWER CO REFUND", response.body, "a pending match paid nothing"
   end
 
   # "Something changed" is only useful if the thing you can still act on is
@@ -1941,16 +2003,16 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("bills.index.review_with_ai"), response.body
   end
 
-  test "the bill page offers smart configure only when AI is available" do
+  test "the bill drawer offers smart configure only when AI is available" do
     bill = create_bill(name: "Power Co", amount: 80)
 
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
-    get bill_url(bill)
+    get_bill_drawer(bill)
     assert_response :success
     assert_match smart_configuration_bill_path(bill), response.body
 
     Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
-    get bill_url(bill)
+    get_bill_drawer(bill)
     assert_response :success
     assert_no_match smart_configuration_bill_path(bill), response.body
   end
@@ -2212,6 +2274,11 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # What a row asks for: the drawer variant, fetched into the drawer frame.
     def get_bill_drawer(bill, **params)
       get bill_url(bill, display: "drawer", **params), headers: { "Turbo-Frame" => "drawer" }
+    end
+
+    # What the drawer's lazy frame fetches once it is scrolled to.
+    def get_bill_history(bill)
+      get bill_url(bill, display: "history"), headers: { "Turbo-Frame" => ActionView::RecordIdentifier.dom_id(bill, :history) }
     end
 
     def create_bill(name:, amount:, **overrides)

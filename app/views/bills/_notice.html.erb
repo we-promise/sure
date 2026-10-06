@@ -24,6 +24,8 @@
         text: t("bills.manage"),
         variant: :default,
         href: bill_path(notice.series),
+        frame: :drawer,
+        data: { turbo_prefetch: false },
         class: "text-xs shrink-0"
       ) %>
 </div>

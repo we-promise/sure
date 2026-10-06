@@ -37,6 +37,7 @@ tr:
       current: Güncel
       next_payment: Sonraki ödeme
       around: '%{date} civarı'
+      overview: Genel Bakış
       rules: Bu fatura nasıl eşleştirilir
       rule_named: '%{name}'
       rule_amount_range: '%{min} ile %{max} arası'
@@ -54,7 +55,6 @@ tr:
       ytd: Bu yıl ödenen
       last_account: Son kullanılan hesap
       upcoming: Yaklaşanlar
-      recent_payments: Son ödemeler
       manual_payment: Manuel ödeme
       history: Geçmiş
       payment_count:
@@ -85,7 +85,6 @@ tr:
     summary:
       remaining: '%{amount} kaldı'
       paid_headline: '%{amount} ödendi'
-      cost_line: Ödeme başına ortalama %{average}, yılda yaklaşık %{annualized}
     add_bill: Fatura ekle
     manage: Yönet
     find_payment: Ödeme bul
@@ -93,7 +92,6 @@ tr:
     review_match: Eşleşmeyi incele
     resolve: Düzelt
     manage_payments: Ödemeleri yönet
-    view_full_bill: Faturanın tamamını görüntüle
     match:
       same_merchant: Aynı satıcı
       name_matches: Ad eşleşiyor

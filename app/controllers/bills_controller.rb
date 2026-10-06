@@ -137,16 +137,41 @@ class BillsController < ApplicationController
   end
 
   # One bill's complete story: current state, history, what is coming, cost.
+  # It lives in the drawer, the way a transaction or a budget category does.
   def show
     @series = Current.family.recurring_transactions
                      .accessible_by(Current.user)
                      .includes(:merchant)
                      .find(params[:id])
 
-    # The drawer names the cycle its row was opened from; the bill's own page
-    # has no cycle in mind and asks the series. Looked up through the series, so
-    # an id from another bill resolves to nothing rather than to someone else's
-    # occurrence.
+    # Outside a frame (a new tab, a pasted link, a notification) there is
+    # nothing to open the drawer into, so the overview renders around it and
+    # the layout's drawer frame loads the bill. A redirect back to this same
+    # URL (Pause on any drawer opened since) refreshes the list, not the bill.
+    unless turbo_frame_request?
+      unless came_from?(request.path)
+        @drawer_src = bill_path(@series, display: "drawer", occurrence: params[:occurrence].presence)
+      end
+      index
+      render :index unless performed?
+      return
+    end
+
+    # The deep part loads into a lazy frame inside the drawer, so opening a
+    # bill costs no more than its summary, and the aggregates behind the chart
+    # and the per-year totals run only once it is scrolled to.
+    if params[:display] == "history"
+      @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(allocations: :entry)
+      @upcoming = @series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3)
+      @analytics = paid_analytics
+      load_deep_extras
+      render :history, layout: false
+      return
+    end
+
+    # The drawer names the cycle its row was opened from; anything else asks
+    # the series. Looked up through the series, so an id from another bill
+    # resolves to nothing rather than to someone else's occurrence.
     @current_occurrence =
       if params[:occurrence].present?
         @series.recurring_occurrences.find_by(id: params[:occurrence]) || @series.current_occurrence
@@ -154,47 +179,10 @@ class BillsController < ApplicationController
         @series.current_occurrence
       end
 
-    @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(:allocations)
-    @upcoming = @series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3)
-
-    # What each settled cycle actually cost. The frozen `expected_amount` is an
-    # estimate, so reading it here would report averages of estimates beside the
-    # per-year totals below, which are sums of real payments.
-    paid_amounts = RecurringAllocation.confirmed
-                                      .joins(:recurring_occurrence)
-                                      .where(recurring_occurrences: {
-                                               recurring_transaction_id: @series.id,
-                                               status: "paid"
-                                             })
-                                      .group(:recurring_occurrence_id)
-                                      .sum(:allocated_amount)
-                                      .values
-    @analytics = if paid_amounts.any?
-      {
-        average: Money.new(paid_amounts.sum / paid_amounts.size, @series.currency),
-        lowest: Money.new(paid_amounts.min, @series.currency),
-        highest: Money.new(paid_amounts.max, @series.currency),
-        annualized: @series.monthly_equivalent_amount * 12,
-        ytd: Money.new(ytd_paid_total, @series.currency)
-      }
-    end
-
-    load_summary_extras
-
-    # Outside a frame (a new tab, a pasted link) there is nothing to open the
-    # dialog into, so the same URL is the bill's page.
-    if params[:display] == "drawer" && turbo_frame_request?
-      # A pending suggestion is the one thing that changes what the drawer
-      # should offer, so it is worth the one query.
-      @drawer_suggestion = @current_occurrence&.allocations&.suggested&.first
-      render :drawer, layout: false
-      return
-    end
-
-    # Only the bill's own page carries the deep material, so only it pays for
-    # the aggregates behind it.
-    load_deep_extras
-    render
+    # A pending suggestion is the one thing that changes what the drawer
+    # should offer, so it is worth the one query.
+    @drawer_suggestion = @current_occurrence&.allocations&.suggested&.first
+    render :drawer, layout: false
   end
 
   private
@@ -233,10 +221,28 @@ class BillsController < ApplicationController
     end
     helper_method :paycheck_income_plans?
 
-    # What the drawer needs: the handful of payments that actually settled
-    # this bill lately. Cheap enough to run on every row someone opens.
-    def load_summary_extras
-      @recent_allocations = confirmed_allocations.includes(:entry).order(paid_on: :desc, created_at: :desc).limit(6)
+    # What each settled cycle actually cost. The frozen `expected_amount` is an
+    # estimate, so reading it here would report averages of estimates beside the
+    # per-year totals, which are sums of real payments.
+    def paid_analytics
+      paid_amounts = RecurringAllocation.confirmed
+                                        .joins(:recurring_occurrence)
+                                        .where(recurring_occurrences: {
+                                                 recurring_transaction_id: @series.id,
+                                                 status: "paid"
+                                               })
+                                        .group(:recurring_occurrence_id)
+                                        .sum(:allocated_amount)
+                                        .values
+      return if paid_amounts.empty?
+
+      {
+        average: Money.new(paid_amounts.sum / paid_amounts.size, @series.currency),
+        lowest: Money.new(paid_amounts.min, @series.currency),
+        highest: Money.new(paid_amounts.max, @series.currency),
+        annualized: @series.monthly_equivalent_amount * 12,
+        ytd: Money.new(ytd_paid_total, @series.currency)
+      }
     end
 
     # The bill's financial story: a year of payments by month, per-year totals,

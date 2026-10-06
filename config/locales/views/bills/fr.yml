@@ -79,13 +79,13 @@ fr:
       manual_payment: Paiement manuel
       next_payment: Prochain paiement
       notes: Remarques
+      overview: Aperçu
       payment_count:
         one: 1 paiement
         other: "%{count} paiements"
       price_change_line: "%{from} → %{to}"
       price_changes: Changements de prix
       range: de %{min} à %{max}
-      recent_payments: Paiements récents
       renews_chip: Renouvellement le %{date}
       rule_aliases: Correspond aussi à %{names}
       rule_amount_range: de %{min} à %{max}
@@ -300,10 +300,8 @@ fr:
         trigger: Laisser l'IA configurer
         uncategorized: Sans catégorie
     summary:
-      cost_line: En moyenne %{average} par paiement, soit environ %{annualized} par an
       paid_headline: "%{amount} payés"
       remaining: "%{amount} restants"
-    view_full_bill: Voir la facture complète
     views:
       all: Toutes les factures
       aria_label: Vues des factures
