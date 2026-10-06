@@ -105,7 +105,11 @@ module Family::AutoTransferMatchable
     candidates_with_confirmation = candidates_scope
       .map { |match| [ match, iban_confirmed?(match, transactions_by_id) ] }
       .select { |match, confirmed| confirmed || match.date_diff <= DEFAULT_DATE_WINDOW }
-      .sort_by { |match, confirmed| [ confirmed ? 0 : 1, match.date_diff ] }
+      # Stable: inside each group keep the SQL order of the candidate
+      # query, so any ranking it applies before date_diff still holds.
+      .each_with_index
+      .sort_by { |(_match, confirmed), index| [ confirmed ? 0 : 1, index ] }
+      .map(&:first)
 
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
