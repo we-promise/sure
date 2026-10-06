@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div id="binance-providers-panel" class="space-y-4">
   <% items = local_assigns[:binance_items] || @binance_items || Current.family.binance_items.active.ordered %>
 
   <%= render DS::Alert.new(
@@ -66,7 +66,7 @@
               icon: "refresh-cw",
               variant: :outline,
               size: :sm,
-              href: sync_binance_item_path(item),
+              href: sync_binance_item_path(item, source: "panel"),
               method: :post,
               disabled: item.syncing?
             ) %>

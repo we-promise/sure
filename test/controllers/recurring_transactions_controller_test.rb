@@ -84,6 +84,14 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert @recurring_transaction.reload.active?
   end
 
+  # Pause is offered from the Bills drawer and the bill's page as well as from
+  # this settings page, and it used to send all of them here.
+  test "toggle_status returns to the page it was pressed on" do
+    post toggle_status_recurring_transaction_url(@recurring_transaction), headers: { "Referer" => bills_url }
+
+    assert_redirected_to bills_url
+  end
+
   # The dialog is delivered into the shared <turbo-frame id="modal"> that every page
   # layout already renders empty. If this action responds with a full page layout,
   # the response carries two frames with that id, Turbo matches the empty one first,
