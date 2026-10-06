@@ -98,6 +98,17 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_empty warnings
   end
 
+  test "timeline_cursor drops the cursor for a newly discovered envelope kind" do
+    envelopes = [ { "kind" => "portfolio" }, { "kind" => "pea" } ]
+
+    # The PEA has not been synced yet, so its older events sit behind the
+    # user-wide cursor: force a full timeline fetch.
+    assert_nil @client.send(:timeline_cursor, "evt_9", envelopes, [ "portfolio" ])
+    assert_nil @client.send(:timeline_cursor, "evt_9", envelopes, [])
+    # Every discovered envelope kind is already known: keep the incremental cursor.
+    assert_equal "evt_9", @client.send(:timeline_cursor, "evt_9", envelopes, %w[portfolio pea])
+  end
+
   test "advances the list cursor when only trade details remain pending" do
     @client.define_singleton_method(:collect_timeline_topic) do |_websocket, topic:, **_|
       if topic == "timelineTransactions"

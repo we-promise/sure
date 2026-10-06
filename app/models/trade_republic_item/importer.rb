@@ -21,7 +21,8 @@ class TradeRepublicItem::Importer
       known_newest_event_id: known_newest_event_id,
       enrich_events: events_needing_detail_enrichment,
       symbol_lookup_isins: isins_needing_symbol_lookup,
-      known_instrument_symbols: stored_instrument_symbols
+      known_instrument_symbols: stored_instrument_symbols,
+      known_envelope_kinds: known_envelope_kinds
     )
 
     data = result.data
@@ -107,7 +108,7 @@ class TradeRepublicItem::Importer
         name: build_account_name(account_id, kind: kind),
         currency: currency,
         current_balance: positions_value(Array(envelope["positions"]), fallback: existing&.current_balance),
-        cash_balance: kind == "pea" ? cash_balance(envelope["cash"]) : 0,
+        cash_balance: pea_cash_balance(kind, envelope, statuses, existing),
         positions: Array(envelope["positions"]),
         events: events,
         instrument_symbols: data["instrument_symbols"],
@@ -269,6 +270,13 @@ class TradeRepublicItem::Importer
       end
     end
 
+    # Envelope kinds already stored for this login. The client uses this to force
+    # a full timeline fetch when discovery surfaces a new envelope (for example a
+    # PEA), whose older events sit behind the shared user-wide cursor.
+    def known_envelope_kinds
+      trade_republic_item.trade_republic_accounts.where(kind: %w[portfolio pea]).distinct.pluck(:kind)
+    end
+
     def known_newest_event_id
       return if trade_republic_item.newest_event_id.blank?
 
@@ -283,7 +291,7 @@ class TradeRepublicItem::Importer
       return if securities_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
 
       trade_republic_item.newest_event_id
-    end
+      end
 
     # Incomplete trade-detail events and complete trades still missing a share
     # price (stored before execution price/fees were parsed). Oldest first so
@@ -484,10 +492,20 @@ class TradeRepublicItem::Importer
 
     # Exact decimal math. Cash comes from the envelope's cash pocket, not the
     # singular top-level payload.
+    # A failed cash fetch must not zero a PEA's stored cash pocket: keep the last
+    # known balance and let a later sync repair it. Other kinds carry no cash
+    # pocket on the securities row.
+    def pea_cash_balance(kind, envelope, statuses, existing)
+      return 0 unless kind == "pea"
+      return existing&.cash_balance || 0 if statuses["cash"] == "failed"
+
+      cash_balance(envelope["cash"])
+    end
+
     def cash_balance(cash)
       parse_decimal(cash&.dig("amount")) ||
         parse_decimal(cash&.dig("value")) || BigDecimal("0")
-    end
+      end
 
     def positions_value(positions, fallback: nil)
       return BigDecimal("0") if positions.empty?

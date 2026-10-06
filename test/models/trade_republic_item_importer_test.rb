@@ -1079,6 +1079,55 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_not @item.trade_republic_accounts.exists?(kind: "pea")
   end
 
+  test "failed pea cash fetch keeps the stored pea cash balance" do
+    pea = @item.trade_republic_accounts.create!(
+      kind: "pea",
+      name: "PEA",
+      trade_republic_account_id: "SEC-PEA",
+      currency: "EUR",
+      cash_balance: BigDecimal("42.00")
+    )
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "SEC-CTO",
+      currency: "EUR"
+    )
+    @item.trade_republic_accounts.create!(
+      kind: "cash",
+      name: "Cash",
+      trade_republic_account_id: "cash:SEC-CTO",
+      currency: "EUR"
+    )
+
+    provider = mock("trade_republic_provider")
+    # Only portfolio and pea are securities envelopes the client needs to know.
+    provider.expects(:sync).with { |args|
+      args[:known_envelope_kinds].sort == %w[pea portfolio]
+    }.returns(client_result(
+      "status" => "partial",
+      "domain_statuses" => {
+        "account_metadata" => "success",
+        "cash" => "failed",
+        "portfolio" => "success",
+        "timeline" => "success",
+        "instrument_metadata" => "success"
+      },
+      "accounts" => [
+        envelope_result(kind: "portfolio", brokerage_account_id: "SEC-CTO", cash_status: "failed"),
+        envelope_result(kind: "pea", brokerage_account_id: "SEC-PEA", cash_status: "failed")
+      ],
+      "account" => { "brokerage_account_id" => "SEC-CTO", "currency" => "EUR" },
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal BigDecimal("42.00"), pea.reload.cash_balance
+    assert_equal BigDecimal("0"), @item.trade_republic_accounts.find_by!(kind: "portfolio").cash_balance
+  end
+
   test "import routes envelope-tagged events and keeps untagged events on the portfolio" do
     pea_trade = {
       "id" => "pea-trade",

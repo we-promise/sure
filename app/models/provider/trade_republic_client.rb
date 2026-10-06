@@ -294,7 +294,7 @@ class Provider::TradeRepublicClient
     end
   end
 
-  def sync(session_txt:, known_newest_event_id: nil, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
+  def sync(session_txt:, known_newest_event_id: nil, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {}, known_envelope_kinds: [])
     raise ConfigurationError, "session_txt is required" if session_txt.blank?
 
     with_retry do
@@ -304,12 +304,13 @@ class Provider::TradeRepublicClient
         timeline_max_pages: timeline_max_pages,
         enrich_events: enrich_events,
         symbol_lookup_isins: symbol_lookup_isins,
-        known_instrument_symbols: known_instrument_symbols
+        known_instrument_symbols: known_instrument_symbols,
+        known_envelope_kinds: known_envelope_kinds
       )
     end
   end
 
-  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
+  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {}, known_envelope_kinds: [])
     session = new_session(session_blob: session_txt)
     account_response = session.get("/api/v2/auth/account")
     return Result.new(data: { "status" => "session_expired" }) if [ 401, 403 ].include?(account_response.code.to_i)
@@ -332,6 +333,7 @@ class Provider::TradeRepublicClient
       raise TransientProviderError, "Trade Republic WebSocket handshake was rejected" unless connected == "connected"
 
       envelopes = discover_envelopes(websocket, account["securitiesAccountNumber"], account["currency"], warnings)
+      known_newest_event_id = timeline_cursor(known_newest_event_id, envelopes, known_envelope_kinds)
       envelopes.each do |envelope|
         fetch_envelope_cash(websocket, envelope, warnings)
         fetch_envelope_positions(websocket, envelope, known_instrument_symbols, warnings)
@@ -764,6 +766,16 @@ class Provider::TradeRepublicClient
       end
 
       envelopes.uniq { |envelope| envelope["kind"] }
+    end
+
+    # The timeline is user-wide, so a cursor advanced by an already-synced
+    # account also caps a newly discovered envelope. Drop the cursor when
+    # discovery finds a kind we have not synced yet, so its older events come in.
+    def timeline_cursor(known_newest_event_id, envelopes, known_envelope_kinds)
+      discovered = envelopes.map { |envelope| envelope["kind"] }
+      return nil unless (discovered - Array(known_envelope_kinds)).empty?
+
+      known_newest_event_id
     end
 
     def default_envelope(sec_acc_no, currency)

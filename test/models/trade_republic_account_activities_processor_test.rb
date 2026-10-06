@@ -1673,6 +1673,29 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not @account.entries.exists?(external_id: "trade_republic_event_evt_pea_only")
   end
 
+  test "pea keeps its own cash movements when the default cash account is linked" do
+    pea_provider, pea_sure = create_linked_pea_account!
+    cash_provider, = create_linked_cash_account!
+
+    dividend = {
+      id: "evt_pea_div_linked",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CREDIT",
+      category: "DIVIDEND",
+      envelope_kind: "pea",
+      detail: { amount: "25.50", currency: "EUR" }
+    }
+    pea_provider.update!(raw_timeline_payload: [ dividend ])
+    cash_provider.update!(raw_timeline_payload: [ dividend ])
+
+    process_all(pea_provider)
+
+    # The PEA books its own cash and must not hand it over to the cash sibling
+    # (the split-portfolio reconciliation runs on the DEFAULT portfolio only).
+    assert pea_sure.entries.exists?(external_id: "trade_republic_event_evt_pea_div_linked")
+    assert_not @account.entries.exists?(external_id: "trade_republic_event_evt_pea_div_linked")
+  end
+
   private
 
     def create_linked_pea_account!

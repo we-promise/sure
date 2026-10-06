@@ -632,12 +632,12 @@ class TradeRepublicAccount::ActivitiesProcessor
       end
     end
 
-    # A securities account whose envelope's cash sibling is linked must not
-    # keep the cash movements it imported before the split: they now belong to
-    # the cash account. Crypto books trades only, never cash movements, so it
-    # is excluded.
+    # A portfolio whose cash sibling is linked must not keep the cash movements
+    # it imported before the split: they now belong to the cash account. The
+    # PEA keeps its cash inside the account and Crypto books trades only, so
+    # neither reaches this path.
     def reconcile_split_portfolio_transactions!
-      return unless (@trade_republic_account.portfolio? || @trade_republic_account.pea?) && linked_cash_account_present?
+      return unless @trade_republic_account.portfolio? && linked_cash_account_present?
       cash_account = @trade_republic_account.trade_republic_item.trade_republic_accounts.find_by(kind: @trade_republic_account.cash_sibling_kind)
       return unless cash_account
 
