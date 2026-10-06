@@ -154,6 +154,20 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal({ "JPY" => 30.days.ago.to_date }, stale, "CAD is current, KRW has no rate at all, USD needs none")
   end
 
+  # Today converts at the latest rate on or before today, so a future-dated row
+  # must not hide that the rate in use is old. A currency with only future rows
+  # has no older rate to name and stays out, as before.
+  test "stale_rate_dates ignores rates dated after as_of" do
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 30.days.ago.to_date, rate: 0.0067)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 3.days.from_now.to_date, rate: 0.0068)
+    ExchangeRate.create!(from_currency: "CHF", to_currency: "USD", date: 3.days.from_now.to_date, rate: 1.1)
+
+    sql = ExchangeRate.rate_sql(from: "'JPY'", to: "'USD'", on: "CURRENT_DATE")
+    assert_equal BigDecimal("0.0067"), ActiveRecord::Base.connection.select_value("SELECT #{sql}").to_d
+
+    assert_equal({ "JPY" => 30.days.ago.to_date }, ExchangeRate.stale_rate_dates(%w[JPY CHF], to: "USD"))
+  end
+
   # A stored 0 or negative is no rate: multiplying by it books an amount as
   # nothing or flips its sign. The usable rate behind it is used instead.
   test "rates_for and rate_sql skip a stored rate of zero or below" do

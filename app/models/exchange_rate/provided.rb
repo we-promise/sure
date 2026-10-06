@@ -179,7 +179,9 @@ module ExchangeRate::Provided
       candidates = currencies.compact.uniq - [ to ]
       return {} if candidates.empty?
 
-      usable_rates.where(from_currency: candidates, to_currency: to)
+      # Rows dated after as_of are left out: today converts at the latest rate
+      # on or before today, so a future row must not hide that it is old.
+      usable_rates.where(from_currency: candidates, to_currency: to, date: ..as_of)
         .group(:from_currency)
         .maximum(:date)
         .select { |_, date| date < as_of - NEAREST_RATE_LOOKBACK_DAYS }
