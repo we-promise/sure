@@ -122,7 +122,16 @@
                           min: Chat::MIN_RESPONSE_TIMEOUT.to_i,
                           disabled: ENV["AI_RESPONSE_TIMEOUT"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
-    <p class="text-xs text-secondary mt-1"><%= t(".ai_response_timeout_help") %></p>
+    <p class="text-xs text-secondary mt-1 mb-3"><%= t(".ai_response_timeout_help") %></p>
+
+    <%= form.number_field :ai_health_probe_timeout,
+                          label: t(".ai_health_probe_timeout_label"),
+                          placeholder: AiHealth::Probe::DEFAULT_TIMEOUT.to_s,
+                          value: ENV["AI_HEALTH_PROBE_TIMEOUT"].present? ? AiHealth::Probe.timeout : Setting.ai_health_probe_timeout,
+                          min: 1,
+                          disabled: ENV["AI_HEALTH_PROBE_TIMEOUT"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1"><%= t(".ai_health_probe_timeout_help") %></p>
   </div>
   <% end %>
 </div>
