@@ -110,10 +110,14 @@ class Balance::LinkedInvestmentSeriesNormalizer
       # the initial balance (e.g. $0), only when the inception date falls within
       # the requested series date range.
       active_points = [ opening_point(date: first_supported_history_date, date_formatted: nil, value: opening_money), *active_points ]
-    elsif active_points.first.date == first_supported_history_date
-      # Sampling landed exactly on the opening date (e.g. a daily "All" chart):
-      # the first point carries the day's closing balance, which already includes
-      # the first activity. Reset it to the balance before that activity (#3959).
+    elsif active_points.first.date == first_supported_history_date &&
+          first_provider_activity_date == first_supported_history_date
+      # Sampling landed exactly on the opening date (e.g. a daily "All" chart)
+      # and that date is the first provider activity date: the first point
+      # carries the day's closing balance, which already includes the first
+      # activity. Reset it to the balance before that activity (#3959).
+      # When the inception date comes from provider holdings rather than
+      # activity, the first point is genuine supported history and is kept.
       first_point = active_points.first
       active_points = [
         opening_point(date: first_point.date, date_formatted: first_point.date_formatted, value: opening_money),
