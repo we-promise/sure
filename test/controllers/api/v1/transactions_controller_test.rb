@@ -666,6 +666,24 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Transaction Name", response_data["name"]
   end
 
+  test "should not sync the account when only notes change" do
+    assert_no_enqueued_jobs only: SyncJob do
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { notes: "Just a note" } },
+          headers: api_headers(@api_key)
+    end
+    assert_response :success
+  end
+
+  test "should sync the account when the amount changes" do
+    assert_enqueued_with(job: SyncJob) do
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { amount: 42.00 } },
+          headers: api_headers(@api_key)
+    end
+    assert_response :success
+  end
+
   test "should protect transaction from provider sync when updated with user_modified true" do
     update_params = {
       transaction: {

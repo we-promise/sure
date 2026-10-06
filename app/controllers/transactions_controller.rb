@@ -183,6 +183,7 @@ class TransactionsController < ApplicationController
 
   def update
     if @entry.update(permitted_entry_params)
+      sync_needed = @entry.saved_changes_affect_balances?
       transaction = @entry.transaction
       transaction.record_category_usage!
 
@@ -197,7 +198,7 @@ class TransactionsController < ApplicationController
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.sync_account_later
+      @entry.sync_account_later if sync_needed
 
       notes_changed = @entry.saved_change_to_notes?
 
@@ -261,7 +262,6 @@ class TransactionsController < ApplicationController
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
-    @entry.sync_account_later
 
     respond_to do |format|
       # JSON stays first so Accept: */* callers keep the original response.
