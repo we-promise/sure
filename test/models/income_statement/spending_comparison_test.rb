@@ -75,6 +75,17 @@ class IncomeStatement::SpendingComparisonTest < ActiveSupport::TestCase
     assert travel.change.negative?
   end
 
+  test "a subcategory refunded below zero doesn't make the others overstate the parent" do
+    bakery = @family.categories.create!(name: "Bakery", parent: @food)
+    create_transaction(account: @account, date: Date.new(2026, 9, 5), amount: 100, category: @groceries)
+    create_transaction(account: @account, date: Date.new(2026, 9, 6), amount: -60, category: bakery) # refund only
+
+    food = comparison.rows.find { |r| r.category == @food }
+
+    assert_equal 40, food.total
+    assert_equal [ [ @food, 40 ] ], food.subcategories.map { |s| [ s.category, s.total ] }
+  end
+
   test "uncategorized spending is its own row" do
     create_transaction(account: @account, date: Date.new(2026, 9, 5), amount: 40)
 
