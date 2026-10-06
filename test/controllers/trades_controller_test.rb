@@ -128,6 +128,55 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to @entry.account
   end
 
+  test "manual option trade form collects contract details without asking for a separate amount" do
+    get new_trade_url(account_id: @entry.account_id, type: "option_buy")
+
+    assert_response :success
+    assert_select "input[name='model[underlying_ticker]']"
+    assert_select "select[name='model[option_type]']"
+    assert_select "input[name='model[strike_price]']"
+    assert_select "input[name='model[expiration_date]']"
+    assert_select "input[name='model[contract_multiplier]']"
+    assert_select "input[name='model[amount]']", count: 0
+  end
+
+  test "creates a manual call trade with its contract multiplier applied to cash and holdings" do
+    assert_difference -> { Entry.count } => 1, -> { Trade.count } => 1, -> { Security.count } => 1 do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: {
+          type: "option_buy",
+          underlying_ticker: "NVDA",
+          option_type: "call",
+          strike_price: "120",
+          expiration_date: "2027-01-15",
+          contract_multiplier: "100",
+          date: Date.current,
+          qty: "2",
+          price: "3.50",
+          fee: "1.25",
+          currency: "USD"
+        }
+      }
+    end
+
+    ticker = Security.option_ticker(
+      underlying_ticker: "NVDA",
+      option_type: "call",
+      strike_price: "120",
+      expiration_date: "2027-01-15",
+      contract_multiplier: 100
+    )
+    trade = @entry.account.trades.find_by!(security: Security.find_by!(ticker: ticker))
+    assert_equal "call", trade.security.option_type
+    assert_equal "NVDA", trade.security.underlying_ticker
+    assert_equal BigDecimal("120"), trade.security.strike_price
+    assert_equal Date.new(2027, 1, 15), trade.security.expiration_date
+    assert_equal 100, trade.contract_multiplier
+    assert_equal 2, trade.qty
+    assert_equal BigDecimal("3.5"), trade.price
+    assert_equal BigDecimal("701.25"), trade.entry.amount
+  end
+
   # A deposit or withdrawal books an entry on the other account too, so that
   # account needs write permission, not just the investment account.
   test "a withdrawal cannot book into an account the member may only read" do

@@ -64,7 +64,7 @@ class Holding::ForwardCalculator
           qty: qty,
           price: price.price,
           currency: price.currency,
-          amount: qty * price.price,
+          amount: qty * price.price * portfolio_cache.security_contract_multiplier(security_id),
           cost_basis: cost_basis_for(security_id, price.currency),
           cost_basis_unknown: @transferred_security_ids.include?(security_id)
         )

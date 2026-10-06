@@ -33,6 +33,7 @@ class Trade < ApplicationRecord
   validates :qty, presence: true
   validates :price, :currency, presence: true
   validates :investment_activity_label, inclusion: { in: ACTIVITY_LABELS }, allow_nil: true
+  validates :contract_multiplier, numericality: { only_integer: true, greater_than: 0 }
 
   def exchange_rate
     extra&.dig("exchange_rate")
@@ -64,6 +65,10 @@ class Trade < ApplicationRecord
     qty.negative?
   end
 
+  def contract_price
+    price.to_d * contract_multiplier
+  end
+
   # A negative quantity that left for another account you own. It looks exactly
   # like a sale — same sign, same shape — and only the label tells them apart.
   def internal_movement?
@@ -82,8 +87,8 @@ class Trade < ApplicationRecord
     current_price = security.current_price
     return nil if current_price.nil?
 
-    current_value = current_price * qty.abs
-    cost_basis = price_money * qty.abs
+    current_value = current_price * qty.abs * contract_multiplier
+    cost_basis = price_money * qty.abs * contract_multiplier
 
     Trend.new(current: current_value, previous: cost_basis)
   end
@@ -218,7 +223,7 @@ class Trade < ApplicationRecord
       return nil unless holding&.avg_cost
 
       cost_basis = holding.avg_cost * qty.abs
-      sale_proceeds = converted_to_basis_currency(price_money * qty.abs, cost_basis.currency)
+      sale_proceeds = converted_to_basis_currency(price_money * qty.abs * contract_multiplier, cost_basis.currency)
 
       # No rate for that day means the gain is unknown, not zero and not the
       # figure a rate of 1.0 would give.

@@ -2,7 +2,7 @@
 
 <%
   # Pre-calculate values for the form
-  # Note: cost_basis field stores per-share cost, so calculate total for display
+  # Cost basis is stored per share for securities and per contract for options.
   current_per_share = holding.cost_basis.present? && holding.cost_basis.positive? ? holding.cost_basis : nil
   current_total = current_per_share && holding.qty.positive? ? (current_per_share * holding.qty).round(2) : nil
   currency = Money::Currency.new(holding.currency)
@@ -39,7 +39,7 @@
              data-controller="cost-basis-form"
              data-cost-basis-form-qty-value="<%= holding.qty %>">
           <h4 class="font-medium text-sm mb-3">
-            <%= t(".set_cost_basis_header", ticker: holding.ticker, qty: format_quantity(holding.qty)) %>
+            <%= t(".set_cost_basis_header", ticker: holding.ticker, qty: format_quantity(holding.qty), unit: t(holding.security.option_contract? ? ".contracts" : ".shares")) %>
           </h4>
           <%
             form_data = { turbo: false }
@@ -74,12 +74,12 @@
               </div>
             </div>
             <p class="text-xs text-secondary -mt-2" data-cost-basis-form-target="perShareDisplay">
-              = <%= currency.symbol %><span data-cost-basis-form-target="perShareValue"><%= number_with_precision(current_per_share, precision: 2) || "0.00" %></span> <%= t(".per_share") %>
+              = <%= currency.symbol %><span data-cost-basis-form-target="perShareValue"><%= number_with_precision(current_per_share, precision: 2) || "0.00" %></span> <%= t(holding.security.option_contract? ? ".per_contract" : ".per_share") %>
             </p>
 
             <!-- Alternative: Per-share input -->
             <div class="pt-2 border-t border-tertiary">
-              <label class="text-xs text-secondary block mb-1"><%= t(".or_per_share_label") %></label>
+              <label class="text-xs text-secondary block mb-1"><%= t(holding.security.option_contract? ? ".or_per_contract_label" : ".or_per_share_label") %></label>
               <div class="flex items-center gap-1">
                 <span class="text-secondary text-sm font-medium"><%= currency.symbol %></span>
                 <input type="number" step="any"

@@ -5,8 +5,9 @@ module Holding::TradeCalculatorHelpers
     # Converts a trade's price into the account's currency, falling back to the
     # raw price when no exchange rate is available.
     def converted_trade_price(trade)
-      Money.new(trade.price, trade.currency).exchange_to(account.currency).amount
+      contract_price = trade.price.to_d * trade.contract_multiplier
+      Money.new(contract_price, trade.currency).exchange_to(account.currency).amount
     rescue Money::ConversionError
-      trade.price
+      contract_price
     end
 end
