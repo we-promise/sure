@@ -233,14 +233,14 @@ class TransactionsController < ApplicationController
           running_balance = nil
           hide_balance = true
           if is_flat_compact
-            running_balance = Account::RunningBalanceCalculator.new([ @entry ]).running_balances[@entry.id] || Money.new(0, @entry.currency)
+            running_balance = Account::RunningBalanceCalculator.new([ @entry ]).running_balances[@entry.id]
             hide_balance = view_ctx != "account" || is_filtered ? true : false
           end
           entry_row_stream = if is_compact
             turbo_stream.replace(
               dom_id(@entry),
               partial: "transactions/compact_transaction",
-              locals: { entry: @entry, view_ctx: view_ctx || "global", in_split_group: in_split_group, running_balance: running_balance, hide_balance: hide_balance }
+              locals: { entry: @entry, view_ctx: view_ctx || "global", in_split_group: in_split_group, running_balance: running_balance, hide_balance: hide_balance, flat: is_flat_compact }
             )
           else
             turbo_stream.replace(

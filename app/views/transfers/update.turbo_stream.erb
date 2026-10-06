@@ -4,7 +4,7 @@
       <%= turbo_stream.replace(
             dom_id(leg[:entry]),
             partial: "transactions/compact_transaction",
-            locals: { entry: leg[:entry], view_ctx: @view_ctx || "global", in_split_group: leg[:in_split_group], running_balance: leg[:running_balance], hide_balance: leg[:hide_balance] }
+            locals: { entry: leg[:entry], view_ctx: @view_ctx || "global", in_split_group: leg[:in_split_group], running_balance: leg[:running_balance], hide_balance: leg[:hide_balance], flat: leg[:flat] }
           ) %>
     <% else %>
       <%= turbo_stream.replace leg[:entry] %>

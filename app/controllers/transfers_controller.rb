@@ -110,10 +110,10 @@ class TransfersController < ApplicationController
       running_balance = nil
       hide_balance = true
       if is_flat_compact
-        running_balance = Account::RunningBalanceCalculator.new([ entry ]).running_balances[entry.id] || Money.new(0, entry.currency)
+        running_balance = Account::RunningBalanceCalculator.new([ entry ]).running_balances[entry.id]
         hide_balance = @view_ctx != "account" || @is_filtered ? true : false
       end
-      { entry: entry, in_split_group: helpers.in_split_group?(entry, params[:grouped]), running_balance: running_balance, hide_balance: hide_balance }
+      { entry: entry, in_split_group: helpers.in_split_group?(entry, params[:grouped]), running_balance: running_balance, hide_balance: hide_balance, flat: is_flat_compact }
     end
 
     respond_to do |format|
