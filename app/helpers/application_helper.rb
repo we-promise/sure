@@ -55,6 +55,11 @@ module ApplicationHelper
     end
   end
 
+  # The chevron for a DS::Disclosure summary_content slot; it turns as the disclosure opens.
+  def disclosure_chevron
+    icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90"
+  end
+
   # Convert alpha (0-1) to 8-digit hex (00-FF)
   def hex_with_alpha(hex, alpha)
     alpha_hex = (alpha * 255).round.to_s(16).rjust(2, "0")
