@@ -353,6 +353,10 @@ export default class extends Controller {
       }
     } catch (error) {
       console.error("[Sortable List] Network error saving order:", error);
+      // A newer order still gets sent; otherwise show what is actually saved.
+      if (!this.pendingOrder) {
+        Turbo.visit(window.location.href, { action: "replace" });
+      }
     }
   }
 }
