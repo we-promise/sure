@@ -1,6 +1,7 @@
 class FamilyMerchantsController < ApplicationController
   include WriteOnlyIbanParams
 
+  before_action :require_non_guest!, except: %i[index]
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index

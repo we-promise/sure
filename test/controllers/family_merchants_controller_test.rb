@@ -208,6 +208,36 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to family_merchants_path
   end
 
+  test "guest cannot create merchant" do
+    sign_in family_guest
+
+    assert_no_difference("FamilyMerchant.count") do
+      post family_merchants_url, params: { family_merchant: { name: "Guest Merchant" } }
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "guest cannot destroy merchant" do
+    sign_in family_guest
+
+    assert_no_difference("FamilyMerchant.count") do
+      delete family_merchant_url(@merchant)
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "member can create merchant" do
+    sign_in users(:family_member)
+
+    assert_difference("FamilyMerchant.count") do
+      post family_merchants_url, params: { family_merchant: { name: "Member Merchant" } }
+    end
+
+    assert_redirected_to family_merchants_path
+  end
+
   test "should create merchant as json" do
     assert_difference("FamilyMerchant.count") do
       post family_merchants_url(format: :json), params: { family_merchant: { name: "Quick Merchant" } }

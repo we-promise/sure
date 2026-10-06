@@ -119,7 +119,7 @@ ru:
         completion: ответ
         cost_by_model: Стоимость по моделям
         cost_by_operation: Стоимость по операциям
-        cost_estimates_description: 'Стоимость оценивается на основе опубликованных цен поставщиков, включая цены OpenAI на июль 2026 года. Фактические затраты могут отличаться. Цены указаны за 1 миллион токенов и варьируются в зависимости от модели. Пользовательские или самохостинг-модели будут отображаться как "N/A" и не включаются в общую стоимость.'
+        cost_estimates_description: 'Стоимость оценивается по опубликованным ценам поставщиков, проверенным %{date}. Фактические затраты могут отличаться. Цены указаны за 1 миллион токенов и варьируются в зависимости от модели. Пользовательские или самохостинг-модели будут отображаться как "N/A" и не включаются в общую стоимость.'
         cost_estimates_title: Оценка стоимости
         end_date: Дата окончания
         failed: Неудачно
@@ -316,6 +316,7 @@ ru:
         api_secret_label: Секретный ключ API
         api_secret_placeholder: Вставьте ваш секретный ключ API Binance
         connect_button: Подключить Binance
+        disconnect: Отключить
         disconnect_confirm: Вы уверены, что хотите отключить Binance?
         historical_import: Настройки исторического импорта
         ip_hint_body: 'Добавьте IP-адрес выхода сервера приложения в белый список
@@ -345,6 +346,7 @@ ru:
         api_secret_label: Секретный ключ API
         api_secret_placeholder: Введите ваш секретный ключ API Coinbase
         connect_button: Подключить Coinbase
+        disconnect: Отключить
         disconnect_confirm: Вы уверены, что хотите отключить это подключение Coinbase?
           Ваши синхронизированные счета станут ручными счетами.
         setup_instructions: 'Чтобы подключить Coinbase:'
@@ -701,11 +703,16 @@ ru:
         qr_instruction: Отсканируйте QR-код в приложении Trade Republic и подтвердите вход.
         qr_success: Вход подтверждён. Sure обновляет страницу провайдера.
         qr_error: Не удалось начать вход по QR-коду. Пожалуйста, попробуйте снова.
+        add_account: "Добавить ещё одно подключение"
         save_configuration: Сохранить и войти
         update_configuration: Обновить конфигурацию
         sync: Синхронизировать
+        syncing: "Синхронизация..."
         disconnect: Отключить Trade Republic
         disconnect_confirm: Отключить Trade Republic? Ваши синхронизированные счета станут ручными.
+        disconnect_confirm_with_identifier: "Отключить подключение Trade Republic, оканчивающееся на %{last4}? Ваши синхронизированные счета станут ручными."
+        identifier_phone: Телефон
+        identifier_account: Счёт
         status_configured_prefix: Подключено. Перейдите на
         accounts_tab: Счета
         setup_accounts: Настроить счета

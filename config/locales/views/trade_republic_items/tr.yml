@@ -148,6 +148,7 @@ tr:
         card_refund: Kart iadesi
         tax_refund: Vergi iadesi
         round_up: Round up
+    duplicate_connection: "Bu Trade Republic hesabı zaten bağlı. Yeni bağlantı kaldırıldı."
     defaults:
       name: Trade Republic
     sync_status:

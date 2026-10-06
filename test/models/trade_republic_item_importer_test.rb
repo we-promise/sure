@@ -39,6 +39,64 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal 1, account.raw_positions_payload.size
   end
 
+  test "import creates a Crypto account valued at the crypto positions" do
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "account" => { "brokerage_account_id" => "DE9997", "currency" => "EUR" },
+      "cash" => { "amount" => "10", "currency" => "EUR" },
+      "positions" => [
+        { "isin" => "US0378331005", "name" => "Apple Inc.", "category" => "brokerage", "quantity" => "2", "price" => "100" },
+        { "isin" => "XF000BTC0017", "name" => "Bitcoin", "category" => "crypto_wallet", "quantity" => "0.001", "price" => "70000" }
+      ],
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    crypto = @item.trade_republic_accounts.find_by(kind: "crypto")
+    assert_equal "crypto:DE9997", crypto.trade_republic_account_id
+    assert_equal BigDecimal("70"), crypto.current_balance
+    assert_equal BigDecimal("270"), @item.trade_republic_accounts.find_by(kind: "portfolio").current_balance
+  end
+
+  test "import creates no Crypto account without crypto" do
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "account" => { "brokerage_account_id" => "DE9996", "currency" => "EUR" },
+      "cash" => { "amount" => "10", "currency" => "EUR" },
+      "positions" => [ { "isin" => "US0378331005", "name" => "Apple Inc.", "quantity" => "2", "price" => "100" } ],
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_not @item.trade_republic_accounts.exists?(kind: "crypto")
+  end
+
+  test "cash balance keeps funds reserved for open orders" do
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE9998", "currency" => "EUR" },
+      "cash" => { "amount" => "1145.19", "available_amount" => "777.19", "currency" => "EUR" },
+      "positions" => [],
+      "events" => [],
+      "newest_event_id" => nil,
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    cash_account = @item.trade_republic_accounts.find_by(kind: "cash")
+    assert_equal BigDecimal("1145.19"), cash_account.current_balance
+    assert_equal BigDecimal("1145.19"), cash_account.cash_balance
+  end
+
   test "repeated sync updates the same account row and stays idempotent" do
     provider_payload = lambda {
       client_result(

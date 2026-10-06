@@ -96,6 +96,7 @@ en:
       activity:
         amount: Amount
         balance: Balance
+        category: Category
         confirmed: Confirmed
         date: Date
         entries: entries
@@ -114,6 +115,7 @@ en:
         search_placeholder: Search entries by name
         status: Status
         title: Activity
+        uncategorized_only: Uncategorized only
       chart:
         balance: Balance
         owed: Amount owed

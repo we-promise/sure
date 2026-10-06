@@ -48,6 +48,11 @@ class Rule < ApplicationRecord
     matching_resources_scope.pluck(:id)
   end
 
+  # Whether this rule's conditions currently match the given transaction.
+  def matches_transaction?(transaction)
+    matching_resources_scope.where(id: transaction.id).exists?
+  end
+
   # Creates a categorization rule for the Quick Categorize Wizard.
   # Returns the saved rule, or nil if a duplicate or invalid rule already exists.
   def self.create_from_grouping(family, grouping_key, category, transaction_type: nil)
