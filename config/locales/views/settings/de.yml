@@ -244,6 +244,7 @@ de:
         connect_button: Coinbase verbinden
         syncing: Wird synchronisiert…
         sync: Synchronisieren
+        disconnect: Trennen
         disconnect_confirm: Bist du sicher, dass du diese Coinbase-Verbindung trennen möchtest? Deine synchronisierten Konten werden zu manuellen Konten.
       enable_banking_panel:
         callback_url_instruction: "Für die Callback-URL, verwende %{callback_url}."
@@ -288,6 +289,7 @@ de:
         api_secret_label: API-Secret
         api_secret_placeholder: Binance-API-Secret einfügen
         connect_button: Binance verbinden
+        disconnect: Trennen
         disconnect_confirm: Verbindung zu Binance wirklich trennen?
         historical_import: Einstellungen für den Verlaufsimport
         ip_hint_body: 'Trag die ausgehende IP-Adresse des App-Servers in die Whitelist des Binance-API-Keys ein:'

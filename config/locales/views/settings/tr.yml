@@ -324,6 +324,7 @@ tr:
         api_secret_label: API Gizli Anahtarı
         api_secret_placeholder: Binance API Gizli Anahtarınızı yapıştırın
         connect_button: Binance'a Bağlan
+        disconnect: Bağlantıyı kes
         disconnect_confirm: Binance bağlantısını kesmek istediğinizden emin misiniz?
         historical_import: Geçmiş İçe Aktarma Ayarları
         ip_hint_body: 'Uygulama sunucusunun çıkış IP adresini Binance API Anahtarı
@@ -353,6 +354,7 @@ tr:
         api_secret_label: API Gizli Anahtarı
         api_secret_placeholder: Coinbase API gizli anahtarınızı girin
         connect_button: Coinbase'e Bağlan
+        disconnect: Bağlantıyı kes
         disconnect_confirm: Bu Coinbase bağlantısını kesmek istediğinizden emin misiniz?
           Senkronize hesaplarınız manuel hesaplara dönüşecektir.
         setup_instructions: 'Coinbase''i bağlamak için:'

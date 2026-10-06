@@ -301,6 +301,7 @@ fr:
         api_secret_label: Secret API
         api_secret_placeholder: Collez votre secret API Binance
         connect_button: Connecter Binance
+        disconnect: Déconnecter
         disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter Binance ?
         historical_import: Paramètres d'importation historique
         ip_hint_body: "Ajoutez l'IP de sortie du serveur de l'application à la liste blanche de la clé API Binance :"
@@ -324,6 +325,7 @@ fr:
         api_secret_label: Secret API
         api_secret_placeholder: Entrez votre secret API Coinbase
         connect_button: Connecter Coinbase
+        disconnect: Déconnecter
         disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter cette connexion Coinbase ? Vos comptes synchronisés deviendront des comptes manuels.
         setup_instructions: "Pour connecter Coinbase :"
         step1_html: Allez dans les <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Paramètres API de Coinbase</a>

@@ -506,6 +506,7 @@ en:
         connect_button: Connect Coinbase
         syncing: Syncing...
         sync: Sync
+        disconnect: Disconnect
         disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
       binance_panel:
         setup_instructions: "To connect Binance, create a read-only API key:"
@@ -527,6 +528,7 @@ en:
         historical_import: "Historical Import Settings"
         sync_start_date_label: "Import data from"
         sync_start_date_help: "Select how far back to fetch historical trades."
+        disconnect: Disconnect
         disconnect_confirm: "Are you sure you want to disconnect Binance?"
       kraken_panel:
         step1_html: 'Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>'

@@ -358,6 +358,7 @@ vi:
         connect_button: Kết nối Coinbase
         syncing: Đang đồng bộ...
         sync: Đồng bộ
+        disconnect: Ngắt kết nối
         disconnect_confirm: Bạn có chắc muốn ngắt kết nối Coinbase? Các tài khoản đã đồng bộ sẽ trở thành tài khoản thủ công.
       binance_panel:
         setup_instructions: "Để kết nối Binance, tạo khóa API chỉ đọc:"
@@ -379,6 +380,7 @@ vi:
         historical_import: "Cài đặt nhập dữ liệu lịch sử"
         sync_start_date_label: "Nhập dữ liệu từ"
         sync_start_date_help: "Chọn khoảng thời gian lịch sử cần tải."
+        disconnect: Ngắt kết nối
         disconnect_confirm: "Bạn có chắc muốn ngắt kết nối Binance?"
       kraken_panel:
         step1_html: 'Vào <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Cài đặt API Kraken</a>'

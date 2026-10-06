@@ -161,14 +161,19 @@
                     <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= t("goals.form.subtypes.#{row_subtype}", default: row_subtype.titleize) %> · <%= Money.new(account.balance, account.currency).format %></p>
                   </div>
                 </label>
-                <%= text_field_tag "goal[allocations][#{account.id}]",
-                                   linked_ga&.allocated_amount&.to_s("F"),
-                                   placeholder: t("goals.form.fields.whole_balance"),
-                                   inputmode: "decimal",
-                                   autocomplete: "off",
-                                   aria: { label: t("goals.form.fields.earmark_for", account: account.name) },
-                                   data: { goal_earmark_target: "allocationInput", action: "input->goal-earmark#refresh" },
-                                   class: "shrink-0 w-36 rounded-md border border-primary bg-container px-2.5 py-1.5 text-sm text-right tabular-nums text-primary placeholder:text-subdued focus-ring privacy-sensitive" %>
+                <%= f.fields_for :allocations do |af| %>
+                  <%= af.money_field account.id,
+                                     label: t("goals.form.fields.earmark_for", account: account.name),
+                                     label_class: "sr-only",
+                                     placeholder: t("goals.form.fields.whole_balance"),
+                                     value: linked_ga&.allocated_amount,
+                                     currency_value_override: account.currency,
+                                     hide_currency: true,
+                                     min: 0,
+                                     container_class: "shrink-0 w-48",
+                                     input_class: "tabular-nums privacy-sensitive privacy-sensitive-interactive",
+                                     amount_data: { goal_earmark_target: "allocationInput", action: "input->goal-earmark#refresh" } %>
+                <% end %>
                 </div>
                 <%# Never text-destructive: none of this is an error. A goal
                     in progress legitimately claims more than its account

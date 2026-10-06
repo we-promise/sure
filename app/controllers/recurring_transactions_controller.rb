@@ -221,7 +221,7 @@ class RecurringTransactionsController < ApplicationController
     respond_to do |format|
       format.html do
         flash[:notice] = message
-        redirect_to recurring_transactions_path
+        redirect_back_or_to recurring_transactions_path
       end
     end
   end
