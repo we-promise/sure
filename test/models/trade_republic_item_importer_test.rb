@@ -1128,6 +1128,47 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), @item.trade_republic_accounts.find_by!(kind: "portfolio").cash_balance
   end
 
+  test "successful pea cash fetch updates the balance even when positions failed" do
+    stored_positions = [ { "isin" => "US0378331005", "quantity" => "2", "price" => "100" } ]
+    pea = @item.trade_republic_accounts.create!(
+      kind: "pea",
+      name: "PEA",
+      trade_republic_account_id: "SEC-PEA",
+      currency: "EUR",
+      cash_balance: BigDecimal("42.00"),
+      raw_positions_payload: stored_positions
+    )
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "partial",
+      "domain_statuses" => {
+        "account_metadata" => "success",
+        "cash" => "success",
+        "portfolio" => "failed",
+        "timeline" => "success",
+        "instrument_metadata" => "success"
+      },
+      "accounts" => [
+        envelope_result(
+          kind: "pea",
+          brokerage_account_id: "SEC-PEA",
+          positions_status: "failed",
+          cash_status: "success",
+          cash: { "amount" => "77.00", "currency" => "EUR" }
+        )
+      ],
+      "account" => { "brokerage_account_id" => "SEC-PEA", "currency" => "EUR" },
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal BigDecimal("77.00"), pea.reload.cash_balance
+    assert_equal stored_positions, pea.raw_positions_payload
+  end
+
   test "import routes envelope-tagged events and keeps untagged events on the portfolio" do
     pea_trade = {
       "id" => "pea-trade",

@@ -108,7 +108,7 @@ class TradeRepublicItem::Importer
         name: build_account_name(account_id, kind: kind),
         currency: currency,
         current_balance: positions_value(Array(envelope["positions"]), fallback: existing&.current_balance),
-        cash_balance: pea_cash_balance(kind, envelope, statuses, existing),
+        cash_balance: pea_cash_balance(kind, envelope),
         positions: Array(envelope["positions"]),
         events: events,
         instrument_symbols: data["instrument_symbols"],
@@ -214,17 +214,24 @@ class TradeRepublicItem::Importer
         currency: currency
       }
 
-      if payload_status != "failed"
-        if securities_kind
+      if securities_kind
+        if payload_status != "failed"
           attrs[:current_balance] = payload_status == "success" ? current_balance : tr_account.current_balance
-          attrs[:cash_balance] = cash_balance
           attrs[:raw_positions_payload] = merge_position_prices(tr_account.raw_positions_payload, positions)
           attrs[:holdings_snapshot_complete] = payload_status == "success" && Array(warnings).empty?
           attrs[:last_positions_sync] = Time.current
-        else
-          attrs[:current_balance] = current_balance
+        end
+        # The PEA keeps its cash pocket on the securities row, so a successful
+        # cash fetch updates it even when the positions fetch failed. On a
+        # failed cash fetch the stored balance is left as is.
+        if kind == "pea"
+          attrs[:cash_balance] = cash_balance if domain_statuses["cash"] != "failed"
+        elsif payload_status != "failed"
           attrs[:cash_balance] = cash_balance
         end
+      elsif payload_status != "failed"
+        attrs[:current_balance] = current_balance
+        attrs[:cash_balance] = cash_balance
       end
 
       if timeline_status != "failed"
@@ -492,12 +499,8 @@ class TradeRepublicItem::Importer
 
     # Exact decimal math. Cash comes from the envelope's cash pocket, not the
     # singular top-level payload.
-    # A failed cash fetch must not zero a PEA's stored cash pocket: keep the last
-    # known balance and let a later sync repair it. Other kinds carry no cash
-    # pocket on the securities row.
-    def pea_cash_balance(kind, envelope, statuses, existing)
+    def pea_cash_balance(kind, envelope)
       return 0 unless kind == "pea"
-      return existing&.cash_balance || 0 if statuses["cash"] == "failed"
 
       cash_balance(envelope["cash"])
     end
