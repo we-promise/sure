@@ -28,15 +28,26 @@ class Transactions::ReadsController < ApplicationController
   end
 
   private
+    # Mirrors TransactionsController#search_params so "mark all" covers
+    # exactly the list the user sees. A dropped filter would widen the scope.
     def filter_params
-      params.fetch(:q, {})
-            .permit(
-              :start_date, :end_date, :search, :amount,
-              :amount_operator, :active_accounts_only,
-              accounts: [], account_ids: [],
-              categories: [], merchants: [], types: [], tags: [], status: []
-            )
-            .to_h
-            .compact_blank
+      @filter_params ||= begin
+        cleaned = params.fetch(:q, {})
+                        .permit(
+                          :start_date, :end_date, :search, :amount,
+                          :amount_operator, :active_accounts_only,
+                          accounts: [], account_ids: [],
+                          categories: [], merchants: [], types: [], tags: [], status: [], ai_status: []
+                        )
+                        .to_h
+                        .compact_blank
+
+        if cleaned[:ai_status]
+          cleaned[:ai_status] &= Transaction::Search::AI_STATUSES
+          cleaned.delete(:ai_status) if cleaned[:ai_status].empty?
+        end
+
+        cleaned
+      end
     end
 end

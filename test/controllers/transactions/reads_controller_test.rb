@@ -25,6 +25,24 @@ class Transactions::ReadsControllerTest < ActionDispatch::IntegrationTest
     assert_includes unread_ids, @card.id
   end
 
+  test "with only an ai_status filter marks only the matching transactions read" do
+    @checking.entryable.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
+
+    post transactions_read_url(q: { ai_status: [ "current" ] })
+
+    unread_ids = @user.unread_entries.pluck(:id)
+    assert_not_includes unread_ids, @checking.id
+    assert_includes unread_ids, @card.id
+  end
+
+  test "an unknown ai_status value does not widen the scope beyond other filters" do
+    post transactions_read_url(q: { search: "Checking", ai_status: [ "bogus" ] })
+
+    unread_ids = @user.unread_entries.pluck(:id)
+    assert_not_includes unread_ids, @checking.id
+    assert_includes unread_ids, @card.id
+  end
+
   test "with an account marks only that account read" do
     post transactions_read_url(account_id: accounts(:credit_card).id)
 
