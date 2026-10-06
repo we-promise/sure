@@ -6,6 +6,7 @@
      data-category-select-auto-submit-value="<%= auto_submit %>"
      data-category-select-create-label-value="<%= helpers.t("transactions.form.create_category", name: "__CATEGORY_NAME__") %>"
      data-category-select-create-error-message-value="<%= helpers.t("transactions.form.create_category_error") %>"
+     data-category-select-parent-picker-label-value="<%= helpers.t("transactions.form.choose_parent", name: "__CATEGORY_NAME__") %>"
      data-action="click@window->category-select#handleOutsideClick">
 
   <div class="form-field">
@@ -48,7 +49,8 @@
 
   <% unless disabled %>
     <div class="absolute z-50 p-1.5 w-full min-w-48 rounded-lg shadow-lg bg-container mt-1.5 hidden"
-         data-category-select-target="menu">
+         data-category-select-target="menu"
+         data-action="keydown.esc->category-select#escape">
 
       <%= render DS::SearchInput.new(
         variant: :embedded,
@@ -61,7 +63,8 @@
 
       <div class="flex flex-col gap-1 max-h-64 overflow-auto mt-1"
            id="<%= menu_id %>"
-           role="listbox">
+           role="listbox"
+           data-category-select-target="list">
 
         <% if blank_label.present? %>
           <button type="button"
@@ -100,16 +103,68 @@
           <% end %>
         <% end %>
 
-        <button type="button"
-                class="hidden text-primary text-sm cursor-pointer items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover"
-                data-category-select-target="createForm"
-                data-action="click->category-select#createCategory">
-          <%= helpers.icon("plus") %>
+        <%= render DS::ActionRow.new(
+              icon: "plus",
+              hidden: true,
+              data: { category_select_target: "createForm", action: "click->category-select#createCategory" }
+            ) do %>
           <span data-category-select-target="createLabel"></span>
-        </button>
+        <% end %>
+
+        <%# Hidden by the controller while there is no top-level category to nest under. %>
+        <%= render DS::ActionRow.new(
+              text: helpers.t("transactions.form.create_as_subcategory"),
+              icon: "corner-down-right",
+              tone: :secondary,
+              hidden: true,
+              data: { category_select_target: "createAsSubcategory", action: "click->category-select#showParentPicker" }
+            ) %>
 
         <p class="hidden px-3 py-1 text-xs text-destructive"
+           role="alert"
            data-category-select-target="createError"></p>
+      </div>
+
+      <%# Shown in place of the list after "Add as a subcategory…": pick a top-level parent. %>
+      <%# Only top-level categories can be parents (categories are at most two levels deep). %>
+      <div class="hidden flex-col gap-1 mt-1"
+           data-category-select-target="parentPicker"
+           role="group"
+           aria-labelledby="<%= parent_label_id %>">
+        <%# Back and the label sit above the scrolling rows, so Back stays in reach with many parents. %>
+        <div class="flex flex-col">
+          <%= render DS::ActionRow.new(
+                text: helpers.t("transactions.form.back_to_categories"),
+                icon: "arrow-left",
+                tone: :secondary,
+                data: { category_select_target: "parentBack", action: "click->category-select#hideParentPicker" }
+              ) %>
+          <p id="<%= parent_label_id %>"
+             class="px-3 py-1 text-xs text-secondary"
+             data-category-select-target="parentPickerLabel"></p>
+        </div>
+
+        <div class="flex flex-col gap-1 max-h-64 overflow-auto"
+             data-category-select-target="parentRows">
+          <% parent_options.each do |parent| %>
+            <%= render DS::ActionRow.new(
+                  tone: :secondary,
+                  data: { category_select_target: "parentOption", parent_id: parent.id, parent_name: parent.name, action: "click->category-select#createUnderParent" }
+                ) do %>
+              <%= render partial: "categories/badge", locals: { category: parent } %>
+            <% end %>
+          <% end %>
+
+          <%# Cloned for a top-level category created inline, so it can be a parent straight away. %>
+          <template data-category-select-target="parentOptionTemplate">
+            <%= render DS::ActionRow.new(
+                  tone: :secondary,
+                  data: { category_select_target: "parentOption", action: "click->category-select#createUnderParent" }
+                ) do %>
+              <span data-category-select-parent-badge></span>
+            <% end %>
+          </template>
+        </div>
       </div>
     </div>
   <% end %>

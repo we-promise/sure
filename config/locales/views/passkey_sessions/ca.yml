@@ -1,0 +1,4 @@
+---
+ca:
+  passkey_sessions:
+    invalid_credential: No s'ha pogut iniciar la sessió amb aquesta clau d'accés. Torna-ho a provar o utilitza la contrasenya.

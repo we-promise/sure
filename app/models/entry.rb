@@ -51,6 +51,7 @@ class Entry < ApplicationRecord
   }
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
+  after_save :track_earliest_saved_date, if: :saved_change_to_date?
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -313,8 +314,19 @@ class Entry < ApplicationRecord
     entryable.lock_saved_attributes!
   end
 
+  # Enqueues an account sync whose window starts at the earliest date this
+  # entry has occupied since it was loaded, so balances are recomputed from
+  # wherever the entry used to sit.
+  #
+  # Later saves (lock_saved_attributes!, mark_user_modified!) reset
+  # date_previously_was, so the earliest date tracked across saves is used too.
+  # Starting the window after the old date would seed the incremental balance
+  # calculation from a balance that still includes this entry.
+  #
+  # @return [void]
   def sync_account_later
-    sync_start_date = [ date_previously_was, date ].compact.min unless destroyed?
+    sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed?
+    @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
   end
 
@@ -605,6 +617,14 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    # Remembers the earliest date this entry had before any save that changed
+    # it, for sync_account_later to use as the sync window start.
+    #
+    # @return [Date]
+    def track_earliest_saved_date
+      @earliest_saved_date = [ @earliest_saved_date, date_before_last_save ].compact.min
+    end
 
     def cannot_unexclude_split_parent
       return unless excluded_changed?(from: true, to: false) && split_parent?

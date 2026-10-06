@@ -15,14 +15,14 @@
       </div>
 
       <%= styled_form_with url: account_statements_path, scope: :account_statement, multipart: true, class: "grid gap-3 lg:grid-cols-[1fr_16rem_auto] lg:items-end" do |form| %>
-        <div>
-          <%= form.label :files, t("account_statements.form.files_label"), class: "form-field__label" %>
-          <%= form.file_field :files,
-                              multiple: true,
-                              accept: AccountStatement::ACCEPTED_FILE_EXTENSIONS.join(","),
-                              class: "form-field__input" %>
-          <p class="text-xs text-secondary mt-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %></p>
-        </div>
+        <%= form.file_field :files,
+                            label: t("account_statements.form.files_label"),
+                            multiple: true,
+                            accept: AccountStatement::ACCEPTED_FILE_EXTENSIONS.join(",") %>
+        <%# Its own row on wide screens, so the three fields line up with each
+            other rather than with the bottom of this hint. Stacked, it still
+            follows the file field it describes. %>
+        <p class="text-xs text-secondary -mt-1 lg:col-start-1 lg:row-start-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %></p>
         <%= form.collection_select :account_id,
                                    @accounts,
                                    :id,

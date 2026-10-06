@@ -110,15 +110,13 @@ tr:
       description: "%{name} kullanarak bağlanın"
       name: Brex - %{name}
     provider_panel:
-      accounts_link: Hesaplar
       add_connection: Brex bağlantısı ekle
       base_url_label: Temel URL (isteğe bağlı)
       base_url_placeholder: https://api.brex.com
-      configured_html: Yapılandırıldı ve kullanıma hazır. Hesapları yönetmek ve kurmak
-        için %{accounts_link} sekmesini ziyaret edin.
       connection_name_label: Bağlantı adı
       connection_name_placeholder: İşletme vadesiz hesabı
       default_connection_name: Brex Bağlantısı
+      disconnect: Bağlantıyı kes
       disconnect_confirm: "%{name} bağlantısı kesilsin mi?"
       disconnect_label: "%{name} bağlantısını kes"
       encryption_warning:
@@ -139,13 +137,11 @@ tr:
         sign_in_html: "%{link} adresini ziyaret edin ve bağlanmak istediğiniz hesapla
           oturum açın"
       keep_token_placeholder: Mevcut anahtarı korumak için boş bırakın
-      not_configured: Yapılandırılmadı
       sandbox_note_html: Senkronize etmek istediğiniz her Brex şirket/API anahtarı
         için ayrı bir adlandırılmış bağlantı kullanın. Üretim için Temel URL'yi boş
         bırakın. Hazırlık ortamı yalnızca Brex onaylı testlerle sınırlıdır ve müşteri
         anahtarlarıyla çalışmaz.
       setup_accounts: Hesapları kur
-      setup_title: 'Kurulum talimatları:'
       sync: Senkronize et
       token_label: Anahtar
       token_placeholder: Anahtarı buraya yapıştırın

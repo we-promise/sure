@@ -336,6 +336,7 @@ Rails.application.routes.draw do
   get "feedback", to: "pages#feedback"
   get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
   patch "dashboard/preferences", to: "pages#update_preferences"
+  patch "dashboard/sections/:section_key/hidden", to: "pages#update_section_hidden", as: :dashboard_section_hidden
 
   resource :current_session, only: %i[update]
 
@@ -425,6 +426,10 @@ Rails.application.routes.draw do
   resources :tags, except: :show do
     resources :deletions, only: %i[new create], module: :tag
     delete :destroy_all, on: :collection
+  end
+
+  namespace :tag do
+    resource :dropdown, only: :show
   end
 
   namespace :category do
@@ -1009,6 +1014,8 @@ Rails.application.routes.draw do
     # that happen to round-trip cleanly). The controller file is singular,
     # so name it explicitly.
     resource :system_health, only: :show, controller: "system_health" do
+      get :ai_status
+      get :hosted_usage
       post :verify_worker_ai
       post :send_test_push
     end

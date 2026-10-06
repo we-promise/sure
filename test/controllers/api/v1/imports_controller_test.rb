@@ -558,13 +558,15 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should preserve Sure import and return preflight errors when auto publish fails preflight" do
-    @family.categories.create!(
-      name: "Groceries",
-      color: "#407706",
-      lucide_icon: "shopping-basket"
-    )
     ndjson_content = [
-      { type: "Category", data: { id: "category_1", name: "Groceries" } }
+      { type: "Transaction", data: {
+        id: "transaction_1",
+        account_id: "missing_account",
+        date: "2024-01-15",
+        amount: "42.50",
+        name: "Orphaned transaction",
+        currency: "USD"
+      } }
     ].map(&:to_json).join("\n")
 
     assert_difference("Import.count") do
@@ -580,7 +582,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     json_response = JSON.parse(response.body)
     assert_equal "preflight_failed", json_response["error"]
-    assert_includes json_response["errors"].join("\n"), "Category name \"Groceries\" already exists"
+    assert_includes json_response["errors"].join("\n"), "references missing account_id"
 
     import = Import.find(json_response["import_id"])
     assert_equal "failed", import.status
@@ -946,7 +948,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_empty data["errors"]
   end
 
-  test "should preflight Sure import taxonomy collisions in strict mode" do
+  test "should reuse an existing Sure import taxonomy match by name instead of blocking preflight (#3113)" do
     @family.tags.create!(name: "Reviewed", color: "#12B76A")
     ndjson_content = [
       { type: "Tag", data: { id: "tag_1", name: "Reviewed" } }
@@ -963,8 +965,9 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     data = JSON.parse(response.body)["data"]
-    assert_equal false, data["valid"]
-    assert_equal "existing_taxonomy_collision", data["errors"].first["code"]
+    assert_equal true, data["valid"]
+    assert_empty data["errors"]
+    assert data["warnings"].any? { |warning| warning.include?("already exists in this family and will be reused") }
   end
 
   test "should report invalid Sure import accountable type during preflight" do

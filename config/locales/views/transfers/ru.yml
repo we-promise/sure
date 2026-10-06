@@ -3,6 +3,9 @@ ru:
   transfers:
     create:
       success: Перевод создан
+      exchange_rate_unavailable: Курс для выбранных валют и даты недоступен
+      date_invalid: указана неверно
+      stale_form: Эта форма уже была отправлена с другими данными. Обновите страницу и повторите попытку.
     destroy:
       success: Перевод удалён
     form:
@@ -19,6 +22,9 @@ ru:
       submit: Создать перевод
       to: Куда
       transfer: Перевод
+      bank_charges: Банковские комиссии
+      outgoing_fee: Комиссия за исходящий перевод
+      incoming_fee: Комиссия за входящий перевод
     new:
       title: Новый перевод
     show:
@@ -40,5 +46,10 @@ ru:
       settings: Настройки
       to: Куда
       uncategorized: Без категории
+      transfer_amount: Сумма перевода
+      total: Итого
+      bank_charges: Банковские комиссии
+      source_fee: Комиссия на стороне отправителя
+      destination_fee: Комиссия на стороне получателя
     update:
       success: Перевод обновлён
