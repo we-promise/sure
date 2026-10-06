@@ -182,6 +182,15 @@ en:
         dashboard_two_column_description: Display dashboard widgets in two columns on large screens, with per-widget width and height controls in each widget's header. When off, widgets stack in a single column.
         dashboard_account_groups_title: Start expanded by default
         dashboard_account_groups_description: These account sections will start expanded on the dashboard and in the account sidebar. You can still collapse them manually at any time.
+        account_lists_title: Account lists
+        account_lists_subtitle: Choose how accounts are grouped in the sidebar and on the dashboard
+        account_grouping_primary_sidebar_label: First level in the sidebar
+        account_grouping_primary_dashboard_label: First level on the dashboard
+        account_grouping_sidebar_label: Second level in the sidebar
+        account_grouping_dashboard_label: Second level on the dashboard
+        account_grouping_none: None
+        custom_account_group_label_label: Name of the custom group field
+        account_lists_hint: Assets and debts always stay apart. Within them, accounts are grouped by the first field and, optionally, split again by the second; totals add up across account types. Accounts without a value are listed under "Not set". The custom group is a free-text field in the account details.
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
     preferences:

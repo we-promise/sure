@@ -232,6 +232,7 @@ class PropertiesController < ApplicationController
               :accountable_type,
               :institution_name,
               :institution_domain,
+              :custom_group,
               :notes,
               accountable_attributes: [ :id, :subtype, :year_built, :area_unit, :area_value ]
             )
