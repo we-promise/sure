@@ -29,6 +29,9 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     create_transaction(date: Date.current, account: term_deposit, amount: -500)
 
     @family.auto_match_transfers!
+    # Confirm the suggestion so the check holds whether the kind is applied
+    # on match or only once the user confirms it.
+    outflow_entry.transaction.reload.transfer.confirm!
 
     outflow = outflow_entry.transaction.reload
     assert_equal "investment_contribution", outflow.kind
