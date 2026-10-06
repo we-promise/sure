@@ -20,7 +20,7 @@ class AddLiquidityToAccounts < ActiveRecord::Migration[8.1]
     isa lisa sipp workplace_pension_uk tfsa rrsp fhsa rdsp resp dpsp prpp lira
     rrif lif lrif prif rlif super smsf assurance_vie pea pillar_3a riester nps
     apy life_insurance ppf ssy infrastructure_bond tax_free_bond sgb pension
-    retirement
+    retirement ruerup bav
   ].freeze
 
   def up

@@ -274,7 +274,7 @@ class SureImport::Preflight
       liquidity = record[:data]["liquidity"]
       return if liquidity.blank? || liquidity.to_s.in?(Account::Liquidity::LEVELS)
 
-      add_warning(:invalid_account_liquidity, "Line #{record[:line_number]} Account has unknown liquidity #{liquidity.inspect}; the subtype default will be used.")
+      add_warning(:invalid_account_liquidity, "Line #{record[:line_number]} Account has unknown liquidity #{liquidity.inspect}; it is ignored, so a new account takes its subtype default and an existing one keeps its current setting.")
     end
 
     def validate_split_lines
