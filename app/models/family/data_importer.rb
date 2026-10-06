@@ -1111,18 +1111,11 @@ class Family::DataImporter
     end
 
     def imported_transfer_outflow_kind(transfer)
-      source_account = transfer.outflow_transaction.entry.account
-      destination_account = transfer.inflow_transaction.entry.account
-      return "loan_payment" if destination_account.loan?
-      return "cc_payment" if destination_account.liability?
-      return "investment_contribution" if investment_account?(destination_account) && !investment_account?(source_account)
-      return "investment_contribution" if Transfer.saving_into?(destination_account, source: source_account, date: transfer.outflow_transaction.entry.date)
-
-      "funds_movement"
-    end
-
-    def investment_account?(account)
-      account.investment? || account.crypto?
+      Transfer.kind_for_account(
+        transfer.inflow_transaction.entry.account,
+        source: transfer.outflow_transaction.entry.account,
+        date: transfer.outflow_transaction.entry.date
+      )
     end
 
     def import_rejected_transfers(records)

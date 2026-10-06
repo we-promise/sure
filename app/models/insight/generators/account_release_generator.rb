@@ -6,8 +6,10 @@
 # but the feed belongs to the family. So the generator only runs when at
 # least one member wants reminders in the feed, uses the longest lead time
 # among them, and only looks at accounts that count in one of those members'
-# finances: an account none of them follows never reaches the feed. Like every
-# other insight, a reminder is then seen by the whole family.
+# finances: an account none of them follows never reaches the feed. The feed
+# is seen by the whole family, so it also leaves out accounts that not every
+# active member can see; reminders for those go out by e-mail only, to the
+# people who follow them.
 #
 # The dedup key carries the account, the kind and the release date, so each
 # reminder appears once per date and a new release date is a new reminder.
@@ -43,7 +45,13 @@ class Insight::Generators::AccountReleaseGenerator < Insight::Generator
         ids: recipients.map(&:id)
       ).select(:id)
 
-      Account::ReleaseReminder.candidates(family.accounts).where(id: followed)
+      Account::ReleaseReminder.candidates(family.accounts).where(id: followed).where(id: visible_to_everyone)
+    end
+
+    # Accounts every active member can see (owned or shared with them). The
+    # name and balance in a reminder must not reach someone without access.
+    def visible_to_everyone
+      family.users.where(active: true).map { |user| family.accounts.accessible_by(user).pluck(:id) }.reduce(:&) || []
     end
 
     def insight_for(reminder)

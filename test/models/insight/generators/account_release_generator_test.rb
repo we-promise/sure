@@ -53,14 +53,21 @@ class Insight::Generators::AccountReleaseGeneratorTest < ActiveSupport::TestCase
     enable(@admin, channel: "insight", lead_days: 3)
     enable(@member, channel: "insight", lead_days: 30)
     shared = term_deposit(available_on: Date.new(2026, 10, 25))
-    AccountShare.create!(account: shared, user: @member, permission: "read_only", include_in_finances: true)
 
     assert_equal [ shared.id ], generate.map { |insight| insight.metadata[:account_id] }
   end
 
   test "leaves out accounts that count in nobody's finances among the recipients" do
     enable(@member, channel: "insight")
-    term_deposit(available_on: Date.new(2026, 10, 6))
+    account = term_deposit(available_on: Date.new(2026, 10, 6))
+    AccountShare.find_by!(account: account, user: @member).update!(include_in_finances: false)
+
+    assert_empty generate
+  end
+
+  test "leaves out accounts that not every member can see" do
+    enable(@admin, channel: "insight")
+    term_deposit(available_on: Date.new(2026, 10, 6), private: true)
 
     assert_empty generate
   end
@@ -107,8 +114,12 @@ class Insight::Generators::AccountReleaseGeneratorTest < ActiveSupport::TestCase
       })
     end
 
-    def term_deposit(available_on:, name: "Term deposit", **attributes)
-      @family.accounts.create!(name: name, balance: 5000, currency: "USD", owner: @admin,
-                               accountable: Depository.new(subtype: "cd"), available_on: available_on, **attributes)
+    # Shared with the other member unless private, so the whole family sees it
+    # like the feed does.
+    def term_deposit(available_on:, name: "Term deposit", private: false, **attributes)
+      account = @family.accounts.create!(name: name, balance: 5000, currency: "USD", owner: @admin,
+                                         accountable: Depository.new(subtype: "cd"), available_on: available_on, **attributes)
+      AccountShare.find_or_create_by!(account: account, user: @member) { |share| share.permission = "read_only" } unless private
+      account
     end
 end

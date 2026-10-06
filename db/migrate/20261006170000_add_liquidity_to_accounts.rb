@@ -11,7 +11,7 @@
 class AddLiquidityToAccounts < ActiveRecord::Migration[8.1]
   LEVELS = %w[immediate short_term locked long_term].freeze
 
-  INVESTMENT_LOCKED_SUBTYPES = %w[fd rd nsc kvp].freeze
+  INVESTMENT_LOCKED_SUBTYPES = %w[fd rd nsc kvp vl].freeze
 
   # Investment subtypes whose tax treatment is not :taxable at the time of
   # writing (tax_deferred, tax_exempt, tax_advantaged).
@@ -55,14 +55,14 @@ class AddLiquidityToAccounts < ActiveRecord::Migration[8.1]
         UPDATE accounts SET liquidity = 'locked'
         FROM depositories
         WHERE accounts.accountable_type = 'Depository' AND depositories.id = accounts.accountable_id
-          AND depositories.subtype = 'cd'
+          AND depositories.subtype IN ('cd', 'building_savings')
       SQL
 
       execute <<~SQL.squish
         UPDATE accounts SET liquidity = 'short_term'
         FROM depositories
         WHERE accounts.accountable_type = 'Depository' AND depositories.id = accounts.accountable_id
-          AND depositories.subtype = 'money_market'
+          AND depositories.subtype IN ('money_market', 'notice_savings')
       SQL
 
       execute <<~SQL.squish

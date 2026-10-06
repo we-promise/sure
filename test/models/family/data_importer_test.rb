@@ -60,6 +60,47 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 12, account.renewal_term_months
   end
 
+  test "imports money moved from a locked deposit into investments as a funds movement" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "cd",
+          name: "Term Deposit",
+          balance: "5000.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          accountable: { subtype: "cd" },
+          liquidity: "locked",
+          locked_attributes: { liquidity: "2026-10-01T00:00:00Z" },
+          available_on: "2099-12-31"
+        }
+      },
+      {
+        type: "Account",
+        data: { id: "brokerage", name: "Brokerage", balance: "1000.00", currency: "USD", accountable_type: "Investment" }
+      },
+      {
+        type: "Transaction",
+        data: { id: "cd-outflow", account_id: "cd", date: "2024-01-15", amount: "100.00", name: "To brokerage", currency: "USD", kind: "standard" }
+      },
+      {
+        type: "Transaction",
+        data: { id: "brokerage-inflow", account_id: "brokerage", date: "2024-01-15", amount: "-100.00", name: "From term deposit", currency: "USD", kind: "standard" }
+      },
+      {
+        type: "Transfer",
+        data: { id: "cd-transfer", inflow_transaction_id: "brokerage-inflow", outflow_transaction_id: "cd-outflow", status: "confirmed", notes: "Locked to brokerage" }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    transfer = Transfer.find_by!(notes: "Locked to brokerage")
+    assert_equal "funds_movement", transfer.outflow_transaction.kind
+    assert_equal "funds_movement", transfer.inflow_transaction.kind
+  end
+
   test "an exported automatic availability follows the subtype default on import" do
     ndjson = build_ndjson([
       {

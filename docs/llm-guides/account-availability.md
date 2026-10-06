@@ -108,7 +108,9 @@ never disagree:
 - Feed: `Insight::Generators::AccountReleaseGenerator`, run by
   `GenerateInsightsJob`. The feed is per family, so it runs only when a member
   chose the feed, takes the longest lead time among them and only accounts
-  that count in one of their finances.
+  that count in one of their finances. Accounts that not every active member
+  can see stay out of the feed (their name and balance would leak); those
+  reminders go out by e-mail only.
 - E-mail: `AccountReleaseNotificationJob` (daily cron) mails each member who
   chose e-mail a digest (`AccountAvailabilityMailer`) for the accounts in their
   own finances with their own lead time. `AccountReleaseNotice` stores what was
