@@ -432,6 +432,24 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "interest_products", positions.first["category"]
   end
 
+  test "keeps bond positions without valuation when the ticker price is non-numeric" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
+      { "last" => { "price" => "N/A" } }
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "bonds", "positions" => [
+          { "instrumentId" => "IT0005377152", "name" => "Italy 3.1% Mar 2040", "netSize" => "2677.95" }
+        ] }
+      ]
+    })
+
+    assert_equal [ "price unavailable for IT0005377152; position kept without valuation" ], warnings
+    assert_nil positions.first["price"]
+    assert_equal "2677.95", positions.first["quantity"]
+  end
+
   test "prefers homeInstrumentExchange ticker before the hardcoded exchange list" do
     requested = []
     @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|

@@ -819,6 +819,8 @@ class Provider::TradeRepublicClient
 
     def bond_unit_price(percent_price)
       (BigDecimal(percent_price.to_s) / 100).to_s("F")
+    rescue ArgumentError
+      nil
     end
 
     def position_price(websocket, isin, category_type)
