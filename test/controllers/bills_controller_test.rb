@@ -262,7 +262,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     frequency = ApplicationController.helpers.frequency_label(bill)
-    assert_select "p", text: /\A#{Regexp.escape(frequency)}\s*·\s*#{Regexp.escape(bill.account.name)}\z/
+    status = I18n.t("recurring_transactions.status.#{bill.status}")
+    assert_select "p", text: /\A#{Regexp.escape(frequency)}\s*·\s*#{Regexp.escape(status)}\s*·\s*#{Regexp.escape(bill.account.name)}\z/
   end
 
   # Rows after this month said "Snoozed until …". The rail that replaced that
