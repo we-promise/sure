@@ -1778,6 +1778,63 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     3.times { |i| assert_match "Utility #{i}", response.body }
   end
 
+  # The cards above the bill list each looked different. Needs review had the
+  # bill sections' inset shell and heading, Possible new bills was an inset
+  # panel 12px narrower with a pill for its count, and the notices had no
+  # heading, with a grey box for their quieter half.
+  test "the notices, both review queues and the bill sections share one recipe" do
+    trial = create_bill(name: "Streamflix", amount: 20)
+    trial.update!(bill_type: "subscription", trial_ends_on: Date.current + 1)
+    2.times do |i|
+      quiet = create_bill(name: "Utility #{i}", amount: 60 + i)
+      quiet.recurring_price_changes.create!(effective_on: (20 + i).days.ago.to_date,
+        previous_amount: 60 + i, new_amount: 61 + i, currency: "USD", source: "detected")
+    end
+    water = declare_bill(name: "CITY WATER", amount: 80, due: Date.current - 3)
+    charge = create_transaction_entry(name: "CITY WATER", amount: 85.50, date: Date.current - 3)
+    RecurringTransaction::Allocator.new(water.recurring_occurrences.order(:due_on).first).allocate_matched!(
+      entry: charge, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+    create_suggested(name: "Hulu", account: accounts(:depository))
+
+    get bills_url
+    assert_response :success
+
+    shells = css_select(".rounded-xl.bg-container-inset.p-1")
+    headings = shells.flat_map { |shell| css_select(shell, "div.uppercase") }
+    [ "#{I18n.t("bills.index.notices_heading")} · 3", "#{I18n.t("bills.index.needs_review")} · 1",
+      "#{I18n.t("recurring_transactions.suggested.title")} · 1", "#{I18n.t("bills.index.this_month")} · " ].each do |heading|
+      assert headings.any? { |node| node.text.squish.start_with?(heading) },
+        "no inset shell heads with #{heading.inspect}: #{headings.map { |node| node.text.squish }.inspect}"
+    end
+    # One heading row, not copies that drift apart.
+    rows = headings.map { |node| node.parent["class"] }.uniq
+    assert_equal 1, rows.size, "the shells' heading rows differ: #{rows.inspect}"
+    # Each card sits straight in its shell, so they all have one width.
+    shells.each do |shell|
+      cards = css_select(shell, ".bg-container.rounded-lg.shadow-border-xs")
+      assert cards.any?, "a shell without its card"
+      cards.each do |card|
+        assert card.parent == shell || card.parent["class"].blank?, "a card is inset by #{card.parent["class"].inspect}"
+      end
+    end
+
+    # Possible new bills still collapses and remembers it, inside the shell.
+    assert_select ".rounded-xl.bg-container-inset.p-1 > details[data-controller='persisted-disclosure'][data-persisted-disclosure-key-value='bills-suggested']"
+    # Needs review can't run long, so it doesn't collapse.
+    assert_select "details", text: /#{I18n.t("bills.index.needs_review")}/, count: 0
+    # The quieter notices fold behind a row of the card, padded like the notices
+    # and with no surface of its own: it used to read as a grey box.
+    routine = ".bg-container.rounded-lg > details > summary"
+    assert_select "#{routine} .px-4.py-2\\.5", text: /#{I18n.t("bills.index.notices_routine", count: 2)}/
+    assert_select "#{routine}[class^='bg-'], #{routine}[class*=' bg-']", count: 0
+    # One chevron for both folds, not copies that drift apart.
+    chevron = "svg[class*='group-open:rotate-90']"
+    chevrons = css_select("[data-persisted-disclosure-key-value='bills-suggested'] > summary #{chevron}, #{routine} #{chevron}")
+    assert_equal 2, chevrons.size
+    assert_equal 1, chevrons.map(&:to_html).uniq.size, "the folds' chevrons differ: #{chevrons.map { |svg| svg["class"] }.inspect}"
+  end
+
   test "a price notice says how big the change was" do
     bill = create_bill(name: "Gym", amount: 90)
     bill.recurring_price_changes.create!(effective_on: 5.days.ago.to_date,

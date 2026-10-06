@@ -273,6 +273,7 @@ en:
         one: We found 1 recurring payment in your transactions. Check it over so the totals here match what you actually pay.
         other: We found %{count} recurring payments in your transactions. Check them over so the totals here match what you actually pay.
       detected_review_action: Review them
+      notices_heading: Changes
       needs_review: Needs review
       notice_trial: "%{name}'s trial ends %{date}"
       notice_renewal: "%{name} renews %{date}"

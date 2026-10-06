@@ -170,6 +170,7 @@ pl:
         one: 1 wymaga uwagi
         other: "%{count} wymaga uwagi"
       needs_attention: Wymaga uwagi
+      notices_heading: Zmiany
       needs_review: Wymaga sprawdzenia
       notice_price: "%{name}: zmiana ceny %{from} → %{to} (%{percent})"
       notice_renewal: "%{name} odnawia się %{date}"

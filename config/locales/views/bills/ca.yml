@@ -259,6 +259,7 @@ ca:
         one: Hem trobat %{count} pagament recurrent a les teves transaccions. Revisa'l perquè els totals d'aquí coincideixin amb el que pagues realment.
         other: Hem trobat %{count} pagaments recurrents a les teves transaccions. Revisa'ls perquè els totals d'aquí coincideixin amb el que pagues realment.
       detected_review_action: Revisa'ls
+      notices_heading: Canvis
       needs_review: Cal revisar
       notice_trial: La prova de %{name} acaba el %{date}
       notice_renewal: '%{name} es renova el %{date}'
