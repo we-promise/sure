@@ -1300,7 +1300,22 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     json_response = JSON.parse(response.body)
-    assert_includes json_response["errors"], "Account must belong to your family"
+    assert_equal [ "Account not found" ], json_response["errors"]
+  end
+
+  test "should not create import for unknown or malformed account id" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    [ SecureRandom.uuid, "not-a-uuid" ].each do |account_id|
+      assert_no_difference("Import.count") do
+        post api_v1_imports_url,
+             params: { raw_file_content: csv_content, account_id: account_id },
+             headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity
+      assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
+    end
   end
 
   test "should reject file upload exceeding max size" do
