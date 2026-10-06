@@ -13,7 +13,7 @@
     whole row took the secondary text below 3:1 in light mode. %>
 <%# The row reads as interactive without dressing up as a button: a hover tint
     and the name underlining, the same cues the transaction list uses. %>
-<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 transition-colors hover:bg-surface-hover">
+<div class="flex items-center gap-3 @lg:gap-4 px-4 py-3 transition-colors hover:bg-surface-hover">
   <%# The bulk of the row is the inspect control. Only the trailing verb sits
       outside it, so there are no anchors inside anchors. The link has no
       padding of its own, so its ring is pushed out into the row's: clear of
@@ -23,7 +23,7 @@
       NEXT one and reported it unpaid. %>
   <%= link_to bill_path(series, display: "drawer", occurrence: occurrence.id),
         data: { turbo_frame: "drawer", turbo_prefetch: false },
-        class: "flex items-center gap-3 lg:gap-4 min-w-0 flex-1 group rounded-lg focus-ring outline-offset-4" do %>
+        class: "flex items-center gap-3 @lg:gap-4 min-w-0 flex-1 group rounded-lg focus-ring outline-offset-4" do %>
     <%# A date rail, and only a date. It used to print "Overdue" beside a
         subline already reading "14 days overdue", which spent the row's one
         piece of temporal context saying the same word twice. The colour still
