@@ -77,7 +77,8 @@ module BillsHelper
   # The paycheck plan split into what the page renders: the leading no-income
   # bridge window (reported above the timeline, never inside it), the real
   # periods, and which of the two bridge states applies -- short earns the
-  # warning, covered-with-items earns the quiet strip.
+  # warning, covered-with-items earns the quiet strip. An unknown cash balance
+  # proves neither state, so it must not render either cash-dependent partial.
   def paycheck_plan_sections(plan)
     return {} if plan.blank?
 
@@ -87,7 +88,7 @@ module BillsHelper
       bridge: bridge,
       periods: plan.reject(&:bridge?),
       shortfall: bridge&.short? ? bridge : nil,
-      bridge_note: bridge && !bridge.short? && bridge.items.any? ? bridge : nil
+      bridge_note: bridge && bridge.cash_on_hand.present? && !bridge.short? && bridge.items.any? ? bridge : nil
     }
   end
 
