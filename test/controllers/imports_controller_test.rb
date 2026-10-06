@@ -451,6 +451,28 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
+  test "member cannot publish QIF import whose embedded account matches a read only shared account" do
+    import = qif_import_with_embedded_account(accounts(:credit_card).name)
+    QifImport.any_instance.expects(:publish_later).never
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member can publish QIF import whose embedded account is new" do
+    import = qif_import_with_embedded_account("Brand New QIF Account")
+    QifImport.any_instance.expects(:publish_later).once
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.started"), flash[:notice]
+  end
+
   test "destroys import" do
     import = imports(:transaction)
 
@@ -641,4 +663,23 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select 'select[name="import[account_id]"] option', text: "IOU (personal debt to friend)", count: 0
     assert_select 'select[name="import[account_id]"] option', text: "Plaid Depository Account", count: 0
   end
+
+  private
+    def qif_import_with_embedded_account(name)
+      import = QifImport.create!(family: families(:dylan_family))
+      import.update!(raw_file_str: <<~QIF)
+        !Account
+        N#{name}
+        TBank
+        ^
+        !Type:Bank
+        D1/ 1'24
+        U-25.00
+        T-25.00
+        PCoffee Shop
+        ^
+      QIF
+      import.generate_rows_from_csv
+      import.reload
+    end
 end
