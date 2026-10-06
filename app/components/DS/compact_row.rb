@@ -39,8 +39,7 @@ class DS::CompactRow < DesignSystemComponent
   end
 
   erb_template <<~ERB
-    <div class="<%= row_classes %>">
-      <div class="hidden lg:flex w-8 shrink-0 justify-center">
+      <div class="w-8 shrink-0 justify-center hidden lg:flex has-[input:not(.hidden)]:flex">
         <%= checkbox %>
       </div>
 
