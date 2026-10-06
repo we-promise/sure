@@ -47,6 +47,24 @@ class SnaptradeAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal [ created.id ], @account.holdings.where(date: Date.current).pluck(:security_id)
   end
 
+  # Another provider on the same account holds the ticker today on another
+  # row. SnapTrade's holding goes on the row for the exchange it reports, and
+  # the other provider's holding keeps its quantity and its provider.
+  test "a sync leaves another provider's holding of the same ticker alone" do
+    item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    other_provider = AccountProvider.create!(account: @account, provider: item.coinstats_accounts.create!(name: "Other provider", currency: "USD"))
+    theirs = Security.create!(ticker: "DUPO", name: "Other provider's row")
+    listed = Security.create!(ticker: "DUPO", name: "Listed row", exchange_operating_mic: "XNYS")
+    theirs_holding = @account.holdings.create!(security: theirs, date: Date.current, qty: 3, price: 100, amount: 300,
+                                               currency: "USD", account_provider: other_provider)
+
+    process_holdings(build_holding(symbol: "DUPO").deep_merge("instrument" => { "exchange" => "XNYS" }))
+
+    theirs_holding.reload
+    assert_equal [ 3, other_provider.id ], [ theirs_holding.qty, theirs_holding.account_provider_id ]
+    assert_equal 10, @account.holdings.find_by!(security: listed, date: Date.current).qty
+  end
+
   private
 
     def hold_position(security, date:)

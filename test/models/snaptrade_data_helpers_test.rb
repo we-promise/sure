@@ -14,8 +14,8 @@ class SnaptradeDataHelpersTest < ActiveSupport::TestCase
       parse_date(value)
     end
 
-    def test_resolve_security(symbol, symbol_data, account: nil)
-      resolve_security(symbol, symbol_data, account: account)
+    def test_resolve_security(symbol, symbol_data, account: nil, account_provider_id: nil)
+      resolve_security(symbol, symbol_data, account: account, account_provider_id: account_provider_id)
     end
 
     def test_extract_currency(data, symbol_data = {}, fallback = nil)
@@ -233,6 +233,34 @@ class SnaptradeDataHelpersTest < ActiveSupport::TestCase
     assert_equal remapped_to, @helper.test_resolve_security("DUPR", {}, account: account)
   end
 
+  # Another provider linked to the same account can hold the same ticker on
+  # another row. Without an external_id the import adapter matches holdings by
+  # security, date and currency alone, so following that holding would make
+  # SnapTrade overwrite it.
+  test "resolve_security does not follow another provider's holding" do
+    account = accounts(:investment)
+    snaptrade = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+    other = AccountProvider.create!(account: account, provider: other_provider_account)
+    theirs = Security.create!(ticker: "DUPO", name: "Other provider's row", exchange_operating_mic: "XNAS")
+    ours = Security.create!(ticker: "DUPO", name: "SnapTrade's row")
+    hold(account, ours, date: 3.days.ago.to_date, account_provider: snaptrade)
+    hold(account, theirs, date: 1.day.ago.to_date, account_provider: other)
+
+    assert_equal ours, @helper.test_resolve_security("DUPO", {}, account: account, account_provider_id: snaptrade.id)
+  end
+
+  # Holdings materialized from the account's trades carry no provider, and a
+  # remap there is the user's choice, so they still count.
+  test "resolve_security still follows a holding with no provider" do
+    account = accounts(:investment)
+    snaptrade = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+    Security.create!(ticker: "DUPM", name: "Priced row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    materialized = Security.create!(ticker: "DUPM", name: "Materialized row")
+    hold(account, materialized, date: 1.day.ago.to_date)
+
+    assert_equal materialized, @helper.test_resolve_security("DUPM", {}, account: account, account_provider_id: snaptrade.id)
+  end
+
   # === extract_currency tests ===
 
   test "extract_currency handles hash with code key (symbol access)" do
@@ -274,10 +302,15 @@ class SnaptradeDataHelpersTest < ActiveSupport::TestCase
 
   private
 
-    def hold(account, security, date:, provider_security: nil)
+    def hold(account, security, date:, provider_security: nil, account_provider: nil)
       account.holdings.create!(
         security: security, provider_security: provider_security, date: date,
-        qty: 1, price: 100, amount: 100, currency: "USD"
+        qty: 1, price: 100, amount: 100, currency: "USD", account_provider: account_provider
       )
+    end
+
+    def other_provider_account
+      item = families(:dylan_family).coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+      item.coinstats_accounts.create!(name: "Other provider", currency: "USD")
     end
 end
