@@ -158,6 +158,42 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to categories_url
   end
 
+  test "guest cannot create category" do
+    sign_in family_guest
+
+    assert_no_difference "Category.count" do
+      post categories_url, params: {
+        category: {
+          name: "Guest Category",
+          color: Category::COLORS.sample } }
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "guest cannot destroy category" do
+    sign_in family_guest
+
+    assert_no_difference "Category.count" do
+      delete category_url(categories(:food_and_drink))
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "member can create category" do
+    sign_in users(:family_member)
+
+    assert_difference "Category.count", 1 do
+      post categories_url, params: {
+        category: {
+          name: "Member Category",
+          color: Category::COLORS.sample } }
+    end
+
+    assert_redirected_to categories_url
+  end
+
   test "bootstrap" do
     # 22 default categories minus 2 that already exist in fixtures (Income, Food & Drink)
     assert_difference "Category.count", 20 do
