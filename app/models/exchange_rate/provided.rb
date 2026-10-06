@@ -36,27 +36,39 @@ module ExchangeRate::Provided
       return nil unless response.success? # Provider error
 
       rate = response.data
+      return rate unless cache
+
       begin
-        if cache
-          stored = ExchangeRate.find_or_create_by!(
-            from_currency: rate.from,
-            to_currency: rate.to,
-            date: rate.date
-          ) do |exchange_rate|
-            exchange_rate.rate = rate.rate
-          end
-          stored.update!(rate: rate.rate) if !stored.rate.to_d.positive? && rate.rate.to_d.positive?
+        stored = ExchangeRate.find_or_create_by!(
+          from_currency: rate.from,
+          to_currency: rate.to,
+          date: rate.date
+        ) do |exchange_rate|
+          exchange_rate.rate = rate.rate
         end
       rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
         # Race condition: another process inserted between our SELECT and INSERT.
         # RecordNotUnique = DB unique constraint; RecordInvalid = model uniqueness
         # validation fired before the DB got a chance to reject it. Both are safe
-        # to handle by reading back the record that the other process just saved.
-        return ExchangeRate.find_by!(
+        # to handle by reading back the record that the other process just saved,
+        # unless what it saved is unusable; then the provider's answer stands.
+        stored = ExchangeRate.find_by!(
           from_currency: rate.from,
           to_currency: rate.to,
           date: rate.date
-        ) if cache
+        )
+        return stored.rate.to_d.positive? ? stored : rate
+      end
+
+      # Replace an unusable row with the provider's answer. Outside the race
+      # rescue above, and best-effort: if the write fails, the provider's rate
+      # is still the answer, never the row it could not replace.
+      if !stored.rate.to_d.positive? && rate.rate.to_d.positive?
+        begin
+          stored.update!(rate: rate.rate)
+        rescue ActiveRecord::ActiveRecordError => e
+          Rails.logger.warn("Could not replace unusable exchange rate #{rate.from}/#{rate.to} on #{rate.date}: #{e.message}")
+        end
       end
       rate
     end

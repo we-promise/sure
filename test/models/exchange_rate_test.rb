@@ -187,6 +187,30 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.0067"), ExchangeRate.find_by(from_currency: "JPY", to_currency: "USD", date: Date.current).rate
   end
 
+  # Another process can save a 0 for the same pair and date between the lookup
+  # and the insert. Read back, that row is no answer; the provider's is.
+  test "find_or_fetch_rate returns the provider's rate when a racing writer saved an unusable one" do
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0)
+    @provider.expects(:fetch_exchange_rate).returns(
+      provider_success_response(OpenStruct.new(from: "JPY", to: "USD", date: Date.current, rate: 0.0067))
+    )
+    ExchangeRate.stubs(:find_or_create_by!).raises(ActiveRecord::RecordNotUnique)
+
+    assert_equal 0.0067, ExchangeRate.find_or_fetch_rate(from: "JPY", to: "USD").rate.to_f
+  end
+
+  # Replacing the unusable row is best-effort: a failed write leaves the
+  # provider's rate as the answer, not the row it could not replace.
+  test "find_or_fetch_rate returns the provider's rate when replacing an unusable row fails" do
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0)
+    @provider.expects(:fetch_exchange_rate).returns(
+      provider_success_response(OpenStruct.new(from: "JPY", to: "USD", date: Date.current, rate: 0.0067))
+    )
+    ExchangeRate.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(ExchangeRate.new))
+
+    assert_equal 0.0067, ExchangeRate.find_or_fetch_rate(from: "JPY", to: "USD").rate.to_f
+  end
+
   test "rates_for converts the target currency itself at 1" do
     @provider.expects(:fetch_exchange_rate).never
 
