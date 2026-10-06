@@ -72,6 +72,9 @@
             <div class="truncate flex-1 min-w-0">
               <div class="space-y-0.5">
                 <div class="flex items-center gap-1 min-w-0" data-tag-fit-bounds="0.5">
+                  <% if unread_entry?(entry) %>
+                    <%= render DS::Pill.new(dot_only: true, tone: :info, size: :md, title: t("transactions.transaction.unread")) %>
+                  <% end %>
                   <div class="truncate flex-shrink">
                     <%= link_to(
                           entry.name,

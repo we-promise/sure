@@ -912,6 +912,35 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
   end
+
+  test "show marks the account's unread transactions read on the activity tab" do
+    @user.update_column(:transactions_read_before, 1.hour.ago)
+    entry = create_transaction(account: @account, external_id: "unread-account", source: "simplefin")
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "##{dom_id(entry)} span[role=img][title=?]", I18n.t("transactions.transaction.unread")
+    assert_not_includes @user.unread_entries.pluck(:id), entry.id
+  end
+
+  test "show leaves transactions unread when another tab is open" do
+    @user.update_column(:transactions_read_before, 1.hour.ago)
+    entry = create_transaction(account: @account, external_id: "unread-other-tab", source: "simplefin")
+
+    get account_url(@account, tab: "statements")
+
+    assert_includes @user.unread_entries.pluck(:id), entry.id
+  end
+
+  test "sidebar shows the unread count per account" do
+    @user.update_column(:transactions_read_before, 1.hour.ago)
+    create_transaction(account: accounts(:credit_card), external_id: "unread-sidebar", source: "simplefin")
+
+    get account_url(@account)
+
+    assert_select "span[title=?]", I18n.t("accounts.sidebar.unread_count", count: 1)
+  end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest

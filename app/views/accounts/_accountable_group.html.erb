@@ -38,6 +38,14 @@
               <% if account.shared? %>
                 <%= icon("users", class: "w-3 h-3 text-secondary shrink-0") %>
               <% end %>
+              <% if (unread_count = sidebar_unread_counts[account.id].to_i).positive? %>
+                <%= render DS::Pill.new(
+                  label: unread_count,
+                  tone: :info,
+                  marker: false,
+                  title: t("accounts.sidebar.unread_count", count: unread_count)
+                ) %>
+              <% end %>
             </div>
             <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
           </div>

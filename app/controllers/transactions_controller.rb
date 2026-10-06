@@ -1,5 +1,5 @@
 class TransactionsController < ApplicationController
-  include EntryableResource
+  include EntryableResource, UnreadEntriesTrackable
 
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
@@ -22,7 +22,7 @@ class TransactionsController < ApplicationController
   def index
     @q = search_params
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
-    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: @accessible_account_ids)
+    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: @accessible_account_ids, user: Current.user)
 
     base_scope = @search.transactions_scope
                        .reverse_chronological
@@ -48,11 +48,21 @@ class TransactionsController < ApplicationController
                          }
                        )
 
-    @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
+    # Rendering marks rows read, so under the unread filter every render is a
+    # fresh first page of what is still unread. Honouring ?page=2 would offset
+    # past rows that moved up after the previous page was marked read.
+    page_override = @search.unread_filter? ? { page: 1 } : {}
+    @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]), **page_override)
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
     # Preload split parent data
     entry_ids = @transactions.map { |t| t.entry.id }
+
+    # With the unread filter the totals must count this page before rendering
+    # it marks the rows read.
+    @search.totals if @search.unread_filter?
+    track_unread_entries(@transactions.map(&:entry))
+    @has_unread = @search.transactions_scope.merge(Entry.unread_by(Current.user)).exists?
 
     # Load split parent entries for grouped display (only when grouping is enabled)
     @split_parents = if Current.user.show_split_grouped?

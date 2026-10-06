@@ -17,6 +17,13 @@ module AccountsHelper
     match && match[1]
   end
 
+  # Unread (synced or imported, not yet seen) transactions per account for the
+  # sidebar badges. One grouped query per request, shared by every render of
+  # the sidebar (desktop and mobile).
+  def sidebar_unread_counts
+    @sidebar_unread_counts ||= Current.user ? Current.user.unread_entry_counts_by_account : {}
+  end
+
   # Cache key for `accounts/_account_sidebar_tabs.html.erb`.
   # Kept here (not in the ERB) so the partial stays render-only.
   #
@@ -36,7 +43,7 @@ module AccountsHelper
       end
 
     [
-      family.build_cache_key("account_sidebar_tabs_v3", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v4", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
       active_tab,
@@ -47,7 +54,9 @@ module AccountsHelper
       # so toggling it in Settings busts the 12h fragment cache immediately
       # (this partial renders with skip_digest: true, so the template digest
       # would not otherwise reflect the change).
-      Current.user&.always_expanded_account_groups&.sort
+      Current.user&.always_expanded_account_groups&.sort,
+      # Unread badges change whenever a list render marks rows read.
+      Digest::SHA256.hexdigest(sidebar_unread_counts.sort.to_json)
     ]
   end
 end

@@ -94,6 +94,7 @@ en:
         balance: Balance
         category: Category
         confirmed: Confirmed
+        mark_all_read: Mark all as read
         date: Date
         entries: entries
         entry: entry
@@ -139,6 +140,9 @@ en:
       success: "%{type} account updated"
     sidebar:
       missing_data: Missing historical data
+      unread_count:
+        one: "%{count} unread transaction"
+        other: "%{count} unread transactions"
       missing_data_description: "%{product} uses third party providers to fetch historical exchange rates, security prices, and more. This data is required to calculate accurate historical account balances."
       configure_providers: Configure your providers here.
       tabs:

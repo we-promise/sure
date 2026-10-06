@@ -37,6 +37,7 @@ class User < ApplicationRecord
   has_many :sso_audit_logs, dependent: :nullify
   has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
+  has_many :entry_reads, dependent: :delete_all
   has_many :shared_accounts, through: :account_shares, source: :account
   has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
   has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy
@@ -163,6 +164,33 @@ class User < ApplicationRecord
 
   def accessible_accounts
     family.accounts.accessible_by(self)
+  end
+
+  # Synced or imported transactions in this user's accounts they have not seen yet.
+  def unread_entries
+    Entry.where(account_id: accessible_accounts.select(:id)).unread_by(self)
+  end
+
+  def unread_entry_counts_by_account
+    unread_entries.group(:account_id).count
+  end
+
+  def mark_entries_read!(entry_ids)
+    EntryRead.mark!(user: self, entry_ids: entry_ids)
+  end
+
+  # Without a scope everything becomes read by moving the watermark, which also
+  # makes the per-entry rows redundant. With a scope (a filtered list, one
+  # account) only the unread entries inside it are marked.
+  def mark_all_transactions_read!(entries_scope = nil)
+    if entries_scope.nil?
+      transaction do
+        update_column(:transactions_read_before, Time.current)
+        entry_reads.delete_all
+      end
+    else
+      mark_entries_read!(entries_scope.merge(Entry.unread_by(self)).pluck("entries.id"))
+    end
   end
 
   def finance_accounts

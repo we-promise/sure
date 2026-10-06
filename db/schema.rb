@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_190001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -723,6 +723,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.datetime "updated_at", null: false
     t.boolean "user_modified", default: false, null: false
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
+    t.index ["account_id", "created_at"], name: "index_entries_on_account_id_and_created_at_transactions", where: "((entryable_type)::text = 'Transaction'::text)"
     t.index ["account_id", "date", "entryable_id"], name: "index_entries_on_investment_totals_lookup", where: "(((entryable_type)::text = 'Trade'::text) AND (excluded = false))"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id", "idempotency_key"], name: "index_entries_on_account_and_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
@@ -738,6 +739,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.index ["reconciled_by_statement_id"], name: "index_entries_on_reconciled_by_statement", where: "(reconciled_by_statement_id IS NOT NULL)"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
     t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
+  end
+
+  create_table "entry_reads", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "entry_id", null: false
+    t.uuid "user_id", null: false
+    t.index ["entry_id"], name: "index_entry_reads_on_entry_id"
+    t.index ["user_id", "entry_id"], name: "index_entry_reads_on_user_id_and_entry_id", unique: true
   end
 
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2838,6 +2847,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.boolean "show_ai_sidebar", default: true
     t.boolean "show_sidebar", default: true
     t.string "theme", default: "system"
+    t.datetime "transactions_read_before", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "ui_layout"
     t.string "unconfirmed_email"
     t.datetime "updated_at", null: false
@@ -2968,6 +2978,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "entries", column: "parent_entry_id", on_delete: :cascade
   add_foreign_key "entries", "imports"
+  add_foreign_key "entry_reads", "entries", on_delete: :cascade
+  add_foreign_key "entry_reads", "users", on_delete: :cascade
   add_foreign_key "eval_results", "eval_runs"
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"

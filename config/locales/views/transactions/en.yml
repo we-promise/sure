@@ -168,6 +168,7 @@ en:
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
+      unread: Unread
       linked_with_provider: Linked with %{provider}
       activity_type_tooltip: Investment activity type
       possible_duplicate: Duplicate?
@@ -206,6 +207,7 @@ en:
       title: "Transactions"
       transaction: transaction
       transactions: transactions
+      mark_all_read: Mark all as read
       import: Import
       new_rule: "New rule"
       edit_rules: "Edit rules"
@@ -309,6 +311,9 @@ en:
         invalid_qty_or_price: Invalid quantity or price. Please enter valid positive values.
         conversion_failed: "Failed to convert transaction: %{error}"
         unexpected_error: "Unexpected error during conversion: %{error}"
+    reads:
+      create:
+        success: Marked as read
     searches:
       filters:
         account_filter:
@@ -335,6 +340,7 @@ en:
           transfer: Transfer
           confirmed: Confirmed
           pending: Pending
+          unread: Unread
           ai_current: AI
           ai_history: AI history
         ai_filter:
@@ -349,6 +355,7 @@ en:
         status_filter:
           confirmed: Confirmed
           pending: Pending
+          unread: Unread
       menu:
         account_filter: Account
         amount_filter: Amount

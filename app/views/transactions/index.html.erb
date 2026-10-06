@@ -1,4 +1,5 @@
 <div class="space-y-4 pb-6 lg:pb-12 flex flex-col">
+  <%= unread_marker_tag %>
   <header class="flex justify-between items-center text-primary font-medium">
     <h1 class="text-xl"><%= t(".title") %></h1>
     <div class="flex items-center gap-5">
@@ -14,6 +15,16 @@
           <% if @uncategorized_count > 0 %>
             <% menu.with_item(variant: "link", text: t(".categorize_button", count: @uncategorized_count), href: transactions_categorize_path, icon: "tag", data: { turbo_frame: :_top }) %>
           <% end %>
+        <% end %>
+
+        <% if @has_unread %>
+          <%= render DS::Button.new(
+            text: t(".mark_all_read"),
+            icon: "check-check",
+            variant: "outline",
+            href: transactions_read_path(q: @q.presence),
+            method: :post
+          ) %>
         <% end %>
 
         <div class="hidden md:flex">

@@ -1,6 +1,25 @@
 module EntriesHelper
   SplitGroup = Data.define(:parent, :children)
 
+  # True for rows the current list render flagged as unread (see
+  # UnreadEntriesTrackable). Renders outside those lists (turbo stream
+  # replacements, broadcasts) have no set and show no dot.
+  def unread_entry?(entry)
+    @unread_entry_ids&.include?(entry.id) || false
+  end
+
+  # Only present on responses to Turbo hover-prefetches: marks the rows read
+  # from the browser when the page is actually shown.
+  def unread_marker_tag
+    return if @unread_entry_ids_to_mark_on_display.blank?
+
+    tag.div hidden: true, data: {
+      controller: "unread-marker",
+      unread_marker_url_value: transactions_read_path,
+      unread_marker_entry_ids_value: @unread_entry_ids_to_mark_on_display.to_a
+    }
+  end
+
   def group_split_entries(entries, split_parents)
     return entries if split_parents.blank?
 

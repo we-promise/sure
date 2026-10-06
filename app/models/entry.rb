@@ -36,6 +36,18 @@ class Entry < ApplicationRecord
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
+  # Transactions that came in through a provider sync or a file import and that
+  # `user` has not seen in a transaction list yet. Manually created entries
+  # carry none of the three origin columns and never count as unread. Split
+  # parents are hidden from every list, so they could never be marked read.
+  scope :unread_by, ->(user) {
+    excluding_split_parents
+      .where(entryable_type: "Transaction")
+      .where("entries.external_id IS NOT NULL OR entries.plaid_id IS NOT NULL OR entries.import_id IS NOT NULL")
+      .where("entries.created_at > ?", user.transactions_read_before)
+      .where("NOT EXISTS (SELECT 1 FROM entry_reads WHERE entry_reads.entry_id = entries.id AND entry_reads.user_id = ?)", user.id)
+  }
+
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
   }

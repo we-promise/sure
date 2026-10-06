@@ -20,12 +20,14 @@ class Transaction::Search
   attribute :ai_status, array: true
   attribute :active_accounts_only, :boolean, default: true
 
-  attr_reader :family, :accessible_account_ids
+  attr_reader :family, :accessible_account_ids, :user
 
-  # Initialize a transaction search with optional filters and accessible accounts
-  def initialize(family, filters: {}, accessible_account_ids: nil)
+  # Initialize a transaction search with optional filters and accessible accounts.
+  # `user` is only needed for the per-user "unread" status filter.
+  def initialize(family, filters: {}, accessible_account_ids: nil, user: nil)
     @family = family
     @accessible_account_ids = accessible_account_ids
+    @user = user
     super(filters)
   end
 
@@ -42,6 +44,7 @@ class Transaction::Search
       query = apply_category_filter(query, categories)
       query = apply_type_filter(query, types)
       query = apply_status_filter(query, status)
+      query = apply_unread_filter(query)
       query = apply_merchant_filter(query, merchants)
       query = apply_tag_filter(query, tags)
       query = apply_ai_status_filter(query, ai_status)
@@ -62,7 +65,15 @@ class Transaction::Search
       # the old logic would keep being served (same cache_key_base) after
       # deploy, disagreeing with the (uncached) transactions_scope list
       # until entries_cache_version next changes for that family.
-      Rails.cache.fetch("transaction_search_totals/v3/#{cache_key_base}") do
+      #
+      # The unread filter depends on the user's read state, which changes on
+      # every list render, so those totals are always recomputed.
+      #
+      # Their entries are still written, so they get their own per-user key and
+      # can never be served to a search without the unread filter.
+      totals_cache_key = "transaction_search_totals/v3/#{cache_key_base}"
+      totals_cache_key += "/unread/#{user.id}" if unread_filter?
+      Rails.cache.fetch(totals_cache_key, force: unread_filter?) do
         scope = transactions_scope
 
         # Exclude tax-advantaged accounts from totals calculation
@@ -117,6 +128,10 @@ class Transaction::Search
       Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json), # stable across processes
       accessible_account_ids ? Digest::SHA256.hexdigest(accessible_account_ids.sort.to_json) : "all"
     ].join("/")
+  end
+
+  def unread_filter?
+    user.present? && Array(status).include?("unread")
   end
 
   private
@@ -268,8 +283,10 @@ class Transaction::Search
       sql + ")"
     end
 
-    # Filter transactions by status (pending or confirmed)
+    # Filter transactions by status (pending or confirmed). "unread" is a
+    # separate per-user dimension, see apply_unread_filter.
     def apply_status_filter(query, statuses)
+      statuses = Array(statuses) - [ "unread" ]
       return query unless statuses.present?
       return query if statuses.uniq.sort == [ "confirmed", "pending" ] # Both selected = no filter
 
@@ -284,5 +301,11 @@ class Transaction::Search
       else
         query
       end
+    end
+
+    def apply_unread_filter(query)
+      return query unless unread_filter?
+
+      query.merge(Entry.unread_by(user))
     end
 end
