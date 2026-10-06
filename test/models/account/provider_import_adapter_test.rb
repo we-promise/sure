@@ -86,6 +86,72 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
                  "a repayment on a Loan account must stay loan_payment, not the provider's funds_movement"
   end
 
+  test "maps investment account withdrawal activity to investment_withdrawal" do
+    investment_account = @family.accounts.create!(
+      name: "Brokerage",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Investment.new(subtype: "brokerage")
+    )
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+
+    entry = adapter.import_transaction(
+      external_id: "brokerage_withdrawal_1",
+      amount: 250,
+      currency: @family.currency,
+      date: Date.current,
+      name: "Withdrawal",
+      source: "test",
+      investment_activity_label: "Withdrawal"
+    )
+
+    assert_equal "investment_withdrawal", entry.transaction.kind
+  end
+
+  test "preserves transfer kinds when reimporting a matched investment withdrawal" do
+    investment_account = @family.accounts.create!(
+      name: "Brokerage",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Investment.new(subtype: "brokerage")
+    )
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    withdrawal = adapter.import_transaction(
+      external_id: "brokerage_withdrawal_reimport",
+      amount: 250,
+      currency: @family.currency,
+      date: Date.current,
+      name: "Withdrawal",
+      source: "test",
+      investment_activity_label: "Withdrawal"
+    )
+    cash_inflow = @account.entries.create!(
+      name: "Brokerage withdrawal",
+      amount: -250,
+      currency: @family.currency,
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    @family.auto_match_transfers!
+
+    assert_equal "funds_movement", withdrawal.reload.transaction.kind
+    assert_equal "investment_withdrawal", cash_inflow.reload.transaction.kind
+
+    adapter.import_transaction(
+      external_id: "brokerage_withdrawal_reimport",
+      amount: 250,
+      currency: @family.currency,
+      date: Date.current,
+      name: "Withdrawal",
+      source: "test",
+      investment_activity_label: "Withdrawal"
+    )
+
+    assert_equal "funds_movement", withdrawal.reload.transaction.kind
+    assert_equal "investment_withdrawal", cash_inflow.reload.transaction.kind
+  end
+
   test "updates existing transaction instead of creating duplicate" do
     # Create initial transaction
     entry = @adapter.import_transaction(

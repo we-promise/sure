@@ -41,6 +41,61 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_includes aggregate_queries.first, '"entries"."account_id" IN (SELECT DISTINCT "accounts"."id"'
   end
 
+  test "includes imported investment withdrawals marked with the new kind" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    @account.entries.create!(
+      name: "Withdrawal",
+      amount: 250,
+      date: Date.current,
+      currency: "USD",
+      entryable: Transaction.new(kind: "investment_withdrawal", investment_activity_label: "Withdrawal")
+    )
+
+    totals = InvestmentFlowStatement.new(@family, user: @user).period_totals(period: period)
+
+    assert_equal Money.new(250, "USD"), totals.withdrawals
+  end
+
+  test "counts transfer-created and auto-matched withdrawal cash legs without double counting" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    investment = @family.accounts.create!(
+      owner: @user,
+      name: "Brokerage",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+
+    Transfer::Creator.new(
+      family: @family,
+      source_account_id: investment.id,
+      destination_account_id: @account.id,
+      date: Date.current,
+      amount: 150
+    ).create
+
+    provider_withdrawal = investment.entries.create!(
+      name: "Withdrawal",
+      amount: 250,
+      date: Date.current,
+      currency: "USD",
+      entryable: Transaction.new(kind: "investment_withdrawal", investment_activity_label: "Withdrawal")
+    )
+    @account.entries.create!(
+      name: "Brokerage withdrawal",
+      amount: -250,
+      date: Date.current,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    @family.auto_match_transfers!
+
+    assert_equal "funds_movement", provider_withdrawal.reload.transaction.kind
+    totals = InvestmentFlowStatement.new(@family, user: @user).period_totals(period: period)
+    assert_equal Money.new(400, "USD"), totals.withdrawals
+  end
+
   private
     def create_flow(label:, amount:, date:)
       @account.entries.create!(

@@ -6,7 +6,7 @@ class InvestmentFlowStatement
     "THEN entries.amount ELSE 0 END)), 0)"
   )
   WITHDRAWALS_TOTAL_SQL = Arel.sql(
-    "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Withdrawal' " \
+    "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Withdrawal' OR transactions.kind = 'investment_withdrawal' " \
     "THEN entries.amount ELSE 0 END)), 0)"
   )
   private_constant :CONTRIBUTIONS_TOTAL_SQL, :WITHDRAWALS_TOTAL_SQL
@@ -24,8 +24,8 @@ class InvestmentFlowStatement
       .visible
       .excluding_pending
       .where(entries: { date: period.date_range })
-      .where(kind: %w[standard investment_contribution])
-      .where(investment_activity_label: %w[Contribution Withdrawal])
+      .where(kind: %w[standard investment_contribution investment_withdrawal])
+      .where("transactions.investment_activity_label IN (?) OR transactions.kind = ?", %w[Contribution Withdrawal], "investment_withdrawal")
 
     if user
       account_ids = family.accounts.included_in_finances_for(user).included_in_reports.select(:id)

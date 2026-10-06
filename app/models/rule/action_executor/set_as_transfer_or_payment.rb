@@ -14,14 +14,15 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
     count_modified_resources(scope) do |txn|
       entry = txn.entry
-      unless txn.transfer?
+      unless txn.transfer.present?
         transfer = build_transfer(target_account, entry)
         Transfer.transaction do
           transfer.save!
 
-          # Use DESTINATION (inflow) account for kind, matching Transfer::Creator logic
+          source_account = transfer.outflow_transaction.entry.account
           destination_account = transfer.inflow_transaction.entry.account
-          outflow_kind = Transfer.kind_for_account(destination_account)
+          transfer_kinds = Transfer.kinds_for(source_account: source_account, destination_account: destination_account)
+          outflow_kind = transfer_kinds[:outflow]
           outflow_attrs = { kind: outflow_kind }
 
           if outflow_kind == "investment_contribution"
@@ -30,7 +31,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
           end
 
           transfer.outflow_transaction.update!(outflow_attrs)
-          transfer.inflow_transaction.update!(kind: "funds_movement")
+          transfer.inflow_transaction.update!(kind: transfer_kinds[:inflow])
         end
 
         transfer.sync_account_later

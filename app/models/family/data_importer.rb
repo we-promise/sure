@@ -1058,29 +1058,17 @@ class Family::DataImporter
     end
 
     def apply_transfer_transaction_kinds!(transfer)
+      source_account = transfer.outflow_transaction.entry.account
       destination_account = transfer.inflow_transaction.entry.account
-      outflow_kind = imported_transfer_outflow_kind(transfer)
+      transfer_kinds = Transfer.kinds_for(source_account: source_account, destination_account: destination_account)
+      outflow_kind = transfer_kinds[:outflow]
       outflow_attrs = { kind: outflow_kind }
       if outflow_kind == "investment_contribution" && transfer.outflow_transaction.category_id.blank?
         outflow_attrs[:category] = destination_account.family.investment_contributions_category
       end
 
       transfer.outflow_transaction.update!(outflow_attrs)
-      transfer.inflow_transaction.update!(kind: "funds_movement")
-    end
-
-    def imported_transfer_outflow_kind(transfer)
-      source_account = transfer.outflow_transaction.entry.account
-      destination_account = transfer.inflow_transaction.entry.account
-      return "loan_payment" if destination_account.loan?
-      return "cc_payment" if destination_account.liability?
-      return "investment_contribution" if investment_account?(destination_account) && !investment_account?(source_account)
-
-      "funds_movement"
-    end
-
-    def investment_account?(account)
-      account.investment? || account.crypto?
+      transfer.inflow_transaction.update!(kind: transfer_kinds[:inflow])
     end
 
     def import_rejected_transfers(records)

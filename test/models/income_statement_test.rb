@@ -382,6 +382,30 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(1900, @family.currency), totals.expense_money # 900 + 1000 investment
   end
 
+  test "includes investment_withdrawal transactions as income regardless of amount sign" do
+    create_transaction(
+      account: @checking_account,
+      amount: 250,
+      category: nil,
+      kind: "investment_withdrawal"
+    )
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(1250, @family.currency), totals.income_money
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "sums uncategorized withdrawals with other income before taking the absolute value" do
+    create_transaction(account: @checking_account, amount: -1000, category: nil, kind: "standard")
+    create_transaction(account: @checking_account, amount: -500, category: nil, kind: "investment_withdrawal")
+
+    totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(2500, @family.currency), totals.income_money
+  end
+
   test "includes provider-imported investment_contribution inflows as expenses" do
     # Simulates a 401k contribution that was auto-deducted from payroll
     # Provider imports this as an inflow to the investment account (negative amount)
