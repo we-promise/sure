@@ -33,17 +33,13 @@ class Rule::ConditionFilter::TransactionType < Rule::ConditionFilter
     when "income"
       scope.where("entries.amount < 0")
            .where.not(kind: Transaction::TRANSFER_KINDS)
-           .where.not(id: Transfer.pending.select(:inflow_transaction_id))
-           .where.not(id: Transfer.pending.select(:outflow_transaction_id))
+           .excluding_pending_transfer_legs
     when "expense"
       scope.where("entries.amount >= 0")
            .where.not(kind: Transaction::TRANSFER_KINDS)
-           .where.not(id: Transfer.pending.select(:inflow_transaction_id))
-           .where.not(id: Transfer.pending.select(:outflow_transaction_id))
+           .excluding_pending_transfer_legs
     when "transfer"
-      scope.where(kind: Transaction::TRANSFER_KINDS)
-           .or(scope.where(id: Transfer.pending.select(:inflow_transaction_id)))
-           .or(scope.where(id: Transfer.pending.select(:outflow_transaction_id)))
+      scope.where(kind: Transaction::TRANSFER_KINDS).or(scope.pending_transfer_legs)
     else
       scope
     end

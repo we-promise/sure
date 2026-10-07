@@ -96,6 +96,17 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "account_name_help_text", fragment.at("input[name='account[name]']")["aria-describedby"]
   end
 
+  test "#totals_by_currency leaves out a leg of a still-pending auto-match" do
+    outflow = accounts(:depository).entries.create!(name: "Out", date: Date.current, amount: 190, currency: "USD", entryable: Transaction.new(kind: "standard"))
+    inflow = accounts(:credit_card).entries.create!(name: "In", date: Date.current, amount: -190, currency: "USD", entryable: Transaction.new(kind: "standard"))
+    plain = accounts(:depository).entries.create!(name: "Coffee", date: Date.current, amount: 5, currency: "USD", entryable: Transaction.new(kind: "standard"))
+    Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction)
+
+    # One account's day group holds just one leg, so the legs don't cancel out.
+    entries = Entry.where(id: [ outflow.id, plain.id ]).to_a
+    assert_equal "$5.00", totals_by_currency(collection: entries, money_method: :amount_money)
+  end
+
   test "#totals_by_currency(collection: collection, money_method: money_method)" do
     assert_equal "$3.00", totals_by_currency(collection: [ @account1, @account2 ], money_method: :balance_money)
     assert_equal "$3.00 | -€7.00", totals_by_currency(collection: [ @account1, @account2, @account3 ], money_method: :balance_money)

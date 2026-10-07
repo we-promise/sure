@@ -57,31 +57,23 @@ class Transaction::Search
   # Compute totals for the specific search, excluding tax-advantaged accounts
   def totals
     @totals ||= begin
-      # v4: bumped because pending auto-matched transfer legs are now
-      # excluded from income/expense (v3: the Uncategorized filter's
-      # exclusion set changed, see #2592) -- without a version bump, a totals
-      # entry cached under the old logic would keep being served (same
-      # cache_key_base) after deploy, disagreeing with the (uncached)
-      # transactions_scope list until entries_cache_version next changes.
-      Rails.cache.fetch("transaction_search_totals/v4/#{cache_key_base}") do
+      # v5: bumped because pending auto-matched transfer legs now count as
+      # transfers in totals and in the type/Uncategorized filters (v3: the
+      # Uncategorized filter's exclusion set changed, see #2592) -- without a
+      # version bump, a totals entry cached under the old logic would keep
+      # being served (same cache_key_base) after deploy, disagreeing with the
+      # (uncached) transactions_scope list until entries_cache_version next
+      # changes.
+      Rails.cache.fetch("transaction_search_totals/v5/#{cache_key_base}") do
         scope = transactions_scope
 
         # Exclude tax-advantaged accounts from totals calculation
         tax_advantaged_ids = family.tax_advantaged_account_ids
         scope = scope.where.not(accounts: { id: tax_advantaged_ids }) if tax_advantaged_ids.present?
 
-        # A pending auto-matched transfer leg keeps kind == "standard" until
-        # confirmed (Transfer#confirm!), so `kind NOT IN (...)` alone isn't
-        # enough here either -- see IncomeStatement::ScopedTransactionsQuery
-        # #exclude_pending_transfers_sql for the same exclusion applied to
-        # the dashboard/report totals.
-        pending_transfer_exists_sql = <<~SQL.chomp
-          EXISTS (
-            SELECT 1 FROM transfers pending_transfers
-            WHERE pending_transfers.status = 'pending'
-              AND (pending_transfers.inflow_transaction_id = transactions.id OR pending_transfers.outflow_transaction_id = transactions.id)
-          )
-        SQL
+        # See Transaction.pending_transfer_legs: a pending leg counts as a
+        # transfer, not as income/expense.
+        pending_transfer_exists_sql = Transaction.pending_transfer_leg_sql
         pending_transfer_exclusion_sql = "AND NOT #{pending_transfer_exists_sql}"
 
         result = scope
@@ -165,37 +157,24 @@ class Transaction::Search
 
       # The Uncategorized bucket answers "which rows have no category", so it
       # excludes only the kinds that have nothing to categorize — the paired
-      # legs of a Transfer. Shared with Entry.uncategorized_transactions so
-      # this list, the uncategorized badge count and the Quick Categorize
-      # wizard can't drift apart. https://github.com/we-promise/sure/issues/2592
-      uncategorized_condition = "categories.id IS NULL AND transactions.kind NOT IN (?)"
-      uncategorized_excluded_kinds = Transaction::UNCATEGORIZED_EXCLUDED_KINDS
-
-      # Build condition based on whether parent_category_ids is empty
-      if parent_category_ids.empty?
-        if include_uncategorized
-          query = query.left_joins(:category).where(
-            "categories.name IN (?) OR (#{uncategorized_condition})",
-            real_categories.presence || [], uncategorized_excluded_kinds
-          )
-        else
-          query = query.left_joins(:category).where(categories: { name: real_categories })
-        end
+      # legs of a Transfer, including a still-pending auto-match. Shared with
+      # Entry.uncategorized_transactions so this list, the uncategorized badge
+      # count and the Quick Categorize wizard can't drift apart.
+      # https://github.com/we-promise/sure/issues/2592
+      query = query.left_joins(:category)
+      named = if parent_category_ids.empty?
+        query.where(categories: { name: real_categories })
       else
-        if include_uncategorized
-          query = query.left_joins(:category).where(
-            "categories.name IN (?) OR categories.parent_id IN (?) OR (#{uncategorized_condition})",
-            real_categories, parent_category_ids, uncategorized_excluded_kinds
-          )
-        else
-          query = query.left_joins(:category).where(
-            "categories.name IN (?) OR categories.parent_id IN (?)",
-            real_categories, parent_category_ids
-          )
-        end
+        query.where("categories.name IN (?) OR categories.parent_id IN (?)", real_categories, parent_category_ids)
       end
 
-      query
+      return named unless include_uncategorized
+
+      named.or(
+        query.where(categories: { id: nil })
+             .where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS)
+             .excluding_pending_transfer_legs
+      )
     end
 
     # Filter transactions by type (expense, income, or transfer)
@@ -205,31 +184,17 @@ class Transaction::Search
 
       case types.sort
       when [ "transfer" ]
-        # Matches Rule::ConditionFilter::TransactionType#apply for
-        # consistency -- a pending auto-matched leg keeps kind == "standard"
-        # until confirmed (Transfer#confirm!), so `kind IN (...)` alone
-        # misses it here too.
-        query.where(kind: Transaction::TRANSFER_KINDS)
-             .or(query.where(id: Transfer.pending.select(:inflow_transaction_id)))
-             .or(query.where(id: Transfer.pending.select(:outflow_transaction_id)))
+        query.where(kind: Transaction::TRANSFER_KINDS).or(query.pending_transfer_legs)
       when [ "expense" ]
-        query.where("entries.amount >= 0")
-             .where.not(kind: Transaction::TRANSFER_KINDS)
-             .where.not(id: Transfer.pending.select(:inflow_transaction_id))
-             .where.not(id: Transfer.pending.select(:outflow_transaction_id))
+        query.where("entries.amount >= 0").where.not(kind: Transaction::TRANSFER_KINDS).excluding_pending_transfer_legs
       when [ "income" ]
-        query.where("entries.amount < 0")
-             .where.not(kind: Transaction::TRANSFER_KINDS)
-             .where.not(id: Transfer.pending.select(:inflow_transaction_id))
-             .where.not(id: Transfer.pending.select(:outflow_transaction_id))
+        query.where("entries.amount < 0").where.not(kind: Transaction::TRANSFER_KINDS).excluding_pending_transfer_legs
       when [ "expense", "transfer" ]
-        query.where("entries.amount >= 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+        query.where("entries.amount >= 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS).or(query.pending_transfer_legs)
       when [ "income", "transfer" ]
-        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS).or(query.pending_transfer_legs)
       when [ "expense", "income" ]
-        query.where.not(kind: Transaction::TRANSFER_KINDS)
-             .where.not(id: Transfer.pending.select(:inflow_transaction_id))
-             .where.not(id: Transfer.pending.select(:outflow_transaction_id))
+        query.where.not(kind: Transaction::TRANSFER_KINDS).excluding_pending_transfer_legs
       else
         query
       end

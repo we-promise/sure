@@ -118,6 +118,38 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes non_transfer_ids, inflow_entry.entryable.id
   end
 
+  test "mixed type filters include the matching leg of a still-pending auto-match" do
+    outflow_entry = create_transaction(account: @checking_account, amount: 190, kind: "standard")
+    inflow_entry = create_transaction(account: @credit_card_account, amount: -190, kind: "standard")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    expense_and_transfer_ids = Transaction::Search.new(@family, filters: { types: [ "expense", "transfer" ] }).transactions_scope.pluck(:id)
+    assert_includes expense_and_transfer_ids, outflow_entry.entryable.id
+    assert_includes expense_and_transfer_ids, inflow_entry.entryable.id
+
+    income_and_transfer_ids = Transaction::Search.new(@family, filters: { types: [ "income", "transfer" ] }).transactions_scope.pluck(:id)
+    assert_includes income_and_transfer_ids, outflow_entry.entryable.id
+    assert_includes income_and_transfer_ids, inflow_entry.entryable.id
+  end
+
+  test "uncategorized filter and badge scope leave out both legs of a still-pending auto-match" do
+    outflow_entry = create_transaction(account: @checking_account, amount: 190, kind: "standard")
+    inflow_entry = create_transaction(account: @credit_card_account, amount: -190, kind: "standard")
+    plain_entry = create_transaction(account: @checking_account, amount: 20, kind: "standard")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    filter_ids = Transaction::Search.new(@family, filters: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ] })
+      .transactions_scope.pluck(:id)
+    assert_includes filter_ids, plain_entry.entryable.id
+    assert_not_includes filter_ids, outflow_entry.entryable.id
+    assert_not_includes filter_ids, inflow_entry.entryable.id
+
+    badge_ids = @family.entries.uncategorized_transactions.pluck(:id)
+    assert_includes badge_ids, plain_entry.id
+    assert_not_includes badge_ids, outflow_entry.id
+    assert_not_includes badge_ids, inflow_entry.id
+  end
+
   test "search category filter handles uncategorized transactions correctly with kind filtering" do
     # Create uncategorized transactions of different kinds
     uncategorized_standard = create_transaction(

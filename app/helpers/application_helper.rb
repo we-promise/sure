@@ -293,7 +293,7 @@ module ApplicationHelper
       items = item.reject do |i|
         i.is_a?(Entry) &&
         i.entryable.is_a?(Transaction) &&
-        i.entryable.transfer?
+        i.entryable.counts_as_transfer?
       end
       total = items.sum(&money_method)
       negate ? -total : total

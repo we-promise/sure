@@ -41,6 +41,19 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_includes aggregate_queries.first, '"entries"."account_id" IN (SELECT DISTINCT "accounts"."id"'
   end
 
+  test "period totals leave out a leg of a still-pending auto-match" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    checking = @family.accounts.create!(owner: @user, name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
+
+    create_flow(label: "Contribution", amount: -50, date: period.start_date)
+    matched_inflow = create_flow(label: "Contribution", amount: -200, date: period.start_date)
+    outflow = checking.entries.create!(name: "To broker", amount: 200, date: period.start_date, currency: "USD", entryable: Transaction.new(kind: "standard"))
+    Transfer.create!(inflow_transaction: matched_inflow.transaction, outflow_transaction: outflow.transaction)
+
+    totals = InvestmentFlowStatement.new(@family, user: @user).period_totals(period: period)
+    assert_equal Money.new(50, "USD"), totals.contributions
+  end
+
   private
     def create_flow(label:, amount:, date:)
       @account.entries.create!(

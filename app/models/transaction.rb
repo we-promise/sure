@@ -136,6 +136,26 @@ class Transaction < ApplicationRecord
     where(conditions.join(" AND "))
   }
 
+  # An auto-matched transfer starts out pending and leaves both legs at kind
+  # "standard" until the user confirms it (Transfer#confirm!), so a kind check
+  # alone counts a pending leg as income/expense. Every kind-based filter
+  # treats a pending leg as a transfer through these.
+  scope :pending_transfer_legs, -> { where(pending_transfer_leg_sql) }
+  scope :excluding_pending_transfer_legs, -> { where.not(pending_transfer_leg_sql) }
+
+  # Uncorrelated on purpose, so Postgres hashes the pending leg ids once
+  # instead of probing transfers per row. Both id columns are NOT NULL, so
+  # NOT IN is safe.
+  def self.pending_transfer_leg_sql(table_alias = "transactions")
+    <<~SQL.squish
+      #{table_alias}.id IN (
+        SELECT inflow_transaction_id FROM transfers WHERE status = 'pending'
+        UNION ALL
+        SELECT outflow_transaction_id FROM transfers WHERE status = 'pending'
+      )
+    SQL
+  end
+
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.
   def self.pending_providers_sql(table_alias = "t")

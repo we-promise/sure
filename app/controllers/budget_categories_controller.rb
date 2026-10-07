@@ -19,8 +19,7 @@ class BudgetCategoriesController < ApplicationController
     # category -- even though the aggregate ignores it. See issue #1059.
     @recent_transactions = @budget.transactions
                                   .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
-                                  .where.not(transactions: { id: Transfer.pending.select(:inflow_transaction_id) })
-                                  .where.not(transactions: { id: Transfer.pending.select(:outflow_transaction_id) })
+                                  .merge(Transaction.excluding_pending_transfer_legs)
 
     if params[:id] == BudgetCategory.uncategorized.id
       @budget_category = @budget.uncategorized_budget_category
