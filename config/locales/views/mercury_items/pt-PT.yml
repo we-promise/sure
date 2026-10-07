@@ -75,6 +75,7 @@ pt-PT:
       connection_name_label: Nome da ligação
       connection_name_placeholder: Conta corrente empresarial
       default_connection_name: Ligação Mercury
+      disconnect: Desligar
       disconnect_confirm: "Desassociar %{name}?"
       instructions:
         copy_token_html: "Copie o <strong>token completo</strong> (incluindo o prefixo <code>secret-token:</code>) e adicione-o como ligação nomeada abaixo"

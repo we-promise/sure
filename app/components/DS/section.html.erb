@@ -1,0 +1,36 @@
+<% heading = capture do %>
+  <div class="flex items-center justify-between gap-3 px-4 py-2">
+    <div class="flex items-center gap-1.5 text-xs font-medium uppercase text-secondary">
+      <% if collapsible %>
+        <%= helpers.disclosure_chevron %>
+      <% end %>
+      <h2><%= title %></h2>
+      <span class="text-subdued" aria-hidden="true">&middot;</span>
+      <p><%= count %></p>
+    </div>
+    <%= aside %>
+  </div>
+<% end %>
+<% card = capture do %>
+  <div class="@container bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+    <%= content %>
+  </div>
+<% end %>
+
+<%= tag.section class: container_classes do %>
+  <% if collapsible %>
+    <%= render DS::Disclosure.new(
+      variant: :inline,
+      open: true,
+      summary_class: "list-none cursor-pointer focus-ring rounded-lg select-none",
+      body_class: nil,
+      data: persist_data
+    ) do |disclosure| %>
+      <% disclosure.with_summary_content { heading } %>
+      <%= card %>
+    <% end %>
+  <% else %>
+    <%= heading %>
+    <%= card %>
+  <% end %>
+<% end %>

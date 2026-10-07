@@ -39,6 +39,7 @@ ru:
       current: Текущий
       next_payment: Следующий платёж
       around: около %{date}
+      overview: Обзор
       rules: Как распознаётся этот платёж
       rule_named: «%{name}»
       rule_amount_range: от %{min} до %{max}
@@ -56,7 +57,6 @@ ru:
       ytd: Оплачено с начала года
       last_account: Последний использованный счёт
       upcoming: Предстоящие
-      recent_payments: Последние оплаты
       manual_payment: Оплата вручную
       history: История
       payment_count:
@@ -93,9 +93,6 @@ ru:
     summary:
       remaining: Осталось %{amount}
       paid_headline: Оплачено %{amount}
-      cost_line: В среднем %{average} за платёж, около %{annualized} в год
-    pane:
-      close: Свернуть подробности
     add_bill: Добавить платёж
     manage: Управлять
     find_payment: Найти оплату
@@ -103,7 +100,6 @@ ru:
     review_match: Проверить совпадение
     resolve: Решить
     manage_payments: Управлять оплатами
-    view_full_bill: Открыть платёж полностью
     match:
       same_merchant: Тот же продавец
       name_matches: Совпадает название
@@ -121,8 +117,9 @@ ru:
         many: Через %{count} дней после срока
         other: Через %{count} дня после срока
     attention:
+      paused: Приостановлено
       needs_review: Совпадение требует проверки
-      partial: Частично · осталось %{amount}
+      partial: Частично
       amount_changed: Сумма изменилась
       overdue:
         one: Просрочено на %{count} день
@@ -136,7 +133,7 @@ ru:
     cancelled_still_scheduled: Вы отметили это как отменённое %{date}, но платёж всё ещё запланирован, поэтому будущие платежи продолжат появляться.
     paid_over: Оплачено %{paid} — больше ожидаемого
     remaining_label: осталось
-    debt_payment: · погашение долга
+    debt_payment: Погашение долга
     paid_from: со счёта %{account}
     amount_range: от %{min} до %{max}
     possible_duplicate: Возможный дубликат
@@ -292,6 +289,7 @@ ru:
         many: Мы нашли %{count} регулярных платежей в ваших операциях. Проверьте их, чтобы итоги здесь соответствовали тому, что вы действительно платите.
         other: Мы нашли %{count} регулярного платежа в ваших операциях. Проверьте их, чтобы итоги здесь соответствовали тому, что вы действительно платите.
       detected_review_action: Проверить
+      notices_heading: Изменения
       needs_review: Требует проверки
       notice_trial: Пробный период «%{name}» заканчивается %{date}
       notice_renewal: «%{name}» продлевается %{date}
