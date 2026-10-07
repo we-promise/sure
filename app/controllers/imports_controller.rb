@@ -6,6 +6,7 @@ class ImportsController < ApplicationController
   before_action :require_writable_import_accounts!, only: %i[publish revert destroy]
   before_action :reject_guest_family_config_import!, except: %i[index new show summary]
   before_action :require_guest_writable_created_accounts!, only: %i[revert destroy]
+  before_action :reject_guest_new_categories_or_tags!, only: :publish
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -190,7 +191,24 @@ class ImportsController < ApplicationController
       writable_ids = Current.family.accounts.writable_by(Current.user).where(id: created_ids).pluck(:id)
       return if (created_ids - writable_ids).empty?
 
-      redirect_back_or_to imports_path, alert: t("accounts.not_authorized")
+      deny_import_change(t("accounts.not_authorized"), fallback: imports_path)
+    end
+
+    # Categories and tags are family-wide configuration, so a guest's import
+    # must map every category and tag to an existing one (or leave it empty).
+    def reject_guest_new_categories_or_tags!
+      return unless Current.user.guest? && @import.creates_categories_or_tags?
+
+      deny_import_change(t("imports.publish.guest_new_categories_or_tags"), fallback: import_confirm_path(@import))
+    end
+
+    def deny_import_change(alert, fallback:)
+      respond_to do |format|
+        format.html { redirect_back_or_to fallback, alert: alert }
+        format.turbo_stream { head :forbidden }
+        format.json { head :forbidden }
+        format.any { head :forbidden }
+      end
     end
 
     def require_statement_import_permission!

@@ -6,6 +6,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
   # Ensure proper scope authorization
   before_action :ensure_read_scope, only: [ :index, :show, :rows, :preflight ]
   before_action :ensure_write_scope, only: [ :create ]
+  before_action :reject_guest_family_config_import!, only: [ :create ]
   before_action :set_import_with_rows, only: [ :show ]
   before_action :set_import, only: [ :rows ]
 
@@ -119,6 +120,10 @@ class Api::V1::ImportsController < Api::V1::BaseController
       # For API simplicity, if enough info is provided, we might want to trigger processing
 
       if @import.configured? && params[:publish] == "true"
+        if current_resource_owner.guest? && @import.creates_categories_or_tags?
+          return render_json({ error: "forbidden", message: "Guests cannot create categories or tags", import_id: @import.id }, status: :forbidden)
+        end
+
         @import.publish_later
       end
 
@@ -161,6 +166,12 @@ class Api::V1::ImportsController < Api::V1::BaseController
   end
 
   private
+
+    def reject_guest_family_config_import!
+      return true unless Import::FAMILY_CONFIG_TYPES.include?(params[:type].to_s)
+
+      reject_guest_writes!
+    end
 
     def set_import
       @import = import_scope.find(params[:id])

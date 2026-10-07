@@ -92,7 +92,7 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
         run_test!
       end
 
-      response '403', 'insufficient scope' do
+      response '403', 'insufficient scope or guest user' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:'X-Api-Key') { api_key_without_write_scope.plain_key }

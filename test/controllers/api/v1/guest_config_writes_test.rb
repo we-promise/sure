@@ -49,6 +49,26 @@ class Api::V1::GuestConfigWritesTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "guest api keys cannot create family configuration imports or import sessions" do
+    assert_no_difference([ "Import.count", "ImportSession.count" ]) do
+      %w[CategoryImport MerchantImport RuleImport SureImport].each do |type|
+        post api_v1_imports_url, params: { type: type, raw_file_content: "name\nGuest" }, headers: @headers
+        assert_response :forbidden, "#{type} should be rejected for guests"
+      end
+
+      post api_v1_import_sessions_url, params: { type: "SureImport" }, headers: @headers
+      assert_response :forbidden
+    end
+  end
+
+  test "guest api keys can still create transaction imports" do
+    assert_difference("Import.count", 1) do
+      post api_v1_imports_url, params: { type: "TransactionImport", raw_file_content: "date,amount,name\n01/15/2024,5.00,Coffee" }, headers: @headers
+    end
+
+    assert_response :created
+  end
+
   private
 
     def guest_api_key

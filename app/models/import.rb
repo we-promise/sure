@@ -479,6 +479,11 @@ class Import < ApplicationRecord
     FAMILY_CONFIG_TYPES.include?(type)
   end
 
+  # Whether publishing would add new categories or tags to the family.
+  def creates_categories_or_tags?
+    mappings.creational.where(type: %w[Import::CategoryMapping Import::TagMapping]).where.not(key: [ nil, "" ]).exists?
+  end
+
   # Whether the user may write to every pre-existing account this import
   # targets (its own account, account mappings) or has already written into
   # (entries). Accounts the import created itself are excluded.
