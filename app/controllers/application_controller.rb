@@ -54,13 +54,13 @@ class ApplicationController < ActionController::Base
       end
     end
 
-    # Guests are read-only by design (see ConnectorAuthorizable): they may view
-    # family-wide configuration but not change it.
+    # Guests are read-only by design: they may view family configuration but
+    # never change it.
     def require_non_guest!
-      return unless Current.user&.guest?
+      return if Current.user && !Current.user.guest?
 
       respond_to do |format|
-        format.html { redirect_back_or_to root_path, alert: t("shared.require_non_guest") }
+        format.html { redirect_to accounts_path, alert: t("shared.require_non_guest") }
         format.turbo_stream { head :forbidden }
         format.json { head :forbidden }
         format.any { head :forbidden }

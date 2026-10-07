@@ -3,6 +3,7 @@ class ImportsController < ApplicationController
 
   before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
+  before_action :require_writable_import_accounts!, only: %i[publish revert]
   before_action :reject_guest_family_config_import!, only: %i[create publish]
 
   # Imports that write family-wide configuration (categories, tags, rules,
@@ -187,6 +188,15 @@ class ImportsController < ApplicationController
 
       redirect_target = @import.account || @import.account_statement
       redirect_back_or_to redirect_target, alert: t("accounts.not_authorized")
+    end
+
+    # Imports are family-scoped, so a member can reach an import configured by
+    # someone else, or one whose target account was unshared since. Publishing
+    # or reverting writes into its accounts, so require write access to all.
+    def require_writable_import_accounts!
+      return if @import.accounts_writable_by?(Current.user)
+
+      redirect_back_or_to import_path(@import), alert: t("accounts.not_authorized")
     end
 
     def create_pdf_import(file)

@@ -52,7 +52,7 @@ class GuestReadOnlyConfigTest < ActionDispatch::IntegrationTest
     post apply_rule_path(rules(:one))
     post apply_all_rules_path
 
-    assert_redirected_to root_path
+    assert_redirected_to accounts_path
     assert_equal I18n.t("shared.require_non_guest"), flash[:alert]
   end
 
