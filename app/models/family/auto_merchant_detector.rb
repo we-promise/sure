@@ -69,10 +69,6 @@ class Family::AutoMerchantDetector
       Provider::Registry.preferred_llm_provider
     end
 
-    def default_logo_provider_url
-      "https://cdn.brandfetch.io"
-    end
-
     def user_merchants_input
       family.merchants.map do |merchant|
         {
@@ -115,36 +111,24 @@ class Family::AutoMerchantDetector
       existing = ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
       return existing if existing
 
-      # Strategy 3: Create new merchant
+      # Strategy 3: Create new merchant (ProviderMerchant generates the logo from the website)
       ProviderMerchant.create!(
         source: "ai",
         name: auto_detection.business_name,
-        website_url: auto_detection.business_url,
-        logo_url: build_logo_url(auto_detection.business_url)
+        website_url: auto_detection.business_url
       )
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
       # Race condition: another process created the merchant between our find and create
       ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
     end
 
-    def build_logo_url(business_url)
-      return nil unless Setting.brand_fetch_client_id.present? && business_url.present?
-      size = Setting.brand_fetch_logo_size
-      "#{default_logo_provider_url}/#{business_url}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
-    end
-
     def enhance_provider_merchant(merchant, auto_detection)
       updates = {}
 
-      # Add website_url if missing
+      # Add website_url if missing. ProviderMerchant fills a blank logo from it
+      # and keeps a provider-supplied one (issue #2925).
       if merchant.website_url.blank? && auto_detection.business_url.present?
         updates[:website_url] = auto_detection.business_url
-
-        # Add logo if BrandFetch is configured
-        if Setting.brand_fetch_client_id.present?
-          size = Setting.brand_fetch_logo_size
-          updates[:logo_url] = "#{default_logo_provider_url}/#{auto_detection.business_url}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
-        end
       end
 
       return false if updates.empty?

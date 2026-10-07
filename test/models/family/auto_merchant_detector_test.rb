@@ -40,6 +40,39 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal 1, @account.transactions.reload.enrichable(:merchant_id).count
   end
 
+  test "enhancing a provider merchant keeps its provider-supplied logo" do
+    provider_logo = "https://plaid-merchant-logos.plaid.com/coffee_shop.png"
+    merchant = ProviderMerchant.create!(source: "plaid", name: "Coffee Shop", logo_url: provider_logo)
+    txn = create_transaction(account: @account, name: "COFFEE SHOP 123", merchant: merchant).transaction
+
+    provider_response = provider_success_response([
+      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Coffee Shop", business_url: "https://www.coffeeshop.com")
+    ])
+
+    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+
+    Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+
+    merchant.reload
+    assert_equal "https://www.coffeeshop.com", merchant.website_url
+    assert_equal provider_logo, merchant.logo_url
+  end
+
+  test "enhancing a provider merchant without a logo builds the logo from the website's domain" do
+    merchant = ProviderMerchant.create!(source: "plaid", name: "Book Store")
+    txn = create_transaction(account: @account, name: "BOOK STORE 42", merchant: merchant).transaction
+
+    provider_response = provider_success_response([
+      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Book Store", business_url: "https://www.bookstore.com")
+    ])
+
+    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+
+    Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+
+    assert_equal "https://cdn.brandfetch.io/bookstore.com/icon/fallback/lettermark/w/40/h/40?c=123", merchant.reload.logo_url
+  end
+
   private
     AutoDetectedMerchant = Provider::LlmConcept::AutoDetectedMerchant
 end

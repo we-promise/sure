@@ -148,13 +148,9 @@ class ProviderMerchant < Merchant
     end
 
     def brandfetch_logo_url
-      return nil unless website_url.present? && Setting.brand_fetch_client_id.present?
+      return nil if website_url.blank?
 
-      domain = extract_domain(website_url)
-      return nil if domain.blank?
-
-      size = Setting.brand_fetch_logo_size
-      "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
+      Setting.brand_fetch_icon_url(extract_domain(website_url))
     end
 
     def extract_domain(url)
