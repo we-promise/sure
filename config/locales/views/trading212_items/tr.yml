@@ -1,0 +1,102 @@
+---
+tr:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: Trading 212 yatırım hesabını API anahtarıyla bağlayın
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: Silme işlemi devam ediyor
+      environment_label_live: Gerçek hesap
+      environment_label_demo: Demo hesap
+      syncing: Senkronize ediliyor
+      requires_update: API anahtarı ilgilenmenizi gerektiriyor
+      error: Hata
+      synced: '%{time} önce senkronize edildi. %{summary}.'
+      never_synced: Hiç senkronize edilmedi.
+      setup_accounts: Hesapları kur
+      delete: Sil
+      accounts_need_setup: Hesabın kurulması gerekiyor
+      accounts_need_setup_description: Trading 212 hesabınızın bir Sure hesabına bağlanması gerekiyor.
+      no_accounts_discovered: Henüz Trading 212 hesabı bulunamadı.
+      no_accounts_discovered_description: Hesabınızı bulmak için API anahtarınızı kaydettikten sonra bir senkronizasyon çalıştırın.
+    setup_accounts:
+      page_title: Trading 212 Hesabını Kur
+      dialog_title: Trading 212 Hesabınızı Kurun
+      subtitle: Trading 212 yatırım hesabınızı bağlayın.
+      info_box:
+        title: Trading 212 API ile İçe Aktarma
+        items:
+          item_1: Fiyat ve miktarlarıyla güncel pozisyonlar
+          item_2: Tüm emir geçmişi (alışlar ve satışlar)
+          item_3: Temettüler ve nakit işlemleri
+      status:
+        fetching_accounts: Hesap Trading 212'den getiriliyor...
+        no_accounts_found_title: Hesap bulunamadı.
+        no_accounts_found_description: Sure bir Trading 212 hesabı bulamadı. API anahtarınızın geçerli olduğunu kontrol edin.
+      available_accounts:
+        title: Kullanılabilir hesap
+        account_type_investment: Yatırım
+        account_summary: '%{account_type} • Bakiye: %{balance}'
+        account_id: 'Hesap kimliği: %{account_id}'
+      link_existing:
+        description: Ya da bulunan Trading 212 hesabını mevcut bir manuel yatırım hesabına bağlayın.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Bir hesap seçin...
+      linked_accounts:
+        title: Zaten bağlı
+        linked_to_html: 'Bağlı olduğu hesap: %{account}'
+      buttons:
+        refresh: Yenile
+        cancel: İptal
+        back_to_settings: Ayarlara dön
+        create_selected_accounts: Seçili hesapları oluştur
+        link: Bağla
+        done: Bitti
+    sync:
+      status:
+        checking_credentials: Trading 212 kimlik bilgileri kontrol ediliyor...
+        importing_account: Trading 212 hesabı içe aktarılıyor...
+        checking_configuration: Hesap yapılandırması kontrol ediliyor...
+        accounts_need_setup:
+          one: '%{count} Trading 212 hesabı kurulum gerektiriyor...'
+          other: '%{count} Trading 212 hesabı kurulum gerektiriyor...'
+        processing_activity: Pozisyonlar ve hareketler işleniyor...
+        calculating_balances: Bakiyeler hesaplanıyor...
+    sync_status:
+      no_accounts: Henüz Trading 212 hesabı bulunamadı
+      all_linked:
+        one: '%{count} hesap bağlandı'
+        other: '%{count} hesap bağlandı'
+      partial: '%{linked} bağlandı, %{unlinked} kurulum gerektiriyor'
+    select_existing_account:
+      title: Trading 212 hesabını bağla
+      no_accounts_available: Henüz bağlanmamış Trading 212 hesabı yok.
+      run_sync_hint: API anahtarınızı kaydettikten sonra Ayarlar > Sağlayıcılar bölümünden bir senkronizasyon çalıştırın.
+      wait_for_sync: Hesap keşfi senkronizasyonunun tamamlanmasını bekleyin.
+      balance: Bakiye
+      link: Bağla
+      cancel: İptal
+    create:
+      success: Trading 212 başarıyla yapılandırıldı.
+    update:
+      success: Trading 212 yapılandırması başarıyla güncellendi.
+    destroy:
+      success: Trading 212 bağlantısı silinmek üzere zamanlandı.
+    select_accounts:
+      not_configured: Trading 212 yapılandırılmamış.
+    link_existing_account:
+      not_found: Hesap veya Trading 212 yapılandırması bulunamadı.
+      only_manual_investment: Trading 212'ye yalnızca manuel yatırım hesapları bağlanabilir.
+      already_linked: Bu Trading 212 hesabı zaten bağlı.
+      success: Trading 212 hesabına başarıyla bağlandı.
+      failed: Trading 212 hesabı bağlanamadı.
+    complete_account_setup:
+      success:
+        one: '%{count} Trading 212 hesabı başarıyla oluşturuldu.'
+        other: '%{count} Trading 212 hesabı başarıyla oluşturuldu.'
+      none_selected: Hiç hesap seçilmedi.
+      none_created: Hiç hesap oluşturulmadı.

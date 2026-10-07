@@ -1,0 +1,12 @@
+---
+ca:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: Clau privada SCA
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: no es pot desar perquè el xifratge d'Active Record no està configurat en aquesta instal·lació

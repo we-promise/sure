@@ -58,6 +58,63 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://api-sandbox.mercury.com/api/v1", @second_item.base_url
   end
 
+  test "invalid create outside a frame redirects instead of rendering a missing template" do
+    assert_no_difference "MercuryItem.count" do
+      post mercury_items_url, params: { mercury_item: { name: "Joint Mercury", token: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "Token can't be blank", flash[:alert]
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post mercury_items_url,
+         params: { mercury_item: { name: "Joint Mercury", token: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "mercury-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Token can't be blank")
+  end
+
+  test "invalid update outside a frame redirects instead of rendering a missing template" do
+    patch mercury_item_url(@second_item), params: { mercury_item: { name: "" } }
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "Name can't be blank", flash[:alert]
+    assert_equal "Business Mercury", @second_item.reload.name
+  end
+
+  # Connection rows post from the page, so Turbo asks for a stream without a Turbo-Frame header.
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch mercury_item_url(@second_item),
+          params: { mercury_item: { name: "Renamed Business Mercury" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "mercury-providers-panel"
+    assert_includes response.body, %(id="mercury-providers-panel")
+    assert_equal "Renamed Business Mercury", @second_item.reload.name
+  end
+
+  test "invalid update from the page re-renders the panel with the error" do
+    patch mercury_item_url(@second_item),
+          params: { mercury_item: { name: "" } },
+          as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "mercury-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Name can't be blank")
+  end
+
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_mercury_item_url(@second_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "mercury-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @second_item.reload.syncing?
+  end
+
   test "blank token update preserves the selected mercury token" do
     original_token = @second_item.token
 

@@ -1,0 +1,104 @@
+---
+ru:
+  coinspot_items:
+    provider_connection:
+      default_name: CoinSpot
+      default_description: Связать счёт на бирже CoinSpot
+      name: CoinSpot - %{name}
+      description: Связать с %{name}
+    create:
+      default_name: CoinSpot
+      success: Подключение к CoinSpot установлено. Ваш биржевой счёт синхронизируется.
+    update:
+      success: Подключение к CoinSpot обновлено.
+    destroy:
+      success: Подключение к CoinSpot запланировано на удаление.
+      unlink_failed: Не удалось отключить подключение к CoinSpot
+    select_accounts:
+      select_connection: Выберите подключение CoinSpot в настройках провайдеров.
+      no_credentials_configured: Добавьте API-данные CoinSpot перед настройкой счетов.
+    link_accounts:
+      select_connection: Выберите подключение CoinSpot перед связыванием счетов.
+    select_existing_account:
+      title: Связать счёт CoinSpot
+      no_accounts_found: Счета CoinSpot не найдены.
+      wait_for_sync: Подождите, пока CoinSpot завершит синхронизацию.
+      check_provider_health: Проверьте, действительны ли ваши API-данные CoinSpot.
+      link: Связать
+      cancel: Отмена
+    link_existing_account:
+      success: Счёт CoinSpot успешно связан
+      select_connection: Выберите подключение CoinSpot перед связыванием счетов.
+      errors:
+        only_manual: С CoinSpot можно связать только ручные счета криптобиржи, ещё не связанные с провайдером
+        invalid_coinspot_account: Недействительный счёт CoinSpot
+        coinspot_account_already_linked: Этот счёт CoinSpot уже связан
+    setup_accounts:
+      title: Импортировать счёт CoinSpot
+      subtitle: Выберите биржевой счёт для отслеживания
+      instructions: CoinSpot импортирует для этого подключения один общий счёт криптобиржи с балансами, стоимостью в AUD, переводами, пополнениями, выводами и историей ордеров.
+      no_accounts: Все счета CoinSpot импортированы.
+      accounts_count:
+        one: Доступен %{count} счёт
+        few: Доступно %{count} счёта
+        many: Доступно %{count} счетов
+        other: Доступно %{count} счёта
+      select_all: Выбрать все
+      import_selected: Импортировать выбранные
+      cancel: Отмена
+      creating: Импортирование...
+    complete_account_setup:
+      success:
+        one: Импортирован %{count} счёт
+        few: Импортированы %{count} счёта
+        many: Импортировано %{count} счетов
+        other: Импортированы %{count} счёта
+      none_selected: Счета не выбраны
+      no_accounts: Нет счетов для импорта
+      setup_failed:
+        one: Не удалось импортировать %{count} счёт
+        few: Не удалось импортировать %{count} счёта
+        many: Не удалось импортировать %{count} счетов
+        other: Не удалось импортировать %{count} счёта
+    coinspot_item:
+      provider_name: CoinSpot
+      syncing: Синхронизация...
+      reconnect: Требуется обновление данных
+      deletion_in_progress: Удаление...
+      sync_status:
+        no_accounts: Счета не найдены
+        all_synced:
+          one: Синхронизирован %{count} счёт
+          few: Синхронизированы %{count} счёта
+          many: Синхронизировано %{count} счетов
+          other: Синхронизированы %{count} счёта
+        partial_sync: '%{linked_count} синхронизировано, %{unlinked_count} требуют настройки'
+      status: Последняя синхронизация %{timestamp} назад
+      status_with_summary: Последняя синхронизация %{timestamp} назад - %{summary}
+      status_never: Ещё не синхронизировалось
+      delete: Удалить
+      no_accounts_title: Счета не найдены
+      no_accounts_message: Ваш биржевой счёт CoinSpot появится здесь после синхронизации.
+      setup_needed: Счёт готов к импорту
+      setup_description: Импортируйте это подключение CoinSpot как счёт криптобиржи.
+      setup_action: Импортировать счёт
+      import_accounts_menu: Импортировать счёт
+      stale_rate_warning: Баланс приблизительный — точный курс обмена на %{date} недоступен. Обновится при следующей синхронизации.
+  coinspot_item:
+    syncer:
+      checking_credentials: Проверка данных...
+      credentials_invalid: Недействительные API-данные CoinSpot. Проверьте ваш API-ключ и секрет.
+      importing_accounts: Импорт счетов из CoinSpot...
+      checking_configuration: Проверка настроек счёта...
+      accounts_need_setup:
+        one: '%{count} счёт требует настройки'
+        few: '%{count} счёта требуют настройки'
+        many: '%{count} счетов требуют настройки'
+        other: '%{count} счёта требуют настройки'
+      processing_accounts: Обработка данных счёта...
+      processing_failed:
+        one: Не удалось обработать %{count} счёт CoinSpot
+        few: Не удалось обработать %{count} счёта CoinSpot
+        many: Не удалось обработать %{count} счетов CoinSpot
+        other: Не удалось обработать %{count} счёта CoinSpot
+      calculating_balances: Расчёт балансов...

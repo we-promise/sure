@@ -100,6 +100,7 @@ de:
       connection_name_label: Verbindungsname
       connection_name_placeholder: Geschäftskonto
       default_connection_name: Brex-Verbindung
+      disconnect: Trennen
       disconnect_label: "%{name} trennen"
       disconnect_confirm: "%{name} trennen?"
       encryption_warning:
