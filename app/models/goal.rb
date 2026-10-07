@@ -98,7 +98,7 @@ class Goal < ApplicationRecord
   monetize :target_amount
 
   # Account types that can back a goal (see linked_accounts_must_be_fundable).
-  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment].freeze
+  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment Crypto].freeze
 
   # States in which a goal has let go of the money it was holding, and so
   # drops out of the shared pool. `completed` belongs here: reaching a goal
@@ -891,10 +891,11 @@ class Goal < ApplicationRecord
   end
 
   # "I just transferred" when any linked account resolves pledges via a transfer
-  # (synced accounts AND investment accounts, per default_pledge_kind); "I just
-  # saved" only for manual cash accounts. Keyed off default_pledge_kind so the
-  # copy matches the kind actually saved — a manual brokerage uses transfer, not
-  # manual_save, so it must not show the "update your manual balance" path.
+  # (synced accounts AND investment or crypto accounts, per default_pledge_kind);
+  # "I just saved" only for manual cash accounts. Keyed off default_pledge_kind so
+  # the copy matches the kind actually saved — a manual brokerage or wallet uses
+  # transfer, not manual_save, so it must not show the "update your manual
+  # balance" path.
   def pledge_action_label_key
     pledges_use_transfer? ? "goals.show.pledge_just_transferred" : "goals.show.pledge_just_saved"
   end
@@ -1289,7 +1290,7 @@ class Goal < ApplicationRecord
 
     def linked_accounts_must_be_fundable
       offending = goal_accounts.reject(&:marked_for_destruction?).reject do |sga|
-        sga.account&.depository? || sga.account&.investment?
+        FUNDABLE_ACCOUNT_TYPES.include?(sga.account&.accountable_type)
       end
       return if offending.empty?
 

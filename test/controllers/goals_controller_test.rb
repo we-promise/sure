@@ -107,6 +107,28 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  # Delta, not presence: the fixture family already has a crypto account,
+  # so the test counts the picker's rows before and after adding one.
+  test "the funding picker offers crypto accounts" do
+    get new_goal_url
+    before = css_select("input[name='goal[account_ids][]'][type=checkbox]").size
+
+    wallet = Account.create!(family: @user.family, owner: @user, accountable: Crypto.new, name: "Picker Wallet", currency: "USD", balance: 500)
+    get new_goal_url
+
+    assert_equal before + 1, css_select("input[name='goal[account_ids][]'][type=checkbox]").size
+    assert_select "input[type=checkbox][value='#{wallet.id}']", 1
+  end
+
+  test "create accepts a crypto account" do
+    wallet = Account.create!(family: @user.family, owner: @user, accountable: Crypto.new, name: "Goal Wallet", currency: "USD", balance: 500)
+
+    assert_difference -> { Goal.count } => 1 do
+      post goals_url, params: { goal: { name: "BTC reserve", target_amount: "1000", account_ids: [ wallet.id ] } }
+    end
+    assert_equal [ wallet.id ], Goal.order(created_at: :desc).first.goal_accounts.pluck(:account_id)
+  end
+
   test "new form excludes same-family accounts not shared with the current user" do
     # Regression for #2168: funding-account picker leaked accounts owned by
     # other family members that were never shared with the current user.
