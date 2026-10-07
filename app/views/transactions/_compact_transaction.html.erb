@@ -76,7 +76,7 @@
             </div>
           </div>
 
-          <div class="text-secondary text-xs font-normal">
+          <div class="text-secondary text-xs font-normal flex flex-wrap min-w-0 items-center gap-1">
             <span class="lg:hidden shrink-0"><%= format_date(entry.date) %><%= " •" unless transaction.transfer? %></span>
             <% unless transaction.transfer? %>
               <% if transaction.merchant&.present? %>

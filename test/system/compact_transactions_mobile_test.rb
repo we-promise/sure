@@ -88,6 +88,24 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     assert_in_delta offsets["headerTxn"], offsets["rowTxn"], 1.0, "TRANSACTION header label is not aligned with row names"
   end
 
+  test "mobile date and category share the same subtitle line" do
+    @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
+    @entry.entryable.update!(category: categories(:food_and_drink))
+    page.current_window.resize_to(375, 800)
+
+    visit transactions_url
+
+    positions = page.evaluate_script(<<~JS, dom_id(@entry))
+      ((id) => {
+        const row = document.getElementById(id);
+        const date = row.querySelector('span[class~="lg:hidden"].shrink-0');
+        const category = date.parentElement.querySelector("div.flex");
+        return [date.getBoundingClientRect().top, category.getBoundingClientRect().top];
+      })(arguments[0])
+    JS
+    assert_in_delta positions[0], positions[1], 2
+  end
+
   private
     # Measures the left x-position of the DATE / TRANSACTION header labels
     # and of the first data row's date cell / name link, so we can assert
