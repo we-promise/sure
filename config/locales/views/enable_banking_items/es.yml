@@ -3,6 +3,7 @@ es:
   enable_banking_items:
     errors:
       api_error: Se produjo un error de comunicación con el banco.
+      history_truncated: Solo se pudo importar una parte del historial de transacciones porque el banco devolvió más páginas de las que se pueden cargar en una sincronización. Faltan las transacciones más antiguas.
       network_unreachable: El servicio bancario no está disponible temporalmente. Inténtalo de nuevo más tarde.
       session_invalid: La sesión ha caducado. Vuelve a conectar tu banco.
       unexpected: Se produjo un error inesperado durante la sincronización.

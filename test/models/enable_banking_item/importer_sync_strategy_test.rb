@@ -167,4 +167,81 @@ class EnableBankingItem::ImporterSyncStrategyTest < ActiveSupport::TestCase
     assert_equal "error", debug_log.level
     assert_equal "validation_error", debug_log.metadata["error_type"]
   end
+
+  test "fetch_paginated_transactions records a debug log when an initial longest fetch hits the page limit" do
+    page = 0
+    @mock_provider.define_singleton_method(:get_account_transactions) do |**_params|
+      page += 1
+      { transactions: [ { "transaction_id" => page.to_s } ], continuation_key: "page#{page + 1}" }
+    end
+
+    result = nil
+    assert_difference "DebugLogEntry.count", 1 do
+      result = @importer.send(
+        :fetch_paginated_transactions,
+        @enable_banking_account,
+        start_date: nil,
+        transaction_status: "BOOK",
+        strategy: "longest"
+      )
+    end
+
+    assert_equal EnableBankingItem::Importer::MAX_PAGINATION_PAGES, result.count
+    debug_log = DebugLogEntry.last
+    assert_equal "provider_sync_error", debug_log.category
+    assert_equal "error", debug_log.level
+    assert_equal "page_limit", debug_log.metadata["reason"]
+    assert_equal "longest", debug_log.metadata["strategy"]
+    assert_equal true, debug_log.metadata["history_gap"]
+    assert_equal EnableBankingItem::Importer::MAX_PAGINATION_PAGES, debug_log.metadata["transactions_kept"]
+  end
+
+  test "fetch_paginated_transactions records a warning when an incremental fetch repeats its continuation key" do
+    @enable_banking_account.stubs(:raw_transactions_payload).returns([ { "transaction_id" => "0" } ])
+    @mock_provider.stubs(:get_account_transactions)
+      .returns({ transactions: [ { "transaction_id" => "1" } ], continuation_key: "stuck" })
+
+    assert_difference "DebugLogEntry.count", 1 do
+      @importer.send(
+        :fetch_paginated_transactions,
+        @enable_banking_account,
+        start_date: 10.days.ago.to_date,
+        transaction_status: "BOOK"
+      )
+    end
+
+    debug_log = DebugLogEntry.last
+    assert_equal "warn", debug_log.level
+    assert_equal "repeated_continuation_key", debug_log.metadata["reason"]
+    assert_equal false, debug_log.metadata["history_gap"]
+  end
+
+  test "fetch_and_store_transactions keeps the pages but reports failure when the initial fetch is truncated" do
+    @enable_banking_item.update!(sync_strategy: "longest")
+    @importer.stubs(:include_pending?).returns(false)
+    page = 0
+    @mock_provider.define_singleton_method(:get_account_transactions) do |**_params|
+      page += 1
+      { transactions: [ { "transaction_id" => page.to_s, "booking_date" => Date.current.iso8601 } ], continuation_key: "page#{page + 1}" }
+    end
+    @enable_banking_account.expects(:upsert_enable_banking_transactions_snapshot!)
+      .with { |snapshot| snapshot.size == EnableBankingItem::Importer::MAX_PAGINATION_PAGES }
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert_not result[:success]
+    assert_equal I18n.t("enable_banking_items.errors.history_truncated"), result[:error]
+  end
+
+  test "fetch_and_store_transactions still succeeds when an incremental fetch is truncated" do
+    @importer.stubs(:include_pending?).returns(false)
+    @enable_banking_account.stubs(:raw_transactions_payload).returns([ { "transaction_id" => "0" } ])
+    @enable_banking_account.stubs(:upsert_enable_banking_transactions_snapshot!)
+    @mock_provider.stubs(:get_account_transactions)
+      .returns({ transactions: [ { "transaction_id" => "1", "booking_date" => Date.current.iso8601 } ], continuation_key: "stuck" })
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+  end
 end

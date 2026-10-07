@@ -121,6 +121,7 @@ class EnableBankingItem::Importer
     transactions_imported = 0
     transactions_failed = 0
     balances_failed = 0
+    history_truncated = 0
 
     linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
 
@@ -131,6 +132,12 @@ class EnableBankingItem::Importer
         result = fetch_and_store_transactions(enable_banking_account)
         if result[:success]
           transactions_imported += result[:transactions_count]
+        elsif result[:history_truncated]
+          # The fetched pages are stored, so count them; the item still
+          # reports failure below, but the syncer keeps processing them.
+          transactions_imported += result[:transactions_count]
+          history_truncated += 1
+          @sync_error ||= result[:error]
         else
           transactions_failed += 1
           @sync_error = promote_session_invalid(@sync_error, result[:error])
@@ -143,12 +150,13 @@ class EnableBankingItem::Importer
     end
 
     result = {
-      success: accounts_failed == 0 && transactions_failed == 0,
+      success: accounts_failed == 0 && transactions_failed == 0 && history_truncated == 0,
       accounts_updated: accounts_updated,
       accounts_failed: accounts_failed,
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed,
-      balances_failed: balances_failed
+      balances_failed: balances_failed,
+      history_truncated: history_truncated
     }
 
     result[:error] = @sync_error || I18n.t("enable_banking_items.errors.unexpected") if !result[:success]
@@ -388,6 +396,41 @@ class EnableBankingItem::Importer
       )
     end
 
+    # Surfaces a sync that stopped at MAX_PAGINATION_PAGES (or on a repeated
+    # continuation_key) and kept only the pages fetched so far. On an initial
+    # sync's booked fetch this is a permanent gap (history_gap): once
+    # transactions are stored, every later sync is incremental, so the older
+    # history is never requested again.
+    def capture_pagination_limit_debug_log(enable_banking_account, transaction_status:, strategy:, start_date:, history_gap:, reason:, transactions_kept:)
+      message = if history_gap
+        "Enable Banking initial transaction fetch stopped before the end of the requested history; kept the fetched pages and reported the sync as failed, because later incremental syncs will not fetch the older transactions"
+      else
+        "Enable Banking transaction fetch stopped before the end of the requested window; kept partial results"
+      end
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: history_gap ? "error" : "warn",
+        message: message,
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          transaction_status: transaction_status,
+          strategy: strategy.to_s.presence,
+          date_from: start_date&.iso8601,
+          history_gap: history_gap,
+          reason: reason,
+          max_pages: MAX_PAGINATION_PAGES,
+          transactions_kept: transactions_kept
+        }
+      )
+    end
+
     # Surfaces "ASPSP doesn't support PDNG" as a support-visible diagnostic, same
     # rationale as capture_pagination_truncation_debug_log: this is a partial
     # degradation (booked transactions still sync, pending transactions are
@@ -481,6 +524,7 @@ class EnableBankingItem::Importer
     end
 
     def fetch_and_store_transactions(enable_banking_account)
+      @initial_history_truncated = false
       start_date = determine_sync_start_date(enable_banking_account)
       allow_longest_retry = allow_longest_retry_for(enable_banking_account)
       # allow_longest_retry gates whether a failed *date*-strategy request may
@@ -649,6 +693,13 @@ class EnableBankingItem::Importer
         )
       end
 
+      # The fetched pages are kept, but a truncated initial fetch is reported
+      # as failed: once transactions are stored, later syncs are incremental
+      # and never request the missing older history.
+      if @initial_history_truncated
+        return { success: false, history_truncated: true, transactions_count: transactions_count, error: I18n.t("enable_banking_items.errors.history_truncated") }
+      end
+
       { success: true, transactions_count: transactions_count }
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Error fetching transactions for account #{enable_banking_account.uid}: #{e.message}"
@@ -724,20 +775,28 @@ class EnableBankingItem::Importer
       [ date, amount, currency, creditor, debtor, remittance_key, tid, direction ].map(&:to_s).join("\x1F")
     end
 
-    class PaginationTruncatedError < StandardError; end
+    class PaginationTruncatedError < StandardError
+      attr_reader :reason
+
+      def initialize(message, reason:)
+        super(message)
+        @reason = reason
+      end
+    end
 
     def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {}, strategy: nil, allow_longest_retry: false)
       all_transactions = []
       continuation_key = nil
       previous_continuation_key = nil
       page_count = 0
+      initial_sync = !stored_transactions?(enable_banking_account)
 
       loop do
         page_count += 1
 
         if page_count > MAX_PAGINATION_PAGES
           msg = "EnableBankingItem::Importer - Pagination limit exceeded for account #{enable_banking_account.uid} (status=#{transaction_status}). Stopped after #{MAX_PAGINATION_PAGES} pages."
-          raise PaginationTruncatedError, msg
+          raise PaginationTruncatedError.new(msg, reason: "page_limit")
         end
 
         begin
@@ -800,7 +859,7 @@ class EnableBankingItem::Importer
 
         if continuation_key.present? && continuation_key == previous_continuation_key
           msg = "EnableBankingItem::Importer - Repeated continuation_key detected for account #{enable_banking_account.uid} (status=#{transaction_status}). Breaking after #{page_count} pages."
-          raise PaginationTruncatedError, msg
+          raise PaginationTruncatedError.new(msg, reason: "repeated_continuation_key")
         end
 
         break if continuation_key.blank?
@@ -808,9 +867,23 @@ class EnableBankingItem::Importer
 
       all_transactions
     rescue PaginationTruncatedError => e
-      # Log as warning and return collected partial data instead of failing entirely.
-      # This ensures accounts with huge history don't lose all synced data.
+      # Return the collected partial data instead of failing entirely, so
+      # accounts with huge history don't lose all synced data. Hitting the page
+      # limit on the initial booked fetch leaves a permanent gap (later syncs
+      # are incremental), so fetch_and_store_transactions reports that case as
+      # failed after storing the pages.
       Rails.logger.warn(e.message)
+      history_gap = initial_sync && transaction_status == "BOOK" && e.reason == "page_limit"
+      @initial_history_truncated = true if history_gap
+      capture_pagination_limit_debug_log(
+        enable_banking_account,
+        transaction_status: transaction_status,
+        strategy: strategy,
+        start_date: start_date,
+        history_gap: history_gap,
+        reason: e.reason,
+        transactions_kept: all_transactions.count
+      )
       all_transactions
     end
 
