@@ -19,5 +19,9 @@ ca:
                 el compte mentre hi hagi altres usuaris. Elimina primer tots els membres.
               provider_item_has_other_accounts: L'usuari té comptes enllaçats a una connexió de proveïdor que també té comptes d'un altre usuari. Mou o desenllaça aquests comptes abans de canviar la pertinença a la família/grup.
               cannot_remove_last_super_admin: No es pot eliminar l'últim superadministrador actiu. Primer promou un altre usuari a superadministrador.
+            password:
+              missing_case: ha d'incloure lletres majúscules i minúscules
+              missing_number: ha d'incloure com a mínim un número
+              missing_special: ha d'incloure com a mínim un caràcter especial
             profile_image:
               invalid_file_size: la mida del fitxer ha de ser inferior a %{max_megabytes}MB

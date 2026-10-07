@@ -20,5 +20,9 @@ en:
               provider_item_has_other_accounts: User owns accounts linked to a provider connection that also has accounts owned by another user. Move or unlink those accounts before changing family/group membership.
               cannot_remove_last_super_admin: Cannot remove the last active super
                 admin. Promote another user to super admin first.
+            password:
+              missing_case: must include both uppercase and lowercase letters
+              missing_number: must include at least one number
+              missing_special: must include at least one special character
             profile_image:
               invalid_file_size: file size must be less than %{max_megabytes}MB

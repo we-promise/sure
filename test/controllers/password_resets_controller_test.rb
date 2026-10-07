@@ -24,8 +24,20 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
 
   test "update" do
     patch password_reset_path(token: @user.generate_token_for(:password_reset)),
-      params: { user: { password: "password", password_confirmation: "password" } }
+      params: { user: { password: "NewSecure1!", password_confirmation: "NewSecure1!" } }
     assert_redirected_to new_session_url
+    assert @user.reload.authenticate("NewSecure1!")
+  end
+
+  test "update rejects a password that does not meet the sign-up rules" do
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "password", password_confirmation: "password" } }
+
+    assert_response :unprocessable_entity
+    assert_not @user.reload.authenticate("password")
+    assert_select "p.text-destructive", text: /uppercase and lowercase/
+    assert_select "p.text-destructive", text: /at least one number/
+    assert_select "p.text-destructive", text: /at least one special character/
   end
 
   test "all actions redirect when password features are disabled" do

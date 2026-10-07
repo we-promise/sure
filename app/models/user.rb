@@ -54,6 +54,7 @@ class User < ApplicationRecord
   # SSO JIT users have password_digest = nil and authenticate via OIDC only.
   validates :password, presence: true, on: :create, unless: :skip_password_validation?
   validates :password, length: { minimum: 8 }, allow_nil: true
+  validate :password_meets_complexity_requirements, if: :require_password_complexity
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
   normalizes :locale, with: ->(locale) { locale.presence }
@@ -238,6 +239,10 @@ class User < ApplicationRecord
 
   # Attribute to skip password validation during SSO JIT provisioning
   attr_accessor :skip_password_validation
+
+  # Set by the self-service password change and the password reset so they
+  # apply the same rules as sign-up, the admin reset and the API signup.
+  attr_accessor :require_password_complexity
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
@@ -793,6 +798,14 @@ class User < ApplicationRecord
 
     def skip_password_validation?
       skip_password_validation == true
+    end
+
+    def password_meets_complexity_requirements
+      return if password.blank?
+
+      errors.add(:password, :missing_case) unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
+      errors.add(:password, :missing_number) unless password.match?(/\d/)
+      errors.add(:password, :missing_special) unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
     end
 
     # The dashboard only sends the order of the widgets it rendered, so put

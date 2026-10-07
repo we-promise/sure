@@ -3,7 +3,7 @@ class PasswordsController < ApplicationController
   end
 
   def update
-    if Current.user.update(password_params)
+    if Current.user.update(password_params.merge(require_password_complexity: true))
       redirect_to root_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity

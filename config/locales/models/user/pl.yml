@@ -24,5 +24,9 @@ pl:
                 z integracją dostawcy, która obsługuje też konta innego użytkownika.
                 Przenieś albo odłącz te konta przed zmianą przynależności do gospodarstwa
                 domowego lub grupy.
+            password:
+              missing_case: musi zawierać zarówno wielkie, jak i małe litery
+              missing_number: musi zawierać co najmniej jedną cyfrę
+              missing_special: musi zawierać co najmniej jeden znak specjalny
             profile_image:
               invalid_file_size: rozmiar pliku nie może przekraczać %{max_megabytes}MB
