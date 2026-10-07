@@ -1,4 +1,4 @@
-class AddIbanToAccountsAndMerchants < ActiveRecord::Migration[7.2]
+class AddIbanToAccountsAndMerchants < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
   ACCOUNTS_INDEX_NAME = "index_accounts_on_family_id_and_iban"
