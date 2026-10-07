@@ -116,7 +116,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
         ((rootId, frameId) => {
           const root = document.getElementById(rootId);
           const up = (el) => el.textContent.trim().toUpperCase();
-          const dateCells = [...root.querySelectorAll('div[class*="w-[110px]"]')];
+          const dateCells = [...root.querySelectorAll('div.w-28')];
           const headerDate = dateCells.find((el) => up(el) === "DATE");
           const header = headerDate.closest("div.uppercase");
           const headerTxn = [...header.querySelectorAll("div")].find((el) => el.children.length === 0 && up(el) === "TRANSACTION");

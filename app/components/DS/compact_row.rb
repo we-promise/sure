@@ -67,7 +67,7 @@ class DS::CompactRow < DesignSystemComponent
       </div>
 
       <% if @show_date %>
-        <div class="hidden lg:flex w-[110px] shrink-0 text-secondary text-sm truncate pr-2"><%= date %></div>
+        <div class="hidden lg:flex w-28 shrink-0 text-secondary text-sm truncate pr-2"><%= date %></div>
       <% end %>
 
       <div class="flex items-center gap-2 lg:gap-3 flex-[2] min-w-0 pr-2">
@@ -92,12 +92,12 @@ class DS::CompactRow < DesignSystemComponent
         <% end %>
       </div>
 
-      <div class="w-[120px] shrink-0 flex items-center justify-end gap-2">
+      <div class="w-30 shrink-0 flex items-center justify-end gap-2">
         <%= amount %>
       </div>
 
       <% if @show_balance %>
-        <div class="hidden lg:flex w-[120px] shrink-0 justify-end px-2">
+        <div class="hidden lg:flex w-30 shrink-0 justify-end px-2">
           <%= balance %>
         </div>
       <% end %>
