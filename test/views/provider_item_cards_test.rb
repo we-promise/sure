@@ -27,6 +27,15 @@ class ProviderItemCardsTest < ActiveSupport::TestCase
     end
   end
 
+  # The on-chain wallet card is rendered by name with a card built in the
+  # controller from accounts_visible_to, not from the item's own accounts.
+  test "the on-chain wallet card lists only the accounts it is given" do
+    source = Rails.root.join("app/views/onchain_wallet_items/_wallet_card.html.erb").read
+
+    assert_includes source, 'render "accounts/index/account_groups", accounts: card[:accounts]'
+    assert_no_match(/onchain_wallet_item\.accounts\b/, source)
+  end
+
   test "the accounts index gives every provider card its visible accounts" do
     index = Rails.root.join("app/views/accounts/index.html.erb").read
 

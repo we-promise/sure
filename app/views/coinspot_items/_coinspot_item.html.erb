@@ -79,7 +79,7 @@
       <div class="space-y-4 mt-4">
         <% if visible_accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: visible_accounts %>
-          <% coinspot_item.stale_rate_accounts.each do |coinspot_account| %>
+          <% coinspot_item.stale_rate_accounts.where(accounts: { id: visible_accounts.map(&:id) }).each do |coinspot_account| %>
             <div class="flex items-center gap-2 text-xs text-warning px-1">
               <span class="font-mono">~</span>
               <%= icon "triangle-alert", size: "sm" %>
