@@ -123,24 +123,12 @@ class Family::AutoMerchantDetector
       # family can't use LLM-extracted data derived from its own transaction
       # description/notes to create a record visible to every other family
       # (issue #3842).
-      existing = family.merchants.find_by(name: auto_detection.business_name)
-      return existing if existing
-
-      # requires_new: true opens a savepoint, so a RecordNotUnique here rolls
-      # back only the failed insert; without it Postgres would abort any
-      # enclosing transaction and the rescue's find_by! below would also fail.
-      FamilyMerchant.transaction(requires_new: true) do
-        family.merchants.create!(
-          name: auto_detection.business_name,
-          website_url: auto_detection.business_url,
-          color: FamilyMerchant::COLORS.sample
-        )
-      end
-    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
-      # Race condition: another process created this family's merchant of
-      # the same name between our find and create.
-      raise if e.is_a?(ActiveRecord::RecordInvalid) && !e.record.errors.of_kind?(:name, :taken)
-      family.merchants.find_by!(name: auto_detection.business_name)
+      merchant, _created = FamilyMerchant.find_or_create_with_name(
+        family,
+        auto_detection.business_name,
+        website_url: auto_detection.business_url
+      )
+      merchant
     end
 
     def enhance_provider_merchant(merchant, auto_detection)

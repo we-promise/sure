@@ -61,6 +61,25 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal "Sushi Place", merchant.name
   end
 
+  test "creates the family merchant through FamilyMerchant.find_or_create_with_name" do
+    txn = create_transaction(account: @account, name: "Sushi Place").transaction
+    merchant = @family.merchants.create!(name: "Sushi Place")
+
+    provider_response = provider_success_response([
+      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Sushi Place", business_url: "sushiplace.example")
+    ])
+    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+    Family::AutoMerchantDetector.any_instance.stubs(:find_matching_user_merchant).returns(nil)
+    FamilyMerchant.expects(:find_or_create_with_name)
+                  .with(@family, "Sushi Place", website_url: "sushiplace.example")
+                  .returns([ merchant, false ])
+                  .once
+
+    Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+
+    assert_equal merchant, txn.reload.merchant
+  end
+
   test "does not let one family's transaction text create or reuse another family's AI merchant" do
     other_family = families(:empty)
     other_account = other_family.accounts.create!(name: "Other", balance: 100, currency: "USD", accountable: Depository.new)
