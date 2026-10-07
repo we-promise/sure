@@ -88,6 +88,23 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     assert_in_delta offsets["headerTxn"], offsets["rowTxn"], 1.0, "TRANSACTION header label is not aligned with row names"
   end
 
+  test "split child tooltip responds to keyboard focus and Escape" do
+    @entry.update!(amount: 100)
+    @entry.split!([ { name: "First Part", amount: 60, category_id: nil }, { name: "Second Part", amount: 40, category_id: nil } ])
+    child = @entry.child_entries.first
+    @user.update!(preferences: @user.preferences.merge("show_split_grouped" => false))
+
+    visit transactions_url
+
+    within "turbo-frame##{dom_id(child)}" do
+      link = find("a[aria-label='#{I18n.t('transactions.transaction.split_child_tooltip')}']")
+      page.execute_script("arguments[0].focus()", link)
+      assert_selector "[role='tooltip']", text: I18n.t("transactions.transaction.split_child_tooltip")
+      link.send_keys(:escape)
+      assert_no_selector "[role='tooltip']"
+    end
+  end
+
   test "compact row clicks open the drawer while selection stays independent" do
     visit transactions_url
 
