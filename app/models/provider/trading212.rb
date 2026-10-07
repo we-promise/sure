@@ -70,6 +70,7 @@ class Provider::Trading212
   def fetch_all_transactions
     fetch_all_pages("/equity/history/transactions")
   rescue ApiError => e
+    raise unless e.status_code == 400
     Rails.logger.warn("Trading 212 transactions skipped: #{e.message}")
     []
   end
