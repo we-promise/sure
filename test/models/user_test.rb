@@ -682,6 +682,31 @@ class UserTest < ActiveSupport::TestCase
     assert_equal new_order, @user.dashboard_section_order
   end
 
+  test "update_dashboard_section_hidden hides and re-adds a section without touching other preferences" do
+    @user.update!(preferences: { "section_order" => %w[balance_sheet net_worth_chart] })
+    assert_equal [], @user.dashboard_hidden_sections
+
+    @user.update_dashboard_section_hidden("net_worth_chart", true)
+    @user.update_dashboard_section_hidden("net_worth_chart", true)
+    @user.update_dashboard_section_hidden("balance_sheet", true)
+    assert_equal %w[net_worth_chart balance_sheet], @user.reload.dashboard_hidden_sections
+
+    @user.update_dashboard_section_hidden("net_worth_chart", false)
+    assert_equal %w[balance_sheet], @user.reload.dashboard_hidden_sections
+    assert_equal %w[balance_sheet net_worth_chart], @user.dashboard_section_order
+  end
+
+  test "update_dashboard_preferences keeps a hidden section's place when the rest are reordered" do
+    @user.update!(preferences: {
+      "section_order" => %w[cashflow_sankey net_worth_chart balance_sheet outflows_donut],
+      "hidden_sections" => %w[net_worth_chart]
+    })
+
+    @user.update_dashboard_preferences({ "section_order" => %w[outflows_donut cashflow_sankey balance_sheet] })
+
+    assert_equal %w[outflows_donut cashflow_sankey net_worth_chart balance_sheet], @user.reload.dashboard_section_order
+  end
+
   test "dashboard_section_height returns stored preset or nil" do
     @user.update!(preferences: {})
     assert_nil @user.dashboard_section_height("net_worth_chart")

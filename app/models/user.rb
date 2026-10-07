@@ -592,22 +592,26 @@ class User < ApplicationRecord
     preferences&.[]("last_seen_release_tag")
   end
 
+  def release_seen?(tag)
+    tag == last_seen_release_tag || Array(preferences&.[]("seen_release_tags")).include?(tag)
+  end
+
   def mark_release_seen!(tag)
-    tag_version = parsed_release_tag_version!(tag)
+    parsed_release_tag_version!(tag)
 
     with_lock do
-      current = last_seen_release_tag
+      # Acknowledgement is about identity, not version precedence: hotfix tags
+      # sort before their base release, and users can switch release channels.
+      # Merge after reloading under the lock so stale tabs cannot lose tags.
+      seen_tags = Array(preferences&.[]("seen_release_tags"))
+      legacy_tag = last_seen_release_tag
+      seen_tags += [ legacy_tag ] if parsed_release_tag_version(legacy_tag)
+      seen_tags = (seen_tags + [ tag ]).uniq
 
-      # Never regress the marker: a stale tab (or an old app version during a
-      # rolling deploy) must not make an already-acknowledged release look
-      # unseen again. A previously stored malformed tag is overwritten by the
-      # next valid dismissal so the account can recover.
-      if current
-        current_version = parsed_release_tag_version(current)
-        next if current_version && tag_version < current_version
-      end
-
-      update!(preferences: (preferences || {}).merge("last_seen_release_tag" => tag))
+      update!(preferences: (preferences || {}).merge(
+        "seen_release_tags" => seen_tags,
+        "last_seen_release_tag" => tag
+      ))
     end
   end
 
@@ -632,6 +636,22 @@ class User < ApplicationRecord
     preferences&.[]("section_order") || default_dashboard_section_order
   end
 
+  def dashboard_hidden_sections
+    preferences&.[]("hidden_sections") || []
+  end
+
+  # Adds or removes one key rather than taking the whole list, so a stale tab
+  # hiding one widget can't bring back another hidden elsewhere.
+  def update_dashboard_section_hidden(section_key, hidden)
+    transaction do
+      lock!
+
+      keys = dashboard_hidden_sections - [ section_key ]
+      keys << section_key if hidden
+      update!(preferences: (preferences || {}).merge("hidden_sections" => keys))
+    end
+  end
+
   # Per-widget height preset override ("compact" | "auto" | "tall"); nil = use default.
   def dashboard_section_height(section_key)
     preferences&.dig("dashboard_section_layout", section_key, "height")
@@ -642,13 +662,18 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_section_layout", section_key, "col_span")
   end
 
-  def update_dashboard_preferences(prefs)
+  # laid_out_order is the order the dashboard laid its widgets out in, which
+  # also places widgets the saved order doesn't list yet.
+  def update_dashboard_preferences(prefs, laid_out_order: nil)
     # Use pessimistic locking to ensure atomic read-modify-write
     # This prevents race conditions when multiple sections are collapsed quickly
     transaction do
       lock! # Acquire row-level lock (SELECT FOR UPDATE)
 
       updated_prefs = (preferences || {}).deep_dup
+      if prefs["section_order"]
+        prefs = prefs.merge("section_order" => keep_hidden_sections_in_order(prefs["section_order"], laid_out_order || dashboard_section_order))
+      end
       prefs.each do |key, value|
         if value.is_a?(Hash)
           updated_prefs[key] ||= {}
@@ -771,6 +796,16 @@ class User < ApplicationRecord
       return if digest_was.present? && BCrypt::Password.new(digest_was).is_password?(password_challenge)
 
       errors.add(:password_challenge)
+    end
+
+    # The dashboard only sends the order of the widgets it rendered, so put
+    # each hidden widget back after the one it followed before.
+    def keep_hidden_sections_in_order(new_order, old_order)
+      hidden = dashboard_hidden_sections
+      (old_order & hidden).reduce(new_order - hidden) do |order, key|
+        predecessor = old_order[0...old_order.index(key)].reverse.find { |k| order.include?(k) }
+        order.insert(predecessor ? order.index(predecessor) + 1 : 0, key)
+      end
     end
 
     def default_dashboard_section_order

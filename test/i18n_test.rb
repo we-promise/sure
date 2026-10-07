@@ -1,3 +1,4 @@
+require "test_helper"
 require "i18n/tasks"
 require "pathname"
 require "yaml"
@@ -90,6 +91,45 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty offenses,
                  "Duplicate keys found in locale files (the last occurrence silently wins):\n" \
                  "#{offenses.map { |offense| "  #{offense}" }.join("\n")}"
+  end
+
+  # Fallbacks would hand a locale without :short_with_year the English
+  # "%b %d, %Y", month first, so check each locale without them.
+  def test_short_with_year_date_format_exists_for_each_locale
+    locales = Dir[File.expand_path("../config/locales/defaults/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    missing = locales.sort.reject do |locale|
+      I18n.t("date.formats.short_with_year", locale: locale, fallback: false, default: nil)
+    end
+
+    assert_empty missing, "date.formats.short_with_year is missing for: #{missing.join(", ")}"
+  end
+
+  def test_short_with_year_follows_the_locale
+    assert_equal "5. Jan 2027", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :de)
+    # The abbreviation takes no case suffix: "tammita" and "Urtk" aren't words.
+    assert_equal "05. tammi 2027", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :fi)
+    assert_equal "2027(e)ko Urt 5", I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: :eu)
+  end
+
+  # %e pads a single-digit day with a space: " 5. Jan 2027", "Jan  5, 2027".
+  def test_short_with_year_has_no_padding_space_on_a_single_digit_day
+    locales = Dir[File.expand_path("../config/locales/defaults/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    padded = locales.sort.select do |locale|
+      I18n.l(Date.new(2027, 1, 5), format: :short_with_year, locale: locale).match?(/\A\s|\s\s/)
+    end
+
+    assert_empty padded, "short_with_year pads the day for: #{padded.join(", ")}"
+  end
+
+  # The bills overview's notices card heads with this. Fallbacks would show the
+  # English "Changes", so check each bills locale file without them.
+  def test_bills_notices_heading_exists_for_each_bills_locale
+    locales = Dir[File.expand_path("../config/locales/views/bills/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    missing = locales.sort.reject do |locale|
+      I18n.t("bills.index.notices_heading", locale: locale, fallback: false, default: nil)
+    end
+
+    assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
   def test_trade_republic_activity_labels_exist_for_each_locale
