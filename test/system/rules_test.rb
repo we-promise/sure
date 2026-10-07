@@ -122,12 +122,17 @@ class RulesTest < ApplicationSystemTestCase
         find("select[aria-label='Split merchant']").select(merchant.name)
         find("button[aria-label='Split tags']").click
         find("[role='option'][data-tag-name='#{tags(:one).name}']").click
+        # Wait for the picked tag to land in the trigger, then close the menu so it can't sit
+        # over the submit button on a slower runner.
+        find("[data-tag-select-target='selectionContainer']", text: tags(:one).name)
+        find("button[aria-label='Split tags']").click
+        assert_no_selector "[data-tag-select-target='menu']", visible: true
       end
 
       click_button "Update Rule"
     end
 
-    assert_text "Rule updated"
+    assert_text "Rule updated", wait: 10
 
     mine = JSON.parse(rule.reload.actions.sole.value)["splits"].first
     assert_equal categories(:food_and_drink).id, mine["category_id"]
