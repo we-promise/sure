@@ -45,6 +45,7 @@ ca:
       success:
         one: S'ha importat %{count} compte
         other: S'han importat %{count} comptes
+      invalid_sync_start_date: La data d'inici de la sincronització ha de ser una data vàlida del passat.
     create:
       default_name: Binance
       success: S'ha connectat correctament a Binance! El teu compte s'està sincronitzant.

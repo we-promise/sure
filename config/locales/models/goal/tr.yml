@@ -18,6 +18,7 @@ tr:
             base:
               at_least_one_linked_account_required: Bu hedefi finanse etmek için en
                 az bir hesap seçin.
+              whole_account_conflict_on_restore: 'Bu hedef geri yüklenemiyor: “%{account_name}” artık tamamen “%{goal_name}” için ayrılmış. Önce bunlardan birine bir tutar girin.'
             currency:
               locked_after_linked: Hedef hesaplara bağlandıktan sonra para birimi
                 değiştirilemez.
@@ -25,3 +26,13 @@ tr:
               currency_mismatch: Bağlı tüm hesaplar aynı para birimini kullanmalıdır.
               must_be_fundable: Bağlı tüm hesaplar nakit veya yatırım hesabı olmalıdır.
               must_belong_to_family: Bağlı hesaplar, hedefle aynı aileye ait olmalıdır.
+            target_mode:
+              months_requires_maintained: Yalnızca sürdürdüğünüz bir rezervin hedefi aylık gider cinsinden belirlenebilir.
+            target_months:
+              blank: Bu rezervin kaç aylık gideri karşılaması gerektiğini belirtin.
+              only_with_months_mode: Aylık gider sayısı yalnızca hedef bu şekilde belirlendiğinde geçerlidir.
+            kind:
+              locked_while_released: Rezerve dönüştürmeden önce bu hedefi yeniden açın.
+              locked_once_consumed: Bu hedefte zaten harcanmış olarak kaydedilen para var, bu yüzden rezerve dönüştürülemez.
+            target_amount:
+              below_consumed: Hedef, bu hedefte harcanmış olarak kaydedilen tutarın altına ayarlanamaz.

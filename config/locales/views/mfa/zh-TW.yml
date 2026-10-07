@@ -9,6 +9,7 @@ zh-TW:
       page_title: 備援代碼
       title: 儲存您的備援代碼
     create:
+      code_already_used: 該驗證碼已被使用。請輸入驗證器應用程式中的下一個驗證碼。
       invalid_code: 驗證碼無效。請再試一次。
     disable:
       success: 雙重驗證已停用

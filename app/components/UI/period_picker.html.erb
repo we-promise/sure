@@ -2,7 +2,7 @@
   <% menu.with_button(
        type: "button",
        class: "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0",
-       aria: { label: t(".aria_label", period: selected_label, default: "Time period: %{period}") }
+       aria: { label: t("UI.period_picker.aria_label", period: selected_label) }
      ) do %>
     <span class="whitespace-nowrap"><%= selected_label %></span>
     <%= helpers.icon("chevron-down", size: "sm") %>
@@ -14,19 +14,19 @@
       a stale ?start_date/&end_date from a chart drag-select would outlive a
       preset pick and come back on refresh. See `turbo_action_for` for why the
       checked row replaces rather than advances. %>
-  <% periods.each do |period| %>
-    <% period_selected = selected?(period.key) %>
+  <% items.each do |key, label| %>
+    <% item_selected = selected?(key) %>
     <% menu.with_item(
          variant: :link,
-         text: period.label_short,
-         href: href_for(period.key),
+         text: label,
+         href: href_for(key),
          frame: frame,
-         selected: period_selected,
-         data: { turbo_action: turbo_action_for(period_selected) }
+         selected: item_selected,
+         data: { turbo_action: turbo_action_for(item_selected) }
        ) %>
   <% end %>
 
-  <% if custom_selected? %>
+  <% if custom_row? %>
     <%# Last, so the presets keep their positions. Without this row a custom
         range leaves the list with nothing checked, which reads as "no selection"
         and hides the fact that picking a preset is how you leave it. %>
