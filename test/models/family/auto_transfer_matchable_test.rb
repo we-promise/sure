@@ -700,6 +700,16 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal @loan, @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
   end
 
+  test "missing_transfer_suggestion_for prefers the account in the outflow's currency when several share the iban" do
+    # Revolut and Wise expose one IBAN for several currency sub-accounts.
+    @family.accounts.create!(name: "EUR sub-account", balance: 0, currency: "EUR", accountable: Depository.new, iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    usd_account = @family.accounts.create!(name: "USD sub-account", balance: 0, currency: "USD", accountable: Depository.new, iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500, currency: "USD")
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    assert_equal usd_account, @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
+  end
+
   test "missing_transfer_suggestion_for returns nil without a counterparty iban" do
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
 

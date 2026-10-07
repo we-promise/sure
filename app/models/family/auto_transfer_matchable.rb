@@ -189,7 +189,10 @@ module Family::AutoTransferMatchable
     counterparty_iban = transaction.counterparty_iban
     return nil if counterparty_iban.blank?
 
-    accounts.writable_by(user).visible.where.not(id: entry.account_id).find_by(iban: normalize_iban(counterparty_iban))
+    # One IBAN can back several currency sub-accounts (Revolut, Wise), so
+    # prefer the one in the outflow's own currency.
+    candidates = accounts.writable_by(user).visible.where.not(id: entry.account_id).where(iban: normalize_iban(counterparty_iban)).to_a
+    candidates.find { |candidate| candidate.currency == entry.currency } || candidates.first
   end
 
   # Family-wide counterpart to missing_transfer_suggestion_for: instead of
