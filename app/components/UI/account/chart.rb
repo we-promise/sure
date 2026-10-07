@@ -169,6 +169,56 @@ class UI::Account::Chart < ApplicationComponent
     @series ||= account.balance_series(period: period, view: view)
   end
 
+  # The Total value view of an account that holds trades draws a second line:
+  # what has been put in, net of what was taken out (#4008).
+  def show_net_contributions?
+    view == "balance" && account.supports_trades?
+  end
+
+  # The second line for the chart controller: each point's net contributions
+  # and its difference from total value on the same date, signed, with the
+  # difference as a percentage of net contributions. Rounded as the value
+  # line's own points are, so the tooltip's three figures agree.
+  def net_contributions_comparison
+    values_by_date = series.values.index_by(&:date)
+
+    points = account.balance_series(period: period, view: :net_contributions).values.filter_map do |point|
+      value_point = values_by_date[point.date]
+      next unless value_point
+
+      contributions = point.value.for_display
+      {
+        date: point.date,
+        value: contributions,
+        difference: Trend.new(current: value_point.value.for_display, previous: contributions)
+      }
+    end
+
+    {
+      label: I18n.t("UI.account.chart.net_contributions.label"),
+      difference_label: I18n.t("UI.account.chart.net_contributions.difference"),
+      values: points
+    }
+  end
+
+  # A flow the line counts could not be valued (no exchange rate, or a
+  # journalled position with no price that day), so the line is understated
+  # and the gap overstates growth. Said under the legend rather than hidden.
+  def net_contributions_understated?
+    account.net_contributions_understated?(period: period)
+  end
+
+  # The legend under the chart names both lines. The value line takes its
+  # trend colour from the series, so its swatch does too; the contributions
+  # swatch is dashed in text-secondary, the colour the controller draws that
+  # line in. Style as well as hue tells them apart, as on the loan legend.
+  def net_contributions_legend
+    [
+      { label: I18n.t("UI.account.chart.views.total_value"), swatch_class: "border-solid", color: series.trend&.color },
+      { label: I18n.t("UI.account.chart.net_contributions.label"), swatch_class: "border-dashed border-current text-secondary", color: nil }
+    ]
+  end
+
   # Current total unrealized gains, taken from the series so the main indicator
   # always matches the last point of the chart (there is no stored gains column).
   def gains_money
