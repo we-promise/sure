@@ -1,0 +1,27 @@
+<%# locals: (entry:, transaction:, view_ctx: "global", compact: false) %>
+<div class="<%= class_names("text-secondary text-xs font-normal", "flex flex-wrap min-w-0 items-center gap-1": compact) %>">
+  <% if compact %>
+    <span class="lg:hidden shrink-0"><%= format_date(entry.date) %><%= " •" unless transaction.transfer? %></span>
+  <% end %>
+  <% if transaction.transfer? && !compact %>
+    <span class="text-secondary"><%= transaction_transfer_subtitle(entry) %></span>
+  <% elsif !transaction.transfer? %>
+    <% if transaction.merchant&.present? %>
+      <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
+    <% end %>
+    <% unless compact && view_ctx == "account" %>
+      <span class="text-secondary hidden lg:inline">
+        <%= link_to entry.account.name,
+            account_path(entry.account, tab: "transactions"),
+            data: { turbo_frame: "_top" },
+            class: "hover:underline" %>
+      </span>
+    <% end %>
+    <div class="flex min-w-0 items-center gap-1">
+      <%= render "categories/category_name_mobile", transaction: transaction %>
+      <% if transaction.merchant&.present? %>
+        <span class="lg:hidden min-w-0 truncate">• <%= transaction.merchant.name %></span>
+      <% end %>
+    </div>
+  <% end %>
+</div>
