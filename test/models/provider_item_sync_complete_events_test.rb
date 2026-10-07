@@ -43,6 +43,28 @@ class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
     assert_includes targets, "sync-toast"
   end
 
+  # Providers without fixtures, built with only what their validations need.
+  {
+    "akahu_item" => { app_token: "app", user_token: "user" },
+    "coinbase_item" => { api_key: "key", api_secret: "secret" },
+    "coinstats_item" => { api_key: "key" },
+    "sophtron_item" => { user_id: "user", access_key: "key" },
+    "up_item" => { access_token: "token" }
+  }.each do |provider, attributes|
+    test "a #{provider} sync completion sends the toast, not the card" do
+      item = families(:dylan_family).public_send(provider.pluralize).create!(name: "Connection", **attributes)
+      Current.reset
+
+      streams = capture_turbo_stream_broadcasts(item.family) do
+        "#{provider.camelize}::SyncCompleteEvent".constantize.new(item).broadcast
+      end
+      targets = streams.map { |stream| stream["target"] }
+
+      assert_not_includes targets, ActionView::RecordIdentifier.dom_id(item)
+      assert_includes targets, "sync-toast"
+    end
+  end
+
   # The two activity jobs used to send the card themselves once the delayed
   # activities arrived.
   { QuestradeActivitiesFetchJob => [ :questrade_accounts, :one, :questrade_item ],
