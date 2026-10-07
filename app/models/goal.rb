@@ -97,6 +97,11 @@ class Goal < ApplicationRecord
   # they belong to are the same fact. Still inside the save transaction, so a
   # later failure takes both back.
   after_save :apply_state_change_side_effects, if: :saved_change_to_state?
+  # The basis decides what current_balance counts, so the balance-derived memos
+  # filled before the save describe the old basis. Cleared the way a state
+  # transition clears them, or the instance the controller renders keeps
+  # reporting the figure the user just switched away from.
+  after_save :reset_state_dependent_caches!, if: :saved_change_to_progress_basis?
 
   monetize :target_amount
 
@@ -440,6 +445,13 @@ class Goal < ApplicationRecord
 
   def contributions_basis?
     progress_basis == "contributions"
+  end
+
+  # Whether the basis is frozen with a completion snapshot (see
+  # progress_basis_locked_once_completed). The form reads it to stop offering
+  # a choice the model would refuse.
+  def progress_basis_locked?
+    persisted? && !completed_amount_in_database.nil?
   end
 
   def one_off?
@@ -1368,8 +1380,7 @@ class Goal < ApplicationRecord
     # the transition that clears it. An archived goal that never completed has
     # no snapshot and reports the live figure, so its basis stays editable.
     def progress_basis_locked_once_completed
-      return unless persisted? && will_save_change_to_progress_basis?
-      return if completed_amount_in_database.nil?
+      return unless progress_basis_locked? && will_save_change_to_progress_basis?
 
       errors.add(:progress_basis, :locked_once_completed)
     end

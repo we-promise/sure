@@ -943,8 +943,8 @@ class GoalTest < ActiveSupport::TestCase
     goal = @family.goals.create!(name: "Switch goal", target_amount: 20_000, currency: "USD") do |g|
       g.goal_accounts.build(account: account)
     end
-    # Read each figure off a fresh record: current_balance is memoised, and
-    # reload does not clear it.
+    # Each figure is read off a fresh record, so this measures the basis on its
+    # own. Reading through the instance that was saved is the next test's job.
     on_market_value = Goal.find(goal.id).current_balance.to_d
 
     goal.update!(progress_basis: "contributions")
@@ -956,6 +956,29 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal BigDecimal("10000"), on_market_value
     assert_equal BigDecimal("3000"), on_market_value - on_contributions
     assert_equal on_market_value, back_on_market_value
+  end
+
+  # The instance that took the save is the one a controller renders, so its
+  # memos must follow the new basis. Read before and after on the SAME object:
+  # a memo left standing would return the old figure and show no difference.
+  test "changing basis refreshes the figures on the saved instance" do
+    account = Account.create!(family: @family, accountable: Investment.new, name: "Brokerage R", currency: "USD", balance: 10_000)
+    account.balances.create!(date: 10.days.ago.to_date, balance: 10_000, currency: "USD", net_market_flows: 3_000)
+    goal = @family.goals.create!(name: "Refresh goal", target_amount: 20_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    before_balance = goal.current_balance.to_d
+    before_money = goal.current_balance_money
+    before_percent = goal.progress_percent
+    before_remaining = goal.remaining_amount.to_d
+
+    goal.update!(progress_basis: "contributions")
+
+    assert_equal BigDecimal("3000"), before_balance - goal.current_balance.to_d
+    assert_equal Money.new(3_000, "USD"), before_money - goal.current_balance_money
+    assert_equal BigDecimal("3000"), goal.remaining_amount.to_d - before_remaining
+    assert_equal 50, before_percent
+    assert_equal 35, goal.progress_percent
   end
 
   # A completed goal reports the amount frozen when it closed, measured on the

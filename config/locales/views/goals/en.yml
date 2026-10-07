@@ -300,6 +300,7 @@ en:
       target_modes:
         fixed: A fixed amount
         months_of_expenses: A number of months of expenses
+      progress_basis_locked: This goal is completed. Reopen it to change what counts toward it.
       progress_bases:
         balance:
           label: What the accounts are worth today

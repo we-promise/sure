@@ -298,6 +298,43 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_equal "balance", @goal.reload.progress_basis
     assert_equal snapshot, @goal.completed_amount
+    # The refusal has to reach the user: the re-rendered form names it, and
+    # the locked radios show the basis that was kept, not the one refused.
+    assert_select "p.text-destructive", text: I18n.t("activerecord.errors.models.goal.attributes.progress_basis.locked_once_completed")
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=balance][checked]", 1
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=contributions][checked]", 0
+  end
+
+  # A completed goal's basis is frozen with its snapshot, so the form must not
+  # offer a choice the model will refuse. Disabled radios are not submitted.
+  test "the form locks the basis on a completed goal and says how to unlock it" do
+    @goal.complete!
+
+    get edit_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[type=radio][name='goal[progress_basis]'][disabled]", 2
+    assert_includes response.body, I18n.t("goals.form.progress_basis_locked")
+  end
+
+  test "the form leaves the basis editable on an active goal" do
+    get edit_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[type=radio][name='goal[progress_basis]']", 2
+    assert_select "input[type=radio][name='goal[progress_basis]'][disabled]", 0
+    assert_not_includes response.body, I18n.t("goals.form.progress_basis_locked")
+  end
+
+  # What the locked form actually submits: everything but the basis.
+  test "an ordinary edit of a completed goal still saves" do
+    @goal.complete!
+
+    patch goal_url(@goal), params: { goal: { name: "Italy, done" } }
+
+    assert_redirected_to goal_path(@goal)
+    assert_equal "Italy, done", @goal.reload.name
+    assert_equal "balance", @goal.progress_basis
   end
 
   test "the basis of another family's goal cannot be changed" do
