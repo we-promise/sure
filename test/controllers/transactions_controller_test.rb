@@ -87,6 +87,17 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal parent_index + 1, child_index
   end
 
+  # The form passes its own change action on the currency select; the money
+  # field must keep its handleCurrencyChange alongside it, or switching the
+  # currency never refreshes the amount's step and precision.
+  test "new form wires the currency select to both the money field and the transaction form" do
+    get new_transaction_path
+
+    assert_response :success
+    assert_select "select[data-money-field-target=currency][data-action=?]",
+                  "change->money-field#handleCurrencyChange change->transaction-form#onCurrencyChange"
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {
@@ -278,6 +289,21 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
+  end
+
+  # Regression: the sync window must start at the old date, or the incremental
+  # balance calculation counts the moved transaction twice.
+  test "moving a transaction later syncs from its original date" do
+    original_date = 5.days.ago.to_date
+    @entry.update!(date: original_date)
+
+    Account.any_instance.expects(:sync_later).with(window_start_date: original_date)
+
+    patch transaction_url(@entry), params: {
+      entry: { date: 2.days.ago.to_date, entryable_type: @entry.entryable_type }
+    }
+
+    assert_equal 2.days.ago.to_date, @entry.reload.date
   end
 
   test "updates with transaction details" do
@@ -1394,6 +1420,44 @@ end
     # the cached block itself would run instead of the whole table name.
     assert_empty queries.grep(/next_expected_date/i),
       "second request with unchanged data should reuse the cached projected recurring lookup"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index renders when the projected_recurring cache holds records from an older schema" do
+    # Regression: the cache used to hold whole RecurringTransaction objects. After
+    # an upgrade that added columns (e.g. payment_url in 0.7.5), the entry written
+    # by the previous version was still served and rendering raised
+    # ActiveModel::MissingAttributeError until the key rolled over the next day.
+    original_cache = Rails.cache
+    written_keys = []
+    Rails.cache = Class.new(ActiveSupport::Cache::MemoryStore) {
+      define_method(:write_entry) do |key, entry, **options|
+        written_keys << key
+        super(key, entry, **options)
+      end
+    }.new
+
+    recurring = recurring_transactions(:netflix_subscription)
+
+    get transactions_url
+    assert_response :success
+
+    cache_keys = written_keys.grep(/transactions_projected_recurring/).uniq
+    assert_not_empty cache_keys, "the first request should populate the projected-recurring cache"
+
+    # Write the Marshal payload the previous version produced: the record's
+    # attributes without the columns that version did not have yet.
+    stale_payload = [ recurring.attributes_for_database.except("payment_url", "autopay", "notes"), false, [ [ :merchant, recurring.merchant ] ] ]
+    stale_record = RecurringTransaction.allocate
+    stale_record.define_singleton_method(:marshal_dump) { stale_payload }
+    cache_keys.each { |key| Rails.cache.write(key, [ stale_record ]) }
+    assert_raises(ActiveModel::MissingAttributeError) { Rails.cache.read(cache_keys.first).first.payment_url }
+
+    get transactions_url
+    assert_response :success
+    assert_match(/#{Regexp.escape(recurring.merchant.name)}/, response.body,
+      "the projected recurring transaction should still render from fresh records")
   ensure
     Rails.cache = original_cache
   end
