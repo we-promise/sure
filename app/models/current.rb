@@ -38,9 +38,14 @@ class Current < ActiveSupport::CurrentAttributes
   # and projected recurring list, which are scoped to accessible accounts).
   # Changes whenever an AccountShare granting/revoking the user's access is
   # created, updated, or destroyed.
+  #
+  # Includes the row count as well as `max(updated_at)`, because deleting a
+  # share that is not the most recent one would not move `max(updated_at)`.
+  # Both come from a single query.
   def account_share_version
     return "0-" unless user
-    shares = AccountShare.where(user: user)
-    "#{shares.count}-#{shares.maximum(:updated_at)&.to_f}"
+    count, max_updated_at = AccountShare.where(user: user)
+      .pick(Arel.sql("count(*)"), Arel.sql("extract(epoch from max(updated_at))"))
+    "#{count}-#{max_updated_at&.to_f}"
   end
 end

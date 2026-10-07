@@ -20,25 +20,14 @@ module AccountsHelper
   # Cache key for `accounts/_account_sidebar_tabs.html.erb`.
   # Kept here (not in the ERB) so the partial stays render-only.
   #
-  # `shares_version` includes both row count and `max(updated_at)` because
-  # deleting a non-most-recent share would not move `max(updated_at)` and
-  # could otherwise serve stale fragments to a user who lost access.
-  # Both are pulled in a single SQL round-trip via `pick`. Note: Rails
-  # returns the values as Strings for raw SQL fragments — that's fine
-  # since they only feed into a cache key (concat-stable, never coerced).
+  # The account share version comes from `Current.account_share_version`, the
+  # same source the sidebar sparkline frame ids use, so a change in the user's
+  # account access moves both together.
   def account_sidebar_tabs_cache_key(family:, active_tab:, mobile:)
-    shares_version =
-      if Current.user
-        count, max_at = AccountShare
-          .where(user_id: Current.user.id)
-          .pick(Arel.sql("count(*)"), Arel.sql("max(updated_at)"))
-        "#{count}-#{max_at}"
-      end
-
     [
       family.build_cache_key("account_sidebar_tabs_v4", invalidate_on_data_updates: true),
       Current.user&.id,
-      shares_version,
+      Current.account_share_version,
       active_tab,
       mobile,
       I18n.locale,
