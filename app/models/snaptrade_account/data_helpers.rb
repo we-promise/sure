@@ -95,7 +95,7 @@ module SnaptradeAccount::DataHelpers
     def existing_security_for(ticker, symbol_data, account, account_provider_id)
       held_security_for(account, ticker, account_provider_id) ||
         reported_exchange_security_for(ticker, symbol_data) ||
-        preferred_security_for(ticker)
+        preferred_security_for(ticker, symbol_data, account, account_provider_id)
     end
 
     # The row the position currently sits on, so it never moves. That includes
@@ -131,10 +131,41 @@ module SnaptradeAccount::DataHelpers
         Security.where("UPPER(ticker) = ?", ticker).where(exchange_mic: exchange).order(:created_at, :id).first
     end
 
-    def preferred_security_for(ticker)
-      Security.where("UPPER(ticker) = ?", ticker)
+    # Not an identity match: the rows differ by exchange, and this order says
+    # nothing about which market SnapTrade trades. Once picked, the held
+    # position keeps the pick, so a wrong one never corrects itself; record
+    # each ambiguous pick so support can find the affected accounts.
+    def preferred_security_for(ticker, symbol_data, account, account_provider_id)
+      candidates = Security.where("UPPER(ticker) = ?", ticker)
         .order(:offline, Arel.sql("price_provider IS NULL"), :created_at, :id)
-        .first
+        .to_a
+
+      if candidates.size > 1
+        capture_ambiguous_security(ticker, candidates, symbol_data, account, account_provider_id)
+      end
+
+      candidates.first
+    end
+
+    def capture_ambiguous_security(ticker, candidates, symbol_data, account, account_provider_id)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Resolved #{ticker} to one of #{candidates.size} securities by fallback order; " \
+                 "no held position and no row on the reported exchange",
+        source: self.class.name,
+        provider_key: "snaptrade",
+        account: account,
+        account_provider_id: account_provider_id,
+        metadata: {
+          ticker: ticker,
+          reported_exchange: extract_exchange(symbol_data),
+          chosen_security_id: candidates.first.id,
+          candidates: candidates.map do |security|
+            security.slice(:id, :exchange_operating_mic, :exchange_mic, :offline, :price_provider)
+          end
+        }
+      )
     end
 
     def extract_security_name(symbol_data, fallback_ticker)

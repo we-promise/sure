@@ -65,6 +65,20 @@ class SnaptradeAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal 10, @account.holdings.find_by!(security: listed, date: Date.current).qty
   end
 
+  test "an ambiguous fallback pick is logged against this connection" do
+    older = Security.create!(ticker: "DUPF", name: "Dup F", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    Security.create!(ticker: "DUPF", name: "Dup F", exchange_operating_mic: "XNAS", price_provider: "yahoo_finance")
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      process_holdings(build_holding(symbol: "DUPF"))
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal [ "SnaptradeAccount::HoldingsProcessor", @family, @snaptrade_account.account_provider ],
+                 [ entry.source, entry.family, entry.account_provider ]
+    assert_equal [ older.id ], @account.holdings.where(date: Date.current).pluck(:security_id)
+  end
+
   private
 
     def hold_position(security, date:)

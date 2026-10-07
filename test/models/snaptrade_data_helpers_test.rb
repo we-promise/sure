@@ -261,6 +261,74 @@ class SnaptradeDataHelpersTest < ActiveSupport::TestCase
     assert_equal materialized, @helper.test_resolve_security("DUPM", {}, account: account, account_provider_id: snaptrade.id)
   end
 
+  # The last tier has no identity signal: with no held position and no row on
+  # SnapTrade's reported exchange, two online, priced rows for different
+  # markets are told apart only by age. This documents that known limit, and
+  # that the pick is recorded for support rather than made silently.
+  test "resolve_security picks the older of two priced rows differing only by exchange, and logs it" do
+    account = accounts(:investment)
+    snaptrade = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+    older = Security.create!(ticker: "DUPX", name: "Dup X", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    newer = Security.create!(ticker: "DUPX", name: "Dup X", exchange_operating_mic: "XNAS", price_provider: "yahoo_finance")
+    # Rewriting the older row moves its tuple behind the newer one.
+    older.update!(name: "Dup X (renamed)")
+
+    assert_difference -> { DebugLogEntry.count }, 2 do
+      2.times { assert_equal older, @helper.test_resolve_security("DUPX", {}, account: account, account_provider_id: snaptrade.id) }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal [ "provider_sync", "warn", "snaptrade", TestHelper.name ],
+                 [ entry.category, entry.level, entry.provider_key, entry.source ]
+    assert_equal [ account.family, account, snaptrade ], [ entry.family, entry.account, entry.account_provider ]
+    assert_equal "DUPX", entry.metadata["ticker"]
+    assert_equal older.id, entry.metadata["chosen_security_id"]
+    assert_equal [ older.id, newer.id ], entry.metadata["candidates"].map { |c| c["id"] }
+    assert_equal [ "XNYS", "XNAS" ], entry.metadata["candidates"].map { |c| c["exchange_operating_mic"] }
+  end
+
+  test "resolve_security logs a fallback pick when the reported exchange matches no row, and without an account" do
+    older = Security.create!(ticker: "DUPU", name: "Dup U", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    Security.create!(ticker: "DUPU", name: "Dup U", exchange_operating_mic: "XNAS", price_provider: "yahoo_finance")
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      assert_equal older, @helper.test_resolve_security("DUPU", { "exchange" => { "mic_code" => "XTSE" } })
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "XTSE", entry.metadata["reported_exchange"]
+    assert_nil entry.family
+    assert_nil entry.account_provider
+  end
+
+  test "resolve_security does not log when the ticker has a single row" do
+    only = Security.create!(ticker: "ONLY", name: "Only row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_equal only, @helper.test_resolve_security("ONLY", {})
+    end
+  end
+
+  test "resolve_security does not log when the held position decides" do
+    account = accounts(:investment)
+    Security.create!(ticker: "DUPHL", name: "Priced row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    held = Security.create!(ticker: "DUPHL", name: "Held row", exchange_operating_mic: "XNAS", price_provider: "yahoo_finance")
+    hold(account, held, date: 1.day.ago.to_date)
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_equal held, @helper.test_resolve_security("DUPHL", {}, account: account)
+    end
+  end
+
+  test "resolve_security does not log when the reported exchange decides" do
+    Security.create!(ticker: "DUPE", name: "Dup E", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    reported = Security.create!(ticker: "DUPE", name: "Dup E", exchange_operating_mic: "XNAS", price_provider: "yahoo_finance")
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_equal reported, @helper.test_resolve_security("DUPE", { "exchange" => { "mic_code" => "XNAS" } })
+    end
+  end
+
   # === extract_currency tests ===
 
   test "extract_currency handles hash with code key (symbol access)" do
