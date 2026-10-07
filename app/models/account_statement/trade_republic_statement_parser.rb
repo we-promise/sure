@@ -11,25 +11,31 @@ class AccountStatement::TradeRepublicStatementParser
   Result = Data.define(:period_start_on, :period_end_on, :opening_balance, :closing_balance, :currency, :iban_last4)
 
   INSTITUTION_PATTERN = /trade\s+republic/i
+  # Month tokens are matched on their first four, then first three letters,
+  # which covers abbreviations ("Sept.", "févr.") and full names ("Oktober").
+  # Languages: Italian, English, German, French, Spanish, Dutch, Portuguese.
   MONTHS = {
-    # Italian
-    "gen" => 1, "feb" => 2, "mar" => 3, "apr" => 4, "mag" => 5, "giu" => 6,
-    "lug" => 7, "ago" => 8, "set" => 9, "ott" => 10, "nov" => 11, "dic" => 12,
-    # English
-    "jan" => 1, "may" => 5, "jun" => 6, "jul" => 7, "aug" => 8, "sep" => 9,
-    "sept" => 9, "oct" => 10, "dec" => 12,
-    # German
-    "mär" => 3, "märz" => 3, "mai" => 5, "juni" => 6, "juli" => 7, "okt" => 10, "dez" => 12,
-    # French
-    "janv" => 1, "févr" => 2, "fevr" => 2, "mars" => 3, "avr" => 4, "juin" => 6,
-    "juil" => 7, "août" => 8, "aout" => 8, "déc" => 12,
-    # Spanish
-    "ene" => 1, "abr" => 4
+    "jan" => 1, "gen" => 1, "ene" => 1, "janv" => 1,
+    "feb" => 2, "fév" => 2, "fev" => 2, "févr" => 2, "fevr" => 2,
+    "mar" => 3, "mär" => 3, "mrz" => 3, "mrt" => 3,
+    "apr" => 4, "avr" => 4, "abr" => 4,
+    "may" => 5, "mag" => 5, "mai" => 5, "mei" => 5,
+    "jun" => 6, "giu" => 6, "juin" => 6,
+    "jul" => 7, "lug" => 7, "juil" => 7,
+    "aug" => 8, "ago" => 8, "aoû" => 8, "aou" => 8,
+    "sep" => 9, "set" => 9,
+    "oct" => 10, "ott" => 10, "okt" => 10, "out" => 10,
+    "nov" => 11,
+    "dec" => 12, "dic" => 12, "dez" => 12, "déc" => 12
   }.freeze
-  DATE_TOKEN = /(\d{1,2})\s+([[:alpha:]]{3,5})\.?\s+(\d{4})/
+  DATE_TOKEN = /(\d{1,2})\.?\s+([[:alpha:]]{3,9})\.?\s+(\d{4})/
   PERIOD_PATTERN = /#{DATE_TOKEN}\s*[-–]\s*#{DATE_TOKEN}/
-  OPENING_BALANCE_HEADERS = [
-    "saldo iniziale", "opening balance", "anfangssaldo", "solde initial", "saldo inicial"
+  # Where the summary table starts: its opening-balance column header, or the
+  # summary section title for editions whose headers are split over lines.
+  SUMMARY_MARKERS = [
+    "saldo iniziale", "opening balance", "initial balance", "anfangssaldo",
+    "solde initial", "saldo inicial", "beginsaldo",
+    "estratto conto riassuntivo", "synthèse du relevé de compte"
   ].freeze
   AMOUNT_PATTERN = /(-?\d{1,3}(?:[.,\u00A0\u202F ]\d{3})*[.,]\d{2})[\u00A0 ]?€|€[\u00A0 ]?(-?\d{1,3}(?:[.,\u00A0\u202F ]\d{3})*[.,]\d{2})/
   IBAN_PATTERN = /IBAN[:\s]+([A-Z]{2}\d{2}[A-Z0-9]{10,30})\b/
@@ -74,7 +80,7 @@ class AccountStatement::TradeRepublicStatementParser
     end
 
     def build_date(day, month_name, year)
-      month = MONTHS[month_name.downcase]
+      month = month_number(month_name)
       return nil unless month
 
       date = Date.new(year.to_i, month, day.to_i)
@@ -83,8 +89,14 @@ class AccountStatement::TradeRepublicStatementParser
       nil
     end
 
+    def month_number(name)
+      token = name.downcase
+      MONTHS[token] || MONTHS[token[0, 4]] || MONTHS[token[0, 3]]
+    end
+
     def parse_summary
-      header_index = OPENING_BALANCE_HEADERS.filter_map { |header| @text.downcase.index(header) }.min
+      downcased = @text.downcase
+      header_index = SUMMARY_MARKERS.filter_map { |marker| downcased.index(marker) }.min
       return nil unless header_index
 
       amounts = @text[header_index..].scan(AMOUNT_PATTERN).first(4).map { |groups| parse_amount(groups.compact.first) }

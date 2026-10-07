@@ -68,6 +68,24 @@ class AccountStatement::TradeRepublicStatementParserTest < ActiveSupport::TestCa
     assert_equal BigDecimal("1846.90"), english_result.closing_balance
   end
 
+  test "reads French statements and full month names" do
+    french = "Trade Republic Bank GmbH\nDATE 01 juil. 2026 - 31 juil. 2026\nSYNTHÈSE DU RELEVÉ DE COMPTE\n" \
+      "PRODUIT SOLDE D'OUVERTURE ENTRÉE D'ARGENT SORTIE D'ARGENT SOLDE DE FERMETURE\n" \
+      "Compte courant 7 099,61 € 1 250,00 € 4 025,41 € 4 324,20 €"
+    german = "Trade Republic Bank GmbH\nDATUM 01. Oktober 2025 - 31. Dezember 2025\nANFANGSSALDO\n100,00 € 50,00 € 25,00 € 125,00 €"
+
+    french_result = AccountStatement::TradeRepublicStatementParser.parse(french)
+    assert_equal Date.new(2026, 7, 1), french_result.period_start_on
+    assert_equal Date.new(2026, 7, 31), french_result.period_end_on
+    assert_equal BigDecimal("7099.61"), french_result.opening_balance
+    assert_equal BigDecimal("4324.20"), french_result.closing_balance
+
+    german_result = AccountStatement::TradeRepublicStatementParser.parse(german)
+    assert_equal Date.new(2025, 10, 1), german_result.period_start_on
+    assert_equal Date.new(2025, 12, 31), german_result.period_end_on
+    assert_equal BigDecimal("125.00"), german_result.closing_balance
+  end
+
   test "drops balances that do not add up" do
     text = LAYOUT_TEXT.sub("1.944,58 €", "1.999,99 €")
 
