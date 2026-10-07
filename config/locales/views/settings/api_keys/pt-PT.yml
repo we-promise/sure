@@ -8,6 +8,7 @@ pt-PT:
     api_keys:
       create:
         success: "A sua chave de API foi criada com sucesso"
+        creation_failed: "Não foi possível criar a sua chave de API. Tente novamente."
       destroy:
         revoked_successfully: "A chave de API foi revogada com sucesso"
         revoke_failed: "Falha ao revogar a chave de API"

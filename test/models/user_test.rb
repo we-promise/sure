@@ -1296,4 +1296,29 @@ class UserTest < ActiveSupport::TestCase
     assert token.reload.revoked_at.present?
     assert grant.reload.revoked_at.present?
   end
+  test "password_challenge must match the current password when given" do
+    @user.assign_attributes(password_challenge: "wrongpassword123", password: "newpassword123")
+    assert_not @user.valid?
+    assert @user.errors.of_kind?(:password_challenge, :invalid)
+
+    @user.assign_attributes(password_challenge: "", password: "newpassword123")
+    assert_not @user.valid?
+
+    @user.assign_attributes(password_challenge: user_password_test, password: "newpassword123")
+    assert @user.valid?
+  end
+
+  test "password_challenge is not checked when not given" do
+    @user.password = "newpassword123"
+    assert @user.valid?
+  end
+
+  test "password_confirmation must match when given" do
+    @user.assign_attributes(password: "newpassword123", password_confirmation: "otherpassword123")
+    assert_not @user.valid?
+    assert @user.errors.of_kind?(:password_confirmation, :confirmation)
+
+    @user.password_confirmation = "newpassword123"
+    assert @user.valid?
+  end
 end

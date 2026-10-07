@@ -15,6 +15,12 @@ class PasswordsController < ApplicationController
   private
 
     def update_password_and_log_change
+      # has_secure_password ignores a blank password, so update would succeed without a change.
+      if password_params[:password].blank?
+        Current.user.errors.add(:password, :blank)
+        return false
+      end
+
       ActiveRecord::Base.transaction do
         next false unless Current.user.update(password_params)
 

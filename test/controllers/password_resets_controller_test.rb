@@ -31,14 +31,35 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update with an invalid password does not write an audit log" do
-    # has_secure_password validations: false (see app/models/user.rb) means
-    # password_confirmation mismatches aren't actually validated — only the
-    # minimum-length rule is, so that's the real failure mode to exercise.
     assert_no_difference "SecurityAuditLog.count" do
       patch password_reset_path(token: @user.generate_token_for(:password_reset)),
         params: { user: { password: "short", password_confirmation: "short" } }
     end
     assert_response :unprocessable_entity
+  end
+
+  test "update rejects a mismatched confirmation" do
+    original_digest = @user.password_digest
+
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+        params: { user: { password: "password", password_confirmation: "different" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
+  end
+
+  test "update with a blank password does not report success or write an audit log" do
+    original_digest = @user.password_digest
+
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+        params: { user: { password: "", password_confirmation: "" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
   end
 
   test "rolls back the password change when the audit log write fails" do
