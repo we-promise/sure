@@ -60,10 +60,10 @@
             <div class="flex items-center gap-1 shrink-0">
               <%= render "transactions/badges", entry: entry, transaction: transaction, in_split_group: in_split_group, drawer_params: drawer_params %>
             </div>
-          </div>
 
-          <div class="mt-1 hidden md:flex min-w-0 items-center gap-1" data-tag-fit-bounds="1">
-            <%= render "tags/menu", entry: entry, transaction: transaction, variant: :desktop %>
+            <div class="hidden md:flex min-w-0 flex-1 items-center gap-1" data-tag-fit-bounds="1">
+              <%= render "tags/menu", entry: entry, transaction: transaction, variant: :desktop %>
+            </div>
           </div>
           <div class="md:hidden flex min-w-0 has-[[data-tag-empty]]:hidden">
             <%= render "tags/menu", entry: entry, transaction: transaction, variant: :mobile %>

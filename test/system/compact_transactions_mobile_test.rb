@@ -105,6 +105,42 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     end
   end
 
+  test "untagged desktop transactions keep compact row height in grouped and flat views" do
+    [ true, false ].each do |grouped|
+      @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => grouped))
+      visit transactions_url
+
+      geometry = compact_row_geometry
+      assert_operator geometry["height"], :<=, 60, "an empty tag control must not add a separate line"
+      assert_in_delta geometry["nameCenter"], geometry["amountCenter"], 12, "name should stay near the amount's baseline"
+    end
+  end
+
+  test "desktop account names align vertically with amounts and dates without tags" do
+    @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
+
+    [ "standard", "funds_movement" ].each do |kind|
+      @entry.entryable.update!(kind: kind)
+      visit account_url(accounts(:depository), tab: "activity")
+
+      geometry = compact_row_geometry
+      assert_operator geometry["height"], :<=, 48, "single-line account rows should remain compact"
+      assert_in_delta geometry["nameCenter"], geometry["amountCenter"], 2, "name and amount should align vertically"
+      assert_in_delta geometry["nameCenter"], geometry["dateCenter"], 2, "name and date should align vertically"
+    end
+  end
+
+  test "desktop tags stay beside the name without adding a row line" do
+    @entry.entryable.update!(tags: [ tags(:one), tags(:two) ])
+    visit transactions_url
+
+    within "turbo-frame##{dom_id(@entry)}" do
+      assert_selector "##{dom_id(@entry.entryable, 'tag_summary_desktop')}"
+    end
+    geometry = compact_row_geometry
+    assert_operator geometry["height"], :<=, 60, "tags must share the transaction name line"
+  end
+
   test "compact row clicks open the drawer while selection stays independent" do
     visit transactions_url
 
@@ -138,6 +174,25 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
   end
 
   private
+    def compact_row_geometry
+      page.evaluate_script(<<~JS, dom_id(@entry))
+        ((id) => {
+          const row = document.getElementById(id).querySelector('[role="row"]');
+          const center = (el) => {
+            const rect = el.getBoundingClientRect();
+            return rect.top + rect.height / 2;
+          };
+          const date = row.querySelector('div.w-28');
+          return {
+            height: row.getBoundingClientRect().height,
+            nameCenter: center(row.querySelector('[data-clickable-row-target="link"]')),
+            amountCenter: center(row.querySelector('p.privacy-sensitive')),
+            dateCenter: date ? center(date) : null
+          };
+        })(arguments[0])
+      JS
+    end
+
     # Measures the left x-position of the DATE / TRANSACTION header labels
     # and of the first data row's date cell / name link, so we can assert
     # the header columns line up with the rows below them. Label matching
