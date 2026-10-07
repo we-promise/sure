@@ -25,22 +25,16 @@ tr:
         needs_setup: '%{count} hesap kurulum gerektiriyor...'
       success: Senkronizasyon başlatıldı
     panel:
-      setup_instructions: 'Kurulum talimatları:'
       step_1: app.redbark.com adresinde Settings altında bir API anahtarı oluşturun
       step_2: API anahtarınızı aşağıya girin ve Kaydet düğmesine tıklayın
       step_3: Bağlantı başarılı olduktan sonra yeni hesapları ayarlamak için Hesaplar sekmesine gidin
-      field_descriptions: 'Alan açıklamaları:'
       optional: (İsteğe bağlı)
-      required: (zorunlu)
       optional_with_default: '(isteğe bağlı, varsayılan: %{default_value})'
       save_button: Yapılandırmayı Kaydet
       update_button: Yapılandırmayı Güncelle
-      status_configured_html: Yapılandırıldı ve kullanıma hazır. Hesapları yönetmek ve ayarlamak için <a href="%{accounts_path}" class="link">Hesaplar</a> sekmesine gidin.
-      status_not_configured: Yapılandırılmadı
       fields:
         api_key:
           label: API Anahtarı
-          description: Redbark API anahtarınız (rbk_live_ ile başlar)
           placeholder_new: rbk_live_...
           placeholder_update: Güncellemek için yeni API anahtarını girin
     create:

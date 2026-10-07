@@ -124,15 +124,13 @@ ru:
       description: Подключитесь, используя %{name}
       name: Brex - %{name}
     provider_panel:
-      accounts_link: Счета
       add_connection: Добавить подключение Brex
       base_url_label: Базовый URL (необязательно)
       base_url_placeholder: https://api.brex.com
-      configured_html: Настроено и готово к использованию. Посетите вкладку %{accounts_link}
-        для управления и настройки счетов.
       connection_name_label: Имя подключения
       connection_name_placeholder: Бизнес-счёт
       default_connection_name: Подключение Brex
+      disconnect: Отключить
       disconnect_confirm: Отключить %{name}?
       disconnect_label: Отключить %{name}
       encryption_warning:
@@ -149,13 +147,11 @@ ru:
           которую хотите подключить
         sign_in_html: Посетите %{link} и войдите в аккаунт, который хотите подключить
       keep_token_placeholder: Оставьте пустым, чтобы сохранить текущий токен
-      not_configured: Не настроено
       sandbox_note_html: Используйте отдельное именованное подключение для каждой
         компании Brex/API токена, который вы хотите синхронизировать. Оставьте базовый
         URL пустым для продакшн. Стадия ограничена тестированием, одобренным Brex,
         и не работает с клиентскими токенами.
       setup_accounts: Настроить счета
-      setup_title: 'Инструкции по настройке:'
       sync: Синхронизировать
       token_label: Токен
       token_placeholder: Вставьте токен здесь
