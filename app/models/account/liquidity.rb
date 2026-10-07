@@ -130,10 +130,13 @@ module Account::Liquidity
     return nil unless liquidity == "locked" && available_on.present?
     return available_on unless auto_renew? && renewal_term_months.to_i.positive?
 
-    # Counted from the original date each time: stepping from the previous
-    # result would let a month-end date slip (Jan 31 -> Feb 28 -> Mar 28).
-    terms = 0
-    terms += 1 while (available_on >> (terms * renewal_term_months)) < date
+    # Whole terms that fit between the original date and `date` by calendar
+    # month, plus one when that renewal still falls before `date`. Counted
+    # from the original date: stepping from the previous result would let a
+    # month-end date slip (Jan 31 -> Feb 28 -> Mar 28).
+    months = (date.year * 12 + date.month) - (available_on.year * 12 + available_on.month)
+    terms = [ months / renewal_term_months, 0 ].max
+    terms += 1 if (available_on >> (terms * renewal_term_months)) < date
     available_on >> (terms * renewal_term_months)
   end
 

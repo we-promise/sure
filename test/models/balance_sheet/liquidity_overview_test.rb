@@ -114,6 +114,44 @@ class BalanceSheet::LiquidityOverviewTest < ActiveSupport::TestCase
     assert_equal 5_800, values.fetch(period.end_date)
   end
 
+  test "converts accounts in another currency to the family currency" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.25)
+    create_account(name: "Checking", balance: 1_000, accountable: Depository.new(subtype: "checking"))
+    create_account(name: "Euro checking", balance: 800, currency: "EUR", accountable: Depository.new(subtype: "checking"))
+    create_account(name: "Euro deposit", balance: 4_000, currency: "EUR", accountable: Depository.new(subtype: "cd"),
+                   liquidity_choice: "locked", available_on: @today + 40)
+    create_account(name: "Euro card", balance: 160, currency: "EUR", accountable: CreditCard.new)
+
+    overview = overview_on(@today)
+
+    assert_equal Money.new(2_000, "USD"), overview.available_assets
+    assert_equal Money.new(5_000, "USD"), overview.bound_assets
+    assert_equal Money.new(200, "USD"), overview.short_term_liabilities
+    assert_equal Money.new(1_800, "USD"), overview.available_net_worth
+    assert_equal [ 2_000, 5_000 ], overview.asset_levels.map { |level| level.total.amount }
+    assert_equal Money.new(5_000, "USD"), overview.releases.sole.amount
+    assert_equal 5_000, overview.release_buckets.find { |bucket| bucket.key == "within_3_months" }.total.amount
+    assert_equal({ 2026 => 5_000 }, overview.releases_by_year.transform_values(&:amount))
+  end
+
+  test "available net worth series converts accounts in another currency" do
+    period = Period.custom(start_date: Date.current - 2.days, end_date: Date.current)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: period.start_date, rate: 1.25)
+    checking = create_account(name: "Checking", balance: 1_000, accountable: Depository.new(subtype: "checking"))
+    deposit = create_account(name: "Euro deposit", balance: 4_000, currency: "EUR", accountable: Depository.new(subtype: "cd"),
+                             liquidity_choice: "locked", available_on: Date.current - 1.day)
+    card = create_account(name: "Euro card", balance: 160, currency: "EUR", accountable: CreditCard.new)
+
+    [ checking, deposit, card ].each do |account|
+      period.start_date.upto(period.end_date) { |date| create_balance(account: account, date: date, balance: account.balance) }
+    end
+
+    values = BalanceSheet.new(@family).available_net_worth_series(period: period).values.to_h { |value| [ value.date, value.value ] }
+
+    assert_equal Money.new(800, "USD"), values.fetch(period.start_date)
+    assert_equal Money.new(5_800, "USD"), values.fetch(period.end_date)
+  end
+
   private
     def create_account(attributes = {})
       @family.accounts.create!(currency: "USD", **attributes)
