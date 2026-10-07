@@ -1,7 +1,11 @@
 class BalanceSheet::NetWorthSeriesBuilder
-  def initialize(family, user: nil)
+  # `accounts:` (an Account relation) narrows the series to a subset of what
+  # the user (or, without one, the family) would otherwise get, e.g. the
+  # insights feed's accounts every member may see.
+  def initialize(family, user: nil, accounts: nil)
     @family = family
     @user = user
+    @accounts = accounts
   end
 
   def net_worth_series(period: Period.last_30_days)
@@ -19,10 +23,14 @@ class BalanceSheet::NetWorthSeriesBuilder
   end
 
   private
-    attr_reader :family, :user
+    attr_reader :family, :user, :accounts
 
     def historical_accounts
-      @historical_accounts ||= historical_account_scope.relation.to_a
+      @historical_accounts ||= begin
+        scope = historical_account_scope.relation
+        scope = scope.where(id: accounts.select(:id)) if accounts
+        scope.to_a
+      end
     end
 
     def historical_account_ids
@@ -48,6 +56,7 @@ class BalanceSheet::NetWorthSeriesBuilder
         "balance_sheet_net_worth_series_historical",
         user&.id,
         shares_version,
+        accounts_digest,
         period.start_date,
         period.end_date
       ].compact.join("_")
@@ -56,5 +65,13 @@ class BalanceSheet::NetWorthSeriesBuilder
         key,
         invalidate_on_data_updates: true
       )
+    end
+
+    # A narrowed series must not share a cache entry with the full one, and a
+    # share granted or revoked changes the set, so the key carries the ids.
+    def accounts_digest
+      return nil unless accounts
+
+      Digest::MD5.hexdigest(historical_account_ids.sort.join(","))
     end
 end

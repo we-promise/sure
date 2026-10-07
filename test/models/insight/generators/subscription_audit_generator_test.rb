@@ -48,4 +48,20 @@ class Insight::Generators::SubscriptionAuditGeneratorTest < ActiveSupport::TestC
 
     assert_empty insights
   end
+
+  test "skips a subscription paid from an account private to one member" do
+    @overdue.update_columns(account_id: accounts(:connected).id)
+
+    insights = Insight::Generators::SubscriptionAuditGenerator.new(@family).generate
+
+    assert_empty insights
+  end
+
+  test "keeps a subscription that has no account" do
+    @overdue.update_columns(account_id: nil)
+
+    insights = Insight::Generators::SubscriptionAuditGenerator.new(@family).generate
+
+    assert_equal [ "subscription_audit:#{@overdue.id}" ], insights.map(&:dedup_key)
+  end
 end

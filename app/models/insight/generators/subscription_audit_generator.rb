@@ -53,6 +53,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
         .open_status
         .joins(:recurring_transaction)
         .where(recurring_transactions: { status: :active, destination_account_id: nil })
+        .merge(shared_recurring_transactions)
         .where("recurring_transactions.amount > 0")
         .where("due_on < ?", Date.current)
         .includes(recurring_transaction: [ :merchant, :recurrence_rules ])
