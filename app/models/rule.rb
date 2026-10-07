@@ -1,4 +1,7 @@
 class Rule < ApplicationRecord
+  # Namespace for the per-family advisory lock around position assignment.
+  POSITION_LOCK_NAMESPACE = 4013
+
   UnsupportedResourceTypeError = Class.new(StandardError)
 
   belongs_to :family
@@ -189,9 +192,17 @@ class Rule < ApplicationRecord
   end
 
   private
+    # Serialized per family with a transaction-scoped advisory lock: without
+    # it, two rules created at the same time both read the same MAX(position)
+    # and share a position, so their run order would silently fall back to
+    # the created_at/id tie-break. before_create runs inside the save
+    # transaction, so the lock is held until the new row is committed.
     def assign_next_position
       return if position.to_i.positive?
 
+      self.class.connection.execute(
+        self.class.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family_id.to_s ])
+      )
       self.position = family.rules.maximum(:position).to_i + 1
     end
 
