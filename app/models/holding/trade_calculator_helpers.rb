@@ -24,10 +24,12 @@ module Holding::TradeCalculatorHelpers
     # the purchase cost. The only way to get a fee-inclusive basis today is to
     # fold the fee into `price` by hand, which loses the fee as a separate fact.
     #
-    # Only acquisitions are adjusted. A disposal is relieved at the running
-    # average cost, and its fee reduces the proceeds rather than the basis of
-    # whatever remains, so applying it here would understate the units still
-    # held.
+    # Only acquisitions are adjusted. The cost-basis tracker relieves a disposal
+    # at the running average and never reads its price, so a disposal's fee has
+    # no effect on the basis here. That fee belongs on the proceeds side, in
+    # Trade#calculate_realized_gain_loss, which does not deduct it yet. A
+    # disposal's price is returned unchanged rather than as a fee-adjusted figure
+    # that nothing should use.
     def effective_trade_price(trade, date:)
       price = converted_trade_price(trade, date: date)
       return price unless trade.qty&.positive?

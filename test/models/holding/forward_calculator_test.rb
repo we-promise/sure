@@ -239,19 +239,17 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("202"), current.cost_basis
   end
 
-  # A disposal's fee reduces the proceeds, not the basis of what is still held.
-  # Relieving the tracker at a fee-inflated price would overstate the basis of
-  # the remaining units.
-  test "a disposal fee is left out of the cost basis of the remaining units" do
+  # The tracker never reads a disposal's price, so this cannot be observed
+  # through the basis; it is pinned on the helper directly.
+  test "a disposal's price is returned without its fee" do
     load_prices
 
-    create_trade(@voo, qty: 10, date: 3.days.ago.to_date, price: 460, account: @account)
-    create_trade(@voo, qty: -5, date: 1.day.ago.to_date, price: 480, fee: 30, account: @account)
+    sell = create_trade(@voo, qty: -5, date: 1.day.ago.to_date, price: 480, fee: 30, account: @account)
 
-    calculated = Holding::ForwardCalculator.new(@account).calculate
-    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+    price = Holding::ForwardCalculator.new(@account)
+      .send(:effective_trade_price, sell.entryable, date: sell.date)
 
-    assert_equal BigDecimal("460"), current.cost_basis
+    assert_equal BigDecimal("480"), price
   end
 
   test "offline tickers sync holdings based on most recent trade price" do

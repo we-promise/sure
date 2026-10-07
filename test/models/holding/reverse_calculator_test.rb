@@ -205,20 +205,6 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_in_delta 102.5, cost_basis_for(calc, security, buy_date).to_f, 1e-6
   end
 
-  # A disposal's fee reduces the proceeds, not the basis of what is still held.
-  test "cost_basis_for leaves a disposal fee out of the remaining basis" do
-    security = Security.create!(ticker: "TST", name: "Test")
-    buy_date  = 5.days.ago.to_date
-    sell_date = 2.days.ago.to_date
-
-    calc = calculator_with_trades(security) do
-      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
-      create_trade(security, account: @account, qty: -4, price: 130, fee: 40, date: sell_date)
-    end
-
-    assert_in_delta 100.0, cost_basis_for(calc, security, sell_date).to_f, 1e-6
-  end
-
   test "cost_basis_for carries forward to dates between buys" do
     security = Security.create!(ticker: "TST", name: "Test")
     first_buy  = 10.days.ago.to_date
