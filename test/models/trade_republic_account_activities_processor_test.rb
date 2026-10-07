@@ -395,6 +395,19 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-20.99"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel").amount
   end
 
+  test "stamp duty cancellation without a status is still imported as a refund" do
+    import_event({
+      id: "evt_stamp_duty_cancel_no_status",
+      timestamp: "2026-02-18T09:37:01Z",
+      eventType: "STAMP_DUTY_TAX_PAID",
+      title: "Stamp duty (Portfolio)",
+      subtitle: "Cancellation of stamp duty",
+      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+    })
+
+    assert_equal BigDecimal("-20.99"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel_no_status").amount
+  end
+
   test "category direction wins over the provider signed amount" do
     import_event({
       id: "evt_incoming_signed",

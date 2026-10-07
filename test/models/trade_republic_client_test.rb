@@ -525,6 +525,21 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "stamp duty cancellations are not treated as declined events" do
+    cancellation = {
+      "eventType" => "STAMP_DUTY_TAX_PAID",
+      "title" => "Stamp duty (Portfolio)",
+      "subtitle" => "Cancellation of stamp duty"
+    }
+
+    assert Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(cancellation)
+    assert_not Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation)
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation.merge("status" => "CANCELED"))
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(
+      "eventType" => "CARD_TRANSACTION", "subtitle" => "Cancelled"
+    )
+  end
+
   test "ignores tax report corrections and source of wealth checks" do
     %w[TAX_YEAR_END_REPORT_CORRECTED AML_SOURCE_OF_WEALTH_RESPONSE_EXECUTED].each do |event_type|
       assert_equal :ignored, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type

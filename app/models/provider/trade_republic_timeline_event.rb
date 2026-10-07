@@ -125,6 +125,8 @@ module Provider::TradeRepublicTimelineEvent
   ].freeze
 
   DECLINED_SUBTITLE_PATTERN = /declin|failed|reject|cancel/i
+  STAMP_DUTY_EVENT_TYPE = "STAMP_DUTY_TAX_PAID"
+  STAMP_DUTY_CANCELLATION_PATTERN = /cancel/i
   LIFECYCLE_KEYS = %w[status deleted hidden badge].freeze
 
   class << self
@@ -187,6 +189,17 @@ module Provider::TradeRepublicTimelineEvent
       nil
     end
 
+    # Trade Republic reports a stamp duty refund as a STAMP_DUTY_TAX_PAID
+    # event whose subtitle says it is a cancellation. It is a real credit,
+    # not a cancelled event.
+    def stamp_duty_cancellation?(event)
+      return false unless event.is_a?(Hash)
+
+      event = event.with_indifferent_access
+      event[:eventType].to_s == STAMP_DUTY_EVENT_TYPE &&
+        event[:subtitle].to_s.match?(STAMP_DUTY_CANCELLATION_PATTERN)
+    end
+
     def resolved_category(event)
       event = event.with_indifferent_access
       event[:category].to_s.presence || EVENT_TYPE_CATEGORIES[event[:eventType].to_s]
@@ -222,6 +235,8 @@ module Provider::TradeRepublicTimelineEvent
       # merchant names and can contain substrings like "cancel" without
       # meaning the event itself failed.
       def declined_subtitle?(event)
+        return false if stamp_duty_cancellation?(event)
+
         [ event[:subtitle], event[:badge] ].compact.any? do |value|
           value.to_s.match?(DECLINED_SUBTITLE_PATTERN)
         end

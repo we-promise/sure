@@ -3,7 +3,6 @@ class TradeRepublicAccount::ActivitiesProcessor
 
   SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
-  STAMP_DUTY_EVENT_TYPE = "STAMP_DUTY_TAX_PAID"
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
   SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
   ACTIVITY_LABELS_BY_KEY = {
@@ -589,14 +588,10 @@ class TradeRepublicAccount::ActivitiesProcessor
       return CATEGORY_WITHDRAWAL if event[:eventType].to_s == "CARD_CASH_BACK" && signed_amount&.negative?
       # Trade Republic reports a stamp duty cancellation with the same event
       # type and sign as the charge; it is a refund to the account.
-      return CATEGORY_DEPOSIT if stamp_duty_cancellation?(event)
+      return CATEGORY_DEPOSIT if Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
 
       event[:category].to_s.presence ||
         Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES[event[:eventType].to_s].to_s
-    end
-
-    def stamp_duty_cancellation?(event)
-      event[:eventType].to_s == STAMP_DUTY_EVENT_TYPE && event[:subtitle].to_s.match?(/cancel/i)
     end
 
     def cash_label_key(event, default:)
