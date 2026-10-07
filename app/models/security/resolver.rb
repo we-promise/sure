@@ -57,7 +57,13 @@ class Security::Resolver
       # Don't clobber a more specific existing reason (e.g. "provider_disabled",
       # "health_check_failed") with "resolution_pending" — only write a new
       # reason when the record doesn't already have a more specific one.
-      security.offline_reason = reason if reason.present? && security.offline_reason.blank?
+      # A successful search without a match settles an earlier
+      # "resolution_pending", so later resolves use the DB fast path again.
+      if reason.present?
+        security.offline_reason = reason if security.offline_reason.blank?
+      elsif security.offline_reason == "resolution_pending"
+        security.offline_reason = nil
+      end
 
       security.save!
 

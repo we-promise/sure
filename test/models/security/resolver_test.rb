@@ -353,6 +353,25 @@ class Security::ResolverTest < ActiveSupport::TestCase
     assert_equal 0, resolved.failed_fetch_count
   end
 
+  test "clears resolution_pending once a successful provider search confirms there is no match" do
+    db_security = Security.create!(
+      ticker: "XMAW5",
+      exchange_operating_mic: "XNAS",
+      country_code: "US",
+      offline: true,
+      offline_reason: "resolution_pending"
+    )
+
+    Security.expects(:search_provider).returns([])
+
+    resolved = Security::Resolver.new("XMAW5", exchange_operating_mic: "XNAS", country_code: "US").resolve
+
+    assert_equal db_security, resolved
+    resolved.reload
+    assert resolved.offline?
+    assert_nil resolved.offline_reason, "A confirmed no-match must stop the DB fast-path bypass on later resolves"
+  end
+
   test "rejects disabled price_provider" do
     db_security = Security.create!(ticker: "GOOG2", exchange_operating_mic: "XNAS", country_code: "US")
 
