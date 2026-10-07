@@ -2,6 +2,65 @@
 de:
   admin:
     system_health:
+      hosted_usage:
+        loading: "Hosting-Nutzung wird geladen…"
+        title: "Hosting-Nutzung"
+        snapshot: "Schreibgeschützter Datenbankstand vom %{time}"
+        summary:
+          trial_households_count: "Testhaushalte (letzte 30 Tage)"
+          trial_members_count: "Aktuelle Test-Mitgliedskonten"
+          trials_expiring_soon_count: "Testphasen enden in 7 Tagen"
+          cleanup_eligible_count: "Haushalte im Bereinigungsumfang"
+          active_supporter_households_count: "Aktive Unterstützerhaushalte (lokal)"
+          supporter_subscription_count: "Abonnementzeilen mit Stripe-Verknüpfung"
+        summary_help: "Testzahlen beziehen sich auf in den letzten 30 Tagen erfasste Abonnements. Die Zahlen für bald endende Testphasen, Bereinigung und Unterstützung umfassen alle passenden aktuellen Zeilen, ohne Tabellenlimit."
+        limitations_title: "Was diese Zahlen aussagen"
+        limitations: "Die aktuellen Tabellen enthalten keinen vollständigen Verlauf von Testphasen, Zahlungen oder Sitzungsaktivität. Das Erstellungsdatum kann aus einem Import stammen. Mitgliedskonten sind keine nachgewiesenen Einzelpersonen. Diese Ansicht ändert keine Haushalts- oder Abonnementdaten. Zurücksetzungen der gemeinsamen Demo entfernen alte Haushalte und Sitzungen; der Besucherverlauf lässt sich daher nicht rekonstruieren."
+        trials:
+          title: "Kürzlich erfasste Testhaushalte"
+          description: "Seit dem %{date} erfasste Abonnements mit gespeichertem Testende, einschließlich umgewandelter Testphasen. Höchstens %{limit} Haushalte werden angezeigt."
+          sessions_help: "Sitzungen sind gespeicherte Anmeldungen aktivierter Nutzer, keine aktuell online befindlichen Nutzer oder Besuche. Abmelden löscht den Eintrag. Das letzte Erstellungsdatum ist kein Zeitpunkt der letzten Aktivität."
+          empty: "Keine Testhaushalte in diesem Zeitraum erfasst"
+        cleanup:
+          title: "Bereinigungsberechtigung"
+          description: "Entspricht dem bestehenden Bereinigungsumfang: pausiertes oder Testabonnement seit mehr als 14 Tagen abgelaufen, oder kein Abonnement und Haushalt älter als 45 + 14 Tage. Höchstens %{limit} Haushalte werden angezeigt."
+          eligibility_help: "Kürzliche Anmeldungen verhindern keine Übereinstimmung. Die Berechtigung bestätigt keine Löschung; 90 Tage sind die Archivaufbewahrung, nicht die Bereinigungsschwelle für Testphasen."
+          disabled: "Die geplante Testbereinigung ist außerhalb des verwalteten Modus deaktiviert. Hier werden nur passende Datensätze angezeigt."
+          empty: "Keine Haushalte im Bereinigungsumfang"
+          reasons:
+            expired_trial_grace_elapsed: "Testphase beendet; 14 Tage Kulanz abgelaufen"
+            no_subscription_grace_elapsed: "Kein Abonnement; 45 + 14 Tage abgelaufen"
+        supporters:
+          title: "Lokaler Unterstützerstatus"
+          description: "Aktuelle lokale Abonnementzeilen mit Kunden- und Abonnement-IDs im Stripe-Format; das synthetische Demoabonnement ist ausgeschlossen. Der Status bestätigt weder Zahlungseingänge noch Erstzahlungsdaten. Es erfolgt keine Stripe-Anfrage."
+          empty: "Keine Abonnementzeilen mit Stripe-Verknüpfung"
+        columns:
+          household: "Haushalts-ID"
+          recorded_at: "Abonnement erfasst"
+          trial_ends_at: "Testende"
+          status: "Aktueller Status"
+          members: "Mitgliedskonten"
+          retained_sessions: "Gespeicherte Anmeldesitzungen"
+          recent_sessions: "Gespeicherte Sitzungen der letzten 30 Tage"
+          latest_session: "Letzte gespeicherte Anmeldung"
+          cleanup_eligible: "Bereinigung möglich"
+          cleanup_reason: "Grund"
+          subscription_rows: "Abonnementzeilen"
+        statuses:
+          unknown: "Unbekannt"
+          incomplete: "Unvollständig"
+          incomplete_expired: "Unvollständig, abgelaufen"
+          trialing: "Testphase"
+          active: "Aktiv"
+          past_due: "Überfällig"
+          canceled: "Gekündigt"
+          unpaid: "Unbezahlt"
+          paused: "Pausiert"
+          no_subscription: "Kein Abonnement"
+        not_recorded: "Nicht erfasst"
+        eligible: "Berechtigt"
+        not_eligible: "Nicht berechtigt"
+        synthetic_demo: "Synthetische Demo"
       push_notifications:
         send_test: "Testbenachrichtigung senden"
         queueing: "Wird eingereiht…"
@@ -49,6 +108,7 @@ de:
       show:
         title: Systemstatus
         tabs:
+          hosted_usage: "Hosting-Nutzung"
           background_jobs: Hintergrundaufgaben
           ai: KI-Status
         alert:
