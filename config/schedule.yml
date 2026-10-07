@@ -107,5 +107,6 @@ refresh_maintained_goal_targets:
 notify_account_releases:
   cron: "15 6 * * *" # daily at 6:15 AM UTC, after insights
   class: "AccountReleaseNotificationJob"
+  active_job: true
   queue: "scheduled"
   description: "E-mails release reminders for locked accounts to members who chose e-mail (preview)"
