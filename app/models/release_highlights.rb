@@ -23,7 +23,7 @@ module ReleaseHighlights
       return unless eligible?(version)
 
       tag = version.to_release_tag
-      tag unless tag == user.last_seen_release_tag
+      tag unless user.release_seen?(tag)
     rescue ArgumentError
       # Unparseable local version (e.g. "n/a: <sha>") - nothing to highlight.
       nil

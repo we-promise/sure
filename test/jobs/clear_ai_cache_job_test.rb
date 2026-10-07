@@ -59,6 +59,24 @@ class ClearAiCacheJobTest < ActiveSupport::TestCase
     assert_equal 0, completion_entry.metadata["entries_removed"]
   end
 
+  test "bumps entries_cache_version so provenance-filtered caches invalidate" do
+    create_ai_enrichment(@transaction, "category_id")
+    before = @family.reload.entries_cache_version
+
+    ClearAiCacheJob.perform_now(@family)
+
+    assert_not_equal before, @family.reload.entries_cache_version
+  end
+
+  test "rolls back the enrichment deletion when the cache touch fails" do
+    enrichment = create_ai_enrichment(@transaction, "category_id")
+    Transaction.any_instance.stubs(:touch).raises(StandardError, "touch failed")
+
+    ClearAiCacheJob.perform_now(@family)
+
+    assert DataEnrichment.exists?(enrichment.id), "deletion should roll back with the failed touch"
+  end
+
   test "warns instead of failing silently when no family is given" do
     ClearAiCacheJob.perform_now(nil)
 

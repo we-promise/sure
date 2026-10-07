@@ -54,7 +54,9 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
                                        currency: "USD", accountable: Investment.new)
     security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
 
-    ExchangeRate.create!(from_currency: "EUR", to_currency: "GBP", date: date, rate: 0.8)
+    # The fixtures already hold EUR->GBP for today and yesterday, so on the 1st
+    # and 2nd of a month a fresh row for its first day breaks uniqueness.
+    ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "GBP", date: date).update!(rate: 0.8)
     ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: date, rate: 1.25)
     account.holdings.create!(security: security, date: date, qty: 5, price: 150,
                              amount: BigDecimal(750), currency: "GBP", cost_basis: 100)
@@ -632,6 +634,17 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     next_start = past_start + 1.month
     next_end = next_start.end_of_month
     assert_select "a[href=?]", reports_path(period_type: :monthly, start_date: next_start, end_date: next_end)
+  end
+
+  test "period arrows carry their keyboard shortcuts" do
+    past_start = Date.current.beginning_of_month - 2.months
+    get reports_path(period_type: :monthly, start_date: past_start, end_date: past_start.end_of_month)
+    assert_response :ok
+
+    assert_select "a[aria-keyshortcuts='ArrowLeft'][data-hotkey='ArrowLeft']"
+    assert_select "a[aria-keyshortcuts='ArrowRight'][data-hotkey='ArrowRight']"
+    assert_select "[role='tooltip']", text: "Previous period (←)"
+    assert_select "[role='tooltip']", text: "Next period (→)"
   end
 
   test "last 6 months next window extends to current month end when crossing boundary" do

@@ -173,6 +173,20 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     end
   end
 
+  # Pausing keeps the open leftover, and a late payment must still reach it:
+  # the window of an overdue leftover runs to today, paused or not.
+  test "a late payment still matches a paused bill's overdue leftover" do
+    series = create_series(name: "POWER CO", amount: 60, day_offset: -20)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    series.mark_inactive!
+    assert_not occurrence.overdue?
+    entry = create_entry(amount: 60, date: Date.current, name: "POWER CO")
+
+    @matcher.run!
+
+    assert_equal entry, occurrence.allocations.sole.entry
+  end
+
   test "backfill mode writes confirmed history only, never suggestions" do
     series = create_series(name: "CITY WATER", amount: 80, day_offset: -7)
     exact_series = create_series(name: "POWER CO", amount: 60, day_offset: 2)
