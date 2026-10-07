@@ -9,7 +9,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   before_action :set_transaction, only: [ :show, :update, :destroy ]
 
   # What a read_write (annotate only) share may change, as in the web UI.
-  ANNOTATE_FIELDS = %w[notes category_id merchant_id tag_ids user_modified].freeze
+  ANNOTATE_FIELDS = %w[notes category_id merchant_id tag_ids].freeze
 
   def index
     family = current_resource_owner.family

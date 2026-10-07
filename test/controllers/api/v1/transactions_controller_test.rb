@@ -931,7 +931,7 @@ end
     entry = shared_account_entry(accounts(:credit_card))
 
     { amount: 999, date: 1.day.ago.to_date, name: "Renamed", description: "Renamed",
-      currency: "EUR", nature: "income" }.each do |field, value|
+      currency: "EUR", nature: "income", user_modified: true }.each do |field, value|
       patch api_v1_transaction_url(entry.transaction),
             params: { transaction: { notes: "annotated", field => value } },
             headers: api_headers(member_api_key)
