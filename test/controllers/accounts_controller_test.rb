@@ -410,6 +410,23 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "split child tooltips use a keyboard focusable drawer link" do
+    parent = create_transaction(account: @account, amount: 100)
+    parent.split!([ { name: "First Part", amount: 60, category_id: nil }, { name: "Second Part", amount: 40, category_id: nil } ])
+    child = parent.child_entries.first
+
+    [ false, true ].each do |compact|
+      @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => compact, "show_split_grouped" => false))
+      get account_url(@account)
+
+      assert_response :success
+      assert_select "turbo-frame##{dom_id(child)} a[aria-label=?]", I18n.t("transactions.transaction.split_child_tooltip") do
+        assert_select "span[data-controller='DS--tooltip'] span[aria-describedby]"
+        assert_select "span[data-controller='DS--tooltip'] button", count: 0
+      end
+    end
+  end
+
   test "show filters entries by search term" do
     create_transaction(name: "Uniquely Named Coffee Shop", amount: 5, account: @account)
     create_transaction(name: "Grocery Store", amount: 40, account: @account)

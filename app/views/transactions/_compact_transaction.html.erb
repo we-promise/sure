@@ -68,7 +68,9 @@
                 <%= render DS::Pill.new(label: t("transactions.transaction.split"), tone: :neutral, marker: false, icon: "split") %>
               <% end %>
               <% if entry.split_child? && !in_split_group %>
-                <%= render DS::Tooltip.new(text: t("transactions.transaction.split_child_tooltip"), icon: "corner-down-right", size: "sm") %>
+                <%= link_to entry_path(entry, drawer_params), data: { turbo_frame: "drawer", turbo_prefetch: false }, aria: { label: t("transactions.transaction.split_child_tooltip") }, class: "inline-flex focus-ring rounded" do %>
+                  <%= render DS::Tooltip.new(text: t("transactions.transaction.split_child_tooltip"), icon: "corner-down-right", size: "sm", as: :span) %>
+                <% end %>
               <% end %>
               <% if transaction.transfer.present? %>
                 <%= render "transactions/transfer_match", transaction: transaction %>
