@@ -17,13 +17,14 @@ class Transfer < ApplicationRecord
   validate :transfer_has_same_family
 
   class << self
-    def kind_for_account(account)
+    def kind_for_account(account, source_account: nil)
       if account.loan?
         "loan_payment"
       elsif account.credit_card?
         "cc_payment"
       elsif account.investment? || account.crypto?
-        "investment_contribution"
+        source_is_investment = source_account.present? && (source_account.investment? || source_account.crypto?)
+        source_is_investment ? "funds_movement" : "investment_contribution"
       elsif account.liability?
         "cc_payment"
       else
