@@ -15,6 +15,8 @@ class AccountStatement::MetadataDetector
     (?:
       (?<year_first>\d{4})[-_\.](?<month_first>0?[1-9]|1[0-2])
       |
+      (?<month_lead>0?[1-9]|1[0-2])[-_\.](?<year_lead>\d{4})
+      |
       (?<month_name>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)
       [-_\s\.]+(?<year_second>\d{4})
     )
@@ -35,6 +37,7 @@ class AccountStatement::MetadataDetector
   MAX_CSV_COLUMNS = 100
   MAX_CSV_DATE_SAMPLES = 250
   MAX_CSV_SAMPLE_BYTES = 256
+  MAX_PDF_PAGES = 2
 
   attr_reader :statement, :content
 
@@ -47,6 +50,12 @@ class AccountStatement::MetadataDetector
     output = statement.sanitized_parser_output || {}
     metadata_sources = []
 
+    # The document's own text is more reliable than the filename, so it runs
+    # first and the filename only fills what it left blank.
+    if statement.pdf? && detect_from_pdf(output)
+      metadata_sources << "pdf_text"
+    end
+
     if detect_from_filename
       metadata_sources << "filename"
     end
@@ -56,12 +65,14 @@ class AccountStatement::MetadataDetector
     elsif statement.xlsx?
       output["spreadsheet_detection"] = "filename_only"
     elsif statement.pdf?
-      output["pdf_detection"] = "filename_only"
+      output["pdf_detection"] ||= "filename_only"
     end
 
     output["metadata_sources"] = metadata_sources
     statement.sanitized_parser_output = output
-    statement.parser_confidence ||= if metadata_sources.include?("csv_dates")
+    statement.parser_confidence ||= if metadata_sources.include?("pdf_text")
+      0.85
+    elsif metadata_sources.include?("csv_dates")
       0.65
     elsif metadata_sources.any?
       0.45
@@ -120,6 +131,42 @@ class AccountStatement::MetadataDetector
       end
 
       detected
+    end
+
+    def detect_from_pdf(output)
+      summary = AccountStatement::TradeRepublicStatementParser.parse(pdf_text)
+      return false unless summary
+
+      statement.period_start_on ||= summary.period_start_on
+      statement.period_end_on ||= summary.period_end_on
+      statement.institution_name_hint ||= "Trade Republic"
+      statement.account_last4_hint ||= summary.iban_last4
+
+      # Only keep balances when they are in the statement's currency; a
+      # mismatch would make reconciliation compare different currencies.
+      if summary.currency.present? && (statement.currency.blank? || statement.currency == summary.currency)
+        statement.currency ||= summary.currency
+        statement.opening_balance ||= summary.opening_balance
+        statement.closing_balance ||= summary.closing_balance
+      end
+
+      output["pdf_detection"] = "text"
+      output["pdf"] = {
+        "layout" => "trade_republic",
+        "balances_detected" => statement.opening_balance.present? && statement.closing_balance.present?
+      }
+      true
+    end
+
+    # Text of the first pages only: periods and balance summaries sit at the
+    # top of a statement. Any reader failure leaves filename detection as the
+    # fallback instead of failing the upload.
+    def pdf_text
+      reader = PDF::Reader.new(StringIO.new(content.to_s))
+      reader.pages.first(MAX_PDF_PAGES).map(&:text).join("\n")
+    rescue StandardError => e
+      Rails.logger.info("AccountStatement::MetadataDetector - PDF text unavailable: #{e.class}")
+      ""
     end
 
     def detect_from_csv(output)
@@ -202,9 +249,9 @@ class AccountStatement::MetadataDetector
       match = basename.match(MONTH_PATTERN)
       return nil unless match
 
-      year = (match[:year_first] || match[:year_second]).to_i
-      month = if match[:month_first]
-        match[:month_first].to_i
+      year = (match[:year_first] || match[:year_lead] || match[:year_second]).to_i
+      month = if match[:month_first] || match[:month_lead]
+        (match[:month_first] || match[:month_lead]).to_i
       else
         Date::ABBR_MONTHNAMES.index(match[:month_name][0, 3].capitalize)
       end
