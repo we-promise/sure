@@ -336,6 +336,70 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
       "a 360-payment schedule ran #{long_count} statements where a 24-payment one ran #{short_count}"
   end
 
+  # we-promise/sure#3958: the tooltip says what each scheduled payment is made
+  # of. The figures are the schedule's own rows, so the chart and the Schedule
+  # tab's table cannot disagree.
+  test "each scheduled payment point carries the payment's principal and interest" do
+    loan = on_contract_loan
+    payload = Loan::PayoffChart.new(loan, as_of: @today, period: @all_time).payload
+    rows = loan.amortization_schedule.payments.index_by { |row| row.date.iso8601 }
+
+    payments = payload[:scheduled].drop(1)
+    assert_equal rows.size, payments.size
+    payments.each do |point|
+      row = rows.fetch(point[:date])
+      assert_equal row.principal.amount.to_f, point[:principal], "principal on #{point[:date]}"
+      assert_equal row.interest.amount.to_f, point[:interest], "interest on #{point[:date]}"
+      assert_in_delta row.payment.amount.to_f, point[:principal] + point[:interest], 0.005,
+        "the split on #{point[:date]} must add up to the payment"
+    end
+  end
+
+  # The point of showing the split: early payments are mostly interest, late
+  # ones mostly principal. If this ever fails the tooltip is telling users
+  # something comfortable and false.
+  test "the split on a long loan is interest-heavy at the start and principal-heavy at the end" do
+    payments = Loan::PayoffChart.new(older_loan, as_of: @today, period: @all_time).payload[:scheduled].drop(1)
+
+    assert_operator payments.first[:interest], :>, payments.first[:principal]
+    assert_operator payments.last[:principal], :>, payments.last[:interest]
+    assert_operator payments.first[:interest], :>, payments.last[:interest]
+  end
+
+  # Only contracted payments are split. The opening point is the amount
+  # borrowed, not a payment, and the projection is a forecast.
+  test "the opening point, the projection and the recorded balance carry no split" do
+    payload = Loan::PayoffChart.new(on_contract_loan, as_of: @today, period: @all_time).payload
+
+    assert_not payload[:scheduled].first.key?(:principal)
+    assert_not payload[:scheduled].first.key?(:interest)
+    [ :projected, :actual ].each do |key|
+      assert payload[key].any?, "#{key} must have points for this to mean anything"
+      assert payload[key].none? { |point| point.key?(:principal) || point.key?(:interest) },
+        "the #{key} series must not carry a split"
+    end
+  end
+
+  # CodeRabbit on #305: the split is shown at the currency's own precision, as
+  # the Schedule tab shows it, so a small component never rounds to zero. The
+  # payload carries that precision because Intl's default can differ from the
+  # app's (BTC is 8 here, 2 to Intl).
+  test "the payload carries the loan currency's precision for the split" do
+    loan = on_contract_loan
+    assert_equal 2, Loan::PayoffChart.new(loan, as_of: @today).payload[:currency_precision]
+
+    loan.account.update_columns(currency: "JPY")
+    assert_equal 0, Loan::PayoffChart.new(loan.reload, as_of: @today).payload[:currency_precision]
+  end
+
+  # The tooltip names the figures with the Schedule tab's own column labels.
+  test "the payload labels the split with the schedule table's own words" do
+    payload = Loan::PayoffChart.new(on_contract_loan, as_of: @today).payload
+
+    assert_equal I18n.t("loans.tabs.schedule.principal"), payload[:labels][:principal]
+    assert_equal I18n.t("loans.tabs.schedule.interest"), payload[:labels][:interest]
+  end
+
   private
     # Each bounded window the loan chart offers, with the start date the
     # shared Period gives it on @today. All is handled by @all_time.
