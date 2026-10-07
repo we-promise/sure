@@ -17,7 +17,7 @@ class AccountStatement::TradeRepublicStatementParser
   MONTHS = {
     "jan" => 1, "gen" => 1, "ene" => 1, "janv" => 1,
     "feb" => 2, "fév" => 2, "fev" => 2, "févr" => 2, "fevr" => 2,
-    "mar" => 3, "mär" => 3, "mrz" => 3, "mrt" => 3,
+    "mar" => 3, "maa" => 3, "mär" => 3, "mrz" => 3, "mrt" => 3,
     "apr" => 4, "avr" => 4, "abr" => 4,
     "may" => 5, "mag" => 5, "mai" => 5, "mei" => 5,
     "jun" => 6, "giu" => 6, "juin" => 6,
@@ -28,7 +28,7 @@ class AccountStatement::TradeRepublicStatementParser
     "nov" => 11,
     "dec" => 12, "dic" => 12, "dez" => 12, "déc" => 12
   }.freeze
-  DATE_TOKEN = /(\d{1,2})\.?\s+([[:alpha:]]{3,9})\.?\s+(\d{4})/
+  DATE_TOKEN = /(\d{1,2})\.?\s+([[:alpha:]]{3,10})\.?\s+(\d{4})/
   PERIOD_PATTERN = /#{DATE_TOKEN}\s*[-–]\s*#{DATE_TOKEN}/
   # Where the summary table starts: its opening-balance column header, or the
   # summary section title for editions whose headers are split over lines.
@@ -37,7 +37,12 @@ class AccountStatement::TradeRepublicStatementParser
     "solde initial", "saldo inicial", "beginsaldo",
     "estratto conto riassuntivo", "synthèse du relevé de compte"
   ].freeze
-  AMOUNT_PATTERN = /(-?\d{1,3}(?:[.,\u00A0\u202F ]\d{3})*[.,]\d{2})[\u00A0 ]?€|€[\u00A0 ]?(-?\d{1,3}(?:[.,\u00A0\u202F ]\d{3})*[.,]\d{2})/
+  AMOUNT_NUMBER = /\d{1,3}(?:[.,\u00A0\u202F ]\d{3})*[.,]\d{2}/
+  # "1.234,56 €", "-1.234,56 €", "€1,234.56", "-€1,234.56" and "€-1,234.56".
+  AMOUNT_PATTERN = Regexp.union(
+    /(?<suffix_sign>-)?(?<suffix_number>#{AMOUNT_NUMBER})[\u00A0 ]?€/,
+    /(?<prefix_sign>-)?€[\u00A0 ]?(?<inner_sign>-)?(?<prefix_number>#{AMOUNT_NUMBER})/
+  )
   IBAN_PATTERN = /IBAN[:\s]+([A-Z]{2}\d{2}[A-Z0-9]{10,30})\b/
   TOLERANCE = BigDecimal("0.01")
 
@@ -99,13 +104,25 @@ class AccountStatement::TradeRepublicStatementParser
       header_index = SUMMARY_MARKERS.filter_map { |marker| downcased.index(marker) }.min
       return nil unless header_index
 
-      amounts = @text[header_index..].scan(AMOUNT_PATTERN).first(4).map { |groups| parse_amount(groups.compact.first) }
+      amounts = amount_matches(@text[header_index..]).first(4).map { |match| signed_amount(match) }
       return nil if amounts.size < 4 || amounts.any?(&:nil?)
 
       opening, money_in, money_out, closing = amounts
       return nil unless (opening + money_in - money_out - closing).abs <= TOLERANCE
 
       [ opening, closing ]
+    end
+
+    def amount_matches(text)
+      text.to_enum(:scan, AMOUNT_PATTERN).map { Regexp.last_match }
+    end
+
+    def signed_amount(match)
+      number = parse_amount(match[:suffix_number] || match[:prefix_number])
+      return nil unless number
+
+      negative = match[:suffix_sign] || match[:prefix_sign] || match[:inner_sign]
+      negative ? -number : number
     end
 
     # Accepts "1.944,58" and "1,944.58": the last separator is the decimal one.
