@@ -3,12 +3,9 @@ class ImportsController < ApplicationController
 
   before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
-  before_action :require_writable_import_accounts!, only: %i[publish revert]
-  before_action :reject_guest_family_config_import!, only: %i[create publish]
-
-  # Imports that write family-wide configuration (categories, tags, rules,
-  # merchants), which guests may view but not change.
-  FAMILY_CONFIG_IMPORT_TYPES = %w[CategoryImport MerchantImport RuleImport SureImport].freeze
+  before_action :require_writable_import_accounts!, only: %i[publish revert destroy]
+  before_action :reject_guest_family_config_import!, except: %i[index new show summary]
+  before_action :require_guest_writable_created_accounts!, only: %i[revert destroy]
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -180,7 +177,20 @@ class ImportsController < ApplicationController
 
     def reject_guest_family_config_import!
       type = @import ? @import.type : params.dig(:import, :type).to_s
-      require_non_guest! if FAMILY_CONFIG_IMPORT_TYPES.include?(type)
+      require_non_guest! if Import::FAMILY_CONFIG_TYPES.include?(type)
+    end
+
+    # Reverting or deleting an import also destroys the accounts it created,
+    # which require_writable_import_accounts! leaves out. Guests are read-only
+    # by design, so they may only do that to accounts they can write.
+    def require_guest_writable_created_accounts!
+      return unless Current.user.guest?
+
+      created_ids = @import.accounts.pluck(:id)
+      writable_ids = Current.family.accounts.writable_by(Current.user).where(id: created_ids).pluck(:id)
+      return if (created_ids - writable_ids).empty?
+
+      redirect_back_or_to imports_path, alert: t("accounts.not_authorized")
     end
 
     def require_statement_import_permission!
@@ -191,8 +201,9 @@ class ImportsController < ApplicationController
     end
 
     # Imports are family-scoped, so a member can reach an import configured by
-    # someone else, or one whose target account was unshared since. Publishing
-    # or reverting writes into its accounts, so require write access to all.
+    # someone else, or one whose target account was unshared since. Publishing,
+    # reverting or deleting writes into its accounts, so require write access
+    # to all.
     def require_writable_import_accounts!
       return if @import.accounts_writable_by?(Current.user)
 

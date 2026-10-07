@@ -70,6 +70,52 @@ class GuestReadOnlyConfigTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("shared.require_non_guest"), flash[:alert]
   end
 
+  test "guest cannot revert, cancel or delete a family configuration import" do
+    import = family_guest.family.imports.create!(type: "SureImport", status: :complete)
+    Import.any_instance.expects(:revert_later).never
+    Import.any_instance.expects(:force_fail!).never
+
+    put revert_import_path(import)
+    assert_equal I18n.t("shared.require_non_guest"), flash[:alert]
+
+    post cancel_import_path(import)
+    assert_equal I18n.t("shared.require_non_guest"), flash[:alert]
+
+    assert_no_difference("Import.count") do
+      delete import_path(import)
+    end
+    assert_equal I18n.t("shared.require_non_guest"), flash[:alert]
+  end
+
+  test "guest cannot revert or delete an import whose created accounts they cannot write" do
+    import = family_guest.family.imports.create!(type: "TransactionImport", status: :complete)
+    account = family_guest.family.accounts.create!(
+      name: "Imported by admin", balance: 0, currency: "USD", accountable: Depository.new,
+      owner: users(:family_admin), import: import
+    )
+    Import.any_instance.expects(:revert_later).never
+
+    put revert_import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+
+    assert_no_difference([ "Import.count", "Account.count" ]) do
+      delete import_path(import)
+    end
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert account.reload.persisted?
+  end
+
+  test "guest does not see revert or delete for family configuration imports" do
+    complete = family_guest.family.imports.create!(type: "RuleImport", status: :complete)
+    pending = family_guest.family.imports.create!(type: "CategoryImport")
+
+    get imports_path
+
+    assert_response :success
+    assert_select "form[action=?]", revert_import_path(complete), count: 0
+    assert_select "form[action=?]", import_path(pending), count: 0
+  end
+
   test "guest does not see controls to change family configuration" do
     get categories_path
     assert_select "a[href=?]", new_category_path, count: 0
