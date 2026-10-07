@@ -37,6 +37,7 @@ tr:
       current: Güncel
       next_payment: Sonraki ödeme
       around: '%{date} civarı'
+      overview: Genel Bakış
       rules: Bu fatura nasıl eşleştirilir
       rule_named: '%{name}'
       rule_amount_range: '%{min} ile %{max} arası'
@@ -54,7 +55,6 @@ tr:
       ytd: Bu yıl ödenen
       last_account: Son kullanılan hesap
       upcoming: Yaklaşanlar
-      recent_payments: Son ödemeler
       manual_payment: Manuel ödeme
       history: Geçmiş
       payment_count:
@@ -85,7 +85,6 @@ tr:
     summary:
       remaining: '%{amount} kaldı'
       paid_headline: '%{amount} ödendi'
-      cost_line: Ödeme başına ortalama %{average}, yılda yaklaşık %{annualized}
     add_bill: Fatura ekle
     manage: Yönet
     find_payment: Ödeme bul
@@ -93,7 +92,6 @@ tr:
     review_match: Eşleşmeyi incele
     resolve: Düzelt
     manage_payments: Ödemeleri yönet
-    view_full_bill: Faturanın tamamını görüntüle
     match:
       same_merchant: Aynı satıcı
       name_matches: Ad eşleşiyor
@@ -107,8 +105,9 @@ tr:
         one: Son ödeme tarihinden %{count} gün sonra
         other: Son ödeme tarihinden %{count} gün sonra
     attention:
+      paused: Duraklatıldı
       needs_review: Eşleşme incelenmeli
-      partial: Kısmi · %{amount} kaldı
+      partial: Kısmi
       amount_changed: Tutar değişti
       overdue:
         one: '%{count} gün gecikmiş'
@@ -120,7 +119,7 @@ tr:
     cancelled_still_scheduled: Bunu %{date} tarihinde iptal edildi olarak işaretlediniz, ancak hâlâ planlı olduğu için gelecekteki faturalar görünmeye devam edecek.
     paid_over: '%{paid} ödendi, beklenenden fazla'
     remaining_label: kalan
-    debt_payment: ' · borç ödemesi'
+    debt_payment: Borç ödemesi
     paid_from: '%{account} hesabından'
     amount_range: '%{min} ile %{max} arasında değişir'
     possible_duplicate: Olası mükerrer
@@ -260,6 +259,7 @@ tr:
         one: İşlemlerinizde %{count} yinelenen ödeme bulduk. Buradaki toplamların gerçekte ödediğinizle eşleşmesi için gözden geçirin.
         other: İşlemlerinizde %{count} yinelenen ödeme bulduk. Buradaki toplamların gerçekte ödediğinizle eşleşmesi için gözden geçirin.
       detected_review_action: Gözden geçir
+      notices_heading: Değişiklikler
       needs_review: İnceleme gerekiyor
       notice_trial: '%{name} deneme süresi %{date} tarihinde bitiyor'
       notice_renewal: '%{name} %{date} tarihinde yenileniyor'

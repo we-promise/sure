@@ -291,6 +291,21 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  # Regression: the sync window must start at the old date, or the incremental
+  # balance calculation counts the moved transaction twice.
+  test "moving a transaction later syncs from its original date" do
+    original_date = 5.days.ago.to_date
+    @entry.update!(date: original_date)
+
+    Account.any_instance.expects(:sync_later).with(window_start_date: original_date)
+
+    patch transaction_url(@entry), params: {
+      entry: { date: 2.days.ago.to_date, entryable_type: @entry.entryable_type }
+    }
+
+    assert_equal 2.days.ago.to_date, @entry.reload.date
+  end
+
   test "updates with transaction details" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       patch transaction_url(@entry), params: {
@@ -1507,6 +1522,9 @@ end
     # Transfer#categorizable? / #payment? walk to_account via
     # transfer.inflow_transaction.entry.account. Without nested includes those
     # become one lookup triad per transfer row during list render.
+    # categorizable? also walks from_account via the outflow leg, which is only
+    # loaded through the inverse_of on Transaction::Transferable; dropping it
+    # makes the transactions.id assertion below fail.
     normalized_queries = queries.map { |sql| normalize_sql_query(sql) }
     assert_empty single_record_lookups(normalized_queries, table: "transactions", column: "id"),
                  "Expected transfer counterparty transactions to be preloaded"

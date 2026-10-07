@@ -35,6 +35,9 @@ en:
       category_search_placeholder: Search categories
       create_category: 'Create "%{name}"'
       create_category_error: Could not create category
+      create_as_subcategory: Add as a subcategory…
+      choose_parent: 'Create "%{name}" under:'
+      back_to_categories: Back
       date: Date
       description: Description
       description_placeholder: Describe transaction
