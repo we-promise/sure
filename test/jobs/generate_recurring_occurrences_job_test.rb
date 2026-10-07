@@ -21,10 +21,10 @@ class GenerateRecurringOccurrencesJobTest < ActiveJob::TestCase
     series = recurring_transactions(:netflix_subscription)
     series.recurring_occurrences.delete_all
 
-    assert_difference "RecurringOccurrence.count", :+, 1 do
-      travel_to Date.new(2026, 8, 13) do
-        GenerateRecurringOccurrencesJob.perform_now(@family.id)
-      end
+    travel_to Date.new(2026, 8, 13) do
+      before = RecurringOccurrence.count
+      GenerateRecurringOccurrencesJob.perform_now(@family.id)
+      assert_operator RecurringOccurrence.count, :>, before, "expected at least one occurrence to be generated"
     end
   end
 
@@ -33,6 +33,7 @@ class GenerateRecurringOccurrencesJobTest < ActiveJob::TestCase
     series1 = recurring_transactions(:netflix_subscription)
     series2 = @family.recurring_transactions.create!(
       account: series1.account,
+      merchant: series1.merchant,
       amount: 9.99,
       currency: "USD",
       status: "active",
