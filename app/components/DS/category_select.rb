@@ -32,4 +32,13 @@ class DS::CategorySelect < DesignSystemComponent
   def menu_id
     "#{field_id}_menu"
   end
+
+  def parent_label_id
+    "#{menu_id}_parent_label"
+  end
+
+  # Only top-level categories can be parents (categories are two levels deep).
+  def parent_options
+    categories.select { |category| category.parent_id.nil? }.sort_by { |category| category.name.downcase }
+  end
 end

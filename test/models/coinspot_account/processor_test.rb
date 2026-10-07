@@ -346,6 +346,21 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "CoinspotAccount::Processor::UnknownOrderTypeError", result[:failures].first[:error_class]
   end
 
+  # CoinSpot opens at zero through the same shared path as Kraken, so it needs
+  # the same repair: history older than the anchor leaves the account starting
+  # after entries it is supposed to precede.
+  test "moves the opening anchor before the first imported entry" do
+    Account::OpeningBalanceManager.new(@account).set_opening_balance(balance: 0, date: Date.new(2026, 6, 1))
+
+    CoinspotAccount::Processor.new(@coinspot_account).process
+
+    # A fresh instance: the manager memoises the anchor it last read.
+    account = Account.find(@account.id)
+    oldest = account.entries.where.not(entryable_type: "Valuation").minimum(:date)
+    assert_equal oldest.prev_day, account.opening_anchor_date
+    assert_equal 0, account.opening_anchor_balance
+  end
+
   private
 
     def order_payload(id, coin, amount, audtotal, rate, fee)
