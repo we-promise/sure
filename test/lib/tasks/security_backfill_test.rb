@@ -168,6 +168,48 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     refute_includes at_rest, "1500.0"
   end
 
+  test "backfills plaintext MonobankAccount card number and IBAN" do
+    account = monobank_accounts(:black_card)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE monobank_accounts SET masked_pan = ?, iban = ? WHERE id = ?",
+      "537541******9999", "UA-PLAINTEXT-IBAN", account.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    account.reload
+    assert_equal "537541******9999", account.masked_pan
+    assert_equal "UA-PLAINTEXT-IBAN", account.iban
+    refute_includes account.read_attribute_before_type_cast(:iban).to_s, "UA-PLAINTEXT-IBAN"
+    refute_includes account.read_attribute_before_type_cast(:masked_pan).to_s, "9999"
+  end
+
+  test "backfills plaintext FioAccount IBAN" do
+    account = fio_accounts(:checking)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE fio_accounts SET iban = ? WHERE id = ?", "CZ-PLAINTEXT-IBAN", account.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    assert_equal "CZ-PLAINTEXT-IBAN", account.reload.iban
+    refute_includes account.read_attribute_before_type_cast(:iban).to_s, "CZ-PLAINTEXT-IBAN"
+  end
+
+  # Pins the manifest's content to CURRENT_BACKFILL_VERSION: a manifest change
+  # without a version bump would leave installs that completed the previous
+  # backfill marked "complete", turning off the plaintext fallback for fields
+  # their backfill never touched. On a deliberate change, bump the version and
+  # add its digest here.
+  BACKFILL_MANIFEST_DIGESTS = {
+    4 => "946aff1a968115a3f11cd5174ea91abfce3c9076635db68c95ee7054ca564410"
+  }.freeze
+
+  test "backfill manifest changes come with a CURRENT_BACKFILL_VERSION bump" do
+    digest = Digest::SHA256.hexdigest(ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.sort.to_h.to_json)
+
+    assert_equal BACKFILL_MANIFEST_DIGESTS[ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION], digest,
+      "BACKFILL_MANIFEST changed - bump CURRENT_BACKFILL_VERSION and record the new digest (#{digest})"
+  end
+
   test "covers every provider item and account model, not just the original subset" do
     out, _err = capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "true") }
     results = JSON.parse(out.lines.last)["results"]
@@ -176,12 +218,12 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     # entirely before this change (would leave plaintext data with no
     # remediation path even after the encryption_ready? gating bug is fixed).
     %w[
-      akahu_items binance_items brex_items coinbase_items coinstats_items
-      ibkr_items indexa_capital_items kraken_items mercury_items
+      akahu_items binance_items brex_items coinbase_items coinspot_items coinstats_items
+      fio_items ibkr_items indexa_capital_items kraken_items mercury_items monobank_items
       onchain_wallet_items questrade_items redbark_items snaptrade_items
       sophtron_items trade_republic_items trading212_items up_items wise_items
-      akahu_accounts binance_accounts brex_accounts ibkr_accounts
-      indexa_capital_accounts kraken_accounts onchain_wallet_accounts
+      akahu_accounts binance_accounts brex_accounts coinspot_accounts fio_accounts ibkr_accounts
+      indexa_capital_accounts kraken_accounts monobank_accounts onchain_wallet_accounts
       questrade_accounts redbark_accounts sophtron_accounts trade_republic_accounts
       trading212_accounts up_accounts wise_accounts
       api_keys sso_providers sso_identity_blocks
@@ -206,6 +248,31 @@ class SecurityBackfillTest < ActiveSupport::TestCase
         "ActiveRecordEncryptionConfig::BACKFILL_MANIFEST - update the manifest " \
         "and bump CURRENT_BACKFILL_VERSION together with whatever changed " \
         "#{model_class_name}'s `encrypts` declarations"
+    end
+  end
+
+  # The parity test above only checks models already listed in the manifest,
+  # so a model that encrypts fields but was never added (Fio, Monobank and
+  # Coinspot, previously) passed silently - and once the completed backfill
+  # turns off the legacy-plaintext fallback, its old rows raise on read.
+  # Session is excluded on purpose, see BACKFILL_MANIFEST's comment.
+  test "every model with encrypted attributes is in the backfill manifest" do
+    Rails.application.eager_load!
+
+    manifest = ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.values.to_h
+    # Named, loadable classes only: anonymous test-only subclasses aren't real models.
+    encrypted_models = ApplicationRecord.descendants.select do |model|
+      !model.abstract_class? && model.name&.safe_constantize == model && model.encrypted_attributes.present?
+    end
+
+    encrypted_models.each do |model|
+      next if model.base_class.name == "Session"
+
+      fields = manifest[model.base_class.name]
+      assert fields, "#{model.name} encrypts #{model.encrypted_attributes.to_a.sort.inspect} but is missing from " \
+        "ActiveRecordEncryptionConfig::BACKFILL_MANIFEST - add it and bump CURRENT_BACKFILL_VERSION"
+      assert_empty model.encrypted_attributes.to_a - fields,
+        "#{model.name} encrypts fields the backfill manifest does not cover"
     end
   end
 

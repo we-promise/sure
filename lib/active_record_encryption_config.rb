@@ -33,7 +33,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 3
+  CURRENT_BACKFILL_VERSION = 4
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -48,7 +48,9 @@ module ActiveRecordEncryptionConfig
   # to a model's `encrypts` list without a matching manifest update (the
   # SnaptradeAccount#raw_balances_payload gap, previously) fails CI instead
   # of silently shipping a field the backfill - and thus the legacy-plaintext
-  # fallback gating - never actually covers. Bump CURRENT_BACKFILL_VERSION
+  # fallback gating - never actually covers. It also requires every model that
+  # declares `encrypts` to appear here, so a whole provider can't be left out
+  # (Fio, Monobank and Coinspot, previously). Bump CURRENT_BACKFILL_VERSION
   # whenever this changes. Session is deliberately excluded: its backfill
   # (lib/tasks/security_backfill.rake#backfill_sessions) also hashes
   # ip_address into ip_address_digest, which isn't a 1:1 encrypted copy of an
@@ -62,15 +64,18 @@ module ActiveRecordEncryptionConfig
     simplefin_items: [ "SimplefinItem", %i[access_url raw_payload raw_institution_payload] ],
     lunchflow_items: [ "LunchflowItem", %i[api_key raw_payload raw_institution_payload] ],
     enable_banking_items: [ "EnableBankingItem", %i[client_certificate session_id raw_payload raw_institution_payload] ],
+    fio_items: [ "FioItem", %i[token raw_payload raw_institution_payload] ],
     akahu_items: [ "AkahuItem", %i[app_token user_token raw_payload raw_institution_payload] ],
     binance_items: [ "BinanceItem", %i[api_key api_secret raw_payload] ],
     brex_items: [ "BrexItem", %i[token raw_payload raw_institution_payload] ],
     coinbase_items: [ "CoinbaseItem", %i[api_key api_secret raw_payload raw_institution_payload] ],
+    coinspot_items: [ "CoinspotItem", %i[api_key api_secret raw_payload] ],
     coinstats_items: [ "CoinstatsItem", %i[api_key raw_payload raw_institution_payload] ],
     ibkr_items: [ "IbkrItem", %i[query_id token raw_payload] ],
     indexa_capital_items: [ "IndexaCapitalItem", %i[password api_token username document raw_payload raw_institution_payload] ],
     kraken_items: [ "KrakenItem", %i[api_key api_secret raw_payload] ],
     mercury_items: [ "MercuryItem", %i[token raw_payload raw_institution_payload] ],
+    monobank_items: [ "MonobankItem", %i[access_token raw_payload raw_institution_payload] ],
     onchain_wallet_items: [ "OnchainWalletItem", %i[etherscan_api_key] ],
     questrade_items: [ "QuestradeItem", %i[refresh_token raw_payload raw_institution_payload] ],
     redbark_items: [ "RedbarkItem", %i[api_key raw_payload raw_institution_payload] ],
@@ -84,10 +89,13 @@ module ActiveRecordEncryptionConfig
     simplefin_accounts: [ "SimplefinAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload] ],
     lunchflow_accounts: [ "LunchflowAccount", %i[raw_payload raw_transactions_payload] ],
     enable_banking_accounts: [ "EnableBankingAccount", %i[raw_payload raw_transactions_payload] ],
+    fio_accounts: [ "FioAccount", %i[raw_payload raw_transactions_payload iban] ],
     snaptrade_accounts: [ "SnaptradeAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload raw_balances_payload] ],
     coinbase_accounts: [ "CoinbaseAccount", %i[raw_payload raw_transactions_payload] ],
+    coinspot_accounts: [ "CoinspotAccount", %i[raw_payload raw_transactions_payload] ],
     coinstats_accounts: [ "CoinstatsAccount", %i[raw_payload raw_transactions_payload] ],
     mercury_accounts: [ "MercuryAccount", %i[raw_payload raw_transactions_payload] ],
+    monobank_accounts: [ "MonobankAccount", %i[raw_payload raw_transactions_payload masked_pan iban] ],
     akahu_accounts: [ "AkahuAccount", %i[raw_payload raw_transactions_payload] ],
     binance_accounts: [ "BinanceAccount", %i[raw_payload raw_transactions_payload] ],
     brex_accounts: [ "BrexAccount", %i[raw_payload raw_transactions_payload] ],
