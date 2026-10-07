@@ -239,6 +239,21 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("202"), current.cost_basis
   end
 
+  # No rate for the trade's day means its cost in the account's currency is
+  # unknown. Counting it at 1:1 would report 1,010 for a purchase that cost
+  # 2,020 at the real rate, and nothing would mark the figure as a guess.
+  test "a foreign purchase with no rate for its day leaves the basis unknown" do
+    load_prices
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    create_trade(@voo, qty: 10, date: 1.day.ago.to_date, price: 100, fee: 10, currency: "EUR", account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    assert_nil current.cost_basis
+  end
+
   # The tracker never reads a disposal's price, so this cannot be observed
   # through the basis; it is pinned on the helper directly.
   test "a disposal's price is returned without its fee" do

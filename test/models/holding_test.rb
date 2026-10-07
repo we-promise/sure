@@ -57,6 +57,10 @@ class HoldingTest < ActiveSupport::TestCase
   end
 
   test "calculates average cost basis from another currency" do
+    [ 1.day.ago.to_date, Date.current ].each do |date|
+      ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: date, rate: 1)
+    end
+
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current, currency: "CAD")
 
@@ -85,6 +89,21 @@ class HoldingTest < ActiveSupport::TestCase
 
     # (10 * 212 + 10 + 15 * 216 + 5) / 25 = 5,375 / 25
     assert_equal Money.new(BigDecimal("215")), @amzn.avg_cost
+  end
+
+  # The fallback's COALESCE(rate, 1) counted a foreign purchase at 1:1 when its
+  # day had no rate, stating a cost that looks measured and is not.
+  test "a foreign purchase with no rate for its day makes the average cost unknown" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+
+    assert_nil @amzn.avg_cost
+  end
+
+  test "a foreign purchase whose stored rate cannot convert makes the average cost unknown" do
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 0)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+
+    assert_nil @amzn.avg_cost
   end
 
   test "calculates total return trend" do

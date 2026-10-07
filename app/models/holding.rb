@@ -308,6 +308,15 @@ class Holding < ApplicationRecord
         Trade::INTERNAL_MOVEMENT_LABELS
       )
 
+      # A foreign purchase with no usable rate for its day has a cost nothing
+      # here knows, so the position's is unknown too, as with an internal
+      # movement -- counting it at 1:1 would state a figure that looks measured
+      # and is not. A stored rate of zero or less converts nothing, so it counts
+      # as missing, as it does in Money#exchange_to.
+      return nil if trades.where(
+        "trades.currency <> ? AND (exchange_rates.rate IS NULL OR exchange_rates.rate <= 0)", account.currency
+      ).exists?
+
       total_cost, total_qty = trades.pick(
         Arel.sql("SUM((trades.price * trades.qty + trades.fee) * COALESCE(exchange_rates.rate, 1))"),
         Arel.sql("SUM(trades.qty)")
