@@ -5,6 +5,7 @@ pt-BR:
     settings:
       enable_label: Ativar correspondência automática
       enable_description: Detecta e sugere automaticamente correspondências de transferências entre contas a cada sincronização. As sugestões não são aplicadas até que você as confirme abaixo.
+      admin_only: Somente administradores podem alterar esta configuração.
     update_settings:
       settings_updated: Configurações de correspondência automática atualizadas
     bulk_update:

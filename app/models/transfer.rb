@@ -16,6 +16,16 @@ class Transfer < ApplicationRecord
   validate :transfer_within_date_range
   validate :transfer_has_same_family
 
+  # Whether a leg counts in budgets, reports and search totals depends on
+  # the Transfer row itself (a pending match keeps both legs "standard"),
+  # but those caches are keyed on Family#entries_cache_version. Creating,
+  # confirming, rejecting or destroying a transfer writes no entry, so bump
+  # both legs' entries here to invalidate those caches.
+  after_create :touch_leg_entries
+  after_update :touch_leg_entries, if: :saved_change_to_status?
+  # Deleting a leg's entry or account already changes the entry count.
+  after_destroy :touch_leg_entries, unless: :destroyed_by_association
+
   class << self
     def kind_for_account(account)
       if account.loan?
@@ -152,6 +162,11 @@ class Transfer < ApplicationRecord
   end
 
   private
+    def touch_leg_entries
+      Entry.where(entryable_type: "Transaction", entryable_id: [ inflow_transaction_id, outflow_transaction_id ])
+           .update_all(updated_at: Time.current)
+    end
+
     # Auto-match creates transfers without touching kind, so both legs are
     # still "standard" until confirmed. Guarding on that (rather than on
     # `pending?`) avoids re-deriving kind/category for transfers that arrived

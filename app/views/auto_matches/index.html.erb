@@ -6,15 +6,24 @@
       <div>
         <p class="text-sm font-medium text-primary"><%= t("auto_matches.settings.enable_label") %></p>
         <p class="text-xs text-secondary"><%= t("auto_matches.settings.enable_description") %></p>
+        <% unless Current.user.admin? %>
+          <p class="text-xs text-subdued"><%= t("auto_matches.settings.admin_only") %></p>
+        <% end %>
       </div>
-      <%= form_with url: update_settings_auto_matches_path, method: :patch, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
-        <%= f.hidden_field :auto_match_transfers_disabled, value: @family.auto_match_transfers_disabled? ? "false" : "true" %>
-        <%= render DS::Toggle.new(
-          id: "auto_match_transfers_enabled",
-          name: "toggle_display",
-          checked: !@family.auto_match_transfers_disabled?,
-          data: { auto_submit_form_target: "auto" }
-        ) %>
+      <% toggle = render DS::Toggle.new(
+        id: "auto_match_transfers_enabled",
+        name: "toggle_display",
+        checked: !@family.auto_match_transfers_disabled?,
+        disabled: !Current.user.admin?,
+        data: { auto_submit_form_target: "auto" }
+      ) %>
+      <% if Current.user.admin? %>
+        <%= form_with url: update_settings_auto_matches_path, method: :patch, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
+          <%= f.hidden_field :auto_match_transfers_disabled, value: @family.auto_match_transfers_disabled? ? "false" : "true" %>
+          <%= toggle %>
+        <% end %>
+      <% else %>
+        <%= toggle %>
       <% end %>
     </div>
   </div>

@@ -57,12 +57,13 @@ class Transaction::Search
   # Compute totals for the specific search, excluding tax-advantaged accounts
   def totals
     @totals ||= begin
-      # v3: bumped because the Uncategorized filter's exclusion set changed
-      # (see #2592) -- without a version bump, a totals entry cached under
-      # the old logic would keep being served (same cache_key_base) after
-      # deploy, disagreeing with the (uncached) transactions_scope list
-      # until entries_cache_version next changes for that family.
-      Rails.cache.fetch("transaction_search_totals/v3/#{cache_key_base}") do
+      # v4: bumped because pending auto-matched transfer legs are now
+      # excluded from income/expense (v3: the Uncategorized filter's
+      # exclusion set changed, see #2592) -- without a version bump, a totals
+      # entry cached under the old logic would keep being served (same
+      # cache_key_base) after deploy, disagreeing with the (uncached)
+      # transactions_scope list until entries_cache_version next changes.
+      Rails.cache.fetch("transaction_search_totals/v4/#{cache_key_base}") do
         scope = transactions_scope
 
         # Exclude tax-advantaged accounts from totals calculation

@@ -5,6 +5,7 @@ vi:
     settings:
       enable_label: Bật tự động khớp lệnh
       enable_description: Tự động phát hiện và đề xuất các giao dịch chuyển khoản trùng khớp giữa các tài khoản sau mỗi lần đồng bộ. Các đề xuất sẽ không được áp dụng cho đến khi bạn xác nhận bên dưới.
+      admin_only: Chỉ quản trị viên mới có thể thay đổi cài đặt này.
     update_settings:
       settings_updated: Đã cập nhật cài đặt tự động khớp lệnh
     bulk_update:

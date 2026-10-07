@@ -5,6 +5,7 @@ ro:
     settings:
       enable_label: Activează potrivirea automată
       enable_description: Detectează și sugerează automat potriviri de transferuri între conturi la fiecare sincronizare. Sugestiile nu sunt aplicate până când nu le confirmi mai jos.
+      admin_only: Doar administratorii pot modifica această setare.
     update_settings:
       settings_updated: Setările de potrivire automată au fost actualizate
     bulk_update:

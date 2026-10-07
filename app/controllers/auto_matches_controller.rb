@@ -1,6 +1,10 @@
 class AutoMatchesController < ApplicationController
   layout "settings"
 
+  # The toggle is family-wide and turning it off destroys every pending
+  # suggestion, including ones between other members' private accounts.
+  before_action :require_admin!, only: :update_settings
+
   def index
     @family = Current.family
     scope = Transfer.pending

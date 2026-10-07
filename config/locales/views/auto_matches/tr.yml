@@ -5,6 +5,7 @@ tr:
     settings:
       enable_label: Otomatik Eşleştirmeyi Etkinleştir
       enable_description: Her senkronizasyonda hesaplar arasındaki transfer eşleşmelerini otomatik olarak algılar ve önerir. Öneriler, aşağıda onaylamadıkça uygulanmaz.
+      admin_only: Bu ayarı yalnızca yöneticiler değiştirebilir.
     update_settings:
       settings_updated: Otomatik eşleştirme ayarları güncellendi
     bulk_update:

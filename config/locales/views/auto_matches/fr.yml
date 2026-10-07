@@ -5,6 +5,7 @@ fr:
     settings:
       enable_label: Activer le rapprochement automatique
       enable_description: Détecte et suggère automatiquement des rapprochements de virements entre comptes à chaque synchronisation. Les suggestions ne sont appliquées qu'après confirmation ci-dessous.
+      admin_only: Seuls les administrateurs peuvent modifier ce paramètre.
     update_settings:
       settings_updated: Paramètres de rapprochement automatique mis à jour
     bulk_update:

@@ -5,6 +5,7 @@ nl:
     settings:
       enable_label: Automatische matching inschakelen
       enable_description: Detecteert en stelt automatisch overschrijvingsmatches tussen rekeningen voor bij elke synchronisatie. Suggesties worden pas toegepast nadat je ze hieronder bevestigt.
+      admin_only: Alleen beheerders kunnen deze instelling wijzigen.
     update_settings:
       settings_updated: Instellingen voor automatische matching bijgewerkt
     bulk_update:

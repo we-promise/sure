@@ -5,6 +5,7 @@ de:
     settings:
       enable_label: Automatischen Abgleich aktivieren
       enable_description: Erkennt und schlägt bei jeder Synchronisierung automatisch Überweisungsabgleiche zwischen Konten vor. Vorschläge werden erst angewendet, nachdem du sie unten bestätigt hast.
+      admin_only: Nur Admins können diese Einstellung ändern.
     update_settings:
       settings_updated: Einstellungen für den automatischen Abgleich aktualisiert
     bulk_update:

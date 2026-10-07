@@ -5,6 +5,7 @@ it:
     settings:
       enable_label: Attiva corrispondenza automatica
       enable_description: Rileva e suggerisce automaticamente le corrispondenze dei trasferimenti tra conti a ogni sincronizzazione. I suggerimenti non vengono applicati finché non li confermi qui sotto.
+      admin_only: Solo gli amministratori possono modificare questa impostazione.
     update_settings:
       settings_updated: Impostazioni di corrispondenza automatica aggiornate
     bulk_update:

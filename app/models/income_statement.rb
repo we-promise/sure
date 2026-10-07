@@ -121,7 +121,7 @@ class IncomeStatement
   # dashboard's cumulative spending chart. Same scoping as `expense_totals`.
   def daily_expense_series(period:)
     Rails.cache.fetch([
-      "income_statement", "daily_expense_series", family.id, user&.id,
+      "income_statement", "daily_expense_series", "v2", family.id, user&.id,
       included_account_ids_hash, period.start_date, period.end_date,
       *cache_freshness_key
     ]) do
@@ -249,14 +249,14 @@ class IncomeStatement
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+        "income_statement", "family_stats", "v2", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
       ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+        "income_statement", "category_stats", "v2", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
       ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
@@ -286,7 +286,7 @@ class IncomeStatement
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key
+        "income_statement", "totals_query", "v3", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
     end
 

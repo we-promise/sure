@@ -5,6 +5,7 @@ es:
     settings:
       enable_label: Activar coincidencia automática
       enable_description: Detecta y sugiere automáticamente coincidencias de transferencias entre cuentas en cada sincronización. Las sugerencias no se aplican hasta que las confirmes a continuación.
+      admin_only: Solo los administradores pueden cambiar esta configuración.
     update_settings:
       settings_updated: Configuración de coincidencia automática actualizada
     bulk_update:

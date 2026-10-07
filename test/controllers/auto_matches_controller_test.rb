@@ -74,6 +74,39 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     assert @family.reload.auto_match_transfers_disabled?
   end
 
+  test "update_settings is refused for a member and keeps pending suggestions" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    transfer = outflow_entry.transaction.reload.transfer
+
+    sign_in users(:family_member)
+    patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+
+    assert_redirected_to accounts_url
+    assert_not @family.reload.auto_match_transfers_disabled?
+    assert Transfer.exists?(transfer.id)
+  end
+
+  test "update_settings is refused for a guest" do
+    users(:family_member).update!(role: "guest")
+    sign_in users(:family_member)
+
+    patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+
+    assert_redirected_to accounts_url
+    assert_not @family.reload.auto_match_transfers_disabled?
+  end
+
+  test "index renders the toggle read-only for a member" do
+    sign_in users(:family_member)
+    get auto_matches_url
+
+    assert_response :success
+    assert_select "form[action='#{update_settings_auto_matches_path}']", false
+    assert_select "input#auto_match_transfers_enabled[disabled]"
+  end
+
   test "update_settings re-enables auto match" do
     @family.update!(auto_match_transfers_disabled: true)
 

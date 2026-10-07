@@ -5,6 +5,7 @@ zh-CN:
     settings:
       enable_label: 启用自动匹配
       enable_description: 每次同步时自动检测并建议账户之间的转账匹配。建议在您于下方确认之前不会被应用。
+      admin_only: 只有管理员可以更改此设置。
     update_settings:
       settings_updated: 自动匹配设置已更新
     bulk_update:

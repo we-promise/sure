@@ -5,6 +5,7 @@ hu:
     settings:
       enable_label: Automatikus egyeztetés engedélyezése
       enable_description: Minden szinkronizáláskor automatikusan felismeri és javasolja az átutalások egyeztetését a számlák között. A javaslatok csak akkor lépnek életbe, ha alább megerősíted őket.
+      admin_only: Ezt a beállítást csak adminisztrátorok módosíthatják.
     update_settings:
       settings_updated: Az automatikus egyeztetés beállításai frissültek
     bulk_update:

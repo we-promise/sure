@@ -5,6 +5,7 @@ en:
     settings:
       enable_label: Enable Auto Match
       enable_description: Automatically detect and suggest transfer matches between accounts on every sync. Suggestions are not applied until you confirm them below.
+      admin_only: Only admins can change this setting.
     update_settings:
       settings_updated: Auto match settings updated
     bulk_update:

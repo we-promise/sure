@@ -5,6 +5,7 @@ zh-TW:
     settings:
       enable_label: 啟用自動配對
       enable_description: 每次同步時自動偵測並建議帳戶之間的轉帳配對。建議在您於下方確認之前不會套用。
+      admin_only: 只有管理員可以變更此設定。
     update_settings:
       settings_updated: 自動配對設定已更新
     bulk_update:
