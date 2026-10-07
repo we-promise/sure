@@ -15,11 +15,3 @@ pt-BR:
       minimum_payment_placeholder: '100'
     new:
       title: Inserir detalhes do cartão de crédito
-    overview:
-      amount_owed: Valor Devido
-      annual_fee: Taxa Anual
-      apr: TAE
-      available_credit: Crédito Disponível
-      expiration_date: Data de Expiração
-      minimum_payment: Pagamento Mínimo
-      unknown: Desconhecido

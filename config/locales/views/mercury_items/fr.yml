@@ -93,6 +93,7 @@ fr:
       connection_name_label: Nom de la connexion
       connection_name_placeholder: Vérification commerciale
       default_connection_name: Connexion Mercury
+      disconnect: Déconnecter
       disconnect_confirm: Déconnecter %{name} ?
       instructions:
         copy_token_html: Copiez le <strong>jeton complet</strong> (y compris le préfixe

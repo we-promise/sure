@@ -5,8 +5,8 @@ ru:
       account_balance: баланс счёта
       asset_value: стоимость актива
       balance: баланс
-      brokerage_cash: Брокерский счёт
-      change: изменение
+      brokerage_cash: Денежные средства на брокерском счёте
+      change: изменения
       credit_card_balance: баланс кредитной карты
       crypto_balance: баланс криптовалюты
       holdings_value: Стоимость активов
@@ -16,12 +16,14 @@ ru:
       property_value: стоимость недвижимости
       recalculate_notice: Все будущие операции и балансы будут пересчитаны на основе
         этого %{change_or_update}.
-      this_will: Это %{action_verb} стоимость счёта на
+      this_will: Вы собираетесь %{action_verb} стоимость счёта на
       to: до
       to_colon: 'до:'
       total_account_value: Общая стоимость счёта
-      update: обновление
+      update: обновления
       vehicle_value: стоимость транспортного средства
+      action_set: установить
+      action_update: обновить
     create:
       account_updated: Счёт обновлён
     errors:
@@ -61,3 +63,9 @@ ru:
     update:
       account_updated: Счёт обновлён
       entry_updated: Запись обновлена
+    confirm_create:
+      confirm: Подтвердить
+      title: Подтвердите новый баланс
+    confirm_update:
+      title: Обновить баланс
+      update: Обновить

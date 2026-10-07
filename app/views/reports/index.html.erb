@@ -69,24 +69,34 @@
     <% if @nav %>
       <div class="flex items-center gap-1 mb-4">
         <div class="flex items-center gap-2">
-          <%= render DS::Link.new(
-            variant: "icon",
-            icon: "chevron-left",
-            href: reports_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end]),
-            aria: { label: t("reports.index.previous_period") },
-          ) %>
+          <%= render DS::Tooltip.new(text: t("reports.index.shortcut_hint", action: t("reports.index.previous_period"), key: "←")) do |tooltip| %>
+            <% tooltip.with_trigger do %>
+              <%= render DS::Link.new(
+                variant: "icon",
+                icon: "chevron-left",
+                href: reports_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end]),
+                aria: { label: t("reports.index.previous_period"), keyshortcuts: "ArrowLeft" },
+                data: { controller: "hotkey", hotkey: "ArrowLeft" },
+              ) %>
+            <% end %>
+          <% end %>
 
           <% if @nav[:at_latest] %>
             <button disabled aria-label="<%= t("reports.index.next_period") %>" class="text-subdued inline-flex items-center justify-center w-9 h-9 rounded-lg cursor-not-allowed">
               <%= icon("chevron-right", color: "current") %>
             </button>
           <% else %>
-            <%= render DS::Link.new(
-              variant: "icon",
-              icon: "chevron-right",
-              href: reports_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end]),
-              aria: { label: t("reports.index.next_period") },
-            ) %>
+            <%= render DS::Tooltip.new(text: t("reports.index.shortcut_hint", action: t("reports.index.next_period"), key: "→")) do |tooltip| %>
+              <% tooltip.with_trigger do %>
+                <%= render DS::Link.new(
+                  variant: "icon",
+                  icon: "chevron-right",
+                  href: reports_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end]),
+                  aria: { label: t("reports.index.next_period"), keyshortcuts: "ArrowRight" },
+                  data: { controller: "hotkey", hotkey: "ArrowRight" },
+                ) %>
+              <% end %>
+            <% end %>
           <% end %>
         </div>
 
