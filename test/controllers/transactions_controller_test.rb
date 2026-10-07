@@ -9,6 +9,43 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:transaction)
   end
 
+  test "correct a provider investment deposit as income through the drawer" do
+    deposit = create_transaction(account: accounts(:investment), amount: -3000, kind: "investment_contribution")
+    get transaction_url(deposit)
+    assert_response :success
+    assert_select "form[action=?]", correct_as_income_transaction_path(deposit)
+    post correct_as_income_transaction_url(deposit)
+    assert_redirected_to transaction_path(deposit)
+    assert_equal "standard", deposit.reload.transaction.kind
+    assert deposit.user_modified?
+  end
+
+  test "income correction rejects an ordinary expense" do
+    post correct_as_income_transaction_url(@entry)
+    assert_response :unprocessable_entity
+  end
+
+  test "read-write members may categorize but cannot change income classification" do
+    account = accounts(:investment)
+    account.account_shares.create!(user: users(:family_member), permission: "read_write")
+    deposit = create_transaction(account: account, amount: -3000, kind: "investment_contribution")
+    sign_in users(:family_member)
+    get transaction_url(deposit)
+    assert_response :success
+    assert_select "form[action=?]", correct_as_income_transaction_path(deposit), count: 0
+    post correct_as_income_transaction_url(deposit)
+    assert_equal "investment_contribution", deposit.reload.transaction.kind
+    refute deposit.user_modified?
+  end
+
+  test "income correction cannot access another family" do
+    other = families(:empty).accounts.create!(name: "Other", accountable: Investment.new, currency: "USD", balance: 0)
+    deposit = create_transaction(account: other, amount: -3000, kind: "investment_contribution")
+    post correct_as_income_transaction_url(deposit)
+    assert_response :not_found
+    assert_equal "investment_contribution", deposit.reload.transaction.kind
+  end
+
   # Bills has always linked out to transactions. Until now nothing linked back,
   # so a transaction that settled a bill was a dead end. The link-back is part
   # of the preview-gated bills surface, so the viewer needs the flag.

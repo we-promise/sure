@@ -66,7 +66,7 @@ class LegacyIncomeStatementTotals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+          CASE WHEN at.kind = 'investment_contribution' THEN 'investment_contribution' WHEN at.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
           ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
@@ -86,7 +86,7 @@ class LegacyIncomeStatementTotals
           AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
+        GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'investment_contribution' WHEN at.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
       SQL
     end
 
@@ -95,7 +95,7 @@ class LegacyIncomeStatementTotals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+          CASE WHEN at.kind = 'investment_contribution' THEN 'investment_contribution' WHEN at.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
           ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
           COUNT(ae.id) as entry_count,
           false as is_uncategorized_investment
@@ -119,7 +119,7 @@ class LegacyIncomeStatementTotals
           AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+        GROUP BY c.id, c.parent_id, CASE WHEN at.kind = 'investment_contribution' THEN 'investment_contribution' WHEN at.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
       SQL
     end
 

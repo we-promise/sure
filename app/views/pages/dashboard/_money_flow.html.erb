@@ -15,6 +15,9 @@
   stacked = col_span != "full"
 %>
 <div id="money-flow-section" class="px-4 space-y-4">
+  <% if money_flow_data[:invested]&.positive? %>
+    <p class="text-sm text-secondary privacy-sensitive"><%= t("pages.dashboard.investment_cash_remaining", invested: format_money(money_flow_data[:invested]), remaining: format_money(money_flow_data[:cash_remaining])) %></p>
+  <% end %>
   <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
     <p class="text-sm text-secondary">
       <%= t(".date_range", start_date: l(period.date_range.begin, format: :long), end_date: l(period.date_range.end, format: :long)) %>

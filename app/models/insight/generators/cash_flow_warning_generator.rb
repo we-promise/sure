@@ -22,7 +22,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
 
     # The recurring bills are part of the monthly median too — subtract them so
     # they aren't counted twice when we spread the remainder across the horizon.
-    median_monthly_expense = income_statement.median_expense(interval: "month").to_d
+    median_monthly_expense = income_statement.median_expense(interval: "month", include_non_operating: true).to_d
     return [] if median_monthly_expense <= 0 && entries.empty?
 
     recurring_expense_total = entries.sum { |e| [ e.amount.to_d, 0.to_d ].max }

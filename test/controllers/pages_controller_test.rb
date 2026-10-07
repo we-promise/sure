@@ -231,6 +231,11 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       .once
       .returns(fake_income_period_total)
 
+    income_statement.expects(:build_period_total)
+      .with(classification: "investment_contribution", period: kind_of(Period))
+      .once
+      .returns(IncomeStatement::PeriodTotal.new(classification: "investment_contribution", total: 0, currency: @family.currency, category_totals: []))
+
     get root_path
 
     assert_response :ok

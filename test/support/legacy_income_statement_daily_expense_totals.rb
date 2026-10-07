@@ -44,7 +44,7 @@ class LegacyIncomeStatementDailyExpenseTotals
         SELECT day, total FROM (
           SELECT
             ae.date as day,
-            CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+            CASE WHEN at.kind = 'investment_contribution' THEN 'investment_contribution' WHEN at.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
             ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total
           FROM (#{@transactions_scope.to_sql}) at
           JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
@@ -65,7 +65,7 @@ class LegacyIncomeStatementDailyExpenseTotals
             AND a.exclude_from_reports = false
             #{exclude_tax_advantaged_sql}
             #{include_finance_accounts_sql}
-          GROUP BY ae.date, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+          GROUP BY ae.date, CASE WHEN at.kind = 'investment_contribution' THEN 'investment_contribution' WHEN at.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
         ) daily
         WHERE classification = 'expense'
         ORDER BY day

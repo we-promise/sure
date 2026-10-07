@@ -245,13 +245,18 @@ class IncomeStatementTest < ActiveSupport::TestCase
   end
 
   test "includes loan payments as expenses in income statement" do
-    # Create a loan payment transaction
+    # loan_payment stays classified as a regular expense (unlike
+    # investment_contribution): neither the provider import path nor
+    # Transfer::Creator verify that a loan_payment transaction is
+    # principal-only, so a provider that bundles principal and interest into
+    # one posted payment would have its interest silently excluded from
+    # consumption too if this were treated as non-operating (see
+    # Transaction::NON_OPERATING_KINDS and PR #3609 review).
     create_transaction(account: @checking_account, amount: 1000, category: nil, kind: "loan_payment")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    # CONTINUES TO WORK: Includes loan payments as expenses (loan_payment not in exclusion list)
     assert_equal 5, totals.transactions_count
     assert_equal Money.new(1000, @family.currency), totals.income_money
     assert_equal Money.new(1900, @family.currency), totals.expense_money # 900 + 1000
@@ -364,8 +369,11 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(1050, @family.currency), totals.expense_money # 900 + 150
   end
 
-  test "includes investment_contribution transactions as expenses in income statement" do
-    # Create a transfer to investment account (marked as investment_contribution)
+  test "excludes investment contributions from expense, reports them as investment_contribution_money" do
+    # A transfer to an investment/crypto account reallocates net worth
+    # (cash -> another asset); it isn't consumption. Counting the full
+    # 60,000 EUR a real user sent to Kraken as "expense" here is exactly
+    # what drove net_income and savings_rate deeply negative in production.
     create_transaction(
       account: @checking_account,
       amount: 1000,
@@ -376,17 +384,16 @@ class IncomeStatementTest < ActiveSupport::TestCase
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    # investment_contribution should be included as an expense (visible in cashflow)
-    assert_equal 5, totals.transactions_count # Original 4 + investment_contribution
+    assert_equal 5, totals.transactions_count # row is present, just not classified as expense
     assert_equal Money.new(1000, @family.currency), totals.income_money
-    assert_equal Money.new(1900, @family.currency), totals.expense_money # 900 + 1000 investment
+    assert_equal Money.new(900, @family.currency), totals.expense_money # unchanged: 200 + 300 + 400
+    assert_equal Money.new(1000, @family.currency), totals.investment_contribution_money
   end
 
-  test "includes provider-imported investment_contribution inflows as expenses" do
-    # Simulates a 401k contribution that was auto-deducted from payroll
-    # Provider imports this as an inflow to the investment account (negative amount)
-    # but it should still appear as an expense in cashflow
-
+  test "excludes provider-imported investment_contribution inflows from expense regardless of sign" do
+    # Simulates a 401k contribution that was auto-deducted from payroll.
+    # Provider imports this as an inflow to the investment account (negative
+    # amount), but it's still a contribution, not income or spending.
     investment_account = @family.accounts.create!(
       name: "401k",
       currency: @family.currency,
@@ -394,8 +401,6 @@ class IncomeStatementTest < ActiveSupport::TestCase
       accountable: Investment.new
     )
 
-    # Provider-imported contribution shows as inflow (negative amount) to the investment account
-    # kind is investment_contribution, which should be treated as expense regardless of sign
     create_transaction(
       account: investment_account,
       amount: -500, # Negative = inflow to account
@@ -406,10 +411,60 @@ class IncomeStatementTest < ActiveSupport::TestCase
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    # The provider-imported contribution should appear as an expense
-    assert_equal 5, totals.transactions_count # Original 4 + provider contribution
+    assert_equal 5, totals.transactions_count
     assert_equal Money.new(1000, @family.currency), totals.income_money
-    assert_equal Money.new(1400, @family.currency), totals.expense_money # 900 + 500 (abs of -500)
+    assert_equal Money.new(900, @family.currency), totals.expense_money # unchanged
+    assert_equal Money.new(500, @family.currency), totals.investment_contribution_money
+  end
+
+  test "money sent to an untracked, unmatched destination still counts as expense" do
+    # Sure only sees the outflow: no counterpart account, no Transfer, kind
+    # stays "standard". There's no evidence the money remained part of the
+    # user's net worth, so it's conservatively still consumption -- this is
+    # the one case where the exclusion in this file does NOT apply. Users
+    # who want it excluded need the destination tracked as a real account
+    # (even manually) so a Transfer can be recognized, per the other tests
+    # in this file.
+    create_transaction(account: @checking_account, amount: 1000, category: nil)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(1900, @family.currency), totals.expense_money # 900 + 1000
+    assert_equal Money.new(0, @family.currency), totals.investment_contribution_money
+  end
+
+  test "excludes trades (buying an asset with cash already inside a broker account)" do
+    # Buying an ETF with cash already sitting in a brokerage account is a
+    # Trade, not a Transaction -- it was already excluded from income
+    # statement totals before this fix (see IncomeStatement::Totals#trades_subquery_sql)
+    # because it's portfolio rebalancing, not cash flow. This asserts that
+    # existing behavior stays correct alongside the investment_contribution fix.
+    investment_account = @family.accounts.create!(
+      name: "Brokerage", currency: @family.currency, balance: 5000, accountable: Investment.new
+    )
+    create_trade(securities(:aapl), account: investment_account, qty: 5, date: Date.current, price: 200)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal 4, totals.transactions_count # unchanged: the trade isn't a Transaction row
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "loan repayment: principal and interest both count as expense" do
+    # Unlike investment_contribution, loan_payment is NOT split out of
+    # "expense" -- see Transaction::NON_OPERATING_KINDS for why (no verified
+    # principal-only invariant on the ingestion side).
+    interest_category = @family.categories.create!(name: "Loan Interest")
+
+    create_transaction(account: @checking_account, amount: 250, category: nil, kind: "loan_payment") # principal
+    create_transaction(account: @checking_account, amount: 100, category: interest_category) # interest, kind: standard
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(1250, @family.currency), totals.expense_money # 900 + 250 principal + 100 interest
   end
 
   # Tax-Advantaged Account Exclusion Tests

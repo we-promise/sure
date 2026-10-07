@@ -70,7 +70,7 @@ class LegacyIncomeStatementFamilyStats
         WITH period_totals AS (
           SELECT
             date_trunc(:interval, ae.date) as period,
-            CASE WHEN t.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
+            CASE WHEN t.kind = 'investment_contribution' THEN 'investment_contribution' WHEN t.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
             SUM(CASE WHEN t.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END) as total
           FROM transactions t
           JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Transaction'
@@ -87,7 +87,7 @@ class LegacyIncomeStatementFamilyStats
             #{pending_providers_sql}
             #{exclude_tax_advantaged_sql}
             #{scope_to_account_ids_sql}
-          GROUP BY period, CASE WHEN t.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+          GROUP BY period, CASE WHEN t.kind = 'investment_contribution' THEN 'investment_contribution' WHEN t.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
         )
         SELECT
           classification,

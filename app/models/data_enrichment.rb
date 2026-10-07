@@ -5,6 +5,7 @@ class DataEnrichment < ApplicationRecord
     rule: "rule",
     plaid: "plaid",
     simplefin: "simplefin",
+    snaptrade: "snaptrade",
     lunchflow: "lunchflow",
     akahu: "akahu",
     up: "up",

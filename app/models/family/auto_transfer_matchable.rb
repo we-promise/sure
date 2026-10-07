@@ -87,6 +87,10 @@ module Family::AutoTransferMatchable
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
 
+        inflow = transactions_by_id.fetch(match.inflow_transaction_id)
+        outflow = transactions_by_id.fetch(match.outflow_transaction_id)
+        next if [ inflow, outflow ].any? { |transaction| transaction.standard? && transaction.locked?(:kind) && transaction.locked?(:investment_activity_label) }
+
         # Skip this candidate when the transfer for this exact pair was not created
         # (a concurrent sync claimed one of the transactions for a different pairing);
         # marking it matched here would leave a transaction matched with no Transfer.
@@ -95,9 +99,9 @@ module Family::AutoTransferMatchable
         inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
         outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
         destination_account = inflow_transaction.entry.account
-        transfer_kind = Transfer.kind_for_account(destination_account)
+        source_account = outflow_transaction.entry.account
+        transfer_kind = Transfer.kind_for_account(destination_account, from_account: source_account)
 
-        # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
         inflow_transaction.update!(kind: "funds_movement")
         outflow_transaction.update!(kind: transfer_kind)
 

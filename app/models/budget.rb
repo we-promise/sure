@@ -402,7 +402,7 @@ class Budget < ApplicationRecord
   # Actuals: How much user has spent on each budget category
   # =============================================================================
   def estimated_spending
-    income_statement.median_expense(interval: "month")
+    income_statement.median_expense(interval: "month", include_non_operating: true)
   end
 
   def actual_spending
@@ -417,11 +417,11 @@ class Budget < ApplicationRecord
   end
 
   def category_median_monthly_expense(category)
-    income_statement.median_expense(category: category)
+    income_statement.median_expense(category: category, include_non_operating: true)
   end
 
   def category_avg_monthly_expense(category)
-    income_statement.avg_expense(category: category)
+    income_statement.avg_expense(category: category, include_non_operating: true)
   end
 
   def available_to_spend
@@ -525,12 +525,18 @@ class Budget < ApplicationRecord
       family.accounts.where(owner_id: user_id).included_in_reports if user_id.present?
     end
 
+    # include_non_operating: true -- a budgeted, fully-contributed
+    # "Investment Contributions" category must show as fully spent here, or
+    # Budget::RolloverCalculator carries the allocation forward as unused
+    # surplus every month even though the user already moved the money (see
+    # PR #3609 review). Dashboard/report "spending" surfaces must NOT do
+    # this; that's the whole point of the classification split.
     def net_totals
-      @net_totals ||= income_statement.net_category_totals(period: period)
+      @net_totals ||= income_statement.net_category_totals(period: period, include_non_operating: true)
     end
 
     def expense_totals
-      @expense_totals ||= income_statement.expense_totals(period: period)
+      @expense_totals ||= income_statement.expense_totals(period: period, include_non_operating: true)
     end
 
     def income_totals

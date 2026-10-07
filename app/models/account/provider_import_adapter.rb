@@ -247,7 +247,10 @@ class Account::ProviderImportAdapter
       apply_provider_extra(entry, extra, replace_extra_namespaces)
 
       # Auto-detect investment activity labels for investment accounts
-      detected_label = investment_activity_label
+      detected_label = investment_activity_label.presence
+      # Reuse brokerage activity only on brokerage accounts. A rule-assigned label
+      # on a cash account is descriptive and must not reclassify it on re-sync.
+      detected_label ||= entry.transaction.investment_activity_label if account.investment?
       if account.investment? && detected_label.nil? && entry.entryable.is_a?(Transaction)
         detected_label = detect_activity_label(name, entry.amount)
       end
@@ -261,7 +264,10 @@ class Account::ProviderImportAdapter
       # the account-type branches below win over the provider hint.
       auto_kind = nil
       auto_category = nil
-      if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
+      if entry.transaction.transfer.present?
+        # Matching owns the pair's classification, not the brokerage label.
+        auto_kind = entry.transaction.kind
+      elsif Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
         auto_kind = "funds_movement"
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
