@@ -847,6 +847,77 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "standard", outflow_entry.reload.entryable.kind
   end
 
+  test "a rejected fabricated counterpart is not recreated by the next sync" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @family.auto_create_missing_transfer_counterparts!
+    Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).reject!
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      @family.auto_create_missing_transfer_counterparts!
+    end
+    assert_equal true, outflow_entry.reload.entryable.extra["counterparty_transfer_suggestion_dismissed"]
+  end
+
+  test "an unlinked fabricated counterpart is not recreated by the next sync" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @family.auto_create_missing_transfer_counterparts!
+    Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).destroy!
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      @family.auto_create_missing_transfer_counterparts!
+    end
+  end
+
+  test "unlinking a real transfer does not dismiss the counterpart suggestion" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.entryable, outflow_transaction: outflow_entry.entryable)
+
+    transfer.reject!
+
+    assert_nil outflow_entry.reload.entryable.extra&.dig("counterparty_transfer_suggestion_dismissed")
+  end
+
+  test "auto_create_missing_transfer_counterparts! does not fabricate into an account the outflow's owner cannot write to" do
+    other_member = users(:family_member)
+    @loan.update!(iban: "DE89370400440532013000", owner: other_member) # pipelock:ignore IBAN
+    @loan.account_shares.where(user: @user).destroy_all
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      @family.auto_create_missing_transfer_counterparts!
+    end
+  end
+
+  test "auto_create_missing_transfer_counterparts! skips third-party ibans without querying candidates" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    @family.expects(:transfer_match_candidates).never
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      @family.auto_create_missing_transfer_counterparts!
+    end
+  end
+
+  test "auto_create_missing_transfer_counterparts! names the fabricated entry in the family locale" do
+    @family.update!(locale: "de")
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    @family.auto_create_missing_transfer_counterparts!
+
+    transfer = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id)
+    assert_equal "Überweisung von #{@depository.name}", transfer.inflow_transaction.entry.name
+  end
+
   private
     # Simulates a live provider connection so `Account#manual?` (and the SQL
     # query's equivalent check) treats the account as linked. `AccountProvider`

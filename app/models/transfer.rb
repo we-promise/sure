@@ -104,6 +104,13 @@ class Transfer < ApplicationRecord
 
   def destroy!
     Transfer.transaction do
+      # Removing the fabricated leg alone isn't enough: the next sync would
+      # find the outflow unmatched again and fabricate the same counterpart.
+      # Rejecting or unlinking it is the user saying "this isn't a transfer",
+      # so record that on the outflow the same way dismissing the suggestion
+      # does (TransferMatchesController#dismiss_suggestion).
+      dismiss_counterpart_suggestion = inflow_transaction&.extra&.dig("auto_generated_transfer_counterpart") == true
+
       [ inflow_transaction, outflow_transaction ].each do |transaction|
         next if transaction.nil?
         next unless Transaction.exists?(transaction.id)
@@ -122,7 +129,11 @@ class Transfer < ApplicationRecord
             next
           end
 
-          transaction.update!(kind: "standard")
+          attributes = { kind: "standard" }
+          if dismiss_counterpart_suggestion && transaction == outflow_transaction
+            attributes[:extra] = (transaction.extra || {}).merge("counterparty_transfer_suggestion_dismissed" => true)
+          end
+          transaction.update!(attributes)
           # The entry survives this destroy (only the Transfer join row and
           # fee transactions go away), but its idempotency_key must not: a
           # later retry of the original create request looks up that key,

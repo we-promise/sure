@@ -211,13 +211,26 @@ module Family::AutoTransferMatchable
   # destination account is eligible, keeping the fabricated entry's amount
   # exact rather than dependent on same-day exchange-rate availability.
   def auto_create_missing_transfer_counterparts!(account: nil)
+    # Only same-currency manual accounts that carry an IBAN can ever receive a
+    # fabricated counterpart, so look them up once and skip every outflow whose
+    # counterparty IBAN isn't one of theirs (rent, utilities and other third
+    # parties) before running any per-entry candidate query.
+    target_accounts_by_iban = accounts.visible.manual.to_a
+      .select { |target| target.iban.present? }
+      .group_by { |target| normalize_iban(target.iban) }
+    return if target_accounts_by_iban.empty?
+
     outflow_entries = Entry.joins(:account)
       .where(accounts: { family_id: id, status: [ "draft", "active" ] })
       .where(entryable_type: "Transaction", excluded: false)
       .where("entries.amount > 0")
     outflow_entries = outflow_entries.where(account_id: account.id) if account
 
-    outflow_entries.includes(:account).find_each do |entry|
+    writable_account_ids_by_owner = Hash.new do |ids, owner|
+      ids[owner] = accounts.writable_by(owner).pluck(:id).to_set
+    end
+
+    outflow_entries.preload(:account, :entryable).find_each do |entry|
       transaction = entry.entryable
       next unless transaction.is_a?(Transaction)
       next if transaction.transfer?
@@ -226,16 +239,22 @@ module Family::AutoTransferMatchable
       counterparty_iban = transaction.counterparty_iban
       next if counterparty_iban.blank?
 
+      target_account = target_accounts_by_iban[normalize_iban(counterparty_iban)]
+        &.find { |candidate| candidate.id != entry.account_id }
+      next unless target_account
+      next unless target_account.currency == entry.currency
+
+      # The sync runs without a user, so act on behalf of the outflow
+      # account's owner: only fabricate into an account they could pick in
+      # the manual match dialog (TransferMatchesController#new), never into
+      # another member's private account.
+      owner = entry.account.owner
+      next unless owner && writable_account_ids_by_owner[owner].include?(target_account.id)
+
       # A real match candidate (an inflow transaction that already exists)
       # is handled by auto_match_transfers! -- only fabricate a counterpart
       # when there's genuinely nothing to match against yet.
       next if transfer_match_candidates(outflow_transaction_id: transaction.id, account_id: account&.id).any?
-
-      target_account = accounts.where(status: [ "draft", "active" ])
-        .where.not(id: entry.account_id)
-        .find_by(iban: normalize_iban(counterparty_iban))
-      next unless target_account&.manual?
-      next unless target_account.currency == entry.currency
 
       create_missing_transfer_counterpart!(entry, transaction, target_account)
     end
@@ -256,7 +275,7 @@ module Family::AutoTransferMatchable
             amount: -entry.amount,
             currency: target_account.currency,
             date: entry.date,
-            name: "Transfer from #{entry.account.name}"
+            name: I18n.with_locale(locale) { I18n.t("transfer.counterpart_name", from_account: entry.account.name) }
           )
         )
         inflow_transaction.save!
