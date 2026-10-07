@@ -3,6 +3,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
   SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
+  STAMP_DUTY_EVENT_TYPE = "STAMP_DUTY_TAX_PAID"
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
   SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
   ACTIVITY_LABELS_BY_KEY = {
@@ -586,20 +587,27 @@ class TradeRepublicAccount::ActivitiesProcessor
     def event_category(event)
       signed_amount = parse_decimal(event.dig(:detail, :signed_amount) || event.dig(:detail, :amount))
       return CATEGORY_WITHDRAWAL if event[:eventType].to_s == "CARD_CASH_BACK" && signed_amount&.negative?
+      # Trade Republic reports a stamp duty cancellation with the same event
+      # type and sign as the charge; it is a refund to the account.
+      return CATEGORY_DEPOSIT if stamp_duty_cancellation?(event)
 
       event[:category].to_s.presence ||
         Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES[event[:eventType].to_s].to_s
     end
 
+    def stamp_duty_cancellation?(event)
+      event[:eventType].to_s == STAMP_DUTY_EVENT_TYPE && event[:subtitle].to_s.match?(/cancel/i)
+    end
+
     def cash_label_key(event, default:)
       case event[:eventType].to_s
-      when "CARD_TRANSACTION", "card_successful_transaction", "CARD_CASH_BACK"
+      when "CARD_TRANSACTION", "card_successful_transaction", "CARD_CASH_BACK", "CARD_AFT"
         "card_payment"
       when "CARD_ATM_WITHDRAWAL"
         "cash_withdrawal"
       when "CARD_ORDER_FEE"
         "card_fee"
-      when "card_refund", "CARD_REFUND"
+      when "card_refund", "CARD_REFUND", "CARD_OCT"
         "card_refund"
       when "TAX_REFUND", "SSP_TAX_CORRECTION", "ssp_tax_correction_invoice"
         "tax_refund"

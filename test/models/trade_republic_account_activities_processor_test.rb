@@ -341,6 +341,60 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Card purchase", entry.transaction.extra.dig("trade_republic", "subtitle")
   end
 
+  test "card funding transactions are imported as card payments" do
+    import_event({
+      id: "evt_card_aft",
+      timestamp: "2026-02-21T11:13:04Z",
+      eventType: "CARD_AFT",
+      title: "Revolut",
+      status: "EXECUTED",
+      detail: { amount: -100.0, signed_amount: -100.0, currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_card_aft")
+    assert_equal BigDecimal("100.0"), entry.amount
+    assert_equal "Revolut", entry.name
+  end
+
+  test "card credit transactions are imported as money in" do
+    import_event({
+      id: "evt_card_oct",
+      timestamp: "2026-03-16T18:01:01Z",
+      eventType: "CARD_OCT",
+      title: "Refund Globalblue.com",
+      status: "EXECUTED",
+      detail: { amount: 2.96, signed_amount: 2.96, currency: "EUR" }
+    })
+
+    assert_equal BigDecimal("-2.96"), Entry.find_by!(external_id: "trade_republic_event_evt_card_oct").amount
+  end
+
+  test "stamp duty is imported as a charge and its cancellation as a refund" do
+    @tr_account.update!(raw_timeline_payload: [
+      {
+        id: "evt_stamp_duty",
+        timestamp: "2026-02-18T14:34:02Z",
+        eventType: "STAMP_DUTY_TAX_PAID",
+        title: "Stamp duty (Portfolio)",
+        status: "EXECUTED",
+        detail: { amount: -22.24, signed_amount: -22.24, currency: "EUR" }
+      },
+      {
+        id: "evt_stamp_duty_cancel",
+        timestamp: "2026-02-18T09:37:01Z",
+        eventType: "STAMP_DUTY_TAX_PAID",
+        title: "Stamp duty (Portfolio)",
+        subtitle: "Cancellation of stamp duty",
+        status: "EXECUTED",
+        detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+      }
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+
+    assert_equal BigDecimal("22.24"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty").amount
+    assert_equal BigDecimal("-20.99"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel").amount
+  end
+
   test "category direction wins over the provider signed amount" do
     import_event({
       id: "evt_incoming_signed",

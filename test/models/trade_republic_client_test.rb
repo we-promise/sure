@@ -514,6 +514,23 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
   end
 
+  test "maps card funding, card credit and stamp duty events to cash categories" do
+    categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
+    assert_equal "POC_CREATED", categories["CARD_AFT"]
+    assert_equal "PAYMENT_RECEIVED", categories["CARD_OCT"]
+    assert_equal "POC_CREATED", categories["STAMP_DUTY_TAX_PAID"]
+
+    %w[CARD_AFT CARD_OCT STAMP_DUTY_TAX_PAID].each do |event_type|
+      assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+  end
+
+  test "ignores tax report corrections and source of wealth checks" do
+    %w[TAX_YEAR_END_REPORT_CORRECTED AML_SOURCE_OF_WEALTH_RESPONSE_EXECUTED].each do |event_type|
+      assert_equal :ignored, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+  end
+
   test "ignores Legal documents timeline rows without an event type" do
     assert_equal :ignored, Provider::TradeRepublicTimelineEvent.classify(
       "title" => "Legal documents",

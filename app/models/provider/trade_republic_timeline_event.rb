@@ -50,6 +50,16 @@ module Provider::TradeRepublicTimelineEvent
     "SAVEBACK_AGGREGATE" => "POC_CREATED",
     "BANK_TRANSACTION_OUTGOING_SCHEDULED" => "POC_CREATED",
     "CARD_ATM_WITHDRAWAL" => "POC_CREATED",
+    # Card-funded transfers out (Account Funding Transaction), e.g. topping up
+    # PayPal, Revolut or Paysafecard with the Trade Republic card.
+    "CARD_AFT" => "POC_CREATED",
+    # Card-funded credits (Original Credit Transaction), e.g. a merchant
+    # refund pushed to the card.
+    "CARD_OCT" => "PAYMENT_RECEIVED",
+    # Italian stamp duty (imposta di bollo) on cash and portfolio. A
+    # cancellation arrives with the same event type and is turned into a
+    # credit by the activities processor.
+    "STAMP_DUTY_TAX_PAID" => "POC_CREATED",
     "SSP_CORPORATE_ACTION_CASH" => "DIVIDEND",
     "ssp_corporate_action_invoice_cash" => "DIVIDEND",
     "SSP_CORPORATE_ACTION_CASH_NON_DIVIDEND" => "PAYMENT_RECEIVED",
@@ -78,6 +88,8 @@ module Provider::TradeRepublicTimelineEvent
     DOCUMENTS_CREATED
     EX_POST_COST_REPORT_CREATED
     TAX_YEAR_END_REPORT_CREATED
+    TAX_YEAR_END_REPORT_CORRECTED
+    AML_SOURCE_OF_WEALTH_RESPONSE_EXECUTED
     QUARTERLY_REPORT
     QUARTERLY_NET_WORTH_STATEMENT_CREATED
     CARD_VERIFICATION
