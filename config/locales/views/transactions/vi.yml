@@ -35,6 +35,7 @@ vi:
       date: Ngày
       description: Mô tả
       description_placeholder: Mô tả giao dịch
+      description_placeholder_optional: "Để trống để dùng tên danh mục/người bán, hoặc chọn một trong hai trước"
       expense: Chi tiêu
       income: Thu nhập
       merchant_label: Nhà cung cấp

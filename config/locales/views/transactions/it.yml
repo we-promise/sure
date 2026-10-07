@@ -35,6 +35,7 @@ it:
       date: Data
       description: Descrizione
       description_placeholder: Descrivi la transazione
+      description_placeholder_optional: "Lascia vuoto per usare il nome della categoria/del commerciante, oppure selezionane prima uno"
       expense: Spesa
       income: Entrata
       merchant_label: Esercente

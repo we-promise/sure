@@ -132,6 +132,27 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
+  # The family setting that fills a blank transaction name and the form
+  # placeholder that explains it. Fallbacks would show English, so each locale
+  # that translates the neighbouring key must translate these too.
+  def test_auto_generate_transaction_name_keys_exist_beside_their_siblings
+    {
+      "settings.appearances.show.split_grouped_title" => %w[
+        settings.appearances.show.auto_generate_transaction_names_title
+        settings.appearances.show.auto_generate_transaction_names_description
+      ],
+      "transactions.form.description_placeholder" => %w[transactions.form.description_placeholder_optional]
+    }.each do |sibling, keys|
+      locales = I18n.available_locales.select { |locale| I18n.t(sibling, locale: locale, fallback: false, default: nil) }
+      assert_includes locales, :de
+
+      locales.each do |locale|
+        missing = keys.reject { |key| I18n.t(key, locale: locale, fallback: false, default: nil) }
+        assert_empty missing, "missing in #{locale}: #{missing.join(", ")}"
+      end
+    end
+  end
+
   def test_trade_republic_activity_labels_exist_for_each_locale
     required_labels = %w[
       contribution withdrawal interest dividend card_payment cash_withdrawal

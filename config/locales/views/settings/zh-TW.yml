@@ -161,6 +161,8 @@ zh-TW:
         dashboard_two_column_title: 雙欄版面
         dashboard_two_column_description: 在大螢幕上以兩欄顯示儀表板小工具，每個小工具的標題列都有各自的寬度與高度控制項。關閉時，小工具會排成單欄。
         split_grouped_title: 將拆分交易分組
+        auto_generate_transaction_names_title: "自動產生交易名稱"
+        auto_generate_transaction_names_description: "手動輸入的交易名稱留空時，會依所選類別和商家自動填入（例如「娛樂 - Netflix」）。若兩者皆未選擇，名稱仍為必填。適用於整個家庭，且僅影響新交易。"
         split_grouped_description: 在交易清單中，將拆分交易歸在其母交易之下顯示。關閉時，拆分出來的子項會各自成為一列。
     preferences:
       show:

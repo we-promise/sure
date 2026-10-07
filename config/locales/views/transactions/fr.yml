@@ -150,6 +150,7 @@ fr:
       date: Date
       description: Libellé
       description_placeholder: Libellé de la transaction
+      description_placeholder_optional: "Laissez vide pour utiliser le nom de la catégorie/du marchand, ou sélectionnez-en un d'abord"
       details: Détails
       expense: Dépense
       income: Revenu

@@ -65,6 +65,8 @@ pl:
           nadrzędną na liście transakcji. Gdy opcja jest wyłączona, pozycje podrzędne
           pojawiają się jako osobne wiersze.
         split_grouped_title: Grupuj podzielone transakcje
+        auto_generate_transaction_names_title: "Automatycznie generuj nazwy transakcji"
+        auto_generate_transaction_names_description: "Jeśli nazwa ręcznie wprowadzonej transakcji pozostanie pusta, zostanie uzupełniona na podstawie wybranej kategorii i sprzedawcy (np. „Rozrywka - Netflix”). Nazwa jest nadal wymagana, jeśli nie wybrano żadnego z nich. Dotyczy całej rodziny i tylko nowych transakcji."
         theme_dark: Ciemny
         theme_light: Jasny
         theme_subtitle: Wybierz preferowany motyw aplikacji

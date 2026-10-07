@@ -45,6 +45,8 @@ pt-BR:
         dashboard_two_column_title: Layout de duas colunas
         dashboard_two_column_description: Exibe os widgets do painel em duas colunas em telas grandes. Quando desativado, os widgets ficam empilhados em uma única coluna.
         split_grouped_title: Agrupar transações divididas
+        auto_generate_transaction_names_title: "Gerar nomes de transações automaticamente"
+        auto_generate_transaction_names_description: "Quando o nome de uma transação inserida manualmente fica em branco, ele é preenchido a partir da categoria e do estabelecimento selecionados (ex.: \"Entretenimento - Netflix\"). O nome continua obrigatório se nenhum dos dois for selecionado. Vale para toda a família e apenas para novas transações."
         split_grouped_description: Mostra as transações divididas agrupadas sob o registro principal na lista de transações. Quando desativado, as subdivisões aparecem como linhas individuais.
     preferences:
       show:
