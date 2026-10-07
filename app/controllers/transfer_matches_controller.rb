@@ -10,8 +10,7 @@ class TransferMatchesController < ApplicationController
   def dismiss_suggestion
     return unless require_account_permission!(@entry.account, redirect_path: transactions_path)
 
-    transaction = @entry.transaction
-    transaction.update!(extra: (transaction.extra || {}).merge("counterparty_transfer_suggestion_dismissed" => true))
+    @entry.transaction.dismiss_counterparty_transfer_suggestion!
 
     redirect_back_or_to transactions_path, notice: t(".success")
   end

@@ -23,5 +23,6 @@ pl:
           same_family: Musi być w ramach tego samego gospodarstwa domowego
           within_days: Musi mieścić się w ciągu %{count} dni
   transfer:
+    counterpart_name: Przelew z %{from_account}
     name: Przelew do %{to_account}
     payment_name: Płatność do %{to_account}

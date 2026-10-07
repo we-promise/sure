@@ -165,6 +165,17 @@ class Transaction < ApplicationRecord
     TRANSFER_KINDS.include?(kind)
   end
 
+  # Stops the counterpart-transfer suggestion (and its automatic counterpart,
+  # see Family::AutoTransferMatchable) for this outflow. A single atomic jsonb
+  # merge, so a concurrent write to other extra keys (e.g. provider metadata)
+  # isn't lost.
+  def dismiss_counterparty_transfer_suggestion!
+    flag = { "counterparty_transfer_suggestion_dismissed" => true }
+    self.class.where(id: id).update_all([ "extra = COALESCE(extra, '{}'::jsonb) || ?::jsonb, updated_at = ?", flag.to_json, Time.current ])
+    self.extra = (extra || {}).merge(flag)
+    clear_attribute_change(:extra)
+  end
+
   def set_category!(category)
     if category.is_a?(String)
       category = entry.account.family.categories.find_or_create_by!(

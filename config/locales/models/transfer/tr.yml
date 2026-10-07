@@ -21,5 +21,6 @@ tr:
           same_family: Aynı aileden olmalıdır
           within_days: "%{count} gün içinde olmalıdır"
   transfer:
+    counterpart_name: "%{from_account} hesabından transfer"
     name: "%{to_account} hesabına transfer"
     payment_name: "%{to_account} hesabına ödeme"

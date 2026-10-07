@@ -14,5 +14,6 @@ nb:
               must_have_single_currency: Overføringen må bruke én enkelt valuta
               outflow_cannot_be_in_multiple_transfers: Utgående transaksjon kan ikke være del av flere overføringer
   transfer:
+    counterpart_name: Overføring fra %{from_account}
     name: Overføring til %{to_account}
     payment_name: Betaling til %{to_account}

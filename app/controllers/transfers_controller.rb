@@ -125,7 +125,7 @@ class TransfersController < ApplicationController
     outflow_account = @transfer.outflow_transaction.entry.account
     return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
 
-    @transfer.destroy!
+    @transfer.unlink!
     redirect_back_or_to transactions_url, notice: t(".success")
   end
 

@@ -23,5 +23,6 @@ fr:
           same_family: Doit être de la même famille
           within_days: Doit être dans les %{count} jours
   transfer:
+    counterpart_name: Transfert depuis %{from_account}
     name: Transfert vers %{to_account}
     payment_name: Paiement vers %{to_account}

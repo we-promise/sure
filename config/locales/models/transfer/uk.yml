@@ -18,5 +18,6 @@ uk:
           opposite_amounts: "Має мати протилежні суми"
           within_days: "Має бути в межах %{count} днів"
   transfer:
+    counterpart_name: "Переказ з %{from_account}"
     name: "Переказ на %{to_account}"
     payment_name: "Платіж на %{to_account}"

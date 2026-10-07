@@ -23,5 +23,6 @@ ca:
           same_family: Han de ser de la mateixa família
           within_days: Han d'estar dins de %{count} dies
   transfer:
+    counterpart_name: Transferència de %{from_account}
     name: Transferència a %{to_account}
     payment_name: Pagament a %{to_account}

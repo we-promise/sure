@@ -865,7 +865,61 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
     @family.auto_create_missing_transfer_counterparts!
+    Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).unlink!
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      @family.auto_create_missing_transfer_counterparts!
+    end
+  end
+
+  test "a system-side destroy of a fabricated transfer does not dismiss the suggestion" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @family.auto_create_missing_transfer_counterparts!
+
+    # e.g. Account#cleanup_transfers when the target account is deleted
     Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).destroy!
+
+    assert_nil outflow_entry.reload.entryable.extra["counterparty_transfer_suggestion_dismissed"]
+  end
+
+  test "rejecting keeps other extra keys on the outflow" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @family.auto_create_missing_transfer_counterparts!
+    transfer = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id)
+    transfer.outflow_transaction.extra # load the outflow before the concurrent write
+
+    # A provider import writes metadata after the transfer was loaded.
+    Transaction.where(id: outflow_entry.entryable_id).update_all(extra: { "provider" => { "ref" => "abc" } })
+    transfer.reject!
+
+    extra = outflow_entry.reload.entryable.extra
+    assert_equal({ "ref" => "abc" }, extra["provider"])
+    assert_equal true, extra["counterparty_transfer_suggestion_dismissed"]
+  end
+
+  test "a reject that lands while the sync is running is not undone" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    stale_transaction = Transaction.find(outflow_entry.entryable_id)
+
+    # The user dismisses it after the sync loaded its batch.
+    Transaction.find(outflow_entry.entryable_id).dismiss_counterparty_transfer_suggestion!
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      @family.send(:create_missing_transfer_counterpart!, outflow_entry, stale_transaction, @loan)
+    end
+  end
+
+  test "auto_create_missing_transfer_counterparts! skips outflow accounts without an owner" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @depository.update_column(:owner_id, nil)
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     assert_no_difference [ "Transfer.count", "Entry.count" ] do
       @family.auto_create_missing_transfer_counterparts!

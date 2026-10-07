@@ -18,5 +18,6 @@ es:
           opposite_amounts: Debe tener importes opuestos
           within_days: Debe estar dentro de un plazo de %{count} días
   transfer:
+    counterpart_name: Transferencia desde %{from_account}
     name: Transferencia a %{to_account}
     payment_name: Pago a %{to_account}
