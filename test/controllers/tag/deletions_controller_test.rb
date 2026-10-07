@@ -14,13 +14,18 @@ class Tag::DeletionsControllerTest < ActionDispatch::IntegrationTest
   test "create with replacement" do
     replacement_tag = tags(:two)
 
-    affected_transaction_count = @tag.transactions.count
+    # The fixture transaction already carries both tags, so it must end up
+    # with the replacement once; this one only carries the deleted tag.
+    already_tagged = transactions(:one)
+    moved = transactions(:transfer_out)
+    moved.taggings.create!(tag: @tag)
 
-    assert affected_transaction_count > 0
-
-    assert_difference -> { Tag.count } => -1, -> { replacement_tag.transactions.count } => affected_transaction_count do
+    assert_difference -> { Tag.count } => -1, -> { Tagging.count } => -1 do
       post tag_deletions_url(@tag), params: { replacement_tag_id: replacement_tag.id }
     end
+
+    assert_equal [ replacement_tag ], already_tagged.reload.tags.to_a
+    assert_equal [ replacement_tag ], moved.reload.tags.to_a
   end
 
   test "create without replacement" do

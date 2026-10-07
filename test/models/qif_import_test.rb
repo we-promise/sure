@@ -722,6 +722,34 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal [ "KEEP" ], train.entryable.tags.map(&:name)
   end
 
+  test "import! applies a tag repeated on a split line once" do
+    qif = <<~QIF
+      !Type:Bank
+      D1/ 1'24
+      U-100.00
+      T-100.00
+      PRepeated Tag Store
+      L--Split--
+      SFood/KEEP:KEEP
+      $-60.00
+      EGroceries
+      STravel
+      $-40.00
+      ETrain
+      ^
+    QIF
+
+    @import.update!(raw_file_str: qif)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    @import.import!
+
+    parent = @account.entries.find_by!(name: "Repeated Tag Store")
+    groceries = parent.child_entries.find_by!(name: "Groceries")
+    assert_equal [ "KEEP" ], groceries.entryable.taggings.map { |tagging| tagging.tag.name }
+  end
+
   test "import! skips split creation when split line totals do not match parent" do
     @import.update!(raw_file_str: QIF_WITH_ROUNDING_SPLIT_MISMATCH)
     @import.generate_rows_from_csv

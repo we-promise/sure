@@ -45,7 +45,16 @@ class Tag < ApplicationRecord
       raise ActiveRecord::RecordInvalid, "Replacement tag cannot be the same as the tag being destroyed" if replacement == self
 
       if replacement
-        taggings.update_all tag_id: replacement.id
+        # Skip objects that already carry the replacement: moving their row
+        # would tag them twice. Their old row goes with destroy! below.
+        taggings.where(<<~SQL, replacement.id).update_all(tag_id: replacement.id)
+          NOT EXISTS (
+            SELECT 1 FROM taggings carried
+            WHERE carried.tag_id = ?
+              AND carried.taggable_type IS NOT DISTINCT FROM taggings.taggable_type
+              AND carried.taggable_id = taggings.taggable_id
+          )
+        SQL
       end
 
       destroy!

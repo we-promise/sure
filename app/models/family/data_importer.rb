@@ -978,7 +978,7 @@ class Family::DataImporter
     def mapped_tag_ids(old_tag_ids, record_type:)
       Array(old_tag_ids).map do |old_tag_id|
         mapped_id(:tags, old_tag_id, record_type: record_type)
-      end.compact
+      end.compact.uniq
     end
 
     def importable_split_rows(data)
