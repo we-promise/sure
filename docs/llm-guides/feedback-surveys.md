@@ -34,6 +34,12 @@ client configuration; operators need no account or key setup. It must never be a
 PostHog personal or project secret key. An operator's own analytics configuration
 must not change this destination.
 
+The browser loads the survey script from this host's `-assets` counterpart and
+sends responses to the host itself, so `config/initializers/content_security_policy.rb`
+allowlists both in `script-src` and `connect-src` under the same gates. If the
+destination host changes, the policy follows it automatically; a new destination
+outside `self_hosted_feedback_project` must be added there too.
+
 Unknown features, blank survey IDs, or a missing ID for the selected destination
 return `{}`. There is no fallback to another feature's survey or another project.
 Self-hosted configuration also returns `{}` outside production (unless development explicitly opts in with
