@@ -59,6 +59,16 @@ At this point, you should have `compose.yml` in your directory (and optionally `
 
 `compose.yml` requires a `SECRET_KEY_BASE` you provide yourself — there is no built-in default. This isn't just a Rails formality: `SECRET_KEY_BASE` also seeds the automatic generation of your Active Record encryption keys (used to encrypt provider API tokens/keys and other sensitive data at rest) when you don't set `ACTIVE_RECORD_ENCRYPTION_*` explicitly. A shared or guessable value would mean session cookies can be forged **and** your encryption keys can be computed by anyone. Follow the steps below before starting the app.
 
+#### Upgrading from the old built-in SECRET_KEY_BASE
+
+Earlier versions of `compose.example.yml` shipped a working default for `SECRET_KEY_BASE`. If your existing install ran without setting its own value, do **not** generate a new one when you update `compose.yml`:
+
+1. Copy the `SECRET_KEY_BASE` default from your current `compose.yml` (the `${SECRET_KEY_BASE:-...}` value) into `.env` as `SECRET_KEY_BASE=...` before starting the new version. If you plan to set `ACTIVE_RECORD_ENCRYPTION_*` explicitly, leave them unset for now.
+2. Start the app. It keeps reading your data, and the boot log shows a `[SECURITY]` warning because this value is publicly known.
+3. Rotate afterwards following that warning: keep the keys derived from the old value as a `previous` [Active Record encryption scheme](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation), set new keys as the current scheme, then run `bin/rails security:backfill_encryption`. Values stored via Settings (AI and market-data provider API keys) and existing sessions are not migrated and have to be re-entered after `SECRET_KEY_BASE` changes.
+
+Setting a fresh `SECRET_KEY_BASE` (or new `ACTIVE_RECORD_ENCRYPTION_*` keys) directly on an install with existing data makes everything already encrypted unreadable: logins and provider syncs fail.
+
 #### Create your environment file
 
 In order to configure the app, you will need to create a file called `.env`, which is where Docker will read environment variables from.
