@@ -158,7 +158,7 @@ en:
               message: Sure could not verify both the configured endpoint and model. The failure was recorded in Settings → Debug logs and Rails.logger.
             llm_model_not_available:
               title: The configured AI model is not available
-              message: The endpoint answered, but it did not list or serve the configured model. Pick an active model for the selected provider, then run the checks again. For Gemini through an OpenAI-compatible translation layer, use a currently supported model such as gemini-2.5-flash.
+              message: The endpoint answered, but it did not list or serve the configured model. Pick an active model for the selected provider, then run the checks again. For Gemini through an OpenAI-compatible translation layer, use a currently supported model such as gemini-3.8-flash.
             pdf_text_extraction_failed:
               title: The synthetic PDF text-extraction check failed
               message: Sure could not complete the text-first path that extracts embedded PDF text locally and sends it to the configured model. No customer data was sent. The failure was recorded in Settings → Debug logs and Rails.logger.
