@@ -1,0 +1,134 @@
+---
+tr:
+  providers:
+    monobank:
+      name: Monobank
+      description: Ukrayna'daki Monobank kartlarınızı ve kumbaralarınızı kişisel API token'ı ile bağlayın
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Monobank Bağlantısı
+  monobank_account:
+    jar_fallback: Monobank kumbarası
+    card_types:
+      black: Black kart
+      white: White kart
+      platinum: Platinum kart
+      iron: Iron kart
+      yellow: Yellow kart
+      eaid: eAid kartı
+      fop: İşletme hesabı
+      jar: Kumbara
+      unknown: Monobank kartı
+  monobank_item:
+    errors:
+      account_processing_failed: Monobank hesabı senkronize edilemedi
+      account_sync_schedule_failed: Monobank hesap senkronizasyonu zamanlanamadı
+      transactions_failed: Monobank ekstresi alınamadı
+      sync_failed: Monobank bağlantısı senkronize edilemedi
+    sync:
+      status:
+        importing: Monobank'tan hesaplar içe aktarılıyor...
+        checking_setup: Hesap yapılandırması kontrol ediliyor...
+        needs_setup:
+          one: '%{count} hesap kurulum gerektiriyor...'
+          other: '%{count} hesap kurulum gerektiriyor...'
+        processing: İşlemler işleniyor...
+        calculating: Bakiyeler hesaplanıyor...
+    sync_status:
+      no_accounts: Hesap bulunamadı
+      all_synced:
+        one: '%{count} hesap senkronize edildi'
+        other: '%{count} hesap senkronize edildi'
+      partial: '%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor'
+    institution_summary:
+      none: Bağlı kurum yok
+      one: 1 kurum
+      count:
+        one: '%{count} kurum'
+        other: '%{count} kurum'
+  monobank_items:
+    provider_panel:
+      default_connection_name: Monobank Bağlantısı
+      add_connection: Monobank bağlantısı ekle
+      update_connection: Bağlantıyı güncelle
+      connection_name_label: Bağlantı adı
+      connection_name_placeholder: Monobank hesabım
+      access_token_label: Kişisel API token'ı
+      access_token_placeholder: Monobank kişisel token'ınızı yapıştırın
+      keep_access_token_placeholder: Mevcut token'ı korumak için boş bırakın
+      setup_accounts: Hesapları kur
+      syncing: Senkronize ediliyor...
+      sync: Senkronize et
+      disconnect: Bağlantıyı kes
+      disconnect_confirm: '%{name} bağlantısını kesmek istediğinizden emin misiniz?'
+      rate_limit_notice: Monobank dakikada yalnızca bir isteğe izin verir; bu nedenle bir senkronizasyon aynı anda birkaç hesap getirir ve eski geçmiş birkaç senkronizasyon boyunca gelir.
+    create:
+      success: Monobank bağlantısı kaydedildi.
+    update:
+      success: Monobank bağlantısı güncellendi.
+    destroy:
+      success: Monobank bağlantısı silinmek üzere zamanlandı.
+      unlink_failed: Monobank bağlantısı kesilemedi
+    select_accounts:
+      title: Monobank hesaplarını bağla
+      description: Eklenecek Monobank kartlarını veya kumbaralarını seçin.
+      no_accounts_found: Bağlanmamış Monobank hesabı bulunamadı.
+      no_credentials_configured: Önce sağlayıcı ayarlarından Monobank'ı yapılandırın.
+      cancel: İptal
+      link_accounts: Hesapları bağla
+    link_accounts:
+      success:
+        one: '%{count} Monobank hesabı bağlandı.'
+        other: '%{count} Monobank hesabı bağlandı.'
+      no_accounts_selected: En az bir hesap seçin.
+      no_credentials_configured: Önce sağlayıcı ayarlarından Monobank'ı yapılandırın.
+      unsupported_account_type: Monobank bu hesap türünü desteklemiyor.
+      link_failed: Hiçbir hesap bağlanmadı.
+    select_existing_account:
+      title: Monobank hesabını %{account_name} hesabına bağla
+      description: Bu hesaba bağlamak için bağlanmamış bir Monobank hesabı seçin.
+      no_accounts_found: Bağlanmamış Monobank hesabı bulunamadı.
+      no_credentials_configured: Önce sağlayıcı ayarlarından Monobank'ı yapılandırın.
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      cancel: İptal
+      link_account: Hesabı bağla
+    link_existing_account:
+      success: Monobank hesabı %{account_name} hesabına bağlandı.
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      monobank_account_already_linked: Bu Monobank hesabı zaten bağlı.
+      no_account_selected: Bağlamak için bir Monobank hesabı seçin.
+    setup_accounts:
+      title: Monobank Hesaplarını Bağla
+      subtitle: Her Monobank kartının veya kumbarasının Sure'da nasıl görüneceğini seçin.
+      no_credentials: Önce Monobank kimlik bilgilerini yapılandırın.
+      api_error: Hesaplar Monobank'tan yenilenemedi; bu nedenle son senkronizasyonda kaydedilen hesaplar gösteriliyor.
+      no_accounts_to_setup: Kurulacak hesap yok
+      all_accounts_linked: Tüm Monobank hesapları zaten bağlı.
+      choose_account_type: Bir hesap türü seçin
+      choose_account_type_description: Takip etmek istemediğiniz hesapları atlayın.
+      account_type_label: Hesap türü
+      account_types:
+        skip: Atla
+        depository: Nakit
+      create_accounts: Hesapları oluştur
+      cancel: İptal
+    complete_account_setup:
+      success:
+        one: '%{count} Monobank hesabı oluşturuldu.'
+        other: '%{count} Monobank hesabı oluşturuldu.'
+      all_skipped: Hiçbir Monobank hesabı oluşturulmadı.
+      no_accounts: Hiçbir Monobank hesabı seçilmedi.
+      creation_failed: Monobank hesapları oluşturulamadı.
+    monobank_item:
+      deletion_in_progress: Silme işlemi devam ediyor
+      syncing: Senkronize ediliyor
+      error: Hata
+      status_with_summary: '%{timestamp} önce senkronize edildi · %{summary}'
+      status_never: Hiç senkronize edilmedi
+      delete: Sil
+      setup_needed: Hesap kurulumu gerekli
+      setup_description: '%{total} hesaptan %{linked} tanesi bağlandı.'
+      setup_action: Hesapları kur
+      no_accounts_title: Henüz içe aktarılmış hesap yok
+      no_accounts_description: Monobank hesaplarını getirin ve hangilerinin bağlanacağını seçin.

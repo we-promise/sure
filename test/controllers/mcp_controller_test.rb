@@ -325,6 +325,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_includes tool_names, "get_transactions"
       assert_includes tool_names, "get_accounts"
       assert_includes tool_names, "get_holdings"
+      assert_includes tool_names, "set_opening_balance"
       assert_includes tool_names, "get_balance_sheet"
       assert_includes tool_names, "get_income_statement"
       assert_includes tool_names, "update_transaction"

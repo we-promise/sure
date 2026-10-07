@@ -165,6 +165,62 @@ describe("parseAmountPaste", () => {
     })
   })
 
+  describe("settles a single separator before three digits with the currency's separator", () => {
+    it('parses "1,234" as 1.234 for a comma-decimal currency', () => {
+      assert.equal(parseAmountPaste("1,234", { separator: "," }), 1.234)
+    })
+
+    it('parses "1,234" as 1234 for a dot-decimal currency', () => {
+      assert.equal(parseAmountPaste("1,234", { separator: "." }), 1234)
+    })
+
+    it('parses "1.234" as 1234 for a comma-decimal currency', () => {
+      assert.equal(parseAmountPaste("1.234", { separator: "," }), 1234)
+    })
+
+    it('parses "1.234" as 1.234 for a dot-decimal currency', () => {
+      assert.equal(parseAmountPaste("1.234", { separator: "." }), 1.234)
+    })
+
+    it('parses "€1,234" as 1.234 for a comma-decimal currency', () => {
+      assert.equal(parseAmountPaste("€1,234", { separator: "," }), 1.234)
+    })
+
+    it('parses "-1,234" as -1.234 for a comma-decimal currency', () => {
+      assert.equal(parseAmountPaste("-1,234", { separator: "," }), -1.234)
+    })
+
+    it('parses "1,234" as 1234 without a separator hint', () => {
+      assert.equal(parseAmountPaste("1,234"), 1234)
+    })
+  })
+
+  describe("ignores the currency's separator when the paste is unambiguous", () => {
+    it('parses "$1,234.56" as 1234.56 for a comma-decimal currency', () => {
+      assert.equal(parseAmountPaste("$1,234.56", { separator: "," }), 1234.56)
+    })
+
+    it('parses "1.234,56" as 1234.56 for a dot-decimal currency', () => {
+      assert.equal(parseAmountPaste("1.234,56", { separator: "." }), 1234.56)
+    })
+
+    it('parses "1,234,567" as 1234567 for a comma-decimal currency', () => {
+      assert.equal(parseAmountPaste("1,234,567", { separator: "," }), 1234567)
+    })
+
+    it('parses "1,5" as 1.5 for a dot-decimal currency', () => {
+      assert.equal(parseAmountPaste("1,5", { separator: "." }), 1.5)
+    })
+
+    it('parses "1.5" as 1.5 for a comma-decimal currency', () => {
+      assert.equal(parseAmountPaste("1.5", { separator: "," }), 1.5)
+    })
+
+    it('parses "1,2345" as 1.2345 for a dot-decimal currency', () => {
+      assert.equal(parseAmountPaste("1,2345", { separator: "." }), 1.2345)
+    })
+  })
+
   describe("rejects multi-cell pastes rather than joining them", () => {
     it('rejects "100\\t200"', () => {
       assert.equal(parseAmountPaste("100\t200"), null)

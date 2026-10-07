@@ -1,11 +1,12 @@
 class DemoFamilyRefreshJob < ApplicationJob
   queue_as :scheduled
+  sidekiq_options retry: false
 
   def perform
-    return unless Rails.application.config.app_mode.managed?
+    return unless Rails.application.config.app_mode.managed? || Setting.demo_family_refresh_enabled
 
     with_advisory_lock do
-      refresh_demo_family
+      refresh_demo_family if Rails.application.config.app_mode.managed? || Setting.demo_family_refresh_enabled
     end
   end
 
@@ -18,14 +19,34 @@ class DemoFamilyRefreshJob < ApplicationJob
       demo_user = User.find_by_email(demo_email)
       old_family = demo_user&.family
 
+      if Rails.application.config.app_mode.self_hosted?
+        # Email alone is not proof that a family is disposable. An administrator
+        # must explicitly enroll the family whose data will be replaced.
+        configured_id = Setting.demo_family_refresh_family_id.presence
+        return Rails.logger.warn("Skipped demo family refresh: no family selected") unless configured_id
+        return Rails.logger.warn("Skipped demo family refresh: selected family does not have a demo admin") unless demo_user&.role == "admin" && old_family.id.to_s == configured_id.to_s && !old_family.users.super_admin.exists?
+
+        # The generator transfers this global key to the new demo user. Never
+        # take it away from a different family on a self-hosted instance.
+        monitoring_key = ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+        return Rails.logger.warn("Skipped demo family refresh: monitoring key belongs to another family") if monitoring_key && monitoring_key.user.family_id != old_family.id
+      end
+
       old_family_session_count = sessions_count_for(old_family, period_start:, period_end:)
       newly_created_families_count = Family.where(created_at: period_start...period_end).count
 
-      if old_family
-        anonymize_family_emails!(old_family)
-      end
+      ActiveRecord::Base.transaction do
+        if old_family
+          anonymize_family_emails!(old_family)
+        end
 
-      Demo::Generator.new.generate_default_data!(skip_clear: true, email: demo_email)
+        Demo::Generator.new.generate_default_data!(skip_clear: true, email: demo_email)
+        if Rails.application.config.app_mode.self_hosted?
+          new_family = User.find_by!(email: demo_email).family
+          Setting.demo_family_refresh_family_id = new_family.id.to_s
+          retire_old_family!(old_family) if old_family
+        end
+      end
 
       DestroyJob.perform_later(old_family) if old_family
 
@@ -36,6 +57,21 @@ class DemoFamilyRefreshJob < ApplicationJob
         period_start:,
         period_end:
       )
+    end
+
+    # Retiring a demo family must close access before its asynchronous deletion.
+    # Deletion can fail on unrelated callbacks, and anonymizing email alone
+    # leaves sessions and keys usable. The generator transfers the dedicated
+    # monitoring key to the replacement before this runs.
+    def retire_old_family!(family)
+      family.users.find_each do |user|
+        SsoIdentityBlock.block_all!(user.oidc_identities, identity_label: user.email)
+        user.sessions.delete_all
+        user.api_keys.active.visible.update_all(revoked_at: Time.current)
+        Doorkeeper::AccessToken.where(resource_owner_id: user.id, revoked_at: nil).update_all(revoked_at: Time.current)
+        Doorkeeper::AccessGrant.where(resource_owner_id: user.id, revoked_at: nil).update_all(revoked_at: Time.current)
+        user.update_columns(active: false)
+      end
     end
 
     def sessions_count_for(family, period_start:, period_end:)
