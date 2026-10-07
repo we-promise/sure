@@ -7,6 +7,7 @@ nl:
       success: Overboeking verwijderd
     form:
       amount: Bedrag
+      category: Categorie
       date: Datum
       expense: Uitgave
       from: Van
@@ -15,6 +16,7 @@ nl:
       submit: Maak overboeking aan
       to: Naar
       transfer: Overboeking
+      uncategorized: Niet gecategoriseerd
     new:
       title: Nieuwe overboeking
     show:

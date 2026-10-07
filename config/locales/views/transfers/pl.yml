@@ -11,6 +11,7 @@ pl:
       success: Przelew został usunięty
     form:
       amount: Kwota
+      category: Kategoria
       bank_charges: Opłaty bankowe
       date: Data
       destination_amount: Kwota docelowa
@@ -26,6 +27,7 @@ pl:
       submit: Utwórz przelew
       to: Do
       transfer: Przelew
+      uncategorized: Bez kategorii
     new:
       title: Nowy przelew
     show:
