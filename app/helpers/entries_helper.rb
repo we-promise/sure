@@ -23,6 +23,21 @@ module EntriesHelper
     result
   end
 
+  def compact_entry_render_options(entry, view_ctx: "account", is_filtered: false, in_split_group: false, running_balance: nil, hide_balance: false, flat: false)
+    partial = {
+      "Transaction" => "transactions/compact_transaction",
+      "Trade" => "trades/compact_trade",
+      "Valuation" => "valuations/compact_valuation"
+    }[entry.entryable_type]
+    return { partial: entry, locals: { view_ctx: view_ctx, is_filtered: is_filtered } } unless partial
+
+    locals = { entry: entry, running_balance: running_balance, hide_balance: hide_balance, flat: flat }
+    unless entry.entryable_type == "Valuation"
+      locals.merge!(view_ctx: view_ctx, is_filtered: is_filtered, in_split_group: entry.entryable_type == "Transaction" && in_split_group)
+    end
+    { partial: partial, locals: locals }
+  end
+
   def dedupe_transfer_entries(entries)
     # For a more intuitive UX, we do not want to show the same transfer twice
     # in the list. We count occurrences by transfer id first (without
