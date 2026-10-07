@@ -36,6 +36,7 @@ de:
       files_hint: PDF, CSV oder XLSX. Max. %{max_size} MB pro Datei.
       files_label: Kontoauszugsdateien
       inbox_upload: Hochladen
+      period_hint: "Sure liest den Zeitraum aus Trade-Republic-PDFs oder aus einem Datum im Dateinamen (2026-04 oder 04-2026). Du kannst ihn auch am Auszug festlegen."
     index:
       account_label: Konto
       confidence: "%{confidence} Übereinstimmung"

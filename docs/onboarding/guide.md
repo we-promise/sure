@@ -156,6 +156,18 @@ You will now see the transaction you added in your **transaction history**, as w
 
 <img width="566" height="587" alt="Filled-out expense form" src="assets/guide-expense-form.png" />
 
+### Uploading statements
+
+You can keep your bank's statements next to an account and let Sure check its balances against them. Open an account and upload the PDF, CSV or XLSX files in **Statements**, or use **Settings → Statement Vault** to upload first and link later.
+
+Sure needs each statement's **period** to show which months are covered and to compare balances. It finds the period in this order:
+
+1. **Inside the PDF**, for banks Sure can read. Trade Republic statements are recognised in any app language, including the opening and closing balance, so their generic `Account statement.pdf` name doesn't matter.
+2. **Dates in the filename**, for everything else, e.g. `2026-04`, `04-2026`, `2026-04-30` or `Apr 2026`.
+3. **Manually**: open the statement and enter the period and balances yourself.
+
+If your bank names every file the same way, add the month to the filename before uploading, e.g. `Statement 2026-04.pdf`.
+
 ## 8. Managing Investment Accounts
 
 If you're tracking investments in Sure, there are additional features to help you manage your portfolio accurately.

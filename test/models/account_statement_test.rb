@@ -488,6 +488,33 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_not_includes statement.sanitized_parser_output.to_json, "MARIO ROSSI"
   end
 
+  test "reads a Trade Republic statement saved under its default filename" do
+    eur_account = @family.accounts.create!(
+      name: "Trade Republic Cash",
+      balance: 0,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: eur_account,
+      file: Rack::Test::UploadedFile.new(
+        file_fixture("account_statements/trade_republic_it_2026_04.pdf"),
+        "application/pdf",
+        true,
+        original_filename: "Account statement.pdf"
+      )
+    )
+
+    assert_equal Date.new(2026, 4, 1), statement.period_start_on
+    assert_equal Date.new(2026, 4, 30), statement.period_end_on
+    assert_equal BigDecimal("11948.59"), statement.closing_balance
+    assert_equal "Trade Republic", statement.institution_name_hint
+    assert_nil statement.account_name_hint
+    assert_equal [ "pdf_text" ], statement.sanitized_parser_output["metadata_sources"]
+  end
+
   test "skips Trade Republic balances when the statement currency differs" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
