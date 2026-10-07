@@ -721,24 +721,7 @@ class TransactionsController < ApplicationController
     end
 
     def search_params
-      cleaned_params = params.fetch(:q, {})
-              .permit(
-                :start_date, :end_date, :search, :amount,
-                :amount_operator, :active_accounts_only,
-                accounts: [], account_ids: [],
-                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: []
-              )
-              .to_h
-              .compact_blank
-
-      cleaned_params.delete(:amount_operator) unless cleaned_params[:amount].present?
-
-      if cleaned_params[:ai_status]
-        cleaned_params[:ai_status] &= Transaction::Search::AI_STATUSES
-        cleaned_params.delete(:ai_status) if cleaned_params[:ai_status].empty?
-      end
-
-      cleaned_params
+      Transaction::Search.clean_filters(params.fetch(:q, {}))
     end
 
     def store_params!

@@ -22,6 +22,29 @@ class Transaction::Search
 
   attr_reader :family, :accessible_account_ids, :user
 
+  # Permits and cleans the `q` params of a transaction list request. Shared by
+  # the list itself and "mark all as read", so both always see the same filters.
+  def self.clean_filters(q_params)
+    cleaned = q_params
+                .permit(
+                  :start_date, :end_date, :search, :amount,
+                  :amount_operator, :active_accounts_only,
+                  accounts: [], account_ids: [],
+                  categories: [], merchants: [], types: [], tags: [], status: [], ai_status: []
+                )
+                .to_h
+                .compact_blank
+
+    cleaned.delete(:amount_operator) unless cleaned[:amount].present?
+
+    if cleaned[:ai_status]
+      cleaned[:ai_status] &= AI_STATUSES
+      cleaned.delete(:ai_status) if cleaned[:ai_status].empty?
+    end
+
+    cleaned
+  end
+
   # Initialize a transaction search with optional filters and accessible accounts.
   # `user` is only needed for the per-user "unread" status filter.
   def initialize(family, filters: {}, accessible_account_ids: nil, user: nil)

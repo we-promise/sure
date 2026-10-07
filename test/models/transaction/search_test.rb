@@ -1178,4 +1178,22 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal [ tx.id ], history_ids
     assert_empty current_ids
   end
+
+  test "clean_filters drops blanks, a lone amount operator and unknown ai statuses" do
+    raw = ActionController::Parameters.new(
+      search: "Coffee", amount: "", amount_operator: "greater",
+      ai_status: [ "bogus" ], tags: [], unknown: "x"
+    )
+
+    assert_equal({ "search" => "Coffee" }, Transaction::Search.clean_filters(raw))
+  end
+
+  test "clean_filters keeps an amount operator with an amount and known ai statuses" do
+    raw = ActionController::Parameters.new(amount: "10", amount_operator: "greater", ai_status: [ "current", "bogus" ])
+
+    assert_equal(
+      { "amount" => "10", "amount_operator" => "greater", "ai_status" => [ "current" ] },
+      Transaction::Search.clean_filters(raw)
+    )
+  end
 end
