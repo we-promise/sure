@@ -106,7 +106,13 @@ class CategoriesController < ApplicationController
   end
 
   def toggle_lock
-    locked = params.require(:locked) == "true"
+    locked = case params.require(:locked)
+    
+    when true, "true" then true
+    when false, "false" then false
+    end
+    return head :bad_request if locked.nil?
+
     Current.family.update!(categories_locked: locked)
 
     redirect_back_or_to categories_path, notice: locked ? t(".locked") : t(".unlocked")

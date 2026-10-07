@@ -544,6 +544,19 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert @family.reload.categories_locked?
   end
 
+  test "toggle_lock accepts a JSON boolean locked value" do
+    patch toggle_lock_categories_url, params: { locked: true }, as: :json
+
+    assert @family.reload.categories_locked?
+  end
+
+  test "toggle_lock rejects a non-boolean locked value" do
+    patch toggle_lock_categories_url, params: { locked: "banana" }
+
+    assert_response :bad_request
+    assert_not @family.reload.categories_locked?
+  end
+
   test "non-admin cannot toggle the category lock" do
     sign_in users(:family_member)
 
