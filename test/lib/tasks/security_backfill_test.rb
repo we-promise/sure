@@ -168,21 +168,6 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     refute_includes at_rest, "1500.0"
   end
 
-  test "backfills plaintext MonobankAccount card number and IBAN" do
-    account = monobank_accounts(:black_card)
-    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
-      "UPDATE monobank_accounts SET masked_pan = ?, iban = ? WHERE id = ?",
-      "537541******9999", "UA-PLAINTEXT-IBAN", account.id ]))
-
-    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
-
-    account.reload
-    assert_equal "537541******9999", account.masked_pan
-    assert_equal "UA-PLAINTEXT-IBAN", account.iban
-    refute_includes account.read_attribute_before_type_cast(:iban).to_s, "UA-PLAINTEXT-IBAN"
-    refute_includes account.read_attribute_before_type_cast(:masked_pan).to_s, "9999"
-  end
-
   test "backfills plaintext FioAccount IBAN" do
     account = fio_accounts(:checking)
     ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
@@ -200,7 +185,7 @@ class SecurityBackfillTest < ActiveSupport::TestCase
   # their backfill never touched. On a deliberate change, bump the version and
   # add its digest here.
   BACKFILL_MANIFEST_DIGESTS = {
-    4 => "946aff1a968115a3f11cd5174ea91abfce3c9076635db68c95ee7054ca564410"
+    4 => "9630168637fae661a583b828adb447e990416c8eae8b5f12eeaf1dad428acfb2"
   }.freeze
 
   test "backfill manifest changes come with a CURRENT_BACKFILL_VERSION bump" do

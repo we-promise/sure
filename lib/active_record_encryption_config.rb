@@ -95,7 +95,7 @@ module ActiveRecordEncryptionConfig
     coinspot_accounts: [ "CoinspotAccount", %i[raw_payload raw_transactions_payload] ],
     coinstats_accounts: [ "CoinstatsAccount", %i[raw_payload raw_transactions_payload] ],
     mercury_accounts: [ "MercuryAccount", %i[raw_payload raw_transactions_payload] ],
-    monobank_accounts: [ "MonobankAccount", %i[raw_payload raw_transactions_payload masked_pan iban] ],
+    monobank_accounts: [ "MonobankAccount", %i[raw_payload raw_transactions_payload] ],
     akahu_accounts: [ "AkahuAccount", %i[raw_payload raw_transactions_payload] ],
     binance_accounts: [ "BinanceAccount", %i[raw_payload raw_transactions_payload] ],
     brex_accounts: [ "BrexAccount", %i[raw_payload raw_transactions_payload] ],
