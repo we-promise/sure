@@ -17,6 +17,7 @@ class Provider::KrakenTest < ActiveSupport::TestCase
 
   setup do
     @provider = Provider::Kraken.new(api_key: "test_key", api_secret: official_sample_secret, nonce_generator: -> { "1616492376594" })
+    @provider.stubs(:throttle_request)
   end
 
   test "sign matches official Kraken Spot REST sample" do
@@ -178,7 +179,91 @@ class Provider::KrakenTest < ActiveSupport::TestCase
     end
   end
 
+  # ================================
+  # Rate limiting
+  # ================================
+
+  test "throttle_request spaces consecutive requests by the minimum interval" do
+    provider = unthrottled_provider
+    slept = []
+    provider.define_singleton_method(:sleep) { |duration| slept << duration }
+
+    provider.send(:throttle_request)   # first call has nothing to wait for
+    provider.send(:throttle_request)
+
+    assert_equal 1, slept.size
+    assert_operator slept.first, :>, 0
+    assert_operator slept.first, :<=, Provider::Kraken::MIN_REQUEST_INTERVAL
+  end
+
+  test "throttle_request honours the KRAKEN_MIN_REQUEST_INTERVAL override" do
+    provider = unthrottled_provider
+    slept = []
+    provider.define_singleton_method(:sleep) { |duration| slept << duration }
+
+    with_env_overrides("KRAKEN_MIN_REQUEST_INTERVAL" => "6") do
+      provider.send(:throttle_request)
+      provider.send(:throttle_request)
+    end
+
+    assert_operator slept.first, :>, Provider::Kraken::MIN_REQUEST_INTERVAL
+    assert_operator slept.first, :<=, 6.0
+  end
+
+  test "throttle_request rejects an interval that is not a positive number" do
+    provider = unthrottled_provider
+
+    with_env_overrides("KRAKEN_MIN_REQUEST_INTERVAL" => "invalid") do
+      error = assert_raises(ArgumentError) { provider.send(:throttle_request) }
+      assert_match(/KRAKEN_MIN_REQUEST_INTERVAL/, error.message)
+    end
+
+    with_env_overrides("KRAKEN_MIN_REQUEST_INTERVAL" => "0") do
+      assert_raises(ArgumentError) { provider.send(:throttle_request) }
+    end
+
+    # Float("1e309") is Infinity, which sleep would reject with a RangeError.
+    with_env_overrides("KRAKEN_MIN_REQUEST_INTERVAL" => "1e309") do
+      assert_raises(ArgumentError) { provider.send(:throttle_request) }
+    end
+  end
+
+  # Ledgers and TradesHistory cost four counter points against a decay of half
+  # a point per second, so they are paced on their own, slower clock.
+  test "account-history requests are spaced by the history interval" do
+    provider = unthrottled_provider
+    slept = []
+    provider.define_singleton_method(:sleep) { |duration| slept << duration }
+    response = mock_httparty_response(200, { "error" => [], "result" => { "ledger" => {}, "count" => 0 } })
+    Provider::Kraken.stubs(:post).returns(response)
+
+    provider.get_ledgers
+    provider.get_ledgers
+
+    assert_equal 1, slept.size
+    assert_operator slept.first, :>, Provider::Kraken::MIN_REQUEST_INTERVAL
+    assert_operator slept.first, :<=, Provider::Kraken::HISTORY_MIN_REQUEST_INTERVAL
+  end
+
+  test "an ordinary private request is not held to the history interval" do
+    provider = unthrottled_provider
+    slept = []
+    provider.define_singleton_method(:sleep) { |duration| slept << duration }
+    response = mock_httparty_response(200, { "error" => [], "result" => {} })
+    Provider::Kraken.stubs(:post).returns(response)
+
+    provider.get_extended_balance
+    provider.get_extended_balance
+
+    assert_equal 1, slept.size
+    assert_operator slept.first, :<=, Provider::Kraken::MIN_REQUEST_INTERVAL
+  end
+
   private
+
+    def unthrottled_provider
+      Provider::Kraken.new(api_key: "test_key", api_secret: official_sample_secret, nonce_generator: -> { "1616492376594" })
+    end
 
     def official_sample_secret
       Base64.strict_encode64(OFFICIAL_SAMPLE_SECRET_BYTES.pack("C*"))

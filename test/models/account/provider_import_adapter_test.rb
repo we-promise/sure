@@ -288,6 +288,93 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "keeps a locked date and amount on re-import" do
+    entry = @adapter.import_transaction(
+      external_id: "plaid_locked_financials",
+      amount: 100.00,
+      currency: "USD",
+      date: Date.current - 3.days,
+      name: "Original Name",
+      source: "plaid"
+    )
+
+    # A user edit that locks the fields without marking the entry user_modified,
+    # as PATCH /api/v1/transactions/:id does when user_modified is not sent.
+    entry.update!(date: Date.current - 1.day, amount: 80.00)
+    entry.lock_saved_attributes!
+    assert_not entry.reload.user_modified?
+
+    updated_entry = @adapter.import_transaction(
+      external_id: "plaid_locked_financials",
+      amount: 100.00,
+      currency: "EUR",
+      date: Date.current - 3.days,
+      name: "Provider Name",
+      source: "plaid"
+    )
+
+    assert_equal entry.id, updated_entry.id
+    assert_equal Date.current - 1.day, updated_entry.reload.date
+    assert_equal 80.00, updated_entry.amount
+    assert_equal "USD", updated_entry.currency
+    assert_equal "Provider Name", updated_entry.name
+  end
+
+  test "classifies a re-imported loan entry by its locked amount, not the provider's" do
+    loan_adapter = Account::ProviderImportAdapter.new(accounts(:loan))
+    entry = loan_adapter.import_transaction(
+      external_id: "plaid_loan_locked_amount",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "plaid"
+    )
+    assert_equal "loan_payment", entry.transaction.kind
+
+    entry.update!(amount: 50.00)
+    entry.lock_saved_attributes!
+    entry.transaction.update!(kind: "standard")
+
+    loan_adapter.import_transaction(
+      external_id: "plaid_loan_locked_amount",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "plaid"
+    )
+
+    assert_equal 50.00, entry.reload.amount
+    assert_equal "standard", entry.transaction.kind
+  end
+
+  test "updates an unlocked amount while keeping a locked date" do
+    entry = @adapter.import_transaction(
+      external_id: "plaid_locked_date_only",
+      amount: 100.00,
+      currency: "USD",
+      date: Date.current - 3.days,
+      name: "Original Name",
+      source: "plaid"
+    )
+
+    entry.update!(date: Date.current - 1.day)
+    entry.lock_saved_attributes!
+
+    updated_entry = @adapter.import_transaction(
+      external_id: "plaid_locked_date_only",
+      amount: 120.00,
+      currency: "USD",
+      date: Date.current - 3.days,
+      name: "Original Name",
+      source: "plaid"
+    )
+
+    assert_equal Date.current - 1.day, updated_entry.reload.date
+    assert_equal 120.00, updated_entry.amount
+  end
+
   test "allows same external_id from different sources without collision" do
     # Create transaction from SimpleFin with ID "transaction_123"
     simplefin_entry = @adapter.import_transaction(
