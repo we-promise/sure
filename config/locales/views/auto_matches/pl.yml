@@ -12,10 +12,12 @@ pl:
       invalid_selection: Wybierz co najmniej jedną sugestię do potwierdzenia lub odrzucenia
       bulk_confirmed:
         one: Potwierdzono 1 przelew
+        few: "Potwierdzono %{count} przelewy"
         many: "Potwierdzono %{count} przelewów"
         other: "Potwierdzono %{count} przelewu"
       bulk_rejected:
         one: Odrzucono 1 przelew
+        few: "Odrzucono %{count} przelewy"
         many: "Odrzucono %{count} przelewów"
         other: "Odrzucono %{count} przelewu"
     empty:

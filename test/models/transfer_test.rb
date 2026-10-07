@@ -226,6 +226,18 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow_entry.transaction.reload.kind
   end
 
+  test "confirm! on an already-confirmed transfer leaves both legs alone when both were reset to standard" do
+    transfer = transfers(:one)
+    transfer.confirm!
+
+    transfer.inflow_transaction.update!(kind: "standard")
+    transfer.outflow_transaction.update!(kind: "standard")
+    transfer.reload.confirm!
+
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+  end
+
   test "confirm! on an already-confirmed transfer does not re-apply kind" do
     transfer = transfers(:one)
     transfer.confirm!

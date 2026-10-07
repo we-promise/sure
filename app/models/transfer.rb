@@ -138,7 +138,7 @@ class Transfer < ApplicationRecord
 
   def confirm!
     with_lock do
-      apply_transfer_kind! if kinds_still_standard?
+      apply_transfer_kind! if pending? && kinds_still_standard?
       update!(status: "confirmed")
     end
   end

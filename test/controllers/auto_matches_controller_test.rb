@@ -107,6 +107,26 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input#auto_match_transfers_enabled[disabled]"
   end
 
+  test "update_settings keeps auto match on when cleaning up a suggestion fails" do
+    create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    Transfer.any_instance.stubs(:destroy!).raises(ActiveRecord::RecordNotDestroyed.new("boom"))
+
+    assert_raises(ActiveRecord::RecordNotDestroyed) do
+      patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+    end
+
+    assert_not @family.reload.auto_match_transfers_disabled?
+  end
+
+  test "bulk update notices use the Polish few form" do
+    I18n.with_locale(:pl) do
+      assert_equal "Potwierdzono 2 przelewy", I18n.t("auto_matches.bulk_update.bulk_confirmed", count: 2)
+      assert_equal "Odrzucono 3 przelewy", I18n.t("auto_matches.bulk_update.bulk_rejected", count: 3)
+    end
+  end
+
   test "update_settings re-enables auto match" do
     @family.update!(auto_match_transfers_disabled: true)
 
