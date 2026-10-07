@@ -59,6 +59,25 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     assert_includes account.extra.dig("kraken", "missing_prices"), "ETH.F"
   end
 
+  # There is no DOT28.S ticker: a bonded balance has to be priced as the asset
+  # underneath it. Priced as the wallet variant it comes back "missing" and the
+  # holding is dropped, so a staked position vanishes from the snapshot.
+  test "prices a bonded balance as its underlying asset" do
+    @provider.stubs(:get_asset_info).returns("DOT28.S" => { "altname" => "DOT28.S" })
+    @provider.stubs(:get_extended_balance).returns(
+      "DOT28.S" => { "balance" => "10.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_ticker).with("DOTUSD").returns("DOTUSD" => { "c" => [ "4.00" ] })
+
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    account = @item.kraken_accounts.first
+    dot = account.raw_payload["assets"].first
+    assert_equal "exact", dot["price_status"]
+    assert_in_delta 4.0, dot["price_usd"].to_d, 0.001
+    assert_in_delta 40.0, account.current_balance, 0.01
+  end
+
   test "paginates TradesHistory in 50 fill pages" do
     @provider.stubs(:get_asset_info).returns({})
     @provider.stubs(:get_extended_balance).returns({})
