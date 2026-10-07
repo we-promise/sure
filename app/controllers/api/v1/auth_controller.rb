@@ -73,9 +73,9 @@ module Api
       end
 
       def login
-        user = User.find_by_email(params[:email])
+        user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
-        if user&.authenticate(params[:password])
+        if user
           unless user.active?
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return

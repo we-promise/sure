@@ -87,22 +87,81 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
     assert_nil User.authenticate_by_email(email: "legacy-plaintext@example.com", password: "wrong-password")
   end
 
-  test "User.authenticate_by_email does not fall back to a second password check for an already-encrypted user" do
+  test "User.authenticate_by_email runs exactly one password check for an already-encrypted user" do
     skip "Encryption not configured" unless User.encryption_ready?
 
     user = users(:family_admin)
     user.update!(password: "correct-horse-battery-staple")
 
-    User.expects(:find_by_email).never
+    BCrypt::Password.expects(:create).never
+    BCrypt::Password.any_instance.expects(:is_password?).twice.returns(true, false)
 
     assert_equal user, User.authenticate_by_email(email: user.email, password: "correct-horse-battery-staple")
     assert_nil User.authenticate_by_email(email: user.email, password: "wrong-password")
+  end
+
+  test "User.authenticate_by_email still hashes the password for an SSO-only user" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+    user.update_column(:password_digest, nil)
+
+    digest = BCrypt::Password.create("whatever", cost: BCrypt::Engine::MIN_COST)
+    BCrypt::Password.expects(:create).once.returns(digest)
+
+    assert_nil User.authenticate_by_email(email: user.email, password: "whatever")
+  end
+
+  test "User.authenticate_by_email rejects a blank or non-String password without raising" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+
+    BCrypt::Password.expects(:create).never
+    assert_nil User.authenticate_by_email(email: user.email, password: "")
+    assert_nil User.authenticate_by_email(email: user.email, password: nil)
+    assert_nil User.authenticate_by_email(email: "no-such-user@example.com", password: "")
+
+    BCrypt::Password.unstub(:create)
+    assert_nil User.authenticate_by_email(email: user.email, password: 123456)
   end
 
   test "User.authenticate_by_email returns nil for an email that matches no user, plaintext or encrypted" do
     skip "Encryption not configured" unless User.encryption_ready?
 
     assert_nil User.authenticate_by_email(email: "no-such-user@example.com", password: "whatever")
+  end
+
+  test "User.authenticate_by_email still hashes the password for an email that matches no user" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    # A miss must cost one bcrypt digest, like a hit, so response time does
+    # not reveal whether an email is registered.
+    digest = BCrypt::Password.create("whatever", cost: BCrypt::Engine::MIN_COST)
+    BCrypt::Password.expects(:create).once.returns(digest)
+
+    assert_nil User.authenticate_by_email(email: "no-such-user@example.com", password: "whatever")
+  end
+
+  test "email uniqueness also catches a legacy plaintext row" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    # Unlike find_by(email:), the uniqueness validator's query is extended to
+    # plaintext rows, so an SSO signup or email change cannot duplicate a
+    # not-yet-backfilled user.
+
+    user = users(:family_admin)
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", "legacy-plaintext@example.com", user.id ])
+    )
+
+    duplicate = User.new(email: "Legacy-Plaintext@example.com", family: Family.new, skip_password_validation: true)
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:email, :taken)
+
+    # The legacy user itself can still be saved.
+    user.reload.first_name = "Renamed"
+    assert user.valid?, user.errors.full_messages.to_sentence
   end
 
   test "deterministic find_by matches a legacy plaintext row for downcase attributes without a model-level normalizes declaration" do

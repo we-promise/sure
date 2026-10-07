@@ -441,6 +441,21 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid email or password", response_data["error"]
   end
 
+  test "login with a non-existent email still hashes the password" do
+    # Same cost as a wrong password, so response time does not reveal
+    # whether the email is registered.
+    digest = BCrypt::Password.create(user_password_test, cost: BCrypt::Engine::MIN_COST)
+    BCrypt::Password.expects(:create).once.returns(digest)
+
+    post "/api/v1/auth/login", params: {
+      email: "nonexistent@example.com",
+      password: user_password_test,
+      device: @device_info
+    }
+
+    assert_response :unauthorized
+  end
+
   test "should login even when OAuth application is missing" do
     user = users(:family_admin)
     password = user_password_test
