@@ -16,5 +16,9 @@ nb:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: Administrator kan ikke deaktivere kontoen mens andre brukere er til stede. Vennligst slett alle medlemmer først.
+            password:
+              missing_case: må inneholde både store og små bokstaver
+              missing_number: må inneholde minst ett tall
+              missing_special: må inneholde minst ett spesialtegn
             profile_image:
               invalid_file_size: filstørrelsen må være mindre enn %{max_megabytes} MB

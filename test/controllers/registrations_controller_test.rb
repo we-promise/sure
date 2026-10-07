@@ -99,6 +99,22 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "sign-up names each broken password rule in the user's language" do
+    I18n.with_locale(:de) do
+      assert_equal "muss mindestens eine Ziffer enthalten", User.new.errors.generate_message(:password, :missing_number)
+    end
+
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: { email: "weakpassword@example.com", password: "abc" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "p", text: /too short \(minimum is 8 characters\)/
+    assert_select "p", text: /uppercase and lowercase/
+    assert_select "p", text: /at least one number/
+    assert_select "p", text: /at least one special character/
+  end
+
   test "invalid invite code does not create a user" do
     with_env_overrides REQUIRE_INVITE_CODE: "true" do
       assert_no_difference "User.count" do

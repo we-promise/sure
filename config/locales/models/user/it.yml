@@ -16,5 +16,9 @@ it:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: L'amministratore non può eliminare l'account mentre altri utenti sono presenti. Elimina prima tutti i membri.
+            password:
+              missing_case: deve contenere lettere maiuscole e minuscole
+              missing_number: deve contenere almeno un numero
+              missing_special: deve contenere almeno un carattere speciale
             profile_image:
               invalid_file_size: la dimensione del file deve essere inferiore a %{max_megabytes}MB

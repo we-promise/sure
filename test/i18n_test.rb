@@ -42,6 +42,26 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
+  # The sign-up form lists the password rules in every locale it ships, so the
+  # password change and reset must name a broken rule in that locale too
+  # instead of falling back to English.
+  def test_password_rule_errors_exist_wherever_sign_up_lists_the_rules
+    rule_locales = Dir.glob(Rails.root.join("config/locales/views/registrations/*.yml")).filter_map do |path|
+      locale, data = YAML.load_file(path, aliases: true).first
+      locale if data.dig("registrations", "new", "password_requirements", "special").present?
+    end
+    assert_includes rule_locales, "en"
+
+    rule_locales.each do |locale|
+      path = Rails.root.join("config/locales/models/user/#{locale}.yml")
+      password_errors = YAML.load_file(path, aliases: true).dig(locale, "activerecord", "errors", "models", "user", "attributes", "password") || {}
+
+      %w[missing_case missing_number missing_special].each do |key|
+        assert password_errors[key].present?, "#{path.relative_path_from(Rails.root)} is missing password.#{key}"
+      end
+    end
+  end
+
   def test_no_missing_keys
     skip "Skipping missing keys test"
     missing_keys = @i18n.missing_keys(locales: [ :en ])

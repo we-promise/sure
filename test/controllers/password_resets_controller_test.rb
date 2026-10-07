@@ -40,6 +40,18 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.text-destructive", text: /at least one special character/
   end
 
+  test "update rejects a blank password and keeps the reset link valid" do
+    token = @user.generate_token_for(:password_reset)
+
+    patch password_reset_path(token: token),
+      params: { user: { password: "", password_confirmation: "" } }
+
+    assert_response :unprocessable_entity
+    assert @user.reload.authenticate(user_password_test)
+    assert_select "p.text-destructive", text: /can't be blank/
+    assert_equal @user, User.find_by_token_for(:password_reset, token)
+  end
+
   test "all actions redirect when password features are disabled" do
     AuthConfig.stubs(:password_features_enabled?).returns(false)
 

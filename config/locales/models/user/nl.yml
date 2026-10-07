@@ -16,5 +16,9 @@ nl:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: Admin kan account niet verwijderen terwijl andere gebruikers aanwezig zijn. Verwijder eerst alle leden.
+            password:
+              missing_case: moet zowel hoofdletters als kleine letters bevatten
+              missing_number: moet minstens één cijfer bevatten
+              missing_special: moet minstens één speciaal teken bevatten
             profile_image:
               invalid_file_size: bestandsgrootte moet minder zijn dan %{max_megabytes} MB

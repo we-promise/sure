@@ -32,6 +32,14 @@ class UserTest < ActiveSupport::TestCase
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end
 
+  test "password complexity requires a new password" do
+    @user.require_password_complexity = true
+    @user.password = ""
+
+    assert_not @user.valid?
+    assert_equal [ :blank ], @user.errors.details[:password].map { |detail| detail[:error] }
+  end
+
   # email
   test "email must be present" do
     potential_user = User.new(

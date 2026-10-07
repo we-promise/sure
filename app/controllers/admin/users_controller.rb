@@ -197,13 +197,12 @@ module Admin
         user_params[:password].present? && @user.has_local_password?
       end
 
+      # i18n-tasks-use t("admin.users.update.password_too_short")
+      # i18n-tasks-use t("admin.users.update.password_missing_case")
+      # i18n-tasks-use t("admin.users.update.password_missing_number")
+      # i18n-tasks-use t("admin.users.update.password_missing_special")
       def validate_password_criteria(password)
-        errors = []
-        errors << t(".password_too_short") if password.length < 8
-        errors << t(".password_missing_case") unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
-        errors << t(".password_missing_number") unless password.match?(/\d/)
-        errors << t(".password_missing_special") unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
-        errors
+        PasswordPolicy.unmet_requirements(password).map { |requirement| t(".password_#{requirement}") }
       end
 
       def membership_change_requested?

@@ -17,5 +17,9 @@ es:
             base:
               cannot_deactivate_admin_with_other_users: El administrador no puede eliminar la cuenta 
                 mientras haya otros usuarios. Por favor, elimine primero a todos los miembros.
+            password:
+              missing_case: debe incluir letras mayúsculas y minúsculas
+              missing_number: debe incluir al menos un número
+              missing_special: debe incluir al menos un carácter especial
             profile_image:
               invalid_file_size: El tamaño del archivo debe ser inferior a %{max_megabytes} MB.

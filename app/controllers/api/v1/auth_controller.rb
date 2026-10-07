@@ -1,6 +1,13 @@
 module Api
   module V1
     class AuthController < BaseController
+      PASSWORD_REQUIREMENT_MESSAGES = {
+        too_short: "Password must be at least #{PasswordPolicy::MIN_LENGTH} characters",
+        missing_case: "Password must include both uppercase and lowercase letters",
+        missing_number: "Password must include at least one number",
+        missing_special: "Password must include at least one special character"
+      }.freeze
+
       include Invitable
 
       skip_before_action :authenticate_request!
@@ -404,10 +411,9 @@ module Api
             return errors
           end
 
-          errors << "Password must be at least 8 characters" if password.length < 8
-          errors << "Password must include both uppercase and lowercase letters" unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
-          errors << "Password must include at least one number" unless password.match?(/\d/)
-          errors << "Password must include at least one special character" unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
+          PasswordPolicy.unmet_requirements(password).each do |requirement|
+            errors << PASSWORD_REQUIREMENT_MESSAGES.fetch(requirement)
+          end
 
           errors
         end

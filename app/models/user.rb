@@ -53,7 +53,7 @@ class User < ApplicationRecord
   # Password is required on create unless the user is being created via SSO JIT.
   # SSO JIT users have password_digest = nil and authenticate via OIDC only.
   validates :password, presence: true, on: :create, unless: :skip_password_validation?
-  validates :password, length: { minimum: 8 }, allow_nil: true
+  validates :password, length: { minimum: PasswordPolicy::MIN_LENGTH }, allow_nil: true
   validate :password_meets_complexity_requirements, if: :require_password_complexity
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
@@ -241,7 +241,8 @@ class User < ApplicationRecord
   attr_accessor :skip_password_validation
 
   # Set by the self-service password change and the password reset so they
-  # apply the same rules as sign-up, the admin reset and the API signup.
+  # require a new password and apply the same rules (PasswordPolicy) as
+  # sign-up, the admin reset and the API signup.
   attr_accessor :require_password_complexity
 
   # Deactivation
@@ -800,12 +801,18 @@ class User < ApplicationRecord
       skip_password_validation == true
     end
 
+    # has_secure_password ignores a blank assignment, so an empty new password
+    # would otherwise leave the old one in place and still report success.
     def password_meets_complexity_requirements
-      return if password.blank?
+      if password.to_s.empty?
+        errors.add(:password, :blank)
+        return
+      end
 
-      errors.add(:password, :missing_case) unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
-      errors.add(:password, :missing_number) unless password.match?(/\d/)
-      errors.add(:password, :missing_special) unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
+      # Length is covered by the length validation above.
+      (PasswordPolicy.unmet_requirements(password) - [ :too_short ]).each do |requirement|
+        errors.add(:password, requirement)
+      end
     end
 
     # The dashboard only sends the order of the widgets it rendered, so put

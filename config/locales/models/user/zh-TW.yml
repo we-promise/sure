@@ -16,5 +16,9 @@ zh-TW:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: 當系統內仍有其他使用者時，管理員無法刪除帳號。請先刪除所有成員。
+            password:
+              missing_case: 必須同時包含大寫和小寫字母
+              missing_number: 必須包含至少一個數字
+              missing_special: 必須包含至少一個特殊字元
             profile_image:
               invalid_file_size: 檔案大小必須小於 %{max_megabytes}MB

@@ -41,4 +41,16 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.text-destructive", text: /at least one number/
     assert_select "p.text-destructive", text: /at least one special character/
   end
+
+  test "update rejects a blank new password instead of reporting success" do
+    patch password_path, params: { user: {
+      password_challenge: user_password_test,
+      password: "",
+      password_confirmation: ""
+    } }
+
+    assert_response :unprocessable_entity
+    assert @user.reload.authenticate(user_password_test)
+    assert_select "p.text-destructive", text: /can't be blank/
+  end
 end
