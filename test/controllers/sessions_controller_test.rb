@@ -910,6 +910,42 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "mobile SSO does not offer account creation when self-hosted signups are closed" do
+    setup_omniauth_mock(
+      provider: "openid_connect",
+      uid: "closed-signup-uid",
+      email: "closed-signup-sso@example.com",
+      name: "New User"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    begin
+      with_self_hosting do
+        Setting.onboarding_state = "closed"
+
+        get "/auth/mobile/openid_connect", params: {
+          device_id: "flutter-device-closed",
+          device_name: "Pixel 8",
+          device_type: "android"
+        }
+        get "/auth/openid_connect/callback"
+      end
+
+      params = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)
+      assert_equal "account_not_linked", params["status"]
+      assert_equal "false", params["allow_account_creation"]
+      assert_equal false, Rails.cache.read("mobile_sso_link:#{params['linking_code']}")[:allow_account_creation]
+    ensure
+      Rails.cache = original_cache
+    end
+  end
+
   test "mobile SSO does not create a web session" do
     oidc_identity = oidc_identities(:bob_google)
 

@@ -80,6 +80,17 @@ class AuthConfig
       domains.map(&:downcase).include?(domain)
     end
 
+    # Whether SSO may create a new account (JIT) for this email without a
+    # pending invitation. Besides the JIT mode and domain restrictions, a
+    # self-hosted instance with signups closed only lets invited users in,
+    # as RegistrationsController#ensure_signup_open does for the web form.
+    def jit_account_creation_allowed?(email)
+      return false if jit_link_only?
+      return false if Rails.configuration.app_mode.self_hosted? && Setting.onboarding_state == "closed"
+
+      allowed_oidc_domain?(email)
+    end
+
     def sso_providers
       if FeatureFlags.db_sso_providers?
         # After boot, OmniAuth registers successfully configured providers into
