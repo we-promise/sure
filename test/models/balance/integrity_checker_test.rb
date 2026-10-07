@@ -320,4 +320,154 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     assert_equal 10.days.ago.to_date, gap.anchor_waypoint.date
     assert_in_delta 50, gap.difference, 0.01
   end
+
+  # A linked account's reconciliation and current anchor hold the balance the
+  # bank reported at the day's sync, not at the end of the day. Transactions
+  # booked later that day, dated the same day, are in the ledger but not in
+  # the snapshot. On a busy account that differs every day, so the residual
+  # never settles even though no transaction is missing.
+  test "same-day transactions booked after a linked account's sync do not create a gap" do
+    freeze_time
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    balance = 1000
+    add_linked_entry(account, date: 10.days.ago.to_date, amount: balance, kind: "reconciliation")
+    (3..8).reverse_each do |days_ago|
+      date = days_ago.days.ago.to_date
+      spent = 10 * days_ago
+      # Snapshot first, then the day's purchase is booked, dated the same day.
+      add_linked_entry(account, date: date, amount: balance, kind: "reconciliation")
+      add_linked_entry(account, date: date, amount: spent)
+      balance -= spent
+    end
+    # Quiet days at the end: the snapshots are exact again.
+    add_linked_entry(account, date: 2.days.ago.to_date, amount: balance, kind: "reconciliation")
+    add_linked_entry(account, date: 1.day.ago.to_date, amount: balance, kind: "current_anchor")
+
+    assert_empty Balance::IntegrityChecker.new(account).flagged_gaps
+  end
+
+  test "a missing transaction on a busy linked account is still flagged" do
+    freeze_time
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    add_linked_entry(account, date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    # The bank received a 50 deposit (day 9) that was never imported.
+    # Day 8: snapshot taken before the day's purchase was booked.
+    add_linked_entry(account, date: 8.days.ago.to_date, amount: 1050, kind: "reconciliation")
+    add_linked_entry(account, date: 8.days.ago.to_date, amount: 30)
+    add_linked_entry(account, date: 6.days.ago.to_date, amount: 1020, kind: "reconciliation")
+    add_linked_entry(account, date: 5.days.ago.to_date, amount: 1020, kind: "reconciliation")
+    add_linked_entry(account, date: 4.days.ago.to_date, amount: 1020, kind: "reconciliation")
+    add_linked_entry(account, date: 4.days.ago.to_date, amount: 15)
+    add_linked_entry(account, date: 2.days.ago.to_date, amount: 1005, kind: "current_anchor")
+
+    gap = Balance::IntegrityChecker.new(account).latest_flagged_gap
+
+    assert gap
+    assert_equal 10.days.ago.to_date, gap.anchor_waypoint.date
+    assert_equal 8.days.ago.to_date, gap.first_open_waypoint.date
+    assert_equal 2.days.ago.to_date, gap.latest_waypoint.date
+    assert_in_delta 50, gap.difference, 0.01
+  end
+
+  test "a missing transaction smaller than a busy day's activity is flagged on the next exact snapshot" do
+    freeze_time
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    add_linked_entry(account, date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    # A 25 deposit (day 9) was never imported. Day 8's snapshot already has
+    # the day's 30 purchase, so its residual (25) looks like timing.
+    add_linked_entry(account, date: 8.days.ago.to_date, amount: 995, kind: "reconciliation")
+    add_linked_entry(account, date: 8.days.ago.to_date, amount: 30)
+    add_linked_entry(account, date: 6.days.ago.to_date, amount: 995, kind: "reconciliation")
+    add_linked_entry(account, date: 5.days.ago.to_date, amount: 995, kind: "reconciliation")
+    add_linked_entry(account, date: 3.days.ago.to_date, amount: 995, kind: "current_anchor")
+
+    gap = Balance::IntegrityChecker.new(account).latest_flagged_gap
+
+    assert gap
+    assert_equal 10.days.ago.to_date, gap.anchor_waypoint.date
+    assert_equal 6.days.ago.to_date, gap.first_open_waypoint.date
+    assert_in_delta 25, gap.difference, 0.01
+  end
+
+  test "busy days between exact snapshots neither hide nor move an open gap" do
+    freeze_time
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    add_linked_entry(account, date: 12.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    # A 40 deposit (day 11) was never imported. Day 10 is quiet, every later
+    # sync day has 50 of purchases booked after the snapshot.
+    add_linked_entry(account, date: 10.days.ago.to_date, amount: 1040, kind: "reconciliation")
+    balance = 1040
+    (3..9).reverse_each do |days_ago|
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: balance, kind: "reconciliation")
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 50)
+      balance -= 50
+    end
+    add_linked_entry(account, date: 2.days.ago.to_date, amount: balance, kind: "current_anchor")
+    add_linked_entry(account, date: 2.days.ago.to_date, amount: 50)
+
+    gap = Balance::IntegrityChecker.new(account).latest_flagged_gap
+
+    assert gap, "a gap open since an exact snapshot must stay open across busy days"
+    assert_equal 10.days.ago.to_date, gap.first_open_waypoint.date
+    assert_equal 2.days.ago.to_date, gap.latest_waypoint.date
+    assert_in_delta 40, gap.difference, 0.01
+  end
+
+  test "a day with only pending transactions is not an exact snapshot" do
+    freeze_time
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    add_linked_entry(account, date: 8.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    # The bank's snapshots include a 20 card authorization the ledger leaves
+    # out while it is pending.
+    (3..6).reverse_each do |days_ago|
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 980, kind: "reconciliation")
+    end
+    (3..6).each do |days_ago|
+      account.entries.create!(
+        name: "Card hold", date: days_ago.days.ago.to_date, amount: 20, currency: account.currency,
+        entryable: Transaction.new(extra: { "plaid" => { "pending" => true } })
+      )
+    end
+
+    assert_nil Balance::IntegrityChecker.new(account).latest_flagged_gap
+  end
+
+  test "linked liability accounts read late charges with the liability sign" do
+    freeze_time
+    account = create_account_with_ledger(
+      account: { type: CreditCard, currency: "USD" },
+      entries: [
+        { type: "reconciliation", date: 10.days.ago.to_date, balance: 500 },
+        # Each snapshot is taken before that day's 40 charge is booked.
+        *(5..8).flat_map do |days_ago|
+          [
+            { type: "reconciliation", date: days_ago.days.ago.to_date, balance: 500 + 40 * (8 - days_ago) },
+            { type: "transaction", date: days_ago.days.ago.to_date, amount: 40 }
+          ]
+        end,
+        { type: "reconciliation", date: 3.days.ago.to_date, balance: 660 }
+      ]
+    )
+    Balance::IntegrityChecker.any_instance.stubs(:linked?).returns(true)
+
+    assert_empty Balance::IntegrityChecker.new(account).flagged_gaps
+  end
+
+  private
+    def add_linked_entry(account, date:, amount:, kind: nil)
+      account.entries.create!(
+        name: kind ? "Valuation" : "Purchase", date: date, amount: amount, currency: account.currency,
+        entryable: kind ? Valuation.new(kind: kind) : Transaction.new
+      )
+    end
 end

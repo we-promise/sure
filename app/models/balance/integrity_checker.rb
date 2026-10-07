@@ -26,12 +26,15 @@ class Balance::IntegrityChecker
   # stays open) — not "one Gap per episode". latest_flagged_gap is what the
   # generator actually calls.
   def flagged_gaps
-    wps = waypoints
+    # The walk starts from a snapshot it can trust exactly (see
+    # exact_snapshot?), so no timing uncertainty is carried forward.
+    wps = waypoints.drop_while { |wp| !exact_snapshot?(wp) }
     return [] if wps.size < 2
 
     gaps = []
     anchor = wps.first
     first_open_waypoint = nil
+    open_residual = nil
     # Accumulated net flow since `anchor`, built up one (small, non-overlapping)
     # interval per iteration instead of re-summing the whole anchor..b range on
     # every step — while a gap stays open across many waypoints, that rescan
@@ -45,14 +48,27 @@ class Balance::IntegrityChecker
       # per-pair delta.
       residual = b.value - implied
 
-      if residual.abs <= tolerance
+      if residual.abs <= tolerance && exact_snapshot?(b)
         anchor = b
         first_open_waypoint = nil
+        open_residual = nil
         accumulated_flow = 0.to_d
         next
       end
 
-      first_open_waypoint ||= b
+      # A busy day's snapshot that the day's own activity can explain says
+      # nothing either way: it neither opens nor closes an episode, and the
+      # anchor stays, so a gap smaller than the day's activity still shows on
+      # the next exact snapshot. An episode already open keeps its start and
+      # the residual last measured outside the timing range.
+      if same_day_timing?(b, residual)
+        next unless first_open_waypoint
+      else
+        first_open_waypoint ||= b
+        # A busy day's residual still carries timing noise; an exact one is
+        # the gap itself, and keeps the reported figure stable night to night.
+        open_residual = residual if open_residual.nil? || exact_snapshot?(b)
+      end
 
       next unless (b.date - first_open_waypoint.date).to_i > min_days_open
 
@@ -62,7 +78,7 @@ class Balance::IntegrityChecker
         latest_waypoint: b,
         implied_value: implied,
         actual_value: b.value,
-        difference: residual
+        difference: open_residual
       )
     end
 
@@ -110,6 +126,57 @@ class Balance::IntegrityChecker
         .map { |e| Waypoint.new(date: e.date, value: e.amount, kind: e.entryable.kind) }
     end
 
+    # A linked account's reconciliation and current anchor hold the balance
+    # the provider reported at that day's sync, not at the end of the day:
+    # transactions dated that day but booked after the sync are in the ledger
+    # and not in the snapshot, and pending ones may be in the snapshot but not
+    # in the ledger. Which ones is unknown, so a snapshot is only exact on a
+    # day without transactions. On a busy day the residual can be anything
+    # from "every late or pending amount lowered the balance" to "every one
+    # raised it". Manual valuations are end-of-day values.
+    #
+    # Transactions dated earlier but imported after a snapshot are no
+    # concern: the import and the snapshot come from the same sync, so they
+    # leave the most recent waypoint consistent.
+    def exact_snapshot?(waypoint)
+      !linked? || same_day_flows(waypoint.date).empty?
+    end
+
+    def same_day_timing?(waypoint, residual)
+      return false unless linked?
+
+      flows = same_day_flows(waypoint.date)
+      lowest = flows.select(&:negative?).sum
+      highest = flows.select(&:positive?).sum
+      residual.between?(lowest - tolerance, highest + tolerance)
+    end
+
+    # Each amount's possible effect on the residual: a posted transaction
+    # booked after the sync is missing from the snapshot (minus its flow), a
+    # pending one may be in the snapshot but not in the ledger (plus its
+    # flow). Signed like net_flow_between.
+    def same_day_flows(date)
+      @same_day_flows ||= {}
+      @same_day_flows[date] ||= begin
+        posted = sync_cache.get_entries(date).select(&:transaction?).map { |e| -flow(e.amount) }
+        posted + pending_amounts_by_date.fetch(date, []).map { |amount| flow(amount) }
+      end
+    end
+
+    def pending_amounts_by_date
+      @pending_amounts_by_date ||= account.entries.pending.pluck(:date, :amount)
+        .group_by(&:first).transform_values { |rows| rows.map(&:last) }
+    end
+
+    def flow(amount)
+      account.asset? ? -amount : amount
+    end
+
+    def linked?
+      return @linked if defined?(@linked)
+      @linked = account.linked?
+    end
+
     # A linked account's opening anchor is a placeholder, not a reported
     # balance: Account.create_and_sync writes the balance at link time, dated
     # before the imported history, and Balance::ReverseCalculator bridges it
@@ -117,7 +184,7 @@ class Balance::IntegrityChecker
     # it would turn the whole imported history into a permanent "gap", so for
     # linked accounts the walk starts at the first provider-reported balance.
     def waypoint_kinds
-      account.linked? ? %w[reconciliation current_anchor] : %w[opening_anchor reconciliation current_anchor]
+      linked? ? %w[reconciliation current_anchor] : %w[opening_anchor reconciliation current_anchor]
     end
 
     # from_date is exclusive (flows *after* the anchor date), to_date inclusive.
