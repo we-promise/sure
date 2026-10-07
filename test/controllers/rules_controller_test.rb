@@ -132,6 +132,40 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
   end
 
+  test "updates the split rows of an existing split_transaction action" do
+    rule = @user.family.rules.create!(
+      name: "Existing split",
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "rent") ],
+      actions: [
+        Rule::Action.new(
+          action_type: "split_transaction",
+          value: { splits: [ { type: "percentage", name: "A", share: "50" }, { type: "percentage", name: "B", share: "50" } ] }.to_json
+        )
+      ]
+    )
+    action = rule.actions.sole
+
+    patch rule_url(rule), params: {
+      rule: {
+        actions_attributes: {
+          "0" => {
+            id: action.id,
+            action_type: "split_transaction",
+            split_rows: {
+              "0" => { type: "percentage", name: "A", share: "60", category_id: categories(:food_and_drink).id },
+              "1" => { type: "percentage", name: "B", share: "40", category_id: "" }
+            }
+          }
+        }
+      }
+    }
+
+    splits = JSON.parse(action.reload.value)["splits"]
+    assert_equal [ "60", "40" ], splits.map { |split| split["share"] }
+    assert_equal categories(:food_and_drink).id, splits.first["category_id"]
+  end
+
   test "can update rule" do
     rule = rules(:one)
 

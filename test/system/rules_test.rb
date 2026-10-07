@@ -91,6 +91,50 @@ class RulesTest < ApplicationSystemTestCase
     end
   end
 
+  test "split rows save category, merchant and tags picked in the rule form" do
+    merchant = @user.family.merchants.create!(name: "Split Landlord")
+    rule = @user.family.rules.create!(
+      name: "Percentage split",
+      resource_type: "transaction",
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "rent")
+      ],
+      actions: [
+        Rule::Action.new(
+          action_type: "split_transaction",
+          value: {
+            splits: [
+              { type: "percentage", name: "Mine", share: "50" },
+              { type: "percentage", name: "Theirs", share: "50" }
+            ]
+          }.to_json
+        )
+      ]
+    )
+
+    visit edit_rule_path(rule)
+
+    within "dialog" do
+      first_row = all("[data-rule--split-action-target='row']", minimum: 2).first
+
+      within first_row do
+        find("select[aria-label='Split category']").select(categories(:food_and_drink).name)
+        find("select[aria-label='Split merchant']").select(merchant.name)
+        find("button[aria-label='Split tags']").click
+        find("[role='option'][data-tag-name='#{tags(:one).name}']").click
+      end
+
+      click_button "Update Rule"
+    end
+
+    assert_text "Rule updated"
+
+    mine = JSON.parse(rule.reload.actions.sole.value)["splits"].first
+    assert_equal categories(:food_and_drink).id, mine["category_id"]
+    assert_equal merchant.id, mine["merchant_id"]
+    assert_equal [ tags(:one).id ], mine["tag_ids"]
+  end
+
   test "creates a transaction rule through the modal with dynamically added condition and action" do
     visit new_rule_path(resource_type: "transaction")
 

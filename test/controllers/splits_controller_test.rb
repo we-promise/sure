@@ -32,6 +32,25 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal parent_index + 1, child_index
   end
 
+  test "new gives each split row's pickers their own ids and labelled controls" do
+    get new_transaction_split_path(@entry)
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    ids = doc.css("[data-split-transaction-target='row'] [id]").map { |node| node["id"] }
+    assert_empty ids.tally.select { |_id, count| count > 1 }.keys
+
+    trigger = doc.at_css("#split_splits_0_category_id_trigger")
+    assert_not_nil trigger
+    assert_equal "split_splits_0_category_id_label split_splits_0_category_id_trigger", trigger["aria-labelledby"]
+
+    %w[merchant_id tag_ids].each do |field|
+      label = doc.at_css("label[for='split_splits_0_#{field}']")
+      assert_not_nil label, "missing label for #{field}"
+      assert_equal "button", doc.at_css("#split_splits_0_#{field}")&.name
+    end
+  end
+
   test "create with valid params splits transaction" do
     assert_difference "Entry.count", 2 do
       post transaction_split_path(@entry), params: {

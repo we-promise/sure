@@ -26,8 +26,9 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     family.merchants.alphabetically.pluck(:name, :id)
   end
 
-  def tag_options
-    family.tags.alphabetically.pluck(:name, :id)
+  # Records, not [name, id] pairs: DS::TagSelect renders each tag's color.
+  def tag_records
+    family.tags.alphabetically
   end
 
   def value_display(value)

@@ -6,7 +6,15 @@ class Rule::Action < ApplicationRecord
   # through custom JS. build_split_value assembles them into `value` before validation runs.
   # Each row carries its own "type" (fixed or percentage) rather than the action having a single
   # mode — see Rule::ActionExecutor::SplitTransaction for how the two types combine.
-  attr_accessor :split_rows
+  attr_reader :split_rows
+
+  # split_rows isn't a tracked attribute, so assigning it must mark `value` as changing: otherwise
+  # a nested-attributes update of an existing rule skips this unchanged-looking action and the
+  # edited splits are never built or saved.
+  def split_rows=(rows)
+    @split_rows = rows
+    value_will_change! if rows.present?
+  end
 
   validates :action_type, presence: true
   before_validation :build_split_value, if: -> { action_type == "split_transaction" && split_rows.present? }

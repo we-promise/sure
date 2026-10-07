@@ -71,7 +71,8 @@ en:
         category_label: Split category
         merchant_label: Split merchant
         no_merchant: No merchant
-        tags_hint: "Hold Ctrl/Cmd to select multiple tags"
+        tags_label: "Split tags"
+        remove_split: "Remove split"
         hint: "Fixed splits are subtracted first, as exact dollar amounts. Percentage splits then divide whatever's left. If every split here uses a fixed amount, also add a condition that matches an exact transaction amount (e.g. Amount = 42.00), since every matching transaction needs the same total for the fixed amounts to add up."
         fixed_summary_label: fixed
         summary:
