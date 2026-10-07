@@ -542,13 +542,17 @@ class EnableBankingItemsController < ApplicationController
     end
 
     def enable_banking_item_params
-      params.require(:enable_banking_item).permit(
+      permitted = params.require(:enable_banking_item).permit(
         :name,
         :sync_start_date,
         :country_code,
         :application_id,
         :client_certificate
       )
+      # The panel never pre-fills the stored certificate, so a blank one on
+      # update means "keep the current certificate".
+      permitted.delete(:client_certificate) if @enable_banking_item&.persisted? && permitted[:client_certificate].blank?
+      permitted
     end
 
     def enable_banking_callback_url

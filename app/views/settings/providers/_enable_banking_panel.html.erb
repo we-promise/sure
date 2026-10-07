@@ -16,7 +16,7 @@
   <% end %>
 
   <%
-    # Use local family variable if available (e.g., from Sidekiq broadcast), otherwise fall back to Current.family (HTTP requests)
+    # Use the local family variable if one is passed, otherwise fall back to Current.family
     family = local_assigns[:family] || Current.family
     enable_banking_item = family.enable_banking_items.first_or_initialize(name: "Enable Banking Connection")
     is_new_record = enable_banking_item.new_record?
@@ -84,7 +84,8 @@
 
     <%= form.text_area :client_certificate,
                         label: t("settings.providers.enable_banking_panel.client_certificate_label"),
-                        placeholder: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+                        placeholder: is_new_record ? "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----" : t("settings.providers.enable_banking_panel.keep_client_certificate_placeholder"),
+                        value: "",
                         rows: 6,
                         class: "form-field__input font-mono text-xs",
                         disabled: has_authenticated_connections && !is_new_record %>
