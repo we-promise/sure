@@ -191,7 +191,9 @@ class User < ApplicationRecord
 
     if entries_scope.nil?
       transaction do
-        update_column(:transactions_read_before, [ as_of, transactions_read_before ].max)
+        # GREATEST in SQL: two tabs clicking at once must not move it backwards.
+        self.class.where(id: id).update_all([ "transactions_read_before = GREATEST(transactions_read_before, ?)", as_of ])
+        reload
         entry_reads.joins(:entry).where("entries.created_at <= ?", as_of).delete_all
       end
     else
