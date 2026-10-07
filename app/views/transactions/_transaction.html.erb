@@ -73,7 +73,7 @@
               <div class="space-y-0.5">
                 <div class="flex items-center gap-1 min-w-0" data-tag-fit-bounds="0.5">
                   <div class="truncate flex-shrink">
-                    <% timestamp_tooltip = DS::Tooltip.new(text: entry.transacted_at.in_time_zone.iso8601) if entry.transacted_at? %>
+                    <% timestamp_tooltip = DS::Tooltip.new(text: entry.transacted_at.in_time_zone.iso8601, as: :span) if entry.transacted_at? %>
                     <% name_link = link_to entry.name, open_path,
                         aria: { describedby: timestamp_tooltip&.tooltip_id },
                         data: {

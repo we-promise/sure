@@ -102,5 +102,7 @@ class TransactionTimestampsControllerTest < ActionDispatch::IntegrationTest
       assert tooltip_id.present?
     end
     assert_select "##{tooltip_id}[role='tooltip']", text: "2026-09-17T16:48:50+02:00"
+    assert_select "[data-controller='DS--tooltip'] > span > a[aria-describedby='#{tooltip_id}']", text: @entry.name
+    assert_select "button a[aria-describedby='#{tooltip_id}']", count: 0
   end
 end
