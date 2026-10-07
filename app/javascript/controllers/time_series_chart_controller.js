@@ -7,6 +7,13 @@ const parseLocalDate = d3.timeParse("%Y-%m-%d");
 export default class extends Controller {
   static values = {
     data: Object,
+    // Optional. A second line drawn dashed beside the trendline, on the same
+    // scales, and added to its tooltip with its difference from the
+    // trendline: { label, difference_label, values: [{ date, value,
+    // difference }] }, where `difference` is a serialized Trend. Only the
+    // account chart's Total value view passes it (#4008); every other caller
+    // takes the single-line path unchanged.
+    comparison: Object,
     strokeWidth: { type: Number, default: 2 },
     useLabels: { type: Boolean, default: true },
     useTooltip: { type: Boolean, default: true },
@@ -19,6 +26,7 @@ export default class extends Controller {
   _d3InitialContainerWidth = 0;
   _d3InitialContainerHeight = 0;
   _normalDataPoints = [];
+  _comparisonPoints = [];
   _resizeObserver = null;
   _d3DragSelectBrush = null;
   _d3DragSelectGroup = null;
@@ -50,6 +58,7 @@ export default class extends Controller {
     this._d3GroupMemo = null;
     this._d3Tooltip = null;
     this._normalDataPoints = [];
+    this._comparisonPoints = [];
     this._d3DragSelectBrush = null;
     this._d3DragSelectGroup = null;
 
@@ -69,6 +78,14 @@ export default class extends Controller {
       value: d.value,
       trend: d.trend,
     }));
+
+    this._comparisonPoints = this.hasComparisonValue
+      ? (this.comparisonValue.values || []).map((d) => ({
+          date: parseLocalDate(d.date),
+          value: d.value,
+          difference: d.difference,
+        }))
+      : [];
   }
 
   _rememberInitialContainerSize() {
@@ -128,6 +145,10 @@ export default class extends Controller {
   _drawChart() {
     this._drawTrendline();
 
+    if (this._comparisonPoints.length > 0) {
+      this._drawComparisonLine();
+    }
+
     if (this.useLabelsValue) {
       this._drawXAxisLabels();
       this._drawGradientBelowTrendline();
@@ -159,6 +180,23 @@ export default class extends Controller {
       // "no change", consistent across light and dark (#2137).
       .attr("stroke-width", this._isFlatSeries ? 1 : this.strokeWidthValue)
       .attr("stroke-opacity", this._isFlatSeries ? 0.4 : 1);
+  }
+
+  // Secondary to the trendline, so dashed and in a muted token colour, and
+  // drawn without the trendline's gradient, fill or hover split.
+  _drawComparisonLine() {
+    this._d3Group
+      .append("path")
+      .datum(this._comparisonPoints)
+      .attr("class", "text-secondary")
+      .attr("fill", "none")
+      .attr("stroke", "currentColor")
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", "4, 4")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("pointer-events", "none")
+      .attr("d", this._d3Line);
   }
 
   get _isFlatSeries() {
@@ -529,6 +567,8 @@ export default class extends Controller {
       .style("z-index", 999)
       .style("left", `${adjustedX}px`)
       .style("top", `${pageY - 10}px`);
+
+    this._appendComparisonTooltip(datum);
   }
 
   _hideTooltip() {
@@ -566,6 +606,59 @@ export default class extends Controller {
         }
       </div>
     `;
+  }
+
+  // The comparison's figure for the hovered date and its difference from the
+  // trendline, signed, with the difference as a percentage of the comparison.
+  // The percentage is left off when it has no finite value (a comparison of
+  // zero), rather than shown as infinity.
+  //
+  // Built as DOM nodes with d3's `.text()`, not as an HTML string, so no
+  // label or amount is ever parsed as markup.
+  _appendComparisonTooltip(datum) {
+    const point = this._comparisonPoints.find(
+      (p) => p.date.getTime() === datum.date.getTime(),
+    );
+    if (!point || !this._d3Tooltip) return;
+
+    const difference = point.difference;
+    const amount = this._extractNumericValue(difference.value);
+    const sign = amount > 0 ? "+" : "";
+    const percent =
+      difference.percent === null || difference.percent === undefined
+        ? ""
+        : ` (${difference.percent > 0 ? "+" : ""}${difference.percent_formatted})`;
+
+    const block = this._d3Tooltip
+      .append("div")
+      .attr("class", "mt-1 space-y-0.5");
+
+    const contributionsRow = block
+      .append("div")
+      .attr("class", "flex items-center justify-between gap-4");
+    contributionsRow
+      .append("span")
+      .attr("class", "text-secondary")
+      .text(this.comparisonValue.label);
+    contributionsRow
+      .append("span")
+      .attr("class", "text-primary tabular-nums")
+      .text(this._extractFormattedValue(point.value));
+
+    const differenceRow = block
+      .append("div")
+      .attr("class", "flex items-center justify-between gap-4");
+    differenceRow
+      .append("span")
+      .attr("class", "text-secondary")
+      .text(this.comparisonValue.difference_label);
+    differenceRow
+      .append("span")
+      .attr("class", "tabular-nums")
+      .style("color", difference.color)
+      .text(
+        `${sign}${this._extractFormattedValue(difference.value)}${percent}`,
+      );
   }
 
   _getTrendIcon(datum) {
@@ -678,8 +771,11 @@ export default class extends Controller {
   }
 
   get _d3YScale() {
-    const dataMin = d3.min(this._normalDataPoints, this._getDatumValue);
-    const dataMax = d3.max(this._normalDataPoints, this._getDatumValue);
+    // The comparison line shares the trendline's y scale, so both lines'
+    // points set its domain.
+    const points = this._normalDataPoints.concat(this._comparisonPoints);
+    const dataMin = d3.min(points, this._getDatumValue);
+    const dataMax = d3.max(points, this._getDatumValue);
 
     // Handle edge case where all values are the same
     if (dataMin === dataMax) {

@@ -79,6 +79,11 @@ en:
           projection_basis: Compares today's recorded balance with the schedule's balance on the same day. A payment posted before its scheduled date reads as ahead until that date; one posted after reads as behind.
           legend: Chart series
           since_start: since the loan started
+        net_contributions:
+          difference: Difference
+          label: Net contributions
+          legend: Chart series
+          understated: Some money moved in or out could not be valued, so net contributions are understated from that date.
         no_data_available: "No data available"
         title:
           balance: Balance
