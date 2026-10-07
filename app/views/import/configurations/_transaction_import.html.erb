@@ -5,9 +5,10 @@
                      scope: :import,
                      method: :patch,
                      class: "space-y-4",
-                     data: {
-                       controller: "import",
-                       import_csv_value: import.csv_rows.to_json,
+                      data: {
+                        controller: "import",
+                        action: "submit->import#cancelPendingRefresh",
+                        import_csv_value: import.csv_rows.to_json,
                        import_amount_type_column_key_value: @import.entity_type_col_label
                      } do |form| %>
 
@@ -20,12 +21,31 @@
     <%= form.select :date_col_label,
                     import.csv_headers,
                     { label: t(".date_label"), prompt: t(".select_column") },
-                    required: true %>
+                    required: true, data: { action: "change->import#refreshForm" } %>
     <%= form.select :date_format,
-                    Family::DATE_FORMATS + Import::CSV_ONLY_DATE_FORMATS,
+                    import_date_format_options(import),
                     { label: t(".date_format_label"), prompt: t(".select_format") },
-                    required: true %>
+                    required: true, data: { action: "change->import#refreshForm" } %>
   </div>
+
+  <% if import.date_col_label.present? %>
+    <%= render DS::Alert.new(message: t("imports.timestamps.#{import.date_detection.status}"),
+                            variant: import.date_detection.status == :detected ? :info : :warning) %>
+    <% if import.date_format == "iso8601" || import.date_detection.formats.include?("iso8601") %>
+      <%= form.select :date_basis,
+                      [[t("imports.timestamps.source_date"), "source"], [t("imports.timestamps.local_date", timezone: import.timestamp_timezone), "local"]],
+                      { label: t("imports.timestamps.date_basis"), selected: import.date_basis.presence || "source" },
+                      data: { action: "change->import#refreshForm" } %>
+      <%= form.hidden_field :date_timezone, value: import.timestamp_timezone %>
+    <% end %>
+    <% if (preview = import_timestamp_preview(import)) %>
+      <p class="text-sm text-secondary" aria-live="polite"><%= preview %></p>
+    <% end %>
+  <% end %>
+
+  <%= form.select :timestamp_col_label, import.csv_headers,
+                  { include_blank: t(".leave_empty"), label: t("imports.timestamps.separate_column") } %>
+  <p class="text-xs text-secondary"><%= t("imports.timestamps.separate_hint") %></p>
 
   <%# Amount Configuration %>
   <div class="flex items-center gap-4">

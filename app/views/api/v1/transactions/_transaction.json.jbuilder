@@ -2,6 +2,7 @@
 
 json.id transaction.id
 json.date transaction.entry.date
+json.transacted_at transaction.entry.transacted_at&.utc&.iso8601(6)
 json.amount transaction.entry.amount_money.format
 
 # Agent/automation-friendly numeric fields (avoid localized parsing and clarify sign)

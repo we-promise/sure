@@ -42,6 +42,15 @@ class TradeImportTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1500"), row.signed_amount
   end
 
+  test "a blank selected trade timestamp does not fall back to the export column" do
+    @import.update!(raw_file_str: "Date,Ticker,Quantity,Price,Occurred,transacted_at\n2026-09-17,AAPL,1,10,,2026-09-17T14:48:50Z\n",
+      date_col_label: "Date", ticker_col_label: "Ticker", qty_col_label: "Quantity",
+      price_col_label: "Price", date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+
+    @import.generate_rows_from_csv
+    assert_equal "", @import.rows.first.transacted_at
+  end
+
   test "imports trades and accounts" do
     aapl_resolver = mock
     googl_resolver = mock
@@ -93,6 +102,26 @@ class TradeImportTest < ActiveSupport::TestCase
     end
 
     assert_equal "complete", @import.status
+  end
+
+  test "import parses a trade row's date and timestamp once" do
+    @import.update!(account: accounts(:investment),
+      raw_file_str: "date,ticker,qty,price,name\n2026-09-18T01:30:00.123456+02:00,AAPL,2,150,Timed trade\n",
+      date_col_label: "date", ticker_col_label: "ticker", qty_col_label: "qty",
+      price_col_label: "price", name_col_label: "name", date_format: "iso8601",
+      signage_convention: "inflows_positive")
+    @import.generate_rows_from_csv
+    row = @import.rows.first
+    parsed = Import::DateParser.parse(row.date, format: "iso8601")
+    @import.expects(:parse_row_date).with(row).once.returns(parsed)
+    Security::Resolver.any_instance.stubs(:resolve).returns(securities(:aapl))
+
+    @import.import!
+
+    entry = @import.entries.first
+    assert_equal parsed.date, entry.date
+    assert_equal parsed.timestamp, entry.transacted_at
+    assert_equal BigDecimal("300"), entry.amount
   end
 
   test "auto-assigns investment activity labels to buy and sell trades" do

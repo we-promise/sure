@@ -132,6 +132,17 @@ class Api::V1::MerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "FamilyMerchant", imported["type"]
   end
 
+  test "create preserves a Windows-1252 merchant name from CSV" do
+    csv = "name\nCafé\n".encode("Windows-1252").b
+
+    post api_v1_merchants_url,
+      params: { file: csv_file(csv) },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :created
+    assert_equal "Café", @user.family.merchants.find_by!(name: "Café").name
+  end
+
   test "create skips duplicate merchant names" do
     csv_content = "name\n#{@merchant.name}\nBrand New Merchant"
 

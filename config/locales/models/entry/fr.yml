@@ -5,6 +5,10 @@ fr:
       models:
         entry:
           attributes:
+            transacted_at:
+              must_match_parent: doit correspondre à l'horodatage de la transaction parente
+            transacted_at_local:
+              invalid: doit être une date et une heure valides dans le fuseau horaire affiché
             base:
               invalid_sell_quantity: Vous ne pouvez pas vendre %{sell_qty} actions
                 de %{ticker} car vous n'en détenez que %{current_qty}

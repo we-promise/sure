@@ -100,6 +100,7 @@
 
   <%= render DS::Disclosure.new(title: t(".details")) do %>
     <section class="space-y-2">
+      <%= render "transactions/timestamp_field", form: f, entry: entry %>
       <%= f.fields_for :entryable do |ef| %>
         <%= render DS::MerchantSelect.new(
               form: ef,

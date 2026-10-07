@@ -1,6 +1,9 @@
 ---
 en:
   transactions:
+    timestamp:
+      label: "Transaction date and time (optional, %{timezone})"
+      help: Leave empty if the time is unknown. This records when the transaction occurred, independently of its accounting date.
     bulk_updates:
       new:
         cancel: Cancel

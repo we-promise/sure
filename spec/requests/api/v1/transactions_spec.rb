@@ -63,6 +63,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
     entry = account.entries.create!(
       name: 'Grocery shopping',
       date: Date.current,
+      transacted_at: Time.current.change(usec: 123456),
       amount: 75.50,
       currency: 'USD',
       entryable: Transaction.new(

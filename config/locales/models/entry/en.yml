@@ -5,6 +5,10 @@ en:
       models:
         entry:
           attributes:
+            transacted_at:
+              must_match_parent: must match the parent transaction timestamp
+            transacted_at_local:
+              invalid: must be a valid date and time in the displayed timezone
             base:
               invalid_sell_quantity: cannot sell %{sell_qty} shares of %{ticker} because
                 you only own %{current_qty} shares

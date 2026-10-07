@@ -1,0 +1,9 @@
+<%# locals: (form:, entry:, disabled: false, auto_submit: false) %>
+
+<%= form.datetime_field :transacted_at_local,
+                        label: t("transactions.timestamp.label", timezone: entry.timestamp_timezone.tzinfo.name),
+                        value: entry.transacted_at_local,
+                         step: "1",
+                        disabled: disabled,
+                        data: { auto_submit_form_target: auto_submit ? "auto" : nil } %>
+<p class="text-xs text-secondary"><%= t("transactions.timestamp.help") %></p>

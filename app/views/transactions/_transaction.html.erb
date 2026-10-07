@@ -73,16 +73,24 @@
               <div class="space-y-0.5">
                 <div class="flex items-center gap-1 min-w-0" data-tag-fit-bounds="0.5">
                   <div class="truncate flex-shrink">
-                    <%= link_to(
-                          entry.name,
-                          open_path,
-                          data: {
-                            turbo_frame: "drawer",
-                            turbo_prefetch: false,
-                            clickable_row_target: "link"
-                          },
-                          class: "hover:underline"
-                        ) %>
+                    <% timestamp_tooltip = DS::Tooltip.new(text: entry.transacted_at.in_time_zone.iso8601, as: :span) if entry.transacted_at? %>
+                    <% name_link = link_to entry.name, open_path,
+                        aria: { describedby: timestamp_tooltip&.tooltip_id },
+                        data: {
+                          turbo_frame: "drawer",
+                          turbo_prefetch: false,
+                          clickable_row_target: "link"
+                        },
+                        class: "hover:underline" %>
+                    <% if timestamp_tooltip %>
+                      <%= render timestamp_tooltip do |tooltip| %>
+                        <% tooltip.with_trigger do %>
+                          <%= name_link %>
+                        <% end %>
+                      <% end %>
+                    <% else %>
+                      <%= name_link %>
+                    <% end %>
                   </div>
 
                   <div class="flex items-center gap-1 flex-shrink-0">

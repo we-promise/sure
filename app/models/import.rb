@@ -79,6 +79,7 @@ class Import < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :account_statement, optional: true
   belongs_to :import_session, optional: true
+  store_accessor :column_mappings, :timestamp_col_label
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
@@ -185,13 +186,42 @@ class Import < ApplicationRecord
     end
 
     def parse_csv_str(csv_str, col_sep: ",")
+      content = normalize_csv_encoding(csv_str || "")
       CSV.parse(
-        (csv_str || "").strip,
+        content.strip.delete_prefix("\uFEFF"),
         headers: true,
         col_sep: col_sep,
         converters: [ ->(str) { str&.strip } ],
         liberal_parsing: true
       )
+    end
+
+    def normalize_csv_encoding(raw)
+      content = raw.dup
+      return content if content.encoding == Encoding::UTF_8 && content.valid_encoding?
+
+      # Uploaded files are binary-tagged even when their bytes are UTF-8.
+      utf8 = content.dup.force_encoding(Encoding::UTF_8)
+      return utf8 if utf8.valid_encoding?
+
+      begin
+        require "rchardet"
+        detection = CharDet.detect(content)
+        if detection["encoding"] && detection["confidence"] > 0.75
+          return content.dup.force_encoding(detection["encoding"]).encode("UTF-8", invalid: :replace, undef: :replace)
+        end
+      rescue LoadError, ArgumentError, Encoding::CompatibilityError
+        # Fall back to common legacy encodings.
+      end
+
+      COMMON_ENCODINGS.each do |encoding|
+        test = content.dup.force_encoding(encoding)
+        return test.encode("UTF-8", invalid: :replace, undef: :replace) if test.valid_encoding?
+      rescue Encoding::InvalidByteSequenceError, Encoding::UndefinedConversionError
+        next
+      end
+
+      content.force_encoding(Encoding::UTF_8).scrub("?")
     end
 
     # Attempts to identify the best-matching date format from a list of candidates
@@ -210,26 +240,7 @@ class Import < ApplicationRecord
       cleaned = samples.map(&:to_s).reject(&:blank?).uniq.first(50)
       return fallback if cleaned.empty?
 
-      reasonable_range = reasonable_date_range
-
-      scored = candidates.map do |fmt|
-        parsed_count     = 0
-        reasonable_count = 0
-
-        cleaned.each do |s|
-          begin
-            date = Date.strptime(s, fmt)
-          rescue Date::Error, ArgumentError
-            next
-          end
-          next unless date
-
-          parsed_count += 1
-          reasonable_count += 1 if reasonable_range.cover?(date)
-        end
-
-        { format: fmt, parsed: parsed_count, reasonable: reasonable_count }
-      end
+      scored = DateParser.score(cleaned, formats: candidates, strict: false)
 
       # Filter to candidates that parsed at least one sample
       viable = scored.select { |s| s[:parsed] > 0 }
@@ -397,7 +408,8 @@ class Import < ApplicationRecord
         category: csv_value(row, category_col_label, "category").to_s,
         tags: csv_value(row, tags_col_label, "tags").to_s,
         entity_type: csv_value(row, entity_type_col_label, "entity_type", "account_type", "type").to_s,
-        notes: csv_value(row, notes_col_label, "notes").to_s
+        notes: csv_value(row, notes_col_label, "notes").to_s,
+        transacted_at: csv_value(row, timestamp_col_label).to_s
       }
     end
 
@@ -520,8 +532,21 @@ class Import < ApplicationRecord
         "date_format", "signage_convention", "number_format",
         "exchange_operating_mic_col_label",
         "rows_to_skip"
-      )
+      ).merge(column_mappings: (column_mappings || {}).except("date_timezone").merge(
+        (import_template.column_mappings || {}).slice("date_basis", "timestamp_col_label")
+      ))
     )
+  end
+
+  def parse_row_date(row, format: date_format, strict: false)
+    parsed = DateParser.parse(row.date, format: format, strict: strict)
+    return parsed if row.transacted_at.blank?
+
+    DateParser::Parsed.new(date: parsed.date, timestamp: Entry::Timestamp.parse(row.transacted_at))
+  end
+
+  def current_date_for_row(row)
+    Date.current
   end
 
   # Returns date formats that can successfully parse the file's date samples,
@@ -742,54 +767,7 @@ class Import < ApplicationRecord
       # Use will_save_change_to_attribute? which is safer for binary data
       return unless will_save_change_to_raw_file_str?
 
-      # If already valid UTF-8, nothing to do
-      begin
-        if raw_file_str.encoding == Encoding::UTF_8 && raw_file_str.valid_encoding?
-          return
-        end
-      rescue ArgumentError
-        # raw_file_str might have invalid encoding, continue to detection
-      end
-
-      # Detect encoding using rchardet
-      begin
-        require "rchardet"
-        detection = CharDet.detect(raw_file_str)
-        detected_encoding = detection["encoding"]
-        confidence = detection["confidence"]
-
-        # Only convert if we have reasonable confidence in the detection
-        if detected_encoding && confidence > 0.75
-          # Force encoding and convert to UTF-8
-          self.raw_file_str = raw_file_str.force_encoding(detected_encoding).encode("UTF-8", invalid: :replace, undef: :replace)
-        else
-          # Fallback: try common encodings
-          try_common_encodings
-        end
-      rescue LoadError
-        # rchardet not available, fallback to trying common encodings
-        try_common_encodings
-      rescue ArgumentError, Encoding::CompatibilityError => e
-        # Handle encoding errors by falling back to common encodings
-        try_common_encodings
-      end
-    end
-
-    def try_common_encodings
-      COMMON_ENCODINGS.each do |encoding|
-        begin
-          test = raw_file_str.dup.force_encoding(encoding)
-          if test.valid_encoding?
-            self.raw_file_str = test.encode("UTF-8", invalid: :replace, undef: :replace)
-            return
-          end
-        rescue Encoding::InvalidByteSequenceError, Encoding::UndefinedConversionError
-          next
-        end
-      end
-
-      # If nothing worked, force UTF-8 and replace invalid bytes
-      self.raw_file_str = raw_file_str.force_encoding("UTF-8").scrub("?")
+      self.raw_file_str = self.class.normalize_csv_encoding(raw_file_str)
     end
 
     def account_belongs_to_family
