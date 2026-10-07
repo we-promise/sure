@@ -1,4 +1,4 @@
-class AddIndexOnSessionsUpdatedAt < ActiveRecord::Migration[7.2]
+class AddIndexOnSessionsUpdatedAt < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
   def change
