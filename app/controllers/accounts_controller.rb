@@ -128,7 +128,7 @@ class AccountsController < ApplicationController
     per_page = safe_per_page(effective_default)
     if params[:per_page].present?
       store_per_page!(per_page)
-      if Current.user.preview_features_enabled? && per_page.to_s == params[:per_page].to_s
+      if Current.user.preview_features_enabled? && per_page.to_s == params[:per_page].to_s && Current.user.transactions_per_page != per_page
         begin
           Current.user.update_transaction_preferences("transactions_per_page" => per_page)
         rescue ActiveRecord::ActiveRecordError => e

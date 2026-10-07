@@ -782,7 +782,7 @@ class TransactionsController < ApplicationController
         if Current.user.preview_features_enabled? && params[:per_page].present?
           safe = safe_per_page(params[:per_page])
           # safe_per_page returns nearest allowed; only persist if it matches the requested value
-          if safe.to_s == params[:per_page].to_s
+          if safe.to_s == params[:per_page].to_s && Current.user.transactions_per_page != safe
             begin
               Current.user.update_transaction_preferences("transactions_per_page" => safe)
             rescue ActiveRecord::ActiveRecordError => e

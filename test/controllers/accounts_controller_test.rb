@@ -399,6 +399,17 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal running_balances[entry_1.id], running_balances[entry_2.id]
   end
 
+  test "unchanged page size does not write transaction preferences" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_per_page" => 50))
+    User.any_instance.expects(:update_transaction_preferences).never
+
+    get account_url(@account, per_page: 50)
+    assert_response :success
+
+    get transactions_url(per_page: 50)
+    assert_response :success
+  end
+
   test "show filters entries by search term" do
     create_transaction(name: "Uniquely Named Coffee Shop", amount: 5, account: @account)
     create_transaction(name: "Grocery Store", amount: 40, account: @account)
