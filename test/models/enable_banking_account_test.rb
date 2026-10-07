@@ -200,7 +200,7 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
   end
 
   test "does not raise or fail the sync when another family account already has this iban" do
-    other_account = @family.accounts.create!(name: "Other account", balance: 0, currency: "EUR", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
+    other_account = @family.accounts.create!(name: "Other account", balance: 0, currency: "USD", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
     linked_account = accounts(:depository)
     AccountProvider.create!(provider: @account, account: linked_account)
 
@@ -221,6 +221,44 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     debug_entry = DebugLogEntry.last
     assert_equal "provider_sync_warning", debug_entry.category
     assert_equal linked_account.id, debug_entry.account_id
+  end
+
+  test "propagates an iban another family account in a different currency already has" do
+    # One IBAN backs several currency sub-accounts at Revolut or Wise.
+    other_account = @family.accounts.create!(name: "EUR sub-account", balance: 0, currency: "EUR", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+
+    assert_no_difference "DebugLogEntry.count" do
+      @account.upsert_enable_banking_snapshot!({
+        uid: "uid_uuid_123",
+        identification_hash: "hash_abc123",
+        currency: "USD",
+        cash_account_type: "CACC",
+        iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+      })
+    end
+
+    assert_equal "NL91ABNA0417164300", linked_account.reload.iban # pipelock:ignore IBAN
+    assert_equal "NL91ABNA0417164300", other_account.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "logs a known iban conflict only once across repeated syncs" do
+    @family.accounts.create!(name: "Other account", balance: 0, currency: "USD", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+    snapshot = {
+      uid: "uid_uuid_123",
+      identification_hash: "hash_abc123",
+      currency: "USD",
+      cash_account_type: "CACC",
+      iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+    }
+
+    assert_difference "DebugLogEntry.count", 1 do
+      3.times { @account.upsert_enable_banking_snapshot!(snapshot) }
+    end
+    assert_nil linked_account.reload.iban
   end
 
   test "does not raise or fail the sync on a raw unique-index race during propagation" do

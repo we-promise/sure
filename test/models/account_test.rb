@@ -54,6 +54,16 @@ class AccountTest < ActiveSupport::TestCase
     assert_includes other.errors[:iban], "has already been taken"
   end
 
+  test "allows the same iban on accounts with different currencies in one family" do
+    # Revolut and Wise expose one IBAN for several currency sub-accounts.
+    @account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+    other = @family.accounts.build(name: "EUR sub-account", balance: 0, currency: "EUR", accountable: Depository.new, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    assert_equal "USD", @account.currency
+    assert other.valid?
+    assert_nothing_raised { other.save! }
+  end
+
   test "allows the same iban across different families" do
     @account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
     other_family = families(:empty)

@@ -2,7 +2,7 @@ class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable, IbanNormalizable
 
   # deterministic: true preserves equality lookups (e.g. find_by(iban:)) and
-  # the family_id+iban uniqueness index, since the same plaintext always
+  # the family_id+iban+currency uniqueness index, since the same plaintext always
   # produces the same ciphertext.
   #
   # Deliberate tradeoff, not an oversight: unlike MonobankAccount#iban
@@ -36,7 +36,9 @@ class Account < ApplicationRecord
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
-  validates :iban, uniqueness: { scope: :family_id }, allow_nil: true
+  # Scoped per currency: Revolut and Wise expose one IBAN for several
+  # currency sub-accounts, and each of them is its own Sure account.
+  validates :iban, uniqueness: { scope: [ :family_id, :currency ] }, allow_nil: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
