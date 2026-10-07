@@ -1459,7 +1459,7 @@ Read and analysis:
 
 Write:
 - `update_transaction`, `update_budget`, `create_goal`
-- `create_tag` / `update_tag`, `create_category` / `update_category`
+- `create_tag` / `update_tag`, `create_category` / `update_category` / `delete_category`
 
 Documents:
 - `import_bank_statement` - Import bank statement data
