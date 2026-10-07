@@ -250,8 +250,12 @@ class User < ApplicationRecord
   after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
   # Runs inside the update's transaction: the user row stays locked until commit,
   # so a concurrent /api/v1/auth/refresh (which takes the same lock) cannot mint
-  # a token the revocation misses.
+  # a token the revocation misses. Doorkeeper's own /oauth/token refresh locks
+  # only the old token, so a refresh already holding it can still commit a new
+  # token the in-transaction sweep does not see; the second sweep after commit
+  # revokes it, and any later refresh finds the old token revoked.
   after_update :revoke_oauth_access, if: :saved_change_to_password_digest?
+  after_update_commit :revoke_oauth_access, if: :saved_change_to_password_digest?
 
   def deactivate
     return true unless active?

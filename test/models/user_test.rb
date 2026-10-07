@@ -1408,4 +1408,29 @@ class UserTest < ActiveSupport::TestCase
 
     assert_nil token.reload.revoked_at
   end
+
+  test "changing the password revokes a token minted before the change commits" do
+    user = users(:family_member)
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    late_token = nil
+
+    User.transaction do
+      user.update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+      # Stands in for a concurrent /oauth/token refresh that held the old token's
+      # row lock and committed its replacement after the in-transaction sweep.
+      late_token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+        application: app,
+        resource_owner_id: user.id,
+        scopes: "read_write",
+        expires_in: 1.year,
+        use_refresh_token: true
+      )
+    end
+
+    assert late_token.reload.revoked_at.present?
+  end
 end
