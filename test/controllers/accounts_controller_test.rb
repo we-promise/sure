@@ -432,6 +432,24 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Small Amount Entry", response.body
   end
 
+  test "show filters account activity by automatic categorization" do
+    category = categories(:food_and_drink)
+    matching = create_transaction(name: "Automatically Categorized Target", account: @account)
+    matching.entryable.enrich_attribute(:category_id, category.id, source: "ai")
+    manual = create_transaction(name: "Manually Categorized Decoy", account: @account, category: category)
+    other_account = create_transaction(name: "Other Account AI Decoy", account: accounts(:credit_card))
+    other_account.entryable.enrich_attribute(:category_id, category.id, source: "ai")
+
+    [ { ai_status: [ "current" ] }, { ai_status: [ "current" ], categories: [ category.name ] } ].each do |filters|
+      get account_url(@account, q: filters)
+
+      assert_response :success
+      assert_select "turbo-frame##{dom_id(matching)}"
+      assert_select "turbo-frame##{dom_id(manual)}", count: 0
+      assert_select "turbo-frame##{dom_id(other_account)}", count: 0
+    end
+  end
+
   test "show filters entries by category" do
     category = categories(:food_and_drink)
     matching = create_transaction(name: "Categorized Entry", amount: 10, account: @account, category: category)
