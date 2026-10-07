@@ -59,6 +59,8 @@ At this point, you should have `compose.yml` in your directory (and optionally `
 
 `compose.yml` requires a `SECRET_KEY_BASE` you provide yourself — there is no built-in default. This isn't just a Rails formality: `SECRET_KEY_BASE` also seeds the automatic generation of your Active Record encryption keys (used to encrypt provider API tokens/keys and other sensitive data at rest) when you don't set `ACTIVE_RECORD_ENCRYPTION_*` explicitly. A shared or guessable value would mean session cookies can be forged **and** your encryption keys can be computed by anyone. Follow the steps below before starting the app.
 
+> **Upgrading an existing install?** Keep the `SECRET_KEY_BASE` it already runs with; generating a new one makes already-encrypted data unreadable. See [Upgrading an install that is already running](#upgrading-an-install-that-is-already-running-keep-your-secret_key_base).
+
 #### Create your environment file
 
 In order to configure the app, you will need to create a file called `.env`, which is where Docker will read environment variables from.
@@ -335,6 +337,14 @@ docker compose pull # This pulls the "latest" published image from GHCR
 docker compose build # This rebuilds the app with updates
 docker compose up --no-deps -d web worker # This restarts the app using the newest version
 ```
+
+### Upgrading an install that is already running: keep your `SECRET_KEY_BASE`
+
+Older example compose files shipped a built-in `SECRET_KEY_BASE` default. Current ones don't, so after refreshing `compose.yml` from the example, `docker compose up` stops with "Set SECRET_KEY_BASE in your .env file". **Do not generate a new value for an existing install.** Put the value your install already runs with into `.env` first (if you never set one, it is the `SECRET_KEY_BASE` default in your previous `compose.yml`).
+
+Why: unless `ACTIVE_RECORD_ENCRYPTION_*` are set explicitly, your encryption keys are derived from `SECRET_KEY_BASE`. Changing it makes everything already encrypted under the old keys (provider tokens, API keys in settings, user emails and other encrypted fields) impossible to decrypt, which breaks logins and syncs. It also signs everyone out.
+
+If the value you have been running with is that old public default, the app logs a `[SECURITY]` warning at boot. Rotate as that warning describes: keep the keys derived from the old value as a `previous` encryption scheme ([key rotation](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)), make new keys from `bin/rails db:encryption:init` the current scheme, then run the backfill task below. Only after that is it safe to change `SECRET_KEY_BASE`. Generating a fresh value right away is only safe for a new install.
 
 ### Re-encrypting data after an encryption-related update
 

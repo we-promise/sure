@@ -53,9 +53,16 @@ x-rails-env: &rails_env
   # forge session cookies and, since ACTIVE_RECORD_ENCRYPTION_* below are
   # deterministically derived from it when unset, compute your encryption
   # keys too. Generate your own with: openssl rand -hex 64
+  # Upgrading an existing install? Do NOT generate a new value: keep the one
+  # it already runs with (the old default if you never set one), or data
+  # already encrypted under keys derived from it becomes unreadable. See
+  # "Upgrading an install that is already running" in docs/hosting/docker.md.
   SECRET_KEY_BASE: "${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in your .env file, e.g. openssl rand -hex 64}"
   # Optional but recommended: set these explicitly instead of relying on the
   # SECRET_KEY_BASE auto-derivation fallback. Generate with: bin/rails db:encryption:init
+  # On an existing install, switching to new keys here also makes existing
+  # encrypted data unreadable; keep the old keys as a `previous` scheme
+  # (see the same docs section).
   ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY:-}
   ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY:-}
   ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT:-}
