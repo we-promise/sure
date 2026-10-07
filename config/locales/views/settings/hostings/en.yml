@@ -216,6 +216,8 @@ en:
         openai_request_timeout_help: "Default: 60. Applies to each OpenAI-compatible HTTP request, including auto-categorization, merchant detection, chat, PDF processing, and vector-store calls. OPENAI_REQUEST_TIMEOUT overrides this field."
         ai_response_timeout_label: Response Timeout in Seconds (Optional)
         ai_response_timeout_help: "Default: 90. Applies only to chat's whole-turn watchdog, so size it as a sum: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × request timeout, plus tool execution and queue time. AI_RESPONSE_TIMEOUT overrides this field."
+        ai_health_probe_timeout_label: Health Check Timeout in Seconds (Optional)
+        ai_health_probe_timeout_help: "Default: 5. Applies only to the live AI checks under Settings → System health, never to real AI calls. Raise it if the PDF checks report a timeout with a cloud model. AI_HEALTH_PROBE_TIMEOUT overrides this field."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

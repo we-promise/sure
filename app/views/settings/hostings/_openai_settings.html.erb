@@ -132,7 +132,18 @@
                           min: Chat::MIN_RESPONSE_TIMEOUT.to_i,
                           disabled: ENV["AI_RESPONSE_TIMEOUT"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
-    <p class="text-xs text-secondary mt-1"><%= t(".ai_response_timeout_help") %></p>
+    <p class="text-xs text-secondary mt-1 mb-3"><%= t(".ai_response_timeout_help") %></p>
+
+    <%# Probe.timeout ignores a non-positive env value, so only a positive one locks the field. %>
+    <% probe_timeout_from_env = ENV["AI_HEALTH_PROBE_TIMEOUT"].to_s.strip.to_i.positive? %>
+    <%= form.number_field :ai_health_probe_timeout,
+                          label: t(".ai_health_probe_timeout_label"),
+                          placeholder: AiHealth::Probe::DEFAULT_TIMEOUT.to_s,
+                          value: probe_timeout_from_env ? AiHealth::Probe.timeout : Setting.ai_health_probe_timeout,
+                          min: 1,
+                          disabled: probe_timeout_from_env,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1"><%= t(".ai_health_probe_timeout_help") %></p>
   </div>
   <% end %>
 </div>

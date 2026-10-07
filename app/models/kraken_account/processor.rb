@@ -16,6 +16,10 @@ class KrakenAccount::Processor
     process_account!
     process_trades
     KrakenAccount::LedgerProcessor.new(kraken_account).process
+
+    # The account was created, and anchored, before any of this history
+    # existed. Now that it does, the anchor has to precede it.
+    kraken_account.current_account.ensure_opening_anchor_precedes_entries
   end
 
   private
@@ -75,8 +79,12 @@ class KrakenAccount::Processor
       security = KrakenAccount::SecurityResolver.resolve("CRYPTO:#{base_symbol}", base_symbol)
       return unless security
 
-      entry_amount = type == "buy" ? -cost : cost
+      # Sure's convention is positive = money out, so a buy is +cost and a sell
+      # -cost: the sign of the quantity, with Kraken's `cost` as the magnitude.
+      # `cost` is the fill's actual cash figure and can differ from `vol * price`
+      # by rounding, so it is kept rather than recomputed.
       trade_qty = type == "buy" ? qty : -qty
+      entry_amount = type == "buy" ? cost : -cost
       label = type == "buy" ? "Buy" : "Sell"
 
       account.entries.create!(

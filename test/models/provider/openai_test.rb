@@ -1037,6 +1037,59 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal "{}", tool_call.dig(:function, :arguments)
   end
 
+  test "build_generic_messages preserves extra_content on assistant tool_calls when present" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://generativelanguage.googleapis.com/v1beta/openai",
+      model: "gemini-3.8-flash"
+    )
+
+    extra = { "google" => { "thought_signature" => "sig_encrypted_token_123" } }
+    messages = provider.send(
+      :build_generic_messages,
+      prompt: "hi",
+      function_results: [
+        {
+          call_id: "call_1",
+          name: "get_net_worth",
+          arguments: "{}",
+          output: { "amount" => 10000 },
+          extra_content: extra
+        }
+      ]
+    )
+
+    assistant_message = messages.find { |m| m[:role] == "assistant" }
+    tool_call = assistant_message[:tool_calls].first
+    assert_equal extra, tool_call[:extra_content]
+  end
+
+  test "build_generic_messages omits extra_content on assistant tool_calls when nil" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    messages = provider.send(
+      :build_generic_messages,
+      prompt: "hi",
+      function_results: [
+        {
+          call_id: "call_1",
+          name: "get_net_worth",
+          arguments: "{}",
+          output: { "amount" => 10000 },
+          extra_content: nil
+        }
+      ]
+    )
+
+    assistant_message = messages.find { |m| m[:role] == "assistant" }
+    tool_call = assistant_message[:tool_calls].first
+    assert_not_includes tool_call.keys, :extra_content
+  end
+
   private
     # Verify the response budget at the provider-to-processor boundary.
     # @param limit [Integer, nil] expected explicit cap or omitted cap
