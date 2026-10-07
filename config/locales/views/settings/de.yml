@@ -244,6 +244,7 @@ de:
         connect_button: Coinbase verbinden
         syncing: Wird synchronisiert…
         sync: Synchronisieren
+        disconnect: Trennen
         disconnect_confirm: Bist du sicher, dass du diese Coinbase-Verbindung trennen möchtest? Deine synchronisierten Konten werden zu manuellen Konten.
       enable_banking_panel:
         callback_url_instruction: "Für die Callback-URL, verwende %{callback_url}."
@@ -288,6 +289,7 @@ de:
         api_secret_label: API-Secret
         api_secret_placeholder: Binance-API-Secret einfügen
         connect_button: Binance verbinden
+        disconnect: Trennen
         disconnect_confirm: Verbindung zu Binance wirklich trennen?
         historical_import: Einstellungen für den Verlaufsimport
         ip_hint_body: 'Trag die ausgehende IP-Adresse des App-Servers in die Whitelist des Binance-API-Keys ein:'
@@ -548,11 +550,16 @@ de:
         qr_instruction: Scanne den QR-Code mit deiner Trade-Republic-App und bestätige die Anmeldung.
         qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
         qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
+        add_account: Weitere Verbindung hinzufügen
         save_configuration: Speichern und Login starten
         update_configuration: Konfiguration aktualisieren
         sync: Sync
+        syncing: Wird synchronisiert...
         disconnect: Trade Republic trennen
         disconnect_confirm: Trade Republic trennen? Deine synchronisierten Konten werden zu manuellen Konten.
+        disconnect_confirm_with_identifier: "Die Trade-Republic-Verbindung mit den Endziffern %{last4} trennen? Deine synchronisierten Konten werden zu manuellen Konten."
+        identifier_phone: Telefon
+        identifier_account: Konto
         status_configured_prefix: "Verbunden. Im Reiter"
         accounts_tab: Konten
         setup_accounts: Konten einrichten
@@ -659,7 +666,7 @@ de:
         completion: Antwort
         cost_by_model: Kosten nach Modell
         cost_by_operation: Kosten nach Vorgang
-        cost_estimates_description: Die Kosten sind aus den veröffentlichten Preisen der Anbieter geschätzt, für OpenAI mit Stand Juli 2026. Die tatsächlichen Kosten können abweichen. Die Preise gelten je 1 Million Tokens und unterscheiden sich je Modell. Eigene oder selbst gehostete Modelle zeigen „N/A“ und fließen nicht in die Gesamtkosten ein.
+        cost_estimates_description: Die Kosten werden anhand der veröffentlichten Anbieterpreise geschätzt, zuletzt geprüft am %{date}. Die tatsächlichen Kosten können abweichen. Die Preise gelten je 1 Million Tokens und unterscheiden sich je Modell. Eigene oder selbst gehostete Modelle zeigen „N/A“ und fließen nicht in die Gesamtkosten ein.
         cost_estimates_title: Zur Kostenschätzung
         end_date: Enddatum
         failed: Fehler

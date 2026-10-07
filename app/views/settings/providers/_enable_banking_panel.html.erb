@@ -1,6 +1,6 @@
-<div class="space-y-4">
+<div id="enable_banking-providers-panel" class="space-y-4">
   <%
-    eb_link = link_to("Enable Banking", "https://enablebanking.com", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")
+    eb_link = link_to("Enable Banking", "https://enablebanking.com", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")
   %>
   <%= render "settings/providers/setup_steps",
              steps: [
@@ -104,7 +104,7 @@
     %>
     <div class="border-t border-primary pt-4 space-y-3">
       <% items.each do |item| %>
-        <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
+        <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-container border border-primary">
           <div class="flex items-center gap-3">
             <% if item.syncing? %>
               <div class="w-2 h-2 bg-inverse rounded-full animate-pulse"></div>
@@ -141,21 +141,26 @@
             <% end %>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <% if item.session_valid? %>
-              <%= button_to sync_enable_banking_item_path(item),
-                            method: :post,
-                            class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-surface-inset transition-colors",
-                            data: { turbo: false } do %>
-                <%= t("settings.providers.enable_banking_panel.sync") %>
-              <% end %>
+              <%= render DS::Button.new(
+                text: t("settings.providers.enable_banking_panel.sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                size: :sm,
+                href: sync_enable_banking_item_path(item, source: "panel"),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
             <% elsif item.session_expired? %>
-              <%= button_to reauthorize_enable_banking_item_path(item),
-                            method: :post,
-                            class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-warning hover:opacity-90 transition-colors",
-                            data: { turbo: false } do %>
-                <%= t("settings.providers.enable_banking_panel.reconnect") %>
-              <% end %>
+              <%= render DS::Button.new(
+                text: t("settings.providers.enable_banking_panel.reconnect"),
+                variant: :primary,
+                size: :sm,
+                href: reauthorize_enable_banking_item_path(item),
+                method: :post,
+                data: { turbo: false }
+              ) %>
             <% else %>
               <%= render DS::Link.new(
                 text: t("settings.providers.enable_banking_panel.connect_bank"),
@@ -166,12 +171,15 @@
               ) %>
             <% end %>
 
-            <%= button_to enable_banking_item_path(item),
-                          method: :delete,
-                          class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors",
-                          data: { turbo_confirm: t("settings.providers.enable_banking_panel.remove_confirm") } do %>
-              <%= t("settings.providers.enable_banking_panel.remove") %>
-            <% end %>
+            <%= render DS::Button.new(
+              text: t("settings.providers.enable_banking_panel.remove"),
+              icon: "trash-2",
+              variant: :outline_destructive,
+              size: :sm,
+              href: enable_banking_item_path(item),
+              method: :delete,
+              data: { turbo_confirm: t("settings.providers.enable_banking_panel.remove_confirm") }
+            ) %>
           </div>
         </div>
       <% end %>

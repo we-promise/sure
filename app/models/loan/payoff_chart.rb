@@ -74,6 +74,9 @@ class Loan
         # hard-codes `lang="en"`, so the document cannot tell the chart.
         locale: I18n.locale.to_s,
         currency: currency,
+        # The split is shown to the currency's own precision, as the Schedule
+        # tab shows it. Intl's default can differ from the app's (BTC).
+        currency_precision: Money::Currency.new(currency).default_precision || 2,
         domain_start: domain_start.iso8601,
         domain_end: domain_end.iso8601,
         **series,
@@ -163,8 +166,13 @@ class Loan
         rows = schedule.payments
         return [] if rows.empty?
 
+        # Each payment carries what it is made of, for the tooltip. The opening
+        # point is the amount borrowed, not a payment, so it carries no split.
         opening = { date: loan.origination_date.iso8601, balance: schedule.principal.to_f }
-        [ opening ] + series(rows) { |p| [ p.date, p.ending_balance.amount ] }
+        [ opening ] + rows.map do |p|
+          { date: p.date.iso8601, balance: p.ending_balance.amount.to_f,
+            principal: p.principal.amount.to_f, interest: p.interest.amount.to_f }
+        end
       end
 
       # A projection opens at today's real balance, so the line starts there
@@ -202,6 +210,10 @@ class Loan
       def labels
         SERIES.index_with { |key| I18n.t("UI.account.chart.loan.#{key}") }
           .merge(
+            # The Schedule tab's column labels, so the tooltip and the table
+            # name the same figures the same way.
+            principal: I18n.t("loans.tabs.schedule.principal"),
+            interest: I18n.t("loans.tabs.schedule.interest"),
             today: I18n.t("UI.account.chart.loan.today"),
             interactive_chart: I18n.t("UI.account.chart.loan.interactive_chart")
           )

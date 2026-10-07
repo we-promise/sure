@@ -18,7 +18,7 @@ ru:
     attachments:
       attachment_deleted: Вложение успешно удалено
       browse_to_add: Выберите файлы для добавления
-      cannot_exceed: Не может превышать %{count} вложений на операцию
+      cannot_exceed: К одной операции можно прикрепить не более %{count} файлов
       delete_failed: Не удалось удалить вложение. Пожалуйста, попробуйте снова или
         свяжитесь с поддержкой.
       failed_delete: 'Не удалось удалить вложение: %{error}'
@@ -133,7 +133,7 @@ ru:
       qty_or_price_hint: Введите хотя бы количество ИЛИ цену. Остальное будет рассчитано
         из суммы операции (%{amount}).
       quantity_hint: Количество акций в сделке
-      quantity_label: Количество (Акции)
+      quantity_label: Количество акций
       quantity_placeholder: например, 20
       security_custom: "+ Введите пользовательский тикер"
       security_label: Ценная бумага
@@ -142,7 +142,7 @@ ru:
       security_prompt: Выберите ценную бумагу...
       submit: Преобразовать в сделку
       success: Операция преобразована в сделку
-      ticker_hint: Введите символ тикера акции/ETF (например, AAPL, MSFT)
+      ticker_hint: Введите тикер акции или ETF (например, AAPL, MSFT)
       ticker_placeholder: AAPL
       ticker_search_hint: Поиск по символу тикера или названию компании, или введите
         пользовательский тикер
@@ -180,6 +180,9 @@ ru:
       category_search_placeholder: Поиск категорий
       create_category: Создать «%{name}»
       create_category_error: Не удалось создать категорию
+      create_as_subcategory: Добавить как подкатегорию…
+      choose_parent: 'Создать «%{name}» в:'
+      back_to_categories: Назад
       create_merchant: Создать
       create_merchant_error: Не удалось создать продавца
       merchant_search_placeholder: Найдите или создайте продавца
@@ -333,9 +336,9 @@ ru:
       none: "(нет)"
       note_label: Заметки
       note_placeholder: Введите заметку
-      one_time_description: Одноразовые операции будут исключены из некоторых расчетов
-        бюджета и отчетов, чтобы помочь вам увидеть, что действительно важно.
-      one_time_title: Одноразовая %{type}
+      one_time_description: Разовые операции будут исключены из некоторых расчётов
+        бюджета и отчётов, чтобы помочь вам увидеть, что действительно важно.
+      one_time_title: Разовая %{type}
       open_matcher: Открыть сопоставитель
       overview: Обзор
       payee: Получатель

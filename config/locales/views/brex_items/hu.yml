@@ -92,14 +92,13 @@ hu:
       total: Összesen
       unlinked: Nincs összekapcsolva
     provider_panel:
-      accounts_link: Számlák
       add_connection: Brex kapcsolat hozzáadása
       base_url_label: Alap URL (opcionális)
       base_url_placeholder: https://api.brex.com
-      configured_html: "Konfigurálva és használatra kész. Látogass el a %{accounts_link} fülre a számlák kezeléséhez és beállításához."
       connection_name_label: Kapcsolat neve
       connection_name_placeholder: Üzleti folyószámla
       default_connection_name: Brex kapcsolat
+      disconnect: Lecsatlakozás
       disconnect_label: "%{name} szétkapcsolása"
       disconnect_confirm: "%{name} szétkapcsolása?"
       encryption_warning:
@@ -111,10 +110,8 @@ hu:
         open_tokens: Menj a csatlakoztatni kívánt vállalat Brex fejlesztői/API-token beállításaiba
         sign_in_html: "Látogass el ide: %{link}, és lépj be a csatlakoztatni kívánt fiókba"
       keep_token_placeholder: Hagyd üresen az aktuális token megtartásához
-      not_configured: Nincs beállítva
       sandbox_note_html: "Minden szinkronizálni kívánt Brex vállalathoz/API-tokenhez használj külön megnevezett kapcsolatot. Az Alap URL-t hagyd üresen az éles környezethez. A tesztkörnyezet csak a Brex által jóváhagyott tesztelésre korlátozódik, és nem működik ügyfél tokenekkel."
       setup_accounts: Számlák beállítása
-      setup_title: "Beállítási utasítások:"
       sync: Szinkronizálás
       token_label: Token
       token_placeholder: Illeszt be tokent ide

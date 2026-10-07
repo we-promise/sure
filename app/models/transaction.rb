@@ -114,6 +114,9 @@ class Transaction < ApplicationRecord
   # Providers that support pending transaction flags
   PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark financekit].freeze
 
+  # DataEnrichment sources that represent automatic category assignment
+  AUTO_CATEGORY_SOURCES = %w[ai bayes].freeze
+
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
   PENDING_CHECK_SQL = PENDING_PROVIDERS
