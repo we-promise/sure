@@ -309,7 +309,7 @@ class Holding < ApplicationRecord
       )
 
       total_cost, total_qty = trades.pick(
-        Arel.sql("SUM(trades.price * trades.qty * COALESCE(exchange_rates.rate, 1))"),
+        Arel.sql("SUM((trades.price * trades.qty + trades.fee) * COALESCE(exchange_rates.rate, 1))"),
         Arel.sql("SUM(trades.qty)")
       )
 

@@ -79,6 +79,14 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(expected_nvda_usd, "CAD").exchange_to("USD"), @nvda.avg_cost
   end
 
+  test "the average cost includes what the purchases cost in fees" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, fee: 10, date: 1.day.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, fee: 5, date: Date.current)
+
+    # (10 * 212 + 10 + 15 * 216 + 5) / 25 = 5,375 / 25
+    assert_equal Money.new(BigDecimal("215")), @amzn.avg_cost
+  end
+
   test "calculates total return trend" do
     @amzn.stubs(:avg_cost).returns(Money.new(214.00))
     @nvda.stubs(:avg_cost).returns(Money.new(126.00))
