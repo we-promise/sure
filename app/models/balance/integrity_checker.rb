@@ -65,9 +65,14 @@ class Balance::IntegrityChecker
         next unless first_open_waypoint
       else
         first_open_waypoint ||= b
-        # A busy day's residual still carries timing noise; an exact one is
-        # the gap itself, and keeps the reported figure stable night to night.
-        open_residual = residual if open_residual.nil? || exact_snapshot?(b)
+        # An exact snapshot measures the gap itself. On a busy day only the
+        # part beyond the timing range is certain, so that is reported until
+        # an exact snapshot settles it; either keeps the figure stable.
+        if exact_snapshot?(b)
+          open_residual = residual
+        elsif open_residual.nil?
+          open_residual = beyond_timing(b, residual)
+        end
       end
 
       next unless (b.date - first_open_waypoint.date).to_i > min_days_open
@@ -145,10 +150,19 @@ class Balance::IntegrityChecker
     def same_day_timing?(waypoint, residual)
       return false unless linked?
 
-      flows = same_day_flows(waypoint.date)
-      lowest = flows.select(&:negative?).sum
-      highest = flows.select(&:positive?).sum
+      lowest, highest = timing_range(waypoint)
       residual.between?(lowest - tolerance, highest + tolerance)
+    end
+
+    def timing_range(waypoint)
+      flows = same_day_flows(waypoint.date)
+      [ flows.select(&:negative?).sum, flows.select(&:positive?).sum ]
+    end
+
+    # The part of a busy day's residual that its activity cannot explain.
+    def beyond_timing(waypoint, residual)
+      lowest, highest = timing_range(waypoint)
+      residual.positive? ? residual - highest : residual - lowest
     end
 
     # Each amount's possible effect on the residual: a posted transaction

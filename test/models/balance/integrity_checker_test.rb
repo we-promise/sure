@@ -463,6 +463,28 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     assert_empty Balance::IntegrityChecker.new(account).flagged_gaps
   end
 
+  test "a gap that opens on a busy day reports only the part the day's activity cannot explain" do
+    freeze_time
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    add_linked_entry(account, date: 8.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    # A 50 deposit (day 7) was never imported, and every later sync day has a
+    # purchase booked after the snapshot, so no exact snapshot follows.
+    ledger = 1000
+    { 5 => 100, 4 => 10, 3 => 10, 2 => 10 }.each do |days_ago, purchase|
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: ledger + 50, kind: "reconciliation")
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: purchase)
+      ledger -= purchase
+    end
+
+    gap = Balance::IntegrityChecker.new(account).latest_flagged_gap
+
+    assert gap
+    assert_equal 5.days.ago.to_date, gap.first_open_waypoint.date
+    assert_in_delta 50, gap.difference, 0.01, "the 100 purchase booked after day 5's sync is timing, not part of the gap"
+  end
+
   private
     def add_linked_entry(account, date:, amount:, kind: nil)
       account.entries.create!(
