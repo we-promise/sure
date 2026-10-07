@@ -163,7 +163,7 @@ class Transaction < ApplicationRecord
   #   - Once matched, both legs defer to Transfer#categorizable?, which is
   #     based on the (stable) destination account rather than either leg's
   #     kind, so both legs of e.g. a loan payment agree and stay correct
-  #     even if a later provider sync leaves a stale kind on this
+  #     even if an older provider sync left a stale kind on this
   #     transaction.
   def category_editable?
     return true unless transfer?
@@ -174,9 +174,9 @@ class Transaction < ApplicationRecord
 
   # Whether this non-editable transfer leg is a liability payment (shown
   # with the "Payment" badge instead of "Transfer"). Defers to the attached
-  # Transfer when one exists, since Account::ProviderImportAdapter can
-  # reassign an already-matched transaction's kind on a later sync without
-  # touching its Transfer record, which would otherwise let a stale
+  # Transfer when one exists, since a matched transaction's own kind can be
+  # stale (rows a provider sync overwrote before the import adapter derived
+  # matched legs from their Transfer), which would otherwise let a stale
   # "cc_payment" kind override a transfer that isn't actually a payment.
   # Only falls back to the transaction's own kind when there's no Transfer
   # record yet (e.g. a provider-imported cc_payment leg whose counterpart

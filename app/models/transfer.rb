@@ -17,10 +17,12 @@ class Transfer < ApplicationRecord
   validate :transfer_has_same_family
 
   class << self
-    # from_account mirrors the guard Transfer::Creator and Family::DataImporter
-    # apply to their own copies of this rule: an investment/crypto destination
-    # only counts as a contribution when the source isn't itself an
-    # investment/crypto account, otherwise it's a plain funds movement.
+    # The outflow leg's kind for a transfer into this account. Transfer::Creator,
+    # Family::DataImporter, auto-matching, rules and manual matches all call
+    # it (the inflow leg is always funds_movement, see kind_for_leg).
+    # from_account: an investment/crypto destination only counts as a
+    # contribution when the source isn't itself an investment/crypto account,
+    # otherwise it's a plain funds movement.
     def kind_for_account(account, from_account: nil)
       if account.loan?
         "loan_payment"
@@ -99,11 +101,18 @@ class Transfer < ApplicationRecord
     "transfer"
   end
 
-  # Based on the destination account rather than outflow_transaction.kind:
-  # Account::ProviderImportAdapter can overwrite an already-matched leg's
-  # kind on a later sync without touching this Transfer, and to_account is
-  # stable across that (see Transaction#payment?, which has the same
-  # to_account-based reasoning for the same class of staleness).
+  # The kind a leg carries while this transfer exists: the outflow by the
+  # destination account, the inflow always funds_movement.
+  def kind_for_leg(transaction)
+    return "funds_movement" if transaction.id == inflow_transaction_id
+
+    Transfer.kind_for_account(to_account, from_account: from_account)
+  end
+
+  # Based on the destination account rather than outflow_transaction.kind,
+  # which can be stale on rows a provider sync overwrote before
+  # Account::ProviderImportAdapter derived matched legs from their transfer
+  # (see Transaction#payment?, which has the same to_account-based reasoning).
   def categorizable?
     return false unless to_account
 
