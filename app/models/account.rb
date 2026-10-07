@@ -62,6 +62,12 @@ class Account < ApplicationRecord
     visible.manual
   }
 
+  # The manual accounts +user+ may see, as /accounts lists them. Admins are
+  # not exempt: an admin sees what they own or were shared, as on /accounts.
+  scope :visible_manual_for, ->(user) {
+    visible_manual.where(id: user.accessible_accounts.select(:id))
+  }
+
   scope :listable_manual, -> {
     manual.where.not(status: :pending_deletion)
   }
