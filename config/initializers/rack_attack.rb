@@ -143,6 +143,33 @@ class Rack::Attack
     credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/api/v1/auth/sso_link")
   end
 
+  # Self-service password change checks the current password
+  # (password_challenge) for a signed-in user, so there's no email param. The
+  # signed session cookie leads to the signed-in user instead, so neither
+  # rotating IPs nor holding several of the user's sessions buys more guesses
+  # at the account password. Only PATCH/PUT /password pays for the lookup.
+  password_change_user = ->(request) do
+    session_id = ActionDispatch::Request.new(request.env).cookie_jar.signed[:session_token]
+    next nil if session_id.blank?
+
+    user_id = Session.where(id: session_id).pick(:user_id)
+    "user:#{user_id}" if user_id
+  end
+
+  # Rack::MethodOverride runs earlier in the stack, so the form's
+  # `_method=patch` already shows up as PATCH here.
+  password_change_request = ->(request) do
+    (request.patch? || request.put?) && credential_guess_path.call(request, "/password")
+  end
+
+  throttle("password_change/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if password_change_request.call(request)
+  end
+
+  throttle("password_change/user", limit: 10, period: 1.minute) do |request|
+    password_change_user.call(request) if password_change_request.call(request)
+  end
+
   # FinanceKit publisher endpoints belong to this section: both the upload and
   # the receipt read authenticate a bearer token against a stored SHA-256
   # digest (FinancekitItem#authenticate_credential?), the same
