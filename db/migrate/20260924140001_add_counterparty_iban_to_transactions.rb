@@ -1,4 +1,4 @@
-class AddCounterpartyIbanToTransactions < ActiveRecord::Migration[7.2]
+class AddCounterpartyIbanToTransactions < ActiveRecord::Migration[8.1]
   def change
     # Dedicated, deterministically encrypted columns for a transaction
     # counterparty's own bank account identifiers (see Transaction and
