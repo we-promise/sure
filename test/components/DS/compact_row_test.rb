@@ -66,7 +66,7 @@ class DS::CompactRowTest < ViewComponent::TestCase
       row.with_primary { "Coffee" }
     end
 
-    assert_selector "span.text-secondary\\/40", text: "—", count: 2
+    assert_selector "span.text-secondary.opacity-40", text: "—", count: 2
   end
 
   test "shows the balance column only when show_balance is true" do
@@ -85,6 +85,6 @@ class DS::CompactRowTest < ViewComponent::TestCase
     end
 
     # Only the category placeholder remains; the notes column is gone.
-    assert_selector "span.text-secondary\\/40", text: "—", count: 1
+    assert_selector "span.text-secondary.opacity-40", text: "—", count: 1
   end
 end

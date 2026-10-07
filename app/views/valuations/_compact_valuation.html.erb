@@ -39,7 +39,7 @@
           <% if running_balance.present? %>
             <span class="privacy-sensitive text-sm font-medium text-primary truncate" title="<%= format_money(running_balance) %>"><%= format_money(running_balance) %></span>
           <% else %>
-            <span class="text-secondary/40 text-sm" title="<%= t("transactions.show.balance_unavailable") %>">—</span>
+            <span class="text-secondary opacity-40 text-sm" title="<%= t("transactions.show.balance_unavailable") %>">—</span>
           <% end %>
         <% end %>
       <% end %>

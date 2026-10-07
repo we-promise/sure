@@ -84,7 +84,7 @@ class DS::CompactRow < DesignSystemComponent
           <% if notes? %>
             <%= notes %>
           <% else %>
-            <span class="text-secondary/40 text-sm">—</span>
+            <span class="text-secondary opacity-40 text-sm">—</span>
           <% end %>
         </div>
       <% end %>
@@ -93,7 +93,7 @@ class DS::CompactRow < DesignSystemComponent
         <% if category? %>
           <%= category %>
         <% else %>
-          <span class="text-secondary/40 text-sm">—</span>
+          <span class="text-secondary opacity-40 text-sm">—</span>
         <% end %>
       </div>
 
