@@ -1300,8 +1300,14 @@ class Goal < ApplicationRecord
     # Goals funded by an investment account default to the contributions basis
     # (so a market swing doesn't move them); depository-only goals stay on the
     # balance basis. Only auto-set when the basis is still the default.
+    # A goal that also holds a crypto account is left on the balance basis:
+    # contributions would take the wallet's market gain out along with the
+    # brokerage's, and a crypto-backed goal counts the wallet at its value
+    # today (#3965).
     def default_progress_basis_for_investment
-      return unless goal_accounts.any? { |ga| ga.account&.investment? }
+      accounts = goal_accounts.map(&:account).compact
+      return unless accounts.any?(&:investment?)
+      return if accounts.any?(&:crypto?)
       return unless progress_basis.blank? || progress_basis == "balance"
 
       self.progress_basis = "contributions"

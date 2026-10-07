@@ -173,6 +173,35 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal BigDecimal("10000"), Goal.find(goal.id).current_balance.to_d
   end
 
+  # The default to contributions is for investment-backed goals. A wallet beside
+  # a brokerage must not be pulled onto it: a contributions reading would take
+  # the wallet's market gain out as well, and a crypto-backed goal counts the
+  # wallet at its value today.
+  test "a goal with a crypto account beside an investment account stays on market value" do
+    brokerage = Account.create!(family: @family, accountable: Investment.new, name: "Brokerage M", currency: "USD", balance: 10_000)
+    brokerage.balances.create!(date: 10.days.ago.to_date, balance: 10_000, currency: "USD", net_market_flows: 3_000)
+    wallet = Account.create!(family: @family, accountable: Crypto.new, name: "Wallet M", currency: "USD", balance: 5_000)
+    wallet.balances.create!(date: 10.days.ago.to_date, balance: 5_000, currency: "USD", net_market_flows: 2_000)
+    goal = @family.goals.create!(name: "Mixed", target_amount: 50_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: brokerage)
+      g.goal_accounts.build(account: wallet)
+    end
+
+    # On contributions this would read 10,000 (15,000 less both gains).
+    assert_equal "balance", goal.progress_basis
+    assert_equal BigDecimal("15000"), Goal.find(goal.id).current_balance.to_d
+  end
+
+  test "adding a crypto account to a cash goal with an investment does not move it to contributions" do
+    goal = goals(:emergency_fund)
+    assert_equal "balance", goal.progress_basis, "precondition"
+    goal.goal_accounts.build(account: accounts(:crypto))
+    goal.goal_accounts.build(account: accounts(:investment))
+    goal.save!
+
+    assert_equal "balance", goal.reload.progress_basis
+  end
+
   test "a crypto account in another currency is still rejected" do
     wallet = Account.create!(family: @family, accountable: Crypto.new, name: "Euro wallet", currency: "EUR", balance: 1_000)
     new_goal = @family.goals.new(name: "BTC reserve", target_amount: 20_000, currency: "USD")
