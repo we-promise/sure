@@ -10,7 +10,7 @@ class Transactions::ReadsController < ApplicationController
       head :no_content
     elsif params[:account_id].present?
       account = Current.user.accessible_accounts.find(params[:account_id])
-      Current.user.mark_all_transactions_read!(account.entries)
+      Current.user.mark_all_transactions_read!(account.entries, as_of: as_of)
       redirect_back_or_to account_path(account), notice: t(".success")
     elsif filter_params.present?
       search = Transaction::Search.new(
@@ -19,15 +19,24 @@ class Transactions::ReadsController < ApplicationController
         accessible_account_ids: Current.user.accessible_accounts.pluck(:id),
         user: Current.user
       )
-      Current.user.mark_all_transactions_read!(Entry.where(id: search.transactions_scope.select("entries.id")))
+      Current.user.mark_all_transactions_read!(Entry.where(id: search.transactions_scope.select("entries.id")), as_of: as_of)
       redirect_back_or_to transactions_path, notice: t(".success")
     else
-      Current.user.mark_all_transactions_read!
+      Current.user.mark_all_transactions_read!(as_of: as_of)
       redirect_back_or_to transactions_path, notice: t(".success")
     end
   end
 
   private
+    # When the page with the button was rendered. Transactions synced after it
+    # were never shown and stay unread. Without a usable value it falls back to
+    # now; User#mark_all_transactions_read! caps it at now.
+    def as_of
+      Time.zone.iso8601(params[:as_of].to_s)
+    rescue ArgumentError
+      Time.current
+    end
+
     # Mirrors TransactionsController#search_params so "mark all" covers
     # exactly the list the user sees. A dropped filter would widen the scope.
     def filter_params

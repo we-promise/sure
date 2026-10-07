@@ -9,7 +9,7 @@
           text: t("accounts.show.activity.mark_all_read"),
           icon: "check-check",
           variant: "outline",
-          href: helpers.transactions_read_path(account_id: account.id),
+          href: helpers.transactions_read_path(account_id: account.id, as_of: helpers.unread_as_of_param),
           method: :post,
           class: "ml-auto mr-2",
           data: { turbo_frame: "_top" }

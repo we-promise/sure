@@ -5,6 +5,13 @@ module UnreadEntriesTrackable
   extend ActiveSupport::Concern
 
   private
+    # Remembers when the list was loaded. "Mark all as read" on the rendered
+    # page sends it back so a transaction synced after this moment, which the
+    # user never saw, stays unread. Run before the entries are queried.
+    def note_unread_as_of
+      @unread_as_of = Time.current
+    end
+
     # Sets @unread_entry_ids, which EntriesHelper#unread_entry? reads while the
     # rows render.
     def track_unread_entries(entries)

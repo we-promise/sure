@@ -2,6 +2,7 @@ class TransactionsController < ApplicationController
   include EntryableResource, UnreadEntriesTrackable
 
   before_action :set_entry_for_unlock, only: :unlock
+  before_action :note_unread_as_of, only: :index
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 

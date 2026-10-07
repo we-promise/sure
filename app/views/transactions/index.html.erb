@@ -22,7 +22,7 @@
             text: t(".mark_all_read"),
             icon: "check-check",
             variant: "outline",
-            href: transactions_read_path(q: @q.presence),
+            href: transactions_read_path(q: @q.presence, as_of: unread_as_of_param),
             method: :post
           ) %>
         <% end %>

@@ -2,6 +2,7 @@ class AccountsController < ApplicationController
   include StreamExtensions, UnreadEntriesTrackable
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
+  before_action :note_unread_as_of, only: :show
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable

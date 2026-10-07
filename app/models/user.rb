@@ -180,16 +180,24 @@ class User < ApplicationRecord
   end
 
   # Without a scope everything becomes read by moving the watermark, which also
-  # makes the per-entry rows redundant. With a scope (a filtered list, one
-  # account) only the unread entries inside it are marked.
-  def mark_all_transactions_read!(entries_scope = nil)
+  # makes the per-entry rows up to it redundant. With a scope (a filtered list,
+  # one account) only the unread entries inside it are marked.
+  #
+  # `as_of` is when the user's list was rendered. Transactions a sync creates
+  # after that were never on screen, so they stay unread even though the click
+  # comes later.
+  def mark_all_transactions_read!(entries_scope = nil, as_of: Time.current)
+    as_of = [ as_of, Time.current ].min
+
     if entries_scope.nil?
       transaction do
-        update_column(:transactions_read_before, Time.current)
-        entry_reads.delete_all
+        update_column(:transactions_read_before, [ as_of, transactions_read_before ].max)
+        entry_reads.joins(:entry).where("entries.created_at <= ?", as_of).delete_all
       end
     else
-      mark_entries_read!(entries_scope.merge(Entry.unread_by(self)).pluck("entries.id"))
+      mark_entries_read!(
+        entries_scope.merge(Entry.unread_by(self)).where("entries.created_at <= ?", as_of).pluck("entries.id")
+      )
     end
   end
 

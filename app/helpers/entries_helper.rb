@@ -8,6 +8,12 @@ module EntriesHelper
     @unread_entry_ids&.include?(entry.id) || false
   end
 
+  # When the list on this page was loaded, for the "mark all as read" button
+  # (see UnreadEntriesTrackable#note_unread_as_of).
+  def unread_as_of_param
+    @unread_as_of&.iso8601(6)
+  end
+
   # Only present on responses to Turbo hover-prefetches: marks the rows read
   # from the browser when the page is actually shown.
   def unread_marker_tag

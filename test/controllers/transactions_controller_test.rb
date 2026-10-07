@@ -1736,6 +1736,8 @@ end
     create_transaction(account: accounts(:depository), external_id: "unread-button", source: "simplefin", date: 1.year.ago.to_date)
     get transactions_url(per_page: 10)
     assert_select "form[action^=?]", transactions_read_path
+    # The button carries when the list was loaded, so a later sync stays unread.
+    assert_select "form[action^=?][action*=?]", transactions_read_path, "as_of="
   end
 
   test "index with ai_status=current renders the AI filter badge" do
