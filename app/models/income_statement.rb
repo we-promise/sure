@@ -26,20 +26,40 @@ class IncomeStatement
 
     total_income = result.select { |t| t.classification == "income" }.sum(&:total)
     total_expense = result.select { |t| t.classification == "expense" }.sum(&:total)
+    total_investment_contribution = result.select { |t| t.classification == "investment_contribution" }.sum(&:total)
 
     ScopeTotals.new(
       transactions_count: result.sum(&:transactions_count),
       income_money: Money.new(total_income, family.currency),
-      expense_money: Money.new(total_expense, family.currency)
+      expense_money: Money.new(total_expense, family.currency),
+      investment_contribution_money: Money.new(total_investment_contribution, family.currency)
     )
   end
 
-  def expense_totals(period: Period.current_month)
-    # Memoized per instance so callers that also invoke `net_category_totals`
+  # Category-level breakdown of investment contributions for the period --
+  # the dashboard counterpart to expense_totals/income_totals, for surfaces
+  # that want to show "Investments" as its own line instead of folding it
+  # into spending (see IncomeStatement::ScopedTransactionsQuery#classification_sql).
+  def investment_contribution_totals(period: Period.current_month)
     key = period_cache_key(period)
+    @investment_contribution_totals_by_period ||= {}
+    @investment_contribution_totals_by_period[key] ||= build_period_total(classification: "investment_contribution", period: period)
+  end
+
+  # `include_non_operating:` folds Transaction::NON_OPERATING_KINDS (currently
+  # just investment_contribution) back into the total. Budget accounting needs
+  # this: a category the user budgeted and fully contributed to must show as
+  # fully spent so Budget::RolloverCalculator doesn't carry the allocation
+  # forward as unused surplus (see PR #3609 review). Dashboard/report
+  # "spending" surfaces must NOT pass this -- that's the whole point of
+  # classification_sql giving investment_contribution its own bucket.
+  def expense_totals(period: Period.current_month, include_non_operating: false)
+    # Memoized per instance so callers that also invoke `net_category_totals`
+    key = [ period_cache_key(period), include_non_operating ]
     @expense_totals_by_period ||= {}
     return @expense_totals_by_period[key] if @expense_totals_by_period.key?(key)
-    @expense_totals_by_period[key] = build_period_total(classification: "expense", period: period)
+    classification = include_non_operating ? [ "expense", *Transaction::NON_OPERATING_KINDS ] : "expense"
+    @expense_totals_by_period[key] = build_period_total(classification: classification, period: period)
   end
 
   def income_totals(period: Period.current_month)
@@ -49,12 +69,12 @@ class IncomeStatement
     @income_totals_by_period[key] = build_period_total(classification: "income", period: period)
   end
 
-  def net_category_totals(period: Period.current_month)
-    key = period_cache_key(period)
+  def net_category_totals(period: Period.current_month, include_non_operating: false)
+    key = [ period_cache_key(period), include_non_operating ]
     @net_category_totals_by_period ||= {}
     return @net_category_totals_by_period[key] if @net_category_totals_by_period.key?(key)
 
-    expense = expense_totals(period: period)
+    expense = expense_totals(period: period, include_non_operating: include_non_operating)
     income = income_totals(period: period)
 
     # Use a stable key for each category: id for persisted, invariant token for synthetic
@@ -121,7 +141,7 @@ class IncomeStatement
   # dashboard's cumulative spending chart. Same scoping as `expense_totals`.
   def daily_expense_series(period:)
     Rails.cache.fetch([
-      "income_statement", "daily_expense_series", family.id, user&.id,
+      "income_statement", "daily_expense_series", "v3", family.id, user&.id,
       included_account_ids_hash, period.start_date, period.end_date,
       *cache_freshness_key
     ]) do
@@ -157,19 +177,19 @@ class IncomeStatement
     end
   end
 
-  def median_expense(interval: "month", category: nil)
+  def median_expense(interval: "month", category: nil, include_non_operating: false)
     if category.present?
-      category_stats(interval: interval).find { |stat| stat.classification == "expense" && stat.category_id == category.id }&.median || 0
+      category_stats(interval: interval, include_non_operating: include_non_operating).find { |stat| stat.classification == "expense" && stat.category_id == category.id }&.median || 0
     else
-      family_stats(interval: interval).find { |stat| stat.classification == "expense" }&.median || 0
+      family_stats(interval: interval, include_non_operating: include_non_operating).find { |stat| stat.classification == "expense" }&.median || 0
     end
   end
 
-  def avg_expense(interval: "month", category: nil)
+  def avg_expense(interval: "month", category: nil, include_non_operating: false)
     if category.present?
-      category_stats(interval: interval).find { |stat| stat.classification == "expense" && stat.category_id == category.id }&.avg || 0
+      category_stats(interval: interval, include_non_operating: include_non_operating).find { |stat| stat.classification == "expense" && stat.category_id == category.id }&.avg || 0
     else
-      family_stats(interval: interval).find { |stat| stat.classification == "expense" }&.avg || 0
+      family_stats(interval: interval, include_non_operating: include_non_operating).find { |stat| stat.classification == "expense" }&.avg || 0
     end
   end
 
@@ -178,7 +198,7 @@ class IncomeStatement
   end
 
   private
-    ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money)
+    ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money, :investment_contribution_money)
     PeriodTotal = Data.define(:classification, :total, :currency, :category_totals)
     CategoryTotal = Data.define(:category, :total, :currency, :weight)
     NetCategoryTotals = Data.define(:net_expense_categories, :net_income_categories, :total_net_expense, :total_net_income, :currency)
@@ -194,7 +214,8 @@ class IncomeStatement
 
     def build_period_total(classification:, period:)
       # Exclude pending transactions from budget calculations
-      totals = totals_for_period(period).select { |t| t.classification == classification }
+      classifications = Array(classification)
+      totals = totals_for_period(period).select { |t| classifications.include?(t.classification) }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
@@ -246,18 +267,18 @@ class IncomeStatement
         )
     end
 
-    def family_stats(interval: "month")
+    def family_stats(interval: "month", include_non_operating: false)
       @family_stats ||= {}
-      @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
-      ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids).call }
+      @family_stats[[ interval, include_non_operating ]] ||= Rails.cache.fetch([
+        "income_statement", "family_stats", "v3", family.id, user&.id, interval, include_non_operating, included_account_ids_hash, *cache_freshness_key
+      ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids, include_non_operating:).call }
     end
 
-    def category_stats(interval: "month")
+    def category_stats(interval: "month", include_non_operating: false)
       @category_stats ||= {}
-      @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
-      ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
+      @category_stats[[ interval, include_non_operating ]] ||= Rails.cache.fetch([
+        "income_statement", "category_stats", "v3", family.id, user&.id, interval, include_non_operating, included_account_ids_hash, *cache_freshness_key
+      ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids, include_non_operating:).call }
     end
 
     def included_account_ids
@@ -278,15 +299,26 @@ class IncomeStatement
     def cache_freshness_key
       @cache_freshness_key ||= [
         family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i,
-        family.currency, ExchangeRate.maximum(:updated_at)&.to_i
+        family.currency, ExchangeRate.maximum(:updated_at)&.to_f, transfers_cache_version
       ]
+    end
+
+    def transfers_cache_version
+      scope = Transfer.joins(outflow_transaction: { entry: :account }).where(accounts: { family_id: family.id })
+      [ scope.maximum(:updated_at)&.to_f, scope.count ]
     end
 
     def totals_query(transactions_scope:, date_range:)
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
+      # v4: transfer relationships are filtered and investment_contribution has its own
+      # bucket instead of "expense" (see PR #3609). Bump on every future
+      # change to classification_sql/converted_amount_sql too -- rows cached
+      # under an unchanged key would keep the old classification indefinitely
+      # on installs with persistent caching, since nothing else here reflects
+      # that the *meaning* of a cached row changed, only the input data.
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key
+        "income_statement", "totals_query", "v4", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
     end
 

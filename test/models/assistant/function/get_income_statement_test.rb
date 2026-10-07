@@ -11,6 +11,17 @@ class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
     }
   end
 
+  test "investment totals respect the selected accounts" do
+    selected = accounts(:depository)
+    outside = @family.accounts.create!(name: "Other checking", owner: @user, accountable: Depository.new, currency: "USD", balance: 0)
+    [ [ selected, 2000 ], [ outside, 5000 ] ].each do |account, amount|
+      account.entries.create!(name: "Investment", amount: amount, currency: "USD", date: Date.current,
+        entryable: Transaction.new(kind: "investment_contribution"))
+    end
+    result = @fn.call(@params.merge("account_ids" => [ selected.id ]))
+    assert_equal "$2,000.00", result.dig(:invested, :total)
+  end
+
   test "has correct name" do
     assert_equal "get_income_statement", @fn.name
   end

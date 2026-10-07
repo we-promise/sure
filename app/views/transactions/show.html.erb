@@ -285,6 +285,12 @@
             <% end %>
           </div>
         <% end %>
+        <% if can_edit_entry? && @entry.transaction.correctable_as_income? %>
+          <div class="p-3 space-y-2">
+            <p class="text-sm text-secondary"><%= t("transactions.show.correct_as_income_description") %></p>
+            <%= render DS::Button.new(text: t("transactions.show.correct_as_income"), href: correct_as_income_transaction_path(@entry), method: :post) %>
+          </div>
+        <% end %>
         <% if @entry.account.investment? || @entry.account.crypto? %>
           <div class="pb-4">
             <%= styled_form_with model: @entry,

@@ -1,6 +1,7 @@
 class TransactionsController < ApplicationController
   include EntryableResource
 
+  before_action -> { set_entry }, only: :correct_as_income
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
@@ -10,6 +11,17 @@ class TransactionsController < ApplicationController
   def show
     super
     assign_mark_recurring_state
+  end
+
+  def correct_as_income
+    return unless require_account_permission!(@entry.account, redirect_path: transaction_path(@entry))
+    return head :unprocessable_entity unless @entry.transaction&.correctable_as_income?
+
+    @entry.transaction.correct_as_income!
+    @entry.sync_account_later
+    redirect_to transaction_path(@entry), notice: t("transactions.correct_as_income.success")
+  rescue ActiveRecord::RecordInvalid
+    head :unprocessable_entity
   end
 
   def new

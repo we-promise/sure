@@ -35,6 +35,39 @@ test("maps graph geometry without rounding or changing API payload", () => {
   assert.equal(body.sankey.nodes[0].value, "12.345");
   assert.equal(graph.nodes[0].color, "#123456");
 });
+test("accepts an invested node", () => {
+  const body = payload();
+  body.sankey.nodes.push({
+    id: "invested_node",
+    name: "Invested",
+    kind: "invested",
+    value: "5",
+    percentage: "40.5",
+    color: "var(--color-warning)",
+  });
+  body.sankey.links.push({
+    source: 1,
+    target: 2,
+    value: "5",
+    percentage: "40.5",
+  });
+  const graph = cashFlowChartData(body);
+  assert.equal(graph.nodes[2].kind, "invested");
+  assert.equal(graph.nodes[2].color, "var(--color-warning)");
+});
+test("an invested node without a colour falls back to its own colour", () => {
+  const body = payload();
+  body.sankey.nodes.push({
+    id: "invested_node",
+    name: "Invested",
+    kind: "invested",
+    value: "5",
+    percentage: "40.5",
+  });
+  body.sankey.links.push({ source: 1, target: 2, value: "5", percentage: "40.5" });
+  const graph = cashFlowChartData(body);
+  assert.equal(graph.nodes[2].color, "var(--color-warning)");
+});
 test("accepts empty graphs", () => {
   assert.deepEqual(
     cashFlowChartData({

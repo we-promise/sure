@@ -1,6 +1,8 @@
 ---
 en:
   transactions:
+    correct_as_income:
+      success: "Deposit now counts as income. Future syncs will preserve this correction."
     bulk_updates:
       new:
         cancel: Cancel
@@ -62,6 +64,8 @@ en:
     new:
       new_transaction: New transaction
     show:
+      correct_as_income: "Treat as income"
+      correct_as_income_description: "Is this a paycheck or other income from outside your accounts? Count it as income instead of a transfer or contribution. This correction is preserved during sync."
       keep_both: No, keep both
       loan_payment: Loan Payment
       mark_recurring: Mark as Recurring

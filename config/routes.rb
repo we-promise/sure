@@ -564,6 +564,7 @@ Rails.application.routes.draw do
 
     member do
       get :convert_to_trade
+      post :correct_as_income
       post :create_trade_from_transaction
       post :mark_as_recurring
       post :merge_duplicate

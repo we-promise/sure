@@ -12,6 +12,7 @@ class CashFlowTest < ApplicationSystemTestCase
     account = @user.family.accounts.create!(name: "Sankey checking", currency: "USD", balance: 0, accountable: Depository.new)
     create_transaction(account: account, category: parent, amount: 100, date: @month)
     create_transaction(account: account, category: child, amount: 50, date: @month)
+    @child, @account = child, account
   end
 
   test "loads the dashboard graph, expands, zooms, and preserves transaction date filters" do
@@ -312,11 +313,11 @@ class CashFlowTest < ApplicationSystemTestCase
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     # A previous lifetime marker must no longer suppress comparisons.
     @user.update!(preferences: @user.preferences.merge("sankey_comparison_result" => "mismatch"))
+    add_refunded_subcategory
     sign_in @user
     visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
     assert_selector "#cashflow-preview svg .sankey-link"
     install_posthog_fake
-    # Expense-only input adds an explicit deficit in the new graph.
     assert_event_count "new_sankey_mismatch", 1
     page.execute_script("document.dispatchEvent(new Event('posthog:ready'))")
     find("#cashflow-preview [data-sankey-preview-target='expandButton']").click
@@ -343,6 +344,7 @@ class CashFlowTest < ApplicationSystemTestCase
   end
 
   test "feedback buttons highlight the current comparison without analytics and reset on loading" do
+    add_refunded_subcategory
     sign_in @user
     visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
     assert_selector "#cashflow-preview[data-sankey-comparison='mismatch']"
@@ -422,5 +424,11 @@ class CashFlowTest < ApplicationSystemTestCase
       assert_selector "body" do
         page.evaluate_script("window.sankeyEvents.filter(e => e.event === #{event.to_json}).length") == count
       end
+    end
+
+    # A subcategory refunded beyond its spending nests under its parent in the
+    # new graph but links straight to Cash Flow in the original, so they differ.
+    def add_refunded_subcategory
+      create_transaction(account: @account, category: @child, amount: -80, date: @month)
     end
 end

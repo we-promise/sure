@@ -38,6 +38,7 @@ en:
       heading: Terms of Service
       placeholder: Terms of service content will be displayed here.
     dashboard:
+      investment_cash_remaining: "%{invested} invested, not spent. Cash remaining after investing: %{remaining}."
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
       new: "New"
@@ -89,6 +90,7 @@ en:
         title: "Insights"
       cashflow_preview:
         node_labels:
+          invested: "Invested"
           cash_flow: "Cash Flow"
           surplus: "Surplus"
           deficit: "Deficit"
@@ -112,6 +114,7 @@ en:
         loading: "Loading cash flow…"
         load_error: "Cash flow could not be loaded. Please try again."
         retry: "Try again"
+        investment_contributions_note: "Plus %{amount} moved to an investment or crypto account — still yours, not spending."
         title: "Cashflow"
         zoom_out: "Back to full cashflow"
         no_data_title: "No cash flow data for this time period"

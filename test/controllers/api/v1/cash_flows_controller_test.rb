@@ -31,6 +31,26 @@ class Api::V1::CashFlowsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "separates investment cash from consumption in summary and graph" do
+    month = Date.new(2026, 8, 1)
+    account = accounts(:depository)
+    create_transaction(account: account, amount: -4200, date: month, category: categories(:income))
+    create_transaction(account: account, amount: 100, date: month, category: categories(:food_and_drink))
+    create_transaction(account: account, amount: 2000, date: month, kind: "investment_contribution")
+
+    get "/api/v1/cash_flow", params: { month: month.iso8601, include: "sankey" }, headers: api_headers(@auth)
+    assert_response :success
+    body = response.parsed_body
+    assert_equal "100.0", body["spending"]
+    assert_equal "4100.0", body["net_savings"]
+    assert_equal "2000.0", body["investment_contributions"]
+    assert_equal "2000.0", body.dig("sankey", "invested")
+    invested = body.dig("sankey", "nodes").find { |node| node["kind"] == "invested" }
+    assert_equal "2000.0", invested["value"]
+    surplus = body.dig("sankey", "nodes").find { |node| node["kind"] == "surplus" }
+    assert_equal "2100.0", surplus["value"]
+  end
+
   test "rejects invalid and future periods" do
     [ "2024-02-02", "2024-13-01", "not-a-date", "9999-01-01", "" ].each do |month|
       get "/api/v1/cash_flow", params: { month: month }, headers: api_headers(@auth)

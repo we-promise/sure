@@ -115,7 +115,7 @@ Read monthly server-calculated totals and the daily spending comparison using
 use these values instead of rebuilding Sure's reporting rules from transactions.
 
 Structural node `name` values are fallback labels; clients should localize
-`cash_flow`, `surplus`, and `deficit` by `kind` at the presentation boundary.
+`cash_flow`, `surplus`, `deficit`, and `invested` by `kind` at the presentation boundary.
 
 `include` and `view` are mutually exclusive; combining them returns `422 invalid_view`.
 
@@ -123,13 +123,16 @@ Request `include=sankey` to append category nodes and links to the monthly
 summary. For arbitrary date filters, request
 `view=sankey&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` to receive only the graph
 and its currency, time zone, as-of date, and inclusive period. This avoids building
-a daily series for long date ranges. The default monthly response is unchanged.
+a daily series for long date ranges. The monthly response also includes gross `investment_contributions`.
 
 Graph values are decimal strings in family currency, with stable node IDs and
 zero-based link indices. Refunds are netted within each category; parent direct
 amounts exclude children before each direction is grouped. Graph income and
 spending can therefore differ from the gross monthly figures, while net savings
-agrees. Surplus and deficit nodes balance the central flow. Clients own layout,
+agrees. The `invested` total/node separates investment contributions from consumption.
+Surplus and deficit nodes balance cash after investing; `net_savings` remains
+income minus consumption. See [investment reporting](investment-cashflow-reporting.md)
+for the budget semantics and client compatibility notes. Clients own layout,
 formatting, and structural colors; all financial aggregation stays on Sure.
 
 The public endpoint uses the standard OAuth/API-key authentication and does not

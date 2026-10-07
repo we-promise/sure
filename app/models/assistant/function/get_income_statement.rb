@@ -138,6 +138,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
           total: format_money(expense_data.total),
           by_category: to_ai_category_totals(expense_data.category_totals)
         },
+        invested: { total: format_money(income_statement.investment_contribution_totals(period: period).total) },
         insights: get_insights(income_data, expense_data)
       }
     end
@@ -156,6 +157,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         account_ids: account_ids,
         income: { total: format_money(totals.income_money.amount), by_category: nil },
         expense: { total: format_money(totals.expense_money.amount), by_category: nil },
+        invested: { total: format_money(totals.investment_contribution_money.amount) },
         net: format_money(totals.income_money.amount - totals.expense_money.amount),
         breakdown_omitted_reason: "category breakdown is not available with an account filter"
       }
