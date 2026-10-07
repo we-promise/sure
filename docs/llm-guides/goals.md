@@ -99,6 +99,12 @@ The goal's *progress* is the live balance of every linked account. There
 is no ledger of contributions. `Goal#current_balance` reads
 `linked_accounts.sum(:balance)` at request time.
 
+`progress_basis` says what that balance counts, and the user chooses it on
+the form: `balance` (the default) is what the linked accounts are worth
+today; `contributions` takes each account's cumulative market gain
+(`balances.net_market_flows`) out. Nothing re-bases a goal on save or when
+an account is linked, so an explicit choice is kept (#3964).
+
 A `GoalPledge` is an intent: amount, account, kind, status, expires_at.
 The status enum is `open` / `matched` / `cancelled` / `expired`. The kind
 enum is `transfer` / `manual_save`; kind is decided at create time from

@@ -250,6 +250,90 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_includes linked, @depository.id
   end
 
+  # The user chooses what progress counts.
+  test "create saves the progress basis the user chose" do
+    account = unclaimed_account("Basis Pot")
+
+    post goals_url, params: {
+      goal: { name: "Discipline goal", target_amount: "1000", progress_basis: "contributions", account_ids: [ account.id ] }
+    }
+
+    goal = @user.family.goals.find_by!(name: "Discipline goal")
+    assert_redirected_to goal_path(goal)
+    assert_equal "contributions", goal.progress_basis
+  end
+
+  test "create without a basis counts market value" do
+    account = unclaimed_account("Default Basis Pot")
+
+    post goals_url, params: { goal: { name: "Plain goal", target_amount: "1000", account_ids: [ account.id ] } }
+
+    goal = @user.family.goals.find_by!(name: "Plain goal")
+    assert_redirected_to goal_path(goal)
+    assert_equal "balance", goal.progress_basis
+  end
+
+  test "update changes the progress basis" do
+    assert_equal "balance", @goal.progress_basis
+
+    patch goal_url(@goal), params: { goal: { progress_basis: "contributions" } }
+
+    assert_redirected_to goal_path(@goal)
+    assert_equal "contributions", @goal.reload.progress_basis
+  end
+
+  test "update refuses an unknown progress basis" do
+    patch goal_url(@goal), params: { goal: { progress_basis: "speculative" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "balance", @goal.reload.progress_basis
+  end
+
+  test "update refuses a basis change on a completed goal" do
+    @goal.complete!
+    snapshot = @goal.reload.completed_amount
+
+    patch goal_url(@goal), params: { goal: { progress_basis: "contributions" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "balance", @goal.reload.progress_basis
+    assert_equal snapshot, @goal.completed_amount
+  end
+
+  test "the basis of another family's goal cannot be changed" do
+    other_family = families(:empty)
+    account = Account.create!(family: other_family, accountable: Depository.new, name: "Theirs", currency: "USD", balance: 500)
+    theirs = other_family.goals.create!(name: "Theirs", target_amount: 1_000, currency: "USD") { |g| g.goal_accounts.build(account: account) }
+
+    patch goal_url(theirs), params: { goal: { progress_basis: "contributions" } }
+
+    assert_redirected_to goals_path
+    assert_equal "balance", theirs.reload.progress_basis
+  end
+
+  test "the form offers both progress bases with the current one selected" do
+    @goal.update_columns(progress_basis: "contributions")
+
+    get edit_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[type=radio][name='goal[progress_basis]']", 2
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=contributions][checked]", 1
+    assert_includes response.body, I18n.t("goals.form.progress_bases.balance.label")
+    assert_includes response.body, I18n.t("goals.form.progress_bases.contributions.label")
+  end
+
+  test "the goal page says which basis its progress counts" do
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis.balance")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis.contributions")
+
+    @goal.update_columns(progress_basis: "contributions")
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis.contributions")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis.balance")
+  end
+
   test "update with empty account_ids re-renders with error" do
     patch goal_url(@goal), params: { goal: { account_ids: [ "" ] } }
     assert_response :unprocessable_entity

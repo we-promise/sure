@@ -175,6 +175,9 @@ en:
         to_go: "%{amount} to go"
         of_target: of target
         market_value: "Market value %{amount}"
+        basis:
+          balance: Counts what the accounts are worth today
+          contributions: Counts only what you have put in
         aria_label: "Goal %{percent}% complete. %{amount} of %{target} saved."
         aria_label_with_used: "Goal %{percent}% complete. %{amount} of %{target}, including %{used} already used."
       projection:
@@ -297,6 +300,13 @@ en:
       target_modes:
         fixed: A fixed amount
         months_of_expenses: A number of months of expenses
+      progress_bases:
+        balance:
+          label: What the accounts are worth today
+          hint: Market value. Investment gains and losses count toward the goal.
+        contributions:
+          label: Only what I have put in
+          hint: Net contributions. Market gains and losses are left out.
       kinds:
         one_off:
           hint: Save toward something, then close it when you spend it.
@@ -332,6 +342,7 @@ en:
         notes: Notes (optional)
         notes_placeholder: A reminder for future you…
         funding_accounts: Funding accounts
+        progress_basis: What counts toward this goal
         funding_accounts_hint: This goal's balance is the balance (or earmarked portion) of these accounts.
         whole_balance: "Blank: whole balance"
         earmark_for: Earmark amount for %{account}
