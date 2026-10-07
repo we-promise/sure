@@ -105,6 +105,10 @@ en:
         feedback_thanks: "Thanks for helping improve the chart!"
         feedback_privacy: "Your response is sent to PostHog. Describe the issue without account numbers, balances, or other private financial details."
         feedback_submit: "Send feedback"
+        sort_label: "Sort flows"
+        sort_auto: "Auto"
+        sort_ascending: "Smallest first"
+        sort_descending: "Largest first"
       cashflow_sankey:
         loading: "Loading cash flow…"
         load_error: "Cash flow could not be loaded. Please try again."
