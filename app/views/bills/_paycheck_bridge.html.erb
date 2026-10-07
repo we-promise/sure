@@ -29,7 +29,8 @@
     <% period.items_due.each do |item| %>
       <div class="flex items-baseline justify-between gap-3 text-xs">
         <%= link_to item.occurrence.recurring_transaction.display_name,
-              bill_path(item.occurrence.recurring_transaction),
+              bill_path(item.occurrence.recurring_transaction, occurrence: item.occurrence.id),
+              data: { turbo_frame: "drawer", turbo_prefetch: false },
               class: "text-secondary hover:text-primary truncate" %>
         <span class="text-secondary tabular-nums privacy-sensitive shrink-0">
           <%= format_money(Money.new(item.share, currency)) %>

@@ -66,7 +66,44 @@
   <%= summary_card title: t(".type") do %>
     <%= account.loan.rate_type&.titleize || t(".unknown") %>
   <% end %>
+
+  <%# What the loan costs in total: the Schedule tab's "Total Cost" (principal
+      and interest) plus any premium charged beside it. With a premium the
+      title says so, because both tabs render on one page and the same title
+      over two different amounts reads as a mistake. Unknown without a schedule
+      to read interest from, the same condition the payoff date answers with. %>
+  <%= summary_card title: account.loan.insurance.present? ? t(".total_cost_with_insurance") : t(".total_cost") do %>
+    <% total_cost = account.loan.total_cost %>
+    <%= total_cost ? format_money(total_cost) : t(".unknown") %>
+  <% end %>
+
+  <%# Only for a loan carrying a premium. A card reading zero would say the
+      borrower has insurance costing nothing rather than none recorded. A rate
+      saved on a loan with no schedule to project it against still shows, as
+      the rate, rather than vanishing as though the save had been lost. %>
+  <% if account.loan.insurance.present? %>
+    <%= summary_card title: t(".total_insurance") do %>
+      <%= format_money(account.loan.total_insurance) %>
+    <% end %>
+  <% elsif account.loan.insurance_rate&.positive? %>
+    <%= summary_card title: t(".total_insurance") do %>
+      <%= t(".insurance_rate_only", rate: number_to_percentage(account.loan.insurance_rate, strip_insignificant_zeros: true)) %>
+    <% end %>
+  <% end %>
+
+  <%# Leverage needs a down payment to be a ratio at all, and a loan with none
+      recorded is not unleveraged -- it is one nobody has told us about. %>
+  <% if account.loan.initial_leverage_ratio.present? %>
+    <%= summary_card title: t(".leverage") do %>
+      <span class="<%= loan_leverage_band_class(account.loan.leverage_band) %>">
+        <%= t(".leverage_multiple", ratio: number_with_precision(account.loan.initial_leverage_ratio, precision: 1)) %>
+        <span class="text-sm"><%= t(".leverage_band_#{account.loan.leverage_band}") %></span>
+      </span>
+    <% end %>
+  <% end %>
 </div>
+
+<%= render "loans/tabs/repayment_progress", loan: account.loan, as_of: today %>
 
 <div class="flex justify-center py-8">
   <%= render DS::Link.new(

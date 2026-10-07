@@ -94,6 +94,7 @@ ca:
       connection_name_label: Nom de la connexió
       connection_name_placeholder: Compte corrent d'empresa
       default_connection_name: Connexió Mercury
+      disconnect: Desconnecta
       disconnect_confirm: Vols desconnectar %{name}?
       instructions:
         copy_token_html: Copia el <strong>token sencer</strong> (incloent el prefix

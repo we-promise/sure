@@ -79,16 +79,23 @@ class TransactionsController < ApplicationController
       Current.accessible_entries.uncategorized_transactions.count
     end
 
-    # Load projected recurring transactions for next 10 days
-    @projected_recurring = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
+    # Load projected recurring transactions for next 10 days. Only the IDs are
+    # cached: cached ActiveRecord objects outlive schema changes across
+    # upgrades and raise MissingAttributeError for columns added since.
+    projected_recurring_ids = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
       Current.family.recurring_transactions
                     .accessible_by(Current.user)
                     .active
                     .where("next_expected_date <= ? AND next_expected_date >= ?",
                            10.days.from_now.to_date,
                            Date.current)
-                    .includes(:merchant)
-                    .to_a
+                    .pluck(:id)
+    end
+    @projected_recurring = if projected_recurring_ids.empty?
+      []
+    else
+      Current.family.recurring_transactions.accessible_by(Current.user)
+                    .where(id: projected_recurring_ids).includes(:merchant).to_a
     end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
@@ -322,13 +329,14 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path
   end
 
+  # Offer transaction conversion only for account types that can own trades.
   def convert_to_trade
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
 
     return unless require_account_permission!(@entry.account)
 
-    unless @entry.account.investment?
+    unless @entry.account.supports_trades?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
@@ -337,6 +345,7 @@ class TransactionsController < ApplicationController
     render :convert_to_trade
   end
 
+  # Lock and recheck the source entry before creating a trade and excluding the transaction.
   def create_trade_from_transaction
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
@@ -344,7 +353,7 @@ class TransactionsController < ApplicationController
     return unless require_account_permission!(@entry.account)
 
     # Pre-transaction validations
-    unless @entry.account.investment?
+    unless @entry.account.supports_trades?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
@@ -360,15 +369,25 @@ class TransactionsController < ApplicationController
     security = resolve_security_for_conversion
     return if performed? # Early exit if redirect already happened
 
-    # Validate and calculate qty/price before transaction
-    qty, price = calculate_qty_and_price
-    return if performed? # Early exit if redirect already happened
-
     activity_label = params[:investment_activity_label].presence
-    # Infer sell from amount sign: negative amount = money coming in = sell
-    is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount < 0)
-
+    # Serialize replacements on the source, including requests already in flight.
     ActiveRecord::Base.transaction do
+      # Entry#transaction is its delegated transaction record, so use an
+      # explicit DB transaction rather than ActiveRecord's instance with_lock.
+      @entry.lock!
+      if @entry.excluded?
+        flash[:alert] = t("transactions.convert_to_trade.errors.already_converted")
+        redirect_back_or_to transactions_path
+        next
+      end
+
+      # Infer missing values from the locked source amount, including edits
+      # committed while the security was being resolved.
+      qty, price = calculate_qty_and_price
+      next if performed?
+
+      # Infer sell from the refreshed source: negative amount means money in.
+      is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount < 0)
       # For trades: positive qty = buy (money out), negative qty = sell (money in)
       signed_qty = is_sell ? -qty : qty
       trade_amount = qty * price
@@ -405,6 +424,8 @@ class TransactionsController < ApplicationController
       # Mark original transaction as excluded (soft delete)
       @entry.update!(excluded: true)
     end
+
+    return if performed?
 
     flash[:notice] = t("transactions.convert_to_trade.success")
     redirect_to account_path(@entry.account), status: :see_other
@@ -523,7 +544,7 @@ class TransactionsController < ApplicationController
     # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
     # doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
-      "transactions_projected_recurring/v5/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
+      "transactions_projected_recurring/v6/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
         "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
         "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
     end
@@ -708,13 +729,17 @@ class TransactionsController < ApplicationController
                 :start_date, :end_date, :search, :amount,
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
-                categories: [], merchants: [], types: [], tags: [], status: []
+                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: []
               )
               .to_h
               .compact_blank
 
       cleaned_params.delete(:amount_operator) unless cleaned_params[:amount].present?
 
+      if cleaned_params[:ai_status]
+        cleaned_params[:ai_status] &= Transaction::Search::AI_STATUSES
+        cleaned_params.delete(:ai_status) if cleaned_params[:ai_status].empty?
+      end
 
       cleaned_params
     end
@@ -749,6 +774,7 @@ class TransactionsController < ApplicationController
 
     # Helper methods for convert_to_trade
 
+    # Resolve the allowed ticker/provider before locking the source, avoiding network calls under its lock.
     def resolve_security_for_conversion
       user_country = Current.family.country
 
@@ -817,6 +843,7 @@ class TransactionsController < ApplicationController
       end
     end
 
+    # Validate submitted trade values and infer a missing value from the locked amount.
     def calculate_qty_and_price
       amount = @entry.amount.abs
       qty = params[:qty].present? ? params[:qty].to_d.abs : nil

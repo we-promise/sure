@@ -5,6 +5,26 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row. Only
+  # this card is replaced, so the other cards keep their state.
+  test "sync from the panel re-renders its card in place" do
+    item = trade_republic_items(:configured_item)
+
+    post sync_trade_republic_item_url(item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert item.reload.syncing?
+  end
+
+  # The Accounts page's Sync button posts here too, without the panel's source.
+  test "sync from the Accounts page goes back to it" do
+    post sync_trade_republic_item_url(trade_republic_items(:configured_item)),
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml", "Referer" => accounts_url }
+
+    assert_redirected_to accounts_url
+  end
+
   test "create rejects a web login without a PIN before persisting the item" do
     assert_no_difference "TradeRepublicItem.count" do
       post trade_republic_items_url, params: {
@@ -29,7 +49,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
       }, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
     end
 
-    assert_response :unprocessable_entity
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "trade-republic-providers-panel"
     assert_includes response.body, I18n.t("trade_republic_items.initiate_login.pin_required")
     assert_select "input[name='trade_republic_item[phone_number]'][value='+491701234567']"
   end
@@ -135,6 +155,19 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil provider_account.current_account
   end
 
+  test "complete account setup creates a Crypto exchange account for the Crypto account" do
+    item = trade_republic_items(:configured_item)
+    provider_account = item.trade_republic_accounts.create!(
+      name: "Trade Republic Crypto", kind: "crypto", trade_republic_account_id: "crypto:DE1", currency: "EUR"
+    )
+
+    post complete_account_setup_trade_republic_item_url(item), params: { account_ids: [ provider_account.id ] }
+
+    account = provider_account.reload.current_account
+    assert_equal "Crypto", account.accountable_type
+    assert_equal "exchange", account.accountable.subtype
+  end
+
   test "complete account setup rolls back an account when linking fails" do
     item = trade_republic_items(:configured_item)
     provider_account = trade_republic_accounts(:main_account)
@@ -171,6 +204,50 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     trade_republic_account.reload
     assert_nil trade_republic_account.current_account
     assert_equal item, trade_republic_account.trade_republic_item
+  end
+
+  test "link_existing_account links the Crypto account only to a Crypto exchange account" do
+    item = trade_republic_items(:configured_item)
+    crypto_provider = item.trade_republic_accounts.create!(
+      name: "Trade Republic Crypto", kind: "crypto", trade_republic_account_id: "crypto:DE1", currency: "EUR"
+    )
+    family = item.family
+    wallet = family.accounts.create!(name: "Wallet", balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "wallet"))
+    exchange = family.accounts.create!(name: "Exchange", balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "exchange"))
+    TradeRepublicAccount::Processor.any_instance.stubs(:process)
+
+    post link_existing_account_trade_republic_items_url, params: { account_id: wallet.id, trade_republic_account_id: crypto_provider.id }
+    assert_nil crypto_provider.reload.current_account
+
+    post link_existing_account_trade_republic_items_url, params: { account_id: exchange.id, trade_republic_account_id: crypto_provider.id }
+    assert_equal exchange, crypto_provider.reload.current_account
+  end
+
+  test "account setup offers only matching manual accounts for linking" do
+    item = trade_republic_items(:configured_item)
+    item.trade_republic_accounts.create!(
+      name: "Trade Republic Crypto", kind: "crypto", trade_republic_account_id: "crypto:DE1", currency: "EUR"
+    )
+    item.family.accounts.create!(name: "Cold Wallet", balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "wallet"))
+    item.family.accounts.create!(name: "Crypto Exchange", balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "exchange"))
+
+    get setup_accounts_trade_republic_item_url(item)
+
+    assert_response :success
+    options = css_select("select[name='account_id'] option").map(&:text)
+    assert options.any? { |option| option.start_with?("Crypto Exchange") }
+    assert_not options.any? { |option| option.start_with?("Cold Wallet") }
+  end
+
+  test "link_existing_account does not link the portfolio to a Crypto account" do
+    item = trade_republic_items(:configured_item)
+    portfolio = trade_republic_accounts(:main_account)
+    exchange = item.family.accounts.create!(name: "Exchange", balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "exchange"))
+
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_trade_republic_items_url, params: { account_id: exchange.id, trade_republic_account_id: portfolio.id }
+    end
+    assert_equal I18n.t("trade_republic_items.link_existing_account.only_manual_investment"), flash[:alert]
   end
 
   test "successful QR polling can complete without a phone number" do
@@ -369,11 +446,27 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("settings.providers.trade_republic_panel.connection_success.close")
   end
 
-  test "pending push login poll replaces only that connection's card" do
+  test "pending push login poll stores the new state without re-rendering the card" do
     item = trade_republic_items(:requires_update_item)
     item.update!(pending_login_state: "pending-login")
     provider = mock
     provider.expects(:complete_login).with(pending_login_b64: "pending-login").returns(
+      Provider::TradeRepublicClient::Result.new(data: { "status" => "pending", "pending_login_b64" => "pending-login-2" })
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: login_poller_headers
+
+    assert_response :no_content
+    assert_empty response.body
+    assert_equal "pending-login-2", item.reload.pending_login_state
+  end
+
+  test "manual push login status check re-renders only that connection's card while pending" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).returns(
       Provider::TradeRepublicClient::Result.new(data: { "status" => "pending" })
     )
     provider.stubs(:login_stage).returns("waiting_for_approval")
@@ -385,7 +478,139 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     card_id = TradeRepublic::ConnectionCardComponent.dom_id_for(item)
     assert_includes response.body, %(target="#{card_id}")
     assert_not_includes response.body, %(target="trade-republic-providers-panel")
+    assert_equal "pending-login", item.reload.pending_login_state
+  end
+
+  test "manual push login status check shows a rate limit on the card" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).raises(Provider::TradeRepublicClient::RateLimited, "slow down")
+    provider.stubs(:login_stage).returns("waiting_for_approval")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_includes response.body, "slow down"
+    assert_equal "pending-login", item.reload.pending_login_state
+  end
+
+  test "expired push login replaces only that connection's card" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).raises(Provider::TradeRepublicClient::LoginExpired, "expired")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    card_id = TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_includes response.body, %(target="#{card_id}")
+    assert_not_includes response.body, %(target="trade-republic-providers-panel")
     assert_not_includes response.body, trade_republic_items(:configured_item).name
+    assert_nil item.reload.pending_login_state
+  end
+
+  test "retryable push login poll failures keep the login pending for the poller's backoff" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).twice
+      .raises(Provider::TradeRepublicClient::RateLimited, "slow down")
+      .then.raises(Provider::TradeRepublicClient::TransientProviderError, "unavailable")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    assert_difference -> { DebugLogEntry.where(source: "trade_republic", level: "info").count }, 2 do
+      post poll_login_trade_republic_item_url(item), headers: login_poller_headers
+      assert_response :too_many_requests
+
+      post poll_login_trade_republic_item_url(item), headers: login_poller_headers
+      assert_response :service_unavailable
+    end
+
+    assert_empty response.body
+    assert_equal "pending-login", item.reload.pending_login_state
+  end
+
+  test "fatal push login poll failure stops polling and shows the error" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).raises(Provider::TradeRepublicClient::InvalidChallenge, "Login state is invalid")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    assert_difference -> { DebugLogEntry.where(source: "trade_republic", level: "warn").count }, 1 do
+      post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+    end
+
+    assert_response :success
+    assert_includes response.body, "Login state is invalid"
+    assert_not_includes response.body, 'data-controller="trade-republic-login"'
+    assert_nil item.reload.pending_login_state
+  end
+
+  test "fatal push login poll failure keeps a newer login started meanwhile" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "old-login")
+    provider = mock
+    # A new login replaces the state while the old poll waits on the provider.
+    provider.expects(:complete_login).with do |pending_login_b64:|
+      TradeRepublicItem.where(id: item.id).update_all(pending_login_state: "new-login")
+      pending_login_b64 == "old-login"
+    end.raises(Provider::TradeRepublicClient::InvalidChallenge, "Login state is invalid")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: login_poller_headers
+
+    assert_response :no_content
+    assert_equal "new-login", item.reload.pending_login_state
+  end
+
+  test "completed push login from an old poll keeps a newer login started meanwhile" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "old-login")
+    provider = mock
+    provider.expects(:complete_login).with do |pending_login_b64:|
+      TradeRepublicItem.where(id: item.id).update_all(pending_login_state: "new-login")
+      pending_login_b64 == "old-login"
+    end.returns(
+      Provider::TradeRepublicClient::Result.new(
+        data: { "status" => "ok", "session_txt" => "old-session", "account" => { "brokerage_account_id" => "DE9999" } }
+      )
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: login_poller_headers
+
+    assert_response :no_content
+    item.reload
+    assert_equal "new-login", item.pending_login_state
+    assert_not_equal "old-session", item.session_blob
+  end
+
+  test "duplicate push login from an old poll keeps a newer login started meanwhile" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :requires_update, pending_login_state: "old-login"
+    )
+    provider = mock
+    provider.expects(:complete_login).with do |pending_login_b64:|
+      TradeRepublicItem.where(id: item.id).update_all(pending_login_state: "new-login")
+      pending_login_b64 == "old-login"
+    end.returns(
+      Provider::TradeRepublicClient::Result.new(
+        data: { "status" => "ok", "session_txt" => "duplicate-session", "account" => { "brokerage_account_id" => "DE1234" } }
+      )
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: login_poller_headers
+
+    assert_response :no_content
+    item.reload
+    assert_equal "new-login", item.pending_login_state
+    assert_not_predicate item, :scheduled_for_deletion?
   end
 
   test "push login for an account already connected by another item is discarded" do
@@ -509,4 +734,10 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "fresh-session", item.session_blob
     assert_not item.scheduled_for_deletion?
   end
+
+  private
+
+    def login_poller_headers
+      { "ACCEPT" => "text/vnd.turbo-stream.html", "X-Requested-With" => "XMLHttpRequest" }
+    end
 end
