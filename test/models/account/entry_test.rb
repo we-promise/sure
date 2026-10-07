@@ -67,6 +67,21 @@ class EntryTest < ActiveSupport::TestCase
     assert_equal 0, family.entries.search(params).size
   end
 
+  test "uncategorized filter keeps only uncategorized, non-transfer transactions" do
+    account = accounts(:depository)
+    uncategorized = create_transaction(account: account, name: "Needs a category", category: nil)
+    categorized = create_transaction(account: account, name: "Has a category", category: categories(:food_and_drink))
+    transfer_leg = create_transaction(account: account, name: "Transfer leg", category: nil, kind: "funds_movement")
+
+    ids = account.entries.search(uncategorized: true).pluck(:id)
+
+    assert_includes ids, uncategorized.id
+    assert_not_includes ids, categorized.id
+    assert_not_includes ids, transfer_leg.id
+
+    assert_includes account.entries.search(uncategorized: false).pluck(:id), categorized.id
+  end
+
   test "status filter matches pending transactions for every supported provider via EntrySearch" do
     family = families(:empty)
     account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new

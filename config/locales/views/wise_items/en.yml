@@ -55,7 +55,6 @@ en:
         one: "%{count} Wise account sync could not be scheduled."
         other: "%{count} Wise account syncs could not be scheduled."
     provider_panel:
-      setup_title: "Setup instructions:"
       add_connection: Add Wise connection
       token_label: API token
       token_placeholder: Paste your Wise personal API token
@@ -73,9 +72,6 @@ en:
       disconnect: Disconnect
       disconnect_label: "Disconnect %{name}"
       disconnect_confirm: "Are you sure you want to disconnect %{name}? This will remove all synced account data."
-      accounts_link: Accounts
-      configured_html: "Connected and syncing. Visit the %{accounts_link} tab to manage your accounts."
-      not_configured: Not configured
       sandbox_note_html: "Use the <strong>sandbox</strong> base URL (<code>https://api.sandbox.transferwise.tech</code>) for testing. Set <code>WISE_BASE_URL</code> in your environment."
       encryption_warning:
         title: Database encryption is not configured

@@ -62,6 +62,136 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
            "Inverse rates should be computed automatically"
   end
 
+  test "imports account exchange rates into the primary currency when the family currency is blank" do
+    family = Family.create!(name: "Smith", currency: "")
+
+    account = family.accounts.create!(
+      name: "Chequing",
+      currency: "CAD",
+      balance: 100,
+      accountable: Depository.new
+    )
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "CAD", to: "USD", start_date: anything, end_date: anything)
+             .returns(provider_success_response([]))
+
+    Account::MarketDataImporter.new(account).import_all
+  end
+
+  test "fetches foreign entry currencies against the family currency as well as the account currency" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Chequing",
+      currency: "CAD",
+      balance: 100,
+      accountable: Depository.new
+    )
+    account.entries.create!(date: 10.days.ago.to_date, amount: 10, currency: "GBP", name: "Card payment", entryable: Transaction.new)
+
+    [ %w[GBP CAD], %w[GBP USD], %w[CAD USD] ].each do |from, to|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: from, to: to, start_date: anything, end_date: anything)
+               .once
+               .returns(provider_success_response([]))
+    end
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
+  test "fetches rates from security price currencies into the account currency" do
+    family = Family.create!(name: "Smith", currency: "EUR")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "EUR",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
+
+    # Securities are shared across families; prices older than this account's
+    # first trade must not pull the exchange rate start date back.
+    Security::Price.create!(security: security, date: 2.years.ago.to_date, price: 90, currency: "USD")
+
+    trade_date = 10.days.ago.to_date
+    trade      = Trade.new(security: security, qty: 1, price: 100, currency: "EUR", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy AAPL", date: trade_date, amount: 100, currency: "EUR", entryable: trade)
+
+    end_date = Date.current.in_time_zone("America/New_York").to_date
+
+    # Prices are imported before exchange rates so a first sync already knows the USD price currency
+    fetch_sequence = sequence("fetch")
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: security.ticker, exchange_operating_mic: security.exchange_operating_mic, start_date: anything, end_date: anything)
+             .in_sequence(fetch_sequence)
+             .returns(provider_success_response([
+               OpenStruct.new(security: security, date: trade_date, price: 110, currency: "USD")
+             ]))
+
+    @provider.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Apple", logo_url: nil)))
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: trade_date - EXCHANGE_RATE_BUFFER, end_date: end_date)
+             .once
+             .in_sequence(fetch_sequence)
+             .returns(provider_success_response([
+               OpenStruct.new(from: "USD", to: "EUR", date: trade_date, rate: 0.9)
+             ]))
+
+    Account::MarketDataImporter.new(account).import_all
+
+    assert ExchangeRate.where(from_currency: "USD", to_currency: "EUR", date: trade_date).exists?
+  end
+
+  test "ignores price currencies that only occur before the account needs prices" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "USD",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    security = Security.create!(ticker: "SHEL", exchange_operating_mic: "XLON")
+    trade_date = 10.days.ago.to_date
+    trade      = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy SHEL", date: trade_date, amount: 100, currency: "USD", entryable: trade)
+
+    # Older GBP prices from before this account traded the security, then USD prices
+    Security::Price.create!(security: security, date: 2.years.ago.to_date, price: 20, currency: "GBP")
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+
+    @provider.expects(:fetch_exchange_rates).never
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
+  test "does not fetch exchange rates for security prices in the account currency" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "USD",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
+    trade    = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy AAPL", date: 10.days.ago.to_date, amount: 100, currency: "USD", entryable: trade)
+
+    Security::Price.create!(security: security, date: 10.days.ago.to_date, price: 100, currency: "USD")
+
+    @provider.expects(:fetch_exchange_rates).never
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
   test "syncs security prices for securities traded by the account" do
     family = Family.create!(name: "Smith", currency: "USD")
 
