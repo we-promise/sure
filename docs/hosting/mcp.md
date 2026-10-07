@@ -25,6 +25,10 @@ This is the best option for Claude.ai and other MCP clients that support OAuth. 
 
 These endpoints let compatible MCP clients register a public OAuth client, redirect you back to Sure for sign-in, and receive a bearer token with the `read_write` scope.
 
+Access tokens issued this way expire after 2 hours. The token response also contains a refresh token, and clients renew access with the `refresh_token` grant at `/oauth/token` without asking you to sign in again. A client that does not support refresh tokens has to be re-authorized when its token expires. Refresh tokens do not expire on their own; each refresh replaces the previous one once the new access token is used. To disconnect a client, revoke all of its entries under Settings > MCP.
+
+> **Upgrade note:** Older versions issued OAuth access tokens that were valid for 1 year. The upgrade revokes every existing OAuth token except those of the Sure mobile app, so each connected MCP client and third-party OAuth app must be re-authorized once (reconnect it in the client). The static `MCP_API_TOKEN` is not affected. The revocation runs as a database migration and cannot be undone by rolling back.
+
 ### 2. Static bearer token via environment variables
 
 This is the simpler fallback for custom agents, scripts, and deployments where you want to pin the MCP server to a specific Sure user.
