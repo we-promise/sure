@@ -9,7 +9,7 @@
 # Mobile app tokens are excluded: they're minted through a separate path
 # (MobileDevice#issue_token!) that already hardcodes a 30-day expiry
 # independent of this setting, so they aren't part of the gap this closes.
-class RevokeExistingOauthAccessTokens < ActiveRecord::Migration[7.2]
+class RevokeExistingOauthAccessTokens < ActiveRecord::Migration[8.1]
   def up
     execute <<~SQL
       UPDATE oauth_access_tokens
