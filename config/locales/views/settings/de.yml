@@ -94,6 +94,8 @@ de:
         dashboard_two_column_description: Zeigt die Dashboard-Widgets auf großen Bildschirmen in zwei Spalten, mit Reglern für Breite und Höhe in der Kopfzeile jedes Widgets. Ist die Option aus, stehen die Widgets untereinander.
         dashboard_two_column_title: Zweispaltiges Layout
         page_title: Darstellung
+        show_counterparty_account_description: Zeigt die IBAN oder Kontonummer der Gegenseite in den Details einer Transaktion, wenn deine Bankverbindung sie liefert. Erscheint nur, wenn diese Daten vorhanden sind.
+        show_counterparty_account_title: Kontodaten der Gegenseite anzeigen
         split_grouped_description: Zeigt geteilte Transaktionen in der Liste gebündelt unter ihrer Ursprungsbuchung. Ist die Option aus, erscheint jede Teilbuchung als eigene Zeile.
         split_grouped_title: Geteilte Transaktionen gruppieren
         theme_dark: Dunkel

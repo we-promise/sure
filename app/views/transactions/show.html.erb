@@ -134,11 +134,11 @@
           <% end %>
         <% end %>
         <% if Current.user.show_counterparty_account? %>
-          <% counterparty_account_value = @entry.transaction.counterparty_iban || @entry.transaction.counterparty_account_id %>
-          <% if counterparty_account_value.present? %>
+          <% counterparty_label, counterparty_value = counterparty_account_display(@entry.transaction) %>
+          <% if counterparty_value.present? %>
             <div class="flex items-center justify-between gap-2 px-1 py-1.5">
-              <span class="text-secondary text-sm"><%= t(".counterparty_account_label") %></span>
-              <span class="text-sm text-primary font-mono privacy-sensitive"><%= mask_counterparty_account_value(counterparty_account_value) %></span>
+              <span class="text-secondary text-sm"><%= counterparty_label %></span>
+              <span class="text-sm text-primary font-mono privacy-sensitive"><%= counterparty_value %></span>
             </div>
           <% end %>
         <% end %>

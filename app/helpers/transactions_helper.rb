@@ -11,6 +11,17 @@ module TransactionsHelper
     "•#{value.last(4)}"
   end
 
+  # Returns [label, masked value] for the counterparty row, or nil when the
+  # transaction carries no counterparty data. Only an actual IBAN is labelled
+  # as one; the provider's generic account id gets a neutral label.
+  def counterparty_account_display(transaction)
+    if (iban = transaction.counterparty_iban.presence)
+      [ t("transactions.show.counterparty_iban_label"), mask_counterparty_account_value(iban) ]
+    elsif (account_id = transaction.counterparty_account_id.presence)
+      [ t("transactions.show.counterparty_account_label"), mask_counterparty_account_value(account_id) ]
+    end
+  end
+
   def transaction_search_filters
     [
       { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },

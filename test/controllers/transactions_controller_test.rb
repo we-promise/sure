@@ -57,7 +57,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     # The label anchors this to the dedicated counterparty-account row, not
     # the pre-existing raw-extra debug dump further down the page.
-    assert_match I18n.t("transactions.show.counterparty_account_label"), response.body
+    assert_match I18n.t("transactions.show.counterparty_iban_label"), response.body
     # Masked to the last 4 characters by default -- a counterparty's own
     # account identifier is more sensitive than the user's own account IBAN
     # (elsewhere shown the same way), so the dedicated row doesn't show it in
@@ -73,6 +73,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
 
     assert_response :success
+    assert_no_match I18n.t("transactions.show.counterparty_iban_label"), response.body
     assert_no_match I18n.t("transactions.show.counterparty_account_label"), response.body
   end
 
@@ -83,10 +84,21 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
 
     assert_response :success
-    assert_no_match I18n.t("transactions.show.counterparty_account_label"), response.body
+    assert_no_match I18n.t("transactions.show.counterparty_iban_label"), response.body
     # The dedicated row is gone; the raw-extra debug dump (Additional
     # Details) always strips this key too, regardless of the setting.
     assert_no_match "DE89370400440532013000", response.body # pipelock:ignore IBAN
+  end
+
+  test "hides the counterparty account id when the user has disabled the setting" do
+    @entry.transaction.update!(counterparty_account_id: "ACC-998877")
+    @user.update!(preferences: { "show_counterparty_account" => false })
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match I18n.t("transactions.show.counterparty_account_label"), response.body
+    assert_no_match "•8877", response.body
   end
 
   test "falls back to counterparty_account_id when no iban is present" do
@@ -95,7 +107,9 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
 
     assert_response :success
+    # A non-IBAN account id must not be presented as an IBAN.
     assert_match I18n.t("transactions.show.counterparty_account_label"), response.body
+    assert_no_match I18n.t("transactions.show.counterparty_iban_label"), response.body
     assert_match "•8877", response.body
   end
 
