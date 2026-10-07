@@ -10,7 +10,7 @@ pt-BR:
       date: Data
       description: Descrição
       description_placeholder: Descreva a transação
-      description_placeholder_optional: "Deixe em branco para usar o nome da categoria/estabelecimento, ou selecione um deles primeiro"
+      description_placeholder_optional: "Deixe em branco para usar o nome da categoria/comerciante, ou selecione um deles primeiro"
       expense: Despesa
       income: Receita
       none: (nenhum)

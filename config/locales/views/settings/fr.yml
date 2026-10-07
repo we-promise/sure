@@ -26,7 +26,7 @@ fr:
         split_grouped_description: Affiche les transactions fractionnées groupées sous leur parent dans la liste des transactions. Lorsque cette option est désactivée, les enfants fractionnés apparaissent comme des lignes individuelles.
         split_grouped_title: Grouper les transactions fractionnées
         auto_generate_transaction_names_title: "Générer automatiquement les noms des transactions"
-        auto_generate_transaction_names_description: "Si le nom d'une transaction saisie manuellement est laissé vide, il est rempli à partir de la catégorie et du marchand sélectionnés (p. ex. « Divertissement - Netflix »). Un nom reste obligatoire si aucun des deux n'est sélectionné. S'applique à toute la famille et uniquement aux nouvelles transactions."
+        auto_generate_transaction_names_description: "Si le nom d'une transaction saisie manuellement est laissé vide, il est rempli à partir de la catégorie et du marchand sélectionnés (p. ex. « Divertissement - Netflix »). Un nom reste obligatoire si aucun des deux n'est sélectionné. S'applique à tout le foyer et uniquement aux nouvelles transactions."
         theme_dark: Sombre
         theme_light: Clair
         theme_subtitle: Choisissez un thème préféré pour l'application

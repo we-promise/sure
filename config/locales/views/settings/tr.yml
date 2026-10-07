@@ -59,7 +59,7 @@ tr:
           ayrı satırlar olarak görünür.
         split_grouped_title: Bölünmüş işlemleri grupla
         auto_generate_transaction_names_title: "İşlem adlarını otomatik oluştur"
-        auto_generate_transaction_names_description: "Elle girilen bir işlemin adı boş bırakılırsa, seçilen kategori ve satıcıdan doldurulur (ör. \"Eğlence - Netflix\"). İkisi de seçilmezse ad yine zorunludur. Tüm aile için geçerlidir ve yalnızca yeni işlemleri etkiler."
+        auto_generate_transaction_names_description: "Elle girilen bir işlemin adı boş bırakılırsa, seçilen kategori ve satıcıdan doldurulur (ör. \"Eğlence - Netflix\"). İkisi de seçilmezse ad yine zorunludur. Tüm hane için geçerlidir ve yalnızca yeni işlemleri etkiler."
         theme_dark: Koyu
         theme_light: Açık
         theme_subtitle: Uygulama için tercih edilen temayı seçin

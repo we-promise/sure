@@ -10,7 +10,7 @@ nb:
       date: Dato
       description: Beskrivelse
       description_placeholder: Beskriv transaksjonen
-      description_placeholder_optional: "La stå tomt for å bruke kategori-/forhandlernavnet, eller velg ett av dem først"
+      description_placeholder_optional: "La stå tomt for å bruke kategori-/selgernavnet, eller velg ett av dem først"
       expense: Utgift
       income: Inntekt
       none: (ingen)

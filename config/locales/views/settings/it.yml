@@ -119,7 +119,7 @@ it:
         dashboard_two_column_description: Visualizza i widget del dashboard in due colonne su schermi grandi, con controlli larghezza e altezza per widget nell'intestazione di ciascun widget. Se disattivato, i widget si impilano in una singola colonna.
         split_grouped_title: Raggruppa transazioni suddivise
         auto_generate_transaction_names_title: "Genera automaticamente i nomi delle transazioni"
-        auto_generate_transaction_names_description: "Se il nome di una transazione inserita manualmente viene lasciato vuoto, viene compilato con la categoria e il commerciante selezionati (es. «Intrattenimento - Netflix»). Il nome resta obbligatorio se nessuno dei due è selezionato. Vale per tutta la famiglia e solo per le nuove transazioni."
+        auto_generate_transaction_names_description: "Se il nome di una transazione inserita manualmente viene lasciato vuoto, viene compilato con la categoria e l'esercente selezionati (es. «Intrattenimento - Netflix»). Il nome resta obbligatorio se nessuno dei due è selezionato. Vale per tutto il nucleo familiare e solo per le nuove transazioni."
         split_grouped_description: Mostra le transazioni suddivise raggruppate sotto la voce principale nell'elenco transazioni. Se disattivato, le voci figlie appaiono come righe individuali.
     preferences:
       show:
