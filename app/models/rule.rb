@@ -84,7 +84,7 @@ class Rule < ApplicationRecord
 
   # Whether this rule's conditions currently match the given transaction.
   def matches_transaction?(transaction)
-    matching_resources_scope.where(id: transaction.id).exists?
+    matching_scope.where(id: transaction.id).exists?
   end
 
   # Creates a categorization rule for the Quick Categorize Wizard.
