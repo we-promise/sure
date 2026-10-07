@@ -1,4 +1,4 @@
-class AddFamilyScopedIbanUniquenessToMerchants < ActiveRecord::Migration[7.2]
+class AddFamilyScopedIbanUniquenessToMerchants < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
   INDEX_NAME = "index_merchants_on_family_id_and_iban"
