@@ -194,7 +194,7 @@ User.find_by(email: "admin@example.com").role  # => "super_admin"
 
 Once set, super‑admins can promote other users via the web UI at `/admin/users`.
 
-On self-hosted instances with more than one family, a `super_admin` is also required to change instance-wide settings (provider credentials, AI and sync settings, the external assistant). Instances that predate automatic super-admin assignment should promote a user this way after upgrading.
+On self-hosted instances with more than one family, a `super_admin` is also required to change instance-wide settings (provider credentials, the shared AI connection settings, sync settings, the external assistant connection). Instances that predate automatic super-admin assignment should promote a user this way after upgrading.
 
 ---
 

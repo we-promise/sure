@@ -26,7 +26,7 @@ en:
         invites: Invite Codes
         title: Self-Hosting
         danger_zone: Danger Zone
-        instance_settings_restricted: Provider, AI and sync settings apply to every family on this instance, so only a super admin can change them. Someone with access to the server can promote a user to super admin; the Docker self-hosting guide shows the command in its upgrade notes.
+        instance_settings_restricted: Provider credentials, the shared AI connection and sync settings apply to every family on this instance, so only a super admin can change them. Which assistant your family uses is still set per family. Someone with access to the server can promote a user to super admin; the Docker self-hosting guide shows the command in its upgrade notes.
         clear_cache: Clear data cache
         clear_cache_warning: Clearing the data cache will remove all exchange rates, security prices, account balances, and other data. This will not delete accounts, transactions, categories, or other user-owned data.
         confirm_clear_cache:

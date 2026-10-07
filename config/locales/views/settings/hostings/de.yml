@@ -23,7 +23,7 @@ de:
         invites: Einladungscodes
         title: Self-Hosting
         danger_zone: Gefahrenbereich
-        instance_settings_restricted: Anbieter-, KI- und Synchronisierungseinstellungen gelten für alle Familien dieser Instanz und können daher nur von einem Super-Admin geändert werden. Wer Zugriff auf den Server hat, kann einen Benutzer zum Super-Admin machen; den Befehl nennt die Docker-Self-Hosting-Anleitung in ihren Upgrade-Hinweisen.
+        instance_settings_restricted: Anbieter-Zugangsdaten, die gemeinsame KI-Verbindung und Synchronisierungseinstellungen gelten für alle Familien dieser Instanz und können daher nur von einem Super-Admin geändert werden. Welchen Assistenten deine Familie nutzt, wird weiterhin pro Familie festgelegt. Wer Zugriff auf den Server hat, kann einen Benutzer zum Super-Admin machen; den Befehl nennt die Docker-Self-Hosting-Anleitung in ihren Upgrade-Hinweisen.
         clear_cache: Daten-Cache leeren
         clear_cache_warning: Das Leeren des Daten-Caches entfernt alle Wechselkurse, Wertpapierpreise, Kontostände und andere zwischengespeicherte Daten. Dies löscht keine Konten, Transaktionen, Kategorien oder andere benutzereigenen Daten.
         confirm_clear_cache:
