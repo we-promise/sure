@@ -27,6 +27,18 @@ class Transaction < ApplicationRecord
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
+  # A tag can be applied to a transaction only once, but assigning the same
+  # tag twice would insert two taggings. Collapse repeats first, comparing
+  # ids as the database does.
+  def tag_ids=(ids)
+    id_type = Tag.type_for_attribute(:id)
+    super(Array(ids).map { |id| id_type.cast(id) }.uniq)
+  end
+
+  def tags=(tags)
+    super(Array(tags).uniq)
+  end
+
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
 
   # Accessors for exchange_rate stored in extra jsonb field

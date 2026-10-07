@@ -1,19 +1,37 @@
 require "test_helper"
 
 class TagTest < ActiveSupport::TestCase
-  test "replace and destroy" do
+  test "replace and destroy moves the tag and tags nothing twice" do
     old_tag = tags(:one)
     new_tag = tags(:two)
 
-    assert_difference "Tag.count", -1 do
+    # The fixture transaction already carries both tags; this one carries
+    # only the tag being replaced.
+    already_tagged = transactions(:one)
+    moved = transactions(:transfer_out)
+    moved.taggings.create!(tag: old_tag)
+
+    assert_difference [ "Tag.count", "Tagging.count" ], -1 do
       old_tag.replace_and_destroy!(new_tag)
     end
 
-    old_tag.transactions.each do |txn|
-      txn.reload
-      assert_includes txn.tags, new_tag
-      assert_not_includes txn.tags, old_tag
-    end
+    assert_equal [ new_tag ], already_tagged.reload.tags.to_a
+    assert_equal [ new_tag ], moved.reload.tags.to_a
+  end
+
+  # The unique index treats a missing taggable_type as a value, so the merge
+  # has to as well, or it moves the row into a duplicate and fails.
+  test "replace and destroy skips a row with no taggable type that the replacement already has" do
+    old_tag = tags(:one)
+    new_tag = tags(:two)
+    taggable_id = transactions(:transfer_out).id
+    Tagging.insert_all!([ old_tag, new_tag ].map do |tag|
+      { tag_id: tag.id, taggable_id: taggable_id, taggable_type: nil, created_at: Time.current, updated_at: Time.current }
+    end)
+
+    old_tag.replace_and_destroy!(new_tag)
+
+    assert_equal [ new_tag.id ], Tagging.where(taggable_id: taggable_id).pluck(:tag_id)
   end
 
   test "rejects the reserved Untagged filter sentinel as a name" do

@@ -564,6 +564,36 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
   end
 
+  # A tag can only be applied once to a transaction, so a writer handed the
+  # same tag twice must store it once rather than fail on the unique index.
+  test "assigning a repeated tag id stores it once" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+
+    transaction.update!(tag_ids: [ tag.id, tag.id, tag.id.upcase ])
+
+    assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
+  end
+
+  test "assigning a repeated tag stores it once" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+
+    transaction.tags = [ tag, tag ]
+
+    assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
+  end
+
+  test "a new transaction built with a repeated tag saves it once" do
+    tag = tags(:one)
+    entry = accounts(:depository).entries.create!(
+      name: "Repeated tag", amount: 10, currency: "USD", date: Date.current,
+      entryable: Transaction.new(tags: [ tag, tag ])
+    )
+
+    assert_equal [ tag.id ], entry.transaction.taggings.pluck(:tag_id)
+  end
+
   private
     # Whether each SQL form of "is this transaction pending?" says it is.
     def sql_pending_answers(transaction)
