@@ -1,0 +1,36 @@
+---
+tr:
+  plans:
+    show:
+      title: Plan
+      subtitle: Paranızın nereye gideceğine karar verin — neyi harcayacağınıza ve neyi biriktireceğinize.
+    budget_card:
+      title: Bu ay
+      edit_budget: Bütçeyi düzenle
+      of_total: / %{total}
+      days_left:
+        one: '%{count} gün kaldı'
+        other: '%{count} gün kaldı'
+      percent_used: '%{percent}% kullanıldı'
+      top_categories: Başlıca kategoriler
+      view_budget: Bütçenin tamamını görüntüle
+      empty_body: Bu ayın nasıl gittiğini görmek için aylık bir harcama hedefi ve kategori bazında limitler belirleyin.
+      set_up: Bu ayın bütçesini oluştur
+    goals_card:
+      title: Hedefleriniz
+      new_goal: Yeni hedef
+      active_count:
+        one: '%{count} aktif'
+        other: '%{count} aktif'
+      of_targets: / %{total} (tüm hedefler)
+      behind_count:
+        one: '%{count} hedef geride'
+        other: '%{count} hedef geride'
+      pending_count:
+        one: '%{count} bekleyen taahhüt'
+        other: '%{count} bekleyen taahhüt'
+      all_on_pace: Tüm hedefler yolunda
+      active_goals: Aktif hedefler
+      pending_marker: bekliyor
+      runway: '%{months} ay yeter · %{pace}/ay'
+      all_goals: Tüm hedefler

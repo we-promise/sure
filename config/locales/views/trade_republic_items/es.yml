@@ -6,6 +6,7 @@ es:
       connection_description: "Conecta una cuenta de inversión de Trade Republic mediante un inicio de sesión web seguro"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Esta cuenta de Trade Republic ya está conectada. Se ha eliminado la nueva conexión."
     portfolio_categories:
       brokerage: "Cuenta de corretaje"
       private_markets: "Mercados privados"
@@ -37,6 +38,9 @@ es:
         unknown:
           one: "%{count} actividad desconocida"
           other: "%{count} actividades desconocidas"
+        pending_trade_details:
+          one: "%{count} actividad de inversión pendiente de detalles"
+          other: "%{count} actividades de inversión pendientes de detalles"
         expenses:
           one: "%{count} gasto en los últimos 30 días (%{amount})"
           other: "%{count} gastos en los últimos 30 días (%{amount})"
@@ -102,5 +106,4 @@ es:
         card_fee: Comisión de tarjeta
         card_refund: Reembolso de tarjeta
         tax_refund: Devolución de impuestos
-        buy: Compra
-        sell: Venta
+        round_up: Round up

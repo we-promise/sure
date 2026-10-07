@@ -267,7 +267,7 @@ zh-CN:
         notes_placeholder: 给未来自己的提醒…
         funding_accounts: 资金账户
         funding_accounts_hint: 此目标余额等于这些账户的余额（或预留的部分）。
-        whole_balance: 全部余额
+        whole_balance: "留空即全部余额"
         earmark_for: 为「%{account}」预留的金额
         earmark_hint: 留空则使用该账户的全部余额。
       subtypes:

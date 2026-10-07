@@ -69,6 +69,14 @@ class GenerateInsightsJob < ApplicationJob
         partial: "insights/refresh_button",
         locals: { pending: false }
       )
+      # The lightbulb lives in the layout, so it goes on the family stream every
+      # page subscribes to, not just the /insights one.
+      Turbo::StreamsChannel.broadcast_replace_to(
+        family,
+        targets: "[data-insights-badge]",
+        partial: "layouts/shared/insights_badge",
+        locals: { count: unread_ids.size }
+      )
     end
 
     # A visible insight whose generator ran successfully but did not re-emit
