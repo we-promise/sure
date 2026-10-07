@@ -239,12 +239,10 @@ class EnableBankingEntry::Processor
       # same key, so consumers (rules, search, transfer matching) never need
       # to know which provider populated it. See issue #3306 for the
       # opposite, hardcoded-provider-list anti-pattern this avoids.
-      # Always assigned (even to nil), not just when present: Account::ProviderImportAdapter
-      # deep-merges this hash into the persisted extra, which only overwrites keys that are
-      # actually present in the incoming hash. Omitting these keys when the current payload
-      # lacks counterparty data (e.g. a booked re-delivery of a transaction whose earlier
-      # pending version had it) would leave the old, now-stale value in place instead of
-      # clearing it.
+      # Always assigned, even to nil. A nil value does not clear what an earlier sync
+      # captured: some ASPSPs drop the account data on the booked re-delivery of a
+      # transaction whose pending version had it, so Account::ProviderImportAdapter only
+      # replaces the stored values when this payload actually carries counterparty data.
       #
       # Passed through this same `extra` hash for
       # Account::ProviderImportAdapter#import_transaction to pick up, but NOT

@@ -580,7 +580,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert entry.transaction.counterparty_iban.blank?
   end
 
-  test "clears a stale counterparty iban when a re-imported version of the same transaction no longer has one" do
+  test "keeps the counterparty iban when the booked re-delivery of the same transaction omits it" do
     with_iban = {
       entry_reference: "ref_stale_iban",
       transaction_id: nil,
@@ -599,10 +599,12 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     # The booked re-delivery of the same transaction (same external_id) omits
     # the account data this time -- a real PSD2 pattern where the pending
     # leg carries more detail than the booked one.
+    # Clearing it would drop the signal rules, search and merchant matching
+    # rely on, so the IBAN the pending leg carried stays.
     without_iban = with_iban.merge(status: "BOOK", _pending: false).except(:creditor_account)
     EnableBankingEntry::Processor.new(without_iban, enable_banking_account: @enable_banking_account).process
 
-    assert_nil entry.reload.transaction.counterparty_iban
+    assert_equal "DE89370400440532013000", entry.reload.transaction.counterparty_iban # pipelock:ignore IBAN
   end
 
   def build_processor(data)

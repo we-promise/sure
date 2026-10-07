@@ -1682,7 +1682,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "always assigns counterparty iban on the unprotected path, clearing a stale value on correction" do
+  test "keeps a captured counterparty iban when a later unprotected sync carries none" do
     entry = @adapter.import_transaction(
       external_id: "eb_unprotected_iban_then_nil",
       amount: 20.0,
@@ -1701,12 +1701,40 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       date: Date.today - 5.days,
       name: "Landlord Payment",
       source: "enable_banking",
-      extra: { "counterparty_iban" => nil }
+      extra: { "counterparty_iban" => nil, "counterparty_account_id" => nil }
     )
 
     assert_equal entry.id, updated_entry.id
-    assert_nil updated_entry.reload.transaction.counterparty_iban,
-      "an unprotected entry must have a corrected/removed counterparty iban actually cleared"
+    assert_equal "AT611904300234573201", updated_entry.reload.transaction.counterparty_iban, # pipelock:ignore IBAN
+      "a redelivery without counterparty data must not clear an IBAN an earlier sync captured"
+  end
+
+  test "replaces counterparty data on the unprotected path when a later sync corrects it" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_unprotected_iban_corrected",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => nil, "counterparty_account_id" => "LEGACY-ACCOUNT-1" }
+    )
+    assert_equal "LEGACY-ACCOUNT-1", entry.transaction.counterparty_account_id
+
+    updated_entry = @adapter.import_transaction(
+      external_id: "eb_unprotected_iban_corrected",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201", "counterparty_account_id" => nil } # pipelock:ignore IBAN
+    )
+
+    assert_equal entry.id, updated_entry.id
+    updated_entry.reload
+    assert_equal "AT611904300234573201", updated_entry.transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_nil updated_entry.transaction.counterparty_account_id
   end
 
   test "leaves counterparty iban columns untouched when the provider never mentions them" do
