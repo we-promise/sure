@@ -8,6 +8,7 @@ tr:
         title: Anlık bildirimler
         requested_at: Son test isteği %{time}
         result_help: APNs tarafından kabul edilmesi, bildirimin cihazınıza ulaştığını doğrulamaz. Çalışan sonuçlarını görmek için yenileyin. Sonuçlar 24 saat saklanır.
+        results_label: Test sonuçları
         device: Cihaz %{number}
         pending: Beklemede
         refresh: Sonuçları yenile
@@ -81,6 +82,7 @@ tr:
           run_checks: Kontrolleri yeniden çalıştır
           last_checked: Canlı kontroller %{time_ago} önce tamamlandı. Sonuçlar kısa süreliğine önbelleğe alınır.
           not_checked_help: Hizmetin çalıştığını doğrulamak için AI durum URL'sini doğrudan açın veya kontrolleri çalıştırın.
+          loading: "Canlı kontroller çalıştırılıyor…"
           alerts:
             custom_openai:
               title: Barındırılan vektör deposu kontrolü bu özel uç noktada başarısız oldu

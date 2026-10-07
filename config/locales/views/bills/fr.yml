@@ -52,7 +52,8 @@ fr:
       overdue:
         one: 1 jour de retard
         other: "%{count} jours de retard"
-      partial: Partiel · %{amount} restant
+      partial: Partiel
+      paused: En pause
     calendar:
       empty_month: Aucune facture à payer ce mois-ci.
       month_totals: "%{expected} prévu · %{paid} payé"
@@ -62,7 +63,7 @@ fr:
       subscribe_ical: S'abonner (iCal)
       today: Aujourd'hui
     cancelled_still_scheduled: "Vous l'avez marquée comme annulée le %{date}, mais elle reste programmée : de nouvelles factures continueront donc d'apparaître."
-    debt_payment: "· remboursement de dette"
+    debt_payment: Remboursement de dette
     detail:
       annualized: Par an
       around: vers le %{date}
@@ -78,13 +79,13 @@ fr:
       manual_payment: Paiement manuel
       next_payment: Prochain paiement
       notes: Remarques
+      overview: Aperçu
       payment_count:
         one: 1 paiement
         other: "%{count} paiements"
       price_change_line: "%{from} → %{to}"
       price_changes: Changements de prix
       range: de %{min} à %{max}
-      recent_payments: Paiements récents
       renews_chip: Renouvellement le %{date}
       rule_aliases: Correspond aussi à %{names}
       rule_amount_range: de %{min} à %{max}
@@ -145,6 +146,7 @@ fr:
         one: 1 requiert votre attention
         other: "%{count} requièrent votre attention"
       needs_attention: Requiert votre attention
+      notices_heading: Changements
       needs_review: À vérifier
       notice_price: "%{name} a changé de prix : %{from} → %{to} (%{percent})"
       notice_renewal: "%{name} se renouvelle le %{date}"
@@ -207,13 +209,11 @@ fr:
       unconvertible:
         one: 1 facture n'est pas incluse, aucun taux de change disponible
         other: "%{count} factures ne sont pas incluses, aucun taux de change disponible"
-      view_upcoming: Voir les prochaines
+      view_calendar: Voir le calendrier
     paid_from: depuis %{account}
     paid_label: Payé
     paid_over: Payé %{paid}, plus que prévu
     paid_over_short: Payé, dépassement
-    pane:
-      close: Réduire les détails
     partial_progress: "%{paid} sur %{expected} payés"
     pay_period:
       before_next_paycheck: Avant votre prochaine paie
@@ -301,10 +301,8 @@ fr:
         trigger: Laisser l'IA configurer
         uncategorized: Sans catégorie
     summary:
-      cost_line: En moyenne %{average} par paiement, soit environ %{annualized} par an
       paid_headline: "%{amount} payés"
       remaining: "%{amount} restants"
-    view_full_bill: Voir la facture complète
     views:
       all: Toutes les factures
       aria_label: Vues des factures

@@ -117,8 +117,7 @@ tr:
         completion: tamamlama
         cost_by_model: Modele Göre Maliyet
         cost_by_operation: İşleme Göre Maliyet
-        cost_estimates_description: Maliyetler, Temmuz 2026 itibarıyla OpenAI fiyatlandırması
-          dahil olmak üzere yayınlanan sağlayıcı fiyatlarına göre tahmin edilir. Gerçek
+        cost_estimates_description: Maliyetler, en son %{date} tarihinde doğrulanan yayınlanmış sağlayıcı fiyatlarına göre tahmin edilir. Gerçek
           maliyetler farklılık gösterebilir. Fiyatlandırma 1 milyon token başınadır
           ve modele göre değişir. Özel veya kendi sunucunuzda barındırılan modeller
           "Yok" olarak gösterilir ve maliyet toplamlarına dahil edilmez.
@@ -325,6 +324,7 @@ tr:
         api_secret_label: API Gizli Anahtarı
         api_secret_placeholder: Binance API Gizli Anahtarınızı yapıştırın
         connect_button: Binance'a Bağlan
+        disconnect: Bağlantıyı kes
         disconnect_confirm: Binance bağlantısını kesmek istediğinizden emin misiniz?
         historical_import: Geçmiş İçe Aktarma Ayarları
         ip_hint_body: 'Uygulama sunucusunun çıkış IP adresini Binance API Anahtarı
@@ -354,6 +354,7 @@ tr:
         api_secret_label: API Gizli Anahtarı
         api_secret_placeholder: Coinbase API gizli anahtarınızı girin
         connect_button: Coinbase'e Bağlan
+        disconnect: Bağlantıyı kes
         disconnect_confirm: Bu Coinbase bağlantısını kesmek istediğinizden emin misiniz?
           Senkronize hesaplarınız manuel hesaplara dönüşecektir.
         setup_instructions: 'Coinbase''i bağlamak için:'
@@ -714,11 +715,16 @@ tr:
         qr_instruction: QR kodu Trade Republic uygulamanızla tarayın ve girişi onaylayın.
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
         qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
+        add_account: "Başka bir bağlantı ekle"
         save_configuration: Kaydet ve Girişi Başlat
         update_configuration: Yapılandırmayı Güncelle
         sync: Senkronize et
+        syncing: "Senkronize ediliyor..."
         disconnect: Trade Republic bağlantısını kes
         disconnect_confirm: Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir.
+        disconnect_confirm_with_identifier: "%{last4} ile biten Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir."
+        identifier_phone: Telefon
+        identifier_account: Hesap
         status_configured_prefix: Bağlandı. Keşfedilen hesapları yönetmek için
         accounts_tab: Hesaplar
         setup_accounts: Hesapları kur

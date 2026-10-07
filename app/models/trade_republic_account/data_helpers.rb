@@ -8,6 +8,7 @@ module TradeRepublicAccount::DataHelpers
   TRANSFER_EVENT_TYPES = %w[
     PAYMENT_INBOUND PAYMENT_OUTBOUND INCOMING_TRANSFER OUTGOING_TRANSFER
     INCOMING_TRANSFER_DELEGATION OUTGOING_TRANSFER_DELEGATION
+    PAYMENT_INBOUND_SEPA_DIRECT_DEBIT PAYMENT_INBOUND_APPLE_PAY PAYMENT_INBOUND_GOOGLE_PAY
   ].freeze
 
   class << self
@@ -94,12 +95,25 @@ module TradeRepublicAccount::DataHelpers
     }.freeze
     OFFLINE_ISIN_REASON = "trade_republic_isin"
 
+    # Trade Republic lists crypto under pseudo-ISINs that embed the coin
+    # symbol: XF000BTC0017 is Bitcoin, XF000ETH0019 Ether. Digits pad the
+    # symbol up to the check digit.
+    CRYPTO_ISIN_PATTERN = /\AXF000(?=[A-Z0-9]{7}\z)([A-Z][A-Z0-9]*[A-Z])\d+\z/
+
     # Resolve (or create) a Security from a Trade Republic position/trade.
-    # Prefer an exact exchange ticker when the client supplied one; otherwise
-    # keep the ISIN as ticker but mark the security offline so market-data
-    # importers skip it while snapshot prices still value the holding.
+    # Crypto maps onto the shared CRYPTO:<SYMBOL> security when a crypto price
+    # provider is enabled. Otherwise prefer an exact exchange ticker when the
+    # client supplied one, else keep the ISIN as ticker but mark the security
+    # offline so market-data importers skip it while snapshot prices still
+    # value the holding.
     def resolve_security(isin, name, symbol: nil, exchange_slug: nil)
       return nil if isin.blank?
+
+      crypto_security = resolve_crypto_security(isin, name)
+      if crypto_security
+        rematch_account_from_isin!(isin, crypto_security)
+        return crypto_security
+      end
 
       usable_symbol, mic = exchange_listing_for(isin, symbol: symbol, exchange_slug: exchange_slug)
       if usable_symbol
@@ -109,6 +123,23 @@ module TradeRepublicAccount::DataHelpers
       end
 
       resolve_offline_isin_security(isin, name)
+    end
+
+    # Holdings and trades share this path, so both land on the same security.
+    # Without the crypto price provider a CRYPTO: security could not be priced
+    # at all; the offline ISIN keeps Trade Republic's own snapshot prices, and
+    # the rematch moves it over once the provider is enabled.
+    def resolve_crypto_security(isin, name)
+      symbol = crypto_symbol_for_isin(isin)
+      return nil if symbol.blank?
+      return nil unless Onchain::SecurityResolver.price_provider_enabled?
+
+      @crypto_securities ||= {}
+      @crypto_securities[symbol] ||= Onchain::SecurityResolver.resolve(symbol: symbol, name: name)
+    end
+
+    def crypto_symbol_for_isin(isin)
+      isin.to_s.strip.upcase[CRYPTO_ISIN_PATTERN, 1]
     end
 
     # [symbol, mic] when Trade Republic supplied a usable exchange ticker.
@@ -312,18 +343,23 @@ module TradeRepublicAccount::DataHelpers
       return unless account.holdings.where(security_id: from_security.id).exists? ||
         account.trades.where(security_id: from_security.id).exists?
 
-      rematch_holdings_from_isin!(from_security, to_security)
       account.trades.where(security_id: from_security.id).update_all(
         security_id: to_security.id,
         updated_at: Time.current
       )
+      rematch_holdings_from_isin!(from_security, to_security)
     end
 
+    # Holdings are rewritten with update_columns: while trades are split across
+    # the ISIN and exchange securities, calculated history can hold negative
+    # quantities that fail validation, and the next materialization replaces
+    # these rows anyway.
     def rematch_holdings_from_isin!(from_security, to_security)
       existing_keys = account.holdings
         .where(security_id: to_security.id)
         .pluck(:date, :currency)
         .to_set
+      mismatched_dates = []
 
       account.holdings.where(security_id: from_security.id).find_each do |holding|
         key = [ holding.date, holding.currency ]
@@ -344,38 +380,43 @@ module TradeRepublicAccount::DataHelpers
             attrs[:provider_security_id] = holding.provider_security_id.presence || from_security.id
           end
           attrs[:account_provider_id] = holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
-          attrs[:cost_basis] = holding.cost_basis if existing.cost_basis.blank? && holding.cost_basis.present?
-
-          if existing.qty != holding.qty || existing.amount != holding.amount
-            DebugLogEntry.capture(
-              category: "sync",
-              level: "info",
-              message: "ISIN rematch collision kept exchange holding market values",
-              source: "trade_republic",
-              family: account.family,
-              provider_key: "trade_republic",
-              account: account,
-              metadata: {
-                from_security_id: from_security.id,
-                to_security_id: to_security.id,
-                date: holding.date,
-                isin_qty: holding.qty,
-                isin_amount: holding.amount,
-                exchange_qty: existing.qty,
-                exchange_amount: existing.amount
-              }
-            )
+          if existing.cost_basis.blank? && holding.cost_basis.present?
+            attrs[:cost_basis] = holding.cost_basis
+            attrs[:cost_basis_source] = holding.cost_basis_source
+            attrs[:cost_basis_locked] = holding.cost_basis_locked
           end
 
-          existing.update!(attrs) if attrs.any?
+          mismatched_dates << holding.date if existing.qty != holding.qty || existing.amount != holding.amount
+
           holding.destroy!
+          existing.update_columns(attrs.merge(updated_at: Time.current)) if attrs.any?
         else
-          holding.update!(
+          holding.update_columns(
             security_id: to_security.id,
-            provider_security_id: holding.provider_security_id.presence || from_security.id
+            provider_security_id: holding.provider_security_id.presence || from_security.id,
+            updated_at: Time.current
           )
           existing_keys << key
         end
       end
+
+      return if mismatched_dates.empty?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "ISIN rematch collision kept exchange holding market values",
+        source: "trade_republic",
+        family: account.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: {
+          from_security_id: from_security.id,
+          to_security_id: to_security.id,
+          collision_count: mismatched_dates.size,
+          first_date: mismatched_dates.min,
+          last_date: mismatched_dates.max
+        }
+      )
     end
 end
