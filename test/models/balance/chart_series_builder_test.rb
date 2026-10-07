@@ -481,7 +481,110 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal 200, series.values.last.trend.current.amount
   end
 
+  test "gains series stops counting a security record the account moved off" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    old_record = Security.create!(ticker: "AAPL", name: "Apple Inc. (duplicate record)", exchange_operating_mic: "XXXX")
+    new_record = securities(:aapl)
+
+    # The provider reported the position on one record, then on another for the same ticker.
+    stale = create_holding(account: account, security: old_record, date: 5.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    4.downto(0) do |days_ago|
+      create_holding(account: account, security: new_record, date: days_ago.days.ago.to_date, qty: 10, price: 110, cost_basis: 90)
+    end
+
+    with_stale_row = gains_amounts(account, start_date: 5.days.ago.to_date)
+    stale.destroy!
+    without_stale_row = gains_amounts(account, start_date: 5.days.ago.to_date)
+
+    # The old record is held on the day it was reported, and on no later day.
+    assert_equal [ 100, 200, 200, 200, 200, 200 ], with_stale_row
+    assert_equal without_stale_row.drop(1), with_stale_row.drop(1)
+  end
+
+  test "gains series stops counting a position whose rows end without a closing row" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+
+    # MSFT stops being reported two days ago, with no zero-quantity row and no sell.
+    2.downto(0) do |days_ago|
+      create_holding(account: account, security: securities(:aapl), date: days_ago.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    end
+    create_holding(account: account, security: securities(:msft), date: 2.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
+
+    # AAPL 100 every day; MSFT 50 only on the day it was held.
+    assert_equal [ 150, 100, 100 ], gains_amounts(account, start_date: 2.days.ago.to_date)
+  end
+
+  test "gains series keeps counting every security held through the latest snapshot" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+
+    2.downto(0) do |days_ago|
+      create_holding(account: account, security: securities(:aapl), date: days_ago.days.ago.to_date, qty: 10, price: 100 + days_ago, cost_basis: 90)
+    end
+    create_holding(account: account, security: securities(:msft), date: 2.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
+    # Gap-filled rows (weekends, price gaps) carry no cost_basis but are still held.
+    create_holding(account: account, security: securities(:msft), date: 1.day.ago.to_date, qty: 5, price: 60, cost_basis: nil)
+    create_holding(account: account, security: securities(:msft), date: Date.current, qty: 5, price: 70, cost_basis: nil)
+
+    # AAPL 120, 110, 100; MSFT 50, 50, 100 (last row is today, so it counts today).
+    assert_equal [ 170, 160, 200 ], gains_amounts(account, start_date: 2.days.ago.to_date)
+  end
+
+  test "gains series carries the latest snapshot forward when the account has not synced since" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+
+    create_holding(account: account, security: securities(:aapl), date: 3.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    create_holding(account: account, security: securities(:msft), date: 3.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
+
+    # No rows after three days ago at all: that snapshot is still the account's position.
+    assert_equal [ 150, 150, 150, 150 ], gains_amounts(account, start_date: 3.days.ago.to_date)
+  end
+
+  test "gains series judges each account against its own latest snapshot" do
+    synced = accounts(:investment)
+    synced.holdings.destroy_all
+    behind = synced.family.accounts.create!(name: "Not synced lately", balance: 1000, currency: "USD", accountable: Investment.new)
+
+    2.downto(0) do |days_ago|
+      create_holding(account: synced, security: securities(:aapl), date: days_ago.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    end
+    create_holding(account: behind, security: securities(:msft), date: 2.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ synced.id, behind.id ],
+      currency: "USD",
+      period: Period.custom(start_date: 2.days.ago.to_date, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    # The other account's later rows do not end this account's position.
+    assert_equal [ 150, 150, 150 ], builder.gains_series.map { |v| v.value.amount }
+  end
+
+  test "gains series counts a zero-quantity closing row as no gain" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+
+    create_holding(account: account, security: securities(:aapl), date: 2.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    create_holding(account: account, security: securities(:aapl), date: 1.day.ago.to_date, qty: 0, price: 100, cost_basis: nil)
+    create_holding(account: account, security: securities(:aapl), date: Date.current, qty: 0, price: 100, cost_basis: nil)
+
+    assert_equal [ 100, 0, 0 ], gains_amounts(account, start_date: 2.days.ago.to_date)
+  end
+
   private
+    def gains_amounts(account, start_date:)
+      Balance::ChartSeriesBuilder.new(
+        account_ids: [ account.id ],
+        currency: "USD",
+        period: Period.custom(start_date: start_date, end_date: Date.current),
+        interval: "1 day"
+      ).gains_series.map { |v| v.value.amount }
+    end
+
     def create_holding(account:, security:, date:, qty:, price:, cost_basis:)
       Holding.create!(
         account: account,
