@@ -328,9 +328,10 @@ class Family::DataImporter
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
-          status: importable_account_status(data["status"]),
-          iban: data["iban"]
+          status: importable_account_status(data["status"])
         )
+        # Older or hand-built files omit iban; don't clear an existing one.
+        account.iban = data["iban"] if data.key?("iban")
 
         account.save!
 
@@ -492,11 +493,11 @@ class Family::DataImporter
         merchant.assign_attributes(
           name: data["name"],
           color: data["color"],
-          logo_url: data["logo_url"],
-          iban: data["iban"]
+          logo_url: data["logo_url"]
         )
-        # Older or hand-built files omit website_url; don't clear an existing one.
+        # Older or hand-built files omit website_url and iban; don't clear existing ones.
         merchant.website_url = data["website_url"] if data.key?("website_url")
+        merchant.iban = data["iban"] if data.key?("iban")
         merchant.save!
         map_source!(:merchants, old_id, merchant)
         increment_summary("Merchant", created ? :created : :updated)
