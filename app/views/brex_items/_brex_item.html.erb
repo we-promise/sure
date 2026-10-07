@@ -1,4 +1,4 @@
-<%# locals: (brex_item:) %>
+<%# locals: (brex_item:, visible_accounts: brex_item.accounts) %>
 <% render_locals = brex_item_render_locals(
      brex_item,
      sync_stats_map: @brex_sync_stats_map,
@@ -27,7 +27,9 @@
                 <%= tag.p t(".deletion_in_progress"), class: "text-destructive text-sm animate-pulse" %>
               <% end %>
             </div>
-            <% if brex_item.accounts.any? %>
+            <%# The institution belongs to every account on the connection, so it is
+                shown only to a viewer who can see them all (#3630). %>
+            <% if brex_item.accounts.any? && visible_accounts.size == brex_item.accounts.size %>
               <p class="text-xs text-secondary">
                 <%= brex_item.institution_summary %>
               </p>
@@ -85,13 +87,13 @@
 
     <% unless brex_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if brex_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: brex_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: brex_item,
+          provider_item: brex_item, show_account_details: visible_accounts.size == brex_item.accounts.size,
           institutions_count: institutions_count
         ) %>
 

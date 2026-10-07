@@ -1,4 +1,4 @@
-<%# locals: (lunchflow_item:) %>
+<%# locals: (lunchflow_item:, visible_accounts: lunchflow_item.accounts) %>
 
 <%= tag.div id: dom_id(lunchflow_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -16,7 +16,9 @@
                 <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
               <% end %>
             </div>
-            <% if lunchflow_item.accounts.any? %>
+            <%# The institution belongs to every account on the connection, so it is
+                shown only to a viewer who can see them all (#3630). %>
+            <% if lunchflow_item.accounts.any? && visible_accounts.size == lunchflow_item.accounts.size %>
               <p class="text-xs text-secondary">
                 <%= lunchflow_item.institution_summary %>
               </p>
@@ -74,8 +76,8 @@
 
     <% unless lunchflow_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if lunchflow_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: lunchflow_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -86,7 +88,7 @@
            end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: lunchflow_item,
+          provider_item: lunchflow_item, show_account_details: visible_accounts.size == lunchflow_item.accounts.size,
           institutions_count: lunchflow_item.connected_institutions.size
         ) %>
 

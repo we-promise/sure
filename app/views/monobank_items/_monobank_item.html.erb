@@ -1,4 +1,4 @@
-<%# locals: (monobank_item:) %>
+<%# locals: (monobank_item:, visible_accounts: monobank_item.accounts) %>
 
 <%= tag.div id: dom_id(monobank_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -17,7 +17,9 @@
               <% end %>
             </div>
 
-            <% if monobank_item.accounts.any? %>
+            <%# The institution belongs to every account on the connection, so it is
+                shown only to a viewer who can see them all (#3630). %>
+            <% if monobank_item.accounts.any? && visible_accounts.size == monobank_item.accounts.size %>
               <p class="text-xs text-secondary"><%= monobank_item.institution_summary %></p>
             <% end %>
 
@@ -62,8 +64,8 @@
 
     <% unless monobank_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if monobank_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: monobank_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <% stats = if defined?(@monobank_sync_stats_map) && @monobank_sync_stats_map
@@ -73,7 +75,7 @@
            end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: monobank_item,
+          provider_item: monobank_item, show_account_details: visible_accounts.size == monobank_item.accounts.size,
           institutions_count: monobank_item.connected_institutions.size
         ) %>
 

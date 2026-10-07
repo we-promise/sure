@@ -1,4 +1,4 @@
-<%# locals: (trade_republic_item:) %>
+<%# locals: (trade_republic_item:, visible_accounts: trade_republic_item.accounts) %>
 
 <%= tag.div id: dom_id(trade_republic_item) do %>
   <% unlinked_count = trade_republic_item.unlinked_accounts_count %>
@@ -80,12 +80,12 @@
 
     <% unless trade_republic_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if trade_republic_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: trade_republic_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <% stats = trade_republic_item.syncs.ordered.first&.sync_stats || {} %>
-        <%= render ProviderSyncSummary.new(stats: stats, provider_item: trade_republic_item) %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: trade_republic_item, show_account_details: visible_accounts.size == trade_republic_item.accounts.size) %>
 
         <% quality = trade_republic_item.data_quality_summary %>
         <% reconciliation = trade_republic_item.reconciliation_summary %>

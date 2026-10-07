@@ -1,4 +1,4 @@
-<%# locals: (plaid_item:) %>
+<%# locals: (plaid_item:, visible_accounts: plaid_item.accounts) %>
 
 <%= tag.div id: dom_id(plaid_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -83,15 +83,12 @@
 
     <% unless plaid_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <%# NOTE: no per-viewer filtering here. This partial is also rendered
-            by PlaidItem::SyncCompleteEvent from the sync job, where
-            Current.user is nil (same gotcha as accounts/_sync_controls), so a
-            viewer-dependent filter would empty the list for everyone on every
-            broadcast. Visibility is decided in AccountsController#visible_provider_items
-            instead, which only shows an owner a card whose accounts they can
-            already see. %>
-        <% if plaid_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: plaid_item.accounts %>
+        <%# The accounts index passes visible_accounts filtered to the viewer
+            (AccountsController#visible_card_accounts). Nothing here reads
+            Current.user: the partial can be rendered outside a request, where
+            it is nil. %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -102,7 +99,7 @@
            end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: plaid_item
+          provider_item: plaid_item, show_account_details: visible_accounts.size == plaid_item.accounts.size
         ) %>
 
         <% if plaid_item.accounts.empty? %>

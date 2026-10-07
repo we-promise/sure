@@ -1,4 +1,4 @@
-<%# locals: (mercury_item:) %>
+<%# locals: (mercury_item:, visible_accounts: mercury_item.accounts) %>
 
 <%= tag.div id: dom_id(mercury_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -16,7 +16,9 @@
                 <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
               <% end %>
             </div>
-            <% if mercury_item.accounts.any? %>
+            <%# The institution belongs to every account on the connection, so it is
+                shown only to a viewer who can see them all (#3630). %>
+            <% if mercury_item.accounts.any? && visible_accounts.size == mercury_item.accounts.size %>
               <p class="text-xs text-secondary">
                 <%= mercury_item.institution_summary %>
               </p>
@@ -74,8 +76,8 @@
 
     <% unless mercury_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if mercury_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: mercury_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -86,7 +88,7 @@
            end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: mercury_item,
+          provider_item: mercury_item, show_account_details: visible_accounts.size == mercury_item.accounts.size,
           institutions_count: mercury_item.connected_institutions.size
         ) %>
 

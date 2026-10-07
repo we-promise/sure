@@ -112,6 +112,230 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     unregister_fake_chain!
   end
 
+  # #3630. A provider card is admitted for a member as soon as ONE of its
+  # accounts is shared with them, so the card must list only the accounts this
+  # viewer may see. The unshared account is renamed to something no other part
+  # of the page can print, so its absence proves the card filtered it.
+  test "a partially shared member sees only their account on a Plaid card" do
+    shared, unshared = link_two_accounts_to(plaid_items(:one)) do |item, index|
+      item.plaid_accounts.create!(
+        name: "Second Plaid Account", plaid_id: "acc_235_#{index}", plaid_type: "investment",
+        currency: "USD", current_balance: 10
+      )
+    end
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(plaid_items(:one))}"
+    assert_select "turbo-frame##{dom_id(shared)}", count: 1
+    assert_select "turbo-frame##{dom_id(unshared)}", count: 0
+    assert_not_includes response.body, unshared.name
+  end
+
+  test "an admin still sees every account on a Plaid card" do
+    shared, unshared = link_two_accounts_to(plaid_items(:one)) do |item, index|
+      item.plaid_accounts.create!(
+        name: "Second Plaid Account", plaid_id: "acc_235_#{index}", plaid_type: "investment",
+        currency: "USD", current_balance: 10
+      )
+    end
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(shared)}", count: 1
+    assert_select "turbo-frame##{dom_id(unshared)}", count: 1
+  end
+
+  test "a partially shared member sees only their account on a SimpleFIN card" do
+    item = SimplefinItem.create!(family: families(:dylan_family), name: "Conn 235", access_url: "https://example.com/access")
+    shared, unshared = link_two_accounts_to(item) do |sf_item, index|
+      sf_item.simplefin_accounts.create!(
+        name: "SF #{index}", account_id: "sf_235_#{index}", currency: "USD",
+        current_balance: 1, account_type: "depository"
+      )
+    end
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_select "turbo-frame##{dom_id(shared)}", count: 1
+    assert_select "turbo-frame##{dom_id(unshared)}", count: 0
+    assert_not_includes response.body, unshared.name
+  end
+
+  # The card's other name-bearing lists. The sync summary's detail rows come
+  # from the connection's last sync and name the accounts and transactions
+  # involved, so they follow the same rule as the account list: shown only to
+  # a viewer who can see every account on the connection. Counts stay.
+  test "a partially shared member does not see account names in a card's sync summary" do
+    item = plaid_items(:one)
+    _shared, unshared = link_two_accounts_to(item) do |p_item, index|
+      p_item.plaid_accounts.create!(
+        name: "Second Plaid Account", plaid_id: "acc_235_#{index}", plaid_type: "investment",
+        currency: "USD", current_balance: 10
+      )
+    end
+    item.syncs.create!(status: "completed", sync_stats: {
+      "tx_seen" => 1, "tx_skipped" => 1,
+      "skip_details" => [ { "name" => "Secret Txn 235", "reason" => "excluded", "account_name" => unshared.name } ],
+      "total_errors" => 1,
+      "errors" => [ { "name" => unshared.name, "message" => "Import failed 235" } ]
+    })
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_not_includes response.body, unshared.name
+    assert_not_includes response.body, "Secret Txn 235"
+  end
+
+  test "an admin still sees the account names in a card's sync summary" do
+    item = plaid_items(:one)
+    link_two_accounts_to(item) do |p_item, index|
+      p_item.plaid_accounts.create!(
+        name: "Second Plaid Account", plaid_id: "acc_235_#{index}", plaid_type: "investment",
+        currency: "USD", current_balance: 10
+      )
+    end
+    item.syncs.create!(status: "completed", sync_stats: {
+      "tx_seen" => 1, "tx_skipped" => 1,
+      "skip_details" => [ { "name" => "Secret Txn 235", "reason" => "excluded", "account_name" => "x" } ]
+    })
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, "Secret Txn 235"
+  end
+
+  test "a partially shared member does not see unshared names in SimpleFIN's stale-pending and replacement banners" do
+    item = SimplefinItem.create!(family: families(:dylan_family), name: "Conn 235", access_url: "https://example.com/access")
+    _shared, unshared = link_two_accounts_to(item) do |sf_item, index|
+      sf_item.simplefin_accounts.create!(
+        name: "SF #{index}", account_id: "sf_235_#{index}", currency: "USD",
+        current_balance: 1, account_type: "depository"
+      )
+    end
+    SimplefinItem.any_instance.stubs(:stale_pending_status)
+                 .returns({ count: 2, message: "2 pending", accounts: [ unshared.name ] })
+    item.syncs.create!(status: "completed", sync_stats: {
+      "replacement_suggestions" => [ {
+        "dormant_sfa_id" => item.simplefin_accounts.find_by!(account_id: "sf_235_1").id,
+        "active_sfa_id" => item.simplefin_accounts.find_by!(account_id: "sf_235_0").id,
+        "sure_account_id" => unshared.id
+      } ]
+    })
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_not_includes response.body, unshared.name
+  end
+
+  # The card header names the connected institution when there is only one.
+  # That institution is the unshared account's as much as the shared one's,
+  # so it follows the same rule as the other names on the card.
+  test "a partially shared member does not see the connection's institution name" do
+    item = SimplefinItem.create!(family: families(:dylan_family), name: "Conn 235", access_url: "https://example.com/access")
+    link_two_accounts_to(item) do |sf_item, index|
+      sf_item.simplefin_accounts.create!(
+        name: "SF #{index}", account_id: "sf_235_#{index}", currency: "USD",
+        current_balance: 1, account_type: "depository"
+      )
+    end
+    SimplefinItem.any_instance.stubs(:connected_institutions).returns([ { "name" => "Hidden Bank 235" } ])
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_not_includes response.body, "Hidden Bank 235"
+  end
+
+  test "an admin still sees the connection's institution name" do
+    item = SimplefinItem.create!(family: families(:dylan_family), name: "Conn 235", access_url: "https://example.com/access")
+    link_two_accounts_to(item) do |sf_item, index|
+      sf_item.simplefin_accounts.create!(
+        name: "SF #{index}", account_id: "sf_235_#{index}", currency: "USD",
+        current_balance: 1, account_type: "depository"
+      )
+    end
+    SimplefinItem.any_instance.stubs(:connected_institutions).returns([ { "name" => "Hidden Bank 235" } ])
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, "Hidden Bank 235"
+  end
+
+  # The SnapTrade card's brokerage line is built from every
+  # account on the connection. With one brokerage it prints that brokerage's
+  # name, so a member shared only the nameless account would read the other's.
+  test "a partially shared member does not see a SnapTrade connection's brokerage" do
+    item = snaptrade_items(:configured_item)
+    # The fixture accounts name two brokerages, which makes the line a count.
+    # Cleared so the only brokerage left is the unshared account's.
+    item.snaptrade_accounts.update_all(brokerage_name: nil)
+    link_two_accounts_to(item) do |st_item, index|
+      st_item.snaptrade_accounts.create!(
+        name: "ST #{index}", snaptrade_account_id: "st_235_#{index}", currency: "USD",
+        current_balance: 1, brokerage_name: (index.zero? ? nil : "Hidden Broker 235")
+      )
+    end
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_not_includes response.body, "Hidden Broker 235"
+  end
+
+  test "an admin still sees a SnapTrade connection's brokerage" do
+    item = snaptrade_items(:configured_item)
+    # The fixture accounts name two brokerages, which makes the line a count.
+    # Cleared so the only brokerage left is the unshared account's.
+    item.snaptrade_accounts.update_all(brokerage_name: nil)
+    link_two_accounts_to(item) do |st_item, index|
+      st_item.snaptrade_accounts.create!(
+        name: "ST #{index}", snaptrade_account_id: "st_235_#{index}", currency: "USD",
+        current_balance: 1, brokerage_name: (index.zero? ? nil : "Hidden Broker 235")
+      )
+    end
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, "Hidden Broker 235"
+  end
+
+  test "a partially shared member sees only their account on a Kraken card" do
+    item = kraken_items(:one)
+    shared, unshared = link_two_accounts_to(item) do |k_item, index|
+      k_item.kraken_accounts.create!(
+        name: "Kraken #{index}", account_id: "kraken_235_#{index}", account_type: "combined",
+        currency: "USD", current_balance: 1, extra: {}
+      )
+    end
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_select "turbo-frame##{dom_id(shared)}", count: 1
+    assert_select "turbo-frame##{dom_id(unshared)}", count: 0
+  end
+
   test "index renders trading212 items" do
     trading212_item = trading212_items(:configured_item)
     get accounts_url
@@ -912,6 +1136,27 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
   end
+
+  private
+    # #3630. Links a shared and an unshared account to +item+ through two fresh
+    # provider rows built by the block, and returns them in that order. Shares
+    # are reset first so the member's access is exactly the one granted here.
+    def link_two_accounts_to(item)
+      admin = users(:family_admin)
+      member = users(:family_member)
+      shared = accounts(:depository)
+      unshared = accounts(:investment)
+      unshared.update!(name: "Unshared Brokerage 235")
+
+      [ shared, unshared ].each_with_index do |account, index|
+        account.update!(owner: admin)
+        account.account_shares.destroy_all
+        AccountProvider.create!(account: account, provider: yield(item, index))
+      end
+      shared.account_shares.create!(user: member, permission: "read_only")
+
+      [ shared, unshared ]
+    end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest

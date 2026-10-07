@@ -1,9 +1,12 @@
-<%# locals: (sophtron_item:) %>
+<%# locals: (sophtron_item:, visible_accounts: sophtron_item.accounts) %>
 
 <%= tag.div id: dom_id(sophtron_item) do %>
   <% provider_display_name = sophtron_item.provider_display_name %>
   <% manual_sync_required = sophtron_item.manual_sync_required? %>
   <% connected_institution_options = sophtron_item.connected_institution_options %>
+  <%# Institution names belong to every account on the connection, so they are
+      shown only to a viewer who can see them all (#3630). %>
+  <% all_accounts_visible = visible_accounts.size == sophtron_item.accounts.size %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
       <div class="flex items-center justify-between gap-2">
@@ -28,7 +31,7 @@
                 <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
               <% end %>
             </div>
-            <% if sophtron_item.accounts.any? %>
+            <% if all_accounts_visible && sophtron_item.accounts.any? %>
               <p class="text-xs text-secondary">
                 <%= sophtron_item.institution_summary %>
               </p>
@@ -71,7 +74,7 @@
           <% end %>
 
           <%= render DS::Menu.new do |menu| %>
-            <% if connected_institution_options.many? %>
+            <% if all_accounts_visible && connected_institution_options.many? %>
               <% connected_institution_options.each do |institution| %>
                 <% institution_manual_sync_required = sophtron_item.manual_sync_required_for_institution?(institution[:institution_key]) %>
                 <% menu.with_item(
@@ -106,8 +109,8 @@
 
     <% unless sophtron_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if sophtron_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: sophtron_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -118,7 +121,7 @@
            end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: sophtron_item,
+          provider_item: sophtron_item, show_account_details: visible_accounts.size == sophtron_item.accounts.size,
           institutions_count: sophtron_item.connected_institutions.size
         ) %>
 

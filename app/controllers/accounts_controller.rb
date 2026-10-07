@@ -6,6 +6,8 @@ class AccountsController < ApplicationController
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
+  helper_method :visible_card_accounts
+
   def index
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
     @manual_accounts = family.accounts
@@ -401,6 +403,16 @@ class AccountsController < ApplicationController
       end
     end
 
+    # The accounts a provider card on this page may list. A card is admitted
+    # by visible_provider_items as soon as ONE of its accounts is accessible,
+    # so it must not then render the rest (#3630). Admins see every account.
+    def visible_card_accounts(item)
+      return item.accounts if Current.user.admin?
+
+      @accessible_account_id_set ||= @accessible_account_ids.to_set
+      item.accounts.select { |account| @accessible_account_id_set.include?(account.id) }
+    end
+
     def visible_provider_items(items)
       accessible_ids = @accessible_account_ids.to_a
 
@@ -411,10 +423,8 @@ class AccountsController < ApplicationController
 
         # Ownership shows a member their own connection, importantly including
         # one just created that has not synced any accounts yet. It must not
-        # widen what they can see: the card renders the item's accounts
-        # unfiltered, and is re-rendered by a family-wide broadcast with no
-        # viewer, so an owner is shown the card only while every account on it
-        # is already accessible to them.
+        # widen what they can see, so an owner is shown the card only while
+        # every account on it is already accessible to them.
         if item.respond_to?(:owned_by?) && item.owned_by?(Current.user)
           next true if (account_ids - accessible_ids).empty?
         end

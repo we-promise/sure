@@ -1,4 +1,4 @@
-<%%= "<" + "%# locals: (#{file_name}_item:) %" + ">" %>
+<%%= "<" + "%# locals: (#{file_name}_item:, visible_accounts: #{file_name}_item.accounts) %" + ">" %>
 
 <%%= "<" + "%= tag.div id: dom_id(#{file_name}_item) do %" + ">" %>
   <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
@@ -75,8 +75,8 @@
 
     <%%= "<" + "% unless #{file_name}_item.scheduled_for_deletion? %" + ">" %>
       <div class="space-y-4 mt-4">
-        <%%= "<" + "% if #{file_name}_item.accounts.any? %" + ">" %>
-          <%%= "<" + "%= render \"accounts/index/account_groups\", accounts: #{file_name}_item.accounts %" + ">" %>
+        <%%= "<" + "% if visible_accounts.any? %" + ">" %>
+          <%%= "<" + "%= render \"accounts/index/account_groups\", accounts: visible_accounts %" + ">" %>
         <%%= "<" + "% end %" + ">" %>
 
         <%%= "<" + "%# Sync summary (collapsible) - using shared ProviderSyncSummary component %" + ">" %>
@@ -87,7 +87,8 @@
            end <%%= "%" + ">" %>
         <%%= "<" + "%= render ProviderSyncSummary.new(" %>
           stats: stats,
-          provider_item: <%= file_name %>_item
+          provider_item: <%= file_name %>_item,
+          show_account_details: visible_accounts.size == <%= file_name %>_item.accounts.size
         ) <%%= "%" + ">" %>
 
         <%%= "<" + "%# Compute unlinked accounts (no AccountProvider link) %" + ">" %>
