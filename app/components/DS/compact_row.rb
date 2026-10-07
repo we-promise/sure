@@ -32,13 +32,14 @@ class DS::CompactRow < DesignSystemComponent
   renders_one :amount
   renders_one :balance
 
-  def initialize(show_date: false, show_balance: false, show_notes: true, muted: false, indent: false, header: false, class: nil)
+  def initialize(show_date: false, show_balance: false, show_notes: true, muted: false, indent: false, header: false, data: {}, class: nil)
     @show_date = show_date
     @show_balance = show_balance
     @show_notes = show_notes
     @muted = muted
     @indent = indent
     @header = header
+    @data = data
     @extra_class = binding.local_variable_get(:class)
   end
 
@@ -61,7 +62,7 @@ class DS::CompactRow < DesignSystemComponent
   end
 
   erb_template <<~ERB
-    <div class="<%= row_classes %>">
+    <%= tag.div class: row_classes, data: @data do %>
       <div class="<%= checkbox_wrapper_classes %>">
         <%= checkbox %>
       </div>
@@ -101,7 +102,7 @@ class DS::CompactRow < DesignSystemComponent
           <%= balance %>
         </div>
       <% end %>
-    </div>
+    <% end %>
   ERB
 
   private

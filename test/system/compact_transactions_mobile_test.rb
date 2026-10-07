@@ -88,6 +88,20 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     assert_in_delta offsets["headerTxn"], offsets["rowTxn"], 1.0, "TRANSACTION header label is not aligned with row names"
   end
 
+  test "compact row clicks open the drawer while selection stays independent" do
+    visit transactions_url
+
+    within "turbo-frame##{dom_id(@entry)}" do
+      find("input[type='checkbox']").click
+    end
+    assert_no_selector "turbo-frame#drawer input[name='entry[name]']"
+
+    within "turbo-frame##{dom_id(@entry)}" do
+      find("p.privacy-sensitive").click
+    end
+    assert_selector "turbo-frame#drawer input[name='entry[name]']", wait: 10
+  end
+
   test "mobile date and category share the same subtitle line" do
     @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
     @entry.entryable.update!(category: categories(:food_and_drink))

@@ -1890,6 +1890,21 @@ end
     assert_not_includes rendered_ids, transfer.inflow_transaction.entry.id.to_s
   end
 
+  test "compact transaction rows preserve tags one-time hints and row clicks" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true))
+    @entry.entryable.update!(kind: "one_time", tags: [ tags(:one) ])
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(@entry)} [data-controller='clickable-row'][data-action='click->clickable-row#open']" do
+      assert_select "a[data-clickable-row-target='link']"
+      assert_select "span.text-warning[title]"
+      assert_select "##{dom_id(@entry.entryable, 'tag_summary_desktop')}", text: /#{Regexp.escape(tags(:one).name)}/
+      assert_select "##{dom_id(@entry.entryable, 'tag_summary_mobile')}", text: /#{Regexp.escape(tags(:one).name)}/
+    end
+  end
+
   test "compact list hides the notes column by default" do
     family = families(:empty)
     sign_in users(:empty)

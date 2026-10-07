@@ -14,7 +14,7 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
-    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, indent: in_split_group) do |row| %>
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, indent: in_split_group, data: { controller: "clickable-row", action: "click->clickable-row#open" }) do |row| %>
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
@@ -42,7 +42,7 @@
                     <%= link_to(
                           entry.name,
                           transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry, drawer_params),
-                          data: { turbo_frame: "drawer", turbo_prefetch: false },
+                          data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
                           class: "hover:underline truncate"
                         ) %>
                   <% end %>
@@ -51,21 +51,26 @@
                 <%= link_to(
                       entry.name,
                       in_split_group ? entry_path(entry, drawer_params.merge(grouped: true)) : entry_path(entry, drawer_params),
-                      data: { turbo_frame: "drawer", turbo_prefetch: false },
+                      data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
                       class: "hover:underline truncate"
                     ) %>
               <% end %>
             </div>
 
             <div class="flex items-center gap-1 shrink-0">
+              <% if transaction.one_time? %>
+                <span class="text-warning" title="<%= t("transactions.transaction.one_time_tooltip", type: t(entry.amount.negative? ? "transactions.searches.filters.type_filter.income" : "transactions.searches.filters.type_filter.expense")) %>">
+                  <%= icon "asterisk", size: "sm", color: "current" %>
+                </span>
+              <% end %>
               <% if transaction.pending? %>
                 <%= render DS::Pill.new(label: t("transactions.transaction.pending"), tone: :neutral, marker: false, icon: "clock", title: t("transactions.transaction.pending_tooltip")) %>
               <% end %>
               <% if transaction.has_potential_duplicate? %>
-                <%= render DS::Pill.new(label: transaction.low_confidence_duplicate? ? t("transactions.transaction.review_recommended") : t("transactions.transaction.possible_duplicate"), tone: transaction.low_confidence_duplicate? ? :neutral : :warning, marker: false, icon: transaction.low_confidence_duplicate? ? "help-circle" : "alert-triangle") %>
+                <%= render DS::Pill.new(label: transaction.low_confidence_duplicate? ? t("transactions.transaction.review_recommended") : t("transactions.transaction.possible_duplicate"), tone: transaction.low_confidence_duplicate? ? :neutral : :warning, marker: false, icon: transaction.low_confidence_duplicate? ? "help-circle" : "alert-triangle", title: t(transaction.low_confidence_duplicate? ? "transactions.transaction.review_recommended_tooltip" : "transactions.transaction.potential_duplicate_tooltip")) %>
               <% end %>
               <% if @split_parent_entry_ids ? @split_parent_entry_ids.include?(entry.id) : entry.split_parent? %>
-                <%= render DS::Pill.new(label: t("transactions.transaction.split"), tone: :neutral, marker: false, icon: "split") %>
+                <%= render DS::Pill.new(label: t("transactions.transaction.split"), tone: :neutral, marker: false, icon: "split", title: t("transactions.transaction.split_tooltip")) %>
               <% end %>
               <% if entry.split_child? && !in_split_group %>
                 <%= link_to entry_path(entry, drawer_params), data: { turbo_frame: "drawer", turbo_prefetch: false }, aria: { label: t("transactions.transaction.split_child_tooltip") }, class: "inline-flex focus-ring rounded" do %>
@@ -78,6 +83,12 @@
             </div>
           </div>
 
+          <div class="mt-1 hidden md:flex min-w-0 items-center gap-1" data-tag-fit-bounds="1">
+            <%= render "tags/menu", entry: entry, transaction: transaction, variant: :desktop %>
+          </div>
+          <div class="md:hidden flex min-w-0 has-[[data-tag-empty]]:hidden">
+            <%= render "tags/menu", entry: entry, transaction: transaction, variant: :mobile %>
+          </div>
           <div class="text-secondary text-xs font-normal flex flex-wrap min-w-0 items-center gap-1">
             <span class="lg:hidden shrink-0"><%= format_date(entry.date) %><%= " •" unless transaction.transfer? %></span>
             <% unless transaction.transfer? %>
