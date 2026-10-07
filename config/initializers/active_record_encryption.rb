@@ -17,9 +17,10 @@ Rails.application.config.active_record.encryption.extend_queries = true
 # lookups to match legacy plaintext data for attributes that combine
 # `encrypts ..., deterministic: true, downcase: true` with a model-level
 # `normalizes` declaration on the same attribute - which is exactly
-# User#email, User#unconfirmed_email, Invitation#email, and InviteCode#token
-# (see app/models/user.rb's `normalizes :email, with: ->(email) {
-# email.strip.downcase }`). Arel::Nodes::HomogeneousIn#casted_values calls
+# User#email and User#unconfirmed_email (see app/models/user.rb's
+# `normalizes :email, with: ->(email) { email.strip.downcase }`).
+# Invitation#email and InviteCode#token normalize in a before_validation
+# callback instead and are not affected. Arel::Nodes::HomogeneousIn#casted_values calls
 # #serialize on the *outermost* ActiveModel::Attributes::Normalization::
 # NormalizedValueType wrapper, whose #cast runs the normalization proc
 # directly on each query value - including extend_queries' internal
@@ -29,10 +30,14 @@ Rails.application.config.active_record.encryption.extend_queries = true
 # (support_unencrypted_data still makes plain *reads* of already-loaded
 # records work). Fixing this generically would mean patching the shared
 # ActiveModel normalization type, which is used for unrelated attributes
-# across the app - too invasive for this fix. Operators MUST run
-# `bin/rails security:backfill_encryption` immediately after upgrading,
-# before relying on login/invitation flows for accounts whose data
-# predates this fix. Non-downcase deterministic fields (tokens, API keys,
+# across the app - too invasive for this fix. Instead, the user-facing email
+# lookups (web and API login, SSO linking, password reset, invitations, MCP,
+# demo refresh) go through User.find_by_email / User.authenticate_by_email,
+# which fall back to a literal match for legacy plaintext rows, so existing
+# users can still sign in after upgrading. Operators should still run
+# `bin/rails security:backfill_encryption`: other `User.find_by(email:)`
+# callers (dev rake tasks, demo generator) do not have the fallback.
+# Non-downcase deterministic fields (tokens, API keys,
 # ...) are unaffected - confirmed in
 # test/initializers/active_record_encryption_test.rb.
 

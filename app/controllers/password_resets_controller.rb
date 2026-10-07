@@ -10,7 +10,7 @@ class PasswordResetsController < ApplicationController
   end
 
   def create
-    if (user = User.find_by(email: params[:email]))
+    if (user = User.find_by_email(params[:email]))
       # Security: Block password reset for SSO-only users.
       # These users have no local password and must authenticate via SSO.
       unless user.sso_only?
