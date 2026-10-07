@@ -177,6 +177,15 @@ class EnableBankingAccount < ApplicationRecord
     target.with_lock do
       next if target.iban.present?
 
+      # Another account in the family already holds this IBAN in the same
+      # currency (e.g. a joint account linked through two consents). Every
+      # sync would fail the same uniqueness check again, so log it once and
+      # leave the account alone.
+      if iban_taken_in_family?(target)
+        capture_propagation_failure_once(target, "Another account in this family already has this IBAN in #{target.currency}")
+        next
+      end
+
       # enrich_attribute no-ops if `iban` is locked (the user explicitly set
       # or cleared it via the account form -- lock_saved_attributes! locks
       # either way), and uses `save` rather than `save!`, so a Rails-level
@@ -210,12 +219,23 @@ class EnableBankingAccount < ApplicationRecord
         # clause embeds the actual conflicting IBAN value in plaintext,
         # which would defeat the point of encrypting the column at rest by
         # persisting it into an unrelated log table instead.
-        capture_propagation_failure(target, "Concurrent iban conflict on the family_id+iban unique index")
+        capture_propagation_failure(target, "Concurrent iban conflict on the family_id+iban+currency unique index")
       end
     end
   end
 
   private
+
+    def iban_taken_in_family?(target)
+      target.family.accounts.where.not(id: target.id).exists?(iban: iban, currency: target.currency)
+    end
+
+    def capture_propagation_failure_once(target, message)
+      full_message = "Could not propagate IBAN to account: #{message}"
+      return if DebugLogEntry.exists?(account_id: target.id, source: self.class.name, message: full_message)
+
+      capture_propagation_failure(target, message)
+    end
 
     def capture_propagation_failure(target, message)
       DebugLogEntry.capture(
