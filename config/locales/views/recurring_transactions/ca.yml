@@ -97,7 +97,6 @@ ca:
       add_link_aria: Afegeix un enllaç de pagament per a %{name}
       autopay: Domiciliat
       autopay_aria: '%{name} es paga automàticament; obre el seu portal en una pestanya nova'
-      open_site: Obre el web de la factura
     new:
       title: Afegeix una factura
       income_title: Afegeix un ingrés
