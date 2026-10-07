@@ -34,6 +34,7 @@ fr:
       account_updated: Compte mis à jour
     errors:
       amount_required: Le montant est requis
+      duplicate_date: Cette date a déjà une mise à jour du solde. Veuillez actualiser la page et réessayer.
     form:
       amount: Montant
       submit: Ajouter une mise à jour du solde

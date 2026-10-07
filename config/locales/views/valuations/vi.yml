@@ -28,6 +28,7 @@ vi:
       entry_updated: Mục nhập đã được cập nhật
     errors:
       amount_required: Số tiền là bắt buộc
+      duplicate_date: Ngày này đã có cập nhật số dư. Vui lòng làm mới trang và thử lại.
     form:
       amount: Số tiền
       submit: Thêm cập nhật số dư

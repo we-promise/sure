@@ -1,4 +1,4 @@
-class AddUniqueIndexForValuationPerAccountAndDate < ActiveRecord::Migration[7.2]
+class AddUniqueIndexForValuationPerAccountAndDate < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
   INDEX_NAME = "index_entries_on_account_and_date_for_valuations"
