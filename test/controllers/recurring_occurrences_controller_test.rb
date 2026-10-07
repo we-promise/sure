@@ -16,13 +16,44 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Resolving a payment is the ACT surface, so it owns the drawer slot -- the
-  # same one transactions, trades and transfers use. The bill's own story moved
-  # to its own page, so nothing competes for it.
+  # same one transactions, trades and transfers use. The bill opens in that
+  # same slot, so View bill swaps one for the other instead of stacking two.
   test "show renders the occurrence dialog in a single drawer frame" do
     get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
 
     assert_response :success
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
+  end
+
+  # Turbo caches the page as it was left, so a drawer still open when the user
+  # navigated away would come back from Back as a stray dialog.
+  # Visited directly, the dialog is the page, and Back has to restore it.
+  test "the dialog is left out of Turbo's page cache in the drawer, not on a direct visit" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+    assert_select "turbo-frame#drawer > dialog[data-turbo-temporary]", count: 1
+
+    # Scoped to the frame: the layout's own confirm dialog is a <dialog> too.
+    get recurring_occurrence_url(@occurrence)
+    assert_select "turbo-frame#drawer > dialog", count: 1
+    assert_select "turbo-frame#drawer > dialog[data-turbo-temporary]", count: 0
+  end
+
+  # Pause redirects back to the page it was pressed on. Fetched for the drawer
+  # frame, that page has no drawer frame in it, so the drawer would read
+  # "Content missing" instead of the list updating behind it.
+  test "the dialog's pause submits to the whole page" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "form[action=?] button[data-turbo-frame=_top]", toggle_status_recurring_transaction_path(@series)
+  end
+
+  # Like every other link into the bill's drawer, a hover doesn't render the
+  # bill ahead of a click that may never come.
+  test "View bill swaps to the bill's drawer without a hover prefetch" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_select "a[href=?][data-turbo-frame=drawer][data-turbo-prefetch=false]", bill_path(@series, occurrence: @occurrence.id)
   end
 
   test "recurring occurrence feedback is localized in German" do

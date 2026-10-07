@@ -111,6 +111,8 @@ class Settings::ProvidersController < ApplicationController
   def connect_form
     provider_key = params[:provider_key]
 
+    # Not FAMILY_PANELS_BY_KEY[provider_key]: Brakeman reads that as the param
+    # choosing the partial to render.
     panel = FAMILY_PANELS.find { |p| p[:key] == provider_key }
     if panel
       @panel_key     = panel[:key]
@@ -217,6 +219,7 @@ class Settings::ProvidersController < ApplicationController
     ].freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
+    FAMILY_PANELS_BY_KEY = FAMILY_PANELS.index_by { |p| p[:key] }.freeze
 
     # Maps panel key → ActiveRecord model name for sync health queries
     PANEL_SYNCABLE_TYPES = {
@@ -289,7 +292,7 @@ class Settings::ProvidersController < ApplicationController
       when "trading212"
         @trading212_items = Current.family.trading212_items.ordered
       when "trade_republic"
-        @trade_republic_items = Current.family.trade_republic_items.ordered
+        @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
       when "indexa_capital"
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
       when "sophtron"
@@ -325,7 +328,7 @@ class Settings::ProvidersController < ApplicationController
       @snaptrade_items = Current.family.snaptrade_items.ordered
       @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
       @trading212_items = Current.family.trading212_items.ordered
-      @trade_republic_items = Current.family.trade_republic_items.ordered.select(:id)
+      @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered

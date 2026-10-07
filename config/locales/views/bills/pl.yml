@@ -54,7 +54,8 @@ pl:
         many: Zaległe od %{count} dni
         one: Zaległe od 1 dnia
         other: Zaległe od %{count} dni
-      partial: Częściowo · pozostało %{amount}
+      partial: Częściowo
+      paused: Wstrzymane
     calendar:
       empty_month: Brak rachunków z terminem w tym miesiącu.
       month_totals: "%{expected} oczekiwane · %{paid} opłacone"
@@ -65,7 +66,7 @@ pl:
       today: Dziś
     cancelled_still_scheduled: Oznaczono to jako anulowane %{date}, ale nadal jest
       zaplanowane, więc kolejne rachunki będą się pojawiać.
-    debt_payment: "· spłata zadłużenia"
+    debt_payment: Spłata zadłużenia
     detail:
       annualized: Rocznie
       around: około %{date}
@@ -81,6 +82,7 @@ pl:
       manual_payment: Płatność ręczna
       next_payment: Następna płatność
       notes: Notatki
+      overview: Przegląd
       payment_count:
         few: "%{count} płatności"
         many: "%{count} płatności"
@@ -89,7 +91,6 @@ pl:
       price_change_line: "%{from} → %{to}"
       price_changes: Zmiany cen
       range: od %{min} do %{max}
-      recent_payments: Ostatnie płatności
       renews_chip: Odnawia się %{date}
       rule_aliases: Pasuje też do %{names}
       rule_amount_range: od %{min} do %{max}
@@ -169,6 +170,7 @@ pl:
         one: 1 wymaga uwagi
         other: "%{count} wymaga uwagi"
       needs_attention: Wymaga uwagi
+      notices_heading: Zmiany
       needs_review: Wymaga sprawdzenia
       notice_price: "%{name}: zmiana ceny %{from} → %{to} (%{percent})"
       notice_renewal: "%{name} odnawia się %{date}"
@@ -253,13 +255,11 @@ pl:
         one: 1 rachunek nie jest uwzględniony — brak dostępnego kursu wymiany
         other: "%{count} rachunków nie jest uwzględnionych — brak dostępnego kursu
           wymiany"
-      view_upcoming: Zobacz nadchodzące
+      view_calendar: Zobacz kalendarz
     paid_from: z %{account}
     paid_label: Opłacone
     paid_over: Zapłacono %{paid}, więcej niż oczekiwano
     paid_over_short: Opłacone, więcej
-    pane:
-      close: Zwiń szczegóły
     partial_progress: Zapłacono %{paid} z %{expected}
     pay_period:
       before_next_paycheck: Przed następną wypłatą
@@ -368,10 +368,8 @@ pl:
         trigger: Pozwól AI skonfigurować
         uncategorized: Bez kategorii
     summary:
-      cost_line: Średnio %{average} za płatność, około %{annualized} rocznie
       paid_headline: Zapłacono %{amount}
       remaining: Pozostało %{amount}
-    view_full_bill: Zobacz pełny rachunek
     views:
       all: Wszystkie rachunki
       aria_label: Widoki rachunków

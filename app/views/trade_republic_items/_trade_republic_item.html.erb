@@ -105,6 +105,7 @@
             <span class="text-secondary"><%= t(".data_quality.unpriced", count: quality[:unpriced_positions]) %></span>
             <span class="text-secondary"><%= t(".data_quality.events", count: quality[:events]) %></span>
             <span class="text-secondary"><%= t(".data_quality.unknown", count: quality[:unknown_events]) %></span>
+            <span class="text-secondary"><%= t(".data_quality.pending_trade_details", count: quality[:pending_trade_details]) %></span>
           </div>
           <div class="grid gap-2 sm:grid-cols-2 text-xs">
             <% expense_money = Money.new(expenses[:total].round(2), trade_republic_item.currency) %>

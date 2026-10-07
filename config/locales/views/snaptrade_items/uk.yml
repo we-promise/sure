@@ -2,7 +2,7 @@ uk:
   snaptrade_items:
     default_name: "З'єднання SnapTrade"
     link_accounts:
-      use_setup_flow: Використовуйте потік налаштування облікового запису
+      use_setup_flow: Використовуйте потік налаштування рахунку
     create:
       success: "SnapTrade успішно налаштовано."
     update:
@@ -19,9 +19,13 @@ uk:
       success:
         one: "Успішно пов'язано %{count} рахунок."
         other: "Успішно пов'язано %{count} рахунків."
+        few: Успішно пов'язано %{count} рахунки.
+        many: Успішно пов'язано %{count} рахунків.
       partial_success:
         one: "Пов'язано %{count} рахунок. %{failed_count} не вдалося пов'язати."
         other: "Пов'язано %{count} рахунків. %{failed_count} не вдалося пов'язати."
+        few: Пов'язано %{count} рахунки. %{failed_count} не вдалося пов'язати.
+        many: Пов'язано %{count} рахунків. %{failed_count} не вдалося пов'язати.
       link_failed: "Не вдалося пов'язати рахунки: %{errors}"
       no_accounts: "Не було вибрано жодного рахунку для пов'язування."
     preload_accounts:
@@ -40,26 +44,30 @@ uk:
       missing_client_id: "Ідентифікатор клієнта SnapTrade OAuth не налаштовано. Додайте SNAPTRADE_OAUTH_CLIENT_ID до .env.local, перезапустіть програму, а потім спробуйте ще раз."
     complete_oauth_device_flow:
       success: "Авторизацію SnapTrade завершено."
-      setup_incomplete: "Авторизацію SnapTrade завершено, але для синхронізації облікових записів потрібні облікові дані API."
+      setup_incomplete: "Авторизацію SnapTrade завершено, але для синхронізації рахунків потрібні облікові дані API."
       failed: "Неможливо завершити авторизацію пристрою SnapTrade OAuth. Будь ласка, спробуйте ще раз."
+      device_code_required: Для цього з'єднання немає активної авторизації пристрою SnapTrade. Почніть її знову, щоб отримати новий код.
+      authorization_pending: SnapTrade ще не отримав вашого підтвердження. Підтвердьте код у SnapTrade і спробуйте ще раз.
+      expired: Термін дії цього коду пристрою минув. Почніть авторизацію знову.
+      access_denied: Авторизацію SnapTrade відхилено.
     start_oauth_device_flow:
       failed: "Неможливо розпочати авторизацію пристрою SnapTrade OAuth. Будь ласка, спробуйте ще раз."
     select_existing_account:
-      not_found: "Обліковий запис або конфігурацію SnapTrade не знайдено."
-      title: "Пов'язати з обліковим записом SnapTrade"
-      header: "Пов'язати існуючий обліковий запис"
-      subtitle: "Виберіть обліковий запис SnapTrade для пов'язування"
-      no_accounts: "Немає доступних непов'язаних облікових записів SnapTrade."
+      not_found: "Рахунок або конфігурацію SnapTrade не знайдено."
+      title: "Пов'язати з рахунком SnapTrade"
+      header: "Пов'язати існуючий рахунок"
+      subtitle: "Виберіть рахунок SnapTrade для пов'язування"
+      no_accounts: "Немає доступних непов'язаних рахунків SnapTrade."
       connect_hint: "Можливо, вам доведеться спочатку підключити брокера."
-      settings_link: "Перейти до налаштувань провайдера"
-      linking_to: "Пов'язування з обліковим записом:"
+      settings_link: "Перейти до налаштувань постачальника"
+      linking_to: "Пов'язування з рахунком:"
       balance_label: "Баланс:"
       link_button: "Пов'язати"
       cancel_button: "Скасувати"
     link_existing_account:
-      success: "Успішно пов'язано з обліковим записом SnapTrade."
-      failed: "Не вдалося пов'язати обліковий запис: %{message}"
-      not_found: "Обліковий запис не знайдено."
+      success: "Успішно пов'язано з рахунком SnapTrade."
+      failed: "Не вдалося пов'язати рахунок: %{message}"
+      not_found: "Рахунок не знайдено."
     connections:
       unknown_brokerage: "Невідомий брокер"
     delete_connection:
@@ -71,41 +79,51 @@ uk:
       success: "Осиротілу реєстрацію успішно видалено."
       failed: "Не вдалося видалити осиротілу реєстрацію."
     setup_accounts:
-      title: "Налаштувати облікові записи SnapTrade"
-      header: "Налаштуйте свої облікові записи SnapTrade"
+      title: "Налаштувати рахунки SnapTrade"
+      header: "Налаштуйте свої рахунки SnapTrade"
       subtitle: "Виберіть, які брокерські рахунки пов'язати"
-      syncing: "Отримання ваших облікових записів..."
-      loading: "Отримання облікових записів з SnapTrade..."
-      loading_hint: "Натисніть Оновити, щоб перевірити наявність облікових записів."
+      syncing: "Отримання ваших рахунків..."
+      loading: "Отримання рахунків з SnapTrade..."
+      loading_hint: "Натисніть Оновити, щоб перевірити наявність рахунків."
       refresh: "Оновити"
       info_title: "Інвестиційні дані SnapTrade"
       info_holdings: "Активи з поточними цінами та кількістю"
-      info_cost_basis: "База витрат на позицію (за наявності)"
-      info_activities: "Історія торгівлі з мітками активності (купівля, продаж, дивіденди тощо)"
+      info_cost_basis: "Базова вартість позиції (за наявності)"
+      info_activities: "Історія угод з мітками операцій (купівля, продаж, дивіденди тощо)"
       info_history: "Історія транзакцій до 3 років"
       free_tier_note: "Безкоштовний рівень SnapTrade дозволяє 20 брокерських з'єднань."
-      no_accounts_title: "Облікових записів не знайдено"
+      no_accounts_title: "Рахунків не знайдено"
       no_accounts_message: "Брокерських рахунків не знайдено. Це може статися, якщо ви скасували з'єднання або якщо ваш брокер не підтримується."
       try_again: "Підключити брокера"
       back_to_settings: "Повернутися до налаштувань"
-      available_accounts: "Доступні облікові записи"
+      available_accounts: "Доступні рахунки"
       balance_label: "Баланс:"
       account_number: "Рахунок:"
       sync_start_date_label: "Імпортувати транзакції з:"
       sync_start_date_help: "Залиште порожнім для всієї доступної історії"
-      create_button: "Створити вибрані облікові записи"
+      create_button: "Створити вибрані рахунки"
       cancel_button: "Скасувати"
-      creating: "Створення облікових записів..."
+      creating: "Створення рахунків..."
       done_button: "Готово"
-      or_link_existing: "Або пов'яжіть з існуючим обліковим записом замість створення нового:"
-      select_account: "Вибрати обліковий запис..."
+      or_link_existing: "Або пов'яжіть з існуючим рахунком замість створення нового:"
+      select_account: "Вибрати рахунок..."
       link_button: "Пов'язати"
       linked_accounts: "Вже пов'язано"
       linked_to: "Пов'язано з:"
+      account_type_label: Тип рахунку
+      account_types:
+        depository: Поточний або ощадний рахунок
+        credit_card: Кредитна картка
+        investment: Інвестиційний рахунок
+        crypto: Криптовалютний рахунок
+        loan: Кредит або кредитна лінія
+        other_asset: Інший актив
     snaptrade_item:
       accounts_need_setup:
-        one: "%{count} обліковий запис потребує налаштування"
-        other: "%{count} облікових записів потребують налаштування"
+        one: "%{count} рахунок потребує налаштування"
+        other: "%{count} рахунків потребують налаштування"
+        few: '%{count} рахунки потребують налаштування'
+        many: '%{count} рахунків потребують налаштування'
       deletion_in_progress: "Видалення триває..."
       syncing: "Синхронізація..."
       requires_update: "З'єднання потребує оновлення"
@@ -116,16 +134,25 @@ uk:
       connect_brokerage: "Підключити брокера"
       add_another_brokerage: "Підключити іншого брокера"
       delete: "Видалити"
-      setup_needed: "Облікові записи потребують налаштування"
-      setup_description: "Деякі облікові записи з SnapTrade потрібно пов'язати з обліковими записами Sure."
-      setup_action: "Налаштувати облікові записи"
-      setup_accounts_menu: "Налаштувати облікові записи"
+      setup_needed: "Рахунки потребують налаштування"
+      setup_description: "Деякі рахунки з SnapTrade потрібно пов'язати з рахунками Sure."
+      setup_action: "Налаштувати рахунки"
+      setup_accounts_menu: "Налаштувати рахунки"
       manage_connections: "Керувати з'єднаннями"
       more_accounts_available:
-        one: "%{count} ще один обліковий запис доступний для налаштування"
-        other: "%{count} ще облікових записів доступні для налаштування"
-      no_accounts_title: "Облікових записів не виявлено"
+        one: "Ще %{count} рахунок доступний для налаштування"
+        other: "Ще %{count} рахунку доступно для налаштування"
+        few: Ще %{count} рахунки доступні для налаштування
+        many: Ще %{count} рахунків доступно для налаштування
+      no_accounts_title: "Рахунків не виявлено"
       no_accounts_description: "Підключіть брокера, щоб імпортувати свої інвестиційні рахунки."
+    oauth_authorize:
+      not_configured: Для авторизації SnapTrade у браузері, крім SNAPTRADE_OAUTH_CLIENT_ID, потрібен SNAPTRADE_OAUTH_CLIENT_SECRET. Задайте його й перезапустіть застосунок або авторизуйтеся за допомогою коду пристрою.
+    oauth_callback:
+      success: Авторизацію SnapTrade завершено.
+      access_denied: Авторизацію SnapTrade скасовано.
+      state_mismatch: Авторизація SnapTrade не пройшла перевірку безпеки. Спробуйте ще раз.
+      failed: Не вдалося завершити авторизацію SnapTrade. Спробуйте ще раз.
 
   providers:
     snaptrade:
@@ -136,7 +163,7 @@ uk:
       step_1_html: "Створіть обліковий запис на <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
       step_2: "Скопіюйте свій ідентифікатор клієнта та ключ споживача з панелі керування"
       step_3: "Введіть свої облікові дані нижче та натисніть Зберегти"
-      step_4: "Перейдіть на сторінку Облікові записи та використовуйте 'Підключити іншого брокера', щоб пов'язати свої інвестиційні рахунки"
+      step_4: "Перейдіть на сторінку Рахунки та використовуйте 'Підключити іншого брокера', щоб пов'язати свої інвестиційні рахунки"
       free_tier_warning: "Безкоштовний рівень SnapTrade охоплює 20 брокерських з'єднань."
       oauth_title: "SnapTrade OAuth"
       oauth_status_ready: "Використовуйте код пристрою для авторизації Sure для SnapTrade."
@@ -154,31 +181,39 @@ uk:
       save_button: "Зберегти конфігурацію"
       update_button: "Оновити конфігурацію"
       status_connected:
-        one: "%{count} обліковий запис з SnapTrade"
-        other: "%{count} облікових записів з SnapTrade"
+        one: "%{count} рахунок з SnapTrade"
+        other: "%{count} рахунків з SnapTrade"
+        few: '%{count} рахунки з SnapTrade'
+        many: '%{count} рахунків з SnapTrade'
       status_needs_registration: "Облікові дані збережено. Завершіть налаштування, щоб підключити брокера."
       needs_setup:
         one: "%{count} потребує налаштування"
         other: "%{count} потребують налаштування"
+        few: '%{count} потребують налаштування'
+        many: '%{count} потребують налаштування'
       status_ready: "Готово до підключення брокерів"
-      setup_accounts_button: "Налаштувати облікові записи"
+      setup_accounts_button: "Налаштувати рахунки"
       connect_button: "Підключити брокера"
       connected_brokerages: "Підключено:"
       manage_connections: "Керувати з'єднаннями"
       loading_connections: "Завантаження з'єднань..."
       connections_error: "Не вдалося завантажити з'єднання: %{message}"
       accounts_count:
-        one: "%{count} обліковий запис"
-        other: "%{count} облікових записів"
+        one: "%{count} рахунок"
+        other: "%{count} рахунків"
+        few: '%{count} рахунки'
+        many: '%{count} рахунків'
       orphaned_connection: "Осиротіле з'єднання (не синхронізовано локально)"
       needs_linking: "потребує пов'язування"
       no_connections: "Брокерських з'єднань не знайдено."
       delete_connection: "Видалити"
       delete_connection_title: "Видалити брокерське з'єднання?"
-      delete_connection_body: "Це назавжди видалить з'єднання %{brokerage} з SnapTrade. Усі облікові записи цього брокера будуть від'єднані. Вам доведеться перепідключитися, щоб знову синхронізувати ці облікові записи."
+      delete_connection_body: "Це назавжди видалить з'єднання %{brokerage} з SnapTrade. Усі рахунки цього брокера будуть від'єднані. Вам доведеться перепідключитися, щоб знову синхронізувати ці рахунки."
       delete_connection_confirm: "Видалити з'єднання"
       orphaned_users_title:
         one: "%{count} осиротіла реєстрація"
+        few: "%{count} осиротілі реєстрації"
+        many: "%{count} осиротілих реєстрацій"
         other: "%{count} осиротілих реєстрацій"
       orphaned_users_description: "Це попередні реєстрації користувачів SnapTrade, які використовують ваші слоти для з'єднання. Видаліть їх, щоб звільнити слоти."
       orphaned_user: "Осиротіла реєстрація"
@@ -186,29 +221,41 @@ uk:
       delete_orphaned_user_title: "Видалити осиротілу реєстрацію?"
       delete_orphaned_user_body: "Це назавжди видалить цього осиротілого користувача SnapTrade та всі його брокерські з'єднання, звільнивши слоти для з'єднання."
       delete_orphaned_user_confirm: "Видалити реєстрацію"
+      oauth_setup_step_1_html: Зареєструйте OAuth-застосунок на <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Лише для входу через браузер: додайте URL зворотного виклику цього застосунку (<code>%{callback_url}</code>) як зареєстрований redirect URI'
+      oauth_setup_step_3: Задайте SNAPTRADE_OAUTH_CLIENT_ID у своєму середовищі та перезапустіть застосунок. Цього достатньо для входу за кодом пристрою; для входу через браузер також додайте SNAPTRADE_OAUTH_CLIENT_SECRET
+      oauth_status_ready_device: Авторизуйте Sure за допомогою коду пристрою, щоб отримувати дані ваших рахунків SnapTrade.
+      oauth_device_button: Використати код пристрою
+      manage_at_snaptrade: Керувати з'єднаннями в SnapTrade
 
   snaptrade_item:
     sync_status:
-      no_accounts: "Облікових записів не знайдено"
+      no_accounts: "Рахунків не знайдено"
       synced:
-        one: "%{count} обліковий запис синхронізовано"
-        other: "%{count} облікових записів синхронізовано"
+        one: "%{count} рахунок синхронізовано"
+        other: "%{count} рахунків синхронізовано"
+        few: '%{count} рахунки синхронізовано'
+        many: '%{count} рахунків синхронізовано'
       synced_with_setup: "%{linked} синхронізовано, %{unlinked} потребує налаштування"
     institution_summary:
       none: "Жодної установи не підключено"
       count:
         one: "%{count} установа"
         other: "%{count} установ"
+        few: '%{count} установи'
+        many: '%{count} установ'
     brokerage_summary:
       none: "Жодного брокера не підключено"
       count:
         one: "%{count} брокер"
         other: "%{count} брокерів"
+        few: '%{count} брокери'
+        many: '%{count} брокерів'
     syncer:
-      discovering: "Виявлення облікових записів..."
-      importing: "Імпорт облікових записів з SnapTrade..."
-      processing: "Обробка активів та діяльності..."
+      discovering: "Виявлення рахунків..."
+      importing: "Імпорт рахунків з SnapTrade..."
+      processing: "Обробка активів та операцій..."
       calculating: "Розрахунок балансів..."
-      checking_config: "Перевірка конфігурації облікового запису..."
-      needs_setup: "%{count} облікових записів потребують налаштування..."
-      activities_fetching_async: "Діяльність отримується у фоновому режимі. Це може зайняти до хвилини для нових брокерських з'єднань."
+      checking_config: "Перевірка конфігурації рахунку..."
+      needs_setup: "%{count} рахунків потребують налаштування..."
+      activities_fetching_async: "Операції завантажуються у фоновому режимі. Це може зайняти до хвилини для нових брокерських з'єднань."

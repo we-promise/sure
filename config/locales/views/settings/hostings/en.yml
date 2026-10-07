@@ -17,7 +17,14 @@ en:
           open: Open
           closed: Closed
           invite_only: Invite-only
+      demo_refresh_settings:
+        description: "Automatically refresh only the selected demo family. All its data and logins will be removed. Other families are untouched. Requires a running worker with at least 2 GiB RAM. First create a disposable demo family using the demo generator, then select it here. Do not choose a real user's family."
+        none: No demo family selected
+        family_label: Disposable demo family
+        save_family: Save demo family
+        enabled_label: Enable daily demo family refresh
       show:
+        demo_refresh: Demo data refresh
         general: General Settings
         ai_assistant: AI Assistant
         financial_data_providers: Financial Data Providers
@@ -201,6 +208,8 @@ en:
         openai_request_timeout_help: "Default: 60. Applies to each OpenAI-compatible HTTP request, including auto-categorization, merchant detection, chat, PDF processing, and vector-store calls. OPENAI_REQUEST_TIMEOUT overrides this field."
         ai_response_timeout_label: Response Timeout in Seconds (Optional)
         ai_response_timeout_help: "Default: 90. Applies only to chat's whole-turn watchdog, so size it as a sum: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × request timeout, plus tool execution and queue time. AI_RESPONSE_TIMEOUT overrides this field."
+        ai_health_probe_timeout_label: Health Check Timeout in Seconds (Optional)
+        ai_health_probe_timeout_help: "Default: 5. Applies only to the live AI checks under Settings → System health, never to real AI calls. Raise it if the PDF checks report a timeout with a cloud model. AI_HEALTH_PROBE_TIMEOUT overrides this field."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
@@ -297,6 +306,8 @@ en:
         view_pricing: View Twelve Data pricing
         title: Twelve Data
       update:
+        invalid_demo_family: Selected family must own the configured demo email.
+        select_demo_family: Select a disposable demo family first.
         failure: Invalid setting value
         success: Settings updated
         invalid_onboarding_state: Invalid onboarding state

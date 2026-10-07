@@ -11,6 +11,7 @@ en:
       private_markets: Private Markets
       interest_products: Interest Products
       crypto_wallet: Crypto Wallet
+    duplicate_connection: "This Trade Republic account is already connected. The new connection was removed."
     defaults:
       name: Trade Republic
     trade_republic_item:
@@ -41,6 +42,9 @@ en:
         unknown:
           one: "%{count} unknown activity"
           other: "%{count} unknown activities"
+        pending_trade_details:
+          one: "%{count} investment activity awaiting details"
+          other: "%{count} investment activities awaiting details"
         expenses:
           one: "%{count} expense in the last 30 days (%{amount})"
           other: "%{count} expenses in the last 30 days (%{amount})"
@@ -70,6 +74,7 @@ en:
         title: Available account
         account_type_investment: Investment portfolio
         account_type_cash: Cash account
+        account_type_crypto: Crypto account
         account_summary: "%{account_type} • Balance: %{balance}"
         account_id: "Account ID: %{account_id}"
       link_existing:
@@ -119,7 +124,7 @@ en:
       success: Trade Republic saved. Confirm the login in the Trade Republic app to finish connecting.
     update:
       success: Successfully updated Trade Republic configuration.
-      pin_required: Enter your Trade Republic PIN to re-authenticate.
+      pin_required: Enter your Trade Republic PIN or password to re-authenticate.
     destroy:
       success: Scheduled Trade Republic connection for deletion.
       unlink_failed: Trade Republic could not be disconnected completely. The connection was kept so it can be retried safely.
@@ -127,7 +132,7 @@ en:
       not_configured: Trade Republic is not configured.
     initiate_login:
       not_configured: Trade Republic is not configured.
-      pin_required: Enter your Trade Republic PIN to start a new login.
+      pin_required: Enter your Trade Republic PIN or password to start a new login.
       verification_required: "Login started. Confirm it via %{method}, then press Confirm login."
     initiate_qr_login:
       not_configured: Trade Republic is not configured.
@@ -170,5 +175,4 @@ en:
         card_fee: Card fee
         card_refund: Card refund
         tax_refund: Tax refund
-        buy: Buy
-        sell: Sell
+        round_up: Round up
