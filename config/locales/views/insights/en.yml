@@ -108,6 +108,6 @@ en:
       budget_on_track: You've spent %{spent} of your %{budgeted} budget (%{budget_spent_pct}%) and everything is within its limit.
       balance_discrepancy: >
         The balance of %{account} doesn't match its transaction history — off by %{difference}
-        since %{since} (%{days_open} days). This usually means a transaction is missing or was
+        since %{since}. This usually means a transaction is missing or was
         entered twice. Check your bank statement around that date for anything that doesn't
         appear in Sure, or that appears twice.

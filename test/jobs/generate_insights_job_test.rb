@@ -78,6 +78,8 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
   test "end-to-end: a real balance gap on a linked account produces an active balance_discrepancy insight, which expires once the gap is fixed" do
     account = accounts(:connected)
     account.update!(currency: "EUR") # deliberately different from @family.currency (USD)
+    # The feed is family-wide: only accounts every active member can see qualify.
+    AccountShare.create!(account: account, user: users(:family_member), permission: "read_only")
     waypoint = ->(date, balance, kind = "reconciliation") do
       account.entries.create!(
         name: "Valuation", date: date, amount: balance, currency: account.currency,
@@ -85,7 +87,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
       )
     end
 
-    waypoint.call(10.days.ago.to_date, 1000, "opening_anchor")
+    waypoint.call(10.days.ago.to_date, 1000)
     waypoint.call(5.days.ago.to_date, 1050)
     waypoint.call(4.days.ago.to_date, 1050)
     waypoint.call(3.days.ago.to_date, 1050)

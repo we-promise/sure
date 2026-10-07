@@ -38,8 +38,17 @@ class Insight::Generators::BalanceDiscrepancyGenerator < Insight::Generator
     def eligible_accounts
       family.accounts.visible.linked
         .where(accountable_type: %w[Depository CreditCard])
+        .where(id: visible_to_everyone)
         .order(:created_at, :id) # stable order: see MAX_INSIGHTS comment above
         .select { |a| single_currency?(a) }
+    end
+
+    # The feed is shared by the whole family, and the insight names the
+    # account and the amount. Only accounts every active member can see
+    # (owned or shared with them) qualify, so a private account never
+    # reaches someone without access to it.
+    def visible_to_everyone
+      family.users.where(active: true).map { |user| family.accounts.accessible_by(user).pluck(:id) }.reduce(:&) || []
     end
 
     # A bank account is inherently single-currency — foreign-currency

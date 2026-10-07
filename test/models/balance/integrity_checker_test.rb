@@ -269,4 +269,55 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     assert_nil Balance::IntegrityChecker.new(account).latest_flagged_gap,
       "the same-date waypoint that actually resolves the gap must win, not an earlier one sharing its date"
   end
+
+  # Account.create_and_sync writes a linked account's opening anchor as the
+  # balance at link time, dated before the imported history; the provider
+  # history then runs forward from it. That anchor is a placeholder, so it
+  # must not be read as a waypoint the ledger has to reach.
+  test "a linked account's placeholder opening anchor does not create a gap" do
+    account = accounts(:connected)
+    account.entries.destroy_all
+    assert account.linked?, "test requires a linked account"
+
+    [
+      { date: 2.years.ago.to_date, amount: 1000, kind: "opening_anchor" },
+      { date: 30.days.ago.to_date, amount: -500, kind: nil }, # imported deposit
+      { date: 20.days.ago.to_date, amount: 200, kind: nil },  # imported payment
+      { date: 5.days.ago.to_date, amount: 1000, kind: "reconciliation" },
+      { date: 4.days.ago.to_date, amount: 1000, kind: "reconciliation" },
+      { date: 3.days.ago.to_date, amount: 1000, kind: "reconciliation" },
+      { date: Date.current, amount: 1000, kind: "current_anchor" }
+    ].each do |e|
+      account.entries.create!(
+        name: "Entry", date: e[:date], amount: e[:amount], currency: account.currency,
+        entryable: e[:kind] ? Valuation.new(kind: e[:kind]) : Transaction.new
+      )
+    end
+
+    assert_nil Balance::IntegrityChecker.new(account).latest_flagged_gap
+  end
+
+  test "a linked account still flags a gap that opens between provider-reported balances" do
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    [
+      { date: 2.years.ago.to_date, amount: 1000, kind: "opening_anchor" },
+      { date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation" },
+      { date: 5.days.ago.to_date, amount: 1050, kind: "reconciliation" },
+      { date: 4.days.ago.to_date, amount: 1050, kind: "reconciliation" },
+      { date: 2.days.ago.to_date, amount: 1050, kind: "current_anchor" }
+    ].each do |e|
+      account.entries.create!(
+        name: "Valuation", date: e[:date], amount: e[:amount], currency: account.currency,
+        entryable: Valuation.new(kind: e[:kind])
+      )
+    end
+
+    gap = Balance::IntegrityChecker.new(account).latest_flagged_gap
+
+    assert gap
+    assert_equal 10.days.ago.to_date, gap.anchor_waypoint.date
+    assert_in_delta 50, gap.difference, 0.01
+  end
 end

@@ -3,12 +3,15 @@ require "test_helper"
 class Insight::Generators::BalanceDiscrepancyGeneratorTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
+    # The feed is family-wide, so only accounts every active member can see
+    # are eligible; share the linked account so the gap tests reach it.
+    AccountShare.create!(account: accounts(:connected), user: users(:family_member), permission: "read_only")
   end
 
   test "flags a linked depository account with a real, persistent balance gap" do
     account = accounts(:connected) # Depository, linked via plaid_account fixture
     build_waypoints(account, [
-      { type: "opening_anchor", date: 10.days.ago.to_date, balance: 1000 },
+      { type: "reconciliation", date: 10.days.ago.to_date, balance: 1000 },
       { type: "reconciliation", date: 5.days.ago.to_date, balance: 1050 },
       { type: "reconciliation", date: 4.days.ago.to_date, balance: 1050 },
       { type: "reconciliation", date: 3.days.ago.to_date, balance: 1050 },
@@ -34,7 +37,7 @@ class Insight::Generators::BalanceDiscrepancyGeneratorTest < ActiveSupport::Test
     account.update!(currency: "EUR")
     assert_not_equal @family.currency, account.currency, "test requires a genuine mismatch"
     build_waypoints(account, [
-      { type: "opening_anchor", date: 10.days.ago.to_date, balance: 1000 },
+      { type: "reconciliation", date: 10.days.ago.to_date, balance: 1000 },
       { type: "reconciliation", date: 5.days.ago.to_date, balance: 1050 },
       { type: "reconciliation", date: 4.days.ago.to_date, balance: 1050 },
       { type: "reconciliation", date: 3.days.ago.to_date, balance: 1050 },
@@ -50,7 +53,7 @@ class Insight::Generators::BalanceDiscrepancyGeneratorTest < ActiveSupport::Test
   test "says nothing about an account with no gap" do
     account = accounts(:connected)
     build_waypoints(account, [
-      { type: "opening_anchor", date: 10.days.ago.to_date, balance: 1000 },
+      { type: "reconciliation", date: 10.days.ago.to_date, balance: 1000 },
       { type: "reconciliation", date: 3.days.ago.to_date, balance: 1000 }
     ])
 
@@ -83,7 +86,7 @@ class Insight::Generators::BalanceDiscrepancyGeneratorTest < ActiveSupport::Test
   test "ignores accounts with entries in a currency other than the account's own" do
     account = accounts(:connected)
     build_waypoints(account, [
-      { type: "opening_anchor", date: 10.days.ago.to_date, balance: 1000 },
+      { type: "reconciliation", date: 10.days.ago.to_date, balance: 1000 },
       { type: "reconciliation", date: 5.days.ago.to_date, balance: 1050 },
       { type: "reconciliation", date: 4.days.ago.to_date, balance: 1050 },
       { type: "reconciliation", date: 3.days.ago.to_date, balance: 1050 }
@@ -94,6 +97,35 @@ class Insight::Generators::BalanceDiscrepancyGeneratorTest < ActiveSupport::Test
     )
 
     assert_empty generate
+  end
+
+  test "leaves out an account that not every active member can see" do
+    account = accounts(:connected)
+    account.account_shares.destroy_all
+    build_waypoints(account, [
+      { type: "reconciliation", date: 10.days.ago.to_date, balance: 1000 },
+      { type: "reconciliation", date: 5.days.ago.to_date, balance: 1050 },
+      { type: "reconciliation", date: 4.days.ago.to_date, balance: 1050 },
+      { type: "reconciliation", date: 3.days.ago.to_date, balance: 1050 },
+      { type: "reconciliation", date: 2.days.ago.to_date, balance: 1050 }
+    ])
+
+    assert_empty generate, "the feed must not name a private account or its amounts"
+  end
+
+  test "an inactive member does not hide an account from the feed" do
+    account = accounts(:connected)
+    account.account_shares.destroy_all
+    users(:family_member).update_columns(active: false)
+    build_waypoints(account, [
+      { type: "reconciliation", date: 10.days.ago.to_date, balance: 1000 },
+      { type: "reconciliation", date: 5.days.ago.to_date, balance: 1050 },
+      { type: "reconciliation", date: 4.days.ago.to_date, balance: 1050 },
+      { type: "reconciliation", date: 3.days.ago.to_date, balance: 1050 },
+      { type: "reconciliation", date: 2.days.ago.to_date, balance: 1050 }
+    ])
+
+    assert_equal [ account.id ], generate.map { |i| i.metadata[:account_id] }
   end
 
   private

@@ -5,6 +5,7 @@ de:
       title: Neue Finanzanalyse
       body: Öffne Sure, um deine neueste KI-Analyse anzusehen.
     actions:
+      balance_discrepancy: Zum Konto
       budget: Budget ansehen
       cash_flow_warning: Wiederkehrende Buchungen prüfen
       idle_cash: Zum Konto
@@ -25,6 +26,9 @@ de:
       header_new: Neu
       view_all: Alle Insights ansehen
     figures:
+      days_open:
+        one: "%{count} Tag"
+        other: "%{count} Tage"
       days_overdue:
         one: "%{count} Tag überfällig"
         other: "%{count} Tage überfällig"
@@ -55,6 +59,7 @@ de:
       checking: Wird geprüft …
       queued: Wir erzeugen gerade neue Insights. Schau in einer Minute noch einmal vorbei.
     templates:
+      balance_discrepancy: Der Saldo von %{account} passt nicht zu den Buchungen, seit dem %{since} beträgt die Abweichung %{difference}. Meist fehlt eine Buchung oder sie wurde doppelt erfasst. Prüfe deinen Kontoauszug rund um dieses Datum auf Buchungen, die in Sure fehlen oder doppelt vorkommen.
       budget_at_risk:
         near: "%{categories} nähern sich diesen Monat ihrer Grenze. Bisher hast du %{budget_spent_pct} % deines Gesamtbudgets genutzt."
         over: "%{categories} liegen diesen Monat über dem Budget. Bisher hast du %{budget_spent_pct} % deines Gesamtbudgets genutzt."
@@ -74,6 +79,7 @@ de:
         below: Hochgerechnet gibst du diesen Monat %{projected_spend} für %{category} aus, rund %{deviation_pct} % weniger als dein jüngster Monatsschnitt von %{baseline_spend}.
       subscription_audit: "%{name} (%{amount}) ist seit dem erwarteten Termin am %{expected_on} nicht mehr aufgetaucht. Vielleicht ist das Abo gekündigt oder die Abbuchung hat sich verschoben."
     titles:
+      balance_discrepancy: Möglicherweise fehlende Buchung in %{account}
       budget_at_risk:
         one: Eine Kategorie in deinem Budget braucht Aufmerksamkeit
         other: "%{count} Kategorien in deinem Budget brauchen Aufmerksamkeit"
@@ -92,6 +98,7 @@ de:
         below: Deine Ausgaben für %{category} sinken
       subscription_audit: Läuft %{name} noch?
     types:
+      balance_discrepancy: Saldenprüfung
       budget_at_risk: Budget
       budget_on_track: Budget
       cash_flow_warning: Liquidität

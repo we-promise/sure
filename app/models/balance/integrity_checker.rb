@@ -105,9 +105,19 @@ class Balance::IntegrityChecker
         .where(entryable_type: "Valuation")
         .preload(:entryable) # avoids one query per waypoint for e.entryable.kind below
         .joins("INNER JOIN valuations ON valuations.id = entries.entryable_id")
-        .where(valuations: { kind: %w[opening_anchor reconciliation current_anchor] })
+        .where(valuations: { kind: waypoint_kinds })
         .order(:date, :id) # secondary tiebreaker for waypoints sharing a date
         .map { |e| Waypoint.new(date: e.date, value: e.amount, kind: e.entryable.kind) }
+    end
+
+    # A linked account's opening anchor is a placeholder, not a reported
+    # balance: Account.create_and_sync writes the balance at link time, dated
+    # before the imported history, and Balance::ReverseCalculator bridges it
+    # with an opening-boundary adjustment instead of trusting it. Walking from
+    # it would turn the whole imported history into a permanent "gap", so for
+    # linked accounts the walk starts at the first provider-reported balance.
+    def waypoint_kinds
+      account.linked? ? %w[reconciliation current_anchor] : %w[opening_anchor reconciliation current_anchor]
     end
 
     # from_date is exclusive (flows *after* the anchor date), to_date inclusive.
