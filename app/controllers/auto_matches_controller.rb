@@ -102,7 +102,7 @@ class AutoMatchesController < ApplicationController
     def cleanup_pending_auto_matches!
       family_transaction_ids = Current.family.transactions.select(:id)
       # Only clean up genuine auto-match suggestions -- both legs still
-      # kind == "standard" (mirrors Transfer#kinds_still_standard?). A
+      # kind == "standard". A
       # pending transfer imported with a kind already set
       # (Family::DataImporter, Demo::Generator) isn't an auto-match
       # suggestion; destroying it here would also reset both legs' kind to

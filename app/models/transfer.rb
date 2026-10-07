@@ -162,7 +162,7 @@ class Transfer < ApplicationRecord
 
   def confirm!
     with_lock do
-      apply_transfer_kind! if pending? && kinds_still_standard?
+      apply_transfer_kind! if pending? && !kinds_applied?
       update!(status: "confirmed")
     end
   end
@@ -191,15 +191,19 @@ class Transfer < ApplicationRecord
            .update_all(updated_at: Time.current)
     end
 
-    # Auto-match creates transfers without touching kind, so both legs are
-    # still "standard" until confirmed. Guarding on that (rather than on
-    # `pending?`) avoids re-deriving kind/category for transfers that arrived
-    # pending with a kind already set by another path -- e.g. Family::DataImporter
-    # or Demo::Generator, which can create a pending transfer whose kind was
-    # computed at import time. Confirming one of those must not silently
-    # overwrite its kind/category.
-    def kinds_still_standard?
-      inflow_transaction&.kind == "standard" && outflow_transaction&.kind == "standard"
+    # Auto-match creates transfers without touching kind, so the legs keep
+    # whatever kind they were imported with (usually "standard", but a
+    # provider can label a leg, e.g. a negative amount on a Loan arrives as
+    # loan_payment) until confirmed. Skipping legs that already carry the
+    # transfer's kinds avoids re-deriving kind/category for transfers that
+    # arrived pending with their kinds set by another path -- e.g.
+    # Family::DataImporter or Demo::Generator. Confirming one of those must
+    # not silently overwrite its category.
+    def kinds_applied?
+      return true unless inflow_transaction && outflow_transaction
+
+      inflow_transaction.kind == kind_for_leg(inflow_transaction) &&
+        outflow_transaction.kind == kind_for_leg(outflow_transaction)
     end
 
     # Only ever needed for transfers coming out of auto-match, since manual
