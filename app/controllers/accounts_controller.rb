@@ -100,7 +100,7 @@ class AccountsController < ApplicationController
     entries = EntrySearch.apply_uncategorized_filter(entries, @q[:uncategorized])
     # Category / merchant / tag / type filters use Transaction::Search scoped to this account
     if @q["categories"].present? || @q["merchants"].present? || @q["tags"].present? || @q["types"].present? || @q["ai_status"].present?
-      txn_entry_ids = Transaction::Search.new(Current.family, filters: @q.slice("categories", "merchants", "tags", "types", "ai_status").to_h.merge("active_accounts_only" => false), accessible_account_ids: [ @account.id ]).transactions_scope.pluck("entries.id")
+      txn_entry_ids = Transaction::Search.new(Current.family, filters: @q.slice("categories", "merchants", "tags", "types", "ai_status").to_h.merge("active_accounts_only" => false), accessible_account_ids: [ @account.id ]).transactions_scope.select("entries.id")
       entries = entries.where(id: txn_entry_ids)
     end
     entries = entries.reverse_chronological.includes(:entryable)
