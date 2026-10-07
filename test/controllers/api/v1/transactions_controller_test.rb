@@ -1206,6 +1206,17 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "should store a repeated tag id once in update" do
+    tag = @family.tags.first
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ tag.id, tag.id ] } },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal [ tag.id ], @transaction.reload.taggings.pluck(:tag_id)
+  end
+
   test "should clear tags when empty tag_ids explicitly provided in update" do
     # Set up transaction with existing tags
     @transaction.tags = [ Tag.first, Tag.second ]
