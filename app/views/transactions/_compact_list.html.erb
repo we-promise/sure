@@ -5,7 +5,7 @@
   data-bulk-select-plural-label-value="<%= t("transactions.list.transactions") %>"
   data-bulk-select-selected-label-value="<%= t("transactions.selection_bar.selected") %>"
   data-bulk-select-edit-label-value="<%= t("transactions.selection_bar.edit") %>"
-  class="flex flex-col bg-container rounded-xl shadow-border-xs px-2 py-3 lg:p-3 relative group">
+  class="@container/compact-table flex flex-col bg-container rounded-xl shadow-border-xs px-2 py-3 lg:p-3 relative group">
 
   <%= form_with url: imports_path, method: :post, class: "hidden", data: { drag_and_drop_import_target: "form", turbo: false } do |f| %>
     <%= f.hidden_field "import[type]", value: "TransactionImport" %>
@@ -28,7 +28,7 @@
             <%= render DS::CompactRow.new(header: true, show_date: true, show_notes: Current.user.transactions_show_notes?) do |row| %>
               <% row.with_checkbox do %>
                 <%= check_box_tag "selection_entry",
-                    class: "checkbox checkbox--light hidden lg:block",
+                    class: "checkbox checkbox--light hidden @5xl/compact-table:block",
                     data: {
                       action: "bulk-select#togglePageSelection",
                       checkbox_toggle_target: "selectionEntry"
@@ -38,13 +38,14 @@
               <% row.with_primary { t("transactions.list.transaction") } %>
               <% row.with_notes { t("transactions.show.notes") } if Current.user.transactions_show_notes? %>
               <% row.with_category { t("transactions.form.category_label") } %>
+              <% row.with_labels { t("transactions.show.labels") } %>
               <% row.with_amount { t("transactions.show.amount") } %>
             <% end %>
           <% else %>
             <%= render DS::CompactRow.new(header: true, show_notes: Current.user.transactions_show_notes?) do |row| %>
               <% row.with_checkbox do %>
                 <%= check_box_tag "selection_entry",
-                    class: "checkbox checkbox--light hidden lg:block",
+                    class: "checkbox checkbox--light hidden @5xl/compact-table:block",
                     data: {
                       action: "bulk-select#togglePageSelection",
                       checkbox_toggle_target: "selectionEntry"
@@ -53,6 +54,7 @@
               <% row.with_primary { t("transactions.list.transaction") } %>
               <% row.with_notes { t("transactions.show.notes") } if Current.user.transactions_show_notes? %>
               <% row.with_category { t("transactions.form.category_label") } %>
+              <% row.with_labels { t("transactions.show.labels") } %>
               <% row.with_amount { t("transactions.show.amount") } %>
             <% end %>
           <% end %>
@@ -85,7 +87,7 @@
         </div>
       <% else %>
         <div class="space-y-3">
-          <%= entries_by_date(@transactions.map(&:entry), totals: true) do |entries| %>
+          <%= entries_by_date(@transactions.map(&:entry), totals: true, compact: true) do |entries| %>
             <% if Current.user.show_split_grouped? %>
               <% group_split_entries(entries, @split_parents).each do |item| %>
                 <% if item.is_a?(EntriesHelper::SplitGroup) %>

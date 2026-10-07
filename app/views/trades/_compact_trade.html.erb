@@ -10,7 +10,7 @@
     <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, indent: in_split_group, muted: entry.excluded) do |row| %>
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
-            class: "checkbox checkbox--light hidden lg:block",
+            class: "checkbox checkbox--light hidden @5xl/compact-table:block",
             data: {
               id: entry.id,
               entry_type: entry.entryable_type,
@@ -33,9 +33,9 @@
                         class: "hover:underline truncate" %>
           </div>
           <div class="text-secondary text-xs font-normal truncate">
-            <span class="lg:hidden"><%= format_date(entry.date) %><%= " •" if view_ctx != "account" %></span>
+            <span class="@5xl/compact-table:hidden"><%= format_date(entry.date) %><%= " •" if view_ctx != "account" %></span>
             <% if view_ctx != "account" %>
-              <span class="hidden lg:inline">
+              <span class="hidden @5xl/compact-table:inline">
                 <%= link_to entry.account.name, account_path(entry.account, tab: "transactions"), data: { turbo_frame: "_top" }, class: "hover:underline" %>
               </span>
             <% end %>

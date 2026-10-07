@@ -7,7 +7,7 @@ class DS::CompactRowTest < ViewComponent::TestCase
         row.with_primary { "Coffee" }
       end
 
-      assert_selector "[role='row'] > [role='#{header ? 'columnheader' : 'cell'}']", count: 6
+      assert_selector "[role='row'] > [role='#{header ? 'columnheader' : 'cell'}']", count: 7
     end
   end
 

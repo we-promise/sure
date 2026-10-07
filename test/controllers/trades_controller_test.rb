@@ -598,7 +598,7 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     }, as: :turbo_stream
 
     assert_response :success
-    assert_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+    assert_match(/w-30 shrink-0 justify-end/, turbo_stream_row_html(@entry),
       "unfiltered account context should render the running balance")
   end
 
@@ -619,7 +619,7 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     }, as: :turbo_stream
 
     assert_response :success
-    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry))
+    assert_no_match(/w-30 shrink-0 justify-end/, turbo_stream_row_html(@entry))
 
     patch trade_url(@entry), params: {
       view_ctx: "global",
@@ -635,7 +635,7 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     }, headers: { "Referer" => account_url(@entry.account) }, as: :turbo_stream
 
     assert_response :success
-    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+    assert_no_match(/w-30 shrink-0 justify-end/, turbo_stream_row_html(@entry),
       "explicit global context must win over an account referer")
   end
 

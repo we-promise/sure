@@ -14,7 +14,7 @@
         <div class="space-y-0.5">
           <div class="flex items-center gap-1 min-w-0">
             <% if show_date %>
-              <span class="lg:hidden shrink-0 text-secondary text-xs"><%= format_date(entry.date) %> • </span>
+              <span class="@5xl/compact-table:hidden shrink-0 text-secondary text-xs"><%= format_date(entry.date) %> • </span>
             <% end %>
             <div class="truncate flex-shrink">
               <%= link_to entry.name,
@@ -35,10 +35,10 @@
 
           <div class="text-secondary text-xs font-normal truncate">
             <% if transaction.merchant&.present? %>
-              <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
+              <span class="hidden @5xl/compact-table:inline truncate"><%= transaction.merchant.name %> • </span>
             <% end %>
             <% if view_ctx != "account" %>
-              <span class="text-secondary hidden lg:inline">
+              <span class="text-secondary hidden @5xl/compact-table:inline">
                 <%= link_to entry.account.name,
                     account_path(entry.account, tab: "transactions"),
                     data: { turbo_frame: "_top" },

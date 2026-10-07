@@ -18,7 +18,7 @@
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
-            class: "checkbox checkbox--light hidden lg:block",
+            class: "checkbox checkbox--light hidden @5xl/compact-table:block",
             data: {
               id: entry.id,
               entry_type: entry.entryable_type,
@@ -60,12 +60,8 @@
             <div class="flex items-center gap-1 shrink-0">
               <%= render "transactions/badges", entry: entry, transaction: transaction, in_split_group: in_split_group, drawer_params: drawer_params %>
             </div>
-
-            <div class="hidden md:flex min-w-0 flex-1 items-center gap-1" data-tag-fit-bounds="1">
-              <%= render "tags/menu", entry: entry, transaction: transaction, variant: :desktop %>
-            </div>
           </div>
-          <div class="md:hidden flex min-w-0 has-[[data-tag-empty]]:hidden">
+          <div class="@5xl/compact-table:hidden flex min-w-0 has-[[data-tag-empty]]:hidden">
             <%= render "tags/menu", entry: entry, transaction: transaction, variant: :mobile %>
           </div>
           <%= render "transactions/subtitle", entry: entry, transaction: transaction, view_ctx: view_ctx, compact: true %>
@@ -84,6 +80,10 @@
         <% else %>
           <%= render "transactions/transaction_category", transaction: transaction, variant: "desktop", in_split_group: in_split_group %>
         <% end %>
+      <% end %>
+
+      <% row.with_labels do %>
+        <%= render "tags/menu", entry: entry, transaction: transaction, variant: :desktop %>
       <% end %>
 
       <% row.with_amount do %>

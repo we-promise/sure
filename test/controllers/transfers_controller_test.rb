@@ -697,7 +697,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
-      assert_no_match(/justify-end px-2/, transfer_leg_stream(entry).to_html)
+      assert_no_match(/w-30 shrink-0 justify-end/, transfer_leg_stream(entry).to_html)
     end
   end
 

@@ -416,7 +416,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     entry_row_html = turbo_stream_row_html(@entry)
-    assert_match(/justify-end px-2/, entry_row_html, "unfiltered account context should render the running balance")
+    assert_match(/w-30 shrink-0 justify-end/, entry_row_html, "unfiltered account context should render the running balance")
   end
 
   test "turbo_stream update renders calculator-backed running balance" do
@@ -450,7 +450,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }, as: :turbo_stream
 
     assert_response :success
-    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry))
+    assert_no_match(/w-30 shrink-0 justify-end/, turbo_stream_row_html(@entry))
   end
 
   test "turbo_stream update hides balance for explicit global context" do
@@ -466,7 +466,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }, as: :turbo_stream
 
     assert_response :success
-    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry))
+    assert_no_match(/w-30 shrink-0 justify-end/, turbo_stream_row_html(@entry))
   end
 
   test "explicit view_ctx params win over referer" do
@@ -482,7 +482,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }, headers: { "Referer" => account_url(@entry.account) }, as: :turbo_stream
 
     assert_response :success
-    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+    assert_no_match(/w-30 shrink-0 justify-end/, turbo_stream_row_html(@entry),
       "explicit global context must win over an account referer")
   end
 
@@ -497,7 +497,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }, headers: { "Referer" => account_url(@entry.account) }, as: :turbo_stream
 
     assert_response :success
-    assert_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+    assert_match(/w-30 shrink-0 justify-end/, turbo_stream_row_html(@entry),
       "unfiltered account referer fallback should render the running balance")
 
     patch transaction_url(@entry), params: {
@@ -508,7 +508,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }, headers: { "Referer" => "#{account_url(@entry.account)}?search=foo" }, as: :turbo_stream
 
     assert_response :success
-    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+    assert_no_match(/w-30 shrink-0 justify-end/, turbo_stream_row_html(@entry),
       "filtered account referer fallback should hide the running balance")
   end
 

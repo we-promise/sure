@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
 class CompactTransactionsMobileTest < ApplicationSystemTestCase
-  DEFAULT_VIEWPORT_WIDTH = 1400
+  DEFAULT_VIEWPORT_WIDTH = 2400
   DEFAULT_VIEWPORT_HEIGHT = 1400
 
   setup do
@@ -65,7 +65,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
 
   test "flat header labels align with row columns on desktop transactions page" do
     @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
-    page.current_window.resize_to(1400, 900)
+    page.current_window.resize_to(2400, 900)
 
     visit transactions_url
 
@@ -77,7 +77,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
 
   test "flat header labels align with row columns on desktop account activity" do
     @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
-    page.current_window.resize_to(1400, 900)
+    page.current_window.resize_to(2400, 900)
 
     visit account_url(accounts(:depository), tab: "activity")
 
@@ -130,15 +130,101 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     end
   end
 
-  test "desktop tags stay beside the name without adding a row line" do
+  test "desktop tags stay in the labels column without adding a row line" do
     @entry.entryable.update!(tags: [ tags(:one), tags(:two) ])
     visit transactions_url
 
     within "turbo-frame##{dom_id(@entry)}" do
-      assert_selector "##{dom_id(@entry.entryable, 'tag_summary_desktop')}"
+      find("##{dom_id(@entry.entryable, 'tag_summary_desktop')}").hover
+      assert_selector '[role="tooltip"]', text: tags(:one).name
+      assert_selector '[role="tooltip"]', text: tags(:two).name
     end
     geometry = compact_row_geometry
-    assert_operator geometry["height"], :<=, 60, "tags must share the transaction name line"
+    assert_operator geometry["height"], :<=, 60, "labels must not add a row line"
+  end
+
+  test "desktop columns align and share remaining space with and without notes" do
+    page.current_window.resize_to(2400, 1200)
+    @entry.update!(amount: 12_345_678.90, notes: "Notes stay in their own column")
+    @entry.entryable.update!(tags: [ tags(:one), tags(:two) ])
+
+    [ true, false ].each do |show_notes|
+      @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false, "transactions_show_notes" => show_notes))
+
+      [ transactions_url, account_url(accounts(:depository), tab: "activity") ].each do |url|
+        visit url
+        layout = page.evaluate_script(<<~JS, dom_id(@entry))
+          ((id) => {
+            const row = document.getElementById(id).querySelector('[role="row"]');
+            const headers = [...row.closest('[role="table"]').querySelectorAll('[role="columnheader"]')];
+            const cells = [...row.children];
+            const columns = Object.fromEntries(headers.map((header, index) => {
+              const rect = cells[index].getBoundingClientRect();
+              return [header.textContent.trim().toLowerCase(), {
+                width: rect.width, left: rect.left, headerLeft: header.getBoundingClientRect().left
+              }];
+            }));
+            const amount = row.querySelector('p.privacy-sensitive');
+            const labels = row.querySelector('[id^="tag_summary_desktop"]');
+            return {
+              columns,
+              order: headers.map(header => header.textContent.trim().toLowerCase()),
+              labelsCell: cells.indexOf(labels.closest('[role="cell"]')),
+              amountFits: amount.scrollWidth <= amount.clientWidth,
+              rowHeight: row.getBoundingClientRect().height
+            };
+          })(arguments[0])
+        JS
+
+        columns = layout["columns"]
+        columns.each_value { |column| assert_in_delta column["headerLeft"], column["left"], 1 }
+        assert_equal layout["order"].index("category") + 1, layout["labelsCell"]
+        assert_equal "labels", layout["order"][layout["labelsCell"]]
+        assert_in_delta columns["amount"]["width"], columns["labels"]["width"], 1
+        assert_in_delta 2.5, columns["transaction"]["width"].fdiv(columns["category"]["width"]), 0.05
+        if show_notes
+          assert_in_delta columns["transaction"]["width"], columns["notes"]["width"], 1
+        else
+          assert_not columns.key?("notes")
+        end
+        assert layout["amountFits"], "large amounts should fit without truncation"
+        assert_operator layout["rowHeight"], :<=, 60, "labels must remain on one line"
+      end
+    end
+  end
+
+  test "transfer account information remains available on name hover" do
+    page.current_window.resize_to(2400, 1200)
+    @entry.entryable.update!(kind: "funds_movement")
+    visit transactions_url
+
+    within "turbo-frame##{dom_id(@entry)}" do
+      find('[data-clickable-row-target="link"]').hover
+      assert_selector '[role="tooltip"]', text: accounts(:depository).name
+    end
+  end
+
+  test "narrow desktop tables use mobile rows and retain selection and category information" do
+    page.current_window.resize_to(1400, 900)
+    @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false, "transactions_show_notes" => true))
+    @entry.update!(notes: "Desktop notes")
+    @entry.entryable.update!(category: categories(:food_and_drink), tags: [ tags(:one) ])
+
+    [ transactions_url, account_url(accounts(:depository), tab: "activity") ].each do |url|
+      visit url
+      within "turbo-frame##{dom_id(@entry)}" do
+        assert_no_selector "div.w-28"
+        assert_selector "#category_name_mobile_#{@entry.entryable_id}", text: categories(:food_and_drink).name
+        assert_selector "##{dom_id(@entry.entryable, 'tag_summary_mobile')}"
+        assert_no_selector "##{dom_id(@entry.entryable, 'tag_summary_desktop')}"
+        assert_no_selector "input[type='checkbox']"
+        assert_no_text @entry.notes
+      end
+      find("#toggle-checkboxes-button").click
+      within "turbo-frame##{dom_id(@entry)}" do
+        assert_selector "input[type='checkbox']"
+      end
+    end
   end
 
   test "compact row clicks open the drawer while selection stays independent" do
@@ -165,7 +251,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     positions = page.evaluate_script(<<~JS, dom_id(@entry))
       ((id) => {
         const row = document.getElementById(id);
-        const date = row.querySelector('span[class~="lg:hidden"].shrink-0');
+        const date = row.querySelector('span[class~="@5xl/compact-table:hidden"].shrink-0');
         const category = date.parentElement.querySelector("div.flex");
         return [date.getBoundingClientRect().top, category.getBoundingClientRect().top];
       })(arguments[0])

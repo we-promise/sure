@@ -5,10 +5,10 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(valuation) do %>
-    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance) do |row| %>
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: Current.user.transactions_show_notes?) do |row| %>
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
-            class: "checkbox checkbox--light hidden lg:block",
+            class: "checkbox checkbox--light hidden @5xl/compact-table:block",
             data: { id: entry.id, entry_type: entry.entryable_type, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection", checkbox_toggle_target: "selectionEntry" } %>
       <% end %>
 
@@ -19,7 +19,7 @@
       <% row.with_primary do %>
         <div class="min-w-0 flex-1 truncate">
           <% if show_date %>
-            <span class="lg:hidden shrink-0 text-secondary text-xs"><%= format_date(entry.date) %> • </span>
+            <span class="@5xl/compact-table:hidden shrink-0 text-secondary text-xs"><%= format_date(entry.date) %> • </span>
           <% end %>
           <%= link_to(
                 valuation.opening_anchor? ? t("valuations.show.opening_balance") : entry.name,

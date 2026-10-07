@@ -54,7 +54,7 @@ module EntriesHelper
     end
   end
 
-  def entries_by_date(entries, totals: false)
+  def entries_by_date(entries, totals: false, compact: false)
     deduped_entries = dedupe_transfer_entries(entries)
 
     deduped_entries.group_by(&:date).sort.reverse_each.map do |date, grouped_entries|
@@ -64,7 +64,7 @@ module EntriesHelper
 
       next if content.blank?
 
-      render partial: "entries/entry_group", locals: { date:, entries: grouped_entries, content:, totals: }
+      render partial: "entries/entry_group", locals: { date:, entries: grouped_entries, content:, totals:, compact: }
     end.compact.join.html_safe
   end
 

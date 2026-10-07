@@ -1,5 +1,5 @@
 <%= turbo_frame_tag dom_id(account, "entries") do %>
-  <div class="bg-container px-3 py-4 lg:p-4 shadow-border-xs rounded-xl" data-controller="checkbox-toggle">
+  <div class="<%= "@container/compact-table" if compact? %> bg-container px-3 py-4 lg:p-4 shadow-border-xs rounded-xl" data-controller="checkbox-toggle">
     <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
       <%= tag.h2 t("accounts.show.activity.title"), class: "font-medium text-lg" %>
 
@@ -142,7 +142,7 @@
       <%= button_tag type: "button",
             id: "toggle-checkboxes-button",
             aria: { label: t("UI.account.activity_feed.toggle_selection_checkboxes") },
-            class: "lg:hidden font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
+            class: "#{compact? ? "@5xl/compact-table:hidden" : "lg:hidden"} font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
             data: {
               action: "click->checkbox-toggle#toggle",
               checkbox_toggle_target: "toggleButton"
@@ -172,7 +172,7 @@
               <%= render DS::CompactRow.new(header: true, show_date: true, show_balance: !filtered?, show_notes: Current.user.transactions_show_notes?) do |row| %>
                 <% row.with_checkbox do %>
                   <%= check_box_tag "selection_entry",
-                                    class: "checkbox checkbox--light hidden lg:block",
+                                    class: "checkbox checkbox--light hidden @5xl/compact-table:block",
                                     data: {
                                       action: "bulk-select#togglePageSelection",
                                       checkbox_toggle_target: "selectionEntry"
@@ -182,6 +182,7 @@
                 <% row.with_primary { t("transactions.list.transaction") } %>
                 <% row.with_notes { t("transactions.show.notes") } if Current.user.transactions_show_notes? %>
                 <% row.with_category { t("transactions.form.category_label") } %>
+                <% row.with_labels { t("transactions.show.labels") } %>
                 <% row.with_amount { t("transactions.show.amount") } %>
                 <% row.with_balance { t("accounts.show.activity.balance") } unless filtered? %>
               <% end %>
@@ -191,7 +192,7 @@
               <%= render DS::CompactRow.new(header: true, show_notes: Current.user.transactions_show_notes?) do |row| %>
                 <% row.with_checkbox do %>
                   <%= check_box_tag "selection_entry",
-                                    class: "checkbox checkbox--light hidden lg:block",
+                                    class: "checkbox checkbox--light hidden @5xl/compact-table:block",
                                     data: {
                                       action: "bulk-select#togglePageSelection",
                                       checkbox_toggle_target: "selectionEntry"
@@ -200,6 +201,7 @@
                 <% row.with_primary { t("transactions.list.transaction") } %>
                 <% row.with_notes { t("transactions.show.notes") } if Current.user.transactions_show_notes? %>
                 <% row.with_category { t("transactions.form.category_label") } %>
+                <% row.with_labels { t("transactions.show.labels") } %>
                 <% row.with_amount { t("transactions.show.amount") } %>
               <% end %>
             </div>

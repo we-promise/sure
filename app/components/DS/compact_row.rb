@@ -10,6 +10,7 @@ class DS::CompactRow < DesignSystemComponent
   #     <% row.with_primary { ... } %>
   #     <% row.with_notes { ... } %>
   #     <% row.with_category { ... } %>
+  #     <% row.with_labels { ... } %>
   #     <% row.with_amount { ... } %>
   #     <% row.with_balance { format_money(running_balance) } %>
   #   <% end %>
@@ -18,6 +19,8 @@ class DS::CompactRow < DesignSystemComponent
   # secondary-colored label row (used for the list's column headers), so
   # header labels can never drift out of alignment with the data rows below
   # them — both are built from the exact same column widths.
+  # Place the table inside an @container/compact-table wrapper. Below 64rem
+  # of available table width, rows use their mobile content and amount only.
   #
   #   <%= render DS::CompactRow.new(header: true, show_date: true) do |row| %>
   #     <% row.with_date { t("transactions.show.date_label") } %>
@@ -29,6 +32,7 @@ class DS::CompactRow < DesignSystemComponent
   renders_one :primary
   renders_one :notes
   renders_one :category
+  renders_one :labels
   renders_one :amount
   renders_one :balance
 
@@ -45,7 +49,7 @@ class DS::CompactRow < DesignSystemComponent
 
   def row_classes
     class_names(
-      "flex items-center gap-2 lg:gap-3",
+      "flex items-center gap-2 @5xl/compact-table:gap-3",
       # Header labels must start at the same x as row content: the header
       # sits in an outer px-2 wrapper, so the header shell needs its own
       # px-2 to reach the 16px inset of data rows (outer p-1 + row px-3).
@@ -60,7 +64,7 @@ class DS::CompactRow < DesignSystemComponent
 
   def checkbox_wrapper_classes
     class_names(
-      "w-8 shrink-0 justify-center hidden lg:flex",
+      "w-8 shrink-0 justify-center hidden @5xl/compact-table:flex",
       @header ? nil : "has-[input:not(.hidden)]:flex"
     )
   end
@@ -72,15 +76,15 @@ class DS::CompactRow < DesignSystemComponent
       </div>
 
       <% if @show_date %>
-        <div role="<%= cell_role %>" class="hidden lg:flex w-28 shrink-0 text-secondary text-sm truncate pr-2"><%= date %></div>
+        <div role="<%= cell_role %>" class="hidden @5xl/compact-table:flex w-28 shrink-0 text-secondary text-sm truncate pr-2"><%= date %></div>
       <% end %>
 
-      <div role="<%= cell_role %>" class="flex items-center gap-2 lg:gap-3 flex-[2] min-w-0 pr-2">
+      <div role="<%= cell_role %>" class="flex items-center gap-2 @5xl/compact-table:gap-3 flex-[5] min-w-0">
         <%= primary %>
       </div>
 
       <% if @show_notes %>
-        <div role="<%= cell_role %>" class="hidden lg:flex min-w-0 flex-[2] px-2">
+        <div role="<%= cell_role %>" class="hidden @5xl/compact-table:flex min-w-0 flex-[5]">
           <% if notes? %>
             <%= notes %>
           <% else %>
@@ -89,7 +93,7 @@ class DS::CompactRow < DesignSystemComponent
         </div>
       <% end %>
 
-      <div role="<%= cell_role %>" class="hidden md:flex min-w-0 items-center gap-1 flex-[1]">
+      <div role="<%= cell_role %>" class="hidden @5xl/compact-table:flex min-w-0 items-center gap-1 flex-[2]">
         <% if category? %>
           <%= category %>
         <% else %>
@@ -97,12 +101,16 @@ class DS::CompactRow < DesignSystemComponent
         <% end %>
       </div>
 
-      <div role="<%= cell_role %>" class="w-30 shrink-0 flex items-center justify-end gap-2">
+      <div role="<%= cell_role %>" class="hidden @5xl/compact-table:flex w-30 shrink-0 min-w-0 items-center whitespace-nowrap" data-tag-fit-bounds="1">
+        <%= labels %>
+      </div>
+
+      <div role="<%= cell_role %>" class="w-30 shrink-0 flex items-center justify-end gap-2 tabular-nums">
         <%= amount %>
       </div>
 
       <% if @show_balance %>
-        <div role="<%= cell_role %>" class="hidden lg:flex w-30 shrink-0 justify-end px-2">
+        <div role="<%= cell_role %>" class="hidden @5xl/compact-table:flex w-30 shrink-0 justify-end tabular-nums">
           <%= balance %>
         </div>
       <% end %>
@@ -113,7 +121,7 @@ class DS::CompactRow < DesignSystemComponent
     def row_type_classes
       class_names(
         "group text-sm font-medium py-2 px-3",
-        @indent ? "pl-6 lg:pl-8" : nil,
+        @indent ? "pl-6 @5xl/compact-table:pl-8" : nil,
         @muted ? "opacity-50 text-secondary" : "text-primary"
       )
     end
