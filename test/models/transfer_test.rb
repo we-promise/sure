@@ -161,7 +161,7 @@ class TransferTest < ActiveSupport::TestCase
     term_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
 
     assert_equal "investment_contribution",
-      Transfer.kind_for_account(term_deposit, source: accounts(:depository), date: Date.current)
+      Transfer.kind_for_account(term_deposit, from_account: accounts(:depository), date: Date.current)
   end
 
   test "kind_for_account counts a transfer into a long-term asset as saving" do
@@ -171,23 +171,23 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "long_term", hsa.liquidity
 
     assert_equal "investment_contribution",
-      Transfer.kind_for_account(hsa, source: accounts(:depository), date: Date.current)
+      Transfer.kind_for_account(hsa, from_account: accounts(:depository), date: Date.current)
   end
 
   test "kind_for_account treats a locked account past its release date as available" do
     term_deposit = create_term_deposit(available_on: 1.month.ago.to_date)
 
     assert_equal "funds_movement",
-      Transfer.kind_for_account(term_deposit, source: accounts(:depository), date: Date.current)
+      Transfer.kind_for_account(term_deposit, from_account: accounts(:depository), date: Date.current)
     assert_equal "investment_contribution",
-      Transfer.kind_for_account(term_deposit, source: accounts(:depository), date: 2.months.ago.to_date)
+      Transfer.kind_for_account(term_deposit, from_account: accounts(:depository), date: 2.months.ago.to_date)
   end
 
   test "kind_for_account keeps a renewing term deposit locked after its first date" do
     term_deposit = create_term_deposit(available_on: 1.month.ago.to_date, auto_renew: true, renewal_term_months: 12)
 
     assert_equal "investment_contribution",
-      Transfer.kind_for_account(term_deposit, source: accounts(:depository), date: Date.current)
+      Transfer.kind_for_account(term_deposit, from_account: accounts(:depository), date: Date.current)
   end
 
   test "kind_for_account does not count moves between savings accounts as saving" do
@@ -197,20 +197,20 @@ class TransferTest < ActiveSupport::TestCase
     )
 
     assert_equal "funds_movement",
-      Transfer.kind_for_account(term_deposit, source: accounts(:investment), date: Date.current)
+      Transfer.kind_for_account(term_deposit, from_account: accounts(:investment), date: Date.current)
     assert_equal "funds_movement",
-      Transfer.kind_for_account(term_deposit, source: building_savings, date: Date.current)
+      Transfer.kind_for_account(term_deposit, from_account: building_savings, date: Date.current)
   end
 
   test "kind_for_account keeps money moved from a locked account into investments neutral" do
     term_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
 
     assert_equal "funds_movement",
-      Transfer.kind_for_account(accounts(:investment), source: term_deposit, date: Date.current)
+      Transfer.kind_for_account(accounts(:investment), from_account: term_deposit, date: Date.current)
     assert_equal "funds_movement",
-      Transfer.kind_for_account(accounts(:crypto), source: accounts(:investment), date: Date.current)
+      Transfer.kind_for_account(accounts(:crypto), from_account: accounts(:investment), date: Date.current)
     assert_equal "investment_contribution",
-      Transfer.kind_for_account(accounts(:investment), source: accounts(:depository), date: Date.current)
+      Transfer.kind_for_account(accounts(:investment), from_account: accounts(:depository), date: Date.current)
     assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:investment))
   end
 
@@ -218,9 +218,9 @@ class TransferTest < ActiveSupport::TestCase
     term_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
 
     assert_equal "funds_movement",
-      Transfer.kind_for_account(term_deposit, source: accounts(:loan), date: Date.current)
+      Transfer.kind_for_account(term_deposit, from_account: accounts(:loan), date: Date.current)
     assert_equal "funds_movement",
-      Transfer.kind_for_account(term_deposit, source: accounts(:credit_card), date: Date.current)
+      Transfer.kind_for_account(term_deposit, from_account: accounts(:credit_card), date: Date.current)
   end
 
   test "kind_for_account keeps instant-access savings and money coming back neutral" do
@@ -229,16 +229,16 @@ class TransferTest < ActiveSupport::TestCase
     )
     term_deposit = create_term_deposit(available_on: 1.year.from_now.to_date)
 
-    assert_equal "funds_movement", Transfer.kind_for_account(savings, source: accounts(:depository), date: Date.current)
-    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository), source: term_deposit, date: Date.current)
+    assert_equal "funds_movement", Transfer.kind_for_account(savings, from_account: accounts(:depository), date: Date.current)
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository), from_account: term_deposit, date: Date.current)
   end
 
   test "kind_for_account keeps transfers into property and other assets neutral" do
     assert_equal "long_term", accounts(:property).liquidity
     assert_equal "long_term", accounts(:other_asset).liquidity
 
-    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:property), source: accounts(:depository), date: Date.current)
-    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:other_asset), source: accounts(:depository), date: Date.current)
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:property), from_account: accounts(:depository), date: Date.current)
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:other_asset), from_account: accounts(:depository), date: Date.current)
   end
 
   test "kind_for_account follows a manual availability choice" do
@@ -248,7 +248,82 @@ class TransferTest < ActiveSupport::TestCase
     )
 
     assert_equal "investment_contribution",
-      Transfer.kind_for_account(savings, source: accounts(:depository), date: Date.current)
+      Transfer.kind_for_account(savings, from_account: accounts(:depository), date: Date.current)
+  end
+
+  test "kind_for_account returns funds_movement for investment-to-investment transfers" do
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:crypto), from_account: accounts(:investment))
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:investment), from_account: accounts(:crypto))
+  end
+
+  test "kind_for_account still returns investment_contribution when the source isn't an investment account" do
+    assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:investment), from_account: accounts(:depository))
+  end
+
+  test "categorizable? is true for loan payment transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "loan_payment")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:loan), amount: -500, kind: "loan_payment")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    assert transfer.categorizable?
+  end
+
+  test "categorizable? is true for investment contribution transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "investment_contribution")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    assert transfer.categorizable?
+  end
+
+  test "categorizable? is false for regular funds movement transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:connected), amount: -500, kind: "funds_movement")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    refute transfer.categorizable?
+  end
+
+  test "categorizable? is false for credit card payment transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "cc_payment")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500, kind: "cc_payment")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    refute transfer.categorizable?
+  end
+
+  test "categorizable? bases on destination account even if the outflow's kind is stale" do
+    # Account::ProviderImportAdapter can reassign an already-matched leg's
+    # kind on a later sync without touching its Transfer. Simulate a stale
+    # "funds_movement" kind left on the outflow of an investment_contribution
+    # transfer -- categorizable? must still key off to_account, not the kind.
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "investment_contribution")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    outflow_entry.transaction.update_column(:kind, "funds_movement")
+
+    assert transfer.reload.categorizable?
+  end
+
+  test "categorizable? is false without a destination account" do
+    transfer = transfers(:one)
+    transfer.stubs(:to_account).returns(nil)
+
+    assert_not transfer.categorizable?
+  end
+
+  test "categorizable? matches how Transfer::Creator classifies investment-to-investment transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:crypto), amount: -500, kind: "funds_movement")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    refute transfer.categorizable?
   end
 
   test "has_source_fee? returns true when source fee present" do

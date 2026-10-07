@@ -97,7 +97,7 @@ module Family::AutoTransferMatchable
         destination_account = inflow_transaction.entry.account
         transfer_kind = Transfer.kind_for_account(
           destination_account,
-          source: outflow_transaction.entry.account,
+          from_account: outflow_transaction.entry.account,
           date: outflow_transaction.entry.date
         )
 

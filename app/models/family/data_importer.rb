@@ -1113,7 +1113,7 @@ class Family::DataImporter
     def imported_transfer_outflow_kind(transfer)
       Transfer.kind_for_account(
         transfer.inflow_transaction.entry.account,
-        source: transfer.outflow_transaction.entry.account,
+        from_account: transfer.outflow_transaction.entry.account,
         date: transfer.outflow_transaction.entry.date
       )
     end

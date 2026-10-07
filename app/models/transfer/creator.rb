@@ -244,21 +244,7 @@ class Transfer::Creator
     end
 
     def outflow_transaction_kind
-      if destination_account.loan?
-        "loan_payment"
-      elsif destination_account.liability?
-        "cc_payment"
-      elsif destination_is_investment? && !Transfer.savings_account?(source_account, date)
-        "investment_contribution"
-      elsif Transfer.saving_into?(destination_account, source: source_account, date: date)
-        "investment_contribution"
-      else
-        "funds_movement"
-      end
-    end
-
-    def destination_is_investment?
-      destination_account.investment? || destination_account.crypto?
+      Transfer.kind_for_account(destination_account, from_account: source_account, date: date)
     end
 
     def name_prefix
