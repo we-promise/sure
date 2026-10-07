@@ -10,15 +10,15 @@
     <div class="bg-container-inset rounded-xl p-1">
       <div class="rounded-lg bg-container text-sm font-medium">
         <% buckets.each_with_index do |bucket, idx| %>
-          <details class="group" data-liquidity-bucket="<%= bucket.key %>">
-            <summary class="cursor-pointer p-4 rounded-lg flex items-center gap-3 focus-ring">
-              <%= icon("chevron-right", class: "group-open:rotate-90 shrink-0") %>
+          <%= render DS::Disclosure.new(summary_class: "cursor-pointer p-4 rounded-lg flex items-center gap-3 focus-ring", body_class: nil, data: { liquidity_bucket: bucket.key }) do |disclosure| %>
+            <% disclosure.with_summary_content do %>
+              <%= icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90 shrink-0" %>
               <p class="w-36 shrink-0"><%= liquidity_bucket_label(bucket.key) %></p>
               <div class="flex-1 h-1.5 bg-container-inset rounded-full overflow-hidden" aria-hidden="true">
                 <div class="h-full rounded-full <%= bucket.key == "long_term" ? liquidity_level_bar_class("long_term") : liquidity_level_bar_class("locked") %>" style="inline-size: <%= liquidity_bar_width(bucket.total.amount, max) %>%;"></div>
               </div>
               <p class="w-24 shrink-0 text-right privacy-sensitive"><%= format_money(bucket.total, precision: 0) %></p>
-            </summary>
+            <% end %>
 
             <ul>
               <% bucket.releases.each do |release| %>
@@ -38,7 +38,7 @@
                 </li>
               <% end %>
             </ul>
-          </details>
+          <% end %>
 
           <% if idx < buckets.size - 1 %>
             <%= render "shared/ruler", classes: "mx-4" %>
