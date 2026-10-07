@@ -152,7 +152,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
   end
 
   def preflight
-    preflight_result = Import::Preflight.new(family: current_resource_owner.family, params: preflight_params).call
+    preflight_result = Import::Preflight.new(family: current_resource_owner.family, params: preflight_params, user: current_resource_owner).call
     render json: preflight_result.payload, status: preflight_result.status
   rescue ActiveRecord::RecordNotFound
     render json: {

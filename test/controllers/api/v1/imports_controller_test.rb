@@ -712,6 +712,39 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_empty data["errors"]
   end
 
+  test "should not preflight against an account the user cannot write" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Member Read-Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    preflight = ->(account) do
+      post preflight_api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: account.id
+           },
+           headers: api_headers(member_key)
+    end
+
+    [ accounts(:credit_card), accounts(:investment) ].each do |account|
+      preflight.call(account)
+      assert_response :not_found
+    end
+
+    preflight.call(accounts(:depository))
+    assert_response :success
+  end
+
   test "should report missing required CSV headers during preflight" do
     csv_content = "name\nMissing Amount"
 
