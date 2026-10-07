@@ -51,6 +51,27 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_equal AiHealth::Probe.timeout, @probe.send(:timeout)
   end
 
+  test "timeout falls back to the self-hosting setting when AI_HEALTH_PROBE_TIMEOUT is unset" do
+    Setting.stubs(:ai_health_probe_timeout).returns(30)
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: nil) do
+      assert_equal 30, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "0") do
+      assert_equal 30, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "42") do
+      assert_equal 42, AiHealth::Probe.timeout
+    end
+
+    Setting.stubs(:ai_health_probe_timeout).returns(0)
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: nil) do
+      assert_equal AiHealth::Probe::DEFAULT_TIMEOUT, AiHealth::Probe.timeout
+    end
+  end
+
   test "OpenAI-compatible LLM probe calls chat completions instead of the models endpoint" do
     endpoint = "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1"
     request = stub_request(:post, "#{endpoint}/chat/completions")

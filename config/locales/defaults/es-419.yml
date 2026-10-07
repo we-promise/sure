@@ -43,6 +43,7 @@ es-419:
       default: "%d/%m/%Y"
       long: "%A, %d de %B de %Y"
       short: "%d de %b"
+      short_with_year: "%d de %b de %Y"
     month_names:
     -
     - enero
