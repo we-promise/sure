@@ -112,6 +112,19 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: "Payee String")
   end
 
+  test "create rule section is localized in German" do
+    entry = create_transaction(account: accounts(:depository), name: "Payee String")
+
+    get transaction_url(entry, locale: "de"), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "##{dom_id(entry, :create_rule)}" do
+      assert_select "h4", text: "Regel erstellen"
+      assert_select "p", text: "Künftige Transaktionen wie diese automatisch bearbeiten."
+      assert_select "a", text: /Regel erstellen/
+    end
+  end
+
   test "create rule link is hidden for split child transactions" do
     parent = create_transaction(account: accounts(:depository), amount: 100)
     parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
