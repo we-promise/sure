@@ -1,6 +1,16 @@
 require "test_helper"
 
 class DS::CompactRowTest < ViewComponent::TestCase
+  test "exposes matching header and data cell semantics" do
+    [ false, true ].each do |header|
+      render_inline(DS::CompactRow.new(header: header, show_date: true, show_balance: true, show_notes: false)) do |row|
+        row.with_primary { "Coffee" }
+      end
+
+      assert_selector "[role='row'] > [role='#{header ? 'columnheader' : 'cell'}']", count: 6
+    end
+  end
+
   test "wraps row content in a single flex container" do
     render_inline(DS::CompactRow.new) do |row|
       row.with_primary { "Coffee" }

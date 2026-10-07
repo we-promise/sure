@@ -165,6 +165,7 @@
           <%= render "entries/selection_bar" %>
         </div>
 
+        <%= tag.div role: (compact? ? "table" : nil), aria: { label: (t("transactions.list.transactions") if compact?) } do %>
         <% if compact? %>
           <% if !group_by_date %>
             <div class="bg-container-inset rounded-xl px-2 py-2 mb-2">
@@ -258,10 +259,12 @@
             </div>
           <% end %>
 
+        </div>
+        <% end %>
+
           <div class="p-4 bg-container rounded-bl-lg rounded-br-lg">
             <%= render "shared/pagination", pagy: pagy %>
           </div>
-        </div>
       <% end %>
     <% end %>
   </div>

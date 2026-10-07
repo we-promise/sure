@@ -54,6 +54,10 @@ class DS::CompactRow < DesignSystemComponent
     )
   end
 
+  def cell_role
+    @header ? "columnheader" : "cell"
+  end
+
   def checkbox_wrapper_classes
     class_names(
       "w-8 shrink-0 justify-center hidden lg:flex",
@@ -62,21 +66,21 @@ class DS::CompactRow < DesignSystemComponent
   end
 
   erb_template <<~ERB
-    <%= tag.div class: row_classes, data: @data do %>
-      <div class="<%= checkbox_wrapper_classes %>">
+    <%= tag.div class: row_classes, data: @data, role: "row" do %>
+      <div role="<%= cell_role %>" class="<%= checkbox_wrapper_classes %>">
         <%= checkbox %>
       </div>
 
       <% if @show_date %>
-        <div class="hidden lg:flex w-28 shrink-0 text-secondary text-sm truncate pr-2"><%= date %></div>
+        <div role="<%= cell_role %>" class="hidden lg:flex w-28 shrink-0 text-secondary text-sm truncate pr-2"><%= date %></div>
       <% end %>
 
-      <div class="flex items-center gap-2 lg:gap-3 flex-[2] min-w-0 pr-2">
+      <div role="<%= cell_role %>" class="flex items-center gap-2 lg:gap-3 flex-[2] min-w-0 pr-2">
         <%= primary %>
       </div>
 
       <% if @show_notes %>
-        <div class="hidden lg:flex min-w-0 flex-[2] px-2">
+        <div role="<%= cell_role %>" class="hidden lg:flex min-w-0 flex-[2] px-2">
           <% if notes? %>
             <%= notes %>
           <% else %>
@@ -85,7 +89,7 @@ class DS::CompactRow < DesignSystemComponent
         </div>
       <% end %>
 
-      <div class="hidden md:flex min-w-0 items-center gap-1 flex-[1]">
+      <div role="<%= cell_role %>" class="hidden md:flex min-w-0 items-center gap-1 flex-[1]">
         <% if category? %>
           <%= category %>
         <% else %>
@@ -93,12 +97,12 @@ class DS::CompactRow < DesignSystemComponent
         <% end %>
       </div>
 
-      <div class="w-30 shrink-0 flex items-center justify-end gap-2">
+      <div role="<%= cell_role %>" class="w-30 shrink-0 flex items-center justify-end gap-2">
         <%= amount %>
       </div>
 
       <% if @show_balance %>
-        <div class="hidden lg:flex w-30 shrink-0 justify-end px-2">
+        <div role="<%= cell_role %>" class="hidden lg:flex w-30 shrink-0 justify-end px-2">
           <%= balance %>
         </div>
       <% end %>
