@@ -216,8 +216,10 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
       post options_settings_webauthn_credentials_path, as: :json
       options = JSON.parse(response.body)
       credential = client.create(challenge: options.fetch("challenge"), rp_id: rp_id)
+      # A backup code confirms the registration so the current TOTP step stays
+      # free for the sign-in steps these tests go on to exercise.
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "MacBook Touch ID" },
+        webauthn_credential: { nickname: "MacBook Touch ID", code: @user.enable_mfa!.first },
         credential: credential
       }, as: :json
       assert_response :success

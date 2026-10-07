@@ -5,6 +5,11 @@ class Settings::WebauthnCredentialsController < ApplicationController
 
   before_action :ensure_mfa_enabled
 
+  # Adding a passkey is confirmed with an MFA code; keep a stolen session from
+  # guessing that code.
+  rate_limit to: 10, within: 1.minute, by: -> { Current.user.id }, only: :create,
+    with: -> { render json: { error: t("webauthn_credentials.rate_limited") }, status: :too_many_requests }
+
   def options
     Current.user.ensure_webauthn_id!
 
@@ -35,6 +40,18 @@ class Settings::WebauthnCredentialsController < ApplicationController
 
     unless challenge.present?
       return render json: { error: t("webauthn_credentials.failure") }, status: :unprocessable_entity
+    end
+
+    # A passkey is a lasting second factor and also a passwordless sign-in, so
+    # adding one must prove more than the session cookie. Checked here rather
+    # than in options so a cancelled browser prompt does not spend the code.
+    case Current.user.verify_otp(webauthn_credential_params[:code])
+    when :accepted
+      nil
+    when :replayed
+      return render json: { error: t("webauthn_credentials.code_already_used") }, status: :unprocessable_entity
+    else
+      return render json: { error: t("webauthn_credentials.invalid_code") }, status: :unprocessable_entity
     end
 
     credential = webauthn_relying_party.verify_registration(
@@ -80,7 +97,7 @@ class Settings::WebauthnCredentialsController < ApplicationController
     end
 
     def webauthn_credential_params
-      params.fetch(:webauthn_credential, ActionController::Parameters.new).permit(:nickname)
+      params.fetch(:webauthn_credential, ActionController::Parameters.new).permit(:nickname, :code)
     end
 
     def credential_response_params

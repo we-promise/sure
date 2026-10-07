@@ -5,7 +5,7 @@ import {
 } from "utils/webauthn";
 
 export default class extends WebauthnController {
-  static targets = ["error", "nickname"];
+  static targets = ["error", "nickname", "code"];
   static values = {
     optionsUrl: String,
     createUrl: String,
@@ -55,6 +55,7 @@ export default class extends WebauthnController {
         credential,
         webauthn_credential: {
           nickname: this.hasNicknameTarget ? this.nicknameTarget.value : "",
+          code: this.hasCodeTarget ? this.codeTarget.value : "",
         },
       }),
     });
