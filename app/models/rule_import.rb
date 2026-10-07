@@ -51,6 +51,15 @@ class RuleImport < Import
         '[{"condition_type":"transaction_name","operator":"like","value":"amazon"}]',
         '[{"action_type":"auto_categorize"}]'
       ]
+
+      csv << [
+        "Split shared rent",
+        "transaction",
+        "true",
+        "",
+        '[{"condition_type":"transaction_name","operator":"like","value":"rent"}]',
+        '[{"action_type":"split_transaction","value":{"splits":[{"type":"percentage","name":"My share","share":"50","category":"Rent"},{"type":"percentage","name":"Partner share","share":"50","category":"Rent","tags":["Shared"]}]}}]'
+      ]
     end
 
     CSV.parse(csv_string, headers: true)
@@ -237,6 +246,8 @@ class RuleImport < Import
 
       return value unless value.present?
 
+      return resolve_import_split_value(value) if action_type == "split_transaction"
+
       # Map category names to UUIDs
       if action_type == "set_transaction_category"
         return find_or_create_category(value).id
@@ -263,6 +274,24 @@ class RuleImport < Import
       return value if names.empty?
 
       names.map { |name| find_or_create_tag(name).id }.join(",")
+    end
+
+    # Names resolve like the other actions; a raw id is kept only if it belongs to the family.
+    def resolve_import_split_value(value)
+      Rule::ActionExecutor::SplitTransaction.localize_value(value) do |kind, name: nil, id: nil|
+        next (id if family_record_ids(kind.to_s.pluralize.to_sym).include?(id)) unless name
+
+        case kind
+        when :category then find_or_create_category(name).id
+        when :merchant then find_or_create_merchant(name).id
+        when :tag then find_or_create_tag(name).id
+        end
+      end
+    end
+
+    def family_record_ids(relation)
+      @family_record_ids ||= {}
+      @family_record_ids[relation] ||= family.public_send(relation).pluck(:id).to_set
     end
 
     # Preloaded once per import and extended in place on cache-miss, so a

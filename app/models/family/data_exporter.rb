@@ -828,7 +828,43 @@ class Family::DataExporter
         return resolve_multi_tag_operand(action.value)
       end
 
+      if action.action_type == "split_transaction"
+        return { value: portable_split_value(action.value), value_ref: nil }
+      end
+
       rule_operand(action.value)
+    end
+
+    # The split config is a JSON blob whose rows reference categories, merchants
+    # and tags by id. Ids only mean something inside this family, so each row
+    # carries names instead (see Rule::ActionExecutor::SplitTransaction.localize_value
+    # for the import side). Ids that no longer resolve (record deleted since the
+    # rule was saved) are dropped, matching how the executor ignores them.
+    def portable_split_value(value)
+      config = Rule::ActionExecutor::SplitTransaction.parse_config(value)
+      return value unless config
+
+      splits = config["splits"].map do |split|
+        row = split.except("category_id", "merchant_id", "tag_ids")
+        category = split_operand_record(:categories, split["category_id"])
+        merchant = split_operand_record(:merchants, split["merchant_id"])
+        tags = Array(split["tag_ids"]).filter_map { |id| split_operand_record(:tags, id) }
+
+        row["category"] = category.name if category
+        row["merchant"] = merchant.name if merchant
+        row["tags"] = tags.map(&:name) if tags.any?
+        row
+      end
+
+      # An object, not a JSON string: the CSV rule import unescapes \" inside string values,
+      # which would corrupt a nested JSON string whose names contain quotes.
+      config.merge("splits" => splits)
+    end
+
+    def split_operand_record(relation_key, id)
+      return nil unless id.is_a?(String) && uuid_like?(id)
+
+      operand_records_by_id(relation_key)[id.downcase]
     end
 
     def resolve_multi_tag_operand(value)

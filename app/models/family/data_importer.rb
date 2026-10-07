@@ -1473,6 +1473,7 @@ class Family::DataImporter
       # resolution path rather than the generic scalar one below (which
       # assumes value_ref is nil or a single hash).
       return resolve_multi_tag_action_value(action_data) if action_type == "set_transaction_tags"
+      return resolve_split_action_value(action_data["value"]) if action_type == "split_transaction"
 
       value = rule_operand_value(action_data)
 
@@ -1508,6 +1509,27 @@ class Family::DataImporter
       end
 
       tag_ids.join(",")
+    end
+
+    # Names resolve like the other rule actions. A raw id (older exports, hand-built files) is
+    # remapped through this import's source mappings, kept if it already belongs to the family,
+    # and otherwise dropped.
+    def resolve_split_action_value(value)
+      Rule::ActionExecutor::SplitTransaction.localize_value(value) do |kind, name: nil, id: nil|
+        relation = kind.to_s.pluralize.to_sym
+        next mapped_id(relation, id, record_type: kind.to_s.classify, required: false) || (id if family_record_ids(relation).include?(id)) unless name
+
+        case kind
+        when :category then find_or_create_rule_category(name).id
+        when :merchant then find_or_create_rule_merchant(name).id
+        when :tag then find_or_create_rule_tag(name).id
+        end
+      end
+    end
+
+    def family_record_ids(relation)
+      @family_record_ids ||= {}
+      @family_record_ids[relation] ||= @family.public_send(relation).pluck(:id).to_set
     end
 
     # Preloaded once per import and extended in place on cache-miss, so a

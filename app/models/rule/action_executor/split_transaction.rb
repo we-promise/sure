@@ -166,6 +166,29 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       config
     end
 
+    # Rebuilds an imported split config against the importing family. Exports carry names
+    # ("category", "merchant", "tags", see Family::DataExporter#portable_split_value) because ids
+    # don't survive a move to another family. Each reference is resolved through the block,
+    # called as (kind, name:) for a name or (kind, id:) for a raw id, with kind :category,
+    # :merchant or :tag; it returns the local id, or nil to drop a stale or foreign id instead of
+    # failing the whole import on save. Unparseable values are returned as a string unchanged so
+    # Rule::Action's validation can report them.
+    def localize_value(value, &resolve)
+      raw = value.is_a?(Hash) || value.is_a?(Array) ? value.to_json : value.to_s
+      config = parse_config(raw)
+      return raw unless config
+
+      splits = config["splits"].map do |split|
+        split.except("category", "merchant", "tags").merge(
+          "category_id" => localize_reference(split, "category", :category, &resolve),
+          "merchant_id" => localize_reference(split, "merchant", :merchant, &resolve),
+          "tag_ids" => localize_tags(split, &resolve)
+        )
+      end
+
+      config.merge("splits" => splits).to_json
+    end
+
     # True if the config has at least one percentage-type split. Pure-fixed configs need an
     # exact-amount rule condition (see Rule::Action#split_config_valid); configs with a
     # percentage split don't, since the percentage share(s) always absorb whatever's left after
@@ -273,6 +296,26 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
         parsed
       rescue JSON::ParserError
         nil
+      end
+
+      def localize_reference(split, key, kind)
+        name = split[key].to_s.strip
+        return yield(kind, name: name) if name.present?
+
+        id = split["#{key}_id"].to_s.strip.downcase
+        yield(kind, id: id) if id.present?
+      end
+
+      # Tags may also come as one comma-separated string, like set_transaction_tags values.
+      def localize_tags(split)
+        ids = if split.key?("tags")
+          names = split["tags"].is_a?(String) ? Rule::Action.decode_multi_value_names(split["tags"]) : Array(split["tags"])
+          names.map { |name| name.to_s.strip }.reject(&:blank?).map { |name| yield(:tag, name: name) }
+        else
+          Array(split["tag_ids"]).map { |id| id.to_s.strip.downcase }.reject(&:blank?).map { |id| yield(:tag, id: id) }
+        end
+
+        ids.compact.uniq
       end
 
       # Non-finite values ("NaN", "Infinity") parse fine but can never be a real share, and NaN

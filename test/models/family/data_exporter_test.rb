@@ -494,6 +494,77 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "split rule round-trips through NDJSON into another family" do
+    split_rule = create_split_rule!
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rule_line = zip.read("all.ndjson").split("\n").find do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == split_rule.name
+      end
+
+      exported_value = JSON.parse(rule_line)["data"]["actions"].first["value"].to_json
+      refute_includes exported_value, @category.id
+      refute_includes exported_value, @tag.id
+
+      existing_category = @other_family.categories.create!(name: "Test Category", color: "#FF0000")
+
+      Family::DataImporter.new(@other_family, rule_line).import!
+
+      assert_imported_split_rule(split_rule.name, category: existing_category)
+    end
+  end
+
+  test "split rule round-trips through rules CSV into another family" do
+    split_rule = create_split_rule!
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      import = @other_family.imports.create!(type: "RuleImport", raw_file_str: zip.read("rules.csv"), col_sep: ",")
+      import.generate_rows_from_csv
+      import.send(:import!)
+
+      assert_imported_split_rule(split_rule.name, category: @other_family.categories.find_by!(name: "Test Category"))
+    end
+  end
+
+  test "split rule with quotes in its names round-trips through rules CSV" do
+    @category.update!(name: 'Kids "Fun" \\ Stuff')
+    split_rule = create_split_rule!(row_name: 'My "half"')
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      import = @other_family.imports.create!(type: "RuleImport", raw_file_str: zip.read("rules.csv"), col_sep: ",")
+      import.generate_rows_from_csv
+      import.send(:import!)
+
+      mine = imported_split_config(split_rule.name).first
+      assert_equal 'My "half"', mine["name"]
+      assert_equal @other_family.categories.find_by!(name: 'Kids "Fun" \\ Stuff').id, mine["category_id"]
+    end
+  end
+
+  test "exports a split rule whose category was deleted without the stale id" do
+    split_rule = create_split_rule!
+    @category.destroy!
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rule_line = zip.read("all.ndjson").split("\n").find do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == split_rule.name
+      end
+
+      splits = JSON.parse(rule_line)["data"]["actions"].first["value"]["splits"]
+      assert_not splits.first.key?("category")
+      assert_not splits.first.key?("category_id")
+      assert_equal [ "Test Tag" ], splits.first["tags"]
+
+      Family::DataImporter.new(@other_family, rule_line).import!
+
+      split = imported_split_config(split_rule.name).first
+      assert_nil split["category_id"]
+      assert_equal [ @other_family.tags.find_by!(name: "Test Tag").id ], split["tag_ids"]
+    end
+  end
+
   test "exports rule condition value refs for mapped operands" do
     category_rule = @family.rules.build(
       name: "Category Condition Rule",
@@ -1172,6 +1243,41 @@ class Family::DataExporterTest < ActiveSupport::TestCase
         currency: account.currency,
         entryable: Transaction.new(kind: "funds_movement")
       )
+    end
+
+    def create_split_rule!(row_name: "Mine")
+      merchant = @family.merchants.create!(name: "Split Merchant")
+      rule = @family.rules.build(name: "Split Rule", resource_type: "transaction", active: true)
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "shared")
+      rule.actions.build(
+        action_type: "split_transaction",
+        value: {
+          splits: [
+            { type: "percentage", name: row_name, share: "60", category_id: @category.id, merchant_id: merchant.id, tag_ids: [ @tag.id ] },
+            { type: "percentage", name: "Theirs", share: "40", category_id: nil, merchant_id: nil, tag_ids: [] }
+          ]
+        }.to_json
+      )
+      rule.save!
+      rule
+    end
+
+    def imported_split_config(rule_name)
+      action = @other_family.rules.find_by!(name: rule_name).actions.sole
+      assert_equal "split_transaction", action.action_type
+      JSON.parse(action.value)["splits"]
+    end
+
+    def assert_imported_split_rule(rule_name, category:)
+      mine, theirs = imported_split_config(rule_name)
+
+      assert_equal [ "percentage", "Mine", "60" ], mine.values_at("type", "name", "share")
+      assert_equal category.id, mine["category_id"]
+      assert_equal @other_family.merchants.find_by!(name: "Split Merchant").id, mine["merchant_id"]
+      assert_equal [ @other_family.tags.find_by!(name: "Test Tag").id ], mine["tag_ids"]
+      assert_nil theirs["category_id"]
+      assert_nil theirs["merchant_id"]
+      assert_equal [], theirs["tag_ids"]
     end
 
     def create_csv_export_trade!

@@ -213,6 +213,46 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal [ existing_tag.id, comma_tag.id ], action.value.split(",")
   end
 
+  test "imports a split action by mapping row category, merchant and tag names to ids" do
+    actions = [
+      {
+        action_type: "split_transaction",
+        value: {
+          splits: [
+            { type: "percentage", name: "Food", share: "70", category: "Groceries", merchant: "Corner Shop", tags: [ "Shared" ] },
+            { type: "percentage", name: "Other", share: "30", category_id: categories(:food_and_drink).id }
+          ]
+        }
+      }
+    ].to_json
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [ "Split groceries", "transaction", "true", "", '[{"condition_type":"transaction_name","operator":"like","value":"market"}]', actions ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    food, other = JSON.parse(Rule.find_by!(family: @family, name: "Split groceries").actions.sole.value)["splits"]
+    assert_equal @category.id, food["category_id"]
+    assert_equal @family.merchants.find_by!(name: "Corner Shop").id, food["merchant_id"]
+    assert_equal [ Tag.find_by!(family: @family, name: "Shared").id ], food["tag_ids"]
+    # A raw id that belongs to the importing family is kept as is
+    assert_equal categories(:food_and_drink).id, other["category_id"]
+  end
+
+  test "csv template rows import, including the split example" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: RuleImport.new.csv_template.to_csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    splits = JSON.parse(Rule.find_by!(family: @family, name: "Split shared rent").actions.sole.value)["splits"]
+    rent = @family.categories.find_by!(name: "Rent")
+    assert_equal [ rent.id, rent.id ], splits.map { |split| split["category_id"] }
+    assert_equal [ @family.tags.find_by!(name: "Shared").id ], splits.last["tag_ids"]
+  end
+
   test "imports transaction_tag condition and maps tag name to id" do
     existing_tag = @family.tags.create!(name: "Existing Tag")
 
