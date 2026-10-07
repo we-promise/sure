@@ -20,5 +20,6 @@ zh-TW:
               missing_case: 必須同時包含大寫和小寫字母
               missing_number: 必須包含至少一個數字
               missing_special: 必須包含至少一個特殊字元
+              too_long: "過長（最多 %{count} 位元組；中文字元和表情符號各佔多個位元組）"
             profile_image:
               invalid_file_size: 檔案大小必須小於 %{max_megabytes}MB

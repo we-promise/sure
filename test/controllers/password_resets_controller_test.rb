@@ -40,6 +40,17 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.text-destructive", text: /at least one special character/
   end
 
+  test "update rejects a password longer than 72 bytes" do
+    too_long = "Aa1!" + "a" * 69
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: too_long, password_confirmation: too_long } }
+
+    assert_response :unprocessable_entity
+    assert @user.reload.authenticate(user_password_test)
+    assert_select "p.text-destructive", text: /maximum is 72 bytes/
+  end
+
   test "update rejects a blank password and keeps the reset link valid" do
     token = @user.generate_token_for(:password_reset)
 

@@ -20,5 +20,6 @@ hu:
               missing_case: tartalmazzon kis- és nagybetűt is
               missing_number: tartalmazzon legalább egy számot
               missing_special: tartalmazzon legalább egy speciális karaktert
+              too_long: "túl hosszú (legfeljebb %{count} bájt; az ékezetes betűk és az emojik egynél több bájtot foglalnak)"
             profile_image:
               invalid_file_size: a fájl mérete nem haladhatja meg a %{max_megabytes}MB-ot

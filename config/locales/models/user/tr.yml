@@ -23,5 +23,6 @@ tr:
               missing_case: hem büyük hem de küçük harf içermelidir
               missing_number: en az bir rakam içermelidir
               missing_special: en az bir özel karakter içermelidir
+              too_long: "çok uzun (en fazla %{count} bayt; Türkçe karakterler ve emojiler birden fazla bayt kaplar)"
             profile_image:
               invalid_file_size: dosya boyutu %{max_megabytes}MB'den küçük olmalıdır

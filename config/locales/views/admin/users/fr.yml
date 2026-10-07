@@ -119,6 +119,7 @@ fr:
         password_missing_number: Le mot de passe doit contenir au moins un chiffre.
         password_missing_special: Le mot de passe doit contenir au moins un caractère spécial.
         password_too_short: Le mot de passe doit comporter au moins 8 caractères.
+        password_too_long: "Le mot de passe doit faire au maximum %{count} octets (les lettres accentuées et les emojis occupent plus d'un octet)."
         success: Rôle de l'utilisateur mis à jour avec succès.
         success_family: Appartenance de l'utilisateur à une famille / un groupe mise à jour avec succès.
         success_password: Mot de passe de l'utilisateur mis à jour avec succès.

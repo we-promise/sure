@@ -20,5 +20,6 @@ nl:
               missing_case: moet zowel hoofdletters als kleine letters bevatten
               missing_number: moet minstens één cijfer bevatten
               missing_special: moet minstens één speciaal teken bevatten
+              too_long: "is te lang (maximaal %{count} bytes; letters met accenten en emoji's nemen meer dan één byte in beslag)"
             profile_image:
               invalid_file_size: bestandsgrootte moet minder zijn dan %{max_megabytes} MB

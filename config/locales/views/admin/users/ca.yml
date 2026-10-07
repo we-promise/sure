@@ -101,6 +101,7 @@ ca:
         family_required: Selecciona una família/grup existent o introdueix un nom per crear-ne una de nova.
         password_and_family_conflict: No es poden actualitzar alhora la contrasenya i la pertinença a la família/grup.
         password_too_short: La contrasenya ha de tenir com a mínim 8 caràcters.
+        password_too_long: "La contrasenya ha de tenir com a màxim %{count} bytes (les lletres accentuades i els emojis ocupen més d'un byte)."
         password_missing_case: La contrasenya ha d'incloure lletres majúscules i minúscules.
         password_missing_number: La contrasenya ha d'incloure com a mínim un número.
         password_missing_special: La contrasenya ha d'incloure com a mínim un caràcter especial.

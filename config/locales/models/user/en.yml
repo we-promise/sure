@@ -24,5 +24,6 @@ en:
               missing_case: must include both uppercase and lowercase letters
               missing_number: must include at least one number
               missing_special: must include at least one special character
+              too_long: "is too long (maximum is %{count} bytes; accented letters and emoji take more than one byte)"
             profile_image:
               invalid_file_size: file size must be less than %{max_megabytes}MB

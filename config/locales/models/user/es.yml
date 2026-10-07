@@ -21,5 +21,6 @@ es:
               missing_case: debe incluir letras mayúsculas y minúsculas
               missing_number: debe incluir al menos un número
               missing_special: debe incluir al menos un carácter especial
+              too_long: "es demasiado larga (máximo %{count} bytes; las letras acentuadas y los emojis ocupan más de un byte)"
             profile_image:
               invalid_file_size: El tamaño del archivo debe ser inferior a %{max_megabytes} MB.

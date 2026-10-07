@@ -20,5 +20,6 @@ de:
               missing_case: muss Groß- und Kleinbuchstaben enthalten
               missing_number: muss mindestens eine Ziffer enthalten
               missing_special: muss mindestens ein Sonderzeichen enthalten
+              too_long: "ist zu lang (höchstens %{count} Bytes; Umlaute, Akzente und Emojis belegen mehr als ein Byte)"
             profile_image:
               invalid_file_size: Dateigröße muss kleiner als %{max_megabytes}MB sein

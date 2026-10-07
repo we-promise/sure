@@ -42,6 +42,20 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.text-destructive", text: /at least one special character/
   end
 
+  test "update rejects a password longer than 72 bytes" do
+    too_long = "Aa1!" + "ü" * 35
+
+    patch password_path, params: { user: {
+      password_challenge: user_password_test,
+      password: too_long,
+      password_confirmation: too_long
+    } }
+
+    assert_response :unprocessable_entity
+    assert @user.reload.authenticate(user_password_test)
+    assert_select "p.text-destructive", text: /maximum is 72 bytes/
+  end
+
   test "update rejects a blank new password instead of reporting success" do
     patch password_path, params: { user: {
       password_challenge: user_password_test,

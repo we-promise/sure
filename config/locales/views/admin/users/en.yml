@@ -93,6 +93,7 @@ en:
         family_required: "Select an existing family/group or enter a name for a new one."
         password_and_family_conflict: "Password and family/group membership cannot be updated at the same time."
         password_too_short: "Password must be at least 8 characters long."
+        password_too_long: "Password must be at most %{count} bytes long (accented letters and emoji take more than one byte)."
         password_missing_case: "Password must include both uppercase and lowercase letters."
         password_missing_number: "Password must include at least one number."
         password_missing_special: "Password must include at least one special character."

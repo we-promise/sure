@@ -131,6 +131,7 @@ pl:
         password_missing_number: Hasło musi zawierać co najmniej jedną cyfrę.
         password_missing_special: Hasło musi zawierać co najmniej jeden znak specjalny.
         password_too_short: Hasło musi mieć co najmniej 8 znaków.
+        password_too_long: "Hasło może mieć maksymalnie %{count} bajty (litery ze znakami diakrytycznymi i emoji zajmują więcej niż jeden bajt)."
         success: Rola użytkownika została pomyślnie zaktualizowana.
         success_family: Przynależność użytkownika do rodziny/grupy została zaktualizowana.
         success_password: Hasło użytkownika zostało zaktualizowane.

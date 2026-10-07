@@ -56,9 +56,21 @@ class I18nTest < ActiveSupport::TestCase
       path = Rails.root.join("config/locales/models/user/#{locale}.yml")
       password_errors = YAML.load_file(path, aliases: true).dig(locale, "activerecord", "errors", "models", "user", "attributes", "password") || {}
 
-      %w[missing_case missing_number missing_special].each do |key|
+      %w[missing_case missing_number missing_special too_long].each do |key|
         assert password_errors[key].present?, "#{path.relative_path_from(Rails.root)} is missing password.#{key}"
       end
+    end
+  end
+
+  # The admin reset names every broken rule, so a locale that translates the
+  # other rules must translate the byte limit too.
+  def test_admin_password_too_long_exists_wherever_the_other_rules_are_translated
+    Dir.glob(Rails.root.join("config/locales/views/admin/users/*.yml")).each do |path|
+      locale, data = YAML.load_file(path, aliases: true).first
+      messages = data.dig("admin", "users", "update") || {}
+      next if messages["password_missing_special"].blank?
+
+      assert_includes messages["password_too_long"].to_s, "%{count}", "#{locale}: admin.users.update.password_too_long is missing"
     end
   end
 

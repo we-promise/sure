@@ -28,5 +28,6 @@ pl:
               missing_case: musi zawierać zarówno wielkie, jak i małe litery
               missing_number: musi zawierać co najmniej jedną cyfrę
               missing_special: musi zawierać co najmniej jeden znak specjalny
+              too_long: "jest za długie (maksymalnie %{count} bajty; litery ze znakami diakrytycznymi i emoji zajmują więcej niż jeden bajt)"
             profile_image:
               invalid_file_size: rozmiar pliku nie może przekraczać %{max_megabytes}MB

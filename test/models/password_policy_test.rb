@@ -11,6 +11,18 @@ class PasswordPolicyTest < ActiveSupport::TestCase
     assert_equal %i[missing_special], PasswordPolicy.unmet_requirements("Abcdefg1")
   end
 
+  test "rejects a password longer than bcrypt's 72 bytes" do
+    assert_empty PasswordPolicy.unmet_requirements("Aa1!" + "a" * 68)
+    assert_equal %i[too_long], PasswordPolicy.unmet_requirements("Aa1!" + "a" * 69)
+  end
+
+  test "counts the byte limit in bytes, not characters" do
+    password = "Aa1!" + "ü" * 35
+
+    assert_equal 39, password.length
+    assert_equal %i[too_long], PasswordPolicy.unmet_requirements(password)
+  end
+
   test "treats nil like an empty password" do
     assert_equal %i[too_short missing_case missing_number missing_special], PasswordPolicy.unmet_requirements(nil)
   end

@@ -54,6 +54,7 @@ class User < ApplicationRecord
   # SSO JIT users have password_digest = nil and authenticate via OIDC only.
   validates :password, presence: true, on: :create, unless: :skip_password_validation?
   validates :password, length: { minimum: PasswordPolicy::MIN_LENGTH }, allow_nil: true
+  validate :password_within_byte_limit
   validate :password_meets_complexity_requirements, if: :require_password_complexity
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
@@ -801,6 +802,14 @@ class User < ApplicationRecord
       skip_password_validation == true
     end
 
+    # has_secure_password validations: false also drops its 72-byte check, so
+    # every path that sets a password relies on this one.
+    def password_within_byte_limit
+      return unless PasswordPolicy.too_long?(password)
+
+      errors.add(:password, :too_long, count: PasswordPolicy::MAX_BYTES)
+    end
+
     # has_secure_password ignores a blank assignment, so an empty new password
     # would otherwise leave the old one in place and still report success.
     def password_meets_complexity_requirements
@@ -809,8 +818,8 @@ class User < ApplicationRecord
         return
       end
 
-      # Length is covered by the length validation above.
-      (PasswordPolicy.unmet_requirements(password) - [ :too_short ]).each do |requirement|
+      # Length is covered by the length and byte-limit validations above.
+      (PasswordPolicy.unmet_requirements(password) - %i[too_short too_long]).each do |requirement|
         errors.add(:password, requirement)
       end
     end

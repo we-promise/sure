@@ -3,6 +3,7 @@ module Api
     class AuthController < BaseController
       PASSWORD_REQUIREMENT_MESSAGES = {
         too_short: "Password must be at least #{PasswordPolicy::MIN_LENGTH} characters",
+        too_long: "Password must be at most #{PasswordPolicy::MAX_BYTES} bytes",
         missing_case: "Password must include both uppercase and lowercase letters",
         missing_number: "Password must include at least one number",
         missing_special: "Password must include at least one special character"

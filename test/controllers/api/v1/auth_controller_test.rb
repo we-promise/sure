@@ -131,6 +131,23 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert response_data["errors"].include?("Password must be at least 8 characters")
   end
 
+  test "should not signup with a password longer than 72 bytes" do
+    assert_no_difference("User.count") do
+      post "/api/v1/auth/signup", params: {
+        user: {
+          email: "newuser@example.com",
+          password: "Aa1!" + "a" * 69,
+          first_name: "New",
+          last_name: "User"
+        },
+        device: @device_info
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes JSON.parse(response.body)["errors"], "Password must be at most 72 bytes"
+  end
+
   test "should not signup with duplicate email" do
     existing_user = users(:family_admin)
 

@@ -23,5 +23,6 @@ ca:
               missing_case: ha d'incloure lletres majúscules i minúscules
               missing_number: ha d'incloure com a mínim un número
               missing_special: ha d'incloure com a mínim un caràcter especial
+              too_long: "és massa llarga (màxim %{count} bytes; les lletres accentuades i els emojis ocupen més d'un byte)"
             profile_image:
               invalid_file_size: la mida del fitxer ha de ser inferior a %{max_megabytes}MB

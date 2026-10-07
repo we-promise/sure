@@ -20,5 +20,6 @@ nb:
               missing_case: må inneholde både store og små bokstaver
               missing_number: må inneholde minst ett tall
               missing_special: må inneholde minst ett spesialtegn
+              too_long: "er for langt (maks %{count} byte; bokstaver med aksent og emojier bruker mer enn én byte)"
             profile_image:
               invalid_file_size: filstørrelsen må være mindre enn %{max_megabytes} MB

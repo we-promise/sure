@@ -99,6 +99,7 @@ tr:
         family_required: Mevcut bir aile/grup seçin veya yeni bir tane için ad girin.
         password_and_family_conflict: Şifre ve aile/grup üyeliği aynı anda güncellenemez.
         password_too_short: Şifre en az 8 karakter uzunluğunda olmalıdır.
+        password_too_long: "Şifre en fazla %{count} bayt olabilir (Türkçe karakterler ve emojiler birden fazla bayt kaplar)."
         password_missing_case: Şifre hem büyük hem de küçük harf içermelidir.
         password_missing_number: Şifre en az bir rakam içermelidir.
         password_missing_special: Şifre en az bir özel karakter içermelidir.

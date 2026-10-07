@@ -19,5 +19,6 @@ ro:
               missing_case: trebuie să conțină litere mari și mici
               missing_number: trebuie să conțină cel puțin o cifră
               missing_special: trebuie să conțină cel puțin un caracter special
+              too_long: "este prea lungă (maximum %{count} de octeți; literele cu diacritice și emoji-urile ocupă mai mult de un octet)"
             profile_image:
               invalid_file_size: dimensiunea fișierului trebuie să fie mai mică de %{max_megabytes}MB

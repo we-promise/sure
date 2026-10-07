@@ -198,11 +198,14 @@ module Admin
       end
 
       # i18n-tasks-use t("admin.users.update.password_too_short")
+      # i18n-tasks-use t("admin.users.update.password_too_long")
       # i18n-tasks-use t("admin.users.update.password_missing_case")
       # i18n-tasks-use t("admin.users.update.password_missing_number")
       # i18n-tasks-use t("admin.users.update.password_missing_special")
       def validate_password_criteria(password)
-        PasswordPolicy.unmet_requirements(password).map { |requirement| t(".password_#{requirement}") }
+        PasswordPolicy.unmet_requirements(password).map do |requirement|
+          requirement == :too_long ? t(".password_too_long", count: PasswordPolicy::MAX_BYTES) : t(".password_#{requirement}")
+        end
       end
 
       def membership_change_requested?

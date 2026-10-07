@@ -95,8 +95,11 @@ class RegistrationsController < ApplicationController
       return if password.blank? # Let Rails built-in validations handle blank passwords
 
       PasswordPolicy.unmet_requirements(password).each do |requirement|
-        if requirement == :too_short
+        case requirement
+        when :too_short
           @user.errors.add(:password, :too_short, count: PasswordPolicy::MIN_LENGTH)
+        when :too_long
+          @user.errors.add(:password, :too_long, count: PasswordPolicy::MAX_BYTES)
         else
           @user.errors.add(:password, requirement)
         end

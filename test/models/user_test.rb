@@ -40,6 +40,21 @@ class UserTest < ActiveSupport::TestCase
     assert_equal [ :blank ], @user.errors.details[:password].map { |detail| detail[:error] }
   end
 
+  test "a new password longer than 72 bytes is rejected on every write" do
+    @user.password = "Aa1!" + "a" * 69
+
+    assert_not @user.valid?
+    assert_equal [ :too_long ], @user.errors.details[:password].map { |detail| detail[:error] }
+    assert_match(/maximum is 72 bytes/, @user.errors.full_messages.to_sentence)
+
+    @user.require_password_complexity = true
+    assert_not @user.valid?
+    assert_equal [ :too_long ], @user.errors.details[:password].map { |detail| detail[:error] }
+
+    @user.password = "Aa1!" + "a" * 68
+    assert @user.valid?, @user.errors.full_messages.to_sentence
+  end
+
   # email
   test "email must be present" do
     potential_user = User.new(
