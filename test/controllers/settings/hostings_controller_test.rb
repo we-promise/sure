@@ -1278,6 +1278,36 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "invalid reasoning effort leaves all OpenAI settings unchanged" do
+    original_settings = {
+      openai_access_token: "original-token",
+      openai_uri_base: "https://saved.example.com/v1",
+      openai_model: "saved-model",
+      openai_json_mode: "strict",
+      openai_reasoning_effort: "low"
+    }
+    with_self_hosting do
+      original_settings.each { |key, value| Setting.public_send("#{key}=", value) }
+
+      patch settings_hosting_url, params: { setting: {
+        openai_access_token: "new-token",
+        openai_uri_base: "https://new.example.com/v1",
+        openai_model: "new-model",
+        openai_json_mode: "none",
+        openai_reasoning_effort: "turbo"
+      } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Reasoning effort must be one of/, flash[:alert])
+      Setting.clear_cache
+      original_settings.each do |key, value|
+        assert_equal value, Setting.public_send(key), "#{key} changed after rejected update"
+      end
+    end
+  ensure
+    original_settings&.each_key { |key| Setting.public_send("#{key}=", nil) }
+  end
+
   private
     def enable_preview_features!
       @user = users(:family_admin)

@@ -178,7 +178,11 @@ class Settings::HostingsController < ApplicationController
       sync_auto_sync_scheduler!
     end
 
-    update_encrypted_setting(:openai_access_token)
+    if hosting_params.key?(:openai_reasoning_effort)
+      raw_effort = hosting_params[:openai_reasoning_effort].presence
+      effort = Provider::Openai.normalize_reasoning_effort(raw_effort)
+      raise Setting::ValidationError, t(".invalid_reasoning_effort") if raw_effort.present? && effort.nil?
+    end
 
     # Validate OpenAI configuration before updating
     if hosting_params.key?(:openai_uri_base) || hosting_params.key?(:openai_model)
@@ -187,6 +191,8 @@ class Settings::HostingsController < ApplicationController
         model: hosting_params[:openai_model]
       )
     end
+
+    update_encrypted_setting(:openai_access_token)
 
     if hosting_params.key?(:openai_uri_base)
       Setting.openai_uri_base = hosting_params[:openai_uri_base]
@@ -198,6 +204,10 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:openai_json_mode)
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
+    end
+
+    if hosting_params.key?(:openai_reasoning_effort)
+      Setting.openai_reasoning_effort = effort
     end
 
     update_encrypted_setting(:anthropic_access_token)
