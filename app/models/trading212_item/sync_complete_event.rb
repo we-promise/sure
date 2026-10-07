@@ -5,17 +5,16 @@ class Trading212Item::SyncCompleteEvent
     @trading212_item = trading212_item
   end
 
+  # The Trading212 card lists only the accounts the viewing user can access,
+  # so it is not re-rendered here: this runs in SyncJob with no Current.user,
+  # and the family-wide stream would send the same HTML to every member.
+  # Account rows are refreshed individually (each target only exists for
+  # viewers who can already see that account), and the family sync toast makes
+  # each browser re-fetch the page on its own authenticated request.
   def broadcast
     trading212_item.accounts.each do |account|
       account.broadcast_sync_complete
     end
-
-    trading212_item.broadcast_replace_to(
-      trading212_item.family,
-      target: "trading212_item_#{trading212_item.id}",
-      partial: "trading212_items/trading212_item",
-      locals: { trading212_item: trading212_item }
-    )
 
     trading212_item.family.broadcast_sync_complete
   end

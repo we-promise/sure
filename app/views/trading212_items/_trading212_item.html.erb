@@ -81,10 +81,13 @@
 
     <% unless trading212_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <%# Re-rendered from SyncJob via broadcast to the family stream, where Current.user is nil. %>
-        <% linked_accounts = trading212_item.accounts %>
-        <% if linked_accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: linked_accounts %>
+        <%# Rows are scoped to the viewer's accessible accounts. With no viewer
+            (e.g. a background render) no account rows are shown rather than
+            leaking every linked account. Trading212Item::SyncCompleteEvent does
+            not re-render this card for that reason. %>
+        <% visible_accounts = Current.user ? trading212_item.accounts & Current.user.accessible_accounts.to_a : [] %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <% stats = trading212_item.syncs.ordered.first&.sync_stats || {} %>
