@@ -12,6 +12,9 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
   def generate
     budget = current_budget
     return [] unless budget&.initialized?
+    # With no account every member may see, the budget's spending reads as zero
+    # and would be reported as "on track" while members spend privately.
+    return [] unless shared_accounts.exists?
 
     parent_categories = budget.budget_categories.reject(&:subcategory?)
     over = parent_categories.select(&:over_budget_with_budget?)
@@ -27,11 +30,18 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
   end
 
   private
+    # The household budget only: a personal budget is visible to its owner and
+    # whoever they shared it with, not to the whole feed. Its spending is read
+    # from the accounts every member may see; left alone, the budget would
+    # fall back to `Current.user` (nil here) and count every account.
     def current_budget
-      family.budgets
+      budget = family.budgets
+        .where(user_id: nil)
         .includes(budget_categories: :category)
         .where("start_date <= ? AND end_date >= ?", Date.current, Date.current)
         .first
+      budget&.income_statement_accounts = shared_accounts
+      budget
     end
 
     def at_risk_insight(budget, over, near)

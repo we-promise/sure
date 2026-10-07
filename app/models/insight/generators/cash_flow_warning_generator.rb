@@ -75,7 +75,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
 
   private
     def cash_accounts
-      family.accounts.visible.where(accountable_type: "Depository", currency: family.currency)
+      shared_accounts.visible.where(accountable_type: "Depository", currency: family.currency)
     end
 
     # Projected occurrences of known recurring transactions within the horizon.
@@ -103,6 +103,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         .open_status
         .joins(:recurring_transaction)
         .where(recurring_transactions: { status: :active, destination_account_id: nil })
+        .merge(shared_recurring_transactions)
         .where("recurring_transactions.amount > 0")
         .where(currency: family.currency)
         .where(due_on: Date.current..(Date.current + HORIZON_DAYS))

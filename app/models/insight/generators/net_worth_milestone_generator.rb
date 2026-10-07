@@ -14,7 +14,8 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
   ].freeze
 
   def generate
-    series = balance_sheet.net_worth_series(period: Period.last_30_days)
+    series = BalanceSheet::NetWorthSeriesBuilder.new(family, accounts: shared_accounts)
+                                                .net_worth_series(period: Period.last_30_days)
     values = series.values
     return [] if values.size < 2
 
