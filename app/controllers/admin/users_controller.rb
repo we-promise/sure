@@ -101,7 +101,12 @@ module Admin
       elsif @user.update(user_update_attributes)
         changes = []
         changes << :role if @user.saved_change_to_role?
-        changes << :password if @user.saved_change_to_password_digest?
+        if @user.saved_change_to_password_digest?
+          changes << :password
+          # Whoever knew the old password must not stay signed in on the web.
+          # Keep the acting admin's own session when they change their own password.
+          @user.sessions.where.not(id: Current.session&.id).destroy_all
+        end
 
         success_key = case changes
         when [ :role, :password ] then ".success_role_and_password"

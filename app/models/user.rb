@@ -248,6 +248,10 @@ class User < ApplicationRecord
 
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
   after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
+  # Runs inside the update's transaction: the user row stays locked until commit,
+  # so a concurrent /api/v1/auth/refresh (which takes the same lock) cannot mint
+  # a token the revocation misses.
+  after_update :revoke_oauth_access, if: :saved_change_to_password_digest?
 
   def deactivate
     return true unless active?
@@ -458,8 +462,7 @@ class User < ApplicationRecord
   # before deactivation could otherwise be exchanged for a fresh token
   # afterward.
   def revoke_all_access_tokens
-    tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
-    grants_revoked = Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    tokens_revoked, grants_revoked = revoke_doorkeeper_tokens_and_grants
     keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
 
     if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
@@ -468,6 +471,29 @@ class User < ApplicationRecord
         "and #{keys_revoked} API key(s) for deactivated user_id=#{id}"
       )
     end
+  end
+
+  # A new password must lock out whoever signed in to the mobile app or an
+  # OAuth client with the old one: their access and refresh tokens would
+  # otherwise stay valid for up to 30 days and keep renewing. API keys are
+  # created deliberately for integrations and do not depend on the password,
+  # so they stay.
+  def revoke_oauth_access
+    tokens_revoked, grants_revoked = revoke_doorkeeper_tokens_and_grants
+
+    if tokens_revoked > 0 || grants_revoked > 0
+      Rails.logger.info(
+        "[AUTH] Revoked #{tokens_revoked} access token(s) and #{grants_revoked} authorization grant(s) " \
+        "after password change for user_id=#{id}"
+      )
+    end
+  end
+
+  def revoke_doorkeeper_tokens_and_grants
+    [
+      Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current),
+      Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    ]
   end
 
   def purge

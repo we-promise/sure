@@ -1347,4 +1347,65 @@ class UserTest < ActiveSupport::TestCase
     assert token.reload.revoked_at.present?
     assert grant.reload.revoked_at.present?
   end
+
+  test "changing the password revokes OAuth access tokens and grants but keeps API keys" do
+    user = users(:family_member)
+    api_key = ApiKey.create!( # pipelock:ignore
+      user: user,
+      name: "Test Key",
+      display_key: "test_password_key_#{SecureRandom.hex(8)}",
+      scopes: [ "read" ]
+    )
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: user.id,
+      scopes: "read_write",
+      expires_in: 1.year,
+      use_refresh_token: true
+    )
+    grant = Doorkeeper::AccessGrant.create!(
+      application: app,
+      resource_owner_id: user.id,
+      redirect_uri: app.redirect_uri,
+      expires_in: 10.minutes,
+      scopes: "read_write"
+    )
+    other_token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: users(:family_admin).id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    user.update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+
+    assert token.reload.revoked_at.present?
+    assert grant.reload.revoked_at.present?
+    assert api_key.reload.active?
+    assert_nil other_token.reload.revoked_at
+  end
+
+  test "updating a user without changing the password keeps OAuth access tokens" do
+    user = users(:family_member)
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    user.update!(first_name: "Renamed")
+
+    assert_nil token.reload.revoked_at
+  end
 end
