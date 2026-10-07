@@ -46,7 +46,7 @@ class Settings::AppearancesController < ApplicationController
 
       if params.dig(:user, :transactions_per_page)
         per_page = params.dig(:user, :transactions_per_page).to_i
-        allowed = [ 10, 20, 30, 50, 100 ]
+        allowed = User::TRANSACTIONS_PER_PAGE_OPTIONS
         updated_prefs["transactions_per_page"] = per_page if allowed.include?(per_page)
       end
 

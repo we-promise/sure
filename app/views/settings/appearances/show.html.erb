@@ -194,7 +194,7 @@
             </div>
             <div class="shrink-0">
               <%= select_tag "user[transactions_per_page]",
-                    options_for_select([ [ "10", 10 ], [ "20", 20 ], [ "30", 30 ], [ "50", 50 ], [ "100", 100 ] ], @user.transactions_per_page || 50),
+                    options_for_select(User::TRANSACTIONS_PER_PAGE_OPTIONS.map { |value| [ value.to_s, value ] }, @user.transactions_per_page || 50),
                     class: "text-sm text-primary font-medium bg-container border border-primary rounded-lg px-3 py-1.5 focus:border-primary focus:ring-primary",
                     data: { auto_submit_form_target: "auto" } %>
             </div>

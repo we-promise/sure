@@ -713,6 +713,8 @@ class User < ApplicationRecord
     end
   end
 
+  TRANSACTIONS_PER_PAGE_OPTIONS = [ 10, 20, 30, 50, 100 ].freeze
+
   # Transactions preferences management
   def show_split_grouped?
     preferences&.dig("show_split_grouped") != false
@@ -732,7 +734,7 @@ class User < ApplicationRecord
 
   def transactions_per_page
     value = preferences&.dig("transactions_per_page").to_i
-    [ 10, 20, 30, 50, 100 ].include?(value) ? value : nil
+    TRANSACTIONS_PER_PAGE_OPTIONS.include?(value) ? value : nil
   end
 
   def update_transaction_preferences(prefs)
