@@ -84,8 +84,9 @@
 
     <%= form.text_area :client_certificate,
                         label: t("settings.providers.enable_banking_panel.client_certificate_label"),
-                        placeholder: is_new_record ? "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----" : t("settings.providers.enable_banking_panel.keep_client_certificate_placeholder"),
+                        placeholder: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
                         value: "",
+                        help_text: (t("settings.providers.enable_banking_panel.keep_client_certificate_hint") unless is_new_record),
                         rows: 6,
                         class: "form-field__input font-mono text-xs",
                         disabled: has_authenticated_connections && !is_new_record %>

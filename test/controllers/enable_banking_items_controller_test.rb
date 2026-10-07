@@ -131,8 +131,8 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, @item.client_certificate.lines.second.strip
     assert_select "textarea[name='enable_banking_item[client_certificate]']" do |fields|
       assert_equal "", fields.first.text.strip
-      assert_equal I18n.t("settings.providers.enable_banking_panel.keep_client_certificate_placeholder"), fields.first["placeholder"]
     end
+    assert_includes response.body, I18n.t("settings.providers.enable_banking_panel.keep_client_certificate_hint")
   end
 
   test "invalid create from the page shows the error in the panel" do

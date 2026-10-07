@@ -1,10 +1,9 @@
 require "test_helper"
+require "openssl"
 require "turbo/broadcastable/test_helper"
 
 class EnableBankingItem::SyncCompleteEventTest < ActiveSupport::TestCase
   include Turbo::Broadcastable::TestHelper
-
-  CERTIFICATE_MARKER = "SYNCEVENTCERTMARKER"
 
   setup do
     @family = families(:dylan_family)
@@ -12,8 +11,10 @@ class EnableBankingItem::SyncCompleteEventTest < ActiveSupport::TestCase
       name: "Test Connection",
       country_code: "DE",
       application_id: "test_app_id",
-      client_certificate: "-----BEGIN PRIVATE KEY-----\n#{CERTIFICATE_MARKER}\n-----END PRIVATE KEY-----"
+      client_certificate: OpenSSL::PKey::RSA.new(2048).to_pem
     )
+    # A line of the key's body, which only a render of the stored value contains.
+    @certificate_marker = @item.client_certificate.lines.second.strip
     Current.reset
   end
 
@@ -26,7 +27,7 @@ class EnableBankingItem::SyncCompleteEventTest < ActiveSupport::TestCase
     end
 
     assert_empty streams.select { |stream| stream["target"] == "enable_banking-providers-panel" }
-    streams.each { |stream| assert_not_includes stream.to_html, CERTIFICATE_MARKER }
+    streams.each { |stream| assert_not_includes stream.to_html, @certificate_marker }
   end
 
   test "a finished sync still refreshes the connection card and the sync toast" do
