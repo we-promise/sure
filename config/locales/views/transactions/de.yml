@@ -11,6 +11,9 @@ de:
       category_prompt: Kategorie auswählen
       create_category: '„%{name}“ erstellen'
       create_category_error: Kategorie konnte nicht erstellt werden
+      create_as_subcategory: Als Unterkategorie hinzufügen…
+      choose_parent: '„%{name}“ erstellen unter:'
+      back_to_categories: Zurück
       date: Datum
       description: Beschreibung
       description_placeholder: Transaktion beschreiben

@@ -284,6 +284,45 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to rules_url
   end
 
+  test "guest cannot create rule" do
+    sign_in family_guest
+
+    assert_no_difference "Rule.count" do
+      post rules_url, params: { rule: { name: "Guest Rule", resource_type: "transaction" } }
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "guest cannot apply rule" do
+    sign_in family_guest
+    rule = rules(:one)
+
+    assert_no_enqueued_jobs do
+      post apply_rule_url(rule)
+    end
+
+    assert_redirected_to accounts_url
+    assert_not rule.reload.active?
+  end
+
+  test "member can create rule" do
+    sign_in users(:family_member)
+
+    assert_difference "Rule.count", 1 do
+      post rules_url, params: {
+        rule: {
+          name: "Member Rule",
+          resource_type: "transaction",
+          actions_attributes: {
+            "0" => {
+              action_type: "set_transaction_category",
+              value: categories(:food_and_drink).id } } } }
+    end
+
+    assert_redirected_to confirm_rule_path(Rule.order(:created_at).last, reload_on_close: true)
+  end
+
   test "clear_ai_cache enqueues job and records the request in the debug log" do
     assert_enqueued_with(job: ClearAiCacheJob, args: [ @user.family ]) do
       post clear_ai_cache_rules_url
