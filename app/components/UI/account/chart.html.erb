@@ -98,6 +98,9 @@
           class="w-full h-full privacy-sensitive"
           data-controller="time-series-chart"
           data-time-series-chart-selectable-value="true"
+          <% if show_net_contributions? %>
+          data-time-series-chart-comparison-value="<%= net_contributions_comparison.to_json %>"
+          <% end %>
           data-time-series-chart-data-value="<%= series.to_json %>"></div>
         <% else %>
           <div class="w-full h-full flex items-center justify-center">
@@ -105,6 +108,22 @@
           </div>
         <% end %>
       </div>
+
+      <% if show_net_contributions? && series.any? %>
+        <div class="px-4 pb-4 space-y-1" data-net-contributions-legend>
+          <ul class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-secondary" aria-label="<%= t("UI.account.chart.net_contributions.legend") %>">
+            <% net_contributions_legend.each do |item| %>
+              <li class="flex items-center gap-1.5">
+                <%= tag.span class: "inline-block w-4 h-0 border-t-2 #{item[:swatch_class]}", style: (item[:color] && "border-color: #{item[:color]};"), aria: { hidden: true } %>
+                <%= item[:label] %>
+              </li>
+            <% end %>
+          </ul>
+          <% if net_contributions_understated? %>
+            <p class="text-xs text-secondary" data-net-contributions-understated><%= t("UI.account.chart.net_contributions.understated") %></p>
+          <% end %>
+        </div>
+      <% end %>
     <% end %>
   <% end %>
 </div>
