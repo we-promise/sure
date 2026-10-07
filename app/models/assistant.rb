@@ -35,6 +35,15 @@ module Assistant
     Function::RecordBillPayment
   ].freeze
 
+  # Guests may view family configuration but not change it, so these tools are
+  # left out of a guest's registry (chat and MCP alike).
+  FAMILY_CONFIG_FUNCTION_CLASSES = [
+    Function::CreateTag,
+    Function::UpdateTag,
+    Function::CreateCategory,
+    Function::UpdateCategory
+  ].freeze
+
   class << self
     def for_chat(chat)
       implementation_for(chat).for_chat(chat)
@@ -80,6 +89,7 @@ module Assistant
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
+      classes -= FAMILY_CONFIG_FUNCTION_CLASSES if user&.guest?
       classes
     end
 

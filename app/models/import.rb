@@ -479,6 +479,15 @@ class Import < ApplicationRecord
     FAMILY_CONFIG_TYPES.include?(type)
   end
 
+  # Guests may view family configuration but not change it, so they may only
+  # edit an import that doesn't write family configuration and isn't being
+  # (or already) published.
+  def editable_by?(user)
+    return true unless user&.guest?
+
+    (pending? || failed?) && !family_config?
+  end
+
   # Whether publishing would add new categories or tags to the family.
   def creates_categories_or_tags?
     mappings.creational.where(type: %w[Import::CategoryMapping Import::TagMapping]).where.not(key: [ nil, "" ]).exists?

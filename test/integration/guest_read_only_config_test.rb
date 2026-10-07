@@ -128,6 +128,40 @@ class GuestReadOnlyConfigTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "guest cannot change a family configuration import in the import steps" do
+    import = family_guest.family.imports.create!(type: "RuleImport", raw_file_str: "name\nOriginal")
+
+    patch import_upload_path(import), params: { import: { raw_file_str: "name\nReplaced" } }
+
+    assert_equal I18n.t("shared.require_non_guest"), flash[:alert]
+    assert_equal "name\nOriginal", import.reload.raw_file_str
+  end
+
+  test "guest cannot change an import's mappings once it is publishing" do
+    import = imports(:transaction)
+    import.update!(status: :importing)
+    mapping = import_mappings(:one)
+
+    patch import_mapping_path(import, mapping), params: {
+      import_mapping: { type: "Import::CategoryMapping", mappable_type: "Category", mappable_id: Import::CategoryMapping::CREATE_NEW_KEY, key: mapping.key }
+    }
+
+    assert_equal I18n.t("shared.require_non_guest"), flash[:alert]
+    assert_equal mapping.attributes, mapping.reload.attributes
+  end
+
+  test "guest can still map a pending transaction import to existing categories" do
+    import = imports(:transaction)
+    mapping = import_mappings(:one)
+
+    patch import_mapping_path(import, mapping), params: {
+      import_mapping: { mappable_type: "Category", mappable_id: categories(:income).id, key: mapping.key }
+    }
+
+    assert_redirected_to import_confirm_path(import)
+    assert_equal categories(:income), mapping.reload.mappable
+  end
+
   test "guest does not see revert or delete for family configuration imports" do
     complete = family_guest.family.imports.create!(type: "RuleImport", status: :complete)
     pending = family_guest.family.imports.create!(type: "CategoryImport")
