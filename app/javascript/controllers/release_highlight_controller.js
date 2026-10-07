@@ -78,7 +78,8 @@ export default class extends Controller {
       return;
     }
 
-    if (this.notesHtml) return;
+    // Gone while the notes loaded (Turbo swapped the page): don't open.
+    if (this.notesHtml || !this.element.isConnected) return;
     this.notesHtml = notesHtml;
     this.openWhenUncovered();
   }
