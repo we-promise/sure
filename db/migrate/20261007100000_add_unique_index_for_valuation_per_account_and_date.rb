@@ -25,17 +25,13 @@ class AddUniqueIndexForValuationPerAccountAndDate < ActiveRecord::Migration[8.1]
     # index_entries_on_account_source_and_external_id already does for
     # provider-sourced entries.
     #
-    # On an installation that already has duplicate (account_id, date)
-    # valuations - the exact state the bug this migration fixes can produce
-    # - PostgreSQL can't build a unique index on top of them. Following this
-    # repo's existing convention for the same situation (see
-    # ScopeLunchflowAccountUniquenessToItem), fail loudly with a clear
-    # message instead of silently deleting financial data on someone's
-    # behalf.
-    if execute("SELECT 1 FROM entries WHERE entryable_type = 'Valuation' GROUP BY account_id, date HAVING COUNT(*) > 1 LIMIT 1").any?
-      raise ActiveRecord::Migration::IrreversibleMigration,
-            "Duplicate (account_id, date) Valuation entries exist. Resolve duplicates before running this migration."
-    end
+    # An installation hit by that race already has duplicate (account_id,
+    # date) valuations, and PostgreSQL can't build a unique index on top of
+    # them. Aborting here would stop a self-hosted upgrade at boot, so keep
+    # the most recently updated valuation per account and date (the value
+    # the user saw last) and remove the others. The account's next sync
+    # rebuilds its balances from what is left.
+    remove_duplicate_valuations
 
     add_index :entries, [ :account_id, :date ],
               unique: true,
@@ -49,6 +45,32 @@ class AddUniqueIndexForValuationPerAccountAndDate < ActiveRecord::Migration[8.1]
   end
 
   private
+    def remove_duplicate_valuations
+      duplicates = select_rows(<<~SQL.squish)
+        SELECT id, entryable_id FROM (
+          SELECT id, entryable_id,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY account_id, date
+                   ORDER BY updated_at DESC, created_at DESC, id DESC
+                 ) AS position
+          FROM entries
+          WHERE entryable_type = 'Valuation'
+        ) ranked
+        WHERE position > 1
+      SQL
+      return if duplicates.empty?
+
+      entry_ids = duplicates.map(&:first)
+      valuation_ids = duplicates.map(&:last)
+
+      transaction do
+        execute "DELETE FROM entries WHERE id IN (#{entry_ids.map { |id| quote(id) }.join(", ")})"
+        execute "DELETE FROM valuations WHERE id IN (#{valuation_ids.map { |id| quote(id) }.join(", ")})"
+      end
+
+      say "Removed #{entry_ids.size} duplicate valuation entries: #{entry_ids.join(", ")}"
+    end
+
     def valid_index_exists?
       select_value(<<~SQL.squish) == true
         SELECT indisvalid FROM pg_index
