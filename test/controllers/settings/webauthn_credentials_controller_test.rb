@@ -106,6 +106,39 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     assert_response :unprocessable_entity
   end
 
+  test "a registration that fails does not spend the backup code" do
+    code = backup_code
+
+    stale_options = registration_options
+    registration_options
+    stale_credential = @client.create(challenge: stale_options.fetch("challenge"), rp_id: "www.example.com")
+    register(stale_credential, code: code)
+    assert_response :unprocessable_entity
+    assert_equal I18n.t("webauthn_credentials.failure"), JSON.parse(response.body).fetch("error")
+
+    options = registration_options
+    assert_difference -> { @user.webauthn_credentials.count }, 1 do
+      register(@client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com"), code: code)
+    end
+    assert_response :success
+  end
+
+  test "a duplicate credential does not spend the backup code" do
+    code = backup_code
+    registration_options
+    @user.webauthn_credentials.create!(nickname: "Existing", credential_id: "duplicate-credential-id", public_key: "public-key")
+
+    verified_credential = Struct.new(:id, :public_key, :sign_count).new("duplicate-credential-id", "new-public-key", 0)
+    relying_party = mock("webauthn_relying_party")
+    relying_party.expects(:verify_registration).returns(verified_credential)
+    Settings::WebauthnCredentialsController.any_instance.stubs(:webauthn_relying_party).returns(relying_party)
+
+    register({ id: "duplicate-credential-id", response: {} }, code: code)
+    assert_response :unprocessable_entity
+
+    assert @user.reload.verify_otp?(code), "backup code should still be unused"
+  end
+
   test "code attempts are rate limited per user" do
     Settings::WebauthnCredentialsController.cache_store.stubs(:increment).returns(11)
     registration_options
