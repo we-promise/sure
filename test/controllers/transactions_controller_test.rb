@@ -1697,6 +1697,17 @@ end
     end
   end
 
+  test "category and date updated together still sync the account" do
+    assert_enqueued_with(job: SyncJob) do
+      patch transaction_url(@entry), params: {
+        entry: {
+          date: @entry.date - 1.day,
+          entryable_attributes: { id: @entry.entryable_id, category_id: categories(:food_and_drink).id }
+        }
+      }
+    end
+  end
+
   test "toggling a tag does not sync the account" do
     assert_no_enqueued_jobs only: SyncJob do
       patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream

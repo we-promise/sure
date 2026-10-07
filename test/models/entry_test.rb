@@ -42,6 +42,20 @@ class EntryTest < ActiveSupport::TestCase
     assert_not entry.saved_changes_affect_balances?
   end
 
+  # A descriptive change must never mask a balance-relevant change made in
+  # the same update.
+  test "descriptive edits combined with a balance edit still affect balances" do
+    entry = create_transaction(account: accounts(:depository), amount: 100)
+
+    entry = Entry.find(entry.id)
+    entry.update!(notes: "x", amount: 150)
+    assert entry.saved_changes_affect_balances?
+
+    entry = Entry.find(entry.id)
+    entry.update!(date: 3.days.ago.to_date, entryable_attributes: { id: entry.entryable_id, category_id: categories(:food_and_drink).id })
+    assert entry.saved_changes_affect_balances?
+  end
+
   test "amount, date and exchange rate edits affect balances" do
     entry = create_transaction(account: accounts(:depository), amount: 100)
 

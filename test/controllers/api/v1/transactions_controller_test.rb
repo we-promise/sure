@@ -684,6 +684,15 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should sync the account when notes and amount change together" do
+    assert_enqueued_with(job: SyncJob) do
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { notes: "Just a note", amount: 42.00 } },
+          headers: api_headers(@api_key)
+    end
+    assert_response :success
+  end
+
   test "should protect transaction from provider sync when updated with user_modified true" do
     update_params = {
       transaction: {
