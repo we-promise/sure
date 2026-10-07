@@ -43,11 +43,7 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
 
     scope = transaction_scope.with_entry
     # Resolved once per rule application (not per transaction) since the scope shares one family.
-    family_ids = {
-      categories: family.categories.pluck(:id).to_set,
-      merchants: family.merchants.pluck(:id).to_set,
-      tags: family.tags.pluck(:id).to_set
-    }
+    references = Entry::SplitReferences.new(family)
 
     unless ignore_attribute_locks
       # Filter by entry's locked_attributes, not transaction's
@@ -63,7 +59,7 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       next false unless txn.splittable?
 
       entry = txn.entry
-      splits = self.class.build_splits(config, entry.amount, family_ids)
+      splits = self.class.build_splits(config, entry.amount, references)
 
       if splits.nil?
         skipped << { transaction_id: txn.id, entry_id: entry.id, reason: "unresolvable_split_amounts", entry_amount: entry.amount.to_s }
@@ -202,17 +198,10 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     # (e.g. fixed splits don't leave a positive remainder for the percentage splits to divide)
     # rather than raising, so the caller can skip just this transaction and keep processing the
     # rest of the scope.
-    def build_splits(config, entry_amount, family_ids)
+    def build_splits(config, entry_amount, references)
       raw_splits = config["splits"]
       sign = entry_amount.negative? ? -1 : 1
       total_magnitude = entry_amount.abs
-
-      # Ids are re-resolved against current family state (passed in by the caller, resolved once
-      # per rule application) rather than trusting the cached JSON — any of them may have been
-      # deleted since the rule was saved.
-      family_category_ids = family_ids[:categories]
-      family_merchant_ids = family_ids[:merchants]
-      family_tag_ids = family_ids[:tags]
 
       fixed_indices = []
       percentage_indices = []
@@ -267,21 +256,14 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
         return nil if percentage_indices.any? { |index| amounts[index] <= 0 }
       end
 
+      # Ids are re-resolved against current family state (references, built once per rule
+      # application) rather than trusting the cached JSON, since any of them may have been
+      # deleted since the rule was saved.
       raw_splits.each_with_index.map do |split, index|
-        category_id = split["category_id"].presence
-        category_id = nil unless category_id && family_category_ids.include?(category_id)
-
-        merchant_id = split["merchant_id"].presence
-        merchant_id = nil unless merchant_id && family_merchant_ids.include?(merchant_id)
-
-        tag_ids = Array(split["tag_ids"]).reject(&:blank?) & family_tag_ids.to_a
-
         {
           name: split["name"],
           amount: amounts[index] * sign,
-          category_id: category_id,
-          merchant_id: merchant_id,
-          tag_ids: tag_ids
+          **references.scope(category_id: split["category_id"], merchant_id: split["merchant_id"], tag_ids: split["tag_ids"])
         }
       end
     end
