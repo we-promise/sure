@@ -218,11 +218,16 @@ class Account::ProviderImportAdapter
         date
       end
 
-      entry.assign_attributes(
-        amount: amount,
-        currency: currency,
-        date: effective_date
-      )
+      # A date or amount the user changed without marking the entry user_modified
+      # (an API PATCH, for example) is still locked by lock_saved_attributes!.
+      # Respect that lock the way enrich_attribute does for name and category.
+      # Amount and currency only make sense together, so a lock on either keeps both.
+      financial_attributes = { amount: amount, currency: currency, date: effective_date }
+      if entry.persisted?
+        financial_attributes.delete(:date) if entry.locked?(:date)
+        financial_attributes.except!(:amount, :currency) if entry.locked?(:amount) || entry.locked?(:currency)
+      end
+      entry.assign_attributes(financial_attributes)
 
       # Use enrichment pattern to respect user overrides
       entry.enrich_attribute(:name, name, source: source)
@@ -246,7 +251,7 @@ class Account::ProviderImportAdapter
       # Auto-detect investment activity labels for investment accounts
       detected_label = investment_activity_label
       if account.investment? && detected_label.nil? && entry.entryable.is_a?(Transaction)
-        detected_label = detect_activity_label(name, amount)
+        detected_label = detect_activity_label(name, entry.amount)
       end
 
       # Determine the transaction kind. Activity-label and account-type classification
@@ -263,7 +268,7 @@ class Account::ProviderImportAdapter
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
         auto_category = account.family.investment_contributions_category
-      elsif account.accountable_type == "Loan" && amount.negative?
+      elsif account.accountable_type == "Loan" && entry.amount.negative?
         auto_kind = "loan_payment"
       end
       auto_kind ||= kind.presence

@@ -155,7 +155,6 @@ fr:
       add_link_aria: Ajouter un lien de paiement pour %{name}
       autopay: Paiement automatique
       autopay_aria: "%{name} est payée automatiquement, ouvrir son portail dans un nouvel onglet"
-      open_site: Ouvrir le site de la facture
       pay: Payer
       pay_aria: Payer %{name} (ouvre un nouvel onglet)
     pick_entry:

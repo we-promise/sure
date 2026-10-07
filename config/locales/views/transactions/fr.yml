@@ -144,6 +144,9 @@ fr:
       category_search_placeholder: Rechercher des catégories
       create_category: Créer « %{name} »
       create_category_error: Impossible de créer la catégorie
+      create_as_subcategory: Ajouter comme sous-catégorie…
+      choose_parent: 'Créer « %{name} » dans :'
+      back_to_categories: Retour
       create_merchant: Créer
       create_merchant_error: Impossible de créer le marchand
       create_tag: Créer
