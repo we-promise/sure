@@ -110,7 +110,7 @@ en:
         failed: "Failed"
         no_usage_data: "No usage data found for the selected period"
         cost_estimates_title: "About Cost Estimates"
-        cost_estimates_description: "Costs are estimated from published provider pricing, including OpenAI pricing as of July 2026. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
+        cost_estimates_description: "Costs are estimated from published provider pricing last verified on %{date}. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
     ai_prompts:
       prompt_field:
         provider_label: Provider
@@ -457,6 +457,7 @@ en:
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         redbark: Sync Australian bank accounts via Redbark open banking.
+        up: Sync Australian Up bank accounts with a personal access token.
         monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
         fio: Sync a Fio banka account with a read-only API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
@@ -505,6 +506,7 @@ en:
         connect_button: Connect Coinbase
         syncing: Syncing...
         sync: Sync
+        disconnect: Disconnect
         disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
       binance_panel:
         setup_instructions: "To connect Binance, create a read-only API key:"
@@ -526,6 +528,7 @@ en:
         historical_import: "Historical Import Settings"
         sync_start_date_label: "Import data from"
         sync_start_date_help: "Select how far back to fetch historical trades."
+        disconnect: Disconnect
         disconnect_confirm: "Are you sure you want to disconnect Binance?"
       kraken_panel:
         step1_html: 'Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>'
@@ -718,15 +721,15 @@ en:
           title: Encryption is not configured
           message: Trade Republic credentials and session data cannot be stored securely until Active Record Encryption is configured.
         steps:
-          step_1: Enter the phone number and PIN you use for the Trade Republic app, then save.
+          step_1: Enter the phone number and PIN or password you use for the Trade Republic app, then save.
           step_2: Enter the code from your authenticator app when requested.
           step_3: Approve the login in your Trade Republic app when prompted.
         phone_number_label: Phone number
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Leave blank to keep the current phone number
-        pin_label: PIN
-        pin_placeholder_new: Your Trade Republic app PIN
-        pin_placeholder_existing: Leave blank to keep the current PIN
+        pin_label: PIN or password
+        pin_placeholder_new: Your Trade Republic PIN or password
+        pin_placeholder_existing: Leave blank to keep the current PIN or password
         currency_label: Account currency
         connect: Log in
         confirm_login: Check login
@@ -748,16 +751,21 @@ en:
           close: Done
         qr_login: Log in with QR code
         qr_cancel: Cancel QR login
-        qr_back_to_credentials: Back to phone number and PIN
+        qr_back_to_credentials: Back to phone number and PIN or password
         qr_loading: Preparing QR code …
         qr_instruction: Scan the QR code with your Trade Republic app and approve the login.
         qr_success: Login approved. Sure is refreshing the provider page.
         qr_error: QR login could not be started. Please try again.
+        add_account: Add another connection
         save_configuration: Save & Start Login
         update_configuration: Update Configuration
         sync: Sync
+        syncing: Syncing...
         disconnect: Disconnect Trade Republic
         disconnect_confirm: Disconnect Trade Republic? Your synced accounts will become manual accounts.
+        disconnect_confirm_with_identifier: "Disconnect the Trade Republic connection ending in %{last4}? Your synced accounts will become manual accounts."
+        identifier_phone: Phone
+        identifier_account: Account
         status_configured_prefix: "Connected. Visit the"
         accounts_tab: Accounts
         setup_accounts: Set up accounts

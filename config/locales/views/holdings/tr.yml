@@ -20,7 +20,7 @@ tr:
       provider: Sağlayıcıdan
     destroy:
       cannot_delete: Bu varlığı silemezsiniz
-      success: Holding silindi
+      success: Varlık silindi
     errors:
       security_collision: 'Yeniden eşlenemedi: %{ticker} için zaten %{date} tarihinde
         bir varlığınız var.'

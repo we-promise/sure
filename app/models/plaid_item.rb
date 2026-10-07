@@ -168,9 +168,10 @@ class PlaidItem < ApplicationRecord
     end
 
     def shared_transactions_refresh_cache?
+      # Compared by name: referencing MemCacheStore autoloads it, which raises
+      # LoadError without the dalli gem, and SolidCache isn't a dependency.
       shared_cache = Rails.cache.is_a?(ActiveSupport::Cache::RedisCacheStore) ||
-        Rails.cache.is_a?(ActiveSupport::Cache::MemCacheStore) ||
-        Rails.cache.class.name == "SolidCache::Store"
+        Rails.cache.class.name.in?(%w[ActiveSupport::Cache::MemCacheStore SolidCache::Store])
 
       Rails.logger.warn("Plaid transaction refresh requires a shared Rails cache store") unless shared_cache
       shared_cache

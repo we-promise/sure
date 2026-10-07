@@ -1,0 +1,44 @@
+---
+uk:
+  plans:
+    show:
+      title: План
+      subtitle: Вирішуйте, куди йдуть ваші гроші, — що ви витрачаєте і що заощаджуєте.
+    budget_card:
+      title: Цей місяць
+      edit_budget: Редагувати бюджет
+      of_total: з %{total}
+      days_left:
+        one: Залишився %{count} день
+        few: Залишилося %{count} дні
+        many: Залишилося %{count} днів
+        other: Залишилося %{count} дня
+      percent_used: Використано %{percent}%
+      top_categories: Основні категорії
+      view_budget: Переглянути весь бюджет
+      empty_body: Установіть місячну ціль витрат і ліміти для категорій, щоб бачити, як іде цей місяць.
+      set_up: Налаштувати бюджет на цей місяць
+    goals_card:
+      title: Ваші цілі
+      new_goal: Нова ціль
+      active_count:
+        one: '%{count} активна'
+        few: '%{count} активні'
+        many: '%{count} активних'
+        other: '%{count} активної'
+      of_targets: з %{total} за всіма цілями
+      behind_count:
+        one: '%{count} відстає від графіка'
+        few: '%{count} відстають від графіка'
+        many: '%{count} відстають від графіка'
+        other: '%{count} відстає від графіка'
+      pending_count:
+        one: '%{count} внесок очікує підтвердження'
+        few: '%{count} внески очікують підтвердження'
+        many: '%{count} внесків очікують підтвердження'
+        other: '%{count} внеску очікує підтвердження'
+      all_on_pace: Усе йде за графіком
+      active_goals: Активні цілі
+      pending_marker: очікує
+      runway: вистачить на %{months} міс. · %{pace}/міс.
+      all_goals: Усі цілі

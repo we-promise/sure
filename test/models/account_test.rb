@@ -65,6 +65,19 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal expected_owner, owners.last
   end
 
+  test "set_current_balance schedules an account sync by default" do
+    @account.expects(:sync_later).once
+
+    assert @account.set_current_balance(1234).success?
+  end
+
+  test "set_current_balance skips the account sync when the caller schedules it" do
+    @account.expects(:sync_later).never
+
+    assert @account.set_current_balance(1234, schedule_sync: false).success?
+    assert_equal 1234, @account.reload.current_anchor_balance
+  end
+
   test "create_and_sync calls sync_later by default" do
     Account.any_instance.expects(:sync_later).once
 
@@ -927,5 +940,16 @@ class AccountTest < ActiveSupport::TestCase
     account.set_opening_anchor_balance(balance: 0, date: default_anchor_date)
 
     assert_nil account.history_start_date
+  end
+
+  test "annotatable_by includes owned and annotate-tier shares but not read-only ones" do
+    member = users(:family_member)
+    ids = Account.annotatable_by(member).pluck(:id)
+
+    assert_includes ids, accounts(:depository).id, "full_control share"
+    assert_not_includes ids, accounts(:credit_card).id, "read_only share"
+
+    accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
+    assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
   end
 end

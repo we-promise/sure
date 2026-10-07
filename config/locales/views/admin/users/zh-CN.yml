@@ -21,8 +21,6 @@ zh-CN:
           trial_expiring_soon: 7 天内到期
           trial_trialing: 试用中
           submit: 筛选
-        summary:
-          trials_expiring_7_days: 未来 7 天内到期的试用
         table:
           user: 用户
           trial_ends_at: 试用结束

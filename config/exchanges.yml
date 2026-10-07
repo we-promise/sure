@@ -122,6 +122,9 @@ XBER:
 XHAM:
   name: Hamburg
   country: DE
+TGAT:
+  name: Tradegate Exchange
+  country: DE
 XDUS:
   name: Düsseldorf
   country: DE

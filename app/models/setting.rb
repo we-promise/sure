@@ -38,6 +38,11 @@ class Setting < RailsSettings::Base
   # generate would otherwise always trip the watchdog. Read via
   # `Chat.response_timeout`, which applies ENV > Setting > default precedence.
   field :ai_response_timeout, type: :integer, default: ENV["AI_RESPONSE_TIMEOUT"]&.to_i
+  # Per-request bound for the admin "Run checks" AI probes on System Health.
+  # The PDF probes do a full extraction round trip, which cloud models often
+  # can't finish inside the 5s default. Read via `AiHealth::Probe.timeout`,
+  # which applies ENV > Setting > default precedence.
+  field :ai_health_probe_timeout, type: :integer, default: ENV["AI_HEALTH_PROBE_TIMEOUT"]&.to_i
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
   field :external_assistant_model, type: :string
@@ -208,6 +213,9 @@ class Setting < RailsSettings::Base
   field :require_invite_for_signup, type: :boolean, default: false
   field :require_email_confirmation, type: :boolean, default: ENV.fetch("REQUIRE_EMAIL_CONFIRMATION", "true") == "true"
   field :invite_only_default_family_id, type: :string, default: nil
+  # Opt-in for self-hosted demo refresh. Managed hosting retains its scheduled behavior.
+  field :demo_family_refresh_enabled, type: :boolean, default: false
+  field :demo_family_refresh_family_id, type: :string, default: nil
 
   def self.validate_onboarding_state!(state)
     return if ONBOARDING_STATES.include?(state)
