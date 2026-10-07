@@ -252,6 +252,38 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal "SSO account creation is disabled. Please contact an administrator.", flash[:alert]
   end
 
+  test "create_user redirects when self-hosted signups are invite-only" do
+    session[:pending_oidc_auth] = new_user_auth
+
+    with_self_hosting do
+      Setting.onboarding_state = "invite_only"
+      Setting.invite_only_default_family_id = families(:dylan_family).id
+
+      assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+        post :create_user
+      end
+    end
+
+    assert_redirected_to new_session_path
+    assert_equal "SSO account creation is disabled. Please contact an administrator.", flash[:alert]
+  end
+
+  test "create_user accepts a pending invitation when self-hosted signups are invite-only" do
+    family = families(:dylan_family)
+    family.invitations.create!(email: "invite-only-invitee@example.com", role: "member", inviter: users(:family_admin))
+    session[:pending_oidc_auth] = new_user_auth.merge("email" => "invite-only-invitee@example.com")
+
+    with_self_hosting do
+      Setting.onboarding_state = "invite_only"
+
+      assert_difference [ "User.count", "OidcIdentity.count" ], 1 do
+        post :create_user
+      end
+    end
+
+    assert_equal family.id, User.find_by!(email: "invite-only-invitee@example.com").family_id
+  end
+
   test "create_user accepts a pending invitation when self-hosted signups are closed" do
     family = families(:dylan_family)
     family.invitations.create!(email: "closed-invitee@example.com", role: "member", inviter: users(:family_admin))

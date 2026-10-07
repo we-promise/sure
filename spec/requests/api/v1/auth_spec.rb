@@ -323,8 +323,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       description 'Creates a new user and family from a previously issued linking code. Links the SSO identity ' \
                   'via OidcIdentity, logs the JIT account creation via SsoAuditLog, and issues mobile OAuth tokens. ' \
                   'The linking code must have allow_account_creation enabled, and self-hosted instances must not have ' \
-                  'signups closed; a pending invitation for the email bypasses both. The first user on a fresh instance is ' \
-                  'assigned the super_admin role; later family creators are assigned an admin-capable role.'
+                  'signups closed or invite-only; a pending invitation for the email bypasses both. The first user on a ' \
+                  'fresh instance is assigned the super_admin role; later family creators are assigned an admin-capable role.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {

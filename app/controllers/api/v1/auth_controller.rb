@@ -274,7 +274,7 @@ module Api
         invitation = Invitation.pending.find_by(email: email)
 
         # Re-check the policy: the cached flag is from the SSO callback, and
-        # signups may have been closed since.
+        # signups may have been closed or made invite-only since.
         unless invitation.present? || (cached[:allow_account_creation] && AuthConfig.jit_account_creation_allowed?(email))
           render json: { error: "SSO account creation is disabled. Please contact an administrator." }, status: :forbidden
           return
