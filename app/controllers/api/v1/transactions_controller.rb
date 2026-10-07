@@ -8,6 +8,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
 
+  # What a read_write (annotate only) share may change, as in the web UI.
+  ANNOTATE_FIELDS = %w[notes category_id merchant_id tag_ids user_modified].freeze
+
   def index
     family = current_resource_owner.family
     accessible_account_ids = family.accounts
@@ -135,6 +138,14 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   end
 
   def update
+    if annotate_only_violation?
+      render json: {
+        error: "forbidden",
+        message: "This account is shared with you to annotate only: category, merchant, tags and notes can be changed"
+      }, status: :forbidden
+      return
+    end
+
     if @entry.split_child?
       render json: { error: "validation_failed", message: "Split child transactions cannot be edited directly. Use the split editor." }, status: :unprocessable_entity
       return
@@ -211,8 +222,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
       family = current_resource_owner.family
       @transaction = family.transactions
-        .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
+        .joins(:entry)
+        .where(entries: { account_id: accounts_with_permission(required_account_permission).select(:id) })
         .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
@@ -220,6 +231,24 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         error: "not_found",
         message: "Transaction not found"
       }, status: :not_found
+    end
+
+    # Same rule as the web UI: reading needs any share, editing needs a
+    # read_write (annotate only) or full_control share, anything else needs
+    # full_control. Missing and not permitted both answer 404.
+    def required_account_permission
+      case action_name
+      when "show" then :read
+      when "update" then :annotate
+      else :write
+      end
+    end
+
+    # A read_write share may only change category, merchant, tags and notes.
+    def annotate_only_violation?
+      return false if @entry.account.permission_for(current_resource_owner).in?([ :owner, :full_control ])
+
+      (transaction_params.keys - ANNOTATE_FIELDS).any?
     end
 
     def ensure_read_scope

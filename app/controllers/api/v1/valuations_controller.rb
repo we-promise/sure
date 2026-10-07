@@ -83,7 +83,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       return
     end
 
-    account = current_resource_owner.family.accounts.find(valuation_account_id)
+    account = accounts_with_permission(:write).find(valuation_account_id)
     requested_upsert = upsert_requested?
     existing_write = false
 
@@ -234,7 +234,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
     def set_valuation
       @entry = current_resource_owner.family
                  .entries
-                 .where(entryable_type: "Valuation")
+                 .where(entryable_type: "Valuation", account_id: accounts_with_permission(action_name == "show" ? :read : :write).select(:id))
                  .find(params[:id])
       @valuation = @entry.entryable
     rescue ActiveRecord::RecordNotFound

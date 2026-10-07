@@ -903,7 +903,91 @@ end
     assert_response :not_found
   end
 
+  test "member cannot update or delete transaction on read_only shared account" do
+    entry = shared_account_entry(accounts(:credit_card))
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: { amount: 999, notes: "changed" } },
+          headers: api_headers(member_api_key)
+    assert_response :not_found
+    assert_equal "Transaction not found", JSON.parse(response.body)["message"]
+
+    assert_no_difference("Entry.count") do
+      delete api_v1_transaction_url(entry.transaction), headers: api_headers(member_api_key)
+    end
+    assert_response :not_found
+    assert_equal "Transaction not found", JSON.parse(response.body)["message"]
+
+    entry.reload
+    assert_equal 10, entry.amount.to_i
+    assert_nil entry.notes
+
+    get api_v1_transaction_url(entry.transaction), headers: api_headers(member_api_key)
+    assert_response :success
+  end
+
+  test "member with read_write share can only annotate a transaction" do
+    account_shares(:credit_card_shared_with_member).update!(permission: "read_write")
+    entry = shared_account_entry(accounts(:credit_card))
+
+    { amount: 999, date: 1.day.ago.to_date, name: "Renamed", description: "Renamed",
+      currency: "EUR", nature: "income" }.each do |field, value|
+      patch api_v1_transaction_url(entry.transaction),
+            params: { transaction: { notes: "annotated", field => value } },
+            headers: api_headers(member_api_key)
+      assert_response :forbidden, "#{field} must not be changeable with a read_write share"
+    end
+    entry.reload
+    assert_equal 10, entry.amount.to_i
+    assert_equal "Shared account purchase", entry.name
+    assert_nil entry.notes
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: {
+            notes: "annotated",
+            category_id: categories(:food_and_drink).id,
+            merchant_id: merchants(:netflix).id,
+            tag_ids: [ tags(:one).id ]
+          } },
+          headers: api_headers(member_api_key)
+    assert_response :success
+    entry.reload
+    assert_equal "annotated", entry.notes
+    assert_equal categories(:food_and_drink), entry.transaction.category
+    assert_equal merchants(:netflix), entry.transaction.merchant
+    assert_equal [ tags(:one) ], entry.transaction.tags.to_a
+
+    assert_no_difference("Entry.count") do
+      delete api_v1_transaction_url(entry.transaction), headers: api_headers(member_api_key)
+    end
+    assert_response :not_found
+  end
+
+  test "member with full_control share can update and delete a transaction" do
+    entry = shared_account_entry(accounts(:depository))
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: { amount: 25 } },
+          headers: api_headers(member_api_key)
+    assert_response :success
+
+    assert_difference("Entry.count", -1) do
+      delete api_v1_transaction_url(entry.transaction), headers: api_headers(member_api_key)
+    end
+    assert_response :success
+  end
+
   private
+
+    def shared_account_entry(account)
+      account.entries.create!(
+        name: "Shared account purchase",
+        date: Date.current,
+        amount: 10,
+        currency: "USD",
+        entryable: Transaction.new
+      )
+    end
 
     def member_api_key
       @member_api_key ||= begin
