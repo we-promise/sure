@@ -36,6 +36,8 @@ class Admin::SystemHealthPushNotificationsTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "Push notifications"
     assert_match "Latest test requested at", response.body
     assert_select "td", text: "Queued"
+    # Named for its contents: "Push notifications" already names the section.
+    assert_select "[role='region'][aria-label='Test results']"
     assert_match "does not confirm delivery", response.body
   end
 
@@ -97,7 +99,7 @@ class Admin::SystemHealthPushNotificationsTest < ActionDispatch::IntegrationTest
 
   test "all system health locales include the notification labels and outcomes" do
     %i[en de fr pt-PT].each do |locale|
-      %w[title requested_at send_test messages.no_devices messages.queued statuses.accepted statuses.failed].each do |key|
+      %w[title requested_at results_label send_test messages.no_devices messages.queued statuses.accepted statuses.failed].each do |key|
         assert_kind_of String, I18n.t("admin.system_health.push_notifications.#{key}", locale: locale, time: "2026-09-12", fallback: false, raise: true)
       end
     end

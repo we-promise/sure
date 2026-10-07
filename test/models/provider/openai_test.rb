@@ -8,6 +8,102 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject_model = "gpt-4.1"
   end
 
+  %w[gpt-6-sol gpt-6.1-sol].each do |model|
+    test "builtin assistant resolves #{model} to the native Responses provider" do
+      with_env_overrides(
+        "OPENAI_ACCESS_TOKEN" => "test-openai-token",
+        "OPENAI_URI_BASE" => nil,
+        "OPENAI_MODEL" => model,
+        "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil
+      ) do
+        Setting.stubs(:openai_uri_base).returns(nil)
+        assistant = Assistant::Builtin.for_chat(chats(:two))
+        provider = assistant.get_model_provider(model)
+
+        assert_instance_of Provider::Openai, provider
+        assert provider.supports_responses_endpoint?
+        assert provider.supports_pdf_processing?(model: model)
+      end
+    end
+
+    test "#{model} PDF processing reserves only an explicitly configured output limit" do
+      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+        Setting.stubs(:llm_max_response_tokens).returns(nil)
+        expect_pdf_response_limit(@openai, model: model, limit: nil)
+        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
+      end
+    end
+
+    test "#{model} PDF processing honors an explicit output limit" do
+      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "8192") do
+        expect_pdf_response_limit(@openai, model: model, limit: 8192)
+        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
+      end
+    end
+  end
+
+  test "GPT-6.1 Sol sends assistant tools through Responses with supported request parameters" do
+    with_env_overrides("OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil) do
+      fake_responses = mock
+      fake_client = mock
+      fake_client.stubs(:responses).returns(fake_responses)
+      fake_client.expects(:chat).never
+      @openai.stubs(:client).returns(fake_client)
+
+      fake_responses.expects(:create).with do |parameters:|
+        parameters[:model] == "gpt-6.1-sol" &&
+          parameters[:tools].first[:name] == "get_net_worth" &&
+          !parameters.key?(:reasoning) && !parameters.key?(:reasoning_effort)
+      end.returns(
+        "id" => "resp_sol61", "model" => "gpt-6.1-sol",
+        "output" => [ {
+          "type" => "function_call", "id" => "fc_sol61", "call_id" => "call_sol61",
+          "name" => "get_net_worth", "arguments" => "{}"
+        } ]
+      )
+
+      response = @openai.chat_response(
+        "What is my net worth?", model: "gpt-6.1-sol",
+        functions: [ { name: "get_net_worth", params_schema: { type: "object", properties: {} } } ]
+      )
+
+      assert response.success?
+      assert_equal "get_net_worth", response.data.function_requests.first.function_name
+    end
+  end
+
+  test "native o-series PDF processing reserves only an explicitly configured output limit" do
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(nil)
+      %w[o1 o3].each do |model|
+        expect_pdf_response_limit(@openai, model: model, limit: nil)
+        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
+      end
+    end
+
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "8192") do
+      %w[o1 o3].each do |model|
+        expect_pdf_response_limit(@openai, model: model, limit: 8192)
+        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
+      end
+    end
+  end
+
+  test "legacy and custom PDF processing preserve the fallback output limit" do
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(nil)
+      expect_pdf_response_limit(@openai, model: "gpt-4.1", limit: 512)
+      assert @openai.process_pdf(pdf_content: "synthetic PDF", model: "gpt-4.1").success?
+
+      custom = Provider::Openai.new("test-token", uri_base: "https://custom.example/v1", model: "gpt-6-sol")
+      expect_pdf_response_limit(custom, model: "gpt-6-sol", limit: 512)
+      assert custom.process_pdf(pdf_content: "synthetic PDF", model: "gpt-6-sol").success?
+
+      expect_pdf_response_limit(custom, model: "o3", limit: 512)
+      assert custom.process_pdf(pdf_content: "synthetic PDF", model: "o3").success?
+    end
+  end
+
   test "effective_model uses Setting when ENV is unset" do
     Setting.stubs(:openai_model).returns("llama3")
     with_env_overrides("OPENAI_MODEL" => nil) do
@@ -488,7 +584,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
   end
 
   test "supported_models_description returns model prefixes for standard provider" do
-    expected = "models starting with: gpt-4, gpt-5, o1, o3"
+    expected = "models starting with: gpt-4, gpt-5, gpt-6, o1, o3"
     assert_equal expected, @subject.supported_models_description
   end
 
@@ -831,4 +927,73 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     tool_call = messages.find { |m| m[:role] == "assistant" }[:tool_calls].first
     assert_equal "{}", tool_call.dig(:function, :arguments)
   end
+
+  test "build_generic_messages preserves extra_content on assistant tool_calls when present" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://generativelanguage.googleapis.com/v1beta/openai",
+      model: "gemini-3.8-flash"
+    )
+
+    extra = { "google" => { "thought_signature" => "sig_encrypted_token_123" } }
+    messages = provider.send(
+      :build_generic_messages,
+      prompt: "hi",
+      function_results: [
+        {
+          call_id: "call_1",
+          name: "get_net_worth",
+          arguments: "{}",
+          output: { "amount" => 10000 },
+          extra_content: extra
+        }
+      ]
+    )
+
+    assistant_message = messages.find { |m| m[:role] == "assistant" }
+    tool_call = assistant_message[:tool_calls].first
+    assert_equal extra, tool_call[:extra_content]
+  end
+
+  test "build_generic_messages omits extra_content on assistant tool_calls when nil" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    messages = provider.send(
+      :build_generic_messages,
+      prompt: "hi",
+      function_results: [
+        {
+          call_id: "call_1",
+          name: "get_net_worth",
+          arguments: "{}",
+          output: { "amount" => 10000 },
+          extra_content: nil
+        }
+      ]
+    )
+
+    assistant_message = messages.find { |m| m[:role] == "assistant" }
+    tool_call = assistant_message[:tool_calls].first
+    assert_not_includes tool_call.keys, :extra_content
+  end
+
+  private
+    # Verify the response budget at the provider-to-processor boundary.
+    # @param limit [Integer, nil] expected explicit cap or omitted cap
+    def expect_pdf_response_limit(provider, model:, limit:)
+      result = Provider::LlmConcept::PdfProcessingResult.new(
+        summary: "Synthetic PDF", document_type: "other", extracted_data: {}
+      )
+      processor = mock
+      processor.expects(:process).returns(result)
+      Provider::Openai::PdfProcessor.expects(:new).with do |*args|
+        params = args.last
+        params[:model] == model && params[:max_response_tokens] == limit &&
+          params[:custom_provider] == provider.custom_provider?
+      end.returns(processor)
+    end
 end

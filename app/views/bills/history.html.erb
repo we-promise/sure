@@ -1,0 +1,10 @@
+<%= turbo_frame_tag dom_id(@series, :history) do %>
+  <%= render "bills/detail",
+        series: @series,
+        history: @history,
+        upcoming: @upcoming,
+        analytics: @analytics,
+        payment_history: @payment_history,
+        yearly_metrics: @yearly_metrics,
+        last_account: @last_account %>
+<% end %>
