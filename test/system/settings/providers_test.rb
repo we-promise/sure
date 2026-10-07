@@ -20,7 +20,7 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     visit settings_providers_path
     find("summary", text: "Apple Wallet").click
     find("details", text: "Apple Wallet").native.save_screenshot(Rails.root.join("tmp", "apple-wallet-connected.png"))
-    within "turbo-frame#financekit-providers-panel" do
+    within "details#financekit-connection" do
       click_link "Test Wallet"
     end
 
@@ -34,6 +34,53 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     end
     assert_current_path account_path(@source.account)
     assert_text "Synthetic shop"
+  end
+
+  test "disconnecting from a connection row follows the redirect and shows its flash" do
+    item = mercury_items(:one)
+
+    visit settings_providers_path
+    find("summary", text: "Mercury").click
+    find("summary", text: item.name).click
+    find("form[action='#{mercury_item_path(item)}']:has(input[name='_method'][value='delete']) button").click
+    within("#confirm-dialog") { click_button "Confirm" }
+
+    assert_current_path accounts_path
+    assert_text I18n.t("mercury_items.destroy.success")
+  end
+
+  test "saving a connection from its row stays on the page for the next save" do
+    item = mercury_items(:one)
+
+    visit settings_providers_path
+    find("summary", text: "Mercury").click
+
+    [ "Renamed Mercury", "Renamed Mercury again" ].each do |name|
+      find("summary", text: item.reload.name).click
+      within("form[action='#{mercury_item_path(item)}']:has(input[name='_method'][value='patch'])") do
+        fill_in I18n.t("mercury_items.provider_panel.connection_name_label"), with: name
+        click_button I18n.t("mercury_items.provider_panel.update_connection")
+      end
+
+      assert_selector "summary", text: name
+      assert_current_path settings_providers_path
+    end
+    assert_equal "Renamed Mercury again", item.reload.name
+  end
+
+  test "syncing a connection from its row keeps the row open" do
+    item = mercury_items(:one)
+
+    visit settings_providers_path
+    find("summary", text: "Mercury").click
+    find("summary", text: item.name).click
+    find("form[action='#{sync_mercury_item_path(item, source: "panel")}'] button").click
+
+    # The toast arrives in the same stream as the panel, after it.
+    assert_text I18n.t("settings.providers.sync_provider_in_progress")
+    assert_selector "details#mercury-connection[open]"
+    assert_current_path settings_providers_path
+    assert item.reload.syncing?
   end
 
   test "Wallet advertises App Store availability without a web connection flow" do
@@ -272,6 +319,21 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     details = find("details", text: /Enable Banking/)
     assert_includes details[:class], "border-warning/25"
+  end
+
+  test "Manage Connections in the SnapTrade menu opens the connections list" do
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.any_instance.stubs(:list_connections)
+      .returns([ { "id" => "auth_456", "brokerage" => { "name" => "Fidelity Investments" } } ])
+
+    visit accounts_path
+    within "##{dom_id(snaptrade_items(:configured_item))}" do
+      find("button[aria-haspopup='menu']", match: :first).click
+      click_link "Manage Connections"
+    end
+
+    assert_selector "details[open] #snaptrade-providers-panel details[open]", text: "Fidelity Investments"
+    assert_current_path settings_providers_path
   end
 
   private

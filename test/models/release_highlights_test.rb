@@ -32,11 +32,40 @@ class ReleaseHighlightsTest < ActiveSupport::TestCase
     assert_nil ReleaseHighlights.pending_tag_for(@user)
   end
 
-  test "mark_release_seen! never regresses to an older tag" do
-    @user.mark_release_seen!("v0.7.5-alpha.7")
-    @user.mark_release_seen!("v0.7.4")
+  test "dismissing a hotfix preserves the legacy base release acknowledgement" do
+    @user.update!(preferences: { "last_seen_release_tag" => "v0.7.5", "custom_preference" => true })
+    Sure.stubs(:version).returns(Semver.new("0.7.5-hotfix.1"))
 
-    assert_equal "v0.7.5-alpha.7", @user.reload.last_seen_release_tag
+    assert_equal "v0.7.5-hotfix.1", ReleaseHighlights.pending_tag_for(@user)
+    @user.mark_release_seen!("v0.7.5-hotfix.1")
+    assert_nil ReleaseHighlights.pending_tag_for(@user.reload)
+    assert @user.preferences["custom_preference"]
+
+    Sure.stubs(:version).returns(Semver.new("0.7.5"))
+    assert_nil ReleaseHighlights.pending_tag_for(@user)
+  end
+
+  test "legacy acknowledgement suppresses the popup before any new dismissal" do
+    @user.update!(preferences: { "last_seen_release_tag" => Sure.version.to_release_tag })
+
+    assert_nil ReleaseHighlights.pending_tag_for(@user.reload)
+  end
+
+  test "stale instances merge acknowledgements across release channels without duplicates" do
+    stale_user = User.find(@user.id)
+    @user.mark_release_seen!("v0.7.6-alpha.1")
+    stale_user.mark_release_seen!("v0.7.5-hotfix.1")
+    @user.mark_release_seen!("v0.7.6-alpha.1")
+
+    @user.reload
+    [ "0.7.6-alpha.1", "0.7.5-hotfix.1" ].each do |version|
+      Sure.stubs(:version).returns(Semver.new(version))
+      assert_nil ReleaseHighlights.pending_tag_for(@user)
+    end
+    assert_equal 2, @user.preferences.fetch("seen_release_tags").size
+
+    Sure.stubs(:version).returns(Semver.new("0.7.6"))
+    assert_equal "v0.7.6", ReleaseHighlights.pending_tag_for(@user)
   end
 
   test "mark_release_seen! accepts a newer tag" do

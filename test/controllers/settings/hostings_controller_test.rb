@@ -31,7 +31,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key demo_family_refresh_enabled demo_family_refresh_family_id].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -155,8 +155,80 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       openai_request_timeout_help
       ai_response_timeout_label
       ai_response_timeout_help
+      ai_health_probe_timeout_label
+      ai_health_probe_timeout_help
     ].each do |key|
       assert I18n.exists?("settings.hostings.openai_settings.#{key}", :de, fallback: false)
+    end
+  end
+
+  test "only a super admin can opt in and the selected family must own the demo email" do
+    # The configured demo email is already used by the new_email fixture.
+    demo_email = "disposable-demo@example.com"
+    Rails.application.stubs(:config_for).with(:demo).returns({ email: demo_email })
+
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
+      assert_not Setting.demo_family_refresh_enabled
+
+      sign_in users(:sure_support_staff)
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
+      assert_response :unprocessable_entity
+      assert_not Setting.demo_family_refresh_enabled
+
+      family = families(:dylan_family)
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: family.id } }
+      assert_response :unprocessable_entity
+
+      demo_family = Family.create!(name: "Disposable Demo")
+      demo_family.users.create!(first_name: "Demo", last_name: "Owner", email: demo_email, password: "password123", role: :admin)
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: demo_family.id } }
+      assert_redirected_to settings_hosting_path
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
+      assert Setting.demo_family_refresh_enabled
+    end
+  end
+
+  test "demo family selection excludes non-admin email owners and cannot be cleared while enabled" do
+    demo_email = "demo-selection@example.com"
+    Rails.application.stubs(:config_for).with(:demo).returns({ email: demo_email })
+    demo_family = Family.create!(name: "Demo Selection")
+    demo_user = demo_family.users.create!(first_name: "Demo", last_name: "Member", email: demo_email, password: "password123", role: :member)
+    sign_in users(:sure_support_staff)
+
+    with_self_hosting do
+      get settings_hosting_url
+      assert_response :success
+      assert_select "option[value='#{demo_family.id}']", count: 0
+
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: demo_family.id } }
+      assert_response :unprocessable_entity
+      assert_nil Setting.demo_family_refresh_family_id
+
+      demo_user.update!(role: :super_admin)
+      get settings_hosting_url
+      assert_select "option[value='#{demo_family.id}']", count: 0
+      demo_user.update!(role: :admin)
+      other_admin = demo_family.users.create!(first_name: "Instance", last_name: "Admin", email: "instance-admin@example.com", password: "password123", role: :super_admin)
+      get settings_hosting_url
+      assert_select "option[value='#{demo_family.id}']", count: 0
+      other_admin.update!(role: :member)
+      get settings_hosting_url
+      assert_select "option[value='#{demo_family.id}']", count: 1
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: demo_family.id } }
+      assert_redirected_to settings_hosting_path
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
+      assert Setting.demo_family_refresh_enabled
+
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: "" } }
+      assert_response :unprocessable_entity
+      assert_equal demo_family.id.to_s, Setting.demo_family_refresh_family_id
+      assert Setting.demo_family_refresh_enabled
+
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: "", demo_family_refresh_enabled: "0" } }
+      assert_redirected_to settings_hosting_path
+      assert_nil Setting.demo_family_refresh_family_id
+      assert_not Setting.demo_family_refresh_enabled
     end
   end
 
@@ -956,7 +1028,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         llm_max_response_tokens: "1024",
         llm_max_items_per_call: "40",
         openai_request_timeout: "180",
-        ai_response_timeout: "240"
+        ai_response_timeout: "240",
+        ai_health_probe_timeout: "30"
       } }
 
       assert_redirected_to settings_hosting_url
@@ -965,13 +1038,15 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_equal 40, Setting.llm_max_items_per_call
       assert_equal 180, Setting.openai_request_timeout
       assert_equal 240, Setting.ai_response_timeout
+      assert_equal 30, Setting.ai_health_probe_timeout
 
       patch settings_hosting_url, params: { setting: {
         llm_context_window: "",
         llm_max_response_tokens: "",
         llm_max_items_per_call: "",
         openai_request_timeout: "",
-        ai_response_timeout: ""
+        ai_response_timeout: "",
+        ai_health_probe_timeout: ""
       } }
 
       assert_nil Setting.llm_context_window
@@ -979,6 +1054,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_nil Setting.llm_max_items_per_call
       assert_nil Setting.openai_request_timeout
       assert_nil Setting.ai_response_timeout
+      assert_nil Setting.ai_health_probe_timeout
     end
   ensure
     Setting.llm_context_window = nil
@@ -986,6 +1062,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.llm_max_items_per_call = nil
     Setting.openai_request_timeout = nil
     Setting.ai_response_timeout = nil
+    Setting.ai_health_probe_timeout = nil
   end
 
   test "rejects llm budget below field minimum" do
@@ -1013,6 +1090,12 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
       assert_match(/must be a whole number/, flash[:alert])
       assert_nil Setting.openai_request_timeout
+
+      patch settings_hosting_url, params: { setting: { ai_health_probe_timeout: "0" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/must be a whole number/, flash[:alert])
+      assert_nil Setting.ai_health_probe_timeout
     end
   ensure
     Setting.llm_context_window = nil
@@ -1034,6 +1117,29 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   ensure
     Setting.openai_request_timeout = nil
+  end
+
+  test "shows environment backed health check timeout when field is disabled" do
+    with_self_hosting do
+      Setting.ai_health_probe_timeout = 30
+
+      with_env_overrides("AI_HEALTH_PROBE_TIMEOUT" => "45") do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "input[name='setting[ai_health_probe_timeout]'][value='45'][disabled='disabled']"
+      end
+
+      # A non-positive env value is ignored by the probes, so it must not lock the field either.
+      with_env_overrides("AI_HEALTH_PROBE_TIMEOUT" => "0") do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "input[name='setting[ai_health_probe_timeout]'][value='30']:not([disabled])"
+      end
+    end
+  ensure
+    Setting.ai_health_probe_timeout = nil
   end
 
   test "can clear data only when admin" do

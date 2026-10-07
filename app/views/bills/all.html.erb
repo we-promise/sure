@@ -84,7 +84,7 @@
     <div class="@3xl:hidden bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
       <% @all_series.each do |series| %>
         <div class="flex items-center gap-3 p-3">
-          <%= link_to bill_path(series), class: "flex items-center gap-3 min-w-0 flex-1 group" do %>
+          <%= link_to bill_path(series), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "flex items-center gap-3 min-w-0 flex-1 group" do %>
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium text-primary truncate group-hover:underline"><%= series.display_name %></p>
               <p class="text-xs text-secondary truncate">
@@ -134,7 +134,7 @@
 
     <%= render DS::Table.new(rows: @all_series, label: t("bills.views.all"), class: "hidden @3xl:block") do |table| %>
       <% table.with_column(t(".col_name")) do |series| %>
-        <%= link_to series.display_name, bill_path(series), class: "font-medium hover:underline" %>
+        <%= link_to series.display_name, bill_path(series), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "font-medium hover:underline" %>
       <% end %>
       <% table.with_column(t(".col_type"), class: "text-secondary") { |series| t(".types.#{series.bill_type}") } %>
       <% table.with_column(t(".col_frequency"), class: "text-secondary") { |series| frequency_label(series) } %>
