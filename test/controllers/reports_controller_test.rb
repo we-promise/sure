@@ -54,7 +54,9 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
                                        currency: "USD", accountable: Investment.new)
     security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
 
-    ExchangeRate.create!(from_currency: "EUR", to_currency: "GBP", date: date, rate: 0.8)
+    # The fixtures already hold EUR->GBP for today and yesterday, so on the 1st
+    # and 2nd of a month a fresh row for its first day breaks uniqueness.
+    ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "GBP", date: date).update!(rate: 0.8)
     ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: date, rate: 1.25)
     account.holdings.create!(security: security, date: date, qty: 5, price: 150,
                              amount: BigDecimal(750), currency: "GBP", cost_basis: 100)

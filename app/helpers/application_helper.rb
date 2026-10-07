@@ -55,6 +55,11 @@ module ApplicationHelper
     end
   end
 
+  # The chevron for a DS::Disclosure summary_content slot; it turns as the disclosure opens.
+  def disclosure_chevron
+    icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90"
+  end
+
   # Convert alpha (0-1) to 8-digit hex (00-FF)
   def hex_with_alpha(hex, alpha)
     alpha_hex = (alpha * 255).round.to_s(16).rjust(2, "0")
@@ -169,6 +174,7 @@ module ApplicationHelper
     Money.new(number_or_money).format(options)
   end
 
+  # Format each native-currency total independently, preserving order and transfer exclusions.
   def totals_by_currency(collection:, money_method:, separator: " | ", negate: false)
     collection.group_by(&:currency)
               .transform_values { |item| calculate_total(item, money_method, negate) }
@@ -287,6 +293,7 @@ module ApplicationHelper
       normalized.downcase
     end
 
+    # Exclude transfers while preserving the original group currency even when its total is zero.
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries
       # Only Entry objects have entryable transactions, Account objects don't
@@ -295,7 +302,8 @@ module ApplicationHelper
         i.entryable.is_a?(Transaction) &&
         i.entryable.counts_as_transfer?
       end
-      total = items.sum(&money_method)
+      # Keep the group's currency when every entry is excluded from the total.
+      total = items.sum(Money.new(0, item.first.currency), &money_method)
       negate ? -total : total
     end
 end
