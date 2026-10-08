@@ -61,7 +61,8 @@
               <%= render "transactions/badges", entry: entry, transaction: transaction, in_split_group: in_split_group, drawer_params: drawer_params %>
             </div>
           </div>
-          <div class="@5xl/compact-table:hidden flex min-w-0 has-[[data-tag-empty]]:hidden">
+          <%# Keep the stream target mounted while labels remain hidden in mobile-style rows. %>
+          <div class="hidden">
             <%= render "tags/menu", entry: entry, transaction: transaction, variant: :mobile %>
           </div>
           <%= render "transactions/subtitle", entry: entry, transaction: transaction, view_ctx: view_ctx, compact: true %>

@@ -36,6 +36,22 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     assert checkbox.visible?, "row checkbox should become visible after tapping the toggle button"
   end
 
+  test "labels stay hidden in mobile-style rows" do
+    @entry.entryable.update!(tags: [ tags(:one) ])
+
+    [ 375, 1400 ].each do |width|
+      page.current_window.resize_to(width, 900)
+      [ transactions_url, account_url(accounts(:depository), tab: "activity") ].each do |url|
+        visit url
+        within "turbo-frame##{dom_id(@entry)}" do
+          assert_no_selector "##{dom_id(@entry.entryable, 'tag_summary_mobile')}"
+          assert_no_selector "##{dom_id(@entry.entryable, 'tag_summary_desktop')}"
+          assert_no_text tags(:one).name
+        end
+      end
+    end
+  end
+
   test "toggling checkboxes on mobile reveals the row selection checkbox in flat (ungrouped) view" do
     @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
     page.current_window.resize_to(375, 800)
@@ -215,7 +231,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
       within "turbo-frame##{dom_id(@entry)}" do
         assert_no_selector "div.w-28"
         assert_selector "#category_name_mobile_#{@entry.entryable_id}", text: categories(:food_and_drink).name
-        assert_selector "##{dom_id(@entry.entryable, 'tag_summary_mobile')}"
+        assert_no_selector "##{dom_id(@entry.entryable, 'tag_summary_mobile')}"
         assert_no_selector "##{dom_id(@entry.entryable, 'tag_summary_desktop')}"
         assert_no_selector "input[type='checkbox']"
         assert_no_text @entry.notes
