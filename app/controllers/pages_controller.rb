@@ -381,7 +381,7 @@ class PagesController < ApplicationController
 
       # Money moved into investments, for a family that does not count it as spending
       if total_invested.positive?
-        percentage = total_income.zero? ? 0 : (total_invested / total_income * 100).round(1)
+        percentage = capacity.zero? ? 0 : (total_invested / capacity * 100).round(1)
         idx = add_node.call("invested_node", t("pages.dashboard.cashflow_preview.node_labels.invested"), total_invested, percentage, IncomeStatement::Sankey::INVESTED_COLOR)
         links << { source: cash_flow_idx, target: idx, value: total_invested, color: IncomeStatement::Sankey::INVESTED_COLOR, percentage: percentage }
       end

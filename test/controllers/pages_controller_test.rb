@@ -329,6 +329,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert links.any? { |link| link.fetch("source") == index.fetch("deficit_node") && link.fetch("target") == center },
       "the deficit flows into Cash Flow"
     assert_operator deficit.fetch("value"), :>=, 200.0, "at least the 200 by which this month's new outflows exceed the payday"
+    capacity = nodes[center].fetch("value")
+    assert_in_delta (500 / capacity * 100).round(1), nodes[index.fetch("invested_node")].fetch("percentage"), 0.05,
+      "invested is a share of the Cash Flow node, which outflows size when they exceed income"
   end
 
   test "dashboard sankey nodes carry a stable filter_value, including opposite-direction subcategories" do
