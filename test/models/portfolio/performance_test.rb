@@ -169,6 +169,41 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_empty result.index_series
   end
 
+  # The same withholding for the fee ratio. Fees and income are money and are
+  # still reported (see Portfolio::Drivers), but a ratio over a value some of
+  # which could not be converted is a percentage of the wrong number.
+  #
+  # Mixed currencies on purpose: with only the EUR account nothing converts, the
+  # average value is zero and the ratio is nil for that reason and not this one.
+  # Here the USD account gives it a perfectly good denominator, which is the case
+  # where a ratio over only the currencies that converted would be shown.
+  test "the fee ratio is withheld when an exchange rate is missing" do
+    eur = eur_account_with_fee
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 995, cash_flow: -5
+    fee_entry account: @account, date: @day_two, amount: 5
+
+    result = performance(account_ids: [ eur.id, @account.id ])
+
+    assert result.rate_missing?
+    assert result.income[:average_value].positive?, "the USD account is a real denominator"
+    assert_equal BigDecimal(5), result.income[:fees], "the fees themselves are still reported"
+    assert_nil result.income[:fee_ratio]
+  end
+
+  # The control for the test above: with the rates present the same fixture has
+  # a ratio, so a nil there is the withholding and not an empty fixture.
+  test "the fee ratio is reported when the rates are present" do
+    eur = eur_account_with_fee
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.0
+    set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.0
+
+    result = performance(account_ids: [ eur.id ])
+
+    assert_not result.rate_missing?
+    assert_in_delta 10 / 995.0, result.income[:fee_ratio].to_f, 0.000001
+  end
+
   # Regression: the key was built from family, user, accounts and period only,
   # so two instances whose rows genuinely differ shared one cache entry and
   # whichever ran first decided what both saw.
