@@ -9,10 +9,16 @@
 # different keys and would let that duplicate through. PARTITION BY groups
 # NULLs together, so the dedupe sees those rows too.
 #
-# The default DDL transaction keeps writers out between the DELETE and the
-# index: CREATE INDEX takes a SHARE lock, which blocks inserts.
+# Writers are locked out from before the DELETE until the index exists. The
+# DELETE alone takes only ROW EXCLUSIVE, which lets other inserts through, so
+# a duplicate written between it and CREATE INDEX would fail the index build.
+# SHARE ROW EXCLUSIVE blocks concurrent writes and is held to the end of the
+# migration's transaction; a transaction never conflicts with its own locks,
+# so the DELETE still runs.
 class AddUniqueIndexToTaggings < ActiveRecord::Migration[8.1]
   def up
+    execute "LOCK TABLE taggings IN SHARE ROW EXCLUSIVE MODE"
+
     execute <<~SQL
       DELETE FROM taggings
       WHERE id IN (
