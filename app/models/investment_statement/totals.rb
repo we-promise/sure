@@ -45,6 +45,14 @@ class InvestmentStatement::Totals
     # rather than by direction. Since #1311 these are recorded as Trades with
     # qty: 0 and price: 0 (Trade::CreateForm#create_income_trade).
     #
+    # Several providers store the same income as a Transaction carrying the
+    # same label instead (Trading212, IBKR, Questrade, SnapTrade, Indexa
+    # Capital, Kraken's fiat staking and earn rows), so income reads the label
+    # from whichever of the two the entry is. Only those labelled
+    # Transactions are joined in, and pending ones are left out until they
+    # post. A Transaction has no trades row, so it never reaches the
+    # direction branches or trades_count.
+    #
     # The direction branches additionally exclude income labels rather than
     # relying on qty: 0 to keep the buckets disjoint. Without this guard such
     # a row would be counted twice: once by direction and once as income.
@@ -64,11 +72,12 @@ class InvestmentStatement::Totals
         SELECT
           COALESCE(SUM(CASE WHEN trades.qty > 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as contributions,
           COALESCE(SUM(CASE WHEN trades.qty < 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as withdrawals,
-          COALESCE(SUM(CASE WHEN trades.investment_activity_label = 'Dividend' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as dividends,
-          COALESCE(SUM(CASE WHEN trades.investment_activity_label = 'Interest' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as interest,
+          COALESCE(SUM(CASE WHEN #{label_sql} = 'Dividend' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as dividends,
+          COALESCE(SUM(CASE WHEN #{label_sql} = 'Interest' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as interest,
           COUNT(trades.id) as trades_count
         FROM entries
-        JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'
+        LEFT JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'
+        LEFT JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'
         LEFT JOIN exchange_rates er ON (
           er.date = entries.date AND
           er.from_currency = entries.currency AND
@@ -77,7 +86,23 @@ class InvestmentStatement::Totals
         WHERE entries.account_id IN (:account_ids)
           AND entries.date BETWEEN :start_date AND :end_date
           AND entries.excluded = false
+          AND (
+            entries.entryable_type = 'Trade'
+            OR (
+              entries.entryable_type = 'Transaction'
+              AND #{income_transaction_sql}
+              #{Transaction.pending_providers_sql("transactions")}
+            )
+          )
       SQL
+    end
+
+    def label_sql
+      "COALESCE(trades.investment_activity_label, transactions.investment_activity_label)"
+    end
+
+    def income_transaction_sql
+      "transactions.investment_activity_label IN ('Dividend', 'Interest')"
     end
 
     def sql_params

@@ -486,7 +486,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     aggregate_queries = queries.grep(/SUM\(CASE WHEN trades\.qty > 0/)
     assert_equal 1, aggregate_queries.size
-    assert_includes aggregate_queries.first, "FROM entries JOIN trades"
+    assert_includes aggregate_queries.first, "FROM entries LEFT JOIN trades"
     assert_includes aggregate_queries.first, "entries.entryable_type = 'Trade'"
     assert_includes aggregate_queries.first, "entries.account_id IN"
     assert_includes aggregate_queries.first, "entries.excluded = false"
@@ -605,6 +605,70 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 5, @statement.total_interest
   end
 
+  test "dividends and interest count the transaction shapes providers write" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+
+    create_income_trade(account: account, label: "Dividend", amount: 50, date: period.start_date)
+    create_income_transaction(account: account, label: "Dividend", amount: 12.5, date: period.start_date, extra_shape: :flat)
+    create_income_transaction(account: account, label: "Interest", amount: 4, date: period.start_date, extra_shape: :none)
+    # PlaidAccount::Investments::TransactionsProcessor writes a dividend as
+    # a qty-0 trade with amount 0 * price, so its cash is not recoverable
+    # here (its `price` is a per-share figure, not the payment). It is
+    # income with amount 0 until the processor is fixed; the 62.5 below
+    # deliberately excludes it.
+    create_plaid_dividend_trade(account: account, date: period.start_date)
+    # Pending income is not counted until it posts
+    create_labelled_transaction(account: account, label: "Dividend", amount: -99, date: period.start_date, extra: { "plaid" => { "pending" => true } })
+    # A labelled transaction outside the period is not counted
+    create_income_transaction(account: account, label: "Dividend", amount: 999, date: period.start_date - 1.day, extra_shape: :flat)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(62.5, "USD"), totals.dividends
+    assert_equal Money.new(4, "USD"), totals.interest
+    assert_equal Money.new(66.5, "USD"), totals.total_income
+    assert_equal Money.new(0, "USD"), totals.contributions
+  end
+
+  test "trades_count counts trades, not the income transactions read beside them" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+
+    create_trade(account: account, qty: 2, amount: 120, date: period.start_date)
+    create_income_transaction(account: account, label: "Dividend", amount: 10, date: period.start_date)
+    create_income_transaction(account: account, label: "Interest", amount: 3, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(13, "USD"), totals.total_income
+    assert_equal 1, totals.trades_count
+  end
+
+  test "contributions and withdrawals count trades only, not external cash transactions" do
+    # None of the non-trade entries below is income, so reading labelled
+    # transactions for income must not let them move the direction buckets.
+    # Totals#contributions is the cash committed to buying securities:
+    # counting the 800 deposit and the 1 000 buy it funded would count that
+    # money twice.
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+    checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+
+    create_portfolio_trade(account: account, qty: 10, price: 100, fee: 0, date: period.start_date)
+    create_portfolio_trade(account: account, qty: -2, price: 100, fee: 0, date: period.start_date)
+    create_labelled_transaction(account: account, label: "Contribution", amount: -300, date: period.start_date)
+    create_labelled_transaction(account: account, label: "Withdrawal", amount: 50, date: period.start_date)
+    create_labelled_transaction(account: account, label: nil, kind: "investment_contribution", amount: -200, date: period.start_date)
+    create_linked_transfer(family: @family, from: checking, to: account, amount: 800, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(1000, "USD"), totals.contributions, "only the buy is a contribution"
+    assert_equal Money.new(200, "USD"), totals.withdrawals, "only the sale is a withdrawal"
+    assert_equal 2, totals.trades_count
+  end
+
   test "current_holdings memoizes so repeated dashboard-style calls issue a single query" do
     account = create_investment_account(balance: 2100, currency: "USD")
     security = Security.create!(ticker: "AAPL", name: "Apple")
@@ -680,6 +744,91 @@ class InvestmentStatementTest < ActiveSupport::TestCase
           investment_activity_label: label
         )
       )
+    end
+
+    def create_portfolio_security(ticker: "T#{SecureRandom.hex(6)}")
+      Security.create!(ticker: ticker, name: "Test #{ticker}")
+    end
+
+    # Manual buy/sell (Trade::CreateForm) and provider trades. The manual form
+    # folds the fee into the entry amount; pass `fee_in_amount: false` for the
+    # Kraken / Binance-spot shape whose amount excludes it.
+    def create_portfolio_trade(account:, security: create_portfolio_security, qty:, price:, fee: 0, label: nil, date: Date.current, fee_in_amount: true, excluded: false)
+      label ||= qty.negative? ? "Sell" : "Buy"
+      amount = qty.to_d * price.to_d
+      amount += fee.to_d if fee_in_amount
+
+      account.entries.create!(
+        name: "#{label} #{security.ticker}",
+        date: date,
+        amount: amount,
+        currency: account.currency,
+        excluded: excluded,
+        entryable: Trade.new(
+          qty: qty,
+          price: price,
+          fee: fee,
+          currency: account.currency,
+          security: security,
+          investment_activity_label: label
+        )
+      )
+    end
+
+    # Trading212 / IBKR / Questrade: a Transaction with the label and the
+    # security id in extra. Negative amount = cash in.
+    def create_income_transaction(account:, label:, amount:, security: create_portfolio_security, date: Date.current, extra_shape: :flat)
+      extra = case extra_shape
+      when :flat then { "security_id" => security.id }
+      when :nested then { "security" => { "id" => security.id } }
+      else {}
+      end
+
+      account.entries.create!(
+        name: "#{label} from #{security.ticker}",
+        date: date,
+        amount: -amount.to_d.abs,
+        currency: account.currency,
+        entryable: Transaction.new(investment_activity_label: label, extra: extra)
+      )
+    end
+
+    # PlaidAccount::Investments::TransactionsProcessor routes a cash dividend
+    # through the trade path with quantity 0, so the amount is 0 * price = 0.
+    def create_plaid_dividend_trade(account:, security: create_portfolio_security, price: 100, date: Date.current)
+      account.entries.create!(
+        name: "Dividend #{security.ticker}",
+        date: date,
+        amount: 0,
+        currency: account.currency,
+        entryable: Trade.new(qty: 0, price: price, fee: 0, currency: account.currency, security: security, investment_activity_label: "Dividend")
+      )
+    end
+
+    def create_labelled_transaction(account:, label:, amount:, kind: "standard", date: Date.current, extra: {}, excluded: false)
+      account.entries.create!(
+        name: "#{label || 'Transaction'} #{SecureRandom.hex(2)}",
+        date: date,
+        amount: amount,
+        currency: account.currency,
+        excluded: excluded,
+        entryable: Transaction.new(investment_activity_label: label, kind: kind, extra: extra)
+      )
+    end
+
+    # A linked Transfer exactly as Transfer::Creator writes it: the outflow leg
+    # is investment_contribution when the destination is an investment account,
+    # the inflow leg is funds_movement, and optional fee legs point back at the
+    # transfer through transfer_id.
+    def create_linked_transfer(family:, from:, to:, amount:, date: Date.current, source_fee_amount: nil)
+      Transfer::Creator.new(
+        family: family,
+        source_account_id: from.id,
+        destination_account_id: to.id,
+        date: date,
+        amount: amount,
+        source_fee_amount: source_fee_amount
+      ).create
     end
 
     def create_trade(account:, qty:, amount:, date:)
