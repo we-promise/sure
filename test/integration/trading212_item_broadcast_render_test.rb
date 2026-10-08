@@ -27,6 +27,22 @@ class Trading212ItemBroadcastRenderTest < ActiveSupport::TestCase
     assert_not_includes html, ERB::Util.html_escape(@private_account.name)
   end
 
+  test "broadcast status partials render without a current user and contain no account rows" do
+    Current.reset
+    assert_nil Current.user
+
+    %w[sync_status sync_summary].each do |partial|
+      html = ApplicationController.render(
+        partial: "trading212_items/#{partial}",
+        locals: { trading212_item: @item.reload }
+      )
+
+      assert_includes html, "id=\"#{partial}_trading212_item_#{@item.id}\""
+      assert_not_includes html, ERB::Util.html_escape(@shared_account.name)
+      assert_not_includes html, ERB::Util.html_escape(@private_account.name)
+    end
+  end
+
   test "only lists accounts the viewing member can access" do
     Current.session = users(:family_member).sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
 
