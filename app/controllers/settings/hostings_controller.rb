@@ -61,6 +61,12 @@ class Settings::HostingsController < ApplicationController
   end
 
   def update
+    if hosting_params.key?(:openai_reasoning_effort)
+      raw_effort = hosting_params[:openai_reasoning_effort].presence
+      effort = Provider::Openai.normalize_reasoning_effort(raw_effort)
+      raise Setting::ValidationError, t(".invalid_reasoning_effort") if raw_effort.present? && effort.nil?
+    end
+
     if hosting_params.key?(:onboarding_state)
       onboarding_state = hosting_params[:onboarding_state].to_s
       Setting.onboarding_state = onboarding_state
@@ -176,12 +182,6 @@ class Settings::HostingsController < ApplicationController
 
     if sync_settings_changed
       sync_auto_sync_scheduler!
-    end
-
-    if hosting_params.key?(:openai_reasoning_effort)
-      raw_effort = hosting_params[:openai_reasoning_effort].presence
-      effort = Provider::Openai.normalize_reasoning_effort(raw_effort)
-      raise Setting::ValidationError, t(".invalid_reasoning_effort") if raw_effort.present? && effort.nil?
     end
 
     # Validate OpenAI configuration before updating

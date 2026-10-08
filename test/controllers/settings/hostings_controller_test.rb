@@ -1308,6 +1308,53 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     original_settings&.each_key { |key| Setting.public_send("#{key}=", nil) }
   end
 
+  test "invalid reasoning effort leaves earlier settings and provider side effects unchanged" do
+    original_settings = {
+      brand_fetch_client_id: "original-brand-client",
+      auto_sync_enabled: false,
+      securities_providers: "twelve_data,tiingo",
+      openai_reasoning_effort: "low"
+    }
+    previous_settings = original_settings.keys.to_h { |key| [ key, Setting.public_send(key) ] }
+
+    with_self_hosting do
+      original_settings.each { |key, value| Setting.public_send("#{key}=", value) }
+      tiingo_security = Security.create!(
+        ticker: "REJECTED-TIINGO", exchange_operating_mic: "XLON",
+        price_provider: "tiingo", offline: false,
+        failed_fetch_count: 2, failed_fetch_at: 1.hour.ago
+      )
+      yahoo_security = Security.create!(
+        ticker: "REJECTED-YAHOO", exchange_operating_mic: "XLON",
+        price_provider: "yahoo_finance", offline: true, offline_reason: "provider_disabled",
+        failed_fetch_count: 4, failed_fetch_at: 1.day.ago
+      )
+      state_fields = %w[offline offline_reason failed_fetch_count failed_fetch_at]
+      original_tiingo_state = tiingo_security.reload.attributes.slice(*state_fields)
+      original_yahoo_state = yahoo_security.reload.attributes.slice(*state_fields)
+      AutoSyncScheduler.expects(:sync!).never
+
+      patch settings_hosting_url, params: { setting: {
+        brand_fetch_client_id: "new-brand-client",
+        auto_sync_enabled: "1",
+        securities_providers: [ "twelve_data", "yahoo_finance" ],
+        openai_reasoning_effort: "turbo"
+      } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Reasoning effort must be one of/, flash[:alert])
+      Setting.clear_cache
+      original_settings.each do |key, value|
+        assert_equal value, Setting.public_send(key), "#{key} changed after rejected update"
+      end
+      assert_equal original_tiingo_state, tiingo_security.reload.attributes.slice(*state_fields)
+      assert_equal original_yahoo_state, yahoo_security.reload.attributes.slice(*state_fields)
+    end
+  ensure
+    previous_settings&.each { |key, value| Setting.public_send("#{key}=", value) }
+    Setting.securities_providers = ""
+  end
+
   private
     def enable_preview_features!
       @user = users(:family_admin)
