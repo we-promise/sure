@@ -98,6 +98,52 @@ class Provider::TerrascoutxTest < ActiveSupport::TestCase
     assert_equal I18n.t("providers.terrascoutx.errors.location_mismatch"), response.error.message
   end
 
+  test "refuses a record that omits its house number or ZIP, since the match cannot be checked" do
+    [
+      { "street" => "Main St", "zip" => "77002" },
+      { "street" => "1000 Main St" }
+    ].each do |address|
+      stub_request(:get, "https://api.terrascoutx.com/v1/suggest")
+        .with(query: hash_including("q" => "1000 Main St, Houston, TX, 77002"))
+        .to_return(status: 200, body: suggest_body(property_record("address" => address)))
+
+      response = fetch_main_st
+
+      assert_not response.success?, address.inspect
+      assert_equal I18n.t("providers.terrascoutx.errors.location_mismatch"), response.error.message
+    end
+  end
+
+  test "refuses a lookup entered without a ZIP code" do
+    stub_request(:get, "https://api.terrascoutx.com/v1/suggest")
+      .with(query: hash_including("q" => "1000 Main St, Houston, TX"))
+      .to_return(status: 200, body: suggest_body(property_record))
+
+    response = @provider.fetch_property_valuation(line1: "1000 Main St", locality: "Houston", region: "TX")
+
+    assert_not response.success?
+    assert_equal I18n.t("providers.terrascoutx.errors.location_mismatch"), response.error.message
+  end
+
+  test "accepts a ZIP+4 on the record when the five digits agree" do
+    stub_request(:get, "https://api.terrascoutx.com/v1/suggest")
+      .with(query: hash_including("q" => "1000 Main St, Houston, TX, 77002"))
+      .to_return(status: 200, body: suggest_body(property_record("address" => { "street" => "1000 Main St", "zip" => "77002-1234" })))
+
+    assert fetch_main_st.success?
+  end
+
+  test "refuses a base URL that is not https, so the API key is never sent in cleartext" do
+    previous = ENV["TERRASCOUTX_URL"]
+    ENV["TERRASCOUTX_URL"] = "http://localhost:4010"
+    response = fetch_main_st
+
+    assert_not response.success?
+    assert_equal I18n.t("providers.terrascoutx.errors.insecure_url"), response.error.message
+  ensure
+    previous ? ENV["TERRASCOUTX_URL"] = previous : ENV.delete("TERRASCOUTX_URL")
+  end
+
   test "returns a friendly error when no property matches the address" do
     stub_request(:get, "https://api.terrascoutx.com/v1/suggest")
       .with(query: hash_including("q" => "1 Nowhere Ln"))

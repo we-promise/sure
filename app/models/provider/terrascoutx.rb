@@ -59,16 +59,23 @@ class Provider::Terrascoutx < Provider
     # same street in another ZIP) must not be taken as the user's property.
     # The city isn't compared: county rolls often record the municipality
     # rather than the mailing city.
+    # Both identifiers must be present and agree. A record that omits its
+    # house number or ZIP cannot be checked, so it is refused.
     def location_match?(record, line1:, postal_code:)
       address = record["address"] || {}
-      [
-        [ house_number(address["street"]), house_number(line1) ],
-        [ address["zip"].to_s.first(5), postal_code.to_s.strip.first(5) ]
-      ].none? { |returned, entered| returned.present? && entered.present? && returned != entered }
+      returned_house, entered_house = house_number(address["street"]), house_number(line1)
+      returned_zip, entered_zip = zip_code(address["zip"]), zip_code(postal_code)
+      returned_house.present? && returned_house == entered_house &&
+        returned_zip.present? && returned_zip == entered_zip
     end
 
     def house_number(street)
       street.to_s[/\A\s*(\d+)/, 1]
+    end
+
+    # Five digits, optionally followed by a ZIP+4 extension.
+    def zip_code(value)
+      value.to_s.strip[/\A(\d{5})(?:-\d{4})?\z/, 1]
     end
 
     # Land use is the county's own description, so it is matched on keywords.
@@ -87,7 +94,9 @@ class Provider::Terrascoutx < Provider
     end
 
     def base_url
-      ENV["TERRASCOUTX_URL"] || "https://api.terrascoutx.com"
+      url = ENV["TERRASCOUTX_URL"].presence || "https://api.terrascoutx.com"
+      raise Error.new(I18n.t("providers.terrascoutx.errors.insecure_url")) unless url.start_with?("https://")
+      url
     end
 
     def client

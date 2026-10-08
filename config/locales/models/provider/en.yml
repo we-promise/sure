@@ -20,3 +20,4 @@ en:
         no_property: TerraScoutX could not find a property matching this address.
         no_valuation: TerraScoutX did not return a value for this property.
         location_mismatch: TerraScoutX matched a property with a different house number or ZIP code. Please double-check the address.
+        insecure_url: TERRASCOUTX_URL must use https://.
