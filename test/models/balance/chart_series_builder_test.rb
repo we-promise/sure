@@ -589,15 +589,50 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal 1_500, amounts[1]
   end
 
-  # A linked account's line opens where its trimmed value line does: on the
-  # anchor date, at that day's closing value, with only the flows after it.
-  test "an anchor date opens at that day's closing value and adds only later flows" do
+  # #382, reading (b): a linked account's line starts from the balance held
+  # before the anchor day's activity (its value_open, 10,000) and counts that
+  # day's 5,000 deposit, so the anchor day's 400 market gain is not money put
+  # in. Before #382 it opened at the day's 15,400 close.
+  test "an anchor date opens at that day's opening value and counts its flows" do
     account = lay_contributions_example
 
     builder = contributions_builder(account, start_date: @day_one + 1)
     series = builder.net_contributions_series(anchor_date: @day_one + 1)
 
-    assert_equal [ 15_400, 15_400, 13_400 ], series.values.map { |v| v.value.amount }
+    assert_equal [ 15_000, 15_000, 13_000 ], series.values.map { |v| v.value.amount }
+    assert_equal [ 400, 900, 1_100 ], builder.balance_series.values.map(&:value).zip(series.values.map(&:value)).map { |v, c| (v - c).amount },
+                 "the gap is the market's and the dividend's, from the anchor day"
+  end
+
+  # When the value line's point on the anchor date is the balance before
+  # that day's activity (a coarse interval's prepended opening, or upstream
+  # #4009's reset), the line's point there is measured at the same moment:
+  # the day's opening value. The day's flows arrive on the next point.
+  test "an anchor point before the day's activity opens at that day's opening value" do
+    account = lay_contributions_example
+
+    series = contributions_builder(account, start_date: @day_one + 1)
+      .net_contributions_series(anchor_date: @day_one + 1, anchor_before_activity: true)
+
+    assert_equal [ 10_000, 15_000, 13_000 ], series.values.map { |v| v.value.amount }
+    assert_equal 10_000, series.values[1].trend.previous.amount
+  end
+
+  # Negative: without an anchor date the flag has nothing to apply to, and
+  # the inception-anchored line is unchanged. The first day carries a
+  # deposit, so opening that day before its activity would read 0.
+  test "the before-activity opening needs an anchor date" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 0, closing: 1_000, cash_flow: 1_000
+    lay_balance account: account, date: @day_one + 1, opening: 1_000, closing: 1_500, cash_flow: 500
+    deposit account: account, date: @day_one, amount: 1_000
+    deposit account: account, date: @day_one + 1, amount: 500
+
+    plain = contributions_builder(account).net_contributions_series
+    flagged = contributions_builder(account).net_contributions_series(anchor_before_activity: true)
+
+    assert_equal [ 1_000, 1_500, 1_500, 1_500 ], flagged.values.map { |v| v.value.amount }
+    assert_equal plain.values.map(&:value), flagged.values.map(&:value)
   end
 
   test "net contributions carry a trend against the previous point" do
@@ -626,6 +661,18 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
 
     assert unconverted.net_contributions_understated?, "a flow with no rate"
     assert_equal 1_500, unconverted.net_contributions_series.values.last.value.amount, "and it counts as nothing"
+  end
+
+  # #382: the anchor day's flows are counted, so one that could not be
+  # valued on that day makes the line understated. One before the anchor
+  # is outside the line and does not.
+  test "an unvalued flow on the anchor day makes net contributions understated" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    deposit account: account, date: @day_one + 2, amount: 1_000, currency: "EUR" # no EUR rate at all
+
+    assert contributions_builder(account).net_contributions_understated?(anchor_date: @day_one + 2), "on the anchor day"
+    refute contributions_builder(account).net_contributions_understated?(anchor_date: @day_one + 3), "before the anchor"
   end
 
   test "an unpriced journal makes net contributions understated" do
