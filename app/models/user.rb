@@ -1,5 +1,6 @@
 class User < ApplicationRecord
   has_many :financekit_items, dependent: :destroy
+  has_one :retirement_plan, dependent: :destroy
 
   include Encryptable
 
