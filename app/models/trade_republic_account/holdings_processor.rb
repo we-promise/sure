@@ -48,10 +48,7 @@ class TradeRepublicAccount::HoldingsProcessor
       )
       return unless security
 
-      if bond_position?(position)
-        rematch_bond_holdings!(isin, security)
-        adopt_bond_instrument_name!(security, position[:instrument_name])
-      end
+      rematch_bond_holdings!(isin, security) if bond_position?(position)
 
       quantity = parse_decimal(position[:quantity])
       price    = parse_decimal(position[:price])
@@ -120,17 +117,6 @@ class TradeRepublicAccount::HoldingsProcessor
         .where(security_id: security.id)
         .where.not(provider_security_id: [ nil, security.id ])
         .update_all(provider_security_id: security.id, updated_at: Time.current)
-    end
-
-    # The first sync can name a bond's ISIN security after its maturity
-    # ("März 2040") when the instrument lookup fails, or after a trade of a
-    # sold bond. Take the instrument name once Trade Republic provides it.
-    # Only securities this provider created are renamed.
-    def adopt_bond_instrument_name!(security, instrument_name)
-      return if instrument_name.blank? || security.name == instrument_name
-      return unless security.offline? && security.offline_reason == OFFLINE_ISIN_REASON
-
-      security.update!(name: instrument_name)
     end
 
     def position_external_id_prefix

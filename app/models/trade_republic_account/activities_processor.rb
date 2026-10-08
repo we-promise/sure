@@ -282,7 +282,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       security = resolve_security(
         isin,
-        detail[:name] || event[:title],
+        detail[:instrument_name] || detail[:name] || event[:title],
         symbol: detail[:symbol],
         exchange_slug: detail[:exchange_slug]
       )

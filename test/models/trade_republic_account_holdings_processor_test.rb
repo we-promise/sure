@@ -703,41 +703,6 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_not holding.security_remapped?
   end
 
-  test "a bond's ISIN security takes the instrument name once Trade Republic provides it" do
-    italy = Security.create!(ticker: "IT0005377152", name: "März 2040", offline: true, offline_reason: "trade_republic_isin")
-
-    @tr_account.update!(raw_positions_payload: [
-      bond_position(isin: "IT0005377152", name: "ITALIEN 19/40", quantity: "10", price: "0.8404")
-        .merge("instrument_name" => "ITALIEN 19/40")
-    ])
-    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
-
-    assert_equal "ITALIEN 19/40", italy.reload.name
-  end
-
-  test "a bond without an instrument name keeps the security name" do
-    italy = Security.create!(ticker: "IT0005377152", name: "ITALIEN 19/40", offline: true, offline_reason: "trade_republic_isin")
-
-    @tr_account.update!(raw_positions_payload: [
-      bond_position(isin: "IT0005377152", name: "März 2040", quantity: "10", price: "0.8404")
-    ])
-    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
-
-    assert_equal "ITALIEN 19/40", italy.reload.name
-  end
-
-  test "bond names never overwrite securities from other flows" do
-    shared_isin = Security.create!(ticker: "IT0005377152", name: "Italy 3.1% 2040", offline: true, offline_reason: "other_provider")
-
-    @tr_account.update!(raw_positions_payload: [
-      bond_position(isin: "IT0005377152", name: "ITALIEN 19/40", quantity: "10", price: "0.8404")
-        .merge("instrument_name" => "ITALIEN 19/40")
-    ])
-    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
-
-    assert_equal "Italy 3.1% 2040", shared_isin.reload.name
-  end
-
   test "bond rematch keeps a holding the user remapped" do
     shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
     holding = @account.holdings.create!(

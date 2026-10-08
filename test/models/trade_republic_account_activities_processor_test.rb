@@ -1660,6 +1660,29 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "IT0005377152 · 2677.95x ITALIEN 19/40", entry.name
   end
 
+  test "a sold bond's security takes the instrument name stamped on its trade" do
+    import_event({
+      id: "evt_sold_bond",
+      timestamp: "2025-11-18T11:19:31Z",
+      category: "orderExecution",
+      title: "März 2040",
+      detail: {
+        isin: "IT0005377152",
+        name: "März 2040",
+        instrument_name: "ITALIEN 19/40",
+        quantity: "-2677.95",
+        price: "0.95",
+        amount: "2544.05",
+        currency: "EUR",
+        instrument_type: "bond"
+      }
+    })
+
+    entry = find_trade("trade_republic_event_evt_sold_bond")
+    assert_equal "ITALIEN 19/40", entry.entryable.security.name
+    assert_equal "IT0005377152 · 2677.95x ITALIEN 19/40", entry.name
+  end
+
   test "stored bond trades on the legacy BOND listing resolve by ISIN" do
     Security.expects(:search_provider).never
     import_event({

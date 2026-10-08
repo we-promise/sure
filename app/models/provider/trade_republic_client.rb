@@ -845,7 +845,6 @@ class Provider::TradeRepublicClient
         {
           "isin" => isin,
           "name" => instrument[:name].presence || position["name"],
-          "instrument_name" => instrument[:name],
           "category" => portfolio_category(position["categoryType"]),
           "instrument_type" => instrument[:instrument_type],
           "quantity" => decimal_string(quantity),
@@ -963,8 +962,11 @@ class Provider::TradeRepublicClient
     # The portfolio names a bond by its localized maturity ("März 2040"); the
     # instrument name also carries the issuer ("ITALIEN 19/40").
     def bond_instrument(websocket, isin)
-      name = instrument_payload(websocket, isin)&.dig("name").to_s.strip.presence
-      { name: name, instrument_type: BOND_INSTRUMENT_TYPE }.compact
+      { name: instrument_name(websocket, isin), instrument_type: BOND_INSTRUMENT_TYPE }.compact
+    end
+
+    def instrument_name(websocket, isin)
+      instrument_payload(websocket, isin)&.dig("name").to_s.strip.presence
     end
 
     def instrument_payload(websocket, isin)
@@ -1006,7 +1008,37 @@ class Provider::TradeRepublicClient
       end
 
       stamp_instrument_symbols_on_events!(events, symbols)
+      stamp_bond_instrument_names!(websocket, events, budget: MAX_INSTRUMENT_LOOKUPS - looked_up)
       symbols
+    end
+
+    # A sold bond has no position to name its ISIN security after, and its
+    # timeline title only names the maturity ("März 2040"). Stamp the
+    # instrument name on bond trades while they pass through a sync, so the
+    # security is created with it.
+    def stamp_bond_instrument_names!(websocket, events, budget:)
+      names = {}
+      Array(events).each do |event|
+        next unless event.is_a?(Hash)
+
+        detail = event["detail"] || event[:detail]
+        next unless self.class.bond?(detail)
+
+        detail = detail.stringify_keys
+        isin = detail["isin"].to_s.presence
+        next if isin.blank? || detail["instrument_name"].present?
+
+        unless names.key?(isin)
+          break if names.size >= budget
+
+          names[isin] = instrument_name(websocket, isin)
+        end
+        next if names[isin].blank?
+
+        detail["instrument_name"] = names[isin]
+        event["detail"] = detail
+      end
+      events
     end
 
     def trade_isins_missing_symbols(events, known_symbols)

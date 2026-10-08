@@ -1662,7 +1662,6 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_includes requested, "instrument"
     position = positions.first
     assert_equal "ITALIEN 19/40", position["name"]
-    assert_equal "ITALIEN 19/40", position["instrument_name"]
     assert_equal "bond", position["instrument_type"]
     assert_nil position["symbol"]
     assert_nil position["exchange_slug"]
@@ -1685,7 +1684,6 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     })
 
     assert_equal "März 2040", positions.first["name"]
-    assert_nil positions.first["instrument_name"]
     assert_equal "bond", positions.first["instrument_type"]
   end
 
@@ -1777,6 +1775,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       looked_up << isin
       nil
     end
+    @client.define_singleton_method(:instrument_name) { |_websocket, _isin| "ITALIEN 19/40" }
     unresolved = []
     events = [
       {
@@ -1792,6 +1791,52 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_empty looked_up
     assert_empty unresolved
     assert_nil events.first.dig("detail", "symbol")
+    assert_equal "ITALIEN 19/40", events.first.dig("detail", "instrument_name")
+  end
+
+  test "enrich_trade_instrument_symbols stamps the instrument name on bond trades once per ISIN" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      requested << payload[:id] if payload[:type] == "instrument"
+      payload[:id] == "IT0005377152" ? { "name" => "ITALIEN 19/40", "typeId" => "bond" } : {}
+    end
+    bond = ->(id, isin, extra = {}) {
+      {
+        "id" => id,
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "category" => "orderExecution",
+        "detail" => { "isin" => isin, "quantity" => "1000", "instrument_type" => "bond" }.merge(extra)
+      }
+    }
+    events = [
+      bond.call("buy", "IT0005377152"),
+      bond.call("sell", "IT0005377152"),
+      bond.call("named", "FR0014001NN8", "instrument_name" => "FRANKREICH 21/72"),
+      bond.call("unknown", "DE0001102580")
+    ]
+
+    @client.send(:enrich_trade_instrument_symbols, Object.new, events)
+
+    assert_equal %w[IT0005377152 DE0001102580], requested
+    assert_equal [ "ITALIEN 19/40", "ITALIEN 19/40", "FRANKREICH 21/72", nil ],
+      events.map { |event| event.dig("detail", "instrument_name") }
+  end
+
+  test "bond instrument names stay within the instrument lookup budget" do
+    requested = 0
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
+      requested += 1
+      { "name" => "Bond" }
+    end
+    events = (1..3).map do |index|
+      { "id" => "buy-#{index}", "detail" => { "isin" => "XS000000000#{index}", "instrument_type" => "bond" } }
+    end
+
+    @client.send(:stamp_bond_instrument_names!, Object.new, events, budget: 2)
+
+    assert_equal 2, requested
+    assert_nil events.last.dig("detail", "instrument_name")
   end
 
   private
