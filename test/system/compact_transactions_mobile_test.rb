@@ -186,6 +186,8 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
               columns,
               order: headers.map(header => header.textContent.trim().toLowerCase()),
               labelsCell: cells.indexOf(labels.closest('[role="cell"]')),
+              checkboxWidth: cells[0].getBoundingClientRect().width,
+              columnGap: parseFloat(getComputedStyle(row).columnGap),
               amountFits: amount.scrollWidth <= amount.clientWidth,
               rowHeight: row.getBoundingClientRect().height
             };
@@ -196,6 +198,9 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
         columns.each_value { |column| assert_in_delta column["headerLeft"], column["left"], 1 }
         assert_equal layout["order"].index("category") + 1, layout["labelsCell"]
         assert_equal "labels", layout["order"][layout["labelsCell"]]
+        assert_in_delta 24, layout["checkboxWidth"], 1
+        assert_in_delta 96, columns["date"]["width"], 1
+        assert_in_delta 8, layout["columnGap"], 1
         assert_in_delta columns["amount"]["width"], columns["labels"]["width"], 1
         assert_in_delta 2.5, columns["transaction"]["width"].fdiv(columns["category"]["width"]), 0.05
         if show_notes
@@ -229,7 +234,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     [ transactions_url, account_url(accounts(:depository), tab: "activity") ].each do |url|
       visit url
       within "turbo-frame##{dom_id(@entry)}" do
-        assert_no_selector "div.w-28"
+        assert_no_selector "div.w-24"
         assert_selector "#category_name_mobile_#{@entry.entryable_id}", text: categories(:food_and_drink).name
         assert_no_selector "##{dom_id(@entry.entryable, 'tag_summary_mobile')}"
         assert_no_selector "##{dom_id(@entry.entryable, 'tag_summary_desktop')}"
@@ -284,7 +289,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
             const rect = el.getBoundingClientRect();
             return rect.top + rect.height / 2;
           };
-          const date = row.querySelector('div.w-28');
+          const date = row.querySelector('div.w-24');
           return {
             height: row.getBoundingClientRect().height,
             nameCenter: center(row.querySelector('[data-clickable-row-target="link"]')),
@@ -304,7 +309,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
         ((rootId, frameId) => {
           const root = document.getElementById(rootId);
           const up = (el) => el.textContent.trim().toUpperCase();
-          const dateCells = [...root.querySelectorAll('div.w-28')];
+          const dateCells = [...root.querySelectorAll('div.w-24')];
           const headerDate = dateCells.find((el) => up(el) === "DATE");
           const header = headerDate.closest("div.uppercase");
           const headerTxn = [...header.querySelectorAll("div")].find((el) => el.children.length === 0 && up(el) === "TRANSACTION");

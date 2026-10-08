@@ -683,7 +683,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       # Compact rows render a flex row with an inline date column; the
       # full-size partial renders a grid-cols-12 row with an icon instead.
       assert_no_match(/grid-cols-12/, stream.to_html)
-      assert_match(/w-28/, stream.to_html)
+      assert_match(/w-24/, stream.to_html)
     end
   end
 

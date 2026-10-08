@@ -49,7 +49,7 @@ class DS::CompactRow < DesignSystemComponent
 
   def row_classes
     class_names(
-      "flex items-center gap-2 @5xl/compact-table:gap-3",
+      "flex items-center gap-2",
       # Header labels must start at the same x as row content: the header
       # sits in an outer px-2 wrapper, so the header shell needs its own
       # px-2 to reach the 16px inset of data rows (outer p-1 + row px-3).
@@ -64,7 +64,7 @@ class DS::CompactRow < DesignSystemComponent
 
   def checkbox_wrapper_classes
     class_names(
-      "w-8 shrink-0 justify-center hidden @5xl/compact-table:flex",
+      "w-6 shrink-0 justify-center hidden @5xl/compact-table:flex",
       @header ? nil : "has-[input:not(.hidden)]:flex"
     )
   end
@@ -76,7 +76,7 @@ class DS::CompactRow < DesignSystemComponent
       </div>
 
       <% if @show_date %>
-        <div role="<%= cell_role %>" class="hidden @5xl/compact-table:flex w-28 shrink-0 text-secondary text-sm truncate pr-2"><%= date %></div>
+        <div role="<%= cell_role %>" class="hidden @5xl/compact-table:flex w-24 shrink-0 text-secondary text-sm truncate pr-2"><%= date %></div>
       <% end %>
 
       <div role="<%= cell_role %>" class="flex items-center gap-2 @5xl/compact-table:gap-3 flex-[5] min-w-0">
