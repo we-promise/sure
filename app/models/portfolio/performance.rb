@@ -120,6 +120,17 @@ class Portfolio::Performance
     metrics[:drivers]
   end
 
+  # Dividend and interest income by calendar month, and the fees over the same
+  # rows -- see Portfolio::Income#to_h for the keys. A Hash, as #drivers is,
+  # because it is cached and an object would not survive the round trip.
+  #
+  # Its OWN cache entry rather than part of #metrics, and computed only when
+  # asked, so a caller that builds a Performance only to read index_series or
+  # the returns never pays for it.
+  def income
+    @income ||= Rails.cache.fetch("#{cache_key}_income") { income_metrics(rate_missing?) }
+  end
+
   # True when a currency pair had no rate anywhere in the period, in which
   # case every return figure is nil and the UI must say why rather than showing
   # a parity-converted number.
@@ -222,6 +233,16 @@ class Portfolio::Performance
         suppressed_dates: rows.select(&:suppressed).map(&:date),
         day_count: rows.size
       }
+    end
+
+    # The income figures are money and are reported whatever happens, as the
+    # drivers are. The fee ratio is a percentage, so it is withheld on the same
+    # terms as the returns: with a rate missing, fees and value cover only the
+    # currencies that converted, and their ratio would read as the whole
+    # portfolio's.
+    def income_metrics(rate_missing)
+      income = Portfolio::Income.new(daily_returns).to_h
+      rate_missing ? income.merge(fee_ratio: nil) : income
     end
 
     # One day's growth applied to a level, rounded to CHAIN_PRECISION
