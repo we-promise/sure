@@ -2016,6 +2016,25 @@ end
     assert_equal 20, css_select("turbo-frame[id^='entry_']").count
   end
 
+  test "pagination per-page select uses the shared options with an accessible name" do
+    family = families(:empty)
+    sign_in users(:empty)
+    user = users(:empty)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => false))
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    create_transaction(account: account)
+
+    get transactions_url(per_page: 50)
+
+    assert_response :success
+    assert_select "select[name='per_page'][aria-label='#{I18n.t("shared.pagination.per_page")}']", count: 1
+    User::TRANSACTIONS_PER_PAGE_OPTIONS.each do |value|
+      assert_select "select[name='per_page'] option[value='#{value}']", count: 1
+    end
+    assert_select "select[name='per_page'] option[selected][value='50']", count: 1
+  end
+
   test "restore redirect prefers preview per_page preference over stale session value" do
     family = families(:empty)
     sign_in users(:empty)
