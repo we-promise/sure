@@ -575,6 +575,31 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal [ 100, 0, 0 ], gains_amounts(account, start_date: 2.days.ago.to_date)
   end
 
+  # Plaid dates each holding by its own `institution_price_as_of`, so one sync
+  # can leave a security's provider row older than the rest. The Holdings tab
+  # (`Account#current_holdings`) and the reverse calculator's starting
+  # portfolio (`Holding::PortfolioSnapshot`) both take only the provider rows on
+  # the account's latest provider date, so that security is not part of the
+  # position they show. Today's gain must agree with the Holdings tab.
+  test "today's gain agrees with the Holdings tab when provider rows carry different dates" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    account.entries.destroy_all
+    link = AccountProvider.create!(account: account, provider: plaid_accounts(:one))
+
+    [ [ securities(:aapl), Date.current, 10, 110, 90 ], [ securities(:msft), 2.days.ago.to_date, 5, 60, 50 ] ].each do |security, date, qty, price, basis|
+      account.holdings.create!(
+        security: security, date: date, qty: qty, price: price, amount: qty * price, currency: "USD",
+        cost_basis: basis, cost_basis_source: "provider", account_provider: link
+      )
+    end
+    Holding::Materializer.new(account, strategy: :reverse).materialize_holdings
+
+    tab_gain = account.current_holdings.sum { |h| h.amount - (h.cost_basis * h.qty) }
+    assert_equal [ securities(:aapl).id ], account.current_holdings.map(&:security_id)
+    assert_equal tab_gain, gains_amounts(account, start_date: Date.current).last
+  end
+
   private
     def gains_amounts(account, start_date:)
       Balance::ChartSeriesBuilder.new(
