@@ -471,6 +471,37 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
                  "the flow must not be converted at parity"
   end
 
+  # A start-of-day flow joins the opening capital, which is valued at the
+  # previous day's rate, so the flow converts at that rate too. Converted at
+  # its own day's rate, the 500 EUR deposit below would read as 600 and leave
+  # a residual the drivers could not explain.
+  test "a foreign currency flow converts at the previous day's rate" do
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.2
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_550, cash_flow: 550
+    deposit account: @account, date: @day_two, amount: 500, currency: "EUR"
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("550"), second.external_flow
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # An account whose history predates the family's first stored rate converts
+  # at the earliest rate after it, rather than being flagged or taken at 1.
+  test "a balance before the first stored rate converts at the earliest rate after it" do
+    eur = create_portfolio_account(family: @family, currency: "EUR")
+    set_rate from: "EUR", to: "USD", date: @day_two + 5.days, rate: 1.2
+    lay_balance account: eur, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: eur, date: @day_two, opening: 1_000, closing: 1_000
+
+    returns = daily_returns(account_ids: [ eur.id ])
+
+    refute returns.rate_missing?, "a rate on file is a rate, however far ahead"
+    assert_equal BigDecimal("1200"), returns.rows.last.value_close
+  end
+
   # The balances stop at the cut-off date; the flows must stop with them, or a
   # deposit lands in the denominator of a day the account is no longer in.
   test "a flow after an account's cut off date is not counted" do
