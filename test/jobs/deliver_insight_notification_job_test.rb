@@ -44,6 +44,13 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
     )
   end
 
+  test "does not push an insight whose account is no longer shared with everyone" do
+    @insight.update!(metadata: @insight.metadata.merge("account_id" => accounts(:connected).id))
+    Apns::Client.expects(:new).never
+
+    DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: @subscription.id)
+  end
+
   test "localizes notifications using the family locale" do
     @insight.family.update!(locale: "de")
     response = stub(ok?: true)
