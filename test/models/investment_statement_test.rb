@@ -740,6 +740,29 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_not_equal before, after
   end
 
+  # Unlinking clears holdings.account_provider_id with update_all, which leaves
+  # updated_at alone. The supported-history trim reads that column, so the
+  # cached series must not outlive the link.
+  test "every series cache key changes when a provider link is removed" do
+    account = create_investment_account(balance: 1000)
+    provider = AccountProvider.create!(account: account, provider: plaid_accounts(:one))
+    security = Security.create!(ticker: "NVDA", name: "Nvidia")
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD", account_provider_id: provider.id
+    )
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    before = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    account.holdings.where(account_provider_id: provider.id).update_all(account_provider_id: nil)
+    after = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+
+    kinds.each do |kind|
+      assert_not_equal before[kind], after[kind], "#{kind} series key survived the unlink"
+    end
+  end
+
   test "every series cache key changes when a holding is deleted" do
     # Every series is trimmed to the supported-history start, which provider
     # holdings decide, so the value and holdings-value charts depend on

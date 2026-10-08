@@ -364,8 +364,12 @@ class InvestmentStatement
     # deletion (a row gone, timestamps unchanged) each move every series key.
     def holdings_version
       @holdings_version ||= begin
-        holdings = Holding.where(account_id: historical_scope.account_ids)
-        "#{holdings.count}-#{holdings.maximum(:updated_at)&.to_f || 0}"
+        # The provider-linked count covers an unlink, which clears
+        # account_provider_id with update_all and leaves updated_at alone,
+        # yet moves the supported-history trim that reads that column.
+        count, linked, latest = Holding.where(account_id: historical_scope.account_ids)
+          .pick(Arel.sql("COUNT(*), COUNT(account_provider_id), MAX(updated_at)"))
+        "#{count}-#{linked}-#{latest&.to_f || 0}"
       end
     end
 
