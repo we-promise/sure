@@ -46,12 +46,14 @@ class Tag < ApplicationRecord
 
       if replacement
         # Skip objects that already carry the replacement: moving their row
-        # would tag them twice. Their old row goes with destroy! below.
+        # would tag them twice. Their old row goes with destroy! below. The
+        # type is compared the way index_taggings_unique keys it, with a
+        # missing type folded to '', so the two always agree.
         taggings.where(<<~SQL, replacement.id).update_all(tag_id: replacement.id)
           NOT EXISTS (
             SELECT 1 FROM taggings carried
             WHERE carried.tag_id = ?
-              AND carried.taggable_type IS NOT DISTINCT FROM taggings.taggable_type
+              AND COALESCE(carried.taggable_type, '') = COALESCE(taggings.taggable_type, '')
               AND carried.taggable_id = taggings.taggable_id
           )
         SQL

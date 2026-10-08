@@ -34,6 +34,23 @@ class TagTest < ActiveSupport::TestCase
     assert_equal [ new_tag.id ], Tagging.where(taggable_id: taggable_id).pluck(:tag_id)
   end
 
+  # The unique index folds a missing taggable_type to '', so the merge must
+  # treat a NULL type and an empty one as the same object too, or moving the
+  # row would hit the index.
+  test "replace and destroy treats a missing and an empty taggable type as the same object" do
+    old_tag = tags(:one)
+    new_tag = tags(:two)
+    taggable_id = transactions(:transfer_out).id
+    Tagging.insert_all!([
+      { tag_id: old_tag.id, taggable_id: taggable_id, taggable_type: nil, created_at: Time.current, updated_at: Time.current },
+      { tag_id: new_tag.id, taggable_id: taggable_id, taggable_type: "", created_at: Time.current, updated_at: Time.current }
+    ])
+
+    old_tag.replace_and_destroy!(new_tag)
+
+    assert_equal [ new_tag.id ], Tagging.where(taggable_id: taggable_id).pluck(:tag_id)
+  end
+
   test "rejects the reserved Untagged filter sentinel as a name" do
     tag = families(:dylan_family).tags.new(name: Tag::UNTAGGED_FILTER_VALUE, color: "#e99537")
 
