@@ -716,6 +716,52 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), second.unexplained
   end
 
+  # A position quoted in another currency converts from the HOLDING's
+  # currency, at the previous day's rate like every start-of-day flow.
+  test "a journal priced in a foreign currency converts at the previous day's rate" do
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.2
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_550, market_flow: 550
+    security_journal account: @account, date: @day_two, qty: 5, price: 100, currency: "EUR"
+
+    assert_equal BigDecimal("550"), daily_returns.rows.last.external_flow
+  end
+
+  # The entry is in the account's currency, so the entry-level rate check sees
+  # nothing wrong. The position is quoted in a currency with no rate, so the
+  # journal cannot be valued, and the day has to say which fact it lacks.
+  test "a journal priced in a currency with no rate is flagged as a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 100, amount: 500, currency: "EUR"
+    )
+
+    returns = daily_returns
+
+    assert returns.rate_missing?, "a journal that could not be converted must be flagged"
+    assert returns.rows.last.suppressed
+  end
+
+  # Only a Transfer is a journal. A Contribution labelled trade that records no
+  # cash contributed nothing, and must not be revalued from the position.
+  test "a contribution labelled trade with no cash amount is not valued as a journal" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    @account.entries.create!(
+      name: "Contribution", date: @day_two, amount: 0, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 5, price: 0,
+                           currency: @account.currency, investment_activity_label: "Contribution")
+    )
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 100, amount: 500, currency: @account.currency
+    )
+
+    assert_equal BigDecimal("0"), daily_returns.rows.last.external_flow
+  end
+
   # The flow classifier makes a Contribution or Withdrawal labelled Trade
   # external too, and those carry a real cash amount. Valuing every external
   # Trade from its position would have turned one with qty 0 into a flow of nothing.
