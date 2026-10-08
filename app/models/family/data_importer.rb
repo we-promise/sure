@@ -111,6 +111,7 @@ class Family::DataImporter
     Import.transaction do
       # Import in dependency order
       import_accounts(records["Account"] || [])
+      link_loan_collateral(records["Account"] || [])
       import_balances(records["Balance"] || [])
       import_categories(records["Category"] || [])
       import_tags(records["Tag"] || [])
@@ -348,6 +349,40 @@ class Family::DataImporter
         map_source!(:accounts, old_id, account)
         @created_accounts << account if created
         increment_summary("Account", created ? :created : :updated)
+      end
+    end
+
+    # A loan's collateral is an account in the same export, so it can only be
+    # linked once every account exists and has its new id. In a single-file import
+    # a collateral id the file does not carry (the asset was left out of the
+    # export, or belongs to another family) leaves the loan unlinked rather than
+    # failing the import.
+    def link_loan_collateral(records)
+      records.each do |record|
+        data = record["data"] || {}
+        old_collateral_id = data.dig("accountable", "collateral_account_id")
+        next unless data["accountable_type"] == "Loan" && old_collateral_id.present?
+
+        loan_account = mapped_record(:accounts, data["id"], @family.accounts, record_type: "Account")
+        # Required, so a session import (chunked, strict) raises on a reference that
+        # has not been imported yet, as every other reference does, instead of
+        # dropping the link. A single-file import leaves such a loan unlinked.
+        collateral_id = mapped_id(:accounts, old_collateral_id, record_type: "Account", required: true)
+        next if loan_account.blank? || collateral_id.blank?
+
+        loan = loan_account.loan
+        next if loan.collateral_account_id == collateral_id
+        next if loan.update(collateral_account_id: collateral_id)
+
+        DebugLogEntry.capture(
+          category: "import",
+          level: "warn",
+          message: "Loan collateral not linked on import: #{loan.errors.full_messages.to_sentence}",
+          source: "Family::DataImporter",
+          family: @family,
+          account: loan_account,
+          metadata: { source_account_id: data["id"], source_collateral_account_id: old_collateral_id }
+        )
       end
     end
 
