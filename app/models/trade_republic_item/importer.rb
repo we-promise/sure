@@ -19,6 +19,7 @@ class TradeRepublicItem::Importer
     result = provider.sync(
       session_txt: trade_republic_item.session_blob,
       known_newest_event_id: known_newest_event_id,
+      timeline_cursors: force_full_timeline_fetch? ? {} : trade_republic_item.timeline_cursors,
       enrich_events: events_needing_detail_enrichment,
       symbol_lookup_isins: isins_needing_symbol_lookup,
       known_instrument_symbols: stored_instrument_symbols
@@ -33,25 +34,30 @@ class TradeRepublicItem::Importer
         "Trade Republic session expired. Re-authentication required."
     end
 
+    history_capped = false
     ActiveRecord::Base.transaction do
-      upsert_account(data, domain_statuses: domain_statuses)
+      history_capped = upsert_account(data, domain_statuses: domain_statuses)
       trade_republic_item.update!(
         status: :good,
         newest_event_id: timeline_cursor_for(data, domain_statuses),
+        timeline_cursors: timeline_cursors_for(data, domain_statuses, history_capped: history_capped),
         session_blob: data["session_txt"].presence || trade_republic_item.session_blob
       )
     end
 
-    record_provider_warnings(data["warnings"])
+    record_provider_warnings(Array(data["warnings"]) + importer_warnings(history_capped: history_capped))
 
     {
       success: true,
-      detail_backfill_count: data["detail_backfill_count"].to_i
+      detail_backfill_count: data["detail_backfill_count"].to_i,
+      timeline_backfill_count: Provider::TradeRepublicClient.pending_timeline_backfills(trade_republic_item.timeline_cursors)
     }
   end
 
   private
 
+    # Returns whether the stored timeline is full, i.e. the size cap dropped
+    # events this sync fetched.
     def upsert_account(data, domain_statuses:)
       account_info = data["account"] || {}
       unless domain_statuses["account_metadata"] == "success"
@@ -69,7 +75,7 @@ class TradeRepublicItem::Importer
                  trade_republic_item.family.currency
       portfolio_account = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
 
-      upsert_kind(
+      portfolio_capped = upsert_kind(
         kind: "portfolio",
         external_id: account_id,
         name: build_account_name(account_id, kind: "portfolio"),
@@ -86,7 +92,7 @@ class TradeRepublicItem::Importer
       # Pass every event into the cash merge, including orderExecution. Filtering
       # happens after merge so a newly categorized savings-plan event can replace
       # and remove its older unmapped cash copy.
-      upsert_kind(
+      cash_capped = upsert_kind(
         kind: "cash",
         external_id: "cash:#{account_id}",
         name: build_account_name(account_id, kind: "cash"),
@@ -100,6 +106,7 @@ class TradeRepublicItem::Importer
         domain_statuses: domain_statuses
       )
       upsert_crypto_account(account_id, currency, domain_statuses)
+      portfolio_capped || cash_capped
     end
 
     # Crypto gets its own account because Sure has a Crypto account type.
@@ -145,6 +152,7 @@ class TradeRepublicItem::Importer
       cash_status = domain_statuses["cash"]
       timeline_status = domain_statuses["timeline"]
       domain_status = kind == "portfolio" ? portfolio_status : cash_status
+      history_capped = false
       attrs = {
         trade_republic_account_id: external_id,
         name: name,
@@ -171,11 +179,13 @@ class TradeRepublicItem::Importer
         # Drop order executions before the size cap so they never crowd out
         # cash events on the cash account.
         merged = merged.reject { |event| event_category(event) == "orderExecution" } if kind == "cash"
+        history_capped = drops_fetched_events?(merged, existing: tr_account.raw_timeline_payload, incoming: events)
         attrs[:raw_timeline_payload] = merged.last(MAX_TIMELINE_EVENTS)
       end
 
       tr_account.assign_attributes(attrs)
       tr_account.save!
+      history_capped
     end
 
     def normalized_domain_statuses(data)
@@ -208,16 +218,20 @@ class TradeRepublicItem::Importer
     end
 
     def known_newest_event_id
-      return if trade_republic_item.newest_event_id.blank?
+      return if force_full_timeline_fetch?
 
-      # A previous implementation could persist the newest cursor while
-      # dropping the actual event payload. Force one full timeline fetch in
-      # that state so historical data can be recovered instead of remaining
-      # permanently invisible.
+      trade_republic_item.newest_event_id.presence
+    end
+
+    # A previous implementation could persist the newest cursor while
+    # dropping the actual event payload. Force one full timeline fetch in
+    # that state so historical data can be recovered instead of remaining
+    # permanently invisible.
+    def force_full_timeline_fetch?
+      return false if trade_republic_item.newest_event_id.blank?
+
       portfolio_accounts = trade_republic_item.trade_republic_accounts.select(&:portfolio?)
-      return if portfolio_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
-
-      trade_republic_item.newest_event_id
+      portfolio_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
     end
 
     # Incomplete trade-detail events and complete trades still missing a share
@@ -281,7 +295,9 @@ class TradeRepublicItem::Importer
     end
 
     # Advance the list cursor whenever timeline pagination finished, even when
-    # a detail backlog remains for later syncs.
+    # a detail backlog remains for later syncs. The per-topic newest events in
+    # timeline_cursors take precedence; this column seeds topics without
+    # their own state and triggers the forced full fetch.
     def timeline_cursor_for(data, domain_statuses)
       pagination_complete = if data.key?("timeline_pagination_complete")
         data["timeline_pagination_complete"]
@@ -292,6 +308,41 @@ class TradeRepublicItem::Importer
       return trade_republic_item.newest_event_id if data["newest_event_id"].blank?
 
       data["newest_event_id"]
+    end
+
+    # Per-topic newest event and history backfill position for the next
+    # sync. Kept as-is when the timeline failed so no progress is lost. Once
+    # the stored history is full, older pages would be dropped straight away,
+    # so the history backfill stops.
+    def timeline_cursors_for(data, domain_statuses, history_capped:)
+      stored = trade_republic_item.timeline_cursors
+      return stored if domain_statuses["timeline"] == "failed" || data["timeline_cursors"].nil?
+
+      cursors = data["timeline_cursors"].to_h
+      history_capped ? Provider::TradeRepublicClient.stop_timeline_history_backfills(cursors) : cursors
+    end
+
+    def importer_warnings(history_capped:)
+      return [] unless history_capped
+
+      [ "timeline history exceeds #{MAX_TIMELINE_EVENTS} events; older history is not imported" ]
+    end
+
+    # True when the size cap would discard events this sync fetched for the
+    # first time, i.e. the history reaches further back than can be stored.
+    def drops_fetched_events?(merged, existing:, incoming:)
+      overflow = merged.size - MAX_TIMELINE_EVENTS
+      return false unless overflow.positive?
+
+      existing_ids = Array(existing).filter_map { |event| event_id(event) }.to_set
+      fetched_ids = Array(incoming).filter_map { |event| event_id(event) }.reject { |id| existing_ids.include?(id) }.to_set
+      merged.first(overflow).any? { |event| fetched_ids.include?(event_id(event)) }
+    end
+
+    def event_id(event)
+      return unless event.is_a?(Hash)
+
+      (event["id"] || event[:id]).presence
     end
 
     def merge_timeline_events(existing, incoming)

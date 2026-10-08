@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2670,6 +2670,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_120000) do
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.text "session_blob"
     t.string "status", default: "good", null: false
+    t.jsonb "timeline_cursors", default: {}, null: false
     t.datetime "updated_at", null: false
     t.index ["family_id", "brokerage_account_id"], name: "index_trade_republic_items_on_family_id_and_brokerage_account", unique: true, where: "((brokerage_account_id IS NOT NULL) AND (scheduled_for_deletion = false))"
     t.index ["family_id"], name: "index_trade_republic_items_on_family_id"
