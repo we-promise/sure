@@ -162,8 +162,8 @@ You can keep your bank's statements next to an account and let Sure check its ba
 
 Sure needs each statement's **period** to show which months are covered and to compare balances. It finds the period in this order:
 
-1. **Inside the PDF**, for banks Sure can read. Trade Republic statements are recognised in any app language, including the opening and closing balance, so their generic `Account statement.pdf` name doesn't matter.
-2. **Dates in the filename**, for everything else, e.g. `2026-04`, `04-2026`, `2026-04-30` or `Apr 2026`.
+1. **Inside the PDF**, for banks Sure can read. Trade Republic statements are recognised in Italian, English, German, French, Spanish and Dutch, including the opening and closing balance, so their default `Account statement.pdf` name doesn't matter.
+2. **Dates in the filename**, for everything else, e.g. `2026-04`, `2026-04-30` or `Apr 2026`.
 3. **Manually**: open the statement and enter the period and balances yourself.
 
 If your bank names every file the same way, add the month to the filename before uploading, e.g. `Statement 2026-04.pdf`.

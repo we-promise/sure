@@ -37,6 +37,7 @@ ca:
       files_hint: PDF, CSV o XLSX. Màxim %{max_size}MB per fitxer.
       files_label: Fitxers d'extracte
       inbox_upload: Puja
+      period_hint: "Sure llegeix el període dels PDF de Trade Republic o d’una data al nom del fitxer (p. ex. 2026-04). També el pots indicar a l’extracte."
     index:
       account_label: Compte
       confidence: Coincidència %{confidence}

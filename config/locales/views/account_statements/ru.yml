@@ -42,6 +42,7 @@ ru:
       files_hint: PDF, CSV или XLSX. Максимум %{max_size}МБ на файл.
       files_label: Файлы выписок
       inbox_upload: Загрузить
+      period_hint: "Sure берёт период из PDF-выписок Trade Republic или из даты в имени файла (например, 2026-04). Его также можно указать в выписке вручную."
     index:
       account_label: Счёт
       confidence: "%{confidence} совпадение"

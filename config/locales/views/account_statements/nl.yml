@@ -36,6 +36,7 @@ nl:
       files_hint: PDF, CSV of XLSX. Max. %{max_size} MB per bestand.
       files_label: Afschriftbestanden
       inbox_upload: Uploaden
+      period_hint: "Sure leest de periode uit Trade Republic-pdf’s of uit een datum in de bestandsnaam (bijv. 2026-04). Je kunt hem ook bij het afschrift instellen."
     index:
       account_label: Account
       confidence: "%{confidence} overeenkomst"

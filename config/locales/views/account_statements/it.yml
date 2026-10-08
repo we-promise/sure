@@ -36,7 +36,7 @@ it:
       files_hint: PDF, CSV o XLSX. Max %{max_size}MB per file.
       files_label: File estratti conto
       inbox_upload: Carica
-      period_hint: "Sure legge il periodo dai PDF di Trade Republic o da una data nel nome del file (2026-04 o 04-2026). Puoi anche impostarlo nell’estratto conto."
+      period_hint: "Sure legge il periodo dai PDF di Trade Republic o da una data nel nome del file (es. 2026-04). Puoi anche impostarlo nell’estratto conto."
     index:
       account_label: Conto
       confidence: "Corrispondenza %{confidence}"

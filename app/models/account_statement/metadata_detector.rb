@@ -15,8 +15,6 @@ class AccountStatement::MetadataDetector
     (?:
       (?<year_first>\d{4})[-_\.](?<month_first>0?[1-9]|1[0-2])
       |
-      (?<month_lead>0?[1-9]|1[0-2])[-_\.](?<year_lead>\d{4})
-      |
       (?<month_name>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)
       [-_\s\.]+(?<year_second>\d{4})
     )
@@ -248,9 +246,9 @@ class AccountStatement::MetadataDetector
       match = basename.match(MONTH_PATTERN)
       return nil unless match
 
-      year = (match[:year_first] || match[:year_lead] || match[:year_second]).to_i
-      month = if match[:month_first] || match[:month_lead]
-        (match[:month_first] || match[:month_lead]).to_i
+      year = (match[:year_first] || match[:year_second]).to_i
+      month = if match[:month_first]
+        match[:month_first].to_i
       else
         Date::ABBR_MONTHNAMES.index(match[:month_name][0, 3].capitalize)
       end

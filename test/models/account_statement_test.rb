@@ -455,7 +455,7 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert statement.original_file.blob.download.start_with?("%PDF-")
   end
 
-  test "reads period and balances from a Trade Republic statement pdf" do
+  test "reads period and balances from a Trade Republic statement pdf over a filename date" do
     eur_account = @family.accounts.create!(
       name: "Trade Republic Cash",
       balance: 0,
@@ -471,7 +471,7 @@ class AccountStatementTest < ActiveSupport::TestCase
         fixture_path,
         "application/pdf",
         true,
-        original_filename: "Account_statement_04-2026_-_Trade_Republic.pdf"
+        original_filename: "Trade Republic 2026-03.pdf"
       )
     )
 
@@ -535,20 +535,19 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal false, statement.sanitized_parser_output.dig("pdf", "balances_detected")
   end
 
-  test "detects a month written as MM-YYYY in the filename" do
+  test "does not read a bare MM-YYYY token in the filename as the period" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
       account: nil,
       file: uploaded_file(
-        filename: "Account_statement_04-2026_-_Some_Bank.pdf",
+        filename: "Invoice_04-2029.pdf",
         content_type: "application/pdf",
         content: "%PDF-1.4 statement"
       )
     )
 
-    assert_equal Date.new(2026, 4, 1), statement.period_start_on
-    assert_equal Date.new(2026, 4, 30), statement.period_end_on
-    assert_equal "filename_only", statement.sanitized_parser_output["pdf_detection"]
+    assert_nil statement.period_start_on
+    assert_nil statement.period_end_on
   end
 
   test "handles malformed csv metadata detection without raw parser output" do
