@@ -163,6 +163,31 @@ class Portfolio::DailyReturns
     rows.any?
   end
 
+  # Income paid in the period, by the security it came from, in the family
+  # currency: { "security-uuid" => BigDecimal }.
+  #
+  # Only what names a security. A Trade-shaped dividend carries one as a column;
+  # a Transaction-shaped one only when the provider recorded it in `extra`
+  # (Transaction#activity_security_id reads the same two keys). Everything else
+  # is simply absent from this Hash: the caller subtracts what is here from
+  # `rows.sum(&:income)` to get the unattributed remainder, which is what makes
+  # a by-security table reconcile to the total by construction.
+  #
+  # That only holds if this reads the SAME entries the rows' `income` does, so
+  # it shares their fragments and not copies of them: the flow classifier for
+  # "is this income?", #rate_lookup for the previous day's rate, and the
+  # same date, active-until and `excluded` predicates as `flows_by_date`. An
+  # entry whose rate is missing is dropped here exactly as the rows drop it (the
+  # product is NULL and falls out of their SUM); #rate_missing? reports it
+  # either way.
+  def income_by_security
+    return {} if account_ids.empty?
+
+    @income_by_security ||= ActiveRecord::Base.connection.select_all(
+      ActiveRecord::Base.sanitize_sql_array([ income_by_security_query, query_binds ])
+    ).to_a.reject { |raw| raw["security_id"].nil? }.to_h { |raw| [ raw["security_id"], decimal(raw["income"]) ] }
+  end
+
   private
     def decimal(value)
       return BigDecimal(0) if value.nil?
@@ -576,6 +601,39 @@ class Portfolio::DailyReturns
       "entries.entryable_type = 'Trade' " \
         "AND trades.investment_activity_label = '#{Portfolio::FlowClassifier::TRANSFER_LABEL}' " \
         "AND entries.amount = 0"
+    end
+
+    def income_by_security_query
+      <<~SQL
+        WITH account_windows AS (
+          SELECT
+            account_window.account_id::uuid AS account_id,
+            account_window.active_until_date::date AS active_until_date
+          FROM jsonb_each_text(CAST(:active_until_json AS jsonb))
+            AS account_window(account_id, active_until_date)
+        )
+        SELECT
+          COALESCE(
+            trades.security_id::text,
+            LOWER(NULLIF(transactions.extra->>'security_id', '')),
+            LOWER(NULLIF(transactions.extra->'security'->>'id', ''))
+          ) AS security_id,
+          SUM(-entries.amount * fx.rate) AS income
+        FROM entries
+        JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
+        LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
+        #{flow_class_joins}
+        LEFT JOIN LATERAL (
+          SELECT #{rate_lookup('COALESCE(entries.currency, entry_accounts.currency)', 'entries.date - 1')} AS rate
+        ) fx ON TRUE
+        WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
+          AND entries.date BETWEEN :start_date AND :end_date
+          AND (flow_windows.active_until_date IS NULL OR entries.date <= flow_windows.active_until_date)
+          AND COALESCE(entries.excluded, false) = false
+          AND fx.rate IS NOT NULL
+          AND #{flow_class_sql} = 'income'
+        GROUP BY 1
+      SQL
     end
 
     def flow_class_sql

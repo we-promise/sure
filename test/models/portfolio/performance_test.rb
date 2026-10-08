@@ -169,6 +169,23 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_empty result.index_series
   end
 
+  # A caller that builds a Performance only to read index_series must not pay
+  # for income. Income carries a by-security read of its own, so if it rode
+  # along in the shared metrics every such caller would run it for a figure it
+  # never shows.
+  test "income is computed only when it is asked for" do
+    build_textbook_case
+    subject = performance
+
+    metric_queries = capture_sql_queries { subject.index_series }
+    income_queries = capture_sql_queries { subject.income }
+
+    assert_empty metric_queries.grep(/AS security_id/), "reading a return must not run the by-security query"
+    assert_equal 1, income_queries.grep(/AS security_id/).size,
+                 "asking for income runs it once, over rows the metrics already loaded"
+    assert_empty income_queries.grep(/AS value_close/), "and does not read the daily rows a second time"
+  end
+
   # The same withholding for the fee ratio. Fees and income are money and are
   # still reported (see Portfolio::Drivers), but a ratio over a value some of
   # which could not be converted is a percentage of the wrong number.

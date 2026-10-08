@@ -120,15 +120,18 @@ class Portfolio::Performance
     metrics[:drivers]
   end
 
-  # Dividend and interest income by calendar month, and the fees over the same
-  # rows -- see Portfolio::Income#to_h for the keys. A Hash, as #drivers is,
-  # because it is cached and an object would not survive the round trip.
+  # Dividend and interest income by calendar month, by security, and the fees
+  # over the same rows -- see Portfolio::Income#to_h for the keys. A Hash, as
+  # #drivers is, because it is cached and an object would not survive the round
+  # trip.
   #
   # Its OWN cache entry rather than part of #metrics, and computed only when
-  # asked, so a caller that builds a Performance only to read index_series or
-  # the returns never pays for it -- and the other way round: the missing-rate
-  # flag it needs is read from the daily returns, not from #metrics, so a
-  # caller reading only the income never runs the returns' compute.
+  # asked. The by-security figures cost a query, and a caller that builds a
+  # Performance only to read index_series or the returns never needs them:
+  # folded into the shared blob, every one of them would run it. The other way
+  # round holds too: the missing-rate flag it needs is read from the daily
+  # returns, not from #metrics, so a caller reading only the income never runs
+  # the returns' compute.
   def income
     @income ||= Rails.cache.fetch("#{cache_key}_income") { income_metrics(daily_returns.rate_missing?) }
   end
