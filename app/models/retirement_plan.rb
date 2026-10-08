@@ -26,13 +26,17 @@ class RetirementPlan < ApplicationRecord
   validates :inflation_rate, presence: true, numericality: { greater_than: -1, less_than_or_equal_to: 1 }
   validates :mode, inclusion: { in: MODES }
 
+  # Monte Carlo. Mirrors the database checks.
+  validates :return_volatility, presence: true, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
+  validates :success_target, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: 1 }
+
   # The user's saved plan, or an unsaved one carrying the column defaults.
   # Never writes: opening a page must not create a row.
   def self.for(user)
     find_by(user: user) || new(user: user)
   end
 
-  PERCENT_ATTRIBUTES = %i[safe_withdrawal_rate expected_annual_return savings_rate inflation_rate].freeze
+  PERCENT_ATTRIBUTES = %i[safe_withdrawal_rate expected_annual_return savings_rate inflation_rate return_volatility success_target].freeze
 
   # The form speaks in percent; the columns hold fractions. Blank stays blank,
   # which for the savings rate means "derive it". Input that is not a number
@@ -119,6 +123,46 @@ class RetirementPlan < ApplicationRecord
     RetirementPlan::Solver.new(**simulation_inputs(as_of:)).call
   end
 
+  # --- Monte Carlo -----------------------------------------------------------
+
+  MONTE_CARLO_PATHS = 5_000
+
+  # Fixed by the plan, so a plan always draws the same paths: the same inputs
+  # give the same answer on every visit.
+  def monte_carlo_seed
+    Zlib.crc32(id.to_s)
+  end
+
+  # The run for this plan: retiring on its date, or in FIRE mode in the
+  # expected-returns year. Nil while the plan cannot be simulated.
+  def monte_carlo(as_of:)
+    year = monte_carlo_retirement_year(as_of)
+    return nil if year.nil? || new_record?
+
+    projection = projection(as_of: as_of)
+    RetirementPlan::MonteCarlo.new(
+      simulation_inputs: simulation_inputs(as_of:), retirement_year: year,
+      annual_income: projection.annual_income, savings_rate: projection.effective_savings_rate,
+      volatility: return_volatility, seed: monte_carlo_seed, paths: MONTE_CARLO_PATHS
+    )
+  end
+
+  # The run's answers as plain values, so a caller can cache them. The
+  # confident year is a full run for each candidate year and only FIRE mode
+  # shows it, so it is searched for only there.
+  def monte_carlo_result(as_of:)
+    mc = monte_carlo(as_of: as_of)
+    return nil if mc.nil?
+
+    {
+      as_of: as_of, retirement_year: mc.retirement_year, success_rate: mc.success_rate,
+      stress_success_rate: mc.stress_success_rate,
+      confident_year: (mc.confident_year(success_target) if mode == "fire"),
+      percentiles: mc.percentiles, heatmap: mc.heatmap,
+      expected_annual_return: mc.expected_annual_return, savings_rate: mc.savings_rate
+    }
+  end
+
   # The accounts a user may fund the plan from: the ones the default funding
   # set draws on. Anything else, a property say, has no balance the funding
   # total counts, so linking it would leave the plan with nothing.
@@ -171,11 +215,11 @@ class RetirementPlan < ApplicationRecord
     AssetTotal = Data.define(:total, :unconverted_count)
     SimulationStreams = Data.define(:streams, :unconverted_count)
 
-    # A plan runs from the reference year to the end-age year. With the owner
-    # born after the reference year, or the end age already past, there are
-    # no years to plan: an empty table would read as a plan that lasts.
-    def plannable?(as_of)
-      birth_year.present? && birth_year <= as_of.year && birth_year + end_age >= as_of.year
+    def monte_carlo_retirement_year(as_of)
+      return nil if birth_year.nil?
+      return retirement_date&.year unless mode == "fire"
+
+      solve(as_of: as_of).retirement_year || (birth_year + end_age)
     end
 
     # Two spending windows, on purpose. The contribution before retirement is

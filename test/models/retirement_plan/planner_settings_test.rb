@@ -101,4 +101,31 @@ class RetirementPlan::PlannerSettingsTest < ActiveSupport::TestCase
 
     assert_not @plan.funding_links.new(account: account).valid?
   end
+
+  # --- Monte Carlo settings ------------------------------------------------
+
+  test "an unsaved plan carries the Monte Carlo defaults: 12% volatility and a 90% target" do
+    RetirementPlan.where(user: @user).delete_all
+    plan = RetirementPlan.for(@user)
+
+    assert_equal [ BigDecimal("0.12"), BigDecimal("0.9") ], [ plan.return_volatility, plan.success_target ]
+  end
+
+  test "volatility and the target are set in percent" do
+    @plan.update!(return_volatility_percent: "15", success_target_percent: "85")
+
+    assert_equal [ BigDecimal("0.15"), BigDecimal("0.85") ], [ @plan.reload.return_volatility, @plan.success_target ]
+  end
+
+  test "volatility outside 0 to 100% and a target of 0 or above 100% are refused" do
+    [ BigDecimal("-0.01"), BigDecimal("1.01") ].each { |v| assert_not @plan.tap { |p| p.return_volatility = v }.valid?, "#{v}" }
+    @plan.return_volatility = 0
+    [ 0, BigDecimal("1.01") ].each { |t| assert_not @plan.tap { |p| p.success_target = t }.valid?, "#{t}" }
+    @plan.success_target = 1
+    assert @plan.valid?
+  end
+
+  test "the database refuses a target of zero that bypasses the model" do
+    assert_raises(ActiveRecord::StatementInvalid) { @plan.update_columns(success_target: 0) }
+  end
 end

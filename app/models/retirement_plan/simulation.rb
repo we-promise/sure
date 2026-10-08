@@ -80,6 +80,24 @@ class RetirementPlan::Simulation
     depletion_year && depletion_year - birth_year
   end
 
+  # Each year's [contribution, withdrawal], which do not depend on returns.
+  # RetirementPlan::MonteCarlo replays them under varying returns.
+  def yearly_flows
+    @yearly_flows ||= (first_year..last_year).map { |year| flows_for(year, year - first_year) }
+  end
+
+  def inflation_rate
+    @inflation_rate
+  end
+
+  def current_assets
+    @current_assets
+  end
+
+  def return_rate
+    @return_rate
+  end
+
   private
     def build_rows
       value = @current_assets

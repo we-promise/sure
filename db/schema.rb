@@ -2330,9 +2330,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.decimal "inflation_rate", precision: 6, scale: 4, default: "0.03", null: false
     t.string "mode", default: "traditional", null: false
     t.date "retirement_date"
+    t.decimal "return_volatility", precision: 5, scale: 4, default: "0.12", null: false
     t.decimal "safe_withdrawal_rate", precision: 5, scale: 4, default: "0.04", null: false
     t.decimal "savings_rate", precision: 5, scale: 4
     t.date "streams_seeded_on"
+    t.decimal "success_target", precision: 5, scale: 4, default: "0.9", null: false
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
     t.index ["user_id"], name: "index_retirement_plans_on_user_id", unique: true
@@ -2341,8 +2343,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.check_constraint "expected_annual_return > '-1'::integer::numeric AND expected_annual_return <= 1::numeric", name: "chk_retirement_plans_expected_annual_return"
     t.check_constraint "inflation_rate > '-1'::integer::numeric AND inflation_rate <= 1::numeric", name: "chk_retirement_plans_inflation_rate"
     t.check_constraint "mode::text = ANY (ARRAY['traditional'::character varying::text, 'fire'::character varying::text])", name: "chk_retirement_plans_mode"
+    t.check_constraint "return_volatility >= 0::numeric AND return_volatility <= 1::numeric", name: "chk_retirement_plans_return_volatility"
     t.check_constraint "safe_withdrawal_rate > 0::numeric AND safe_withdrawal_rate <= 1::numeric", name: "chk_retirement_plans_safe_withdrawal_rate"
     t.check_constraint "savings_rate IS NULL OR savings_rate >= 0::numeric AND savings_rate <= 1::numeric", name: "chk_retirement_plans_savings_rate"
+    t.check_constraint "success_target > 0::numeric AND success_target <= 1::numeric", name: "chk_retirement_plans_success_target"
   end
 
   create_table "rule_actions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
