@@ -287,6 +287,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
       metadata: { "account_id" => accounts(:connected).id }, dedup_key: "idle_cash:private",
       generated_at: Time.current
     )
+    assert_not @family.insights.visible.exists?(id: insight.id), "precondition: the row must be hidden, not just stale"
     stub_generated([], succeeded_types: [ "idle_cash" ])
 
     GenerateInsightsJob.perform_now(family_id: @family.id)
