@@ -41,7 +41,7 @@
                   <% tooltip.with_trigger do %>
                     <%= link_to(
                           entry.name,
-                          transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry, drawer_params),
+                          transaction.transfer.present? ? transfer_path(transaction.transfer, drawer_params) : entry_path(entry, drawer_params),
                           data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
                           class: "hover:underline truncate"
                         ) %>

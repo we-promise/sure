@@ -239,6 +239,30 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal entry_path(entry, view_ctx: "account", is_filtered: false), drawer_link["href"]
   end
 
+  test "compact account transfer links retain row context for drawer updates" do
+    @user.update!(preferences: (@user.preferences || {}).merge(
+      "preview_features_enabled" => true,
+      "transactions_compact" => true,
+      "transactions_group_by_date" => false
+    ))
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update!(kind: "cc_payment")
+    entry = transfer.outflow_transaction.entry
+
+    get account_url(@account, tab: "activity")
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    drawer_link = doc.at_css("turbo-frame##{dom_id(entry)} a[data-clickable-row-target='link']")
+    assert_equal transfer_path(transfer, view_ctx: "account", is_filtered: false), drawer_link["href"]
+
+    get drawer_link["href"], headers: { "HTTP_REFERER" => transactions_url }
+
+    assert_response :success
+    assert_select "input[type='hidden'][name='view_ctx'][value='account']"
+    assert_select "input[type='hidden'][name='is_filtered'][value='0']"
+  end
+
   test "show avoids N+1 split-parent queries across paginated entries" do
     queries = capture_sql_queries { get account_url(@account) }
     assert_response :success

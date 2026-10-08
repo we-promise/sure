@@ -240,7 +240,7 @@ class TransactionsController < ApplicationController
             turbo_stream.replace(
               dom_id(@entry),
               partial: "transactions/compact_transaction",
-              locals: { entry: @entry, view_ctx: view_ctx || "global", in_split_group: in_split_group, running_balance: running_balance, hide_balance: hide_balance, flat: is_flat_compact }
+              locals: { entry: @entry, view_ctx: view_ctx || "global", is_filtered: is_filtered, in_split_group: in_split_group, running_balance: running_balance, hide_balance: hide_balance, flat: is_flat_compact }
             )
           else
             turbo_stream.replace(

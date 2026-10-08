@@ -4,7 +4,7 @@
 <% transaction_security_logo_url = transaction.activity_security&.display_logo_url %>
 <% drawer_params = { view_ctx: view_ctx, is_filtered: is_filtered } %>
 <% open_path = if transaction.transfer?
-     transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry, drawer_params)
+     transaction.transfer.present? ? transfer_path(transaction.transfer, drawer_params) : entry_path(entry, drawer_params)
    else
      in_split_group ? entry_path(entry, drawer_params.merge(grouped: true)) : entry_path(entry, drawer_params)
    end %>

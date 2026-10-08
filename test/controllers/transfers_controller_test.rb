@@ -684,12 +684,14 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       # full-size partial renders a grid-cols-12 row with an icon instead.
       assert_no_match(/grid-cols-12/, stream.to_html)
       assert_match(/w-24/, stream.to_html)
+      assert stream.at_css("div[role='cell'][class*='shrink-0 justify-end tabular-nums']"), "Expected a balance column for an unfiltered account row"
     end
   end
 
   test "turbo_stream update hides balance on compact legs when filtered" do
     users(:family_admin).update!(preferences: { "preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false })
     transfer = transfers(:one)
+    transfer.outflow_transaction.update!(kind: "cc_payment")
 
     patch transfer_url(transfer),
       params: { view_ctx: "account", is_filtered: "1", transfer: { notes: "Filtered legs" } },
@@ -699,6 +701,8 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
       assert_no_match(/w-30 shrink-0 justify-end/, transfer_leg_stream(entry).to_html)
     end
+    assert_equal transfer_path(transfer, view_ctx: "account", is_filtered: true),
+      transfer_leg_stream(transfer.outflow_transaction.entry).at_css("a[data-clickable-row-target='link']")["href"]
   end
 
   test "turbo_stream update replaces both legs with the full-size partial when compact preview is disabled" do

@@ -620,6 +620,8 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_no_match(/w-30 shrink-0 justify-end/, turbo_stream_row_html(@entry))
+    row_links = Nokogiri::HTML.fragment(turbo_stream_row_html(@entry)).css("a").map { |link| link["href"] }
+    assert_includes row_links, entry_path(@entry, view_ctx: "account", is_filtered: true)
 
     patch trade_url(@entry), params: {
       view_ctx: "global",
