@@ -54,6 +54,18 @@ class Family::DataExporter
   end
 
   private
+    # Every account that is not a loan, then the loans: the only account-to-account
+    # reference is a loan's collateral. Two `find_each` passes rather than one
+    # ordered scope, as `find_each` ignores an order clause.
+    def accounts_in_dependency_order
+      scope = @family.accounts.includes(:accountable)
+
+      Enumerator.new do |yielder|
+        scope.where.not(accountable_type: "Loan").find_each { |account| yielder << account }
+        scope.where(accountable_type: "Loan").find_each { |account| yielder << account }
+      end
+    end
+
     def generate_version_txt
       <<~TEXT
         export_version: #{EXPORT_VERSION}
@@ -243,8 +255,12 @@ class Family::DataExporter
     def generate_ndjson
       lines = []
 
-      # Export accounts with full accountable data
-      @family.accounts.includes(:accountable).find_each do |account|
+      # Export accounts with full accountable data. Loans come last: a loan can
+      # name another account as its collateral, and a chunked (session) import
+      # applies chunks in order and resolves that id against what is already
+      # there. Primary-key order is arbitrary, so without this a valid export
+      # could put a loan ahead of its asset and fail the restore.
+      accounts_in_dependency_order.each do |account|
         lines << {
           type: "Account",
           data: account.as_json(

@@ -19,6 +19,9 @@ class Account < ApplicationRecord
   has_many :shared_users, through: :account_shares, source: :user
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
   has_many :entries, dependent: :destroy
+  # Loans this account secures. No `dependent:`: loans.collateral_account_id
+  # nullifies in the database, so deleting the asset unlinks them.
+  has_many :secured_loans, class_name: "Loan", foreign_key: :collateral_account_id, inverse_of: :collateral_account
   has_many :transactions, through: :entries, source: :entryable, source_type: "Transaction"
   has_many :valuations, through: :entries, source: :entryable, source_type: "Valuation"
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
@@ -147,6 +150,14 @@ class Account < ApplicationRecord
   end
 
   accepts_nested_attributes_for :accountable, update_only: true
+
+  # `loan.account` is nil while a new loan validates (Rails cannot infer the
+  # inverse across a polymorphic association), and on an update it is the account
+  # as stored, not as submitted. Either way the loan's check of its collateral link
+  # would compare the asset against the wrong account. So the account hands itself
+  # to the loan before validating (a transient `owning_account`, not the
+  # association); the loan's own validation then judges the link once, correctly.
+  before_validation :hand_loan_its_account, if: -> { loan? && association(:accountable).loaded? }
 
   # Account state machine
   aasm column: :status, timestamps: true do
@@ -772,6 +783,13 @@ class Account < ApplicationRecord
   end
 
   private
+
+    # The loan's checks on its collateral need the account it is being saved
+    # through, as it will be saved: the currency the form submitted, and an account
+    # that does not exist yet. `loan.account` is neither (see Loan#owning_account).
+    def hand_loan_its_account
+      accountable.owning_account = self
+    end
 
     def assign_default_owner
       return if owner.present?

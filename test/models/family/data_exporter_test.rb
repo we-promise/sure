@@ -353,6 +353,44 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports a loan's collateral link with its account" do
+    property = @family.accounts.create!(name: "House", balance: 500_000, currency: "USD", accountable: Property.new)
+    loan_account = @family.accounts.create!(name: "Mortgage", balance: 400_000, currency: "USD", accountable: Loan.new)
+    loan_account.loan.update!(collateral_account: property)
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      exported = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .select { |line| line["type"] == "Account" && line.dig("data", "id") == loan_account.id }
+
+      assert_equal 1, exported.size
+      assert_equal property.id, exported.first.dig("data", "accountable", "collateral_account_id")
+    end
+  end
+
+  # Accounts are exported in primary-key order, which is arbitrary, and a loan's
+  # collateral is another account in the same stream. Chunked imports apply
+  # chunks in order and resolve a collateral id against what is already there, so
+  # a loan has to come after every other account or a valid export can fail.
+  test "exports loans after every other account, whatever the ids" do
+    loan_account = @family.accounts.create!(
+      id: "00000000-0000-4000-8000-000000000001", name: "Early mortgage", balance: 1, currency: "USD", accountable: Loan.new
+    )
+    asset = @family.accounts.create!(
+      id: "ffffffff-ffff-4fff-8fff-ffffffffffff", name: "Late house", balance: 1, currency: "USD", accountable: Property.new
+    )
+    loan_account.loan.update!(collateral_account: asset)
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      accounts = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .select { |line| line["type"] == "Account" }.map { |line| line["data"] }
+      types = accounts.map { |data| data["accountable_type"] }
+      ids = accounts.map { |data| data["id"] }
+
+      assert_equal types.sort_by { |type| type == "Loan" ? 1 : 0 }, types, "a non-loan account follows a loan"
+      assert_operator ids.index(asset.id), :<, ids.index(loan_account.id)
+    end
+  end
+
   test "generates valid NDJSON file" do
     zip_data = @exporter.generate_export
 
