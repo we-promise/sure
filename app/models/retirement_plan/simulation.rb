@@ -10,9 +10,10 @@
 #
 #   V(n + 1) = (V(n) - W(n)) * (1 + r) + C(n)
 #
-# Before retirement W holds only one-off amounts, which is RetirementPlan::Projection's recurrence
-# whenever there are none. From the retirement year, W is spending less
-# income, never below zero, and income beyond spending is reinvested as C.
+# Before retirement W holds only one-off amounts, which is the recurrence
+# RetirementPlan::Projection uses whenever there are none. From the
+# retirement year, W is spending less income, never below zero, and income
+# beyond spending is reinvested as C.
 #
 # `expected_annual_return` is the compound annual return before inflation.
 # Streams marked `indexed` grow with `inflation_rate` from the reference year,
