@@ -164,4 +164,18 @@ class PeriodTest < ActiveSupport::TestCase
     assert_equal first_transaction_date - 1.month, period.start_date
     assert_equal Date.current, period.end_date
   end
+
+  test "all_time period falls back to oldest entry date for valuation-only families" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "House", balance: 0, currency: "USD", accountable: Depository.new)
+    valuation_date = Date.new(2000, 1, 15)
+    account.entries.create!(date: valuation_date, name: "Old valuation",
+                            amount: 5000, currency: "USD", entryable: Valuation.new)
+
+    Current.stubs(:family).returns(family)
+    period = Period.from_key("all_time")
+
+    assert_equal valuation_date - 1.month, period.start_date
+    assert_equal Date.current, period.end_date
+  end
 end

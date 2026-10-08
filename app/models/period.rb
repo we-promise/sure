@@ -78,11 +78,14 @@ class Period
     },
     "all_time" => {
       date_range: -> {
-        oldest_date = Current.family&.oldest_activity_date
-        # If no family or no Transaction/Trade entries exist, use a reasonable
-        # historical fallback to ensure "All Time" represents a meaningful
-        # range, not just today. Starts one month before the first real
-        # activity so the chart has breathing room (#4007).
+        family = Current.family
+        # Prefer the first real activity; fall back to the oldest entry of any
+        # type so valuation-only families keep their full history (#4007).
+        oldest_date = family&.oldest_activity_date || family&.oldest_entry_date
+        # If no family or no dated entries exist, use a reasonable historical
+        # fallback to ensure "All Time" represents a meaningful range, not just
+        # today. Starts one month before the first activity so the chart has
+        # breathing room.
         start_date = if oldest_date && oldest_date < Date.current
           oldest_date - 1.month
         else
