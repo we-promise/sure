@@ -16,6 +16,14 @@ class Provider::Eodhd < Provider
   # EODHD bills each fundamentals request as 10 API calls against the daily allowance
   FUNDAMENTALS_REQUEST_COST = 10
 
+  # The fundamentals response carries `General.Sector` / `General.Industry`,
+  # so this provider can answer for classification -- see
+  # `fetch_security_info` below. Without this declaration the classification
+  # gate in `Security::Provided` would never ask it.
+  def supplies_classification?
+    true
+  end
+
   # The free tier provides ~1 year of EOD data; paid plans go back 30+ years.
   # Raising EODHD_MAX_REQUESTS_PER_DAY above the free cap signals a paid key.
   def max_history_days
@@ -226,7 +234,9 @@ class Provider::Eodhd < Provider
         logo_url: general.dig("LogoURL"),
         description: general.dig("Description"),
         kind: general.dig("Type"),
-        exchange_operating_mic: exchange_operating_mic
+        exchange_operating_mic: exchange_operating_mic,
+        sector: general.dig("Sector"),
+        industry: general.dig("Industry")
       )
     end
   end

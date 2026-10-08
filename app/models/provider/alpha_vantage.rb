@@ -13,6 +13,12 @@ class Provider::AlphaVantage < Provider
   # Maximum requests per day (Alpha Vantage free tier limit)
   MAX_REQUESTS_PER_DAY = 25
 
+  # Returns `sector` and `industry` from its own metadata response, so the
+  # classification gate in `Security::Provided` must ask it.
+  def supplies_classification?
+    true
+  end
+
   # Free tier "compact" returns ~100 trading days (~140 calendar days).
   # "full" requires a paid plan.
   def max_history_days
@@ -155,7 +161,9 @@ class Provider::AlphaVantage < Provider
         logo_url: nil,
         description: parsed["Description"].presence,
         kind: parsed["AssetType"]&.downcase,
-        exchange_operating_mic: exchange_operating_mic
+        exchange_operating_mic: exchange_operating_mic,
+        sector: parsed["Sector"].presence,
+        industry: parsed["Industry"].presence
       )
     end
   end
