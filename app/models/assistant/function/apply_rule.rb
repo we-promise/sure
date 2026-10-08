@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 # ApplyRule — activates a rule and applies it to existing transactions, like
-# the Apply button on the rule confirmation page. It requires the match count
-# from a preview and refuses when the current count differs, so a stale or
-# skipped preview cannot be applied.
+# the Apply button on the rule confirmation page. It needs the preview_token
+# from a preview of the rule as it is now, so a skipped, stale or edited
+# preview cannot be applied (see RuleSupport).
 class Assistant::Function::ApplyRule < Assistant::Function
   include Assistant::Function::RuleSupport
 
@@ -18,9 +18,11 @@ class Assistant::Function::ApplyRule < Assistant::Function
         active, it also runs on every future sync. Undo future runs with
         update_rule active: false; changes already made are not reverted.
 
-        expected_count must equal match_count from the latest preview_rule,
-        create_rule or update_rule for this rule; if the matches have changed,
-        nothing is applied and the new preview is returned.
+        preview_token must come from the latest preview_rule, create_rule or
+        update_rule for this rule (get_rules does not issue one). It expires
+        after #{Assistant::Function::RuleSupport::PREVIEW_TOKEN_TTL.inspect}. If the rule or its matches have
+        changed since, nothing is applied and a fresh preview, with a new
+        token, is returned.
 
         By default transactions whose category, merchant, name or tags were set
         by hand keep them. Pass override_locked: true to overwrite those too
@@ -37,15 +39,15 @@ class Assistant::Function::ApplyRule < Assistant::Function
 
   def params_schema
     build_schema(
-      required: %w[rule_id expected_count],
+      required: %w[rule_id preview_token],
       properties: {
         rule_id: {
           type: "string",
           description: "Rule ID from get_rules or create_rule."
         },
-        expected_count: {
-          type: "integer",
-          description: "match_count from the latest preview of this rule."
+        preview_token: {
+          type: "string",
+          description: "preview_token from the latest preview of this rule."
         },
         override_locked: {
           type: "boolean",
@@ -63,21 +65,28 @@ class Assistant::Function::ApplyRule < Assistant::Function
       return error("ai_action", "This rule has an AI-backed action; apply it in Settings > Rules, which shows the cost estimate.")
     end
 
-    expected = Integer(params["expected_count"].to_s, exception: false)
-    return error("invalid_arguments", "expected_count must be the integer match_count from a preview.") if expected.nil?
+    token = read_preview_token(params["preview_token"], rule)
+    unless token
+      return error(
+        "preview_required",
+        "Preview this rule first (preview_rule with rule_id) and pass its preview_token. Tokens expire after #{PREVIEW_TOKEN_TTL.inspect}."
+      )
+    end
 
     override_locked = ActiveModel::Type::Boolean.new.cast(params["override_locked"]) || false
 
     current = nil
+    unchanged = false
     rule.with_lock do
       current = rule.affected_resource_count
-      rule.update!(active: true) if current == expected
+      unchanged = definition_digest(rule) == token["definition"] && current == token["match_count"]
+      rule.update!(active: true) if unchanged
     end
 
-    if current != expected
+    unless unchanged
       return error(
-        "count_mismatch",
-        "The rule now matches #{current} transactions, not #{expected}. Nothing was applied; check this preview and retry.",
+        "preview_stale",
+        "The rule or its matches changed since that preview (it now matches #{current} transactions). Nothing was applied; check this preview and retry with its token.",
         rule: serialize_rule(rule),
         preview: preview(rule)
       )
@@ -88,9 +97,9 @@ class Assistant::Function::ApplyRule < Assistant::Function
     {
       success: true,
       rule: serialize_rule(rule),
-      applied_to: expected,
+      applied_to: current,
       override_locked: override_locked,
-      message: "Rule activated and queued to apply to #{expected} transactions. It will also run on future syncs."
+      message: "Rule activated and queued to apply to #{current} transactions. It will also run on future syncs."
     }
   end
 end

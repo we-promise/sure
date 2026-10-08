@@ -72,4 +72,28 @@ class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
     assert_equal "no_changes", @fn.call("rule_id" => @rule.id)[:error]
     assert_equal "not_found", @fn.call("rule_id" => SecureRandom.uuid, "name" => "x")[:error]
   end
+
+  test "another family's rule is not found and left untouched" do
+    foreign = families(:empty).rules.create!(
+      name: "Theirs",
+      resource_type: "transaction",
+      active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "zxq" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "x" } ]
+    )
+
+    assert_equal "not_found", @fn.call("rule_id" => foreign.id, "name" => "Mine now", "active" => false)[:error]
+    foreign.reload
+    assert_equal "Theirs", foreign.name
+    assert foreign.active
+  end
+
+  test "an update returns a preview with a token for apply_rule" do
+    create_transaction(name: "ZXQ Coffee Shop")
+
+    result = @fn.call("rule_id" => @rule.id, "conditions" => [ { "condition_type" => "transaction_name", "operator" => "like", "value" => "zxq" } ])
+
+    assert result[:success], result.inspect
+    assert result.dig(:preview, :preview_token).present?
+  end
 end

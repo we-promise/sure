@@ -5,8 +5,11 @@
 #
 # A rule rewrites every matching transaction, and an active rule runs again on
 # every family sync. So the write tools never activate a rule: create_rule and
-# update_rule save it inactive, and only apply_rule activates it, against the
-# match count of a preview.
+# update_rule save it inactive, and only apply_rule activates it. apply_rule
+# needs a preview_token, which only a preview that listed matching
+# transactions issues (preview_rule, create_rule, update_rule; never
+# get_rules). The token is bound to the rule's definition and match count, so
+# it can't be skipped, reused after an edit, or applied to changed matches.
 #
 # Allowed values are resolved here from the requesting user rather than from
 # the registry's own option lists: those read Current.user, which is nil on the
@@ -24,6 +27,8 @@ module Assistant::Function::RuleSupport
 
   DEFAULT_SAMPLE_SIZE = 10
   MAX_SAMPLE_SIZE = 25
+
+  PREVIEW_TOKEN_TTL = 30.minutes
 
   # JSON schema fragments shared by preview_rule, create_rule and update_rule.
   def condition_schema
@@ -373,8 +378,53 @@ module Assistant::Function::RuleSupport
         match_count: match_count,
         visible_match_count: visible.count,
         sample: sample.map { |txn| serialize_sample(txn) },
-        actions: rule.actions.reject(&:marked_for_destruction?).map { |a| describe_action(rule, a) }
+        actions: rule.actions.reject(&:marked_for_destruction?).map { |a| describe_action(rule, a) },
+        preview_token: preview_token(rule, match_count, sample_size: sample_size)
+      }.compact
+    end
+
+    # Issued for a saved rule when the preview listed matches (a zero
+    # sample_size shows none). Signed, and bound to the user, the rule's
+    # definition and the match count.
+    def preview_token(rule, match_count, sample_size:)
+      return nil unless rule.persisted? && rule.changes.empty?
+      return nil if sample_size.zero? && match_count.positive?
+
+      preview_verifier.generate(
+        { "rule_id" => rule.id, "user_id" => user.id, "definition" => definition_digest(rule), "match_count" => match_count },
+        purpose: :apply_rule, expires_in: PREVIEW_TOKEN_TTL
+      )
+    end
+
+    # The token's payload, or nil when it is missing, forged, expired, or
+    # issued to another user or rule.
+    def read_preview_token(token, rule)
+      payload = preview_verifier.verified(token.to_s, purpose: :apply_rule) if token.present?
+      return nil unless payload.is_a?(Hash)
+      return nil unless payload["rule_id"] == rule.id && payload["user_id"] == user.id
+
+      payload
+    end
+
+    # What the rule would do, independent of timestamps and display names.
+    def definition_digest(rule)
+      definition = {
+        effective_date: rule.effective_date&.iso8601,
+        conditions: rule.conditions.reject(&:marked_for_destruction?).select { |c| c.parent_id.nil? }
+                        .map { |c| digest_condition(c) }.sort_by(&:to_json),
+        actions: rule.actions.reject(&:marked_for_destruction?).map { |a| [ a.action_type, a.value.to_s ] }.sort
       }
+      Digest::SHA256.hexdigest(definition.to_json)
+    end
+
+    def digest_condition(condition)
+      return [ condition.operator, condition.sub_conditions.map { |sub| digest_condition(sub) }.sort_by(&:to_json) ] if condition.compound?
+
+      [ condition.condition_type, condition.operator, condition.value.to_s ]
+    end
+
+    def preview_verifier
+      Rails.application.message_verifier("assistant/rule_preview")
     end
 
     def serialize_sample(txn)

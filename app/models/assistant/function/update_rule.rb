@@ -62,7 +62,7 @@ class Assistant::Function::UpdateRule < Assistant::Function
     return error("not_found", "No rule with id '#{params["rule_id"]}'.") unless rule
 
     active = params.key?("active") ? ActiveModel::Type::Boolean.new.cast(params["active"]) : nil
-    return error("cannot_activate", "update_rule cannot activate a rule. Use apply_rule with expected_count from a preview.") if active == true
+    return error("cannot_activate", "update_rule cannot activate a rule. Use apply_rule with a preview_token from a preview.") if active == true
 
     definition = params.slice("conditions", "actions", "effective_date")
     return error("no_changes", "Provide name, conditions, actions, effective_date or active: false.") if definition.empty? && !params.key?("name") && active.nil?
@@ -84,7 +84,7 @@ class Assistant::Function::UpdateRule < Assistant::Function
 
     message =
       if was_active && !rule.active
-        "Rule updated and deactivated. Call apply_rule with expected_count to activate it again."
+        "Rule updated and deactivated. Check the preview, then call apply_rule with its preview_token to activate it again."
       else
         "Rule updated."
       end

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 # PreviewRule — shows what a rule matches without changing anything, for a
-# saved rule or an unsaved definition. Its match_count is what apply_rule
-# expects as expected_count.
+# saved rule or an unsaved definition. For a saved rule it also issues the
+# preview_token apply_rule requires.
 class Assistant::Function::PreviewRule < Assistant::Function
   include Assistant::Function::RuleSupport
 
@@ -23,6 +23,9 @@ class Assistant::Function::PreviewRule < Assistant::Function
         actions in readable form. Check the sample before create_rule or
         apply_rule: a loose condition (e.g. "greater than" instead of "equal to")
         rewrites far more transactions than intended.
+
+        For a saved rule it also returns preview_token, which apply_rule needs.
+        No token is issued with sample_size 0, since no matches are shown.
       INSTRUCTIONS
     end
   end

@@ -19,7 +19,7 @@ class Assistant::Function::CreateRule < Assistant::Function
 
         Build the definition from get_rule_options, and check it with
         preview_rule first. Returns the saved rule and the same preview as
-        preview_rule; pass its match_count to apply_rule as expected_count.
+        preview_rule; pass its preview_token to apply_rule after checking the sample.
       INSTRUCTIONS
     end
   end
@@ -59,7 +59,7 @@ class Assistant::Function::CreateRule < Assistant::Function
       success: true,
       rule: serialize_rule(rule),
       preview: preview(rule, sample_size: resolved_sample_size(params)),
-      message: "Rule saved inactive. Call apply_rule with expected_count to activate it."
+      message: "Rule saved inactive. Check the preview, then call apply_rule with its preview_token to activate it."
     }
   end
 end
