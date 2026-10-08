@@ -16,6 +16,8 @@ class Rule::Condition < ApplicationRecord
   validates :operator, presence: true
   validates :value, presence: true, unless: -> { compound? || Rule::ConditionFilter::VALUELESS_OPERATORS.include?(operator) }
 
+  validate :regex_value_is_safe, if: :regex_value_changed?
+
   accepts_nested_attributes_for :sub_conditions, allow_destroy: true
 
   # We don't store rule_id on sub_conditions, so "walk up" to the parent rule
@@ -25,6 +27,21 @@ class Rule::Condition < ApplicationRecord
 
   def compound?
     condition_type == "compound"
+  end
+
+  def regex?
+    Rule::ConditionFilter::REGEX_OPERATORS.include?(operator)
+  end
+
+  # True when this condition, or any condition nested in it, matches a pattern.
+  def uses_regex?
+    compound? ? sub_conditions.any?(&:regex?) : regex?
+  end
+
+  # Probing costs a database round trip, so an untouched condition (a rule being
+  # toggled active, say) is not probed again.
+  def regex_value_changed?
+    regex? && (new_record? || will_save_change_to_value? || will_save_change_to_operator?)
   end
 
   def apply(scope)
@@ -70,6 +87,16 @@ class Rule::Condition < ApplicationRecord
   end
 
   private
+    # A blank value is already reported by the presence validation.
+    def regex_value_is_safe
+      return if value.blank?
+
+      error = Rule::SafeRegex.error_for(value)
+      return if error.nil?
+
+      errors.add(:value, :"regex_#{error}", count: Rule::SafeRegex::MAX_LENGTH)
+    end
+
     def normalize_legacy_condition_type
       return if condition_type.blank?
 

@@ -116,6 +116,9 @@ en:
       operators:
         contains: Contains
         does_not_contain: Does not contain
+        starts_with: Starts with
+        ends_with: Ends with
+        matches_regex: Matches regex
         equal_to: Equal to
         is_equal_to: Is equal to
         not_equal_to: Not equal to

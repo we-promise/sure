@@ -1,6 +1,11 @@
 class RuleJob < ApplicationJob
   queue_as :medium_priority
 
+  # A pattern that timed out would time out again, so the failed run recorded
+  # below is final: the job is not retried, and ApplyAllRulesJob carries on with
+  # the family's next rule instead of stopping at this one.
+  discard_on Rule::SafeRegex::TimeoutError
+
   def perform(rule, ignore_attribute_locks: false, execution_type: "manual")
     executed_at = Time.current
     transactions_queued = 0

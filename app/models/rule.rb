@@ -36,8 +36,12 @@ class Rule < ApplicationRecord
     end
   end
 
+  # Display-only: a pattern that times out reads as zero here, and the failure
+  # surfaces where the rule actually runs (#apply).
   def affected_resource_count
     matching_resources_scope.count
+  rescue Rule::SafeRegex::TimeoutError
+    0
   end
 
   # Public wrapper around the private matching scope so callers can read the
@@ -49,8 +53,13 @@ class Rule < ApplicationRecord
   end
 
   # Whether this rule's conditions currently match the given transaction.
+  #
+  # A pattern that times out matches nothing here, as it does when the rule runs:
+  # the rule cannot categorize the transaction, so the prompt is still offered.
   def matches_transaction?(transaction)
     matching_resources_scope.where(id: transaction.id).exists?
+  rescue Rule::SafeRegex::TimeoutError
+    false
   end
 
   # Creates a categorization rule for the Quick Categorize Wizard.
@@ -75,6 +84,8 @@ class Rule < ApplicationRecord
     transaction_ids = Set.new
     rules.each do |rule|
       transaction_ids.merge(rule.send(:matching_resources_scope).pluck(:id))
+    rescue Rule::SafeRegex::TimeoutError
+      next
     end
 
     transaction_ids.size
@@ -84,6 +95,10 @@ class Rule < ApplicationRecord
     total_modified = 0
     total_async_jobs = 0
     has_async = false
+
+    # Every action reads the matches again, so the one expensive part (a regex scan
+    # under a statement timeout) is resolved once for the whole apply.
+    @regex_matches = {}
 
     actions.each do |action|
       result = action.apply(matching_resources_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
@@ -105,6 +120,8 @@ class Rule < ApplicationRecord
     else
       total_modified
     end
+  ensure
+    @regex_matches = nil
   end
 
   def apply_later(ignore_attribute_locks: false)
@@ -146,7 +163,13 @@ class Rule < ApplicationRecord
         scope = condition.apply(scope)
       end
 
-      scope
+      # A pattern is the one condition whose cost the database cannot bound by
+      # itself, so its matches are resolved under a statement timeout and the
+      # actions then run on those ids.
+      return scope unless conditions.any?(&:uses_regex?)
+
+      ids = regex_matching_ids(scope)
+      registry.resource_scope.where(id: ids)
     end
 
     def min_actions
@@ -174,6 +197,14 @@ class Rule < ApplicationRecord
           end
         end
       end
+    end
+
+    # The ids a regex rule matches, resolved under a statement timeout. During #apply
+    # the result is kept, so a rule with several actions scans once.
+    def regex_matching_ids(scope)
+      return Rule::SafeRegex.with_timeout { scope.pluck(:id) } if @regex_matches.nil?
+
+      @regex_matches.fetch(:ids) { @regex_matches[:ids] = Rule::SafeRegex.with_timeout { scope.pluck(:id) } }
     end
 
     def normalize_name
