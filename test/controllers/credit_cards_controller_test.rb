@@ -208,6 +208,44 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_not lunchflow_account.reload.treat_balance_as_available_credit?
   end
 
+  test "resyncs lunch flow when the card limit changes in available credit mode" do
+    lunchflow_account = create_linked_lunchflow_account
+    lunchflow_account.update!(treat_balance_as_available_credit: true)
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      patch credit_card_path(@account), params: {
+        account: { name: @account.name, accountable_type: "CreditCard",
+                   accountable_attributes: { id: @account.accountable.id, available_credit: 7500 } }
+      }
+    end
+
+    assert_redirected_to @account
+    assert lunchflow_account.reload.treat_balance_as_available_credit?, "a form without the flag keeps it"
+  end
+
+  test "turning the flag on and setting the limit together syncs once" do
+    create_linked_lunchflow_account
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      patch credit_card_path(@account), params: {
+        account: { name: @account.name, accountable_type: "CreditCard",
+                   accountable_attributes: { id: @account.accountable.id, available_credit: 7500 },
+                   lunchflow: { treat_balance_as_available_credit: "1" } }
+      }
+    end
+  end
+
+  test "a limit change does not resync lunch flow outside available credit mode" do
+    create_linked_lunchflow_account
+
+    assert_no_enqueued_jobs only: SyncJob do
+      patch credit_card_path(@account), params: {
+        account: { name: @account.name, accountable_type: "CreditCard",
+                   accountable_attributes: { id: @account.accountable.id, available_credit: 7500 } }
+      }
+    end
+  end
+
   test "does not persist lunch flow flag when the account update fails" do
     lunchflow_account = create_linked_lunchflow_account
 
