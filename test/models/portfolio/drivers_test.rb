@@ -158,6 +158,15 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
     assert drivers.reconciles?
   end
 
+  # One minor unit of slack and no more. Converting entry flows and balance
+  # rows by different paths leaves sub-cent dust in a multi-currency family,
+  # which must not read as a failure to reconcile; a cent and a half must.
+  test "reconciles allows a residual of up to one minor unit" do
+    assert drivers_with_residual(BigDecimal("0.004")).reconciles?
+    assert drivers_with_residual(BigDecimal("0.01")).reconciles?, "the boundary itself reconciles"
+    refute drivers_with_residual(BigDecimal("0.015")).reconciles?
+  end
+
   private
     def drivers_for(account_ids: [ @account.id ])
       Portfolio::Drivers.new(
@@ -167,5 +176,14 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
           period: Period.custom(start_date: @day_one, end_date: @day_two)
         )
       )
+    end
+
+    def drivers_with_residual(residual)
+      row = Portfolio::DailyReturns::Row.new(
+        date: @day_one, value_open: BigDecimal("1000"), value_close: BigDecimal("1000") + residual,
+        external_flow: 0, composition_flow: 0, income: 0, fees: 0, market: 0,
+        revaluations: 0, fx_effect: 0, rate_missing: false, suppressed: false
+      )
+      Portfolio::Drivers.new(Struct.new(:rows).new([ row ]))
     end
 end
