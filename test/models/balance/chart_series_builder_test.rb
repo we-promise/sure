@@ -773,6 +773,54 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     refute contributions_builder(account).net_contributions_understated?
   end
 
+  # An account whose history starts after the others' brings its opening
+  # value into the scope on its first balance date: that is money put in, so
+  # the line steps up by it there and not before.
+  test "an account that joins the scope later adds its opening value on its first balance date" do
+    family = families(:empty)
+    first = create_portfolio_account(family: family)
+    later = create_portfolio_account(family: family)
+    lay_balance account: first, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: later, date: @day_one + 2, opening: 700, closing: 700
+
+    both = Balance::ChartSeriesBuilder.new(
+      account_ids: [ first.id, later.id ],
+      currency: "USD",
+      period: Period.custom(start_date: @day_one, end_date: @day_one + 3),
+      interval: "1 day"
+    )
+
+    assert_equal [ 1_000, 1_000, 1_700, 1_700 ], both.net_contributions_series.values.map { |v| v.value.amount }
+  end
+
+  # A day with nothing invested is suppressed by the returns engine for its
+  # zero denominator, not because a flow went unvalued, so it must not make
+  # the line read as understated.
+  test "an empty opening day does not make net contributions understated" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 0, closing: 0
+    lay_balance account: account, date: @day_one + 1, opening: 0, closing: 500, cash_flow: 500
+    deposit account: account, date: @day_one + 1, amount: 500
+
+    builder = contributions_builder(account)
+
+    refute builder.net_contributions_understated?
+    assert_equal [ 0, 500, 500, 500 ], builder.net_contributions_series.values.map { |v| v.value.amount }
+  end
+
+  # An explicit anchor opens at that day's close, which already holds the
+  # day's flows; one of them going unvalued is not part of the line, so it
+  # does not make the line understated. Without the anchor it does.
+  test "an unvalued flow on an explicit anchor day does not make the line understated" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    deposit account: account, date: @day_one + 1, amount: 100, currency: "EUR" # no EUR rate at all
+
+    assert contributions_builder(account).net_contributions_understated?, "counted from inception"
+    refute contributions_builder(account).net_contributions_understated?(anchor_date: @day_one + 1),
+           "opened at the anchor day's close"
+  end
+
   private
     def lay_contributions_example
       account = create_portfolio_account(family: families(:empty))
