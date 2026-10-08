@@ -4,10 +4,12 @@
 #
 # The index is partial because both taggable columns are nullable: a row
 # with no taggable is not a tagging of anything, so it is left alone.
-# NULLS NOT DISTINCT (PostgreSQL 15+) is what makes the index hold when
-# taggable_type is missing; by default Postgres treats two NULLs as
-# different keys and would let that duplicate through. PARTITION BY groups
-# NULLs together, so the dedupe sees those rows too.
+# taggable_type is indexed as COALESCE(taggable_type, ''): Postgres treats two
+# NULLs as different keys, so a plain column index would let a duplicate with
+# no type through. The expression works on every supported Postgres version,
+# where NULLS NOT DISTINCT would need 15 or later. The dedupe partitions on
+# the same expression, so the rows it keeps are exactly the ones the index
+# will accept.
 #
 # Writers are locked out from before the DELETE until the index exists. The
 # DELETE alone takes only ROW EXCLUSIVE, which lets other inserts through, so
@@ -24,7 +26,7 @@ class AddUniqueIndexToTaggings < ActiveRecord::Migration[8.1]
       WHERE id IN (
         SELECT id FROM (
           SELECT id, ROW_NUMBER() OVER (
-            PARTITION BY tag_id, taggable_type, taggable_id
+            PARTITION BY tag_id, COALESCE(taggable_type, ''), taggable_id
             ORDER BY created_at, id
           ) AS position
           FROM taggings
@@ -34,10 +36,9 @@ class AddUniqueIndexToTaggings < ActiveRecord::Migration[8.1]
       )
     SQL
 
-    add_index :taggings, [ :tag_id, :taggable_type, :taggable_id ],
+    add_index :taggings, "tag_id, COALESCE(taggable_type, ''), taggable_id",
       name: "index_taggings_unique",
       unique: true,
-      nulls_not_distinct: true,
       where: "taggable_id IS NOT NULL",
       if_not_exists: true
   end
