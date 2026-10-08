@@ -67,6 +67,19 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form textarea", count: 0
   end
 
+  test "index shows the AI consent screen next to existing chats when AI is disabled" do
+    @user.update!(ai_enabled: false)
+    assert @user.chats.any?, "fixture user should have chats so the list branch renders"
+
+    get chats_url
+
+    assert_response :success
+    # Scoped to the composer's wrapper: the layout's own consent overlay sits
+    # in the desktop-only sidebar, which the mobile Assistant entry never shows.
+    assert_select "div.max-w-sm h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "form textarea", count: 0
+  end
+
   test "new shows the AI consent screen instead of the compose form when AI is disabled" do
     @user.update!(ai_enabled: false)
 
