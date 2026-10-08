@@ -98,6 +98,16 @@ class RetirementPlan::SimulationTest < ActiveSupport::TestCase
     assert_equal [ 30_000, 10_000, 0, 0 ], sim.rows.first(4).map(&:end_value)
   end
 
+  # 40,000 at 0% with 20,000 a year: the second year's withdrawal takes the
+  # last 20,000, which is met, and only the third year's cannot be.
+  test "a withdrawal that takes exactly what is left is met" do
+    sim = simulation(current_assets: 40_000, annual_contribution: 0, retirement_year: AS_OF.year,
+                     streams: [ Stream.new(kind: "expense", annual_amount: 20_000) ])
+
+    assert_equal AS_OF.year + 2, sim.depletion_year
+    assert_equal [ 20_000, 0 ], sim.rows.first(2).map(&:end_value)
+  end
+
   test "a plan that never runs short survives, with no depletion age" do
     sim = simulation(current_assets: 1_000_000, retirement_year: AS_OF.year, birth_year: 1980,
                      streams: [ Stream.new(kind: "expense", annual_amount: 1_000) ])
