@@ -49,6 +49,13 @@ class RetirementPlan::MilestoneInputsTest < ActiveSupport::TestCase
     @plan.milestones(as_of: AS_OF, simulation: drawn)
   end
 
+  test "Coast FI keeps measuring to the plan's retirement date when a drawn path retires earlier" do
+    drawn = @plan.simulation(as_of: AS_OF, retirement_year: 2030)
+    RetirementPlan::Milestones.expects(:new).with(has_entries(rows: drawn.rows, retirement_year: 2046)).returns(stub(all: []))
+
+    @plan.milestones(as_of: AS_OF, simulation: drawn)
+  end
+
   test "a plan that cannot be simulated has no milestones" do
     @plan.update!(birth_year: nil)
 
