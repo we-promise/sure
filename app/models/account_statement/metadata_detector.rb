@@ -162,8 +162,7 @@ class AccountStatement::MetadataDetector
     # top of a statement. Any reader failure leaves filename detection as the
     # fallback instead of failing the upload.
     def pdf_text
-      reader = PDF::Reader.new(StringIO.new(content.to_s))
-      reader.pages.first(MAX_PDF_PAGES).map(&:text).join("\n")
+      Pdf::TextExtractor.pages(content, max_pages: MAX_PDF_PAGES).join("\n")
     rescue StandardError => e
       Rails.logger.info("AccountStatement::MetadataDetector - PDF text unavailable: #{e.class}")
       ""
