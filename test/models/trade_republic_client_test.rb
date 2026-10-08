@@ -266,6 +266,35 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
   end
 
+  test "keeps the pages read before a backfill page fails and resumes at that page" do
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      next { "items" => [], "cursors" => {} } unless payload[:type] == "timelineTransactions"
+
+      case payload[:after]
+      when nil then { "items" => [ { "id" => "tx-known", "timestamp" => "2026-08-03" } ], "cursors" => {} }
+      when "page-9" then { "items" => [ { "id" => "tx-old", "timestamp" => "2026-08-02" } ], "cursors" => { "after" => "page-10" } }
+      else raise Provider::TradeRepublicClient::ProviderUnavailable, "subscription failed"
+      end
+    end
+    failures = Provider::TradeRepublicClient::MAX_TIMELINE_BACKFILL_FAILURES - 1
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 5,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9", "backfill_failures" => failures } }
+    )
+
+    assert_equal %w[tx-known tx-old], timeline.events.map { |event| event["id"] }
+    assert_includes timeline.warnings, "timeline history backfill failed for timelineTransactions (ProviderUnavailable)"
+    # Moving forward restarts the failure count, so the backfill is not abandoned.
+    assert_equal(
+      { "newest_event_id" => "tx-known", "backfill_cursor" => "page-10", "backfill_failures" => 1 },
+      timeline.cursors["timelineTransactions"]
+    )
+  end
+
   test "abandons a backfill that keeps failing" do
     stub_failing_backfill_page
     failures = Provider::TradeRepublicClient::MAX_TIMELINE_BACKFILL_FAILURES - 1
@@ -301,6 +330,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
     assert_equal "timelineTransactions", error.topic
     assert_equal "TransientProviderError", error.reason
+    assert_equal "page-9", error.cursor
   end
 
   test "retries the sync without a backfill that times out and counts the failure" do
@@ -325,6 +355,34 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_includes result["warnings"], "timeline history backfill failed for timelineTransactions (Timeout)"
     assert_equal(
       { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9", "backfill_failures" => 1 },
+      result["timeline_cursors"]["timelineTransactions"]
+    )
+  end
+
+  test "keeps the pages read before the websocket fails in the backfill" do
+    stub_sync_session
+    @client.stubs(:sleep_for)
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      next { "items" => [], "cursors" => {} } unless payload[:type] == "timelineTransactions"
+
+      requested << payload[:after]
+      case payload[:after]
+      when nil then { "items" => [ { "id" => "tx-known", "timestamp" => "2026-08-03" } ], "cursors" => {} }
+      when "page-9" then { "items" => [ { "id" => "tx-old", "timestamp" => "2026-08-02" } ], "cursors" => { "after" => "page-10" } }
+      else raise Provider::TradeRepublicClient::Timeout, "timeout"
+      end
+    end
+
+    result = @client.sync(
+      session_txt: "session",
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" } }
+    )
+
+    assert_equal [ nil, "page-9", "page-10", nil ], requested
+    assert_equal %w[tx-known tx-old], result["events"].map { |event| event["id"] }
+    assert_equal(
+      { "newest_event_id" => "tx-known", "backfill_cursor" => "page-10", "backfill_failures" => 1 },
       result["timeline_cursors"]["timelineTransactions"]
     )
   end

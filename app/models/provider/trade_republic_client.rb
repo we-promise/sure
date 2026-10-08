@@ -27,12 +27,15 @@ class Provider::TradeRepublicClient
   # The websocket failed during the history backfill. The sync is retried
   # without the backfill, so one bad backfill page cannot block the rest of
   # the import, and the failure counts towards abandoning the backfill.
+  # The pages read before the failure and the cursor to resume at are kept.
   class TimelineBackfillInterrupted < TransientProviderError
-    attr_reader :topic, :reason
+    attr_reader :topic, :reason, :cursor, :events
 
-    def initialize(message = nil, topic:, reason:)
+    def initialize(message = nil, topic:, reason:, cursor:, events: [])
       @topic = topic
       @reason = reason
+      @cursor = cursor
+      @events = events
       super(message)
     end
   end
@@ -135,8 +138,11 @@ class Provider::TradeRepublicClient
 
   # One walk through a timeline topic. `outcome` is :finished (end of the
   # topic), :caught_up (reached the stop event), :budget_exhausted (`cursor`
-  # is where to continue) or :stalled (pagination broke off at `cursor`).
-  TimelinePass = Data.define(:events, :newest_event_id, :warnings, :outcome, :cursor)
+  # is where to continue), :stalled (pagination broke off at `cursor`) or
+  # :failed (the page at `cursor` raised `error`).
+  TimelinePass = Data.define(:events, :newest_event_id, :warnings, :outcome, :cursor, :error) do
+    def initialize(error: nil, **attributes) = super
+  end
   # One topic's events this sync and its state for the next sync.
   # `head_complete` is false when the newest pages stalled.
   TopicSync = Data.define(:events, :newest_event_id, :warnings, :head_complete, :state)
@@ -340,7 +346,7 @@ class Provider::TradeRepublicClient
         interrupted_backfill: interrupted_backfill
       )
     rescue TimelineBackfillInterrupted => e
-      interrupted_backfill = { topic: e.topic, reason: e.reason }
+      interrupted_backfill = { topic: e.topic, reason: e.reason, cursor: e.cursor, events: e.events }
       raise
     end
   end
@@ -1204,9 +1210,11 @@ class Provider::TradeRepublicClient
 
       if interrupted_backfill
         # The websocket failed during this sync's backfill, which is now being
-        # retried without it. The backfill resumes on the next sync.
+        # retried without it. The pages read before the failure are kept and
+        # the backfill resumes at the failed page on the next sync.
         if interrupted_backfill[:topic] == topic && state["backfill_cursor"].present?
-          state = timeline_backfill_failed(state, topic: topic, reason: interrupted_backfill[:reason], warnings: warnings)
+          events += interrupted_backfill[:events]
+          state = timeline_backfill_stopped(state, cursor: interrupted_backfill[:cursor], topic: topic, reason: interrupted_backfill[:reason], warnings: warnings)
         end
       elsif state["backfill_cursor"].present?
         backfill_events, state = continue_timeline_backfill(websocket, topic: topic, state: state, max_pages: max_pages, warnings: warnings)
@@ -1241,22 +1249,29 @@ class Provider::TradeRepublicClient
         next_state = start_timeline_backfill(state, topic: topic, cursor: pass.cursor, stop_event_id: state["backfill_stop_event_id"], warnings: warnings)
         [ pass.events, next_state ]
       else
-        # Resume after the last page that was read.
-        next_state = if storable_timeline_cursor?(pass.cursor, topic: topic, warnings: warnings)
-          timeline_backfill_failed(state.merge("backfill_cursor" => pass.cursor), topic: topic, reason: "pagination stalled", warnings: warnings)
-        else
-          state.except(*TIMELINE_BACKFILL_KEYS)
+        reason = pass.error&.class&.name&.demodulize || "pagination stalled"
+        if pass.error.is_a?(Timeout) || pass.error.is_a?(TransientProviderError)
+          raise TimelineBackfillInterrupted.new(
+            "Trade Republic timeline backfill for #{topic} was interrupted",
+            topic: topic,
+            reason: reason,
+            cursor: pass.cursor,
+            events: pass.events
+          )
         end
-        [ pass.events, next_state ]
+
+        [ pass.events, timeline_backfill_stopped(state, cursor: pass.cursor, topic: topic, reason: reason, warnings: warnings) ]
       end
-    rescue Timeout, TransientProviderError => e
-      raise TimelineBackfillInterrupted.new(
-        "Trade Republic timeline backfill for #{topic} was interrupted",
-        topic: topic,
-        reason: e.class.name.demodulize
-      )
-    rescue MalformedResponse, ProviderUnavailable => e
-      [ [], timeline_backfill_failed(state, topic: topic, reason: e.class.name.demodulize, warnings: warnings) ]
+    end
+
+    # Resumes after the last page that was read. Abandoning counts failures
+    # in a row at the same position, so a pass that moved forward starts the
+    # count again.
+    def timeline_backfill_stopped(state, cursor:, topic:, reason:, warnings:)
+      return state.except(*TIMELINE_BACKFILL_KEYS) unless storable_timeline_cursor?(cursor, topic: topic, warnings: warnings)
+
+      state = state.except("backfill_failures") if cursor != state["backfill_cursor"]
+      timeline_backfill_failed(state.merge("backfill_cursor" => cursor), topic: topic, reason: reason, warnings: warnings)
     end
 
     # Keeps the cursor so the next sync retries the same page, until the
@@ -1289,6 +1304,7 @@ class Provider::TradeRepublicClient
       page_budget = [ max_pages, MAX_TIMELINE_PAGES ].min
       pages = 0
       outcome = :finished
+      error = nil
       loop do
         if pages >= page_budget
           outcome = cursor.present? ? :budget_exhausted : :stalled
@@ -1296,7 +1312,16 @@ class Provider::TradeRepublicClient
         end
         payload = { type: topic }
         payload[:after] = cursor if cursor
-        response = subscribe(websocket, payload)
+        begin
+          response = subscribe(websocket, payload)
+        rescue Timeout, MalformedResponse, ProviderUnavailable => e
+          # The newest pages fail as a whole; a backfill keeps what it read.
+          raise if start_cursor.nil?
+
+          error = e
+          outcome = :failed
+          break
+        end
         page_items = response.is_a?(Hash) ? Array(response["items"]) : []
         items.concat(page_items)
         if known_newest_event_id.present? && page_items.any? { |item| item["id"].to_s == known_newest_event_id.to_s }
@@ -1320,7 +1345,8 @@ class Provider::TradeRepublicClient
         newest_event_id: items.filter_map { |item| item["id"].to_s.presence }.first,
         warnings: warnings,
         outcome: outcome,
-        cursor: cursor
+        cursor: cursor,
+        error: error
       )
     end
 
