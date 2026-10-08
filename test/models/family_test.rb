@@ -612,7 +612,7 @@ class FamilyTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { family.resolved_categorization_provider }
   end
 
-  test "oldest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
+  test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
     family = families(:empty)
     account = family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
 
@@ -622,16 +622,16 @@ class FamilyTest < ActiveSupport::TestCase
     account.entries.create!(date: transaction_date, name: "Groceries",
                             amount: -50, currency: "USD", entryable: Transaction.new)
 
-    assert_equal transaction_date, family.oldest_activity_date
+    assert_equal transaction_date, family.earliest_activity_date
   end
 
-  test "oldest_activity_date returns nil when family has no Transaction/Trade entries" do
+  test "earliest_activity_date returns nil when family has no Transaction/Trade entries" do
     family = families(:empty)
     account = family.accounts.create!(name: "House", balance: 0, currency: "USD", accountable: Depository.new)
     account.entries.create!(date: Date.new(2000, 1, 15), name: "Old valuation",
                             amount: 5000, currency: "USD", entryable: Valuation.new)
 
-    assert_nil family.oldest_activity_date
+    assert_nil family.earliest_activity_date
   end
 
   private

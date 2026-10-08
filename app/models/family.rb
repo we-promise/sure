@@ -629,8 +629,8 @@ class Family < ApplicationRecord
   # AI balance sheet), valuations and opening balances don't count here, so a
   # single old valuation can't stretch All-range charts back for years (#4007).
   # Returns nil when the family has no Transaction/Trade entries yet.
-  def oldest_activity_date
-    entries.where(entryable_type: %w[Transaction Trade]).order(:date).first&.date
+  def earliest_activity_date
+    entries.where(entryable_type: %w[Transaction Trade]).minimum(:date)
   end
 
   # Used for invalidating family / balance sheet related aggregation queries
