@@ -139,6 +139,34 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
     assert_equal BigDecimal(30), income_by_security.amount_for(@aapl.id)
   end
 
+  # A disabled account stops contributing on its cut-off date, so a dividend
+  # paid after it is in neither the total nor the table.
+  test "income after an account's cut off date is not attributed" do
+    income_trade account: @account, date: @mar, amount: 30, security: @aapl
+    income_trade account: @account, date: @mar + 5, amount: 99, security: @aapl
+    lay_flat_balances cash_by_date: { @mar => 30, @mar + 5 => 99 }
+
+    returns = Portfolio::DailyReturns.new(
+      account_ids: [ @account.id ], currency: @family.currency, period: period,
+      active_until_dates: { @account.id => @mar + 1 }
+    )
+
+    assert_equal({ @aapl.id.to_s => BigDecimal(30) }, returns.income_by_security)
+    assert_equal BigDecimal(30), Portfolio::Income.new(returns).total
+  end
+
+  # Income that names no security still has to be shown: a table that only
+  # appeared when something was attributed would hide the period's income.
+  test "a period whose income is all unattributed still has something to show" do
+    income_transaction account: @account, date: @mar, amount: 12.5
+    lay_flat_balances cash_by_date: { @mar => 12.5 }
+
+    by_security = income_by_security
+
+    assert_empty by_security.rows
+    assert by_security.any?
+  end
+
   # The same conversion the bars use: the previous day's rate. The rate on
   # the payment day and every later day is different, so converting at either
   # reads 20 rather than 15.
@@ -159,8 +187,8 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
   end
 
   # A money amount in a currency with no rate cannot be converted and is
-  # dropped by the daily rows (rate_missing? reports it). Attribution must drop it the
-  # same way, or the table would hold a row the total does not.
+  # dropped by the daily rows (rate_missing? reports it). Attribution must drop
+  # it the same way, or the table would hold a row the total does not.
   test "a dividend that cannot be converted is left out of both the total and the table" do
     eur = create_portfolio_account(family: @family, currency: "EUR")
     income_trade account: eur, date: @mar, amount: 10, security: @aapl
