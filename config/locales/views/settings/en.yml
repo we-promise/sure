@@ -469,7 +469,7 @@ en:
         binance: Sync your Binance spot balances using a read-only API key.
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.
         coinspot: Sync CoinSpot balances, AUD values, transfers, deposits, withdrawals, and order history using a read-only API key.
-        onchain_wallet: Track self-custody Bitcoin, EVM and Solana wallets from their public addresses.
+        onchain_wallet: Track self-custody Bitcoin, EVM, Solana and Cosmos Hub wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
         trade_republic: Sync your Trade Republic investment account via secure read-only web login.

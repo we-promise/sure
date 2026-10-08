@@ -563,7 +563,7 @@ ca:
         fio: Sincronitza un compte de Fio banka amb un token API de només lectura.
         wise: Sincronitza automàticament els teus saldos multidivisa i les transferències internacionals de Wise.
         coinspot: Sincronitza saldos, valors en AUD, transferències, dipòsits, retirades i historial d'ordres de CoinSpot amb una clau API de només lectura.
-        onchain_wallet: Fes el seguiment de carteres Bitcoin, EVM i Solana d'autocustòdia a partir de les seves adreces públiques.
+        onchain_wallet: Fes el seguiment de carteres Bitcoin, EVM, Solana i Cosmos Hub d'autocustòdia a partir de les seves adreces públiques.
         trading212: Sincronitza la teva cartera d'inversió de Trading 212 amb una clau API de només lectura.
         trade_republic: Sincronitza el teu compte d'inversió de Trade Republic mitjançant un inici de sessió web segur de només lectura.
         questrade: Sincronitza els teus comptes d'inversió de Questrade directament a través de l'API de Questrade.

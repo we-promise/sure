@@ -427,7 +427,7 @@ pt-PT:
         coinbase: Importe as suas posições cripto Coinbase e acompanhe o desempenho.
         binance: Sincronize os seus saldos à vista Binance utilizando uma chave de API apenas de leitura.
         kraken: Sincronize os saldos Kraken e as execuções de negociação à vista utilizando uma chave de API apenas de leitura.
-        onchain_wallet: Acompanhe carteiras Bitcoin, EVM e Solana de autocustódia a partir dos seus endereços públicos.
+        onchain_wallet: Acompanhe carteiras Bitcoin, EVM, Solana e Cosmos Hub de autocustódia a partir dos seus endereços públicos.
         snaptrade: Ligue contas de corretagem através da rede de agregação SnapTrade.
         trading212: Sincronize a sua carteira de investimento Trading 212 utilizando uma chave de API apenas de leitura.
         ibkr: Sincronize contas de investimento Interactive Brokers através de importações de Flex Query.
