@@ -1,0 +1,253 @@
+# What return method an account's data can actually support.
+#
+# This exists so the engine cannot quote a
+# figure the underlying records do not justify: a manually valued account has no
+# record of what was paid in, so a money-weighted return over its flows would be
+# a fabrication, and an account with one day of history has no return at all.
+#
+# Deliberately evaluated BEFORE the metrics rather than filtered afterwards --
+# a suppression rule applied at the view layer is one refactor away from being
+# forgotten.
+class Portfolio::ReturnScope
+  # The account records buys, sells or transfers, so its external flows are
+  # known and every method is available.
+  TRADE_TRACKED = :trade_tracked
+
+  # The account's value is asserted by valuations. Its change over time is a
+  # value return; its flows are unknown, so no money-weighted return.
+  VALUATION_TRACKED = :valuation_tracked
+
+  # Fewer than two days of balance history in the period: no return exists.
+  INSUFFICIENT = :insufficient
+
+  KINDS = [ TRADE_TRACKED, VALUATION_TRACKED, INSUFFICIENT ].freeze
+
+  attr_reader :account, :period
+
+  # `resolved` carries the four inputs when a caller has already fetched them
+  # for a set of accounts. Everything below still derives `kind` from those four
+  # by the same rules, so the batch path cannot mean something different from
+  # the lazy one -- it only skips the fetching. Built directly, the instance
+  # queries for each input as before.
+  def initialize(account:, period:, resolved: nil)
+    @account = account
+    @period = period
+
+    return if resolved.nil?
+
+    @balance_days = resolved.fetch(:balance_days)
+    @trades = resolved.fetch(:trades)
+    @valuations = resolved.fetch(:valuations)
+    @external_transactions = resolved.fetch(:external_transactions)
+  end
+
+  # Eligibility for a set of accounts, keyed by account id, in a fixed number of
+  # round trips rather than up to four per account.
+  #
+  # Four, not three: loading the accounts, then the three resolution queries.
+  # The load is part of the work, because the resolver hands back ReturnScope
+  # objects that hold the record and `Portfolio::Performance` carries only ids,
+  # so nothing earlier in the call has already fetched them. What the batch path buys is
+  # that the four do not grow with the number of accounts -- pinned by
+  # "resolve_all asks the same number of queries however many accounts it is
+  # given".
+  #
+  # Takes Account RECORDS -- a relation, or an array of them, which may include
+  # closed and disabled accounts; Performance passes
+  # `Account.where(id: account_ids)`.
+  #
+  # Not ids. Passing them raises NoMethodError on the first `records.map(&:id)`,
+  # which is the intended answer: normalising them here would mean a load whose
+  # existence depends on the shape of the argument, so the query count this
+  # method advertises would stop being a property of the method. A caller that
+  # holds ids converts them, and pays for it where it can be seen.
+  def self.resolve_all(accounts:, period:)
+    records = accounts.to_a
+    return {} if records.empty?
+
+    days = balance_days_by_account(records, period)
+    kinds = live_entry_kinds_by_account(records, period)
+    external = external_transaction_account_ids(records, period)
+
+    records.to_h do |account|
+      resolved = {
+        # An account with no rows in the period gets no GROUP BY row. It must
+        # default to zero rather than go missing: `balance_days.zero?` is a
+        # load-bearing case at both Performance call sites, where it means
+        # "holds nothing here, so it neither contributes nor withholds".
+        balance_days: days.fetch(account.id, 0),
+        trades: kinds.include?([ account.id, "Trade" ]),
+        valuations: kinds.include?([ account.id, "Valuation" ]),
+        external_transactions: external.include?(account.id)
+      }
+
+      [ account.id, new(account: account, period: period, resolved: resolved) ]
+    end
+  end
+
+  # Balance rows are counted in each account's OWN currency, as the instance
+  # does. Grouping over `balances` alone would count every currency the account
+  # holds, so the account is joined and the currencies compared.
+  def self.balance_days_by_account(records, period)
+    Balance
+      .joins(:account)
+      .where(account_id: records.map(&:id), date: period.date_range)
+      .where("balances.currency = accounts.currency")
+      .group(:account_id)
+      .count
+  end
+  private_class_method :balance_days_by_account
+
+  # trades? and valuations? read the same rows, so one query answers both.
+  def self.live_entry_kinds_by_account(records, period)
+    Entry
+      .where(account_id: records.map(&:id), entryable_type: %w[Trade Valuation])
+      .where("COALESCE(entries.excluded, false) = false")
+      .where("entries.date <= ?", period.end_date)
+      .distinct
+      .pluck(:account_id, :entryable_type)
+      .to_set
+  end
+  private_class_method :live_entry_kinds_by_account
+
+  # One round trip, but one fragment per account: each account has to be its
+  # OWN classifier scope, exactly as the instance builds it. Classifying the
+  # whole set together would make a transfer between two accounts in the set
+  # `internal`, and an account whose only external flow is a transfer to a
+  # sibling would fall from TRADE_TRACKED to VALUATION_TRACKED -- Performance
+  # would then withhold a money-weighted return it should quote. FlowClassifier bakes
+  # its scope into a fixed ARRAY literal, so the scope cannot vary per row.
+  def self.external_transaction_account_ids(records, period)
+    connection = ActiveRecord::Base.connection
+    quoted_end_date = connection.quote(period.end_date)
+
+    fragments = records.map do |account|
+      classifier = Portfolio::FlowClassifier.new(scope_account_ids: [ account.id ])
+      quoted_id = connection.quote(account.id)
+
+      # Values are quoted rather than bound: sanitize_sql_array would scan the
+      # classifier's finished CASE for `:name` placeholders, and the CASE
+      # carries every label literal.
+      <<~SQL
+        SELECT #{quoted_id} AS account_id
+        WHERE EXISTS (
+          SELECT 1
+          FROM entries
+          #{classifier.sql_joins}
+          WHERE entries.account_id = #{quoted_id}
+            AND entries.entryable_type = 'Transaction'
+            AND entries.date <= #{quoted_end_date}
+            AND COALESCE(entries.excluded, false) = false
+            AND #{classifier.sql_case} IN ('external_inflow', 'external_outflow')
+        )
+      SQL
+    end
+
+    connection.select_values(fragments.join(" UNION ALL ")).to_set
+  end
+  private_class_method :external_transaction_account_ids
+
+  def kind
+    @kind ||= begin
+      if balance_days < 2
+        INSUFFICIENT
+      elsif trades? || external_transactions?
+        TRADE_TRACKED
+      elsif valuations?
+        VALUATION_TRACKED
+      else
+        # Balances exist but nothing explains them. Treated as valuation-tracked:
+        # the value change is real and reportable, the flows are not known.
+        VALUATION_TRACKED
+      end
+    end
+  end
+
+  def insufficient? = kind == INSUFFICIENT
+  def trade_tracked? = kind == TRADE_TRACKED
+  def valuation_tracked? = kind == VALUATION_TRACKED
+
+  def supports_time_weighted_return?
+    !insufficient?
+  end
+
+  # Only an account whose flows are known supports a money-weighted return.
+  def supports_money_weighted_return?
+    trade_tracked?
+  end
+
+  # The i18n key suffix the UI uses to label the figure, so a valuation-tracked
+  # account is never captioned "time-weighted return".
+  def return_label_key
+    valuation_tracked? ? "value_return" : "time_weighted_return"
+  end
+
+  # Balance rows in the account's currency inside the period. Public so a
+  # caller weighing several accounts can tell one that holds nothing in the
+  # period (no rows, nothing to withhold) from one with a single day, which
+  # has no return.
+  def balance_days
+    @balance_days ||= account.balances
+      .where(currency: account.currency, date: period.date_range)
+      .count
+  end
+
+  private
+    # Every tracking check reads the same records: the account's live entries
+    # up to the end of the period. Live means not excluded, as
+    # Portfolio::FlowClassifier reads it, and `entries.excluded` is nullable,
+    # so NULL counts as live through COALESCE. History before the period
+    # counts, because flows known from earlier are still known inside
+    # it.
+    def live_entries_through_period_end
+      account.entries
+        .where("COALESCE(entries.excluded, false) = false")
+        .where("entries.date <= ?", period.end_date)
+    end
+
+    def trades?
+      return @trades if defined?(@trades)
+      @trades = live_entries_through_period_end.where(entryable_type: "Trade").exists?
+    end
+
+    # A transfer in or out is as good as a trade for knowing the flows.
+    #
+    # One query through the classifier's SQL form rather than the Ruby form per
+    # entry: the Ruby form looks up transfers and counterparts row by row, which
+    # over an account's whole history is a round trip per transaction. The two
+    # forms are held to agree by the classifier's parity test.
+    def external_transactions?
+      return @external_transactions if defined?(@external_transactions)
+
+      # The account is its own scope here: this asks whether money crossed
+      # *this* account's boundary, so a transfer to a sibling account is
+      # external from where this question is asked.
+      classifier = Portfolio::FlowClassifier.new(scope_account_ids: [ account.id ])
+      sql = <<~SQL
+        SELECT EXISTS (
+          SELECT 1
+          FROM entries
+          #{classifier.sql_joins}
+          WHERE entries.account_id = :account_id
+            AND entries.entryable_type = 'Transaction'
+            AND entries.date <= :end_date
+            AND COALESCE(entries.excluded, false) = false
+            AND #{classifier.sql_case} IN ('external_inflow', 'external_outflow')
+        )
+      SQL
+
+      # No :scope_account_ids bind: the classifier sanitizes the scope into its
+      # own fragment rather than leaving a placeholder for the caller to fill.
+      value = ActiveRecord::Base.connection.select_value(
+        ActiveRecord::Base.sanitize_sql_array([
+          sql, { account_id: account.id, end_date: period.end_date }
+        ])
+      )
+      @external_transactions = ActiveModel::Type::Boolean.new.cast(value) == true
+    end
+
+    def valuations?
+      return @valuations if defined?(@valuations)
+      @valuations = live_entries_through_period_end.where(entryable_type: "Valuation").exists?
+    end
+end
