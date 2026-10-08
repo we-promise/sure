@@ -521,7 +521,9 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     first = capture_sql_queries { subject.send(:time_weighted_supported?) }
     # The other call site, not the same one twice: this is what proves the two
     # share a resolution rather than each memoising its own.
-    shared = capture_sql_queries { subject.send(:money_weighted_supported?, [ :row, :row ]) }
+    shared = ActiveRecord::Base.uncached do
+      capture_sql_queries { subject.send(:money_weighted_supported?, [ :row, :row ]) }
+    end
 
     assert_operator first.size, :<=, 4
     assert_empty shared,
