@@ -60,6 +60,9 @@ class Rule::ConditionRegexTest < ActiveSupport::TestCase
 
     Rule::SafeRegex.expects(:error_for).never
     rule.update!(active: true)
+    # Saving the rule leaves an unchanged condition unvalidated by itself, so the
+    # condition is also saved directly: its own validations always run.
+    rule.conditions.first.save!
 
     Rule::SafeRegex.expects(:error_for).with("^changed").returns(nil).once
     rule.conditions.first.update!(value: "^changed")

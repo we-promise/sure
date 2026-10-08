@@ -75,6 +75,17 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     assert_equal 2, calls
   end
 
+  test "the cache does not outlive the apply: a later read resolves the pattern again" do
+    rule = regex_rule("amzn")
+    calls = 0
+    Rule::SafeRegex.stubs(:with_timeout).with { |*| calls += 1; true }.yields.returns([ @hit.transaction.id ])
+
+    rule.apply
+    rule.matching_transaction_ids
+
+    assert_equal 2, calls
+  end
+
   # No stub on the timeout itself: a scope that really sleeps in Postgres is cancelled by
   # the statement timeout, and the error comes out of Rule#apply as TimeoutError.
   test "a regex rule whose match query outlives the limit is cancelled by Postgres and raises from apply" do
