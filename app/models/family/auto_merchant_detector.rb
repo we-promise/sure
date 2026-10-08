@@ -129,6 +129,13 @@ class Family::AutoMerchantDetector
         website_url: auto_detection.business_url
       )
       merchant
+    rescue ActiveRecord::RecordInvalid => e
+      # A name the model rejects (e.g. the reserved Merchant::NO_MERCHANT_FILTER_VALUE)
+      # leaves this transaction without a merchant, as before, instead of
+      # failing the whole detection batch. The name itself isn't logged since
+      # it's derived from the family's transaction text.
+      Rails.logger.warn("Skipping invalid AI-detected merchant for family #{family.id}: #{e.record.errors.attribute_names.join(', ')}")
+      nil
     end
 
     def enhance_provider_merchant(merchant, auto_detection)

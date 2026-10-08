@@ -40,6 +40,22 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal 1, @account.transactions.reload.enrichable(:merchant_id).count
   end
 
+  test "an invalid AI merchant name leaves that transaction unassigned without failing the batch" do
+    invalid_txn = create_transaction(account: @account, name: "Weird").transaction
+    valid_txn = create_transaction(account: @account, name: "Chipotle").transaction
+
+    provider_response = provider_success_response([
+      AutoDetectedMerchant.new(transaction_id: invalid_txn.id, business_name: Merchant::NO_MERCHANT_FILTER_VALUE, business_url: nil),
+      AutoDetectedMerchant.new(transaction_id: valid_txn.id, business_name: "Chipotle", business_url: "chipotle.com")
+    ])
+    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+
+    Family::AutoMerchantDetector.new(@family, transaction_ids: [ invalid_txn.id, valid_txn.id ]).auto_detect
+
+    assert_nil invalid_txn.reload.merchant
+    assert_equal "Chipotle", valid_txn.reload.merchant.name
+  end
+
   # Regression: issue #3842. A family could previously get a globally-shared
   # ProviderMerchant created from LLM-extracted data derived from its own
   # transaction name/notes, which every other family could then match/reuse.
