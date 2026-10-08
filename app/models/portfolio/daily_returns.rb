@@ -119,7 +119,11 @@ class Portfolio::DailyReturns
           revaluations: decimal(raw["revaluations"]),
           fx_effect: decimal(raw["fx_effect"]),
           rate_missing: raw["rate_missing"] == true,
-          suppressed: !denominator.positive?
+          # Same rule as a non-positive denominator: a day carrying a journal that
+          # could not be valued is suppressed rather than returned. Its flow is
+          # missing from the denominator while its value is present in the
+          # close, so the day would read as return the portfolio did not earn.
+          suppressed: !denominator.positive? || raw["journal_unpriced"] == true
         )
       end
     end
@@ -346,8 +350,41 @@ class Portfolio::DailyReturns
         flows_by_date AS (
           SELECT
             entries.date AS date,
+            -- A security journalled in or out is an external flow whose
+            -- magnitude is the POSITION's value, not the entry's cash amount.
+            -- A journal is written with `amount: 0` (Questrade writes
+            -- `price: 0, amount: 0`), so `-entries.amount` values it at nothing
+            -- and the arriving position lands in the numerator with the
+            -- denominator unchanged -- a position worth half the account read
+            -- as a 50% day.
+            --
+            -- Valued as qty x the holding's price for that date, and NOT as
+            -- `journal_holdings.amount`: `amount` is the whole position for
+            -- that security in the account, including units already held, so it
+            -- overstates the flow whenever a journal tops up a position the
+            -- scope already had. qty is what arrived.
+            --
+            -- The price comes from the same `holdings` row that
+            -- Balance::BaseCalculator#market_value_change_on_date reads, so the
+            -- numerator and the denominator move by one number rather than two
+            -- independently derived ones.
             COALESCE(SUM(CASE WHEN #{flow_class_sql} IN ('external_inflow', 'external_outflow')
-                              THEN -entries.amount * fx.rate ELSE 0 END), 0) AS external_flow,
+                              THEN CASE WHEN #{journal_predicate}
+                                        THEN COALESCE(trades.qty * journal_holdings.price * journal_fx.rate, 0)
+                                        ELSE -entries.amount * fx.rate
+                                   END
+                              ELSE 0 END), 0) AS external_flow,
+            -- The SAME value is already in the balance row's
+            -- net_market_flows: a journal carries `amount: 0`, so
+            -- Balance::BaseCalculator books its whole arriving value as market
+            -- movement. Counting it as an external flow as well would leave the
+            -- identity short by exactly the journal, and `unexplained` would
+            -- carry minus its value on every journal day. Reported separately
+            -- here so the final SELECT can take it back out of `market`.
+            COALESCE(SUM(CASE WHEN #{journal_predicate}
+                              AND #{flow_class_sql} IN ('external_inflow', 'external_outflow')
+                              THEN COALESCE(trades.qty * journal_holdings.price * journal_fx.rate, 0)
+                              ELSE 0 END), 0) AS journal_flow,
             COALESCE(SUM(CASE WHEN #{flow_class_sql} = 'income'
                               THEN -entries.amount * fx.rate ELSE 0 END), 0) AS income,
             COALESCE(SUM(CASE WHEN #{flow_class_sql} = 'fee'
@@ -356,8 +393,36 @@ class Portfolio::DailyReturns
             -- currency with no rate is flagged, never converted at parity. Only the
             -- classes that feed a figure count; an internal trade in an
             -- unconvertible currency moves nothing we sum.
-            COALESCE(BOOL_OR(fx.rate IS NULL
-                             AND #{flow_class_sql} IN ('external_inflow', 'external_outflow', 'income', 'fee')), false) AS flow_rate_missing
+            -- A journal converts from the HOLDING's currency, not the entry's,
+            -- so a missing rate there is invisible to the check above. Without
+            -- this a suppressed journal day would not report `rate_missing?`
+            -- and a caller could not say which fact it was short of.
+            COALESCE(BOOL_OR((fx.rate IS NULL
+                              AND #{flow_class_sql} IN ('external_inflow', 'external_outflow', 'income', 'fee'))
+                             OR (journal_fx.rate IS NULL
+                                 AND journal_holdings.currency IS NOT NULL
+                                 AND #{journal_predicate}
+                                 AND #{flow_class_sql} IN ('external_inflow', 'external_outflow'))), false) AS flow_rate_missing,
+            -- The journal suppression condition, and it keys on the PRICE rather
+            -- than on the row. Holding::PortfolioCache deliberately keeps zero-price
+            -- journal trades (Holding::PortfolioCache#load_prices) and matches the exact
+            -- date only, so on a journal date with no price for that date --
+            -- a weekend, a holiday, an instance with no feed -- `build_holdings`
+            -- still writes a row, valued at qty x 0. Keying on "no row exists"
+            -- would never fire and the phantom gain would simply move to the
+            -- day the price appears.
+            --
+            -- Keyed on the JOURNAL predicate, not on `entryable_type` alone:
+            -- the flow classifier makes a Contribution or Withdrawal labelled
+            -- trade external too, and one of those is valued from `-entries.amount` like any
+            -- other external flow. It needs no holdings row, and a trade with
+            -- qty 0 writes none, so keying on the type suppressed a day whose
+            -- figures were complete.
+            COALESCE(BOOL_OR(#{journal_predicate}
+                             AND #{flow_class_sql} IN ('external_inflow', 'external_outflow')
+                             AND (journal_holdings.price IS NULL
+                                  OR journal_holdings.price <= 0
+                                  OR journal_fx.rate IS NULL)), false) AS journal_unpriced
           FROM entries
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
           -- The same active-until window the balances use: a flow dated after
@@ -373,6 +438,37 @@ class Portfolio::DailyReturns
           LEFT JOIN LATERAL (
             SELECT #{rate_lookup('COALESCE(entries.currency, entry_accounts.currency)', 'entries.date - 1')} AS rate
           ) fx ON TRUE
+          -- The position this entry moved, on the day it moved, for valuing a
+          -- journal. Absent for every non-trade entry and for a trade whose
+          -- security the account holds no row for that date.
+          --
+          -- EXACTLY ONE ROW, which is why this is a LATERAL and not a plain
+          -- join. `holdings` is unique on (account_id, security_id, date,
+          -- CURRENCY), so one security can hold several rows for one day --
+          -- Balance::SyncCache sums them all, converting each from its own
+          -- currency. A join without the currency would match every one of
+          -- them and value the journal once per row.
+          --
+          -- The row matching the entry's own currency is preferred, since that
+          -- is the unit `trades.qty` is priced in; the ordering falls back to
+          -- the alphabetically first currency so the choice is deterministic
+          -- rather than whatever the planner returns.
+          LEFT JOIN LATERAL (
+            SELECT h.price, h.currency
+            FROM holdings h
+            WHERE entries.entryable_type = 'Trade'
+              AND h.account_id = entries.account_id
+              AND h.security_id = trades.security_id
+              AND h.date = entries.date
+            ORDER BY (h.currency = COALESCE(entries.currency, entry_accounts.currency)) DESC, h.currency
+            LIMIT 1
+          ) journal_holdings ON TRUE
+          -- Converted from the HOLDING's currency, which is the one its price
+          -- is quoted in, and at the previous day's rate for the same reason
+          -- every other start-of-day flow is.
+          LEFT JOIN LATERAL (
+            SELECT #{rate_lookup('journal_holdings.currency', 'entries.date - 1')} AS rate
+          ) journal_fx ON TRUE
           WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
             AND entries.date BETWEEN :start_date AND :end_date
             AND (flow_windows.active_until_date IS NULL OR entries.date <= flow_windows.active_until_date)
@@ -387,12 +483,16 @@ class Portfolio::DailyReturns
           b.date,
           b.value_close,
           b.value_open,
-          b.market,
+          -- The journal is now an external flow, so it must stop being a
+          -- market move. Same value, same row, taken out of the driver that
+          -- double-counted it.
+          b.market - COALESCE(f.journal_flow, 0) AS market,
           b.revaluations,
           b.fx_effect,
           (b.rate_missing OR COALESCE(f.flow_rate_missing, false)) AS rate_missing,
           COALESCE(arr.arrived_value, 0) AS arrived_value,
           COALESCE(dep.departed_value, 0) AS departed_value,
+          COALESCE(f.journal_unpriced, false) AS journal_unpriced,
           COALESCE(f.external_flow, 0) AS external_flow,
           COALESCE(f.income, 0) AS income,
           COALESCE(f.fees, 0) AS fees
@@ -435,6 +535,28 @@ class Portfolio::DailyReturns
     # nothing to collide with.
     def flow_classifier
       @flow_classifier ||= Portfolio::FlowClassifier.new(scope_account_ids: scope_account_ids)
+    end
+
+    # A security journal: a Transfer-labelled trade with no cash amount.
+    #
+    # Deliberately NOT every Trade classified external -- the flow classifier
+    # makes a Contribution or Withdrawal labelled Trade external too, and those
+    # carry a real cash amount that must keep flowing at its amount rather than
+    # being revalued from a position.
+    #
+    # The amount is checked as well as the label, and it is not belt and braces.
+    # A Transfer-labelled trade that carries `amount = qty x price` is ordinary
+    # -- the onchain processor, the web edit form, the API update and any Buy
+    # relabelled Transfer all write one -- and for those the balance calculator
+    # has already booked a cash-settled purchase, so the close does not move and
+    # there is no market flow to take the value out of. Valued from the position
+    # anyway, a 500 purchase in a 1,000 account read as external_flow 500,
+    # market -500, denominator 1,500 and a -33% day, with `unexplained` at 0:
+    # a phantom loss that reconciles, which the drivers table cannot flag.
+    def journal_predicate
+      "entries.entryable_type = 'Trade' " \
+        "AND trades.investment_activity_label = '#{Portfolio::FlowClassifier::TRANSFER_LABEL}' " \
+        "AND entries.amount = 0"
     end
 
     def flow_class_sql

@@ -530,6 +530,261 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     refute returns.any?
   end
 
+  # A security transferred in from a broker OUTSIDE the scope raises the
+  # closing value without any money crossing the boundary the flow sum could
+  # see: the journal carries amount 0 (Questrade writes price: 0, amount: 0)
+  # and external_flow was amount-weighted, so the arriving position landed in
+  # the numerator with an unchanged denominator and read as a 50% day.
+  #
+  # It is valued from the position -- qty x the holding's price for that
+  # date -- so the flow joins the denominator and the day returns what the
+  # portfolio actually earned, which is nothing.
+  test "a security journalled in from outside the scope is a flow rather than a return" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 100
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow,
+                 "the arriving position is an external flow at its value on the day"
+    assert_equal BigDecimal("1500"), second.denominator,
+                 "so it joins the start-of-day capital"
+
+    returns = daily_returns.returns.map(&:last)
+    assert_in_delta 0.0, returns.last.to_f, 0.000001,
+                    "receiving a position you already owned elsewhere earns nothing"
+
+    # The assertion whose deletion lets the identity break: the value is
+    # an external flow now, so it must have stopped being a market move. If both
+    # carried it, this would be -500.
+    assert_equal BigDecimal("0"), second.unexplained,
+                 "the journal is a flow OR a market move, never both"
+  end
+
+  # The mirror case, and it fails differently: a journal OUT understates,
+  # because the departing value leaves the close while nothing leaves the
+  # denominator.
+  test "a security journalled out of the scope is a negative flow" do
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    security_journal account: @account, date: @day_two, qty: -5, price: 100
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("-500"), second.external_flow
+    assert_equal BigDecimal("1000"), second.denominator
+
+    assert_in_delta 0.0, daily_returns.returns.map(&:last).last.to_f, 0.000001,
+                    "giving a position away loses nothing"
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # A journal is a Transfer-labelled trade with `price: 0, amount: 0`, and a
+  # predicate that only read the label would be wrong. A Transfer trade that
+  # carries a real cash amount is ordinary -- the onchain processor, the web
+  # edit form, the API update and any Buy relabelled Transfer all write
+  # `amount = qty x price` -- and for one of those the balance calculator has
+  # already booked a cash-settled purchase, so the close does not move and there
+  # is no market flow to take the value out of.
+  #
+  # Valued from the position anyway, the day read: external_flow 500, market
+  # -500, denominator 1500, unexplained 0 and a -33% return -- a phantom loss
+  # that reconciles, which is worse than one the drivers table would flag.
+  # Keyed on the amount as well, the trade keeps flowing at its own amount and
+  # the day is what it was.
+  test "a Transfer labelled trade that carries a cash amount is not valued as a journal" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+
+    @account.entries.create!(
+      name: "Transfer in", date: @day_two, amount: 500, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 5, price: 100,
+                           currency: @account.currency, investment_activity_label: "Transfer")
+    )
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 100,
+      amount: BigDecimal(500), currency: @account.currency
+    )
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("-500"), second.external_flow,
+                 "the trade flows at the cash amount it carries, not at the position's worth"
+    assert_equal BigDecimal("0"), second.market,
+                 "and nothing is subtracted from market for a purchase the close already absorbed"
+
+    # The day does NOT reconcile, and that is the point. How the flow
+    # classifier treats a Transfer-labelled trade that carries cash is a
+    # separate question; what this pins is that the journal valuation does not
+    # paper over it. Revalued from the position the residual would cancel to
+    # zero and the day report -33%: a phantom loss that reconciles, which the
+    # drivers cannot flag. Left alone it lands in `unexplained`, where it is visible.
+    assert_equal BigDecimal("500"), second.unexplained,
+                 "the residual stays visible rather than being cancelled by a revaluation"
+
+    second_return = daily_returns.returns.find { |date, _| date == @day_two }&.last
+    assert_operator second_return.to_f, :>, -0.3,
+                    "-33% was the revaluation's phantom, not the day's return"
+  end
+
+  # The flow is qty x price, NOT the holding row's `amount`. `amount` is the
+  # whole position for that security in the account, so when a journal tops up
+  # something the scope already held, valuing the flow from it counts the units
+  # that were there all along as though they had just arrived.
+  #
+  # Here the account already holds 10 units and 5 are journalled in. The holding
+  # row reads 15 x 100 = 1,500; the flow is 500.
+  test "a journal that tops up an existing position is valued on what arrived" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 100, holding_qty: 15
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow,
+                 "five units arrived, not fifteen"
+    assert_equal BigDecimal("1500"), second.denominator
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # The reason suppression keys on the PRICE rather than on the row.
+  #
+  # Holding::PortfolioCache deliberately keeps zero-price journal trades and
+  # matches the exact date only, so a journal on a day with no price for that
+  # date -- a weekend, a holiday, an instance with no feed -- still writes a
+  # holding row, valued at qty x 0. A fallback keyed on "no row exists" would
+  # never fire, and the phantom gain would simply move to the day the price
+  # appears.
+  test "a journal with no usable price suppresses the day rather than valuing it at nothing" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+
+    second = daily_returns.rows.last
+
+    assert second.suppressed, "a journal valued at zero is not a journal worth zero"
+    assert_not second.computable?
+
+    # A suppressed day is still listed; it contributes zero rather than the 50%
+    # the unvalued journal would otherwise have produced.
+    suppressed_return = daily_returns.returns.find { |date, _| date == @day_two }&.last
+    assert_equal BigDecimal("0"), suppressed_return,
+                 "a suppressed day contributes nothing, not the phantom gain"
+  end
+
+  test "a journal with no holding row at all suppresses the day" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5
+
+    row = daily_returns.rows.last
+    assert row.suppressed
+    # Suppressed because the position could not be valued -- NOT because a
+    # currency had no rate. Reporting both would give the reader two
+    # contradictory explanations and no figures.
+    assert_not row.rate_missing,
+               "an unpriced journal is a valuation gap, not a missing exchange rate"
+  end
+
+  # `holdings` is unique on (account_id, security_id, date, CURRENCY), so one
+  # security can carry several rows for one day and Balance::SyncCache sums them
+  # all. A journal join without the currency matched every row and valued the
+  # journal once per row -- two rows, twice the flow.
+  #
+  # The row matching the entry's own currency is the one used, since that is the
+  # unit the quantity is priced in.
+  test "a journal is valued once when the security has rows in several currencies" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 100
+
+    # A second row for the same security and day, in another currency, which the
+    # schema allows and a provider reporting in the security's own currency
+    # produces.
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 80,
+      amount: BigDecimal(400), currency: "EUR"
+    )
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.25
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow,
+                 "five units arrived once, however many currencies the position is recorded in"
+    assert_equal BigDecimal("1500"), second.denominator
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # The flow classifier makes a Contribution or Withdrawal labelled Trade
+  # external too, and those carry a real cash amount. Valuing every external
+  # Trade from its position would have turned one with qty 0 into a flow of nothing.
+  test "a contribution written as a trade still flows at its cash amount" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, cash_flow: 500
+
+    @account.entries.create!(
+      name: "Contribution", date: @day_two, amount: -500, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 0, price: 0,
+                           currency: @account.currency, investment_activity_label: "Contribution")
+    )
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow,
+                 "a cash contribution flows at its amount, whatever entryable carries it"
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # The journal suppression is about a JOURNAL that could not be valued, and a
+  # journal is a Transfer-labelled trade. Keyed on `entryable_type = 'Trade'` alone it
+  # also caught the Contribution and Withdrawal labelled trades, whose
+  # flow comes from `-entries.amount` and never touches a holdings price. Such a
+  # trade on a day with no holdings row for its security -- qty 0 writes none,
+  # and a cash contribution recorded as a trade is exactly that -- suppressed a
+  # day whose figures were complete, and the real return it carried was dropped
+  # from the chain instead of contributing to it.
+  test "a contribution written as a trade is not suppressed by a price it never needed" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_650,
+                cash_flow: 500, market_flow: 150
+
+    @account.entries.create!(
+      name: "Contribution", date: @day_two, amount: -500, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 0, price: 0,
+                           currency: @account.currency, investment_activity_label: "Contribution")
+    )
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow
+    assert_equal BigDecimal("1500"), second.denominator
+    assert_not second.suppressed,
+               "nothing here is valued from a position, so no price is missing"
+
+    second_return = daily_returns.returns.find { |date, _| date == @day_two }&.last
+    assert_in_delta 0.10, second_return.to_f, 0.000001,
+                    "the day returned 10% and must contribute it"
+  end
+
+  # The negative control. A journal between two accounts the scope CONTAINS is
+  # internal and moves nothing across the boundary, so it must not be
+  # valued as a flow however well the valuation works.
+  test "a journal between two in-scope accounts is not an external flow" do
+    other = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 500, market_flow: -500
+    lay_balance account: other, date: @day_one, opening: 0, closing: 0
+    lay_balance account: other, date: @day_two, opening: 0, closing: 500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: -5, price: 100
+    security_journal account: other, date: @day_two, qty: 5, price: 100
+
+    scope = daily_returns(account_ids: [ @account.id, other.id ])
+
+    assert_equal BigDecimal("0"), scope.rows.last.external_flow,
+                 "a position moved between accounts the scope holds crosses no boundary"
+  end
+
   # Regression. When the period starts after the last balance row, that row is
   # carried forward by the `lb` lateral. It was read for BOTH boundaries --
   # value_close from its end_balance, value_open from its start_balance -- so
