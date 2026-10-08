@@ -3,10 +3,10 @@
 <div id="<%= dom_id(transaction, "category_menu_#{variant}") %>" class="min-w-0 overflow-hidden">
   <% if transaction.shows_transfer_category? %>
     <div class="hidden lg:flex">
-      <%= render "categories/badge", category: transaction.transfer&.payment? ? payment_category :  transfer_category %>
+      <%= render "categories/badge", category: transaction.payment? ? payment_category : transfer_category %>
     </div>
     <div class="flex lg:hidden">
-      <%= render "categories/badge_mobile", category: transaction.transfer&.payment? ? payment_category :  transfer_category %>
+      <%= render "categories/badge_mobile", category: transaction.payment? ? payment_category : transfer_category %>
     </div>
   <% else %>
     <%= render "categories/menu", transaction: transaction, in_split_group: in_split_group %>

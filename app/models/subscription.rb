@@ -1,6 +1,11 @@
 class Subscription < ApplicationRecord
   TRIAL_DAYS = 45
 
+  # Sentinel Stripe ID used by the demo data generator. This is not a real
+  # Stripe object; any code path that would call the Stripe API must call
+  # `synthetic?` first to skip demo subscriptions.
+  DEMO_STRIPE_ID = "sub_demo_123"
+
   belongs_to :family
 
   # https://docs.stripe.com/api/subscriptions/object
@@ -38,5 +43,12 @@ class Subscription < ApplicationRecord
 
   def pending_cancellation?
     active? && cancel_at_period_end?
+  end
+
+  # Returns true when this subscription is a demo/synthetic object with no
+  # backing Stripe record.  Callers that would otherwise hit the Stripe API
+  # (e.g. the before_destroy cancel callback) should guard with this predicate.
+  def synthetic?
+    stripe_id == DEMO_STRIPE_ID
   end
 end

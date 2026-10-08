@@ -41,7 +41,7 @@
                 variant: :outline,
                 size: :sm,
                 icon: "refresh-cw",
-                href: helpers.sync_trade_republic_item_path(item),
+                href: helpers.sync_trade_republic_item_path(item, source: "panel"),
                 method: :post,
                 disabled: item.syncing?
               ) %>

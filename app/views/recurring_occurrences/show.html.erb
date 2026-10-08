@@ -7,7 +7,7 @@
 
     This is the ACT surface: it answers "what do I need to do about this bill
     right now", which is a different question from "what is this bill", and it
-    is why it opens in the drawer while the bill's own story lives on its page.
+    is why it is its own drawer, one link away from the bill's.
 
     frame: "drawer", responsive: true matches every other detail surface in the
     app -- a centred card on a phone, a right-hand drawer from lg up. The close
@@ -291,7 +291,8 @@
               <% menu.with_item(variant: "button",
                     text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
                     icon: series.active? ? "pause" : "play",
-                    href: toggle_status_recurring_transaction_path(series), method: :post) %>
+                    href: toggle_status_recurring_transaction_path(series), method: :post,
+                    frame: "_top") %>
             <% end %>
           </div>
         <% else %>
@@ -303,8 +304,9 @@
           <%= render DS::Link.new(
                 text: t(".view_bill"),
                 variant: "default",
-                href: bill_path(series),
-                data: { turbo_frame: "_top" }
+                href: bill_path(series, occurrence: @occurrence.id),
+                frame: :drawer,
+                data: { turbo_prefetch: false }
               ) %>
           <%= render "recurring_transactions/pay_action", recurring_transaction: series, show_add: false %>
         </div>
