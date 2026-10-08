@@ -116,6 +116,21 @@ class RetirementPlan < ApplicationRecord
     RetirementPlan::Simulation.new(**simulation_inputs(as_of:), retirement_year: retirement_year)
   end
 
+  # The milestones on the path the planner draws: a quarter, a half, three
+  # quarters and all of #projection's FI number, and Coast FI measured to the
+  # plan's retirement date. The page hands in the simulation it draws, so in
+  # FIRE mode they follow the path to the solved retirement year.
+  def milestones(as_of:, simulation: self.simulation(as_of: as_of))
+    return [] if simulation.nil?
+
+    RetirementPlan::Milestones.new(
+      rows: simulation.rows, current_assets: funding_total(as_of),
+      fi_number: projection(as_of: as_of).fi_number,
+      expected_annual_return: expected_annual_return, inflation_rate: inflation_rate,
+      retirement_year: retirement_date&.year, first_year: as_of.year, birth_year: birth_year
+    ).all
+  end
+
   # FIRE mode: the earliest year the money lasts to the end age.
   def solve(as_of:)
     return nil unless plannable?(as_of)
