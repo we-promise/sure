@@ -27,6 +27,16 @@ class IncomeStatement::SpendingComparison
 
   attr_reader :period, :baseline_period
 
+  # The first transaction these totals could count: in the statement's
+  # eligible accounts and not excluded, as IncomeStatement::Totals filters.
+  # Opening-balance valuations can predate real activity by years, accounts
+  # outside the user's finances aren't counted, and an excluded old entry
+  # isn't spending, so any of them would dilute "normal" with empty months.
+  def self.history_start(income_statement)
+    Entry.where(account_id: income_statement.eligible_accounts.select(:id), entryable_type: "Transaction", excluded: false)
+         .minimum(:date)
+  end
+
   def initialize(income_statement, period:, history_start:)
     @income_statement = income_statement
     @period = period
