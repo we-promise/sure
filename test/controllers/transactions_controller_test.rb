@@ -1925,6 +1925,32 @@ end
     end
   end
 
+  test "compact row shows merchant inline on the name line instead of the subtitle" do
+    family = families(:empty)
+    sign_in users(:empty)
+    @user = users(:empty)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create!(name: "Amazon", color: "#fd7f6f")
+    create_transaction(account: account, name: "Coffee", merchant: merchant)
+
+    get transactions_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    frame = doc.css("turbo-frame[id^='entry_']").first
+    assert frame.present?, "Expected a rendered entry row"
+    name_box = frame.css("div.truncate").find { |div| div.at_css("a") }
+    assert name_box.present?, "Expected a name container with a link"
+    # "Merchant • " (bullet after) lives on the name line...
+    assert_match(/Amazon •/, name_box.text)
+    # ...not in the desktop subtitle (which keeps "• Merchant", bullet before, for mobile).
+    subtitle = frame.at_css("div.text-secondary.text-xs")
+    assert_no_match(/Amazon •/, subtitle.text)
+    assert_match(/• Amazon/, subtitle.text)
+  end
+
   test "compact list hides the notes column by default" do
     family = families(:empty)
     sign_in users(:empty)

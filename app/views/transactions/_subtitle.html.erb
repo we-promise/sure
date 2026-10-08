@@ -6,8 +6,10 @@
   <% if transaction.transfer? && !compact %>
     <span class="text-secondary"><%= transaction_transfer_subtitle(entry) %></span>
   <% elsif !transaction.transfer? %>
-    <% if transaction.merchant&.present? %>
-      <span class="hidden <%= compact ? "@5xl/compact-table:inline" : "lg:inline" %> truncate"><%= transaction.merchant.name %> • </span>
+    <%# In compact rows the merchant moves up onto the name line (desktop only);
+        the subtitle keeps it only for standard rows and mobile sublines. %>
+    <% if transaction.merchant&.present? && !compact %>
+      <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
     <% end %>
     <% unless compact && view_ctx == "account" %>
       <span class="text-secondary hidden <%= compact ? "@5xl/compact-table:inline min-w-0 truncate" : "lg:inline" %>">

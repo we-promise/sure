@@ -48,6 +48,9 @@
                   <% end %>
                 <% end %>
               <% else %>
+                <% if transaction.merchant&.present? %>
+                  <span class="hidden @5xl/compact-table:inline text-secondary font-normal"><%= transaction.merchant.name %> • </span>
+                <% end %>
                 <%= link_to(
                       entry.name,
                       in_split_group ? entry_path(entry, drawer_params.merge(grouped: true)) : entry_path(entry, drawer_params),
