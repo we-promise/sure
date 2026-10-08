@@ -146,6 +146,26 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
   # crossed THIS account's boundary. Resolving the set under one shared scope
   # would read this transfer as internal and drop the account to
   # VALUATION_TRACKED, withholding a money-weighted return it should quote.
+  # The batch path reads its own SQL for transfers, so the history rules the
+  # instance follows are asserted on it too: a transfer from before the period
+  # is known, and an excluded one is not a record of anything.
+  test "resolve_all reads transfer history as the instance does" do
+    earlier = create_portfolio_account(family: @family)
+    lay_balance account: earlier, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: earlier, date: @day_two, opening: 1_000, closing: 1_000
+    deposit account: earlier, date: @day_one - 10.days, amount: 1_000
+
+    excluded = create_portfolio_account(family: @family)
+    lay_balance account: excluded, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: excluded, date: @day_two, opening: 1_000, closing: 1_000
+    deposit(account: excluded, date: @day_one, amount: 1_000).update!(excluded: true)
+
+    resolved = Portfolio::ReturnScope.resolve_all(accounts: [ earlier, excluded ], period: @period)
+
+    assert resolved.fetch(earlier.id).trade_tracked?, "a transfer before the period is still a known flow"
+    assert resolved.fetch(excluded.id).valuation_tracked?, "an excluded transfer records nothing"
+  end
+
   test "a transfer to a sibling account in the same set is still external to its own account" do
     sibling = create_portfolio_account(family: @family)
 
