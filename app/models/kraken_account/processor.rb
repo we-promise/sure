@@ -58,7 +58,7 @@ class KrakenAccount::Processor
       return unless account
 
       external_id = "kraken_trade_#{txid}"
-      return if account.entries.exists?(external_id: external_id, source: "kraken")
+      existing = account.entries.find_by(external_id: external_id, source: "kraken")
 
       type = trade["type"].to_s.downcase
       return unless %w[buy sell].include?(type)
@@ -66,6 +66,8 @@ class KrakenAccount::Processor
       pair = trade["pair"].to_s
       base_symbol, quote_symbol = infer_pair_symbols(pair, trade)
       return if base_symbol.blank?
+
+      return reconcile_with_ledger(existing, txid, type, base_symbol, quote_symbol) if existing
 
       # `vol` is gross. When the fee is taken in the base asset -- an order-level
       # choice Kraken makes per fill -- the units that actually moved are fewer,
@@ -115,6 +117,38 @@ class KrakenAccount::Processor
       )
     rescue StandardError => e
       Rails.logger.error "KrakenAccount::Processor - failed to process trade #{txid}: #{e.message}"
+    end
+
+    # A trade imported before its ledger rows were available -- before the API
+    # key was granted "Query ledger entries", or before the ledger backfill
+    # reached it -- holds TradesHistory's gross `vol` and `cost`. Once the rows
+    # arrive, correct it from them, as a fresh import would have. Only what the
+    # ledger answers is touched, an unchanged entry is not rewritten, and one the
+    # user edited or locked is left alone.
+    def reconcile_with_ledger(entry, txid, type, base_symbol, quote_symbol)
+      return if entry.protected_from_sync?
+
+      trade = entry.entryable
+      return unless trade.is_a?(Trade)
+
+      qty = ledger_qty_for(txid, base_symbol)
+      cash = ledger_cash_for(txid, quote_symbol)
+      signed_qty = qty && (type == "buy" ? qty : -qty)
+
+      qty_changed = signed_qty && signed_qty != trade.qty
+      cash_changed = cash && cash != entry.amount
+      return unless qty_changed || cash_changed
+
+      label = type == "buy" ? "Buy" : "Sell"
+      # Entry.transaction, not entry.transaction: delegated_type makes the
+      # instance method the Transaction entryable accessor.
+      Entry.transaction do
+        trade.update!(qty: signed_qty) if qty_changed
+        entry.update!(
+          amount: cash_changed ? cash : entry.amount,
+          name: qty_changed ? "#{label} #{qty.round(8)} #{base_symbol}" : entry.name
+        )
+      end
     end
 
     # A trade's ledger rows carry its txid in `refid`, one row per asset moved.

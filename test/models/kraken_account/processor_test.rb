@@ -129,6 +129,44 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 50.to_d, buy.amount
   end
 
+  # A trade imported before the ledger permission was granted holds the gross
+  # `vol` and `cost`. When its rows arrive, the next sync corrects it rather
+  # than skipping it as already imported.
+  test "corrects a trade imported without ledger rows once they arrive" do
+    KrakenAccount::Processor.new(@kraken_account).process
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 0.001.to_d, buy.trade.qty
+
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000200"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00", fee: "0.10")
+    )
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy.reload
+    assert_equal 0.000998.to_d, buy.trade.reload.qty
+    assert_equal 50.10.to_d, buy.amount
+
+    assert_no_changes -> { buy.reload.updated_at } do
+      KrakenAccount::Processor.new(@kraken_account).process
+    end
+  end
+
+  test "leaves a trade the user edited alone when its ledger rows arrive" do
+    KrakenAccount::Processor.new(@kraken_account).process
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    buy.update!(user_modified: true)
+
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000200"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00", fee: "0.10")
+    )
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    assert_equal 0.001.to_d, buy.trade.reload.qty
+    assert_equal 50.to_d, buy.reload.amount
+  end
+
   test "trade import is idempotent by txid" do
     assert_difference -> { @account.entries.where(source: "kraken").count }, 2 do
       KrakenAccount::Processor.new(@kraken_account).process
