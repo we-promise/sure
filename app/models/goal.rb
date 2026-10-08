@@ -756,7 +756,10 @@ class Goal < ApplicationRecord
     end
 
     segments = []
-    segments << { color: color.presence || "var(--color-blue-500)", amount: filled, id: "saved" } if filled.positive?
+    # A real colour, not a CSS variable: the ring runs this segment through
+    # d3.color, which cannot parse var(...) and left the ring blank (#4030).
+    # The same fallback as Goals::AvatarComponent, so ring and avatar match.
+    segments << { color: color.presence || Goal::COLORS.first, amount: filled, id: "saved" } if filled.positive?
     segments << { color: "var(--budget-unused-fill)", amount: rem, id: "unused" } if rem.positive?
     segments
   end
