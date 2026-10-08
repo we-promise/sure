@@ -37,7 +37,7 @@
           <div class="flex items-center gap-1 min-w-0">
             <div class="truncate">
               <% if transaction.transfer? %>
-                <%= render DS::Tooltip.new(text: transfer_tooltip) do |tooltip| %>
+                <%= render DS::Tooltip.new(text: transfer_tooltip, placement: "top", variant: :surface, html_class: "min-w-0 max-w-full") do |tooltip| %>
                   <% tooltip.with_trigger do %>
                     <%= link_to(
                           entry.name,

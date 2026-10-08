@@ -1970,8 +1970,13 @@ end
     assert_response :success
     # No visible "Transfer • from → to" subtitle line under the name...
     assert_no_match(/Transfer •/, response.body)
-    # ...the from→to detail lives in the name tooltip instead.
+    # ...the from→to detail lives in the name tooltip instead, styled like
+    # the tag tooltips (surface card, not the dark inverse bubble).
     assert_match(/Transfer: From → To/, response.body)
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    tooltip = doc.at_css("div.chart-tooltip[role='tooltip']")
+    assert tooltip.present?, "Expected the transfer tooltip panel with surface styling"
+    assert_match(/Transfer: From → To/, tooltip.text)
   end
 
   test "group_by_date toggle only affects compact view" do
