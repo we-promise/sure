@@ -160,16 +160,28 @@ class Transaction < ApplicationRecord
   #     stay editable, same as a regular transaction, since there's no
   #     counterpart to defer to and no other way for the user to fix a
   #     provider mislabel.
-  #   - Once matched, both legs defer to Transfer#categorizable?, which is
-  #     based on the (stable) destination account rather than either leg's
-  #     kind, so both legs of e.g. a loan payment agree and stay correct
-  #     even if an older provider sync left a stale kind on this
-  #     transaction.
+  #   - Once matched, the category belongs to the outflow leg, the one
+  #     budgets and reports count. Only that leg is editable, and only when
+  #     Transfer#categorizable?, which is based on the (stable) destination
+  #     account rather than either leg's kind, so it stays correct even if
+  #     an older provider sync left a stale kind on this transaction. The
+  #     inflow leg shows the outflow's category instead (see
+  #     #category_set_on_transfer_outflow?), since a category picked there
+  #     would look saved but never reach a budget.
   def category_editable?
     return true unless transfer?
     return true unless transfer
 
-    transfer.categorizable?
+    transfer.categorizable? && transfer.outflow_transaction_id == id
+  end
+
+  # The inflow leg of a categorizable transfer: its category is the
+  # outflow's, shown read-only.
+  def category_set_on_transfer_outflow?
+    return false unless transfer?
+    return false unless transfer
+
+    transfer.categorizable? && transfer.inflow_transaction_id == id
   end
 
   # Whether this non-editable transfer leg is a liability payment (shown

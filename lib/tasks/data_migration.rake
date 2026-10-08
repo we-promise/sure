@@ -246,4 +246,34 @@ namespace :data_migration do
 
     puts "✅  Provider settings migration complete."
   end
+
+  desc "Reconcile stored kinds of transfers into investment/crypto accounts"
+  # 2026-10-08: older syncs and match paths left some legs of transfers into
+  # investment/crypto accounts on a kind the current rules no longer give them
+  # (see Transfer::InvestmentKindReconciler). Provider syncs only repair the
+  # rows they replay. Idempotent; only transfer kinds are rewritten, standard
+  # and one_time are left alone. Report totals for affected periods can change,
+  # and reverting the code later does not restore the previous kinds.
+  #
+  #   DRY_RUN=1    print what would change without writing
+  #   FAMILY_ID=id limit the run to one family
+  task reconcile_investment_transfer_kinds: :environment do
+    dry_run = ENV["DRY_RUN"].present?
+    scope = Transfer.all
+
+    if ENV["FAMILY_ID"].present?
+      family = Family.find_by(id: ENV["FAMILY_ID"])
+      abort "No family with id #{ENV["FAMILY_ID"]}" unless family
+      scope = scope.where(inflow_transaction_id: family.transactions.select(:id))
+    end
+
+    result = Transfer::InvestmentKindReconciler.new(scope: scope, dry_run: dry_run).run
+
+    puts "#{dry_run ? "Dry run: " : ""}checked #{result.checked} transfers into investment/crypto accounts"
+    if result.changed.empty?
+      puts "No legs needed a new kind."
+    else
+      result.changed.each { |change, count| puts "  #{change}: #{count}" }
+    end
+  end
 end
