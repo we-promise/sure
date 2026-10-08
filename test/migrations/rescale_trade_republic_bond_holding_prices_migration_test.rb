@@ -65,6 +65,29 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     assert_equal BigDecimal("84.04"), calculated.reload.price
   end
 
+  test "rescales sold bonds kept on the shared BOND security" do
+    shared_bond = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "Bond")
+    sold = create_snapshot("DE0001102580", 30.days.ago.to_date, qty: "1000", price: "97.50", cost_basis: "0.96",
+      security: shared_bond)
+    sold_without_cost = create_snapshot("DE0001102598", 31.days.ago.to_date, qty: "1000", price: "97.50", cost_basis: nil,
+      security: shared_bond)
+
+    run_migration
+
+    assert_equal BigDecimal("0.975"), sold.reload.price
+    assert_equal BigDecimal("975"), sold.amount
+    assert_equal BigDecimal("97.5"), sold_without_cost.reload.price
+  end
+
+  test "rescales percent quotes in the stored portfolio payload" do
+    run_migration
+
+    prices = @tr_account.reload.raw_positions_payload.to_h { |position| [ position["isin"], position["price"] ] }
+    assert_equal "0.8404", prices[BOND_ISIN]
+    assert_equal "183.94", prices[STOCK_ISIN]
+    assert_equal "101.20", prices[INTEREST_ISIN]
+  end
+
   test "schedules a sync only for items with rescaled holdings" do
     create_snapshot(BOND_ISIN, Date.current, qty: "2677.95", price: "84.04", cost_basis: "0.93")
 
@@ -79,7 +102,7 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
   private
 
     def create_snapshot(isin, date, qty:, price:, cost_basis:, **attributes)
-      security = Security.find_or_create_by!(ticker: isin) { |s| s.name = isin }
+      security = attributes.delete(:security) || Security.find_or_create_by!(ticker: isin) { |s| s.name = isin }
       @account.holdings.create!({
         security: security,
         date: date,
