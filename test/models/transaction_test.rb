@@ -342,6 +342,20 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
   end
 
+  # The dedupe above relies on the uuid cast downcasing a non-canonical id
+  # (ActiveRecord's PostgreSQL OID::Uuid#format_uuid), so pin that, and an
+  # assignment made only of case variants of one id.
+  test "an id differing only in case is the same tag" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+
+    assert_equal tag.id, Tag.type_for_attribute(:id).cast(tag.id.upcase)
+
+    transaction.update!(tag_ids: [ tag.id.upcase, tag.id.downcase ])
+
+    assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
+  end
+
   test "assigning a repeated tag stores it once" do
     transaction = transactions(:transfer_out)
     tag = tags(:one)
