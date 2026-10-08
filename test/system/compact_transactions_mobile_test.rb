@@ -1,6 +1,8 @@
 require "application_system_test_case"
 
 class CompactTransactionsMobileTest < ApplicationSystemTestCase
+  include EntriesTestHelper
+
   DEFAULT_VIEWPORT_WIDTH = 2400
   DEFAULT_VIEWPORT_HEIGHT = 1400
 
@@ -216,12 +218,59 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
 
   test "transfer account information remains available on name hover" do
     page.current_window.resize_to(2400, 1200)
-    @entry.entryable.update!(kind: "funds_movement")
+    transfer = create_transfer(from_account: accounts(:depository), to_account: accounts(:credit_card), amount: 25)
+    transfer_entry = transfer.outflow_transaction.entry
     visit transactions_url
 
-    within "turbo-frame##{dom_id(@entry)}" do
+    within "turbo-frame##{dom_id(transfer_entry)}" do
       find('[data-clickable-row-target="link"]').hover
       assert_selector '[role="tooltip"]', text: accounts(:depository).name
+      assert_selector '[role="tooltip"]', text: accounts(:credit_card).name
+    end
+
+    tooltip_is_uncovered = page.evaluate_script(<<~JS, dom_id(transfer_entry))
+      ((id) => {
+        const tooltip = document.getElementById(id).querySelector('[role="tooltip"]');
+        const bounds = tooltip.getBoundingClientRect();
+        const hit = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+        return tooltip.contains(hit);
+      })(arguments[0])
+    JS
+    assert tooltip_is_uncovered, "hover tooltip should be visible above the row"
+  end
+
+  test "filter popovers stay next to their buttons in both compact tables" do
+    [ 2400, 1400, 375 ].each do |width|
+      page.current_window.resize_to(width, 1200)
+
+      [ [ transactions_url, "#transaction-filters-button" ],
+        [ account_url(accounts(:depository), tab: "activity"), "#activity-status-filter-button" ] ].each do |url, selector|
+        visit url
+        find(selector).click
+        assert_selector "[data-DS--popover-target='content']:not(.hidden)"
+
+        geometry = page.evaluate_script(<<~JS, selector)
+          ((selector) => {
+            const button = document.querySelector(selector);
+            const panel = button.closest('[data-controller="DS--popover"]').querySelector('[data-DS--popover-target="content"]');
+            const b = button.getBoundingClientRect();
+            const p = panel.getBoundingClientRect();
+            return {
+              buttonTop: b.top, buttonBottom: b.bottom, buttonLeft: b.left, buttonRight: b.right,
+              panelTop: p.top, panelBottom: p.bottom, panelLeft: p.left, panelRight: p.right,
+              viewportWidth: window.innerWidth
+            };
+          })(arguments[0])
+        JS
+
+        vertical_gap = [ (geometry["panelTop"] - geometry["buttonBottom"]).abs,
+                         (geometry["buttonTop"] - geometry["panelBottom"]).abs ].min
+        assert_operator vertical_gap, :<=, 15, "filter panel should open immediately above or below its button"
+        assert_operator geometry["panelLeft"], :>=, -1
+        assert_operator geometry["panelRight"], :<=, geometry["viewportWidth"] + 1
+        assert_operator geometry["panelLeft"], :<=, geometry["buttonRight"]
+        assert_operator geometry["panelRight"], :>=, geometry["buttonLeft"]
+      end
     end
   end
 
