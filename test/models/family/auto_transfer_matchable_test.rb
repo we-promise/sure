@@ -19,6 +19,19 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "auto-matched transfers wait for confirmation before changing transaction kinds" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500)
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow_entry.entryable_id)
+    assert transfer.pending?
+    assert_equal "standard", outflow_entry.reload.entryable.kind
+    assert_equal "standard", inflow_entry.reload.entryable.kind
+    assert_nil outflow_entry.entryable.category
+  end
+
   test "concurrent unique-index race does not abort the surrounding transaction" do
     outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
@@ -62,12 +75,8 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     refute_equal "funds_movement", inflow_entry.entryable.kind
 
     # ...and matching did not stop at the skip: the non-conflicting candidate was
-    # still created and both its entries marked.
-    good_in.reload
-    good_out.reload
+    # still created.
     assert Transfer.exists?(inflow_transaction_id: good_in.entryable_id, outflow_transaction_id: good_out.entryable_id)
-    assert_equal "funds_movement", good_in.entryable.kind
-    assert_equal "cc_payment", good_out.entryable.kind
   end
 
   test "a :taken on one column from a different pairing is skipped, not marked" do
@@ -534,33 +543,17 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
-  test "auto-matched cash to investment assigns investment contribution category" do
+  test "confirmed auto-match from cash to investment assigns investment contribution category" do
     investment = accounts(:investment)
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500)
 
-    @family.auto_match_transfers!
+    auto_match_and_confirm_transfers!
 
     outflow_entry.reload
 
     category = @family.investment_contributions_category
     assert_equal category, outflow_entry.entryable.category
-  end
-
-  test "auto-matched investment transfers reuse contribution category lookup" do
-    investment = accounts(:investment)
-    category = @family.investment_contributions_category
-
-    create_transaction(date: Date.current, account: @depository, amount: 500)
-    create_transaction(date: Date.current, account: investment, amount: -500)
-    create_transaction(date: Date.current, account: @depository, amount: 700)
-    create_transaction(date: Date.current, account: investment, amount: -700)
-
-    @family.expects(:investment_contributions_category).once.returns(category)
-
-    assert_difference -> { Transfer.count }, 2 do
-      @family.auto_match_transfers!
-    end
   end
 
   test "does not match multi-currency transfer with missing exchange rate" do
@@ -632,7 +625,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
 
-    @family.auto_match_transfers!
+    auto_match_and_confirm_transfers!
 
     outflow_entry.reload
     inflow_entry.reload
@@ -647,7 +640,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     outflow_entry = create_transaction(date: Date.current, account: @loan, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @depository, amount: -500)
 
-    @family.auto_match_transfers!
+    auto_match_and_confirm_transfers!
 
     outflow_entry.reload
     inflow_entry.reload
@@ -663,7 +656,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
-    @family.auto_match_transfers!
+    auto_match_and_confirm_transfers!
 
     outflow_entry.reload
     inflow_entry.reload
@@ -674,6 +667,11 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   end
 
   private
+    def auto_match_and_confirm_transfers!
+      @family.auto_match_transfers!
+      Transfer.pending.find_each(&:confirm!)
+    end
+
     # Simulates a live provider connection so `Account#manual?` (and the SQL
     # query's equivalent check) treats the account as linked. `AccountProvider`
     # validates its polymorphic `provider` association is present, so this needs

@@ -110,6 +110,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
     transfer = loan_entry.transaction.reload.transfer
     assert transfer.present?, "expected the two legs to be auto-matched"
+    transfer.confirm!
     assert_equal "funds_movement", loan_entry.transaction.kind
     assert_equal "loan_payment", checking_entry.transaction.reload.kind
 
@@ -148,8 +149,10 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
 
     @family.auto_match_transfers!
-    assert checking_entry.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
-    assert_equal "loan_payment", checking_entry.transaction.kind
+    transfer = checking_entry.transaction.reload.transfer
+    assert transfer.present?, "expected the two legs to be auto-matched"
+    transfer.confirm!
+    assert_equal "loan_payment", checking_entry.transaction.reload.kind
 
     # Up flags the outgoing leg as an internal transfer (transferAccount).
     @adapter.import_transaction(

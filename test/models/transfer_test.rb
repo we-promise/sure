@@ -137,6 +137,64 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
+  test "confirm! marks both legs with the destination account's transfer kinds" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+
+    transfer.confirm!
+
+    assert transfer.reload.confirmed?
+    assert_equal "cc_payment", transfer.outflow_transaction.reload.kind
+    assert_equal "funds_movement", transfer.inflow_transaction.reload.kind
+  end
+
+  test "confirm! assigns the investment contributions category to an uncategorized outflow" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+
+    transfer.confirm!
+
+    outflow = transfer.outflow_transaction.reload
+    assert_equal "investment_contribution", outflow.kind
+    assert_equal families(:dylan_family).investment_contributions_category, outflow.category
+  end
+
+  test "confirm! keeps an outflow category the user already set" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+    transfer.outflow_transaction.update!(category: categories(:income))
+
+    transfer.confirm!
+
+    assert_equal categories(:income), transfer.outflow_transaction.reload.category
+  end
+
+  test "reject! leaves the kind of a pending transfer's transactions alone" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.outflow_transaction.update!(kind: "one_time")
+
+    transfer.reject!
+
+    assert_equal "one_time", transfer.outflow_transaction.reload.kind
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
+  test "reject! keeps a transfer kind that predates a pending match" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.outflow_transaction.update!(kind: "funds_movement")
+
+    transfer.reject!
+
+    assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+  end
+
+  test "reject! resets the transfer kinds of a confirmed transfer" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.confirm!
+
+    transfer.reject!
+
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
   test "kind_for_account returns investment_contribution for investment accounts" do
     assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:investment))
   end
@@ -260,4 +318,12 @@ class TransferTest < ActiveSupport::TestCase
     transfer.fee_transactions << entry1.entryable << entry2.entryable
     assert_equal 5, transfer.total_fee
   end
+
+  private
+    def create_pending_transfer(from:, to:)
+      outflow_entry = create_transaction(date: Date.current, account: from, amount: 500)
+      inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)
+
+      Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    end
 end
