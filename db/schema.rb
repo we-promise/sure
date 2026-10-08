@@ -2291,16 +2291,55 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.index ["outflow_transaction_id"], name: "index_rejected_transfers_on_outflow_transaction_id"
   end
 
-  create_table "retirement_plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "retirement_plan_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
     t.datetime "created_at", null: false
+    t.uuid "retirement_plan_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_retirement_plan_accounts_on_account_id"
+    t.index ["retirement_plan_id", "account_id"], name: "idx_retirement_plan_accounts_unique", unique: true
+    t.index ["retirement_plan_id"], name: "index_retirement_plan_accounts_on_retirement_plan_id"
+  end
+
+  create_table "retirement_plan_streams", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id"
+    t.decimal "annual_amount", precision: 19, scale: 4, null: false
+    t.datetime "created_at", null: false
+    t.integer "end_year"
+    t.boolean "indexed", default: true, null: false
+    t.string "kind", null: false
+    t.string "name", null: false
+    t.uuid "retirement_plan_id", null: false
+    t.string "source", default: "manual", null: false
+    t.integer "start_year"
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_retirement_plan_streams_on_account_id"
+    t.index ["retirement_plan_id"], name: "index_retirement_plan_streams_on_retirement_plan_id"
+    t.check_constraint "annual_amount > 0::numeric", name: "chk_retirement_plan_streams_amount"
+    t.check_constraint "end_year IS NULL OR start_year IS NULL OR end_year >= start_year", name: "chk_retirement_plan_streams_years"
+    t.check_constraint "kind::text = ANY (ARRAY['expense'::character varying, 'income'::character varying, 'one_off'::character varying]::text[])", name: "chk_retirement_plan_streams_kind"
+    t.check_constraint "source::text = ANY (ARRAY['seeded_living_costs'::character varying, 'seeded_loan'::character varying, 'manual'::character varying]::text[])", name: "chk_retirement_plan_streams_source"
+  end
+
+  create_table "retirement_plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "birth_year"
+    t.datetime "created_at", null: false
+    t.integer "end_age", default: 90, null: false
     t.decimal "expected_annual_return", precision: 6, scale: 4, default: "0.05", null: false
+    t.decimal "inflation_rate", precision: 6, scale: 4, default: "0.03", null: false
+    t.string "mode", default: "traditional", null: false
     t.date "retirement_date"
     t.decimal "safe_withdrawal_rate", precision: 5, scale: 4, default: "0.04", null: false
     t.decimal "savings_rate", precision: 5, scale: 4
+    t.date "streams_seeded_on"
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
     t.index ["user_id"], name: "index_retirement_plans_on_user_id", unique: true
+    t.check_constraint "birth_year IS NULL OR birth_year >= 1900 AND birth_year <= 2100", name: "chk_retirement_plans_birth_year"
+    t.check_constraint "end_age >= 50 AND end_age <= 120", name: "chk_retirement_plans_end_age"
     t.check_constraint "expected_annual_return > '-1'::integer::numeric AND expected_annual_return <= 1::numeric", name: "chk_retirement_plans_expected_annual_return"
+    t.check_constraint "inflation_rate > '-1'::integer::numeric AND inflation_rate <= 1::numeric", name: "chk_retirement_plans_inflation_rate"
+    t.check_constraint "mode::text = ANY (ARRAY['traditional'::character varying, 'fire'::character varying]::text[])", name: "chk_retirement_plans_mode"
     t.check_constraint "safe_withdrawal_rate > 0::numeric AND safe_withdrawal_rate <= 1::numeric", name: "chk_retirement_plans_safe_withdrawal_rate"
     t.check_constraint "savings_rate IS NULL OR savings_rate >= 0::numeric AND savings_rate <= 1::numeric", name: "chk_retirement_plans_savings_rate"
   end
@@ -3330,6 +3369,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
   add_foreign_key "redbark_items", "families"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
+  add_foreign_key "retirement_plan_accounts", "accounts", on_delete: :cascade
+  add_foreign_key "retirement_plan_accounts", "retirement_plans", on_delete: :cascade
+  add_foreign_key "retirement_plan_streams", "accounts", on_delete: :nullify
+  add_foreign_key "retirement_plan_streams", "retirement_plans", on_delete: :cascade
   add_foreign_key "retirement_plans", "users", on_delete: :cascade
   add_foreign_key "rule_actions", "rules"
   add_foreign_key "rule_conditions", "rule_conditions", column: "parent_id"
