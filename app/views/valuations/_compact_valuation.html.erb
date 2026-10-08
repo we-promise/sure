@@ -5,7 +5,7 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(valuation) do %>
-    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: Current.user.transactions_show_notes?) do |row| %>
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: Current.user.transactions_show_notes?, data: { controller: "clickable-row", action: "click->clickable-row#open" }) do |row| %>
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             class: "checkbox checkbox--light hidden @5xl/compact-table:block",
@@ -24,7 +24,7 @@
           <%= link_to(
                 valuation.opening_anchor? ? t("valuations.show.opening_balance") : entry.name,
                 entry_path(entry),
-                data: { turbo_frame: "drawer", turbo_prefetch: false },
+                data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
                 class: "hover:underline truncate"
               ) %>
         </div>

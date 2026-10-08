@@ -340,6 +340,9 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # compact_valuation renders a flex row; the full-size partial renders a grid-cols-12 row instead
     assert_select "turbo-frame[id^='valuation_']"
     assert_select "turbo-frame[id^='valuation_'] div.grid-cols-12", count: 0
+    # Whole-row click parity with the compact transaction row.
+    assert_select "turbo-frame[id^='valuation_'] div[data-controller='clickable-row']", minimum: 1
+    assert_select "turbo-frame[id^='valuation_'] a[data-clickable-row-target='link']", minimum: 1
   end
 
   test "show groups split parents into a single split-group row in the compact flat (ungrouped) view" do
