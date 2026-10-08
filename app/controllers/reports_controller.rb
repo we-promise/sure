@@ -339,11 +339,7 @@ class ReportsController < ApplicationController
       IncomeStatement::SpendingComparison.new(
         @income_statement,
         period: @period,
-        # Start the baseline at the first transaction in the accounts these
-        # totals cover. Opening-balance valuations can predate real activity
-        # by years, and accounts outside the user's finances aren't counted,
-        # so either would dilute "normal" with empty months.
-        history_start: Entry.where(account_id: @income_statement.eligible_accounts.select(:id), entryable_type: "Transaction").minimum(:date)
+        history_start: IncomeStatement::SpendingComparison.history_start(@income_statement)
       )
     end
 

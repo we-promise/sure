@@ -16,6 +16,15 @@ class IncomeStatement::SpendingComparisonTest < ActiveSupport::TestCase
     @baseline_start = @period.start_date - 1.year
   end
 
+  test "history starts at the first transaction that counts, not an excluded one or a valuation" do
+    create_transaction(account: @account, date: Date.new(2024, 1, 10), amount: 40, category: @food, excluded: true)
+    @account.entries.create!(date: Date.new(2023, 6, 1), amount: 5000, currency: @family.currency, name: "Opening balance",
+                             entryable: Valuation.new(kind: "opening_anchor"))
+    create_transaction(account: @account, date: Date.new(2026, 3, 2), amount: 25, category: @food)
+
+    assert_equal Date.new(2026, 3, 2), IncomeStatement::SpendingComparison.history_start(IncomeStatement.new(@family))
+  end
+
   test "spending is net of refunds, and spending on the parent gets its own row" do
     create_transaction(account: @account, date: Date.new(2026, 9, 5), amount: 300, category: @groceries)
     create_transaction(account: @account, date: Date.new(2026, 9, 9), amount: -100, category: @groceries) # refund

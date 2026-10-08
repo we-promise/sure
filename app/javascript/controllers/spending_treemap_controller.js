@@ -6,6 +6,12 @@ import * as d3 from "d3";
 // Box size is net spending in the period; fill is the change against the
 // category's normal (blue = less, red = more, inset surface = about normal).
 // Clicking a box opens Transactions filtered to that category and period.
+function tint(token, percent) {
+  return percent === 100
+    ? `var(${token})`
+    : `color-mix(in srgb, var(${token}) ${percent}%, var(--color-container))`;
+}
+
 export default class extends Controller {
   static targets = ["chart", "legend"];
   static values = {
@@ -14,27 +20,30 @@ export default class extends Controller {
     comparable: { type: Boolean, default: true },
   };
 
+  // Functional tokens mixed into the container colour, so every step follows
+  // the theme (light and dark remap --color-info / --color-destructive). The
+  // two lighter steps keep the theme's text colour (ink: null).
   static STEPS = [
     {
       key: "much_less",
       min: Number.NEGATIVE_INFINITY,
       max: -1,
-      fill: "var(--color-blue-600)",
+      fill: tint("--color-info", 100),
       ink: "var(--color-white)",
     },
     {
       key: "less",
       min: -1,
       max: -0.5,
-      fill: "var(--color-blue-400)",
-      ink: "var(--color-black)",
+      fill: tint("--color-info", 60),
+      ink: null,
     },
     {
       key: "slightly_less",
       min: -0.5,
       max: -0.15,
-      fill: "var(--color-blue-200)",
-      ink: "var(--color-black)",
+      fill: tint("--color-info", 30),
+      ink: null,
     },
     {
       key: "normal",
@@ -47,21 +56,21 @@ export default class extends Controller {
       key: "slightly_more",
       min: 0.15,
       max: 0.5,
-      fill: "var(--color-red-200)",
-      ink: "var(--color-black)",
+      fill: tint("--color-destructive", 30),
+      ink: null,
     },
     {
       key: "more",
       min: 0.5,
       max: 1,
-      fill: "var(--color-red-400)",
-      ink: "var(--color-black)",
+      fill: tint("--color-destructive", 60),
+      ink: null,
     },
     {
       key: "much_more",
       min: 1,
       max: Number.POSITIVE_INFINITY,
-      fill: "var(--color-red-600)",
+      fill: tint("--color-destructive", 100),
       ink: "var(--color-white)",
     },
   ];
