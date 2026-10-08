@@ -71,7 +71,7 @@ class Account::MarketDataImporter
       next unless security
 
       security.import_provider_prices(start_date: window.start_date, end_date: window.end_date)
-      security.import_provider_details
+      security.import_provider_details(include_classification: true)
     end
   end
 

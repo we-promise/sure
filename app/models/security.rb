@@ -354,10 +354,10 @@ class Security < ApplicationRecord
     # safe on every save, which is also how an existing security picks these
     # up: as it is next written to, with no backfill job.
     #
-    # The order is a contract for the writers that follow, not something this
-    # code enforces: nothing yet reads `classification_source` to let a
-    # stronger writer replace a `default`. That arrives with provider
-    # classification ingestion; until then a stored default stays put.
+    # The stronger writers enforce the order, not this code: the provider
+    # writer, `Security::Provided#classification_attributes_from`, reads
+    # `classification_source` and replaces a `default`, but never `manual` or
+    # `ai`.
     def apply_classification_defaults
       return if classification_locked?
 
