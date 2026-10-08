@@ -71,6 +71,30 @@ class AddUniqueIndexToTaggingsMigrationTest < ActiveSupport::TestCase
     end
   end
 
+  # A duplicate inserted after the dedupe but before the index exists would
+  # fail the index build, and DELETE's own lock lets inserts through. So the
+  # table is locked against writers before the dedupe, and held.
+  test "locks out writers from before the dedupe until the index exists" do
+    statements = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, payload| statements << payload[:sql] }
+    begin
+      run_migration
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+
+    lock_at = statements.index { |sql| sql.match?(/\ALOCK TABLE taggings IN SHARE ROW EXCLUSIVE MODE\z/) }
+    delete_at = statements.index { |sql| sql.include?("DELETE FROM taggings") }
+    assert lock_at, "no lock was taken on taggings"
+    assert_operator lock_at, :<, delete_at, "the lock was taken after the dedupe"
+
+    held = connection.select_values(<<~SQL)
+      SELECT mode FROM pg_locks
+      WHERE locktype = 'relation' AND relation = 'taggings'::regclass AND pid = pg_backend_pid()
+    SQL
+    assert_includes held, "ShareRowExclusiveLock", "the lock was not held to the end of the transaction"
+  end
+
   test "can be run again" do
     2.times { run_migration }
 
