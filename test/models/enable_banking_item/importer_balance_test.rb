@@ -308,6 +308,16 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal "USD", @enable_banking_account.currency
   end
 
+  test "fetch_and_update_balance stores the normalized balance currency" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [ { balance_type: "CLBD", balance_amount: { amount: "12.00", currency: " usd " }, credit_debit_indicator: "CRDT" } ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal "USD", @enable_banking_account.reload.currency
+  end
+
   test "fetch_and_update_balance logs funded balances left out in other currencies" do
     @enable_banking_account.update!(raw_payload: { "uid" => "paypal", "currency" => "EUR" })
     balances = paypal_balances

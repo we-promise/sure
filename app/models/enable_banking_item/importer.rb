@@ -240,7 +240,6 @@ class EnableBankingItem::Importer
       end
 
       amount = balance.dig(:balance_amount, :amount) || balance[:amount]
-      currency = balance.dig(:balance_amount, :currency) || balance[:currency]
 
       unless amount.present?
         mark_balance_unavailable(enable_banking_account)
@@ -256,7 +255,7 @@ class EnableBankingItem::Importer
 
       enable_banking_account.update!(
         current_balance: parsed_amount,
-        currency: currency.presence || enable_banking_account.currency
+        currency: balance_currency(balance) || enable_banking_account.currency
       )
 
       true
