@@ -308,19 +308,30 @@ class Holding < ApplicationRecord
         Trade::INTERNAL_MOVEMENT_LABELS
       )
 
+      # The rate a trade carries itself (extra["exchange_rate"], e.g. IBKR's
+      # fx_rate_to_base) comes before the table's, as in the calculators and
+      # Balance::SyncCache; a trade in the account's own currency converts at 1.
+      rate = <<~SQL.squish
+        COALESCE(
+          CASE WHEN jsonb_typeof(trades.extra->'exchange_rate') = 'number'
+               THEN (trades.extra->>'exchange_rate')::numeric END,
+          exchange_rates.rate
+        )
+      SQL
+      foreign = ActiveRecord::Base.sanitize_sql_array([ "trades.currency <> ?", account.currency ])
+
       # A foreign purchase with no usable rate for its day has a cost nothing
       # here knows, so the position's is unknown too, as with an internal
       # movement -- counting it at 1:1 would state a figure that looks measured
-      # and is not. A stored rate of zero or less converts nothing, so it counts
-      # as missing, as it does in Money#exchange_to.
-      return nil if trades.where(
-        "trades.currency <> ? AND (exchange_rates.rate IS NULL OR exchange_rates.rate <= 0)", account.currency
-      ).exists?
-
-      total_cost, total_qty = trades.pick(
-        Arel.sql("SUM((trades.price * trades.qty + trades.fee) * COALESCE(exchange_rates.rate, 1))"),
-        Arel.sql("SUM(trades.qty)")
+      # and is not. A rate of zero or less converts nothing, so it counts as
+      # missing, as it does in Money#exchange_to. Checked in the same query as
+      # the totals rather than in another round trip.
+      total_cost, total_qty, rate_missing = trades.pick(
+        Arel.sql("SUM((trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END)"),
+        Arel.sql("SUM(trades.qty)"),
+        Arel.sql("BOOL_OR(#{foreign} AND (#{rate} IS NULL OR #{rate} <= 0))")
       )
+      return nil if rate_missing
 
       # Return nil when no trades exist - cost basis is genuinely unknown
       # Previously this fell back to current market price, which was misleading

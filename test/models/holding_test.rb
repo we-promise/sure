@@ -106,6 +106,25 @@ class HoldingTest < ActiveSupport::TestCase
     assert_nil @amzn.avg_cost
   end
 
+  test "the fallback converts a purchase at the rate it carries when the table has none" do
+    entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+    entry.entryable.update!(exchange_rate: 1.25)
+
+    # 10 * 212 CAD at the trade's own 1.25 = 2,650 USD for 10 units
+    assert_equal Money.new(BigDecimal("265")), @amzn.avg_cost
+  end
+
+  # The missing-rate check rides on the totals query instead of adding a round
+  # trip to a path that exists to avoid N+1 queries.
+  test "the fallback reads the trades in two queries" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
+    @amzn.account
+
+    queries = capture_sql_queries { @amzn.avg_cost }
+
+    assert_equal 2, queries.count { |sql| sql.include?('FROM "trades"') }
+  end
+
   test "calculates total return trend" do
     @amzn.stubs(:avg_cost).returns(Money.new(214.00))
     @nvda.stubs(:avg_cost).returns(Money.new(126.00))

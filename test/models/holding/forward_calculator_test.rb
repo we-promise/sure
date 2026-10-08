@@ -254,6 +254,22 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_nil current.cost_basis
   end
 
+  # A rate the trade carries itself (IBKR's fx_rate_to_base) is a rate for its
+  # day, so the basis is known even when the rates table has a gap.
+  test "a foreign purchase converts at the rate it carries when the table has none" do
+    load_prices
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    entry = create_trade(@voo, qty: 10, date: 1.day.ago.to_date, price: 100, fee: 10, currency: "EUR", account: @account)
+    entry.entryable.update!(exchange_rate: 2.0)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # (10 * 100 + 10) EUR at the trade's own 2.0 = 2,020 USD for 10 units
+    assert_equal BigDecimal("202"), current.cost_basis
+  end
+
   # The tracker never reads a disposal's price, so this cannot be observed
   # through the basis; it is pinned on the helper directly.
   test "a disposal's price is returned without its fee" do
