@@ -258,7 +258,7 @@ namespace :data_migration do
   #   DRY_RUN=1    print what would change without writing
   #   FAMILY_ID=id limit the run to one family
   task reconcile_investment_transfer_kinds: :environment do
-    dry_run = ENV["DRY_RUN"].present?
+    dry_run = ActiveModel::Type::Boolean.new.cast(ENV["DRY_RUN"]) || false
     scope = Transfer.all
 
     if ENV["FAMILY_ID"].present?

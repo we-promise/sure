@@ -169,6 +169,7 @@ class Transaction < ApplicationRecord
   #     #category_set_on_transfer_outflow?), since a category picked there
   #     would look saved but never reach a budget.
   def category_editable?
+    return false if category_set_on_transfer_outflow?
     return true unless transfer?
     return true unless transfer
 
@@ -176,12 +177,11 @@ class Transaction < ApplicationRecord
   end
 
   # The inflow leg of a categorizable transfer: its category is the
-  # outflow's, shown read-only.
+  # outflow's, shown read-only. Decided by the Transfer record rather than
+  # this leg's kind, so editing the kind (e.g. to standard) cannot bypass
+  # the outflow's ownership.
   def category_set_on_transfer_outflow?
-    return false unless transfer?
-    return false unless transfer
-
-    transfer.categorizable? && transfer.inflow_transaction_id == id
+    transfer_as_inflow.present? && transfer_as_inflow.categorizable?
   end
 
   # Whether this non-editable transfer leg is a liability payment (shown

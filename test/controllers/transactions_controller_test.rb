@@ -1773,6 +1773,20 @@ end
     assert_equal "Monthly savings", inflow_entry.reload.notes
   end
 
+  test "update drops a category for a matched inflow leg whose kind was edited to standard" do
+    outflow = Transaction.create!(kind: "investment_contribution")
+    Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
+    inflow = Transaction.create!(kind: "standard")
+    inflow_entry = Entry.create!(account: accounts(:investment), entryable: inflow, name: "Contribution", amount: -500, currency: "USD", date: Date.current)
+    Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    patch transaction_url(inflow_entry), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: inflow.id, category_id: categories(:income).id } }
+    }
+
+    assert_nil inflow.reload.category_id
+  end
+
   test "drawer shows a matched transfer's inflow leg with the outflow's category, disabled" do
     outflow = Transaction.create!(kind: "investment_contribution", category: categories(:income))
     Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
