@@ -219,16 +219,17 @@ class IncomeStatement
   end
 
   # `excluding_kinds` leaves transactions of those kinds out of the monthly
-  # totals before the median is taken. It defaults to off, so existing callers
-  # are unchanged. The retirement plan passes `investment_contribution`: money
-  # moved into an investment account is saving, not spending.
-  def median_expense(interval: "month", category: nil, excluding_kinds: [])
+  # totals before the median is taken, and `period` limits the median to the
+  # months inside it. Both default to off, so existing callers are unchanged.
+  # The retirement plan passes `investment_contribution`: money moved into an
+  # investment account is saving, not spending.
+  def median_expense(interval: "month", category: nil, excluding_kinds: [], period: nil)
     if category.present?
-      raise ArgumentError, "excluding_kinds is not supported with a category" if excluding_kinds.any?
+      raise ArgumentError, "excluding_kinds and period are not supported with a category" if excluding_kinds.any? || period
 
       category_stats(interval: interval).find { |stat| stat.classification == "expense" && stat.category_id == category.id }&.median || 0
     else
-      family_stats(interval: interval, excluding_kinds: excluding_kinds).find { |stat| stat.classification == "expense" }&.median || 0
+      family_stats(interval: interval, excluding_kinds: excluding_kinds, period: period).find { |stat| stat.classification == "expense" }&.median || 0
     end
   end
 
@@ -363,13 +364,15 @@ class IncomeStatement
       end
     end
 
-    def family_stats(interval: "month", excluding_kinds: [])
+    def family_stats(interval: "month", excluding_kinds: [], period: nil)
       excluding_kinds = excluding_kinds.map(&:to_s).sort
+      date_range = period && [ period.start_date, period.end_date ]
       @family_stats ||= {}
-      @family_stats[[ interval, excluding_kinds ]] ||= Rails.cache.fetch([
+      @family_stats[[ interval, excluding_kinds, date_range ]] ||= Rails.cache.fetch([
         "income_statement", "family_stats", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key,
-        *([ "excluding", *excluding_kinds ] if excluding_kinds.any?)
-      ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids, excluding_kinds:).call }
+        *([ "excluding", *excluding_kinds ] if excluding_kinds.any?),
+        *([ "between", *date_range ] if date_range)
+      ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids, excluding_kinds:, date_range: period&.date_range).call }
     end
 
     def category_stats(interval: "month")

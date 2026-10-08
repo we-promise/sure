@@ -546,6 +546,35 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 1000.0, income_statement.median_expense(category: @groceries_category)
   end
 
+  test "a period bounds the months the median expense is taken over, and the default still takes them all" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, date: Date.new(2026, 2, 10))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2025, 1, 10))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2025, 2, 10))
+    period = Period.custom(start_date: Date.new(2025, 3, 1), end_date: Date.new(2026, 2, 28))
+    income_statement = IncomeStatement.new(@family)
+
+    bounded = income_statement.median_expense(interval: "month", period: period)
+    default = income_statement.median_expense(interval: "month")
+
+    assert_equal 1000.0, bounded
+    assert_equal 9000.0, default, "the same instance must not reuse the bounded figure"
+  end
+
+  test "the bounded and default medians are cached under different keys" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, date: Date.new(2026, 2, 10))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2025, 1, 10))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2025, 2, 10))
+    period = Period.custom(start_date: Date.new(2025, 3, 1), end_date: Date.new(2026, 2, 28))
+
+    bounded = IncomeStatement.new(@family).median_expense(interval: "month", period: period)
+    default = IncomeStatement.new(@family).median_expense(interval: "month")
+
+    assert_equal [ 1000.0, 9000.0 ], [ bounded, default ]
+  end
+
   test "calculates median income correctly with known dataset" do
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
