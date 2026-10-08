@@ -1618,6 +1618,47 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert entry.reload.user_modified?
   end
 
+  test "bond purchase books nominal and percent-of-par price on the bond's own security" do
+    @tr_account.update!(raw_positions_payload: [
+      {
+        "isin" => "IT0005377152",
+        "name" => "ITALIEN 19/40",
+        "category" => "interest_products",
+        "instrument_type" => "bond",
+        "quantity" => "2677.95",
+        "price" => "0.8404"
+      }
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    import_event({
+      id: "evt_bond",
+      timestamp: "2025-11-18T11:19:31Z",
+      category: "orderExecution",
+      title: "März 2040",
+      detail: {
+        isin: "IT0005377152",
+        name: "März 2040",
+        quantity: "2677.95",
+        price: "0.9267",
+        amount: "2498.31",
+        fees: "1.0",
+        currency: "EUR",
+        instrument_type: "bond"
+      }
+    })
+
+    entry = find_trade("trade_republic_event_evt_bond")
+    trade = entry.entryable
+    assert_equal "IT0005377152", trade.security.ticker
+    assert trade.security.offline?
+    assert_equal @account.holdings.first.security, trade.security
+    assert_equal BigDecimal("2677.95"), trade.qty
+    assert_equal BigDecimal("0.9267"), trade.price
+    assert_equal BigDecimal("1"), trade.fee
+    assert_equal BigDecimal("2498.31"), entry.amount
+  end
+
   private
 
     def create_linked_crypto_account!

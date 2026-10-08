@@ -254,6 +254,7 @@ class TradeRepublicItem::Importer
         detail = detail.stringify_keys
         isin = detail["isin"].to_s.presence
         next if isin.blank?
+        next if detail["instrument_type"].to_s == Provider::TradeRepublicClient::BOND_INSTRUMENT_TYPE
 
         symbol = detail["symbol"].to_s.strip.presence
         exchange_slug = detail["exchange_slug"].to_s.strip.presence

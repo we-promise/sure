@@ -570,6 +570,57 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("70"), crypto.account_balance
   end
 
+  test "bonds resolve by ISIN and leave the shared BOND listing" do
+    Security.stubs(:search_provider).returns([])
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "Mai 2072")
+    provider_id = @tr_account.account_provider.id
+    # Earlier syncs put both bonds on the shared listing; the French bond
+    # overwrote today's Italian snapshot.
+    @account.holdings.create!(
+      security: shared, date: Date.current - 1, qty: 2677.95, price: 84.04, amount: 225054.92, currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_IT0005377152_#{Date.current - 1}", account_provider_id: provider_id
+    )
+    @account.holdings.create!(
+      security: shared, date: Date.current, qty: 1000, price: 48.5, amount: 48500, currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_FR0014001NN8_#{Date.current}", account_provider_id: provider_id
+    )
+
+    @tr_account.update!(raw_positions_payload: [
+      bond_position(isin: "IT0005377152", name: "ITALIEN 19/40", quantity: "2677.95", price: "0.8404"),
+      bond_position(isin: "FR0014001NN8", name: "FRANKREICH 21/72", quantity: "1000", price: "0.485")
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    assert_not @account.holdings.exists?(security: shared)
+
+    italy = Security.find_by!(ticker: "IT0005377152")
+    assert italy.offline?
+    assert_equal "ITALIEN 19/40", italy.name
+    assert_equal [ Date.current - 1, Date.current ], @account.holdings.where(security: italy).order(:date).pluck(:date)
+    assert_equal BigDecimal("2250.5492"), @account.holdings.find_by!(security: italy, date: Date.current).amount
+
+    france = Security.find_by!(ticker: "FR0014001NN8")
+    holding = @account.holdings.find_by!(security: france)
+    assert_equal BigDecimal("485"), holding.amount
+    assert_equal france.id, holding.provider_security_id
+  end
+
+  test "bond rematch keeps a holding the user remapped" do
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
+    holding = @account.holdings.create!(
+      security: shared, date: Date.current - 1, qty: 10, price: 1, amount: 10, currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_IT0005377152_#{Date.current - 1}",
+      account_provider_id: @tr_account.account_provider.id, security_locked: true
+    )
+
+    @tr_account.update!(raw_positions_payload: [
+      bond_position(isin: "IT0005377152", name: "ITALIEN 19/40", quantity: "10", price: "0.8404")
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    assert_equal shared, holding.reload.security
+  end
+
   private
 
     def import_position(isin:, quantity:, price:, average_cost: nil, symbol: nil, exchange_slug: nil)
@@ -577,6 +628,17 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
         position_payload(isin:, quantity:, price:, average_cost:, symbol:, exchange_slug:)
       ])
       TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+    end
+
+    def bond_position(isin:, name:, quantity:, price:)
+      {
+        "isin" => isin,
+        "name" => name,
+        "category" => "interest_products",
+        "instrument_type" => "bond",
+        "quantity" => quantity,
+        "price" => price
+      }
     end
 
     def position_payload(isin:, quantity:, price:, average_cost: nil, symbol: nil, exchange_slug: nil)

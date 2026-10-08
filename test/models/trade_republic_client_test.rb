@@ -1626,4 +1626,177 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "ABN", symbols.dig("NL0000303709", "symbol")
     assert_equal "XETR", symbols.dig("NL0000303709", "exchange_slug")
   end
+
+  test "bonds skip the shared BOND listing and take the instrument name" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      requested << payload[:type]
+      case payload[:type]
+      when "instrument"
+        {
+          "name" => "ITALIEN 19/40",
+          "shortName" => "März 2040",
+          "typeId" => "bond",
+          "exchanges" => [
+            { "slug" => "LSX", "symbolAtExchange" => "BOND", "active" => true },
+            { "slug" => "XFRA", "symbolAtExchange" => "FIT537715", "active" => false }
+          ]
+        }
+      when "ticker"
+        { "last" => { "price" => "84.04" } }
+      else
+        {}
+      end
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "bonds", "positions" => [
+          { "instrumentId" => "IT0005377152", "name" => "März 2040", "netSize" => "2677.95", "averageBuyIn" => "0.927073" }
+        ] }
+      ]
+    }, known_instrument_symbols: { "IT0005377152" => { "symbol" => "BOND", "exchange_slug" => "LSX" } })
+
+    assert_empty warnings
+    assert_includes requested, "instrument"
+    position = positions.first
+    assert_equal "ITALIEN 19/40", position["name"]
+    assert_equal "bond", position["instrument_type"]
+    assert_nil position["symbol"]
+    assert_nil position["exchange_slug"]
+  end
+
+  test "bonds keep the portfolio name when the instrument subscription fails" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      raise Provider::TradeRepublicClient::ProviderUnavailable, "instrument unavailable" if payload[:type] == "instrument"
+
+      { "last" => { "price" => "84.04" } }
+    end
+
+    positions, = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "bonds", "positions" => [
+          { "instrumentId" => "IT0005377152", "name" => "März 2040", "netSize" => "2677.95" }
+        ] }
+      ]
+    })
+
+    assert_equal "März 2040", positions.first["name"]
+    assert_equal "bond", positions.first["instrument_type"]
+  end
+
+  test "pick_instrument_exchange_symbol ignores bond listings" do
+    payload = {
+      "typeId" => "bond",
+      "exchanges" => [ { "slug" => "LSX", "symbolAtExchange" => "BOND", "active" => true } ]
+    }
+
+    assert_nil @client.send(:pick_instrument_exchange_symbol, payload, "FR0014001NN8")
+  end
+
+  test "normalize_event_detail reads a bond purchase from the nested breakdown" do
+    detail = @client.send(:normalize_event_detail, bond_purchase_detail, item: { "title" => "März 2040", "subtitle" => "Kauforder" })
+
+    assert_equal "IT0005377152", detail["isin"]
+    assert_equal "2677.95", detail["quantity"]
+    assert_equal "0.9267", detail["price"]
+    assert_equal "2498.31", detail["amount"]
+    assert_equal "1.0", detail["fees"]
+    assert_equal "bond", detail["instrument_type"]
+    assert_equal "2481.66", (BigDecimal(detail["quantity"]) * BigDecimal(detail["price"])).round(2).to_s("F")
+  end
+
+  test "normalize_event_detail signs a bond sale negative" do
+    detail = @client.send(:normalize_event_detail, bond_purchase_detail, item: { "title" => "März 2040", "subtitle" => "Verkaufsorder" })
+
+    assert_equal "-2677.95", detail["quantity"]
+  end
+
+  test "share trades do not pick up bond titles" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Übersicht", "data" => [
+          { "title" => "Aktien", "detail" => { "text" => "2" } },
+          { "title" => "Quotation", "detail" => { "text" => "50 %" } },
+          { "title" => "Summe", "detail" => { "text" => "9,99 €" } },
+          { "title" => "Gesamt", "detail" => { "text" => "1.024,92 €" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
+      ]
+    }, item: { "title" => "Core S&P 500", "subtitle" => "Kauforder" })
+
+    assert_equal "1024.92", detail["amount"]
+    assert_equal "512.46", detail["price"]
+    assert_nil detail["instrument_type"]
+  end
+
+  test "enrich_trade_instrument_symbols does not look up bond trades" do
+    looked_up = []
+    @client.define_singleton_method(:instrument_exchange_symbol) do |_websocket, isin|
+      looked_up << isin
+      nil
+    end
+    unresolved = []
+    events = [
+      {
+        "id" => "buy-bond",
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "category" => "orderExecution",
+        "detail" => { "isin" => "IT0005377152", "quantity" => "2677.95", "instrument_type" => "bond" }
+      }
+    ]
+
+    @client.send(:enrich_trade_instrument_symbols, Object.new, events, unresolved: unresolved)
+
+    assert_empty looked_up
+    assert_empty unresolved
+    assert_nil events.first.dig("detail", "symbol")
+  end
+
+  private
+
+    # Trimmed from a real Trade Republic bond purchase shared in #4012.
+    def bond_purchase_detail
+      row = ->(title, text) { { "title" => title, "detail" => { "text" => text, "type" => "text" }, "style" => "plain" } }
+      breakdown = {
+        "id" => "00000000-0000-0000-0000-000000000000",
+        "sections" => [
+          { "title" => "Transaktion", "type" => "title" },
+          { "type" => "table", "data" => [
+            row.call("Nennwert", "2.677,95 €"),
+            row.call("Quotation", "92,67 %"),
+            row.call("Stückzinsen", "18,35 €"),
+            row.call("Summe", "2.498,31 €")
+          ] }
+        ]
+      }
+
+      {
+        "id" => "1be7f4cb-9d85-476e-82a5-8bd641b27245",
+        "sections" => [
+          {
+            "title" => "Du hast 2.498,31 € investiert",
+            "type" => "header",
+            "data" => { "subtitleText" => "18 Nov. 2025 · 11:19", "status" => "executed" },
+            "action" => { "type" => "instrumentDetail", "payload" => "IT0005377152" }
+          },
+          { "title" => "Übersicht", "type" => "table", "data" => [
+            { "title" => "Kauf", "detail" => { "text" => "Ausgeführt", "functionalStyle" => "EXECUTED", "type" => "status" } },
+            row.call("Asset", "März 2040"),
+            {
+              "title" => "Transaktion",
+              "detail" => {
+                "text" => "2.481,66 €",
+                "type" => "text",
+                "action" => { "type" => "infoPage", "payload" => breakdown, "displayMode" => "bottomSheet" }
+              }
+            },
+            row.call("Gebühr", "1,00 €"),
+            row.call("Summe", "2.498,31 €")
+          ] }
+        ]
+      }
+    end
 end

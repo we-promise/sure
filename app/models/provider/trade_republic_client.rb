@@ -65,7 +65,10 @@ class Provider::TradeRepublicClient
   # that merely echo the ISIN (common on TIB).
   INSTRUMENT_EXCHANGE_PREFERENCE = %w[XETR TDG].freeze
   INSTRUMENT_EXCHANGE_LAST_RESORT = %w[LSX].freeze
-  INSTRUMENT_SYMBOL_CATEGORIES = %w[stocksAndETFs bonds].freeze
+  # Bonds are left out: Trade Republic lists every bond on LSX under the same
+  # placeholder symbol "BOND", so they resolve by ISIN instead.
+  INSTRUMENT_SYMBOL_CATEGORIES = %w[stocksAndETFs].freeze
+  BOND_INSTRUMENT_TYPE = "bond"
   FEE_TITLES = [
     "gebühr", "fee", "fees", "kosten", "costs", "cost", "commission", "kommission"
   ].freeze
@@ -80,6 +83,11 @@ class Provider::TradeRepublicClient
     "share price", "aandelenkoers", "aktienkurs", "anteilskurs",
     "execution price", "kurs"
   ].freeze
+  # Bond executions list a nominal amount and a price in percent of par
+  # instead of shares and a share price.
+  NOMINAL_TITLES = [ "nennwert" ].freeze
+  QUOTATION_TITLES = [ "quotation" ].freeze
+  BOND_TOTAL_TITLES = [ "summe" ].freeze
   SELL_SUBTITLE_MARKERS = %w[sell verkauf verkaufen verkopen].freeze
   MAX_TIMELINE_PAGES = 50
   MAX_TIMELINE_DETAILS = 200
@@ -784,6 +792,11 @@ class Provider::TradeRepublicClient
       valid_positions.each do |position|
         isin = position["instrumentId"].presence || position["isin"]
         next if instruments.key?(isin)
+
+        if position["categoryType"].to_s == "bonds"
+          instruments[isin] = bond_instrument(websocket, isin)
+          next
+        end
         next unless INSTRUMENT_SYMBOL_CATEGORIES.include?(position["categoryType"].to_s)
 
         known = known_symbols[isin]
@@ -800,8 +813,9 @@ class Provider::TradeRepublicClient
         instrument = instruments[isin] || {}
         {
           "isin" => isin,
-          "name" => position["name"],
+          "name" => instrument[:name].presence || position["name"],
           "category" => portfolio_category(position["categoryType"]),
+          "instrument_type" => instrument[:instrument_type],
           "quantity" => decimal_string(quantity),
           "average_cost" => decimal_string(position["averageBuyIn"] || position["avgCost"]),
           "price" => prices[isin],
@@ -910,10 +924,20 @@ class Provider::TradeRepublicClient
     # Returns { symbol:, exchange_slug: } from the instrument subscription, or
     # nil when Trade Republic has no usable exchange ticker for this ISIN.
     def instrument_exchange_symbol(websocket, isin)
-      payload = optional_subscribe(websocket, type: "instrument", id: isin)
-      return nil unless payload.is_a?(Hash)
+      payload = instrument_payload(websocket, isin)
+      pick_instrument_exchange_symbol(payload, isin) if payload
+    end
 
-      pick_instrument_exchange_symbol(payload, isin)
+    # The portfolio names a bond by its localized maturity ("März 2040"); the
+    # instrument name also carries the issuer ("ITALIEN 19/40").
+    def bond_instrument(websocket, isin)
+      name = instrument_payload(websocket, isin)&.dig("name").to_s.strip.presence
+      { name: name, instrument_type: BOND_INSTRUMENT_TYPE }.compact
+    end
+
+    def instrument_payload(websocket, isin)
+      payload = optional_subscribe(websocket, type: "instrument", id: isin)
+      payload if payload.is_a?(Hash)
     rescue TransientProviderError, RateLimited
       raise
     rescue Error
@@ -966,6 +990,7 @@ class Provider::TradeRepublicClient
         detail = detail.stringify_keys
         isin = detail["isin"].to_s.presence
         next if isin.blank?
+        next if detail["instrument_type"].to_s == BOND_INSTRUMENT_TYPE
         next if known_symbols.key?(isin)
         next if usable_trade_symbol?(detail["symbol"], isin) && detail["exchange_slug"].to_s.strip.present?
 
@@ -1022,6 +1047,8 @@ class Provider::TradeRepublicClient
     end
 
     def pick_instrument_exchange_symbol(payload, isin)
+      return nil if payload["typeId"].to_s == BOND_INSTRUMENT_TYPE
+
       candidates = Array(payload["exchanges"]).filter_map do |exchange|
         next unless exchange.is_a?(Hash)
         next if exchange.key?("active") && !ActiveModel::Type::Boolean.new.cast(exchange["active"])
@@ -1353,7 +1380,9 @@ class Provider::TradeRepublicClient
       price_row = find_row(rows, PRICE_TITLES)
       fees = find_row(rows, FEE_TITLES)
       taxes = find_row(rows, TAX_TITLES)
-      quantity = decimal_from_row(shares) || quantity_from_raw(raw)
+      nominal = find_row(rows, NOMINAL_TITLES) unless shares
+      total ||= find_row(rows, BOND_TOTAL_TITLES) if nominal
+      quantity = decimal_from_row(shares) || decimal_from_row(nominal) || quantity_from_raw(raw)
       title = shares&.dig("title").to_s.downcase
       quantity = -quantity.abs if title.include?("entfernt") || title.include?("removed") || title.include?("gesendet") || title.include?("sent")
       subtitle = item&.dig("subtitle").to_s.downcase
@@ -1362,6 +1391,9 @@ class Provider::TradeRepublicClient
       fee_amount = decimal_from_row(fees)
       tax_amount = decimal_from_row(taxes)
       price = decimal_from_row(price_row)
+      quotation = decimal_from_row(find_row(rows, QUOTATION_TITLES)) if nominal
+      # Same per-unit convention as bond positions: 92,67 % of par is 0.9267.
+      price ||= quotation / 100 if quotation
       dividend_per_share = decimal_from_row(find_row(rows, DIVIDEND_PER_SHARE_TITLES))
       if price.nil? && quantity&.nonzero? && amount
         # Provider cash totals embed costs: buy total = gross + fees/taxes,
@@ -1382,14 +1414,17 @@ class Provider::TradeRepublicClient
         "currency" => currency_from_row(total) || currency_from_row(shares) || currency_from_row(price_row),
         "fees" => decimal_string(fee_amount),
         "taxes" => decimal_string(tax_amount),
-        "dividend_per_share" => decimal_string(dividend_per_share)
+        "dividend_per_share" => decimal_string(dividend_per_share),
+        "instrument_type" => (BOND_INSTRUMENT_TYPE if nominal)
       }.compact
     end
 
     def collect_sections(node, result = [])
       case node
       when Hash
-        result << node if node.key?("title") && node["data"].is_a?(Array)
+        # Untitled tables hold breakdowns such as a bond's nominal and quote
+        # inside an infoPage bottom sheet.
+        result << node if (node.key?("title") || node["type"] == "table") && node["data"].is_a?(Array)
         node.each_value { |value| collect_sections(value, result) }
       when Array then node.each { |value| collect_sections(value, result) }
       end

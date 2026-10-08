@@ -48,6 +48,8 @@ class TradeRepublicAccount::HoldingsProcessor
       )
       return unless security
 
+      rematch_bond_holdings!(isin, security) if position[:instrument_type] == Provider::TradeRepublicClient::BOND_INSTRUMENT_TYPE
+
       quantity = parse_decimal(position[:quantity])
       price    = parse_decimal(position[:price])
       return unless quantity && price && quantity.positive?
@@ -55,7 +57,7 @@ class TradeRepublicAccount::HoldingsProcessor
       amount = quantity * price
       date   = Date.current
 
-      external_id = "trade_republic_position_#{@trade_republic_account.trade_republic_account_id}_#{isin}_#{date}"
+      external_id = "#{position_external_id_prefix}#{isin}_#{date}"
 
       import_adapter.import_holding(
         security:           security,
@@ -84,11 +86,38 @@ class TradeRepublicAccount::HoldingsProcessor
       false
     end
 
+    # Earlier syncs put every bond on Trade Republic's shared "BOND" listing.
+    # The external id still names the bond's ISIN, so move this bond's
+    # snapshots onto its own security. A row the target already has for that
+    # date wins over the stale copy.
+    def rematch_bond_holdings!(isin, security)
+      stale = account.holdings
+        .where("external_id LIKE ?", "#{position_external_id_prefix}#{isin}_%")
+        .where.not(security_id: security.id)
+        .where(security_locked: false)
+      return unless stale.exists?
+
+      taken = account.holdings.where(security_id: security.id).pluck(:date, :currency).to_set
+      stale.find_each do |holding|
+        key = [ holding.date, holding.currency ]
+        if taken.include?(key)
+          holding.destroy!
+        else
+          holding.update_columns(security_id: security.id, provider_security_id: security.id, updated_at: Time.current)
+          taken << key
+        end
+      end
+    end
+
+    def position_external_id_prefix
+      "trade_republic_position_#{@trade_republic_account.trade_republic_account_id}_"
+    end
+
     def reconcile_stale_holdings!(positions)
       provider_id = @trade_republic_account.account_provider&.id
       return if provider_id.blank?
 
-      prefix = "trade_republic_position_#{@trade_republic_account.trade_republic_account_id}_"
+      prefix = position_external_id_prefix
       current_ids = positions.filter_map do |position|
         isin = position.with_indifferent_access[:isin].to_s
         isin.present? ? "#{prefix}#{isin}_#{Date.current}" : nil

@@ -972,7 +972,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       portfolio.reload.raw_timeline_payload.first.dig("detail", Provider::TradeRepublicClient::SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY)
   end
 
-  test "isins_needing_symbol_lookup skips trades that already have a ticker" do
+  test "isins_needing_symbol_lookup skips trades that already have a ticker and bonds" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",
       name: "Portfolio",
@@ -996,6 +996,12 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
             "quantity" => "1",
             "amount" => "10"
           }
+        },
+        {
+          "id" => "bond",
+          "category" => "orderExecution",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "detail" => { "isin" => "IT0005377152", "quantity" => "2677.95", "amount" => "2498.31", "instrument_type" => "bond" }
         }
       ]
     )
