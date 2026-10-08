@@ -5,6 +5,7 @@ en:
       success: Entry created
     destroy:
       success: Entry deleted
+      blocked_settled_bond_lot: Cannot delete entry linked to a settled bond lot
     empty:
       description: Try adding an entry, editing filters or refining your search
       title: No entries found

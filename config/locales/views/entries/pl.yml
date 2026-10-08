@@ -5,6 +5,7 @@ pl:
       success: Wpis został utworzony
     destroy:
       success: Wpis został usunięty
+      blocked_settled_bond_lot: Nie można usunąć wpisu powiązanego z rozliczoną lokatą obligacji
     empty:
       description: Spróbuj dodać wpis, zmienić filtry lub doprecyzować wyszukiwanie
       title: Nie znaleziono wpisów

@@ -37,6 +37,8 @@ module EntryableResource
     @entry.sync_account_later
 
     redirect_back_or_to account_path(@entry.account), notice: t("account.entries.destroy.success")
+  rescue ActiveRecord::RecordNotDestroyed
+    redirect_back_or_to account_path(@entry.account), alert: @entry.errors.full_messages.to_sentence
   end
 
   private

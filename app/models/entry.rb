@@ -22,6 +22,7 @@ class Entry < ApplicationRecord
   # Read side only, so a transaction can say which bills it paid. The foreign key
   # already nullifies on delete, so this adds no lifecycle behaviour.
   has_many :recurring_allocations, dependent: nil, inverse_of: :entry
+  has_one :bond_lot, dependent: :destroy
 
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
@@ -36,6 +37,7 @@ class Entry < ApplicationRecord
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
+  before_destroy :prevent_deletion_when_linked_bond_lot_settled, prepend: true
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -609,5 +611,16 @@ class Entry < ApplicationRecord
       return if destroyed_by_association || unsplitting
 
       throw :abort
+    end
+
+    def prevent_deletion_when_linked_bond_lot_settled
+      return unless bond_lot&.closed_on.present?
+
+      errors.add(:base, settled_bond_lot_deletion_error_message)
+      throw :abort
+    end
+
+    def settled_bond_lot_deletion_error_message
+      I18n.t("entries.destroy.blocked_settled_bond_lot")
     end
 end

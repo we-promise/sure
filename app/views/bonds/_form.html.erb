@@ -1,0 +1,33 @@
+<%# locals: (account:, url:) %>
+
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= render "shared/ruler", classes: "my-4" %>
+
+  <div class="space-y-2" data-controller="bond-account-form" data-bond-account-form-tax-exempt-wrappers-value='["ike","ikze"]'>
+    <%= form.fields_for :accountable do |bond_form| %>
+      <div class="flex items-center gap-2">
+        <%= bond_form.money_field :initial_balance,
+                                  label: t("bonds.form.initial_balance"),
+                                  default_currency: Current.family.currency,
+                                  required: true %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bond_form.select :tax_wrapper,
+                             Bond::TAX_WRAPPERS.map { |key, value| [value[:long], key] },
+                             { label: t("bonds.form.tax_wrapper") },
+                             { data: { action: "change->bond-account-form#toggleTaxWrapperFields", bond_account_form_target: "wrapperSelect" } } %>
+      </div>
+
+      <div class="space-y-2" data-bond-account-form-target="taxExemptFields">
+        <div class="flex items-center justify-between gap-3 rounded-lg bg-container-inset px-3 py-2">
+          <div>
+            <p class="text-sm text-primary"><%= t("bonds.form.auto_buy_new_issues") %></p>
+            <p class="text-xs text-secondary"><%= t("bonds.form.auto_buy_new_issues_hint") %></p>
+          </div>
+          <%= bond_form.toggle :auto_buy_new_issues, checked: account.accountable&.auto_buy_new_issues? %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>
