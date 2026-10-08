@@ -1,10 +1,11 @@
 class IncomeStatement::FamilyStats
   include IncomeStatement::ScopedTransactionsQuery
 
-  def initialize(family, interval: "month", account_ids: nil)
+  def initialize(family, interval: "month", account_ids: nil, excluding_kinds: [])
     @family = family
     @interval = interval
     @account_ids = account_ids
+    @excluding_kinds = excluding_kinds
   end
 
   def call
@@ -30,7 +31,14 @@ class IncomeStatement::FamilyStats
     end
 
     def sql_params
-      base_sql_params(interval: @interval)
+      params = { interval: @interval }
+      params[:excluding_kinds] = @excluding_kinds if @excluding_kinds.any?
+      base_sql_params(params)
+    end
+
+    # Bound as a parameter, never interpolated: the kinds come from callers.
+    def excluding_kinds_sql
+      "AND t.kind NOT IN (:excluding_kinds)" if @excluding_kinds.any?
     end
 
     def query_sql
@@ -45,6 +53,7 @@ class IncomeStatement::FamilyStats
           #{accounts_join_sql}
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
+            #{excluding_kinds_sql}
             AND ae.excluded = false
             AND a.exclude_from_reports = false
             #{pending_providers_sql}
