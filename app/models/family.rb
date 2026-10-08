@@ -624,6 +624,15 @@ class Family < ApplicationRecord
     entries.order(:date).first&.date || Date.current
   end
 
+  # Earliest Transaction/Trade entry date: the family's first real activity.
+  # Unlike oldest_entry_date (any entry type; kept as-is for budgets and the
+  # AI balance sheet), valuations and opening balances don't count here, so a
+  # single old valuation can't stretch All-range charts back for years (#4007).
+  # Returns nil when the family has no Transaction/Trade entries yet.
+  def oldest_activity_date
+    entries.where(entryable_type: %w[Transaction Trade]).order(:date).first&.date
+  end
+
   # Used for invalidating family / balance sheet related aggregation queries
   def build_cache_key(key, invalidate_on_data_updates: false)
     # Our data sync process updates this timestamp whenever any family account successfully completes a data update.

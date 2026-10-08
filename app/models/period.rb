@@ -78,11 +78,13 @@ class Period
     },
     "all_time" => {
       date_range: -> {
-        oldest_date = Current.family&.oldest_entry_date
-        # If no family or no entries exist, use a reasonable historical fallback
-        # to ensure "All Time" represents a meaningful range, not just today
+        oldest_date = Current.family&.oldest_activity_date
+        # If no family or no Transaction/Trade entries exist, use a reasonable
+        # historical fallback to ensure "All Time" represents a meaningful
+        # range, not just today. Starts one month before the first real
+        # activity so the chart has breathing room (#4007).
         start_date = if oldest_date && oldest_date < Date.current
-          oldest_date
+          oldest_date - 1.month
         else
           5.years.ago.to_date
         end
