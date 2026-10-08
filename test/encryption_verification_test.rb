@@ -366,6 +366,31 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     assert_column_not_plaintext(SnaptradeAccount, account.id, :account_number, "9988776655")
   end
 
+  test "plaid account holdings stored before encryption was enabled can be read and backfilled" do
+    account = PlaidAccount.create!(
+      plaid_item: plaid_items(:one),
+      plaid_id: "holdings_backfill_probe",
+      name: "Brokerage",
+      plaid_type: "investment",
+      currency: "USD",
+      current_balance: 1000
+    )
+    # Store plaintext, as an instance that enabled encryption after syncing would have.
+    PlaidAccount.where(id: account.id).update_all(
+      "raw_holdings_payload = '{\"holdings\": [{\"security_id\": \"sec_probe\"}]}'::jsonb"
+    )
+
+    with_unencrypted_data_supported do
+      account = PlaidAccount.find(account.id)
+      assert_equal "sec_probe", account.raw_holdings_payload["holdings"].first["security_id"]
+
+      account.encrypt
+    end
+
+    assert_equal "sec_probe", account.reload.raw_holdings_payload["holdings"].first["security_id"]
+    assert_column_not_plaintext(PlaidAccount, account.id, :raw_holdings_payload, "sec_probe")
+  end
+
   # ============================================================================
   # DATABASE VERIFICATION TESTS
   # ============================================================================
@@ -392,6 +417,14 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   end
 
   private
+
+    def with_unencrypted_data_supported
+      previous = ActiveRecord::Encryption.config.support_unencrypted_data
+      ActiveRecord::Encryption.config.support_unencrypted_data = true
+      yield
+    ensure
+      ActiveRecord::Encryption.config.support_unencrypted_data = previous
+    end
 
     # Reads +column+ straight from the database, bypassing the model, and asserts the
     # stored bytes do not contain +value+. An accessor round-trip alone cannot tell
