@@ -144,8 +144,16 @@ class RecurringOccurrence < ApplicationRecord
     end
   end
 
+  # Nobody is paying a bill that isn't active, so its leftover is neither late
+  # nor due, whatever the dates say. derived_state stays the raw schedule
+  # state: the matcher reads it to keep a late payment able to settle the
+  # leftover.
   def overdue?
-    derived_state == :overdue
+    recurring_transaction.active? && derived_state == :overdue
+  end
+
+  def due?
+    recurring_transaction.active? && derived_state == :due
   end
 
   # --- Lifecycle actions. Closing freezes the resolved amount so the row is

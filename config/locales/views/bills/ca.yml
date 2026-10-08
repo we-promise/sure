@@ -37,6 +37,7 @@ ca:
       current: Actual
       next_payment: Proper pagament
       around: cap al %{date}
+      overview: Resum
       rules: Com s'identifica aquesta factura
       rule_named: '%{name}'
       rule_amount_range: de %{min} a %{max}
@@ -54,7 +55,6 @@ ca:
       ytd: Pagat aquest any
       last_account: Últim compte utilitzat
       upcoming: Properament
-      recent_payments: Pagaments recents
       manual_payment: Pagament manual
       history: Historial
       payment_count:
@@ -85,7 +85,6 @@ ca:
     summary:
       remaining: '%{amount} pendents'
       paid_headline: '%{amount} pagats'
-      cost_line: Una mitjana de %{average} per pagament, uns %{annualized} l'any
     add_bill: Afegeix una factura
     manage: Gestiona
     find_payment: Cerca el pagament
@@ -93,7 +92,6 @@ ca:
     review_match: Revisa la coincidència
     resolve: Resol
     manage_payments: Gestiona els pagaments
-    view_full_bill: Mostra la factura completa
     match:
       same_merchant: Mateix comerç
       name_matches: El nom coincideix
@@ -261,6 +259,7 @@ ca:
         one: Hem trobat %{count} pagament recurrent a les teves transaccions. Revisa'l perquè els totals d'aquí coincideixin amb el que pagues realment.
         other: Hem trobat %{count} pagaments recurrents a les teves transaccions. Revisa'ls perquè els totals d'aquí coincideixin amb el que pagues realment.
       detected_review_action: Revisa'ls
+      notices_heading: Canvis
       needs_review: Cal revisar
       notice_trial: La prova de %{name} acaba el %{date}
       notice_renewal: '%{name} es renova el %{date}'

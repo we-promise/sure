@@ -82,6 +82,7 @@ pl:
       manual_payment: Płatność ręczna
       next_payment: Następna płatność
       notes: Notatki
+      overview: Przegląd
       payment_count:
         few: "%{count} płatności"
         many: "%{count} płatności"
@@ -90,7 +91,6 @@ pl:
       price_change_line: "%{from} → %{to}"
       price_changes: Zmiany cen
       range: od %{min} do %{max}
-      recent_payments: Ostatnie płatności
       renews_chip: Odnawia się %{date}
       rule_aliases: Pasuje też do %{names}
       rule_amount_range: od %{min} do %{max}
@@ -170,6 +170,7 @@ pl:
         one: 1 wymaga uwagi
         other: "%{count} wymaga uwagi"
       needs_attention: Wymaga uwagi
+      notices_heading: Zmiany
       needs_review: Wymaga sprawdzenia
       notice_price: "%{name}: zmiana ceny %{from} → %{to} (%{percent})"
       notice_renewal: "%{name} odnawia się %{date}"
@@ -367,10 +368,8 @@ pl:
         trigger: Pozwól AI skonfigurować
         uncategorized: Bez kategorii
     summary:
-      cost_line: Średnio %{average} za płatność, około %{annualized} rocznie
       paid_headline: Zapłacono %{amount}
       remaining: Pozostało %{amount}
-    view_full_bill: Zobacz pełny rachunek
     views:
       all: Wszystkie rachunki
       aria_label: Widoki rachunków

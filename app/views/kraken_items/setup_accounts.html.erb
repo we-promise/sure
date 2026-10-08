@@ -60,11 +60,21 @@
                     <p class="font-medium text-primary truncate"><%= kraken_account.name %></p>
                     <p class="text-xs text-secondary"><%= kraken_account.account_type %></p>
                   </div>
+                  <%# Kraken reports in USD. Show the figure in the currency the account
+                      will actually be created in, which is the one every other number
+                      on the screen is in. With no rate the account opens at zero
+                      (Account.convert_provider_balance), so that is what is shown:
+                      the reported figure would promise a balance the account will
+                      not have. %>
+                  <% reported = Money.new(kraken_account.current_balance || 0, kraken_account.currency)
+                     display = begin
+                       reported.exchange_to(Current.family.currency)
+                     rescue Money::ConversionError
+                       Money.new(0, Current.family.currency)
+                     end %>
                   <div class="text-right flex-shrink-0">
-                    <p class="text-sm font-medium text-primary">
-                      <%= number_with_delimiter(kraken_account.current_balance || 0, delimiter: ",") %>
-                    </p>
-                    <p class="text-xs text-secondary"><%= kraken_account.currency %></p>
+                    <p class="text-sm font-medium text-primary"><%= format_money(display) %></p>
+                    <p class="text-xs text-secondary"><%= display.currency.iso_code %></p>
                   </div>
                 </label>
               <% end %>

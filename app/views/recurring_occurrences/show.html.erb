@@ -7,7 +7,7 @@
 
     This is the ACT surface: it answers "what do I need to do about this bill
     right now", which is a different question from "what is this bill", and it
-    is why it opens in the drawer while the bill's own story lives on its page.
+    is why it is its own drawer, one link away from the bill's.
 
     frame: "drawer", responsive: true matches every other detail surface in the
     app -- a centred card on a phone, a right-hand drawer from lg up. The close
@@ -22,7 +22,7 @@
         <h2 id="<%= dialog.title_id %>" class="text-lg font-medium text-primary truncate">
           <%= series.display_name %>
         </h2>
-        <p class="text-sm <%= bills_overdue?(@occurrence) ? "text-destructive" : "text-secondary" %>">
+        <p class="text-sm <%= @occurrence.overdue? ? "text-destructive" : "text-secondary" %>">
           <%= occurrence_due_label(@occurrence) %>
         </p>
       </div>
@@ -66,7 +66,7 @@
           <%= render DS::ProgressRing.new(
                 percent: percent,
                 size: 56,
-                tone: @occurrence.paid? ? :success : (bills_overdue?(@occurrence) ? :destructive : :neutral)
+                tone: @occurrence.paid? ? :success : (@occurrence.overdue? ? :destructive : :neutral)
               ) %>
         </div>
       </div>
@@ -304,8 +304,9 @@
           <%= render DS::Link.new(
                 text: t(".view_bill"),
                 variant: "default",
-                href: bill_path(series),
-                data: { turbo_frame: "_top" }
+                href: bill_path(series, occurrence: @occurrence.id),
+                frame: :drawer,
+                data: { turbo_prefetch: false }
               ) %>
           <%= render "recurring_transactions/pay_action", recurring_transaction: series, show_add: false %>
         </div>

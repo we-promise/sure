@@ -75,7 +75,14 @@ export default class extends Controller {
     root.innerHTML = "";
     const data = this.dataValue || {};
 
-    const toPoint = (p) => ({ date: parseDate(p.date), balance: p.balance });
+    // `principal`/`interest` are on the scheduled payment points only; the
+    // tooltip checks for them rather than assuming.
+    const toPoint = (p) => ({
+      date: parseDate(p.date),
+      balance: p.balance,
+      principal: p.principal,
+      interest: p.interest,
+    });
 
     const domainStart = parseDate(data.domain_start);
     const domainEnd = parseDate(data.domain_end);
@@ -372,6 +379,22 @@ export default class extends Controller {
       }
     })();
     const money = (value) => formatter.format(value);
+    // The balance reads in whole units; the principal/interest split keeps the
+    // currency's minor units so a small component never rounds to nothing.
+    const splitFormatter = (() => {
+      const digits = data.currency_precision ?? 2;
+      try {
+        return new Intl.NumberFormat(locale, {
+          style: "currency",
+          currency: data.currency || "USD",
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits,
+        });
+      } catch {
+        return formatter;
+      }
+    })();
+    const splitMoney = (value) => splitFormatter.format(value);
 
     const showAt = (date) => {
       const px = x(date);
@@ -381,12 +404,18 @@ export default class extends Controller {
           if (date < s.points[0].date || date > s.points.at(-1).date)
             return null;
           const point = nearest(s.points, date);
-          return point
-            ? {
-                label: data.labels?.[s.key] || s.key,
-                value: money(point.balance),
-              }
-            : null;
+          if (!point) return null;
+          // What the scheduled payment on this date is made of (#3958).
+          const split =
+            point.principal != null && point.interest != null
+              ? `${data.labels?.principal || "Principal"}: ${splitMoney(point.principal)} · ` +
+                `${data.labels?.interest || "Interest"}: ${splitMoney(point.interest)}`
+              : null;
+          return {
+            label: data.labels?.[s.key] || s.key,
+            value: money(point.balance),
+            split,
+          };
         })
         .filter(Boolean);
       // The domain can open before the first series point (a period that
@@ -402,13 +431,18 @@ export default class extends Controller {
       const dateRow = document.createElement("div");
       dateRow.className = CHART_TOOLTIP_CONTEXT_CLASSES;
       dateRow.textContent = monthYear.format(date);
-      const valueRows = rows.map(({ label, value }) => {
+      const valueRows = rows.flatMap(({ label, value, split }) => {
         const row = document.createElement("div");
         const amount = document.createElement("span");
         amount.className = CHART_TOOLTIP_VALUE_CLASSES;
         amount.textContent = value;
         row.append(`${label}: `, amount);
-        return row;
+        if (!split) return [row];
+        // Secondary styling, under the balance it explains.
+        const splitRow = document.createElement("div");
+        splitRow.className = CHART_TOOLTIP_CONTEXT_CLASSES;
+        splitRow.textContent = split;
+        return [row, splitRow];
       });
       tooltip.replaceChildren(dateRow, ...valueRows);
       tooltip.style.display = "block";

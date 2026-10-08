@@ -1,37 +1,20 @@
-<%# locals: (title:, occurrences:, tone: :default, suggestions: {}, meta: nil, pay_periods: []) %>
+<%# locals: (title:, occurrences:, suggestions: {}, meta: nil, pay_periods: [], inset: false) %>
 <% return if occurrences.empty? %>
 
 <% markers = bills_pay_period_markers(occurrences, pay_periods) %>
 
-<div>
-  <div class="flex items-baseline justify-between gap-3 px-4 py-2">
-    <div class="flex items-center gap-1.5 text-xs font-medium uppercase <%= tone == :destructive ? "text-destructive" : "text-secondary" %>">
-      <p><%= title %></p>
-      <span class="text-subdued">&middot;</span>
-      <p><%= occurrences.size %></p>
-    </div>
-    <% if meta %>
-      <p class="text-xs text-secondary privacy-sensitive shrink-0"><%= meta %></p>
+<%# No shell by default: bills/index stacks the month sections in one. %>
+<%= render DS::Section.new(title: title, count: occurrences.size, inset: inset) do |section| %>
+  <% section.with_aside { tag.p(meta, class: "text-xs text-secondary privacy-sensitive shrink-0") } if meta %>
+  <% occurrences.each do |occurrence| %>
+    <%# The marker belongs to the first row of its period, so it lands
+        between groups without the section having to pre-bucket the rows. %>
+    <% if (marker = markers[occurrence.id]) %>
+      <%= render "bills/pay_period_marker",
+                 period: marker[:period],
+                 currency: Current.family.currency,
+                 due_total: marker[:due_total] %>
     <% end %>
-  </div>
-
-  <%# The divider is half its old weight: the rows are separated by a hairline
-      and by the hover state, not by a rule competing with the content. %>
-  <%# A container query, not a media query. The app shell has two sidebars, so
-      main is ~420px wide at a 1280px viewport -- "desktop" by any breakpoint
-      and phone-width in practice. The row has to size itself against the space
-      it actually has. %>
-  <div class="@container bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
-    <% occurrences.each do |occurrence| %>
-      <%# The marker belongs to the first row of its period, so it lands
-          between groups without the section having to pre-bucket the rows. %>
-      <% if (marker = markers[occurrence.id]) %>
-        <%= render "bills/pay_period_marker",
-                   period: marker[:period],
-                   currency: Current.family.currency,
-                   due_total: marker[:due_total] %>
-      <% end %>
-      <%= render "bills/occurrence", occurrence: occurrence, suggestion: suggestions[occurrence.id] %>
-    <% end %>
-  </div>
-</div>
+    <%= render "bills/occurrence", occurrence: occurrence, suggestion: suggestions[occurrence.id] %>
+  <% end %>
+<% end %>
