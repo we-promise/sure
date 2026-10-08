@@ -3,7 +3,7 @@ de:
   settings:
     providers:
       taglines:
-        onchain_wallet: Verfolgt selbstverwahrte Bitcoin-, EVM- und Solana-Wallets über ihre öffentlichen Adressen.
+        onchain_wallet: Verfolgt selbstverwahrte Bitcoin-, EVM-, Solana- und Polkadot-Wallets über ihre öffentlichen Adressen.
       onchain_wallet_panel:
         add_wallet: Wallet hinzufügen
         advanced: Erweitert
