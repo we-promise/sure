@@ -11,6 +11,7 @@ class AddUniqueIndexToTaggingsMigrationTest < ActiveSupport::TestCase
   # duplicates the database was free to accept. DDL is transactional in
   # Postgres, so the removal is rolled back with the rest of the test.
   setup do
+    @schema_definition = index_definition
     connection.remove_index :taggings, name: INDEX, if_exists: true
     @tag = tags(:one)
     @transaction = transactions(:one)
@@ -95,10 +96,30 @@ class AddUniqueIndexToTaggingsMigrationTest < ActiveSupport::TestCase
     assert_includes held, "ShareRowExclusiveLock", "the lock was not held to the end of the transaction"
   end
 
+  # db/schema.rb carries the index by hand, as an expression, so check it is
+  # the index the migration builds rather than trusting the dump format.
+  test "builds the same index the schema declares" do
+    run_migration
+
+    assert_not_nil @schema_definition
+    assert_equal @schema_definition, index_definition
+  end
+
+  # No NULLS NOT DISTINCT (PostgreSQL 15+): a missing taggable_type is folded
+  # to '' by the index expression, so the index holds on any supported version.
+  test "treats a missing taggable_type and an empty one as the same key" do
+    run_migration
+    assert_not_includes index_definition, "NULLS NOT DISTINCT"
+
+    Tagging.where(id: @kept.id).delete_all
+    insert_tagging(taggable_type: nil)
+    assert_raises(ActiveRecord::RecordNotUnique) { insert_tagging(taggable_type: "") }
+  end
+
   test "can be run again" do
     2.times { run_migration }
 
-    assert connection.index_exists?(:taggings, [ :tag_id, :taggable_type, :taggable_id ], name: INDEX, unique: true)
+    assert connection.index_name_exists?(:taggings, INDEX)
   end
 
   private
@@ -109,6 +130,12 @@ class AddUniqueIndexToTaggingsMigrationTest < ActiveSupport::TestCase
         id: id, tag_id: @tag.id, taggable_type: taggable_type, taggable_id: taggable_id,
         created_at: created_at, updated_at: created_at
       } ])
+    end
+
+    def index_definition
+      connection.select_value("SELECT pg_get_indexdef('#{INDEX}'::regclass)")
+    rescue ActiveRecord::StatementInvalid
+      nil
     end
 
     def run_migration
