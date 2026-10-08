@@ -649,6 +649,54 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type='hidden'][name='is_filtered'][value='1']", minimum: 1
   end
 
+  test "compact trade row mobile subtitle has no orphan bullet" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch trade_url(@entry), params: {
+      view_ctx: "global",
+      is_filtered: "0",
+      entry: {
+        currency: "USD",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 50,
+          price: 25
+        }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    doc = Nokogiri::HTML.fragment(turbo_stream_row_html(@entry))
+    mobile_spans = doc.css("span[class*='compact-table:hidden']")
+    assert mobile_spans.any?, "Expected a mobile-only subtitle span in the compact trade row"
+    mobile_spans.each do |span|
+      assert_no_match(/•/, span.text, "Orphan bullet in mobile trade subtitle")
+    end
+  end
+
+  test "compact trade row supports whole-row click" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch trade_url(@entry), params: {
+      view_ctx: "global",
+      is_filtered: "0",
+      entry: {
+        currency: "USD",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 50,
+          price: 25
+        }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    doc = Nokogiri::HTML.fragment(turbo_stream_row_html(@entry))
+    row = doc.at_css("div[data-controller='clickable-row']")
+    assert row.present?, "Expected the compact trade row to carry the clickable-row controller"
+    assert row.at_css("a[data-clickable-row-target='link']").present?, "Expected the trade name link to be the clickable-row target"
+  end
+
   private
     # Extracts the entry-row turbo-stream's inner HTML from an update response,
     # so compact-row rendering (e.g. the running-balance column) can be asserted.

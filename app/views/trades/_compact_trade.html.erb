@@ -7,7 +7,7 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(trade) do %>
-    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, indent: in_split_group, muted: entry.excluded) do |row| %>
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, indent: in_split_group, muted: entry.excluded, data: { controller: "clickable-row", action: "click->clickable-row#open" }) do |row| %>
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             class: "checkbox checkbox--light hidden @5xl/compact-table:block",
@@ -29,11 +29,11 @@
           <div class="truncate">
             <%= link_to entry.name,
                         entry_path(entry, drawer_params),
-                        data: { turbo_frame: "drawer", turbo_prefetch: false },
+                        data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
                         class: "hover:underline truncate" %>
           </div>
           <div class="text-secondary text-xs font-normal truncate">
-            <span class="@5xl/compact-table:hidden"><%= format_date(entry.date) %><%= " •" if view_ctx != "account" %></span>
+            <span class="@5xl/compact-table:hidden"><%= format_date(entry.date) %></span>
             <% if view_ctx != "account" %>
               <span class="hidden @5xl/compact-table:inline">
                 <%= link_to entry.account.name, account_path(entry.account, tab: "transactions"), data: { turbo_frame: "_top" }, class: "hover:underline" %>
