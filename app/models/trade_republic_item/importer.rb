@@ -244,25 +244,8 @@ class TradeRepublicItem::Importer
       return [] unless portfolio
 
       Array(portfolio.raw_timeline_payload).filter_map do |event|
-        next unless event.is_a?(Hash)
-        next unless Provider::TradeRepublicClient.requires_trade_detail?(event)
-        next unless Provider::TradeRepublicTimelineEvent.importable?(event)
-
-        detail = (event["detail"] || event[:detail])
-        next unless detail.is_a?(Hash)
-
-        detail = detail.stringify_keys
-        isin = detail["isin"].to_s.presence
-        next if isin.blank?
-        next if Provider::TradeRepublicClient.bond?(detail)
-
-        symbol = detail["symbol"].to_s.strip.presence
-        exchange_slug = detail["exchange_slug"].to_s.strip.presence
-        usable = symbol.present? && !symbol.casecmp?(isin) && exchange_slug.present?
-        next if usable
-        next unless Provider::TradeRepublicClient.symbol_lookup_due?(event)
-
-        isin
+        isin = Provider::TradeRepublicClient.symbol_lookup_isin(event)
+        isin if isin && Provider::TradeRepublicClient.symbol_lookup_due?(event)
       end.uniq.first(Provider::TradeRepublicClient::MAX_INSTRUMENT_LOOKUPS)
     end
 

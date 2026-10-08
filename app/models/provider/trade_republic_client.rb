@@ -517,6 +517,25 @@ class Provider::TradeRepublicClient
       detail.is_a?(Hash) && detail.with_indifferent_access[:instrument_type].to_s == BOND_INSTRUMENT_TYPE
     end
 
+    # The ISIN of a stored or new trade that still needs an exchange ticker,
+    # or nil. Bonds never get one.
+    def symbol_lookup_isin(event)
+      return nil unless event.is_a?(Hash)
+      return nil unless requires_trade_detail?(event)
+      return nil unless Provider::TradeRepublicTimelineEvent.importable?(event)
+
+      detail = event["detail"] || event[:detail]
+      return nil unless detail.is_a?(Hash)
+
+      detail = detail.stringify_keys
+      isin = detail["isin"].to_s.presence
+      return nil if isin.blank? || bond?(detail)
+
+      symbol = detail["symbol"].to_s.strip.presence
+      usable = symbol.present? && !symbol.casecmp?(isin) && detail["exchange_slug"].to_s.strip.present?
+      isin unless usable
+    end
+
     def instrument_symbols_from_positions(positions)
       Array(positions).each_with_object({}) do |position, map|
         next unless position.is_a?(Hash)
@@ -826,6 +845,7 @@ class Provider::TradeRepublicClient
         {
           "isin" => isin,
           "name" => instrument[:name].presence || position["name"],
+          "instrument_name" => instrument[:name],
           "category" => portfolio_category(position["categoryType"]),
           "instrument_type" => instrument[:instrument_type],
           "quantity" => decimal_string(quantity),
@@ -990,25 +1010,10 @@ class Provider::TradeRepublicClient
     end
 
     def trade_isins_missing_symbols(events, known_symbols)
-      missing = []
-      Array(events).each do |event|
-        next unless event.is_a?(Hash)
-        next unless self.class.requires_trade_detail?(event)
-        next unless Provider::TradeRepublicTimelineEvent.importable?(event)
-
-        detail = event["detail"] || event[:detail]
-        next unless detail.is_a?(Hash)
-
-        detail = detail.stringify_keys
-        isin = detail["isin"].to_s.presence
-        next if isin.blank?
-        next if self.class.bond?(detail)
-        next if known_symbols.key?(isin)
-        next if usable_trade_symbol?(detail["symbol"], isin) && detail["exchange_slug"].to_s.strip.present?
-
-        missing << isin
-      end
-      missing.uniq
+      Array(events).filter_map do |event|
+        isin = self.class.symbol_lookup_isin(event)
+        isin unless isin.nil? || known_symbols.key?(isin)
+      end.uniq
     end
 
     def stamp_instrument_symbols_on_events!(events, symbols)

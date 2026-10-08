@@ -1662,6 +1662,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_includes requested, "instrument"
     position = positions.first
     assert_equal "ITALIEN 19/40", position["name"]
+    assert_equal "ITALIEN 19/40", position["instrument_name"]
     assert_equal "bond", position["instrument_type"]
     assert_nil position["symbol"]
     assert_nil position["exchange_slug"]
@@ -1684,6 +1685,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     })
 
     assert_equal "März 2040", positions.first["name"]
+    assert_nil positions.first["instrument_name"]
     assert_equal "bond", positions.first["instrument_type"]
   end
 
