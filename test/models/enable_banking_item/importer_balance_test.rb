@@ -267,6 +267,71 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("10.00"), @enable_banking_account.reload.current_balance
   end
 
+  test "fetch_and_update_balance uses the account currency's balance from a multi-currency wallet" do
+    # PayPal reports one balance per currency under the same type. The stored
+    # USD currency is what the old last-entry pick left behind.
+    @enable_banking_account.update!(currency: "USD", raw_payload: { "uid" => "paypal", "currency" => "EUR" })
+    @mock_provider.stubs(:get_account_balances).returns(balances: paypal_balances)
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("392.04"), @enable_banking_account.current_balance
+    assert_equal "EUR", @enable_banking_account.currency
+  end
+
+  test "fetch_and_update_balance uses the first listed currency when the snapshot has none" do
+    @enable_banking_account.update!(raw_payload: { "uid" => "paypal" })
+    @mock_provider.stubs(:get_account_balances).returns(balances: paypal_balances)
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("392.04"), @enable_banking_account.current_balance
+    assert_equal "EUR", @enable_banking_account.currency
+  end
+
+  test "fetch_and_update_balance follows the snapshot currency even when it is not listed first" do
+    @enable_banking_account.update!(raw_payload: { "uid" => "paypal", "currency" => "USD" })
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        { balance_type: "CLBD", balance_amount: { amount: "10.00", currency: "EUR" }, credit_debit_indicator: "CRDT" },
+        { balance_type: "ITAV", balance_amount: { amount: "30.00", currency: "USD" }, credit_debit_indicator: "CRDT" },
+        { balance_type: "ITBD", balance_amount: { amount: "25.00", currency: "USD" }, credit_debit_indicator: "CRDT" }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("25.00"), @enable_banking_account.current_balance
+    assert_equal "USD", @enable_banking_account.currency
+  end
+
+  test "fetch_and_update_balance logs funded balances left out in other currencies" do
+    @enable_banking_account.update!(raw_payload: { "uid" => "paypal", "currency" => "EUR" })
+    balances = paypal_balances
+    balances[2] = balances[2].merge(balance_amount: { amount: "15.50", currency: "USD" })
+    @mock_provider.stubs(:get_account_balances).returns(balances: balances)
+
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync").count }, 1 do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+
+    entry = DebugLogEntry.where(category: "provider_sync").order(:created_at).last
+    assert_equal "EUR", entry.metadata["currency"]
+    assert_equal [ { "currency" => "USD", "balance_type" => "CLBD", "amount" => "15.50" } ], entry.metadata["other_balances"]
+  end
+
+  test "fetch_and_update_balance does not log empty balances in other currencies" do
+    @enable_banking_account.update!(raw_payload: { "uid" => "paypal", "currency" => "EUR" })
+    @mock_provider.stubs(:get_account_balances).returns(balances: paypal_balances)
+
+    assert_no_difference -> { DebugLogEntry.where(category: "provider_sync").count } do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+  end
+
   test "fetch_and_update_balance handles descriptive booked balance types" do
     @mock_provider.stubs(:get_account_balances).returns(
       balances: [
@@ -390,4 +455,14 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
     assert_nil unsaved_account.current_balance
   end
+
+  private
+
+    # Shaped like PayPal's response: the primary EUR balance first, then empty
+    # CAD and USD balances under the same type.
+    def paypal_balances
+      %w[EUR CAD USD].zip(%w[392.04 0.00 0.00]).map do |currency, amount|
+        { balance_type: "CLBD", balance_amount: { amount: amount, currency: currency }, credit_debit_indicator: "CRDT" }
+      end
+    end
 end
