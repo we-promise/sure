@@ -330,7 +330,9 @@ class TradeRepublicAccount::ActivitiesProcessor
         fee:            fee,
         currency:       detail[:currency].presence || currency,
         date:           date,
-        name:           build_trade_name(detail[:name], security, signed_quantity),
+        # A bond's timeline title is only its maturity ("März 2040"); the
+        # security carries the instrument name the holding shows.
+        name:           build_trade_name(Provider::TradeRepublicClient.bond?(detail) ? nil : detail[:name], security, signed_quantity),
         source:         "trade_republic",
         activity_label: is_buy ? "Buy" : "Sell"
       )

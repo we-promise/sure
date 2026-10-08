@@ -147,6 +147,8 @@ module TradeRepublicAccount::DataHelpers
       position = position_metadata_for(isin)
       symbol = symbol.to_s.presence || position&.dig(:symbol)
       exchange_slug = exchange_slug.to_s.presence || position&.dig(:exchange_slug)
+      return nil if Provider::TradeRepublicClient.bond_placeholder_listing?(symbol, exchange_slug)
+
       mic = mic_for_exchange_slug(exchange_slug)
       usable_symbol = usable_exchange_symbol(symbol, isin)
 
@@ -350,18 +352,34 @@ module TradeRepublicAccount::DataHelpers
       rematch_holdings_from_isin!(from_security, to_security)
     end
 
+    def rematch_holdings_from_isin!(from_security, to_security)
+      mismatched_dates = move_holdings_to_security!(account.holdings.where(security_id: from_security.id), to_security)
+      log_rematch_collisions(
+        "ISIN rematch collision kept exchange holding market values",
+        mismatched_dates,
+        from_security_id: from_security.id,
+        to_security_id: to_security.id
+      )
+    end
+
     # Holdings are rewritten with update_columns: while trades are split across
     # the ISIN and exchange securities, calculated history can hold negative
     # quantities that fail validation, and the next materialization replaces
     # these rows anyway.
-    def rematch_holdings_from_isin!(from_security, to_security)
+    #
+    # `provider_security_id` normally keeps the security the provider first
+    # reported, so a user can reset a remapped holding. `adopt_provider_security`
+    # replaces it when that original security was itself wrong.
+    #
+    # Returns the dates where both rows existed with different values.
+    def move_holdings_to_security!(holdings, to_security, adopt_provider_security: false)
       existing_keys = account.holdings
         .where(security_id: to_security.id)
         .pluck(:date, :currency)
         .to_set
       mismatched_dates = []
 
-      account.holdings.where(security_id: from_security.id).find_each do |holding|
+      holdings.find_each do |holding|
         key = [ holding.date, holding.currency ]
         if existing_keys.include?(key)
           existing = account.holdings.find_by!(
@@ -369,15 +387,15 @@ module TradeRepublicAccount::DataHelpers
             date: holding.date,
             currency: holding.currency
           )
-          # Both rows are the same position after ISIN→ticker rematch (live
-          # exchange holding from HoldingsProcessor vs stale ISIN row). Keep
-          # exchange market qty/amount/price — summing would double-count.
-          # Merge provider tracking and cost basis from the ISIN row when the
-          # exchange row is missing them.
+          # Both rows are the same position after the rematch (live holding
+          # from HoldingsProcessor vs stale row). Keep the live market
+          # qty/amount/price — summing would double-count. Merge provider
+          # tracking and cost basis from the stale row when the live row is
+          # missing them.
           attrs = {}
           attrs[:external_id] = holding.external_id if existing.external_id.blank? && holding.external_id.present?
-          if existing.provider_security_id.blank?
-            attrs[:provider_security_id] = holding.provider_security_id.presence || from_security.id
+          if existing.provider_security_id.blank? && !adopt_provider_security
+            attrs[:provider_security_id] = holding.provider_security_id.presence || holding.security_id
           end
           attrs[:account_provider_id] = holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
           if existing.cost_basis.blank? && holding.cost_basis.present?
@@ -391,32 +409,35 @@ module TradeRepublicAccount::DataHelpers
           holding.destroy!
           existing.update_columns(attrs.merge(updated_at: Time.current)) if attrs.any?
         else
+          provider_security_id = adopt_provider_security ? to_security.id : holding.provider_security_id.presence || holding.security_id
           holding.update_columns(
             security_id: to_security.id,
-            provider_security_id: holding.provider_security_id.presence || from_security.id,
+            provider_security_id: provider_security_id,
             updated_at: Time.current
           )
           existing_keys << key
         end
       end
 
+      mismatched_dates
+    end
+
+    def log_rematch_collisions(message, mismatched_dates, **metadata)
       return if mismatched_dates.empty?
 
       DebugLogEntry.capture(
         category: "sync",
         level: "info",
-        message: "ISIN rematch collision kept exchange holding market values",
+        message: message,
         source: "trade_republic",
         family: account.family,
         provider_key: "trade_republic",
         account: account,
-        metadata: {
-          from_security_id: from_security.id,
-          to_security_id: to_security.id,
+        metadata: metadata.merge(
           collision_count: mismatched_dates.size,
           first_date: mismatched_dates.min,
           last_date: mismatched_dates.max
-        }
+        )
       )
     end
 end

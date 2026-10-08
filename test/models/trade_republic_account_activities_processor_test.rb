@@ -1657,6 +1657,30 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.9267"), trade.price
     assert_equal BigDecimal("1"), trade.fee
     assert_equal BigDecimal("2498.31"), entry.amount
+    assert_equal "IT0005377152 · 2677.95x ITALIEN 19/40", entry.name
+  end
+
+  test "stored bond trades on the legacy BOND listing resolve by ISIN" do
+    Security.expects(:search_provider).never
+    import_event({
+      id: "evt_legacy_bond",
+      timestamp: "2025-11-18T11:19:31Z",
+      category: "orderExecution",
+      detail: {
+        isin: "IT0005377152",
+        name: "März 2040",
+        quantity: "2677.95",
+        price: "0.9267",
+        amount: "2498.31",
+        currency: "EUR",
+        symbol: "BOND",
+        exchange_slug: "LSX"
+      }
+    })
+
+    security = find_trade("trade_republic_event_evt_legacy_bond").entryable.security
+    assert_equal "IT0005377152", security.ticker
+    assert_nil security.exchange_operating_mic
   end
 
   private

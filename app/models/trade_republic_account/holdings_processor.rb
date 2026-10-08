@@ -48,7 +48,7 @@ class TradeRepublicAccount::HoldingsProcessor
       )
       return unless security
 
-      rematch_bond_holdings!(isin, security) if position[:instrument_type] == Provider::TradeRepublicClient::BOND_INSTRUMENT_TYPE
+      rematch_bond_holdings!(isin, security) if Provider::TradeRepublicClient.bond?(position)
 
       quantity = parse_decimal(position[:quantity])
       price    = parse_decimal(position[:price])
@@ -88,25 +88,22 @@ class TradeRepublicAccount::HoldingsProcessor
 
     # Earlier syncs put every bond on Trade Republic's shared "BOND" listing.
     # The external id still names the bond's ISIN, so move this bond's
-    # snapshots onto its own security. A row the target already has for that
-    # date wins over the stale copy.
+    # snapshots onto its own security. The shared listing was never the
+    # bond's real security, so it doesn't stay as provider_security_id.
     def rematch_bond_holdings!(isin, security)
       stale = account.holdings
-        .where("external_id LIKE ?", "#{position_external_id_prefix}#{isin}_%")
+        .where("external_id LIKE ?", "#{ActiveRecord::Base.sanitize_sql_like("#{position_external_id_prefix}#{isin}_")}%")
         .where.not(security_id: security.id)
         .where(security_locked: false)
       return unless stale.exists?
 
-      taken = account.holdings.where(security_id: security.id).pluck(:date, :currency).to_set
-      stale.find_each do |holding|
-        key = [ holding.date, holding.currency ]
-        if taken.include?(key)
-          holding.destroy!
-        else
-          holding.update_columns(security_id: security.id, provider_security_id: security.id, updated_at: Time.current)
-          taken << key
-        end
-      end
+      mismatched_dates = move_holdings_to_security!(stale, security, adopt_provider_security: true)
+      log_rematch_collisions(
+        "Bond rematch collision kept the bond's own holding market values",
+        mismatched_dates,
+        isin: isin,
+        to_security_id: security.id
+      )
     end
 
     def position_external_id_prefix

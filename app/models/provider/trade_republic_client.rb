@@ -69,6 +69,8 @@ class Provider::TradeRepublicClient
   # placeholder symbol "BOND", so they resolve by ISIN instead.
   INSTRUMENT_SYMBOL_CATEGORIES = %w[stocksAndETFs].freeze
   BOND_INSTRUMENT_TYPE = "bond"
+  BOND_PLACEHOLDER_SYMBOL = "BOND"
+  BOND_PLACEHOLDER_EXCHANGE = "LSX"
   FEE_TITLES = [
     "gebühr", "fee", "fees", "kosten", "costs", "cost", "commission", "kommission"
   ].freeze
@@ -503,6 +505,16 @@ class Provider::TradeRepublicClient
 
       detail = (event["detail"] || event[:detail]).stringify_keys
       detail["price"].to_s.strip.blank?
+    end
+
+    # Earlier syncs stored this listing on bond positions and trades.
+    def bond_placeholder_listing?(symbol, exchange_slug)
+      symbol.to_s.strip.casecmp?(BOND_PLACEHOLDER_SYMBOL) &&
+        exchange_slug.to_s.strip.casecmp?(BOND_PLACEHOLDER_EXCHANGE)
+    end
+
+    def bond?(detail)
+      detail.is_a?(Hash) && detail.with_indifferent_access[:instrument_type].to_s == BOND_INSTRUMENT_TYPE
     end
 
     def instrument_symbols_from_positions(positions)
@@ -990,7 +1002,7 @@ class Provider::TradeRepublicClient
         detail = detail.stringify_keys
         isin = detail["isin"].to_s.presence
         next if isin.blank?
-        next if detail["instrument_type"].to_s == BOND_INSTRUMENT_TYPE
+        next if self.class.bond?(detail)
         next if known_symbols.key?(isin)
         next if usable_trade_symbol?(detail["symbol"], isin) && detail["exchange_slug"].to_s.strip.present?
 
@@ -1392,7 +1404,8 @@ class Provider::TradeRepublicClient
       tax_amount = decimal_from_row(taxes)
       price = decimal_from_row(price_row)
       quotation = decimal_from_row(find_row(rows, QUOTATION_TITLES)) if nominal
-      # Same per-unit convention as bond positions: 92,67 % of par is 0.9267.
+      # Per unit of nominal, like a bond position's averageBuyIn: 92,67 % of
+      # par is 0.9267.
       price ||= quotation / 100 if quotation
       dividend_per_share = decimal_from_row(find_row(rows, DIVIDEND_PER_SHARE_TITLES))
       if price.nil? && quantity&.nonzero? && amount

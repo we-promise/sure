@@ -605,6 +605,58 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal france.id, holding.provider_security_id
   end
 
+  test "bond rematch keeps the bond's own holding and its cost basis on a date collision" do
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
+    italy = Security.create!(ticker: "IT0005377152", name: "ITALIEN 19/40", offline: true)
+    provider_id = @tr_account.account_provider.id
+    date = Date.current - 1
+    own = @account.holdings.create!(
+      security: italy, date: date, qty: 2677.95, price: 0.8404, amount: 2250.55, currency: "EUR",
+      account_provider_id: provider_id
+    )
+    stale = @account.holdings.create!(
+      security: shared, date: date, qty: 2677.95, price: 84.04, amount: 225054.92, currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_IT0005377152_#{date}", account_provider_id: provider_id,
+      cost_basis: 0.9271, cost_basis_source: "manual", cost_basis_locked: true
+    )
+
+    @tr_account.update!(raw_positions_payload: [
+      bond_position(isin: "IT0005377152", name: "ITALIEN 19/40", quantity: "2677.95", price: "0.8404")
+    ])
+    assert_difference -> { DebugLogEntry.where(message: "Bond rematch collision kept the bond's own holding market values").count }, 1 do
+      TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+    end
+
+    assert_not Holding.exists?(stale.id)
+    own.reload
+    assert_equal BigDecimal("2250.55"), own.amount
+    assert_equal BigDecimal("0.9271"), own.cost_basis
+    assert own.cost_basis_locked?
+    assert_equal stale.external_id, own.external_id
+    assert_nil own.provider_security_id
+  end
+
+  test "positions on the legacy BOND listing resolve by ISIN" do
+    import_position(isin: "IT0005377152", quantity: "2677.95", price: "0.8404", symbol: "BOND", exchange_slug: "LSX")
+
+    security = @account.holdings.first.security
+    assert_equal "IT0005377152", security.ticker
+    assert_nil security.exchange_operating_mic
+  end
+
+  test "bond rematch leaves share positions alone" do
+    other = Security.create!(ticker: "OTHER", name: "Other")
+    holding = @account.holdings.create!(
+      security: other, date: Date.current - 1, qty: 1, price: 10, amount: 10, currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_US0378331005_#{Date.current - 1}",
+      account_provider_id: @tr_account.account_provider.id
+    )
+
+    import_position(isin: "US0378331005", quantity: "1", price: "183.94")
+
+    assert_equal other, holding.reload.security
+  end
+
   test "bond rematch keeps a holding the user remapped" do
     shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
     holding = @account.holdings.create!(

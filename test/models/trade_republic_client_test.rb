@@ -1732,6 +1732,43 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_nil detail["instrument_type"]
   end
 
+  test "rows of a nested untitled table do not override the share trade overview" do
+    breakdown = {
+      "sections" => [
+        { "type" => "table", "data" => [
+          { "title" => "Aktien", "detail" => { "text" => "99" } },
+          { "title" => "Kurs", "detail" => { "text" => "1,00 €" } },
+          { "title" => "Gesamt", "detail" => { "text" => "5,00 €" } }
+        ] }
+      ]
+    }
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Übersicht", "type" => "table", "data" => [
+          { "title" => "Aktien", "detail" => { "text" => "2" } },
+          { "title" => "Kurs", "detail" => { "text" => "511,96 €" } },
+          {
+            "title" => "Transaktion",
+            "detail" => { "text" => "1.023,92 €", "action" => { "type" => "infoPage", "payload" => breakdown } }
+          },
+          { "title" => "Gesamt", "detail" => { "text" => "1.024,92 €" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
+      ]
+    }, item: { "title" => "Core S&P 500", "subtitle" => "Kauforder" })
+
+    assert_equal "2.0", detail["quantity"]
+    assert_equal "511.96", detail["price"]
+    assert_equal "1024.92", detail["amount"]
+  end
+
+  test "bond_placeholder_listing? only matches BOND on LSX" do
+    assert Provider::TradeRepublicClient.bond_placeholder_listing?("BOND", "LSX")
+    assert Provider::TradeRepublicClient.bond_placeholder_listing?(" bond ", "lsx")
+    assert_not Provider::TradeRepublicClient.bond_placeholder_listing?("BOND", "XETR")
+    assert_not Provider::TradeRepublicClient.bond_placeholder_listing?("BAS", "LSX")
+  end
+
   test "enrich_trade_instrument_symbols does not look up bond trades" do
     looked_up = []
     @client.define_singleton_method(:instrument_exchange_symbol) do |_websocket, isin|
@@ -1774,7 +1811,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       }
 
       {
-        "id" => "1be7f4cb-9d85-476e-82a5-8bd641b27245",
+        "id" => "bond-purchase",
         "sections" => [
           {
             "title" => "Du hast 2.498,31 € investiert",
