@@ -1,6 +1,8 @@
 module EntriesHelper
   SplitGroup = Data.define(:parent, :children)
 
+  # Groups split-child entries under their parent, preserving list order.
+  # Children whose parent isn't loaded render as plain entries.
   def group_split_entries(entries, split_parents)
     return entries if split_parents.blank?
 
@@ -23,6 +25,8 @@ module EntriesHelper
     result
   end
 
+  # Picks the compact partial and locals for an account-activity entry based on
+  # its entryable type. Unknown types fall back to rendering the entry itself.
   def compact_entry_render_options(entry, view_ctx: "account", is_filtered: false, in_split_group: false, running_balance: nil, hide_balance: false, flat: false)
     partial = {
       "Transaction" => "transactions/compact_transaction",
@@ -38,6 +42,8 @@ module EntriesHelper
     { partial: partial, locals: locals }
   end
 
+  # Drops the inflow leg of transfers whose both legs are listed, keeping the
+  # original order so flat (ungrouped) lists stay chronological.
   def dedupe_transfer_entries(entries)
     # For a more intuitive UX, we do not want to show the same transfer twice
     # in the list. We count occurrences by transfer id first (without
@@ -54,6 +60,8 @@ module EntriesHelper
     end
   end
 
+  # Groups entries by date (newest first) after transfer dedup, yielding each
+  # day's entries for rendering inside an entry-group section.
   def entries_by_date(entries, totals: false, compact: false)
     deduped_entries = dedupe_transfer_entries(entries)
 

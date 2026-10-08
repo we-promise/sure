@@ -47,6 +47,8 @@ class DS::CompactRow < DesignSystemComponent
     @extra_class = binding.local_variable_get(:class)
   end
 
+  # Root flex shell shared by data rows and header labels, so columns stay
+  # pixel-aligned. Headers render label typography with matching inset.
   def row_classes
     class_names(
       "flex items-center gap-2",
@@ -58,10 +60,14 @@ class DS::CompactRow < DesignSystemComponent
     )
   end
 
+  # Table semantics for the div-based layout: headers expose columnheaders,
+  # data rows expose cells.
   def cell_role
     @header ? "columnheader" : "cell"
   end
 
+  # Checkbox column shell. Data rows reveal it on small containers once the
+  # bulk-select toggle unhides the input; headers never reveal it.
   def checkbox_wrapper_classes
     class_names(
       "w-6 shrink-0 justify-center hidden @5xl/compact-table:flex",
