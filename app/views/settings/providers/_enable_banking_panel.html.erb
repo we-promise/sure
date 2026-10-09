@@ -79,7 +79,7 @@
     <%= form.text_field :application_id,
                         label: t("settings.providers.enable_banking_panel.application_id_label"),
                         placeholder: is_new_record ? t("settings.providers.enable_banking_panel.application_id_placeholder_new") : t("settings.providers.enable_banking_panel.application_id_placeholder_update"),
-                        value: enable_banking_item.application_id,
+                        value: nil,
                         disabled: has_authenticated_connections && !is_new_record %>
 
     <%= form.text_area :client_certificate,

@@ -549,9 +549,13 @@ class EnableBankingItemsController < ApplicationController
         :application_id,
         :client_certificate
       )
-      # The panel never pre-fills the stored certificate, so a blank one on
-      # update means "keep the current certificate".
-      permitted.delete(:client_certificate) if @enable_banking_item&.persisted? && permitted[:client_certificate].blank?
+      # The panel never pre-fills the stored credentials, so a blank one on
+      # update means "keep the current value".
+      if @enable_banking_item&.persisted?
+        %i[application_id client_certificate].each do |credential|
+          permitted.delete(credential) if permitted[credential].blank?
+        end
+      end
       permitted
     end
 
