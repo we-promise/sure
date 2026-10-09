@@ -56,21 +56,22 @@ class Portfolio::DailyReturns
     end
   end
 
-  attr_reader :account_ids, :currency, :period, :active_until_dates, :scope_account_ids
+  attr_reader :account_ids, :currency, :period, :active_until_dates
 
-  # `scope_account_ids` is what the flow classifier treats as "inside" -- see
-  # Portfolio::FlowClassifier. It defaults to `account_ids` (the natural reading:
-  # a scope is external to everything it does not contain), but a caller
-  # computing one account's return inside a wider portfolio can pass the wider
-  # set to keep internal transfers internal.
-  def initialize(account_ids:, currency:, period:, active_until_dates: {}, scope_account_ids: nil)
+  # The flow classifier's "inside" is `account_ids` itself: a scope is
+  # external to everything it does not contain (see Portfolio::FlowClassifier).
+  #
+  # Deliberately not a separate, wider set. Classifying against accounts the
+  # series does not value makes a transfer to one of them internal, so it
+  # leaves the denominator alone while the money leaves the close, and the
+  # source account's drop reads as a loss.
+  def initialize(account_ids:, currency:, period:, active_until_dates: {})
     @account_ids = Array(account_ids).compact.map(&:to_s)
     @currency = currency
     @period = period
     @active_until_dates = (active_until_dates || {}).compact
       .transform_keys(&:to_s)
       .transform_values { |date| date.to_date.iso8601 }
-    @scope_account_ids = Array(scope_account_ids || @account_ids).compact.map(&:to_s)
   end
 
   # Every day in the period, with its raw components. Empty when no accounts.
@@ -173,7 +174,6 @@ class Portfolio::DailyReturns
     def query_binds
       {
         account_ids: account_ids,
-        scope_account_ids: scope_account_ids,
         target_currency: currency,
         start_date: period.start_date,
         end_date: period.end_date,
@@ -434,12 +434,12 @@ class Portfolio::DailyReturns
       SQL
     end
 
-    # One classifier for both fragments, built on the scope this instance treats
-    # as "inside". Its table aliases are fixed rather than passed in; nothing in
+    # One classifier for both fragments, built on the accounts this instance
+    # values. Its table aliases are fixed rather than passed in; nothing in
     # the queries above joins `trades` or `transactions` itself, so there is
     # nothing to collide with.
     def flow_classifier
-      @flow_classifier ||= Portfolio::FlowClassifier.new(scope_account_ids: scope_account_ids)
+      @flow_classifier ||= Portfolio::FlowClassifier.new(scope_account_ids: account_ids)
     end
 
     def flow_class_sql
