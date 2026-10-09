@@ -808,11 +808,19 @@ class Provider::TradeRepublicClient
 
         private_market = position["categoryType"].to_s == "privateMarkets"
         price = position_price(websocket, isin, position["categoryType"])
+        # Bond tickers are quoted in percent of par (e.g. 84.04 = 84.04%),
+        # while netSize is the nominal amount in currency units. Convert the
+        # ticker quote to a per-unit price so quantity * price yields the
+        # market value. Fallback prices below are already per unit.
+        price = bond_unit_price(price) if price.present? && position["categoryType"].to_s == "bonds"
         price = private_market_quotes[isin] if price.blank? && private_market_quotes.present?
         # Private-market funds have no exchange quote. Without a
         # privateMarketsPositions unit price, value them at the average buy-in
         # rather than zero. Other categories keep the unpriced warning.
         price = decimal_string(position["averageBuyIn"] || position["avgCost"]) if price.blank? && private_market
+        # Non-numeric quotes ("N/A") and non-finite ones ("NaN", "Infinity")
+        # would corrupt the balance; keep the position unvalued instead.
+        price = nil unless finite_decimal(price)
 
         if price.present?
           prices[isin] = price
@@ -855,6 +863,20 @@ class Provider::TradeRepublicClient
         }.compact
       end
       [ positions, warnings ]
+    end
+
+    def bond_unit_price(percent_price)
+      value = finite_decimal(percent_price)
+      (value / 100).to_s("F") if value
+    end
+
+    def finite_decimal(value)
+      return nil if value.blank?
+
+      decimal = BigDecimal(value.to_s)
+      decimal if decimal.finite?
+    rescue ArgumentError
+      nil
     end
 
     def position_price(websocket, isin, category_type)

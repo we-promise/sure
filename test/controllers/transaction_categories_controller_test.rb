@@ -63,4 +63,39 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_includes response.body, "action_type=set_transaction_category"
   end
+
+  test "a matched transfer's inflow leg does not take a category" do
+    outflow, inflow = create_contribution_transfer
+    category = categories(:income)
+
+    patch transaction_category_url(inflow.entry),
+          params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: inflow.id, category_id: category.id } } },
+          as: :turbo_stream
+
+    assert_response :unprocessable_entity
+    assert_nil inflow.reload.category_id
+    assert_nil outflow.reload.category_id
+  end
+
+  test "a matched transfer's outflow leg still takes a category" do
+    outflow, _inflow = create_contribution_transfer
+    category = categories(:income)
+
+    patch transaction_category_url(outflow.entry),
+          params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: outflow.id, category_id: category.id } } },
+          as: :turbo_stream
+
+    assert_response :success
+    assert_equal category, outflow.reload.category
+  end
+
+  private
+    def create_contribution_transfer
+      outflow = Transaction.create!(kind: "investment_contribution")
+      Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
+      inflow = Transaction.create!(kind: "funds_movement")
+      Entry.create!(account: accounts(:investment), entryable: inflow, name: "Contribution", amount: -500, currency: "USD", date: Date.current)
+      Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+      [ outflow, inflow ]
+    end
 end

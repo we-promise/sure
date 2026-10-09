@@ -437,7 +437,8 @@ class TradeRepublicItem::Importer
 
     def parse_decimal(value)
       return nil if value.blank?
-      BigDecimal(value.to_s)
+      decimal = BigDecimal(value.to_s)
+      decimal if decimal.finite?
     rescue ArgumentError
       nil
     end

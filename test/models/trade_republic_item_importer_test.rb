@@ -265,6 +265,32 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal "617.28", portfolio.raw_positions_payload.first["price"]
   end
 
+  test "non-finite position prices preserve the last known portfolio balance" do
+    portfolio = @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Existing portfolio",
+      currency: "EUR",
+      trade_republic_account_id: "DE5555",
+      current_balance: BigDecimal("1234.56"),
+      raw_positions_payload: [ { "isin" => "KEEP", "quantity" => "2", "price" => "617.28" } ]
+    )
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE5555", "currency" => "EUR" },
+      "cash" => { "amount" => "0", "currency" => "EUR" },
+      "positions" => [ { "isin" => "KEEP", "quantity" => "2", "price" => "NaN" } ],
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal BigDecimal("1234.56"), portfolio.reload.current_balance
+  end
+
   test "cash success with timeline failure updates cash but preserves timeline and cursor" do
     portfolio = @item.trade_republic_accounts.create!(
       kind: "portfolio",
