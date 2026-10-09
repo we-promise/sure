@@ -83,8 +83,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "bills.views.paycheck" => "Einkommensplan",
       "bills.views.all" => "Alle Rechnungen",
       "bills.index.title" => "Rechnungen",
-      "bills.index.add_bill" => "Rechnung hinzufügen",
-      "bills.index.add_income" => "Einkommen hinzufügen",
+      "bills.index.add_bill" => "Neue Rechnung",
+      "bills.index.add_income" => "Neues Einkommen",
       "bills.index.review_with_ai" => "Mit KI prüfen"
     }
 
@@ -269,6 +269,30 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       assert_no_match(/overdue/i, links.first.text)
       # A paused bill isn't charging.
       assert_not_includes links.first.text, I18n.t("recurring_transactions.pay_action.autopay")
+    end
+  end
+
+  # Paused bills sat under a heading that called them Dormant, while each row,
+  # the drawer's Pause/Resume and the All bills filter all said Paused. The
+  # heading names a group of bills, so it takes the All bills filter's label
+  # for that same group: in Russian and Ukrainian that is the plural, where a
+  # row's own status reads as a single bill's.
+  test "paused bills sit under the All bills filter's word for them, in every language" do
+    late = 6.days.ago.to_date
+    bill = create_bill(name: "Paused gym", amount: 40, expected_day_of_month: late.day,
+                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+    bill.mark_inactive!
+
+    get bills_url
+
+    assert_response :success
+    assert_select "main h2", text: I18n.t("bills.all.status_filters.paused")
+    I18n.available_locales.each do |locale|
+      filter = I18n.t("bills.all.status_filters.paused", locale: locale, fallback: false, default: nil)
+      next if filter.nil?
+
+      assert_equal filter, I18n.t("bills.index.dormant", locale: locale, fallback: false, default: nil),
+        "#{locale}: the Paused heading and the All bills filter say different things"
     end
   end
 
@@ -2116,7 +2140,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
     assert_response :success
     assert_match "Water Co", response.body
-    assert_no_match I18n.t("bills.index.dormant"), response.body
+    # No Paused section. The word itself is fine: the paid row says Paused.
+    assert_select "main h2", text: I18n.t("bills.index.dormant"), count: 0
     assert_match I18n.t("bills.month_pulse.left_to_pay"), response.body
   end
 

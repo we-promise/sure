@@ -37,7 +37,7 @@ de:
       skip: Überspringen
       snooze_week: Um eine Woche verschieben
       reopen: Wieder öffnen
-      view_bill: Vollständige Rechnung anzeigen
+      view_bill: Rechnung anzeigen
     mark_paid:
       success: Rechnung als bezahlt markiert
     skip:

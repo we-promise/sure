@@ -98,8 +98,8 @@ ca:
       autopay: Domiciliat
       autopay_aria: '%{name} es paga automàticament; obre el seu portal en una pestanya nova'
     new:
-      title: Afegeix una factura
-      income_title: Afegeix un ingrés
+      title: Nova factura
+      income_title: Nou ingrés
       start_from_title: Parteix d'un càrrec recurrent que hem detectat
       start_from_income_title: Parteix d'un ingrés recurrent que hem detectat
       start_from_hint: Opcional. Si en tries un, només s'omple el formulari; encara pots canviar-ho tot.

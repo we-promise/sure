@@ -122,7 +122,7 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       "show.skip" => "Überspringen",
       "show.snooze_week" => "Um eine Woche verschieben",
       "show.reopen" => "Wieder öffnen",
-      "show.view_bill" => "Vollständige Rechnung anzeigen",
+      "show.view_bill" => "Rechnung anzeigen",
       "mark_paid.success" => "Rechnung als bezahlt markiert",
       "skip.success" => "Rechnung übersprungen",
       "reopen.success" => "Rechnung wieder geöffnet",

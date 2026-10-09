@@ -52,8 +52,8 @@ en:
       autopay: Autopay
       autopay_aria: "%{name} pays automatically, open its portal in a new tab"
     new:
-      title: Add a bill
-      income_title: Add income
+      title: New bill
+      income_title: New income
       start_from_title: Start from a recurring charge we spotted
       start_from_income_title: Start from a recurring deposit we spotted
       start_from_hint: Optional. Picking one just fills in the form; you can still change anything.
