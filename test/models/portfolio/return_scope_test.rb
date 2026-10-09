@@ -261,6 +261,24 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
     assert_empty queries, "an empty set must not reach the database at all"
   end
 
+  # Every test here counts rows laid by `lay_balance`, so the builder's own
+  # arithmetic check has to hold at the precision the rows are stored at.
+  # These components add up as given, but `balances` keeps four decimal
+  # places: stored, each 0.00005 becomes 0.0001 and the row's end_balance is
+  # 0.0002 against a balance of 0.0001.
+  test "the balance builder refuses an amount finer than balances store" do
+    error = assert_raises(ArgumentError) do
+      lay_balance account: @account, date: @day_one, opening: "0.00005", closing: "0.0001", cash_flow: "0.00005"
+    end
+
+    assert_match "finer than the 4 decimal places", error.message
+    assert_empty @account.balances.reload, "nothing is written for a refused day"
+
+    lay_balance account: @account, date: @day_one, opening: "0.0001", closing: "0.0002", cash_flow: "0.0001"
+    assert_equal BigDecimal("0.0002"), @account.balances.reload.sole.end_balance,
+                 "four decimal places is the stored scale and is accepted"
+  end
+
   private
     def create_valuation_entry(date:, amount:)
       @account.entries.create!(
