@@ -362,10 +362,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     travel_to Date.current.beginning_of_month + 9.days
     create_bill(name: "Soon Co", amount: 20, manual: true, anchor_date: Date.current + 3,
                 expected_day_of_month: (Date.current + 3).day, next_expected_date: Date.current + 3)
-    late = 6.days.ago.to_date
-    bill = create_bill(name: "Late Co", amount: 30, expected_day_of_month: late.day,
-                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
-    bill.recurring_occurrences.open_status.order(:due_on).first.snooze!(Date.current + 7)
+    snoozed_late_bill
 
     get bills_url
 
@@ -377,17 +374,108 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # month with next month's date on its rail.
   test "a bill snoozed past the month's end moves after this month" do
     travel_to Date.current.end_of_month - 2.days
-    late = 6.days.ago.to_date
-    bill = create_bill(name: "Late Co", amount: 30, expected_day_of_month: late.day,
-                       last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
-    occurrence = bill.recurring_occurrences.open_status.order(:due_on).first
-    occurrence.snooze!(Date.current + 7)
+    occurrence = snoozed_late_bill
 
     get bills_url
 
     assert_response :success
     assert_empty @controller.view_assigns["month_rows"]
     assert_equal [ occurrence.id ], @controller.view_assigns["later"].map(&:id)
+  end
+
+  # Paid, a snoozed bill still belongs to the month of its new date. Paid
+  # before that month, it jumped back into this one with next month's date on
+  # its rail and its payment in this month's paid total, then listed nowhere
+  # once the month turned.
+  test "a bill snoozed into next month and paid early lists as paid in next month" do
+    travel_to Date.current.end_of_month - 2.days
+    occurrence = snoozed_late_bill
+    pay(occurrence)
+
+    get bills_url
+    assert_not_includes @controller.view_assigns["month_rows"].map(&:id), occurrence.id
+    assert_nil @controller.view_assigns["paid_this_month_total"]
+
+    travel_to occurrence.reload.effective_due_on + 1.day
+    get bills_url
+    assert_includes @controller.view_assigns["month_rows"].map(&:id), occurrence.id
+    assert_equal Money.new(30, "USD"), @controller.view_assigns["paid_this_month_total"]
+  end
+
+  # Paid after the month turned, the same bill dropped out of the month it was
+  # snoozed into, because the query still went by the date it was moved from.
+  test "a bill snoozed into next month and paid there stays listed there" do
+    travel_to Date.current.end_of_month - 2.days
+    occurrence = snoozed_late_bill
+    travel_to occurrence.reload.effective_due_on - 2.days
+    pay(occurrence)
+
+    get bills_url
+
+    assert_includes @controller.view_assigns["month_rows"].map(&:id), occurrence.id
+    assert_equal Money.new(30, "USD"), @controller.view_assigns["paid_this_month_total"]
+  end
+
+  # Next month's rent paid a day early used to list, and count as paid, in
+  # both months. It belongs to the month it is due in.
+  test "next month's bill paid early lists in next month only" do
+    travel_to Date.current.end_of_month
+    due = Date.current + 1
+    rent = create_bill(name: "Rent Co", amount: 900, manual: true, anchor_date: due,
+                       expected_day_of_month: due.day, next_expected_date: due)
+    occurrence = rent.recurring_occurrences.find_by!(due_on: due)
+    pay(occurrence)
+
+    get bills_url
+    assert_empty @controller.view_assigns["month_rows"]
+    assert_nil @controller.view_assigns["paid_this_month_total"]
+
+    travel_to due + 2.days
+    get bills_url
+    assert_includes @controller.view_assigns["month_rows"].map(&:id), occurrence.id
+    assert_equal Money.new(900, "USD"), @controller.view_assigns["paid_this_month_total"]
+  end
+
+  # The month's first and last days are both inside it: a bill snoozed onto
+  # the 1st and one due on the last day, each paid, list in it.
+  test "paid rows dated on the month's first and last day list in it" do
+    travel_to Date.current.beginning_of_month + 9.days
+    month_start = Date.current.beginning_of_month
+    month_end = Date.current.end_of_month
+    carried = create_bill(name: "Carried Co", amount: 30, expected_day_of_month: (month_start - 5).day,
+                          last_occurrence_date: 2.months.ago.to_date, next_expected_date: month_start - 5)
+    first = carried.recurring_occurrences.find_by!(due_on: month_start - 5)
+    first.snooze!(month_start)
+    month_end_bill = create_bill(name: "Month-end Co", amount: 50, manual: true, anchor_date: month_end,
+                                 expected_day_of_month: month_end.day, next_expected_date: month_end)
+    last = month_end_bill.recurring_occurrences.find_by!(due_on: month_end)
+    pay(first)
+    pay(last)
+
+    get bills_url
+
+    assert_includes @controller.view_assigns["month_rows"].map(&:id), first.id
+    assert_includes @controller.view_assigns["month_rows"].map(&:id), last.id
+    assert_equal Money.new(80, "USD"), @controller.view_assigns["paid_this_month_total"]
+  end
+
+  # The overview files a bill snoozed past payday under that payday's marker.
+  # The income plan kept it before payday, at its old date, and called the
+  # $100 in the bank short.
+  test "the income plan files a bill snoozed past payday under that payday" do
+    @family.accounts.where(accountable_type: "Depository").update_all(balance: 0)
+    accounts(:depository).update_column(:balance, 100)
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 3)
+    power = declare_bill(name: "Power Co", amount: 120, due: Date.current - 6)
+    occurrence = power.recurring_occurrences.open_status.order(:due_on).first
+    occurrence.snooze!(Date.current + 7)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_no_match I18n.t("bills.paycheck.shortfall_label"), response.body
+    row = assert_select("a[href=?]", recurring_occurrence_path(occurrence)).first.ancestors("div").first
+    assert_equal I18n.l(Date.current + 7, format: :short), row.at_css("span").text.strip
   end
 
   # On a phone the range squeezed the bill's name to "PG&E Ele…", so the row
@@ -2323,6 +2411,25 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("bills.index.suggestion_line", entry: "SKIPPED GYM", bill: "SKIPPED GYM"), response.body
   end
 
+  # Paid ahead, next month's bill lists in next month, so this month's queue
+  # mustn't ask about it either.
+  test "a suggestion against next month's bill paid early stays out of this month's review queue" do
+    travel_to Date.current.end_of_month
+    due = Date.current + 1
+    bill = declare_bill(name: "EARLY GYM", amount: 40, due: due)
+    occurrence = bill.recurring_occurrences.find_by!(due_on: due)
+    charge = create_transaction_entry(name: "EARLY GYM", amount: 40, date: Date.current)
+    RecurringTransaction::Allocator.new(occurrence).allocate_matched!(
+      entry: charge, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+    pay(occurrence)
+
+    get bills_url
+
+    assert_response :success
+    assert_no_match I18n.t("bills.index.suggestion_line", entry: "EARLY GYM", bill: "EARLY GYM"), response.body
+  end
+
 
   # The overview groups by calendar month, which is the wrong unit for anyone
   # paid weekly: four paychecks and four rent payments land in one list. The
@@ -2451,6 +2558,20 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     def money_string(amount)
       ApplicationController.helpers.format_money(Money.new(amount, @family.currency))
+    end
+
+    # A bill due six days ago, snoozed a week: the one snooze the app offers.
+    def snoozed_late_bill
+      late = 6.days.ago.to_date
+      bill = create_bill(name: "Late Co", amount: 30, expected_day_of_month: late.day,
+                         last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
+      occurrence = bill.recurring_occurrences.open_status.order(:due_on).first
+      occurrence.snooze!(Date.current + 7)
+      occurrence
+    end
+
+    def pay(occurrence)
+      RecurringTransaction::Allocator.new(occurrence).mark_paid!(paid_on: Date.current)
     end
 
     def create_transaction_entry(name:, amount:, date:, account: accounts(:depository))
