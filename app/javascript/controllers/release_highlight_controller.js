@@ -1,8 +1,10 @@
 import { Controller } from "@hotwired/stimulus";
 
-// A drawer or modal over the page, or a frame still fetching one.
-const COVERED =
-  "dialog:modal, turbo-frame#drawer[busy], turbo-frame#modal[busy]";
+// A drawer or modal over the page, or a frame that may still be fetching one.
+// Any loading frame counts, not just #drawer and #modal: dialogs also arrive
+// in frames of their own, such as the transactions bulk-edit drawer, and
+// listing frame ids would miss the next one.
+const COVERED = "dialog:modal, turbo-frame[busy]";
 
 // "What's new" release highlight.
 //

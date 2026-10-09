@@ -79,18 +79,38 @@ class ReleaseHighlightsSystemTest < ApplicationSystemTestCase
     page.execute_script("document.getElementById('drawer').setAttribute('busy', '')")
     find("h1", text: @user.first_name).click
 
-    page.document.synchronize do
-      waiting = page.evaluate_script(<<~JS)
-        (() => {
-          const element = document.querySelector('[data-controller="release-highlight"]');
-          return !!window.Stimulus.getControllerForElementAndIdentifier(element, "release-highlight").uncoveredPoll;
-        })()
-      JS
-      raise Capybara::ElementNotFound, "the popup is not waiting yet" unless waiting
-    end
+    assert_popup_waiting
     assert_no_selector "dialog[open]"
 
     page.execute_script("document.getElementById('drawer').removeAttribute('busy')")
     assert_selector "dialog[open]", text: "Hotfix release notes"
   end
+
+  # Not every drawer loads into #drawer: bulk edit has a frame of its own.
+  test "the popup waits for the bulk-edit drawer frame too" do
+    visit transactions_url
+    frame = "document.getElementById('bulk_transaction_edit_drawer')"
+    page.execute_script("#{frame}.setAttribute('busy', '')")
+    find("h1", text: I18n.t("transactions.index.title")).click
+
+    assert_popup_waiting
+    assert_no_selector "dialog[open]"
+
+    page.execute_script("#{frame}.removeAttribute('busy')")
+    assert_selector "dialog[open]", text: "Hotfix release notes"
+  end
+
+  private
+
+    def assert_popup_waiting
+      page.document.synchronize do
+        waiting = page.evaluate_script(<<~JS)
+          (() => {
+            const element = document.querySelector('[data-controller="release-highlight"]');
+            return !!window.Stimulus.getControllerForElementAndIdentifier(element, "release-highlight").uncoveredPoll;
+          })()
+        JS
+        raise Capybara::ElementNotFound, "the popup is not waiting yet" unless waiting
+      end
+    end
 end
