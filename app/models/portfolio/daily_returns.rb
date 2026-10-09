@@ -56,21 +56,22 @@ class Portfolio::DailyReturns
     end
   end
 
-  attr_reader :account_ids, :currency, :period, :active_until_dates, :scope_account_ids
+  attr_reader :account_ids, :currency, :period, :active_until_dates
 
-  # `scope_account_ids` is what the flow classifier treats as "inside" -- see
-  # Portfolio::FlowClassifier. It defaults to `account_ids` (the natural reading:
-  # a scope is external to everything it does not contain), but a caller
-  # computing one account's return inside a wider portfolio can pass the wider
-  # set to keep internal transfers internal.
-  def initialize(account_ids:, currency:, period:, active_until_dates: {}, scope_account_ids: nil)
+  # The flow classifier's "inside" is `account_ids` itself: a scope is
+  # external to everything it does not contain (see Portfolio::FlowClassifier).
+  #
+  # Deliberately not a separate, wider set. Classifying against accounts the
+  # series does not value makes a transfer to one of them internal, so it
+  # leaves the denominator alone while the money leaves the close, and the
+  # source account's drop reads as a loss.
+  def initialize(account_ids:, currency:, period:, active_until_dates: {})
     @account_ids = Array(account_ids).compact.map(&:to_s)
     @currency = currency
     @period = period
     @active_until_dates = (active_until_dates || {}).compact
       .transform_keys(&:to_s)
       .transform_values { |date| date.to_date.iso8601 }
-    @scope_account_ids = Array(scope_account_ids || @account_ids).compact.map(&:to_s)
   end
 
   # Every day in the period, with its raw components. Empty when no accounts.
@@ -177,7 +178,6 @@ class Portfolio::DailyReturns
     def query_binds
       {
         account_ids: account_ids,
-        scope_account_ids: scope_account_ids,
         target_currency: currency,
         start_date: period.start_date,
         end_date: period.end_date,
@@ -316,7 +316,12 @@ class Portfolio::DailyReturns
             -- day's rate change. Zero when the account's currency is the
             -- family's, because both rates are then exactly 1.
             COALESCE(SUM(lb.end_balance * lb.flows_factor * (er.rate - prev_er.rate)), 0) AS fx_effect,
-            BOOL_OR(lb.end_balance IS NOT NULL
+            -- Only a balance that is not zero needs converting: an account
+            -- whose rows are all zero (an unfunded account with a zero opening
+            -- anchor) contributes zero at any rate, so it cannot be short of
+            -- one. start_balance is checked too because it is what value_open
+            -- reads on the period's first day.
+            BOOL_OR((lb.end_balance <> 0 OR lb.start_balance <> 0)
                     AND sa.currency <> :target_currency
                     AND er.rate IS NULL) AS rate_missing
           FROM dates d
@@ -397,7 +402,15 @@ class Portfolio::DailyReturns
             -- so a missing rate there is invisible to the check above. Without
             -- this a suppressed journal day would not report `rate_missing?`
             -- and a caller could not say which fact it was short of.
+            --
+            -- For the same reason the entry-currency check leaves journals out:
+            -- a journal's entry carries a zero amount that converts nothing,
+            -- so its rate cannot be what a figure is short of. COALESCE
+            -- because the predicate compares `trades` columns, and a trade
+            -- with no label makes it NULL; NOT NULL is NULL, which would
+            -- drop the row from this check rather than keep it.
             COALESCE(BOOL_OR((fx.rate IS NULL
+                              AND NOT COALESCE((#{journal_predicate}), false)
                               AND #{flow_class_sql} IN ('external_inflow', 'external_outflow', 'income', 'fee'))
                              OR (journal_fx.rate IS NULL
                                  AND journal_holdings.currency IS NOT NULL
@@ -529,12 +542,12 @@ class Portfolio::DailyReturns
       SQL
     end
 
-    # One classifier for both fragments, built on the scope this instance treats
-    # as "inside". Its table aliases are fixed rather than passed in; nothing in
+    # One classifier for both fragments, built on the accounts this instance
+    # values. Its table aliases are fixed rather than passed in; nothing in
     # the queries above joins `trades` or `transactions` itself, so there is
     # nothing to collide with.
     def flow_classifier
-      @flow_classifier ||= Portfolio::FlowClassifier.new(scope_account_ids: scope_account_ids)
+      @flow_classifier ||= Portfolio::FlowClassifier.new(scope_account_ids: account_ids)
     end
 
     # A security journal: a Transfer-labelled trade with no cash amount.

@@ -71,6 +71,24 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), daily_returns.returns.last.last
   end
 
+  # The case the zero test above cannot see. A withdrawal larger than the
+  # opening value leaves a NEGATIVE start-of-day capital, and dividing by it
+  # flips the sign: here the day's 100 close over a -500 denominator reads as a
+  # -120% day. A guard that only refused zero would let that through.
+  test "an over-withdrawal suppresses the day rather than reversing its sign" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 100,
+                cash_flow: -1_500, market_flow: 600
+    deposit account: @account, date: @day_two, amount: -1_500
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("-500"), second.denominator, "the fixture must reach a negative denominator"
+    assert second.suppressed, "a negative denominator must be suppressed"
+    assert_equal BigDecimal("0"), daily_returns.returns.last.last,
+                 "a suppressed day contributes nothing, not a reversed return"
+  end
+
   # `InvestmentStatement#period_return_trend` converts a missing
   # rate at parity (COALESCE(rate, 1)), which turns 1,000 EUR into 1,000 USD
   # without saying so. A missing pair has to be visible.
@@ -425,6 +443,36 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_in_delta 0.10, returns.returns.last.last.to_f, 0.000001
   end
 
+  # The same rule one step on: an account that HAS balance rows, every one of
+  # them zero, holds nothing either. A zero opening anchor written for an
+  # account the user has added but not funded is exactly this, and a zero
+  # converts to zero at any rate, so there is no conversion to be missing.
+  test "a foreign account whose balance rows are all zero does not flag a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, market_flow: 100
+    zero_gbp = create_portfolio_account(family: @family, currency: "GBP")
+    lay_balance account: zero_gbp, date: @day_one, opening: 0, closing: 0
+    lay_balance account: zero_gbp, date: @day_two, opening: 0, closing: 0
+
+    returns = daily_returns(account_ids: [ @account.id, zero_gbp.id ])
+
+    refute returns.rate_missing?, "a balance of zero needs no rate to be converted"
+    assert_in_delta 0.10, returns.returns.last.last.to_f, 0.000001
+  end
+
+  # The control, and the half of the check the closing balance cannot see:
+  # an account that OPENED the period holding 50 and withdrew all of it ends
+  # every day at zero, yet value_open reads its 50 on the first day and needs
+  # the rate to convert it. So the check is about the amounts, not the rows.
+  test "a foreign account that opened the period holding a balance still flags a missing rate" do
+    gbp = create_portfolio_account(family: @family, currency: "GBP")
+    lay_balance account: gbp, date: @day_one, opening: 50, closing: 0, cash_flow: -50
+    lay_balance account: gbp, date: @day_two, opening: 0, closing: 0
+
+    assert daily_returns(account_ids: [ gbp.id ]).rate_missing?,
+           "an opening balance of 50 GBP has to be converted"
+  end
+
   # Regression: components used to be read from the carried-forward balance row,
   # so a day with no row of its own re-reported the previous day's market flow.
   # Over a gap that multiplied the market driver by the gap's length.
@@ -516,6 +564,57 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     )
 
     assert_equal BigDecimal("0"), returns.rows.last.external_flow
+  end
+
+  # The flow scope is the accounts the series values, and only those. Money
+  # sent to an account outside the series has left the series: it is an
+  # external outflow, so it leaves the denominator as it leaves the close and
+  # the day returns what the portfolio earned, which is nothing. Classified as
+  # internal, the outflow stays in the denominator and the day reads -40%.
+  test "a transfer to an account outside the series is a flow out, not a loss" do
+    other = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 600, cash_flow: -400
+    Transfer::Creator.new(
+      family: @family, source_account_id: @account.id, destination_account_id: other.id,
+      date: @day_two, amount: 400
+    ).create
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("-400"), second.external_flow
+    assert_in_delta 0.0, daily_returns.returns.last.last.to_f, 0.000001,
+                    "moving money out of the series is not a loss"
+  end
+
+  # There is no second, wider "inside" to pass. A caller asking for one is
+  # told so rather than silently getting the accounts' own scope.
+  test "the flow scope cannot be widened beyond the accounts in the series" do
+    assert_raises(ArgumentError) do
+      Portfolio::DailyReturns.new(
+        account_ids: [ @account.id ], currency: @family.currency,
+        period: Period.custom(start_date: @day_one, end_date: @day_two),
+        scope_account_ids: [ @account.id, create_portfolio_account(family: @family).id ]
+      )
+    end
+  end
+
+  # The fixture builder guards these tests' own arithmetic, so it has to check
+  # it at the precision the rows are stored at. These components add up as
+  # given, but `balances` keeps four decimal places: stored, each 0.00005
+  # becomes 0.0001 and the row's end_balance is 0.0002 against a balance of
+  # 0.0001, a day that no longer reconciles.
+  test "the balance builder refuses an amount finer than balances store" do
+    error = assert_raises(ArgumentError) do
+      lay_balance account: @account, date: @day_one, opening: "0.00005", closing: "0.0001", cash_flow: "0.00005"
+    end
+
+    assert_match "finer than the 4 decimal places", error.message
+    assert_empty @account.balances.reload, "nothing is written for a refused day"
+
+    lay_balance account: @account, date: @day_one, opening: "0.0001", closing: "0.0002", cash_flow: "0.0001"
+    assert_equal BigDecimal("0.0002"), @account.balances.reload.sole.end_balance,
+                 "four decimal places is the stored scale and is accepted"
   end
 
   test "returns are empty without accounts" do
@@ -743,6 +842,29 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
 
     assert returns.rate_missing?, "a journal that could not be converted must be flagged"
     assert returns.rows.last.suppressed
+  end
+
+  # The other direction. A journal is valued from its holding, so the rate it
+  # needs is the HOLDING's. Its entry carries a zero amount in a currency that
+  # may have no rate at all, and that rate converts nothing: zero times any
+  # rate is zero. Here the position is priced in USD, the family's currency,
+  # so the journal is fully valued and nothing is missing.
+  test "a journal valued from a holding in a rated currency does not flag the entry currency's missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, currency: "EUR"
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 100, amount: 500, currency: "USD"
+    )
+    # No EUR -> USD rate exists at all.
+
+    returns = daily_returns
+    second = returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow, "the journal is valued from its USD holding"
+    assert_not second.suppressed
+    assert_not returns.rate_missing?,
+               "the entry's own currency converts a zero amount, so its missing rate withholds nothing"
   end
 
   # Only a Transfer is a journal. A Contribution labelled trade that records no

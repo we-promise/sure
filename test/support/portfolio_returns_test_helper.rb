@@ -5,6 +5,9 @@
 # quietly absorbed its own arithmetic error into `cash_adjustments` would still
 # pass, and would be asserting the author's mistake rather than the rule.
 module PortfolioReturnsTestHelper
+  # The scale of every amount column on `balances` (db/schema.rb).
+  BALANCE_SCALE = 4
+
   def create_portfolio_account(family:, currency: "USD", balance: 0, cash_balance: 0, name: nil)
     family.accounts.create!(
       name: name || "Brokerage #{SecureRandom.hex(3)}",
@@ -22,12 +25,25 @@ module PortfolioReturnsTestHelper
   #   cash_flow   signed cash movement (+ in, - out) -- deposits, withdrawals, income
   #   market_flow change in holdings value (net_market_flows)
   #   revaluation valuation/reconciliation movement (non_cash_adjustments)
+  #
+  # Every amount must be representable at the column's scale. `balances` stores
+  # four decimal places, so a finer input is rounded on the way in, and
+  # components that add up here can then miss the closing balance once stored:
+  # 0.00005 + 0.00005 == 0.0001, but each persists as 0.0001 and the stored
+  # end_balance becomes 0.0002 against a balance of 0.0001.
   def lay_balance(account:, date:, opening:, closing:, cash_flow: 0, market_flow: 0, revaluation: 0)
-    opening = BigDecimal(opening.to_s)
-    closing = BigDecimal(closing.to_s)
-    cash_flow = BigDecimal(cash_flow.to_s)
-    market_flow = BigDecimal(market_flow.to_s)
-    revaluation = BigDecimal(revaluation.to_s)
+    amounts = { opening: opening, closing: closing, cash_flow: cash_flow, market_flow: market_flow, revaluation: revaluation }
+      .transform_values { |value| BigDecimal(value.to_s) }
+
+    amounts.each do |name, value|
+      next if value.round(BALANCE_SCALE) == value
+
+      raise ArgumentError,
+            "#{name} #{value.to_s("F")} is finer than the #{BALANCE_SCALE} decimal places balances store, " \
+            "so it would persist as #{value.round(BALANCE_SCALE).to_s("F")}"
+    end
+
+    opening, closing, cash_flow, market_flow, revaluation = amounts.values_at(:opening, :closing, :cash_flow, :market_flow, :revaluation)
 
     expected = opening + cash_flow + market_flow + revaluation
     unless expected == closing
