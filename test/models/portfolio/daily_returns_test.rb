@@ -566,6 +566,39 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), returns.rows.last.external_flow
   end
 
+  # The flow scope is the accounts the series values, and only those. Money
+  # sent to an account outside the series has left the series: it is an
+  # external outflow, so it leaves the denominator as it leaves the close and
+  # the day returns what the portfolio earned, which is nothing. Classified as
+  # internal, the outflow stays in the denominator and the day reads -40%.
+  test "a transfer to an account outside the series is a flow out, not a loss" do
+    other = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 600, cash_flow: -400
+    Transfer::Creator.new(
+      family: @family, source_account_id: @account.id, destination_account_id: other.id,
+      date: @day_two, amount: 400
+    ).create
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("-400"), second.external_flow
+    assert_in_delta 0.0, daily_returns.returns.last.last.to_f, 0.000001,
+                    "moving money out of the series is not a loss"
+  end
+
+  # There is no second, wider "inside" to pass. A caller asking for one is
+  # told so rather than silently getting the accounts' own scope.
+  test "the flow scope cannot be widened beyond the accounts in the series" do
+    assert_raises(ArgumentError) do
+      Portfolio::DailyReturns.new(
+        account_ids: [ @account.id ], currency: @family.currency,
+        period: Period.custom(start_date: @day_one, end_date: @day_two),
+        scope_account_ids: [ @account.id, create_portfolio_account(family: @family).id ]
+      )
+    end
+  end
+
   test "returns are empty without accounts" do
     returns = Portfolio::DailyReturns.new(
       account_ids: [],
