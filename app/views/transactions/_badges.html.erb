@@ -1,6 +1,6 @@
 <%# locals: (entry:, transaction:, in_split_group: false, drawer_params: {}) %>
 <% if transaction.one_time? %>
-  <span class="text-warning" title="<%= t("transactions.transaction.one_time_tooltip", type: t(entry.amount.negative? ? "transactions.searches.filters.type_filter.income" : "transactions.searches.filters.type_filter.expense")) %>">
+  <span class="text-warning" title="<%= t(entry.amount.negative? ? "transactions.transaction.one_time_income_tooltip" : "transactions.transaction.one_time_expense_tooltip") %>">
     <%= icon "asterisk", size: "sm", color: "current" %>
   </span>
 <% end %>
