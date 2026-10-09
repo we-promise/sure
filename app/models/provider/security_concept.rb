@@ -63,8 +63,8 @@ module Provider::SecurityConcept
   # right for most of them and stops a per-sync fetch that answers nothing.
   # The cost: a provider added later that DOES supply one, and forgets to say
   # so, is silently never asked, and it reads as missing data rather than a
-  # missing line here. A new provider that returns `sector:` from
-  # `fetch_security_info` must override this.
+  # missing line here. A new provider that returns `sector:` or `industry:`
+  # from `fetch_security_info` must override this.
   #
   # Same shape as `max_history_days` below: declared on the concept, safely
   # defaulted, overridden by the providers it applies to.

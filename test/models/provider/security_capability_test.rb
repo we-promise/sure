@@ -11,8 +11,12 @@ require "test_helper"
 class Provider::SecurityCapabilityTest < ActiveSupport::TestCase
   PROVIDER_FILES = Dir[Rails.root.join("app/models/provider/*.rb")].freeze
 
+  # Either field is a classification: a provider that returns only an industry
+  # still has to be asked.
+  BUILDS_CLASSIFICATION = /^\s*(sector|industry):/
+
   test "every provider that returns a classification declares it" do
-    mismatched = capability_mismatches(builds: /^\s*sector:/, declares: :supplies_classification?)
+    mismatched = capability_mismatches(builds: BUILDS_CLASSIFICATION, declares: :supplies_classification?)
 
     assert_empty mismatched,
                  "these providers return sector/industry but answer false to supplies_classification?, " \
@@ -23,7 +27,7 @@ class Provider::SecurityCapabilityTest < ActiveSupport::TestCase
   # everything true: a provider that builds no classification must not claim one.
   test "a provider that returns no classification does not claim one" do
     overclaiming = security_providers.reject do |klass, source|
-      next true if source.match?(/^\s*sector:/)
+      next true if source.match?(BUILDS_CLASSIFICATION)
 
       !klass.allocate.supplies_classification?
     end.map { |klass, _| klass.name }
