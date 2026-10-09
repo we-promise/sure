@@ -30,7 +30,7 @@ class UserBackupCodeConcurrencyTest < ActiveSupport::TestCase
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
           latch.count_down
-          latch.wait(5)
+          assert latch.wait(5), "both workers must reach the redemption checkpoint"
           instance.send(:consume_backup_code!, code)
         end
       end
