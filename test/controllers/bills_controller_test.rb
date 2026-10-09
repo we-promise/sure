@@ -40,24 +40,6 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # Laid out like Transactions: the overflow menu, then the primary action,
-  # which a phone shows as a round + that keeps the action's name.
-  test "the bills header lays out its actions like Transactions" do
-    { bills_url => [ I18n.t("bills.index.add_bill"), new_recurring_transaction_path ],
-      bills_url(view: "paycheck") => [ I18n.t("bills.index.add_income"), new_recurring_transaction_path(income: true) ] }.each do |url, (name, href)|
-      get url
-      assert_response :success
-
-      assert_select "main header [data-controller~='DS--menu'] ~ a[href='#{href}']", count: 2
-      assert_select "main header a[class~='md:inline-flex'][href='#{href}']", text: name
-      assert_select "main header a[class~='md:hidden'][class~='rounded-full'][aria-label='#{name}'][href='#{href}']"
-    end
-
-    # The switcher's track is drawn on the page, not in the page's own colour.
-    get bills_url
-    assert_select "main [role=group].segmented-control.bg-surface-inset a[aria-current=true]", text: I18n.t("bills.views.overview")
-  end
-
   test "bills page shell is localized in German" do
     @user.update!(locale: "de")
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
@@ -107,6 +89,24 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       assert_select "a[role=menuitem]", text: translations.fetch("bills.index.add_bill")
       assert_select "button", text: translations.fetch("bills.index.review_with_ai")
     end
+  end
+
+  # Laid out like Transactions: the overflow menu, then the primary action,
+  # which a phone shows as a round + that keeps the action's name.
+  test "the bills header lays out its actions like Transactions" do
+    { bills_url => [ I18n.t("bills.index.add_bill"), new_recurring_transaction_path ],
+      bills_url(view: "paycheck") => [ I18n.t("bills.index.add_income"), new_recurring_transaction_path(income: true) ] }.each do |url, (name, href)|
+      get url
+      assert_response :success
+
+      assert_select "main header [data-controller~='DS--menu'] ~ a[href='#{href}']", count: 2
+      assert_select "main header a[class~='md:inline-flex'][href='#{href}']", text: name
+      assert_select "main header a[class~='md:hidden'][class~='rounded-full'][aria-label='#{name}'][href='#{href}']"
+    end
+
+    # The switcher's track is drawn on the page, not in the page's own colour.
+    get bills_url
+    assert_select "main [role=group].segmented-control.bg-surface-inset a[aria-current=true]", text: I18n.t("bills.views.overview")
   end
 
   test "index lists a bill" do
