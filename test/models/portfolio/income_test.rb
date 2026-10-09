@@ -125,9 +125,10 @@ class Portfolio::IncomeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(4), income.fees
   end
 
-  # Today's value is deliberately different and much larger: a
-  # ratio taken over the closing balance reads 10 / 3_000, one taken over the
-  # opening balance 10 / 1_000, and only the average of the period is 10 / 2_000.
+  # Today's value is deliberately different and much larger: a ratio taken
+  # over the closing balance reads 10 / 3_010, one taken over the opening
+  # balance 10 / 1_000, and the average of the period's closes,
+  # (1_000 + 990 + 3_010) / 3 = 5_000 / 3, gives 10 / 1_666.67, about 0.006.
   test "the fee ratio divides by the period's value, not by where it ended" do
     fee_entry account: @account, date: @feb + 1, amount: 10
     lay_balance account: @account, date: @feb, opening: 1_000, closing: 1_000
