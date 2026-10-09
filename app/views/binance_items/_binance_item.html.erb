@@ -1,4 +1,4 @@
-<%# locals: (binance_item:, unlinked_count: binance_item.unlinked_accounts_count, visible_accounts: binance_item.accounts) %>
+<%# locals: (binance_item:, unlinked_count: binance_item.unlinked_accounts_count, visible_accounts:) %>
 
 <%= tag.div id: dom_id(binance_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>

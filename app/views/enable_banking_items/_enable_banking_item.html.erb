@@ -1,4 +1,4 @@
-<%# locals: (enable_banking_item:, visible_accounts: enable_banking_item.accounts) %>
+<%# locals: (enable_banking_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(enable_banking_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>

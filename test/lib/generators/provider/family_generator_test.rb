@@ -32,6 +32,18 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes rendered, "does not implement the #{'#{disposition}'} disposition"
   end
 
+  # A generated card must require the accounts it lists, so a render that
+  # forgets them fails instead of showing every account on the connection.
+  test "the generated card requires visible_accounts and its job broadcast passes them" do
+    card = render_template("item_partial.html.erb.tt", file_name: "gocardless")
+    job = render_template("activities_fetch_job.rb.tt", class_name: "Gocardless", file_name: "gocardless")
+
+    assert_includes card.lines.first, 'locals: (#{file_name}_item:, visible_accounts:)'
+    assert_includes card, 'render \\"accounts/index/account_groups\\", accounts: visible_accounts'
+    assert_parses job
+    assert_includes job, "locals: { gocardless_item: @gocardless_account.gocardless_item, visible_accounts: @gocardless_account.gocardless_item.accounts }"
+  end
+
   test "appends to a single-line enum" do
     result = append(<<~RUBY)
       class ProviderMerchant < Merchant

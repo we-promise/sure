@@ -1,4 +1,4 @@
-<%# locals: (kraken_item:, unlinked_count: kraken_item.unlinked_accounts_count, visible_accounts: kraken_item.accounts) %>
+<%# locals: (kraken_item:, unlinked_count: kraken_item.unlinked_accounts_count, visible_accounts:) %>
 
 <%= tag.div id: dom_id(kraken_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>

@@ -1,4 +1,4 @@
-<%# locals: (monobank_item:, visible_accounts: monobank_item.accounts) %>
+<%# locals: (monobank_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(monobank_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>

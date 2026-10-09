@@ -1,4 +1,4 @@
-<%# locals: (wise_item:, visible_accounts: wise_item.accounts) %>
+<%# locals: (wise_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(wise_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>

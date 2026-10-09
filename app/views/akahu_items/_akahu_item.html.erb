@@ -1,4 +1,4 @@
-<%# locals: (akahu_item:, visible_accounts: akahu_item.accounts) %>
+<%# locals: (akahu_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(akahu_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>

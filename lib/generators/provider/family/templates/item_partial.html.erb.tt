@@ -1,4 +1,4 @@
-<%%= "<" + "%# locals: (#{file_name}_item:, visible_accounts: #{file_name}_item.accounts) %" + ">" %>
+<%%= "<" + "%# locals: (#{file_name}_item:, visible_accounts:) %" + ">" %>
 
 <%%= "<" + "%= tag.div id: dom_id(#{file_name}_item) do %" + ">" %>
   <details open class="group bg-container p-4 shadow-border-xs rounded-xl">

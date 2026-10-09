@@ -11,7 +11,7 @@ class Trading212ItemBroadcastRenderTest < ActiveSupport::TestCase
     assert_nothing_raised do
       ApplicationController.render(
         partial: "trading212_items/trading212_item",
-        locals: { trading212_item: trading212_items(:configured_item) }
+        locals: { trading212_item: trading212_items(:configured_item), visible_accounts: trading212_items(:configured_item).accounts }
       )
     end
   end

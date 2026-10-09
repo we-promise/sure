@@ -470,10 +470,11 @@ class SophtronItemsController < ApplicationController
       format.turbo_stream do
         flash.now[:notice] = t(".success_#{enabled ? 'enabled' : 'disabled'}")
         render turbo_stream: [
+          # Admin-only action (require_admin!), so the card lists every account.
           turbo_stream.replace(
             ActionView::RecordIdentifier.dom_id(@sophtron_item),
             partial: "sophtron_items/sophtron_item",
-            locals: { sophtron_item: @sophtron_item.reload }
+            locals: { sophtron_item: @sophtron_item.reload, visible_accounts: @sophtron_item.accounts }
           ),
           *flash_notification_stream_items
         ]
@@ -625,10 +626,11 @@ class SophtronItemsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@sophtron_item),
           partial: "sophtron_items/sophtron_item",
-          locals: { sophtron_item: @sophtron_item }
+          locals: { sophtron_item: @sophtron_item, visible_accounts: @sophtron_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else

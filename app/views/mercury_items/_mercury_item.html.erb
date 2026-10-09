@@ -1,4 +1,4 @@
-<%# locals: (mercury_item:, visible_accounts: mercury_item.accounts) %>
+<%# locals: (mercury_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(mercury_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>

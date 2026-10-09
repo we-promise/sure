@@ -1,4 +1,4 @@
-<%# locals: (lunchflow_item:, visible_accounts: lunchflow_item.accounts) %>
+<%# locals: (lunchflow_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(lunchflow_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>

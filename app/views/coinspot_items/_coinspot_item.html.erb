@@ -1,4 +1,4 @@
-<%# locals: (coinspot_item:, unlinked_count: coinspot_item.unlinked_accounts_count, visible_accounts: coinspot_item.accounts) %>
+<%# locals: (coinspot_item:, unlinked_count: coinspot_item.unlinked_accounts_count, visible_accounts:) %>
 
 <%= tag.div id: dom_id(coinspot_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
