@@ -503,9 +503,15 @@ class Family::DataImporter
 
     # ProviderMerchant rows share the :merchants id-mapping namespace with
     # Merchant, so Transaction/RecurringTransaction merchant_id resolution below
-    # needs no changes to accept either source. A ProviderMerchant is shared
-    # across every family on the instance, so an existing match is reused as-is:
-    # an import never writes to a record it did not create.
+    # needs no changes to accept either source.
+    #
+    # A ProviderMerchant is shared by every family on the instance, and bank syncs
+    # find it by provider_merchant_id, which most providers derive from the payee
+    # name (e.g. "simplefin_" + MD5 of it). So an import only reuses one that
+    # already exists, as-is, and never creates one: otherwise any user could
+    # choose the name, logo and website that other families' synced transactions
+    # attach to. A merchant the instance does not know yet becomes this family's
+    # own FamilyMerchant.
     def import_provider_merchants(records)
       records.each do |record|
         data = record["data"]
@@ -519,32 +525,20 @@ class Family::DataImporter
           next
         end
 
-        merchant = ProviderMerchant.find_by_import_data(data, source)
-        merchant ||= create_provider_merchant(data, source)
-        created = merchant.previously_new_record?
+        if (merchant = ProviderMerchant.find_by_import_data(data, source))
+          increment_summary("ProviderMerchant", :updated)
+        else
+          merchant, created = FamilyMerchant.find_or_create_with_name(
+            @family,
+            data["name"],
+            logo_url: data["logo_url"],
+            website_url: data["website_url"]
+          )
+          increment_summary("ProviderMerchant", created ? :created : :updated)
+        end
 
         map_source!(:merchants, old_id, merchant)
-        increment_summary("ProviderMerchant", created ? :created : :updated)
       end
-    end
-
-    # ProviderMerchant does not support color, so a color in the file is not read.
-    # The savepoint keeps a lost race from aborting the surrounding import transaction.
-    # A race usually surfaces as the name-uniqueness validation (RecordInvalid) rather
-    # than the index (RecordNotUnique); either way, reuse the winner if it exists and
-    # let anything else propagate.
-    def create_provider_merchant(data, source)
-      ProviderMerchant.transaction(requires_new: true) do
-        ProviderMerchant.create!(
-          name: data["name"],
-          source: source,
-          provider_merchant_id: data["provider_merchant_id"].presence,
-          logo_url: data["logo_url"],
-          website_url: data["website_url"]
-        )
-      end
-    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
-      ProviderMerchant.find_by_import_data(data, source) || raise
     end
 
     def import_recurring_transactions(records)
@@ -1072,15 +1066,7 @@ class Family::DataImporter
     def imported_transfer_outflow_kind(transfer)
       source_account = transfer.outflow_transaction.entry.account
       destination_account = transfer.inflow_transaction.entry.account
-      return "loan_payment" if destination_account.loan?
-      return "cc_payment" if destination_account.liability?
-      return "investment_contribution" if investment_account?(destination_account) && !investment_account?(source_account)
-
-      "funds_movement"
-    end
-
-    def investment_account?(account)
-      account.investment? || account.crypto?
+      Transfer.kind_for_account(destination_account, from_account: source_account)
     end
 
     def import_rejected_transfers(records)

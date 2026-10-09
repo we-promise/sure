@@ -39,7 +39,7 @@ ru:
       skip: Пропустить
       snooze_week: Отложить на неделю
       reopen: Открыть снова
-      view_bill: Открыть весь платёж
+      view_bill: Открыть платёж
     mark_paid:
       success: Платёж отмечен как оплаченный
     skip:

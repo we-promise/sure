@@ -54,6 +54,12 @@ class Holding::CostBasisTracker
     reset if @total_qty <= 0
   end
 
+  # A split changes the share count and not the money invested, so total cost
+  # stays and the per-share average moves by the inverse of the ratio.
+  def split(ratio)
+    @total_qty = Security::Split.scale(@total_qty, ratio)
+  end
+
   # Current weighted-average cost per share, or nil when nothing is held or
   # the cost of what is held is unknown.
   def average_cost
