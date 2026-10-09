@@ -719,6 +719,43 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal shared, holding.reload.security
   end
 
+  test "removes holdings calculated on the shared BOND listing" do
+    Security.stubs(:search_provider).returns([])
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
+    calculated = @account.holdings.create!(
+      security: shared, date: Date.current - 30, qty: 2677.95, price: 84.04, amount: 225054.92, currency: "EUR"
+    )
+    locked = @account.holdings.create!(
+      security: shared, date: Date.current - 31, qty: 2677.95, price: 84.04, amount: 225054.92, currency: "EUR",
+      security_locked: true
+    )
+    other_account = @family.accounts.create!(
+      name: "Other broker", balance: 0, currency: "EUR", accountable: Investment.new
+    )
+    other = other_account.holdings.create!(
+      security: shared, date: Date.current - 30, qty: 1, price: 1, amount: 1, currency: "EUR"
+    )
+    share = @account.holdings.create!(
+      security: Security.create!(ticker: "BAS", exchange_operating_mic: "XETR", name: "BASF"),
+      date: Date.current - 30, qty: 1, price: 1, amount: 1, currency: "EUR"
+    )
+    bond_ticker_elsewhere = @account.holdings.create!(
+      security: Security.create!(ticker: "BOND", exchange_operating_mic: "ARCX", name: "PIMCO Active Bond ETF"),
+      date: Date.current - 30, qty: 1, price: 1, amount: 1, currency: "EUR"
+    )
+
+    # A sold bond is no longer a position; its calculated rows go as well.
+    assert_difference -> { DebugLogEntry.where(provider_key: "trade_republic").count }, 1 do
+      import_position(isin: "IE00B5BMR087", quantity: "2", price: "511.96")
+    end
+
+    assert_not Holding.exists?(calculated.id)
+    assert Holding.exists?(locked.id)
+    assert Holding.exists?(other.id)
+    assert Holding.exists?(share.id)
+    assert Holding.exists?(bond_ticker_elsewhere.id)
+  end
+
   test "bond rematch keeps the provider security of a locked holding already on the bond" do
     shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
     italy = Security.create!(ticker: "IT0005377152", name: "ITALIEN 19/40", offline: true,

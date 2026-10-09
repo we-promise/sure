@@ -87,9 +87,9 @@ class Provider::TradeRepublicClient
   ].freeze
   # Bond executions list a nominal amount and a price in percent of par
   # instead of shares and a share price.
-  NOMINAL_TITLES = [ "nennwert" ].freeze
+  NOMINAL_TITLES = [ "nennwert", "face value" ].freeze
   QUOTATION_TITLES = [ "quotation" ].freeze
-  BOND_TOTAL_TITLES = [ "summe" ].freeze
+  BOND_TOTAL_TITLES = [ "summe", "total" ].freeze
   SELL_SUBTITLE_MARKERS = %w[sell verkauf verkaufen verkopen].freeze
   MAX_TIMELINE_PAGES = 50
   MAX_TIMELINE_DETAILS = 200
@@ -105,8 +105,12 @@ class Provider::TradeRepublicClient
   PRICE_BACKFILL_ATTEMPTED_AT_KEY = "price_backfill_attempted_at"
   SYMBOL_LOOKUP_ATTEMPTED_AT_KEY = "symbol_lookup_attempted_at"
   SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY = "symbol_lookup_first_attempted_at"
+  # Stored trades whose detail is still incomplete after a fetch; the backlog
+  # retries the least recently attempted first.
+  DETAIL_BACKFILL_ATTEMPTED_AT_KEY = "detail_backfill_attempted_at"
   RETRY_MARKER_KEYS = [
-    PRICE_BACKFILL_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY
+    PRICE_BACKFILL_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY,
+    DETAIL_BACKFILL_ATTEMPTED_AT_KEY
   ].freeze
   # Cap instrument lookups for sold / historical trade ISINs that are absent
   # from the current portfolio snapshot.
@@ -484,6 +488,16 @@ class Provider::TradeRepublicClient
       return false if traded_at && traded_at <= now - RETRY_WINDOW
 
       attempted_at <= now - RETRY_INTERVAL
+    end
+
+    # Backlog order for stored events needing details: never-attempted events
+    # first, oldest first, then the least recently attempted, so events that
+    # stay incomplete can't hold the budget on every sync. Price backfills
+    # carry no detail attempt; trade_detail_needs_price_backfill? paces them.
+    def detail_backfill_sort_key(event)
+      return [ 0, "" ] unless event.is_a?(Hash)
+
+      [ detail_time(event, DETAIL_BACKFILL_ATTEMPTED_AT_KEY).to_i, (event["timestamp"] || event[:timestamp]).to_s ]
     end
 
     # Stored trades whose ISIN found no usable exchange symbol are retried at
@@ -988,7 +1002,30 @@ class Provider::TradeRepublicClient
     end
 
     def instrument_name(websocket, isin)
-      instrument_payload(websocket, isin)&.dig("name").to_s.strip.presence
+      bond_name(instrument_payload(websocket, isin))
+    end
+
+    # Bonds are named like the market lists them: issuer, coupon and maturity
+    # ("Italy 3.1% Mar 2040"). The instrument name is the exchange's German
+    # name ("ITALIEN 19/40") even with locale "en", so it is only the fallback.
+    def bond_name(payload)
+      return nil unless payload.is_a?(Hash)
+
+      bond_info = payload["bondInfo"].is_a?(Hash) ? payload["bondInfo"] : {}
+      issuer = bond_info["issuerName"].to_s.strip.presence
+      maturity = payload["shortName"].to_s.strip.presence
+      return payload["name"].to_s.strip.presence unless issuer && maturity
+
+      [ issuer, bond_coupon(bond_info), maturity ].compact.join(" ")
+    end
+
+    # A fixed coupon never changes, so it can go in a name that is only set
+    # when the security is created. Floating rates are left out.
+    def bond_coupon(bond_info)
+      return nil unless bond_info["interestRateType"] == "FIXED_INTEREST_RATE"
+
+      rate = finite_decimal(bond_info["interestRate"])
+      "#{(rate * 100).round(4).to_s("F").delete_suffix(".0")}%" if rate
     end
 
     def instrument_payload(websocket, isin)
@@ -1352,7 +1389,11 @@ class Provider::TradeRepublicClient
         if kind == :backfill
           result = fetched ? prefer_richer_event(item, fetched) : item
           detail_backfill_count += 1 if detail_backfill_improved?(item, result)
-          fetched = with_price_backfill_attempt(result) if self.class.trade_detail_missing_price?(result)
+          if self.class.trade_detail_missing_price?(result)
+            fetched = with_price_backfill_attempt(result)
+          elsif self.class.incomplete_trade_detail_event?(result)
+            fetched = with_detail_backfill_attempt(result)
+          end
         end
         enriched_by_id[item["id"].to_s] = fetched if fetched
       end
@@ -1374,10 +1415,14 @@ class Provider::TradeRepublicClient
       self.class.trade_detail_missing_price?(before) && !self.class.trade_detail_missing_price?(after)
     end
 
-    def with_price_backfill_attempt(event)
+    def with_price_backfill_attempt(event) = with_attempt_marker(event, PRICE_BACKFILL_ATTEMPTED_AT_KEY)
+
+    def with_detail_backfill_attempt(event) = with_attempt_marker(event, DETAIL_BACKFILL_ATTEMPTED_AT_KEY)
+
+    def with_attempt_marker(event, key)
       event = event.stringify_keys
       detail = (event["detail"] || {}).stringify_keys
-      event.merge("detail" => detail.merge(PRICE_BACKFILL_ATTEMPTED_AT_KEY => Time.current.iso8601))
+      event.merge("detail" => detail.merge(key => Time.current.iso8601))
     end
 
     # Test/helper wrapper: enrich a raw timeline page without touching the list cursor.

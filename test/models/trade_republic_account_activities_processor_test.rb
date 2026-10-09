@@ -1576,17 +1576,19 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "price backfill attempt marker stays out of the transaction provider detail" do
+  test "retry attempt markers stay out of the transaction provider detail" do
+    markers = Provider::TradeRepublicClient::RETRY_MARKER_KEYS
+    assert_includes markers, Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY
     cash_account, cash_sure = create_linked_cash_account!
     cash_account.update!(raw_timeline_payload: [ deposit_event.deep_merge(
-      detail: { Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY => "2026-08-01T10:00:00Z" }
+      detail: markers.index_with { "2026-08-01T10:00:00Z" }
     ) ])
 
     TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
 
     entry = Entry.find_by!(account: cash_sure, external_id: "trade_republic_event_evt_dep")
     provider_detail = entry.entryable.extra.dig("trade_republic", "provider_detail")
-    assert_not provider_detail.key?(Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY)
+    assert_empty provider_detail.keys & markers
   end
 
   test "preserves protected entries when reconciling declined upstream events" do

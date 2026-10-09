@@ -20,6 +20,8 @@ class TradeRepublicAccount::HoldingsProcessor
     if @trade_republic_account.positions_snapshot_complete? && processed_count == positions.size
       reconcile_stale_holdings!(positions)
     end
+
+    purge_shared_bond_calculated_holdings!
   end
 
   private
@@ -117,6 +119,35 @@ class TradeRepublicAccount::HoldingsProcessor
         .where(security_id: security.id, security_locked: false)
         .where.not(provider_security_id: [ nil, security.id ])
         .update_all(provider_security_id: security.id, updated_at: Time.current)
+    end
+
+    # Earlier syncs calculated daily holdings on the shared BOND listing.
+    # Reverse syncs never purge calculated rows, and bond history is now
+    # calculated on each bond's own security, so leaving them counts bonds
+    # twice. Rows still backed by trades on the listing are recalculated.
+    def purge_shared_bond_calculated_holdings!
+      removed_count = account.holdings
+        .where(security_id: shared_bond_security_ids, account_provider_id: nil, security_locked: false)
+        .delete_all
+      return unless removed_count.positive?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Removed #{removed_count} holding(s) calculated on the shared Trade Republic BOND listing",
+        source: "trade_republic",
+        family: account.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: { trade_republic_account_id: @trade_republic_account.id, removed_count: removed_count }
+      )
+    end
+
+    def shared_bond_security_ids
+      Security.where(
+        ticker: Provider::TradeRepublicClient::BOND_PLACEHOLDER_SYMBOL,
+        exchange_operating_mic: EXCHANGE_SLUG_TO_MIC[Provider::TradeRepublicClient::BOND_PLACEHOLDER_EXCHANGE]
+      ).select(:id)
     end
 
     def position_external_id_prefix

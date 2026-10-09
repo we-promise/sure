@@ -221,8 +221,8 @@ class TradeRepublicItem::Importer
     end
 
     # Incomplete trade-detail events and complete trades still missing a share
-    # price (stored before execution price/fees were parsed). Oldest first so
-    # repeated syncs progressively drain historical starvation.
+    # price (stored before execution price/fees were parsed), in the client's
+    # backlog order.
     def events_needing_detail_enrichment
       portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
       return [] unless portfolio
@@ -232,7 +232,7 @@ class TradeRepublicItem::Importer
           Provider::TradeRepublicClient.incomplete_trade_detail_event?(event) ||
             Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(event)
         end
-        .sort_by { |event| event_timestamp(event) }
+        .sort_by { |event| Provider::TradeRepublicClient.detail_backfill_sort_key(event) }
         .first(Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS)
     end
 
@@ -256,12 +256,6 @@ class TradeRepublicItem::Importer
       return {} unless portfolio
 
       Provider::TradeRepublicClient.instrument_symbols_from_positions(portfolio.raw_positions_payload)
-    end
-
-    def event_timestamp(event)
-      return "" unless event.is_a?(Hash)
-
-      (event["timestamp"] || event[:timestamp]).to_s
     end
 
     # Advance the list cursor whenever timeline pagination finished, even when
