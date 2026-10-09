@@ -549,16 +549,6 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
   end
 
   private
-    # 1,000 EUR, then a 10 EUR fee: closing values 1,000 and 990, so the mean is
-    # 995 and the ratio 10 / 995. No exchange rate is stored.
-    def eur_account_with_fee
-      eur = create_portfolio_account(family: @family, currency: "EUR")
-      fee_entry account: eur, date: @day_two, amount: 10
-      lay_balance account: eur, date: @day_one, opening: 1_000, closing: 1_000
-      lay_balance account: eur, date: @day_two, opening: 1_000, closing: 990, cash_flow: -10
-      eur
-    end
-
     def build_valuation_tracked_account
       account = create_portfolio_account(family: @family)
       lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
