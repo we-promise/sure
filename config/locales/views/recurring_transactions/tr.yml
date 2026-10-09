@@ -126,6 +126,7 @@ tr:
       success_income: Gelir eklendi
       due_date_required: Faturanın bir sonraki son ödeme tarihini girin
       amount_invalid: Tutarı düz bir sayı olarak girin
+      amount_too_precise: En fazla 4 ondalık basamak kullanın
       account_invalid: Fatura ekleyebileceğiniz bir hesap seçin veya boş bırakın
       already_exists: Bu fatura zaten mevcut
     edit:
@@ -172,7 +173,6 @@ tr:
       income_amount_edit_hint: Bundan sonraki maaş günlerine uygulanır. Vadesi gelmiş olanlar mevcut tutarlarını korur.
       cancelled_on_label: İptal tarihi
       cancelled_on_hint: Tarihi kaydetmek yalnızca kendi bilginiz içindir. Gelecektekilerin görünmemesi için faturayı duraklatın.
-      category_label: Kategori
       category_blank: Kategori yok
       frequency_new_hint: Gün ayrıntıları yukarıdaki son ödeme tarihinden alınır. Kaydettikten sonra zamanlamayı ayrıntılandırabilirsiniz.
       frequency_label: Sıklık

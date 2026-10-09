@@ -127,6 +127,7 @@ ca:
       success_income: Ingrés afegit
       due_date_required: Introdueix la propera data de venciment de la factura
       amount_invalid: Introdueix l'import com a número sense format
+      amount_too_precise: Fes servir 4 decimals com a màxim
       account_invalid: Tria un compte al qual puguis afegir factures, o deixa-ho en blanc
       already_exists: Aquesta factura ja existeix
     edit:
@@ -173,7 +174,6 @@ ca:
       income_amount_edit_hint: S'aplica als cobraments a partir d'ara. Els que ja han vençut mantenen l'import que tenien.
       cancelled_on_label: Data de cancel·lació
       cancelled_on_hint: Registrar la data és només per a la teva referència. Posa la factura en pausa perquè deixin d'aparèixer els propers venciments.
-      category_label: Categoria
       category_blank: Sense categoria
       frequency_new_hint: Els detalls del dia surten de la data de venciment de dalt. Pots ajustar la periodicitat després de desar.
       frequency_label: Periodicitat

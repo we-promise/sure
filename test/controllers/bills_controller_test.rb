@@ -1441,6 +1441,19 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.all.subscription_price_changes"), response.body
   end
 
+  # Bare, the filters read as loose words with a chevron and had no focus
+  # ring. Each sits in the boxed field the form builder draws.
+  test "the All bills filters are boxed fields like the search beside them" do
+    create_bill(name: "Rent", amount: 1200)
+
+    get bills_url(view: "all")
+
+    assert_response :success
+    %w[q[status] q[bill_type] q[sort]].each do |name|
+      assert_select ".form-field select.form-field__input[name=?]", name
+    end
+  end
+
   test "the rollup stays out of the way when the filter is not on subscriptions" do
     sub = create_bill(name: "STREAMFLIX", amount: 24.99)
     sub.update!(bill_type: "subscription")

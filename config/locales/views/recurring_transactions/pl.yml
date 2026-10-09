@@ -21,6 +21,7 @@ pl:
         puste
       already_exists: Ten rachunek już istnieje
       amount_invalid: Wpisz kwotę jako zwykłą liczbę
+      amount_too_precise: Użyj najwyżej 4 miejsc po przecinku
       due_date_required: Wpisz następny termin płatności rachunku
       success: Rachunek dodany
       success_income: Przychód dodany
@@ -63,7 +64,6 @@ pl:
         rachunek, aby przyszłe wystąpienia przestały się pojawiać.
       cancelled_on_label: Anulowano
       category_blank: Brak kategorii
-      category_label: Kategoria
       first_due_on_label: Następny termin
       frequency_day_label: W dniu
       frequency_hint: Jak często ten rachunek jest wymagalny. Dobierz szczegóły dnia

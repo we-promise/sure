@@ -20,6 +20,7 @@ fr:
       account_invalid: Choisissez un compte auquel vous pouvez ajouter des factures, ou laissez le champ vide
       already_exists: Cette facture existe déjà
       amount_invalid: Saisissez le montant sous forme de nombre simple
+      amount_too_precise: Utilisez au plus 4 décimales
       due_date_required: Saisissez la prochaine date d'échéance de la facture
       success: Facture ajoutée
       success_income: Revenu ajouté
@@ -55,7 +56,6 @@ fr:
       cancelled_on_hint: Noter la date ne sert qu'à votre suivi personnel. Mettez la facture en pause pour arrêter l'apparition des suivantes.
       cancelled_on_label: Annulée le
       category_blank: Sans catégorie
-      category_label: Catégorie
       first_due_on_label: Prochaine échéance
       frequency_day_label: Le jour
       frequency_hint: À quelle fréquence cette facture arrive à échéance. Choisissez les détails du jour pour correspondre à votre relevé.
