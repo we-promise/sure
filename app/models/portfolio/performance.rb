@@ -18,7 +18,7 @@ class Portfolio::Performance
   # Bumped whenever the meaning of a cached figure changes, so warm caches stop
   # serving the old interpretation under the same name (the pattern #3350 used
   # for totals_query/v2).
-  CACHE_VERSION = "v7".freeze
+  CACHE_VERSION = "v8".freeze
 
   # The balance rows are calendar daily, so the series includes weekends and
   # holidays as structural zeros. Annualising that by the trading-day convention
@@ -74,6 +74,15 @@ class Portfolio::Performance
     metrics[:annualized_mwr]
   end
   alias_method :annualized_mwr, :annualized_money_weighted_return
+
+  # True when the money-weighted return's flows change sign more than once, so
+  # more than one rate may solve them and the figure is one of possibly several
+  # (Portfolio::Xirr#ambiguous?, a conservative bound: "may", not "has"). The
+  # figure is still reported. False whenever the rate is withheld, for any
+  # reason: there is no figure to hedge.
+  def money_weighted_return_ambiguous?
+    metrics[:mwr_ambiguous]
+  end
 
   # Annualised standard deviation of daily returns.
   def volatility
@@ -181,7 +190,8 @@ class Portfolio::Performance
       # history supports no return, so it withholds every time-weighted figure.
       withhold_time_weighted = rate_missing || !time_weighted_supported?
       chained = withhold_time_weighted ? nil : chain(returns)
-      money_weighted_rate = rate_missing || !money_weighted_supported?(rows) ? nil : money_weighted(rows)
+      money_weighted_result = rate_missing || !money_weighted_supported?(rows) ? nil : money_weighted(rows)
+      money_weighted_rate = money_weighted_result&.fetch(:rate)
 
       {
         twr: chained,
@@ -189,6 +199,8 @@ class Portfolio::Performance
         # Period basis. The annualised form is :annualized_mwr, nil under a year.
         mwr: money_weighted_rate,
         annualized_mwr: annualize(money_weighted_rate),
+        # From the same solve as :mwr, and false whenever :mwr is nil.
+        mwr_ambiguous: money_weighted_result.present? && money_weighted_result.fetch(:ambiguous),
         volatility: withhold_time_weighted ? nil : annualized_volatility(returns),
         max_drawdown: withhold_time_weighted ? nil : drawdown(returns),
         index_series: withhold_time_weighted ? [] : rebased_index(returns),
@@ -281,6 +293,11 @@ class Portfolio::Performance
     # instead would compress the series by a day: the money was at work for N
     # days but discounted over N-1, which annualised to a figure about four
     # basis points off the annual XIRR of the same flows over a year.
+    #
+    # Returns { rate:, ambiguous: } from ONE Portfolio::Xirr, so the rate and
+    # whether it may be one of several cannot come from different flows, or nil
+    # when there is no rate -- the three errors Xirr.rate_or_nil rescues, the
+    # same ones rescued here.
     def money_weighted(rows)
       return nil if rows.empty?
 
@@ -303,7 +320,10 @@ class Portfolio::Performance
 
       flows << Portfolio::Xirr::Flow.new(date: closing_date, amount: closing) unless closing.zero?
 
-      Portfolio::Xirr.rate_or_nil(flows, days_per_unit: span_in_days)
+      xirr = Portfolio::Xirr.new(flows, days_per_unit: span_in_days)
+      { rate: xirr.rate, ambiguous: xirr.ambiguous? }
+    rescue Portfolio::Xirr::NoSignChangeError, Portfolio::Xirr::NoDurationError, Portfolio::Xirr::ConvergenceError
+      nil
     end
 
     def annualized_volatility(returns)
