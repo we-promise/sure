@@ -227,8 +227,11 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Paused bills sat under a heading that called them Dormant, while each row,
-  # the drawer's Pause/Resume and the All bills filter all said Paused.
-  test "paused bills sit under the word their rows use, in every language" do
+  # the drawer's Pause/Resume and the All bills filter all said Paused. The
+  # heading names a group of bills, so it takes the All bills filter's label
+  # for that same group: in Russian and Ukrainian that is the plural, where a
+  # row's own status reads as a single bill's.
+  test "paused bills sit under the All bills filter's word for them, in every language" do
     late = 6.days.ago.to_date
     bill = create_bill(name: "Paused gym", amount: 40, expected_day_of_month: late.day,
                        last_occurrence_date: 2.months.ago.to_date, next_expected_date: late)
@@ -237,13 +240,13 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    assert_select "main h2", text: I18n.t("bills.attention.paused")
+    assert_select "main h2", text: I18n.t("bills.all.status_filters.paused")
     I18n.available_locales.each do |locale|
-      row = I18n.t("bills.attention.paused", locale: locale, fallback: false, default: nil)
-      next if row.nil?
+      filter = I18n.t("bills.all.status_filters.paused", locale: locale, fallback: false, default: nil)
+      next if filter.nil?
 
-      assert_equal row, I18n.t("bills.index.dormant", locale: locale, fallback: false, default: nil),
-        "#{locale}: the Paused heading and its rows say different things"
+      assert_equal filter, I18n.t("bills.index.dormant", locale: locale, fallback: false, default: nil),
+        "#{locale}: the Paused heading and the All bills filter say different things"
     end
   end
 
