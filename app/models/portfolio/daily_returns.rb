@@ -312,7 +312,12 @@ class Portfolio::DailyReturns
             -- day's rate change. Zero when the account's currency is the
             -- family's, because both rates are then exactly 1.
             COALESCE(SUM(lb.end_balance * lb.flows_factor * (er.rate - prev_er.rate)), 0) AS fx_effect,
-            BOOL_OR(lb.end_balance IS NOT NULL
+            -- Only a balance that is not zero needs converting: an account
+            -- whose rows are all zero (an unfunded account with a zero opening
+            -- anchor) contributes zero at any rate, so it cannot be short of
+            -- one. start_balance is checked too because it is what value_open
+            -- reads on the period's first day.
+            BOOL_OR((lb.end_balance <> 0 OR lb.start_balance <> 0)
                     AND sa.currency <> :target_currency
                     AND er.rate IS NULL) AS rate_missing
           FROM dates d
