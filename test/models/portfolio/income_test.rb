@@ -178,6 +178,26 @@ class Portfolio::IncomeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(15), income.total
   end
 
+  # Performance caches this hash, and a cache store with a JSON serializer
+  # turns a Date into a string on the way out and hands the string back. The
+  # month is therefore an ISO 8601 string from the start, so what a caller reads
+  # is the same whichever serializer the store uses, and it parses back to the
+  # month it names.
+  test "the cached payload's months survive a JSON round trip unchanged" do
+    income_trade account: @account, date: @mar, amount: 30
+    lay_flat_balances cash_by_date: { @mar => 30 }
+
+    payload = income_for.to_h
+    round_tripped = JSON.parse(payload.to_json)
+
+    assert_equal [ "2026-03-01" ], payload[:buckets].map { |bucket| bucket[:month] }
+    assert_equal payload[:buckets].map { |bucket| bucket[:month] },
+                 round_tripped["buckets"].map { |bucket| bucket["month"] },
+                 "a JSON store must hand back what was cached"
+    assert_equal Date.new(2026, 3, 1), Date.iso8601(round_tripped["buckets"].first["month"])
+    assert_equal BigDecimal(30), BigDecimal(round_tripped["buckets"].first["amount"])
+  end
+
   private
     def daily_returns
       Portfolio::DailyReturns.new(
