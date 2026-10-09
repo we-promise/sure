@@ -414,9 +414,11 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=file]", count: 0
   end
 
-  test "shows bond positions tab without strict locals errors" do
+  test "bond account page renders without strict locals errors" do
     bond_account = accounts(:bond)
 
+    # Bonds have no dedicated positions tab; an unknown tab falls back to the
+    # activity tab. This guards that the bond account page renders at all.
     get account_url(bond_account, tab: "positions")
 
     assert_response :success

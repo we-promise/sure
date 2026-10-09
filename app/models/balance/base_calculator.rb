@@ -52,44 +52,32 @@ class Balance::BaseCalculator
     end
 
     def bond_holdings_value_for_date(date)
-      return 0.to_d if bond_lot_change_dates.empty?
+      lots = bond_lots_for_holdings
+      return 0.to_d if lots.empty?
 
-      next_change_index = bond_lot_change_dates.bsearch_index { |change_date| change_date > date }
+      BondLot.with_inflation_lookup_cache do
+        lots.sum do |lot|
+          next 0.to_d unless lot_held_on?(lot, date)
 
-      if next_change_index.nil?
-        bond_lot_running_totals.last || 0.to_d
-      elsif next_change_index.zero?
-        0.to_d
-      else
-        bond_lot_running_totals[next_change_index - 1]
-      end
-    end
-
-    def bond_lot_change_dates
-      @bond_lot_change_dates ||= bond_lot_changes_by_date.keys.sort
-    end
-
-    def bond_lot_running_totals
-      @bond_lot_running_totals ||= begin
-        running_total = 0.to_d
-
-        bond_lot_change_dates.map do |change_date|
-          running_total += bond_lot_changes_by_date[change_date]
+          # Accrued value as of `date` (not just purchase principal), so the
+          # holdings series reflects interest/inflation accrual over the lot's
+          # life. estimated_current_value caps at maturity_date internally.
+          lot.estimated_current_value(on: date, allow_import: false)
         end
       end
     end
 
-    def bond_lot_changes_by_date
-      @bond_lot_changes_by_date ||= bond_lots_for_holdings.each_with_object(Hash.new(0.to_d)) do |lot, changes|
-        amount = lot.amount.to_d
+    # A lot contributes to holdings from its purchase date until (but not
+    # including) the date it closed/settled, when its value moves to cash.
+    def lot_held_on?(lot, date)
+      return false if lot.purchased_on.nil? || date < lot.purchased_on
+      return false if lot.closed_on.present? && date >= lot.closed_on
 
-        changes[lot.purchased_on] += amount
-        changes[lot.closed_on] -= amount if lot.closed_on.present?
-      end
+      true
     end
 
     def bond_lots_for_holdings
-      @bond_lots_for_holdings ||= account.bond.bond_lots.select(:purchased_on, :closed_on, :amount).to_a
+      @bond_lots_for_holdings ||= account.bond.bond_lots.to_a
     end
 
     def derive_cash_balance_on_date_from_total(total_balance:, date:)

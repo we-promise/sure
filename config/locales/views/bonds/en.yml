@@ -26,29 +26,6 @@ en:
         long: Other Bond
     new:
       title: Enter bond details
-    tabs:
-      positions:
-        positions: Bond positions
-        new_activity: New activity
-        name: Name
-        weight: Weight
-        rate: Rate
-        holdings: Holdings
-        maturity: Maturity
-        total_return: Total return
-        no_purchases: No purchases added yet.
-      closed:
-        closed: Closed bond lots
-        name: Name
-        weight: Weight
-        rate: Rate
-        holdings: Holdings
-        maturity: Maturity
-        total_return: Total return
-        no_closed_lots: No closed bond lots yet.
-        closed_lots: Closed bond lots
-        closed_lot_meta: "Purchased %{purchased}, closed %{closed}"
-        settled_net: Settled net
     cash_holding:
       cash_position: Bond cash
     purchase_holding:
@@ -114,6 +91,7 @@ en:
       success: Bond purchase added
     update:
       success: Bond purchase updated
+      settled_error: Cannot modify a settled bond lot
     destroy:
       success: Bond purchase removed
       settled_error: Cannot delete a settled bond lot

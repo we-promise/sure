@@ -134,10 +134,19 @@ class BondLot < ApplicationRecord
     unpaid_coupon_accrual = 0.to_d
     cursor = purchased_on
     issue_base = anniversary_issue_base
+    accrual_months = accrual_period_months
+    accrual_idx = accrual_periods_elapsed(cursor:, issue_base:)
+    anniversary_idx = anniversary_periods_elapsed(cursor:, issue_base:)
 
     while cursor < period_end
-      next_accrual_boundary, _accrual_start = accrual_boundaries(cursor:, issue_base:)
-      next_anniversary, anniversary_start = anniversary_boundaries(cursor:, issue_base:)
+      # Advance the period indices forward from where we left off rather than
+      # rescanning from issue_base each iteration (keeps the loop O(n), not O(n^2)).
+      accrual_idx = accrual_periods_elapsed(cursor:, issue_base:, from: accrual_idx)
+      anniversary_idx = anniversary_periods_elapsed(cursor:, issue_base:, from: anniversary_idx)
+
+      next_accrual_boundary = issue_base + ((accrual_idx + 1) * accrual_months).months
+      next_anniversary = issue_base + anniversary_idx.years
+      anniversary_start = issue_base + (anniversary_idx - 1).years
 
       next_cursor = [ next_accrual_boundary, period_end ].min
       days_in_step = [ (next_cursor - cursor).to_i, 0 ].max
@@ -318,18 +327,21 @@ class BondLot < ApplicationRecord
   def settle_if_matured!(on: Date.current)
     settlement_date_for_sync = nil
 
-    # Lock the row to prevent concurrent settlements.
+    # Lock the row to prevent concurrent settlements. Use `next` (not `return`)
+    # to exit the block: `with_lock` runs inside a transaction, and a non-local
+    # `return` out of a transaction block triggers a ROLLBACK, which would
+    # silently discard the requires_rate_review write below.
     settled = with_lock do
-      return false unless auto_close_on_maturity?
-      return false unless open?
-      return false unless matured?(on:)
+      next false unless auto_close_on_maturity?
+      next false unless open?
+      next false unless matured?(on:)
 
       settlement_date = [ on, maturity_date ].compact.min
 
       # Abort if any rate period cannot be resolved — prevents closing the lot with a wrong value.
       unless rates_resolvable_through?(date: settlement_date)
         update_column(:requires_rate_review, true)
-        return false
+        next false
       end
 
       gross_value = estimated_current_value(on: settlement_date)
@@ -370,10 +382,17 @@ class BondLot < ApplicationRecord
     opening_balance = principal
     cursor = purchased_on
     issue_base = anniversary_issue_base
+    accrual_months = accrual_period_months
+    accrual_idx = accrual_periods_elapsed(cursor:, issue_base:)
+    anniversary_idx = anniversary_periods_elapsed(cursor:, issue_base:)
 
     while cursor < history_end
-      next_accrual_boundary, _accrual_start = accrual_boundaries(cursor:, issue_base:)
-      next_anniversary, anniversary_start = anniversary_boundaries(cursor:, issue_base:)
+      accrual_idx = accrual_periods_elapsed(cursor:, issue_base:, from: accrual_idx)
+      anniversary_idx = anniversary_periods_elapsed(cursor:, issue_base:, from: anniversary_idx)
+
+      next_accrual_boundary = issue_base + ((accrual_idx + 1) * accrual_months).months
+      next_anniversary = issue_base + anniversary_idx.years
+      anniversary_start = issue_base + (anniversary_idx - 1).years
 
       next_cursor = [ next_accrual_boundary, history_end ].min
       days_in_step = [ (next_cursor - cursor).to_i, 0 ].max
@@ -461,17 +480,33 @@ class BondLot < ApplicationRecord
 
     # Returns [next_anniversary, anniversary_start] for the period containing cursor.
     def anniversary_boundaries(cursor:, issue_base:)
-      years_since = 0
-      years_since += 1 while issue_base + years_since.years <= cursor
+      years_since = anniversary_periods_elapsed(cursor:, issue_base:)
       [ issue_base + years_since.years, issue_base + (years_since - 1).years ]
+    end
+
+    # Number of whole years from issue_base strictly before cursor. Extracted so
+    # callers iterating forward can advance incrementally instead of rescanning
+    # from issue_base each period (which made the accrual loops O(n^2)).
+    def anniversary_periods_elapsed(cursor:, issue_base:, from: 0)
+      years_since = from
+      years_since += 1 while issue_base + years_since.years <= cursor
+      years_since
     end
 
     # Returns [next_accrual_boundary, accrual_start] for the period containing cursor.
     def accrual_boundaries(cursor:, issue_base:)
       months = accrual_period_months
-      periods_since = 0
-      periods_since += 1 while issue_base + ((periods_since + 1) * months).months <= cursor
+      periods_since = accrual_periods_elapsed(cursor:, issue_base:)
       [ issue_base + ((periods_since + 1) * months).months, issue_base + (periods_since * months).months ]
+    end
+
+    # Number of whole accrual periods from issue_base at/before cursor. `from`
+    # lets a forward iterator resume the scan instead of restarting at 0.
+    def accrual_periods_elapsed(cursor:, issue_base:, from: 0)
+      months = accrual_period_months
+      periods_since = from
+      periods_since += 1 while issue_base + ((periods_since + 1) * months).months <= cursor
+      periods_since
     end
 
     def accrual_period_months

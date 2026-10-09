@@ -1,100 +1,6 @@
 ---
 pl:
-  bond_lots:
-    activity:
-      maturity_settlement_name: 'Rozliczenie zapadalności obligacji: %{subtype}'
-      maturity_settlement_notes_with_tax: |-
-        Kwota zakupu: %{purchase_amount}
-        Łączne odsetki: %{interest_amount}
-        Potrącony podatek: %{tax_withheld_amount}
-      maturity_settlement_notes_without_tax: |-
-        Kwota zakupu: %{purchase_amount}
-        Łączne odsetki: %{interest_amount}
-        Potrącony podatek: brak
-      purchase_name: 'Zakup obligacji: %{subtype}'
-    closed_purchase_holding:
-      closed_meta: Zakupiono %{purchased}, zamknięto %{closed}
-      closed_rate_meta: "%{periods} okresów kapitalizacji"
-      history_meta: Odsetki %{interest}, podatek %{tax}
-      settled_net: Rozliczono netto %{net}
-    create:
-      success: Dodano zakup obligacji
-    destroy:
-      success: Usunięto zakup obligacji
-    edit:
-      title: Edytuj zakup dla %{account}
-    form:
-      amount: Kwota kapitału
-      auto_close_on_maturity: Automatycznie zamknij w dniu zapadalności
-      auto_close_on_maturity_hint: Automatycznie rozlicz tę partię w dniu zapadalności
-        i przeksięguj środki na gotówkę konta.
-      auto_fetch_disabled_hint: Automatyczny import CPI jest globalnie wyłączony w
-        ustawieniach self-hosting. Wprowadź inflację ręcznie.
-      auto_fetch_inflation: Pobieraj inflację automatycznie z GUS
-      coupon_frequencies:
-        annual: Rocznie
-        at_maturity: W terminie zapadalności
-        monthly: Miesięcznie
-        quarterly: Kwartalnie
-        semi_annual: Półrocznie
-      coupon_frequency: Częstotliwość kuponu
-      cpi_lag_months: Opóźnienie CPI (miesiące)
-      early_redemption_fee: Opłata za wcześniejszy wykup
-      first_period_rate: Oprocentowanie pierwszego okresu (%)
-      inflation_margin: Marża inflacyjna (%)
-      inflation_rate_assumption: Założenie CPI (%)
-      interest_rate: Oprocentowanie
-      interest_rate_placeholder: '4.25'
-      issue_date: Data emisji
-      nominal_per_unit: Nominał na jednostkę
-      purchased_on: Data zakupu
-      rate_type: Typ oprocentowania
-      rate_types:
-        fixed: Stałe
-        variable: Zmienne
-      submit: Dodaj zakup
-      subtype: Typ obligacji
-      tax_rate: Stawka podatku (%)
-      tax_strategies:
-        exempt: Zwolnione z podatku (IKE/IKZE)
-        reduced: Podatek obniżony
-        standard: Podatek standardowy
-      tax_strategy: Obsługa podatku przy zapadalności
-      term_months: Okres (miesiące)
-      units: Jednostki
-      update: Zaktualizuj zakup
-    new:
-      title: Dodaj zakup dla %{account}
-    not_bond_account: To konto nie jest kontem obligacji.
-    show:
-      delete: Usuń
-      delete_confirm: Usunąć ten zakup?
-      delete_subtitle: Usuń ten zakup i powiązany wpis aktywności.
-      delete_title: Usuń zakup
-      history: Historia
-      history_balance: Saldo %{opening} -> %{closing}
-      history_capitalized: Skapitalizowano
-      history_inflation_first_period: Stała stopa pierwszego okresu
-      history_inflation_gus: 'Użyta inflacja: %{inflation} + %{margin} marży (GUS
-        SDP %{indicator}, odn. %{reference})'
-      history_inflation_manual: 'Użyta inflacja: %{inflation} + %{margin} marży (założenie
-        ręczne)'
-      history_interest: Odsetki %{interest} przy %{rate}
-      history_partial: Okres częściowy
-      history_period: 'Okres %{period}: %{start} - %{end}'
-      no_history: Brak historii kapitalizacji.
-      overview_closed_on: Zamknięto
-      overview_maturity: Data zapadalności
-      overview_principal: Kapitał
-      overview_settlement: Kwota rozliczenia
-      purchased: Zakupiono %{date}
-      settings: Ustawienia
-      unknown: Nieznane
-    update:
-      success: Zaktualizowano zakup obligacji
   bonds:
-    cash_holding:
-      cash_position: Gotówka z obligacji
     edit:
       title: Edytuj %{account}
     form:
@@ -105,28 +11,6 @@ pl:
       tax_wrapper: Otoczka podatkowa
     new:
       title: Wprowadź dane obligacji
-    purchase_holding:
-      bond_meta: "%{rate_type} / %{coupon}"
-      confirm_remove: Usunąć ten zakup?
-      edit: Edytuj
-      first_period_fixed_rate: Stałe oprocentowanie pierwszego okresu
-      inflation_meta_gus: "%{inflation} inflacji + %{margin} marży (GUS SDP %{indicator})"
-      inflation_meta_manual: "%{inflation} inflacji + %{margin} marży (ręcznie)"
-      maturity: Zapada %{date}
-      maturity_label: Data zapadalności
-      pending_review: Oczekiwanie na zaktualizowane stawki emisji
-      principal_term: Kapitał, %{term}
-      projected_to_maturity: Prognoza do zapadalności
-      purchased: Zakupiono %{date}
-      remove: Usuń
-      since_purchase: Od zakupu
-      term_months:
-        few: "%{count} miesiące"
-        many: "%{count} miesięcy"
-        one: "%{count} miesiąc"
-        other: "%{count} miesiąca"
-      unknown: Nieznane
-      update_needed: Wymagana aktualizacja
     subtypes:
       zero_coupon:
         short: Zero-kuponowa
@@ -153,33 +37,6 @@ pl:
       rod:
         long: 12-letnia rodzinna obligacja oszczędnościowa
         short: ROD
-    tabs:
-      closed:
-        closed: Zamknięte partie obligacji
-        closed_lot_meta: Zakupiono %{purchased}, zamknięto %{closed}
-        closed_lots: Zamknięte partie obligacji
-        holdings: Stan
-        maturity: Zapadalność
-        name: Nazwa
-        no_closed_lots: Brak zamkniętych partii obligacji.
-        rate: Oprocentowanie
-        settled_net: Rozliczono netto
-        total_return: Łączny zwrot
-        weight: Udział
-      positions:
-        holdings: Stan
-        maturity: Zapadalność
-        name: Nazwa
-        new_activity: Nowa aktywność
-        no_purchases: Nie dodano jeszcze żadnych zakupów.
-        positions: Pozycje obligacji
-        rate: Oprocentowanie
-        total_return: Łączny zwrot
-        weight: Udział
-        no_closed_lots: Brak zamkniętych partii obligacji.
-        closed_lots: Zamknięte partie obligacji
-        closed_lot_meta: "Zakupiono %{purchased}, zamknięto %{closed}"
-        settled_net: Rozliczono netto
     cash_holding:
       cash_position: Gotówka z obligacji
     purchase_holding:
@@ -247,6 +104,7 @@ pl:
       success: Dodano zakup obligacji
     update:
       success: Zaktualizowano zakup obligacji
+      settled_error: Nie można modyfikować rozliczonego zakupu obligacji
     destroy:
       success: Usunięto zakup obligacji
       settled_error: Nie można usunąć rozliczonego zakupu obligacji

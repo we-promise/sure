@@ -18,7 +18,9 @@ class BondLotsController < ApplicationController
 
   def edit
     @account = @bond_lot.account
-    return unless require_account_permission!(@account) # rubocop:disable Style/RedundantReturn
+    return unless require_account_permission!(@account)
+
+    redirect_if_settled!
   end
 
   def show
@@ -51,6 +53,7 @@ class BondLotsController < ApplicationController
   def update
     @account = @bond_lot.account
     return unless require_account_permission!(@account)
+    return if redirect_if_settled!
 
     old_purchased_on = @bond_lot.purchased_on
 
@@ -89,6 +92,16 @@ class BondLotsController < ApplicationController
                          .where(accounts: { family_id: Current.family.id })
                          .merge(Account.accessible_by(Current.user))
                          .find(params[:id])
+    end
+
+    # A settled lot is immutable: its settlement record and any replacement lot
+    # were derived from its final state. The show view hides the form, but a
+    # direct GET edit / PATCH would otherwise still mutate it, so guard here too.
+    def redirect_if_settled!
+      return false if @bond_lot.closed_on.blank?
+
+      redirect_back_or_to account_path(@account), alert: t("bond_lots.update.settled_error")
+      true
     end
 
     def bond_lot_params(bond = nil)

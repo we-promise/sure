@@ -864,4 +864,94 @@ class BondLotTest < ActiveSupport::TestCase
     assert BondLot.exists?(lot.id)
     assert Entry.exists?(lot.entry.id)
   end
+
+  test "settle_if_matured! persists requires_rate_review when rates are unresolvable" do
+    lot = BondLot.create!(
+      bond: bonds(:one),
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      subtype: "inflation_linked",
+      term_months: 12,
+      maturity_date: Date.new(2025, 1, 1),
+      first_period_rate: nil,
+      inflation_margin: 0.9,
+      inflation_rate_assumption: nil,
+      cpi_lag_months: 2,
+      units: 10,
+      nominal_per_unit: 100,
+      issue_date: Date.new(2024, 1, 1),
+      auto_close_on_maturity: true,
+      rate_type: "variable",
+      coupon_frequency: "at_maturity",
+      requires_rate_review: true
+    )
+    # Simulate the flag having been cleared (e.g. a prior review) so we can prove
+    # the settlement path re-persists it rather than rolling the write back.
+    lot.update_column(:requires_rate_review, false)
+
+    # Rates cannot be resolved (no manual assumption, no CPI), so settlement must
+    # bail out AND persist the review flag. The write must survive the with_lock
+    # transaction rather than being rolled back by a non-local return.
+    assert_not lot.settle_if_matured!(on: Date.new(2025, 2, 1))
+
+    assert lot.reload.requires_rate_review?, "requires_rate_review should persist after an unresolvable settlement"
+    assert_nil lot.closed_on, "lot must remain open when rates are unresolvable"
+  end
+
+  test "settlement entry cannot be deleted directly after a lot settles" do
+    account = accounts(:bond)
+    lot = BondLot.create!(
+      bond: account.bond,
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      subtype: "other_bond",
+      term_months: 12,
+      interest_rate: 10,
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      auto_close_on_maturity: true,
+      tax_strategy: "standard",
+      tax_rate: 19
+    )
+    lot.create_purchase_entry!
+    lot.settle_if_matured!(on: Date.new(2025, 2, 1))
+
+    settlement_entry = account.entries.find do |e|
+      e.entryable.is_a?(Transaction) && e.entryable.extra["bond_lot_settlement"]
+    end
+    assert_not_nil settlement_entry, "settlement entry should exist after settling"
+
+    # The settlement entry has no bond_lot association (only extra metadata), so
+    # the guard must detect it via that metadata, not the association.
+    assert_raises(ActiveRecord::RecordNotDestroyed) { settlement_entry.destroy! }
+    assert Entry.exists?(settlement_entry.id)
+  end
+
+  test "destroying the account cascades through a settled lot's purchase entry" do
+    account = accounts(:bond)
+    lot = BondLot.create!(
+      bond: account.bond,
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      subtype: "other_bond",
+      term_months: 12,
+      interest_rate: 10,
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      auto_close_on_maturity: true,
+      tax_strategy: "standard",
+      tax_rate: 19
+    )
+    lot.create_purchase_entry!
+    lot.settle_if_matured!(on: Date.new(2025, 2, 1))
+    entry_id = lot.entry.id
+
+    # The settled-lot guard must NOT block a cascaded destroy (Account/Family
+    # deletion); otherwise the account can never be removed once a lot settles.
+    assert_nothing_raised { account.destroy! }
+
+    assert_not Account.exists?(account.id)
+    assert_not BondLot.exists?(lot.id)
+    assert_not Entry.exists?(entry_id)
+  end
 end

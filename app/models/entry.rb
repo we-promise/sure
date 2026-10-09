@@ -614,10 +614,26 @@ class Entry < ApplicationRecord
     end
 
     def prevent_deletion_when_linked_bond_lot_settled
-      return unless bond_lot&.closed_on.present?
+      # Only guard an individual entry deletion. When the entry is destroyed
+      # through a parent association (Account/Family cascade), let it through:
+      # has_one :bond_lot, dependent: :destroy removes the lot first, satisfying
+      # the on_delete: :restrict FK, so cascading account deletion still works.
+      return if destroyed_by_association
+      return unless linked_to_settled_bond_lot?
 
       errors.add(:base, settled_bond_lot_deletion_error_message)
       throw :abort
+    end
+
+    # True when deleting this entry would strand a settled bond lot. Covers both
+    # the purchase entry (linked via the bond_lot association) and the
+    # settlement entry (a plain Transaction tagged with bond_lot_settlement
+    # metadata, which has no association back to the lot).
+    def linked_to_settled_bond_lot?
+      return true if bond_lot&.closed_on.present?
+
+      entryable.is_a?(Transaction) && entryable.extra.is_a?(Hash) &&
+        entryable.extra["bond_lot_settlement"]
     end
 
     def settled_bond_lot_deletion_error_message

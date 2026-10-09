@@ -188,6 +188,54 @@ class BondLotsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#drawer"
   end
 
+  test "edit redirects with alert for a settled lot" do
+    lot = BondLot.create!(
+      bond: @account.bond,
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      term_months: 12,
+      interest_rate: 10,
+      subtype: "other_bond",
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      auto_close_on_maturity: true,
+      tax_strategy: "standard",
+      tax_rate: 19
+    )
+    lot.create_purchase_entry!
+    lot.settle_if_matured!(on: Date.new(2025, 2, 1))
+
+    get edit_bond_lot_path(lot)
+
+    assert_redirected_to account_path(@account)
+    assert_equal I18n.t("bond_lots.update.settled_error"), flash[:alert]
+  end
+
+  test "update rejects changes to a settled lot" do
+    lot = BondLot.create!(
+      bond: @account.bond,
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      term_months: 12,
+      interest_rate: 10,
+      subtype: "other_bond",
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      auto_close_on_maturity: true,
+      tax_strategy: "standard",
+      tax_rate: 19
+    )
+    lot.create_purchase_entry!
+    lot.settle_if_matured!(on: Date.new(2025, 2, 1))
+
+    assert_no_changes -> { lot.reload.amount } do
+      patch bond_lot_path(lot), params: { bond_lot: { amount: 9999 } }
+    end
+
+    assert_redirected_to account_path(@account)
+    assert_equal I18n.t("bond_lots.update.settled_error"), flash[:alert]
+  end
+
   test "creates EOD purchase without term months input" do
     purchase_date = Date.new(2026, 4, 1)
 
