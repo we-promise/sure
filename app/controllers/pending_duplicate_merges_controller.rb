@@ -71,14 +71,12 @@ class PendingDuplicateMergesController < ApplicationController
     def find_eligible_posted_entry(entry_id)
       # Constrain to same account, currency, and ensure it's a posted transaction
       # Use the same logic as pending_duplicate_candidates to ensure consistency
-      conditions = Transaction::PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS NOT TRUE" }
-
       @transaction.entry.account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(id: entry_id)
         .where(currency: @transaction.entry.currency)
         .where.not(id: @transaction.entry.id)
-        .where(conditions.join(" AND "))
+        .where(Transaction.not_pending_sql)
         .first
     end
 
