@@ -19,6 +19,26 @@ class Rule < ApplicationRecord
   validate :min_actions
   validate :no_duplicate_actions
 
+  # Switching a rule on records the transactions it already matches as delivered,
+  # so an email action only reports what appears afterwards. Rule::Action seeds the
+  # same baseline when the action is created, but a rule switched off and on again
+  # (by the toggle, the form, Apply or an import) would otherwise email every match
+  # from before, including those from while it was off.
+  #
+  # after_update, not after_update_commit: it runs inside the save's transaction,
+  # after the nested conditions and actions are written, so the baseline is taken
+  # from the conditions as saved and is committed together with `active`. Nothing
+  # can see the rule switched on without its baseline. Declared after the nested
+  # attributes so it runs after their autosave. A new rule needs no callback:
+  # creating its email action seeds the baseline.
+  after_update :seed_notification_baseline, if: :switched_on?
+
+  # True when the last save asked to switch the rule on but the baseline query
+  # timed out, so the rule was left off.
+  def notification_baseline_timed_out?
+    @notification_baseline_timed_out == true
+  end
+
   def action_executors
     registry.action_executors
   end
@@ -211,6 +231,24 @@ class Rule < ApplicationRecord
       return Rule::SafeRegex.with_timeout { scope.pluck(:id) } if @regex_matches.nil?
 
       @regex_matches.fetch(:ids) { @regex_matches[:ids] = Rule::SafeRegex.with_timeout { scope.pluck(:id) } }
+    end
+
+    def switched_on?
+      saved_change_to_active?(from: false, to: true)
+    end
+
+    def seed_notification_baseline
+      @notification_baseline_timed_out = false
+      return unless actions.exists?(action_type: "send_email_notification")
+
+      NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)
+    rescue Rule::SafeRegex::TimeoutError => e
+      # As in Rule::Action#seed_notification_baseline: without a baseline the next
+      # run would email every past match, so the rule stays off. The timed-out query
+      # ran in its own savepoint, so the rest of the save still commits.
+      Rails.logger.warn("Notification baseline for rule #{id} timed out, rule left off: #{e.message}")
+      @notification_baseline_timed_out = true
+      update_columns(active: false)
     end
 
     def normalize_name

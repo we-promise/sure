@@ -60,6 +60,13 @@ class RulesController < ApplicationController
 
   def apply
     @rule.update!(active: true)
+
+    # The rule stayed off, so running it now would only repeat the slow query.
+    if @rule.notification_baseline_timed_out?
+      redirect_back_or_to rules_path, alert: t("rules.notification_baseline_timed_out")
+      return
+    end
+
     @rule.apply_later(ignore_attribute_locks: true)
     redirect_back_or_to rules_path, notice: "#{@rule.resource_type.humanize} rule activated"
   end
@@ -76,9 +83,15 @@ class RulesController < ApplicationController
 
   def update
     if @rule.update(rule_params)
+      flash_message = if @rule.notification_baseline_timed_out?
+        { alert: t("rules.notification_baseline_timed_out") }
+      else
+        { notice: t(".success") }
+      end
+
       respond_to do |format|
-        format.html { redirect_back_or_to rules_path, notice: t(".success") }
-        format.turbo_stream { stream_redirect_back_or_to rules_path, notice: t(".success") }
+        format.html { redirect_back_or_to rules_path, **flash_message }
+        format.turbo_stream { stream_redirect_back_or_to rules_path, **flash_message }
       end
     else
       render :edit, status: :unprocessable_entity

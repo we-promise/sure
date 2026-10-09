@@ -3,6 +3,7 @@ en:
   rules:
     no_action: No Action
     no_condition: No condition
+    notification_baseline_timed_out: This rule is still off. Checking which transactions it already matches took too long, and without that check it would email all of them. Simplify its conditions, then turn it on again.
     category_rule_cta:
       close: Close
       create_rule: Create rule
