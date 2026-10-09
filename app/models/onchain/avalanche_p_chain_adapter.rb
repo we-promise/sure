@@ -43,11 +43,20 @@ class Onchain::AvalanchePChainAdapter
     ADDRESS_PATTERN.match?(address.to_s.strip)
   end
 
-  # Bech32 is case-insensitive and canonically lowercase; the chain-context
-  # prefix is restored if the input omitted it (see ADDRESS_PATTERN above).
+  # Bech32 is case-insensitive and canonically lowercase, but the "P-"
+  # chain-context prefix is not part of the bech32 payload - it is Avalanche's
+  # own chain-alias lookup, and the node only registers the alias "P"
+  # (uppercase), not "p". A fully-lowercased "p-avax1..." is rejected by the
+  # node's RPC with "there is no ID with alias: p", which this app's error
+  # handling can't tell apart from the node being genuinely unreachable - so
+  # getting this wrong here surfaces as a misleading "could not be reached"
+  # for every single address. The prefix is restored/normalized to uppercase
+  # "P-" regardless of input casing; only the bech32 payload after it is
+  # lowercased.
   def canonical_address(address)
     value = address.to_s.strip.downcase
-    value.start_with?("p-") ? value : "p-#{value}"
+    bech32_payload = value.delete_prefix("p-")
+    "P-#{bech32_payload}"
   end
 
   def fetch_snapshot(address)

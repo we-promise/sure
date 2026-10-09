@@ -36,10 +36,17 @@ class Onchain::AvalanchePChainAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "canonicalizes to the P- prefixed, lowercase form regardless of input style" do
-    assert_equal ADDRESS.downcase, @adapter.canonical_address(ADDRESS.upcase)
-    assert_equal ADDRESS.downcase, @adapter.canonical_address(BARE_ADDRESS.upcase)
-    assert_equal ADDRESS.downcase, @adapter.canonical_address(" #{BARE_ADDRESS} ")
+  # The "P-" prefix is Avalanche's own chain-alias lookup, not part of the
+  # bech32 payload, and the node only registers the uppercase alias "P" - a
+  # fully-lowercased "p-avax1..." is rejected by the real RPC with "there is
+  # no ID with alias: p" (confirmed live against api.avax.network). So the
+  # prefix must stay uppercase in canonical form even though the bech32
+  # payload after it is canonically lowercase.
+  test "canonicalizes to the P- prefixed (uppercase prefix, lowercase payload) form regardless of input style" do
+    assert_equal ADDRESS, @adapter.canonical_address(ADDRESS.upcase)
+    assert_equal ADDRESS, @adapter.canonical_address(BARE_ADDRESS.upcase)
+    assert_equal ADDRESS, @adapter.canonical_address(" #{BARE_ADDRESS} ")
+    assert_equal ADDRESS, @adapter.canonical_address(ADDRESS.downcase)
   end
 
   test "fetch_snapshot refuses a malformed address before any request" do
