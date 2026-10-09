@@ -85,9 +85,15 @@ class Portfolio::Income
 
   # The shape Portfolio::Performance caches. Plain values only, so it survives
   # Rails.cache the way Portfolio::Drivers#to_h does.
+  #
+  # Each bucket's `month` is an ISO 8601 date string ("2026-03-01"), not a
+  # Date. A Marshal-based store would hand a Date back, but one with a JSON
+  # serializer turns it into this string anyway, so a caller would read a Date
+  # or a String depending on the store. As a string it reads the same from
+  # every store; `Date.iso8601` turns it back into the month.
   def to_h
     {
-      buckets: buckets.map { |bucket| { month: bucket.month, amount: bucket.amount } },
+      buckets: buckets.map { |bucket| { month: bucket.month.iso8601, amount: bucket.amount } },
       total: total,
       fees: fees,
       average_value: average_value,
