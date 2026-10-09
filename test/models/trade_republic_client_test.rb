@@ -882,6 +882,91 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "private_markets", positions.first["category"]
   end
 
+  test "converts bond ticker prices from percent of par to a per-unit price" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
+      { "last" => { "price" => "84.04" } }
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "bonds", "positions" => [
+          {
+            "instrumentId" => "IT0005377152",
+            "name" => "Italy 3.1% Mar 2040",
+            "netSize" => "2677.95",
+            "averageBuyIn" => "0.93"
+          }
+        ] }
+      ]
+    })
+
+    assert_empty warnings
+    assert_equal "0.8404", positions.first["price"]
+    assert_equal "2677.95", positions.first["quantity"]
+    assert_equal "interest_products", positions.first["category"]
+  end
+
+  test "keeps bond positions without valuation when the ticker price is non-numeric" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
+      { "last" => { "price" => "N/A" } }
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "bonds", "positions" => [
+          { "instrumentId" => "IT0005377152", "name" => "Italy 3.1% Mar 2040", "netSize" => "2677.95" }
+        ] }
+      ]
+    })
+
+    assert_equal [ "price unavailable for IT0005377152; position kept without valuation" ], warnings
+    assert_nil positions.first["price"]
+    assert_equal "2677.95", positions.first["quantity"]
+  end
+
+  test "keeps positions without valuation when the ticker price is not finite" do
+    [ [ "bonds", "NaN" ], [ "bonds", "Infinity" ], [ "stocksAndETFs", "-Infinity" ] ].each do |category, quote|
+      @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
+        { "last" => { "price" => quote } }
+      end
+
+      positions, warnings = @client.send(:normalize_positions, Object.new, {
+        "categories" => [
+          { "categoryType" => category, "positions" => [
+            { "instrumentId" => "IT0005377152", "name" => "Instrument", "netSize" => "2677.95" }
+          ] }
+        ]
+      })
+
+      assert_equal [ "price unavailable for IT0005377152; position kept without valuation" ], warnings, quote
+      assert_nil positions.first["price"], quote
+      assert_equal "2677.95", positions.first["quantity"], quote
+    end
+  end
+
+  test "does not convert private markets fallback prices for bonds" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
+      raise Provider::TradeRepublicClient::ProviderUnavailable
+    end
+    @client.define_singleton_method(:private_markets_unit_prices) do |_websocket, _sec_acc_no|
+      { "IT0005377152" => "0.8404" }
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "bonds", "positions" => [
+          { "instrumentId" => "IT0005377152", "name" => "Italy 3.1% Mar 2040", "netSize" => "2677.95" }
+        ] },
+        { "categoryType" => "privateMarkets", "positions" => [
+          { "instrumentId" => "LU3176111881", "name" => "Private Equity", "netSize" => "1.01", "averageBuyIn" => "100.0" }
+        ] }
+      ]
+    }, sec_acc_no: "0717713602")
+
+    assert_empty warnings
+    assert_equal "0.8404", positions.find { |p| p["isin"] == "IT0005377152" }["price"]
+  end
+
   test "prefers homeInstrumentExchange ticker before the hardcoded exchange list" do
     requested = []
     @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
