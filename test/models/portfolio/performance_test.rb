@@ -379,7 +379,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
   # period so the account is trade-tracked without adding an in-period flow.
   test "the money weighted return is the return over the period, not annualised" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
-    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_035.714286, market_flow: 35.714286
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_035.7143, market_flow: 35.7143
     deposit account: @account, date: @day_one - 10.days, amount: 1_000
 
     result = performance
