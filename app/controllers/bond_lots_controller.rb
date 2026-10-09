@@ -61,6 +61,8 @@ class BondLotsController < ApplicationController
       @bond_lot.update_with_purchase_entry!(bond_lot_params(@bond_lot.bond))
       @bond_lot.account.sync_later(window_start_date: [ old_purchased_on, @bond_lot.purchased_on ].min)
       redirect_back_or_to account_path(@account), notice: t("bond_lots.update.success")
+    rescue BondLot::SettledLotError
+      redirect_back_or_to account_path(@account), alert: t("bond_lots.update.settled_error")
     rescue ActiveRecord::RecordInvalid => e
       @bond_lot.errors.add(:base, e.record.errors.full_messages.to_sentence) if e.record != @bond_lot
       template = request.headers["Turbo-Frame"] == "drawer" ? :show : :edit

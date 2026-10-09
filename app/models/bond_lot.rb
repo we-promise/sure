@@ -1,4 +1,9 @@
 class BondLot < ApplicationRecord
+  # Raised when an update is attempted on a lot that is already settled. Checked
+  # under the row lock in update_with_purchase_entry! so a settlement that
+  # commits after the controller's pre-check still cannot be overwritten.
+  class SettledLotError < StandardError; end
+
   attr_accessor :_preserve_coupon_frequency
 
   belongs_to :bond
@@ -270,6 +275,11 @@ class BondLot < ApplicationRecord
 
   def update_with_purchase_entry!(attributes)
     with_lock do
+      # Enforce the settled-lot invariant under the row lock, not just in the
+      # controller: a concurrent settlement could commit between the controller's
+      # pre-check and acquiring this lock, so re-read closed_on while locked.
+      raise SettledLotError, "Cannot modify a settled bond lot" if closed_on.present?
+
       ActiveRecord::Base.transaction do
         update!(attributes)
         update_purchase_entry!

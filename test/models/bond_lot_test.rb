@@ -898,6 +898,31 @@ class BondLotTest < ActiveSupport::TestCase
     assert_nil lot.closed_on, "lot must remain open when rates are unresolvable"
   end
 
+  test "update_with_purchase_entry! rejects a settled lot under the lock" do
+    account = accounts(:bond)
+    lot = BondLot.create!(
+      bond: account.bond,
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      subtype: "other_bond",
+      term_months: 12,
+      interest_rate: 10,
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity",
+      auto_close_on_maturity: true,
+      tax_strategy: "standard",
+      tax_rate: 19
+    )
+    lot.create_purchase_entry!
+    lot.settle_if_matured!(on: Date.new(2025, 2, 1))
+
+    # Model-level invariant (defense-in-depth beyond the controller pre-check).
+    assert_raises(BondLot::SettledLotError) do
+      lot.update_with_purchase_entry!(amount: 9999)
+    end
+    assert_equal 1000, lot.reload.amount
+  end
+
   test "settlement entry cannot be deleted directly after a lot settles" do
     account = accounts(:bond)
     lot = BondLot.create!(
