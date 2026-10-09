@@ -207,20 +207,16 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     ).cache_key, "figures converted into USD must not be served to an EUR family"
   end
 
-  test "cache key distinguishes different flow scopes" do
-    build_textbook_case
-    period = Period.custom(start_date: @day_one, end_date: @day_two)
-    other = create_portfolio_account(family: @family)
-
-    narrow = Portfolio::Performance.new(
-      family: @family, account_ids: [ @account.id ], period: period
-    )
-    wide = Portfolio::Performance.new(
-      family: @family, account_ids: [ @account.id ], period: period,
-      scope_account_ids: [ @account.id, other.id ]
-    )
-
-    refute_equal narrow.cache_key, wide.cache_key
+  # The flow scope is the accounts themselves (see Portfolio::DailyReturns),
+  # so there is no second set to pass, and none to key the cache on.
+  test "the flow scope cannot be widened beyond the accounts measured" do
+    assert_raises(ArgumentError) do
+      Portfolio::Performance.new(
+        family: @family, account_ids: [ @account.id ],
+        period: Period.custom(start_date: @day_one, end_date: @day_two),
+        scope_account_ids: [ @account.id, create_portfolio_account(family: @family).id ]
+      )
+    end
   end
 
   test "an empty scope reports nothing rather than raising" do
@@ -272,20 +268,6 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     result = performance(start_date: @day_one, end_date: @day_one)
 
     assert_nil result.mwr
-  end
-
-  # An omitted scope means "the accounts themselves"; an explicit empty scope
-  # means nothing is inside, so every transfer is external. Those are different
-  # figures and must not share a cache entry.
-  test "cache key distinguishes an omitted flow scope from an empty one" do
-    period = Period.custom(start_date: @day_one, end_date: @day_two)
-
-    omitted = Portfolio::Performance.new(family: @family, account_ids: [ @account.id ], period: period)
-    empty = Portfolio::Performance.new(family: @family, account_ids: [ @account.id ], period: period, scope_account_ids: [])
-    explicit = Portfolio::Performance.new(family: @family, account_ids: [ @account.id ], period: period, scope_account_ids: [ @account.id ])
-
-    refute_equal omitted.cache_key, empty.cache_key
-    assert_equal omitted.cache_key, explicit.cache_key, "the same effective scope may share an entry"
   end
 
   # Regression. DailyReturns compacts active_until_dates, so `{ id => nil }` is
