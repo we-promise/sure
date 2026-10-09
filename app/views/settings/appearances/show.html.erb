@@ -196,6 +196,7 @@
               <%= select_tag "user[transactions_per_page]",
                     options_for_select(User::TRANSACTIONS_PER_PAGE_OPTIONS.map { |value| [ value.to_s, value ] }, @user.transactions_per_page || 50),
                     class: "text-sm text-primary font-medium bg-container border border-primary rounded-lg px-3 py-1.5 focus:border-primary focus:ring-primary",
+                    aria: { label: t(".per_page_title") },
                     data: { auto_submit_form_target: "auto" } %>
             </div>
           </div>
