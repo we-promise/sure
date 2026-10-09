@@ -94,7 +94,7 @@ ru:
       remaining: Осталось %{amount}
       paid_headline: Оплачено %{amount}
     add_bill: Добавить платёж
-    manage: Управлять
+    manage: Открыть
     find_payment: Найти оплату
     add_payment: Добавить оплату
     review_match: Проверить совпадение
@@ -280,8 +280,8 @@ ru:
       paid_so_far: Уже оплачено
       hero_past_due: Просрочено %{amount}
       hero_next_seven: '%{amount} к оплате в ближайшие 7 дней'
-      add_bill: Добавить платёж
-      add_income: Добавить доход
+      add_bill: Новый платёж
+      add_income: Новый доход
       review_with_ai: Проверить с ИИ
       detected_review:
         one: Мы нашли %{count} регулярный платёж в ваших операциях. Проверьте его, чтобы итоги здесь соответствовали тому, что вы действительно платите.
@@ -331,7 +331,7 @@ ru:
       this_month: В этом месяце
       later: После этого месяца
       paid_this_month: Оплачено в этом месяце
-      dormant: Неактивные
+      dormant: Приостановлено
       kpi_remaining: Осталось в этом месяце
       kpi_paid: Оплачено в этом месяце
       kpi_next_seven: К оплате за 7 дней

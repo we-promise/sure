@@ -146,7 +146,7 @@ pl:
     marked_inactive: Transakcję cykliczną oznaczono jako nieaktywną
     new:
       candidate_meta: "%{count}× · ostatnio %{date}"
-      income_title: Dodaj przychód
+      income_title: Nowy przychód
       pick_different: Zacznij od innej transakcji
       search_all_cta: Przeszukaj wszystkie swoje transakcje
       search_all_prompt: Nie widzisz tego, czego szukasz?
@@ -157,7 +157,7 @@ pl:
         możesz wszystko zmienić.
       start_from_income_title: Zacznij od wykrytego cyklicznego wpływu
       start_from_title: Zacznij od wykrytego cyklicznego obciążenia
-      title: Dodaj rachunek
+      title: Nowy rachunek
     pay_action:
       add_link: Dodaj link
       add_link_aria: Dodaj link do płatności dla %{name}

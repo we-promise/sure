@@ -97,8 +97,8 @@ tr:
       autopay: Otomatik ödeme
       autopay_aria: '%{name} otomatik olarak ödeniyor, portalını yeni sekmede açın'
     new:
-      title: Fatura ekle
-      income_title: Gelir ekle
+      title: Yeni fatura
+      income_title: Yeni gelir
       start_from_title: Tespit ettiğimiz yinelenen bir harcamadan başlayın
       start_from_income_title: Tespit ettiğimiz yinelenen bir para girişinden başlayın
       start_from_hint: İsteğe bağlı. Birini seçmek yalnızca formu doldurur; yine de her şeyi değiştirebilirsiniz.

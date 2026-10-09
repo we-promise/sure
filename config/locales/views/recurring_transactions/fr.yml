@@ -140,7 +140,7 @@ fr:
     marked_inactive: Transaction récurrente marquée comme inactive
     new:
       candidate_meta: "%{count}× · dernière fois le %{date}"
-      income_title: Ajouter un revenu
+      income_title: Nouveau revenu
       pick_different: Partir d'une autre transaction
       search_all_cta: Rechercher dans toutes vos transactions
       search_all_prompt: Vous ne trouvez pas ce que vous cherchez ?
@@ -149,7 +149,7 @@ fr:
       start_from_hint: Facultatif. En choisir une ne fait que préremplir le formulaire ; vous pouvez tout modifier.
       start_from_income_title: Partir d'un versement récurrent que nous avons repéré
       start_from_title: Partir d'un prélèvement récurrent que nous avons repéré
-      title: Ajouter une facture
+      title: Nouvelle facture
     pay_action:
       add_link: Ajouter un lien
       add_link_aria: Ajouter un lien de paiement pour %{name}
