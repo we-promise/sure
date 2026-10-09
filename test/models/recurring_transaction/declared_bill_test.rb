@@ -31,6 +31,28 @@ class RecurringTransaction::DeclaredBillTest < ActiveSupport::TestCase
     end
   end
 
+  # The form offers the currency next to the amount, like a transaction's: a
+  # USD subscription charged to a EUR card is a USD bill.
+  test "a picked currency wins over the account's" do
+    series = build_bill(amount: "40", currency: "EUR")
+
+    assert series.errors.none?
+    assert_equal "EUR", series.currency
+    assert_equal "USD", accounts(:depository).currency
+  end
+
+  test "without a picked currency the bill takes its account's" do
+    assert_equal accounts(:depository).currency, build_bill(amount: "40").currency
+    assert_equal accounts(:depository).currency, build_bill(amount: "40", currency: "").currency
+  end
+
+  test "a currency the app doesn't know is ignored, not saved" do
+    series = build_bill(amount: "40", currency: "XYZ")
+
+    assert series.errors.none?
+    assert_equal accounts(:depository).currency, series.currency
+  end
+
   test "the same identity at the same amount reports a duplicate instead of raising" do
     # The amount is stamped into dedup_scope before the first insert, so the
     # very first identical duplicate collides and must surface as a validation
@@ -54,7 +76,7 @@ class RecurringTransaction::DeclaredBillTest < ActiveSupport::TestCase
   end
 
   private
-    def build_bill(amount:)
+    def build_bill(amount:, **attrs)
       RecurringTransaction::DeclaredBill.new(
         family: @family,
         user: @user,
@@ -64,7 +86,7 @@ class RecurringTransaction::DeclaredBillTest < ActiveSupport::TestCase
           account_id: accounts(:depository).id,
           first_due_on: (Date.current + 10).iso8601,
           frequency_preset: "monthly"
-        }
+        }.merge(attrs)
       ).build
     end
 end

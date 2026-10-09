@@ -250,18 +250,21 @@
           <%= render DS::Disclosure.new(title: t(".cant_find"), align: "left") do %>
             <div class="space-y-2 pt-1">
               <p class="text-xs text-secondary"><%= t(".manual_explainer") %></p>
-              <%= form_with url: recurring_occurrence_allocations_path(@occurrence), class: "flex items-end gap-2" do |form| %>
-                <div class="grow">
-                  <%= form.label :amount, t(".manual_amount_label"), class: "form-field__label" %>
-                  <%= form.number_field :amount, step: 0.01, min: 0.01,
-                        value: @occurrence.remaining_amount.positive? ? @occurrence.remaining_amount : nil,
-                        class: "form-field__input" %>
+              <%# The same boxed fields as every other form. Bare inputs under
+                  a bare label read as text, not as something to fill in. The
+                  payment is recorded in the bill's currency, so that shows
+                  and stays put. %>
+              <%= styled_form_with url: recurring_occurrence_allocations_path(@occurrence), class: "space-y-2" do |form| %>
+                <div class="grid grid-cols-2 gap-2">
+                  <%= form.money_field :amount,
+                        label: t(".manual_amount_label"),
+                        value: (@occurrence.remaining_amount if @occurrence.remaining_amount.positive?),
+                        currency_value_override: @occurrence.currency,
+                        disable_currency: true,
+                        min: 0.01 %>
+                  <%= form.date_field :paid_on, label: t(".manual_date_label"), value: Date.current %>
                 </div>
-                <div class="grow">
-                  <%= form.label :paid_on, t(".manual_date_label"), class: "form-field__label" %>
-                  <%= form.date_field :paid_on, value: Date.current, class: "form-field__input" %>
-                </div>
-                <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary") %>
+                <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary", full_width: true) %>
               <% end %>
             </div>
           <% end %>

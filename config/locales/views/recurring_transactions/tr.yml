@@ -172,7 +172,6 @@ tr:
       income_amount_edit_hint: Bundan sonraki maaş günlerine uygulanır. Vadesi gelmiş olanlar mevcut tutarlarını korur.
       cancelled_on_label: İptal tarihi
       cancelled_on_hint: Tarihi kaydetmek yalnızca kendi bilginiz içindir. Gelecektekilerin görünmemesi için faturayı duraklatın.
-      category_label: Kategori
       category_blank: Kategori yok
       frequency_new_hint: Gün ayrıntıları yukarıdaki son ödeme tarihinden alınır. Kaydettikten sonra zamanlamayı ayrıntılandırabilirsiniz.
       frequency_label: Sıklık

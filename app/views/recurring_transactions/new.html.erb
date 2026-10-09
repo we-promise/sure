@@ -6,7 +6,7 @@
         <p class="text-sm font-medium text-primary">
           <%= @recurring_transaction.is_income ? t(".start_from_income_title") : t(".start_from_title") %>
         </p>
-        <div class="max-h-44 overflow-y-auto rounded-lg shadow-border-xs divide-y divide-divider">
+        <div class="max-h-44 overflow-y-auto rounded-lg shadow-border-xs divide-y divide-subdued">
           <% @candidates.each do |candidate| %>
             <%= link_to new_recurring_transaction_path(entry_id: candidate[:entry_id], income: params[:income].presence),
                   class: "flex items-center justify-between gap-3 px-3 py-2 hover:bg-surface-inset" do %>

@@ -55,7 +55,6 @@ fr:
       cancelled_on_hint: Noter la date ne sert qu'à votre suivi personnel. Mettez la facture en pause pour arrêter l'apparition des suivantes.
       cancelled_on_label: Annulée le
       category_blank: Sans catégorie
-      category_label: Catégorie
       first_due_on_label: Prochaine échéance
       frequency_day_label: Le jour
       frequency_hint: À quelle fréquence cette facture arrive à échéance. Choisissez les détails du jour pour correspondre à votre relevé.

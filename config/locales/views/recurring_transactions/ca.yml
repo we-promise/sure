@@ -173,7 +173,6 @@ ca:
       income_amount_edit_hint: S'aplica als cobraments a partir d'ara. Els que ja han vençut mantenen l'import que tenien.
       cancelled_on_label: Data de cancel·lació
       cancelled_on_hint: Registrar la data és només per a la teva referència. Posa la factura en pausa perquè deixin d'aparèixer els propers venciments.
-      category_label: Categoria
       category_blank: Sense categoria
       frequency_new_hint: Els detalls del dia surten de la data de venciment de dalt. Pots ajustar la periodicitat després de desar.
       frequency_label: Periodicitat

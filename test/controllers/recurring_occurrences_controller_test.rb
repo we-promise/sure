@@ -25,6 +25,19 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
   end
 
+  # A manual payment is typed into the same boxed money and date fields as
+  # every other form, in the bill's own currency, which can't be changed here.
+  test "the manual payment form uses the app's money and date fields" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "form[action=?]", recurring_occurrence_allocations_path(@occurrence) do
+      assert_select ".form-field[data-controller~='money-field'] input[name=amount][value=?]", "15.99"
+      assert_select "select[name=currency][disabled] option[selected][value=?]", "USD"
+      assert_select ".form-field input[type=date][name=paid_on]"
+    end
+  end
+
   # Turbo caches the page as it was left, so a drawer still open when the user
   # navigated away would come back from Back as a stray dialog.
   # Visited directly, the dialog is the page, and Back has to restore it.
