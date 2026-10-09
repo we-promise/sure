@@ -212,6 +212,47 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
     assert_equal({ @aapl.id.to_s => BigDecimal(30) }, amounts)
   end
 
+  # The lock on the "adds up by construction" claim. `unattributed` is defined
+  # as total minus attributed, so a test reading it back proves nothing about
+  # the two queries agreeing. This one derives each side on its own: the total
+  # from the daily rows' income, the attributed part from income_by_security,
+  # and the unattributed part from the fixture -- the one dividend that names
+  # no security. Change the income expression, its rate or its windowing in
+  # one query and not the other, and the partition stops adding up.
+  #
+  # Every shape at once, in two currencies: 30 + 12.5 + 7 attributed in USD,
+  # 10 EUR attributed at the previous day's 1.5 (15), 5 unattributed, and a fee
+  # on a security that is neither.
+  test "attributed and unattributed income partition the daily rows' total" do
+    income_trade account: @account, date: @mar, amount: 30, security: @aapl
+    income_transaction account: @account, date: @mar + 1, amount: 12.5, extra: { "security_id" => @aapl.id }
+    income_transaction account: @account, date: @mar + 2, amount: 7, extra: { "security" => { "id" => @msft.id } }
+    income_transaction account: @account, date: @mar + 3, amount: 5
+    fee_entry account: @account, date: @mar + 4, amount: 4
+    lay_flat_balances cash_by_date: { @mar => 30, @mar + 1 => 12.5, @mar + 2 => 7, @mar + 3 => 5, @mar + 4 => -4 }
+
+    eur = create_portfolio_account(family: @family, currency: "EUR")
+    income_trade account: eur, date: @mar, amount: 10, security: @msft
+    (@mar - 1..@last_day).each do |date|
+      lay_balance account: eur, date: date, opening: 1_000 + (date > @mar ? 10 : 0),
+                  closing: 1_000 + (date >= @mar ? 10 : 0), cash_flow: date == @mar ? 10 : 0
+      set_rate from: "EUR", to: "USD", date: date, rate: date == @mar - 1 ? 1.5 : 2.0
+    end
+
+    returns = Portfolio::DailyReturns.new(account_ids: [ @account.id, eur.id ], currency: "USD", period: period)
+    rows_total = returns.rows.sum(BigDecimal(0), &:income)
+    attributed = returns.income_by_security.values.sum(BigDecimal(0))
+    unattributed = BigDecimal(5)
+
+    assert_equal BigDecimal("69.5"), rows_total, "the fixture's own arithmetic"
+    assert_equal rows_total, attributed + unattributed,
+                 "the two reads of the same entries must partition the same total"
+
+    by_security = Portfolio::IncomeBySecurity.new(amounts: returns.income_by_security, total: Portfolio::Income.new(returns).total)
+    assert_equal unattributed, by_security.unattributed
+    assert_equal attributed, by_security.attributed
+  end
+
   private
     def period
       Period.custom(start_date: @mar - 1, end_date: @last_day)
