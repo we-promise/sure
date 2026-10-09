@@ -573,6 +573,15 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       assert_in_delta expected[value.date], value.value.amount, 0.001,
         "portfolio value on #{value.date} should equal the sum of the per-account series"
     end
+
+    # The comparison above shares Balance::ChartSeriesBuilder with the code
+    # under test, so pin the totals by hand as well: 1000 USD + 500 EUR at 1.2
+    # + 300 USD until the disabled account's cut-off, then 1200 USD + 600.
+    by_date = actual.values.index_by(&:date)
+    { 10 => 1900, 9 => 1900, 8 => 1900, 7 => 1800, 6 => 1800, 5 => 1800 }.each do |days_ago, total|
+      assert_in_delta total, by_date.fetch(days_ago.days.ago.to_date).value.amount, 0.001,
+        "portfolio value #{days_ago} days ago"
+    end
   end
 
   test "a disabled account stops contributing to value_series after its cut-off date" do
