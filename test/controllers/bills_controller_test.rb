@@ -2165,6 +2165,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # Skipping closes the occurrence but keeps its suggestion. Before this month
   # the overview no longer lists the row, so the queue mustn't ask about it.
   test "a suggestion against a skipped occurrence from last month stays out of the payment review queue" do
+    travel_to Date.current.beginning_of_month + 9.days
+
     due = Date.current.beginning_of_month - 10
     bill = declare_bill(name: "SKIPPED GYM", amount: 40, due: due)
     RecurringTransaction::OccurrenceGenerator.new(bill).generate!
