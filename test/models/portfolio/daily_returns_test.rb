@@ -71,6 +71,24 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), daily_returns.returns.last.last
   end
 
+  # The case the zero test above cannot see. A withdrawal larger than the
+  # opening value leaves a NEGATIVE start-of-day capital, and dividing by it
+  # flips the sign: here the day's 100 close over a -500 denominator reads as a
+  # -120% day. A guard that only refused zero would let that through.
+  test "an over-withdrawal suppresses the day rather than reversing its sign" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 100,
+                cash_flow: -1_500, market_flow: 600
+    deposit account: @account, date: @day_two, amount: -1_500
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("-500"), second.denominator, "the fixture must reach a negative denominator"
+    assert second.suppressed, "a negative denominator must be suppressed"
+    assert_equal BigDecimal("0"), daily_returns.returns.last.last,
+                 "a suppressed day contributes nothing, not a reversed return"
+  end
+
   # `InvestmentStatement#period_return_trend` converts a missing
   # rate at parity (COALESCE(rate, 1)), which turns 1,000 EUR into 1,000 USD
   # without saying so. A missing pair has to be visible.
