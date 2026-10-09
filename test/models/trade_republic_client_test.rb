@@ -625,6 +625,18 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
   end
 
+  test "a failed badge still blocks a stamp duty cancellation" do
+    cancellation = {
+      "eventType" => "STAMP_DUTY_TAX_PAID",
+      "title" => "Stamp duty (Portfolio)",
+      "subtitle" => "Cancellation of stamp duty"
+    }
+
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation.merge("badge" => "Failed"))
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation.merge("badge" => "Declined"))
+    assert_not Provider::TradeRepublicTimelineEvent.importable?(cancellation.merge("badge" => "Failed"))
+  end
+
   test "ignores tax report corrections and source of wealth checks" do
     %w[TAX_YEAR_END_REPORT_CORRECTED AML_SOURCE_OF_WEALTH_RESPONSE_EXECUTED].each do |event_type|
       assert_equal :ignored, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type

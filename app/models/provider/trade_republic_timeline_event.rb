@@ -233,11 +233,13 @@ module Provider::TradeRepublicTimelineEvent
 
       # Only subtitle/badge — never title. Titles are often security or
       # merchant names and can contain substrings like "cancel" without
-      # meaning the event itself failed.
+      # meaning the event itself failed. A stamp duty cancellation's
+      # subtitle names the refund, so only its badge counts.
       def declined_subtitle?(event)
-        return false if stamp_duty_cancellation?(event)
+        values = [ event[:badge] ]
+        values << event[:subtitle] unless stamp_duty_cancellation?(event)
 
-        [ event[:subtitle], event[:badge] ].compact.any? do |value|
+        values.compact.any? do |value|
           value.to_s.match?(DECLINED_SUBTITLE_PATTERN)
         end
       end
