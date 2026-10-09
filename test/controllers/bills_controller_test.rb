@@ -100,7 +100,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
 
       assert_select "main header [data-controller~='DS--menu'] ~ a[href='#{href}']", count: 2
-      assert_select "main header a[class~='md:inline-flex'][href='#{href}']", text: name
+      assert_select "main header a[class~='hidden'][class~='md:inline-flex'][href='#{href}']", text: name
       assert_select "main header a[class~='md:hidden'][class~='rounded-full'][aria-label='#{name}'][href='#{href}']"
     end
 
