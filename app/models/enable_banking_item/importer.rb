@@ -1,4 +1,6 @@
 class EnableBankingItem::Importer
+  include CurrencyNormalizable
+
   # Maximum number of pagination requests to prevent infinite loops
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
@@ -232,7 +234,8 @@ class EnableBankingItem::Importer
         return false
       end
 
-      balance = select_current_balance(balances_in_account_currency(balances, enable_banking_account))
+      currency, kept, skipped = split_balances_by_currency(balances, enable_banking_account)
+      balance = select_current_balance(kept)
 
       unless balance.present?
         mark_balance_unavailable(enable_banking_account)
@@ -257,6 +260,8 @@ class EnableBankingItem::Importer
         current_balance: parsed_amount,
         currency: balance_currency(balance) || enable_banking_account.currency
       )
+      # Only now is the chosen-currency balance known to be the one in use.
+      capture_skipped_currency_balances(enable_banking_account, currency, skipped)
 
       true
     rescue Provider::EnableBanking::EnableBankingError => e
@@ -279,26 +284,28 @@ class EnableBankingItem::Importer
     # first currency listed, which is the wallet's primary one. Otherwise
     # select_current_balance takes the last entry of each type, so an empty
     # USD balance replaced the EUR one and switched the account to USD.
-    def balances_in_account_currency(balances, enable_banking_account)
+    # Returns the chosen currency, the balances in it and the ones left out.
+    def split_balances_by_currency(balances, enable_banking_account)
       currencies = balances.filter_map { |balance| balance_currency(balance) }.uniq
-      return balances if currencies.size <= 1
+      return [ currencies.first, balances, [] ] if currencies.size <= 1
 
       account_currency = snapshot_currency(enable_banking_account)
       currency = currencies.include?(account_currency) ? account_currency : currencies.first
       kept, skipped = balances.partition { |balance| balance_currency(balance) == currency }
-      capture_skipped_currency_balances(enable_banking_account, currency, skipped)
-      kept
+      [ currency, kept, skipped ]
     end
 
     def balance_currency(balance)
-      (balance.dig(:balance_amount, :currency) || balance[:currency]).to_s.strip.upcase.presence
+      parse_currency(balance.dig(:balance_amount, :currency) || balance[:currency])
     end
 
     # Read from the raw snapshot, not the stored column: the stored currency
     # may already be the wrong one picked from a multi-currency response.
+    # PayPal reports XXX (no currency) for the wallet; parse_currency turns
+    # that into nil, so the first listed currency is used.
     def snapshot_currency(enable_banking_account)
       payload = enable_banking_account.raw_payload
-      payload.with_indifferent_access[:currency].to_s.strip.upcase.presence if payload.is_a?(Hash)
+      parse_currency(payload.with_indifferent_access[:currency]) if payload.is_a?(Hash)
     end
 
     # A non-zero balance in another currency is money the account leaves out;
