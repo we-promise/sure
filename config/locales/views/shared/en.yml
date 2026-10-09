@@ -7,7 +7,7 @@ en:
     preview: Preview
     dot_separator: "·"
     pagination:
-      per_page: "Transactions per page"
+      per_page: "Rows per page"
     sync_toast:
       message: "New data available"
       refresh: "Refresh"
