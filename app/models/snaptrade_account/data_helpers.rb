@@ -58,7 +58,7 @@ module SnaptradeAccount::DataHelpers
 
     # A ticker can have several Security rows (one per exchange), so the
     # lookup must be deterministic or a holding flips between rows from one
-    # sync to the next (#333). Order: the row the account already holds, the
+    # sync to the next (#3988). Order: the row the account already holds, the
     # row on SnapTrade's reported exchange, then a fixed preference order.
     def resolve_security(symbol, symbol_data, account: nil, account_provider_id: nil)
       ticker = symbol.to_s.upcase.strip
