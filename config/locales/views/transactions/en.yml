@@ -175,7 +175,8 @@ en:
       reject_match: Reject match
       transfer_confirmed: Transfer is confirmed
     transaction:
-      one_time_tooltip: "One-time %{type} (excluded from averages)"
+      one_time_income_tooltip: "One-time income (excluded from averages)"
+      one_time_expense_tooltip: "One-time expense (excluded from averages)"
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
       linked_with_provider: Linked with %{provider}
