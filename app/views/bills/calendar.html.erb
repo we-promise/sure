@@ -74,7 +74,7 @@
 
   <%# Mobile: an agenda list of the month's days that actually have bills,
       not a shrunken grid. %>
-  <div class="md:hidden space-y-1 rounded-xl bg-container-inset p-1">
+  <div class="md:hidden space-y-1 rounded-xl bg-surface-inset p-1">
     <% month_days = (@month..@month.end_of_month).select { |day| @by_day[day].present? } %>
     <% if month_days.empty? %>
       <div class="bg-container rounded-lg p-4">
