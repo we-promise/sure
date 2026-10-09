@@ -30,12 +30,13 @@ class EnableBankingItem::SyncCompleteEventTest < ActiveSupport::TestCase
     streams.each { |stream| assert_not_includes stream.to_html, @certificate_marker }
   end
 
-  test "a finished sync still refreshes the connection card and the sync toast" do
+  # The toast is what makes each browser re-fetch its own page now that the
+  # panel is not streamed.
+  test "a finished sync still sends the sync toast" do
     targets = capture_turbo_stream_broadcasts(@family) do
       EnableBankingItem::SyncCompleteEvent.new(@item).broadcast
     end.map { |stream| stream["target"] }
 
-    assert_includes targets, "enable_banking_item_#{@item.id}"
     assert_includes targets, "sync-toast"
   end
 end
