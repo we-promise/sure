@@ -992,6 +992,20 @@ usdc:
   delimiter: ","
   default_format: "%u%n"
   default_precision: 2
+usdt:
+  name: Tether USD
+  priority: 100
+  iso_code: USDT
+  iso_numeric: ""
+  html_code: "$"
+  symbol: USDT
+  minor_unit: Cent
+  minor_unit_conversion: 100
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 2
 thb:
   name: Thai Baht
   priority: 100
