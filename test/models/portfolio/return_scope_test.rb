@@ -226,6 +226,61 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
                  resolved.fetch(@account.id).balance_days
   end
 
+  # An account's cut-off ends its contribution: Portfolio::DailyReturns drops
+  # every row after it. Two rows in the period with the second past the cut-off
+  # leave ONE day the series can use, and one day is a position, not a return.
+  test "a cut-off that leaves one balance day in the window is insufficient" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, market_flow: 100
+
+    uncut = Portfolio::ReturnScope.new(account: @account, period: @period)
+    cut = Portfolio::ReturnScope.new(account: @account, period: @period, active_until_date: @day_one)
+
+    assert_equal 2, uncut.balance_days, "the fixture must have two rows in the period"
+    assert_equal 1, cut.balance_days
+    assert cut.insufficient?
+  end
+
+  # The batch path keys the cut-offs by account, as DailyReturns does, and must
+  # read each account's own -- not one shared date, and not none.
+  test "resolve_all counts balance days only up to each account's own cut-off" do
+    cut = @account
+    uncut = create_portfolio_account(family: @family)
+    nil_cut = create_portfolio_account(family: @family)
+    [ cut, uncut, nil_cut ].each do |account|
+      lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+      lay_balance account: account, date: @day_two, opening: 1_000, closing: 1_000
+    end
+
+    resolved = Portfolio::ReturnScope.resolve_all(
+      accounts: [ cut, uncut, nil_cut ], period: @period,
+      active_until_dates: { cut.id => @day_one, nil_cut.id => nil }
+    )
+
+    assert_equal 1, resolved.fetch(cut.id).balance_days
+    assert resolved.fetch(cut.id).insufficient?
+    assert_equal 2, resolved.fetch(uncut.id).balance_days, "an account with no cut-off keeps every row"
+    assert_equal 2, resolved.fetch(nil_cut.id).balance_days, "a nil cut-off means none, as DailyReturns reads it"
+    assert_equal Portfolio::ReturnScope.new(account: cut, period: @period, active_until_date: @day_one).balance_days,
+                 resolved.fetch(cut.id).balance_days, "the batch and instance paths agree"
+  end
+
+  test "resolve_all with cut-offs asks no more queries than without" do
+    second = create_portfolio_account(family: @family)
+    [ @account, second ].each do |account|
+      lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    end
+
+    queries = capture_sql_queries do
+      Portfolio::ReturnScope.resolve_all(
+        accounts: Account.where(id: [ @account.id, second.id ]), period: @period,
+        active_until_dates: { @account.id => @day_one, second.id => @day_two }
+      )
+    end
+
+    assert_equal 4, queries.size, "cut-offs are part of the balance query, not one more per account\n#{queries.join("\n")}"
+  end
+
   # The batch path's actual cost, pinned so a claim about it can be settled by
   # a number. Four round trips: the account load, then the three resolution
   # queries. The account load is not avoidable here -- `resolve_all` returns

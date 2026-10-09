@@ -22,16 +22,23 @@ class Portfolio::ReturnScope
 
   KINDS = [ TRADE_TRACKED, VALUATION_TRACKED, INSUFFICIENT ].freeze
 
-  attr_reader :account, :period
+  attr_reader :account, :period, :active_until_date
 
+  # `active_until_date` is the account's cut-off, as Portfolio::DailyReturns
+  # takes it: the last day the account contributes to the series. Rows after it
+  # are dropped there, so they are not counted here either -- an account with
+  # two rows in the period and the second past its cut-off has one usable day,
+  # and one day supports no return. nil means no cut-off.
+  #
   # `resolved` carries the four inputs when a caller has already fetched them
   # for a set of accounts. Everything below still derives `kind` from those four
   # by the same rules, so the batch path cannot mean something different from
   # the lazy one -- it only skips the fetching. Built directly, the instance
   # queries for each input as before.
-  def initialize(account:, period:, resolved: nil)
+  def initialize(account:, period:, active_until_date: nil, resolved: nil)
     @account = account
     @period = period
+    @active_until_date = active_until_date&.to_date
 
     return if resolved.nil?
 
@@ -61,11 +68,20 @@ class Portfolio::ReturnScope
   # existence depends on the shape of the argument, so the query count this
   # method advertises would stop being a property of the method. A caller that
   # holds ids converts them, and pays for it where it can be seen.
-  def self.resolve_all(accounts:, period:)
+  #
+  # `active_until_dates` is { account_id => cut-off } in the shape
+  # Portfolio::DailyReturns takes, nil values meaning no cut-off, and each
+  # account's balance days are counted only up to its own cut-off -- the same
+  # rule the instance applies.
+  def self.resolve_all(accounts:, period:, active_until_dates: {})
     records = accounts.to_a
     return {} if records.empty?
 
-    days = balance_days_by_account(records, period)
+    cutoffs = (active_until_dates || {}).compact
+      .transform_keys(&:to_s)
+      .transform_values(&:to_date)
+
+    days = balance_days_by_account(records, period, cutoffs)
     kinds = live_entry_kinds_by_account(records, period)
     external = external_transaction_account_ids(records, period)
 
@@ -81,18 +97,26 @@ class Portfolio::ReturnScope
         external_transactions: external.include?(account.id)
       }
 
-      [ account.id, new(account: account, period: period, resolved: resolved) ]
+      [ account.id, new(account: account, period: period, active_until_date: cutoffs[account.id.to_s], resolved: resolved) ]
     end
   end
 
   # Balance rows are counted in each account's OWN currency, as the instance
   # does. Grouping over `balances` alone would count every currency the account
   # holds, so the account is joined and the currencies compared.
-  def self.balance_days_by_account(records, period)
+  #
+  # The cut-offs go in as one JSON object read per row, the way DailyReturns
+  # binds them, so a set with cut-offs still costs this one query.
+  def self.balance_days_by_account(records, period, cutoffs)
     Balance
       .joins(:account)
       .where(account_id: records.map(&:id), date: period.date_range)
       .where("balances.currency = accounts.currency")
+      .where(
+        "(CAST(:cutoffs AS jsonb) ->> balances.account_id::text) IS NULL " \
+        "OR balances.date <= (CAST(:cutoffs AS jsonb) ->> balances.account_id::text)::date",
+        cutoffs: cutoffs.transform_values(&:iso8601).to_json
+      )
       .group(:account_id)
       .count
   end
@@ -182,14 +206,16 @@ class Portfolio::ReturnScope
     valuation_tracked? ? "value_return" : "time_weighted_return"
   end
 
-  # Balance rows in the account's currency inside the period. Public so a
-  # caller weighing several accounts can tell one that holds nothing in the
-  # period (no rows, nothing to withhold) from one with a single day, which
-  # has no return.
+  # Balance rows in the account's currency inside the period, up to the
+  # account's cut-off. Public so a caller weighing several accounts can tell
+  # one that holds nothing in the period (no rows, nothing to withhold) from
+  # one with a single day, which has no return.
   def balance_days
-    @balance_days ||= account.balances
-      .where(currency: account.currency, date: period.date_range)
-      .count
+    @balance_days ||= begin
+      rows = account.balances.where(currency: account.currency, date: period.date_range)
+      rows = rows.where(date: ..active_until_date) if active_until_date
+      rows.count
+    end
   end
 
   private
