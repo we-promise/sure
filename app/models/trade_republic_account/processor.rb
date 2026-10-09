@@ -31,7 +31,9 @@ class TradeRepublicAccount::Processor
 
       account.assign_attributes(
         balance: total_balance,
-        cash_balance: trade_republic_account.cash? ? cash_balance : 0,
+        # The cash account and the PEA carry a cash pocket; the plain portfolio
+        # and crypto accounts split it out, so only their trades value the row.
+        cash_balance: trade_republic_account.cash_holding? ? cash_balance : 0,
         currency: trade_republic_account.currency
       )
       account.save!

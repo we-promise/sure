@@ -1618,7 +1618,104 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert entry.reload.user_modified?
   end
 
+  test "pea account books only events routed to the pea envelope" do
+    pea_provider, pea_sure = create_linked_pea_account!
+    cto_trade = order_execution_detail(event_id: "evt_cto", quantity: "1", isin: "US0378331005", amount: "150.00")
+      .merge(envelope_kind: "portfolio")
+    pea_trade = order_execution_detail(event_id: "evt_pea", quantity: "2", isin: "IE00B5BMR087", amount: "500.00")
+      .merge(envelope_kind: "pea")
+
+    @tr_account.update!(raw_timeline_payload: [ cto_trade, pea_trade ])
+    pea_provider.update!(raw_timeline_payload: [ pea_trade ])
+
+    process_all(@tr_account, pea_provider)
+
+    assert @account.entries.exists?(external_id: "trade_republic_event_evt_cto")
+    assert_not @account.entries.exists?(external_id: "trade_republic_event_evt_pea")
+    assert pea_sure.entries.exists?(external_id: "trade_republic_event_evt_pea")
+    assert_not pea_sure.entries.exists?(external_id: "trade_republic_event_evt_cto")
+  end
+
+  test "pea books its own cash movements instead of delegating them to a cash sibling" do
+    pea_provider, pea_sure = create_linked_pea_account!
+    dividend = {
+      id: "evt_pea_div",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CREDIT",
+      category: "DIVIDEND",
+      envelope_kind: "pea",
+      detail: { amount: "25.50", currency: "EUR" }
+    }
+    pea_provider.update!(raw_timeline_payload: [ dividend ])
+
+    process_all(pea_provider)
+
+    entry = pea_sure.entries.find_by!(external_id: "trade_republic_event_evt_pea_div")
+    assert_equal BigDecimal("-25.50"), entry.amount
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+    assert_nil pea_provider.cash_sibling_kind
+    assert_not @account.entries.exists?(external_id: "trade_republic_event_evt_pea_div")
+  end
+
+  test "portfolio ignores pea-tagged movements even when stored on its timeline" do
+    pea_dividend = {
+      id: "evt_pea_only",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CREDIT",
+      category: "DIVIDEND",
+      envelope_kind: "pea",
+      detail: { amount: "25.50", currency: "EUR" }
+    }
+    @tr_account.update!(raw_timeline_payload: [ pea_dividend ])
+
+    process_all(@tr_account)
+
+    assert_not @account.entries.exists?(external_id: "trade_republic_event_evt_pea_only")
+  end
+
+  test "pea keeps its own cash movements when the default cash account is linked" do
+    pea_provider, pea_sure = create_linked_pea_account!
+    cash_provider, = create_linked_cash_account!
+
+    dividend = {
+      id: "evt_pea_div_linked",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CREDIT",
+      category: "DIVIDEND",
+      envelope_kind: "pea",
+      detail: { amount: "25.50", currency: "EUR" }
+    }
+    pea_provider.update!(raw_timeline_payload: [ dividend ])
+    cash_provider.update!(raw_timeline_payload: [ dividend ])
+
+    process_all(pea_provider)
+
+    # The PEA books its own cash and must not hand it over to the cash sibling
+    # (the split-portfolio reconciliation runs on the DEFAULT portfolio only).
+    assert pea_sure.entries.exists?(external_id: "trade_republic_event_evt_pea_div_linked")
+    assert_not @account.entries.exists?(external_id: "trade_republic_event_evt_pea_div_linked")
+  end
+
   private
+
+    def create_linked_pea_account!
+      pea_provider = @item.trade_republic_accounts.create!(
+        name: "PEA",
+        kind: "pea",
+        trade_republic_account_id: "SEC-PEA",
+        currency: "EUR",
+        raw_timeline_payload: []
+      )
+      pea_sure = @family.accounts.create!(
+        name: "Trade Republic PEA",
+        balance: 0,
+        cash_balance: 0,
+        currency: "EUR",
+        accountable: Investment.new(subtype: "pea")
+      )
+      pea_provider.ensure_account_provider!(pea_sure)
+      [ pea_provider.reload, pea_sure ]
+    end
 
     def create_linked_crypto_account!
       crypto_provider = @item.trade_republic_accounts.create!(

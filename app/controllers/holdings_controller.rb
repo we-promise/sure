@@ -152,7 +152,7 @@ class HoldingsController < ApplicationController
 
     def trade_republic_categories_for(account)
       provider = account.account_providers.includes(:provider).map(&:provider).find do |candidate|
-        candidate.is_a?(TradeRepublicAccount) && candidate.portfolio?
+        candidate.is_a?(TradeRepublicAccount) && candidate.holds_securities?
       end
       return if provider.blank?
 

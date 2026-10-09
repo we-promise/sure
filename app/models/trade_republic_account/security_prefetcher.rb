@@ -37,7 +37,7 @@ class TradeRepublicAccount::SecurityPrefetcher
     end
 
     def trade_listings
-      return {} unless @trade_republic_account.portfolio?
+      return {} unless @trade_republic_account.holds_securities?
 
       Array(@trade_republic_account.raw_timeline_payload).each_with_object({}) do |event, map|
         next unless event.is_a?(Hash)

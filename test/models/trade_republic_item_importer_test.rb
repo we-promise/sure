@@ -1032,9 +1032,290 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal [ "NL0000303709" ], isins
   end
 
+  test "import creates portfolio pea and cash accounts from the per-envelope accounts array" do
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "domain_statuses" => full_domain_statuses,
+      "accounts" => [
+        envelope_result(
+          kind: "portfolio",
+          brokerage_account_id: "SEC-CTO",
+          cash_account_number: "CASH-CTO",
+          positions: [ { "isin" => "US0378331005", "name" => "Apple", "quantity" => "2", "price" => "100" } ],
+          cash: { "amount" => "500.00", "currency" => "EUR" }
+        ),
+        envelope_result(
+          kind: "pea",
+          brokerage_account_id: "SEC-PEA",
+          positions: [ { "isin" => "IE00B4L5Y983", "name" => "MSCI World", "quantity" => "1", "price" => "250" } ],
+          cash: { "amount" => "42.00", "currency" => "EUR" }
+        )
+      ],
+      "account" => { "brokerage_account_id" => "SEC-CTO", "currency" => "EUR" },
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    portfolio = @item.trade_republic_accounts.find_by!(kind: "portfolio")
+    pea = @item.trade_republic_accounts.find_by!(kind: "pea")
+    cash = @item.trade_republic_accounts.find_by!(kind: "cash")
+
+    assert_equal "SEC-CTO", portfolio.trade_republic_account_id
+    assert_equal BigDecimal("200"), portfolio.current_balance
+    assert_equal BigDecimal("0"), portfolio.cash_balance
+
+    assert_equal "SEC-PEA", pea.trade_republic_account_id
+    assert_equal BigDecimal("250"), pea.current_balance
+    assert_equal BigDecimal("42.00"), pea.cash_balance
+    assert_match(/PEA/, pea.name)
+
+    assert_equal "cash:SEC-CTO", cash.trade_republic_account_id
+    assert_equal BigDecimal("500.00"), cash.current_balance
+
+    assert_equal 3, @item.trade_republic_accounts.count
+    assert_not @item.trade_republic_accounts.exists?(trade_republic_account_id: "cash:SEC-PEA")
+  end
+
+  test "import creates no pea account when the feed has only the default envelope" do
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "domain_statuses" => full_domain_statuses,
+      "accounts" => [
+        envelope_result(
+          kind: "portfolio",
+          brokerage_account_id: "SEC-CTO",
+          cash_account_number: "CASH-CTO",
+          cash: { "amount" => "10.00", "currency" => "EUR" }
+        )
+      ],
+      "account" => { "brokerage_account_id" => "SEC-CTO", "currency" => "EUR" },
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert @item.trade_republic_accounts.exists?(kind: "portfolio")
+    assert @item.trade_republic_accounts.exists?(kind: "cash")
+    assert_not @item.trade_republic_accounts.exists?(kind: "pea")
+  end
+
+  test "failed pea cash fetch keeps the stored pea cash balance" do
+    pea = @item.trade_republic_accounts.create!(
+      kind: "pea",
+      name: "PEA",
+      trade_republic_account_id: "SEC-PEA",
+      currency: "EUR",
+      cash_balance: BigDecimal("42.00")
+    )
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "SEC-CTO",
+      currency: "EUR"
+    )
+    @item.trade_republic_accounts.create!(
+      kind: "cash",
+      name: "Cash",
+      trade_republic_account_id: "cash:SEC-CTO",
+      currency: "EUR"
+    )
+
+    provider = mock("trade_republic_provider")
+    # Only portfolio and pea are securities envelopes the client needs to know.
+    provider.expects(:sync).with { |args|
+      args[:known_envelope_kinds].sort == %w[pea portfolio]
+    }.returns(client_result(
+      "status" => "partial",
+      "domain_statuses" => {
+        "account_metadata" => "success",
+        "cash" => "failed",
+        "portfolio" => "success",
+        "timeline" => "success",
+        "instrument_metadata" => "success"
+      },
+      "accounts" => [
+        envelope_result(kind: "portfolio", brokerage_account_id: "SEC-CTO", cash_status: "failed"),
+        envelope_result(kind: "pea", brokerage_account_id: "SEC-PEA", cash_status: "failed")
+      ],
+      "account" => { "brokerage_account_id" => "SEC-CTO", "currency" => "EUR" },
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal BigDecimal("42.00"), pea.reload.cash_balance
+    assert_equal BigDecimal("0"), @item.trade_republic_accounts.find_by!(kind: "portfolio").cash_balance
+  end
+
+  test "successful pea cash fetch updates the balance even when positions failed" do
+    stored_positions = [ { "isin" => "US0378331005", "quantity" => "2", "price" => "100" } ]
+    pea = @item.trade_republic_accounts.create!(
+      kind: "pea",
+      name: "PEA",
+      trade_republic_account_id: "SEC-PEA",
+      currency: "EUR",
+      cash_balance: BigDecimal("42.00"),
+      raw_positions_payload: stored_positions
+    )
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "partial",
+      "domain_statuses" => {
+        "account_metadata" => "success",
+        "cash" => "success",
+        "portfolio" => "failed",
+        "timeline" => "success",
+        "instrument_metadata" => "success"
+      },
+      "accounts" => [
+        envelope_result(
+          kind: "pea",
+          brokerage_account_id: "SEC-PEA",
+          positions_status: "failed",
+          cash_status: "success",
+          cash: { "amount" => "77.00", "currency" => "EUR" }
+        )
+      ],
+      "account" => { "brokerage_account_id" => "SEC-PEA", "currency" => "EUR" },
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal BigDecimal("77.00"), pea.reload.cash_balance
+    assert_equal stored_positions, pea.raw_positions_payload
+  end
+
+  test "import routes envelope-tagged events and keeps untagged events on the portfolio" do
+    pea_trade = {
+      "id" => "pea-trade",
+      "timestamp" => "2026-08-01T10:00:00Z",
+      "category" => "orderExecution",
+      "envelope_kind" => "pea"
+    }
+    cto_movement = {
+      "id" => "cto-cash",
+      "timestamp" => "2026-08-01T10:00:00Z",
+      "category" => "POC_CREATED"
+    }
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "domain_statuses" => full_domain_statuses,
+      "accounts" => [
+        envelope_result(kind: "portfolio", brokerage_account_id: "SEC-CTO", cash_account_number: "CASH-CTO"),
+        envelope_result(kind: "pea", brokerage_account_id: "SEC-PEA")
+      ],
+      "account" => { "brokerage_account_id" => "SEC-CTO", "currency" => "EUR" },
+      "events" => [ pea_trade, cto_movement ],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    portfolio_events = @item.trade_republic_accounts.find_by!(kind: "portfolio").raw_timeline_payload
+      .map { |event| event["id"] }
+    pea_events = @item.trade_republic_accounts.find_by!(kind: "pea").raw_timeline_payload
+      .map { |event| event["id"] }
+    cash_events = @item.trade_republic_accounts.find_by!(kind: "cash").raw_timeline_payload
+      .map { |event| event["id"] }
+
+    assert_equal [ "cto-cash" ], portfolio_events
+    assert_equal [ "pea-trade" ], pea_events
+    assert_equal [ "cto-cash" ], cash_events
+  end
+
+  test "import keeps the legacy singular payload working when accounts are absent" do
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "domain_statuses" => full_domain_statuses,
+      "account" => { "brokerage_account_id" => "DE-LEGACY", "currency" => "EUR" },
+      "cash" => { "amount" => "88.00", "currency" => "EUR" },
+      "positions" => [ { "isin" => "US0378331005", "quantity" => "1", "price" => "100" } ],
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    portfolio = @item.trade_republic_accounts.find_by!(kind: "portfolio")
+    cash = @item.trade_republic_accounts.find_by!(kind: "cash")
+
+    assert_equal "DE-LEGACY", portfolio.trade_republic_account_id
+    assert_equal BigDecimal("100"), portfolio.current_balance
+    assert_equal "cash:DE-LEGACY", cash.trade_republic_account_id
+    assert_equal BigDecimal("88.00"), cash.current_balance
+    assert_not @item.trade_republic_accounts.exists?(kind: "pea")
+  end
+
+  test "stored instrument symbols include both portfolio and pea positions" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "SEC-CTO",
+      currency: "EUR",
+      raw_positions_payload: [ { "isin" => "DE000BASF111", "symbol" => "BAS", "exchange_slug" => "XETR" } ]
+    )
+    @item.trade_republic_accounts.create!(
+      kind: "pea",
+      name: "PEA",
+      trade_republic_account_id: "SEC-PEA",
+      currency: "EUR",
+      raw_positions_payload: [ { "isin" => "IE00B4L5Y983", "symbol" => "SXR8", "exchange_slug" => "XETR" } ]
+    )
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with(
+      has_entries(known_instrument_symbols: {
+        "DE000BASF111" => { "symbol" => "BAS", "exchange_slug" => "XETR" },
+        "IE00B4L5Y983" => { "symbol" => "SXR8", "exchange_slug" => "XETR" }
+      })
+    ).returns(client_result("status" => "session_expired"))
+
+    assert_raises(Provider::TradeRepublicClient::AuthenticationRequired) do
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+  end
+
   private
 
     def client_result(data)
       Provider::TradeRepublicClient::Result.new(data: data)
+    end
+
+    def full_domain_statuses
+      {
+        "account_metadata" => "success",
+        "cash" => "success",
+        "portfolio" => "success",
+        "timeline" => "success",
+        "instrument_metadata" => "success"
+      }
+    end
+
+    def envelope_result(kind:, brokerage_account_id:, cash_account_number: nil, currency: "EUR",
+                        positions: [], position_warnings: [], positions_status: "success",
+                        cash_status: "success", cash: nil)
+      {
+        "kind" => kind,
+        "brokerage_account_id" => brokerage_account_id,
+        "product_type" => kind == "pea" ? "TAX_WRAPPER" : "DEFAULT",
+        "cash_account_number" => cash_account_number,
+        "currency" => currency,
+        "positions" => positions,
+        "position_warnings" => position_warnings,
+        "positions_status" => positions_status,
+        "cash_status" => cash_status,
+        "cash" => cash
+      }
     end
 end

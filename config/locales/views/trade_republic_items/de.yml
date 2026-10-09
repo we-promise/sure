@@ -73,6 +73,7 @@ de:
         account_summary: "%{account_type} • Saldo: %{balance}"
         account_id: "Konto-ID: %{account_id}"
         account_type_investment: "Investment-Portfolio"
+        account_type_pea: "PEA"
         account_type_cash: "Cash-Konto"
         account_type_crypto: "Krypto-Konto"
       link_existing:
