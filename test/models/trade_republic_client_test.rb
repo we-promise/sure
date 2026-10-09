@@ -359,6 +359,38 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
   end
 
+  test "still runs the other topic's backfill when the sync is retried after an interruption" do
+    stub_sync_session
+    @client.stubs(:sleep_for)
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      requested << [ payload[:type], payload[:after] ]
+      case [ payload[:type], payload[:after] ]
+      when [ "timelineTransactions", "page-9" ] then raise Provider::TradeRepublicClient::Timeout, "timeout"
+      when [ "timelineActivityLog", "act-page-9" ] then { "items" => [ { "id" => "act-old", "timestamp" => "2026-08-01" } ], "cursors" => {} }
+      when [ "timelineTransactions", nil ] then { "items" => [ { "id" => "tx-known", "timestamp" => "2026-08-02" } ], "cursors" => {} }
+      when [ "timelineActivityLog", nil ] then { "items" => [ { "id" => "act-known", "timestamp" => "2026-08-02" } ], "cursors" => {} }
+      else { "items" => [], "cursors" => {} }
+      end
+    end
+
+    result = @client.sync(
+      session_txt: "session",
+      timeline_cursors: {
+        "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" },
+        "timelineActivityLog" => { "newest_event_id" => "act-known", "backfill_cursor" => "act-page-9" }
+      }
+    )
+
+    assert_includes requested, [ "timelineActivityLog", "act-page-9" ]
+    assert_includes result["events"].map { |event| event["id"] }, "act-old"
+    assert_equal({ "newest_event_id" => "act-known" }, result["timeline_cursors"]["timelineActivityLog"])
+    assert_equal(
+      { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9", "backfill_failures" => 1 },
+      result["timeline_cursors"]["timelineTransactions"]
+    )
+  end
+
   test "keeps the pages read before the websocket fails in the backfill" do
     stub_sync_session
     @client.stubs(:sleep_for)

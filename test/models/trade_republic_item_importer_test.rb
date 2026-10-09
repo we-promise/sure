@@ -267,6 +267,58 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal({ "timelineTransactions" => { "newest_event_id" => "evt_3" }, "timelineActivityLog" => gap }, @item.reload.timeline_cursors)
   end
 
+  test "stops the history backfill when the cap drops a fetched event without an id" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-CURSOR",
+      currency: "EUR",
+      raw_timeline_payload: [
+        { "id" => "evt_2", "timestamp" => "2026-08-02", "category" => "PAYMENT_RECEIVED" },
+        { "id" => "evt_3", "timestamp" => "2026-08-03", "category" => "PAYMENT_RECEIVED" }
+      ]
+    )
+    returned = { "timelineTransactions" => { "newest_event_id" => "evt_3", "backfill_cursor" => "page-10" } }
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result(
+      returned,
+      "events" => [ { "timestamp" => "2026-08-01", "category" => "PAYMENT_RECEIVED", "title" => "Card" } ]
+    ))
+
+    with_max_timeline_events(2) do
+      DebugLogEntry.expects(:capture).with { |args| args[:message] == "Trade Republic sync warning: timeline history exceeds 2 events; older history is not imported" }
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+
+    assert_equal({ "timelineTransactions" => { "newest_event_id" => "evt_3" } }, @item.reload.timeline_cursors)
+  end
+
+  test "keeps the history backfill when a stored event without an id falls off the cap" do
+    stored = { "timestamp" => "2026-08-01", "category" => "PAYMENT_RECEIVED", "title" => "Card" }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-CURSOR",
+      currency: "EUR",
+      raw_timeline_payload: [ stored, { "id" => "evt_2", "timestamp" => "2026-08-02", "category" => "PAYMENT_RECEIVED" } ]
+    )
+    returned = { "timelineTransactions" => { "newest_event_id" => "evt_3", "backfill_cursor" => "page-10" } }
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result(
+      returned,
+      "events" => [ stored, { "id" => "evt_3", "timestamp" => "2026-08-03", "category" => "PAYMENT_RECEIVED" } ]
+    ))
+
+    with_max_timeline_events(2) do
+      DebugLogEntry.expects(:capture).never
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+
+    assert_equal returned, @item.reload.timeline_cursors
+  end
+
   test "keeps the history backfill when only stored events fall off the cap" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",

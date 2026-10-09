@@ -333,7 +333,7 @@ class Provider::TradeRepublicClient
   def sync(session_txt:, known_newest_event_id: nil, timeline_cursors: {}, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
     raise ConfigurationError, "session_txt is required" if session_txt.blank?
 
-    interrupted_backfill = nil
+    interrupted_backfills = {}
     with_retry do
       sync_once(
         session_txt: session_txt,
@@ -343,15 +343,15 @@ class Provider::TradeRepublicClient
         enrich_events: enrich_events,
         symbol_lookup_isins: symbol_lookup_isins,
         known_instrument_symbols: known_instrument_symbols,
-        interrupted_backfill: interrupted_backfill
+        interrupted_backfills: interrupted_backfills
       )
     rescue TimelineBackfillInterrupted => e
-      interrupted_backfill = { topic: e.topic, reason: e.reason, cursor: e.cursor, events: e.events }
+      interrupted_backfills = interrupted_backfills.merge(e.topic => { reason: e.reason, cursor: e.cursor, events: e.events })
       raise
     end
   end
 
-  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, timeline_cursors: {}, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {}, interrupted_backfill: nil)
+  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, timeline_cursors: {}, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {}, interrupted_backfills: {})
     session = new_session(session_blob: session_txt)
     account_response = session.get("/api/v2/auth/account")
     return Result.new(data: { "status" => "session_expired" }) if [ 401, 403 ].include?(account_response.code.to_i)
@@ -417,7 +417,7 @@ class Provider::TradeRepublicClient
           max_pages: timeline_max_pages.to_i,
           enrich_events: enrich_events,
           timeline_cursors: timeline_cursors,
-          interrupted_backfill: interrupted_backfill
+          interrupted_backfills: interrupted_backfills
         )
         instrument_symbols = enrich_trade_instrument_symbols(
           websocket,
@@ -1146,7 +1146,7 @@ class Provider::TradeRepublicClient
       nil
     end
 
-    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [], timeline_cursors: {}, interrupted_backfill: nil)
+    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [], timeline_cursors: {}, interrupted_backfills: {})
       timeline_cursors = (timeline_cursors || {}).to_h.stringify_keys
       topics = TIMELINE_TOPICS.index_with do |topic|
         state = timeline_cursors[topic].is_a?(Hash) ? timeline_cursors[topic].stringify_keys : {}
@@ -1156,7 +1156,7 @@ class Provider::TradeRepublicClient
           state: state,
           fallback_newest_event_id: known_newest_event_id,
           max_pages: max_pages,
-          interrupted_backfill: interrupted_backfill
+          interrupted_backfill: interrupted_backfills[topic]
         )
       end.values
       skeleton_events = topics.flat_map(&:events).uniq do |event|
@@ -1209,10 +1209,11 @@ class Provider::TradeRepublicClient
       end
 
       if interrupted_backfill
-        # The websocket failed during this sync's backfill, which is now being
-        # retried without it. The pages read before the failure are kept and
-        # the backfill resumes at the failed page on the next sync.
-        if interrupted_backfill[:topic] == topic && state["backfill_cursor"].present?
+        # The websocket failed during this topic's backfill, and the sync is
+        # now being retried without it. The pages read before the failure are
+        # kept and the backfill resumes at the failed page on the next sync.
+        # Backfills of other topics still run.
+        if state["backfill_cursor"].present?
           events += interrupted_backfill[:events]
           state = timeline_backfill_stopped(state, cursor: interrupted_backfill[:cursor], topic: topic, reason: interrupted_backfill[:reason], warnings: warnings)
         end

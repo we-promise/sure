@@ -334,9 +334,17 @@ class TradeRepublicItem::Importer
       overflow = merged.size - MAX_TIMELINE_EVENTS
       return false unless overflow.positive?
 
-      existing_ids = Array(existing).filter_map { |event| event_id(event) }.to_set
-      fetched_ids = Array(incoming).filter_map { |event| event_id(event) }.reject { |id| existing_ids.include?(id) }.to_set
-      merged.first(overflow).any? { |event| fetched_ids.include?(event_id(event)) }
+      existing_keys = Array(existing).filter_map { |event| timeline_event_key(event) }.to_set
+      fetched_keys = Array(incoming).filter_map { |event| timeline_event_key(event) }.reject { |key| existing_keys.include?(key) }.to_set
+      merged.first(overflow).any? { |event| fetched_keys.include?(timeline_event_key(event)) }
+    end
+
+    # Matches how merge_timeline_events collapses events: by id, or by the
+    # whole event when it has none.
+    def timeline_event_key(event)
+      return unless event.is_a?(Hash)
+
+      event_id(event) || event.as_json
     end
 
     def event_id(event)
