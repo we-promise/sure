@@ -92,6 +92,11 @@ module Account::Chartable
     # balance query gave for that date: the normalizer prepended it or reset
     # it to the balance before the day's activity. False when there is no
     # such point.
+    #
+    # Known limit: once upstream #4009 resets the first point to the balance
+    # before the day's activity, a reset point whose value equals the day's
+    # close (a flow offset by the market) is read as the close. Fixed in the
+    # sync that brings in #4009.
     def value_point_before_activity?(value_series, builder:, date:)
       point = date && value_series.values.find { |value| value.date == date }
       return false unless point

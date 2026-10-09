@@ -669,6 +669,33 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert account.net_contributions_understated?(period: period, interval: "1 day")
   end
 
+  # value_point_before_activity? decides how the line is measured on the
+  # anchor date. It reads the value line's point against the balance query's
+  # own close for that date: a point equal to the close (here a flat day,
+  # where open and close are both 1,000) is the close, and a point on a date
+  # the query never sampled, or one whose value differs from the close, was
+  # supplied by the normalizer before the day's activity.
+  test "the value line's anchor point is read as before activity only when the normalizer supplied it" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: day_one, opening: 1_000, closing: 1_000
+    lay_balance account: account, date: day_one + 2, opening: 1_000, closing: 1_600, cash_flow: 500, market_flow: 100
+    period = Period.custom(start_date: day_one, end_date: day_one + 2)
+    builder = account.send(:chart_series_builder, period: period, interval: "1 day")
+    before_activity = ->(date, amount) do
+      point = Series::Value.new(date: date, date_formatted: date.to_s, value: Money.new(amount, "USD"))
+      series = Series.new(start_date: date, end_date: date, interval: "1 day", values: [ point ])
+      account.send(:value_point_before_activity?, series, builder: builder, date: date)
+    end
+
+    refute before_activity.call(day_one, 1_000), "a flat day's close is the close"
+    refute before_activity.call(day_one + 2, 1_600), "an active day's close is the close"
+    assert before_activity.call(day_one + 2, 1_000), "a point reset below the day's close was supplied"
+    assert before_activity.call(day_one + 3, 1_000), "a point on a date the query has no row for was supplied"
+    refute account.send(:value_point_before_activity?, Series.new(start_date: day_one, end_date: day_one, interval: "1 day", values: []), builder: builder, date: day_one),
+           "no point on the anchor date"
+  end
+
   private
     # Value minus net contributions at each point: what the chart reads as
     # performance.
