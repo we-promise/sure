@@ -22,6 +22,7 @@
     is_new_record = enable_banking_item.new_record?
     # Check if there are any authenticated connections (have session_id)
     has_authenticated_connections = family.enable_banking_items.where.not(session_id: nil).exists?
+    credentials_locked = has_authenticated_connections && !is_new_record
   %>
 
   <%= styled_form_with model: enable_banking_item,
@@ -68,7 +69,7 @@
                   { label: true, include_blank: t("settings.providers.enable_banking_panel.select_country") },
                   { label: t("settings.providers.enable_banking_panel.country_label"), class: "form-field__input" } %>
 
-    <% if has_authenticated_connections && !is_new_record %>
+    <% if credentials_locked %>
       <%= render DS::Alert.new(
             variant: :warning,
             title: t("settings.providers.enable_banking_panel.config_locked_title"),
@@ -80,16 +81,16 @@
                         label: t("settings.providers.enable_banking_panel.application_id_label"),
                         placeholder: is_new_record ? t("settings.providers.enable_banking_panel.application_id_placeholder_new") : t("settings.providers.enable_banking_panel.application_id_placeholder_update"),
                         value: nil,
-                        disabled: has_authenticated_connections && !is_new_record %>
+                        disabled: credentials_locked %>
 
     <%= form.text_area :client_certificate,
                         label: t("settings.providers.enable_banking_panel.client_certificate_label"),
                         placeholder: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
                         value: "",
-                        help_text: (t("settings.providers.enable_banking_panel.keep_client_certificate_hint") unless is_new_record),
+                        help_text: (t("settings.providers.enable_banking_panel.keep_client_certificate_hint") unless is_new_record || credentials_locked),
                         rows: 6,
                         class: "form-field__input font-mono text-xs",
-                        disabled: has_authenticated_connections && !is_new_record %>
+                        disabled: credentials_locked %>
 
     <div class="flex justify-end">
       <%= form.submit is_new_record ? t("settings.providers.enable_banking_panel.save_and_connect") : t("settings.providers.enable_banking_panel.update_connection") %>

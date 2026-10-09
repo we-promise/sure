@@ -135,6 +135,18 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("settings.providers.enable_banking_panel.keep_client_certificate_hint")
   end
 
+  # An authenticated connection locks the credential fields, and a disabled
+  # field is never submitted, so "leave blank to keep" does not apply there.
+  test "the panel hides the keep-certificate hint while the credentials are locked" do
+    @item.update!(session_id: "authenticated-session")
+
+    get connect_form_settings_providers_url(provider_key: "enable_banking")
+
+    assert_response :success
+    assert_select "textarea[name='enable_banking_item[client_certificate]'][disabled]"
+    assert_not_includes response.body, I18n.t("settings.providers.enable_banking_panel.keep_client_certificate_hint")
+  end
+
   # The application id is the key id of every signed request, so the panel
   # treats it like the certificate: never echoed back, blank keeps it.
   test "the panel does not send the stored application id back to the browser" do
