@@ -57,7 +57,7 @@ class Rule < ApplicationRecord
   # A pattern that times out matches nothing here, as it does when the rule runs:
   # the rule cannot categorize the transaction, so the prompt is still offered.
   def matches_transaction?(transaction)
-    matching_resources_scope.where(id: transaction.id).exists?
+    matching_resources_scope(only_id: transaction.id).exists?
   rescue Rule::SafeRegex::TimeoutError
     false
   end
@@ -150,8 +150,12 @@ class Rule < ApplicationRecord
   end
 
   private
-    def matching_resources_scope
+    # `only_id` narrows the match to one resource inside the query itself, so a
+    # check on a single transaction runs any pattern on that row alone rather
+    # than on the whole family.
+    def matching_resources_scope(only_id: nil)
       scope = registry.resource_scope
+      scope = scope.where(id: only_id) if only_id
 
       # 1. Prepare the query with joins required by conditions
       conditions.each do |condition|
@@ -168,7 +172,9 @@ class Rule < ApplicationRecord
       # actions then run on those ids.
       return scope unless conditions.any?(&:uses_regex?)
 
-      ids = regex_matching_ids(scope)
+      # A one-row answer is not the rule's matches, so it bypasses the per-apply
+      # cache in both directions.
+      ids = only_id ? Rule::SafeRegex.with_timeout { scope.pluck(:id) } : regex_matching_ids(scope)
       registry.resource_scope.where(id: ids)
     end
 

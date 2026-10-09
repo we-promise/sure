@@ -150,6 +150,37 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     assert_not rule.matches_transaction?(@miss.transaction)
   end
 
+  # The prompt check asks about one transaction. Resolving the family's every
+  # match first and then looking for that id scans the whole family per prompt.
+  test "a regex rule's prompt check runs the pattern on that transaction only" do
+    rule = regex_rule('^amzn\s')
+    target = @hit.transaction
+
+    queries = []
+    callback = ->(*, payload) { queries << payload unless payload[:name] == "SCHEMA" }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      assert rule.matches_transaction?(target)
+    end
+
+    regex_queries = queries.select { |payload| payload[:sql].include?("~*") }
+    assert_equal 1, regex_queries.size, "the pattern runs once"
+
+    regex_query = regex_queries.first
+    assert_match(/"transactions"\."id" = (\$\d+|'#{target.id}')/, regex_query[:sql], "the regex query is filtered to one id")
+    assert_includes Array(regex_query[:type_casted_binds]) + [ regex_query[:sql] ], target.id
+  end
+
+  # During an apply the matches are kept for the actions; a prompt check reached
+  # from inside one must neither read nor fill that cache with one row's answer.
+  test "a prompt check inside an apply judges each transaction alone" do
+    rule = regex_rule('^amzn\s')
+    rule.instance_variable_set(:@regex_matches, {})
+
+    assert rule.matches_transaction?(@hit.transaction)
+    assert_not rule.matches_transaction?(@miss.transaction)
+    assert_empty rule.instance_variable_get(:@regex_matches)
+  end
+
   test "the confirmation counts are 0 rather than an error when the pattern times out" do
     rule = regex_rule("amzn")
     Rule::SafeRegex.stubs(:with_timeout).raises(Rule::SafeRegex::TimeoutError)
