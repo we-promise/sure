@@ -78,7 +78,7 @@ en:
       account_label: Account
       amount: Amount
       balance_unavailable: Balance not available yet
-      labels: Labels
+      labels: Tags
       transfer_tooltip: "%{type}: %{from_account} %{arrow} %{to_account}"
       transfer_tooltip_account_only: "%{type}: %{account}"
       category_label: Category
