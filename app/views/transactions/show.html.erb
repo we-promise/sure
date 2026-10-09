@@ -96,6 +96,21 @@
                     blank_label: t(".uncategorized")
                   ) %>
             <% end %>
+          <% elsif @entry.transaction.category_set_on_transfer_outflow? %>
+            <% outflow_category = transfer_outflow_category(@entry.transaction) %>
+            <div class="space-y-1">
+              <div class="opacity-60 cursor-not-allowed">
+                <%= f.fields_for :entryable do |ef| %>
+                  <%= render DS::CategorySelect.new(
+                        form: ef,
+                        categories: [],
+                        selected_category: outflow_category || transfer_category,
+                        disabled: true
+                      ) %>
+                <% end %>
+              </div>
+              <p class="text-xs text-secondary"><%= outflow_category ? t(".category_set_on_outflow") : t(".category_set_on_hidden_outflow") %></p>
+            </div>
           <% end %>
         <% end %>
       </div>

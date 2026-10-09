@@ -40,6 +40,34 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # container-inset is the page's own colour in light mode, so a list framed
+  # with it straight on the page lost its frame: headings floated, and its card
+  # sat 4px inside every other card's edge. Inside a card it does show.
+  test "no bills view frames a list in the page's own colour" do
+    @family.accounts.where(accountable_type: "Depository").update_all(balance: 5_000)
+    create_bill(name: "Rent", amount: 1200)
+    sub = create_bill(name: "STREAMFLIX", amount: 24.99, bill_type: "subscription")
+    sub.recurring_price_changes.create!(effective_on: 2.months.ago.to_date, previous_amount: 19.99,
+                                        new_amount: 24.99, currency: "USD", source: "detected")
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 5)
+    declare_bill(name: "Curbside Cuts", amount: 150, due: Date.current + 2)
+
+    [ bills_url, bills_url(view: "calendar"), bills_url(view: "paycheck"),
+      bills_url(view: "all", q: { bill_type: "subscription" }) ].each do |url|
+      get url
+
+      assert_response :success
+      on_page = Nokogiri::HTML(response.body).xpath(
+        "//main//*[contains(concat(' ', @class, ' '), ' bg-container-inset ')]" \
+        "[not(ancestor::*[contains(concat(' ', @class, ' '), ' bg-container ')])]"
+      )
+      assert_empty on_page.map { |node| node["class"] }, "#{url} frames something in container-inset on the page"
+    end
+
+    get bills_url
+    assert_select "main .bg-surface-inset h2", text: I18n.t("bills.index.this_month")
+  end
+
   test "bills page shell is localized in German" do
     @user.update!(locale: "de")
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
@@ -1800,7 +1828,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
     assert_response :success
 
-    shells = css_select(".rounded-xl.bg-container-inset.p-1")
+    shells = css_select(".rounded-xl.bg-surface-inset.p-1")
     headings = shells.flat_map { |shell| css_select(shell, "div.uppercase") }
     [ "#{I18n.t("bills.index.notices_heading")} · 3", "#{I18n.t("bills.index.needs_review")} · 1",
       "#{I18n.t("recurring_transactions.suggested.title")} · 1", "#{I18n.t("bills.index.this_month")} · " ].each do |heading|
@@ -1820,7 +1848,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     end
 
     # Possible new bills still collapses and remembers it, inside the shell.
-    assert_select ".rounded-xl.bg-container-inset.p-1 > details[data-controller='persisted-disclosure'][data-persisted-disclosure-key-value='bills-suggested']"
+    assert_select ".rounded-xl.bg-surface-inset.p-1 > details[data-controller='persisted-disclosure'][data-persisted-disclosure-key-value='bills-suggested']"
     # Needs review can't run long, so it doesn't collapse.
     assert_select "details", text: /#{I18n.t("bills.index.needs_review")}/, count: 0
     # The quieter notices fold behind a row of the card, padded like the notices
