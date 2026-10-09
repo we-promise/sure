@@ -10,6 +10,45 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     @msft = securities(:msft)
   end
 
+  # The figure carried past a provider's last snapshot is per share, and a
+  # split changes how many shares the same money bought. Carried across a
+  # 2-for-1 unchanged, every row after the split recorded twice the cost the
+  # position actually has — and every gain and return computed from it.
+  test "a cost basis carried past a split is restated per post-split share" do
+    security = Security.create!(ticker: "CBSP", name: "Carried Basis Split")
+    (4.days.ago.to_date..Date.current).each do |date|
+      Security::Price.create!(security: security, date: date, price: date < 1.day.ago.to_date ? 200 : 100)
+    end
+
+    # An entry so materialisation reaches back past the snapshot's own day;
+    # account history starts the day before the first entry.
+    @account.entries.create!(
+      name: "Opening", date: 4.days.ago.to_date, amount: 20000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    # The provider's last snapshot, before the split: 10 shares at $100 each.
+    @account.holdings.create!(
+      security: security, date: 3.days.ago.to_date, qty: 10, price: 200, amount: 2000,
+      currency: "USD", cost_basis: 100, cost_basis_source: "provider", account_provider: account_provider
+    )
+    Security::Split.create!(security: security, ex_date: 1.day.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    after_split = @account.holdings.find_by!(security: security, date: Date.current)
+    before_split = @account.holdings.find_by!(security: security, date: 2.days.ago.to_date)
+
+    assert_equal 100, before_split.cost_basis.to_d, "the snapshot's own terms are untouched before the split"
+    assert_equal 50, after_split.cost_basis.to_d, "the same money over twice the shares"
+    assert_equal before_split.qty * before_split.cost_basis, after_split.qty * after_split.cost_basis,
+      "a split moves no money, so total recorded cost is unchanged"
+  end
+
   test "syncs holdings" do
     create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
 

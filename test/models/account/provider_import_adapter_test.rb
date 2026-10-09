@@ -86,6 +86,219 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
                  "a repayment on a Loan account must stay loan_payment, not the provider's funds_movement"
   end
 
+  test "re-importing a matched loan payment leg keeps the kinds its transfer set" do
+    loan_adapter = Account::ProviderImportAdapter.new(accounts(:loan))
+
+    loan_entry = loan_adapter.import_transaction(
+      external_id: "plaid_loan_inflow_1",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment Received",
+      source: "plaid"
+    )
+    checking_entry = @adapter.import_transaction(
+      external_id: "plaid_checking_outflow_1",
+      amount: 200.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "plaid"
+    )
+
+    @family.auto_match_transfers!
+
+    transfer = loan_entry.transaction.reload.transfer
+    assert transfer.present?, "expected the two legs to be auto-matched"
+    assert_equal "funds_movement", loan_entry.transaction.kind
+    assert_equal "loan_payment", checking_entry.transaction.reload.kind
+
+    # The next sync of the loan account sees a negative amount on a Loan and
+    # would classify the leg as loan_payment again, which makes budgets and
+    # reports count the same repayment as an expense on both legs.
+    loan_adapter.import_transaction(
+      external_id: "plaid_loan_inflow_1",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment Received",
+      source: "plaid"
+    )
+
+    assert_equal "funds_movement", loan_entry.transaction.reload.kind
+    assert_equal "loan_payment", checking_entry.transaction.reload.kind
+  end
+
+  test "a provider transfer hint does not overwrite the kind of a matched payment leg" do
+    loan_entry = Account::ProviderImportAdapter.new(accounts(:loan)).import_transaction(
+      external_id: "up_loan_inflow_1",
+      amount: -150.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment Received",
+      source: "up"
+    )
+    checking_entry = @adapter.import_transaction(
+      external_id: "up_checking_outflow_1",
+      amount: 150.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "up"
+    )
+
+    @family.auto_match_transfers!
+    assert checking_entry.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
+    assert_equal "loan_payment", checking_entry.transaction.kind
+
+    # Up flags the outgoing leg as an internal transfer (transferAccount).
+    @adapter.import_transaction(
+      external_id: "up_checking_outflow_1",
+      amount: 150.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "up",
+      kind: "funds_movement"
+    )
+
+    assert_equal "loan_payment", checking_entry.transaction.reload.kind
+  end
+
+  test "re-importing a matched leg repairs a kind an earlier sync overwrote" do
+    loan_adapter = Account::ProviderImportAdapter.new(accounts(:loan))
+    loan_entry = loan_adapter.import_transaction(
+      external_id: "plaid_loan_inflow_legacy",
+      amount: -300.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment Received",
+      source: "plaid"
+    )
+    @adapter.import_transaction(
+      external_id: "plaid_checking_outflow_legacy",
+      amount: 300.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "plaid"
+    )
+    @family.auto_match_transfers!
+    assert loan_entry.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
+
+    # State left behind by syncs before the fix: the matched inflow was
+    # turned back into loan_payment.
+    loan_entry.transaction.update_columns(kind: "loan_payment")
+
+    loan_adapter.import_transaction(
+      external_id: "plaid_loan_inflow_legacy",
+      amount: -300.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment Received",
+      source: "plaid"
+    )
+
+    assert_equal "funds_movement", loan_entry.transaction.reload.kind
+  end
+
+  test "a rejected match takes the account kind again on re-import" do
+    loan_adapter = Account::ProviderImportAdapter.new(accounts(:loan))
+    loan_entry = loan_adapter.import_transaction(
+      external_id: "plaid_loan_inflow_rejected",
+      amount: -120.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment Received",
+      source: "plaid"
+    )
+    @adapter.import_transaction(
+      external_id: "plaid_checking_outflow_rejected",
+      amount: 120.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "plaid"
+    )
+    @family.auto_match_transfers!
+    loan_entry.transaction.reload.transfer.reject!
+
+    loan_adapter.import_transaction(
+      external_id: "plaid_loan_inflow_rejected",
+      amount: -120.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment Received",
+      source: "plaid"
+    )
+
+    assert_nil loan_entry.transaction.reload.transfer
+    assert_equal "loan_payment", loan_entry.transaction.kind
+  end
+
+  test "an unmatched provider leg still takes the provider kind on re-import" do
+    entry = @adapter.import_transaction(
+      external_id: "up_unmatched_1",
+      amount: -40.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Round Up",
+      source: "up"
+    )
+    assert_equal "standard", entry.transaction.kind
+
+    @adapter.import_transaction(
+      external_id: "up_unmatched_1",
+      amount: -40.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Round Up",
+      source: "up",
+      kind: "funds_movement"
+    )
+
+    assert_equal "funds_movement", entry.transaction.reload.kind
+  end
+
+  test "deriving a matched leg's kind on re-import costs one query per row" do
+    amounts = [ 150.00, 160.00, 170.00 ]
+    amounts.each_with_index do |amount, i|
+      Account::ProviderImportAdapter.new(accounts(:loan)).import_transaction(
+        external_id: "up_loan_inflow_batch_#{i}", amount: -amount, currency: "USD",
+        date: Date.current, name: "Loan Repayment Received", source: "up"
+      )
+      @adapter.import_transaction(
+        external_id: "up_checking_outflow_batch_#{i}", amount: amount, currency: "USD",
+        date: Date.current, name: "Loan Repayment", source: "up"
+      )
+    end
+    @family.auto_match_transfers!
+
+    # Up flags the outgoing legs as internal transfers, so the kind is derived
+    # from each leg's transfer; without the hint the adapter derives nothing.
+    reimport = lambda do |kind|
+      ActiveRecord::Base.uncached do
+        capture_sql_queries do
+          amounts.each_with_index do |amount, i|
+            Account::ProviderImportAdapter.new(@account).import_transaction(
+              external_id: "up_checking_outflow_batch_#{i}", amount: amount, currency: "USD",
+              date: Date.current, name: "Loan Repayment", source: "up", kind: kind
+            )
+          end
+        end
+      end
+    end
+
+    without_derivation = reimport.call(nil)
+    with_derivation = reimport.call("funds_movement")
+
+    assert_equal without_derivation.size + amounts.size, with_derivation.size,
+      "the transfer, its legs and their accounts should load in one query per row"
+    amounts.each_index do |i|
+      assert_equal "loan_payment", @account.entries.find_by!(external_id: "up_checking_outflow_batch_#{i}").transaction.kind
+    end
+  end
+
   test "updates existing transaction instead of creating duplicate" do
     # Create initial transaction
     entry = @adapter.import_transaction(
@@ -112,6 +325,93 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_equal 200.00, updated_entry.amount
       assert_equal "Updated Name", updated_entry.name
     end
+  end
+
+  test "keeps a locked date and amount on re-import" do
+    entry = @adapter.import_transaction(
+      external_id: "plaid_locked_financials",
+      amount: 100.00,
+      currency: "USD",
+      date: Date.current - 3.days,
+      name: "Original Name",
+      source: "plaid"
+    )
+
+    # A user edit that locks the fields without marking the entry user_modified,
+    # as PATCH /api/v1/transactions/:id does when user_modified is not sent.
+    entry.update!(date: Date.current - 1.day, amount: 80.00)
+    entry.lock_saved_attributes!
+    assert_not entry.reload.user_modified?
+
+    updated_entry = @adapter.import_transaction(
+      external_id: "plaid_locked_financials",
+      amount: 100.00,
+      currency: "EUR",
+      date: Date.current - 3.days,
+      name: "Provider Name",
+      source: "plaid"
+    )
+
+    assert_equal entry.id, updated_entry.id
+    assert_equal Date.current - 1.day, updated_entry.reload.date
+    assert_equal 80.00, updated_entry.amount
+    assert_equal "USD", updated_entry.currency
+    assert_equal "Provider Name", updated_entry.name
+  end
+
+  test "classifies a re-imported loan entry by its locked amount, not the provider's" do
+    loan_adapter = Account::ProviderImportAdapter.new(accounts(:loan))
+    entry = loan_adapter.import_transaction(
+      external_id: "plaid_loan_locked_amount",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "plaid"
+    )
+    assert_equal "loan_payment", entry.transaction.kind
+
+    entry.update!(amount: 50.00)
+    entry.lock_saved_attributes!
+    entry.transaction.update!(kind: "standard")
+
+    loan_adapter.import_transaction(
+      external_id: "plaid_loan_locked_amount",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Loan Repayment",
+      source: "plaid"
+    )
+
+    assert_equal 50.00, entry.reload.amount
+    assert_equal "standard", entry.transaction.kind
+  end
+
+  test "updates an unlocked amount while keeping a locked date" do
+    entry = @adapter.import_transaction(
+      external_id: "plaid_locked_date_only",
+      amount: 100.00,
+      currency: "USD",
+      date: Date.current - 3.days,
+      name: "Original Name",
+      source: "plaid"
+    )
+
+    entry.update!(date: Date.current - 1.day)
+    entry.lock_saved_attributes!
+
+    updated_entry = @adapter.import_transaction(
+      external_id: "plaid_locked_date_only",
+      amount: 120.00,
+      currency: "USD",
+      date: Date.current - 3.days,
+      name: "Original Name",
+      source: "plaid"
+    )
+
+    assert_equal Date.current - 1.day, updated_entry.reload.date
+    assert_equal 120.00, updated_entry.amount
   end
 
   test "allows same external_id from different sources without collision" do
@@ -1923,4 +2223,22 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "false", pending_entry.transaction.reload.extra.dig("enable_banking", "pending"),
       "a flag that does not mark the transaction pending is not cleared"
   end
+
+  private
+
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end
