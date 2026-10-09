@@ -24,6 +24,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select "turbo-frame#modal"
+    assert_select "form[data-turbo-frame=_top] input[type=file]"
   end
 
   test "cancel marks a lost import as failed" do
@@ -86,6 +87,15 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to import_upload_url(Import.all.ordered.first)
+  end
+
+  test "create with an empty request body redirects back with an alert" do
+    assert_no_difference "Import.count" do
+      post imports_url
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.missing_upload"), flash[:alert]
   end
 
   test "uploads supported non-pdf document for vector store without creating import" do

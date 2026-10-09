@@ -127,6 +127,8 @@ class ImportsController < ApplicationController
     else
       redirect_to import_upload_path(import)
     end
+  rescue ActionController::ParameterMissing
+    redirect_to new_import_path, alert: t("imports.create.missing_upload")
   end
 
   def show
