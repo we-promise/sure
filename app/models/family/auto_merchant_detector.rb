@@ -106,16 +106,19 @@ class Family::AutoMerchantDetector
 
     def find_or_create_ai_merchant(auto_detection)
       # Strategy 1: Find an existing merchant by website_url (most reliable for
-      # deduplication). Reusing an already-vetted shared merchant is safe —
-      # unlike creating one, it doesn't let this family's transaction text
-      # write anything into a record other families see.
+      # deduplication). Provider-sourced merchants (Plaid etc.) are vetted
+      # shared data and stay reusable across families. AI-sourced ones were
+      # created from some family's own transaction text (before #3842), so
+      # they're only reused when already assigned to this family — otherwise
+      # another family's crafted name/logo would surface here.
       if auto_detection.business_url.present?
-        existing = ProviderMerchant.find_by(website_url: auto_detection.business_url)
+        existing = reusable_provider_merchants.find_by(website_url: auto_detection.business_url)
         return existing if existing
       end
 
-      # Strategy 2: Find an existing AI-sourced merchant by exact name match.
-      existing = ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
+      # Strategy 2: Find an AI-sourced merchant by exact name match, limited
+      # to the ones this family already uses (see Strategy 1).
+      existing = family_ai_provider_merchants.find_by(name: auto_detection.business_name)
       return existing if existing
 
       # Strategy 3: no shared merchant to reuse. Create a merchant scoped to
@@ -136,6 +139,14 @@ class Family::AutoMerchantDetector
       # it's derived from the family's transaction text.
       Rails.logger.warn("Skipping invalid AI-detected merchant for family #{family.id}: #{e.record.errors.attribute_names.join(', ')}")
       nil
+    end
+
+    def family_ai_provider_merchants
+      ProviderMerchant.where(source: "ai", id: family.transactions.select(:merchant_id))
+    end
+
+    def reusable_provider_merchants
+      ProviderMerchant.where.not(source: "ai").or(family_ai_provider_merchants)
     end
 
     def enhance_provider_merchant(merchant, auto_detection)

@@ -125,6 +125,42 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal other_family, merchant2.family
   end
 
+  # Legacy AI-sourced ProviderMerchants were created from some family's own
+  # transaction text, so another family must not pick them up by url or name.
+  test "does not reuse another family's legacy AI provider merchant" do
+    legacy = ProviderMerchant.create!(name: "Crafted Co", source: "ai", website_url: "crafted.example")
+    txn = create_transaction(account: @account, name: "Crafted Co purchase").transaction
+
+    provider_response = provider_success_response([
+      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Crafted Co", business_url: "crafted.example")
+    ])
+    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+
+    Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+
+    merchant = txn.reload.merchant
+    assert_instance_of FamilyMerchant, merchant
+    assert_not_equal legacy.id, merchant.id
+  end
+
+  test "reuses an AI provider merchant this family already uses" do
+    mine = ProviderMerchant.create!(name: "Mine Co", source: "ai", website_url: "mine.example")
+    used = create_transaction(account: @account, name: "Earlier Mine Co").transaction
+    used.update!(merchant: mine)
+    txn = create_transaction(account: @account, name: "Mine Co purchase").transaction
+
+    provider_response = provider_success_response([
+      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Mine Co", business_url: "mine.example")
+    ])
+    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+
+    assert_no_difference [ "ProviderMerchant.count", "FamilyMerchant.count" ] do
+      Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+    end
+
+    assert_equal mine.id, txn.reload.merchant.id
+  end
+
   test "still reuses an existing shared provider merchant by website" do
     known = ProviderMerchant.create!(name: "Known Co", source: "plaid", website_url: "known.example")
     txn = create_transaction(account: @account, name: "Known Co purchase").transaction
