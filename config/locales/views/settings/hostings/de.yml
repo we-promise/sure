@@ -104,6 +104,8 @@ de:
         openai_request_timeout_help: 'Standard: 60. Gilt für jede OpenAI-kompatible HTTP-Anfrage, einschließlich automatischer Kategorisierung, Händlererkennung, Chat, PDF-Verarbeitung und Vektorspeicher-Aufrufen. OPENAI_REQUEST_TIMEOUT überschreibt dieses Feld.'
         ai_response_timeout_label: Antwortzeitlimit in Sekunden (optional)
         ai_response_timeout_help: 'Standard: 90. Gilt nur für das Zeitlimit der gesamten Chat-Runde. Setz den Wert daher als Summe an: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × Anfragezeitlimit, plus Ausführungszeit der Tools und Wartezeit in der Warteschlange. AI_RESPONSE_TIMEOUT überschreibt dieses Feld.'
+        ai_health_probe_timeout_label: Zeitlimit für Systemstatus-Prüfungen in Sekunden (optional)
+        ai_health_probe_timeout_help: 'Standard: 5. Gilt nur für die KI-Live-Prüfungen unter Einstellungen → Systemstatus, nie für echte KI-Aufrufe. Erhöhe den Wert, wenn die PDF-Prüfungen mit einem Cloud-Modell ein Zeitlimit melden. AI_HEALTH_PROBE_TIMEOUT überschreibt dieses Feld.'
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance bietet kostenlosen Zugriff auf Aktienkurse, Wechselkurse und Finanzdaten – ganz ohne API-Schlüssel.

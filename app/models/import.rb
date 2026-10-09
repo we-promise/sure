@@ -473,6 +473,27 @@ class Import < ApplicationRecord
     complete? || revert_failed?
   end
 
+  # Whether the user may write to every pre-existing account this import
+  # targets (its own account, account mappings) or has already written into
+  # (entries). Accounts the import created itself are excluded.
+  def accounts_writable_by?(user)
+    ids = [ account_id ]
+    ids += mappings.accounts.where.not(mappable_id: nil).pluck(:mappable_id)
+    ids += entries.distinct.pluck(:account_id)
+    ids += preexisting_target_account_ids
+    ids = ids.compact.uniq - accounts.pluck(:id)
+    return true if ids.empty?
+    return false if user.nil?
+
+    (ids - family.accounts.writable_by(user).where(id: ids).pluck(:id)).empty?
+  end
+
+  # Existing family accounts the import resolves on its own at publish time
+  # (e.g. by name). Subclasses that do this override it.
+  def preexisting_target_account_ids
+    []
+  end
+
   def has_unassigned_account?
     mappings.accounts.where(key: "").any?
   end
