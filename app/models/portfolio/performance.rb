@@ -37,15 +37,14 @@ class Portfolio::Performance
   # Annualising anything shorter produces a number nobody should be shown.
   MIN_DAYS_FOR_ANNUALISATION = 365
 
-  attr_reader :family, :account_ids, :period, :user, :active_until_dates, :scope_account_ids
+  attr_reader :family, :account_ids, :period, :user, :active_until_dates
 
-  def initialize(family:, account_ids:, period:, user: nil, active_until_dates: {}, scope_account_ids: nil)
+  def initialize(family:, account_ids:, period:, user: nil, active_until_dates: {})
     @family = family
     @account_ids = Array(account_ids).compact.map(&:to_s)
     @period = period
     @user = user
     @active_until_dates = active_until_dates || {}
-    @scope_account_ids = scope_account_ids
   end
 
   # Chained daily returns, as a BigDecimal fraction (0.21 == 21%).
@@ -121,25 +120,22 @@ class Portfolio::Performance
       account_ids: account_ids,
       currency: family.currency,
       period: period,
-      active_until_dates: active_until_dates,
-      scope_account_ids: scope_account_ids
+      active_until_dates: active_until_dates
     )
   end
 
   # Every constructor argument that can change a figure has to be in here.
-  # `active_until_dates` and `scope_account_ids` are easy to forget because
-  # neither is passed today, but both change the underlying rows materially --
-  # a cut-off date drops an account's later history entirely -- so omitting them
-  # would let the first caller to use them read another caller's cached answer.
+  # `active_until_dates` is easy to forget because it is not passed today, but
+  # it changes the underlying rows materially -- a cut-off date drops an
+  # account's later history entirely -- so omitting it would let the first
+  # caller to use it read another caller's cached answer.
   #
-  # Both the flow scope and the cut-off dates are keyed as DailyReturns resolves
-  # them, not as they were passed. For the scope: an omitted one means "the
-  # accounts themselves" while an explicit `[]` means "nothing is inside", and
-  # those classify transfers differently. For the cut-offs: DailyReturns
-  # compacts them and normalises each value to an ISO8601 string, so
-  # `{ id => nil }` is valid input meaning "no cut-off" and has to key
-  # identically to an omitted hash -- which it does only after that compaction,
-  # and a key-type difference would key two identical scopes differently.
+  # The cut-off dates are keyed as DailyReturns resolves them, not as they were
+  # passed: DailyReturns compacts them and normalises each value to an ISO8601
+  # string, so `{ id => nil }` is valid input meaning "no cut-off" and has to
+  # key identically to an omitted hash -- which it does only after that
+  # compaction, and a key-type difference would key two identical scopes
+  # differently.
   #
   # Nothing is converted here for the same reason: the resolved values are
   # already the strings DailyReturns keyed its own query on, so a `to_date`
@@ -155,7 +151,6 @@ class Portfolio::Performance
         Digest::SHA256.hexdigest(
           [
             account_ids.sort.join(","),
-            "scope:" + daily_returns.scope_account_ids.sort.join(","),
             daily_returns.active_until_dates.map { |id, date| "#{id}:#{date}" }.sort.join(",")
           ].join("|")
         ),
