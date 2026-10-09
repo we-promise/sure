@@ -1058,6 +1058,33 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.summary.remaining", amount: "$15.99"), response.body
   end
 
+  # The drawer leads with its figure at the size the payment drawer and a
+  # transaction's drawer use. At text-lg it matched the bill's own name.
+  test "the bill drawer's figure leads at the payment drawer's size" do
+    bill = create_bill(name: "Streaming Plus", amount: 15.99)
+
+    get_bill_drawer(bill)
+    assert_select "dialog p.text-2xl", text: I18n.t("bills.summary.remaining", amount: "$15.99")
+
+    occurrence = bill.recurring_occurrences.open_status.order(:due_on).first
+    get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+    assert_select "dialog p.text-2xl", text: I18n.t("recurring_occurrences.show.remaining", amount: "$15.99")
+  end
+
+  # One eyebrow style per page: the pulse's tracked labels sat over sections
+  # whose headings use the same xs uppercase without the tracking.
+  test "the overview and the income plan label things with one eyebrow style" do
+    create_bill(name: "Rent", amount: 1200)
+    declare_income(name: "Paycheck", amount: -1840, payday: Date.current + 3)
+
+    [ bills_url, bills_url(view: "paycheck") ].each do |url|
+      get url
+      assert_response :success
+      assert_select "main .uppercase", minimum: 1
+      assert_select "main [class~='tracking-wide']", count: 0, message: "#{url} still tracks an eyebrow"
+    end
+  end
+
   # The id is resolved through the series, so one from another bill cannot be
   # borrowed to render someone else's cycle.
   test "an occurrence id from another bill is ignored" do
