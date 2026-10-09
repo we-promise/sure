@@ -358,6 +358,22 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_empty result.index_series
   end
 
+  # The empty-account carve-out below must not swallow the whole scope. With
+  # no account holding a balance, DailyReturns still emits a row per calendar
+  # day, every one zero, and chaining them reads as a 0% return and a flat
+  # index -- a figure for a portfolio that held nothing.
+  test "time weighted figures are withheld when no account holds a balance in the period" do
+    empty = create_portfolio_account(family: @family)
+
+    result = performance(account_ids: [ @account.id, empty.id ])
+
+    assert result.any?, "the period still has its calendar rows"
+    assert_nil result.twr, "nothing was held, so nothing was returned (was 0%)"
+    assert_nil result.volatility
+    assert_nil result.max_drawdown
+    assert_empty result.index_series
+  end
+
   # Eligibility reads the same window DailyReturns does. The account has two
   # balance days in the period, but its cut-off is the first, so the series
   # holds one day of it and that supports no return. Counted over the whole
