@@ -46,6 +46,7 @@
     </div>
   </header>
 
+  <%= render "shared/exchange_rate_notes", family: Current.family %>
   <%= render "summary", totals: @search.totals %>
   <% if Current.family.recurring_transactions_disabled? %>
     <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>

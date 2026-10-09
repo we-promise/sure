@@ -157,6 +157,9 @@ en:
       realized_gains: Realized Gains
       total_gains: Total Gains
       taxable_realized_note: These gains may be subject to taxes
+      unconverted_note:
+        one: "%{count} gain is not included: no exchange rate to %{currency}"
+        other: "%{count} gains are not included: no exchange rate to %{currency}"
       no_data: "-"
       view_details: View details
       holdings_count:

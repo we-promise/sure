@@ -17,11 +17,16 @@ module IncomeStatement::ScopedTransactionsQuery
       "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
     end
 
-    # Entry amount converted to the family currency at the day's exchange
-    # rate. Contribution/loan-payment outflows are flipped positive so they
-    # add to expense totals.
+    # Entry amount converted to the family currency (see ExchangeRate.rate_sql).
+    # Contribution/loan-payment outflows are flipped positive so they add to
+    # expense totals. NULL for a currency with no rate at all, so the entry is
+    # left out of a SUM rather than counted at 1 (#3640). Totals wrap their SUM
+    # in COALESCE so a group with nothing convertible reads 0; the stats leave
+    # it NULL, so a period with nothing convertible is skipped by the median
+    # and average rather than counted as a period with no spending.
     def converted_amount_sql(t)
-      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END"
+      rate = ExchangeRate.rate_sql(from: "ae.currency", to: ":target_currency", on: "ae.date")
+      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * #{rate}) ELSE ae.amount * #{rate} END"
     end
 
     def entries_join_sql(t)
@@ -30,16 +35,6 @@ module IncomeStatement::ScopedTransactionsQuery
 
     def accounts_join_sql
       "JOIN accounts a ON a.id = ae.account_id"
-    end
-
-    def exchange_rates_join_sql
-      <<~SQL.chomp
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
-      SQL
     end
 
     # Investment activity rows that move money within a portfolio

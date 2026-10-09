@@ -599,6 +599,22 @@ class Family < ApplicationRecord
     (requires_exchange_rates_data_provider? && ExchangeRate.provider.nil?)
   end
 
+  # Currencies the family's accounts, entries or holdings use that have no
+  # stored exchange rate into the family currency on any date. Totals built on
+  # #rate_sql leave amounts in them out rather than counting them at 1 (#3640);
+  # totals built on #rates_for include them only if the provider supplies a
+  # rate, which is then stored. The pages that show those totals say so.
+  def currencies_without_exchange_rate
+    @currencies_without_exchange_rate ||= ExchangeRate.currencies_without_rate(currencies_in_use, to: currency)
+  end
+
+  # Currencies in use whose newest rate into the family currency is too old to
+  # count as today's, mapped to that rate's date. Today's totals use it, and
+  # the same pages say so.
+  def stale_exchange_rate_dates
+    @stale_exchange_rate_dates ||= ExchangeRate.stale_rate_dates(currencies_in_use, to: currency)
+  end
+
   # Returns securities with plan restrictions for a specific provider
   # @param provider [String] The provider name (e.g., "TwelveData")
   # @return [Array<Hash>] Array of hashes with ticker, name, required_plan, provider
@@ -730,6 +746,13 @@ class Family < ApplicationRecord
   end
 
   private
+    def currencies_in_use
+      @currencies_in_use ||= (
+        accounts.distinct.pluck(:currency) + entries.distinct.pluck(:currency) +
+          trades.distinct.pluck(:currency) + holdings.distinct.pluck(:currency)
+      ).compact.uniq
+    end
+
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
     # `tax_advantaged_account_ids`. Joins `depositories` and filters by
     # `Depository::TAX_ADVANTAGED_SUBTYPES` (currently `%w[hsa]`). Extracted

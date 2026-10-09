@@ -203,6 +203,27 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal [ 1100, 1320 ], series.map { |v| v.value.amount }
   end
 
+  # The series is the sum of every account's converted balance. An account in
+  # a currency with no rate on any date drops out of it rather than counting
+  # at 1 (#3640).
+  test "an account in a currency with no rate at all is left out of the series" do
+    family = families(:dylan_family)
+    usd = family.accounts.create!(name: "USD", balance: 100, currency: "USD", accountable: Depository.new)
+    krw = family.accounts.create!(name: "KRW", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+    [ usd, krw ].each { |account| account.balances.destroy_all }
+    create_balance(account: usd, date: Date.current, balance: 100)
+    create_balance(account: krw, date: Date.current, balance: 1_000_000)
+
+    series = Balance::ChartSeriesBuilder.new(
+      account_ids: [ usd.id, krw.id ],
+      currency: "USD",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      interval: "1 day"
+    ).balance_series
+
+    assert_equal [ 100 ], series.map { |v| v.value.amount }
+  end
+
   test "linked account with orphaned currency balances shows correct values after cleanup" do
     # This test reproduces the original bug scenario:
     # 1. Linked account created with initial sync before correct currency was known

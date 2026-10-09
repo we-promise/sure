@@ -99,11 +99,14 @@ class BalanceSheet::AccountTotals
     end
 
     # Converts an account's balance to the family's currency using pre-fetched exchange rates.
+    # An account in a currency with no rate at all converts to 0, so it is
+    # left out of every total rather than counted at 1 (#3640); its row still
+    # shows its own balance, and the page says the currency is missing.
     # @return [BigDecimal] balance in the family's currency
     def converted_balance_for(account)
       return account.balance if account.currency == family.currency
 
       rate = exchange_rates[account.currency]
-      account.balance * rate
+      rate ? account.balance * rate : BigDecimal(0)
     end
 end

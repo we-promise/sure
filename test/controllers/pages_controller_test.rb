@@ -885,6 +885,38 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "dashboard says which currencies are left out of its totals" do
+    @family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from KRW to USD is stored yet, so some totals may leave out amounts in KRW/
+  end
+
+  test "dashboard shows no exchange rate notes when every rate is current" do
+    @family.accounts.create!(name: "EUR Savings", balance: 100, currency: "EUR", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: Date.current, rate: 1.1)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
+    assert_select "[data-testid='stale-exchange-rates']", count: 0
+  end
+
+  test "dashboard says when today's totals use an out-of-date rate" do
+    rate_date = 30.days.ago.to_date
+    @family.accounts.create!(name: "JPY Savings", balance: 1_000_000, currency: "JPY", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: rate_date, rate: 0.0067)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='stale-exchange-rates']", text: /JPY from #{Regexp.escape(I18n.l(rate_date, format: :long))}/
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
+  end
+
   private
     def money_flow_bars
       JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])

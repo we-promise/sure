@@ -101,6 +101,7 @@ class Trade < ApplicationRecord
   def preloaded_exchange_rates=(value)
     @preloaded_exchange_rates = value
     remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+    @realized_gain_unconvertible = false
   end
 
   # One query for every rate a set of disposals can need, instead of one per
@@ -161,7 +162,17 @@ class Trade < ApplicationRecord
   def realized_gain_loss
     return @realized_gain_loss if defined?(@realized_gain_loss)
 
+    @realized_gain_unconvertible = false
     @realized_gain_loss = calculate_realized_gain_loss
+  end
+
+  # True when #realized_gain_loss is nil only because the proceeds' currency
+  # has no rate into the basis currency on any date, as opposed to a buy, a
+  # transfer or an unknown cost basis. A caller summing gains counts these as
+  # left out (#3640).
+  def realized_gain_unconvertible?
+    realized_gain_loss
+    @realized_gain_unconvertible
   end
 
   # Trades are always excluded from expense budgets
@@ -220,9 +231,12 @@ class Trade < ApplicationRecord
       cost_basis = holding.avg_cost * qty.abs
       sale_proceeds = converted_to_basis_currency(price_money * qty.abs, cost_basis.currency)
 
-      # No rate for that day means the gain is unknown, not zero and not the
-      # figure a rate of 1.0 would give.
-      return nil if sale_proceeds.nil?
+      # No rate at all means the gain is unknown, not zero and not the figure
+      # a rate of 1.0 would give.
+      if sale_proceeds.nil?
+        @realized_gain_unconvertible = true
+        return nil
+      end
 
       Trend.new(current: sale_proceeds, previous: cost_basis)
     end
@@ -241,10 +255,11 @@ class Trade < ApplicationRecord
     # account has a EUR->USD row for the day it happened, while USD->EUR is
     # only ever there by accident of another account.
     #
-    # Exact date, exact direction, no parity fallback and no nearest-rate
-    # lookback. A disposal happened on one known day; the rate for that day is
-    # the rate, and its absence is a fact to report rather than a 1.0 nobody
-    # can see.
+    # The day's rate, else the nearest stored one (ExchangeRate.rate_sql's
+    # rule, which every other conversion follows), else no figure. Never 1.0:
+    # an absent rate is a fact to report, not a parity nobody can see (#3640).
+    # The stored lookup only, never the provider: this runs per disposal while
+    # a page renders.
     #
     # A rate that is present but not positive is absent for this purpose.
     # `ExchangeRate` validates presence only -- neither the model nor the
@@ -258,9 +273,12 @@ class Trade < ApplicationRecord
       to = basis_currency.iso_code
       return proceeds if from == to
 
-      rate = preloaded_rate(from, to) ||
-             ExchangeRate.find_by(from_currency: from, to_currency: to, date: entry.date)&.rate
-      return nil unless rate.to_d.positive?
+      rate = [
+        -> { preloaded_rate(from, to) },
+        -> { ExchangeRate.find_by(from_currency: from, to_currency: to, date: entry.date)&.rate },
+        -> { ExchangeRate.nearest_stored_rate(from: from, to: to, date: entry.date) }
+      ].lazy.map(&:call).find { |candidate| candidate.to_d.positive? }
+      return nil unless rate
 
       Money.new(proceeds.amount * rate, to)
     end
