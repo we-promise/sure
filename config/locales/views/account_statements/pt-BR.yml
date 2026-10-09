@@ -36,7 +36,7 @@ pt-BR:
       files_hint: PDF, CSV ou XLSX. Máximo de %{max_size} MB por arquivo.
       files_label: Arquivos de extrato
       inbox_upload: Enviar
-      period_hint: "O Sure lê o período dos PDFs da Trade Republic ou de uma data no nome do arquivo (ex.: 2026-04). Você também pode defini-lo no extrato."
+      period_hint: "O Sure lê o período do PDF, quando ele o informa, ou de uma data no nome do arquivo (ex.: 2026-04). Você também pode defini-lo no extrato."
     index:
       account_label: Conta
       confidence: "%{confidence} de correspondência"

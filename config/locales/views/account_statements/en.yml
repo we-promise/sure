@@ -36,7 +36,7 @@ en:
       files_hint: PDF, CSV, or XLSX. %{max_size}MB max per file.
       files_label: Statement files
       inbox_upload: Upload
-      period_hint: "Sure reads the period from Trade Republic PDFs, or from a date in the filename (e.g. 2026-04). You can also set it on the statement."
+      period_hint: "Sure reads the period from the PDF when it states one, or from a date in the filename (e.g. 2026-04). You can also set it on the statement."
     index:
       account_label: Account
       confidence: "%{confidence} match"

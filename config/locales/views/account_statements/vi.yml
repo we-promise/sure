@@ -36,7 +36,7 @@ vi:
       files_hint: PDF, CSV hoặc XLSX. Tối đa %{max_size}MB mỗi tệp.
       files_label: Tệp sao kê
       inbox_upload: Tải lên
-      period_hint: "Sure đọc kỳ sao kê từ tệp PDF của Trade Republic hoặc từ ngày trong tên tệp (ví dụ 2026-04). Bạn cũng có thể đặt kỳ trên sao kê."
+      period_hint: "Sure đọc kỳ sao kê từ tệp PDF nếu tệp có ghi kỳ, hoặc từ ngày trong tên tệp (ví dụ 2026-04). Bạn cũng có thể đặt kỳ trên sao kê."
     index:
       account_label: Tài khoản
       confidence: "Khớp %{confidence}"

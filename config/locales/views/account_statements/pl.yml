@@ -42,7 +42,7 @@ pl:
       files_hint: PDF, CSV lub XLSX. Maks. %{max_size} MB na plik.
       files_label: Pliki wyciągów
       inbox_upload: Prześlij
-      period_hint: "Sure odczytuje okres z plików PDF Trade Republic lub z daty w nazwie pliku (np. 2026-04). Możesz go też ustawić na wyciągu."
+      period_hint: "Sure odczytuje okres z pliku PDF, jeśli jest w nim podany, lub z daty w nazwie pliku (np. 2026-04). Możesz go też ustawić na wyciągu."
     index:
       account_label: Konto
       confidence: Zgodność %{confidence}

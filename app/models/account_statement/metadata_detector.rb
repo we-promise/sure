@@ -132,17 +132,17 @@ class AccountStatement::MetadataDetector
     end
 
     def detect_from_pdf(output)
-      summary = AccountStatement::TradeRepublicStatementParser.parse(pdf_text)
+      summary = AccountStatement::TextMetadataParser.parse(pdf_text, currency: statement.currency)
       return false unless summary
 
       statement.period_start_on ||= summary.period_start_on
       statement.period_end_on ||= summary.period_end_on
-      statement.institution_name_hint ||= "Trade Republic"
       statement.account_last4_hint ||= summary.iban_last4
 
       # Only keep balances when they are in the statement's currency; a
       # mismatch would make reconciliation compare different currencies.
-      if summary.currency.present? && (statement.currency.blank? || statement.currency == summary.currency)
+      balances_kept = summary.currency.present? && (statement.currency.blank? || statement.currency == summary.currency)
+      if balances_kept
         statement.currency ||= summary.currency
         statement.opening_balance ||= summary.opening_balance
         statement.closing_balance ||= summary.closing_balance
@@ -150,7 +150,7 @@ class AccountStatement::MetadataDetector
 
       output["pdf_detection"] = "text"
       output["pdf"] = {
-        "layout" => "trade_republic",
+        "balances_source" => (summary.balances_source if balances_kept),
         "balances_detected" => statement.opening_balance.present? && statement.closing_balance.present?
       }
       true

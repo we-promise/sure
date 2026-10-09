@@ -38,7 +38,7 @@ fr:
       files_hint: PDF, CSV ou XLSX. %{max_size}Mo maximum par fichier.
       files_label: Fichiers de relevés
       inbox_upload: Télécharger
-      period_hint: "Sure lit la période dans les PDF Trade Republic ou à partir d’une date dans le nom du fichier (p. ex. 2026-04). Vous pouvez aussi la saisir sur le relevé."
+      period_hint: "Sure lit la période dans le PDF lorsqu’il l’indique, ou à partir d’une date dans le nom du fichier (p. ex. 2026-04). Vous pouvez aussi la saisir sur le relevé."
     index:
       account_label: Compte
       confidence: "%{confidence} correspond"

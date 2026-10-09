@@ -36,7 +36,7 @@ zh-TW:
       files_hint: PDF、CSV 或 XLSX，每個檔案最大 %{max_size}MB。
       files_label: 對帳單檔案
       inbox_upload: 上傳
-      period_hint: "Sure 會從 Trade Republic 的 PDF 或檔名中的日期（例如 2026-04）讀取對帳單期間。你也可以在對帳單上手動設定。"
+      period_hint: "如果 PDF 中載明對帳單期間，Sure 會直接讀取，否則從檔名中的日期（例如 2026-04）讀取。你也可以在對帳單上手動設定。"
     index:
       account_label: 帳戶
       confidence: '%{confidence} 相符度'
