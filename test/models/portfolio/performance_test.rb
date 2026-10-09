@@ -548,7 +548,104 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
                  "money_weighted_supported? reads the resolution time_weighted_supported? already paid for"
   end
 
+  # Opening value out, a withdrawal back, a later deposit out and the closing
+  # value back: the flows change sign three times, so more than one rate can
+  # solve them (Portfolio::Xirr, MULTIPLE ROOTS). The figure is still quoted,
+  # and it is the rate Portfolio::Xirr gives for exactly these flows; what
+  # changes is that it now says it may be one of several.
+  test "an ambiguous money-weighted series is flagged" do
+    build_ambiguous_case
+
+    result = performance(end_date: ambiguous_end_date)
+
+    assert result.money_weighted_return_ambiguous?
+    assert_equal Portfolio::Xirr.rate(ambiguous_flows, days_per_unit: 3), result.mwr,
+                 "the flag travels with the rate; the rate itself is unchanged"
+  end
+
+  # The control: deposit-then-growth changes sign once, so its rate is unique.
+  test "a single-sign-change series is not flagged" do
+    build_textbook_case
+
+    result = performance
+
+    assert_not_nil result.mwr
+    assert_not result.money_weighted_return_ambiguous?
+  end
+
+  # The hedge belongs beside a figure. Whenever the rate is withheld there is
+  # no figure to hedge, so the flag is false -- including when the flows that
+  # were NOT solved would have read as ambiguous, which is the case each of
+  # these is built on.
+  test "a withheld money-weighted return is not flagged" do
+    build_ambiguous_case
+
+    [ Portfolio::Xirr::ConvergenceError, Portfolio::Xirr::NoSignChangeError, Portfolio::Xirr::NoDurationError ].each do |error|
+      Portfolio::Xirr.any_instance.stubs(:rate).raises(error)
+      result = performance(end_date: ambiguous_end_date)
+
+      assert_nil result.mwr, "#{error.name.demodulize} withholds the rate"
+      assert_not result.money_weighted_return_ambiguous?, "#{error.name.demodulize}: no rate, no hedge"
+    ensure
+      Portfolio::Xirr.any_instance.unstub(:rate)
+    end
+
+    unsupported = performance(account_ids: [ @account.id, build_valuation_tracked_account.id ], end_date: ambiguous_end_date)
+    assert_nil unsupported.mwr, "a valuation-tracked account withholds the rate"
+    assert_not unsupported.money_weighted_return_ambiguous?
+
+    eur = create_portfolio_account(family: @family, currency: "EUR")
+    build_ambiguous_case(account: eur)
+    missing_rate = performance(account_ids: [ eur.id ], end_date: ambiguous_end_date)
+    assert missing_rate.rate_missing?
+    assert_nil missing_rate.mwr
+    assert_not missing_rate.money_weighted_return_ambiguous?
+  end
+
+  # The flag is part of the cached figures, so a warm read has to carry it --
+  # and the version has to have moved, because entries written before the flag
+  # existed have no `mwr_ambiguous` and would read as false.
+  test "the cached metrics carry the ambiguity flag" do
+    build_ambiguous_case
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    assert performance(end_date: ambiguous_end_date).money_weighted_return_ambiguous?, "the cold read computes it"
+
+    warm = performance(end_date: ambiguous_end_date)
+    warm.expects(:compute).never
+    assert warm.money_weighted_return_ambiguous?, "the warm read is served from the cache with the flag intact"
+
+    assert_includes warm.cache_key, "_#{Portfolio::Performance::CACHE_VERSION}_"
+    refute_equal "v7", Portfolio::Performance::CACHE_VERSION, "v7 entries were cached without the flag"
+  end
+
   private
+    # Day one holds 1,000; day two withdraws 800; day three deposits 500 and
+    # gains 10. See "an ambiguous money-weighted series is flagged".
+    def build_ambiguous_case(account: @account)
+      day_three = @day_two + 1.day
+      lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+      lay_balance account: account, date: @day_two, opening: 1_000, closing: 200, cash_flow: -800
+      lay_balance account: account, date: day_three, opening: 200, closing: 710, cash_flow: 500, market_flow: 10
+      deposit account: account, date: @day_two, amount: -800
+      deposit account: account, date: day_three, amount: 500
+    end
+
+    def ambiguous_end_date
+      @day_two + 1.day
+    end
+
+    # The flows Performance#money_weighted builds from build_ambiguous_case,
+    # the closing value dated at the end of the last day.
+    def ambiguous_flows
+      [
+        Portfolio::Xirr::Flow.new(date: @day_one, amount: BigDecimal(-1_000)),
+        Portfolio::Xirr::Flow.new(date: @day_two, amount: BigDecimal(800)),
+        Portfolio::Xirr::Flow.new(date: ambiguous_end_date, amount: BigDecimal(-500)),
+        Portfolio::Xirr::Flow.new(date: ambiguous_end_date + 1, amount: BigDecimal(710))
+      ]
+    end
+
     def build_valuation_tracked_account
       account = create_portfolio_account(family: @family)
       lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
