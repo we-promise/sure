@@ -844,6 +844,29 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert returns.rows.last.suppressed
   end
 
+  # The other direction. A journal is valued from its holding, so the rate it
+  # needs is the HOLDING's. Its entry carries a zero amount in a currency that
+  # may have no rate at all, and that rate converts nothing: zero times any
+  # rate is zero. Here the position is priced in USD, the family's currency,
+  # so the journal is fully valued and nothing is missing.
+  test "a journal valued from a holding in a rated currency does not flag the entry currency's missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, currency: "EUR"
+    @account.holdings.create!(
+      security: security_under_test, date: @day_two, qty: 5, price: 100, amount: 500, currency: "USD"
+    )
+    # No EUR -> USD rate exists at all.
+
+    returns = daily_returns
+    second = returns.rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow, "the journal is valued from its USD holding"
+    assert_not second.suppressed
+    assert_not returns.rate_missing?,
+               "the entry's own currency converts a zero amount, so its missing rate withholds nothing"
+  end
+
   # Only a Transfer is a journal. A Contribution labelled trade that records no
   # cash contributed nothing, and must not be revalued from the position.
   test "a contribution labelled trade with no cash amount is not valued as a journal" do

@@ -402,7 +402,15 @@ class Portfolio::DailyReturns
             -- so a missing rate there is invisible to the check above. Without
             -- this a suppressed journal day would not report `rate_missing?`
             -- and a caller could not say which fact it was short of.
+            --
+            -- For the same reason the entry-currency check leaves journals out:
+            -- a journal's entry carries a zero amount that converts nothing,
+            -- so its rate cannot be what a figure is short of. COALESCE
+            -- because the predicate compares `trades` columns, and a trade
+            -- with no label makes it NULL; NOT NULL is NULL, which would
+            -- drop the row from this check rather than keep it.
             COALESCE(BOOL_OR((fx.rate IS NULL
+                              AND NOT COALESCE((#{journal_predicate}), false)
                               AND #{flow_class_sql} IN ('external_inflow', 'external_outflow', 'income', 'fee'))
                              OR (journal_fx.rate IS NULL
                                  AND journal_holdings.currency IS NOT NULL
