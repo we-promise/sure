@@ -1069,7 +1069,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     get recurring_transactions_url
     assert_response :success
 
-    assert_select ".bg-container-inset > details[data-persisted-disclosure-key-value='bills-suggested']" do
+    assert_select ".bg-surface-inset > details[data-persisted-disclosure-key-value='bills-suggested']" do
       assert_select "summary div.uppercase", text: /#{I18n.t("recurring_transactions.suggested.title")}\s*·\s*1/
       assert_select ".bg-container.rounded-lg", text: /Maybe A Bill/
       assert_select "a", text: I18n.t("recurring_transactions.suggested.confirm")

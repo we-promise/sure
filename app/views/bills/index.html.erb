@@ -171,7 +171,7 @@
                suggestions: @suggestions_by_occurrence,
                meta: (@past_due_total && @past_due_total.amount.positive? ? t(".attention_overdue_total", amount: format_money(@past_due_total)) : nil) %>
 
-    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+    <div class="rounded-xl bg-surface-inset space-y-1 p-1">
       <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @month_rows, suggestions: @suggestions_by_occurrence, pay_periods: @month_pay_periods %>
       <%= render "bills/occurrence_section", title: t(".later"), occurrences: @later, suggestions: @suggestions_by_occurrence %>
       <%= render "bills/occurrence_section", title: t(".dormant"), occurrences: @dormant, suggestions: @suggestions_by_occurrence %>
