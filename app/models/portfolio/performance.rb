@@ -254,9 +254,14 @@ class Portfolio::Performance
     # #money_weighted_supported?: an account with exactly one day of balance
     # history has no return to contribute, so it withholds the aggregate. An
     # account with no balance rows in the period contributes nothing and does
-    # not block it.
+    # not block it -- but some account has to hold a balance on two days, or
+    # the scope as a whole held nothing and its calendar rows of zeros would
+    # chain into a 0% return.
     def time_weighted_supported?
-      return_scopes.values.none? { |scope| scope.balance_days == 1 }
+      scopes = return_scopes.values
+
+      scopes.none? { |scope| scope.balance_days == 1 } &&
+        scopes.any? { |scope| scope.balance_days >= 2 }
     end
 
     # The opening value is the investor's first outlay; every flow
