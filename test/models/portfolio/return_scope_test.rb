@@ -316,6 +316,88 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
     assert_empty queries, "an empty set must not reach the database at all"
   end
 
+  # The cut-off ends the account's contribution to the series, so it ends the
+  # history every tracking check reads, not just the balance days. A trade
+  # dated after it records a flow the series never sees; counted, it would make
+  # an account trade tracked on the strength of a day DailyReturns drops.
+  #
+  # Each case below is measured against the same account with no cut-off, so
+  # the assertion is the cut-off's effect rather than the fixture's, and each
+  # is asserted on the instance and on the batch path.
+  test "a trade after the cut-off does not make the account trade tracked" do
+    lay_two_days_before_the_cut_off
+    buy_trade account: @account, date: @day_three, qty: 2, price: 100
+
+    assert_kinds :trade_tracked, cut_off: nil, message: "with no cut-off the trade is a known flow"
+    assert_kinds :valuation_tracked, cut_off: @day_two, message: "the trade falls after the cut-off"
+  end
+
+  test "an external transfer after the cut-off does not make the account trade tracked" do
+    lay_two_days_before_the_cut_off
+    deposit account: @account, date: @day_three, amount: 500
+
+    assert_kinds :trade_tracked, cut_off: nil, message: "with no cut-off the deposit is a known flow"
+    assert_kinds :valuation_tracked, cut_off: @day_two, message: "the deposit falls after the cut-off"
+  end
+
+  # `kind` cannot show this one: an account with neither trades nor transfers
+  # is valuation tracked whether or not a valuation explains its balances. The
+  # predicate is the only place the read is visible, so the test reads it.
+  test "a valuation after the cut-off is not read as the account's history" do
+    lay_two_days_before_the_cut_off
+    create_valuation_entry(date: @day_three, amount: 1_000)
+
+    assert_equal [ true, true ], valuations_read(cut_off: nil), "with no cut-off the valuation is read"
+    assert_equal [ false, false ], valuations_read(cut_off: @day_two), "the valuation falls after the cut-off"
+  end
+
+  # The other side of the boundary: the cut-off day is the last day the account
+  # contributes, so activity on it still counts.
+  test "activity on or before the cut-off still counts" do
+    lay_two_days_before_the_cut_off
+    buy_trade account: @account, date: @day_two, qty: 2, price: 100
+
+    assert_kinds :trade_tracked, cut_off: @day_two, message: "a trade on the cut-off day is inside it"
+
+    transfer_only = create_portfolio_account(family: @family)
+    lay_two_days_before_the_cut_off(transfer_only)
+    deposit account: transfer_only, date: @day_one, amount: 500
+
+    assert_kinds :trade_tracked, cut_off: @day_two, account: transfer_only,
+                 message: "a deposit before the cut-off is inside it"
+
+    valued = create_portfolio_account(family: @family)
+    lay_two_days_before_the_cut_off(valued)
+    create_valuation_entry(date: @day_two, amount: 1_000, account: valued)
+
+    assert_equal [ true, true ], valuations_read(cut_off: @day_two, account: valued),
+                 "a valuation on the cut-off day is inside it"
+  end
+
+  # A cut-off is a bound, never an extension: one later than the period end
+  # still stops the read at the period end.
+  test "a cut-off after the period does not read history past the period end" do
+    lay_two_days_before_the_cut_off
+    buy_trade account: @account, date: @day_three + 5.days, qty: 2, price: 100
+
+    assert_kinds :valuation_tracked, cut_off: @day_three + 10.days,
+                 message: "the trade is after the period, so the cut-off cannot bring it in"
+
+    deposited = create_portfolio_account(family: @family)
+    lay_two_days_before_the_cut_off(deposited)
+    deposit account: deposited, date: @day_three + 5.days, amount: 500
+
+    assert_kinds :valuation_tracked, cut_off: @day_three + 10.days, account: deposited,
+                 message: "the deposit is after the period, so the cut-off cannot bring it in"
+
+    valued = create_portfolio_account(family: @family)
+    lay_two_days_before_the_cut_off(valued)
+    create_valuation_entry(date: @day_three + 5.days, amount: 1_000, account: valued)
+
+    assert_equal [ false, false ], valuations_read(cut_off: @day_three + 10.days, account: valued),
+                 "the valuation is after the period, so the cut-off cannot bring it in"
+  end
+
   # Every test here counts rows laid by `lay_balance`, so the builder's own
   # arithmetic check has to hold at the precision the rows are stored at.
   # These components add up as given, but `balances` keeps four decimal
@@ -335,12 +417,44 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
   end
 
   private
-    def create_valuation_entry(date:, amount:)
-      @account.entries.create!(
+    # Two balance days in a three-day period, both on or before a cut-off at
+    # day two, so the cut-off leaves the account with a return (two days) and
+    # only the activity laid after it is in question.
+    def lay_two_days_before_the_cut_off(account = @account)
+      @day_three = @day_two + 1.day
+      @period = Period.custom(start_date: @day_one, end_date: @day_three)
+      lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+      lay_balance account: account, date: @day_two, opening: 1_000, closing: 1_000
+    end
+
+    # [instance, batch] for one account under one cut-off.
+    def scopes_for(account, cut_off)
+      [
+        Portfolio::ReturnScope.new(account: account, period: @period, active_until_date: cut_off),
+        Portfolio::ReturnScope.resolve_all(
+          accounts: [ account ], period: @period, active_until_dates: { account.id => cut_off }
+        ).fetch(account.id)
+      ]
+    end
+
+    def assert_kinds(expected, cut_off:, message:, account: @account)
+      instance, batch = scopes_for(account, cut_off)
+
+      assert_equal 2, instance.balance_days, "the cut-off must leave two balance days, or the kind is insufficient for another reason"
+      assert_equal expected, instance.kind, "instance: #{message}"
+      assert_equal expected, batch.kind, "batch: #{message}"
+    end
+
+    def valuations_read(cut_off:, account: @account)
+      scopes_for(account, cut_off).map { |scope| scope.send(:valuations?) }
+    end
+
+    def create_valuation_entry(date:, amount:, account: @account)
+      account.entries.create!(
         name: "Valuation",
         date: date,
         amount: amount,
-        currency: @account.currency,
+        currency: account.currency,
         entryable: Valuation.new(kind: "reconciliation")
       )
     end

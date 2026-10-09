@@ -28,7 +28,9 @@ class Portfolio::ReturnScope
   # takes it: the last day the account contributes to the series. Rows after it
   # are dropped there, so they are not counted here either -- an account with
   # two rows in the period and the second past its cut-off has one usable day,
-  # and one day supports no return. nil means no cut-off.
+  # and one day supports no return. The same bound ends the history every
+  # tracking check reads: a trade, valuation or transfer after the cut-off
+  # records a flow the series never sees. nil means no cut-off.
   #
   # `resolved` carries the four inputs when a caller has already fetched them
   # for a set of accounts. Everything below still derives `kind` from those four
@@ -70,9 +72,10 @@ class Portfolio::ReturnScope
   # holds ids converts them, and pays for it where it can be seen.
   #
   # `active_until_dates` is { account_id => cut-off } in the shape
-  # Portfolio::DailyReturns takes, nil values meaning no cut-off, and each
-  # account's balance days are counted only up to its own cut-off -- the same
-  # rule the instance applies.
+  # Portfolio::DailyReturns takes, nil values meaning no cut-off, and every
+  # check reads each account's history only up to its own cut-off -- the same
+  # rule the instance applies. The cut-offs ride inside the existing queries,
+  # so they add none.
   def self.resolve_all(accounts:, period:, active_until_dates: {})
     records = accounts.to_a
     return {} if records.empty?
@@ -82,8 +85,8 @@ class Portfolio::ReturnScope
       .transform_values(&:to_date)
 
     days = balance_days_by_account(records, period, cutoffs)
-    kinds = live_entry_kinds_by_account(records, period)
-    external = external_transaction_account_ids(records, period)
+    kinds = live_entry_kinds_by_account(records, period, cutoffs)
+    external = external_transaction_account_ids(records, period, cutoffs)
 
     records.to_h do |account|
       resolved = {
@@ -123,11 +126,17 @@ class Portfolio::ReturnScope
   private_class_method :balance_days_by_account
 
   # trades? and valuations? read the same rows, so one query answers both.
-  def self.live_entry_kinds_by_account(records, period)
+  # The cut-offs bind as the balance query binds them.
+  def self.live_entry_kinds_by_account(records, period, cutoffs)
     Entry
       .where(account_id: records.map(&:id), entryable_type: %w[Trade Valuation])
       .where("COALESCE(entries.excluded, false) = false")
       .where("entries.date <= ?", period.end_date)
+      .where(
+        "(CAST(:cutoffs AS jsonb) ->> entries.account_id::text) IS NULL " \
+        "OR entries.date <= (CAST(:cutoffs AS jsonb) ->> entries.account_id::text)::date",
+        cutoffs: cutoffs.transform_values(&:iso8601).to_json
+      )
       .distinct
       .pluck(:account_id, :entryable_type)
       .to_set
@@ -141,13 +150,16 @@ class Portfolio::ReturnScope
   # sibling would fall from TRADE_TRACKED to VALUATION_TRACKED -- Performance
   # would then withhold a money-weighted return it should quote. FlowClassifier bakes
   # its scope into a fixed ARRAY literal, so the scope cannot vary per row.
-  def self.external_transaction_account_ids(records, period)
+  #
+  # Each fragment carries its own account's history end, the earlier of the
+  # period end and its cut-off, as `history_end_date` computes it.
+  def self.external_transaction_account_ids(records, period, cutoffs)
     connection = ActiveRecord::Base.connection
-    quoted_end_date = connection.quote(period.end_date)
 
     fragments = records.map do |account|
       classifier = Portfolio::FlowClassifier.new(scope_account_ids: [ account.id ])
       quoted_id = connection.quote(account.id)
+      quoted_end_date = connection.quote([ period.end_date, cutoffs[account.id.to_s] ].compact.min)
 
       # Values are quoted rather than bound: sanitize_sql_array would scan the
       # classifier's finished CASE for `:name` placeholders, and the CASE
@@ -219,21 +231,28 @@ class Portfolio::ReturnScope
   end
 
   private
+    # The last day any tracking check reads: the period end, or the account's
+    # cut-off when that comes first. A cut-off later than the period end is a
+    # bound, never an extension.
+    def history_end_date
+      [ period.end_date, active_until_date ].compact.min
+    end
+
     # Every tracking check reads the same records: the account's live entries
-    # up to the end of the period. Live means not excluded, as
+    # up to `history_end_date`. Live means not excluded, as
     # Portfolio::FlowClassifier reads it, and `entries.excluded` is nullable,
     # so NULL counts as live through COALESCE. History before the period
     # counts, because flows known from earlier are still known inside
     # it.
-    def live_entries_through_period_end
+    def live_entries_through_history_end
       account.entries
         .where("COALESCE(entries.excluded, false) = false")
-        .where("entries.date <= ?", period.end_date)
+        .where("entries.date <= ?", history_end_date)
     end
 
     def trades?
       return @trades if defined?(@trades)
-      @trades = live_entries_through_period_end.where(entryable_type: "Trade").exists?
+      @trades = live_entries_through_history_end.where(entryable_type: "Trade").exists?
     end
 
     # A transfer in or out is as good as a trade for knowing the flows.
@@ -266,7 +285,7 @@ class Portfolio::ReturnScope
       # own fragment rather than leaving a placeholder for the caller to fill.
       value = ActiveRecord::Base.connection.select_value(
         ActiveRecord::Base.sanitize_sql_array([
-          sql, { account_id: account.id, end_date: period.end_date }
+          sql, { account_id: account.id, end_date: history_end_date }
         ])
       )
       @external_transactions = ActiveModel::Type::Boolean.new.cast(value) == true
@@ -274,6 +293,6 @@ class Portfolio::ReturnScope
 
     def valuations?
       return @valuations if defined?(@valuations)
-      @valuations = live_entries_through_period_end.where(entryable_type: "Valuation").exists?
+      @valuations = live_entries_through_history_end.where(entryable_type: "Valuation").exists?
     end
 end
