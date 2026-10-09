@@ -81,12 +81,12 @@ class AccountStatement::TextMetadataParser
   # A number with two decimals ("1.944,58", "1,944.58", "1 944,58", "1'944.58")
   # that isn't part of a date such as 31.03.2026.
   AMOUNT_NUMBER = /(?<![\d.,])\d{1,3}(?:[.,'\u00A0\u202F ]\d{3})*[.,]\d{2}(?![\d]|[.,\/-]\d)/
-  CURRENCY_TOKEN = /€|£|\$|\b[A-Z]{3}\b/
+  CURRENCY_MARK = /€|£|\$|\b[A-Z]{3}\b/
   # "1.234,56 €", "+1.234,56      €", "1.234,56 EUR", "-1.234,56 €", "€1,234.56",
   # "-€1,234.56", "€-1,234.56", "EUR 1.234,56" or a bare "1.234,56".
   AMOUNT_PATTERN = Regexp.union(
-    /(?<prefix_sign>[-+])?(?<prefix_currency>#{CURRENCY_TOKEN})\p{Blank}*(?<inner_sign>[-+])?(?<prefix_number>#{AMOUNT_NUMBER})/,
-    /(?<suffix_sign>[-+])?(?<suffix_number>#{AMOUNT_NUMBER})(?:\p{Blank}*(?<suffix_currency>#{CURRENCY_TOKEN}))?/
+    /(?<prefix_sign>[-+])?(?<prefix_currency>#{CURRENCY_MARK})\p{Blank}*(?<inner_sign>[-+])?(?<prefix_number>#{AMOUNT_NUMBER})/,
+    /(?<suffix_sign>[-+])?(?<suffix_number>#{AMOUNT_NUMBER})(?:\p{Blank}*(?<suffix_currency>#{CURRENCY_MARK}))?/
   )
   CURRENCY_SYMBOLS = { "€" => "EUR", "£" => "GBP" }.freeze
   # The rest of the line after "IBAN": one unspaced token, or the printed
