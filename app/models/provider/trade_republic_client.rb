@@ -147,8 +147,9 @@ class Provider::TradeRepublicClient
   # `head_complete` is false when the newest pages stalled.
   TopicSync = Data.define(:events, :newest_event_id, :warnings, :head_complete, :state)
   # `cursors` holds the next per-topic state: the newest event id the head
-  # pass stops at, and the history backfill position.
-  TimelineSync = Data.define(:events, :newest_event_id, :warnings, :pagination_complete, :detail_backfill_count, :cursors)
+  # pass stops at, and the history backfill position. `topic_event_ids` lists
+  # the ids of the events each topic fetched.
+  TimelineSync = Data.define(:events, :newest_event_id, :warnings, :pagination_complete, :detail_backfill_count, :cursors, :topic_event_ids)
 
   attr_reader :phone_number, :pin
 
@@ -452,6 +453,7 @@ class Provider::TradeRepublicClient
         "newest_event_id" => timeline&.newest_event_id,
         "timeline_pagination_complete" => timeline&.pagination_complete || false,
         "timeline_cursors" => timeline&.cursors,
+        "timeline_topic_event_ids" => timeline&.topic_event_ids,
         "detail_backfill_count" => timeline&.detail_backfill_count || 0,
         "warnings" => warnings,
         "position_warnings" => position_warnings
@@ -466,15 +468,17 @@ class Provider::TradeRepublicClient
   class << self
     def available? = !!defined?(WebSocket::Driver)
 
-    # Stops the backfills that read further back in history. Gap backfills
-    # fetch events newer than anything stored, so they keep running.
-    def stop_timeline_history_backfills(timeline_cursors)
-      timeline_cursors.to_h.transform_values do |state|
-        next state unless state.is_a?(Hash) && state["backfill_cursor"].present? && state["backfill_stop_event_id"].blank?
-
-        state.except(*TIMELINE_BACKFILL_KEYS)
+    # Stops the given topics' backfills that read further back in history.
+    # Gap backfills fetch events newer than anything stored, so they keep
+    # running.
+    def stop_timeline_history_backfills(timeline_cursors, topics:)
+      timeline_cursors.to_h.to_h do |topic, state|
+        history_backfill = topics.include?(topic) && state.is_a?(Hash) &&
+          state["backfill_cursor"].present? && state["backfill_stop_event_id"].blank?
+        [ topic, history_backfill ? state.except(*TIMELINE_BACKFILL_KEYS) : state ]
       end
     end
+
 
     def pending_timeline_backfills(timeline_cursors)
       timeline_cursors.to_h.count { |_topic, state| state.is_a?(Hash) && state["backfill_cursor"].present? }
@@ -1200,7 +1204,8 @@ class Provider::TradeRepublicClient
         # later syncs.
         pagination_complete: topics.all?(&:head_complete),
         detail_backfill_count: detail_backfill_count,
-        cursors: TIMELINE_TOPICS.zip(topics.map(&:state)).to_h.compact_blank
+        cursors: TIMELINE_TOPICS.zip(topics.map(&:state)).to_h.compact_blank,
+        topic_event_ids: TIMELINE_TOPICS.zip(topics.map { |topic| topic.events.filter_map { |event| event["id"].presence&.to_s } }).to_h
       )
     end
 
@@ -1388,7 +1393,8 @@ class Provider::TradeRepublicClient
     # dividend events, drain oldest stored incomplete / price-backfill trades
     # next, then spend any leftover on additional new events. Failed attempts
     # still consume budget so a bad event cannot starve the rest of the queue
-    # forever within one sync. Stored dividends are not backfilled.
+    # forever within one sync. Stored dividends without their detail are
+    # backfilled too.
     def enrich_timeline_details(websocket, events, enrich_events: [])
       warnings = []
       events = Array(events)
@@ -1397,6 +1403,7 @@ class Provider::TradeRepublicClient
           (self.class.incomplete_trade_detail_event?(event) || self.class.dividend_detail_missing?(event))
       end
       new_ids = new_candidates.to_set { |event| event["id"].to_s }
+      page_ids = events.filter_map { |event| event["id"].presence&.to_s }.to_set
       backlog_candidates = Array(enrich_events).select do |event|
         next false unless event.is_a?(Hash)
 
@@ -1404,8 +1411,11 @@ class Provider::TradeRepublicClient
         next false if item["id"].blank?
         next false if new_ids.include?(item["id"].to_s)
 
+        # A dividend on this sync's pages is handled there: a new one is
+        # fetched above, and one that already has its details needs nothing.
         self.class.incomplete_trade_detail_event?(item) ||
-          self.class.trade_detail_needs_price_backfill?(item)
+          self.class.trade_detail_needs_price_backfill?(item) ||
+          (self.class.dividend_detail_missing?(item) && !page_ids.include?(item["id"].to_s))
       end
 
       budget = MAX_TIMELINE_DETAILS

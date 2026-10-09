@@ -319,6 +319,72 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal returned, @item.reload.timeline_cursors
   end
 
+  test "stops the history backfill only for the topic whose fetched events fall off the cap" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-CURSOR",
+      currency: "EUR",
+      raw_timeline_payload: [
+        { "id" => "evt_2", "timestamp" => "2026-08-02", "category" => "PAYMENT_RECEIVED" },
+        { "id" => "evt_3", "timestamp" => "2026-08-03", "category" => "PAYMENT_RECEIVED" }
+      ]
+    )
+    activity = { "newest_event_id" => "act_9", "backfill_cursor" => "act-page-10" }
+    returned = {
+      "timelineTransactions" => { "newest_event_id" => "evt_3", "backfill_cursor" => "page-10" },
+      "timelineActivityLog" => activity
+    }
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result(
+      returned,
+      "events" => [ { "id" => "evt_1", "timestamp" => "2026-08-01", "category" => "PAYMENT_RECEIVED" } ],
+      "timeline_topic_event_ids" => { "timelineTransactions" => [ "evt_1" ], "timelineActivityLog" => [] }
+    ))
+
+    with_max_timeline_events(2) do
+      DebugLogEntry.expects(:capture).with { |args| args[:message] == "Trade Republic sync warning: timeline history exceeds 2 events; older history is not imported" }
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+
+    # The activity log's older events may still fit, so its backfill keeps running.
+    assert_equal({ "timelineTransactions" => { "newest_event_id" => "evt_3" }, "timelineActivityLog" => activity }, @item.reload.timeline_cursors)
+  end
+
+  test "events needing detail enrichment include dividends without details" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-DIVIDEND",
+      currency: "EUR",
+      raw_timeline_payload: [
+        {
+          "id" => "dividend-missing",
+          "timestamp" => "2024-12-27T14:58:41Z",
+          "eventType" => "SSP_CORPORATE_ACTION_CASH",
+          "category" => "DIVIDEND",
+          "status" => "EXECUTED",
+          "detail" => { "amount" => 4.3, "currency" => "EUR" }
+        },
+        {
+          "id" => "dividend-complete",
+          "timestamp" => "2024-12-28T10:00:00Z",
+          "eventType" => "SSP_CORPORATE_ACTION_CASH",
+          "category" => "DIVIDEND",
+          "status" => "EXECUTED",
+          "detail" => { "isin" => "US0378331005", "amount" => 4.3, "currency" => "EUR" }
+        }
+      ]
+    )
+
+    enrich_ids = TradeRepublicItem::Importer.new(@item, provider: mock("provider"))
+      .send(:events_needing_detail_enrichment)
+      .map { |event| event["id"] || event[:id] }
+
+    assert_equal [ "dividend-missing" ], enrich_ids
+  end
+
   test "keeps the history backfill when only stored events fall off the cap" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",

@@ -227,6 +227,30 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal({ "newest_event_id" => "tx-known" }, timeline.cursors["timelineTransactions"])
   end
 
+  test "reports which topic fetched each event" do
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      case payload[:type]
+      when "timelineActivityLog" then { "items" => [ { "id" => "act-1", "timestamp" => "2026-08-02" } ], "cursors" => {} }
+      else { "items" => [ { "id" => "tx-1", "timestamp" => "2026-08-03" }, { "timestamp" => "2026-08-01" } ], "cursors" => {} }
+      end
+    end
+
+    timeline = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 2)
+
+    assert_equal({ "timelineTransactions" => [ "tx-1" ], "timelineActivityLog" => [ "act-1" ] }, timeline.topic_event_ids)
+  end
+
+  test "stops the history backfill only for the given topics" do
+    cursors = {
+      "timelineTransactions" => { "newest_event_id" => "tx-1", "backfill_cursor" => "page-9" },
+      "timelineActivityLog" => { "newest_event_id" => "act-1", "backfill_cursor" => "act-9" }
+    }
+
+    stopped = Provider::TradeRepublicClient.stop_timeline_history_backfills(cursors, topics: [ "timelineTransactions" ])
+
+    assert_equal({ "timelineTransactions" => { "newest_event_id" => "tx-1" }, "timelineActivityLog" => cursors["timelineActivityLog"] }, stopped)
+  end
+
   test "stops each topic at its own newest event" do
     requested = []
     @client.define_singleton_method(:subscribe) do |_websocket, payload|
@@ -1560,6 +1584,34 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     @client.send(:enrich_timeline_details, Object.new, [ stored ], enrich_events: [ stored.merge("detail" => nil) ])
 
     assert_empty requested
+  end
+
+  test "stored dividends without details are fetched from the backlog" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      {
+        "sections" => [
+          { "title" => "You received €4.30", "type" => "header", "data" => {
+            "icon" => { "asset" => "logos/US0378331005/v2", "badge" => nil }
+          } },
+          { "title" => "Transaction", "data" => [ { "title" => "Shares", "detail" => { "text" => "10.000000" } } ] }
+        ]
+      }
+    end
+    stored = {
+      "id" => "dividend-1",
+      "timestamp" => "2024-12-27T10:00:00Z",
+      "eventType" => "SSP_CORPORATE_ACTION_CASH",
+      "category" => "DIVIDEND",
+      "status" => "EXECUTED",
+      "detail" => { "amount" => 4.3, "currency" => "EUR" }
+    }
+
+    enriched, = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ stored ])
+
+    assert_equal [ "dividend-1" ], requested
+    assert_equal "US0378331005", enriched.find { |event| event["id"] == "dividend-1" }.dig("detail", "isin")
   end
 
   test "trade savings saveback and round-up events request timeline details" do
