@@ -369,6 +369,19 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-2.96"), Entry.find_by!(external_id: "trade_republic_event_evt_card_oct").amount
   end
 
+  test "credit card top-ups are imported as money in" do
+    import_event({
+      id: "evt_credit_card_cash_in",
+      timestamp: "2024-12-11T10:00:00Z",
+      eventType: "PAYMENT_INBOUND_CREDIT_CARD",
+      title: "Cash In",
+      status: "EXECUTED",
+      detail: { amount: 500.0, signed_amount: 500.0, currency: "EUR" }
+    })
+
+    assert_equal BigDecimal("-500"), Entry.find_by!(external_id: "trade_republic_event_evt_credit_card_cash_in").amount
+  end
+
   test "stamp duty is imported as a charge and its cancellation as a refund" do
     @tr_account.update!(raw_timeline_payload: [
       {
@@ -639,6 +652,26 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "SAVEBACK_AGGREGATE", trade.entryable.extra.dig("trade_republic", "event_type")
 
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_saveback")
+  end
+
+  test "a stock bonus imports as a portfolio trade without a cash leg" do
+    cash_account, cash_sure = create_linked_cash_account!
+
+    bonus = stock_bonus_event
+    @tr_account.update!(raw_timeline_payload: [ bonus ])
+    cash_account.update!(raw_timeline_payload: [ bonus ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    trade = find_trade("trade_republic_event_evt_stock_bonus")
+    assert_equal "Trade", trade.entryable_type
+    assert_equal BigDecimal("0.055"), trade.entryable.qty
+    assert_equal BigDecimal("10.04"), trade.amount
+    assert_equal "ACQUISITION_TRADE_PERK", trade.entryable.extra.dig("trade_republic", "event_type")
+
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_stock_bonus")
+    assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_stock_bonus")
   end
 
   test "round up imports as a portfolio trade and a cash outflow when split" do
@@ -1745,6 +1778,25 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
           quantity: "0.09329",
           isin: "DE000A0F5UH1",
           name: "STOXX Global Dividend 100 EUR (Dist)"
+        }
+      }
+    end
+
+    # Shaped like a stored stock bonus: no status, no amount on the timeline,
+    # shares and value from the detail.
+    def stock_bonus_event
+      {
+        id: "evt_stock_bonus",
+        timestamp: "2025-06-25T14:52:12.282+0000",
+        eventType: "ACQUISITION_TRADE_PERK",
+        title: "Stock Bonus",
+        subtitle: "Redeemed",
+        detail: {
+          amount: "10.04",
+          currency: "EUR",
+          quantity: "0.055",
+          isin: "US0231351067",
+          name: "Amazon.com"
         }
       }
     end

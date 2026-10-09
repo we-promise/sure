@@ -2,6 +2,9 @@ class TradeRepublicAccount::ActivitiesProcessor
   include TradeRepublicAccount::DataHelpers
 
   SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
+  STOCK_PERK_EVENT_TYPE = "ACQUISITION_TRADE_PERK"
+  # Shares Trade Republic pays for: a trade only, without a cash leg.
+  BROKER_FUNDED_TRADE_EVENT_TYPES = [ SAVEBACK_EVENT_TYPE, STOCK_PERK_EVENT_TYPE ].freeze
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
   SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
@@ -144,11 +147,12 @@ class TradeRepublicAccount::ActivitiesProcessor
         .to_set
     end
 
-    # Saveback and Round Up stay classified as POC_CREATED at the client
-    # boundary so other cash withdrawals are unchanged. Routing happens here
-    # by eventType: Saveback is a trade only; Round Up is a trade plus cash
-    # outflow when both accounts are linked. Crypto trades go to the Crypto
-    # account once it is linked, except a portfolio copy the user edited.
+    # Saveback, stock bonuses and Round Up stay classified as POC_CREATED at
+    # the client boundary so other cash withdrawals are unchanged. Routing
+    # happens here by eventType: Saveback and stock bonuses are a trade only;
+    # Round Up is a trade plus cash outflow when both accounts are linked.
+    # Crypto trades go to the Crypto account once it is linked, except a
+    # portfolio copy the user edited.
     def processable_event?(event)
       event_type = event[:eventType].to_s
 
@@ -157,7 +161,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         return false if @trade_republic_account.crypto? && protected_portfolio_trade?(event)
       end
 
-      return @trade_republic_account.holds_securities? if saveback_event?(event_type)
+      return @trade_republic_account.holds_securities? if broker_funded_trade_event?(event_type)
       return true if round_up_event?(event_type)
 
       category = event[:category].to_s
@@ -183,7 +187,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       detail = event[:detail] || {}
       event_type = event[:eventType].to_s
 
-      return process_saveback(event, detail, external_id, date) if saveback_event?(event_type)
+      return process_broker_funded_trade(event, detail, external_id, date) if broker_funded_trade_event?(event_type)
       return process_round_up(event, detail, external_id, date) if round_up_event?(event_type)
 
       case event_category(event)
@@ -214,7 +218,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       nil
     end
 
-    def process_saveback(event, detail, external_id, date)
+    def process_broker_funded_trade(event, detail, external_id, date)
       return nil unless @trade_republic_account.holds_securities?
 
       import_order_execution(event, detail, external_id, date) ? :trade : nil
@@ -266,8 +270,8 @@ class TradeRepublicAccount::ActivitiesProcessor
       [ detail[:isin].to_s, date, parse_decimal(detail[:quantity])&.abs ]
     end
 
-    def saveback_event?(event_type)
-      event_type == SAVEBACK_EVENT_TYPE
+    def broker_funded_trade_event?(event_type)
+      BROKER_FUNDED_TRADE_EVENT_TYPES.include?(event_type)
     end
 
     def round_up_event?(event_type)

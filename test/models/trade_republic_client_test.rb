@@ -610,6 +610,27 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "maps credit card top-ups and stock bonuses" do
+    categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
+    assert_equal "PAYMENT_RECEIVED", categories["PAYMENT_INBOUND_CREDIT_CARD"]
+    assert_equal "POC_CREATED", categories["ACQUISITION_TRADE_PERK"]
+
+    %w[PAYMENT_INBOUND_CREDIT_CARD ACQUISITION_TRADE_PERK].each do |event_type|
+      assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+    assert Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "ACQUISITION_TRADE_PERK")
+  end
+
+  test "normalize_event_detail names a stock bonus after its asset" do
+    detail = @client.send(:normalize_event_detail, stock_bonus_detail,
+      item: { "title" => "Stock Bonus", "subtitle" => "Redeemed", "eventType" => "ACQUISITION_TRADE_PERK" })
+
+    assert_equal "US0231351067", detail["isin"]
+    assert_equal "Amazon.com", detail["name"]
+    assert_equal "0.055", detail["quantity"]
+    assert_equal "10.04", detail["amount"]
+  end
+
   test "stamp duty cancellations are not treated as declined events" do
     cancellation = {
       "eventType" => "STAMP_DUTY_TAX_PAID",
@@ -1755,4 +1776,32 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "ABN", symbols.dig("NL0000303709", "symbol")
     assert_equal "XETR", symbols.dig("NL0000303709", "exchange_slug")
   end
+
+  private
+
+    # Trimmed from a real Trade Republic stock bonus (ACQUISITION_TRADE_PERK).
+    def stock_bonus_detail
+      row = ->(title, text) { { "title" => title, "detail" => { "text" => text, "type" => "text" }, "style" => "plain" } }
+
+      {
+        "id" => "stock-bonus",
+        "sections" => [
+          {
+            "title" => "Amazon.com stock bonus",
+            "type" => "header",
+            "data" => { "icon" => { "asset" => "logos/US0231351067/v2", "badge" => nil }, "status" => "executed" }
+          },
+          { "title" => "Overview", "type" => "table", "data" => [
+            { "title" => "Buy", "detail" => { "text" => "Completed", "functionalStyle" => "EXECUTED", "type" => "status" } },
+            row.call("Asset", "Amazon.com"),
+            {
+              "title" => "Transaction",
+              "detail" => { "text" => "0.055 × € 182.46", "displayValue" => { "text" => "€ 182.46", "prefix" => "0.055 ×" }, "type" => "text" }
+            },
+            row.call("Fee", "Free"),
+            row.call("Total", "€ 10.04")
+          ] }
+        ]
+      }
+    end
 end
