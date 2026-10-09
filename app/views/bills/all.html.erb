@@ -81,7 +81,7 @@
         shell's sidebars can squeeze a desktop window to phone-list widths,
         and a viewport breakpoint cannot see that. %>
     <div class="@container">
-    <div class="@3xl:hidden bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+    <div class="@3xl:hidden bg-container rounded-xl shadow-border-xs divide-y divide-subdued">
       <% @all_series.each do |series| %>
         <div class="flex items-center gap-3 p-3">
           <%= link_to bill_path(series), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "flex items-center gap-3 min-w-0 flex-1 group" do %>
@@ -186,26 +186,21 @@
   <%# Across every bill, not just the one you have open. Per-bill history lives
       in the bill's own detail. %>
   <% if @recent_price_changes&.any? %>
-    <div class="rounded-xl bg-container-inset space-y-1 p-1">
-      <div class="px-4 py-2 text-xs font-medium text-secondary uppercase">
-        <p><%= t(".subscription_price_changes") %></p>
-      </div>
-      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
-        <% @recent_price_changes.each do |change| %>
-          <div class="flex items-center justify-between gap-3 px-4 py-2">
-            <div>
-              <p class="text-sm text-primary"><%= change.recurring_transaction.display_name %></p>
-              <p class="text-xs text-secondary"><%= l(change.effective_on, format: :long) %></p>
-            </div>
-            <p class="text-sm privacy-sensitive <%= change.new_amount > change.previous_amount ? "text-warning" : "text-success" %>">
-              <%= t(".subscription_price_change_line",
-                    from: format_money(change.previous_amount_money),
-                    to: format_money(change.new_amount_money),
-                    percent: change.previous_amount.positive? ? ((change.new_amount - change.previous_amount) / change.previous_amount * 100).round(1) : 0) %>
-            </p>
+    <%= render DS::Section.new(title: t(".subscription_price_changes"), count: @recent_price_changes.size) do %>
+      <% @recent_price_changes.each do |change| %>
+        <div class="flex items-center justify-between gap-3 px-4 py-2">
+          <div>
+            <p class="text-sm text-primary"><%= change.recurring_transaction.display_name %></p>
+            <p class="text-xs text-secondary"><%= l(change.effective_on, format: :long) %></p>
           </div>
-        <% end %>
-      </div>
-    </div>
+          <p class="text-sm privacy-sensitive <%= change.new_amount > change.previous_amount ? "text-warning" : "text-success" %>">
+            <%= t(".subscription_price_change_line",
+                  from: format_money(change.previous_amount_money),
+                  to: format_money(change.new_amount_money),
+                  percent: change.previous_amount.positive? ? ((change.new_amount - change.previous_amount) / change.previous_amount * 100).round(1) : 0) %>
+          </p>
+        </div>
+      <% end %>
+    <% end %>
   <% end %>
 </div>
