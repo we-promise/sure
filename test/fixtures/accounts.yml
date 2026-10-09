@@ -70,6 +70,16 @@ loan:
   accountable: one
   status: active
 
+bond:
+  family: dylan_family
+  owner: family_admin
+  name: US T-Bill
+  balance: 10000
+  currency: USD
+  accountable_type: Bond
+  accountable: one
+  status: active
+
 property:
   family: dylan_family
   owner: family_admin

@@ -737,6 +737,80 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "bond lot purchase is treated as non-cash flow, not market change" do
+    account = create_account_with_ledger(
+      account: { type: Bond, balance: 1000, cash_balance: 0, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 1000 },
+        { type: "opening_anchor", date: 2.days.ago.to_date, balance: 0 },
+        {
+          type: "transaction",
+          date: 1.day.ago.to_date,
+          amount: 1000,
+          kind: "funds_movement",
+          extra: { "bond_lot_id" => "test-lot-1" }
+        }
+      ]
+    )
+
+    account.bond.bond_lots.create!(
+      purchased_on: 1.day.ago.to_date,
+      amount: 1000,
+      subtype: "other_bond",
+      term_months: 12,
+      maturity_date: 1.year.from_now.to_date,
+      interest_rate: 5,
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity"
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+    balance = calculated.find { |b| b.date == 1.day.ago.to_date }
+
+    assert_equal 1000, balance.cash_outflows
+    assert_equal 1000, balance.non_cash_inflows
+    assert_equal 0, balance.net_market_flows
+  end
+
+  test "bond holdings accrue interest over the lot's life rather than staying at principal" do
+    account = create_account_with_ledger(
+      account: { type: Bond, balance: 1000, cash_balance: 0, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.new(2025, 1, 1), balance: 1000 },
+        { type: "opening_anchor", date: Date.new(2023, 12, 31), balance: 0 },
+        {
+          type: "transaction",
+          date: Date.new(2024, 1, 1),
+          amount: 1000,
+          kind: "funds_movement",
+          extra: { "bond_lot_id" => "accrual-lot" }
+        }
+      ]
+    )
+    account.bond.bond_lots.create!(
+      purchased_on: Date.new(2024, 1, 1),
+      amount: 1000,
+      subtype: "fixed_coupon",
+      term_months: 24,
+      maturity_date: Date.new(2026, 1, 1),
+      interest_rate: 10,
+      rate_type: "fixed",
+      coupon_frequency: "at_maturity"
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+    non_cash_at = lambda do |date|
+      b = calculated.find { |row| row.date == date }
+      b && (b.balance - b.cash_balance)
+    end
+
+    at_purchase = non_cash_at.call(Date.new(2024, 1, 1))
+    mid_term = non_cash_at.call(Date.new(2024, 7, 1))
+
+    assert_in_delta 1000, at_purchase, 1, "holdings should start at principal"
+    assert_operator mid_term, :>, at_purchase, "holdings should accrue above principal over time"
+  end
+
   test "uses provider reported holdings and cash value on current day" do
     # Implied holdings value of $1,000 from provider
     account = create_account_with_ledger(
