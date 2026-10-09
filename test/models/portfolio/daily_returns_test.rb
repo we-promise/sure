@@ -443,6 +443,36 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_in_delta 0.10, returns.returns.last.last.to_f, 0.000001
   end
 
+  # The same rule one step on: an account that HAS balance rows, every one of
+  # them zero, holds nothing either. A zero opening anchor written for an
+  # account the user has added but not funded is exactly this, and a zero
+  # converts to zero at any rate, so there is no conversion to be missing.
+  test "a foreign account whose balance rows are all zero does not flag a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, market_flow: 100
+    zero_gbp = create_portfolio_account(family: @family, currency: "GBP")
+    lay_balance account: zero_gbp, date: @day_one, opening: 0, closing: 0
+    lay_balance account: zero_gbp, date: @day_two, opening: 0, closing: 0
+
+    returns = daily_returns(account_ids: [ @account.id, zero_gbp.id ])
+
+    refute returns.rate_missing?, "a balance of zero needs no rate to be converted"
+    assert_in_delta 0.10, returns.returns.last.last.to_f, 0.000001
+  end
+
+  # The control, and the half of the check the closing balance cannot see:
+  # an account that OPENED the period holding 50 and withdrew all of it ends
+  # every day at zero, yet value_open reads its 50 on the first day and needs
+  # the rate to convert it. So the check is about the amounts, not the rows.
+  test "a foreign account that opened the period holding a balance still flags a missing rate" do
+    gbp = create_portfolio_account(family: @family, currency: "GBP")
+    lay_balance account: gbp, date: @day_one, opening: 50, closing: 0, cash_flow: -50
+    lay_balance account: gbp, date: @day_two, opening: 0, closing: 0
+
+    assert daily_returns(account_ids: [ gbp.id ]).rate_missing?,
+           "an opening balance of 50 GBP has to be converted"
+  end
+
   # Regression: components used to be read from the carried-forward balance row,
   # so a day with no row of its own re-reported the previous day's market flow.
   # Over a gap that multiplied the market driver by the gap's length.
