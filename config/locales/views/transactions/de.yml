@@ -35,7 +35,11 @@ de:
       merchant_label: Händler
     new:
       new_transaction: Neue Transaktion
+    transaction_category:
+      set_on_outflow: "Die Kategorie gehört zur Abbuchung dieses Transfers und lässt sich nur dort ändern"
     show:
+      category_set_on_hidden_outflow: "Dies ist die Gutschrift eines Transfers. Die Kategorie gehört zur Abbuchung auf einem Konto, auf das du keinen Zugriff hast, und lässt sich nur dort ändern."
+      category_set_on_outflow: "Dies ist die Gutschrift eines Transfers. Die Kategorie gehört zur Abbuchung und lässt sich nur dort ändern, damit Budgets sie nur einmal zählen."
       account_label: Konto
       amount: Betrag
       category_label: Kategorie
