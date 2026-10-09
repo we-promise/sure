@@ -160,10 +160,12 @@ class Transaction < ApplicationRecord
   # `includes` would emit the wrong subquery for the IN clause.
   def self.reassign_category!(scope, category_id)
     transaction do
+      # Lock inside the scope so a concurrent category edit is rechecked before
+      # its ID reaches the UPDATE, rather than overwriting the new category.
       sql = <<~SQL
         UPDATE #{quoted_table_name}
         SET category_id = #{connection.quote(category_id)}
-        WHERE id IN (#{scope.reselect(:id).to_sql})
+        WHERE id IN (#{scope.reselect(:id).lock("FOR UPDATE OF transactions").to_sql})
         RETURNING id
       SQL
 
