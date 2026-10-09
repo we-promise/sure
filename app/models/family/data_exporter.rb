@@ -61,7 +61,9 @@ class Family::DataExporter
       scope = @family.accounts.includes(:accountable)
 
       Enumerator.new do |yielder|
-        scope.where.not(accountable_type: "Loan").find_each { |account| yielder << account }
+        # `where.not` alone would drop a row with no type: NULL <> 'Loan' is NULL.
+        scope.where(accountable_type: nil).or(scope.where.not(accountable_type: "Loan"))
+          .find_each { |account| yielder << account }
         scope.where(accountable_type: "Loan").find_each { |account| yielder << account }
       end
     end

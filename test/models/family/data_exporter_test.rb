@@ -391,6 +391,23 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  # The loans-last ordering splits the accounts on their type. A row with no
+  # type at all (accountable_type is nullable) is not a loan and must not fall
+  # between the two halves of that split.
+  test "exports an account with no accountable type, ahead of the loans" do
+    loan_account = @family.accounts.create!(name: "Mortgage", balance: 1, currency: "USD", accountable: Loan.new)
+    untyped = @family.accounts.create!(name: "Untyped", balance: 1, currency: "USD", accountable: Property.new)
+    untyped.update_columns(accountable_type: nil, accountable_id: nil)
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      ids = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .select { |line| line["type"] == "Account" }.map { |line| line.dig("data", "id") }
+
+      assert_includes ids, untyped.id
+      assert_operator ids.index(untyped.id), :<, ids.index(loan_account.id)
+    end
+  end
+
   test "generates valid NDJSON file" do
     zip_data = @exporter.generate_export
 
