@@ -358,6 +358,26 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_empty result.index_series
   end
 
+  # Eligibility reads the same window DailyReturns does. The account has two
+  # balance days in the period, but its cut-off is the first, so the series
+  # holds one day of it and that supports no return. Counted over the whole
+  # period, it passed and the chained zero of its departure day was quoted.
+  test "a cut-off that leaves one in-window balance day withholds time weighted figures" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_010, market_flow: 10
+
+    uncut = performance
+    cut = Portfolio::Performance.new(
+      family: @family, account_ids: [ @account.id ],
+      period: Period.custom(start_date: @day_one, end_date: @day_two),
+      active_until_dates: { @account.id => @day_one }
+    )
+
+    assert_in_delta 0.01, uncut.twr.to_f, 0.000001, "without the cut-off the account supports a return"
+    assert_nil cut.twr, "one day in the window supports none"
+    assert_empty cut.index_series
+  end
+
   # The rule must not overreach, mirroring the MWR carve-out: an account with no
   # balance rows in the period contributes nothing and cannot make the figure
   # unsupported.

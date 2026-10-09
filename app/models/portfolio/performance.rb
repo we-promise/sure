@@ -238,10 +238,15 @@ class Portfolio::Performance
     # both run inside the uncached compute behind Rails.cache.fetch, so a
     # cache miss costs the account load plus three resolution queries, once,
     # rather than that load plus up to four queries per account, twice.
+    #
+    # Resolved over the same cut-offs DailyReturns applies, as it resolved
+    # them: a row after an account's cut-off is not in the series, so it cannot
+    # count towards the days that support a return.
     def return_scopes
       @return_scopes ||= Portfolio::ReturnScope.resolve_all(
         accounts: Account.where(id: account_ids),
-        period: period
+        period: period,
+        active_until_dates: daily_returns.active_until_dates
       )
     end
 
