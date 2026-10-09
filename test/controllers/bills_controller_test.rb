@@ -1863,6 +1863,37 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, chevrons.map(&:to_html).uniq.size, "the folds' chevrons differ: #{chevrons.map { |svg| svg["class"] }.inspect}"
   end
 
+  # The pulse totals what is owed, so the bills come next, late ones first, the
+  # way Budgets leads its categories with Over budget. The queues waiting on a
+  # yes or no follow, and the notices, which only inform, close the page.
+  test "the overview leads with the bills, late ones first, then the queues and the notices" do
+    trial = create_bill(name: "Streamflix", amount: 20)
+    trial.update!(bill_type: "subscription", trial_ends_on: Date.current + 1)
+    create_bill(name: "Rent", amount: 1200)
+    overdue_day = 10.days.ago.to_date
+    create_bill(name: "Late bill", amount: 75, expected_day_of_month: overdue_day.day,
+                last_occurrence_date: 2.months.ago.to_date, next_expected_date: overdue_day)
+    water = declare_bill(name: "CITY WATER", amount: 80, due: Date.current - 3)
+    charge = create_transaction_entry(name: "CITY WATER", amount: 85.50, date: Date.current - 3)
+    RecurringTransaction::Allocator.new(water.recurring_occurrences.order(:due_on).first).allocate_matched!(
+      entry: charge, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+    create_suggested(name: "Hulu", account: accounts(:depository))
+
+    get bills_url
+    assert_response :success
+
+    order = [ I18n.t("bills.index.needs_attention"), I18n.t("bills.index.this_month"),
+              I18n.t("bills.index.needs_review"), I18n.t("recurring_transactions.suggested.title"),
+              I18n.t("bills.index.notices_heading") ]
+    headings = css_select("main h2").map { |heading| heading.text.squish }
+    assert_equal order, headings & order
+
+    # Late bills open the same list as the month, not a shell of their own.
+    list = css_select("main .bg-surface-inset").find { |shell| css_select(shell, "h2").any? { |h| h.text.squish == I18n.t("bills.index.this_month") } }
+    assert_includes css_select(list, "h2").map { |heading| heading.text.squish }, I18n.t("bills.index.needs_attention")
+  end
+
   test "a price notice says how big the change was" do
     bill = create_bill(name: "Gym", amount: 90)
     bill.recurring_price_changes.create!(effective_on: 5.days.ago.to_date,
