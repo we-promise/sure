@@ -41,6 +41,13 @@ class KrakenAccount::HoldingsProcessor
 
       return if symbol.blank? || total.zero? || price_usd.blank?
 
+      # Fiat at the exchange is cash, not a position. Held as a holding it is
+      # valued twice -- once here and once as the cash the ledger already moved --
+      # and it can never be reversed into history, because no trade ever moves it.
+      return if KrakenAccount::FIAT_CURRENCIES.include?(
+        KrakenAccount::SecurityResolver.canonical_asset(symbol)
+      )
+
       security = resolve_security(symbol)
       return unless security
 
@@ -72,8 +79,7 @@ class KrakenAccount::HoldingsProcessor
     end
 
     def resolve_security(symbol)
-      ticker = symbol.to_s.include?(":") ? symbol.to_s : "CRYPTO:#{symbol}"
-      KrakenAccount::SecurityResolver.resolve(ticker, symbol)
+      KrakenAccount::SecurityResolver.resolve(symbol)
     end
 
     def log_stale_rate(symbol, field, rate_date)

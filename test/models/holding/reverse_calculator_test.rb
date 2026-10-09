@@ -191,6 +191,20 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_in_delta 100.0, cost_basis_for(calc, security, buy_date).to_f, 1e-6
   end
 
+  # An acquisition fee is part of what the units cost, so it belongs in the
+  # basis. Providers already record it on the trade; nothing used to read it.
+  test "cost_basis_for includes the fee charged on an acquisition" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date = 5.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, fee: 25, date: buy_date)
+    end
+
+    # 10 * 100 + 25 = 1,025 for 10 units
+    assert_in_delta 102.5, cost_basis_for(calc, security, buy_date).to_f, 1e-6
+  end
+
   test "cost_basis_for carries forward to dates between buys" do
     security = Security.create!(ticker: "TST", name: "Test")
     first_buy  = 10.days.ago.to_date

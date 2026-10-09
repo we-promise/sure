@@ -277,8 +277,15 @@ class Account::ProviderImportAdapter
           entry.transaction.assign_attributes(investment_activity_label: detected_label)
         end
 
+        # A leg that is already matched to a Transfer takes its kind from the
+        # transfer, not from this row. Re-classifying it here, e.g. a negative
+        # amount on a Loan turning the matched inflow back into loan_payment,
+        # makes budgets and reports count the same payment as an expense on
+        # both legs. Deriving it from the transfer also repairs legs an earlier
+        # sync already overwrote.
         if auto_kind.present?
-          entry.transaction.assign_attributes(kind: auto_kind)
+          transfer = matched_transfer_for(entry)
+          entry.transaction.assign_attributes(kind: transfer ? transfer.kind_for_leg(entry.transaction) : auto_kind)
         end
 
         if auto_category.present? && entry.transaction.category_id.blank?
@@ -1059,6 +1066,20 @@ class Account::ProviderImportAdapter
   end
 
   private
+
+    # Loads the transfer together with both legs, their entries and accounts in
+    # one joined query, so Transfer#kind_for_leg reads them without the lazy
+    # loads it would otherwise pay on every re-imported row. Looked up per row
+    # rather than memoized per adapter: most processors build an adapter per
+    # row, and some link or destroy transfers mid-sync (Trade Republic), so a
+    # memo would be both costlier and stale.
+    def matched_transfer_for(entry)
+      return nil unless entry.persisted?
+
+      transaction_id = entry.transaction.id
+      transfers = Transfer.eager_load(inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account })
+      transfers.where(inflow_transaction_id: transaction_id).or(transfers.where(outflow_transaction_id: transaction_id)).first
+    end
 
     # Memoized per adapter instance (which is per-account). Membership in
     # goal_accounts is stable across a sync batch.

@@ -208,6 +208,50 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("480"), current.cost_basis
   end
 
+  # An acquisition fee is part of what the units cost, so it belongs in the
+  # basis. Providers already record it on the trade; nothing used to read it.
+  test "an acquisition fee is part of the cost basis" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 1.day.ago.to_date, price: 460, fee: 20, account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # 10 * 460 + 20 = 4,620 for 10 units
+    assert_equal BigDecimal("462"), current.cost_basis
+  end
+
+  # A basis is what was paid on the day. Converted at today's rate it would
+  # drift with every move in the exchange rate since.
+  test "a foreign-currency price and fee are converted at the trade's own rate" do
+    load_prices
+    trade_date = 1.day.ago.to_date
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: trade_date, rate: 2.0)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.0)
+
+    create_trade(@voo, qty: 10, date: trade_date, price: 100, fee: 10, currency: "EUR", account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # (10 * 100 + 10) EUR at 2.0 = 2,020 USD for 10 units, not 1,010 at today's rate
+    assert_equal BigDecimal("202"), current.cost_basis
+  end
+
+  # The tracker never reads a disposal's price, so this cannot be observed
+  # through the basis; it is pinned on the helper directly.
+  test "a disposal's price is returned without its fee" do
+    load_prices
+
+    sell = create_trade(@voo, qty: -5, date: 1.day.ago.to_date, price: 480, fee: 30, account: @account)
+
+    price = Holding::ForwardCalculator.new(@account)
+      .send(:effective_trade_price, sell.entryable, date: sell.date)
+
+    assert_equal BigDecimal("480"), price
+  end
+
   test "offline tickers sync holdings based on most recent trade price" do
     offline_security = Security.create!(ticker: "OFFLINE", name: "Offline Ticker")
 
