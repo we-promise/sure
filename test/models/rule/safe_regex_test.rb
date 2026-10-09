@@ -43,6 +43,15 @@ class Rule::SafeRegexTest < ActiveSupport::TestCase
     assert_equal :invalid, Rule::SafeRegex.error_for("[a-")
   end
 
+  # The database driver refuses a string with a NUL in it outright (ArgumentError),
+  # so the probe would raise out of validation instead of reporting a bad pattern.
+  test "a pattern containing a null byte is invalid and never reaches the database" do
+    ActiveRecord::Base.connection.expects(:select_value).never
+
+    assert_equal :invalid, Rule::SafeRegex.error_for("ab\u0000c")
+    assert_equal :invalid, Rule::SafeRegex.error_for("\u0000")
+  end
+
   test "a pattern Postgres calls too complex is refused" do
     assert_equal :invalid, Rule::SafeRegex.error_for("^(a{1,255}){1,255}(b)")
   end

@@ -10,7 +10,8 @@
 # * patterns Postgres will not compile (`parentheses () not balanced`,
 #   `regular expression is too complex`) only fail when a query runs them, which
 #   would put a saved, active rule into a failing state on every sync. They are
-#   probed once, at save.
+#   probed once, at save. A pattern containing a null byte is refused without a
+#   probe, because the database driver will not send one.
 #
 # Execution is bounded as well: #with_timeout runs a block under a Postgres
 # `statement_timeout` and raises TimeoutError, so a rule cannot hold a worker or
@@ -67,6 +68,10 @@ class Rule::SafeRegex
   end
 
   def error
+    # The database driver refuses a string containing NUL before Postgres sees it,
+    # so the probe could not judge it. Checked first: String#strip removes NUL, so
+    # "\0" alone would otherwise read as blank.
+    return :invalid if pattern.include?("\0")
     return :blank if pattern.strip.empty?
     return :too_long if pattern.length > MAX_LENGTH
     return :backreference if backreference?

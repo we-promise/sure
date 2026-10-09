@@ -19,7 +19,8 @@ class Rule::ConditionRegexTest < ActiveSupport::TestCase
     "a back-reference" => [ '(a*)*\1c', :regex_backreference ],
     "an unbalanced group" => [ "(", :regex_invalid ],
     "a pattern Postgres calls too complex" => [ "^(a{1,255}){1,255}(b)", :regex_invalid ],
-    "an over-long pattern" => [ "a" * 201, :regex_too_long ]
+    "an over-long pattern" => [ "a" * 201, :regex_too_long ],
+    "a null byte" => [ "ab\u0000c", :regex_invalid ]
   }.each do |description, (pattern, kind)|
     test "a rule with #{description} is rejected and nothing is saved" do
       rule = build_rule(value: pattern)
@@ -30,6 +31,13 @@ class Rule::ConditionRegexTest < ActiveSupport::TestCase
 
       assert rule.conditions.first.errors.of_kind?(:value, kind), rule.conditions.first.errors.details.inspect
     end
+  end
+
+  test "a null byte is reported on the form as an invalid pattern" do
+    rule = build_rule(value: "ab\u0000c")
+
+    assert_not rule.save
+    assert_equal [ "Value is not a valid regular expression" ], rule.conditions.first.errors.full_messages
   end
 
   test "the same pattern is accepted under the contains operator" do
