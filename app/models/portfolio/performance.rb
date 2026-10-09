@@ -126,9 +126,11 @@ class Portfolio::Performance
   #
   # Its OWN cache entry rather than part of #metrics, and computed only when
   # asked, so a caller that builds a Performance only to read index_series or
-  # the returns never pays for it.
+  # the returns never pays for it -- and the other way round: the missing-rate
+  # flag it needs is read from the daily returns, not from #metrics, so a
+  # caller reading only the income never runs the returns' compute.
   def income
-    @income ||= Rails.cache.fetch("#{cache_key}_income") { income_metrics(rate_missing?) }
+    @income ||= Rails.cache.fetch("#{cache_key}_income") { income_metrics(daily_returns.rate_missing?) }
   end
 
   # True when a currency pair had no rate anywhere in the period, in which

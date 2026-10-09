@@ -204,6 +204,29 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_in_delta 10 / 995.0, result.income[:fee_ratio].to_f, 0.000001
   end
 
+  # #income is its own cache entry so that asking for it does not pay for the
+  # returns, and that has to hold on a cold instance too. It needs one fact the
+  # returns also use -- whether a rate is missing -- and reading that from the
+  # metrics ran the whole of #compute first: eligibility, the drivers and an
+  # XIRR solve, none of which the income reads. The fee ratio is still withheld
+  # here, so the flag is read; it is read from the daily returns.
+  test "reading the income alone computes none of the returns" do
+    eur = eur_account_with_fee
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 995, cash_flow: -5
+    fee_entry account: @account, date: @day_two, amount: 5
+    result = performance(account_ids: [ eur.id, @account.id ])
+
+    result.expects(:compute).never
+    Portfolio::ReturnScope.expects(:resolve_all).never
+    Portfolio::Xirr.expects(:new).never
+
+    income = result.income
+
+    assert_equal BigDecimal(5), income[:fees], "the USD fee converts; the EUR one has no rate"
+    assert_nil income[:fee_ratio], "the missing rate still withholds the ratio"
+  end
+
   # Regression: the key was built from family, user, accounts and period only,
   # so two instances whose rows genuinely differ shared one cache entry and
   # whichever ran first decided what both saw.
