@@ -214,6 +214,24 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
     assert_empty returns.income_by_security
   end
 
+  # Adding `by_security` changed the shape of the cached income hash. An entry
+  # written under the version before it has no `by_security` key, and served
+  # under the same key it would read as a period with nothing attributed. The
+  # version moves so those entries are never read; the stale entry here sits
+  # under the previous version's key, as a warm cache from before would.
+  test "an income entry cached before by_security existed is not served" do
+    income_trade account: @account, date: @mar, amount: 30, security: @aapl
+    lay_flat_balances cash_by_date: { @mar => 30 }
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    performance = Portfolio::Performance.new(family: @family, account_ids: [ @account.id ], period: period)
+    previous_key = performance.cache_key.sub("_#{Portfolio::Performance::CACHE_VERSION}_", "_v8_")
+    Rails.cache.write("#{previous_key}_income", { buckets: [], total: BigDecimal(30), fees: 0, average_value: 0, fee_ratio: nil })
+
+    assert_equal({ @aapl.id.to_s => BigDecimal(30) }, performance.income[:by_security],
+                 "a v8 entry, written without by_security, must not be read")
+  end
+
   test "the amounts a Hash carries survive the cache round trip" do
     income_trade account: @account, date: @mar, amount: 30, security: @aapl
     lay_flat_balances cash_by_date: { @mar => 30 }
