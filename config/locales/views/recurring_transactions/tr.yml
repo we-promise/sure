@@ -126,6 +126,7 @@ tr:
       success_income: Gelir eklendi
       due_date_required: Faturanın bir sonraki son ödeme tarihini girin
       amount_invalid: Tutarı düz bir sayı olarak girin
+      amount_too_precise: En fazla 4 ondalık basamak kullanın
       account_invalid: Fatura ekleyebileceğiniz bir hesap seçin veya boş bırakın
       already_exists: Bu fatura zaten mevcut
     edit:

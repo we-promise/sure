@@ -20,6 +20,7 @@ fr:
       account_invalid: Choisissez un compte auquel vous pouvez ajouter des factures, ou laissez le champ vide
       already_exists: Cette facture existe déjà
       amount_invalid: Saisissez le montant sous forme de nombre simple
+      amount_too_precise: Utilisez au plus 4 décimales
       due_date_required: Saisissez la prochaine date d'échéance de la facture
       success: Facture ajoutée
       success_income: Revenu ajouté

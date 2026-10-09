@@ -256,12 +256,18 @@
                   and stays put. %>
               <%= styled_form_with url: recurring_occurrence_allocations_path(@occurrence), class: "space-y-2" do |form| %>
                 <div class="grid grid-cols-2 gap-2">
+                  <%# The minimum is one step, so a whole-unit currency like JPY
+                      keeps whole amounts valid: a 0.01 minimum would have
+                      been the step base and put 1000 off-step. %>
+                  <% step = RecurringTransaction.amount_step(@occurrence.currency) %>
                   <%= form.money_field :amount,
                         label: t(".manual_amount_label"),
+                        input_class: "privacy-sensitive privacy-sensitive-interactive",
                         value: (@occurrence.remaining_amount if @occurrence.remaining_amount.positive?),
                         currency_value_override: @occurrence.currency,
                         disable_currency: true,
-                        min: 0.01 %>
+                        step: step,
+                        min: step %>
                   <%= form.date_field :paid_on, label: t(".manual_date_label"), value: Date.current %>
                 </div>
                 <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary", full_width: true) %>

@@ -81,6 +81,7 @@ en:
       success_income: Income added
       due_date_required: "Enter the bill's next due date"
       amount_invalid: "Enter the amount as a plain number"
+      amount_too_precise: Use at most 4 decimal places
       account_invalid: "Pick an account you can add bills to, or leave it blank"
       already_exists: "This bill already exists"
     edit:

@@ -1404,7 +1404,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     %w[q[status] q[bill_type] q[sort]].each do |name|
-      assert_select ".form-field > select.form-field__input[name=?]", name
+      assert_select ".form-field select.form-field__input[name=?]", name
     end
   end
 

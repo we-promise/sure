@@ -45,6 +45,8 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select ".form-field[data-controller~='money-field'] input[name=?]", "recurring_transaction[amount]"
+    # Blurred in privacy mode, and still typeable.
+    assert_select "input.privacy-sensitive.privacy-sensitive-interactive[name=?]", "recurring_transaction[amount]"
     assert_select "select[name=?]:not([disabled]) option[selected][value=?]", "recurring_transaction[currency]", @family.currency
     # The candidate list's rows are divided by a real token: divide-divider
     # matched nothing, so its rules fell back to the text colour.
@@ -60,6 +62,26 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name=?][disabled] option[selected][value=?]", "recurring_transaction[currency]", @recurring_transaction.currency
     assert_select "#category_id_trigger"
     assert_select "input[type=hidden][name=?]", "recurring_transaction[category_id]"
+  end
+
+  # Assigning the amount would already round it to the column's four places,
+  # so the edit form refuses a finer one instead of saving a different figure.
+  test "update refuses an amount finer than the column keeps" do
+    patch recurring_transaction_url(@recurring_transaction),
+      params: { recurring_transaction: { name: @recurring_transaction.display_name, amount: "15.123456" } }
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.create.amount_too_precise"), response.body
+    assert_equal 15.99, @recurring_transaction.reload.amount
+  end
+
+  test "the amount steps by the currency, never finer than the column" do
+    assert_in_delta 0.01, RecurringTransaction.amount_step("USD")
+    assert_in_delta 1.0, RecurringTransaction.amount_step("JPY")
+    assert_in_delta 0.0001, RecurringTransaction.amount_step("BTC")
+
+    get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+    assert_select "input[name=?][step=?]", "recurring_transaction[amount]", "0.01"
   end
 
   test "create keeps the currency picked on the form" do

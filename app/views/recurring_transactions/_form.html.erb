@@ -30,8 +30,10 @@
           new bill takes the currency picked here, like a transaction does. %>
       <%= f.money_field :amount,
             label: income ? t(".income_amount_label") : t(".amount_label"),
+            input_class: "privacy-sensitive privacy-sensitive-interactive",
             value: recurring_transaction.amount&.abs,
             default_currency: Current.family.currency,
+            step: RecurringTransaction.amount_step(recurring_transaction.currency.presence || Current.family.currency),
             min: 0,
             required: true %>
       <%= f.date_field :first_due_on,
@@ -49,8 +51,10 @@
             payments already matched to it. %>
         <%= f.money_field :amount,
               label: income ? t(".income_amount_label") : t(".amount_label"),
+              input_class: "privacy-sensitive privacy-sensitive-interactive",
               value: recurring_transaction.amount&.abs,
               disable_currency: true,
+              step: RecurringTransaction.amount_step(recurring_transaction.currency),
               min: 0,
               required: true %>
         <p class="text-xs text-secondary"><%= income ? t(".income_amount_edit_hint") : t(".amount_edit_hint") %></p>

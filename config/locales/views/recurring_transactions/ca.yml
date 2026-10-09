@@ -127,6 +127,7 @@ ca:
       success_income: Ingrés afegit
       due_date_required: Introdueix la propera data de venciment de la factura
       amount_invalid: Introdueix l'import com a número sense format
+      amount_too_precise: Fes servir 4 decimals com a màxim
       account_invalid: Tria un compte al qual puguis afegir factures, o deixa-ho en blanc
       already_exists: Aquesta factura ja existeix
     edit:

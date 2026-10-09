@@ -53,6 +53,26 @@ class RecurringTransaction::DeclaredBillTest < ActiveSupport::TestCase
     assert_equal accounts(:depository).currency, series.currency
   end
 
+  # The column keeps four decimal places. A finer amount would be rounded on
+  # save, and one this small to zero: a bill whose cycles can never close.
+  test "an amount finer than the column keeps is refused, not rounded" do
+    series = build_bill(amount: "0.00000001", currency: "BTC")
+
+    assert_includes series.errors.full_messages.to_sentence,
+      I18n.t("recurring_transactions.create.amount_too_precise")
+    assert build_bill(amount: "12.3456", currency: "BTC").errors.none?
+  end
+
+  # The assistant sends JSON numbers, so 15.99 + 1 arrives as
+  # 16.990000000000002. That is noise past any currency's places, not a
+  # precision the user meant, and it saves as 16.99 the way it always has.
+  test "float noise past every currency's places is rounded, not refused" do
+    series = build_bill(amount: (15.99 + 1).to_s)
+
+    assert series.errors.none?, series.errors.full_messages.to_sentence
+    assert_equal BigDecimal("16.99"), series.amount
+  end
+
   test "the same identity at the same amount reports a duplicate instead of raising" do
     # The amount is stamped into dedup_scope before the first insert, so the
     # very first identical duplicate collides and must surface as a validation

@@ -431,8 +431,13 @@ class RecurringTransactionsController < ApplicationController
 
       if attrs[:amount].present?
         magnitude = attrs[:amount].to_d.abs
-        @recurring_transaction.amount =
-          @recurring_transaction.typed_income? ? -magnitude : magnitude
+        # Checked on the input: assigning it already rounded to the column.
+        if RecurringTransaction.storable_amount?(magnitude)
+          @recurring_transaction.amount =
+            @recurring_transaction.typed_income? ? -magnitude : magnitude
+        else
+          @recurring_transaction.errors.add(:base, t("recurring_transactions.create.amount_too_precise"))
+        end
       end
 
       if attrs.key?(:account_id)

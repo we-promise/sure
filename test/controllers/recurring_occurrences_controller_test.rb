@@ -33,9 +33,20 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "form[action=?]", recurring_occurrence_allocations_path(@occurrence) do
       assert_select ".form-field[data-controller~='money-field'] input[name=amount][value=?]", "15.99"
+      assert_select "input.privacy-sensitive.privacy-sensitive-interactive[name=amount]"
       assert_select "select[name=currency][disabled] option[selected][value=?]", "USD"
       assert_select ".form-field input[type=date][name=paid_on]"
     end
+  end
+
+  # A whole-unit currency steps by 1. With a 0.01 minimum as the step base,
+  # every whole amount was off-step and the browser refused to submit it.
+  test "the manual payment steps from its minimum in the bill's currency" do
+    @occurrence.update!(currency: "JPY")
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_select "input[name=amount][step='1.0'][min='1.0']"
   end
 
   # Turbo caches the page as it was left, so a drawer still open when the user

@@ -68,6 +68,12 @@ class RecurringTransaction
         return recurring
       end
 
+      # Checked on the input: assigning it already rounded to the column.
+      unless RecurringTransaction.storable_amount?(amount)
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.amount_too_precise"))
+        return recurring
+      end
+
       if due.nil?
         recurring.errors.add(:base, I18n.t("recurring_transactions.create.due_date_required"))
         return recurring

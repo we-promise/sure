@@ -21,6 +21,7 @@ pl:
         puste
       already_exists: Ten rachunek już istnieje
       amount_invalid: Wpisz kwotę jako zwykłą liczbę
+      amount_too_precise: Użyj najwyżej 4 miejsc po przecinku
       due_date_required: Wpisz następny termin płatności rachunku
       success: Rachunek dodany
       success_income: Przychód dodany
