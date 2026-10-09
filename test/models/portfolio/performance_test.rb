@@ -619,6 +619,47 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     refute_equal "v7", Portfolio::Performance::CACHE_VERSION, "v7 entries were cached without the flag"
   end
 
+  # End to end, with nothing set by hand between the layers. Every other
+  # journal test lays the balance row's market flow itself, so it assumes the
+  # two valuations of the arriving position agree rather than checking it:
+  # Balance::BaseCalculator books the journal's value as market movement from
+  # the holdings it materialises, and DailyReturns values the same journal as
+  # an external flow from the same holding's price and takes it back out of
+  # market. If those two numbers ever differ, `unexplained` carries the gap.
+  #
+  # So the journal arrives through the real Balance::Materializer: 1,000 cash,
+  # five units journalled in at 100 on day two, the price 110 on day three.
+  # The arrival is a flow and earns nothing; day three earns 50 on 1,500.
+  test "a journal through the real balance calculator is valued once, and the drivers reconcile" do
+    day_three = @day_two + 1.day
+    @account.entries.create!(
+      name: "Opening balance", date: @day_one - 1.day, amount: 1_000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+    Security::Price.create!(security: security_under_test, date: @day_two, price: 100, currency: "USD")
+    Security::Price.create!(security: security_under_test, date: day_three, price: 110, currency: "USD")
+    security_journal account: @account, date: @day_two, qty: 5
+
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+
+    booked = @account.balances.find_by!(date: @day_two, currency: "USD")
+    result = performance(end_date: day_three)
+    journal_day = result.daily_returns.rows.find { |row| row.date == @day_two }
+
+    assert_equal BigDecimal(500), booked.net_market_flows, "the calculator books the arrival as market movement"
+    assert_equal booked.net_market_flows, journal_day.external_flow,
+                 "and DailyReturns values the same journal at the same 500"
+    assert_not journal_day.suppressed
+    assert_equal BigDecimal(0), journal_day.market, "so the arrival is a flow and not a gain"
+
+    drivers = result.drivers
+    assert_equal BigDecimal(0), drivers[:unexplained], "the two valuations agree: #{drivers.inspect}"
+    assert_equal BigDecimal(500), drivers[:external_net]
+    assert_equal BigDecimal(50), drivers[:market]
+    assert_equal 0, drivers[:suppressed_days]
+    assert_in_delta 50 / 1_500.0, result.twr.to_f, 0.000001, "the journal earns nothing; the price move does"
+  end
+
   private
     # Day one holds 1,000; day two withdraws 800; day three deposits 500 and
     # gains 10. See "an ambiguous money-weighted series is flagged".
