@@ -17,6 +17,41 @@ class Loan::CollateralAccountTest < ActiveSupport::TestCase
     Loan.collateral_candidates_for(@loan, viewer: users(:family_admin))
   end
 
+  # A new loan has no account to judge against yet, so the list used to skip
+  # the currency and visibility checks its save then applies. The picker offered
+  # accounts the save would refuse.
+  test "the candidate list for a new loan leaves out what its save would refuse" do
+    family = @loan.account.family
+    viewer = users(:family_admin)
+    assert family.share_all_by_default?, "precondition: a new loan is visible to the whole family"
+    assert_not_equal [], family.users.where.not(id: viewer.id).to_a, "precondition: another viewer"
+
+    shared = family.accounts.create!(name: "Shared house", currency: "USD", balance: 1, owner: viewer, accountable: Property.new)
+    shared.auto_share_with_family!
+    private_asset = family.accounts.create!(name: "Private house", currency: "USD", balance: 1, owner: viewer, accountable: Property.new)
+    private_asset.account_shares.destroy_all
+    euro = family.accounts.create!(name: "Flat in Lisbon", currency: "EUR", balance: 1, owner: viewer, accountable: Property.new)
+    euro.auto_share_with_family!
+
+    new_loan = Loan.new
+    candidates = Loan.collateral_candidates_for(new_loan, viewer: viewer, family: family, currency: "USD")
+
+    assert_includes candidates, shared
+    assert_not_includes candidates, private_asset, "a new loan the family will share cannot take a private asset"
+    assert_not_includes candidates, euro, "a USD loan cannot take a EUR asset"
+
+    # The same three, as the save judges them.
+    assert_nothing_raised { create_loan_on(family, collateral: shared) }
+    assert_raises(ActiveRecord::RecordInvalid) { create_loan_on(family, collateral: private_asset) }
+    assert_raises(ActiveRecord::RecordInvalid) { create_loan_on(family, collateral: euro) }
+
+    # With no currency given, the account is created in the family's.
+    assert_equal "USD", family.currency, "precondition"
+    without_currency = Loan.collateral_candidates_for(Loan.new, viewer: viewer, family: family)
+    assert_includes without_currency, shared
+    assert_not_includes without_currency, euro
+  end
+
   test "a loan can be secured by a property or a vehicle" do
     assert_nil @loan.collateral_account_id
 

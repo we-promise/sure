@@ -546,18 +546,23 @@ class Loan < ApplicationRecord
 
   # The accounts a viewer may pick as this loan's collateral: assets of the right
   # type in the loan's family that they can see and that the save would accept.
-  # `family` stands in for the loan account's when the loan has none yet.
-  # `currency` narrows the list when the loan has no account to read one from.
+  # `family` and `currency` describe the account a new loan will be created on,
+  # which does not exist yet: the list judges against that account as the save
+  # will build it (the viewer as its owner, the family's currency when none is
+  # given), so the currency and visibility checks apply to a new loan too.
   def self.collateral_candidates_for(loan, viewer:, family: nil, currency: nil)
     family ||= loan.account&.family
     return Account.none unless family && viewer
 
+    # Ids rather than records, so the stand-in is not added to the family's or
+    # the viewer's loaded associations.
+    loan_account = loan.owning_account ||
+      Account.new(family_id: family.id, owner_id: viewer.id, currency: currency.presence || family.currency)
+
     scope = Account.accessible_by(viewer).visible
       .where(family_id: family.id, accountable_type: COLLATERAL_ACCOUNTABLE_TYPES)
-    scope = scope.where(currency: currency) if currency.present? && loan.account.nil?
 
-    loan_account = loan.owning_account
-    viewers = loan.send(:collateral_viewers, loan_account) if loan_account&.family
+    viewers = loan.send(:collateral_viewers, loan_account)
     scope.order(:name)
       .select { |candidate| loan.collateral_ineligibilities_for(candidate, loan_account: loan_account, viewers: viewers).empty? }
   end
