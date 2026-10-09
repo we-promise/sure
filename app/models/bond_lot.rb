@@ -338,9 +338,10 @@ class BondLot < ApplicationRecord
     settlement_date_for_sync = nil
 
     # Lock the row to prevent concurrent settlements. Use `next` (not `return`)
-    # to exit the block: `with_lock` runs inside a transaction, and a non-local
-    # `return` out of a transaction block triggers a ROLLBACK, which would
-    # silently discard the requires_rate_review write below.
+    # to exit the block: it keeps the control flow local to `with_lock`'s
+    # transaction and makes the intent explicit. (On Rails 8.1 a non-local
+    # `return` from a transaction commits rather than rolling back, so this is a
+    # clarity/robustness choice, not a correctness fix.)
     settled = with_lock do
       next false unless auto_close_on_maturity?
       next false unless open?
