@@ -35,6 +35,19 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
     assert_equal BigDecimal(0), by_security.unattributed
   end
 
+  # amount_for is documented to take a Security or its id. A Security's to_s
+  # is not its id, so looked up as given it found nothing and read zero.
+  test "amount_for takes a Security as readily as its id" do
+    income_trade account: @account, date: @mar, amount: 30, security: @aapl
+    lay_flat_balances cash_by_date: { @mar => 30 }
+
+    by_security = income_by_security
+
+    assert_equal BigDecimal(30), by_security.amount_for(@aapl.id)
+    assert_equal BigDecimal(30), by_security.amount_for(@aapl), "a Security is looked up by its id"
+    assert_equal BigDecimal(0), by_security.amount_for(@msft), "a security that paid nothing reads zero"
+  end
+
   # The case the section's whole design exists for. A Transaction-shaped
   # dividend with no security counts toward the period's income, so a table that
   # left it out would sum to less than the chart above it.
