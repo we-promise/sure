@@ -1029,7 +1029,7 @@ class Provider::TradeRepublicClient
         next if isin.blank? || detail["instrument_name"].present?
 
         unless names.key?(isin)
-          break if names.size >= budget
+          next if names.size >= budget
 
           names[isin] = instrument_name(websocket, isin)
         end
@@ -1423,14 +1423,18 @@ class Provider::TradeRepublicClient
     end
 
     def normalize_event_detail(raw, item: nil)
-      rows = collect_sections(raw).flat_map { |section| Array(section["data"]) }.select { |row| row.is_a?(Hash) }
+      rows = section_rows(collect_sections(raw))
       shares = find_row(rows, SHARE_TITLES)
       total = find_row(rows, TOTAL_TITLES)
       price_row = find_row(rows, PRICE_TITLES)
       fees = find_row(rows, FEE_TITLES)
       taxes = find_row(rows, TAX_TITLES)
-      nominal = find_row(rows, NOMINAL_TITLES) unless shares
-      total ||= find_row(rows, BOND_TOTAL_TITLES) if nominal
+      # A bond's nominal and quote sit in an untitled table inside an infoPage
+      # bottom sheet. Only bond fields read it, so an unrelated nested table
+      # can't fill in a share trade's price or total.
+      bond_rows = rows + section_rows(collect_sections(raw, untitled_tables: true)) unless shares
+      nominal = find_row(bond_rows, NOMINAL_TITLES) unless shares
+      total ||= find_row(bond_rows, BOND_TOTAL_TITLES) if nominal
       quantity = decimal_from_row(shares) || decimal_from_row(nominal) || quantity_from_raw(raw)
       title = shares&.dig("title").to_s.downcase
       quantity = -quantity.abs if title.include?("entfernt") || title.include?("removed") || title.include?("gesendet") || title.include?("sent")
@@ -1440,7 +1444,7 @@ class Provider::TradeRepublicClient
       fee_amount = decimal_from_row(fees)
       tax_amount = decimal_from_row(taxes)
       price = decimal_from_row(price_row)
-      quotation = decimal_from_row(find_row(rows, QUOTATION_TITLES)) if nominal
+      quotation = decimal_from_row(find_row(bond_rows, QUOTATION_TITLES)) if nominal
       # Per unit of nominal, like a bond position's averageBuyIn: 92,67 % of
       # par is 0.9267.
       price ||= quotation / 100 if quotation
@@ -1469,17 +1473,18 @@ class Provider::TradeRepublicClient
       }.compact
     end
 
-    def collect_sections(node, result = [])
+    def collect_sections(node, result = [], untitled_tables: false)
       case node
       when Hash
-        # Untitled tables hold breakdowns such as a bond's nominal and quote
-        # inside an infoPage bottom sheet.
-        result << node if (node.key?("title") || node["type"] == "table") && node["data"].is_a?(Array)
-        node.each_value { |value| collect_sections(value, result) }
-      when Array then node.each { |value| collect_sections(value, result) }
+        section = untitled_tables ? node["type"] == "table" && !node.key?("title") : node.key?("title")
+        result << node if section && node["data"].is_a?(Array)
+        node.each_value { |value| collect_sections(value, result, untitled_tables:) }
+      when Array then node.each { |value| collect_sections(value, result, untitled_tables:) }
       end
       result
     end
+
+    def section_rows(sections) = sections.flat_map { |section| Array(section["data"]) }.select { |row| row.is_a?(Hash) }
 
     def find_row(rows, titles) = rows.find { |row| titles.include?(row["title"].to_s.downcase.strip) }
 

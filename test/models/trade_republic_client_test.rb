@@ -1762,6 +1762,28 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "1024.92", detail["amount"]
   end
 
+  test "a nested untitled table does not supply a missing share trade price" do
+    fx_breakdown = {
+      "sections" => [
+        { "type" => "table", "data" => [ { "title" => "Kurs", "detail" => { "text" => "1,0850" } } ] }
+      ]
+    }
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Übersicht", "type" => "table", "data" => [
+          { "title" => "Aktien", "detail" => { "text" => "2" } },
+          {
+            "title" => "Wechselkurs",
+            "detail" => { "text" => "1,0850", "action" => { "type" => "infoPage", "payload" => fx_breakdown } }
+          },
+          { "title" => "Gesamt", "detail" => { "text" => "1.024,92 €" } }
+        ] }
+      ]
+    }, item: { "title" => "Core S&P 500", "subtitle" => "Kauforder" })
+
+    assert_equal "512.46", detail["price"]
+  end
+
   test "bond_placeholder_listing? only matches BOND on LSX" do
     assert Provider::TradeRepublicClient.bond_placeholder_listing?("BOND", "LSX")
     assert Provider::TradeRepublicClient.bond_placeholder_listing?(" bond ", "lsx")
@@ -1837,6 +1859,20 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     assert_equal 2, requested
     assert_nil events.last.dig("detail", "instrument_name")
+  end
+
+  test "bond names already looked up are stamped after the lookup budget is spent" do
+    @client.define_singleton_method(:instrument_name) { |_websocket, isin| "Bond #{isin}" }
+    events = [
+      { "id" => "buy-a", "detail" => { "isin" => "XS0000000001", "instrument_type" => "bond" } },
+      { "id" => "buy-b", "detail" => { "isin" => "XS0000000002", "instrument_type" => "bond" } },
+      { "id" => "sell-a", "detail" => { "isin" => "XS0000000001", "instrument_type" => "bond" } }
+    ]
+
+    @client.send(:stamp_bond_instrument_names!, Object.new, events, budget: 1)
+
+    assert_equal [ "Bond XS0000000001", nil, "Bond XS0000000001" ],
+      events.map { |event| event.dig("detail", "instrument_name") }
   end
 
   private

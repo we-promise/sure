@@ -719,6 +719,25 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal shared, holding.reload.security
   end
 
+  test "bond rematch keeps the provider security of a locked holding already on the bond" do
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
+    italy = Security.create!(ticker: "IT0005377152", name: "ITALIEN 19/40", offline: true,
+      offline_reason: "trade_republic_isin")
+    holding = @account.holdings.create!(
+      security: italy, provider_security: shared, date: Date.current - 1, qty: 10, price: 1, amount: 10,
+      currency: "EUR", external_id: "trade_republic_position_DEHOLD1_IT0005377152_#{Date.current - 1}",
+      account_provider_id: @tr_account.account_provider.id, security_locked: true
+    )
+
+    @tr_account.update!(raw_positions_payload: [
+      bond_position(isin: "IT0005377152", name: "ITALIEN 19/40", quantity: "10", price: "0.8404")
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    assert_equal shared.id, holding.reload.provider_security_id
+    assert_equal italy, holding.security
+  end
+
   private
 
     def import_position(isin:, quantity:, price:, average_cost: nil, symbol: nil, exchange_slug: nil)

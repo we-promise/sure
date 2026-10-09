@@ -114,7 +114,7 @@ class TradeRepublicAccount::HoldingsProcessor
       end
 
       bond_holdings
-        .where(security_id: security.id)
+        .where(security_id: security.id, security_locked: false)
         .where.not(provider_security_id: [ nil, security.id ])
         .update_all(provider_security_id: security.id, updated_at: Time.current)
     end
