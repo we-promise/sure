@@ -623,6 +623,15 @@ class FamilyTest < ActiveSupport::TestCase
                             amount: -50, currency: "USD", entryable: Transaction.new)
 
     assert_equal transaction_date, family.earliest_activity_date
+
+    # A Trade earlier than the Transaction must win, so a regression that
+    # drops Trade from the filter is caught (#4007).
+    trade_date = Date.new(2020, 6, 15)
+    account.entries.create!(date: trade_date, name: "Investment purchase",
+                            amount: 100, currency: "USD",
+                            entryable: Trade.new(security: securities(:aapl), qty: 1, price: 100, currency: "USD"))
+
+    assert_equal trade_date, family.earliest_activity_date
   end
 
   test "earliest_activity_date returns nil when family has no Transaction/Trade entries" do
