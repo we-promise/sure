@@ -165,8 +165,12 @@ class BondLot < ApplicationRecord
       if coupon_reinvested?
         value += interest_earned
       else
+        # Periodic coupons are retained in the bond's value (simple interest)
+        # rather than zeroed at each coupon date. Zeroing would drop the paid
+        # coupon from holdings, returns, and settlement with no offsetting cash
+        # entry, silently losing the money. Modeling the coupon as a separate
+        # cash ledger entry is a documented follow-up (docs/bonds-followups.md).
         unpaid_coupon_accrual += interest_earned
-        unpaid_coupon_accrual = 0.to_d if coupon_paid_before_maturity?(next_cursor:, next_accrual_boundary:)
       end
 
       cursor = next_cursor
@@ -450,10 +454,6 @@ class BondLot < ApplicationRecord
   private
     def coupon_reinvested?
       coupon_frequency.to_s == "at_maturity"
-    end
-
-    def coupon_paid_before_maturity?(next_cursor:, next_accrual_boundary:)
-      next_cursor == next_accrual_boundary && maturity_date.present? && next_cursor < maturity_date
     end
 
     def rate_context_for(on:, allow_import: true)

@@ -416,7 +416,7 @@ class BondLotTest < ActiveSupport::TestCase
   end
 
 
-  test "estimated_current_value for periodic coupon bond excludes already paid coupons" do
+  test "estimated_current_value for periodic coupon bond retains paid coupons in value" do
     lot = BondLot.new(
       bond: bonds(:one),
       purchased_on: Date.new(2024, 1, 1),
@@ -429,9 +429,38 @@ class BondLotTest < ActiveSupport::TestCase
       coupon_frequency: "semi_annual"
     )
 
+    # Periodic coupons are retained (simple interest) rather than dropped at each
+    # coupon date — otherwise the paid coupon would vanish from holdings/returns
+    # with no offsetting cash entry. 8 months of 12%/yr on 1000 ≈ 80.
     value = lot.estimated_current_value(on: Date.new(2024, 9, 1))
+    assert_in_delta 1080.0, value.to_f, 0.5
 
-    assert_in_delta 1020.33, value.to_f, 0.2
+    # At maturity: full year of simple 12% = 120.
+    at_maturity = lot.estimated_current_value(on: Date.new(2025, 1, 1))
+    assert_in_delta 1120.0, at_maturity.to_f, 0.5
+  end
+
+  test "periodic coupon bond value never drops over its life (no phantom coupon-date dip)" do
+    lot = BondLot.new(
+      bond: bonds(:one),
+      purchased_on: Date.new(2024, 1, 1),
+      maturity_date: Date.new(2026, 1, 1),
+      term_months: 24,
+      amount: 1000,
+      interest_rate: 12,
+      subtype: "fixed_coupon",
+      rate_type: "fixed",
+      coupon_frequency: "quarterly"
+    )
+
+    # Sample monotonically across coupon boundaries; retained-coupon accounting
+    # means value is non-decreasing (it would dip at each quarter if coupons
+    # were zeroed with no offsetting cash entry).
+    dates = (0..24).map { |m| Date.new(2024, 1, 1) >> m }
+    values = dates.map { |d| lot.estimated_current_value(on: d).to_f }
+    values.each_cons(2) do |a, b|
+      assert_operator b, :>=, a - 0.01, "value dipped from #{a} to #{b} across a coupon date"
+    end
   end
 
   test "product change re-applies inflation-linked product defaults" do
@@ -753,7 +782,7 @@ class BondLotTest < ActiveSupport::TestCase
     assert_includes settlement_entry.notes, "Tax withheld: none"
   end
 
-  test "auto-settlement for periodic coupon bond excludes previously paid coupons" do
+  test "auto-settlement for periodic coupon bond retains all coupons in settlement value" do
     account = accounts(:bond)
     account.bond.update!(tax_wrapper: "ike")
 
@@ -774,7 +803,10 @@ class BondLotTest < ActiveSupport::TestCase
     assert lot.settle_if_matured!(on: Date.new(2025, 2, 1))
 
     lot.reload
-    assert_in_delta 1060.33, lot.settlement_amount.to_d.to_f, 0.2
+    # Full year of simple 12% = 120, retained in the settlement value (no coupon
+    # is dropped). Tax-exempt wrapper, so no deduction. See docs/bonds-followups.md
+    # for the deferred per-coupon cash-entry accounting.
+    assert_in_delta 1120.0, lot.settlement_amount.to_d.to_f, 0.5
   end
 
   test "auto-buys replacement inflation-linked lot and flags rate review" do
