@@ -109,6 +109,33 @@ class Portfolio::Drivers
     market + revaluations
   end
 
+  # Days Portfolio::DailyReturns suppressed. Exposed because neither
+  # `unexplained` nor `reconciles?` can see them.
+  #
+  # A day is suppressed for a non-positive denominator, whose components are
+  # complete, or for a security journal it could not value (no holding row, a
+  # zero price, or no rate for the holding's currency). On the second kind the
+  # journal is not an external flow, so its value stays wherever the balance
+  # row booked it -- in `market` -- and the identity below still holds:
+  # `unexplained` is zero and the period reconciles while `market` carries a
+  # gain the holdings never earned. Nothing here can tell that apart from a
+  # real one, so a caller presenting these figures reads #complete? (or
+  # `suppressed_days` in #to_h) and says that a day was left out.
+  #
+  # The drivers are not withheld for it: they are money, reported on the same
+  # terms as when a rate is missing, and the suppression flag does not record
+  # which kind of day it was, so withholding would also blank the complete
+  # figures of every over-withdrawal.
+  def suppressed_dates
+    @suppressed_dates ||= rows.select(&:suppressed).map(&:date)
+  end
+
+  # True when no day in the period was suppressed, which is the only case in
+  # which every component is known to describe every day.
+  def complete?
+    suppressed_dates.empty?
+  end
+
   def to_h
     {
       value_open: value_open,
@@ -121,7 +148,9 @@ class Portfolio::Drivers
       market: market,
       revaluations: revaluations,
       fx_effect: fx_effect,
-      unexplained: unexplained
+      unexplained: unexplained,
+      # A count rather than the dates, so the cached hash stays plain values.
+      suppressed_days: suppressed_dates.size
     }
   end
 
@@ -146,7 +175,9 @@ class Portfolio::Drivers
 
   # A real check: `unexplained` is measured independently of the components
   # it is compared against, so this returns false when the decomposition does
-  # not hold.
+  # not hold. It speaks to the rows as recorded and to nothing else: over a
+  # suppressed journal day it is true while `market` is wrong (see
+  # #suppressed_dates), so it is read together with #complete?.
   def reconciles?(tolerance: RECONCILE_TOLERANCE)
     unexplained.abs <= tolerance
   end

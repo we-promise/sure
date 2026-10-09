@@ -149,6 +149,42 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("0"), drivers.unexplained
     assert drivers.reconciles?
+    assert drivers.complete?, "no day was suppressed, so the drivers describe every day"
+    assert_equal 0, drivers.to_h[:suppressed_days]
+  end
+
+  # The contract over a suppressed journal day, pinned because neither
+  # `unexplained` nor `reconciles?` can say anything about it.
+  #
+  # The journal has no holding row for its date, so `journal_holdings.currency`
+  # is NULL: DailyReturns cannot value it and suppresses the day, but no rate is
+  # missing either, so `rate_missing?` is not set and Portfolio::Performance
+  # withholds nothing. The journal is therefore NOT an external flow, and its
+  # 500 stays where the balance row booked it, in market. The identity still
+  # holds -- unexplained is 0 and the period reconciles -- while the drivers
+  # report a 500 market gain the holdings never earned.
+  #
+  # So the drivers say so themselves: `complete?` is false and `to_h` carries
+  # the suppressed day count, which a caller presenting them must read.
+  test "a suppressed journal day still reconciles, so the drivers say a day was suppressed" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5
+
+    drivers = drivers_for
+    day = drivers.rows.last
+
+    assert day.suppressed, "the fixture must be a suppressed journal day"
+    assert_not drivers.daily_returns.rate_missing?, "and one no missing rate accounts for"
+
+    assert_equal BigDecimal("0"), drivers.external_net, "an unvalued journal is not a flow"
+    assert_equal BigDecimal("500"), drivers.market, "its value stays in market"
+    assert_equal BigDecimal("0"), drivers.unexplained, "the identity holds over the rows as recorded"
+    assert drivers.reconciles?, "so reconciling says nothing about the suppressed day"
+
+    assert_not drivers.complete?
+    assert_equal [ @day_two ], drivers.suppressed_dates
+    assert_equal 1, drivers.to_h[:suppressed_days]
   end
 
   test "an empty scope reports zeroes rather than raising" do
