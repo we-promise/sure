@@ -242,6 +242,22 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert other_insight.reload.active?
   end
 
+  test "an insight about an account not everyone can see is neither shown nor changed" do
+    hidden = @user.family.insights.create!(
+      insight_type: "idle_cash", priority: "low", status: "active", title: "Idle cash in Private",
+      body: "Body", metadata: { "account_id" => accounts(:connected).id },
+      dedup_key: "idle_cash:private:2026-07", generated_at: Time.current
+    )
+
+    get insights_url
+    assert_no_match "Idle cash in Private", response.body
+    assert hidden.reload.active?, "viewing the feed does not mark a hidden row read"
+
+    patch acknowledge_insight_url(hidden), as: :turbo_stream
+    assert_response :not_found
+    assert hidden.reload.active?
+  end
+
   test "refresh enqueues insight generation for the family" do
     assert_enqueued_with(job: GenerateInsightsJob, args: [ { family_id: @user.family_id } ]) do
       post refresh_insights_url

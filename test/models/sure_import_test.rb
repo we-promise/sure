@@ -764,6 +764,14 @@ class SureImportTest < ActiveSupport::TestCase
         accountable_type: "Depository",
         accountable: { subtype: "checking" }
       } },
+      { type: "Valuation", data: {
+        id: "valuation-1",
+        account_id: "account-1",
+        date: "2024-01-14",
+        amount: "1000.00",
+        currency: "USD",
+        kind: "opening_anchor"
+      } },
       { type: "ProviderMerchant", data: {
         id: "provider-merchant-1",
         name: "AMZN MKTP",
@@ -784,19 +792,56 @@ class SureImportTest < ActiveSupport::TestCase
     result = @import.sure_preflight
     assert result.valid?, result.error_message
 
-    assert_difference -> { ProviderMerchant.count }, 1 do
-      @import.publish
+    assert_no_difference -> { ProviderMerchant.count } do
+      assert_difference -> { @family.merchants.count }, 1 do
+        @import.publish
+      end
     end
 
     assert_equal "complete", @import.status
+    assert_equal "matched", @import.verification_status
 
     entry = @family.entries.find_by!(name: "Amazon purchase")
     merchant = entry.entryable.merchant
 
-    assert_instance_of ProviderMerchant, merchant
+    assert_instance_of FamilyMerchant, merchant
     assert_equal "AMZN MKTP", merchant.name
-    assert_equal "plaid", merchant.source
-    assert_equal "plaid_amzn", merchant.provider_merchant_id
+  end
+
+  # ProviderMerchant rows are shared across families and bank syncs look them up
+  # by provider_merchant_id, which most providers derive from the payee name. An
+  # import that created one would pick the name, logo and website other
+  # families' synced transactions attach to.
+  test "provider merchant import never creates a shared provider merchant" do
+    attach_ndjson(provider_merchant_ndjson(
+      name: "Call +1 555 0100 for your refund",
+      logo_url: "https://tracker.example/pixel.png",
+      website_url: "https://phish.example"
+    ))
+
+    assert_no_difference -> { ProviderMerchant.count } do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+    assert_equal "matched", @import.verification_status
+    assert_nil ProviderMerchant.find_by(provider_merchant_id: "plaid_amzn", source: "plaid")
+
+    merchant = @family.entries.find_by!(name: "Amazon purchase").entryable.merchant
+    assert_instance_of FamilyMerchant, merchant
+    assert_equal @family, merchant.family
+    assert_equal "https://phish.example", merchant.website_url
+  end
+
+  test "provider merchant import reuses the family's own merchant of the same name" do
+    own = @family.merchants.create!(name: "AMZN MKTP")
+    attach_ndjson(provider_merchant_ndjson)
+
+    assert_no_difference [ -> { ProviderMerchant.count }, -> { @family.merchants.count } ] do
+      @import.publish
+    end
+
+    assert_equal own, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant
   end
 
   test "provider merchant import reuses an existing matching record instead of duplicating or overwriting it" do
@@ -861,45 +906,6 @@ class SureImportTest < ActiveSupport::TestCase
     assert_nil existing.logo_url
     assert_nil existing.color
     assert_equal existing.id, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant_id
-  end
-
-  test "a color in the file is not read when a provider merchant is created" do
-    attach_ndjson(provider_merchant_ndjson(color: "#123456"))
-
-    assert_difference -> { ProviderMerchant.count }, 1 do
-      @import.publish
-    end
-
-    assert_equal "complete", @import.status
-    assert_nil ProviderMerchant.where(name: "AMZN MKTP", source: "plaid").pick(:color)
-  end
-
-  {
-    "RecordNotUnique" => -> { ActiveRecord::RecordNotUnique.new("duplicate key") },
-    "RecordInvalid" => -> { ActiveRecord::RecordInvalid.new(ProviderMerchant.new.tap { |merchant| merchant.errors.add(:name, :taken) }) }
-  }.each do |label, build_error|
-    test "provider merchant import recovers when another import wins the creation race (#{label})" do
-      winner = ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn")
-      attach_ndjson(provider_merchant_ndjson)
-
-      ProviderMerchant.stubs(:find_by_import_data).returns(nil).then.returns(winner)
-      ProviderMerchant.stubs(:create!).raises(build_error.call)
-
-      assert_no_difference -> { ProviderMerchant.count } do
-        @import.import!
-      end
-
-      assert_equal winner.id, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant_id
-    end
-  end
-
-  test "provider merchant import surfaces validation errors that are not a lost creation race" do
-    attach_ndjson(provider_merchant_ndjson)
-    invalid = ActiveRecord::RecordInvalid.new(ProviderMerchant.new.tap { |merchant| merchant.errors.add(:name, :blank) })
-    ProviderMerchant.stubs(:find_by_import_data).returns(nil)
-    ProviderMerchant.stubs(:create!).raises(invalid)
-
-    assert_raises(ActiveRecord::RecordInvalid) { @import.import! }
   end
 
   test "preflight warns with the actual diff when an existing provider merchant differs from the file" do
@@ -1079,6 +1085,10 @@ class SureImportTest < ActiveSupport::TestCase
         { type: "Account", data: {
           id: "account-1", name: "Provider Merchant Checking", balance: "1000.00", currency: "USD",
           accountable_type: "Depository", accountable: { subtype: "checking" }
+        } },
+        { type: "Valuation", data: {
+          id: "valuation-1", account_id: "account-1", date: "2024-01-14", amount: "1000.00",
+          currency: "USD", kind: "opening_anchor"
         } },
         { type: "ProviderMerchant", data: {
           id: "provider-merchant-1", name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn"
