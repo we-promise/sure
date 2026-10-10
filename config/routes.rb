@@ -335,7 +335,7 @@ Rails.application.routes.draw do
   patch "release_highlight/dismiss", to: "release_highlights#dismiss"
   get "feedback", to: "pages#feedback"
   get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
-  post "dashboard/monthly-spending/filters", to: "pages#update_monthly_spending_filters", as: :monthly_spending_filters
+  post "dashboard/monthly-spending/filters", to: "cash_flows#update_filters", as: :monthly_spending_filters
   patch "dashboard/preferences", to: "pages#update_preferences"
   patch "dashboard/sections/:section_key/hidden", to: "pages#update_section_hidden", as: :dashboard_section_hidden
 
@@ -778,7 +778,6 @@ Rails.application.routes.draw do
       end
       resource :usage, only: [ :show ], controller: :usage
       resource :cash_flow, only: [ :show ], controller: :cash_flows
-      resource :monthly_spending, only: [ :show ], controller: :monthly_spendings
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resources :insights, only: [ :index ]
       resources :push_subscriptions, only: [ :create, :destroy ]

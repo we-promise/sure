@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sure_mobile/services/monthly_spending_preferences.dart';
+import 'package:sure_mobile/services/preferences_service.dart';
 import 'package:sure_mobile/l10n/app_localizations.dart';
 import 'package:sure_mobile/models/monthly_spending.dart';
 import 'package:sure_mobile/providers/privacy_provider.dart';
@@ -172,5 +172,26 @@ void main() {
     expect(selections.last.accountIds, isNull);
     expect((await MonthlySpendingPreferences.load('server:user'))!.period,
         'last_twelve');
+  });
+  testWidgets('hidden card makes no requests and reacts to settings changes',
+      (tester) async {
+    SharedPreferences.setMockInitialValues(
+        {'monthly_spending_visible:server:user': false});
+    var requests = 0;
+    await tester.pumpWidget(app((_) async {
+      requests++;
+      return ready();
+    }, preferenceKey: 'server:user'));
+    await tester.pumpAndSettle();
+    expect(requests, 0);
+    expect(find.text('Spending by month'), findsNothing);
+    await MonthlySpendingPreferences.setVisible('server:user', true);
+    await tester.pumpAndSettle();
+    expect(requests, 1);
+    expect(find.text('Spending by month'), findsOneWidget);
+    await MonthlySpendingPreferences.setVisible('server:user', false);
+    await tester.pumpAndSettle();
+    expect(find.text('Spending by month'), findsNothing);
+    expect(requests, 1);
   });
 }

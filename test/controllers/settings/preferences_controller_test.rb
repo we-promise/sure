@@ -79,4 +79,26 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, I18n.t("settings.preferences.show.household_budget_enabled")
     assert_not_includes response.body, I18n.t("settings.preferences.show.budget_sharing_title")
   end
+  test "monthly visibility shares Home settings and preserves other preferences" do
+    user = users(:family_admin)
+    user.update!(preferences: { "preview_features_enabled" => true, "hidden_sections" => [ "money_flow" ], "monthly_spending_filters" => { "period" => "this_year" } })
+    get settings_preferences_url
+    assert_select "input[name='user[monthly_spending_visible]'][checked]", count: 1
+    patch settings_preferences_url, params: { user: { monthly_spending_visible: "0" } }
+    assert_includes user.reload.dashboard_hidden_sections, "monthly_spending"
+    assert_includes user.dashboard_hidden_sections, "money_flow"
+    assert_equal "this_year", user.preferences.dig("monthly_spending_filters", "period")
+    get root_url
+    assert_select "turbo-frame#monthly_spending_chart", count: 0
+    patch settings_preferences_url, params: { user: { monthly_spending_visible: "1" } }
+    assert_not_includes user.reload.dashboard_hidden_sections, "monthly_spending"
+    assert_includes user.dashboard_hidden_sections, "money_flow"
+  end
+
+  test "monthly visibility setting is unavailable without preview access" do
+    get settings_preferences_url
+    assert_select "input[name='user[monthly_spending_visible]']", count: 0
+    patch settings_preferences_url, params: { user: { monthly_spending_visible: "0" } }
+    assert_not_includes users(:family_admin).reload.dashboard_hidden_sections, "monthly_spending"
+  end
 end

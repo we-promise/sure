@@ -1,4 +1,10 @@
 <%# locals: (monthly_spending:, filter_error: nil, view_params:) %>
+<% if monthly_spending.nil? %>
+  <%= turbo_frame_tag "monthly_spending_chart", src: dashboard_cash_flow_path(view_params.merge(view: "monthly_spending")) do %>
+    <p class="p-4 text-secondary"><%= t(".loading") %></p>
+  <% end %>
+<% else %>
+<%= turbo_frame_tag "monthly_spending_chart" do %>
 <div id="monthly-spending-section" class="px-4 space-y-4">
   <div class="flex flex-wrap items-center justify-between gap-3">
     <%= render DS::Pill.new(label: t(".preview")) %>
@@ -89,3 +95,6 @@
     <% end %>
   <% end %>
 </div>
+
+<% end %>
+<% end %>

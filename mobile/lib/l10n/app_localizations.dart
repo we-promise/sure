@@ -2083,6 +2083,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Previous year'**
   String get monthlySpendingPreviousYear;
+
+  /// No description provided for @monthlySpendingShowOnHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Show monthly spending on Home'**
+  String get monthlySpendingShowOnHome;
 }
 
 class _AppLocalizationsDelegate

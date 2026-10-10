@@ -161,7 +161,7 @@ owner or removed by that owner; knowing the APNs token alone never authorizes tr
 ## Monthly spending preview
 
 The Home monthly-spending card and Flutter companion app share
-`GET /api/v1/monthly_spending`. It requires ordinary read authentication and
+`GET /api/v1/cash_flow?view=monthly_spending`. It requires ordinary read authentication and
 the authenticated user's personal preview setting. Browser sessions do not
 authenticate this API; use OAuth or `X-Api-Key`. Responses use `private, no-store`.
 
@@ -190,8 +190,7 @@ server, and waits for a successful response before first showing the card.
 Confirmed users can retry later request failures without seeing stale totals.
 No new offline cache is provided. Financial aggregation belongs to the server;
 clients format decimal strings and render the supplied monthly/category data.
-See the [OpenAPI schema](api/openapi.yaml) and the
-[project plan](plans/monthly-spending-dashboard.md) for rollout gates.
+See the [OpenAPI schema](api/openapi.yaml).
 
 ## FinanceKit device publisher
 

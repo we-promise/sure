@@ -1135,4 +1135,8 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get monthlySpendingPreviousYear => 'Föregående år';
+
+  @override
+  String get monthlySpendingShowOnHome =>
+      'Visa utgifter per månad på startsidan';
 }

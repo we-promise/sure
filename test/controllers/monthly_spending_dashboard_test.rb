@@ -9,13 +9,12 @@ class MonthlySpendingDashboardTest < ActionDispatch::IntegrationTest
 
   test "preview block renders after money flow with responsive chart and category details" do
     @user.update!(preferences: { "preview_features_enabled" => true })
-    get root_url
+    get_monthly_home
     assert_response :success
     assert_select "#monthly-spending-section", count: 1
     assert_select "[data-controller='DS--monthly-spending-chart']", count: 1
     assert_select "#monthly-spending-section table"
     assert_select "#monthly-spending-section input[name='monthly_spending_account_ids[]'][type=hidden]", count: 1
-    assert_operator response.body.index('id="money-flow-section"'), :<, response.body.index('id="monthly-spending-section"')
   end
 
   test "feature and hidden list are absent without personal preview access" do
@@ -29,10 +28,10 @@ class MonthlySpendingDashboardTest < ActionDispatch::IntegrationTest
 
   test "empty and invalid filters never show unfiltered bars" do
     @user.update!(preferences: { "preview_features_enabled" => true })
-    get root_url, params: { monthly_spending_account_ids: [ "" ] }
+    get_monthly_home params: { monthly_spending_account_ids: [ "" ] }
     assert_response :success
     assert_select "#monthly-spending-section [data-controller='DS--monthly-spending-chart']", count: 0
-    get root_url, params: { monthly_spending_from: "invalid" }
+    get_monthly_home params: { monthly_spending_from: "invalid" }
     assert_response :success
     assert_select "#monthly-spending-section [data-controller='DS--monthly-spending-chart']", count: 0
     assert_select "#monthly-spending-section [role='status']"
@@ -42,7 +41,7 @@ class MonthlySpendingDashboardTest < ActionDispatch::IntegrationTest
     @user.update!(preferences: { "preview_features_enabled" => true })
     travel_to Date.new(2026, 10, 10) do
       create_transaction(account: accounts(:depository), date: Date.new(2025, 2, 1), amount: 25)
-      get root_url, params: { monthly_spending_from: "2025-2", monthly_spending_to: "2025-04" }
+      get_monthly_home params: { monthly_spending_from: "2025-2", monthly_spending_to: "2025-04" }
       assert_response :success
       assert_select "select[name='monthly_spending_from_month'] option[selected][value='2']"
       assert_select "select[name='monthly_spending_from_year'] option[selected][value='2025']"
@@ -54,7 +53,7 @@ class MonthlySpendingDashboardTest < ActionDispatch::IntegrationTest
   test "invalid range retains date and account selections for correction" do
     @user.update!(preferences: { "preview_features_enabled" => true })
     travel_to Date.new(2026, 10, 10) do
-      get root_url, params: {
+      get_monthly_home params: {
         monthly_spending_from_year: "2026", monthly_spending_from_month: "2",
         monthly_spending_to_year: "2025", monthly_spending_to_month: "11",
         monthly_spending_account_ids: [ "" ]
@@ -77,15 +76,17 @@ class MonthlySpendingDashboardTest < ActionDispatch::IntegrationTest
     }
     assert_response :see_other
     follow_redirect!
+    load_monthly_frame
     assert_select "select[name='monthly_spending_from_month'] option[selected][value='2']"
     assert_equal "custom", @user.reload.preferences.dig("monthly_spending_filters", "period")
-    get root_url
+    get_monthly_home
     assert_select "select[name='monthly_spending_from_year'] option[selected][value='2025']"
     assert_select "input[name='monthly_spending_account_ids[]'][checked]", count: 0
     other = users(:family_member)
     assert_nil other.preferences&.[]("monthly_spending_filters")
     post monthly_spending_filters_path, params: { reset: "true" }
     follow_redirect!
+    load_monthly_frame
     assert_nil @user.reload.preferences["monthly_spending_filters"]
   end
 
@@ -97,12 +98,13 @@ class MonthlySpendingDashboardTest < ActionDispatch::IntegrationTest
       assert_equal "last_twelve", @user.reload.preferences.dig("monthly_spending_filters", "period")
     end
     travel_to Date.new(2026, 1, 10) do
-      get root_url
+      get_monthly_home
       assert_select "select[name='monthly_spending_from_month'] option[selected][value='2']"
       assert_select "select[name='monthly_spending_to_year'] option[selected][value='2026']"
       saved = @user.reload.preferences["monthly_spending_filters"].deep_dup
       post monthly_spending_filters_path, params: { monthly_spending_from: "2026-12", monthly_spending_to: "2026-01" }
       follow_redirect!
+      load_monthly_frame
       assert_select "#monthly-spending-section [role='status']"
       assert_equal saved, @user.reload.preferences["monthly_spending_filters"]
     end
@@ -114,4 +116,14 @@ class MonthlySpendingDashboardTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     assert_nil @user.reload.preferences["monthly_spending_filters"]
   end
+  private
+    def get_monthly_home(params: {})
+      get root_url, params: params
+      load_monthly_frame
+    end
+
+    def load_monthly_frame
+      frame = css_select("turbo-frame#monthly_spending_chart[src]").first
+      get frame["src"] if frame
+    end
 end

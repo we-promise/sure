@@ -18,6 +18,29 @@ class User::MonthlySpendingPreferences
     end
   end
 
+  def self.month_param(params, key)
+    if params.key?("#{key}_year") || params.key?("#{key}_month")
+      year, month = params["#{key}_year"], params["#{key}_month"]
+      if year.is_a?(String) && month.is_a?(String) && year.match?(/\A\d{1,4}\z/) && month.match?(/\A\d{1,2}\z/)
+        return format("%04d-%02d-01", year.to_i, month.to_i)
+      end
+      return "#{year}-#{month}"
+    end
+    value = params[key]
+    return if value.nil?
+    if value.is_a?(String) && (match = value.match(/\A(\d{4})-(\d{1,2})\z/))
+      return format("%04d-%02d-01", match[1].to_i, match[2].to_i)
+    end
+    value
+  end
+
+
+  def self.selection(params, dates: nil)
+    { from: month_param(params, :monthly_spending_from) || dates&.first&.iso8601,
+      to: month_param(params, :monthly_spending_to) || dates&.last&.iso8601,
+      account_ids: params[:monthly_spending_account_ids], category_ids: params[:monthly_spending_category_ids] }
+  end
+
   def query_params
     saved = @user.preferences&.[](KEY)
     return {} unless saved.is_a?(Hash)

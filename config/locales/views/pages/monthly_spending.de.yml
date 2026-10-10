@@ -3,6 +3,8 @@
     "pages": {
       "dashboard": {
         "monthly_spending": {
+        "loading": "Monatsausgaben werden geladen…",
+        "show_on_home": "Monatsausgaben auf der Startseite anzeigen",
           "title": "Ausgaben nach Monat",
           "preview": "Vorschau",
           "filters": "Filter",

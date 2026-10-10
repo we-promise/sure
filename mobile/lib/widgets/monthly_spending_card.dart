@@ -6,7 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/monthly_spending.dart';
 import '../providers/privacy_provider.dart';
 import '../services/monthly_spending_service.dart';
-import '../services/monthly_spending_preferences.dart';
+import '../services/preferences_service.dart';
 import '../theme/sure_colors.dart';
 import '../theme/sure_spacing.dart';
 import '../utils/money_masker.dart';
@@ -30,6 +30,7 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
       const MonthlySpendingSelection(period: 'last_twelve');
   MonthlySpendingResult? _result;
   bool _loading = true;
+  bool _visible = true;
   bool _hasPreviewAccess = false;
   int _request = 0;
   String? _selectedMonth;
@@ -38,12 +39,20 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
   @override
   void initState() {
     super.initState();
+    MonthlySpendingPreferences.changes.addListener(_onVisibilityChanged);
     _restore();
   }
+
+  void _onVisibilityChanged() => _restore();
 
   Future<void> _restore() async {
     final request = ++_request;
     final key = widget.preferenceKey;
+    final visible =
+        key == null || await MonthlySpendingPreferences.visible(key);
+    if (!mounted || request != _request) return;
+    setState(() => _visible = visible);
+    if (!visible) return;
     final saved =
         key == null ? null : await MonthlySpendingPreferences.load(key);
     if (!mounted || request != _request) return;
@@ -66,11 +75,13 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
   @override
   void dispose() {
     _request++;
+    MonthlySpendingPreferences.changes.removeListener(_onVisibilityChanged);
     _scroll.dispose();
     super.dispose();
   }
 
   Future<void> _load({bool save = false}) async {
+    if (!_visible) return;
     final preferenceKey = widget.preferenceKey;
     final request = ++_request;
     setState(() {
@@ -143,6 +154,7 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_visible) return const SizedBox.shrink();
     final l = AppLocalizations.of(context);
     final palette = SureColors.of(context).palette;
     final data = _result?.data;

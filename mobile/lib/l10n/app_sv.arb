@@ -340,5 +340,6 @@
   "monthlySpendingChooseMonth": "Välj valfri månad",
   "monthlySpendingLastTwelve": "Senaste 12 månaderna",
   "monthlySpendingThisYear": "Detta år",
-  "monthlySpendingPreviousYear": "Föregående år"
+  "monthlySpendingPreviousYear": "Föregående år",
+  "monthlySpendingShowOnHome": "Visa utgifter per månad på startsidan"
 }

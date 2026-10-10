@@ -3,6 +3,8 @@
     "pages": {
       "dashboard": {
         "monthly_spending": {
+        "loading": "Loading monthly spending…",
+        "show_on_home": "Show monthly spending on Home",
           "title": "Spending by month",
           "preview": "Preview",
           "filters": "Filters",

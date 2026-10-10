@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sure_mobile/services/preferences_service.dart';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -8,9 +10,52 @@ import 'package:sure_mobile/services/api_config.dart';
 import '../support/monthly_spending_fixture.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+  test('selection is isolated by server and user and preserves explicit none',
+      () async {
+    const selection = MonthlySpendingSelection(
+        period: 'last_twelve', accountIds: [], categoryIds: ['food']);
+    await MonthlySpendingPreferences.save('server-a:user-a', selection);
+    expect(await MonthlySpendingPreferences.load('server-b:user-a'), isNull);
+    expect(await MonthlySpendingPreferences.load('server-a:user-b'), isNull);
+    final restored =
+        (await MonthlySpendingPreferences.load('server-a:user-a'))!;
+    expect(restored.accountIds, isEmpty);
+    expect(restored.categoryIds, ['food']);
+    expect(restored.resolved(DateTime(2026, 1)).from, isNull);
+    expect(restored.resolved(DateTime(2026, 1)).query['account_ids[]'], ['']);
+  });
+  test('rolling year follows January while custom dates stay fixed', () {
+    const rolling = MonthlySpendingSelection(
+        period: 'this_year', from: '2025-01-01', to: '2025-12-01');
+    expect(rolling.resolved(DateTime(2026, 1)).from, '2026-01-01');
+    expect(rolling.resolved(DateTime(2026, 1)).to, '2026-01-01');
+    const custom = MonthlySpendingSelection(
+        period: 'custom', from: '2025-02-01', to: '2025-04-01');
+    expect(custom.resolved(DateTime(2026, 1)).from, '2025-02-01');
+  });
+  test('corrupt saved settings do not break Home', () async {
+    SharedPreferences.setMockInitialValues(
+        {'monthly_spending:server:user': 'invalid'});
+    expect(await MonthlySpendingPreferences.load('server:user'), isNull);
+  });
+  test('visibility is isolated by user/server and does not clear filters',
+      () async {
+    await MonthlySpendingPreferences.save(
+        'a:one', const MonthlySpendingSelection(categoryIds: []));
+    await MonthlySpendingPreferences.setVisible('a:one', false);
+    expect(await MonthlySpendingPreferences.visible('a:one'), false);
+    expect(await MonthlySpendingPreferences.visible('b:one'), true);
+    expect(await MonthlySpendingPreferences.visible('a:two'), true);
+    expect(
+        (await MonthlySpendingPreferences.load('a:one'))!.categoryIds, isEmpty);
+  });
+
   test('preserves empty filter selection and trusts server monthly totals',
       () async {
     final service = MonthlySpendingService(client: MockClient((request) async {
+      expect(request.url.path, '/api/v1/cash_flow');
+      expect(request.url.queryParameters['view'], 'monthly_spending');
       expect(request.url.queryParametersAll['account_ids[]'], ['']);
       expect(request.url.queryParametersAll['category_ids[]'], ['food']);
       return http.Response(jsonEncode(monthlySpendingFixture()), 200);
@@ -187,5 +232,14 @@ void main() {
           MonthlySpendingStatus.error);
       service.dispose();
     }
+  });
+  test('older cash-flow server without this view hides the preview', () async {
+    final service = MonthlySpendingService(
+        client: MockClient(
+            (_) async => http.Response('{"error":"invalid_view"}', 422)));
+    final result = await service.fetch(
+        accessToken: 'test', selection: const MonthlySpendingSelection());
+    expect(result.status, MonthlySpendingStatus.unavailable);
+    service.dispose();
   });
 }

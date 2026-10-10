@@ -1123,4 +1123,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get monthlySpendingPreviousYear => 'Previous year';
+
+  @override
+  String get monthlySpendingShowOnHome => 'Show monthly spending on Home';
 }

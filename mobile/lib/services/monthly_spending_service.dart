@@ -30,7 +30,7 @@ class MonthlySpendingService {
   Future<MonthlySpendingResult> fetch(
       {required String accessToken,
       required MonthlySpendingSelection selection}) async {
-    final endpoint = Uri.parse('${ApiConfig.baseUrl}/api/v1/monthly_spending');
+    final endpoint = Uri.parse('${ApiConfig.baseUrl}/api/v1/cash_flow');
     final headers = ApiConfig.getAuthHeaders(accessToken);
     var result = await _fetch(endpoint, headers, selection);
     if (selection.period != 'this_year' &&
@@ -60,7 +60,8 @@ class MonthlySpendingService {
 
   Future<MonthlySpendingResult> _fetch(Uri endpoint,
       Map<String, String> headers, MonthlySpendingSelection selection) async {
-    final uri = endpoint.replace(queryParameters: selection.query);
+    final uri = endpoint.replace(
+        queryParameters: {'view': 'monthly_spending', ...selection.query});
     try {
       final response = await _client
           .get(uri, headers: headers)
@@ -77,6 +78,10 @@ class MonthlySpendingService {
           // Preview off or an older server: the rest of Home still works.
           return const MonthlySpendingResult(MonthlySpendingStatus.unavailable);
         case 422:
+          if (jsonDecode(response.body)['error'] == 'invalid_view') {
+            return const MonthlySpendingResult(
+                MonthlySpendingStatus.unavailable);
+          }
           return const MonthlySpendingResult(
               MonthlySpendingStatus.invalidSelection);
         default:

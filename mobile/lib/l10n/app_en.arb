@@ -1012,5 +1012,6 @@
   "monthlySpendingChooseMonth": "Choose any month",
   "monthlySpendingLastTwelve": "Last 12 months",
   "monthlySpendingThisYear": "This year",
-  "monthlySpendingPreviousYear": "Previous year"
+  "monthlySpendingPreviousYear": "Previous year",
+  "monthlySpendingShowOnHome": "Show monthly spending on Home"
 }

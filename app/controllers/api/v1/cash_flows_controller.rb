@@ -3,6 +3,14 @@ class Api::V1::CashFlowsController < Api::V1::BaseController
 
   def show
     response.headers["Cache-Control"] = "private, no-store"
+    if params[:view] == "monthly_spending"
+      return invalid_query("invalid_view", "Monthly spending cannot combine with summary or Sankey parameters") if params[:include] || params[:month] || params[:start_date] || params[:end_date] || params[:group_by]
+      unless current_resource_owner.preview_features_enabled?
+        return render json: { error: "preview_required", message: "Enable preview features in Preferences" }, status: :forbidden
+      end
+      statement = IncomeStatement.new(current_resource_owner.family, user: current_resource_owner)
+      return render json: IncomeStatement::MonthlySpending.new(statement, params: params.to_unsafe_h.slice("from", "to", "account_ids", "category_ids").symbolize_keys)
+    end
     today = Date.current
     statement = IncomeStatement.new(current_resource_owner.family, user: current_resource_owner)
     if params[:include] && params[:view]
@@ -38,6 +46,8 @@ class Api::V1::CashFlowsController < Api::V1::BaseController
     else
       render json: IncomeStatement::CashFlow.new(statement, month: month, as_of: today, include_sankey: params[:include] == "sankey")
     end
+  rescue IncomeStatement::MonthlySpending::InvalidSelection => error
+    invalid_query("invalid_selection", error.message)
   end
 
   private

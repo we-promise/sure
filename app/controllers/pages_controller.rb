@@ -34,35 +34,21 @@ class PagesController < ApplicationController
     :monthly_spending_from, :monthly_spending_to, :monthly_spending_period,
     { money_flow_account_ids: [], monthly_spending_account_ids: [], monthly_spending_category_ids: [] } ].freeze
 
+  def self.dashboard_view_params(params)
+    params.permit(*DASHBOARD_VIEW_PARAMS).to_h.tap do |view|
+      %i[monthly_spending_from monthly_spending_to].each do |key|
+        value = User::MonthlySpendingPreferences.month_param(params, key)
+        view[key.to_s] = value.delete_suffix("-01") if value.is_a?(String)
+      end
+    end
+  end
+
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
   DEFAULT_HEIGHT_PRESET = "auto"
 
   skip_authentication only: %i[redis_configuration_error privacy terms]
   before_action :ensure_intro_guest!, only: :intro
-
-  def update_monthly_spending_filters
-    return head :not_found unless preview_features_enabled?
-    preferences = User::MonthlySpendingPreferences.new(Current.user)
-    if params[:reset] == "true"
-      preferences.reset
-    else
-      period = params[:monthly_spending_period] || "last_twelve"
-      dates = User::MonthlySpendingPreferences.period_dates(period)
-      raise IncomeStatement::MonthlySpending::InvalidSelection, "Unknown period" if dates.nil? && period != "custom"
-      selection = {
-        from: monthly_spending_month_param(:monthly_spending_from) || dates&.first&.iso8601,
-        to: monthly_spending_month_param(:monthly_spending_to) || dates&.last&.iso8601,
-        account_ids: params[:monthly_spending_account_ids],
-        category_ids: params[:monthly_spending_category_ids]
-      }
-      spending = IncomeStatement::MonthlySpending.new(Current.family.income_statement, params: selection)
-      preferences.save(spending, period: period)
-    end
-    redirect_to root_path(dashboard_view_params.except("monthly_spending_from", "monthly_spending_to", "monthly_spending_period", "monthly_spending_account_ids", "monthly_spending_category_ids")), status: :see_other
-  rescue IncomeStatement::MonthlySpending::InvalidSelection
-    redirect_to root_path(dashboard_view_params), status: :see_other
-  end
 
   def dashboard
     unless params.keys.any? { |key| key.start_with?("monthly_spending_") }
@@ -159,14 +145,7 @@ class PagesController < ApplicationController
     end
 
     def dashboard_view_params
-      params.permit(*DASHBOARD_VIEW_PARAMS).to_h.tap do |view|
-        # Keep one canonical URL representation even when the browser form
-        # submits separate month/year controls. Customization and presets carry it.
-        %i[monthly_spending_from monthly_spending_to].each do |key|
-          value = monthly_spending_month_param(key)
-          view[key.to_s] = value.delete_suffix("-01") if value.is_a?(String)
-        end
-      end
+      self.class.dashboard_view_params(params)
     end
 
     # Each widget builds its own data, so a hidden widget's builder is never
@@ -326,44 +305,14 @@ class PagesController < ApplicationController
     def monthly_spending_section
       return nil unless preview_features_enabled?
 
-      selection = {
-        from: monthly_spending_month_param(:monthly_spending_from),
-        to: monthly_spending_month_param(:monthly_spending_to),
-        account_ids: params[:monthly_spending_account_ids],
-        category_ids: params[:monthly_spending_category_ids]
-      }
-      begin
-        spending = IncomeStatement::MonthlySpending.new(dashboard_income_statement, params: selection)
-      rescue IncomeStatement::MonthlySpending::InvalidSelection
-        filter_error = true
-        # Only render default filter controls; never show unfiltered results
-        # after rejecting the user's selection.
-        spending = IncomeStatement::MonthlySpending.new(dashboard_income_statement)
-      end
       {
         key: "monthly_spending",
         title: "pages.dashboard.monthly_spending.title",
         partial: "pages/dashboard/monthly_spending",
         layout: section_layout("monthly_spending"),
-        locals: { monthly_spending: spending, filter_error: filter_error, view_params: dashboard_view_params },
+        locals: { monthly_spending: nil, view_params: dashboard_view_params },
         visible: @accounts.any?, collapsible: true
       }
-    end
-
-    def monthly_spending_month_param(key)
-      if params.key?("#{key}_year") || params.key?("#{key}_month")
-        year, month = params["#{key}_year"], params["#{key}_month"]
-        if year.is_a?(String) && month.is_a?(String) && year.match?(/\A\d{1,4}\z/) && month.match?(/\A\d{1,2}\z/)
-          return format("%04d-%02d-01", year.to_i, month.to_i)
-        end
-        return "#{year}-#{month}"
-      end
-      value = params[key]
-      return if value.nil?
-      if value.is_a?(String) && (match = value.match(/\A(\d{4})-(\d{1,2})\z/))
-        return format("%04d-%02d-01", match[1].to_i, match[2].to_i)
-      end
-      value
     end
 
     def build_dashboard_sections

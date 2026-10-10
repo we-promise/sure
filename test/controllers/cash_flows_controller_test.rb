@@ -104,6 +104,16 @@ class CashFlowsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "JPY", response.parsed_body["currency"]
   end
 
+  test "monthly frame uses browser identity and rejects foreign account selections" do
+    sign_in @user
+    get dashboard_cash_flow_path, params: { view: "monthly_spending", monthly_spending_account_ids: [ SecureRandom.uuid ] }
+    assert_response :success
+    assert_select "turbo-frame#monthly_spending_chart"
+    assert_select "[data-monthly-spending-total]", count: 0
+    assert_select "[role='status']"
+    assert_equal "private, no-store", response.headers["Cache-Control"]
+  end
+
   private
     def api_key
       ApiKey.create!(user: @user, name: "Graph Read", scopes: [ "read" ],
