@@ -3,10 +3,10 @@ zh-CN:
   settings:
     hostings:
       brand_fetch_settings:
-        description: 请输入 Brand Fetch 提供的 Client ID
+        description: 请输入 Brandfetch 提供的 Client ID
         label: Client ID
         placeholder: 在此输入您的 Client ID
-        title: Brand Fetch 设置
+        title: Brandfetch 设置
         env_configured_message: 已通过环境变量配置 Brandfetch。
         show_details: "（显示详情）"
         setup_step_1_html: 前往 Brandfetch 并创建 API Key。

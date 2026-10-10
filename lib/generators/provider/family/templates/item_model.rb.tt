@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class <%= class_name %>Item < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -42,11 +42,6 @@ class <%= class_name %>Item < ApplicationRecord
 
   def syncer
     <%= class_name %>Item::Syncer.new(self)
-  end
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
   end
 
 <% if investment_provider? -%>
