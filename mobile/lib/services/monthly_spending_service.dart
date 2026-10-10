@@ -30,11 +30,40 @@ class MonthlySpendingService {
   Future<MonthlySpendingResult> fetch(
       {required String accessToken,
       required MonthlySpendingSelection selection}) async {
-    final uri = Uri.parse('${ApiConfig.baseUrl}/api/v1/monthly_spending')
-        .replace(queryParameters: selection.query);
+    final endpoint = Uri.parse('${ApiConfig.baseUrl}/api/v1/monthly_spending');
+    final headers = ApiConfig.getAuthHeaders(accessToken);
+    var result = await _fetch(endpoint, headers, selection);
+    if (selection.period != 'this_year' &&
+        selection.period != 'previous_year') {
+      return result;
+    }
+    if (result.status == MonthlySpendingStatus.invalidSelection) {
+      // The device may already be in a month the family's server has not
+      // reached. Ask for its default period, preserving every selected ID.
+      result = await _fetch(
+          endpoint,
+          headers,
+          MonthlySpendingSelection(
+              accountIds: selection.accountIds,
+              categoryIds: selection.categoryIds));
+    }
+    final data = result.data;
+    if (result.status != MonthlySpendingStatus.ready || data == null) {
+      return result;
+    }
+    final current = selection.resolved(data.asOf);
+    if (data.from == current.from && data.to == current.to) return result;
+    // Refresh a rolling year using the freshly returned server date, rather
+    // than a cached response or the device's calendar. Usually no retry is needed.
+    return _fetch(endpoint, headers, current);
+  }
+
+  Future<MonthlySpendingResult> _fetch(Uri endpoint,
+      Map<String, String> headers, MonthlySpendingSelection selection) async {
+    final uri = endpoint.replace(queryParameters: selection.query);
     try {
       final response = await _client
-          .get(uri, headers: ApiConfig.getAuthHeaders(accessToken))
+          .get(uri, headers: headers)
           .timeout(const Duration(seconds: 30));
       switch (response.statusCode) {
         case 200:
