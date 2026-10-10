@@ -118,7 +118,7 @@ class Provider::Openai::AutoCategorizer
   private
 
     def auto_categorize_openai_native
-      span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
+      span = langfuse_trace&.generation(name: "auto_categorize_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
         user_categories: user_categories
@@ -202,7 +202,7 @@ class Provider::Openai::AutoCategorizer
     end
 
     def auto_categorize_with_mode(mode)
-      span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
+      span = langfuse_trace&.generation(name: "auto_categorize_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
         user_categories: user_categories,

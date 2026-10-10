@@ -1,9 +1,11 @@
-require "langfuse"
+require "langfuse_tracing"
 
 if ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
-  Langfuse.configure do |config|
-    config.public_key = ENV["LANGFUSE_PUBLIC_KEY"]
-    config.secret_key = ENV["LANGFUSE_SECRET_KEY"]
-    config.host = ENV["LANGFUSE_HOST"] if ENV["LANGFUSE_HOST"].present?
-  end
+  Rails.configuration.x.langfuse = LangfuseTracing.new(
+    public_key: ENV.fetch("LANGFUSE_PUBLIC_KEY"),
+    secret_key: ENV.fetch("LANGFUSE_SECRET_KEY"),
+    host: ENV["LANGFUSE_HOST"].presence || "https://cloud.langfuse.com"
+  )
+
+  at_exit { Rails.configuration.x.langfuse.shutdown }
 end

@@ -130,7 +130,7 @@ class Provider::Openai::AutoMerchantDetector
   private
 
     def auto_detect_merchants_openai_native
-      span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
+      span = langfuse_trace&.generation(name: "auto_detect_merchants_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
         user_merchants: user_merchants
@@ -211,7 +211,7 @@ class Provider::Openai::AutoMerchantDetector
     end
 
     def auto_detect_merchants_with_mode(mode)
-      span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
+      span = langfuse_trace&.generation(name: "auto_detect_merchants_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
         user_merchants: user_merchants,

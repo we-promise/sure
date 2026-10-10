@@ -23,7 +23,7 @@ class Provider::Anthropic::BankStatementExtractor
             "PDF exceeds Anthropic's 32 MB limit (#{pdf_content.bytesize} bytes)"
     end
 
-    span = langfuse_trace&.span(name: "extract_bank_statement_api_call", input: {
+    span = langfuse_trace&.generation(name: "extract_bank_statement_api_call", model: model, input: {
       model: model,
       pdf_size: pdf_content.bytesize
     })
@@ -216,14 +216,5 @@ class Provider::Anthropic::BankStatementExtractor
 
     def block_input(block)
       block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
-    end
-
-    def usage_hash(raw_usage)
-      return {} unless raw_usage
-      {
-        "input_tokens" => raw_usage.input_tokens.to_i,
-        "output_tokens" => raw_usage.output_tokens.to_i,
-        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i
-      }
     end
 end

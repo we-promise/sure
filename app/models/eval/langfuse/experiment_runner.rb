@@ -18,6 +18,7 @@ class Eval::Langfuse::ExperimentRunner
 
   def run(run_name: nil)
     @run_name = run_name || generate_run_name
+    @experiment_id = SecureRandom.uuid
 
     Rails.logger.info("[Langfuse Experiment] Starting experiment '#{@run_name}'")
     Rails.logger.info("[Langfuse Experiment] Dataset: #{dataset.name} (#{dataset.sample_count} samples)")
@@ -25,6 +26,7 @@ class Eval::Langfuse::ExperimentRunner
 
     # Ensure dataset exists in Langfuse
     ensure_dataset_exported
+    @dataset_id = client.get_dataset(name: langfuse_dataset_name).fetch("id")
 
     # Get dataset items from Langfuse
     items = fetch_langfuse_items
@@ -45,6 +47,8 @@ class Eval::Langfuse::ExperimentRunner
       samples_processed: results.size,
       metrics: metrics
     }
+  ensure
+    client.shutdown
   end
 
   private
@@ -94,7 +98,8 @@ class Eval::Langfuse::ExperimentRunner
     end
 
     def process_batch(items)
-      case dataset.eval_type
+      @pending_scores = []
+      results = case dataset.eval_type
       when "categorization"
         process_categorization_batch(items)
       when "merchant_detection"
@@ -104,6 +109,13 @@ class Eval::Langfuse::ExperimentRunner
       else
         raise "Unsupported eval type: #{dataset.eval_type}"
       end
+      client.flush_experiment_items
+      @pending_scores.each { |args| score_result(*args) }
+      results
+    rescue => e
+      handle_batch_error(items, e)
+    ensure
+      @pending_scores = nil
     end
 
     def process_categorization_batch(items)
@@ -141,8 +153,8 @@ class Eval::Langfuse::ExperimentRunner
           score_value = correct ? 1.0 : 0.0
 
           # Create trace and score in Langfuse
-          trace_id = create_trace_for_item(item, actual_category, latency_ms)
-          score_result(trace_id, item["id"], score_value, correct, actual_category, expected_category)
+          observation = create_trace_for_item(item, actual_category, latency_ms)
+          queue_score_result(observation, item["id"], score_value, correct, actual_category, expected_category)
 
           {
             item_id: item["id"],
@@ -194,8 +206,8 @@ class Eval::Langfuse::ExperimentRunner
 
           # Create trace and score in Langfuse
           actual_output = { business_name: actual_name, business_url: actual_url }
-          trace_id = create_trace_for_item(item, actual_output, latency_ms)
-          score_result(trace_id, item["id"], score_value, correct, actual_output, item["expectedOutput"])
+          observation = create_trace_for_item(item, actual_output, latency_ms)
+          queue_score_result(observation, item["id"], score_value, correct, actual_output, item["expectedOutput"])
 
           {
             item_id: item["id"],
@@ -239,8 +251,8 @@ class Eval::Langfuse::ExperimentRunner
       score_value = correct ? 1.0 : 0.0
 
       # Create trace and score in Langfuse
-      trace_id = create_trace_for_item(item, { functions: actual_functions }, latency_ms)
-      score_result(trace_id, item["id"], score_value, correct, actual_functions, expected_functions)
+      observation = create_trace_for_item(item, { functions: actual_functions }, latency_ms)
+      queue_score_result(observation, item["id"], score_value, correct, actual_functions, expected_functions)
 
       {
         item_id: item["id"],
@@ -254,49 +266,40 @@ class Eval::Langfuse::ExperimentRunner
     end
 
     def create_trace_for_item(item, output, latency_ms)
-      trace_id = client.create_trace(
+      client.create_experiment_item(
         name: "#{dataset.eval_type}_eval",
         input: item["input"],
         output: output,
-        metadata: {
-          run_name: @run_name,
-          model: model,
-          latency_ms: latency_ms,
-          dataset_item_id: item["id"]
-        }
+        expected_output: item["expectedOutput"],
+        experiment_id: @experiment_id,
+        experiment_name: @run_name,
+        dataset_id: @dataset_id,
+        item_id: item.fetch("id"),
+        start_time: Time.current - latency_ms / 1000.0,
+        metadata: (item["metadata"] || {}).merge(model: model, latency_ms: latency_ms)
       )
-
-      Rails.logger.debug("[Langfuse Experiment] Created trace #{trace_id} for item #{item['id']}")
-      trace_id
     end
 
-    def score_result(trace_id, item_id, score_value, correct, actual, expected)
-      return unless trace_id
+    def queue_score_result(observation, item_id, score_value, correct, actual, expected)
+      @pending_scores << [ observation, item_id, score_value, correct, actual, expected ]
+    end
 
-      # Score the accuracy
+    def score_result(observation, item_id, score_value, correct, actual, expected)
+      return unless observation
+
       client.create_score(
-        trace_id: trace_id,
+        trace_id: observation.id,
+        observation_id: observation.span_id,
         name: "accuracy",
         value: score_value,
         comment: correct ? "Correct" : "Expected: #{expected.inspect}, Got: #{actual.inspect}"
-      )
-
-      # Link to dataset run
-      client.create_dataset_run_item(
-        run_name: @run_name,
-        dataset_item_id: item_id,
-        trace_id: trace_id,
-        metadata: {
-          correct: correct,
-          actual: actual,
-          expected: expected
-        }
       )
     rescue => e
       Rails.logger.warn("[Langfuse Experiment] Failed to score item #{item_id}: #{e.message}")
     end
 
     def handle_batch_error(items, error)
+      @pending_scores&.clear
       error_message = error.is_a?(Exception) ? error.message : error.to_s
       Rails.logger.error("[Langfuse Experiment] Batch error: #{error_message}")
 
