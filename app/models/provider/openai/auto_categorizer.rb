@@ -14,6 +14,10 @@ class Provider::Openai::AutoCategorizer
   # This is a heuristic to detect when strict JSON mode is breaking the model's ability to reason
   AUTO_MODE_NULL_THRESHOLD = 0.5
 
+  # Key aliases accepted from models that don't follow the schema's field names
+  TRANSACTION_ID_KEYS = %w[transaction_id id txn_id].freeze
+  CATEGORY_NAME_KEYS = %w[category_name category name].freeze
+
   attr_reader :client, :model, :transactions, :user_categories, :custom_provider, :langfuse_trace, :family, :json_mode
 
   def initialize(client, model: "", transactions: [], user_categories: [], custom_provider: false, langfuse_trace: nil, family: nil, json_mode: nil)
@@ -167,8 +171,10 @@ class Provider::Openai::AutoCategorizer
       end
     rescue Faraday::BadRequestError => e
       # If strict mode fails (HTTP 400), fall back to none mode
-      # This handles providers that don't support json_schema response format
-      if json_mode == JSON_MODE_STRICT || json_mode == JSON_MODE_AUTO
+      # This handles providers that don't support json_schema response format.
+      # Auto mode performs its own strict-attempt fallback; a BadRequestError
+      # reaching this rescue while in auto mode came from a none-mode retry.
+      if json_mode == JSON_MODE_STRICT
         Rails.logger.warn("Strict JSON mode failed, falling back to none mode: #{e.message}")
         auto_categorize_with_mode(JSON_MODE_NONE)
       else
@@ -186,7 +192,18 @@ class Provider::Openai::AutoCategorizer
     # The heuristic is simple: if >50% of results are null or missing, the model likely
     # needs the freedom to reason in its output (which strict mode prevents).
     def auto_categorize_with_auto_mode
-      result = auto_categorize_with_mode(JSON_MODE_STRICT)
+      result = begin
+        auto_categorize_with_mode(JSON_MODE_STRICT)
+      rescue Provider::Openai::ResponseFormatError => e
+        Rails.logger.warn("Auto mode: strict JSON response could not be parsed (#{e.message}), retrying with none mode")
+        return auto_categorize_with_mode(JSON_MODE_NONE)
+      rescue Faraday::BadRequestError => e
+        # Handle the provider-rejects-strict-schema fallback inside auto mode so
+        # a failure of the none-mode retry propagates instead of re-entering
+        # the outer BadRequestError rescue and firing a second fallback.
+        Rails.logger.warn("Auto mode: strict JSON mode rejected by provider (#{e.message}), retrying with none mode")
+        return auto_categorize_with_mode(JSON_MODE_NONE)
+      end
 
       null_count = result.count { |r| r.category_name.nil? || r.category_name == "null" }
       missing_count = transactions.size - result.size
@@ -355,20 +372,37 @@ class Provider::Openai::AutoCategorizer
       raw = response.dig("choices", 0, "message", "content")
       parsed = parse_json_flexibly(raw)
 
-      # Handle different response formats from various LLMs
-      categorizations = parsed.dig("categorizations") ||
-                        parsed.dig("results") ||
-                        (parsed.is_a?(Array) ? parsed : nil)
+      # Handle different response formats from various LLMs. parsed can be any
+      # JSON value; only Hash (with a known key) and bare Array are usable.
+      categorizations = if parsed.is_a?(Hash)
+        parsed.dig("categorizations") || parsed.dig("results")
+      else
+        parsed
+      end
 
-      raise Provider::Openai::Error, "Could not find categorizations in response" if categorizations.nil?
+      unless categorizations.is_a?(Array) && categorizations.all? { |c| c.is_a?(Hash) }
+        raise Provider::Openai::ResponseFormatError, "Could not find categorizations in response"
+      end
+
+      # Drop items with no transaction id: they can't be correlated to a
+      # transaction, and left in they'd surface as nil-field rows that hide a
+      # malformed batch from the auto-mode retry heuristic. A missing category
+      # field is fine (models in none/json_object mode often omit nulls) and
+      # is treated as "no category" downstream.
+      categorizations.select! { |cat| field_value(cat, TRANSACTION_ID_KEYS).present? }
 
       # Normalize field names (some LLMs use different naming)
       categorizations.map do |cat|
         {
-          "transaction_id" => cat["transaction_id"] || cat["id"] || cat["txn_id"],
-          "category_name" => cat["category_name"] || cat["category"] || cat["name"]
+          "transaction_id" => field_value(cat, TRANSACTION_ID_KEYS),
+          "category_name" => field_value(cat, CATEGORY_NAME_KEYS)
         }
       end
+    end
+
+    # First truthy value among the accepted key aliases (same semantics as `a || b || c`)
+    def field_value(item, keys)
+      item.values_at(*keys).find(&:itself)
     end
 
     # Flexible JSON parsing that handles common LLM output issues
@@ -433,7 +467,7 @@ class Provider::Openai::AutoCategorizer
         end
       end
 
-      raise Provider::Openai::Error, "Could not parse JSON from response: #{raw.truncate(200)}"
+      raise Provider::Openai::ResponseFormatError, "Could not parse JSON from response: #{raw.truncate(200)}"
     end
 
     # Strip thinking model tags (<think>...</think>) from response
