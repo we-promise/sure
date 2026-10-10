@@ -114,6 +114,7 @@ class ReportsController < ApplicationController
       @income_statement = Current.family.income_statement(user: Current.user)
       @current_income_totals = @income_statement.income_totals(period: @period)
       @current_expense_totals = @income_statement.expense_totals(period: @period)
+      @current_investment_contribution_totals = @income_statement.investment_contribution_totals(period: @period)
 
       @previous_income_totals = @income_statement.income_totals(period: @previous_period)
       @previous_expense_totals = @income_statement.expense_totals(period: @previous_period)
@@ -282,6 +283,10 @@ class ReportsController < ApplicationController
       current_income = ensure_money(@current_income_totals.total)
       current_expenses = ensure_money(@current_expense_totals.total)
       net_savings = current_income - current_expenses
+      # Cash moved into investment/crypto accounts: a real outflow, but not
+      # consumption, so it's kept separate from current_expenses/net_savings
+      # rather than folded back into "spending" (see IncomeStatement::ScopedTransactionsQuery#classification_sql).
+      current_investment_contributions = ensure_money(@current_investment_contribution_totals.total)
 
       previous_income = ensure_money(@previous_income_totals.total)
       previous_expenses = ensure_money(@previous_expense_totals.total)
@@ -299,6 +304,7 @@ class ReportsController < ApplicationController
         current_expenses: current_expenses,
         expense_change: expense_change,
         net_savings: net_savings,
+        current_investment_contributions: current_investment_contributions,
         budget_percent: budget_percent
       }
     end
@@ -427,8 +433,18 @@ class ReportsController < ApplicationController
       end
 
       # Helper to process an entry (transaction or trade)
-      process_entry = ->(category, entry, is_trade) do
-        type = entry.amount > 0 ? "expense" : "income"
+      # `kind` is nil for trades, which have no Transaction#kind.
+      process_entry = ->(category, entry, is_trade, kind: nil) do
+        # A transfer to an investment/crypto account is a real cash outflow
+        # but not consumption (see Transaction::NON_OPERATING_KINDS): it must
+        # not land in "Expenses" here any more than it does in the summary
+        # cards above, so it gets its own group instead of the plain
+        # sign-based classification.
+        type = if kind && Transaction::NON_OPERATING_KINDS.include?(kind)
+          kind
+        else
+          entry.amount > 0 ? "expense" : "income"
+        end
         begin
           converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
         rescue Money::ConversionError
@@ -468,7 +484,7 @@ class ReportsController < ApplicationController
 
       # Process transactions
       transactions.each do |transaction|
-        process_entry.call(transaction.category, transaction.entry, false)
+        process_entry.call(transaction.category, transaction.entry, false, kind: transaction.kind)
       end
 
       # Process trades
@@ -790,8 +806,14 @@ class ReportsController < ApplicationController
       # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
-        is_expense = entry.amount > 0
-        type = is_expense ? "expense" : "income"
+        # Same non-operating-kind carve-out as the on-screen breakdown (see
+        # Transaction::NON_OPERATING_KINDS): an investment contribution is a
+        # real outflow but not consumption.
+        type = if Transaction::NON_OPERATING_KINDS.include?(transaction.kind)
+          transaction.kind
+        else
+          entry.amount > 0 ? "expense" : "income"
+        end
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 
@@ -819,14 +841,16 @@ class ReportsController < ApplicationController
         }
       end
 
-      # Separate and sort income and expenses
+      # Separate and sort income, expenses, and non-operating outflows
       income_data = result.select { |r| r[:type] == "income" }.sort_by { |r| -r[:total] }
       expense_data = result.select { |r| r[:type] == "expense" }.sort_by { |r| -r[:total] }
+      investment_contribution_data = result.select { |r| r[:type] == "investment_contribution" }.sort_by { |r| -r[:total] }
 
       {
         months: months,
         income: income_data,
-        expenses: expense_data
+        expenses: expense_data,
+        investment_contributions: investment_contribution_data
       }
     end
 
@@ -899,7 +923,37 @@ class ReportsController < ApplicationController
           totals_row << Money.new(grand_expenses_total, Current.family.currency).format
           csv << totals_row
         end
+
+        csv_section(csv, "INVESTMENT CONTRIBUTIONS", @export_data[:investment_contributions], month_headers)
       end
+    end
+
+    # Shared by generate_transactions_csv for the investment-contribution
+    # section, which follows the same shape as INCOME/EXPENSES but is kept
+    # separate: a real cash outflow, not consumption (see
+    # Transaction::NON_OPERATING_KINDS).
+    def csv_section(csv, label, category_rows, month_headers)
+      return if category_rows.blank?
+
+      csv << [ label ] + Array.new(month_headers.length + 1, "")
+
+      category_rows.each do |category_data|
+        row = [ category_data[:category] ]
+        @export_data[:months].each do |month|
+          amount = category_data[:months][month] || 0
+          row << Money.new(amount, Current.family.currency).format
+        end
+        row << Money.new(category_data[:total], Current.family.currency).format
+        csv << row
+      end
+
+      totals_row = [ "TOTAL #{label}" ]
+      @export_data[:months].each do |month|
+        month_total = category_rows.sum { |c| c[:months][month] || 0 }
+        totals_row << Money.new(month_total, Current.family.currency).format
+      end
+      totals_row << Money.new(category_rows.sum { |c| c[:total] }, Current.family.currency).format
+      csv << totals_row
     end
 
     def generate_transactions_xlsx
