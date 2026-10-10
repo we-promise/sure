@@ -19,12 +19,16 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "gets new" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
     get new_import_url
 
     assert_response :success
 
     assert_select "turbo-frame#modal"
-    assert_select "form[data-turbo-frame=_top] input[type=file]"
+    assert_select "form[data-turbo-frame=_top] input[type=file][onchange='this.form.requestSubmit()']", count: 2
   end
 
   test "cancel marks a lost import as failed" do
