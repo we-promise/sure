@@ -667,7 +667,10 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     trade = find_trade("trade_republic_event_evt_stock_bonus")
     assert_equal "Trade", trade.entryable_type
     assert_equal BigDecimal("0.055"), trade.entryable.qty
-    assert_equal BigDecimal("10.04"), trade.amount
+    # No cash moved, so the portfolio's cash must not move either; the value
+    # stays in the price for the cost basis.
+    assert_equal 0, trade.amount
+    assert_in_delta BigDecimal("10.04"), trade.entryable.qty * trade.entryable.price, BigDecimal("0.01")
     assert_equal "ACQUISITION_TRADE_PERK", trade.entryable.extra.dig("trade_republic", "event_type")
 
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_stock_bonus")

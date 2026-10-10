@@ -218,10 +218,13 @@ class TradeRepublicAccount::ActivitiesProcessor
       nil
     end
 
+    # A stock bonus is a gift: no cash moves anywhere, so its trade must not
+    # move the portfolio's cash either. Saveback keeps booking its amount.
     def process_broker_funded_trade(event, detail, external_id, date)
       return nil unless @trade_republic_account.holds_securities?
 
-      import_order_execution(event, detail, external_id, date) ? :trade : nil
+      moves_cash = event[:eventType].to_s != STOCK_PERK_EVENT_TYPE
+      import_order_execution(event, detail, external_id, date, moves_cash: moves_cash) ? :trade : nil
     end
 
     def process_round_up(event, detail, external_id, date)
@@ -278,7 +281,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       event_type == ROUND_UP_EVENT_TYPE
     end
 
-    def import_order_execution(event, detail, external_id, date)
+    def import_order_execution(event, detail, external_id, date, moves_cash: true)
       isin = detail[:isin].to_s
       quantity = parse_decimal(detail[:quantity])
 
@@ -330,7 +333,9 @@ class TradeRepublicAccount::ActivitiesProcessor
         security:       security,
         quantity:       signed_quantity,
         price:          price,
-        amount:         signed_amount,
+        # Without a cash leg the value lives in qty and price, which is all
+        # the cost basis needs.
+        amount:         moves_cash ? signed_amount : 0,
         fee:            fee,
         currency:       detail[:currency].presence || currency,
         date:           date,
