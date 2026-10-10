@@ -8,6 +8,12 @@ class Transaction < ApplicationRecord
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
+  # Enrichment rows recording automatic category assignments (AI, Bayes) —
+  # scoped so the index can preload them for the provenance pill.
+  has_many :auto_category_enrichments,
+    -> { where(attribute_name: "category_id", source: AUTO_CATEGORY_SOURCES).order(updated_at: :desc) },
+    class_name: "DataEnrichment", as: :enrichable
+
   # File attachments (receipts, invoices, etc.) using Active Storage
   # Supports images (JPEG, PNG, GIF, WebP) and PDFs up to 10MB each
   # Maximum 10 attachments per transaction, family-scoped access
@@ -265,6 +271,16 @@ class Transaction < ApplicationRecord
   # hasn't been matched), the same pattern category_editable? uses.
   def payment?
     transfer ? transfer.payment? : kind == "cc_payment"
+  end
+
+  # Automatic-categorization provenance for the UI, or nil when no
+  # ai/bayes enrichment was ever recorded for this transaction.
+  def category_provenance
+    # ||= alone would re-run the lookup every call for transactions with no
+    # automatic categorization history (nil is not memoized by ||=).
+    return @category_provenance if defined?(@category_provenance)
+
+    @category_provenance = Transaction::CategoryProvenance.for(self)
   end
 
   def set_category!(category)
