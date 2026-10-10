@@ -94,7 +94,7 @@ uk:
       remaining: Залишилося %{amount}
       paid_headline: Сплачено %{amount}
     add_bill: Додати платіж
-    manage: Керувати
+    manage: Переглянути
     find_payment: Знайти оплату
     add_payment: Додати оплату
     review_match: Перевірити зіставлення
@@ -280,8 +280,8 @@ uk:
       paid_so_far: Уже сплачено
       hero_past_due: '%{amount} прострочено'
       hero_next_seven: '%{amount} до сплати в наступні 7 днів'
-      add_bill: Додати платіж
-      add_income: Додати дохід
+      add_bill: Новий платіж
+      add_income: Новий дохід
       review_with_ai: Переглянути з ШІ
       detected_review:
         one: Ми знайшли у ваших транзакціях %{count} регулярний платіж. Перевірте його, щоб підсумки тут відповідали тому, що ви фактично платите.
@@ -331,7 +331,7 @@ uk:
       this_month: Цього місяця
       later: Після цього місяця
       paid_this_month: Сплачено цього місяця
-      dormant: Неактивні
+      dormant: Призупинені
       kpi_remaining: Залишилося цього місяця
       kpi_paid: Сплачено цього місяця
       kpi_next_seven: До сплати за 7 днів

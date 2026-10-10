@@ -141,13 +141,19 @@
     <div data-controller="sortable-list"
          data-sortable-list-url-value="<%= update_preferences_reports_path %>"
          data-sortable-list-param-value="preferences.reports_section_order"
+         data-sortable-list-hold-delay-value="800"
          data-action="dragover->sortable-list#dragOver drop->sortable-list#drop"
          role="list"
          aria-label="<%= t("reports.index.sections_aria") %>">
       <% @reports_sections.each do |section| %>
         <% next unless section[:visible] %>
+        <%# [-webkit-touch-callout:none] suppresses iOS Safari's native long-press
+            link preview on the amount/percentage anchors inside this section —
+            without it, the callout preempts the touch, fires touchcancel, and
+            the press-and-hold drag gesture never gets a chance to activate
+            (see #3132 review). %>
         <section
-          class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+          class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group focus:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 focus-visible:ring-offset-2 [-webkit-touch-callout:none]"
           data-sortable-list-target="item"
           data-sortable-list-id="<%= section[:key] %>"
           data-section-key="<%= section[:key] %>"
@@ -165,6 +171,8 @@
             touchstart->sortable-list#touchStart
             touchmove->sortable-list#touchMove
             touchend->sortable-list#touchEnd
+            touchcancel->sortable-list#touchCancel
+            contextmenu->sortable-list#suppressContextMenu
             keydown->sortable-list#handleKeyDown">
           <div class="px-4 py-2 flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -183,7 +191,7 @@
             </div>
             <button
               type="button"
-              class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100"
+              class="cursor-grab active:cursor-grabbing hidden lg:flex items-center justify-center w-6 h-6 text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
               aria-label="<%= t("reports.index.drag_to_reorder") %>">
               <%= icon("grip-vertical", size: "sm") %>
             </button>
