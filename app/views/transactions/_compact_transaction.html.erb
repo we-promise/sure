@@ -1,4 +1,4 @@
-<%# locals: (entry:, balance_trend: nil, view_ctx: "global", is_filtered: false, in_split_group: false, running_balance: nil, hide_balance: false, flat: false) %>
+<%# locals: (entry:, balance_trend: nil, view_ctx: "global", is_filtered: false, in_split_group: false, running_balance: nil, hide_balance: false, flat: false, density: :comfortable) %>
 <% transaction = entry.entryable %>
 <% show_date = flat %>
 <% show_balance = flat && view_ctx == "account" && !hide_balance %>
@@ -14,7 +14,7 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
-    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, indent: in_split_group, data: { controller: "clickable-row", action: "click->clickable-row#open" }) do |row| %>
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, indent: in_split_group, density: density, data: { controller: "clickable-row", action: "click->clickable-row#open" }) do |row| %>
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,

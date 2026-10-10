@@ -329,7 +329,25 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     assert_in_delta positions[0], positions[1], 2
   end
 
+  test "global list rows are denser than account rows on fine pointers" do
+    page.current_window.resize_to(1400, 900)
+
+    visit transactions_url
+    assert_in_delta 6.0, compact_row_padding_top(dom_id(@entry)), 0.5,
+      "global list rows should tighten to 6px on fine pointers"
+
+    visit account_url(accounts(:depository), tab: "activity")
+    assert_in_delta 8.0, compact_row_padding_top(dom_id(@entry)), 0.5,
+      "account activity rows should stay roomy at 8px"
+  end
+
   private
+    def compact_row_padding_top(frame_id)
+      page.evaluate_script(<<~JS, frame_id)
+        ((id) => parseFloat(getComputedStyle(document.getElementById(id).querySelector('[role="row"]')).paddingTop))(arguments[0])
+      JS
+    end
+
     def compact_row_geometry
       page.evaluate_script(<<~JS, dom_id(@entry))
         ((id) => {

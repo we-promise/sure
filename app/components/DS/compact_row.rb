@@ -37,7 +37,7 @@ class DS::CompactRow < DesignSystemComponent
   renders_one :amount
   renders_one :balance
 
-  def initialize(show_date: false, show_balance: false, show_notes: true, muted: false, indent: false, header: false, data: {}, class: nil)
+  def initialize(show_date: false, show_balance: false, show_notes: true, muted: false, indent: false, header: false, data: {}, density: :comfortable, class: nil)
     @show_date = show_date
     @show_balance = show_balance
     @show_notes = show_notes
@@ -45,6 +45,7 @@ class DS::CompactRow < DesignSystemComponent
     @indent = indent
     @header = header
     @data = data
+    @density = density
     @extra_class = binding.local_variable_get(:class)
   end
 
@@ -125,9 +126,13 @@ class DS::CompactRow < DesignSystemComponent
   ERB
 
   private
+    # Comfortable keeps today's spacing everywhere. Compact (global
+    # transaction list only) stays roomy on touch screens but tightens on
+    # fine-pointer devices via the pointer media query.
     def row_type_classes
       class_names(
-        "group text-sm font-medium py-2 px-3",
+        "group text-sm font-medium px-3",
+        @density == :compact ? "py-2 [@media(pointer:fine)]:py-1.5" : "py-2",
         @indent ? "pl-6 @3xl/compact-table:pl-8" : nil,
         @muted ? "opacity-50 text-secondary" : "text-primary"
       )

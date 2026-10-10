@@ -1,10 +1,10 @@
-<%# locals: (entry:, view_ctx: "global", is_filtered: false, running_balance: nil, hide_balance: false, flat: false) %>
+<%# locals: (entry:, view_ctx: "global", is_filtered: false, running_balance: nil, hide_balance: false, flat: false, density: :comfortable) %>
 <% transaction = entry.entryable %>
 <% show_date = flat %>
 <% show_balance = flat && view_ctx == "account" && !hide_balance %>
 
 <div data-controller="clickable-row" data-action="click->clickable-row#open">
-  <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: Current.user.transactions_show_notes?, muted: true) do |row| %>
+  <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: Current.user.transactions_show_notes?, muted: true, density: density) do |row| %>
     <% if show_date %>
       <% row.with_date { format_date(entry.date) } %>
     <% end %>

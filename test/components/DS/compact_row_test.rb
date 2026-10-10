@@ -11,6 +11,23 @@ class DS::CompactRowTest < ViewComponent::TestCase
     end
   end
 
+  test "comfortable density keeps roomy padding without pointer overrides" do
+    render_inline(DS::CompactRow.new) do |row|
+      row.with_primary { "Coffee" }
+    end
+
+    assert_selector "div.py-2"
+    assert_no_selector "div[class*='pointer:fine']"
+  end
+
+  test "compact density stays roomy on touch but tightens on fine pointers" do
+    render_inline(DS::CompactRow.new(density: :compact)) do |row|
+      row.with_primary { "Coffee" }
+    end
+
+    assert_selector "div.py-2[class*='pointer:fine']"
+  end
+
   test "wraps row content in a single flex container" do
     render_inline(DS::CompactRow.new) do |row|
       row.with_primary { "Coffee" }
