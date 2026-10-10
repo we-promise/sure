@@ -11,8 +11,18 @@ class UI::Account::ActivityFeed < ApplicationComponent
     @q = q || {}
   end
 
+  # The amount operator select always submits a value ("equal" by default),
+  # even when the user never touched the filters — so on its own it must not
+  # count as an active filter, only as a modifier of an amount value.
   def filtered?
-    q.present? && q.values.any? { |v| v.present? && (v.is_a?(Array) ? v.any?(&:present?) : true) }
+    return false if q.blank?
+
+    filters = q.to_h
+    filters.any? do |key, value|
+      next false if key.to_s == "amount_operator" && filters["amount"].blank?
+
+      value.present? && (value.is_a?(Array) ? value.any?(&:present?) : true)
+    end
   end
 
   def compact?
