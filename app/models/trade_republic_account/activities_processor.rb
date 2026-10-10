@@ -19,6 +19,8 @@ class TradeRepublicAccount::ActivitiesProcessor
   }.freeze
   CASH_UNLABELED_KEYS = %w[contribution withdrawal].freeze
   SETTLEMENT_COUNTERPART_PREFIX = "trade_republic_settlement_"
+  # Keeps the diagnostics entry small for accounts with a long backlog.
+  MAX_LOGGED_INCOMPLETE_EXECUTIONS = 50
 
   def initialize(trade_republic_account, exchange_securities: {})
     @trade_republic_account = trade_republic_account
@@ -63,6 +65,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     reconcile_stale_saveback_cash_transactions!
     reconcile_non_importable_entries!
     reconcile_settlement_counterparts!
+    capture_incomplete_executions
 
     { trades: trade_count, transactions: transaction_count }
   end
@@ -285,7 +288,10 @@ class TradeRepublicAccount::ActivitiesProcessor
       isin = detail[:isin].to_s
       quantity = parse_decimal(detail[:quantity])
 
-      return false if isin.blank? || quantity.nil? || quantity.zero?
+      if isin.blank? || quantity.nil? || quantity.zero?
+        record_incomplete_execution(event, date, missing: [ ("isin" if isin.blank?), ("quantity" if quantity.nil? || quantity.zero?) ].compact)
+        return false
+      end
 
       security = resolve_security(
         isin,
@@ -972,6 +978,40 @@ class TradeRepublicAccount::ActivitiesProcessor
         .where(kind: "cash")
         .joins(:account_provider)
         .exists?
+    end
+
+    def record_incomplete_execution(event, date, missing:)
+      (@incomplete_executions ||= []) << {
+        event_id: event[:id],
+        event_type: event[:eventType],
+        date: date.iso8601,
+        missing: missing
+      }
+    end
+
+    # Order executions whose detail has no ISIN or quantity yet can't become
+    # trades; later syncs fetch their detail again. One entry per run lists
+    # them, so the gap shows in diagnostics instead of being silent.
+    def capture_incomplete_executions
+      executions = @incomplete_executions.to_a
+      @incomplete_executions = nil
+      return if executions.empty?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "warn",
+        message: "#{executions.size} Trade Republic #{"order execution".pluralize(executions.size)} not imported yet: " \
+          "the detail has no ISIN or quantity",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: {
+          trade_republic_account_id: @trade_republic_account.id,
+          incomplete_count: executions.size,
+          executions: executions.first(MAX_LOGGED_INCOMPLETE_EXECUTIONS)
+        }
+      )
     end
 
     def record_unknown_event(event)

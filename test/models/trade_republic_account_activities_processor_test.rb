@@ -795,6 +795,44 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Buy", cash_entry.transaction.investment_activity_label
   end
 
+  test "logs order executions whose detail has no ISIN or quantity yet" do
+    # Shaped like the stored 2025 executions in #4040: only the list amount.
+    savings_plan = {
+      id: "evt_old_plan", timestamp: "2025-07-02T08:00:00Z", eventType: "TRADING_SAVINGSPLAN_EXECUTED",
+      category: "orderExecution", detail: { amount: "25.00", signed_amount: -25.0, currency: "EUR" }
+    }
+    trade = {
+      id: "evt_old_trade", timestamp: "2025-06-13T06:36:46Z", eventType: "TRADING_TRADE_EXECUTED",
+      category: "orderExecution", detail: { amount: "1001.00", signed_amount: -1001.0, currency: "EUR" }
+    }
+    complete = order_execution_detail(event_id: "evt_complete", quantity: "2.0", isin: "US0378331005", amount: "460.00")
+    saveback = saveback_event.deep_merge(detail: { quantity: nil })
+    @tr_account.update!(raw_timeline_payload: [ savings_plan, trade, complete, saveback ])
+
+    assert_difference -> { incomplete_execution_logs.count }, 1 do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    end
+
+    log = incomplete_execution_logs.order(:created_at).last
+    assert_equal "warn", log.level
+    assert_equal "3 Trade Republic order executions not imported yet: the detail has no ISIN or quantity", log.message
+    assert_equal 3, log.metadata["incomplete_count"]
+    executions = log.metadata["executions"].index_by { |execution| execution["event_id"] }
+    assert_equal(
+      { "event_id" => "evt_old_plan", "event_type" => "TRADING_SAVINGSPLAN_EXECUTED", "date" => "2025-07-02", "missing" => [ "isin", "quantity" ] },
+      executions["evt_old_plan"]
+    )
+    assert_equal "TRADING_TRADE_EXECUTED", executions["evt_old_trade"]["event_type"]
+    assert_equal [ "quantity" ], executions["evt_saveback"]["missing"]
+    assert_not_nil find_trade("trade_republic_event_evt_complete")
+  end
+
+  test "logs nothing when every order execution has its detail" do
+    assert_no_difference -> { incomplete_execution_logs.count } do
+      import_event(order_execution_detail(event_id: "evt_complete", quantity: "2.0", isin: "US0378331005", amount: "460.00"))
+    end
+  end
+
   test "portfolio-only saveback and round up import as trades without cash entries" do
     @tr_account.update!(raw_timeline_payload: [ saveback_event, round_up_event ])
 
@@ -1920,6 +1958,10 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     def import_event(event)
       @tr_account.update!(raw_timeline_payload: [ event ])
       TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    end
+
+    def incomplete_execution_logs
+      DebugLogEntry.where("message LIKE ?", "%not imported yet%")
     end
 
     def order_execution_detail(event_id: "evt_buy", quantity:, isin:, amount:)
