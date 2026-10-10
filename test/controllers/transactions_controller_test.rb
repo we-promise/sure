@@ -1802,6 +1802,28 @@ end
     assert_match I18n.t("transactions.show.category_set_on_outflow"), response.body
   end
 
+  test "does not offer guests to create a rule through a transaction update" do
+    category = categories(:income)
+    @entry.update!(name: "AMZN Mktp UK")
+    rule = @entry.account.family.rules.build(name: "Amazon", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "AMAZON.CO.UK")
+    rule.actions.build(action_type: "set_transaction_category", value: category.id.to_s)
+    rule.save!
+    @entry.account.update!(owner: family_guest)
+    sign_in family_guest
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: { id: @entry.entryable_id, category_id: category.id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal category.id, @entry.reload.entryable.category_id
+    assert_not_includes response.body, "action_type=set_transaction_category"
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }

@@ -65,14 +65,22 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "does not offer guests to create a rule they cannot save" do
+    category = categories(:income)
+    @entry.update!(name: "AMZN Mktp UK")
+    rule = @entry.account.family.rules.build(name: "Amazon", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "AMAZON.CO.UK")
+    rule.actions.build(action_type: "set_transaction_category", value: category.id.to_s)
+    rule.save!
     @entry.account.update!(owner: family_guest)
     sign_in family_guest
 
     patch transaction_category_url(@entry),
-      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: categories(:income).id } } }
+      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: category.id } } },
+      as: :turbo_stream
 
-    assert_equal categories(:income).id, @transaction.reload.category_id
-    assert_nil flash[:cta]
+    assert_response :success
+    assert_equal category.id, @transaction.reload.category_id
+    assert_not_includes response.body, "action_type=set_transaction_category"
   end
 
   test "a matched transfer's inflow leg does not take a category" do
