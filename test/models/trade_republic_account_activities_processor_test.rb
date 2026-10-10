@@ -382,35 +382,33 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-500"), Entry.find_by!(external_id: "trade_republic_event_evt_credit_card_cash_in").amount
   end
 
-  test "a stamp duty cancellation refunds the earlier charge it cancels" do
+  test "a stamp duty cancellation books nothing" do
+    # Trade Republic turns the charge's timeline item into its cancellation.
+    # The statement books the charge and the refund, which cancel out.
     @tr_account.update!(raw_timeline_payload: [
-      stamp_duty_event(id: "evt_stamp_duty", timestamp: "2026-01-12T10:58:47Z", amount: -15.40),
       stamp_duty_event(id: "evt_stamp_duty_cancel", timestamp: "2026-02-18T09:37:01Z", amount: -15.40, cancellation: true),
       stamp_duty_event(id: "evt_stamp_duty_new", timestamp: "2026-02-18T14:34:02Z", amount: -16.10)
     ])
     TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
 
-    assert_equal BigDecimal("15.40"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty").amount
-    assert_equal BigDecimal("-15.40"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel").amount
+    assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_cancel")
     assert_equal BigDecimal("16.10"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_new").amount
   end
 
-  test "a stamp duty cancellation whose charge is no longer on the timeline books nothing" do
-    # Trade Republic can replace the charge with its cancellation. The
-    # statement still books both, so they cancel out.
+  test "a stamp duty cancellation does not refund an earlier charge of the same amount" do
+    # Recurring stamp duty often repeats its amount, so an earlier charge that
+    # matches is not evidence of the one the cancellation replaced.
     @tr_account.update!(raw_timeline_payload: [
-      stamp_duty_event(id: "evt_stamp_duty_cancel", timestamp: "2026-02-18T09:37:01Z", amount: -15.40, cancellation: true),
-      stamp_duty_event(id: "evt_stamp_duty_new", timestamp: "2026-02-18T14:34:02Z", amount: -16.10),
-      stamp_duty_event(id: "evt_stamp_duty_cash", timestamp: "2026-01-12T10:58:47Z", amount: -15.40, title: "Stamp duty (Cash)")
+      stamp_duty_event(id: "evt_stamp_duty", timestamp: "2025-10-07T06:16:00Z", amount: -15.40),
+      stamp_duty_event(id: "evt_stamp_duty_cancel", timestamp: "2026-02-18T09:37:01Z", amount: -15.40, cancellation: true, status: nil)
     ])
     TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
 
+    assert_equal BigDecimal("15.40"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty").amount
     assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_cancel")
-    assert_equal BigDecimal("16.10"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_new").amount
-    assert_equal BigDecimal("15.40"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cash").amount
   end
 
-  test "removes a refund an earlier sync booked for a cancellation without its charge" do
+  test "removes a refund an earlier sync booked for a stamp duty cancellation" do
     Account::ProviderImportAdapter.new(@account).import_transaction(
       external_id: "trade_republic_event_evt_stamp_duty_cancel",
       amount: BigDecimal("-15.40"),
@@ -423,28 +421,6 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     import_event(stamp_duty_event(id: "evt_stamp_duty_cancel", timestamp: "2026-02-18T09:37:01Z", amount: -15.40, cancellation: true))
 
     assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_cancel")
-  end
-
-  test "stamp duty cancellation without a status is still imported as a refund" do
-    @tr_account.update!(raw_timeline_payload: [
-      stamp_duty_event(id: "evt_stamp_duty", timestamp: "2026-01-12T10:58:47Z", amount: -15.40, status: nil),
-      stamp_duty_event(id: "evt_stamp_duty_cancel_no_status", timestamp: "2026-02-18T09:37:01Z", amount: -15.40, cancellation: true, status: nil)
-    ])
-    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
-
-    assert_equal BigDecimal("-15.40"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel_no_status").amount
-  end
-
-  test "a stamp duty refund on a portfolio account is not booked as a contribution" do
-    @tr_account.update!(raw_timeline_payload: [
-      stamp_duty_event(id: "evt_stamp_duty", timestamp: "2026-01-12T10:58:47Z", amount: -15.40),
-      stamp_duty_event(id: "evt_stamp_duty_refund", timestamp: "2026-02-18T09:37:01Z", amount: -15.40, cancellation: true)
-    ])
-    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
-
-    transaction = Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_refund").transaction
-    assert_nil transaction.investment_activity_label
-    assert_equal "standard", transaction.kind
   end
 
   test "a voided stamp duty charge is not imported as a refund" do
@@ -750,6 +726,12 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert @account.entries.exists?(external_id: "trade_republic_settlement_evt_pm_bonus")
 
     @tr_account.update!(raw_timeline_payload: [ private_markets_event ])
+    # Until the portfolio pass rebooks the trade without cash (it runs first,
+    # but can fail), the cash leg stays so the portfolio's cash nets to zero.
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    assert cash_sure.entries.exists?(external_id: "trade_republic_event_evt_pm_bonus")
+    assert @account.entries.exists?(external_id: "trade_republic_settlement_evt_pm_bonus")
+
     TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
     TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
 

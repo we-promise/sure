@@ -199,7 +199,11 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       return process_broker_funded_trade(event, detail, external_id, date) if broker_funded_trade_event?(event)
       return process_round_up(event, detail, external_id, date) if round_up_event?(event_type)
-      return nil if unmatched_stamp_duty_cancellation?(event)
+      # Trade Republic turns a stamp duty charge's timeline item into its
+      # cancellation: the item keeps the charge's amount and lists both stamp
+      # duty documents. The statement books the charge and the refund, which
+      # cancel out, so the item books nothing.
+      return nil if Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
 
       case event_category(event)
       when CATEGORY_ORDER_EXECUTION
@@ -289,48 +293,6 @@ class TradeRepublicAccount::ActivitiesProcessor
       return true if BROKER_FUNDED_TRADE_EVENT_TYPES.include?(event_type)
 
       event_type == PRIVATE_MARKETS_TRADE_EVENT_TYPE && event[:subtitle].to_s.match?(PRIVATE_MARKETS_BONUS_PATTERN)
-    end
-
-    # Trade Republic can replace a stamp duty charge with its cancellation
-    # instead of adding the cancellation next to it. The statement then books
-    # both, the charge and the refund, while the timeline only has the
-    # cancellation. A refund is booked only when the charge it cancels is on
-    # the timeline; otherwise both sides are missing and nothing is booked.
-    def unmatched_stamp_duty_cancellation?(event)
-      return false unless Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
-
-      !refunded_stamp_duty_ids.include?((event["id"] || event[:id]).to_s)
-    end
-
-    # Pairs each cancellation, oldest first, with an earlier charge of the
-    # same title and amount; a charge refunds at most one cancellation.
-    def refunded_stamp_duty_ids
-      @refunded_stamp_duty_ids ||= begin
-        stamp_duty = timeline_events.filter_map do |event|
-          next unless event.is_a?(Hash)
-
-          event = event.with_indifferent_access
-          event if event[:eventType].to_s == Provider::TradeRepublicTimelineEvent::STAMP_DUTY_EVENT_TYPE &&
-            importable_timeline_event?(event)
-        end
-        cancellations, charges = stamp_duty.partition { |event| Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event) }
-        charges = charges.sort_by { |event| event[:timestamp].to_s }
-        cancellations.sort_by { |event| event[:timestamp].to_s }.each_with_object(Set.new) do |cancellation, ids|
-          charge = charges.find do |candidate|
-            candidate[:title].to_s == cancellation[:title].to_s &&
-              candidate[:timestamp].to_s <= cancellation[:timestamp].to_s &&
-              stamp_duty_amount(candidate) == stamp_duty_amount(cancellation)
-          end
-          next unless charge
-
-          charges.delete(charge)
-          ids << cancellation[:id].to_s
-        end
-      end
-    end
-
-    def stamp_duty_amount(event)
-      parse_decimal(event.dig(:detail, :amount) || event.dig(:detail, :signed_amount))&.abs
     end
 
     def round_up_event?(event_type)
@@ -683,17 +645,12 @@ class TradeRepublicAccount::ActivitiesProcessor
     def event_category(event)
       signed_amount = parse_decimal(event.dig(:detail, :signed_amount) || event.dig(:detail, :amount))
       return CATEGORY_WITHDRAWAL if event[:eventType].to_s == "CARD_CASH_BACK" && signed_amount&.negative?
-      # Trade Republic reports a stamp duty cancellation with the same event
-      # type and sign as the charge; it is a refund to the account.
-      return CATEGORY_DEPOSIT if Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
 
       event[:category].to_s.presence ||
         Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES[event[:eventType].to_s].to_s
     end
 
     def cash_label_key(event, default:)
-      return "tax_refund" if Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
-
       case event[:eventType].to_s
       when "CARD_TRANSACTION", "card_successful_transaction", "CARD_CASH_BACK", "CARD_AFT"
         "card_payment"
@@ -791,14 +748,15 @@ class TradeRepublicAccount::ActivitiesProcessor
           next
         end
 
-        # Keep the legacy cash row until the portfolio trade is present so an
-        # incomplete detail cannot open a ledger gap.
-        unless securities_account_with_trade(entry.external_id)
+        # Keep the legacy cash row until the portfolio trade is present and no
+        # longer books cash, so an incomplete detail or a failed portfolio pass
+        # cannot open a ledger gap.
+        unless securities_account_with_trade(entry.external_id, amount: 0)
           skipped_count += 1
           DebugLogEntry.capture(
             category: "sync",
             level: "info",
-            message: "Skipped removing cash leg #{entry.external_id} of a trade Trade Republic paid for until the portfolio trade exists",
+            message: "Skipped removing cash leg #{entry.external_id} of a trade Trade Republic paid for until the portfolio trade books no cash",
             source: "trade_republic",
             family: @trade_republic_account.trade_republic_item.family,
             provider_key: "trade_republic",
@@ -840,10 +798,10 @@ class TradeRepublicAccount::ActivitiesProcessor
       end
     end
 
-    def securities_account_with_trade(external_id)
+    def securities_account_with_trade(external_id, **conditions)
       linked_securities_accounts.find do |securities_account|
         securities_account.entries
-          .where(source: "trade_republic", entryable_type: "Trade", external_id: external_id)
+          .where(source: "trade_republic", entryable_type: "Trade", external_id: external_id, **conditions)
           .exists?
       end
     end
@@ -945,20 +903,20 @@ class TradeRepublicAccount::ActivitiesProcessor
     # hidden or in a terminal non-importable status, unless the user protected
     # them. Events blocked only by the free-text subtitle heuristic are skipped
     # on import but never delete existing entries. Earlier syncs also booked
-    # stamp duty cancellations whose charge is not on the timeline as refunds.
+    # stamp duty cancellations as refunds; they book nothing now.
     def reconcile_non_importable_entries!
       explicit_ids = []
       heuristic_ids = []
       timeline_events.each do |event|
         next unless event.is_a?(Hash)
 
-        unmatched_cancellation = unmatched_stamp_duty_cancellation?(event.with_indifferent_access)
-        next unless unmatched_cancellation || lifecycle_blocks_import?(event)
+        cancellation = Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
+        next unless cancellation || lifecycle_blocks_import?(event)
 
         event_id = event["id"].presence || event[:id].presence
         next if event_id.blank?
 
-        explicit = unmatched_cancellation || explicit_lifecycle_block?(event)
+        explicit = cancellation || explicit_lifecycle_block?(event)
         (explicit ? explicit_ids : heuristic_ids) << "trade_republic_event_#{event_id}"
       end
       return if explicit_ids.empty? && heuristic_ids.empty?
