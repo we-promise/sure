@@ -1,0 +1,6 @@
+<%# locals: (trading212_item:) %>
+<%# Viewer-independent: re-broadcast by Trading212Item::SyncCompleteEvent from SyncJob (no Current.user). %>
+<%= tag.div id: dom_id(trading212_item, :sync_summary) do %>
+  <% stats = trading212_item.syncs.ordered.first&.sync_stats || {} %>
+  <%= render ProviderSyncSummary.new(stats: stats, provider_item: trading212_item) %>
+<% end %>

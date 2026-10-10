@@ -19,30 +19,7 @@
               <% end %>
             </div>
             <p class="text-xs text-secondary"><%= t(".environment_label_#{trading212_item.environment}") %></p>
-            <% if trading212_item.syncing? %>
-              <div class="text-secondary flex items-center gap-1">
-                <%= icon "loader", size: "sm", class: "animate-spin" %>
-                <%= tag.span t(".syncing") %>
-              </div>
-            <% elsif trading212_item.requires_update? %>
-              <div class="text-warning flex items-center gap-1">
-                <%= icon "alert-triangle", size: "sm", color: "warning" %>
-                <%= tag.span t(".requires_update") %>
-              </div>
-            <% elsif trading212_item.sync_error.present? %>
-              <div class="text-secondary flex items-center gap-1">
-                <%= render DS::Tooltip.new(text: trading212_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
-                <%= tag.span t(".error"), class: "text-destructive" %>
-              </div>
-            <% else %>
-              <p class="text-secondary">
-                <% if trading212_item.last_synced_at %>
-                  <%= t(".synced", time: time_ago_in_words(trading212_item.last_synced_at), summary: trading212_item.sync_status_summary) %>
-                <% else %>
-                  <%= t(".never_synced") %>
-                <% end %>
-              </p>
-            <% end %>
+            <%= render "trading212_items/sync_status", trading212_item: trading212_item %>
           </div>
         </div>
 
@@ -81,13 +58,17 @@
 
     <% unless trading212_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% visible_accounts = trading212_item.accounts & Current.user.accessible_accounts.to_a %>
+        <%# Rows are scoped to the viewer's accessible accounts (one item can mix
+            shared and private accounts). With no viewer, no rows are shown rather
+            than leaking every linked account. Trading212Item::SyncCompleteEvent
+            therefore re-broadcasts only the viewer-independent sync_status and
+            sync_summary partials, never this whole card. %>
+        <% visible_accounts = Current.user ? trading212_item.accounts & Current.user.accessible_accounts.to_a : [] %>
         <% if visible_accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
-        <% stats = trading212_item.syncs.ordered.first&.sync_stats || {} %>
-        <%= render ProviderSyncSummary.new(stats: stats, provider_item: trading212_item) %>
+        <%= render "trading212_items/sync_summary", trading212_item: trading212_item %>
 
         <% if Current.user&.admin? %>
           <% if unlinked_count > 0 && trading212_item.accounts.empty? %>
