@@ -31,4 +31,25 @@ class Money::CurrencyTest < ActiveSupport::TestCase
   test "step returns the smallest value of the currency" do
     assert_equal 0.01, @currency.step
   end
+
+  test "ethereum uses wei native scale" do
+    eth = Money::Currency.new(:eth)
+    assert_equal "Ethereum", eth.name
+    assert_equal "ETH", eth.iso_code
+    assert_equal "Ξ", eth.symbol
+    assert_equal "Wei", eth.minor_unit
+    assert_equal 1000000000000000000, eth.minor_unit_conversion
+    assert_equal 8, eth.default_precision
+  end
+
+  test "ethereum step represents display precision" do
+    eth = Money::Currency.new(:eth)
+    assert_equal 0.00000001, eth.step
+  end
+
+  test "ethereum conversion formula: step = 10^-default_precision" do
+    eth = Money::Currency.new(:eth)
+    expected_step = 1.0 / (10 ** eth.default_precision)
+    assert_equal expected_step, eth.step
+  end
 end

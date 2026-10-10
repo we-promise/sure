@@ -37,6 +37,67 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("recurring_transactions.form.more_options"), body
   end
 
+  # The amount is the money field every other form uses. On a new bill its
+  # currency is picked there, defaulting to the family's, or the transaction's
+  # when the dialog starts from one. On an existing bill it shows and stays.
+  test "the add and edit forms use the app's money field and category select" do
+    get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select ".form-field[data-controller~='money-field'] input[name=?]", "recurring_transaction[amount]"
+    # Blurred in privacy mode, and still typeable.
+    assert_select "input.privacy-sensitive.privacy-sensitive-interactive[name=?]", "recurring_transaction[amount]"
+    assert_select "select[name=?]:not([disabled]) option[selected][value=?]", "recurring_transaction[currency]", @family.currency
+    # The candidate list's rows are divided by a real token: divide-divider
+    # matched nothing, so its rules fell back to the text colour.
+    assert_no_match "divide-divider", response.body
+
+    entry = accounts(:depository).entries.create!(date: Date.current - 20, amount: 12.5, currency: "EUR",
+                                                  name: "STREAMBOX", entryable: Transaction.new)
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+    assert_select "select[name=?] option[selected][value=?]", "recurring_transaction[currency]", "EUR"
+    assert_select "input[name=?][value=?]", "recurring_transaction[amount]", "12.50"
+
+    get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+    assert_select "select[name=?][disabled] option[selected][value=?]", "recurring_transaction[currency]", @recurring_transaction.currency
+    assert_select "#category_id_trigger"
+    assert_select "input[type=hidden][name=?]", "recurring_transaction[category_id]"
+  end
+
+  # Assigning the amount would already round it to the column's four places,
+  # so the edit form refuses a finer one instead of saving a different figure.
+  test "update refuses an amount finer than the column keeps" do
+    patch recurring_transaction_url(@recurring_transaction),
+      params: { recurring_transaction: { name: @recurring_transaction.display_name, amount: "15.123456" } }
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.create.amount_too_precise"), response.body
+    assert_equal 15.99, @recurring_transaction.reload.amount
+  end
+
+  test "the amount steps by the currency, never finer than the column" do
+    assert_in_delta 0.01, RecurringTransaction.amount_step("USD")
+    assert_in_delta 1.0, RecurringTransaction.amount_step("JPY")
+    assert_in_delta 0.0001, RecurringTransaction.amount_step("BTC")
+
+    get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+    assert_select "input[name=?][step=?]", "recurring_transaction[amount]", "0.01"
+  end
+
+  test "create keeps the currency picked on the form" do
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Streambox", amount: "12.50", currency: "EUR",
+        account_id: accounts(:depository).id, first_due_on: (Date.current + 9).iso8601,
+        frequency_preset: "monthly"
+      }
+    }
+
+    bill = @family.recurring_transactions.find_by!(name: "Streambox")
+    assert_equal "EUR", bill.currency
+    assert_equal 12.5, bill.amount
+  end
+
   test "edit renders the form" do
     get edit_recurring_transaction_url(@recurring_transaction)
 
@@ -815,7 +876,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     # The stored sign is bookkeeping; the form edits what the paycheck pays.
-    assert_select "input[name=?][value=?]", "recurring_transaction[amount]", "2000.0"
+    assert_select "input[name=?][value=?]", "recurring_transaction[amount]", "2000.00"
   end
 
   test "the edit form shows a bill amount as it is stored" do

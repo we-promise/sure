@@ -430,7 +430,7 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal 0.1.to_d, statement.parser_confidence
   end
 
-  test "stores an actual pdf document fixture as a statement" do
+  test "stores another bank's pdf statement and reads its period from the text" do
     fixture_path = file_fixture("imports/sample_bank_statement.pdf")
     statement = AccountStatement.create_from_upload!(
       family: @family,
@@ -448,11 +448,111 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal "application/pdf", statement.content_type
     assert_equal fixture_path.size, statement.byte_size
     assert_equal Digest::SHA256.file(fixture_path).hexdigest, statement.content_sha256
-    assert_equal "filename_only", statement.sanitized_parser_output["pdf_detection"]
-    assert_equal [ "filename" ], statement.sanitized_parser_output["metadata_sources"]
-    assert_equal Date.new(2024, 1, 1), statement.period_start_on
-    assert_equal Date.new(2024, 1, 31), statement.period_end_on
+    # An M-PESA statement: "Statement Period: 01st 1 2025 - 01st 7 2025" wins
+    # over the filename date, and it has no opening or closing balance.
+    assert_equal "text", statement.sanitized_parser_output["pdf_detection"]
+    assert_equal Date.new(2025, 1, 1), statement.period_start_on
+    assert_equal Date.new(2025, 7, 1), statement.period_end_on
+    assert_nil statement.opening_balance
+    assert_nil statement.closing_balance
+    assert_equal false, statement.sanitized_parser_output.dig("pdf", "balances_detected")
     assert statement.original_file.blob.download.start_with?("%PDF-")
+  end
+
+  test "reads period and balances from a Trade Republic statement pdf over a filename date" do
+    eur_account = @family.accounts.create!(
+      name: "Trade Republic Cash",
+      balance: 0,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+    fixture_path = file_fixture("account_statements/trade_republic_it_2026_04.pdf")
+
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: eur_account,
+      file: Rack::Test::UploadedFile.new(
+        fixture_path,
+        "application/pdf",
+        true,
+        original_filename: "Trade Republic 2026-03.pdf"
+      )
+    )
+
+    assert_equal Date.new(2026, 4, 1), statement.period_start_on
+    assert_equal Date.new(2026, 4, 30), statement.period_end_on
+    assert_equal BigDecimal("1101.14"), statement.opening_balance
+    assert_equal BigDecimal("11948.59"), statement.closing_balance
+    assert_equal "1234", statement.account_last4_hint
+    assert_equal "Trade Republic", statement.institution_name_hint
+    assert_equal "text", statement.sanitized_parser_output["pdf_detection"]
+    assert_equal "summary_table", statement.sanitized_parser_output.dig("pdf", "balances_source")
+    assert_equal [ "pdf_text", "filename" ], statement.sanitized_parser_output["metadata_sources"]
+    assert_equal 0.85.to_d, statement.parser_confidence
+    assert_not_includes statement.sanitized_parser_output.to_json, "MARIO ROSSI"
+  end
+
+  test "reads a Trade Republic statement saved under its default filename" do
+    eur_account = @family.accounts.create!(
+      name: "Trade Republic Cash",
+      balance: 0,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: eur_account,
+      file: Rack::Test::UploadedFile.new(
+        file_fixture("account_statements/trade_republic_it_2026_04.pdf"),
+        "application/pdf",
+        true,
+        original_filename: "Account statement.pdf"
+      )
+    )
+
+    assert_equal Date.new(2026, 4, 1), statement.period_start_on
+    assert_equal Date.new(2026, 4, 30), statement.period_end_on
+    assert_equal BigDecimal("11948.59"), statement.closing_balance
+    assert_nil statement.institution_name_hint
+    assert_nil statement.account_name_hint
+    assert_equal [ "pdf_text" ], statement.sanitized_parser_output["metadata_sources"]
+  end
+
+  test "skips Trade Republic balances when the statement currency differs" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: Rack::Test::UploadedFile.new(
+        file_fixture("account_statements/trade_republic_it_2026_04.pdf"),
+        "application/pdf",
+        true,
+        original_filename: "statement.pdf"
+      )
+    )
+
+    assert_equal "USD", statement.currency
+    assert_equal Date.new(2026, 4, 1), statement.period_start_on
+    assert_equal Date.new(2026, 4, 30), statement.period_end_on
+    assert_nil statement.opening_balance
+    assert_nil statement.closing_balance
+    assert_equal false, statement.sanitized_parser_output.dig("pdf", "balances_detected")
+    assert_nil statement.sanitized_parser_output.dig("pdf", "balances_source")
+  end
+
+  test "does not read a bare MM-YYYY token in the filename as the period" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(
+        filename: "Invoice_04-2029.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 statement"
+      )
+    )
+
+    assert_nil statement.period_start_on
+    assert_nil statement.period_end_on
   end
 
   test "handles malformed csv metadata detection without raw parser output" do

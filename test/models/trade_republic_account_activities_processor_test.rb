@@ -341,6 +341,115 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Card purchase", entry.transaction.extra.dig("trade_republic", "subtitle")
   end
 
+  test "card funding transactions are imported as card payments" do
+    import_event({
+      id: "evt_card_aft",
+      timestamp: "2026-02-21T11:13:04Z",
+      eventType: "CARD_AFT",
+      title: "Revolut",
+      status: "EXECUTED",
+      detail: { amount: -100.0, signed_amount: -100.0, currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_card_aft")
+    assert_equal BigDecimal("100.0"), entry.amount
+    assert_equal "Revolut", entry.name
+  end
+
+  test "card credit transactions are imported as money in" do
+    import_event({
+      id: "evt_card_oct",
+      timestamp: "2026-03-16T18:01:01Z",
+      eventType: "CARD_OCT",
+      title: "Refund Globalblue.com",
+      status: "EXECUTED",
+      detail: { amount: 2.96, signed_amount: 2.96, currency: "EUR" }
+    })
+
+    assert_equal BigDecimal("-2.96"), Entry.find_by!(external_id: "trade_republic_event_evt_card_oct").amount
+  end
+
+  test "credit card top-ups are imported as money in" do
+    import_event({
+      id: "evt_credit_card_cash_in",
+      timestamp: "2024-12-11T10:00:00Z",
+      eventType: "PAYMENT_INBOUND_CREDIT_CARD",
+      title: "Cash In",
+      status: "EXECUTED",
+      detail: { amount: 500.0, signed_amount: 500.0, currency: "EUR" }
+    })
+
+    assert_equal BigDecimal("-500"), Entry.find_by!(external_id: "trade_republic_event_evt_credit_card_cash_in").amount
+  end
+
+  test "stamp duty is imported as a charge and its cancellation as a refund" do
+    @tr_account.update!(raw_timeline_payload: [
+      {
+        id: "evt_stamp_duty",
+        timestamp: "2026-02-18T14:34:02Z",
+        eventType: "STAMP_DUTY_TAX_PAID",
+        title: "Stamp duty (Portfolio)",
+        status: "EXECUTED",
+        detail: { amount: -22.24, signed_amount: -22.24, currency: "EUR" }
+      },
+      {
+        id: "evt_stamp_duty_cancel",
+        timestamp: "2026-02-18T09:37:01Z",
+        eventType: "STAMP_DUTY_TAX_PAID",
+        title: "Stamp duty (Portfolio)",
+        subtitle: "Cancellation of stamp duty",
+        status: "EXECUTED",
+        detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+      }
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+
+    assert_equal BigDecimal("22.24"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty").amount
+    assert_equal BigDecimal("-20.99"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel").amount
+  end
+
+  test "stamp duty cancellation without a status is still imported as a refund" do
+    import_event({
+      id: "evt_stamp_duty_cancel_no_status",
+      timestamp: "2026-02-18T09:37:01Z",
+      eventType: "STAMP_DUTY_TAX_PAID",
+      title: "Stamp duty (Portfolio)",
+      subtitle: "Cancellation of stamp duty",
+      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+    })
+
+    assert_equal BigDecimal("-20.99"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel_no_status").amount
+  end
+
+  test "a stamp duty refund on a portfolio account is not booked as a contribution" do
+    import_event({
+      id: "evt_stamp_duty_refund",
+      timestamp: "2026-02-18T09:37:01Z",
+      eventType: "STAMP_DUTY_TAX_PAID",
+      title: "Stamp duty (Portfolio)",
+      subtitle: "Cancellation of stamp duty",
+      status: "EXECUTED",
+      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+    })
+
+    transaction = Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_refund").transaction
+    assert_nil transaction.investment_activity_label
+    assert_equal "standard", transaction.kind
+  end
+
+  test "a voided stamp duty charge is not imported as a refund" do
+    import_event({
+      id: "evt_stamp_duty_voided",
+      timestamp: "2026-02-18T09:37:01Z",
+      eventType: "STAMP_DUTY_TAX_PAID",
+      title: "Stamp duty (Portfolio)",
+      subtitle: "Cancelled",
+      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+    })
+
+    assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_voided")
+  end
+
   test "category direction wins over the provider signed amount" do
     import_event({
       id: "evt_incoming_signed",
@@ -568,10 +677,36 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Trade", trade.entryable_type
     assert_equal BigDecimal("0.09329"), trade.entryable.qty
     assert_equal "Buy", trade.entryable.investment_activity_label
-    assert_equal BigDecimal("3.74"), trade.amount
+    # Trade Republic pays for Saveback, so the portfolio's cash must not move;
+    # the value stays in the price for the cost basis.
+    assert_equal 0, trade.amount
+    assert_in_delta BigDecimal("3.74"), trade.entryable.qty * trade.entryable.price, BigDecimal("0.01")
     assert_equal "SAVEBACK_AGGREGATE", trade.entryable.extra.dig("trade_republic", "event_type")
 
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_saveback")
+  end
+
+  test "a stock bonus imports as a portfolio trade without a cash leg" do
+    cash_account, cash_sure = create_linked_cash_account!
+
+    bonus = stock_bonus_event
+    @tr_account.update!(raw_timeline_payload: [ bonus ])
+    cash_account.update!(raw_timeline_payload: [ bonus ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    trade = find_trade("trade_republic_event_evt_stock_bonus")
+    assert_equal "Trade", trade.entryable_type
+    assert_equal BigDecimal("0.055"), trade.entryable.qty
+    # No cash moved, so the portfolio's cash must not move either; the value
+    # stays in the price for the cost basis.
+    assert_equal 0, trade.amount
+    assert_in_delta BigDecimal("10.04"), trade.entryable.qty * trade.entryable.price, BigDecimal("0.01")
+    assert_equal "ACQUISITION_TRADE_PERK", trade.entryable.extra.dig("trade_republic", "event_type")
+
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_stock_bonus")
+    assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_stock_bonus")
   end
 
   test "round up imports as a portfolio trade and a cash outflow when split" do
@@ -658,6 +793,44 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not_nil cash_entry
     assert_equal BigDecimal("0.40"), cash_entry.amount
     assert_equal "Buy", cash_entry.transaction.investment_activity_label
+  end
+
+  test "logs order executions whose detail has no ISIN or quantity yet" do
+    # Shaped like the stored 2025 executions in #4040: only the list amount.
+    savings_plan = {
+      id: "evt_old_plan", timestamp: "2025-07-02T08:00:00Z", eventType: "TRADING_SAVINGSPLAN_EXECUTED",
+      category: "orderExecution", detail: { amount: "25.00", signed_amount: -25.0, currency: "EUR" }
+    }
+    trade = {
+      id: "evt_old_trade", timestamp: "2025-06-13T06:36:46Z", eventType: "TRADING_TRADE_EXECUTED",
+      category: "orderExecution", detail: { amount: "1001.00", signed_amount: -1001.0, currency: "EUR" }
+    }
+    complete = order_execution_detail(event_id: "evt_complete", quantity: "2.0", isin: "US0378331005", amount: "460.00")
+    saveback = saveback_event.deep_merge(detail: { quantity: nil })
+    @tr_account.update!(raw_timeline_payload: [ savings_plan, trade, complete, saveback ])
+
+    assert_difference -> { incomplete_execution_logs.count }, 1 do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    end
+
+    log = incomplete_execution_logs.order(:created_at).last
+    assert_equal "warn", log.level
+    assert_equal "3 Trade Republic order executions not imported yet: the detail has no ISIN or quantity", log.message
+    assert_equal 3, log.metadata["incomplete_count"]
+    executions = log.metadata["executions"].index_by { |execution| execution["event_id"] }
+    assert_equal(
+      { "event_id" => "evt_old_plan", "event_type" => "TRADING_SAVINGSPLAN_EXECUTED", "date" => "2025-07-02", "missing" => [ "isin", "quantity" ] },
+      executions["evt_old_plan"]
+    )
+    assert_equal "TRADING_TRADE_EXECUTED", executions["evt_old_trade"]["event_type"]
+    assert_equal [ "quantity" ], executions["evt_saveback"]["missing"]
+    assert_not_nil find_trade("trade_republic_event_evt_complete")
+  end
+
+  test "logs nothing when every order execution has its detail" do
+    assert_no_difference -> { incomplete_execution_logs.count } do
+      import_event(order_execution_detail(event_id: "evt_complete", quantity: "2.0", isin: "US0378331005", amount: "460.00"))
+    end
   end
 
   test "portfolio-only saveback and round up import as trades without cash entries" do
@@ -885,6 +1058,49 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     import_event(order_execution_detail(event_id: "evt_btc", quantity: "0.000134", isin: "XF000BTC0017", amount: "11.00"))
 
     assert find_trade("trade_republic_event_evt_btc")
+  end
+
+  test "a sale's cash leg uses the detail total when the timeline amount differs" do
+    cash_account, cash_sure = create_linked_cash_account!
+    # A sale with withheld tax (#4057): the timeline list says 81.33, while the
+    # detail total and the account statement say 80.87.
+    sell = net_sale_event(detail_amount: "80.87")
+    @tr_account.update!(raw_timeline_payload: [ sell ])
+
+    assert_difference -> { DebugLogEntry.where(message: SETTLEMENT_MISMATCH_MESSAGE).count }, 1 do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    assert_equal BigDecimal("-80.87"), find_trade("trade_republic_event_evt_net_sell").amount
+    assert_equal BigDecimal("-80.87"), cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_net_sell").amount
+    assert_equal BigDecimal("80.87"), @account.entries.find_by!(external_id: "trade_republic_settlement_evt_net_sell").amount
+    assert_equal 0, @account.entries.sum(:amount)
+
+    log = DebugLogEntry.where(message: SETTLEMENT_MISMATCH_MESSAGE).order(:created_at).last
+    assert_equal "81.33", log.metadata["timeline_amount"]
+    assert_equal "80.87", log.metadata["detail_amount"]
+
+    assert_no_difference -> { DebugLogEntry.where(message: SETTLEMENT_MISMATCH_MESSAGE).count } do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+  end
+
+  test "a sale booked before its detail arrived is corrected to the detail total" do
+    cash_account, cash_sure = create_linked_cash_account!
+    # Without the detail, the amount is the timeline list amount.
+    @tr_account.update!(raw_timeline_payload: [ net_sale_event(detail_amount: "81.33") ])
+
+    assert_no_difference -> { DebugLogEntry.where(message: SETTLEMENT_MISMATCH_MESSAGE).count } do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+    assert_equal BigDecimal("-81.33"), cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_net_sell").amount
+
+    @tr_account.update!(raw_timeline_payload: [ net_sale_event(detail_amount: "80.87") ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_equal BigDecimal("-80.87"), cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_net_sell").amount
+    assert_equal 1, cash_sure.entries.where(external_id: "trade_republic_event_evt_net_sell").count
   end
 
   test "split accounts settle buys and sells against the cash account" do
@@ -1682,6 +1898,25 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
       }
     end
 
+    # Shaped like a stored stock bonus: no status, no amount on the timeline,
+    # shares and value from the detail.
+    def stock_bonus_event
+      {
+        id: "evt_stock_bonus",
+        timestamp: "2025-06-25T14:52:12.282+0000",
+        eventType: "ACQUISITION_TRADE_PERK",
+        title: "Stock Bonus",
+        subtitle: "Redeemed",
+        detail: {
+          amount: "10.04",
+          currency: "EUR",
+          quantity: "0.055",
+          isin: "US0231351067",
+          name: "Amazon.com"
+        }
+      }
+    end
+
     def round_up_event
       {
         id: "evt_round_up",
@@ -1725,6 +1960,10 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
       TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
     end
 
+    def incomplete_execution_logs
+      DebugLogEntry.where("message LIKE ?", "%not imported yet%")
+    end
+
     def order_execution_detail(event_id: "evt_buy", quantity:, isin:, amount:)
       {
         id: event_id,
@@ -1751,5 +1990,14 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     def find_trade(external_id)
       @account.entries.find_by(external_id: external_id)
+    end
+
+    SETTLEMENT_MISMATCH_MESSAGE = "Trade Republic order booked at its detail total instead of the timeline amount"
+
+    # The timeline list amount stays 81.33; detail_amount is what the event's
+    # detail reports as its total.
+    def net_sale_event(detail_amount:)
+      order_execution_detail(event_id: "evt_net_sell", quantity: "-3.90625", isin: "GB00BD9G2S12", amount: detail_amount)
+        .deep_merge(title: "Gates Industrial", subtitle: "Sell Order", detail: { signed_amount: 81.33, fees: "1.0", taxes: "1.72" })
     end
 end
