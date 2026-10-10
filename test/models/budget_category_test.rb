@@ -235,6 +235,16 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_empty uncategorized_bc.subcategories
   end
 
+  test "subcategories issues no additional queries when budget_categories are already loaded" do
+    # Load budget_categories through the association so the inverse is populated.
+    parent_bc = @budget.budget_categories.find { |bc| bc.id == @parent_budget_category.id }
+
+    assert_queries_count(0) do
+      result = parent_bc.subcategories
+      assert_equal 2, result.size
+    end
+  end
+
   test "parent with only inheriting subcategories shares entire budget" do
     # Set subcategory_with_limit to also inherit
     @subcategory_with_limit_bc.update!(budgeted_spending: 0)
