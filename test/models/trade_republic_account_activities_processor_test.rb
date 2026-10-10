@@ -1022,6 +1022,49 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert find_trade("trade_republic_event_evt_btc")
   end
 
+  test "a sale's cash leg uses the detail total when the timeline amount differs" do
+    cash_account, cash_sure = create_linked_cash_account!
+    # A sale with withheld tax (#4057): the timeline list says 81.33, while the
+    # detail total and the account statement say 80.87.
+    sell = net_sale_event(detail_amount: "80.87")
+    @tr_account.update!(raw_timeline_payload: [ sell ])
+
+    assert_difference -> { DebugLogEntry.where(message: SETTLEMENT_MISMATCH_MESSAGE).count }, 1 do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    assert_equal BigDecimal("-80.87"), find_trade("trade_republic_event_evt_net_sell").amount
+    assert_equal BigDecimal("-80.87"), cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_net_sell").amount
+    assert_equal BigDecimal("80.87"), @account.entries.find_by!(external_id: "trade_republic_settlement_evt_net_sell").amount
+    assert_equal 0, @account.entries.sum(:amount)
+
+    log = DebugLogEntry.where(message: SETTLEMENT_MISMATCH_MESSAGE).order(:created_at).last
+    assert_equal "81.33", log.metadata["timeline_amount"]
+    assert_equal "80.87", log.metadata["detail_amount"]
+
+    assert_no_difference -> { DebugLogEntry.where(message: SETTLEMENT_MISMATCH_MESSAGE).count } do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+  end
+
+  test "a sale booked before its detail arrived is corrected to the detail total" do
+    cash_account, cash_sure = create_linked_cash_account!
+    # Without the detail, the amount is the timeline list amount.
+    @tr_account.update!(raw_timeline_payload: [ net_sale_event(detail_amount: "81.33") ])
+
+    assert_no_difference -> { DebugLogEntry.where(message: SETTLEMENT_MISMATCH_MESSAGE).count } do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+    assert_equal BigDecimal("-81.33"), cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_net_sell").amount
+
+    @tr_account.update!(raw_timeline_payload: [ net_sale_event(detail_amount: "80.87") ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_equal BigDecimal("-80.87"), cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_net_sell").amount
+    assert_equal 1, cash_sure.entries.where(external_id: "trade_republic_event_evt_net_sell").count
+  end
+
   test "split accounts settle buys and sells against the cash account" do
     cash_account, cash_sure = create_linked_cash_account!
     buy = order_execution_detail(event_id: "evt_settle_buy", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
@@ -1905,5 +1948,14 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     def find_trade(external_id)
       @account.entries.find_by(external_id: external_id)
+    end
+
+    SETTLEMENT_MISMATCH_MESSAGE = "Trade Republic order booked at its detail total instead of the timeline amount"
+
+    # The timeline list amount stays 81.33; detail_amount is what the event's
+    # detail reports as its total.
+    def net_sale_event(detail_amount:)
+      order_execution_detail(event_id: "evt_net_sell", quantity: "-3.90625", isin: "GB00BD9G2S12", amount: detail_amount)
+        .deep_merge(title: "Gates Industrial", subtitle: "Sell Order", detail: { signed_amount: 81.33, fees: "1.0", taxes: "1.72" })
     end
 end

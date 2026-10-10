@@ -8,6 +8,7 @@ class TradeRepublicAccount::ActivitiesProcessor
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
   SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
+  SETTLEMENT_AMOUNT_TOLERANCE = BigDecimal("0.01")
   ACTIVITY_LABELS_BY_KEY = {
     "contribution" => "Contribution",
     "withdrawal" => "Withdrawal",
@@ -363,23 +364,28 @@ class TradeRepublicAccount::ActivitiesProcessor
       true
     end
 
-    # The timeline list amount is what Trade Republic booked against the cash
-    # balance, fees and taxes included. Unlike cash movements (see
+    # The cash leg of an order. The detail total ("Total" / "Summe") is what
+    # Trade Republic books against the cash balance, fees and taxes included.
+    # The timeline list amount usually matches it, but not for some sales with
+    # withheld tax (#4057), so the detail total wins once the detail is
+    # fetched; before that, `amount` is the list amount anyway.
+    # The list amount still gives the direction: unlike cash movements (see
     # import_cash_movement), order executions carry a consistent sign across
-    # topics: negative for buys, positive for sales. Payloads that only carry
-    # a magnitude fall back to the traded quantity; without either signal the
-    # direction is unknown and nothing is booked.
+    # topics, negative for buys and positive for sales. Payloads that only
+    # carry a magnitude fall back to the traded quantity; without either
+    # signal the direction is unknown and nothing is booked.
     # Buys count as investment contributions in budgets; sale proceeds are a
     # funds movement rather than income. Neither gets a category.
     def import_order_settlement(event, detail, external_id, date)
       signed_amount = parse_decimal(detail[:signed_amount])
-      amount = signed_amount || parse_decimal(detail[:amount])
+      amount = parse_decimal(detail[:amount])&.nonzero? || signed_amount
       return false unless amount && !amount.zero?
 
       quantity = parse_decimal(detail[:quantity])
       return false if signed_amount.nil? && (quantity.nil? || quantity.zero?)
 
       outflow = signed_amount ? signed_amount.negative? : quantity.positive?
+      capture_settlement_amount_mismatch(event, external_id, signed_amount, outflow ? amount.abs : -amount.abs)
 
       import_cash_movement(
         event,
@@ -391,6 +397,28 @@ class TradeRepublicAccount::ActivitiesProcessor
         sign: outflow ? 1 : -1,
         kind: outflow ? "investment_contribution" : "funds_movement",
         settles_trade: true
+      )
+    end
+
+    # Records an order whose list amount and detail total differ, when the
+    # booked amount changes (a new entry or a correction), not on every sync.
+    def capture_settlement_amount_mismatch(event, external_id, list_amount, booked_amount)
+      return if list_amount.nil? || (list_amount.abs - booked_amount.abs).abs <= SETTLEMENT_AMOUNT_TOLERANCE
+      return if account.entries.where(external_id: external_id, source: "trade_republic").pick(:amount) == booked_amount
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Trade Republic order booked at its detail total instead of the timeline amount",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: {
+          event_id: event[:id],
+          timeline_amount: list_amount.abs.to_s("F"),
+          detail_amount: booked_amount.abs.to_s("F")
+        }
       )
     end
 
