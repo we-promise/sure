@@ -1,10 +1,38 @@
 require "test_helper"
 
 class SimplefinItem::ImporterPostImportTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @family = families(:dylan_family)
     @item = SimplefinItem.create!(family: @family, name: "SF Conn", access_url: "https://example.com/access")
     @sync = Sync.create!(syncable: @item)
+  end
+
+  test "track_stale_unmatched_pending excludes split parents and children" do
+    account = accounts(:depository)
+    importer = SimplefinItem::Importer.new(@item, simplefin_provider: mock(), sync: @sync)
+
+    # Standalone stale (>8 days) pending entry, no posted-match suggestion — should be counted.
+    standalone = create_transaction(
+      account: account, amount: 20, currency: "USD", date: 10.days.ago.to_date, source: "simplefin"
+    )
+    standalone.transaction.update!(extra: { "simplefin" => { "pending" => true } })
+
+    # Split stale pending family: children inherit the pending flag but are not authoritative.
+    parent = create_transaction(
+      account: account, amount: 100, currency: "USD", date: 10.days.ago.to_date, source: "simplefin"
+    )
+    parent.transaction.update!(extra: { "simplefin" => { "pending" => true } })
+    parent.split!([
+      { name: "Part A", amount: 60, category_id: nil },
+      { name: "Part B", amount: 40, category_id: nil }
+    ])
+
+    importer.send(:track_stale_unmatched_pending, account)
+
+    assert_equal 1, importer.send(:stats)["stale_unmatched_pending"],
+      "only the standalone stale pending entry should be tracked, not the split parent or its children"
   end
 
   test "credit account import updates available_credit when available-balance provided" do

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class SimplefinItemTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @family = families(:dylan_family)
     @simplefin_item = SimplefinItem.create!(
@@ -8,6 +10,41 @@ class SimplefinItemTest < ActiveSupport::TestCase
       name: "Test SimpleFin Connection",
       access_url: "https://example.com/access_token"
     )
+  end
+
+  test "stale_pending_status excludes split parents and children" do
+    account = Account.create!(
+      family: @family, name: "SF Checking",
+      accountable: Depository.new(subtype: "checking"), balance: 0, currency: "USD"
+    )
+    sf_account = @simplefin_item.simplefin_accounts.create!(
+      name: "SF", account_id: "sf_stale", currency: "USD",
+      account_type: "checking", current_balance: 0
+    )
+    account.update!(simplefin_account_id: sf_account.id)
+
+    # Standalone stale (>8 days) pending entry — should be counted.
+    standalone = create_transaction(
+      account: account, amount: 20, currency: "USD", date: 10.days.ago.to_date, source: "simplefin"
+    )
+    standalone.transaction.update!(extra: { "simplefin" => { "pending" => true } })
+
+    # Split stale pending family: parent is excluded; children inherit the pending flag.
+    # Neither should be counted — auto_exclude_stale_pending skips them, so counting them
+    # would show a warning that can never reach zero.
+    parent = create_transaction(
+      account: account, amount: 100, currency: "USD", date: 10.days.ago.to_date, source: "simplefin"
+    )
+    parent.transaction.update!(extra: { "simplefin" => { "pending" => true } })
+    parent.split!([
+      { name: "Part A", amount: 60, category_id: nil },
+      { name: "Part B", amount: 40, category_id: nil }
+    ])
+
+    status = @simplefin_item.stale_pending_status(days: 8)
+
+    assert_equal 1, status[:count],
+      "only the standalone stale pending entry should be counted, not the split parent or its children"
   end
 
   test "belongs to family" do
