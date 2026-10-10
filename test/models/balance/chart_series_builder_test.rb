@@ -855,17 +855,17 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal [ 0, 500, 500, 500 ], builder.net_contributions_series.values.map { |v| v.value.amount }
   end
 
-  # An explicit anchor opens at that day's close, which already holds the
-  # day's flows; one of them going unvalued is not part of the line, so it
-  # does not make the line understated. Without the anchor it does.
-  test "an unvalued flow on an explicit anchor day does not make the line understated" do
+  # An explicit anchor opens before the day's activity and counts the day's
+  # flows (#382), so one of them going unvalued is part of the line and makes
+  # it understated, with the anchor as without it.
+  test "an unvalued flow on an explicit anchor day makes the line understated" do
     account = create_portfolio_account(family: families(:empty))
     lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
     deposit account: account, date: @day_one + 1, amount: 100, currency: "EUR" # no EUR rate at all
 
     assert contributions_builder(account).net_contributions_understated?, "counted from inception"
-    refute contributions_builder(account).net_contributions_understated?(anchor_date: @day_one + 1),
-           "opened at the anchor day's close"
+    assert contributions_builder(account).net_contributions_understated?(anchor_date: @day_one + 1),
+           "the anchor day's flows are counted, so an unvalued one is reported"
   end
 
   private
