@@ -71,6 +71,37 @@ class Assistant::Function::GetBillsTest < ActiveSupport::TestCase
     end
   end
 
+  # Nobody is paying a paused bill, so its leftover is neither overdue nor
+  # due, and the occurrence names the pause the way the series does.
+  test "a paused bill's leftover is not overdue or due, and reads paused" do
+    late_day = 10.days.ago.to_date
+    late = create_series(name: "Paused late", amount: 75, expected_day_of_month: late_day.day,
+                         anchor_date: late_day, last_occurrence_date: 2.months.ago.to_date,
+                         next_expected_date: late_day)
+    grace_day = 2.days.ago.to_date
+    in_grace = create_series(name: "Paused grace", amount: 76, expected_day_of_month: grace_day.day,
+                             anchor_date: grace_day, last_occurrence_date: 2.months.ago.to_date,
+                             next_expected_date: grace_day)
+    assert_equal [ "Paused late" ], call_tool("payment_state" => "overdue")[:bills].map { |bill| bill[:name] }
+    assert_equal [ "Paused grace" ], call_tool("payment_state" => "due")[:bills].map { |bill| bill[:name] }
+    future_day = Date.current + 20
+    future = create_series(name: "Paused future", amount: 77, expected_day_of_month: future_day.day,
+                           anchor_date: future_day, last_occurrence_date: future_day - 1.month,
+                           next_expected_date: future_day)
+    # Pausing drops future rows, except one already carrying a payment.
+    RecurringTransaction::Allocator.new(future.current_occurrence).allocate!(amount: "10")
+    assert_equal [ "Paused future" ], call_tool("payment_state" => "upcoming")[:bills].map { |bill| bill[:name] }
+    [ late, in_grace, future ].each(&:mark_inactive!)
+
+    assert_empty call_tool("status" => "all", "payment_state" => "overdue")[:bills]
+    assert_empty call_tool("status" => "paused", "payment_state" => "due")[:bills]
+    assert_empty call_tool("status" => "paused", "payment_state" => "upcoming")[:bills]
+
+    result = call_tool("status" => "all")
+    assert_equal 0, result[:totals][:overdue_count]
+    assert_equal %w[paused paused paused], result[:bills].map { |bill| bill.dig(:current_occurrence, :state) }
+  end
+
   test "search matches the merchant behind a nameless series" do
     create_series(name: nil, merchant: merchants(:netflix), amount: 15.99)
     create_series(name: "Water", amount: 80)

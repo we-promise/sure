@@ -229,7 +229,7 @@ class RecurringTransaction
         family.recurring_occurrences
               .open_status
               .includes(recurring_transaction: :recurrence_rules)
-              .reject { |occurrence| occurrence.recurring_transaction.transfer? }
+              .to_a
       end
 
       def rejected_pairs
@@ -251,20 +251,58 @@ class RecurringTransaction
       end
 
       # One query over the envelope of every open occurrence's window.
+      # Transfer legs are left out, except the outflow side of a transfer that
+      # a recurring transfer series could be paid by.
       def entries_for(occurrences, include_closed_window)
         window_min = occurrences.map { |occurrence| window_for(occurrence).begin }.min
         window_max = occurrences.map { |occurrence| window_for(occurrence).end }.max
         window_max = Date.current if !include_closed_window && window_max > Date.current
+
+        source_account_ids = occurrences.map(&:recurring_transaction).select(&:transfer?).map(&:account_id).uniq
+        preload_transfer_destinations(source_account_ids, window_min..window_max)
 
         family.entries
               .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
               .where(entryable_type: "Transaction")
               .where(excluded: false)
               .where(date: window_min..window_max)
-              .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+              .where("transactions.kind NOT IN (?) OR transactions.id IN (?)", Transaction::TRANSFER_KINDS, transfer_destinations.keys)
               .where.not(id: RecurringAllocation.where.not(entry_id: nil).where(state: "confirmed").select(:entry_id))
               .includes(:entryable)
               .to_a
+      end
+
+      # Outflow transaction id => the account its transfer pays into, for the
+      # transfers leaving the given accounts in the window. Every entry
+      # candidate collection scores is in that window, so once this has run the
+      # map is complete and a missing entry is simply not a transfer outflow.
+      def preload_transfer_destinations(account_ids, dates)
+        @transfer_destinations_complete = true
+        return if account_ids.empty?
+
+        Transfer
+          .joins(outflow_transaction: :entry)
+          .joins("INNER JOIN entries inflow_entries ON inflow_entries.entryable_id = transfers.inflow_transaction_id AND inflow_entries.entryable_type = 'Transaction'")
+          .where(entries: { account_id: account_ids, date: dates })
+          .pluck(:outflow_transaction_id, "inflow_entries.account_id")
+          .each { |outflow_id, account_id| transfer_destinations[outflow_id] = account_id }
+      end
+
+      def transfer_destinations
+        @transfer_destinations ||= {}
+      end
+
+      # The account the entry pays into when it is the outflow of a transfer.
+      # Read from the preload during candidate collection; looked up on demand
+      # for explain and orphan repair, which handle one entry at a time.
+      def transfer_destination(entry)
+        transaction_id = entry.entryable_id
+        return transfer_destinations[transaction_id] if transfer_destinations.key?(transaction_id) || @transfer_destinations_complete
+
+        transfer_destinations[transaction_id] = Transfer
+          .where(outflow_transaction_id: transaction_id)
+          .joins(inflow_transaction: :entry)
+          .pick("entries.account_id")
       end
 
       # The occurrence's date window, snooze-aware and clamped so adjacent
@@ -298,6 +336,10 @@ class RecurringTransaction
       # keeps the merchant when it has one, and its name stays kin to the old
       # descriptor rather than equal to it.
       def repair_identity?(series, entry)
+        # A transfer leg's name is generic ("Transfer", a bank reference), so
+        # the account pair is the identity here too, as in identity_matches?.
+        return transfer_destination(entry) == series.destination_account_id if series.transfer?
+
         if series.merchant_id.present? && entry.entryable.merchant_id.present?
           return entry.entryable.merchant_id == series.merchant_id
         end
@@ -310,13 +352,19 @@ class RecurringTransaction
 
       # Hard filters: right sign, right currency, right account when the
       # series is account-scoped, and the identifier at least plausibly
-      # related (same merchant, or a name the series knows).
+      # related (same merchant, or a name the series knows). A recurring
+      # transfer is identified by its account pair instead: the entry must be
+      # the outflow of a transfer into the series' destination account. Any
+      # other series never matches a transfer leg.
       def identity_matches?(series, entry)
         return false unless entry.currency == series.currency
         return false if series.account_id.present? && entry.account_id != series.account_id
 
         expense_series = series.amount.positive?
         return false if expense_series != entry.amount.positive?
+
+        return transfer_destination(entry) == series.destination_account_id if series.transfer?
+        return false if entry.entryable.transfer?
 
         if series.merchant_id.present?
           entry.entryable.merchant_id == series.merchant_id
@@ -348,7 +396,9 @@ class RecurringTransaction
         signals = {}
         expected = expected_for(occurrence)
 
-        if series.merchant_id.present?
+        if series.transfer?
+          signals[:transfer] = 0.40
+        elsif series.merchant_id.present?
           signals[:merchant] = 0.40
         else
           signals[:name] = 0.35

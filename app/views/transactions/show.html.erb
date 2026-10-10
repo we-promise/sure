@@ -82,6 +82,8 @@
                     disabled: @entry.linked? || split_locked || edit_locked,
                     disable_currency: @entry.linked? || split_locked || edit_locked %>
             </div>
+          <% end %>
+          <% if @entry.transaction.category_editable? %>
             <%= f.fields_for :entryable do |ef| %>
               <%= render DS::CategorySelect.new(
                     form: ef,
@@ -92,6 +94,21 @@
                     blank_label: t(".uncategorized")
                   ) %>
             <% end %>
+          <% elsif @entry.transaction.category_set_on_transfer_outflow? %>
+            <% outflow_category = transfer_outflow_category(@entry.transaction) %>
+            <div class="space-y-1">
+              <div class="opacity-60 cursor-not-allowed">
+                <%= f.fields_for :entryable do |ef| %>
+                  <%= render DS::CategorySelect.new(
+                        form: ef,
+                        categories: [],
+                        selected_category: outflow_category || transfer_category,
+                        disabled: true
+                      ) %>
+                <% end %>
+              </div>
+              <p class="text-xs text-secondary"><%= outflow_category ? t(".category_set_on_outflow") : t(".category_set_on_hidden_outflow") %></p>
+            </div>
           <% end %>
         <% end %>
         <%= render "transactions/category_provenance", entry: @entry %>
@@ -380,8 +397,8 @@
               ) %>
             </div>
           <% end %>
-          <!-- Convert to Trade (Investment Accounts Only, not already converted) -->
-          <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
+          <!-- Convert to Trade (trade-capable accounts, not already converted) -->
+          <% if @entry.account.supports_trades? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
             <div class="flex items-center justify-between gap-2 p-3">
               <div class="text-sm space-y-1">
                 <h4 class="text-primary"><%= t(".convert_to_trade_title") %></h4>
@@ -409,9 +426,9 @@
                 <div class="flex items-center justify-between gap-2 text-sm">
                   <div>
                     <%= link_to occurrence.recurring_transaction.display_name,
-                                bill_path(occurrence.recurring_transaction),
+                                bill_path(occurrence.recurring_transaction, occurrence: occurrence.id),
                                 class: "text-primary font-medium hover:underline",
-                                data: { turbo_frame: "_top" } %>
+                                data: { turbo_frame: "drawer", turbo_prefetch: false } %>
                     <p class="text-secondary text-xs privacy-sensitive">
                       <%= t(".applied_to_detail",
                             amount: format_money(allocation.allocated_amount_money),

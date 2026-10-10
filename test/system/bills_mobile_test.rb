@@ -78,10 +78,18 @@ class BillsMobileTest < ApplicationSystemTestCase
       assert_no_horizontal_scroll("the #{view} view")
     end
 
-    # The bill's own page: chart, history and configuration in one column.
+    # A bill visited directly: its drawer over the overview, with the chart and
+    # the per-year totals loaded into it. Every section opened, or a closed one
+    # would hide whatever it pushes sideways.
     visit bill_url(bill)
-    assert_text bill.display_name
-    assert_no_horizontal_scroll("the bill page")
+    within("dialog[open]") do
+      assert_selector "h2", text: bill.display_name
+      scroll_to find("turbo-frame[src*='display=history']")
+      assert_text(/#{I18n.t("bills.detail.history_title")}/i)
+      all("details:not([open]) > summary").each(&:click)
+      assert_text bill.notes
+    end
+    assert_no_horizontal_scroll("the bill drawer")
 
     # The control for the reflow above: given its width back, the container
     # query must bring the table back, or the check proved only that a table
@@ -109,6 +117,66 @@ class BillsMobileTest < ApplicationSystemTestCase
       assert_selector "button[aria-label='#{I18n.t("ds.dialog.close")}']", visible: true
     end
     assert_no_horizontal_scroll("the bill drawer")
+  end
+
+  # Bill rows padded 12px under a 16px section header, so every card had a 4px
+  # step. And the review rows kept two buttons beside the text, which left a
+  # phone "VERIZON …" for a question and "Neighborhood …" for a name.
+  test "every list row lines up with its header and review rows read in full on a phone" do
+    bill = @family.recurring_transactions.create!(
+      name: "Verizon Wireless", account: accounts(:depository), amount: 95, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    RecurringAllocation.create!(
+      recurring_occurrence: bill.recurring_occurrences.order(:due_on).first,
+      state: :suggested, source: :auto_matched,
+      allocated_amount: 95, currency: "USD", paid_on: Date.current
+    )
+    @family.recurring_transactions.create!(
+      name: "Neighborhood Fitness Club", account: accounts(:depository), amount: 89.99, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current + 1.month,
+      status: "suggested", occurrence_count: 3
+    )
+
+    # Chrome will not shrink a window below ~500px, which leaves these lists
+    # just past @md. Emulate the phone itself.
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: PHONE[0], height: PHONE[1], deviceScaleFactor: 1, mobile: true)
+    visit bills_url
+    question = I18n.t("bills.index.suggestion_line", entry: I18n.t("bills.index.suggestion_unknown_entry"), bill: bill.display_name)
+    assert_text question
+    assert_text "Neighborhood Fitness Club"
+
+    offsets = page.evaluate_script(<<~JS)
+      (() => {
+        const visibleChild = (el) => [...el.children].find((c) => c.getClientRects().length > 0);
+        return [...document.querySelectorAll(".\\\\@container a[href*='display=drawer']")].map((link) => {
+          const header = link.closest(".\\\\@container").previousElementSibling.querySelector("h2");
+          return Math.round(visibleChild(link).getBoundingClientRect().left - header.getBoundingClientRect().left);
+        });
+      })()
+    JS
+    assert offsets.any?, "expected bill rows on the overview"
+    assert_equal [ 0 ], offsets.uniq, "bill row content must share its section header's left edge"
+
+    [ question, "Neighborhood Fitness Club" ].each do |text|
+      layout = page.evaluate_script(<<~JS, text)
+        ((text) => {
+          const p = [...document.querySelectorAll("#main p")].find((el) => el.textContent.trim() === text);
+          const button = p.closest(".py-3").querySelector("a, button");
+          return {
+            clipped: p.scrollWidth > p.clientWidth,
+            below: button.getBoundingClientRect().top >= p.getBoundingClientRect().bottom
+          };
+        })(arguments[0])
+      JS
+      assert_not layout["clipped"], "#{text.inspect} is truncated"
+      assert layout["below"], "the buttons for #{text.inspect} should sit under the text"
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
   # A green overflow assertion proves nothing unless it can go red, and this

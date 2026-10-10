@@ -160,6 +160,49 @@ class Transaction < ApplicationRecord
     TRANSFER_KINDS.include?(kind)
   end
 
+  # Whether the user can assign a category (and merchant/tags) to this
+  # transaction. Regular transactions always qualify. For transfers:
+  #   - No Transfer record yet (e.g. an unmatched provider-imported leg):
+  #     stay editable, same as a regular transaction, since there's no
+  #     counterpart to defer to and no other way for the user to fix a
+  #     provider mislabel.
+  #   - Once matched, the category belongs to the outflow leg, the one
+  #     budgets and reports count. Only that leg is editable, and only when
+  #     Transfer#categorizable?, which is based on the (stable) destination
+  #     account rather than either leg's kind, so it stays correct even if
+  #     an older provider sync left a stale kind on this transaction. The
+  #     inflow leg shows the outflow's category instead (see
+  #     #category_set_on_transfer_outflow?), since a category picked there
+  #     would look saved but never reach a budget.
+  def category_editable?
+    return false if category_set_on_transfer_outflow?
+    return true unless transfer?
+    return true unless transfer
+
+    transfer.categorizable? && transfer.outflow_transaction_id == id
+  end
+
+  # The inflow leg of a categorizable transfer: its category is the
+  # outflow's, shown read-only. Decided by the Transfer record rather than
+  # this leg's kind, so editing the kind (e.g. to standard) cannot bypass
+  # the outflow's ownership.
+  def category_set_on_transfer_outflow?
+    transfer_as_inflow.present? && transfer_as_inflow.categorizable?
+  end
+
+  # Whether this non-editable transfer leg is a liability payment (shown
+  # with the "Payment" badge instead of "Transfer"). Defers to the attached
+  # Transfer when one exists, since a matched transaction's own kind can be
+  # stale (rows a provider sync overwrote before the import adapter derived
+  # matched legs from their Transfer), which would otherwise let a stale
+  # "cc_payment" kind override a transfer that isn't actually a payment.
+  # Only falls back to the transaction's own kind when there's no Transfer
+  # record yet (e.g. a provider-imported cc_payment leg whose counterpart
+  # hasn't been matched), the same pattern category_editable? uses.
+  def payment?
+    transfer ? transfer.payment? : kind == "cc_payment"
+  end
+
   # Automatic-categorization provenance for the UI, or nil when no
   # ai/bayes enrichment was ever recorded for this transaction.
   def category_provenance
