@@ -1792,6 +1792,49 @@ RSpec.configure do |config|
               sankey: { '$ref' => '#/components/schemas/CashFlowSankey' }
             }
           },
+          MonthlySpending: {
+            type: :object,
+            required: %w[currency basis as_of period filters accounts categories months empty_selection missing_exchange_rates],
+            properties: {
+              currency: { type: :string },
+              basis: { type: :string, enum: [ 'gross_expense' ] },
+              as_of: { type: :string, format: :date },
+              period: {
+                type: :object, required: %w[from to end_date],
+                properties: { from: { type: :string, format: :date }, to: { type: :string, format: :date }, end_date: { type: :string, format: :date } }
+              },
+              filters: {
+                type: :object, required: %w[account_ids category_ids],
+                properties: { account_ids: { type: :array, items: { type: :string } }, category_ids: { type: :array, items: { type: :string } } }
+              },
+              accounts: { type: :array, items: { '$ref' => '#/components/schemas/MonthlySpendingOption' } },
+              categories: { type: :array, items: { '$ref' => '#/components/schemas/MonthlySpendingOption' } },
+              months: {
+                type: :array, minItems: 1, maxItems: 36,
+                items: {
+                  type: :object, required: %w[month partial total missing_exchange_rates categories],
+                  properties: {
+                    month: { type: :string, format: :date },
+                    partial: { type: :boolean },
+                    total: { type: :string, description: 'Exact decimal amount in family currency' },
+                    missing_exchange_rates: { type: :integer, minimum: 0 },
+                    categories: {
+                      type: :array, items: {
+                        type: :object, required: %w[id amount],
+                        properties: { id: { type: :string }, amount: { type: :string, description: 'Exact decimal amount in family currency' } }
+                      }
+                    }
+                  }
+                }
+              },
+              empty_selection: { type: :boolean },
+              missing_exchange_rates: { type: :integer, minimum: 0 }
+            }
+          },
+          MonthlySpendingOption: {
+            type: :object, required: %w[id name],
+            properties: { id: { type: :string }, name: { type: :string }, color: { type: :string, nullable: true } }
+          },
           CashFlow: {
             type: :object,
             required: %w[month as_of time_zone currency period income spending net_savings savings_rate spending_comparison],

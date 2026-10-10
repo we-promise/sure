@@ -292,3 +292,14 @@
     </label>
   <% end %>
 <% end %>
+
+<% if preview_features_enabled? %>
+  <%= settings_section title: t("pages.dashboard.monthly_spending.title") do %>
+    <%= styled_form_with url: settings_preferences_path, method: :patch, data: { controller: "auto-submit-form" } do |form| %>
+      <label for="monthly_spending_visible" class="flex cursor-pointer items-center justify-between gap-4">
+        <span class="text-sm text-primary"><%= t("pages.dashboard.monthly_spending.show_on_home") %></span>
+        <%= render DS::Toggle.new(id: "monthly_spending_visible", name: "user[monthly_spending_visible]", checked: !@user.dashboard_hidden_sections.include?("monthly_spending"), data: { auto_submit_form_target: "auto" }) %>
+      </label>
+    <% end %>
+  <% end %>
+<% end %>

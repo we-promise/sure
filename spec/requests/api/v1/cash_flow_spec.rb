@@ -39,16 +39,26 @@ RSpec.describe 'API V1 Cash Flow', type: :request do
       description 'Server-calculated income, spending, savings, and daily cumulative comparison in family currency. Uses the authenticated user’s finance accounts and Sure reporting rules. Browser sessions do not authenticate this public API.'
       parameter name: :month, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Non-future first day YYYY-MM-01; defaults to the current month in the family time zone.'
       parameter name: :include, in: :query, required: false, schema: { type: :string, enum: [ 'sankey' ] }, description: 'Append server-calculated graph to the monthly summary; cannot combine with view.'
-      parameter name: :view, in: :query, required: false, schema: { type: :string, enum: [ 'sankey' ] }, description: 'Graph-only envelope; omits daily comparison. Accepts month or an explicit date range; cannot combine with include.'
+      parameter name: :view, in: :query, required: false, schema: { type: :string, enum: [ 'sankey', 'monthly_spending' ] }, description: 'Graph-only envelope; omits daily comparison. Accepts month or an explicit date range; cannot combine with include. monthly_spending is preview-gated, uses from/to and filters, and cannot combine with month or Sankey dates.'
       parameter name: :group_by, in: :query, required: false, schema: { type: :string, enum: %w[category account], default: 'category' }, description: 'Requires view=sankey. category: flows through one Cash Flow node; account: income categories flow through each account to expense categories (basis net_by_account).'
       parameter name: :start_date, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Inclusive ISO date. Requires end_date and view=sankey; cannot combine with month.'
       parameter name: :end_date, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Inclusive ISO date at or after start_date. Explicit ranges preserve their bounds, including future dates.'
+      parameter name: :from, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Requires view=monthly_spending. First month YYYY-MM-01; defaults to 11 months before to. Maximum 36 months inclusive.'
+      parameter name: :to, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Requires view=monthly_spending. Last month YYYY-MM-01; defaults to current family-timezone month, capped at today. Future months are rejected.'
+      parameter name: :'account_ids[]', in: :query, required: false, schema: { type: :array, items: { type: :string } }, description: 'Requires view=monthly_spending. Omitted means all eligible accounts. Send an empty-string item for explicit none. Unknown or unavailable IDs return 422.'
+      parameter name: :'category_ids[]', in: :query, required: false, schema: { type: :array, items: { type: :string } }, description: 'Requires view=monthly_spending. Root category IDs (include children) or __uncategorized__. Omitted means all; empty-string item means none. Unknown IDs return 422.'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
-      response '200', 'summary returned' do
-        schema anyOf: [ { '$ref' => '#/components/schemas/CashFlow' }, { '$ref' => '#/components/schemas/CashFlowGraph' } ]
+      response '200', 'summary or selected chart returned' do
+        schema anyOf: [ { '$ref' => '#/components/schemas/CashFlow' }, { '$ref' => '#/components/schemas/CashFlowGraph' }, { '$ref' => '#/components/schemas/MonthlySpending' } ]
 
+        run_test!
+      end
+
+      response '403', 'monthly spending preview disabled' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:view) { 'monthly_spending' }
         run_test!
       end
 

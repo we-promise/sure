@@ -1030,4 +1030,100 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chatConversationStartFailed =>
       'Failed to start conversation. Please try again.';
+
+  @override
+  String get monthlySpendingTitle => 'Spending by month';
+
+  @override
+  String get monthlySpendingPreview => 'Preview';
+
+  @override
+  String get monthlySpendingFilters => 'Filters';
+
+  @override
+  String get monthlySpendingReset => 'Reset';
+
+  @override
+  String get monthlySpendingError =>
+      'Unable to load spending. Connect to the server and try again.';
+
+  @override
+  String get monthlySpendingInvalid =>
+      'Choose 1–36 months in order and available accounts and categories.';
+
+  @override
+  String monthlySpendingScope(int accounts, int categories) {
+    return '$accounts accounts · $categories categories';
+  }
+
+  @override
+  String get monthlySpendingBasis =>
+      'Posted gross expenses in family currency. Transfers and pending entries are excluded; refunds remain income.';
+
+  @override
+  String get monthlySpendingFx =>
+      'Provisional: missing exchange rates. Original amounts are included without conversion.';
+
+  @override
+  String get monthlySpendingEmptySelection =>
+      'Select at least one account and category to show spending.';
+
+  @override
+  String get monthlySpendingEmpty =>
+      'No reportable expenses for this selection.';
+
+  @override
+  String get monthlySpendingChartHidden => 'Chart hidden in privacy mode.';
+
+  @override
+  String get monthlySpendingHint =>
+      'Tap a bar for details; swipe sideways for more months. * Month in progress.';
+
+  @override
+  String get monthlySpendingPartial => 'Month in progress';
+
+  @override
+  String get monthlySpendingDetails => 'Month details';
+
+  @override
+  String get monthlySpendingFrom => 'From month';
+
+  @override
+  String get monthlySpendingTo => 'To month';
+
+  @override
+  String get monthlySpendingAccounts => 'Accounts';
+
+  @override
+  String get monthlySpendingCategories => 'Categories';
+
+  @override
+  String get monthlySpendingApply => 'Apply';
+
+  @override
+  String get monthlySpendingSearch => 'Search';
+
+  @override
+  String get monthlySpendingAll => 'All';
+
+  @override
+  String get monthlySpendingNone => 'None';
+
+  @override
+  String get monthlySpendingNoResults => 'No matches';
+
+  @override
+  String get monthlySpendingChooseMonth => 'Choose any month';
+
+  @override
+  String get monthlySpendingLastTwelve => 'Last 12 months';
+
+  @override
+  String get monthlySpendingThisYear => 'This year';
+
+  @override
+  String get monthlySpendingPreviousYear => 'Previous year';
+
+  @override
+  String get monthlySpendingShowOnHome => 'Show monthly spending on Home';
 }

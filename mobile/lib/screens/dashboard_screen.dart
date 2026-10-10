@@ -2,6 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/account.dart';
+import '../models/monthly_spending.dart';
+import '../services/monthly_spending_service.dart';
+import '../services/api_config.dart';
+import '../widgets/monthly_spending_card.dart';
 import '../providers/auth_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/transactions_provider.dart';
@@ -30,6 +34,8 @@ class DashboardScreen extends StatefulWidget {
 
 class DashboardScreenState extends State<DashboardScreen> {
   final LogService _log = LogService.instance;
+  final MonthlySpendingService _monthlySpendingService = MonthlySpendingService();
+  int _monthlySpendingRevision = 0;
   bool _showSyncSuccess = false;
   int _previousPendingCount = 0;
   Timer? _syncSuccessTimer;
@@ -60,6 +66,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    _monthlySpendingService.dispose();
     _syncSuccessTimer?.cancel();
     _transactionsProvider?.removeListener(_onTransactionsChanged);
     super.dispose();
@@ -109,11 +116,21 @@ class DashboardScreenState extends State<DashboardScreen> {
     }
 
     await accountsProvider.fetchAccounts(accessToken: accessToken);
+    if (mounted) setState(() { _monthlySpendingRevision++; });
     
     // Check if unauthorized
     if (accountsProvider.errorMessage == 'unauthorized') {
       await authProvider.logout();
     }
+  }
+
+  Future<MonthlySpendingResult> _loadMonthlySpending(MonthlySpendingSelection selection) async {
+    final auth = context.read<AuthProvider>();
+    final token = await auth.getValidAccessToken();
+    if (token == null) return const MonthlySpendingResult(MonthlySpendingStatus.unauthorized);
+    final result = await _monthlySpendingService.fetch(accessToken: token, selection: selection);
+    if (mounted && result.status == MonthlySpendingStatus.unauthorized) await auth.logout();
+    return result;
   }
 
   Future<void> _loadPreferences() async {
@@ -511,6 +528,15 @@ class DashboardScreenState extends State<DashboardScreen> {
                     formatAmount: _formatAmount,
                     netWorthFormatted: accountsProvider.netWorthFormatted,
                     isStale: accountsProvider.isBalanceSheetStale,
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: MonthlySpendingCard(
+                    preferenceKey: authProvider.user == null ? null : '${ApiConfig.baseUrl}:${authProvider.user!.id}',
+                    key: ValueKey('monthly:${ApiConfig.baseUrl}:${authProvider.user?.id}'),
+                    loader: _loadMonthlySpending,
+                    revision: _monthlySpendingRevision,
                   ),
                 ),
 
