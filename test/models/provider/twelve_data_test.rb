@@ -100,6 +100,32 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     assert_instance_of Provider::TwelveData::Error, result.error
   end
 
+  test "default_error_transformer surfaces the real API message from a raised HTTP error body" do
+    body = {
+      "code" => 404,
+      "message" => "This endpoint is not available for this symbol/exchange combination, available starting with Grow plan",
+      "status" => "error"
+    }.to_json
+    error = Faraday::ResourceNotFound.new("the server responded with status 404 for GET https://api.twelvedata.com/time_series", { status: 404, body: body })
+
+    result = @provider.send(:with_provider_response) { raise error }
+
+    assert_not result.success?
+    assert_instance_of Provider::TwelveData::Error, result.error
+    assert_includes result.error.message, "available starting with Grow plan"
+    assert Provider::TwelveData.plan_upgrade_required?(result.error.message)
+    assert_equal "Grow", Provider::TwelveData.extract_required_plan(result.error.message)
+  end
+
+  test "default_error_transformer falls back to the generic Faraday message when the body isn't JSON" do
+    error = Faraday::ResourceNotFound.new("the server responded with status 404 for GET https://api.twelvedata.com/time_series", { status: 404, body: "<html>Not Found</html>" })
+
+    result = @provider.send(:with_provider_response) { raise error }
+
+    assert_not result.success?
+    assert_equal error.message, result.error.message
+  end
+
   # ================================
   #     Crypto Filter Tests
   # ================================
