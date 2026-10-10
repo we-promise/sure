@@ -110,12 +110,32 @@ class MonthlySpendingDashboardTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "saved year presets use the household date when the server has entered a new year" do
+    @user.update!(preferences: { "preview_features_enabled" => true })
+    @user.family.update!(timezone: "America/Los_Angeles")
+    travel_to Time.utc(2026, 1, 1, 1) do
+      post monthly_spending_filters_path, params: { monthly_spending_period: "this_year" }
+      assert_response :see_other
+      saved = @user.reload.preferences["monthly_spending_filters"]
+      assert_equal "this_year", saved["period"]
+      assert_equal "2025-01", saved["from"]
+      assert_equal "2025-12", saved["to"]
+
+      get_monthly_home
+      assert_response :success
+      assert_select "select[name='monthly_spending_from_year'] option[selected][value='2025']"
+      assert_select "select[name='monthly_spending_to_month'] option[selected][value='12']"
+      assert_not_includes response.body, I18n.t("pages.dashboard.monthly_spending.invalid_filters")
+    end
+  end
+
   test "saving filters requires personal preview access" do
     @user.update!(preferences: { "preview_features_enabled" => false })
     post monthly_spending_filters_path, params: { monthly_spending_period: "last_twelve" }
     assert_response :not_found
     assert_nil @user.reload.preferences["monthly_spending_filters"]
   end
+
   private
     def get_monthly_home(params: {})
       get root_url, params: params

@@ -1,60 +1,51 @@
-{
-  "de": {
-    "pages": {
-      "dashboard": {
-        "monthly_spending": {
-        "loading": "Monatsausgaben werden geladen…",
-        "show_on_home": "Monatsausgaben auf der Startseite anzeigen",
-          "title": "Ausgaben nach Monat",
-          "preview": "Vorschau",
-          "filters": "Filter",
-          "reset": "Zurücksetzen",
-          "from": "Von Monat",
-          "to": "Bis Monat",
-          "range_hint": "Wähle 1–36 Monate, spätestens bis zum aktuellen Monat.",
-          "accounts": "Konten",
-          "categories": "Kategorien",
-          "apply": "Anwenden",
-          "invalid_filters": "Diese Filter sind ungültig oder nicht mehr verfügbar. Bitte passe sie an oder setze die Auswahl zurück.",
-          "scope": "%{from} – %{to} · %{accounts} Konten · %{categories} Kategorien",
-          "basis_hint": "Gebuchte Bruttoausgaben in der Haushaltswährung. Umbuchungen und vorgemerkte Buchungen sind ausgeschlossen; Erstattungen bleiben nach den aktuellen Berichtsregeln Einnahmen.",
-          "fx_warning": {
-            "one": "Vorläufig: Bei %{count} Ausgabe fehlt der Wechselkurs. Der Originalbetrag ist ohne Umrechnung enthalten.",
-            "other": "Vorläufig: Bei %{count} Ausgaben fehlt der Wechselkurs. Die Originalbeträge sind ohne Umrechnung enthalten."
-          },
-          "empty_selection": "Keine Konten oder Kategorien ausgewählt. Wähle mindestens ein Konto und eine Kategorie.",
-          "no_expenses": "Keine berücksichtigten Ausgaben für diesen Zeitraum und diese Auswahl.",
-          "partial": "Laufender Monat",
-          "provisional": "Vorläufig: Wechselkurse fehlen",
-          "chart_label": "Monatliche Ausgaben; für weitere Monate horizontal scrollen",
-          "interaction_hint": "Balken wählen für Kategoriedetails. Seitlich scrollen für weitere Monate. * Laufender Monat.",
-          "category": "Kategorie",
-          "amount": "Betrag",
-          "all_months": "Alle Monatssummen",
-          "month": "Monat",
-          "status": "Status",
-          "period": "Zeitraum",
-          "last_twelve": "Letzte 12 Monate",
-          "this_year": "Dieses Jahr",
-          "invalid_period": "Der Beginn darf nicht nach dem Ende liegen. Wähle höchstens 36 Monate und kein Ende nach dem aktuellen Monat.",
-          "share": "Anteil"
-        }
-      }
-    },
-    "ds": {
-      "filter_checklist": {
-        "search": "%{label} durchsuchen",
-        "all": "Alle",
-        "none": "Keine",
-        "no_results": "Keine Treffer"
-      },
-      "month_picker": {
-        "month": "Monat",
-        "year": "Jahr",
-        "choose_month": "Monat…",
-        "choose_year": "Jahr…",
-        "invalid_value": "Ungültiger Wert: %{value}. Wähle Monat und Jahr."
-      }
-    }
-  }
-}
+---
+de:
+  pages:
+    dashboard:
+      monthly_spending:
+        loading: Monatsausgaben werden geladen…
+        show_on_home: Monatsausgaben auf der Startseite anzeigen
+        title: Ausgaben nach Monat
+        preview: Vorschau
+        filters: Filter
+        reset: Zurücksetzen
+        from: Von Monat
+        to: Bis Monat
+        range_hint: Wähle 1–36 Monate, spätestens bis zum aktuellen Monat.
+        accounts: Konten
+        categories: Kategorien
+        apply: Anwenden
+        invalid_filters: Diese Filter sind ungültig oder nicht mehr verfügbar. Bitte passe sie an oder setze die Auswahl zurück.
+        scope: '%{from} – %{to} · %{accounts} Konten · %{categories} Kategorien'
+        basis_hint: Gebuchte Bruttoausgaben in der Haushaltswährung. Umbuchungen und vorgemerkte Buchungen sind ausgeschlossen; Erstattungen bleiben nach den aktuellen Berichtsregeln Einnahmen.
+        fx_warning:
+          one: 'Vorläufig: Bei %{count} Ausgabe fehlt der Wechselkurs. Der Originalbetrag ist ohne Umrechnung enthalten.'
+          other: 'Vorläufig: Bei %{count} Ausgaben fehlt der Wechselkurs. Die Originalbeträge sind ohne Umrechnung enthalten.'
+        empty_selection: Keine Konten oder Kategorien ausgewählt. Wähle mindestens ein Konto und eine Kategorie.
+        no_expenses: Keine berücksichtigten Ausgaben für diesen Zeitraum und diese Auswahl.
+        partial: Laufender Monat
+        provisional: 'Vorläufig: Wechselkurse fehlen'
+        chart_label: Monatliche Ausgaben; für weitere Monate horizontal scrollen
+        interaction_hint: Balken wählen für Kategoriedetails. Seitlich scrollen für weitere Monate. * Laufender Monat.
+        category: Kategorie
+        amount: Betrag
+        all_months: Alle Monatssummen
+        month: Monat
+        status: Status
+        period: Zeitraum
+        last_twelve: Letzte 12 Monate
+        this_year: Dieses Jahr
+        invalid_period: Der Beginn darf nicht nach dem Ende liegen. Wähle höchstens 36 Monate und kein Ende nach dem aktuellen Monat.
+        share: Anteil
+  ds:
+    filter_checklist:
+      search: '%{label} durchsuchen'
+      all: Alle
+      none: Keine
+      no_results: Keine Treffer
+    month_picker:
+      month: Monat
+      year: Jahr
+      choose_month: Monat…
+      choose_year: Jahr…
+      invalid_value: 'Ungültiger Wert: %{value}. Wähle Monat und Jahr.'

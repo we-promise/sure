@@ -79,6 +79,7 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, I18n.t("settings.preferences.show.household_budget_enabled")
     assert_not_includes response.body, I18n.t("settings.preferences.show.budget_sharing_title")
   end
+
   test "monthly visibility shares Home settings and preserves other preferences" do
     user = users(:family_admin)
     user.update!(preferences: { "preview_features_enabled" => true, "hidden_sections" => [ "money_flow" ], "monthly_spending_filters" => { "period" => "this_year" } })

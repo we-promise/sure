@@ -43,6 +43,7 @@ module ReportsHelper
   def has_sparkline_data?(trends_data)
     trends_data&.length.to_i >= 2
   end
+
   def monthly_spending_share(amount, total)
     return "—" unless total.to_d.positive?
     number_to_percentage(amount.to_d / total.to_d * 100, precision: 1, strip_insignificant_zeros: true)

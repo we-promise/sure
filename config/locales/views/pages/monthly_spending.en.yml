@@ -1,60 +1,51 @@
-{
-  "en": {
-    "pages": {
-      "dashboard": {
-        "monthly_spending": {
-        "loading": "Loading monthly spending…",
-        "show_on_home": "Show monthly spending on Home",
-          "title": "Spending by month",
-          "preview": "Preview",
-          "filters": "Filters",
-          "reset": "Reset",
-          "from": "From month",
-          "to": "To month",
-          "range_hint": "Choose 1–36 months, ending no later than this month.",
-          "accounts": "Accounts",
-          "categories": "Categories",
-          "apply": "Apply",
-          "invalid_filters": "These filters are invalid or unavailable. Adjust them or reset the selection.",
-          "scope": "%{from} – %{to} · %{accounts} accounts · %{categories} categories",
-          "basis_hint": "Posted gross expenses in your family currency. Transfers and pending entries are excluded; refunds remain income under the current reporting rules.",
-          "fx_warning": {
-            "one": "Provisional: %{count} expense has no exchange rate. Its original amount is included without conversion.",
-            "other": "Provisional: %{count} expenses have no exchange rate. Their original amounts are included without conversion."
-          },
-          "empty_selection": "No accounts or categories selected. Select at least one of each to show spending.",
-          "no_expenses": "No reportable expenses in this period and selection.",
-          "partial": "Month in progress",
-          "provisional": "Provisional: missing exchange rates",
-          "chart_label": "Monthly spending chart; scroll horizontally for more months",
-          "interaction_hint": "Select a bar for category details. Scroll sideways for more months. * Month in progress.",
-          "category": "Category",
-          "amount": "Amount",
-          "all_months": "All monthly totals",
-          "month": "Month",
-          "status": "Status",
-          "period": "Period",
-          "last_twelve": "Last 12 months",
-          "this_year": "This year",
-          "invalid_period": "Choose a start no later than the end, at most 36 months, ending no later than the current month.",
-          "share": "Share"
-        }
-      }
-    },
-    "ds": {
-      "filter_checklist": {
-        "search": "Search %{label}",
-        "all": "All",
-        "none": "None",
-        "no_results": "No matches"
-      },
-      "month_picker": {
-        "month": "Month",
-        "year": "Year",
-        "choose_month": "Month…",
-        "choose_year": "Year…",
-        "invalid_value": "Invalid value: %{value}. Choose a month and year."
-      }
-    }
-  }
-}
+---
+en:
+  pages:
+    dashboard:
+      monthly_spending:
+        loading: Loading monthly spending…
+        show_on_home: Show monthly spending on Home
+        title: Spending by month
+        preview: Preview
+        filters: Filters
+        reset: Reset
+        from: From month
+        to: To month
+        range_hint: Choose 1–36 months, ending no later than this month.
+        accounts: Accounts
+        categories: Categories
+        apply: Apply
+        invalid_filters: These filters are invalid or unavailable. Adjust them or reset the selection.
+        scope: '%{from} – %{to} · %{accounts} accounts · %{categories} categories'
+        basis_hint: Posted gross expenses in your family currency. Transfers and pending entries are excluded; refunds remain income under the current reporting rules.
+        fx_warning:
+          one: 'Provisional: %{count} expense has no exchange rate. Its original amount is included without conversion.'
+          other: 'Provisional: %{count} expenses have no exchange rate. Their original amounts are included without conversion.'
+        empty_selection: No accounts or categories selected. Select at least one of each to show spending.
+        no_expenses: No reportable expenses in this period and selection.
+        partial: Month in progress
+        provisional: 'Provisional: missing exchange rates'
+        chart_label: Monthly spending chart; scroll horizontally for more months
+        interaction_hint: Select a bar for category details. Scroll sideways for more months. * Month in progress.
+        category: Category
+        amount: Amount
+        all_months: All monthly totals
+        month: Month
+        status: Status
+        period: Period
+        last_twelve: Last 12 months
+        this_year: This year
+        invalid_period: Choose a start no later than the end, at most 36 months, ending no later than the current month.
+        share: Share
+  ds:
+    filter_checklist:
+      search: Search %{label}
+      all: All
+      none: None
+      no_results: No matches
+    month_picker:
+      month: Month
+      year: Year
+      choose_month: Month…
+      choose_year: Year…
+      invalid_value: 'Invalid value: %{value}. Choose a month and year.'

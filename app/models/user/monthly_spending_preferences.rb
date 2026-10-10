@@ -34,7 +34,6 @@ class User::MonthlySpendingPreferences
     value
   end
 
-
   def self.selection(params, dates: nil)
     { from: month_param(params, :monthly_spending_from) || dates&.first&.iso8601,
       to: month_param(params, :monthly_spending_to) || dates&.last&.iso8601,

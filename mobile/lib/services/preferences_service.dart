@@ -1,7 +1,7 @@
 import 'dart:convert';
-import '../models/monthly_spending.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/monthly_spending.dart';
 
 class PreferencesService {
   static const _groupByTypeKey = 'dashboard_group_by_type';

@@ -159,8 +159,7 @@ class Api::V1::CashFlowsMonthlySpendingTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert response.parsed_body["empty_selection"]
     assert response.parsed_body["months"].all? { |month| month["total"] == "0.0" }
-    [ { account_ids: [ accounts(:depository).id ] }, { category_ids: "all" }, { from: "2020-01-01" }, { to: "invalid"
-} ].each do |query|
+    [ { account_ids: [ accounts(:depository).id ] }, { category_ids: "all" }, { from: "2020-01-01" }, { to: "invalid" } ].each do |query|
       get "/api/v1/cash_flow?view=monthly_spending", params: query, headers: @headers
       assert_response :unprocessable_entity
       assert_equal "invalid_selection", response.parsed_body["error"]
@@ -176,6 +175,7 @@ class Api::V1::CashFlowsMonthlySpendingTest < ActionDispatch::IntegrationTest
       assert_equal "2025-01-31", response.parsed_body["as_of"]
     end
   end
+
   test "monthly view cannot silently ignore summary or Sankey period options" do
     @user.update!(preferences: { "preview_features_enabled" => true })
     [ { month: "2025-01-01" }, { include: "sankey" }, { start_date: "2025-01-01" }, { group_by: "account" } ].each do |query|

@@ -49,6 +49,9 @@ class PagesController < ApplicationController
 
   skip_authentication only: %i[redis_configuration_error privacy terms]
   before_action :ensure_intro_guest!, only: :intro
+  # Resolve the household zone after browser authentication populates Current.
+  skip_around_action :switch_timezone
+  around_action :switch_timezone
 
   def dashboard
     unless params.keys.any? { |key| key.start_with?("monthly_spending_") }

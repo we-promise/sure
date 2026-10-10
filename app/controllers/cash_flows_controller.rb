@@ -1,5 +1,8 @@
 class CashFlowsController < ApplicationController
   before_action :require_preview_features!, only: :show
+  # Resolve the household zone after browser authentication populates Current.
+  skip_around_action :switch_timezone
+  around_action :switch_timezone
 
   def show
     response.headers["Cache-Control"] = "private, no-store"
@@ -16,10 +19,7 @@ class CashFlowsController < ApplicationController
 
     statement = IncomeStatement.new(Current.family, user: Current.user)
     period = Period.custom(start_date: start_date, end_date: end_date)
-    # Resolve reporting dates after ordinary session authentication has set Current.
-    Time.use_zone(resolved_timezone) do
-      render json: IncomeStatement::CashFlowGraph.new(statement, period: period, group_by: group_by)
-    end
+    render json: IncomeStatement::CashFlowGraph.new(statement, period: period, group_by: group_by)
   end
 
   def update_filters
@@ -42,19 +42,17 @@ class CashFlowsController < ApplicationController
 
   private
     def render_monthly_spending
-      Time.use_zone(resolved_timezone) do
-        statement = IncomeStatement.new(Current.family, user: Current.user)
-        begin
-          spending = IncomeStatement::MonthlySpending.new(statement, params: User::MonthlySpendingPreferences.selection(params))
-        rescue IncomeStatement::MonthlySpending::InvalidSelection
-          filter_error = true
-          spending = IncomeStatement::MonthlySpending.new(statement)
-        end
-        render partial: "pages/dashboard/monthly_spending", locals: {
-          monthly_spending: spending, filter_error: filter_error,
-          view_params: PagesController.dashboard_view_params(params)
-        }
+      statement = IncomeStatement.new(Current.family, user: Current.user)
+      begin
+        spending = IncomeStatement::MonthlySpending.new(statement, params: User::MonthlySpendingPreferences.selection(params))
+      rescue IncomeStatement::MonthlySpending::InvalidSelection
+        filter_error = true
+        spending = IncomeStatement::MonthlySpending.new(statement)
       end
+      render partial: "pages/dashboard/monthly_spending", locals: {
+        monthly_spending: spending, filter_error: filter_error,
+        view_params: PagesController.dashboard_view_params(params)
+      }
     end
 
     def parse_date(value)
