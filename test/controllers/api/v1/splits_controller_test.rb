@@ -182,6 +182,69 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # Review findings from PR #4117
+
+  test "a read-only share cannot split, even with a read_write key" do
+    other = User.create!(family: @family, email: "viewer-#{SecureRandom.hex(4)}@example.com",
+                         password: "password123", password_confirmation: "password123", role: "member")
+    @account.update!(owner: @user)
+    AccountShare.create!(account: @account, user: other, permission: "read_only") rescue skip("account sharing unavailable")
+    other.api_keys.active.destroy_all
+    key = ApiKey.create!(user: other, name: "Viewer RW", scopes: [ "read_write" ],
+                         display_key: "test_v_#{SecureRandom.hex(8)}")
+    Redis.new.del("api_rate_limit:#{key.id}")
+
+    post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(key), as: :json
+    assert_response :forbidden
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "rejects a category belonging to another family" do
+    other_family = Family.create!(name: "Other", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
+    foreign = other_family.categories.create!(name: "Foreign", color: "#000000", lucide_icon: "circle")
+    params = { split: { splits: [
+      { name: "A", amount: (@entry.amount / 2).to_s, category_id: foreign.id },
+      { name: "B", amount: (@entry.amount / 2).to_s }
+    ] } }
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "rounds amounts to the stored scale so children sum exactly" do
+    params = { split: { splits: [
+      { name: "A", amount: "33.33335" },
+      { name: "B", amount: (@entry.amount - BigDecimal("33.33335")).to_s }
+    ] } }
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    if response.successful?
+      assert_equal @entry.amount, @entry.reload.child_entries.sum(:amount),
+                   "persisted children must still sum to the parent"
+    else
+      assert_response :unprocessable_entity
+    end
+  end
+
+  test "defaults a missing child name to the parent name" do
+    params = { split: { splits: [
+      { amount: (@entry.amount / 2).to_s },
+      { amount: (@entry.amount / 2).to_s }
+    ] } }
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :created
+    assert_equal [ @entry.name, @entry.name ], @entry.reload.child_entries.map(&:name)
+  end
+
+  test "exposes the exact amount a client needs to replace a split" do
+    post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+    body = JSON.parse(response.body)
+    assert_equal @entry.amount.to_s, body["amount_decimal"]
+    assert body["amount_cents"].is_a?(Integer)
+  end
+
   test "returns 401 without an API key" do
     get api_v1_transaction_split_url(@transaction)
     assert_response :unauthorized

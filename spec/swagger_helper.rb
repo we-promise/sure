@@ -82,12 +82,14 @@ RSpec.configure do |config|
           },
           Split: {
             type: :object,
-            required: %w[transaction_id amount currency children],
+            required: %w[transaction_id amount amount_decimal amount_cents currency children],
             properties: {
               transaction_id: { type: :string },
-              amount: { type: :string, description: 'Formatted parent amount' },
+              amount: { type: :string, description: 'Formatted parent amount, rounded for display' },
+              amount_decimal: { type: :string, description: 'Exact stored amount; children must sum to this' },
+              amount_cents: { type: :integer, description: 'Absolute amount in minor units' },
               currency: { type: :string },
-              children: { type: :array, items: { type: :object } }
+              children: { type: :array, items: { '$ref' => '#/components/schemas/Transaction' } }
             }
           },
           Pagination: {

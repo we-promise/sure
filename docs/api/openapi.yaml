@@ -70,6 +70,8 @@ components:
       required:
       - transaction_id
       - amount
+      - amount_decimal
+      - amount_cents
       - currency
       - children
       properties:
@@ -77,13 +79,19 @@ components:
           type: string
         amount:
           type: string
-          description: Formatted parent amount
+          description: Formatted parent amount, rounded for display
+        amount_decimal:
+          type: string
+          description: Exact stored amount; children must sum to this
+        amount_cents:
+          type: integer
+          description: Absolute amount in minor units
         currency:
           type: string
         children:
           type: array
           items:
-            type: object
+            "$ref": "#/components/schemas/Transaction"
     Pagination:
       type: object
       required:

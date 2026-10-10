@@ -8,10 +8,17 @@
 # split editor", which an API consumer cannot reach. These actions close that
 # gap using the same model calls the UI makes.
 class Api::V1::SplitsController < Api::V1::BaseController
+  AlreadySplit = Class.new(StandardError)
+
+  # entries.amount is decimal(19,4). Children are rounded independently on
+  # assignment, so raw values that sum to the parent can persist as a total
+  # that does not: 33.33335 + 66.66665 becomes 33.3334 + 66.6667 = 100.0001.
+  AMOUNT_SCALE = 4
   before_action :ensure_read_scope, only: [ :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction
   before_action :resolve_to_parent
+  before_action :ensure_account_write_permission, only: [ :create, :update, :destroy ]
 
   # GET /api/v1/transactions/:transaction_id/split
   def show
@@ -29,11 +36,24 @@ class Api::V1::SplitsController < Api::V1::BaseController
     splits = build_splits
     return if performed?
 
-    @entry.split!(splits)
+    # Explicit transaction + lock!, NOT Entry#with_lock: on Rails 8.1 the
+    # with_lock form silently discards the whole split -- no children, no
+    # exception. Verified against real data before relying on this.
+    Entry.transaction do
+      @entry.lock!
+      # Re-check inside the lock: two concurrent POSTs can both clear the
+      # check above, and split! validates only its own amounts, so both sets
+      # of children would be inserted and the transaction counted twice.
+      raise AlreadySplit if @entry.split_parent?
+
+      @entry.split!(splits)
+    end
     @entry.sync_account_later
     @entry.reload
 
     render :show, status: :created
+  rescue AlreadySplit
+    render_unprocessable("Transaction cannot be split", [ "Transaction is already split" ])
   rescue ActiveRecord::RecordInvalid => e
     render_unprocessable(e.message)
   end
@@ -50,6 +70,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
     return if performed?
 
     Entry.transaction do
+      @entry.lock!
       @entry.unsplit!
       @entry.split!(splits)
     end
@@ -81,6 +102,21 @@ class Api::V1::SplitsController < Api::V1::BaseController
 
     def ensure_write_scope
       authorize_scope!(:write)
+    end
+
+    # The token scope says what the KEY may do; this says what its owner may do
+    # to this account. `Account.accessible_by` admits every share, read-only
+    # ones included, so without this a read-only share could rewrite someone
+    # else's transaction. SplitsController enforces the same thing through
+    # require_account_permission!.
+    def ensure_account_write_permission
+      return if performed?
+      return if @entry.account.permission_for(current_resource_owner).in?([ :owner, :full_control ])
+
+      render json: {
+        error: "forbidden",
+        message: "You do not have write access to this account"
+      }, status: :forbidden
     end
 
     def set_transaction
@@ -125,16 +161,30 @@ class Api::V1::SplitsController < Api::V1::BaseController
 
       raw.map do |s|
         s = s.permit(:name, :amount, :category_id, :excluded) if s.respond_to?(:permit)
+        category_id = s[:category_id].presence
+        if category_id && !family_category_ids.include?(category_id)
+          render_unprocessable("Unknown category: #{category_id}")
+          return nil
+        end
+
         {
-          name: s[:name].presence,
-          amount: BigDecimal(s[:amount].to_s),
-          category_id: s[:category_id].presence,
+          # Documented as optional, defaulting to the parent's name; Entry
+          # validates presence, so apply the default rather than 422 on it.
+          name: s[:name].presence || @entry.name,
+          amount: BigDecimal(s[:amount].to_s).round(AMOUNT_SCALE),
+          category_id: category_id,
           excluded: s[:excluded]
         }
       end
     rescue ArgumentError, TypeError
       render_unprocessable("each split requires a numeric amount")
       nil
+    end
+
+    # belongs_to :category is unscoped, so a known UUID from another family
+    # would be accepted and then serialized back to the caller.
+    def family_category_ids
+      @family_category_ids ||= current_resource_owner.family.categories.pluck(:id).to_set
     end
 
     def not_splittable_reason
