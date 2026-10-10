@@ -4,6 +4,8 @@
 
 Adds a **Spending by month** Home block behind the existing personal preview toggle. Users can compare category spending across months, read exact totals above the stacked bars, and select a month to see category amounts and percentage shares. The same server aggregation powers responsive web and the Flutter Home card.
 
+This is a first proposal for the monthly view. Feedback and feature requests are welcome, especially on the dashboard placement, filters, chart readability and mobile interaction.
+
 - Account and root-category filters, including uncategorized expenses and explicit empty selections.
 - Last twelve months by default; rolling presets, calendar years and custom ranges up to 36 months. The current partial month is marked, and empty months remain visible.
 - Month/year selectors with validation; invalid selections preserve the draft and never silently broaden access or reset to all accounts.
@@ -47,15 +49,12 @@ Checked on `main` base `aa22875d1`:
 - [x] Brakeman: no errors/security warnings; nine existing ignored findings.
 - [x] OpenAPI regenerated unchanged: 439 documentation examples, no failures, 89 documentation-only pending.
 - [x] Format comparison: the same 73 existing files as pristine main, no new formatting failures.
-
 - [x] Flutter: 204 tests; Web release build; analyze with CI's `--no-fatal-infos` (three existing infos).
 - [x] Responsive preview at 320/390 px and 768 px, with no page overflow and reachable filter footer.
 - [x] Synthetic screenshots inspected; no credentials or personal financial data.
 - [ ] GitHub CI, including Android APK and unsigned iOS release build, before requesting review.
 - [ ] Real-device/screenreader and large-dataset performance acceptance before broad rollout.
 
-## Related work and follow-ups
+## Follow-ups
 
-Related to [#4002](https://github.com/we-promise/sure/pull/4002), which adds a net-spending comparison against normal on Reports. This PR provides a monthly Home timeline, shared API and Flutter card. Refund treatment is explicitly different. [#3609](https://github.com/we-promise/sure/pull/3609) proposes changes to investment/loan reporting semantics; those changes belong in the shared reporting layer.
-
-Exact transaction drilldowns, year/month overlays, offline caching and synchronization of web/native filter preferences remain follow-ups. None is claimed as delivered here.
+Possible next steps include transaction drilldowns, year/month comparisons, offline caching and synchronization of web/native filter preferences. Feedback will help prioritize which improvements are most useful.
