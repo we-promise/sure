@@ -777,7 +777,10 @@ class Account::ProviderImportAdapter
   #   provider sync: a provider must not claim another provider's entry. A
   #   statement import passes true, because the whole question it is asking is
   #   whether this transaction already arrived via sync.
-  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil, date_window: 0, include_provider_entries: false)
+  # @param provider_entries_only [Boolean] restrict matches to entries with an
+  #   external ID that are posted or split into child entries. Pending or
+  #   excluded entries cannot suppress a posted CSV transaction.
+  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil, date_window: 0, include_provider_entries: false, provider_entries_only: false)
     # Convert date to Date object if it's a string
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
@@ -801,7 +804,20 @@ class Account::ProviderImportAdapter
       query.where(date: (date - date_window.days)..(date + date_window.days))
     end
 
-    query = query.where(external_id: nil) unless include_provider_entries
+    query = if provider_entries_only
+      query.where.not(external_id: [ nil, "" ]).where(<<~SQL.squish)
+        (entries.excluded IS NOT TRUE AND NOT EXISTS (
+          SELECT 1 FROM transactions t
+          WHERE t.id = entries.entryable_id AND (#{Transaction::PENDING_CHECK_SQL})
+        )) OR EXISTS (
+          SELECT 1 FROM entries children WHERE children.parent_entry_id = entries.id
+        )
+      SQL
+    elsif include_provider_entries
+      query
+    else
+      query.where(external_id: nil)
+    end
 
     # Add name filter if provided
     query = query.where(name: name) if name.present?
