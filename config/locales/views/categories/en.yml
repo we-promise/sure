@@ -3,6 +3,10 @@ en:
   categories:
     bootstrap:
       success: Default categories created successfully
+    locked: Categories are locked. Unlock them to add a new category.
+    toggle_lock:
+      locked: Categories locked
+      unlocked: Categories unlocked
     category:
       delete: Delete category
       edit: Edit category
@@ -31,8 +35,11 @@ en:
       categories_incomes: Income categories
       delete_all: Delete all
       empty: No categories found
+      lock_categories: Lock categories
+      locked_message: Category creation is locked. Imports and bank syncs can still add categories.
       merge: Merge categories
       new: New category
+      unlock_categories: Unlock categories
     merge:
       title: Merge categories
       description: Select a target category and the categories to merge into it. Matching transactions and budget lines will move to the target.

@@ -466,6 +466,106 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert Category.exists?(other.id)
   end
 
+  test "new renders a locked dialog when categories are locked" do
+    @family.update!(categories_locked: true)
+
+    get new_category_url
+
+    assert_response :success
+    assert_select "turbo-frame#modal dialog"
+    assert_match I18n.t("categories.index.locked_message"), response.body
+  end
+
+  test "create is blocked when categories are locked" do
+    @family.update!(categories_locked: true)
+
+    assert_no_difference "Category.count" do
+      post categories_url, params: {
+        category: { name: "Locked Out", color: Category::COLORS.sample } }
+    end
+
+    assert_redirected_to categories_url
+  end
+
+  test "create as json reports the locked error" do
+    @family.update!(categories_locked: true)
+
+    assert_no_difference "Category.count" do
+      post categories_url(format: :json), params: {
+        category: { name: "Locked Out", color: Category::COLORS.sample } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes JSON.parse(response.body).fetch("errors"), I18n.t("categories.locked")
+  end
+
+  test "create as json shows members the lock explanation without the unlock instruction" do
+    @family.update!(categories_locked: true)
+    sign_in users(:family_member)
+
+    assert_no_difference "Category.count" do
+      post categories_url(format: :json), params: {
+        category: { name: "Locked Out", color: Category::COLORS.sample } }
+    end
+
+    assert_response :unprocessable_entity
+    errors = JSON.parse(response.body).fetch("errors")
+    assert_includes errors, I18n.t("categories.index.locked_message")
+    assert_not_includes errors, I18n.t("categories.locked")
+  end
+
+  test "bootstrap is blocked when categories are locked" do
+    @family.update!(categories_locked: true)
+
+    assert_no_difference "Category.count" do
+      post bootstrap_categories_url
+    end
+
+    assert_redirected_to categories_url
+  end
+
+  test "admin can lock and unlock categories" do
+    assert_not @family.categories_locked?
+
+    patch toggle_lock_categories_url(locked: true)
+
+    assert_redirected_to categories_url
+    assert @family.reload.categories_locked?
+
+    patch toggle_lock_categories_url(locked: false)
+
+    assert_not @family.reload.categories_locked?
+  end
+
+  test "locking twice keeps categories locked" do
+    patch toggle_lock_categories_url(locked: true)
+    patch toggle_lock_categories_url(locked: true)
+
+    assert @family.reload.categories_locked?
+  end
+
+  test "toggle_lock accepts a JSON boolean locked value" do
+    patch toggle_lock_categories_url, params: { locked: true }, as: :json
+
+    assert @family.reload.categories_locked?
+  end
+
+  test "toggle_lock rejects a non-boolean locked value" do
+    patch toggle_lock_categories_url, params: { locked: "banana" }
+
+    assert_response :bad_request
+    assert_not @family.reload.categories_locked?
+  end
+
+  test "non-admin cannot toggle the category lock" do
+    sign_in users(:family_member)
+
+    patch toggle_lock_categories_url(locked: true)
+
+    assert_redirected_to accounts_url
+    assert_not @family.reload.categories_locked?
+  end
+
   private
     def capture_sql_queries
       queries = []

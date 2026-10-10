@@ -1,5 +1,17 @@
 <%= content_for :page_title, t(".categories") %>
 <%= content_for :page_actions do %>
+  <% if Current.user.admin? %>
+    <% locked = Current.family.categories_locked? %>
+    <%= render DS::Button.new(
+      variant: :icon,
+      icon: locked ? "lock" : "lock-open",
+      href: toggle_lock_categories_path(locked: !locked),
+      method: :patch,
+      title: locked ? t(".unlock_categories") : t(".lock_categories"),
+      aria: { label: locked ? t(".unlock_categories") : t(".lock_categories") }
+    ) %>
+  <% end %>
+
   <%= render DS::Menu.new do |menu| %>
     <% menu.with_item(
         variant: "link",
@@ -16,16 +28,24 @@
         confirm: CustomConfirm.for_resource_deletion("all categories", high_severity: true)) %>
   <% end %>
 
-  <%= render DS::Link.new(
-    text: t(".new"),
-    variant: "primary",
-    icon: "plus",
-    href: new_category_path,
-    frame: :modal
-  ) %>
+  <% unless Current.family.categories_locked? %>
+    <%= render DS::Link.new(
+      text: t(".new"),
+      variant: "primary",
+      icon: "plus",
+      href: new_category_path,
+      frame: :modal
+    ) %>
+  <% end %>
 <% end %>
 
 <div class="bg-container rounded-xl shadow-border-xs p-4">
+  <% if Current.family.categories_locked? %>
+    <div class="mb-4">
+      <%= render DS::Alert.new(message: t(".locked_message"), variant: :info) %>
+    </div>
+  <% end %>
+
   <% if @categories.any? %>
     <div class="space-y-4">
       <%= render "categories/category_list_group",
@@ -39,20 +59,22 @@
     <div class="flex justify-center items-center py-20">
       <div class="text-center flex flex-col items-center max-w-[500px]">
         <p class="text-sm text-secondary mb-4"><%= t(".empty") %></p>
-        <div class="flex items-center gap-2">
-          <%= render DS::Button.new(
-            text: t(".bootstrap"),
-            href: bootstrap_categories_path,
-          ) %>
+        <% unless Current.family.categories_locked? %>
+          <div class="flex items-center gap-2">
+            <%= render DS::Button.new(
+              text: t(".bootstrap"),
+              href: bootstrap_categories_path,
+            ) %>
 
-          <%= render DS::Link.new(
-            text: t(".new"),
-            variant: "outline",
-            icon: "plus",
-            href: new_category_path,
-            frame: :modal
-          ) %>
-        </div>
+            <%= render DS::Link.new(
+              text: t(".new"),
+              variant: "outline",
+              icon: "plus",
+              href: new_category_path,
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
       </div>
     </div>
   <% end %>

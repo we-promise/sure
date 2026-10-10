@@ -3,6 +3,8 @@ class CategoriesController < ApplicationController
   before_action :set_category, only: %i[edit update destroy]
   before_action :set_categories, only: %i[update edit]
   before_action :set_transaction, only: :create
+  before_action :require_admin!, only: :toggle_lock
+  before_action :ensure_categories_unlocked, only: %i[create bootstrap]
 
   def index
     @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
@@ -16,6 +18,8 @@ class CategoriesController < ApplicationController
   end
 
   def new
+    return render :locked if Current.family.categories_locked?
+
     @category = Current.family.categories.new color: Category::COLORS.sample
     set_categories
   end
@@ -101,6 +105,19 @@ class CategoriesController < ApplicationController
     redirect_back_or_to categories_path, notice: t(".success")
   end
 
+  def toggle_lock
+    locked = case params.require(:locked)
+    
+    when true, "true" then true
+    when false, "false" then false
+    end
+    return head :bad_request if locked.nil?
+
+    Current.family.update!(categories_locked: locked)
+
+    redirect_back_or_to categories_path, notice: locked ? t(".locked") : t(".unlocked")
+  end
+
   def perform_merge
     permitted_params = category_merge_params
 
@@ -127,6 +144,29 @@ class CategoriesController < ApplicationController
   private
     def set_category
       @category = Current.family.categories.find(params[:id])
+    end
+
+    def ensure_categories_unlocked
+      return unless Current.family.categories_locked?
+
+      respond_to do |format|
+        format.html { redirect_back_or_to categories_path, alert: categories_locked_message }
+        format.turbo_stream { redirect_to categories_path, alert: categories_locked_message }
+        format.json { render json: { errors: categories_locked_errors }, status: :unprocessable_entity }
+        format.any { head :forbidden }
+      end
+    end
+
+    def categories_locked_message
+      if Current.user.admin?
+        t("categories.locked")
+      else
+        t("categories.index.locked_message")
+      end
+    end
+
+    def categories_locked_errors
+      [ categories_locked_message ]
     end
 
     def set_categories
