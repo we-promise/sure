@@ -5,6 +5,11 @@ class TradeRepublicAccount::ActivitiesProcessor
   STOCK_PERK_EVENT_TYPE = "ACQUISITION_TRADE_PERK"
   # Shares Trade Republic pays for: a trade only, without a cash leg.
   BROKER_FUNDED_TRADE_EVENT_TYPES = [ SAVEBACK_EVENT_TYPE, STOCK_PERK_EVENT_TYPE ].freeze
+  PRIVATE_MARKETS_TRADE_EVENT_TYPE = "PRIVATE_MARKET_FUND_TRADE_EXECUTED"
+  # The bonus units Trade Republic adds to a Private Markets order ("1 %
+  # Bonus"). The statement credits their value and buys them with it in one
+  # step; the timeline shows only the buy.
+  PRIVATE_MARKETS_BONUS_PATTERN = /\bbonus\b/i
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
   SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
@@ -62,7 +67,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     reconcile_split_portfolio_transactions!
     reconcile_moved_crypto_trades!
-    reconcile_stale_saveback_cash_transactions!
+    reconcile_stale_broker_funded_cash_transactions!
     reconcile_non_importable_entries!
     reconcile_settlement_counterparts!
     capture_incomplete_executions
@@ -153,8 +158,9 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     # Saveback, stock bonuses and Round Up stay classified as POC_CREATED at
     # the client boundary so other cash withdrawals are unchanged. Routing
-    # happens here by eventType: Saveback and stock bonuses are a trade only;
-    # Round Up is a trade plus cash outflow when both accounts are linked.
+    # happens here by eventType: Saveback, stock bonuses and Private Markets
+    # bonus units are a trade only; Round Up is a trade plus cash outflow when
+    # both accounts are linked.
     # Crypto trades go to the Crypto account once it is linked, except a
     # portfolio copy the user edited.
     def processable_event?(event)
@@ -165,7 +171,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         return false if @trade_republic_account.crypto? && protected_portfolio_trade?(event)
       end
 
-      return @trade_republic_account.holds_securities? if broker_funded_trade_event?(event_type)
+      return @trade_republic_account.holds_securities? if broker_funded_trade_event?(event)
       return true if round_up_event?(event_type)
 
       category = event[:category].to_s
@@ -191,8 +197,9 @@ class TradeRepublicAccount::ActivitiesProcessor
       detail = event[:detail] || {}
       event_type = event[:eventType].to_s
 
-      return process_broker_funded_trade(event, detail, external_id, date) if broker_funded_trade_event?(event_type)
+      return process_broker_funded_trade(event, detail, external_id, date) if broker_funded_trade_event?(event)
       return process_round_up(event, detail, external_id, date) if round_up_event?(event_type)
+      return nil if unmatched_stamp_duty_cancellation?(event)
 
       case event_category(event)
       when CATEGORY_ORDER_EXECUTION
@@ -222,8 +229,9 @@ class TradeRepublicAccount::ActivitiesProcessor
       nil
     end
 
-    # Trade Republic pays for Saveback and stock bonuses: no cash moves
-    # anywhere, so the trade must not move the portfolio's cash either.
+    # Trade Republic pays for Saveback, stock bonuses and Private Markets bonus
+    # units, so the cash balance does not change and the trade must not move
+    # the portfolio's cash either.
     def process_broker_funded_trade(event, detail, external_id, date)
       return nil unless @trade_republic_account.holds_securities?
 
@@ -276,8 +284,53 @@ class TradeRepublicAccount::ActivitiesProcessor
       [ detail[:isin].to_s, date, parse_decimal(detail[:quantity])&.abs ]
     end
 
-    def broker_funded_trade_event?(event_type)
-      BROKER_FUNDED_TRADE_EVENT_TYPES.include?(event_type)
+    def broker_funded_trade_event?(event)
+      event_type = event[:eventType].to_s
+      return true if BROKER_FUNDED_TRADE_EVENT_TYPES.include?(event_type)
+
+      event_type == PRIVATE_MARKETS_TRADE_EVENT_TYPE && event[:subtitle].to_s.match?(PRIVATE_MARKETS_BONUS_PATTERN)
+    end
+
+    # Trade Republic can replace a stamp duty charge with its cancellation
+    # instead of adding the cancellation next to it. The statement then books
+    # both, the charge and the refund, while the timeline only has the
+    # cancellation. A refund is booked only when the charge it cancels is on
+    # the timeline; otherwise both sides are missing and nothing is booked.
+    def unmatched_stamp_duty_cancellation?(event)
+      return false unless Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
+
+      !refunded_stamp_duty_ids.include?((event["id"] || event[:id]).to_s)
+    end
+
+    # Pairs each cancellation, oldest first, with an earlier charge of the
+    # same title and amount; a charge refunds at most one cancellation.
+    def refunded_stamp_duty_ids
+      @refunded_stamp_duty_ids ||= begin
+        stamp_duty = timeline_events.filter_map do |event|
+          next unless event.is_a?(Hash)
+
+          event = event.with_indifferent_access
+          event if event[:eventType].to_s == Provider::TradeRepublicTimelineEvent::STAMP_DUTY_EVENT_TYPE &&
+            importable_timeline_event?(event)
+        end
+        cancellations, charges = stamp_duty.partition { |event| Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event) }
+        charges = charges.sort_by { |event| event[:timestamp].to_s }
+        cancellations.sort_by { |event| event[:timestamp].to_s }.each_with_object(Set.new) do |cancellation, ids|
+          charge = charges.find do |candidate|
+            candidate[:title].to_s == cancellation[:title].to_s &&
+              candidate[:timestamp].to_s <= cancellation[:timestamp].to_s &&
+              stamp_duty_amount(candidate) == stamp_duty_amount(cancellation)
+          end
+          next unless charge
+
+          charges.delete(charge)
+          ids << cancellation[:id].to_s
+        end
+      end
+    end
+
+    def stamp_duty_amount(event)
+      parse_decimal(event.dig(:detail, :amount) || event.dig(:detail, :signed_amount))&.abs
     end
 
     def round_up_event?(event_type)
@@ -688,25 +741,28 @@ class TradeRepublicAccount::ActivitiesProcessor
       )
     end
 
-    # Saveback used to import as a cash withdrawal. Once split accounts are
-    # linked, remove those leftover cash entries only after the portfolio
-    # replacement trade exists, and unless the user edited or split them.
-    def reconcile_stale_saveback_cash_transactions!
+    # Saveback used to import as a cash withdrawal, and Private Markets bonus
+    # units as a settled buy. Once split accounts are linked, remove those
+    # leftover cash entries only after the portfolio replacement trade exists,
+    # and unless the user edited or split them. Their settlement counterparts
+    # go with them in reconcile_settlement_counterparts!.
+    def reconcile_stale_broker_funded_cash_transactions!
       return unless @trade_republic_account.cash?
       return if linked_securities_accounts.empty?
 
-      saveback_event_ids = Array(@trade_republic_account.raw_timeline_payload).filter_map do |event|
+      event_types = timeline_events.each_with_object({}) do |event, types|
         next unless event.is_a?(Hash)
-        next unless event["eventType"].to_s == SAVEBACK_EVENT_TYPE
 
-        event["id"].presence
+        event = event.with_indifferent_access
+        next if event[:id].blank? || !broker_funded_trade_event?(event)
+
+        types["trade_republic_event_#{event[:id]}"] = event[:eventType].to_s
       end
-      return if saveback_event_ids.empty?
+      return if event_types.empty?
 
-      external_ids = saveback_event_ids.map { |event_id| "trade_republic_event_#{event_id}" }
       candidates = account.entries
         .where(source: "trade_republic", entryable_type: "Transaction")
-        .where(external_id: external_ids)
+        .where(external_id: event_types.keys)
         .includes(:entryable)
 
       removed_count = 0
@@ -714,14 +770,14 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       candidates.find_each do |entry|
         event_type = entry.entryable.try(:extra)&.dig("trade_republic", "event_type")
-        next if event_type.present? && event_type != SAVEBACK_EVENT_TYPE
+        next if event_type.present? && event_type != event_types[entry.external_id]
 
         if entry.protected_from_sync? || entry.split_parent? || entry.split_child?
           skipped_count += 1
           DebugLogEntry.capture(
             category: "sync",
             level: "info",
-            message: "Skipped removing protected Saveback cash transaction #{entry.external_id}",
+            message: "Skipped removing protected cash leg #{entry.external_id} of a trade Trade Republic paid for",
             source: "trade_republic",
             family: @trade_republic_account.trade_republic_item.family,
             provider_key: "trade_republic",
@@ -736,13 +792,13 @@ class TradeRepublicAccount::ActivitiesProcessor
         end
 
         # Keep the legacy cash row until the portfolio trade is present so an
-        # incomplete Saveback detail cannot open a ledger gap.
+        # incomplete detail cannot open a ledger gap.
         unless securities_account_with_trade(entry.external_id)
           skipped_count += 1
           DebugLogEntry.capture(
             category: "sync",
             level: "info",
-            message: "Skipped removing Saveback cash transaction #{entry.external_id} until portfolio trade exists",
+            message: "Skipped removing cash leg #{entry.external_id} of a trade Trade Republic paid for until the portfolio trade exists",
             source: "trade_republic",
             family: @trade_republic_account.trade_republic_item.family,
             provider_key: "trade_republic",
@@ -764,7 +820,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       DebugLogEntry.capture(
         category: "sync",
         level: "info",
-        message: "Reconciled stale Saveback cash transactions (removed=#{removed_count}, skipped=#{skipped_count})",
+        message: "Reconciled stale cash legs of trades Trade Republic paid for (removed=#{removed_count}, skipped=#{skipped_count})",
         source: "trade_republic",
         family: @trade_republic_account.trade_republic_item.family,
         provider_key: "trade_republic",
@@ -888,18 +944,22 @@ class TradeRepublicAccount::ActivitiesProcessor
     # Remove previously imported entries whose upstream events are now deleted,
     # hidden or in a terminal non-importable status, unless the user protected
     # them. Events blocked only by the free-text subtitle heuristic are skipped
-    # on import but never delete existing entries.
+    # on import but never delete existing entries. Earlier syncs also booked
+    # stamp duty cancellations whose charge is not on the timeline as refunds.
     def reconcile_non_importable_entries!
       explicit_ids = []
       heuristic_ids = []
       timeline_events.each do |event|
         next unless event.is_a?(Hash)
-        next unless lifecycle_blocks_import?(event)
+
+        unmatched_cancellation = unmatched_stamp_duty_cancellation?(event.with_indifferent_access)
+        next unless unmatched_cancellation || lifecycle_blocks_import?(event)
 
         event_id = event["id"].presence || event[:id].presence
         next if event_id.blank?
 
-        (explicit_lifecycle_block?(event) ? explicit_ids : heuristic_ids) << "trade_republic_event_#{event_id}"
+        explicit = unmatched_cancellation || explicit_lifecycle_block?(event)
+        (explicit ? explicit_ids : heuristic_ids) << "trade_republic_event_#{event_id}"
       end
       return if explicit_ids.empty? && heuristic_ids.empty?
 
