@@ -1,9 +1,10 @@
-<%= content_for :page_title, t("bills.index.title") %>
-
 <div class="space-y-4 pb-6 lg:pb-12">
   <%= render "bills/view_switcher", active: "all" %>
 
-  <%= form_with url: bills_path, method: :get, scope: :q,
+  <%# Built with the styled form builder, so each filter sits in the boxed field
+      every form uses, one height with the search box. As bare selects they read
+      as loose words with a chevron, and had no focus ring at all. %>
+  <%= styled_form_with url: bills_path, method: :get, scope: :q,
         data: { controller: "auto-submit-form" },
         class: "flex flex-wrap items-center gap-2" do |form| %>
     <%= hidden_field_tag :view, "all" %>
@@ -18,21 +19,21 @@
             [ [ t(".any_status"), "" ] ] + BillsController::STATUS_FILTERS.map { |status| [ t(".status_filters.#{status}"), status ] },
             params.dig(:q, :status)
           ),
-          {},
+          { container_class: "w-auto py-2.5" },
           { class: "form-field__input w-auto", "data-auto-submit-form-target": "auto" } %>
     <%= form.select :bill_type,
           options_for_select(
             [ [ t(".any_type"), "" ] ] + RecurringTransaction.bill_types.keys.map { |type| [ t(".types.#{type}"), type ] },
             params.dig(:q, :bill_type)
           ),
-          {},
+          { container_class: "w-auto py-2.5" },
           { class: "form-field__input w-auto", "data-auto-submit-form-target": "auto" } %>
     <%= form.select :sort,
           options_for_select(
             [ [ t(".sort_due"), "" ], [ t(".sort_name"), "name" ], [ t(".sort_amount"), "amount" ] ],
             params.dig(:q, :sort)
           ),
-          {},
+          { container_class: "w-auto py-2.5" },
           { class: "form-field__input w-auto", "data-auto-submit-form-target": "auto" } %>
   <% end %>
 
@@ -81,7 +82,7 @@
         shell's sidebars can squeeze a desktop window to phone-list widths,
         and a viewport breakpoint cannot see that. %>
     <div class="@container">
-    <div class="@3xl:hidden bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+    <div class="@3xl:hidden bg-container rounded-xl shadow-border-xs divide-y divide-subdued">
       <% @all_series.each do |series| %>
         <div class="flex items-center gap-3 p-3">
           <%= link_to bill_path(series), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "flex items-center gap-3 min-w-0 flex-1 group" do %>
@@ -186,26 +187,21 @@
   <%# Across every bill, not just the one you have open. Per-bill history lives
       in the bill's own detail. %>
   <% if @recent_price_changes&.any? %>
-    <div class="rounded-xl bg-container-inset space-y-1 p-1">
-      <div class="px-4 py-2 text-xs font-medium text-secondary uppercase">
-        <p><%= t(".subscription_price_changes") %></p>
-      </div>
-      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
-        <% @recent_price_changes.each do |change| %>
-          <div class="flex items-center justify-between gap-3 px-4 py-2">
-            <div>
-              <p class="text-sm text-primary"><%= change.recurring_transaction.display_name %></p>
-              <p class="text-xs text-secondary"><%= l(change.effective_on, format: :long) %></p>
-            </div>
-            <p class="text-sm privacy-sensitive <%= change.new_amount > change.previous_amount ? "text-warning" : "text-success" %>">
-              <%= t(".subscription_price_change_line",
-                    from: format_money(change.previous_amount_money),
-                    to: format_money(change.new_amount_money),
-                    percent: change.previous_amount.positive? ? ((change.new_amount - change.previous_amount) / change.previous_amount * 100).round(1) : 0) %>
-            </p>
+    <%= render DS::Section.new(title: t(".subscription_price_changes"), count: @recent_price_changes.size) do %>
+      <% @recent_price_changes.each do |change| %>
+        <div class="flex items-center justify-between gap-3 px-4 py-2">
+          <div>
+            <p class="text-sm text-primary"><%= change.recurring_transaction.display_name %></p>
+            <p class="text-xs text-secondary"><%= l(change.effective_on, format: :long) %></p>
           </div>
-        <% end %>
-      </div>
-    </div>
+          <p class="text-sm privacy-sensitive <%= change.new_amount > change.previous_amount ? "text-warning" : "text-success" %>">
+            <%= t(".subscription_price_change_line",
+                  from: format_money(change.previous_amount_money),
+                  to: format_money(change.new_amount_money),
+                  percent: change.previous_amount.positive? ? ((change.new_amount - change.previous_amount) / change.previous_amount * 100).round(1) : 0) %>
+          </p>
+        </div>
+      <% end %>
+    <% end %>
   <% end %>
 </div>
