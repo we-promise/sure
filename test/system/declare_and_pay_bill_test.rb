@@ -124,7 +124,7 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
     click_on "WATSON PROPERTY LLC"
 
     assert_field I18n.t("recurring_transactions.form.name_label"), with: "WATSON PROPERTY LLC"
-    assert_field I18n.t("recurring_transactions.form.amount_label"), with: "537.5"
+    assert_field I18n.t("recurring_transactions.form.amount_label"), with: "537.50"
     click_button I18n.t("recurring_transactions.form.submit")
 
     assert_text "WATSON PROPERTY LLC"
