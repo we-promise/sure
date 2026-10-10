@@ -1,6 +1,7 @@
 bob_google:
   user: family_admin
   provider: openid_connect
+  issuer: https://test.example.com
   uid: google-uid-12345
   info:
     email: bob@bobdylan.com
@@ -12,6 +13,7 @@ bob_google:
 jakob_google:
   user: family_member
   provider: openid_connect
+  issuer: https://test.example.com
   uid: google-uid-67890
   info:
     email: jakobdylan@yahoo.com
@@ -23,6 +25,7 @@ jakob_google:
 sso_only_identity:
   user: sso_only
   provider: openid_connect
+  issuer: https://test.example.com
   uid: sso-only-uid-12345
   info:
     email: sso-user@example.com
