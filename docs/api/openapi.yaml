@@ -32,6 +32,58 @@ components:
             read: Read access
             read_write: Read and write access
   schemas:
+    SplitRequest:
+      type: object
+      required:
+      - split
+      properties:
+        split:
+          type: object
+          required:
+          - splits
+          properties:
+            splits:
+              type: array
+              minItems: 1
+              description: Child transactions. Amounts must sum exactly to the parent
+                amount.
+              items:
+                type: object
+                required:
+                - amount
+                properties:
+                  name:
+                    type: string
+                    nullable: true
+                    description: Defaults to the parent name when omitted
+                  amount:
+                    type: string
+                    description: Same sign convention as the transaction amount
+                  category_id:
+                    type: string
+                    nullable: true
+                  excluded:
+                    type: boolean
+                    nullable: true
+    Split:
+      type: object
+      required:
+      - transaction_id
+      - amount
+      - currency
+      - children
+      properties:
+        transaction_id:
+          type: string
+        amount:
+          type: string
+          description: Formatted parent amount
+        currency:
+          type: string
+        children:
+          type: array
+          items:
+            type: object
     Pagination:
       type: object
       required:
@@ -9090,6 +9142,88 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/transactions/{transaction_id}/split":
+    parameters:
+    - name: transaction_id
+      in: path
+      description: Transaction ID. A split child resolves to its parent.
+      required: true
+      schema:
+        type: string
+    post:
+      summary: Split a transaction
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Splits a transaction into child transactions. The child amounts
+        must sum exactly to the parent amount, using the same sign convention the
+        transaction endpoints return. The parent becomes excluded from totals.
+      parameters: []
+      responses:
+        '201':
+          description: transaction split
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Split"
+        '422':
+          description: amounts do not sum to the parent, or the transaction cannot
+            be split
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/SplitRequest"
+    get:
+      summary: Retrieve a transaction split
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Returns the child transactions of a split.
+      responses:
+        '200':
+          description: split returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Split"
+        '404':
+          description: transaction is not split
+    patch:
+      summary: Replace a transaction split
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Replaces the children of an existing split. The previous children
+        are destroyed, so anything set on them afterwards is not carried over.
+      parameters: []
+      responses:
+        '200':
+          description: split replaced
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Split"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/SplitRequest"
+    delete:
+      summary: Remove a transaction split
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Removes the children and restores the parent transaction.
+      responses:
+        '204':
+          description: split removed
+        '404':
+          description: transaction is not split
   "/api/v1/syncs":
     get:
       summary: Lists sync history

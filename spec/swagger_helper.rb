@@ -53,6 +53,43 @@ RSpec.configure do |config|
           }
         },
         schemas: {
+          SplitRequest: {
+            type: :object,
+            required: %w[split],
+            properties: {
+              split: {
+                type: :object,
+                required: %w[splits],
+                properties: {
+                  splits: {
+                    type: :array,
+                    minItems: 1,
+                    description: 'Child transactions. Amounts must sum exactly to the parent amount.',
+                    items: {
+                      type: :object,
+                      required: %w[amount],
+                      properties: {
+                        name: { type: :string, nullable: true, description: 'Defaults to the parent name when omitted' },
+                        amount: { type: :string, description: 'Same sign convention as the transaction amount' },
+                        category_id: { type: :string, nullable: true },
+                        excluded: { type: :boolean, nullable: true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          Split: {
+            type: :object,
+            required: %w[transaction_id amount currency children],
+            properties: {
+              transaction_id: { type: :string },
+              amount: { type: :string, description: 'Formatted parent amount' },
+              currency: { type: :string },
+              children: { type: :array, items: { type: :object } }
+            }
+          },
           Pagination: {
             type: :object,
             required: %w[page per_page total_count total_pages],
