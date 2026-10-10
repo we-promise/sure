@@ -82,7 +82,7 @@ class LunchflowAccount::Investments::HoldingsProcessor
         date: Date.current,
         price: price,
         cost_basis: cost_basis,
-        external_id: "lunchflow_#{holding_id}",
+        external_id: "lunchflow_#{holding_id}_#{Date.current}",
         account_provider_id: lunchflow_account.account_provider&.id,
         source: "lunchflow",
         delete_future_holdings: false
