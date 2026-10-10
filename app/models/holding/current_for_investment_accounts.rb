@@ -1,12 +1,16 @@
 class Holding::CurrentForInvestmentAccounts
+  # Each account's latest provider import day is computed once, grouped by
+  # account, rather than as a subquery correlated to every row. Correlated, it
+  # rescans the account's provider holdings per row, which is quadratic in the
+  # number of provider rows an account keeps.
   CURRENT_HOLDINGS_SQL = <<~SQL.squish.freeze
     (
       holdings.account_provider_id IS NOT NULL
-      AND holdings.updated_at::date = (
-        SELECT MAX(provider_holdings.updated_at::date)
+      AND (holdings.account_id, holdings.updated_at::date) IN (
+        SELECT provider_holdings.account_id, MAX(provider_holdings.updated_at::date)
         FROM holdings provider_holdings
-        WHERE provider_holdings.account_id = holdings.account_id
-          AND provider_holdings.account_provider_id IS NOT NULL
+        WHERE provider_holdings.account_provider_id IS NOT NULL
+        GROUP BY provider_holdings.account_id
       )
     ) OR (
       NOT EXISTS (
