@@ -1792,17 +1792,19 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "price backfill attempt marker stays out of the transaction provider detail" do
+  test "retry attempt markers stay out of the transaction provider detail" do
+    markers = Provider::TradeRepublicClient::RETRY_MARKER_KEYS
+    assert_includes markers, Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY
     cash_account, cash_sure = create_linked_cash_account!
     cash_account.update!(raw_timeline_payload: [ deposit_event.deep_merge(
-      detail: { Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY => "2026-08-01T10:00:00Z" }
+      detail: markers.index_with { "2026-08-01T10:00:00Z" }
     ) ])
 
     TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
 
     entry = Entry.find_by!(account: cash_sure, external_id: "trade_republic_event_evt_dep")
     provider_detail = entry.entryable.extra.dig("trade_republic", "provider_detail")
-    assert_not provider_detail.key?(Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY)
+    assert_empty provider_detail.keys & markers
   end
 
   test "preserves protected entries when reconciling declined upstream events" do
@@ -1832,6 +1834,94 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     assert Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_protected")
     assert entry.reload.user_modified?
+  end
+
+  test "bond purchase books nominal and percent-of-par price on the bond's own security" do
+    @tr_account.update!(raw_positions_payload: [
+      {
+        "isin" => "IT0005377152",
+        "name" => "ITALIEN 19/40",
+        "category" => "interest_products",
+        "instrument_type" => "bond",
+        "quantity" => "2677.95",
+        "price" => "0.8404"
+      }
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    import_event({
+      id: "evt_bond",
+      timestamp: "2025-11-18T11:19:31Z",
+      category: "orderExecution",
+      title: "März 2040",
+      detail: {
+        isin: "IT0005377152",
+        name: "März 2040",
+        quantity: "2677.95",
+        price: "0.9267",
+        amount: "2498.31",
+        fees: "1.0",
+        currency: "EUR",
+        instrument_type: "bond"
+      }
+    })
+
+    entry = find_trade("trade_republic_event_evt_bond")
+    trade = entry.entryable
+    assert_equal "IT0005377152", trade.security.ticker
+    assert trade.security.offline?
+    assert_equal @account.holdings.first.security, trade.security
+    assert_equal BigDecimal("2677.95"), trade.qty
+    assert_equal BigDecimal("0.9267"), trade.price
+    assert_equal BigDecimal("1"), trade.fee
+    assert_equal BigDecimal("2498.31"), entry.amount
+    assert_equal "IT0005377152 · 2677.95x ITALIEN 19/40", entry.name
+  end
+
+  test "a sold bond's security takes the instrument name stamped on its trade" do
+    import_event({
+      id: "evt_sold_bond",
+      timestamp: "2025-11-18T11:19:31Z",
+      category: "orderExecution",
+      title: "März 2040",
+      detail: {
+        isin: "IT0005377152",
+        name: "März 2040",
+        instrument_name: "ITALIEN 19/40",
+        quantity: "-2677.95",
+        price: "0.95",
+        amount: "2544.05",
+        currency: "EUR",
+        instrument_type: "bond"
+      }
+    })
+
+    entry = find_trade("trade_republic_event_evt_sold_bond")
+    assert_equal "ITALIEN 19/40", entry.entryable.security.name
+    assert_equal "IT0005377152 · 2677.95x ITALIEN 19/40", entry.name
+  end
+
+  test "stored bond trades on the legacy BOND listing resolve by ISIN" do
+    Security.expects(:search_provider).never
+    import_event({
+      id: "evt_legacy_bond",
+      timestamp: "2025-11-18T11:19:31Z",
+      category: "orderExecution",
+      detail: {
+        isin: "IT0005377152",
+        name: "März 2040",
+        quantity: "2677.95",
+        price: "0.9267",
+        amount: "2498.31",
+        currency: "EUR",
+        symbol: "BOND",
+        exchange_slug: "LSX"
+      }
+    })
+
+    security = find_trade("trade_republic_event_evt_legacy_bond").entryable.security
+    assert_equal "IT0005377152", security.ticker
+    assert_nil security.exchange_operating_mic
   end
 
   private

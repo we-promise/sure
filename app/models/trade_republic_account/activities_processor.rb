@@ -295,7 +295,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       security = resolve_security(
         isin,
-        detail[:name] || event[:title],
+        detail[:instrument_name] || detail[:name] || event[:title],
         symbol: detail[:symbol],
         exchange_slug: detail[:exchange_slug]
       )
@@ -345,7 +345,9 @@ class TradeRepublicAccount::ActivitiesProcessor
         fee:            fee,
         currency:       detail[:currency].presence || currency,
         date:           date,
-        name:           build_trade_name(detail[:name], security, signed_quantity),
+        # A bond's timeline title is only its maturity ("März 2040"); the
+        # security carries the instrument name the holding shows.
+        name:           build_trade_name(Provider::TradeRepublicClient.bond?(detail) ? nil : detail[:name], security, signed_quantity),
         source:         "trade_republic",
         activity_label: is_buy ? "Buy" : "Sell"
       )
