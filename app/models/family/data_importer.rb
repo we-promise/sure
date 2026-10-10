@@ -1479,6 +1479,8 @@ class Family::DataImporter
 
     def resolve_multi_tag_action_value(action_data)
       value_ref = action_data["value_ref"]
+      validate_rule_text!(value_ref, field: "value_ref")
+      validate_rule_text!(action_data["value"], field: "value")
       refs = case value_ref
       when Array then value_ref
       when Hash then [ value_ref ]
@@ -1531,6 +1533,8 @@ class Family::DataImporter
 
     def rule_operand_value(data)
       raw_value = data["value"]
+      validate_rule_text!(raw_value, field: "value")
+      validate_rule_text!(data["value_ref"], field: "value_ref")
       value = raw_value.is_a?(String) ? raw_value.presence : raw_value
       value_ref_name = data.dig("value_ref", "name")
 
@@ -1538,6 +1542,12 @@ class Family::DataImporter
       return value unless value.nil?
 
       value_ref_name
+    end
+
+    def validate_rule_text!(value, field:)
+      return if DatabaseTextValidator.acceptable?(value)
+
+      raise InvalidRecordError.new(record_type: "Rule", field: field, value: "(invalid text)")
     end
 
     def uuid_like?(value)
