@@ -136,6 +136,7 @@ class PagesController < ApplicationController
         permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections].respond_to?(:to_unsafe_h)
         permitted["section_order"] = prefs[:section_order] if prefs[:section_order].is_a?(Array)
         permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout].respond_to?(:to_unsafe_h)
+        permitted["cashflow_sankey_group_by"] = prefs[:cashflow_sankey_group_by] if User::CASHFLOW_SANKEY_GROUPINGS.include?(prefs[:cashflow_sankey_group_by])
       end
     end
 

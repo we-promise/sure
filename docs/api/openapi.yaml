@@ -3280,6 +3280,9 @@ components:
           type: string
           enum:
           - net_by_category
+          - net_by_account
+          description: net_by_account (group_by=account) replaces the Cash Flow node
+            with one account node per account, each balanced by Surplus or Deficit
         income:
           type: string
         spending:
@@ -3312,6 +3315,7 @@ components:
                 - income
                 - expense
                 - cash_flow
+                - account
                 - surplus
                 - deficit
               value:
@@ -5563,6 +5567,18 @@ paths:
           - sankey
         description: Graph-only envelope; omits daily comparison. Accepts month or
           an explicit date range; cannot combine with include.
+      - name: group_by
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - category
+          - account
+          default: category
+        description: 'Requires view=sankey. category: flows through one Cash Flow
+          node; account: income categories flow through each account to expense categories
+          (basis net_by_account).'
       - name: start_date
         in: query
         required: false

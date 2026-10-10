@@ -44,7 +44,30 @@ class Insight < ApplicationRecord
   validates :dedup_key, uniqueness: { scope: :family_id }
 
   # Everything the user hasn't acknowledged; what the feed renders.
-  scope :visible, -> { where(status: [ :active, :read ]) }
+  scope :visible, -> { where(status: [ :active, :read ]).about_shared_accounts }
+
+  # The feed is shared by the whole family, so an insight that names an
+  # account (metadata account_id) shows only while every active member can
+  # see that account. Generators already skip other accounts; this read-time
+  # check also covers rows written before access changed (a share revoked, a
+  # member joined, the account moved, hidden or deleted), which would
+  # otherwise stay in the feed until the next nightly run expires them.
+  # Nothing is written, so the row reappears as it was if access is restored.
+  #
+  # The id is cast to uuid (not the column to text) so the lookup stays a
+  # primary-key probe; the CASE keeps a malformed value from raising.
+  scope :about_shared_accounts, -> {
+    shared_account = Account.visible.accessible_by_all_active_members
+      .where("accounts.family_id = insights.family_id")
+      .where(<<~SQL.squish)
+        accounts.id = CASE
+          WHEN insights.metadata->>'account_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          THEN (insights.metadata->>'account_id')::uuid
+        END
+      SQL
+    where("NOT (insights.metadata ? 'account_id')").or(where(shared_account.arel.exists))
+  }
+
   scope :ordered, -> {
     order(Arel.sql("CASE insights.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END"))
       .order(generated_at: :desc)

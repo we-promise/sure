@@ -46,7 +46,7 @@
                               label: t("account_statements.form.files_label"),
                               multiple: true,
                               accept: AccountStatement::ACCEPTED_FILE_EXTENSIONS.join(",") %>
-          <p class="text-xs text-secondary mt-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %></p>
+          <p class="text-xs text-secondary mt-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %> <%= t("account_statements.form.period_hint") %></p>
         </div>
         <%= form.submit t("account_statements.form.account_upload") %>
       <% end %>
