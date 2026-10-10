@@ -217,9 +217,11 @@ class SimplefinItemsController < ApplicationController
     if @stale_simplefin_accounts.any?
       # Build list of target accounts for "move transactions to" dropdown
       # Only show accounts from this SimpleFin connection (excluding stale ones)
+      # that the user can write, since complete_account_setup refuses the rest.
       stale_account_ids = @stale_simplefin_accounts.map { |sfa| sfa.current_account&.id }.compact
       @target_accounts = @simplefin_item.accounts
         .reject { |acct| stale_account_ids.include?(acct.id) }
+        .select { |acct| writable_account_ids.include?(acct.id) }
         .sort_by(&:name)
     end
   end
@@ -348,6 +350,7 @@ class SimplefinItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
 
     # Allow explicit relinking by listing all available SimpleFIN accounts for the family.
     # The UI will surface the current mapping (if any), and the action will move the link.
@@ -362,7 +365,8 @@ class SimplefinItemsController < ApplicationController
       # - Show SFAs that are still legacy-linked (`sfa.account.present?`) => candidates to move.
       # - Show SFAs that are fully unlinked (no legacy account and no account_provider) => candidates to link.
       # - Hide SFAs that are linked via AccountProvider but no longer legacy-linked => already relinked.
-      .select { |sfa| sfa.account.present? || sfa.account_provider.nil? }
+      # - Never offer (or name) a link held by an account the user cannot write.
+      .select { |sfa| (sfa.account.present? || sfa.account_provider.nil?) && relinkable_by_current_user?(sfa) }
       .sort_by { |sfa| sfa.updated_at || sfa.created_at }
       .reverse
 
@@ -372,6 +376,8 @@ class SimplefinItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     simplefin_account = SimplefinAccount.find(params[:simplefin_account_id])
 
     # Cross-provider guard: we only support swapping SimpleFIN-to-SimpleFIN links
@@ -402,10 +408,12 @@ class SimplefinItemsController < ApplicationController
       return
     end
 
-    # Relink behavior: detach any legacy link and point provider link at the chosen account
-    Account.transaction do
-      simplefin_account.lock!
+    # The relink below clears the legacy FK on the account holding it, moves
+    # the AccountProvider off its account and may queue that account for deletion.
+    return unless require_relinkable_provider_account!(simplefin_account, @account)
 
+    # Relink behavior: detach any legacy link and point provider link at the chosen account
+    relinked = relinking(simplefin_account, @account) do
       # Detach @account's EXISTING SimpleFIN link (if any) before attaching the
       # new one. This is the fraud-replacement path: user is swapping from
       # sfa_old (dead card) to sfa_new (replacement). Without this, @account
@@ -451,6 +459,7 @@ class SimplefinItemsController < ApplicationController
         end
       end
     end
+    return unless relinked
 
     if turbo_frame_request?
       # Reload the item to ensure associations are fresh
@@ -574,6 +583,13 @@ class SimplefinItemsController < ApplicationController
         account = sfa.current_account
         next unless account
 
+        # Both actions destroy the stale account, and a move writes into the
+        # target, so each needs write access like any other link change.
+        unless writable_account_ids.include?(account.id)
+          results[:errors] << { account: account.name, action: action }
+          next
+        end
+
         case action
         when "delete"
           if handle_stale_account_delete(sfa, account)
@@ -611,7 +627,7 @@ class SimplefinItemsController < ApplicationController
 
     def handle_stale_account_move(simplefin_account, source_account, target_account_id)
       target_account = @simplefin_item.accounts.find { |acct| acct.id.to_s == target_account_id.to_s }
-      return false unless target_account
+      return false unless target_account && writable_account_ids.include?(target_account.id)
 
       ActiveRecord::Base.transaction do
         # Handle transfers that would become invalid after moving entries.
