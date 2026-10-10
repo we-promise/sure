@@ -140,6 +140,39 @@ class DebugLogEntryTest < ActiveSupport::TestCase
     assert_equal "[REDACTED]", entry.metadata["details"]["nested"]["amount"]
   end
 
+  test "capture walks monetary lists and hashes but redacts every figure inside" do
+    entry = DebugLogEntry.capture(
+      category: "provider_sync",
+      level: "info",
+      message: "Provider event",
+      source: "Provider::Test",
+      metadata: {
+        balance_type: "CLBD",
+        amount_in_account_currency: "1234.56",
+        other_balances: [
+          { currency: "USD", balance_type: "CLBD", amount: "15.50", note: "15.50 USD", owner: { iban: "DE00" } },
+          "42.00"
+        ],
+        balance_detail: { amount: { value: "5.00", currency: "USD" } },
+        balances: { "EUR" => "100.00" },
+        address_balances: [ { currency: "BTC" } ]
+      }
+    )
+
+    assert_equal "[REDACTED]", entry.metadata["balance_type"]
+    assert_equal "[REDACTED]", entry.metadata["amount_in_account_currency"]
+    assert_equal(
+      [
+        { "currency" => "USD", "balance_type" => "CLBD", "amount" => "[REDACTED]", "note" => "[REDACTED]", "owner" => { "iban" => "[REDACTED]" } },
+        "[REDACTED]"
+      ],
+      entry.metadata["other_balances"]
+    )
+    assert_equal({ "amount" => { "value" => "[REDACTED]", "currency" => "USD" } }, entry.metadata["balance_detail"])
+    assert_equal "[REDACTED]", entry.metadata["balances"]
+    assert_equal "[REDACTED]", entry.metadata["address_balances"]
+  end
+
   test "capture does not redact unrelated keys that merely resemble sensitive ones" do
     entry = DebugLogEntry.capture(
       category: "provider_sync",

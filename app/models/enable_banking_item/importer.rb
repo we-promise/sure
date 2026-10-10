@@ -330,7 +330,6 @@ class EnableBankingItem::Importer
         metadata: {
           enable_banking_item_id: enable_banking_item.id,
           enable_banking_account_id: enable_banking_account.id,
-          uid: enable_banking_account.uid,
           currency: currency,
           other_balances: funded
         }

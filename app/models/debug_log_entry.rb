@@ -9,7 +9,20 @@ class DebugLogEntry < ApplicationRecord
   # call site wrote them — a safety net for the many capture(...) sites across provider
   # importers that this class has no direct visibility into, on top of the individual
   # sites that were audited and fixed not to pass these in the first place.
-  SENSITIVE_METADATA_KEY_PATTERN = /amount|balance|address|\bbody\b|qty|\buid\b|api_account_id|api_key|access_token|refresh_token|password|authorization|secret|iban|account_number|email/i
+  MONETARY_METADATA_KEY_PATTERN = /amount|balance|qty/i
+  IDENTIFYING_METADATA_KEY_PATTERN = /address|\bbody\b|\buid\b|api_account_id|api_key|access_token|refresh_token|password|authorization|secret|iban|account_number|email/i
+  SENSITIVE_METADATA_KEY_PATTERN = /#{MONETARY_METADATA_KEY_PATTERN.source}|#{IDENTIFYING_METADATA_KEY_PATTERN.source}/i
+
+  # Monetary keys whose value is a list or hash (e.g. other_balances: [{currency:,
+  # balance_type:, amount:}]) are walked instead of replaced, so support still sees
+  # which currencies and balance types were involved. Inside such a container every
+  # scalar is redacted except under the exact descriptive keys below, and a hash
+  # whose keys are not plain field names (an IBAN, a currency code, a wallet
+  # address used as key) is replaced whole. Identifying keys always win.
+  DESCRIPTIVE_METADATA_KEYS = %w[currency balance_type].freeze
+  FIELD_NAME_PATTERN = /\A[a-z_]+\z/
+
+  REDACTED = "[REDACTED]"
 
   # Credential shapes redacted inside string values (e.g. an error_message that
   # embeds an Authorization header or a serialized JSON fragment) — key-based
@@ -76,19 +89,36 @@ class DebugLogEntry < ApplicationRecord
     end
 
     private
-      def redact_sensitive(value)
+      def redact_sensitive(value, monetary: false)
         case value
         when Hash
+          return REDACTED if monetary && !value.keys.all? { |key| key.to_s.match?(FIELD_NAME_PATTERN) }
+
           value.each_with_object({}) do |(key, v), result|
-            result[key] = key.to_s.match?(SENSITIVE_METADATA_KEY_PATTERN) ? "[REDACTED]" : redact_sensitive(v)
+            result[key] = redact_metadata_value(key.to_s, v, monetary: monetary)
           end
         when Array
-          value.map { |v| redact_sensitive(v) }
+          value.map { |v| monetary && !container?(v) ? REDACTED : redact_sensitive(v, monetary: monetary) }
         when String
-          SENSITIVE_METADATA_VALUE_PATTERNS.reduce(value) { |result, pattern| result.gsub(pattern, "[REDACTED]") }
+          SENSITIVE_METADATA_VALUE_PATTERNS.reduce(value) { |result, pattern| result.gsub(pattern, REDACTED) }
         else
           value
         end
+      end
+
+      def redact_metadata_value(key, value, monetary:)
+        return REDACTED if key.match?(IDENTIFYING_METADATA_KEY_PATTERN)
+
+        monetary_key = key.match?(MONETARY_METADATA_KEY_PATTERN)
+        return redact_sensitive(value, monetary: monetary || monetary_key) if container?(value)
+        return redact_sensitive(value) if monetary && DESCRIPTIVE_METADATA_KEYS.include?(key)
+        return REDACTED if monetary || monetary_key
+
+        redact_sensitive(value)
+      end
+
+      def container?(value)
+        value.is_a?(Hash) || value.is_a?(Array)
       end
 
       def normalize_provider_key(provider_key, provider)
