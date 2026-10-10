@@ -1,6 +1,7 @@
 require "test_helper"
 
 class RulesControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
   setup do
     sign_in @user = users(:family_admin)
   end
@@ -295,6 +296,52 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_not rule.reload.active?
   end
 
+  test "switching on an email rule records its baseline before queuing the run" do
+    rule = email_rule_for(@user.family)
+
+    assert_difference -> { NotificationDelivery.where(rule: rule).count }, 1 do
+      assert_enqueued_with(job: RuleJob) { post apply_rule_url(rule) }
+    end
+
+    assert rule.reload.active?
+  end
+
+  test "apply leaves an email rule off and queues nothing when its baseline times out" do
+    rule = email_rule_for(@user.family)
+    Rule::SafeRegex.stubs(:with_timeout).raises(Rule::SafeRegex::TimeoutError)
+
+    assert_no_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
+
+    assert_redirected_to rules_url
+    assert_equal I18n.t("rules.notification_baseline_timed_out"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_not rule.reload.active?
+  end
+
+  test "the active toggle leaves an email rule off and says why when its baseline times out" do
+    rule = email_rule_for(@user.family)
+    Rule::SafeRegex.stubs(:with_timeout).raises(Rule::SafeRegex::TimeoutError)
+
+    patch rule_url(rule), params: { rule: { active: "1" } }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal I18n.t("rules.notification_baseline_timed_out"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_not rule.reload.active?
+  end
+
+  test "the active toggle switches an email rule on when its baseline is recorded" do
+    rule = email_rule_for(@user.family)
+
+    assert_difference -> { NotificationDelivery.where(rule: rule).count }, 1 do
+      patch rule_url(rule), params: { rule: { active: "1" } }, as: :turbo_stream
+    end
+
+    assert_equal I18n.t("rules.update.success"), flash[:notice]
+    assert_nil flash[:alert]
+    assert rule.reload.active?
+  end
+
   test "member can create rule" do
     sign_in users(:family_member)
 
@@ -364,4 +411,18 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_match "connection refused", entry.message
     assert_equal "connection refused", entry.metadata["error_message"]
   end
+
+  private
+    # A regex condition, so a stubbed timeout reaches the baseline query, and one
+    # matching transaction, so a recorded baseline is visible as a delivery.
+    def email_rule_for(family)
+      account = family.accounts.create!(name: "Baseline", balance: 1000, currency: "USD", accountable: Depository.new)
+      create_transaction(date: Date.current, account: account, name: "Baseline match zq")
+
+      Rule.create!(
+        family: family, resource_type: "transaction", active: false,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "matches_regex", value: "baseline match zq") ],
+        actions: [ Rule::Action.new(action_type: "send_email_notification") ]
+      )
+    end
 end

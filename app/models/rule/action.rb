@@ -78,5 +78,11 @@ class Rule::Action < ApplicationRecord
         rule_id: rule_id,
         transaction_ids: rule.matching_transaction_ids
       )
+    rescue Rule::SafeRegex::TimeoutError => e
+      # The action is already committed. With no baseline, leaving the rule on would
+      # email every past match on its next run, so it is switched off instead; the
+      # user can turn it back on after changing the pattern.
+      Rails.logger.warn("Notification baseline for rule #{rule_id} timed out, rule switched off: #{e.message}")
+      rule.update_columns(active: false)
     end
 end
