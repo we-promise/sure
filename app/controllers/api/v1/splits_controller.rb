@@ -9,6 +9,7 @@
 # gap using the same model calls the UI makes.
 class Api::V1::SplitsController < Api::V1::BaseController
   AlreadySplit = Class.new(StandardError)
+  NotSplit = Class.new(StandardError)
 
   # entries.amount is decimal(19,4). Children are rounded independently on
   # assignment, so raw values that sum to the parent can persist as a total
@@ -71,6 +72,11 @@ class Api::V1::SplitsController < Api::V1::BaseController
 
     Entry.transaction do
       @entry.lock!
+      # The split_parent? test above runs before the lock, so a concurrent
+      # DELETE can unsplit in between; without this the replacement would
+      # resurrect a split the other caller just removed.
+      raise NotSplit unless @entry.split_parent?
+
       @entry.unsplit!
       @entry.split!(splits)
     end
@@ -78,6 +84,8 @@ class Api::V1::SplitsController < Api::V1::BaseController
     @entry.reload
 
     render :show
+  rescue NotSplit
+    render_not_split
   rescue ActiveRecord::RecordInvalid => e
     render_unprocessable(e.message)
   end
@@ -86,10 +94,17 @@ class Api::V1::SplitsController < Api::V1::BaseController
   def destroy
     return render_not_split unless @entry.split_parent?
 
-    @entry.unsplit!
+    Entry.transaction do
+      @entry.lock!
+      raise NotSplit unless @entry.split_parent?
+
+      @entry.unsplit!
+    end
     @entry.sync_account_later
 
     head :no_content
+  rescue NotSplit
+    render_not_split
   rescue ActiveRecord::RecordInvalid => e
     render_unprocessable(e.message)
   end

@@ -188,7 +188,7 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     other = User.create!(family: @family, email: "viewer-#{SecureRandom.hex(4)}@example.com",
                          password: "password123", password_confirmation: "password123", role: "member")
     @account.update!(owner: @user)
-    AccountShare.create!(account: @account, user: other, permission: "read_only") rescue skip("account sharing unavailable")
+    AccountShare.create!(account: @account, user: other, permission: "read_only")
     other.api_keys.active.destroy_all
     key = ApiKey.create!(user: other, name: "Viewer RW", scopes: [ "read_write" ],
                          display_key: "test_v_#{SecureRandom.hex(8)}")
