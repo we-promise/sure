@@ -721,9 +721,39 @@ class User < ApplicationRecord
     end
   end
 
+  TRANSACTIONS_PER_PAGE_OPTIONS = [ 10, 20, 30, 50, 100 ].freeze
+
   # Transactions preferences management
   def show_split_grouped?
     preferences&.dig("show_split_grouped") != false
+  end
+
+  def transactions_compact?
+    preferences&.dig("transactions_compact") == true
+  end
+
+  def transactions_group_by_date?
+    preferences&.dig("transactions_group_by_date") != false
+  end
+
+  def transactions_show_notes?
+    preferences&.dig("transactions_show_notes") == true
+  end
+
+  def transactions_per_page
+    value = preferences&.dig("transactions_per_page").to_i
+    TRANSACTIONS_PER_PAGE_OPTIONS.include?(value) ? value : nil
+  end
+
+  def update_transaction_preferences(prefs)
+    transaction do
+      lock!
+      updated_prefs = (preferences || {}).deep_dup
+      prefs.each do |key, value|
+        updated_prefs[key.to_s] = value
+      end
+      update!(preferences: updated_prefs)
+    end
   end
 
   # Returns whether the user has enabled the two-column dashboard layout.

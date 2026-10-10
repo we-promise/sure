@@ -1,0 +1,29 @@
+<%# locals: (entry:, transaction:, view_ctx: "global", compact: false) %>
+<div class="<%= class_names("text-secondary text-xs font-normal", "flex min-w-0 items-center gap-1": compact) %>">
+  <% if compact %>
+    <span class="@3xl/compact-table:hidden shrink-0"><%= format_date(entry.date) %><%= " •" unless transaction.transfer? %></span>
+  <% end %>
+  <% if transaction.transfer? && !compact %>
+    <span class="text-secondary"><%= transaction_transfer_subtitle(entry) %></span>
+  <% elsif !transaction.transfer? %>
+    <%# In compact rows the merchant moves up onto the name line (desktop only);
+        the subtitle keeps it only for standard rows and mobile sublines. %>
+    <% if transaction.merchant&.present? && !compact %>
+      <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
+    <% end %>
+    <% unless compact && view_ctx == "account" %>
+      <span class="text-secondary hidden <%= compact ? "@3xl/compact-table:inline min-w-0 truncate" : "lg:inline" %>">
+        <%= link_to entry.account.name,
+            account_path(entry.account, tab: "transactions"),
+            data: { turbo_frame: "_top" },
+            class: "hover:underline" %>
+      </span>
+    <% end %>
+    <div class="flex min-w-0 items-center gap-1 <%= compact ? "@3xl/compact-table:hidden" : "lg:hidden" %>">
+      <%= render "categories/category_name_mobile", transaction: transaction %>
+      <% if transaction.merchant&.present? %>
+        <span class="min-w-0 truncate">• <%= transaction.merchant.name %></span>
+      <% end %>
+    </div>
+  <% end %>
+</div>

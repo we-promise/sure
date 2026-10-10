@@ -1,4 +1,16 @@
 module TransactionsHelper
+  def transaction_transfer_subtitle(entry)
+    transaction = entry.entryable
+    label = transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer")
+    accounts = entry.account.name
+    if transaction.transfer.present?
+      outflow = transaction.transfer_as_outflow.present?
+      counterpart = outflow ? transaction.transfer.to_account : transaction.transfer.from_account
+      accounts = "#{accounts} #{outflow ? '→' : '←'} #{counterpart.name}" if counterpart && @accessible_account_ids&.include?(counterpart.id)
+    end
+    "#{label} • #{accounts}"
+  end
+
   # @return [Array<Hash>] the filters offered above the transaction list, each
   #   with the key its partial is named for, a translated label and an icon
   def transaction_search_filters

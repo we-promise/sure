@@ -81,6 +81,10 @@ en:
       transfer: Transfer
       account_label: Account
       amount: Amount
+      balance_unavailable: Balance not available yet
+      labels: Tags
+      transfer_tooltip: "%{type}: %{from_account} %{arrow} %{to_account}"
+      transfer_tooltip_account_only: "%{type}: %{account}"
       category_label: Category
       date_label: Date
       delete: Delete
@@ -143,6 +147,8 @@ en:
       transfer_or_debt_payment: "Transfer or Debt Payment?"
       open_matcher: "Open matcher"
       convert: "Convert"
+      account: Account
+      notes: Notes
     activity_labels:
       buy: Buy
       sell: Sell
@@ -173,6 +179,8 @@ en:
       reject_match: Reject match
       transfer_confirmed: Transfer is confirmed
     transaction:
+      one_time_income_tooltip: "One-time income (excluded from averages)"
+      one_time_expense_tooltip: "One-time expense (excluded from averages)"
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
       linked_with_provider: Linked with %{provider}

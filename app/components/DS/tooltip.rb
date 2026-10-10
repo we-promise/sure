@@ -55,11 +55,22 @@ class DS::Tooltip < ApplicationComponent
   end
 
   def panel_classes
-    variant == :surface ? "chart-tooltip text-sm" : "bg-inverse text-sm px-1.5 py-1 rounded-md"
+    # The max width mirrors the content cap so bubble and text share one
+    # constraint even when an ancestor leaks white-space: nowrap (e.g. a
+    # truncating row) that would otherwise let text spill past the bubble.
+    if variant == :surface
+      "chart-tooltip text-sm max-w-[20rem]"
+    else
+      "bg-inverse text-sm px-1.5 py-1 rounded-md max-w-[20rem]"
+    end
   end
 
   def content_classes
-    variant == :surface ? "text-primary font-normal max-w-[20rem]" : "text-inverse font-normal max-w-[20rem]"
+    if variant == :surface
+      "text-primary font-normal max-w-[20rem] whitespace-normal"
+    else
+      "text-inverse font-normal max-w-[20rem] whitespace-normal"
+    end
   end
 
   def tooltip_content

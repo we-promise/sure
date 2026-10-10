@@ -1,0 +1,115 @@
+<%# locals: (entry:, balance_trend: nil, view_ctx: "global", is_filtered: false, in_split_group: false, running_balance: nil, hide_balance: false, flat: false, density: :comfortable) %>
+<% transaction = entry.entryable %>
+<% show_date = flat %>
+<% show_balance = flat && view_ctx == "account" && !hide_balance %>
+<% show_notes = Current.user.transactions_show_notes? %>
+<% drawer_params = { view_ctx: view_ctx, is_filtered: is_filtered } %>
+<% if transaction.transfer? %>
+  <% transfer_counterpart = transaction.transfer.present? ? (transaction.transfer_as_outflow.present? ? transaction.transfer.to_account : transaction.transfer.from_account) : nil %>
+  <% transfer_counterpart = nil unless transfer_counterpart.present? && @accessible_account_ids&.include?(transfer_counterpart.id) %>
+  <% transfer_type = transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %>
+  <% transfer_arrow = transaction.transfer_as_outflow.present? ? "→" : "←" %>
+  <% transfer_tooltip = transfer_counterpart.present? ? t("transactions.show.transfer_tooltip", type: transfer_type, from_account: entry.account.name, arrow: transfer_arrow, to_account: transfer_counterpart.name) : t("transactions.show.transfer_tooltip_account_only", type: transfer_type, account: entry.account.name) %>
+<% end %>
+
+<%= turbo_frame_tag dom_id(entry) do %>
+  <%= turbo_frame_tag dom_id(transaction) do %>
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, indent: in_split_group, density: density, data: { controller: "clickable-row", action: "click->clickable-row#open" }) do |row| %>
+      <% row.with_checkbox do %>
+        <%= check_box_tag dom_id(entry, "selection"),
+            disabled: transaction.transfer.present?,
+            class: "checkbox checkbox--light hidden @3xl/compact-table:block",
+            data: {
+              id: entry.id,
+              entry_type: entry.entryable_type,
+              "bulk-select-target": "row",
+              action: "bulk-select#toggleRowSelection",
+              checkbox_toggle_target: "selectionEntry"
+            } %>
+      <% end %>
+
+      <% if show_date %>
+        <% row.with_date { format_date(entry.date) } %>
+      <% end %>
+
+      <% row.with_primary do %>
+        <div class="min-w-0 flex-1 <%= "opacity-50 text-secondary" if entry.excluded %>">
+          <div class="flex items-center gap-1 min-w-0">
+            <div class="truncate">
+              <% if transaction.transfer? %>
+                <%= render DS::Tooltip.new(text: transfer_tooltip, placement: "top", variant: :surface, html_class: "min-w-0 max-w-full") do |tooltip| %>
+                  <% tooltip.with_trigger do %>
+                    <%= link_to(
+                          entry.name,
+                          transaction.transfer.present? ? transfer_path(transaction.transfer, drawer_params) : entry_path(entry, drawer_params),
+                          data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
+                          class: "hover:underline truncate"
+                        ) %>
+                  <% end %>
+                <% end %>
+              <% else %>
+                <% if transaction.merchant&.present? %>
+                  <span class="hidden @3xl/compact-table:inline text-secondary font-normal"><%= transaction.merchant.name %> • </span>
+                <% end %>
+                <%= link_to(
+                      entry.name,
+                      in_split_group ? entry_path(entry, drawer_params.merge(grouped: true)) : entry_path(entry, drawer_params),
+                      data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
+                      class: "hover:underline truncate"
+                    ) %>
+              <% end %>
+            </div>
+
+            <div class="flex items-center gap-1 shrink-0">
+              <%= render "transactions/badges", entry: entry, transaction: transaction, in_split_group: in_split_group, drawer_params: drawer_params %>
+            </div>
+          </div>
+          <%# Keep the stream target mounted while labels remain hidden in mobile-style rows. %>
+          <div class="hidden">
+            <%= render "tags/menu", entry: entry, transaction: transaction, variant: :mobile %>
+          </div>
+          <%= render "transactions/subtitle", entry: entry, transaction: transaction, view_ctx: view_ctx, compact: true %>
+        </div>
+      <% end %>
+
+      <% if show_notes && entry.notes.present? %>
+        <% row.with_notes do %>
+          <span class="truncate block text-sm text-secondary privacy-sensitive" title="<%= entry.notes %>"><%= entry.notes %></span>
+        <% end %>
+      <% end %>
+
+      <% row.with_category do %>
+        <% if entry.account.supports_trades? && !transaction.transfer? %>
+          <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: transaction, view_ctx: view_ctx, is_filtered: is_filtered %>
+        <% else %>
+          <%= render "transactions/transaction_category", transaction: transaction, variant: "desktop", in_split_group: in_split_group %>
+        <% end %>
+      <% end %>
+
+      <% row.with_labels do %>
+        <%= render "tags/menu", entry: entry, transaction: transaction, variant: :desktop %>
+      <% end %>
+
+      <% row.with_amount do %>
+        <% if entry.protected_from_sync? && !entry.excluded? %>
+          <%= link_to entry_path(entry, drawer_params), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "invisible group-hover:visible transition-opacity" do %>
+            <%= render DS::Tooltip.new(text: t("entries.protection.tooltip"), icon: "lock", size: "sm", as: :span) %>
+          <% end %>
+        <% end %>
+        <%= content_tag :p,
+            transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
+            class: ["privacy-sensitive text-sm font-medium truncate", "text-success": entry.amount.negative?, "opacity-50": entry.excluded] %>
+      <% end %>
+
+      <% if show_balance %>
+        <% row.with_balance do %>
+          <% if running_balance.present? %>
+            <span class="privacy-sensitive text-sm font-medium text-primary truncate" title="<%= format_money(running_balance) %>"><%= format_money(running_balance) %></span>
+          <% else %>
+            <span class="text-secondary opacity-40 text-sm" title="<%= t("transactions.show.balance_unavailable") %>">—</span>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

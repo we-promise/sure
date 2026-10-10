@@ -15,6 +15,7 @@ class TransfersController < ApplicationController
   def show
     @categories = Current.family.categories.alphabetically_by_hierarchy
     @tags = Current.family.tags.alphabetically
+    assign_compact_row_context
 
     # Whether the current user can hit `mark_as_recurring`: feature flag on,
     # AND they have write access to BOTH transfer endpoints. Gating the
@@ -96,6 +97,25 @@ class TransfersController < ApplicationController
       update_transfer_status
       update_transfer_fees_and_amount
       update_transfer_details
+    end
+
+    # Compact-aware row replaces (mirrors TransactionsController#update): a
+    # bare `turbo_stream.replace(entry)` re-renders the full-size row and
+    # would clobber the compact layout (e.g. after editing tags in the
+    # transfer drawer, whose form auto-submits here).
+    @is_compact = Current.user.preview_features_enabled? && Current.user.transactions_compact?
+    is_flat_compact = @is_compact && !Current.user.transactions_group_by_date?
+    assign_compact_row_context
+    @accessible_account_ids ||= Current.user.accessible_accounts.pluck(:id) if @is_compact
+    @transfer_legs = [ @transfer.outflow_transaction.entry, @transfer.inflow_transaction.entry ].map do |entry|
+      entry.reload
+      running_balance = nil
+      hide_balance = true
+      if is_flat_compact
+        running_balance = Account::RunningBalanceCalculator.new([ entry ]).running_balances[entry.id]
+        hide_balance = @view_ctx != "account" || @is_filtered ? true : false
+      end
+      { entry: entry, in_split_group: helpers.in_split_group?(entry, params[:grouped]), running_balance: running_balance, hide_balance: hide_balance, flat: is_flat_compact }
     end
 
     respond_to do |format|

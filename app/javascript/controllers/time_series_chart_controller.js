@@ -32,7 +32,7 @@ export default class extends Controller {
   // display — only pixel density changes.
   _yAxisPadding = 0.12;      // breathing room above and below the series
   _yAxisMinRelSpan = 0.015;  // smallest movement allowed to fill the chart,
-                             // as a fraction of the average balance  
+                             // as a fraction of the average balance
 
   connect() {
     this._install();

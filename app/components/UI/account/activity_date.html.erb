@@ -4,7 +4,7 @@
       <div class="py-2 px-4 flex items-center justify-between font-medium text-xs text-secondary">
         <div class="flex pl-0.5 items-center gap-4">
           <%= check_box_tag "#{date}_entries_selection",
-                          class: ["checkbox checkbox--light hidden lg:block", "lg:hidden": entries.size == 0],
+                          class: ["checkbox checkbox--light hidden", ((compact? ? "@3xl/compact-table:block" : "lg:block") if entries.any?)],
                           id: "selection_entry_#{date}",
                           data: {
                             action: "bulk-select#toggleGroupSelection",
@@ -38,17 +38,38 @@
   </details>
 
   <div class="bg-container shadow-border-xs rounded-lg">
-    <% if Current.user.show_split_grouped? %>
-      <% helpers.group_split_entries(entries, split_parents).each do |item| %>
-        <% if item.is_a?(EntriesHelper::SplitGroup) %>
-          <%= render "entries/split_group", split_group: item, view_ctx: "account" %>
-        <% else %>
-          <%= render item, view_ctx: "account" %>
+    <% if compact? %>
+      <% if Current.user.show_split_grouped? %>
+        <% helpers.group_split_entries(entries, split_parents).each do |item| %>
+          <% if item.is_a?(EntriesHelper::SplitGroup) %>
+            <div class="split-group">
+              <%= render "transactions/compact_split_parent_row", entry: item.parent, view_ctx: "account", is_filtered: filtered? %>
+              <% item.children.each do |child_entry| %>
+                <%= render helpers.compact_entry_render_options(child_entry, view_ctx: "account", in_split_group: true, is_filtered: filtered?) %>
+              <% end %>
+            </div>
+          <% else %>
+            <%= render helpers.compact_entry_render_options(item, view_ctx: "account", in_split_group: false, is_filtered: filtered?) %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <% entries.each do |entry| %>
+          <%= render helpers.compact_entry_render_options(entry, view_ctx: "account", in_split_group: false, is_filtered: filtered?) %>
         <% end %>
       <% end %>
     <% else %>
-      <% entries.each do |entry| %>
-        <%= render entry, view_ctx: "account" %>
+      <% if Current.user.show_split_grouped? %>
+        <% helpers.group_split_entries(entries, split_parents).each do |item| %>
+          <% if item.is_a?(EntriesHelper::SplitGroup) %>
+            <%= render "entries/split_group", split_group: item, view_ctx: "account", is_filtered: filtered? %>
+          <% else %>
+            <%= render item, view_ctx: "account", is_filtered: filtered? %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <% entries.each do |entry| %>
+          <%= render entry, view_ctx: "account", is_filtered: filtered? %>
+        <% end %>
       <% end %>
     <% end %>
   </div>

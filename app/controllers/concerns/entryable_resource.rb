@@ -1,10 +1,20 @@
 module EntryableResource
   extend ActiveSupport::Concern
 
+  # Compact row-render context (COMPACT_VIEW_CONTEXTS,
+  # FILTERED_REFERER_PATTERN, assign/resolve_compact_row_context and the
+  # referer fallbacks) lives in StreamExtensions so controllers that cannot
+  # include this concern (e.g. TransfersController, which owns set_transfer)
+  # resolve drawer/update row context the same way.
+  # Kept here as aliases so existing references keep working.
+  COMPACT_VIEW_CONTEXTS = StreamExtensions::COMPACT_VIEW_CONTEXTS
+  FILTERED_REFERER_PATTERN = StreamExtensions::FILTERED_REFERER_PATTERN
+
   included do
     include StreamExtensions, ActionView::RecordIdentifier
 
     before_action :set_entry, only: %i[show update destroy]
+    before_action :assign_compact_row_context, only: :show
 
     helper_method :can_edit_entry?, :can_annotate_entry?
   end
