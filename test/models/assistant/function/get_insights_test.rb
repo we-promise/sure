@@ -78,4 +78,16 @@ class Assistant::Function::GetInsightsTest < ActiveSupport::TestCase
 
     assert_empty result[:insights]
   end
+
+  test "include_acknowledged still hides insights about accounts not everyone can see" do
+    insight = @family.insights.create!(
+      insight_type: "idle_cash", priority: "low", status: "dismissed", title: "Idle", body: "body",
+      metadata: { "account_id" => accounts(:connected).id }, dedup_key: "idle_cash:private",
+      generated_at: Time.current
+    )
+
+    ids = @fn.call("include_acknowledged" => true)[:insights].map { |i| i[:id] }
+
+    assert_not_includes ids, insight.id
+  end
 end

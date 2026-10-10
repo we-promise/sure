@@ -20,6 +20,8 @@ class TradeRepublicAccount::HoldingsProcessor
     if @trade_republic_account.positions_snapshot_complete? && processed_count == positions.size
       reconcile_stale_holdings!(positions)
     end
+
+    purge_shared_bond_calculated_holdings!
   end
 
   private
@@ -48,6 +50,8 @@ class TradeRepublicAccount::HoldingsProcessor
       )
       return unless security
 
+      rematch_bond_holdings!(isin, security) if bond_position?(position)
+
       quantity = parse_decimal(position[:quantity])
       price    = parse_decimal(position[:price])
       return unless quantity && price && quantity.positive?
@@ -55,7 +59,7 @@ class TradeRepublicAccount::HoldingsProcessor
       amount = quantity * price
       date   = Date.current
 
-      external_id = "trade_republic_position_#{@trade_republic_account.trade_republic_account_id}_#{isin}_#{date}"
+      external_id = "#{position_external_id_prefix}#{isin}_#{date}"
 
       import_adapter.import_holding(
         security:           security,
@@ -84,11 +88,77 @@ class TradeRepublicAccount::HoldingsProcessor
       false
     end
 
+    # Positions stored before bonds were marked still carry the shared
+    # listing; they are bonds as well.
+    def bond_position?(position)
+      Provider::TradeRepublicClient.bond?(position) ||
+        Provider::TradeRepublicClient.bond_placeholder_listing?(position[:symbol], position[:exchange_slug])
+    end
+
+    # Earlier syncs put every bond on Trade Republic's shared "BOND" listing.
+    # The external id still names the bond's ISIN, so move this bond's
+    # snapshots onto its own security. The shared listing was never the
+    # bond's real security, so it doesn't stay as provider_security_id, also
+    # not on rows that import_holding already moved.
+    def rematch_bond_holdings!(isin, security)
+      bond_holdings = account.holdings
+        .where("external_id LIKE ?", "#{ActiveRecord::Base.sanitize_sql_like("#{position_external_id_prefix}#{isin}_")}%")
+      stale = bond_holdings.where.not(security_id: security.id).where(security_locked: false)
+
+      if stale.exists?
+        mismatched_dates = move_holdings_to_security!(stale, security, adopt_provider_security: true)
+        log_rematch_collisions(
+          "Bond rematch collision kept the bond's own holding market values",
+          mismatched_dates,
+          isin: isin,
+          to_security_id: security.id
+        )
+      end
+
+      bond_holdings
+        .where(security_id: security.id, security_locked: false)
+        .where.not(provider_security_id: [ nil, security.id ])
+        .update_all(provider_security_id: security.id, updated_at: Time.current)
+    end
+
+    # Earlier syncs calculated daily holdings on the shared BOND listing.
+    # Reverse syncs never purge calculated rows, and bond history is now
+    # calculated on each bond's own security, so leaving them counts bonds
+    # twice. Rows still backed by trades on the listing are recalculated.
+    def purge_shared_bond_calculated_holdings!
+      removed_count = account.holdings
+        .where(security_id: shared_bond_security_ids, account_provider_id: nil, security_locked: false)
+        .delete_all
+      return unless removed_count.positive?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Removed #{removed_count} holding(s) calculated on the shared Trade Republic BOND listing",
+        source: "trade_republic",
+        family: account.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: { trade_republic_account_id: @trade_republic_account.id, removed_count: removed_count }
+      )
+    end
+
+    def shared_bond_security_ids
+      Security.where(
+        ticker: Provider::TradeRepublicClient::BOND_PLACEHOLDER_SYMBOL,
+        exchange_operating_mic: EXCHANGE_SLUG_TO_MIC[Provider::TradeRepublicClient::BOND_PLACEHOLDER_EXCHANGE]
+      ).select(:id)
+    end
+
+    def position_external_id_prefix
+      "trade_republic_position_#{@trade_republic_account.trade_republic_account_id}_"
+    end
+
     def reconcile_stale_holdings!(positions)
       provider_id = @trade_republic_account.account_provider&.id
       return if provider_id.blank?
 
-      prefix = "trade_republic_position_#{@trade_republic_account.trade_republic_account_id}_"
+      prefix = position_external_id_prefix
       current_ids = positions.filter_map do |position|
         isin = position.with_indifferent_access[:isin].to_s
         isin.present? ? "#{prefix}#{isin}_#{Date.current}" : nil

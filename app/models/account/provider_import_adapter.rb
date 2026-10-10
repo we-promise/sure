@@ -1,14 +1,4 @@
 class Account::ProviderImportAdapter
-  # Matches a transaction any provider has flagged pending, for the lookups below that
-  # join `transactions` directly. Derived from Transaction::PENDING_PROVIDERS rather
-  # than spelled out, so a newly supported provider cannot silently drop out of
-  # pending→posted reconciliation. Frozen constant built from a frozen provider list:
-  # no user input reaches the SQL (same reasoning as Transaction::PENDING_CHECK_SQL).
-  PENDING_LOOKUP_SQL = Transaction::PENDING_PROVIDERS
-    .map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean = true" }
-    .join(" OR ")
-    .freeze
-
   attr_reader :account, :skipped_entries
 
   # @param account [Account] the account every import through this adapter lands on
@@ -64,14 +54,7 @@ class Account::ProviderImportAdapter
 
       # Determine early whether the incoming transaction is pending — needed by both
       # the protection check (pending→booked bypass) and the auto-claim path below.
-      incoming_pending = false
-      if extra.is_a?(Hash)
-        pending_extra = extra.with_indifferent_access
-        boolean_type = ActiveModel::Type::Boolean.new
-        incoming_pending = Transaction::PENDING_PROVIDERS.any? do |provider|
-          boolean_type.cast(pending_extra.dig(provider, "pending"))
-        end
-      end
+      incoming_pending = extra.is_a?(Hash) && Transaction.pending_extra?(extra.with_indifferent_access)
 
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===
       # Check persisted Transaction entries for protection flags before making changes.
@@ -92,8 +75,7 @@ class Account::ProviderImportAdapter
           # here (determine_skip_reason reports user_modified first) but is excluded
           # from that refresh, so this is the only thing that clears its pending flag.
           if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
-            entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
-            if entry_is_pending
+            if entry.transaction.pending?
               entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
             end
           end
@@ -193,7 +175,7 @@ class Account::ProviderImportAdapter
       # must clear the stale pending flag here before the final save.
       # (The auto-claim path already clears it in-memory, so this is a no-op there.)
       if !incoming_pending && entry.entryable.is_a?(Transaction)
-        if Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
+        if entry.transaction.pending?
           entry.transaction.extra = clear_pending_flags_from_extra(entry.transaction.extra)
         end
       end
@@ -277,8 +259,15 @@ class Account::ProviderImportAdapter
           entry.transaction.assign_attributes(investment_activity_label: detected_label)
         end
 
+        # A leg that is already matched to a Transfer takes its kind from the
+        # transfer, not from this row. Re-classifying it here, e.g. a negative
+        # amount on a Loan turning the matched inflow back into loan_payment,
+        # makes budgets and reports count the same payment as an expense on
+        # both legs. Deriving it from the transfer also repairs legs an earlier
+        # sync already overwrote.
         if auto_kind.present?
-          entry.transaction.assign_attributes(kind: auto_kind)
+          transfer = matched_transfer_for(entry)
+          entry.transaction.assign_attributes(kind: transfer ? transfer.kind_for_leg(entry.transaction) : auto_kind)
         end
 
         if auto_category.present? && entry.transaction.category_id.blank?
@@ -840,7 +829,7 @@ class Account::ProviderImportAdapter
       .where(amount: amount)
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
-      .where(PENDING_LOOKUP_SQL)
+      .where(Transaction.pending_sql("transactions"))
       .order(date: :desc) # Prefer most recent pending transaction
 
     candidates.first
@@ -882,7 +871,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(PENDING_LOOKUP_SQL)
+      .where(Transaction.pending_sql("transactions"))
 
     # If merchant_id is provided, prioritize matching by merchant
     if merchant_id.present?
@@ -947,7 +936,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date)
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(PENDING_LOOKUP_SQL)
+      .where(Transaction.pending_sql("transactions"))
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
     if merchant_id.present? && name.present?
@@ -1059,6 +1048,20 @@ class Account::ProviderImportAdapter
   end
 
   private
+
+    # Loads the transfer together with both legs, their entries and accounts in
+    # one joined query, so Transfer#kind_for_leg reads them without the lazy
+    # loads it would otherwise pay on every re-imported row. Looked up per row
+    # rather than memoized per adapter: most processors build an adapter per
+    # row, and some link or destroy transfers mid-sync (Trade Republic), so a
+    # memo would be both costlier and stale.
+    def matched_transfer_for(entry)
+      return nil unless entry.persisted?
+
+      transaction_id = entry.transaction.id
+      transfers = Transfer.eager_load(inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account })
+      transfers.where(inflow_transaction_id: transaction_id).or(transfers.where(outflow_transaction_id: transaction_id)).first
+    end
 
     # Memoized per adapter instance (which is per-account). Membership in
     # goal_accounts is stable across a sync batch.

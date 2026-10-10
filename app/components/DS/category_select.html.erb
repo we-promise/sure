@@ -27,7 +27,7 @@
 
         <span data-category-select-target="selectionContainer"
               class="text-secondary">
-          <% selected = categories.find { |c| c.id.to_s == selected_id } %>
+          <% selected = selected_category %>
 
           <% if selected %>
             <%= render partial: "categories/badge",
