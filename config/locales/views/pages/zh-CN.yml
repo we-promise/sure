@@ -35,6 +35,11 @@ zh-CN:
       heading: 服务条款
       placeholder: 服务条款内容将显示在这里。
     dashboard:
+      cashflow_preview:
+        node_labels:
+          cash_flow: "现金流"
+          surplus: "盈余"
+          deficit: "赤字"
       welcome: 欢迎回来，%{name}
       subtitle: 以下是您的财务状况概览
       new: 新建

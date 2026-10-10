@@ -1,5 +1,5 @@
 class EnableBankingItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -26,11 +26,6 @@ class EnableBankingItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   def credentials_configured?
     application_id.present? && client_certificate.present? && country_code.present?

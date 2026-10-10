@@ -4,4 +4,4 @@ pl:
     errors:
       models:
         sophtron_account:
-          no_balance: "Konto Sophtron musi mieć saldo bieżące lub dostępne"
+          no_balance: Konto Sophtron musi mieć saldo bieżące lub dostępne

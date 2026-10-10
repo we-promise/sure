@@ -87,6 +87,234 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal %w[ASML AAPL], top.map(&:ticker)
   end
 
+  test "top_holdings rolls up the same security across accounts" do
+    ira = create_investment_account(balance: 5000, cash_balance: 0, currency: "USD")
+    taxable = create_investment_account(balance: 3000, cash_balance: 0, currency: "USD")
+    other = create_investment_account(balance: 2000, cash_balance: 0, currency: "USD")
+
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    msft = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    Holding.create!(
+      account: ira, security: aapl, date: Date.current,
+      qty: 10, price: 200, amount: 2000, currency: "USD"
+    )
+    Holding.create!(
+      account: taxable, security: aapl, date: Date.current,
+      qty: 15, price: 200, amount: 3000, currency: "USD"
+    )
+    Holding.create!(
+      account: other, security: msft, date: Date.current,
+      qty: 10, price: 200, amount: 2000, currency: "USD"
+    )
+
+    top = @statement.top_holdings(limit: 5)
+
+    assert_equal %w[AAPL MSFT], top.map(&:ticker)
+    assert_equal 1, top.count { |row| row.ticker == "AAPL" }
+    assert_equal Money.new(5000, "USD"), top.first.amount_money
+    # Portfolio total = 5000 + 3000 + 2000 = 10000; AAPL = 50%, MSFT = 20%
+    assert_in_delta 50.0, top.first.weight, 0.01
+    assert_in_delta 20.0, top.second.weight, 0.01
+  end
+
+  test "top_holdings weight is percent of total portfolio including cash" do
+    account = create_investment_account(balance: 10_000, cash_balance: 4000, currency: "USD")
+    security = Security.create!(ticker: "VOO", name: "Vanguard S&P 500")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 30, price: 200, amount: 6000, currency: "USD"
+    )
+
+    top = @statement.top_holdings(limit: 1)
+
+    assert_equal 1, top.size
+    # 6000 / 10000 portfolio = 60% (not 100% of holdings)
+    assert_in_delta 60.0, top.first.weight, 0.01
+  end
+
+  test "top_holdings still lists positions when portfolio_value is stale zero" do
+    # Cached Account#balance can lag behind Holding rows; presence must not
+    # depend on portfolio_value alone.
+    account = create_investment_account(balance: 0, cash_balance: 0, currency: "USD")
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 200, amount: 2000, currency: "USD"
+    )
+
+    assert_equal 0, @statement.portfolio_value
+
+    top = @statement.top_holdings(limit: 5)
+
+    assert_equal 1, top.size
+    assert_equal "AAPL", top.first.ticker
+    assert_equal Money.new(2000, "USD"), top.first.amount_money
+    # Falls back to holdings total as weight denominator when portfolio is 0
+    assert_in_delta 100.0, top.first.weight, 0.01
+  end
+
+  test "top_holdings weight stays within 100 when cash is negative" do
+    # Margin or an unsettled buy: balance 960 = holdings 1000 + cash -40.
+    account = create_investment_account(balance: 960, cash_balance: -40, currency: "USD")
+    security = Security.create!(ticker: "VTI", name: "Vanguard Total Market")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 5, price: 200, amount: 1000, currency: "USD"
+    )
+
+    top = @statement.top_holdings(limit: 1)
+
+    assert_equal 1, top.size
+    assert_in_delta 100.0, top.first.weight, 0.01
+  end
+
+  test "top_holdings ignores a negative holding row when weighting" do
+    # Holding validates amount >= 0, but Holding::Materializer writes via
+    # upsert_all, which skips validations — an over-sell can land a negative row.
+    account = create_investment_account(balance: 500, cash_balance: 0, currency: "USD")
+    good = Security.create!(ticker: "AAPL", name: "Apple")
+    bad = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    Holding.create!(
+      account: account, security: good, date: Date.current,
+      qty: 5, price: 200, amount: 1000, currency: "USD"
+    )
+
+    negative = Holding.new(
+      account: account, security: bad, date: Date.current,
+      qty: 2, price: 250, amount: -500, currency: "USD"
+    )
+    negative.save!(validate: false)
+
+    top = @statement.top_holdings(limit: 5)
+
+    assert_equal [ "AAPL" ], top.map(&:ticker)
+    assert_in_delta 100.0, top.first.weight, 0.01
+  end
+
+  test "top_holdings ignores a negative row sharing a security with a good one" do
+    # current_holdings is DISTINCT ON (account_id, security_id), so one security
+    # held in two accounts yields two rows. A negative row in one account must
+    # not net against the good row in the other before the value is taken.
+    ira = create_investment_account(balance: 1000, cash_balance: 0, currency: "USD")
+    taxable = create_investment_account(balance: 0, cash_balance: 0, currency: "USD")
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+
+    Holding.create!(
+      account: ira, security: security, date: Date.current,
+      qty: 5, price: 200, amount: 1000, currency: "USD"
+    )
+
+    negative = Holding.new(
+      account: taxable, security: security, date: Date.current,
+      qty: 2, price: 250, amount: -500, currency: "USD"
+    )
+    negative.save!(validate: false)
+
+    # Trades give both rows a cost basis, so combined_holding_trend actually has
+    # something to combine — without them Holding#trend is nil and the trend
+    # half of the filtering would go unexercised.
+    create_trade_for(account: ira, security: security, qty: 5, price: 200)
+    create_trade_for(account: taxable, security: security, qty: 2, price: 250)
+
+    top = @statement.top_holdings(limit: 5)
+
+    assert_equal [ "AAPL" ], top.map(&:ticker)
+    assert_equal Money.new(1000, "USD"), top.first.amount_money
+    assert_in_delta 100.0, top.first.weight, 0.01
+
+    # The bad row must not reach the trend either: netting it in would give
+    # current 500 (1000 + -500) against previous 1500.
+    assert_equal Money.new(1000, "USD"), top.first.trend.current
+    assert_equal Money.new(1000, "USD"), top.first.trend.previous
+  end
+
+  test "top_holdings computes trends only for the selected limit" do
+    large = create_investment_account(balance: 5000, cash_balance: 0)
+    small = create_investment_account(balance: 1000, cash_balance: 0)
+
+    top_security = Security.create!(ticker: "TOP1", name: "Top One")
+    skipped_security = Security.create!(ticker: "SKIP", name: "Skipped")
+
+    Holding.create!(
+      account: large, security: top_security, date: Date.current,
+      qty: 50, price: 100, amount: 5000, currency: "USD",
+      cost_basis: 90, cost_basis_locked: true
+    )
+    Holding.create!(
+      account: small, security: skipped_security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD",
+      cost_basis: 90, cost_basis_locked: true
+    )
+
+    # Only the one holding in the selected top security should ask for a trend
+    Holding.any_instance.expects(:trend).once.returns(nil)
+
+    top = @statement.top_holdings(limit: 1)
+
+    assert_equal %w[TOP1], top.map(&:ticker)
+  end
+
+  # allocation shares top_holdings' denominator, so its weights sum to the
+  # invested share of the portfolio and cash is the visible residual.
+  test "allocation rolls up duplicate securities and weights leave cash as the residual" do
+    # Coherent balances: each account's balance is its holdings plus its cash,
+    # so the weight residual is genuinely cash and not stale balance data.
+    ira = create_investment_account(balance: 3000, cash_balance: 0, currency: "USD")
+    taxable = create_investment_account(balance: 2000, cash_balance: 1500, currency: "USD")
+
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    msft = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    Holding.create!(
+      account: ira, security: aapl, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD"
+    )
+    Holding.create!(
+      account: taxable, security: aapl, date: Date.current,
+      qty: 5, price: 100, amount: 500, currency: "USD"
+    )
+    Holding.create!(
+      account: ira, security: msft, date: Date.current,
+      qty: 20, price: 100, amount: 2000, currency: "USD"
+    )
+
+    allocation = @statement.allocation
+
+    assert_equal 2, allocation.size
+    assert_equal %w[MSFT AAPL], allocation.map(&:ticker)
+    assert_equal Money.new(1500, "USD"), allocation.find { |a| a.ticker == "AAPL" }.amount
+
+    # 3500 of holdings against a 5000 portfolio: 70% invested, 30% cash.
+    assert_in_delta 70.0, allocation.sum(&:weight), 0.01
+
+    cash_share = @statement.cash_balance / @statement.portfolio_value * 100
+    assert_in_delta 100.0, allocation.sum(&:weight) + cash_share, 0.01
+  end
+
+  # The latent bug behind the divergence: the two methods used different
+  # denominators, so one security could report two percentages. Nothing renders
+  # allocation today, so this guards whoever wires it up.
+  test "top_holdings and allocation report the same weight for a security" do
+    account = create_investment_account(balance: 10_000, cash_balance: 4000, currency: "USD")
+    security = Security.create!(ticker: "VOO", name: "Vanguard S&P 500")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 30, price: 200, amount: 6000, currency: "USD"
+    )
+
+    top_weight = @statement.top_holdings(limit: 1).first.weight
+    allocation_weight = @statement.allocation.find { |a| a.ticker == "VOO" }.weight
+
+    assert_in_delta top_weight, allocation_weight, 0.01
+    assert_in_delta 60.0, top_weight, 0.01
+  end
+
   test "allocation weights sum to 100% with mixed currencies" do
     usd_account = create_investment_account(balance: 2100, currency: "USD")
     eur_account = create_investment_account(balance: 2000, currency: "EUR")
@@ -308,6 +536,21 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         cash_balance: cash_balance,
         currency: currency,
         accountable: Investment.new
+      )
+    end
+
+    def create_trade_for(account:, security:, qty:, price:, date: Date.current)
+      account.entries.create!(
+        name: "Trade #{SecureRandom.hex(3)}",
+        amount: qty * price,
+        date: date,
+        currency: account.currency,
+        entryable: Trade.new(
+          security: security,
+          qty: qty,
+          price: price,
+          currency: account.currency
+        )
       )
     end
 
