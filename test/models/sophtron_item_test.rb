@@ -215,4 +215,11 @@ class SophtronItemTest < ActiveSupport::TestCase
     assert_empty manual_item.automatic_sync_sophtron_accounts
     assert_equal [ first_account, second_account ], manual_item.manual_sync_sophtron_accounts.to_a
   end
+
+  test "declares user_id and access_key as encrypted" do
+    skip "Encryption not configured" unless SophtronItem.encryption_ready?
+
+    assert_includes SophtronItem.encrypted_attributes.map(&:to_s), "user_id"
+    assert_includes SophtronItem.encrypted_attributes.map(&:to_s), "access_key"
+  end
 end

@@ -140,4 +140,11 @@ class IndexaCapitalItemTest < ActiveSupport::TestCase
 
     assert_equal I18n.t("indexa_capital_items.sync_status.synced_with_setup", linked: 1, unlinked: 1), @item.sync_status_summary
   end
+
+  test "declares password and api_token as encrypted" do
+    skip "Encryption not configured" unless IndexaCapitalItem.encryption_ready?
+
+    assert_includes IndexaCapitalItem.encrypted_attributes.map(&:to_s), "password"
+    assert_includes IndexaCapitalItem.encrypted_attributes.map(&:to_s), "api_token"
+  end
 end

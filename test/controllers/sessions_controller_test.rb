@@ -186,6 +186,25 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert cookies[:session_token].blank?
   end
 
+  test "signs in a user whose email row is still legacy plaintext" do
+    email = store_legacy_plaintext_email(@user)
+
+    post sessions_url, params: { email: email.upcase, password: user_password_test }
+
+    assert_redirected_to root_url
+    assert Session.exists?(user_id: @user.id)
+  end
+
+  test "rejects a bad password for a user whose email row is still legacy plaintext" do
+    email = store_legacy_plaintext_email(@user)
+
+    assert_no_difference "Session.count" do
+      post sessions_url, params: { email: email, password: "bad" }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "fails to sign in with bad password" do
     post sessions_url, params: { email: @user.email, password: "bad" }
     assert_response :unprocessable_entity
@@ -239,6 +258,19 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
 
     post sessions_url, params: { email: super_admin.email, password: user_password_test }
+
+    assert_redirected_to root_path
+    assert Session.exists?(user_id: super_admin.id)
+  end
+
+  test "allows the super admin override for a user whose email row is still legacy plaintext" do
+    super_admin = users(:sure_support_staff)
+    email = store_legacy_plaintext_email(super_admin)
+
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+
+    post sessions_url, params: { email: email, password: user_password_test }
 
     assert_redirected_to root_path
     assert Session.exists?(user_id: super_admin.id)
