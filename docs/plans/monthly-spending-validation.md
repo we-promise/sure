@@ -2,7 +2,7 @@
 
 Stand: 10. Oktober 2026. Branch: `feature/monthly-spending-dashboard`, Basis `94e71a8c2` (`origin/main`). Autor ausschließlich für dieses Repository: `hescher <github@johecker.com>`.
 
-Der lokale Preview umfasst Rails-Web, mobiles Web, API und die öffentliche Flutter-App. Kein Push, PR, Merge oder Deployment. Das Projekt bis Feedback-Auswertung und v3 ist weiterhin offen; siehe [Projektplan](monthly-spending-dashboard.md).
+Der lokale Preview umfasst Rails-Web, mobiles Web, API und die öffentliche Flutter-App. Kein Push, PR oder Merge. Eine separate lokale Preview ist nach Nutzerwahl deployed; kein Produktionsupdate. Das Projekt bis Feedback-Auswertung und v3 ist weiterhin offen; siehe [Projektplan](monthly-spending-dashboard.md).
 
 ## Ergebnisse
 
@@ -68,3 +68,9 @@ flutter analyze
 ```
 
 Die Screenshots im gemeinsamen Workspace zeigen tatsächlich gerenderte Komponenten mit synthetischen Testdaten: `monthly-spending-desktop.png`, `monthly-spending-mobile.png`, `monthly-spending-flutter.png`.
+
+## Live-Deployment-Check (10. Oktober 2026)
+
+Separates lokales Compose-Projekt `sure-monthly-preview`, URL `http://localhost:3100`, App-Code `d6d652cd8`. Web, DB und Redis gesund; Worker läuft. Eigene Datenbank/Volumes und synthetische EUR-Daten; vorhandene Sure-Instanz unverändert. Port nur an `127.0.0.1` gebunden.
+
+HTTP-Healthcheck 200; erfolgreiche Demo-Anmeldung und Monatsblock im Browser. Echte Monats-API: 200 mit zwölf EUR-Monaten und `private, no-store`; 401 ohne Schlüssel; explizit leere Kontenauswahl liefert einen leeren Bericht; umgekehrter Zeitraum liefert 422. Temporärer ausschließlich für diesen Check erzeugter Demo-Schlüssel nach der Prüfung entfernt. Kein nativer App-Build deployt.

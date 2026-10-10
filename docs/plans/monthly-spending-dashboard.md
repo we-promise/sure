@@ -1,6 +1,6 @@
 # Projektplan: Monatsausgaben auf Home
 
-Stand: 10. Oktober 2026. Status: lokaler v1-Preview implementiert und in Prüfung; Rollout noch offen.
+Stand: 10. Oktober 2026. Status: lokaler v1-Preview implementiert, geprüft und separat auf diesem PC deployed; Produktionsrollout und v3 bleiben offen.
 
 Lokaler Branch: `feature/monthly-spending-dashboard`.
 Checkout: `/home/user/projects/sure` in WSL `Ubuntu-22.04`.
@@ -153,7 +153,7 @@ Relevante Vorhaben zum Abgleichen, nicht als ungeprüfte harte Abhängigkeiten:
 - #3428: Erstattungen als Ausgabenminderung.
 - #4107: Händlerberichte; spätere Wiederverwendung der Monatsdaten prüfen.
 
-Status dieser Vorhaben vor Implementierung und jedem Rebase erneut prüfen. Keine Commits anderer offener PRs still in unseren Branch übernehmen. Maintainer-Kommunikation, PR-Push und Produktionsdeployment sind spätere explizite Schritte; Plan und lokaler Branch sind erstellt; nach „go“ wurde ein lokaler v1-Preview umgesetzt. Push, PR, Merge und Deployment sind noch nicht ausgeführt.
+Status dieser Vorhaben vor Implementierung und jedem Rebase erneut prüfen. Keine Commits anderer offener PRs still in unseren Branch übernehmen. Maintainer-Kommunikation, PR-Push und Produktionsdeployment sind spätere explizite Schritte; Plan und lokaler Branch sind erstellt; nach „go“ wurde ein lokaler v1-Preview umgesetzt. Push, PR und Merge sind noch nicht ausgeführt. Eine separate lokale Preview-Instanz ist inzwischen deployed; Produktionsdeployment bleibt offen.
 
 ## 8. Test- und Abnahmematrix
 
@@ -208,7 +208,7 @@ Abschluss v3 setzt voraus:
 
 ## 11. Umsetzungsstand und nächste Gates
 
-Stand 10. Oktober 2026: lokaler v1-Preview für Rails-Web, mobiles Web und die öffentliche Flutter-App. Noch kein Push, PR, Merge oder Deployment. Das Gesamtprojekt bis v3 bleibt offen.
+Stand 10. Oktober 2026: lokaler v1-Preview für Rails-Web, mobiles Web und die öffentliche Flutter-App. Noch kein Push, PR oder Merge. Nach Nutzerwahl ist eine separate lokale Preview mit Beispieldaten unter `http://localhost:3100` deployed; kein Update der bestehenden Sure-Instanz. Das Gesamtprojekt bis v3 bleibt offen.
 
 ### Bereits umgesetzt
 
@@ -244,3 +244,11 @@ Die öffentlich verfügbare mobile Implementierung liegt unter `mobile/` im Sure
 Automatische Resultate und konkrete Einschränkungen werden im [lokalen Prüfbericht](monthly-spending-validation.md) festgehalten. Synthetische Screenshots stammen aus echten Web-/Flutter-Komponenten, nicht aus produktiven Finanzdaten.
 
 Als Nächstes den lokalen Preview anhand derselben Beispielzahlen prüfen, die offenen v1-Gates schließen und den PR-Schnitt abstimmen. Nach Merge und Preview-Deployment Feedback nach Abschnitt 10 aufnehmen, v2-Fixes und Vergleiche umsetzen, erneut deployen und v3 erst nach überprüfter Stabilisierung abschließen. Keine spätere Phase ohne Belege als fertig markieren.
+
+## 12. Lokales Preview-Deployment
+
+Am 10. Oktober 2026 nach Nutzerwahl „Separate Preview-Instanz“ auf diesem Windows-PC gestartet. URL `http://localhost:3100`, nur Loopback-Zugriff. Code `d6d652cd8`, Image `sure-monthly-spending-preview:d6d652cd8`, Manifest `sha256:5ace6905d5b311eefcc6184261bade695af98dbe2c821dde162cbcdab73c2f1b`.
+
+Eigenes Compose-Projekt `sure-monthly-preview` mit PostgreSQL, Redis, Web und Worker; 36 Monate synthetische EUR-Buchungen mit zwei Konten. Die vorhandene Sure-Instanz und deren Daten wurden nicht geändert. Anmeldung und sichtbarer Monatsblock im Browser sowie echte API-Antworten für Read-Zugriff, explizit leere Auswahl, ungültigen Zeitraum und fehlende Authentifizierung geprüft. Preview Features beim Demo-Benutzer bereits an.
+
+Compose-Datei, Seed und Start-/Stop-Hinweise liegen im gemeinsamen Workspace unter `preview-deployment/`; Zugangsdaten ausschließlich in dortigen lokalen Dateien, nicht im Repository. Native Builds und Zugriff von einem weiteren Gerät sind noch keine abgeschlossene Lieferung. Die v3-Abschlusskriterien aus Abschnitt 10 bleiben offen.
