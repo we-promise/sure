@@ -311,10 +311,18 @@ class Holding < ApplicationRecord
       # The rate a trade carries itself (extra["exchange_rate"], e.g. IBKR's
       # fx_rate_to_base) comes before the table's, as in the calculators and
       # Balance::SyncCache; a trade in the account's own currency converts at 1.
+      # Trade#exchange_rate= stores a number, but a row written to `extra`
+      # directly can hold the same rate as a string, which Trade's validation
+      # and Money#exchange_to both accept -- so a plain decimal string counts
+      # too. Anything else, an exponent or an absurd length included, is not
+      # cast, so it cannot overflow numeric and fail the query.
       rate = <<~SQL.squish
         COALESCE(
-          CASE WHEN jsonb_typeof(trades.extra->'exchange_rate') = 'number'
-               THEN (trades.extra->>'exchange_rate')::numeric END,
+          CASE jsonb_typeof(trades.extra->'exchange_rate')
+            WHEN 'number' THEN (trades.extra->>'exchange_rate')::numeric
+            WHEN 'string' THEN CASE WHEN trades.extra->>'exchange_rate' ~ '^[[:space:]]*[+-]?([0-9]{1,20}([.][0-9]{0,20})?|[.][0-9]{1,20})[[:space:]]*$'
+                                    THEN (trades.extra->>'exchange_rate')::numeric END
+          END,
           exchange_rates.rate
         )
       SQL

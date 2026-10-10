@@ -114,6 +114,26 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(BigDecimal("265")), @amzn.avg_cost
   end
 
+  # Trade#exchange_rate= stores a number, but a rate written to `extra` directly
+  # stays a string, and Trade and Money#exchange_to both accept it.
+  test "the fallback converts a purchase at a rate it carries as a string" do
+    entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+    entry.entryable.update_column(:extra, { "exchange_rate" => "1.25" })
+
+    assert entry.entryable.reload.valid?
+    assert_equal Money.new(BigDecimal("265")), @amzn.avg_cost
+  end
+
+  test "the fallback ignores a rate string that is not a plain decimal" do
+    entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+
+    [ "n/a", "1e999999" ].each do |rate|
+      entry.entryable.update_column(:extra, { "exchange_rate" => rate })
+
+      assert_nil @amzn.avg_cost, rate
+    end
+  end
+
   # The missing-rate check rides on the totals query instead of adding a round
   # trip to a path that exists to avoid N+1 queries.
   test "the fallback reads the trades in two queries" do
