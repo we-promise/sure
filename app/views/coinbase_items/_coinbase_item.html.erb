@@ -18,7 +18,7 @@
 
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
-      <div class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-2 focus-visible:outline-hidden">
         <div class="flex items-center gap-2">
           <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
@@ -59,7 +59,7 @@
         </div>
 
         <% if Current.user&.admin? %>
-          <div class="flex items-center gap-2">
+          <div class="ml-auto flex items-center gap-2">
             <% if coinbase_item.requires_update? %>
               <%= render DS::Link.new(
                 text: t(".update_credentials"),
