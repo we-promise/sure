@@ -140,10 +140,11 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       field_label = find("label", exact_text: label_text)
       container = field_label.ancestor("div.relative")
       container.find("button").click
-      if container.has_selector?("input[type='search']", visible: true)
+      listbox = container.find("[role='listbox']", visible: true)
+      # The open menu is ready; non-searchable selects never render this input.
+      if container.has_selector?("input[type='search']", visible: true, wait: 0)
         container.find("input[type='search']", visible: true).set(record.name)
       end
-      listbox = container.find("[role='listbox']", visible: true)
       listbox.find("[role='option'][data-value='#{record.id}']", visible: true).click
     end
 end

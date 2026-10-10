@@ -12,7 +12,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
 
     click_button "Disable AI Assistant"
 
-    sleep 5
+    assert_text "AI Assistant has been disabled."
 
     assert_current_path settings_ai_prompts_path
     @user.reload

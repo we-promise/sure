@@ -51,6 +51,9 @@ class PropertiesEditTest < ApplicationSystemTestCase
             end
             click_on "Edit"
           end
+        rescue Capybara::ElementNotFound
+          # A morph can also close the menu without detaching its node.
+          next false
         rescue Selenium::WebDriver::Error::WebDriverError => e
           raise unless e.message.match?(
             /does not belong to the document|stale element reference/i,

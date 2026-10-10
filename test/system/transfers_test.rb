@@ -78,25 +78,4 @@ class TransfersTest < ApplicationSystemTestCase
       assert_text "Transfer to"
     end
   end
-
-  private
-
-    def select_ds(label_text, record)
-      field_label = find("label", exact_text: label_text)
-      container = field_label.ancestor("div.relative")
-
-      # Click the button to open the dropdown
-      container.find("button").click
-
-      # If searchable, type in the search input
-      if container.has_selector?("input[type='search']", visible: true)
-        container.find("input[type='search']", visible: true).set(record.name)
-      end
-
-      # Wait for the listbox to appear inside the relative container
-      listbox = container.find("[role='listbox']", visible: true)
-
-      # Click the option inside the listbox
-      listbox.find("[role='option'][data-value='#{record.id}']", visible: true).click
-    end
 end

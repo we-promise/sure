@@ -29,6 +29,8 @@ class TradesTest < ApplicationSystemTestCase
 
     click_button "Add transaction"
 
+    # The Turbo redirect closes the modal before exposing the page's notice.
+    assert_no_selector "turbo-frame#modal dialog[open]"
     assert_text "Entry created"
 
     visit_trades
@@ -54,6 +56,7 @@ class TradesTest < ApplicationSystemTestCase
 
     click_button "Add transaction"
 
+    assert_no_selector "turbo-frame#modal dialog[open]"
     assert_text "Entry created"
 
     visit_trades

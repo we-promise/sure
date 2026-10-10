@@ -20,10 +20,10 @@ only when that environment work has been explicitly requested. In particular,
 | Rails console | `bin/rails console` |
 | Database preparation / migration | `bin/rails db:prepare` / `bin/rails db:migrate` |
 | Database rollback / seed | `bin/rails db:rollback` / `bin/rails db:seed` |
-| Full behavioral suite | `bin/rails test` |
+| Rails tests (excluding system tests) | `bin/rails test` |
 | One file / test at a line | `bin/rails test test/models/account_test.rb` / `bin/rails test test/models/account_test.rb:42` |
 | Reset test database and test | `bin/rails test:db` (database-changing task) |
-| System tests | `DISABLE_PARALLELIZATION=true bin/rails test:system` |
+| System tests | `PARALLEL_WORKERS=2 bin/rails test:system` |
 | Ruby lint | `bin/rubocop` |
 | Safe Ruby autocorrection | `bin/rubocop -a` (`-A` also enables unsafe corrections) |
 | JavaScript/TypeScript lint / fix | `npm run lint` / `npm run lint:fix` |
@@ -40,7 +40,7 @@ Run these checks locally before **every** PR. All required checks must pass befo
 PR creation; the full suite is also required to be green before pushing.
 
 1. `bin/rails test` — the full Minitest suite is always required.
-2. `DISABLE_PARALLELIZATION=true bin/rails test:system` — required when system tests
+2. `PARALLEL_WORKERS=2 bin/rails test:system` — required when system tests
    are applicable to the change; keep system-test additions focused on critical flows.
 3. `bin/rubocop -f github -a` — Ruby lint with safe autocorrection.
 4. `bundle exec erb_lint ./app/**/*.erb -a` — ERB lint with autocorrection.
@@ -63,5 +63,19 @@ GitHub checks and an up-to-date branch before requesting review.
 
 The [devcontainer configuration](../../.devcontainer/docker-compose.yml) includes
 Selenium Chromium and sets `SELENIUM_REMOTE_URL`; no local Chrome is needed there.
-Run `DISABLE_PARALLELIZATION=true bin/rails test:system`. Watch the browser at
+Run `PARALLEL_WORKERS=2 bin/rails test:system`. Watch the browser at
 `http://localhost:7900` or `http://localhost:4444` (development password: `secret`).
+
+Rails isolates each process in its own test database and browser session. The
+recommended two workers leave CPU headroom for Rails and browser rendering. The
+devcontainer's Selenium service supports up to four sessions; never exceed that
+limit. Lower the worker count on machines with fewer CPUs or less available RAM.
+Use `PARALLEL_WORKERS=1` for a serial run when investigating a failure; the existing
+`DISABLE_PARALLELIZATION=true` override also remains supported. Remote parallel
+runs need a distinct server port per worker, so leave `CAPYBARA_SERVER_PORT` unset.
+
+For timing investigations, use `--seed=12345` for repeatable test selection/order
+and `--verbose` for individual test durations. Record worker counts and compare
+full suites on the same machine with the same `COVERAGE` setting. Time Rails tests,
+browser tests and setup separately: CI runs the two test jobs concurrently, while
+running the local commands one after another adds their durations.

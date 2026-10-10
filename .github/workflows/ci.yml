@@ -147,10 +147,7 @@ jobs:
           bundler-cache: true
 
       - name: DB setup and smoke test
-        run: |
-          bin/rails db:create
-          bin/rails db:schema:load
-          bin/rails db:seed
+        run: bin/rails db:create db:schema:load db:seed
 
       - name: Unit and integration tests
         run: bin/rails test
@@ -205,13 +202,12 @@ jobs:
           bundler-cache: true
 
       - name: DB setup and smoke test
-        run: |
-          bin/rails db:create
-          bin/rails db:schema:load
-          bin/rails db:seed
+        run: bin/rails db:create db:schema:load db:seed
 
       - name: System tests
-        run: DISABLE_PARALLELIZATION=true bin/rails test:system
+        # Rails gives each process its own database and local browser session.
+        # Leave CPU headroom for Rails requests and browser rendering.
+        run: PARALLEL_WORKERS=2 bin/rails test:system
 
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
