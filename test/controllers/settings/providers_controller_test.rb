@@ -7,6 +7,10 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
   setup do
     ensure_tailwind_build
+    # Provider credentials are instance-wide, so saving them takes a super
+    # admin. Promote the fixture admin rather than switching users so the
+    # family-scoped assertions below keep using dylan_family.
+    users(:family_admin).update!(role: :super_admin)
     sign_in users(:family_admin)
 
     # Ensure provider adapters are loaded for all tests
@@ -146,6 +150,62 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     patch settings_providers_url, params: { setting: { plaid_client_id: "test123" } }
     assert_redirected_to settings_providers_url
+  end
+
+  test "a family admin cannot change instance-wide provider credentials in managed mode" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    sign_in users(:empty)
+
+    patch settings_providers_url, params: { setting: { plaid_client_id: "attacker", plaid_secret: "attacker-secret" } }
+
+    assert_redirected_to settings_providers_url
+    assert_equal I18n.t("settings.providers.not_authorized"), flash[:alert]
+    assert_nil Setting["plaid_client_id"]
+    assert_nil Setting["plaid_secret"]
+  end
+
+  test "a family admin cannot change provider credentials on a self-hosted instance with several families" do
+    with_self_hosting do
+      sign_in users(:empty)
+
+      patch settings_providers_url, params: { setting: { plaid_client_id: "attacker" } }
+
+      assert_redirected_to settings_providers_url
+      assert_nil Setting["plaid_client_id"]
+    end
+  end
+
+  test "the admin of the only family on a self-hosted instance can change provider credentials" do
+    with_self_hosting do
+      Family.stubs(:count).returns(1)
+      sign_in users(:empty)
+
+      patch settings_providers_url, params: { setting: { plaid_client_id: "own-client-id" } }
+
+      assert_redirected_to settings_providers_url
+      assert_equal "own-client-id", Setting["plaid_client_id"]
+    end
+  ensure
+    Setting["plaid_client_id"] = nil
+  end
+
+  test "instance-wide provider forms are only offered to those who may save them" do
+    instance_wide_forms = Provider::ConfigurationRegistry.all.map do |config|
+      connect_form_settings_providers_path(provider_key: config.provider_key)
+    end
+
+    get settings_providers_url
+    assert instance_wide_forms.any? { |path| response.body.include?(path) }
+
+    sign_in users(:empty)
+
+    get settings_providers_url
+    assert_response :success
+    assert instance_wide_forms.none? { |path| response.body.include?(path) }
+
+    get connect_form_settings_providers_path(provider_key: "plaid")
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("settings.providers.not_authorized"), flash[:alert]
   end
 
   test "should get show when self hosting is enabled" do
