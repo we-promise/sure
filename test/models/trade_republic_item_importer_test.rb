@@ -753,7 +753,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       "timestamp" => "2026-08-01T10:00:00Z",
       "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
       "category" => "orderExecution",
-      "detail" => { "amount" => -25.0, "isin" => "IE00B4L5Y983", "quantity" => "0.25", "price" => "100.00" }
+      "detail" => { "amount" => -25.0, "isin" => "IE00B4L5Y983", "quantity" => "0.25", "price" => "100.00", "price_source" => "detail" }
     }
     needs_price = {
       "id" => "trade-needs-price",
@@ -1111,7 +1111,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal %w[new-never-attempted needs-price old-early-attempt old-recent-attempt], enrich_ids
   end
 
-  test "events needing detail enrichment include complete trades missing share price" do
+  test "events needing detail enrichment include complete trades without a price read from the detail" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",
       name: "Portfolio",
@@ -1140,6 +1140,20 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
             "quantity" => "1",
             "amount" => "500.00",
             "price" => "500.00",
+            "price_source" => "detail",
+            "currency" => "EUR"
+          }
+        },
+        {
+          "id" => "derived-price",
+          "timestamp" => "2024-03-30T10:00:00Z",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "category" => "orderExecution",
+          "detail" => {
+            "isin" => "IE00B5BMR087",
+            "quantity" => "0.055",
+            "amount" => "10.04",
+            "price" => "182.54545454545454545454545454545",
             "currency" => "EUR"
           }
         }
@@ -1150,7 +1164,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       .send(:events_needing_detail_enrichment)
       .map { |event| event["id"] || event[:id] }
 
-    assert_equal [ "needs-price" ], enrich_ids
+    assert_equal [ "needs-price", "derived-price" ], enrich_ids
   end
 
   test "apply_instrument_symbols stamps merged timeline events that lacked a ticker" do
