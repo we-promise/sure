@@ -1409,6 +1409,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     }, item: { "title" => "Core S&P 500", "subtitle" => "Buy" })
 
     assert_equal "511.96", detail["price"]
+    assert_nil detail["price_source"]
     assert_equal "1.0", detail["fees"]
   end
 
@@ -1448,6 +1449,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     # The total is rounded to the cent: 10.15 / 1.25 would give 8.12.
     assert_equal "1.25", detail["quantity"]
     assert_equal "8.123", detail["price"]
+    assert_equal "detail", detail["price_source"]
     assert_equal "10.15", detail["amount"]
   end
 
@@ -1466,29 +1468,95 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
   end
 
   test "normalize_event_detail does not read a percent quote as a share price" do
-    detail = @client.send(:normalize_event_detail, {
-      "sections" => [
-        { "title" => "Overview", "data" => [
-          { "title" => "Transaction", "detail" => { "text" => "1,000 × 92.67 %" } },
-          { "title" => "Total", "detail" => { "text" => "€926.70" } }
-        ] }
-      ]
-    }, item: { "title" => "Italy 3.1% Mar 2040", "subtitle" => "Buy" })
+    [
+      { "text" => "500 × 92.67 %" },
+      { "text" => "500 × 92.67 %", "displayValue" => { "text" => "92.67", "prefix" => "500 ×" } }
+    ].each do |row_detail|
+      detail = @client.send(:normalize_event_detail, {
+        "sections" => [
+          { "title" => "Overview", "data" => [
+            { "title" => "Transaction", "detail" => row_detail },
+            { "title" => "Total", "detail" => { "text" => "€463.35" } }
+          ] }
+        ]
+      }, item: { "title" => "Italy 3.1% Mar 2040", "subtitle" => "Buy" })
 
-    assert_not_equal "92.67", detail["price"]
+      # The quote is skipped and the price falls back to total ÷ nominal, per
+      # unit of nominal like a bond's quotation.
+      assert_equal "500.0", detail["quantity"], row_detail.inspect
+      assert_equal "0.9267", detail["price"], row_detail.inspect
+      assert_nil detail["price_source"], row_detail.inspect
+    end
   end
 
-  test "trade_detail_needs_price_backfill detects complete trades without price" do
+  test "trade_detail_needs_price_backfill detects complete trades without a price read from the detail" do
+    trade = ->(detail) { { "category" => "orderExecution", "eventType" => "TRADING_TRADE_EXECUTED", "detail" => detail } }
+
     assert Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(
-      "category" => "orderExecution",
-      "eventType" => "TRADING_TRADE_EXECUTED",
-      "detail" => { "isin" => "IE00B5BMR087", "quantity" => "2", "amount" => "1024.92" }
+      trade.call("isin" => "IE00B5BMR087", "quantity" => "2", "amount" => "1024.92")
+    )
+    # Derived from the rounded total, or stored before the price rows were read.
+    assert Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(
+      trade.call("isin" => "IE00B5BMR087", "quantity" => "0.055", "price" => "182.54545454545454545454545454545")
     )
     refute Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(
+      trade.call("isin" => "IE00B5BMR087", "quantity" => "2", "price" => "511.96", "price_source" => "detail")
+    )
+  end
+
+  test "price backfill replaces a derived price with the Transaction row price" do
+    event = {
+      "id" => "trade-1",
+      "timestamp" => 200.days.ago.iso8601,
       "category" => "orderExecution",
       "eventType" => "TRADING_TRADE_EXECUTED",
-      "detail" => { "isin" => "IE00B5BMR087", "quantity" => "2", "price" => "511.96" }
-    )
+      "detail" => { "isin" => "US0378331005", "quantity" => "0.0428", "amount" => "10.11", "price" => "236.21495327102803738317757009346" }
+    }
+    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+      { "sections" => [
+        { "title" => "Overview", "data" => [
+          {
+            "title" => "Transaction",
+            "detail" => { "text" => "0.0428 × € 236.15", "displayValue" => { "text" => "€ 236.15", "prefix" => "0.0428 ×" } }
+          },
+          { "title" => "Total", "detail" => { "text" => "€ 10.11" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+      ] }
+    end
+
+    events, _warnings, backfill_count = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ event ])
+
+    stored = events.find { |candidate| candidate["id"] == "trade-1" }
+    assert_equal 1, backfill_count
+    assert_equal "236.15", stored.dig("detail", "price")
+    assert_equal "detail", stored.dig("detail", "price_source")
+    refute Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(stored)
+  end
+
+  test "price backfill fetches an old derived price only once when the detail has no price row" do
+    event = {
+      "id" => "trade-1",
+      "timestamp" => 200.days.ago.iso8601,
+      "category" => "orderExecution",
+      "eventType" => "TRADING_TRADE_EXECUTED",
+      "detail" => { "isin" => "IE00B5BMR087", "quantity" => "2", "amount" => "1024.92", "price" => "512.46" }
+    }
+    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+      { "sections" => [
+        { "title" => "Overview", "data" => [
+          { "title" => "Shares", "detail" => { "text" => "2" } },
+          { "title" => "Total", "detail" => { "text" => "€1,024.92" } }
+        ] }
+      ] }
+    end
+
+    events, _warnings, backfill_count = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ event ])
+
+    stored = events.find { |candidate| candidate["id"] == "trade-1" }
+    assert_equal 0, backfill_count
+    assert stored.dig("detail", Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY).present?
+    refute Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(stored, 2.days.from_now)
   end
 
   test "price backfill retries an unfixable trade at most once per day" do
