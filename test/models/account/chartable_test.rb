@@ -465,12 +465,14 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { account.balance_series(view: :contributions) }
   end
 
-  # A linked account's value line is
-  # trimmed to the first real broker activity, so its first balance row is not
-  # where the chart starts. The contributions line opens on the trimmed line's
-  # first date at that point's value. Anchored on the first balance row
-  # instead, it would open at 1,000 + 500 = 1,500 against a value of 1,600.
-  test "a linked account's net contributions open where its trimmed value line does" do
+  # #382, owner decision 2026-10-08 (reading b). A linked account's value
+  # line is trimmed to its first broker activity. The contributions line
+  # starts from the balance actually held before that day's activity
+  # (DailyReturns' value_open, 1,000 here) and counts the day's 500 deposit,
+  # so the gap between the lines is the 100 the market added, on the trim
+  # day and after. Opened at the value line's own anchor point instead, the
+  # day's whole change counted as money put in and the gap read 0.
+  test "a linked account's net contributions count the anchor day's flows, not its market gain" do
     day_one = Date.new(2026, 3, 2)
     account = create_portfolio_account(family: families(:empty))
     account.stubs(:linked?).returns(true)
@@ -478,34 +480,130 @@ class Account::ChartableTest < ActiveSupport::TestCase
     lay_balance account: account, date: day_one + 1, opening: 1_000, closing: 1_000
     lay_balance account: account, date: day_one + 2, opening: 1_000, closing: 1_600, cash_flow: 500, market_flow: 100
     lay_balance account: account, date: day_one + 3, opening: 1_600, closing: 1_900, cash_flow: 300
-    account.entries.create!(name: "Deposit", date: day_one + 2, amount: -500, currency: "USD", source: "plaid",
-                            entryable: Transaction.new(kind: "standard"))
+    provider_deposit account: account, date: day_one + 2, amount: 500
     deposit account: account, date: day_one + 3, amount: 300
     period = Period.custom(start_date: day_one, end_date: day_one + 3)
 
     value = account.balance_series(period: period, interval: "1 day")
     contributions = account.balance_series(period: period, view: :net_contributions, interval: "1 day")
 
-    assert_equal day_one + 2, value.values.first.date, "the value line is trimmed to the first broker activity"
-    assert_equal value.values.first.date, contributions.values.first.date
-    assert_equal value.values.first.value, contributions.values.first.value
-    assert_equal [ 1_600, 1_900 ], contributions.values.map { |v| v.value.amount }
+    assert_equal [ day_one + 2, day_one + 3 ], value.values.map(&:date), "the value line is trimmed to the first broker activity"
+    assert_equal value.values.map(&:date), contributions.values.map(&:date)
+    assert_equal [ 1_600, 1_900 ], value.values.map { |v| v.value.amount }
+    assert_equal [ 1_500, 1_800 ], contributions.values.map { |v| v.value.amount }
+    assert_equal [ 100, 100 ], gaps(value, contributions), "the gap is the anchor day's market gain, not 0"
+    assert_equal 1_500, contributions.values[1].trend.previous.amount, "the trend follows the line's own opening"
   end
 
-  # On a coarse interval the trim date is not sampled, so the
-  # normalizer prepends a synthetic opening point (here 0) to the value line.
-  # The contributions line starts from that same point, then carries the
-  # trim day's close plus later flows, rather than opening at a different
-  # figure on the same day.
-  test "on a coarse interval a linked account's net contributions start from the value line's own opening point" do
+  # The realistic shape: no balance before the first broker activity. The
+  # line opens at the 500 deposit, not at the day's 600 close.
+  test "a linked account with no history before its first activity opens at that day's flows" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(family: families(:empty))
+    account.stubs(:linked?).returns(true)
+    lay_balance account: account, date: day_one, opening: 0, closing: 600, cash_flow: 500, market_flow: 100
+    lay_balance account: account, date: day_one + 1, opening: 600, closing: 900, cash_flow: 300
+    provider_deposit account: account, date: day_one, amount: 500
+    deposit account: account, date: day_one + 1, amount: 300
+    period = Period.custom(start_date: day_one, end_date: day_one + 1)
+
+    value = account.balance_series(period: period, interval: "1 day")
+    contributions = account.balance_series(period: period, view: :net_contributions, interval: "1 day")
+
+    assert_equal [ 600, 900 ], value.values.map { |v| v.value.amount }
+    assert_equal [ 500, 800 ], contributions.values.map { |v| v.value.amount }
+    assert_equal [ 100, 100 ], gaps(value, contributions)
+  end
+
+  # An opening anchor on the first activity date sets the balance held
+  # before it. The line starts from that balance and adds the day's deposit.
+  test "a linked account opened with an anchor on its first activity date counts the anchor as held" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(family: families(:empty))
+    account.stubs(:linked?).returns(true)
+    account.set_opening_anchor_balance(balance: 1_000, date: day_one)
+    account.balances.delete_all
+    lay_balance account: account, date: day_one, opening: 1_000, closing: 1_600, cash_flow: 500, market_flow: 100
+    lay_balance account: account, date: day_one + 1, opening: 1_600, closing: 1_900, cash_flow: 300
+    provider_deposit account: account, date: day_one, amount: 500
+    deposit account: account, date: day_one + 1, amount: 300
+    period = Period.custom(start_date: day_one, end_date: day_one + 1)
+
+    value = account.balance_series(period: period, interval: "1 day")
+    contributions = account.balance_series(period: period, view: :net_contributions, interval: "1 day")
+
+    assert_equal [ 1_600, 1_900 ], value.values.map { |v| v.value.amount }
+    assert_equal [ 1_500, 1_800 ], contributions.values.map { |v| v.value.amount }
+    assert_equal [ 100, 100 ], gaps(value, contributions)
+  end
+
+  # The boundary on the other side of the first-activity reset: when the
+  # inception date comes from provider holdings, the value line's first
+  # point is that day's close and is kept. The day's flows are counted once,
+  # in the opening, and not again on the next point.
+  test "a linked account whose history starts at its holdings counts the opening day's flows once" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(family: families(:empty))
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = account.account_providers.create!(provider: coinstats_account)
+    [ day_one + 2, day_one + 3 ].each do |date|
+      account.holdings.create!(security: securities(:aapl), date: date, qty: 1, price: 100, amount: 100,
+                               currency: "USD", account_provider: account_provider)
+    end
+    lay_balance account: account, date: day_one, opening: 1_000, closing: 1_000
+    lay_balance account: account, date: day_one + 2, opening: 1_000, closing: 1_600, cash_flow: 500, market_flow: 100
+    lay_balance account: account, date: day_one + 3, opening: 1_600, closing: 1_900, cash_flow: 300
+    deposit account: account, date: day_one + 2, amount: 500
+    deposit account: account, date: day_one + 3, amount: 300
+    period = Period.custom(start_date: day_one, end_date: day_one + 3)
+
+    assert account.linked?, "a provider link, not a stub"
+    value = account.balance_series(period: period, interval: "1 day")
+    contributions = account.balance_series(period: period, view: :net_contributions, interval: "1 day")
+
+    assert_equal [ day_one + 2, day_one + 3 ], value.values.map(&:date), "trimmed to the first provider holdings"
+    assert_equal [ 1_600, 1_900 ], value.values.map { |v| v.value.amount }
+    assert_equal [ 1_500, 1_800 ], contributions.values.map { |v| v.value.amount }
+    assert_equal [ 100, 100 ], gaps(value, contributions)
+  end
+
+  # Negative: an account that is not linked has no anchor, even when its
+  # entries came from a provider (an account unlinked after a sync). Its line
+  # stays inception-anchored, so the 100 gained before the provider entry is
+  # not folded into what was put in.
+  test "an unlinked account with provider entries keeps the inception-anchored line" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: day_one, opening: 0, closing: 1_000, cash_flow: 1_000
+    lay_balance account: account, date: day_one + 1, opening: 1_000, closing: 1_100, market_flow: 100
+    lay_balance account: account, date: day_one + 2, opening: 1_100, closing: 1_600, cash_flow: 500
+    deposit account: account, date: day_one, amount: 1_000
+    provider_deposit account: account, date: day_one + 2, amount: 500
+    period = Period.custom(start_date: day_one, end_date: day_one + 2)
+
+    refute account.linked?
+    contributions = account.balance_series(period: period, view: :net_contributions, interval: "1 day")
+
+    assert_equal [ 1_000, 1_000, 1_500 ], contributions.values.map { |v| v.value.amount }
+  end
+
+  # cubic on #337, re-expressed for #382. On a coarse interval the trim date
+  # is not sampled, so the normalizer prepends a synthetic opening point
+  # (here 0) to the value line: a point before the day's activity. The
+  # contributions line opens there at the balance actually held before that
+  # activity, 1,000 -- the cost the owner accepted on 2026-10-08 where there
+  # is history before the trim -- and from the next point the gap is the
+  # anchor day's 100 market gain. Before #382 it jumped to the day's 1,600
+  # close, counting the gain as money put in.
+  test "on a coarse interval a linked account's net contributions open before the anchor day's activity" do
     day_one = Date.new(2026, 3, 2)
     account = create_portfolio_account(family: families(:empty))
     account.stubs(:linked?).returns(true)
     lay_balance account: account, date: day_one, opening: 1_000, closing: 1_000
     lay_balance account: account, date: day_one + 2, opening: 1_000, closing: 1_600, cash_flow: 500, market_flow: 100
     lay_balance account: account, date: day_one + 10, opening: 1_600, closing: 1_900, cash_flow: 300
-    account.entries.create!(name: "Deposit", date: day_one + 2, amount: -500, currency: "USD", source: "plaid",
-                            entryable: Transaction.new(kind: "standard"))
+    provider_deposit account: account, date: day_one + 2, amount: 500
     deposit account: account, date: day_one + 10, amount: 300
     period = Period.custom(start_date: day_one, end_date: day_one + 14)
 
@@ -514,9 +612,10 @@ class Account::ChartableTest < ActiveSupport::TestCase
 
     assert_equal day_one + 2, value.values.first.date, "the normalizer prepends the trim date"
     assert_equal value.values.map(&:date), contributions.values.map(&:date)
-    assert_equal value.values.first.value, contributions.values.first.value, "both lines open at the same point"
-    assert_equal [ 0, 1_600, 1_900 ], contributions.values.map { |v| v.value.amount }
-    assert_equal 0, contributions.values[1].trend.previous.amount, "the trend follows the replaced opening point"
+    assert_equal [ 0, 1_600, 1_900 ], value.values.map { |v| v.value.amount }
+    assert_equal [ 1_000, 1_500, 1_800 ], contributions.values.map { |v| v.value.amount }
+    assert_equal [ 100, 100 ], gaps(value, contributions).drop(1), "the gap is the market's, from the next point"
+    assert_equal 1_000, contributions.values[1].trend.previous.amount, "the trend follows the line's own opening"
   end
 
   # The understated check reads the same flows as the line: a deposit in a
@@ -534,4 +633,80 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert Account.find(account.id).net_contributions_understated?(period: period, interval: "1 day"),
            "a flow with no rate, read by a fresh instance since the builder is memoized"
   end
+
+  # The same coarse path with no history before the trim: both lines open
+  # at 0 and the gap after it is the market gain.
+  test "on a coarse interval a linked account with no prior history opens both lines at zero" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(family: families(:empty))
+    account.stubs(:linked?).returns(true)
+    lay_balance account: account, date: day_one + 2, opening: 0, closing: 600, cash_flow: 500, market_flow: 100
+    lay_balance account: account, date: day_one + 10, opening: 600, closing: 900, cash_flow: 300
+    provider_deposit account: account, date: day_one + 2, amount: 500
+    deposit account: account, date: day_one + 10, amount: 300
+    period = Period.custom(start_date: day_one, end_date: day_one + 14)
+
+    value = account.balance_series(period: period, interval: "1 week")
+    contributions = account.balance_series(period: period, view: :net_contributions, interval: "1 week")
+
+    assert_equal [ 0, 600, 900 ], value.values.map { |v| v.value.amount }
+    assert_equal [ 0, 500, 800 ], contributions.values.map { |v| v.value.amount }
+    assert_equal [ 0, 100, 100 ], gaps(value, contributions)
+  end
+
+  # #382: the understated note reads the same rows as the line, so a flow on
+  # the anchor day that could not be valued is reported now that the line
+  # counts that day's flows.
+  test "a linked account's unvalued flow on its anchor day makes net contributions understated" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(family: families(:empty))
+    account.stubs(:linked?).returns(true)
+    lay_balance account: account, date: day_one, opening: 1_000, closing: 1_000
+    lay_balance account: account, date: day_one + 2, opening: 1_000, closing: 1_100, market_flow: 100
+    provider_deposit account: account, date: day_one + 2, amount: 500, currency: "EUR" # no EUR rate at all
+    period = Period.custom(start_date: day_one, end_date: day_one + 2)
+
+    assert account.net_contributions_understated?(period: period, interval: "1 day")
+  end
+
+  # value_point_before_activity? decides how the line is measured on the
+  # anchor date. It reads the value line's point against the balance query's
+  # own close for that date: a point equal to the close (here a flat day,
+  # where open and close are both 1,000) is the close, and a point on a date
+  # the query never sampled, or one whose value differs from the close, was
+  # supplied by the normalizer before the day's activity.
+  test "the value line's anchor point is read as before activity only when the normalizer supplied it" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: day_one, opening: 1_000, closing: 1_000
+    lay_balance account: account, date: day_one + 2, opening: 1_000, closing: 1_600, cash_flow: 500, market_flow: 100
+    period = Period.custom(start_date: day_one, end_date: day_one + 2)
+    builder = account.send(:chart_series_builder, period: period, interval: "1 day")
+    before_activity = ->(date, amount) do
+      point = Series::Value.new(date: date, date_formatted: date.to_s, value: Money.new(amount, "USD"))
+      series = Series.new(start_date: date, end_date: date, interval: "1 day", values: [ point ])
+      account.send(:value_point_before_activity?, series, builder: builder, date: date)
+    end
+
+    refute before_activity.call(day_one, 1_000), "a flat day's close is the close"
+    refute before_activity.call(day_one + 2, 1_600), "an active day's close is the close"
+    assert before_activity.call(day_one + 2, 1_000), "a point reset below the day's close was supplied"
+    assert before_activity.call(day_one + 3, 1_000), "a point on a date the query has no row for was supplied"
+    refute account.send(:value_point_before_activity?, Series.new(start_date: day_one, end_date: day_one, interval: "1 day", values: []), builder: builder, date: day_one),
+           "no point on the anchor date"
+  end
+
+  private
+    # Value minus net contributions at each point: what the chart reads as
+    # performance.
+    def gaps(value, contributions)
+      value.values.zip(contributions.values).map { |v, c| v.value.amount - c.value.amount }
+    end
+
+    # A deposit the provider posted: what makes its date the first broker
+    # activity a linked account's value line is trimmed to.
+    def provider_deposit(account:, date:, amount:, currency: "USD")
+      account.entries.create!(name: "Deposit", date: date, amount: -amount, currency: currency, source: "plaid",
+                              entryable: Transaction.new(kind: "standard"))
+    end
 end

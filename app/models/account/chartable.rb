@@ -57,43 +57,52 @@ module Account::Chartable
     # The normalizer does not run on this series: it would prepend a
     # synthetic opening point of its own. Instead the line is sampled on the
     # value line's dates, after that line's trim. For a linked investment
-    # account whose value line is trimmed to supported history, it opens at
-    # the trim date's closing value and adds only the flows after it, so the
-    # two lines start together and the difference opens at zero. The anchor
-    # comes from the account's history, not the period, so it is the same
-    # whichever period is shown.
+    # account whose value line is trimmed to supported history, the line
+    # starts from the balance held before the trim day's activity and counts
+    # that day's flows (#382), so the gap between the lines is the market's
+    # from the trim date on. The anchor comes from the account's history,
+    # not the period, so it is the same whichever period is shown.
     #
-    # On the anchor date itself the line takes the value line's own point.
-    # They are the same figure unless a coarse interval skipped that date and
-    # the normalizer prepended a synthetic opening point (0, or the opening
-    # anchor's balance); the line then starts from that point too, rather
-    # than from a different figure on the same day.
+    # On the anchor date the line is measured at the same moment as the
+    # value line's own point there. That point is the day's close when the
+    # balance query sampled it unchanged, and the balance before the day's
+    # activity when the normalizer supplied it instead (a coarse interval's
+    # prepended opening, or upstream #4009's reset of the first point).
     def net_contributions_series(period:, interval:)
+      builder = chart_series_builder(period: period, interval: interval)
       value_series = balance_series(period: period, view: :balance, interval: interval)
       value_dates = value_series.values.map(&:date)
       anchor_date = net_contributions_anchor_date
-      series = chart_series_builder(period: period, interval: interval)
-        .net_contributions_series(anchor_date: anchor_date, dates: value_dates)
-
-      anchor_point = anchor_date && value_series.values.find { |value| value.date == anchor_date }
-      amounts = series.values.map do |value|
-        anchor_point && value.date == anchor_date ? anchor_point.value : value.value
-      end
+      series = builder.net_contributions_series(
+        anchor_date: anchor_date,
+        dates: value_dates,
+        anchor_before_activity: value_point_before_activity?(value_series, builder: builder, date: anchor_date)
+      )
 
       Series.new(
         start_date: value_dates.min || series.start_date,
         end_date: series.end_date,
         interval: series.interval,
-        values: series.values.zip(amounts).each_with_index.map do |(value, amount), index|
-          Series::Value.new(
-            date: value.date,
-            date_formatted: value.date_formatted,
-            value: amount,
-            trend: Trend.new(current: amount, previous: index.zero? ? amount : amounts[index - 1], favorable_direction: series.favorable_direction)
-          )
-        end,
+        values: series.values,
         favorable_direction: series.favorable_direction
       )
+    end
+
+    # True when the value line's point on `date` is not the close the
+    # balance query gave for that date: the normalizer prepended it or reset
+    # it to the balance before the day's activity. False when there is no
+    # such point.
+    #
+    # Known limit: once upstream #4009 resets the first point to the balance
+    # before the day's activity, a reset point whose value equals the day's
+    # close (a flow offset by the market) is read as the close. Fixed in the
+    # sync that brings in #4009.
+    def value_point_before_activity?(value_series, builder:, date:)
+      point = date && value_series.values.find { |value| value.date == date }
+      return false unless point
+
+      close = builder.balance_series.values.find { |value| value.date == date }
+      close.nil? || close.value != point.value
     end
 
     def net_contributions_anchor_date
