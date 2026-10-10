@@ -167,6 +167,82 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 50.to_d, buy.reload.amount
   end
 
+  # A fill whose units all went on its fee nets to zero in the ledger. That is
+  # the ledger's answer, not a missing row: the cash still left the account.
+  test "records a buy whose whole quantity went on the fee" do
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00100000"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00", fee: "0.00")
+    )
+
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 0.to_d, buy.trade.qty
+    assert_equal 50.to_d, buy.amount
+  end
+
+  # `entries.amount` keeps four decimals and a ledger can carry eight. Compared
+  # unrounded, the stored figure would never match, and every sync would take
+  # the update path for a trade that has not changed.
+  test "rounds ledger cash to the stored precision and leaves it alone afterwards" do
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000000"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00123456", fee: "0.00000000")
+    )
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 50.0012.to_d, buy.amount
+
+    Entry.any_instance.expects(:update!).never
+    KrakenAccount::Processor.new(@kraken_account).process
+  end
+
+  # Each row is right on its own: a fee taken in the base asset leaves the quote
+  # row equal to `cost`, so taking the quantity before the cash row arrives
+  # makes the trade no less correct. The half-ledger trade is logged for support,
+  # once, when it is written.
+  test "corrects the quantity from a base row alone and logs the missing quote row" do
+    KrakenAccount::Processor.new(@kraken_account).process
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+
+    set_ledgers("l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000200"))
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "kraken").count }, 1 do
+      KrakenAccount::Processor.new(@kraken_account).process
+    end
+    assert_equal 0.000998.to_d, buy.trade.reload.qty
+    assert_equal 50.to_d, buy.reload.amount
+
+    assert_no_difference -> { DebugLogEntry.where(provider_key: "kraken").count } do
+      KrakenAccount::Processor.new(@kraken_account).process
+    end
+  end
+
+  # A repeat sync can carry thousands of fills. Their entries and trades load
+  # in one go rather than in two queries per fill.
+  test "loads the existing trades once, not once per fill" do
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    queries = capture_sql_queries { KrakenAccount::Processor.new(@kraken_account).send(:process_trades) }
+
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "entries"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+  end
+
+  # The entry uniqueness check would stop a duplicate, but each trade would then
+  # fail its insert and log an error on every pass after the first.
+  test "a second pass of the same processor sees the trades the first one imported" do
+    processor = KrakenAccount::Processor.new(@kraken_account)
+    processor.send(:process_trades)
+
+    Rails.logger.expects(:error).never
+    assert_no_difference -> { @account.entries.where(source: "kraken").count } do
+      processor.send(:process_trades)
+    end
+  end
+
   test "trade import is idempotent by txid" do
     assert_difference -> { @account.entries.where(source: "kraken").count }, 2 do
       KrakenAccount::Processor.new(@kraken_account).process
