@@ -86,3 +86,5 @@ HTTP-Healthcheck 200; erfolgreiche Demo-Anmeldung und Monatsblock im Browser. Ec
 - Weitere Wünsche zur nächsten Iteration: klarer „bis heute“-Hinweis am laufenden Monat, aktive Filter besser sichtbar, gespeicherte persönliche Filterauswahl. Vorjahresvergleich nur mit nachvollziehbarer Behandlung unvollständiger Monate.
 
 Feedback-Validierung: gesamte Rails-Suite 11.063 Tests / 46.996 Assertions, null Fehler; drei gezielte Browser-Systemtests / 20 Assertions erfolgreich.
+
+Feedback-Preview aus Code-Commit `ca98cf98e` erneut unter `http://localhost:3100` deployt. Web/Worker aktualisiert, vorhandene isolierte Preview-Daten und Layout behalten. Host-Healthcheck 200 und API-Smoke erfolgreich; im laufenden Browser Summenbeschriftungen und Monat-/Jahr-Auswahl bestätigt. Umgekehrter Entwurf blockiert Anwenden, bleibt stehen und lässt sich korrigieren. Native Änderungen sind getestet, weiterhin kein nativer App-Build deployt.
