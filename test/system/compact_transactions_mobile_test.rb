@@ -199,11 +199,11 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
         columns = layout["columns"]
         columns.each_value { |column| assert_in_delta column["headerLeft"], column["left"], 1 }
         assert_equal layout["order"].index("category") + 1, layout["labelsCell"]
-        assert_equal "labels", layout["order"][layout["labelsCell"]]
+        assert_equal "tags", layout["order"][layout["labelsCell"]]
         assert_in_delta 24, layout["checkboxWidth"], 1
         assert_in_delta 96, columns["date"]["width"], 1
         assert_in_delta 8, layout["columnGap"], 1
-        assert_in_delta columns["amount"]["width"], columns["labels"]["width"], 1
+        assert_in_delta columns["amount"]["width"], columns["tags"]["width"], 1
         assert_in_delta 2.5, columns["transaction"]["width"].fdiv(columns["category"]["width"]), 0.05
         if show_notes
           assert_in_delta columns["transaction"]["width"], columns["notes"]["width"], 1
@@ -321,7 +321,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     positions = page.evaluate_script(<<~JS, dom_id(@entry))
       ((id) => {
         const row = document.getElementById(id);
-        const date = row.querySelector('span[class~="@5xl/compact-table:hidden"].shrink-0');
+        const date = row.querySelector('span[class~="@3xl/compact-table:hidden"].shrink-0');
         const category = date.parentElement.querySelector("div.flex");
         return [date.getBoundingClientRect().top, category.getBoundingClientRect().top];
       })(arguments[0])
