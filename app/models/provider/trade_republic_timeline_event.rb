@@ -128,7 +128,7 @@ module Provider::TradeRepublicTimelineEvent
 
   DECLINED_SUBTITLE_PATTERN = /declin|failed|reject|cancel/i
   STAMP_DUTY_EVENT_TYPE = "STAMP_DUTY_TAX_PAID"
-  STAMP_DUTY_CANCELLATION_PATTERN = /cancel/i
+  STAMP_DUTY_CANCELLATION_PATTERN = /cancellation/i
   LIFECYCLE_KEYS = %w[status deleted hidden badge].freeze
 
   class << self

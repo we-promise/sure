@@ -421,6 +421,35 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-20.99"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel_no_status").amount
   end
 
+  test "a stamp duty refund on a portfolio account is not booked as a contribution" do
+    import_event({
+      id: "evt_stamp_duty_refund",
+      timestamp: "2026-02-18T09:37:01Z",
+      eventType: "STAMP_DUTY_TAX_PAID",
+      title: "Stamp duty (Portfolio)",
+      subtitle: "Cancellation of stamp duty",
+      status: "EXECUTED",
+      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+    })
+
+    transaction = Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_refund").transaction
+    assert_nil transaction.investment_activity_label
+    assert_equal "standard", transaction.kind
+  end
+
+  test "a voided stamp duty charge is not imported as a refund" do
+    import_event({
+      id: "evt_stamp_duty_voided",
+      timestamp: "2026-02-18T09:37:01Z",
+      eventType: "STAMP_DUTY_TAX_PAID",
+      title: "Stamp duty (Portfolio)",
+      subtitle: "Cancelled",
+      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+    })
+
+    assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_voided")
+  end
+
   test "category direction wins over the provider signed amount" do
     import_event({
       id: "evt_incoming_signed",

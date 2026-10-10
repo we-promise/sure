@@ -1144,6 +1144,18 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
   end
 
+  test "a voided stamp duty charge is blocked, not treated as a cancellation" do
+    voided = {
+      "eventType" => "STAMP_DUTY_TAX_PAID",
+      "title" => "Stamp duty (Portfolio)",
+      "subtitle" => "Cancelled"
+    }
+
+    assert_not Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(voided)
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(voided)
+    assert_not Provider::TradeRepublicTimelineEvent.importable?(voided)
+  end
+
   test "a failed badge still blocks a stamp duty cancellation" do
     cancellation = {
       "eventType" => "STAMP_DUTY_TAX_PAID",

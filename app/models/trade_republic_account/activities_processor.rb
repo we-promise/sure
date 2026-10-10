@@ -3,7 +3,8 @@ class TradeRepublicAccount::ActivitiesProcessor
 
   SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
   STOCK_PERK_EVENT_TYPE = "ACQUISITION_TRADE_PERK"
-  # Shares Trade Republic pays for: a trade only, without a cash leg.
+  # Shares Trade Republic pays for: a portfolio trade with no counterpart in
+  # the cash account. Saveback books its amount; a stock bonus books no cash.
   BROKER_FUNDED_TRADE_EVENT_TYPES = [ SAVEBACK_EVENT_TYPE, STOCK_PERK_EVENT_TYPE ].freeze
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
@@ -604,6 +605,8 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     def cash_label_key(event, default:)
+      return "tax_refund" if Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
+
       case event[:eventType].to_s
       when "CARD_TRANSACTION", "card_successful_transaction", "CARD_CASH_BACK", "CARD_AFT"
         "card_payment"
