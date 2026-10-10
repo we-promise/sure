@@ -552,7 +552,7 @@ fr:
         kraken: Synchronisez vos soldes Kraken et transactions spot à l'aide d'une clé API en lecture seule.
         lunchflow: Connectez plus de 20k banques dans plus de 40 pays (UK, UE, USA, etc.)
         mercury: Synchronisez automatiquement vos comptes professionnels Mercury.
-        onchain_wallet: Suivez vos portefeuilles Bitcoin, EVM, Solana et Polkadot en autoconservation à partir de leurs adresses publiques.
+        onchain_wallet: Suivez vos portefeuilles Bitcoin, EVM, Solana, Cosmos et Polkadot en autoconservation à partir de leurs adresses publiques.
         plaid: Connectez des milliers d'institutions financières américaines via Plaid.
         plaid_eu: Connectez des institutions financières européennes via Plaid (PSD2 / Open Banking).
         questrade: Synchronisez directement vos comptes d'investissement Questrade via l'API Questrade.
