@@ -14,6 +14,26 @@ class FamilyMerchant < Merchant
   # duplicates, silently assigning a transaction to the wrong merchant.
   validates :iban, uniqueness: { scope: :family }, allow_nil: true
 
+  # Reuses a family's existing merchant of this name instead of raising on the
+  # uniqueness validation, and survives a concurrent create for the same name
+  # (e.g. two imports, or an import racing a manual edit) landing on the
+  # database's unique index first. Returns [merchant, created?].
+  def self.find_or_create_with_name(family, name, **attributes)
+    existing = family.merchants.find_by(name: name)
+    return [ existing, false ] if existing
+
+    begin
+      # requires_new: true opens a savepoint, so a RecordNotUnique here rolls
+      # back only the failed insert. Without it, Postgres aborts the whole
+      # enclosing transaction and the rescue's find_by! below would also fail.
+      merchant = transaction(requires_new: true) { family.merchants.create!(attributes.merge(name: name)) }
+      [ merchant, true ]
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+      raise if e.is_a?(ActiveRecord::RecordInvalid) && !e.record.errors.of_kind?(:name, :taken)
+      [ family.merchants.find_by!(name: name), false ]
+    end
+  end
+
   private
     def set_default_color
       self.color = COLORS.sample unless valid_hex_color?

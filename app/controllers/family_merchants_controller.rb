@@ -70,26 +70,18 @@ class FamilyMerchantsController < ApplicationController
 
   def update
     if @merchant.is_a?(ProviderMerchant)
-      name_changed = effective_merchant_params[:name].present? && effective_merchant_params[:name] != @merchant.name
-      # An IBAN edit must not mutate the shared ProviderMerchant row: unlike
-      # website_url (cosmetic, logo lookup only), iban drives cross-family
-      # merchant-identity matching (Account::ProviderImportAdapter looks
-      # merchants up globally by source+iban), so one family setting it would
-      # silently redirect another family's future transactions to this
-      # merchant. Route it through the same conversion path as a name change.
-      iban_changed = effective_merchant_params.key?(:iban) && normalize_iban(effective_merchant_params[:iban]) != @merchant.iban
-
-      if name_changed || iban_changed
-        # Convert ProviderMerchant to FamilyMerchant for this family only
+      # A ProviderMerchant is shared by every family whose transactions use it,
+      # so changing its name, website or IBAN converts it to a FamilyMerchant for this
+      # family only; editing the shared row would change it for all of them. The IBAN
+      # also drives cross-family merchant matching on import, so editing it on
+      # the shared row would redirect other families' future transactions.
+      if provider_merchant_customized?
         @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, effective_merchant_params)
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
           format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
         end
       else
-        # Only website changed — update the ProviderMerchant directly
-        @merchant.update!(effective_merchant_params.slice(:website_url))
-        @merchant.generate_logo_url_from_website!
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".success") }
           format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
@@ -190,6 +182,16 @@ class FamilyMerchantsController < ApplicationController
       @merchant = Current.family.merchants.find_by(id: params[:id]) ||
                   Current.family.assigned_merchants.find(params[:id])
       @family_merchant = @merchant # For backwards compatibility with views
+    end
+
+    def provider_merchant_customized?
+      attrs = effective_merchant_params
+      name_changed = attrs[:name].present? && attrs[:name] != @merchant.name
+      website_changed = attrs.key?(:website_url) &&
+        attrs[:website_url].to_s.strip != @merchant.website_url.to_s
+      iban_changed = attrs.key?(:iban) && normalize_iban(attrs[:iban]) != @merchant.iban
+
+      name_changed || website_changed || iban_changed
     end
 
     def merchant_params

@@ -51,17 +51,29 @@ class ProviderMerchant < Merchant
   # Returns the newly created FamilyMerchant.
   def convert_to_family_merchant_for(family, attributes = {})
     transaction do
-      family_merchant = family.merchants.create!(
-        name: attributes[:name].presence || name,
+      # If the family already has a FamilyMerchant with this name, reuse it
+      # instead of failing on the uniqueness validation.
+      family_merchant, created = FamilyMerchant.find_or_create_with_name(
+        family,
+        attributes[:name].presence || name,
         color: attributes[:color].presence || FamilyMerchant::COLORS.sample,
-        # attributes.key?(...) distinguishes "the form submitted this field
-        # empty" (explicit clear -> nil) from "it wasn't part of this
-        # submission at all" (fall back to the existing value) --
-        # attributes[:x].presence alone would treat both the same and make
-        # an intentional clear silently come back.
+        # A submitted blank website or iban clears it; only an omitted one is inherited.
         website_url: attributes.key?(:website_url) ? attributes[:website_url].presence : website_url,
         iban: attributes.key?(:iban) ? attributes[:iban].presence : iban
       )
+
+      # find_or_create_with_name doesn't touch a merchant it reused, so
+      # explicitly submitted attributes still need applying here; omitted
+      # ones leave the reused merchant untouched. A submitted website or iban
+      # (present or blank-to-clear) is honored; color can't be cleared
+      # (FamilyMerchant requires it), so only a non-blank submission applies.
+      if !created
+        reuse_updates = {}
+        reuse_updates[:website_url] = attributes[:website_url].presence if attributes.key?(:website_url)
+        reuse_updates[:iban] = attributes[:iban].presence if attributes.key?(:iban)
+        reuse_updates[:color] = attributes[:color] if attributes[:color].present?
+        family_merchant.update!(reuse_updates) if reuse_updates.any?
+      end
 
       scope = family.transactions.where(merchant_id: id)
 
