@@ -3,9 +3,12 @@ class ExchangeRate::Importer
   MissingStartRateError = Class.new(StandardError)
 
   PROVISIONAL_LOOKBACK_DAYS = 5
+  HISTORY_PROBE_COOLDOWN = 1.day
 
-  def initialize(exchange_rate_provider:, from:, to:, start_date:, end_date:, clear_cache: false)
+  # Capture the provider identity so a settings change cannot commit stale-provider history.
+  def initialize(exchange_rate_provider:, from:, to:, start_date:, end_date:, provider_name: nil, clear_cache: false)
     @exchange_rate_provider = exchange_rate_provider
+    @current_provider_name = provider_name || ExchangeRatePair.resolve_provider_name
     @from = from
     @to = to
     @start_date = start_date
@@ -13,23 +16,36 @@ class ExchangeRate::Importer
     @clear_cache = clear_cache
   end
 
+  # Fill usable rates and commit both currency directions with their verified history metadata.
   def import_provider_rates
+    return 0 unless provider_still_selected?
+
     if !clear_cache && all_rates_exist?
       Rails.logger.info("No new rates to sync for #{from} to #{to} between #{start_date} and #{end_date}, skipping")
       backfill_inverse_rates_if_needed
       return
     end
 
-    if provider_rates.empty?
+    pair = exchange_rate_pair
+    return 0 unless provider_still_selected?
+
+    rates = provider_rates
+    return 0 unless provider_still_selected?
+
+    if rates.empty?
+      # Success alone cannot distinguish missing history from a partial response.
+      # Keep the previous boundary so this range remains retryable.
       Rails.logger.warn("Could not fetch rates for #{from} to #{to} between #{start_date} and #{end_date} because provider returned no rates")
       return
     end
+
+    return 0 unless provider_still_selected?
 
     prev_rate_value = start_rate_value
 
     # Always find the earliest valid provider rate for pair metadata tracking.
     # record_first_provider_rate_on's atomic guard prevents moving the date forward.
-    earliest_valid_provider_date = provider_rates.values
+    earliest_valid_provider_date = rates.values
       .select { |r| r.rate.present? && r.rate.to_f > 0 }
       .min_by(&:date)&.date
 
@@ -76,7 +92,7 @@ class ExchangeRate::Importer
       }
     end
 
-    upsert_rows(gapfilled_rates)
+    return 0 unless provider_still_selected?
 
     # Compute and upsert inverse rates (e.g., EUR→USD from USD→EUR) to avoid
     # separate API calls for the reverse direction.
@@ -91,16 +107,32 @@ class ExchangeRate::Importer
       }
     end
 
-    upsert_rows(inverse_rates)
+    import_completed = false
+    ExchangeRate.transaction(requires_new: true) do
+      upsert_rows(gapfilled_rates)
+
+      if provider_still_selected?
+        upsert_rows(inverse_rates)
+        import_completed = true
+      else
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    return 0 unless import_completed
 
     # Backfill inverse rows for any forward rates that existed in the DB
     # before the loop range (i.e. dates not covered by gapfilled_rates).
     backfill_inverse_rates_if_needed
+    record_provider_history_checked_from(pair: pair)
 
     if earliest_valid_provider_date.present?
       ExchangeRatePair.record_first_provider_rate_on(
-        from: from, to: to, date: earliest_valid_provider_date,
-        provider_name: current_provider_name
+        from: from,
+        to: to,
+        date: earliest_valid_provider_date,
+        provider_name: current_provider_name,
+        pair: pair
       )
     end
   end
@@ -111,7 +143,12 @@ class ExchangeRate::Importer
     # Resolves the provider name the same way as ExchangeRate::Provided.provider:
     # ENV takes precedence over the DB Setting to stay consistent in env-configured deployments.
     def current_provider_name
-      @current_provider_name ||= (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
+      @current_provider_name
+    end
+
+    # Reject work if the configured provider changed after this import began.
+    def provider_still_selected?
+      current_provider_name == ExchangeRatePair.resolve_provider_name
     end
 
     def upsert_rows(rows)
@@ -167,10 +204,15 @@ class ExchangeRate::Importer
         .max_by { |date, _| date }&.last&.rate
     end
 
+    # Avoid unsupported earlier history unless a requested backfill still needs verification.
     def clamped_start_date
       @clamped_start_date ||= begin
-        listed = exchange_rate_pair.first_provider_rate_on
-        listed.present? && listed > start_date ? listed : start_date
+        if history_backfill_required?
+          start_date
+        else
+          listed = exchange_rate_pair.first_provider_rate_on
+          listed.present? && listed > start_date ? listed : start_date
+        end
       end
     end
 
@@ -182,22 +224,76 @@ class ExchangeRate::Importer
       @fill_start_date ||= [ provider_fetch_start_date, effective_start_date ].max
     end
 
+    # Apply history limits to the actual provider window, including provisional lookback.
     def provider_fetch_start_date
       @provider_fetch_start_date ||= begin
         base = effective_start_date - PROVISIONAL_LOOKBACK_DAYS.days
-        max_days = exchange_rate_provider.respond_to?(:max_history_days) ? exchange_rate_provider.max_history_days : nil
-
-        if max_days && (end_date - base).to_i > max_days
-          clamped = end_date - max_days.days
-          Rails.logger.info(
-            "#{exchange_rate_provider.class.name} max history is #{max_days} days; " \
-            "clamping #{from}->#{to} start_date from #{base} to #{clamped}"
-          )
-          clamped
-        else
-          base
-        end
+        clamp_provider_fetch_start_date(base)
       end
+    end
+
+    # Clamp the requested historical probe to the selected provider coverage limit.
+    def requested_history_start_date
+      # Track the requested account range, not the earlier API lookback date.
+      @requested_history_start_date ||= clamp_provider_fetch_start_date(
+        start_date,
+        log: false
+      )
+    end
+
+    # Apply provider history limits consistently to normal and backfill requests.
+    def clamp_provider_fetch_start_date(base, log: true)
+      max_days = exchange_rate_provider.respond_to?(:max_history_days) ? exchange_rate_provider.max_history_days : nil
+      return base unless max_days && (end_date - base).to_i > max_days
+
+      clamped = end_date - max_days.days
+      if log
+        Rails.logger.info(
+          "#{exchange_rate_provider.class.name} max history is #{max_days} days; " \
+          "clamping #{from}->#{to} start_date from #{base} to #{clamped}"
+        )
+      end
+      clamped
+    end
+
+    # Retry an earlier requested range until returned data supports its coverage boundary.
+    def history_backfill_required?
+      return @history_backfill_required if defined?(@history_backfill_required)
+
+      pair = exchange_rate_pair
+      checked_from = pair.provider_history_checked_from
+      # Legacy pairs did not store a checked boundary; use the first returned
+      # rate as a conservative baseline so an earlier account start gets probed.
+      checked_from ||= pair.first_provider_rate_on
+
+      @history_backfill_required = checked_from.present? && requested_history_start_date < checked_from &&
+        (clear_cache || !Rails.cache.read(history_probe_cache_key))
+    end
+
+    # Record only the earliest coverage supported by positive returned rates.
+    def record_provider_history_checked_from(pair:)
+      earliest_returned_date = provider_rates.values
+        .select { |rate| rate.rate.present? && rate.rate.to_f > 0 }.map(&:date).min
+      return unless earliest_returned_date
+
+      ExchangeRatePair.record_provider_history_checked_from(
+        from: from,
+        to: to,
+        date: [ provider_fetch_start_date, earliest_returned_date ].max,
+        provider_name: current_provider_name,
+        pair: pair
+      )
+
+      # Incomplete success does not prove earlier history is unavailable, but
+      # need not repeat the same large probe on every account sync.
+      if history_backfill_required? && requested_history_start_date < earliest_returned_date && provider_still_selected?
+        Rails.cache.write(history_probe_cache_key, true, expires_in: HISTORY_PROBE_COOLDOWN)
+      end
+    end
+
+    # Separate probe cooldowns by provider, pair and requested historical boundary.
+    def history_probe_cache_key
+      [ "exchange_rate_history_probe", current_provider_name, from, to, requested_history_start_date.to_s ]
     end
 
     def effective_start_date
