@@ -84,39 +84,43 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
   test "merges transaction and activity timelines without duplicate events" do
     responses = {
-      "timelineTransactions" => [ [ { "id" => "cash-1", "timestamp" => "2026-08-02" } ], "cash-1", [], true ],
-      "timelineActivityLog" => [ [ { "id" => "cash-1", "timestamp" => "2026-08-02" }, { "id" => "trade-1", "timestamp" => "2026-08-03" } ], "trade-1", [], true ]
+      "timelineTransactions" => timeline_pass([ { "id" => "cash-1", "timestamp" => "2026-08-02" } ], "cash-1"),
+      "timelineActivityLog" => timeline_pass([ { "id" => "cash-1", "timestamp" => "2026-08-02" }, { "id" => "trade-1", "timestamp" => "2026-08-03" } ], "trade-1")
     }
     @client.define_singleton_method(:collect_timeline_topic) do |_websocket, topic:, **_|
       responses.fetch(topic)
     end
 
-    events, newest_id, warnings = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 2)
+    timeline = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 2)
 
-    assert_equal %w[cash-1 trade-1], events.map { |event| event["id"] }
-    assert_equal "trade-1", newest_id
-    assert_empty warnings
+    assert_equal %w[cash-1 trade-1], timeline.events.map { |event| event["id"] }
+    assert_equal "trade-1", timeline.newest_event_id
+    assert_empty timeline.warnings
+    assert_equal(
+      { "timelineTransactions" => { "newest_event_id" => "cash-1" }, "timelineActivityLog" => { "newest_event_id" => "trade-1" } },
+      timeline.cursors
+    )
   end
 
   test "advances the list cursor when only trade details remain pending" do
+    responses = {
+      "timelineTransactions" => timeline_pass([ {
+        "id" => "trade-1",
+        "timestamp" => "2026-08-02",
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "category" => "orderExecution",
+        "detail" => { "amount" => -100.0 }
+      } ], "trade-1"),
+      "timelineActivityLog" => timeline_pass([], nil)
+    }
     @client.define_singleton_method(:collect_timeline_topic) do |_websocket, topic:, **_|
-      if topic == "timelineTransactions"
-        [ [ {
-          "id" => "trade-1",
-          "timestamp" => "2026-08-02",
-          "eventType" => "TRADING_TRADE_EXECUTED",
-          "category" => "orderExecution",
-          "detail" => { "amount" => -100.0 }
-        } ], "trade-1", [], true ]
-      else
-        [ [], nil, [], true ]
-      end
+      responses.fetch(topic)
     end
     @client.define_singleton_method(:subscribe) do |_websocket, **_|
       raise Provider::TradeRepublicClient::MalformedResponse, "no budget"
     end
 
-    events, newest_id, warnings, complete, backfill_count = @client.send(
+    timeline = @client.send(
       :collect_all_timeline,
       Object.new,
       known_newest_event_id: nil,
@@ -124,33 +128,527 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       enrich_events: []
     )
 
-    assert_equal [ "trade-1" ], events.map { |event| event["id"] }
-    assert_equal "trade-1", newest_id
-    assert complete
-    assert_equal 0, backfill_count
-    assert_includes warnings, "detail fetch failed for event trade-1"
+    assert_equal [ "trade-1" ], timeline.events.map { |event| event["id"] }
+    assert_equal "trade-1", timeline.newest_event_id
+    assert timeline.pagination_complete
+    assert_equal 0, timeline.detail_backfill_count
+    assert_includes timeline.warnings, "detail fetch failed for event trade-1"
   end
 
-  test "does not mark timeline complete when pagination is truncated" do
-    @client.define_singleton_method(:collect_timeline_topic) do |_websocket, topic:, **_|
-      if topic == "timelineTransactions"
-        [ [ { "id" => "event-1", "timestamp" => "2026-08-02" } ], "event-1", [ "timeline pagination truncated for timelineTransactions" ], false ]
+  test "hands a truncated first sync over to the history backfill" do
+    stub_timeline_pages(
+      nil => [ "tx-1", "2026-08-04", "page-2" ],
+      "page-2" => [ "tx-2", "2026-08-03", "page-3" ],
+      "page-3" => [ "tx-3", "2026-08-02", "page-4" ],
+      "page-4" => [ "tx-4", "2026-08-01", "page-5" ]
+    )
+
+    timeline = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 2)
+
+    assert_equal %w[tx-1 tx-2 tx-3 tx-4], timeline.events.map { |event| event["id"] }
+    assert_equal "tx-1", timeline.newest_event_id
+    assert timeline.pagination_complete
+    assert_empty timeline.warnings
+    assert_equal({ "newest_event_id" => "tx-1", "backfill_cursor" => "page-5" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "fills a gap of new events larger than the page budget down to the previous newest event" do
+    stub_timeline_pages(
+      nil => [ "tx-5", "2026-08-05", "page-2" ],
+      "page-2" => [ "tx-4", "2026-08-04", "page-3" ],
+      "page-3" => [ "tx-3", "2026-08-03", "page-4" ],
+      "page-4" => [ "tx-2", "2026-08-02", "page-5" ],
+      "page-5" => [ "tx-1", "2026-08-01", "page-6" ]
+    )
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 2,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-2" } }
+    )
+
+    assert_equal %w[tx-5 tx-4 tx-3 tx-2], timeline.events.map { |event| event["id"] }
+    assert timeline.pagination_complete
+    assert_empty timeline.warnings
+    assert_equal({ "newest_event_id" => "tx-5" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "continues the history backfill and finishes at the end of the topic" do
+    stub_timeline_pages(
+      nil => [ "tx-new", "2026-08-03", "page-2" ],
+      "page-2" => [ "tx-known", "2026-08-02", "page-3" ],
+      "page-9" => [ "tx-old", "2026-08-01", nil ]
+    )
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 2,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9", "backfill_failures" => 2 } }
+    )
+
+    assert_equal %w[tx-new tx-known tx-old], timeline.events.map { |event| event["id"] }
+    assert_equal "tx-new", timeline.newest_event_id
+    assert timeline.pagination_complete
+    assert_empty timeline.warnings
+    assert_equal({ "newest_event_id" => "tx-new" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "backfills the activity log independently of transactions" do
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      case [ payload[:type], payload[:after] ]
+      when [ "timelineActivityLog", nil ]
+        { "items" => [ { "id" => "act-known", "timestamp" => "2026-08-02" } ], "cursors" => { "after" => "act-2" } }
+      when [ "timelineActivityLog", "act-9" ]
+        { "items" => [ { "id" => "act-old", "timestamp" => "2026-07-01" } ], "cursors" => { "after" => "act-10" } }
+      when [ "timelineActivityLog", "act-10" ]
+        { "items" => [ { "id" => "act-older", "timestamp" => "2026-06-01" } ], "cursors" => {} }
       else
-        [ [], nil, [], true ]
+        { "items" => [ { "id" => "tx-known", "timestamp" => "2026-08-03" } ], "cursors" => {} }
       end
     end
 
-    _events, newest_id, warnings, complete, = @client.send(
+    timeline = @client.send(
       :collect_all_timeline,
       Object.new,
       known_newest_event_id: nil,
       max_pages: 2,
-      enrich_events: []
+      timeline_cursors: {
+        "timelineTransactions" => { "newest_event_id" => "tx-known" },
+        "timelineActivityLog" => { "newest_event_id" => "act-known", "backfill_cursor" => "act-9" }
+      }
     )
 
-    assert_equal "event-1", newest_id
-    refute complete
-    assert_includes warnings, "timeline pagination truncated for timelineTransactions"
+    assert_equal %w[tx-known act-known act-old act-older], timeline.events.map { |event| event["id"] }
+    assert_equal({ "newest_event_id" => "act-known" }, timeline.cursors["timelineActivityLog"])
+    assert_equal({ "newest_event_id" => "tx-known" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "reports which topic fetched each event" do
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      case payload[:type]
+      when "timelineActivityLog" then { "items" => [ { "id" => "act-1", "timestamp" => "2026-08-02" } ], "cursors" => {} }
+      else { "items" => [ { "id" => "tx-1", "timestamp" => "2026-08-03" }, { "timestamp" => "2026-08-01" } ], "cursors" => {} }
+      end
+    end
+
+    timeline = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 2)
+
+    assert_equal({ "timelineTransactions" => [ "tx-1" ], "timelineActivityLog" => [ "act-1" ] }, timeline.topic_event_ids)
+  end
+
+  test "stops the history backfill only for the given topics" do
+    cursors = {
+      "timelineTransactions" => { "newest_event_id" => "tx-1", "backfill_cursor" => "page-9" },
+      "timelineActivityLog" => { "newest_event_id" => "act-1", "backfill_cursor" => "act-9" }
+    }
+
+    stopped = Provider::TradeRepublicClient.stop_timeline_history_backfills(cursors, topics: [ "timelineTransactions" ])
+
+    assert_equal({ "timelineTransactions" => { "newest_event_id" => "tx-1" }, "timelineActivityLog" => cursors["timelineActivityLog"] }, stopped)
+  end
+
+  test "stops each topic at its own newest event" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      requested << [ payload[:type], payload[:after] ]
+      id = payload[:type] == "timelineTransactions" ? "tx-known" : "act-known"
+      { "items" => [ { "id" => id, "timestamp" => "2026-08-02" } ], "cursors" => { "after" => "more" } }
+    end
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: "act-known",
+      max_pages: 50,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known" } }
+    )
+
+    assert timeline.pagination_complete
+    assert_equal [ [ "timelineTransactions", nil ], [ "timelineActivityLog", nil ] ], requested
+  end
+
+  test "keeps the backfill cursor when the backfill page fails" do
+    stub_failing_backfill_page
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 2,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" } }
+    )
+
+    assert timeline.pagination_complete
+    assert_includes timeline.warnings, "timeline history backfill failed for timelineTransactions (ProviderUnavailable)"
+    assert_equal(
+      { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9", "backfill_failures" => 1 },
+      timeline.cursors["timelineTransactions"]
+    )
+  end
+
+  test "keeps the pages read before a backfill page fails and resumes at that page" do
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      next { "items" => [], "cursors" => {} } unless payload[:type] == "timelineTransactions"
+
+      case payload[:after]
+      when nil then { "items" => [ { "id" => "tx-known", "timestamp" => "2026-08-03" } ], "cursors" => {} }
+      when "page-9" then { "items" => [ { "id" => "tx-old", "timestamp" => "2026-08-02" } ], "cursors" => { "after" => "page-10" } }
+      else raise Provider::TradeRepublicClient::ProviderUnavailable, "subscription failed"
+      end
+    end
+    failures = Provider::TradeRepublicClient::MAX_TIMELINE_BACKFILL_FAILURES - 1
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 5,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9", "backfill_failures" => failures } }
+    )
+
+    assert_equal %w[tx-known tx-old], timeline.events.map { |event| event["id"] }
+    assert_includes timeline.warnings, "timeline history backfill failed for timelineTransactions (ProviderUnavailable)"
+    # Moving forward restarts the failure count, so the backfill is not abandoned.
+    assert_equal(
+      { "newest_event_id" => "tx-known", "backfill_cursor" => "page-10", "backfill_failures" => 1 },
+      timeline.cursors["timelineTransactions"]
+    )
+  end
+
+  test "abandons a backfill that keeps failing" do
+    stub_failing_backfill_page
+    failures = Provider::TradeRepublicClient::MAX_TIMELINE_BACKFILL_FAILURES - 1
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 2,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9", "backfill_failures" => failures } }
+    )
+
+    assert_includes timeline.warnings,
+      "timeline history backfill for timelineTransactions abandoned after #{failures + 1} failed attempts (ProviderUnavailable)"
+    assert_equal({ "newest_event_id" => "tx-known" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "reports a websocket failure in the backfill as an interruption" do
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      raise Provider::TradeRepublicClient::TransientProviderError, "busy" if payload[:after] == "page-9"
+
+      { "items" => [ { "id" => "tx-known", "timestamp" => "2026-08-02" } ], "cursors" => {} }
+    end
+
+    error = assert_raises(Provider::TradeRepublicClient::TimelineBackfillInterrupted) do
+      @client.send(
+        :collect_all_timeline,
+        Object.new,
+        known_newest_event_id: nil,
+        max_pages: 2,
+        timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" } }
+      )
+    end
+    assert_equal "timelineTransactions", error.topic
+    assert_equal "TransientProviderError", error.reason
+    assert_equal "page-9", error.cursor
+  end
+
+  test "retries the sync without a backfill that times out and counts the failure" do
+    stub_sync_session
+    @client.stubs(:sleep_for)
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      next { "items" => [], "cursors" => {} } unless payload[:type] == "timelineTransactions"
+
+      requested << payload[:after]
+      raise Provider::TradeRepublicClient::Timeout, "timeout" if payload[:after] == "page-9"
+
+      { "items" => [ { "id" => "tx-known", "timestamp" => "2026-08-02" } ], "cursors" => {} }
+    end
+
+    result = @client.sync(
+      session_txt: "session",
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" } }
+    )
+
+    assert_equal [ nil, "page-9", nil ], requested
+    assert_includes result["warnings"], "timeline history backfill failed for timelineTransactions (Timeout)"
+    assert_equal(
+      { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9", "backfill_failures" => 1 },
+      result["timeline_cursors"]["timelineTransactions"]
+    )
+  end
+
+  test "still runs the other topic's backfill when the sync is retried after an interruption" do
+    stub_sync_session
+    @client.stubs(:sleep_for)
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      requested << [ payload[:type], payload[:after] ]
+      case [ payload[:type], payload[:after] ]
+      when [ "timelineTransactions", "page-9" ] then raise Provider::TradeRepublicClient::Timeout, "timeout"
+      when [ "timelineActivityLog", "act-page-9" ] then { "items" => [ { "id" => "act-old", "timestamp" => "2026-08-01" } ], "cursors" => {} }
+      when [ "timelineTransactions", nil ] then { "items" => [ { "id" => "tx-known", "timestamp" => "2026-08-02" } ], "cursors" => {} }
+      when [ "timelineActivityLog", nil ] then { "items" => [ { "id" => "act-known", "timestamp" => "2026-08-02" } ], "cursors" => {} }
+      else { "items" => [], "cursors" => {} }
+      end
+    end
+
+    result = @client.sync(
+      session_txt: "session",
+      timeline_cursors: {
+        "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" },
+        "timelineActivityLog" => { "newest_event_id" => "act-known", "backfill_cursor" => "act-page-9" }
+      }
+    )
+
+    assert_includes requested, [ "timelineActivityLog", "act-page-9" ]
+    assert_includes result["events"].map { |event| event["id"] }, "act-old"
+    assert_equal({ "newest_event_id" => "act-known" }, result["timeline_cursors"]["timelineActivityLog"])
+    assert_equal(
+      { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9", "backfill_failures" => 1 },
+      result["timeline_cursors"]["timelineTransactions"]
+    )
+  end
+
+  test "keeps the pages read before the websocket fails in the backfill" do
+    stub_sync_session
+    @client.stubs(:sleep_for)
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      next { "items" => [], "cursors" => {} } unless payload[:type] == "timelineTransactions"
+
+      requested << payload[:after]
+      case payload[:after]
+      when nil then { "items" => [ { "id" => "tx-known", "timestamp" => "2026-08-03" } ], "cursors" => {} }
+      when "page-9" then { "items" => [ { "id" => "tx-old", "timestamp" => "2026-08-02" } ], "cursors" => { "after" => "page-10" } }
+      else raise Provider::TradeRepublicClient::Timeout, "timeout"
+      end
+    end
+
+    result = @client.sync(
+      session_txt: "session",
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" } }
+    )
+
+    assert_equal [ nil, "page-9", "page-10", nil ], requested
+    assert_equal %w[tx-known tx-old], result["events"].map { |event| event["id"] }
+    assert_equal(
+      { "newest_event_id" => "tx-known", "backfill_cursor" => "page-10", "backfill_failures" => 1 },
+      result["timeline_cursors"]["timelineTransactions"]
+    )
+  end
+
+  test "replaces a running history backfill with one that reads to the end of the topic" do
+    stub_timeline_pages(
+      nil => [ "tx-5", "2026-08-05", "page-2" ],
+      "page-2" => [ "tx-4", "2026-08-04", "page-3" ],
+      "page-3" => [ "tx-3", "2026-08-03", "page-4" ],
+      "page-4" => [ "tx-2", "2026-08-02", "page-5" ]
+    )
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 2,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-2", "backfill_cursor" => "page-old" } }
+    )
+
+    assert_equal %w[tx-5 tx-4 tx-3 tx-2], timeline.events.map { |event| event["id"] }
+    assert_equal({ "newest_event_id" => "tx-5", "backfill_cursor" => "page-5" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "replaces a running gap backfill with one that keeps its stop event" do
+    stub_timeline_pages(
+      nil => [ "tx-7", "2026-08-07", "page-2" ],
+      "page-2" => [ "tx-6", "2026-08-06", "page-3" ],
+      "page-3" => [ "tx-5", "2026-08-05", "page-4" ],
+      "page-4" => [ "tx-4", "2026-08-04", "page-5" ]
+    )
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 2,
+      timeline_cursors: {
+        "timelineTransactions" => { "newest_event_id" => "tx-4", "backfill_cursor" => "page-old", "backfill_stop_event_id" => "tx-1" }
+      }
+    )
+
+    assert_equal %w[tx-7 tx-6 tx-5 tx-4], timeline.events.map { |event| event["id"] }
+    assert_equal(
+      { "newest_event_id" => "tx-7", "backfill_cursor" => "page-5", "backfill_stop_event_id" => "tx-1" },
+      timeline.cursors["timelineTransactions"]
+    )
+  end
+
+  test "seeds each topic from the item newest event before it has its own" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      requested << [ payload[:type], payload[:after] ]
+      { "items" => [ { "id" => "evt-new", "timestamp" => "2026-08-03" }, { "id" => "evt-known", "timestamp" => "2026-08-02" } ], "cursors" => { "after" => "more" } }
+    end
+
+    timeline = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: "evt-known", max_pages: 50)
+
+    assert_equal [ [ "timelineTransactions", nil ], [ "timelineActivityLog", nil ] ], requested
+    assert_equal(
+      { "timelineTransactions" => { "newest_event_id" => "evt-new" }, "timelineActivityLog" => { "newest_event_id" => "evt-new" } },
+      timeline.cursors
+    )
+  end
+
+  test "reads nothing and keeps the stored state without a page budget" do
+    @client.define_singleton_method(:subscribe) { |*| raise "unexpected subscription" }
+    stored = { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" } }
+
+    timeline = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 0, timeline_cursors: stored)
+
+    refute timeline.pagination_complete
+    assert_equal stored, timeline.cursors
+  end
+
+  test "keeps the backfill position when its pagination stalls" do
+    stub_timeline_pages(
+      nil => [ "tx-known", "2026-08-03", nil ],
+      "page-9" => [ "tx-old", "2026-08-02", "page-10" ],
+      "page-10" => [ "tx-older", "2026-08-01", "page-10" ]
+    )
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 5,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" } }
+    )
+
+    assert_equal %w[tx-known tx-old tx-older], timeline.events.map { |event| event["id"] }
+    assert_includes timeline.warnings, "timeline pagination cursor repeated for timelineTransactions"
+    assert_equal(
+      { "newest_event_id" => "tx-known", "backfill_cursor" => "page-10", "backfill_failures" => 1 },
+      timeline.cursors["timelineTransactions"]
+    )
+  end
+
+  test "follows an empty page that still has a next cursor" do
+    stub_timeline_pages(
+      nil => [ "tx-known", "2026-08-03", nil ],
+      "page-9" => [ nil, nil, "page-10" ],
+      "page-10" => [ "tx-old", "2026-08-01", nil ]
+    )
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 5,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" } }
+    )
+
+    assert_equal %w[tx-known tx-old], timeline.events.map { |event| event["id"] }
+    assert_equal({ "newest_event_id" => "tx-known" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "keeps the stored state when the newest pages stall" do
+    stub_timeline_pages(
+      nil => [ "tx-2", "2026-08-03", "page-2" ],
+      "page-2" => [ "tx-1", "2026-08-02", "page-2" ],
+      "page-9" => [ "tx-old", "2026-08-01", nil ]
+    )
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 5,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-0", "backfill_cursor" => "page-9" } }
+    )
+
+    refute timeline.pagination_complete
+    assert_equal %w[tx-2 tx-1 tx-old], timeline.events.map { |event| event["id"] }
+    assert_equal({ "newest_event_id" => "tx-0" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "does not store a cursor that is too long to persist" do
+    long_cursor = "x" * (Provider::TradeRepublicClient::MAX_TIMELINE_CURSOR_LENGTH + 1)
+    stub_timeline_pages(nil => [ "tx-1", "2026-08-02", long_cursor ])
+
+    timeline = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 1)
+
+    assert_includes timeline.warnings, "timeline pagination cursor for timelineTransactions cannot be stored; older history is not imported"
+    assert_equal({ "newest_event_id" => "tx-1" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "does not store a cursor that stalls the backfill and is too long to persist" do
+    long_cursor = "x" * (Provider::TradeRepublicClient::MAX_TIMELINE_CURSOR_LENGTH + 1)
+    stub_timeline_pages(
+      nil => [ "tx-known", "2026-08-03", nil ],
+      "page-9" => [ "tx-old", "2026-08-02", long_cursor ],
+      long_cursor => [ "tx-older", "2026-08-01", long_cursor ]
+    )
+
+    timeline = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 5,
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" } }
+    )
+
+    assert_includes timeline.warnings, "timeline pagination cursor for timelineTransactions cannot be stored; older history is not imported"
+    assert_equal({ "newest_event_id" => "tx-known" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "stores integer cursors but not structured ones" do
+    stub_timeline_pages(nil => [ "tx-1", "2026-08-02", 7 ], 7 => [ "tx-0", "2026-08-01", 8 ])
+
+    timeline = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 1)
+
+    assert_equal({ "newest_event_id" => "tx-1", "backfill_cursor" => 8 }, timeline.cursors["timelineTransactions"])
+
+    stub_timeline_pages(nil => [ "tx-1", "2026-08-02", { "offset" => 1 } ])
+
+    timeline = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 1)
+
+    assert_includes timeline.warnings, "timeline pagination cursor for timelineTransactions cannot be stored; older history is not imported"
+    assert_equal({ "newest_event_id" => "tx-1" }, timeline.cursors["timelineTransactions"])
+  end
+
+  test "sync resumes the stored history backfill" do
+    stub_sync_session
+    stub_timeline_pages(
+      nil => [ "tx-known", "2026-08-03", nil ],
+      "page-9" => [ "tx-old", "2026-08-01", nil ]
+    )
+
+    result = @client.sync(
+      session_txt: "session",
+      timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "tx-known", "backfill_cursor" => "page-9" } }
+    )
+
+    assert_equal %w[tx-known tx-old], result["events"].map { |event| event["id"] }
+    assert_equal({ "timelineTransactions" => { "newest_event_id" => "tx-known" } }, result["timeline_cursors"])
+  end
+
+  test "sync returns the timeline cursors for the importer" do
+    stub_sync_session
+    stub_timeline_pages(
+      nil => [ "tx-1", "2026-08-02", "page-2" ],
+      "page-2" => [ "tx-0", "2026-08-01", nil ]
+    )
+
+    result = @client.sync(session_txt: "session", timeline_max_pages: 1)
+
+    assert_equal "success", result["domain_statuses"]["timeline"]
+    assert_equal %w[tx-1 tx-0], result["events"].map { |event| event["id"] }
+    assert_equal({ "timelineTransactions" => { "newest_event_id" => "tx-1" } }, result["timeline_cursors"])
   end
 
   test "recognizes QR login pending state" do
@@ -1009,8 +1507,9 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
   end
 
   test "backfilled stored events do not move the list cursor" do
+    empty_pass = timeline_pass([], nil)
     @client.define_singleton_method(:collect_timeline_topic) do |_websocket, **_|
-      [ [], nil, [], true ]
+      empty_pass
     end
     @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
       {
@@ -1024,7 +1523,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       }
     end
 
-    events, newest_id, _warnings, complete, backfill_count = @client.send(
+    timeline = @client.send(
       :collect_all_timeline,
       Object.new,
       known_newest_event_id: "newest-1",
@@ -1038,10 +1537,10 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       } ]
     )
 
-    assert_equal [ "old-1" ], events.map { |event| event["id"] }
-    assert_equal 1, backfill_count
-    assert complete
-    assert_nil newest_id
+    assert_equal [ "old-1" ], timeline.events.map { |event| event["id"] }
+    assert_equal 1, timeline.detail_backfill_count
+    assert timeline.pagination_complete
+    assert_nil timeline.newest_event_id
   end
 
   test "card and cash events do not consume timeline detail requests" do
@@ -1128,6 +1627,52 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     @client.send(:enrich_timeline_details, Object.new, [ stored ], enrich_events: [ stored.merge("detail" => nil) ])
 
     assert_empty requested
+  end
+
+  test "stored dividends without details are fetched from the backlog" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      {
+        "sections" => [
+          { "title" => "You received €4.30", "type" => "header", "data" => {
+            "icon" => { "asset" => "logos/US0378331005/v2", "badge" => nil }
+          } },
+          { "title" => "Transaction", "data" => [ { "title" => "Shares", "detail" => { "text" => "10.000000" } } ] }
+        ]
+      }
+    end
+    stored = {
+      "id" => "dividend-1",
+      "timestamp" => "2024-12-27T10:00:00Z",
+      "eventType" => "SSP_CORPORATE_ACTION_CASH",
+      "category" => "DIVIDEND",
+      "status" => "EXECUTED",
+      "detail" => { "amount" => 4.3, "currency" => "EUR" }
+    }
+
+    enriched, = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ stored ])
+
+    assert_equal [ "dividend-1" ], requested
+    assert_equal "US0378331005", enriched.find { |event| event["id"] == "dividend-1" }.dig("detail", "isin")
+  end
+
+  test "detail backfill marks a stored dividend that stays without details" do
+    freeze_time
+    stored = {
+      "id" => "dividend-1",
+      "timestamp" => "2024-12-27T10:00:00Z",
+      "eventType" => "SSP_CORPORATE_ACTION_CASH",
+      "category" => "DIVIDEND",
+      "status" => "EXECUTED",
+      "detail" => { "amount" => 4.3, "currency" => "EUR" }
+    }
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| { "sections" => [] } }
+
+    enriched, = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ stored ])
+
+    dividend = enriched.find { |event| event["id"] == "dividend-1" }
+    assert_equal Time.current.iso8601, dividend.dig("detail", Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY)
   end
 
   test "trade savings saveback and round-up events request timeline details" do
@@ -1256,21 +1801,17 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
   test "does not collapse distinct timeline events that have no id" do
     responses = {
-      "timelineTransactions" => [
-        [
-          { "timestamp" => "2026-08-02T10:00:00Z", "eventType" => "CARD_TRANSACTION" },
-          { "timestamp" => "2026-08-02T11:00:00Z", "eventType" => "CARD_TRANSACTION" }
-        ],
-        nil,
-        []
-      ],
-      "timelineActivityLog" => [ [], nil, [] ]
+      "timelineTransactions" => timeline_pass([
+        { "timestamp" => "2026-08-02T10:00:00Z", "eventType" => "CARD_TRANSACTION" },
+        { "timestamp" => "2026-08-02T11:00:00Z", "eventType" => "CARD_TRANSACTION" }
+      ], nil),
+      "timelineActivityLog" => timeline_pass([], nil)
     }
     @client.define_singleton_method(:collect_timeline_topic) do |_websocket, topic:, **_|
       responses.fetch(topic)
     end
 
-    events, = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 1)
+    events = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 1).events
 
     assert_equal 2, events.size
   end
@@ -1284,7 +1825,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       end
     end
 
-    events, = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: "old", max_pages: 2)
+    events = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: "old", max_pages: 2).events
 
     assert_equal %w[new old], events.map { |event| event["id"] }
   end
@@ -2149,5 +2690,45 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
           ] }
         ]
       }
+    end
+
+    def timeline_pass(events, newest_event_id, outcome: :finished)
+      Provider::TradeRepublicClient::TimelinePass.new(events: events, newest_event_id: newest_event_id, warnings: [], outcome: outcome, cursor: nil)
+    end
+
+    # Serves timelineTransactions pages keyed by their `after` cursor as
+    # [event id, timestamp, next cursor]; a nil id is an empty page and the
+    # activity log is empty.
+    def stub_timeline_pages(pages)
+      @client.define_singleton_method(:subscribe) do |_websocket, payload|
+        next { "items" => [], "cursors" => {} } unless payload[:type] == "timelineTransactions"
+
+        id, timestamp, after = pages.fetch(payload[:after])
+        items = id ? [ { "id" => id, "timestamp" => timestamp } ] : []
+        { "items" => items, "cursors" => { "after" => after }.compact }
+      end
+    end
+
+    # Drives the real sync_once against a stubbed account response and an
+    # already connected websocket; subscriptions come from the test's stub.
+    def stub_sync_session
+      account_response = Net::HTTPOK.new("1.1", "200", "OK")
+      account_response.stubs(:body).returns({ securitiesAccountNumber: "SEC-1", currency: "EUR" }.to_json)
+      session = stub(get: account_response, websocket_headers: {}, cookies_blob: "session")
+      @client.stubs(:new_session).returns(session)
+      websocket = stub(send_text: nil, receive: "connected", close: nil)
+      Provider::TradeRepublicWebsocket.stubs(:new).returns(stub(connect: websocket))
+    end
+
+    def stub_failing_backfill_page
+      @client.define_singleton_method(:subscribe) do |_websocket, payload|
+        raise Provider::TradeRepublicClient::ProviderUnavailable, "subscription failed" if payload[:after] == "page-9"
+
+        if payload[:type] == "timelineTransactions"
+          { "items" => [ { "id" => "tx-known", "timestamp" => "2026-08-02" } ], "cursors" => { "after" => "page-2" } }
+        else
+          { "items" => [], "cursors" => {} }
+        end
+      end
     end
 end
