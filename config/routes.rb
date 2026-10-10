@@ -1015,6 +1015,7 @@ Rails.application.routes.draw do
     # so name it explicitly.
     resource :system_health, only: :show, controller: "system_health" do
       get :ai_status
+      get :hosted_usage
       post :verify_worker_ai
       post :send_test_push
     end
