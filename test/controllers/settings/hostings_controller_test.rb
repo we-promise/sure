@@ -1234,6 +1234,59 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.tinkoff_invest_api_key = nil
   end
 
+  [ "high", " HIGH " ].each do |env_value|
+    test "shows effective environment backed reasoning effort for #{env_value.inspect}" do
+      with_self_hosting do
+        Setting.openai_reasoning_effort = "low"
+
+        with_env_overrides("OPENAI_REASONING_EFFORT" => env_value) do
+          get settings_hosting_url
+
+          assert_response :success
+          assert_select "select[name='setting[openai_reasoning_effort]'][disabled]" do
+            assert_select "option[selected][value='high']", count: 1
+          end
+        end
+      end
+    ensure
+      Setting.openai_reasoning_effort = nil
+    end
+  end
+
+  test "shows saved reasoning effort when there is no environment override" do
+    with_self_hosting do
+      with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+        Setting.openai_reasoning_effort = "low"
+
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select[name='setting[openai_reasoning_effort]']:not([disabled])" do
+          assert_select "option[selected][value='low']", count: 1
+        end
+      end
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
+  test "shows provider default when reasoning effort is unset" do
+    with_self_hosting do
+      with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+        Setting.openai_reasoning_effort = nil
+
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select[name='setting[openai_reasoning_effort]']:not([disabled])" do
+          assert_select "option[selected][value='']", count: 1
+        end
+      end
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
   test "can update openai reasoning effort with a valid value" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "low" } }

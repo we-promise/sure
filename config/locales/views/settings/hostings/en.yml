@@ -201,7 +201,7 @@ en:
         reasoning_effort_low: Low
         reasoning_effort_medium: Medium
         reasoning_effort_high: High
-        reasoning_effort_help: "Sent as reasoning_effort on every OpenAI-compatible request. Lowers latency and output-budget use for reasoning models (e.g. Qwen3, gpt-oss, GPT-5). Leave on the default unless your model supports it — the official OpenAI API rejects it for non-reasoning models."
+        reasoning_effort_help: "Controls reasoning effort for supported models. Lower effort can reduce latency and token use. Leave on the provider default unless your model supports this setting. OPENAI_REASONING_EFFORT overrides this field."
         budget_heading: Token Budget
         budget_description: Applies to OpenAI-compatible calls (chat, auto-categorization, merchant detection, and PDF processing). Defaults are conservative for small-context local models. Raise for cloud models with larger context windows.
         context_window_label: Context Window (Optional)

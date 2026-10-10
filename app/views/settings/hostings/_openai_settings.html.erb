@@ -73,7 +73,7 @@
   <%= form.select :openai_reasoning_effort,
                   options_for_select(
                     [[t(".reasoning_effort_default"), ""]] + Provider::Openai::REASONING_EFFORTS.map { |e| [t(".reasoning_effort_#{e}"), e] },
-                    Setting.openai_reasoning_effort
+                    Provider::Openai.reasoning_effort || ""
                   ),
                   { label: t(".reasoning_effort_label") },
                   { disabled: ENV["OPENAI_REASONING_EFFORT"].present?,
