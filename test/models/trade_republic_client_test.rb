@@ -1432,6 +1432,52 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "0.5", detail["taxes"]
   end
 
+  test "normalize_event_detail reads the exact share price from the Transaction row" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Overview", "data" => [
+          {
+            "title" => "Transaction",
+            "detail" => { "text" => "1.25 ×  €8.123", "displayValue" => { "text" => "€8.123", "prefix" => "1.25 × " } }
+          },
+          { "title" => "Total", "detail" => { "text" => "€10.15" } }
+        ] }
+      ]
+    }, item: { "title" => "Core MSCI World", "subtitle" => "Savings plan executed" })
+
+    # The total is rounded to the cent: 10.15 / 1.25 would give 8.12.
+    assert_equal "1.25", detail["quantity"]
+    assert_equal "8.123", detail["price"]
+    assert_equal "10.15", detail["amount"]
+  end
+
+  test "normalize_event_detail reads a Saveback price from the Transaction text" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Overview", "data" => [
+          { "title" => "Transaction", "detail" => { "text" => "0.05 x  €130.32" } },
+          { "title" => "Total", "detail" => { "text" => "+ €6.52" } }
+        ] }
+      ]
+    }, item: { "title" => "Core MSCI World", "subtitle" => "Saveback" })
+
+    assert_equal "0.05", detail["quantity"]
+    assert_equal "130.32", detail["price"]
+  end
+
+  test "normalize_event_detail does not read a percent quote as a share price" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Overview", "data" => [
+          { "title" => "Transaction", "detail" => { "text" => "1,000 × 92.67 %" } },
+          { "title" => "Total", "detail" => { "text" => "€926.70" } }
+        ] }
+      ]
+    }, item: { "title" => "Italy 3.1% Mar 2040", "subtitle" => "Buy" })
+
+    assert_not_equal "92.67", detail["price"]
+  end
+
   test "trade_detail_needs_price_backfill detects complete trades without price" do
     assert Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(
       "category" => "orderExecution",

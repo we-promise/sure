@@ -94,6 +94,9 @@ class Provider::TradeRepublicClient
     "aktien entfernt", "shares removed", "aktien gesendet", "shares sent"
   ].freeze
   TOTAL_TITLES = [ "gesamt", "total", "totaal", "gesamtbetrag" ].freeze
+  # The Overview row "0.626409 × €7.982" carries the exact share price that
+  # the rounded total is computed from.
+  TRANSACTION_TITLES = [ "transaction", "transaktion", "transactie" ].freeze
   PRICE_TITLES = [
     "share price", "aandelenkoers", "aktienkurs", "anteilskurs",
     "execution price", "kurs"
@@ -1577,6 +1580,7 @@ class Provider::TradeRepublicClient
       tax_amount = decimal_from_row(taxes)
       price = decimal_from_row(price_row)
       dividend_per_share = decimal_from_row(find_row(rows, DIVIDEND_PER_SHARE_TITLES))
+      price ||= transaction_unit_price(find_row(rows, TRANSACTION_TITLES))
       if price.nil? && quantity&.nonzero? && amount
         # Provider cash totals embed costs: buy total = gross + fees/taxes,
         # sell total = gross - fees/taxes. Recover share price accordingly.
@@ -1612,8 +1616,24 @@ class Provider::TradeRepublicClient
 
     def find_row(rows, titles) = rows.find { |row| titles.include?(row["title"].to_s.downcase.strip) }
 
+    # "0.626409 × €7.982"; Saveback writes "x". The displayValue holds the
+    # price alone. A bond's row quotes percent of par, not a unit price.
+    def transaction_unit_price(row)
+      return nil unless row
+
+      text = row.dig("detail", "displayValue", "text").presence ||
+        row.dig("detail", "text").to_s.split(/\s[×x]\s+/i, 2).second
+      return nil if text.blank? || text.include?("%")
+
+      price = decimal_from_text(text)
+      price if price&.positive?
+    end
+
     def decimal_from_row(row)
-      text = row&.dig("detail", "text") || row&.dig("detail", "value", "text")
+      decimal_from_text(row&.dig("detail", "text") || row&.dig("detail", "value", "text"))
+    end
+
+    def decimal_from_text(text)
       return nil if text.blank?
 
       normalized = text.to_s.gsub(/[^\d,.-]/, "")
