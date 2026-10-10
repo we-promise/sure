@@ -274,3 +274,11 @@ Umgesetzt am 10. Oktober 2026:
 - Native Filter liegen auf dem Gerät, getrennt nach Server-URL und Nutzer-ID. Nur IDs und Zeitraumwahl, keine finanziellen Ergebnisse. Wiederherstellung erfolgt vor der ersten Abfrage; Speichern nach erfolgreicher Antwort. Veraltete IDs bleiben über Reset korrigierbar. Keine Synchronisation der nativen Filter mit den Webpräferenzen in dieser Iteration.
 - Prüfung: Rails komplett 11.067 Tests / 47.015 Assertions ohne Fehler (34 bestehende Skips); vier gezielte Browser-Systemtests / 24 Assertions erfolgreich. Flutter komplett 199 Tests erfolgreich. Ruby-/ERB-/JavaScript-Lint für Änderungen grün. Flutter analyze meldet weiterhin ausschließlich die drei bekannten Hinweise in intro_screen_web.dart.
 - Schnellzeiträume und graue Hervorhebung des ausgewählten Monats bleiben bestehen. Zusätzliche sichtbare Filterhinweise sind auf Nutzerwunsch vertagt. Native Builds und die übrigen Release-Gates bleiben offen.
+
+
+## 15. PR-Form und Screenshots
+
+Entwurf und vier echte Aufnahmen liegen unter [PR-Entwurf](monthly-spending-pr.md).
+Er folgt CONTRIBUTING und den üblichen UI-PRs des Projekts. Branch auf Main
+`aa22875d1` aktualisiert; neue Pflichtchecks im Prüfbericht dokumentiert.
+Native GitHub-CI, Review, Merge und weiterer Rollout bleiben eigene Schritte.

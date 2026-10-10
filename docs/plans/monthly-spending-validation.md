@@ -137,3 +137,21 @@ Flutter erneut vollständig: 199 Tests bestanden. `flutter analyze --no-fatal-in
 | Git / Main | Whitespace-Prüfung bestanden; Basis weiterhin aktuelles `origin/main` 94e71a8c2. |
 
 Lokale Pflichtchecks für die PR-Vorbereitung abgeschlossen. Kein Push und keine PR erstellt. Der lokale PR-Entwurf liegt als `monthly-spending-pr.md` im gemeinsamen Windows-Workspace. Native CI-Builds bleiben vor Merge erforderlich; die weiteren Geräte-, Zugänglichkeits- und Performance-Gates gelten vor breitem Rollout. Die isolierte Preview bleibt auf Funktionscommit `7abaddb36`: die anschließende Testkorrektur und Dokumentation ändern keine Laufzeitfunktion und erfordern keinen erneuten Image-Build.
+
+
+## PR-Form, Screenshots und aktualisierte Main-Basis
+
+`CONTRIBUTING.md`, `AGENTS.md` sowie Design-System-, UI-, Preview- und API-Guides überprüft. Kein festes PR-Template im Projekt. Aktuelle UI-PRs verwenden Summary, Screenshots und tatsächliche Testergebnisse; der Entwurf folgt dieser Form. Verwandte offene PRs #4002 (Reports-Vergleich) und #3609 (Reporting-Semantik) verlinkt, keine unvollständig erfüllten Issues als geschlossen ausgewiesen.
+
+Branch konfliktfrei auf `origin/main` `aa22875d1` aktualisiert (neue Transfer-Berechtigungen und AI-Consent). Frühere Prüfstände auf `94e71a8c2` bleiben historische Ergebnisse. Neue vollständige Rails-Suite: 11.093 Tests / 47.108 Assertions, 0 Failures/Errors, 34 bestehende Skips. Neue vollständige Browser-Suite: 240 Tests / 1,194 Assertions, 0 Failures/Errors/Skips. RuboCop, ERB (758 Dateien), Biome-Lint und Brakeman erneut erfolgreich. OpenAPI erneut generiert und unverändert.
+
+Vier echte, visuell geprüfte PNGs mit synthetischen Daten unter `docs/screenshots/monthly-spending/`: Desktop/light, mobiles Web/light, Tablet/dark und aktuelles Flutter-Widget/dark. Web-Systemtest-Aufnahmen nach dem aktualisierten Gesamtlauf erneut übernommen. Flutter-Aufnahme frisch aus aktuellem Widget mit geladenen App-Schriften; ausdrücklich keine Geräteaufnahme. Temporärer Capture-Test entfernt und nicht committed. Kein privater Finanzdatensatz, keine Zugangsdaten in Bildern. Entwurf `docs/plans/monthly-spending-pr.md` enthält die Bilder bereits; lokale Kopie verwendet Windows-Bildpfade. Beim Veröffentlichen werden die GitHub-Bildlinks auf den tatsächlichen gepushten Repository-/Commit-Pfad aufgelöst.
+
+Lokale Anforderungen an Form, DS-Verwendung, persönlichen Preview-Gate, Auth/Berechtigungen, API-Dokumentation, Migration/Abhängigkeiten und Pflichtchecks erfüllt. Vor Review bleiben grüne GitHub Checks erforderlich, einschließlich nativer CI-Builds. Fork/Push und `Allow edits from maintainers` gehören zum späteren Veröffentlichungsablauf. Vor breitem Rollout gelten die dokumentierten Geräte-, Screenreader- und Last-Gates weiterhin. Kein Push und keine GitHub-PR in dieser Prüfung erstellt.
+
+
+### Bei der Anforderungsprüfung korrigierter nativer Kalender-Randfall
+
+Gespeicherte Jahres-Presets konnten beim Refresh am alten `as_of` hängen bleiben; ein vorauslaufender Gerätekalender konnte einen gültigen rollierenden Bereich zunächst als zukünftig erscheinen lassen. Der Mobile-Service gleicht die Auswahl nun mit dem frischen Server-Stichtag ab und korrigiert sie begrenzt. Konto-/Kategorien-IDs und explizit leere Auswahl bleiben in jeder Anfrage erhalten. Ein 422 wegen ungültiger IDs bleibt ein Fehler; eigene Zeiträume werden nicht korrigiert. Server-URL und Authentifizierungsheader werden für die gesamte Operation festgehalten, sodass ein Serverwechsel keine Zugangsdaten an das andere Ziel umleitet.
+
+Fünf neue Regressionen: normaler Jahresbereich ohne Zusatzanfrage, Jahreswechsel nach altem Stichtag, vorauslaufender Gerätekalender mit erhaltener leerer Auswahl, veraltete IDs ohne Filterausweitung sowie Server-/Credential-Wechsel während einer Korrektur. Flutter vollständig erneut: 204 Tests bestanden. Analyze mit CI-Option erfolgreich, weiterhin nur drei bestehende Infos; Web-Release erneut erfolgreich. Keine Änderung am Rails-Funktionscode in dieser Korrektur; Rails- und Browser-Gesamtläufe auf `aa22875d1` bleiben gültig. Native CI-/Geräteabnahme weiter offen.
