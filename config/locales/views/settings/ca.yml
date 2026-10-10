@@ -331,6 +331,7 @@ ca:
         application_id_placeholder_update: Introdueix el nou ID per actualitzar
         callback_url_instruction: Per a l'URL de retorn de trucada, fes servir %{callback_url}.
         client_certificate_label: Certificat de client (amb clau privada)
+        keep_client_certificate_hint: "Deixa-ho en blanc per mantenir el certificat actual"
         config_locked_message: Desconnecta tots els bancs vinculats abans de canviar
           aquestes credencials.
         config_locked_title: Configuració bloquejada
