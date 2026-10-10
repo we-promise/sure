@@ -238,8 +238,7 @@ class TradeRepublicItem::Importer
 
     # Incomplete trade-detail events, complete trades still missing a share
     # price (stored before execution price/fees were parsed) and dividends
-    # without their detail. Oldest first so repeated syncs progressively drain
-    # historical starvation.
+    # without their detail, in the client's backlog order.
     def events_needing_detail_enrichment
       portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
       return [] unless portfolio
@@ -250,7 +249,7 @@ class TradeRepublicItem::Importer
             Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(event) ||
             Provider::TradeRepublicClient.dividend_detail_missing?(event)
         end
-        .sort_by { |event| event_timestamp(event) }
+        .sort_by { |event| Provider::TradeRepublicClient.detail_backfill_sort_key(event) }
         .first(Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS)
     end
 
@@ -262,24 +261,8 @@ class TradeRepublicItem::Importer
       return [] unless portfolio
 
       Array(portfolio.raw_timeline_payload).filter_map do |event|
-        next unless event.is_a?(Hash)
-        next unless Provider::TradeRepublicClient.requires_trade_detail?(event)
-        next unless Provider::TradeRepublicTimelineEvent.importable?(event)
-
-        detail = (event["detail"] || event[:detail])
-        next unless detail.is_a?(Hash)
-
-        detail = detail.stringify_keys
-        isin = detail["isin"].to_s.presence
-        next if isin.blank?
-
-        symbol = detail["symbol"].to_s.strip.presence
-        exchange_slug = detail["exchange_slug"].to_s.strip.presence
-        usable = symbol.present? && !symbol.casecmp?(isin) && exchange_slug.present?
-        next if usable
-        next unless Provider::TradeRepublicClient.symbol_lookup_due?(event)
-
-        isin
+        isin = Provider::TradeRepublicClient.symbol_lookup_isin(event)
+        isin if isin && Provider::TradeRepublicClient.symbol_lookup_due?(event)
       end.uniq.first(Provider::TradeRepublicClient::MAX_INSTRUMENT_LOOKUPS)
     end
 
@@ -290,12 +273,6 @@ class TradeRepublicItem::Importer
       return {} unless portfolio
 
       Provider::TradeRepublicClient.instrument_symbols_from_positions(portfolio.raw_positions_payload)
-    end
-
-    def event_timestamp(event)
-      return "" unless event.is_a?(Hash)
-
-      (event["timestamp"] || event[:timestamp]).to_s
     end
 
     # Advance the list cursor whenever timeline pagination finished, even when

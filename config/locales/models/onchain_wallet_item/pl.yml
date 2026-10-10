@@ -5,6 +5,7 @@ pl:
       arbitrum: Arbitrum
       base: Base
       bitcoin: Bitcoin
+      cosmos: Cosmos Hub
       ethereum: Ethereum
       gnosis: Gnosis
       optimism: Optimism
