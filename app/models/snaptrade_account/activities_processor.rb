@@ -173,6 +173,11 @@ class SnaptradeAccount::ActivitiesProcessor
     end
 
     def process_trade(data, activity_type, external_id)
+      # Check `option_symbol` first: if present, this is an option contract trade.
+      # Prioritizing `option_symbol` prevents brokerages like Robinhood (which populate
+      # plain `symbol` with the underlying equity) from importing options as common stock.
+      ticker, option_data = option_ticker_and_data(data)
+
       # Extract and normalize symbol data
       # SnapTrade activities have DIFFERENT structure than holdings:
       #   activity.symbol.symbol = "MSTR" (ticker string directly)
@@ -187,16 +192,25 @@ class SnaptradeAccount::ActivitiesProcessor
       # Determine ticker based on data type
       if raw_symbol_data.is_a?(String)
         # Activities: symbol.symbol is the ticker string directly
-        ticker = raw_symbol_data
-        symbol_data = symbol_wrapper # Use the wrapper for description, etc.
+        fallback_ticker = raw_symbol_data
+        underlying_symbol_data = symbol_wrapper # Use the wrapper for description, etc.
       elsif raw_symbol_data.is_a?(Hash)
         # Holdings structure: symbol.symbol is an object with symbol inside
-        symbol_data = raw_symbol_data.with_indifferent_access
-        ticker = symbol_data["symbol"] || symbol_data[:symbol]
-        ticker = symbol_data["raw_symbol"] if ticker.is_a?(Hash)
+        underlying_symbol_data = raw_symbol_data.with_indifferent_access
+        fallback_ticker = underlying_symbol_data["symbol"] || underlying_symbol_data[:symbol]
+        fallback_ticker = underlying_symbol_data["raw_symbol"] if fallback_ticker.is_a?(Hash)
       else
-        ticker = nil
-        symbol_data = {}
+        fallback_ticker = nil
+        underlying_symbol_data = {}
+      end
+
+      if ticker.present?
+        # When option_symbol is present, use option_data but merge in underlying symbol
+        # metadata as fallback (e.g. exchange, currency, ticker) when option_symbol lacks them.
+        symbol_data = underlying_symbol_data.merge(option_data).with_indifferent_access
+      else
+        ticker = fallback_ticker
+        symbol_data = underlying_symbol_data
       end
 
       # Must have a symbol for trades
@@ -333,6 +347,8 @@ class SnaptradeAccount::ActivitiesProcessor
       raw_symbol_data = data[:symbol] || data["symbol"] || {}
       symbol_data = raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
       symbol = symbol_data[:symbol] || symbol_data["symbol"] || symbol_data[:ticker]
+      option_ticker, = option_ticker_and_data(data)
+      symbol = option_ticker if option_ticker.present?
       description = data[:description] || data["description"] || build_description(activity_type, symbol)
 
       # Normalize amount sign for certain activity types
@@ -427,5 +443,16 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       label || "Other"
+    end
+
+    def option_ticker_and_data(data)
+      raw_option_symbol = data["option_symbol"] || data[:option_symbol]
+      return [ nil, nil ] unless raw_option_symbol.is_a?(Hash)
+
+      option_symbol_data = raw_option_symbol.with_indifferent_access
+      ticker = option_symbol_data[:ticker]
+      return [ nil, nil ] if ticker.blank?
+
+      [ ticker, option_symbol_data ]
     end
 end
