@@ -902,8 +902,10 @@ class TradeRepublicAccount::ActivitiesProcessor
     # Remove previously imported entries whose upstream events are now deleted,
     # hidden or in a terminal non-importable status, unless the user protected
     # them. Events blocked only by the free-text subtitle heuristic are skipped
-    # on import but never delete existing entries. Earlier syncs also booked
-    # stamp duty cancellations as refunds; they book nothing now.
+    # on import but never delete existing entries. Stamp duty items are the
+    # exception: they carry no merchant text, so their subtitle only states
+    # the item's state. A cancelled or voided stamp duty charge removes what
+    # earlier syncs booked for it, the charge or a refund.
     def reconcile_non_importable_entries!
       explicit_ids = []
       heuristic_ids = []
@@ -916,7 +918,8 @@ class TradeRepublicAccount::ActivitiesProcessor
         event_id = event["id"].presence || event[:id].presence
         next if event_id.blank?
 
-        explicit = cancellation || explicit_lifecycle_block?(event)
+        stamp_duty = (event["eventType"] || event[:eventType]).to_s == Provider::TradeRepublicTimelineEvent::STAMP_DUTY_EVENT_TYPE
+        explicit = stamp_duty || explicit_lifecycle_block?(event)
         (explicit ? explicit_ids : heuristic_ids) << "trade_republic_event_#{event_id}"
       end
       return if explicit_ids.empty? && heuristic_ids.empty?

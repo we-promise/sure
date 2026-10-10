@@ -436,6 +436,29 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_voided")
   end
 
+  test "removes a stamp duty charge whose item Trade Republic later voids" do
+    import_event(stamp_duty_event(id: "evt_stamp_duty", timestamp: "2026-01-12T10:58:47Z", amount: -15.40))
+    assert_equal BigDecimal("15.40"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty").amount
+
+    voided = stamp_duty_event(id: "evt_stamp_duty", timestamp: "2026-01-12T10:58:47Z", amount: -15.40, status: nil)
+    import_event(voided.merge(subtitle: "Cancelled"))
+
+    assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty")
+  end
+
+  test "keeps a card payment flagged only by its subtitle" do
+    import_event({
+      id: "evt_card", timestamp: "2026-01-12T10:58:47Z", eventType: "CARD_TRANSACTION",
+      title: "Cancelled Cafe", status: "EXECUTED", detail: { amount: -4.50, signed_amount: -4.50, currency: "EUR" }
+    })
+    import_event({
+      id: "evt_card", timestamp: "2026-01-12T10:58:47Z", eventType: "CARD_TRANSACTION",
+      title: "Cancelled Cafe", subtitle: "Cancelled", detail: { amount: -4.50, signed_amount: -4.50, currency: "EUR" }
+    })
+
+    assert Entry.exists?(external_id: "trade_republic_event_evt_card")
+  end
+
   test "category direction wins over the provider signed amount" do
     import_event({
       id: "evt_incoming_signed",
