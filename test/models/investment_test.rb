@@ -25,7 +25,7 @@ class InvestmentTest < ActiveSupport::TestCase
   end
 
   test "tax_treatment returns taxable for standard accounts" do
-    %w[brokerage mutual_fund angel trust ugma utma other].each do |subtype|
+    %w[brokerage cash_management mutual_fund angel trust ugma utma other].each do |subtype|
       investment = Investment.new(subtype: subtype)
       assert_equal :taxable, investment.tax_treatment, "Expected #{subtype} to be taxable"
     end

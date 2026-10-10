@@ -2,6 +2,47 @@
 fr:
   admin:
     system_health:
+      push_notifications:
+        send_test: "Envoyer une notification de test"
+        queueing: "Mise en file…"
+        title: "Notifications push"
+        requested_at: "Dernier test demandé le %{time}"
+        result_help: "L’acceptation par APNs ne confirme pas la réception sur votre appareil. Actualisez pour voir les résultats du worker. Les résultats sont conservés pendant 24 heures."
+        device: "Appareil %{number}"
+        pending: "En attente"
+        refresh: "Actualiser les résultats"
+        columns:
+          device: "Appareil"
+          environment: "Environnement APNs"
+          status: "Résultat"
+          checked_at: "Dernière mise à jour"
+        environments:
+          sandbox: "Sandbox"
+          production: "Production"
+        messages:
+          enqueue_failed: "Le test n’a pas pu être mis en file. Vérifiez Sidekiq et actualisez les résultats ci-dessous."
+          ready: "Envoyez une notification de test aux appareils iOS activés et enregistrés pour votre compte."
+          queued: "Notification de test mise en file. Actualisez les résultats ci-dessous pour consulter son état."
+          hosted_only: "Les notifications push sont disponibles uniquement en mode hébergé."
+          ineligible: "Seul un super-administrateur actif peut envoyer une notification de test."
+          no_devices: "Activez les notifications push dans l’application iOS Sure pour ce compte afin d’envoyer un test."
+          disabled: "L’opérateur a désactivé l’envoi des notifications push."
+          not_configured: "Les identifiants APNs ne sont pas configurés."
+          cooldown: "Veuillez patienter 30 secondes avant d’envoyer un autre test."
+          storage_unavailable: "La demande de test n’a pas pu être enregistrée. Vérifiez la configuration du cache partagé."
+        statuses:
+          queued: "En file"
+          accepted: "Accepté par APNs"
+          skipped: "Ignoré : plus éligible"
+          rejected: "Rejeté par APNs ; consultez les journaux push"
+          unregistered: "L’enregistrement de l’appareil n’est plus valide"
+          retrying: "Nouvelle tentative après une erreur temporaire"
+          failed: "Échec ; consultez les journaux push"
+          enqueue_failed: "Mise en file impossible ; vérifiez Sidekiq"
+          expired: "Expiré sans résultat final"
+      push_notification:
+        title: "Notification de test Sure"
+        body: "Ceci est une notification push de test pour votre compte Sure."
       show:
         ai:
           adapters:

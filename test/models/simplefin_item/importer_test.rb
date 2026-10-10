@@ -35,6 +35,40 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 1911.72, credit_card.cash_balance
   end
 
+  test "balances-only import honors a credit balance sign override" do
+    credit_card = accounts(:credit_card)
+    simplefin_account = create_simplefin_account("sf_credit_override_1", "Store Card", "credit", -48.48)
+    simplefin_account.update!(balance_sign_override: "credit")
+    credit_card.update!(simplefin_account_id: simplefin_account.id)
+
+    @importer.send(:import_account_minimal_and_balance, {
+      id: simplefin_account.account_id,
+      name: "Store Card",
+      balance: -48.48,
+      currency: "USD"
+    })
+
+    assert_equal(-48.48, credit_card.reload.balance)
+    assert_equal(-48.48, credit_card.cash_balance)
+  end
+
+  test "balances-only import honors a debt balance sign override" do
+    credit_card = accounts(:credit_card)
+    simplefin_account = create_simplefin_account("sf_debt_override_1", "Store Card", "credit", 48.48)
+    simplefin_account.update!(balance_sign_override: "debt")
+    credit_card.update!(simplefin_account_id: simplefin_account.id)
+
+    @importer.send(:import_account_minimal_and_balance, {
+      id: simplefin_account.account_id,
+      name: "Store Card",
+      balance: 48.48,
+      currency: "USD"
+    })
+
+    assert_equal 48.48, credit_card.reload.balance
+    assert_equal 48.48, credit_card.cash_balance
+  end
+
   test "balances-only import keeps a positive loan principal positive" do
     loan = accounts(:loan)
     simplefin_account = create_simplefin_account("sf_loan_1", "Mortgage Loan", "loan", 250_000)

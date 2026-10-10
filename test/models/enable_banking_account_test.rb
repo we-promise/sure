@@ -165,6 +165,12 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_equal "NL91ABNA0417164300", linked_account.reload.iban # pipelock:ignore IBAN
   end
 
+  test "normalizes iban by stripping dots, dashes, and other punctuation on sync" do
+    @account.update!(iban: "nl91.abna-0417/1643:00'")
+
+    assert_equal "NL91ABNA0417164300", @account.reload.iban # pipelock:ignore IBAN
+  end
+
   test "does not overwrite an already-present account iban on sync" do
     linked_account = accounts(:depository)
     linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
@@ -200,7 +206,7 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
   end
 
   test "does not raise or fail the sync when another family account already has this iban" do
-    other_account = @family.accounts.create!(name: "Other account", balance: 0, currency: "EUR", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
+    other_account = @family.accounts.create!(name: "Other account", balance: 0, currency: "USD", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
     linked_account = accounts(:depository)
     AccountProvider.create!(provider: @account, account: linked_account)
 
@@ -217,6 +223,48 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_nil linked_account.reload.iban
     assert_equal "NL91ABNA0417164300", other_account.reload.iban # pipelock:ignore IBAN
     assert_equal "NL91ABNA0417164300", @account.reload.iban # pipelock:ignore IBAN
+
+    debug_entry = DebugLogEntry.last
+    assert_equal "provider_sync_warning", debug_entry.category
+    assert_equal linked_account.id, debug_entry.account_id
+  end
+
+  test "propagates an iban another family account in a different currency already has" do
+    # One IBAN backs several currency sub-accounts at Revolut or Wise.
+    other_account = @family.accounts.create!(name: "EUR sub-account", balance: 0, currency: "EUR", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+
+    assert_no_difference "DebugLogEntry.count" do
+      @account.upsert_enable_banking_snapshot!({
+        uid: "uid_uuid_123",
+        identification_hash: "hash_abc123",
+        currency: "USD",
+        cash_account_type: "CACC",
+        iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+      })
+    end
+
+    assert_equal "NL91ABNA0417164300", linked_account.reload.iban # pipelock:ignore IBAN
+    assert_equal "NL91ABNA0417164300", other_account.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "logs a known iban conflict only once across repeated syncs" do
+    @family.accounts.create!(name: "Other account", balance: 0, currency: "USD", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+    snapshot = {
+      uid: "uid_uuid_123",
+      identification_hash: "hash_abc123",
+      currency: "USD",
+      cash_account_type: "CACC",
+      iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+    }
+
+    assert_difference "DebugLogEntry.count", 1 do
+      3.times { @account.upsert_enable_banking_snapshot!(snapshot) }
+    end
+    assert_nil linked_account.reload.iban
   end
 
   test "does not raise or fail the sync on a raw unique-index race during propagation" do
@@ -240,6 +288,10 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
         iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
       })
     end
+
+    debug_entry = DebugLogEntry.last
+    assert_equal "provider_sync_warning", debug_entry.category
+    assert_match "Concurrent iban conflict", debug_entry.message
   end
 
   test "does not touch linked account when snapshot has no iban" do

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class QuestradeItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -29,11 +29,6 @@ class QuestradeItem < ApplicationRecord
 
   def syncer
     QuestradeItem::Syncer.new(self)
-  end
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
   end
 
   # Override syncing? to include background activities fetch

@@ -20,6 +20,11 @@ ca:
         title: Balanç patrimonial
         value: Valor
         weight: Pes
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Flux de caixa"
+          surplus: "Superàvit"
+          deficit: "Dèficit"
       cashflow_sankey:
         add_transaction: Afegeix una transacció
         no_data_description: Afegeix transaccions per mostrar dades de flux de caixa

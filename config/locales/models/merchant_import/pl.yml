@@ -4,5 +4,5 @@ pl:
     errors:
       models:
         merchant_import:
-          missing_columns: "Brakujące wymagane kolumny: %{columns}"
-          duplicate_columns: "Zduplikowane nazwy kolumn po normalizacji: %{columns}"
+          duplicate_columns: 'Zduplikowane nazwy kolumn po normalizacji: %{columns}'
+          missing_columns: 'Brakujące wymagane kolumny: %{columns}'
