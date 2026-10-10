@@ -93,22 +93,40 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     transactions(:one).update!(merchant: provider_merchant)
 
     assert_no_difference "FamilyMerchant.count" do
-      patch family_merchant_url(provider_merchant), params: { provider_merchant: { website_url: "https://example.com", iban: "" } }
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { name: "Provider Payee", website_url: "", iban: "" } }
     end
 
     assert_equal "AT611904300234573201", provider_merchant.reload.iban # pipelock:ignore IBAN
     assert_instance_of ProviderMerchant, Merchant.find(provider_merchant.id)
   end
 
-  test "updating only website on a provider merchant updates it directly without converting to a family merchant" do
-    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
+  test "changing only the website of a provider merchant converts it and keeps its iban" do
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking", iban: "AT611904300234573201") # pipelock:ignore IBAN
     transactions(:one).update!(merchant: provider_merchant)
 
-    patch family_merchant_url(provider_merchant), params: { provider_merchant: { website_url: "https://example.com" } }
+    assert_difference "FamilyMerchant.count", 1 do
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { website_url: "https://example.com", iban: "" } }
+    end
+
+    assert_nil provider_merchant.reload.website_url, "the shared ProviderMerchant must be untouched"
+    converted = @user.family.merchants.find_by(name: "Provider Payee")
+    assert_equal "https://example.com", converted.website_url
+    assert_equal "AT611904300234573201", converted.iban # pipelock:ignore IBAN
+  end
+
+  test "a website-only edit does not inherit an iban another family merchant already holds" do
+    FamilyMerchant.create!(name: "Existing Landlord", family: @user.family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking", iban: "AT611904300234573201") # pipelock:ignore IBAN
+    transactions(:one).update!(merchant: provider_merchant)
+
+    assert_difference "FamilyMerchant.count", 1 do
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { website_url: "https://example.com", iban: "" } }
+    end
 
     assert_redirected_to family_merchants_path
-    assert_equal "https://example.com", provider_merchant.reload.website_url
-    assert_instance_of ProviderMerchant, Merchant.find(provider_merchant.id)
+    converted = @user.family.merchants.find_by(name: "Provider Payee")
+    assert_equal "https://example.com", converted.website_url
+    assert_nil converted.iban
   end
 
   test "updating iban on a provider merchant converts it to a family merchant instead of mutating the shared record" do
