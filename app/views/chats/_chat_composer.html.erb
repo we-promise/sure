@@ -1,0 +1,12 @@
+<%# locals: (chat: nil) %>
+<% if Current.user.ai_enabled? %>
+  <%= render "messages/chat_form", chat: chat %>
+<% else %>
+  <%# Mirrors the sidebar's AI consent gate (layouts/application.html.erb) for
+      entry points that render the full chat page instead — the mobile nav's
+      "Assistant" item has no sidebar to gate, so it must not fall through to
+      an ungated compose box. %>
+  <div class="max-w-sm mx-auto w-full">
+    <%= render "chats/ai_consent", redirect_to: "chats" %>
+  </div>
+<% end %>
