@@ -57,6 +57,10 @@ class HoldingTest < ActiveSupport::TestCase
   end
 
   test "calculates average cost basis from another currency" do
+    [ 1.day.ago.to_date, Date.current ].each do |date|
+      ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: date, rate: 1)
+    end
+
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current, currency: "CAD")
 
@@ -77,6 +81,48 @@ class HoldingTest < ActiveSupport::TestCase
     ExchangeRate.stubs(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1))
     assert_equal Money.new(expected_amzn_usd, "CAD").exchange_to("USD"), @amzn.avg_cost
     assert_equal Money.new(expected_nvda_usd, "CAD").exchange_to("USD"), @nvda.avg_cost
+  end
+
+  test "the average cost includes what the purchases cost in fees" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, fee: 10, date: 1.day.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, fee: 5, date: Date.current)
+
+    # (10 * 212 + 10 + 15 * 216 + 5) / 25 = 5,375 / 25
+    assert_equal Money.new(BigDecimal("215")), @amzn.avg_cost
+  end
+
+  # The fallback's COALESCE(rate, 1) counted a foreign purchase at 1:1 when its
+  # day had no rate, stating a cost that looks measured and is not.
+  test "a foreign purchase with no rate for its day makes the average cost unknown" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+
+    assert_nil @amzn.avg_cost
+  end
+
+  test "a foreign purchase whose stored rate cannot convert makes the average cost unknown" do
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 0)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+
+    assert_nil @amzn.avg_cost
+  end
+
+  test "the fallback converts a purchase at the rate it carries when the table has none" do
+    entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+    entry.entryable.update!(exchange_rate: 1.25)
+
+    # 10 * 212 CAD at the trade's own 1.25 = 2,650 USD for 10 units
+    assert_equal Money.new(BigDecimal("265")), @amzn.avg_cost
+  end
+
+  # The missing-rate check rides on the totals query instead of adding a round
+  # trip to a path that exists to avoid N+1 queries.
+  test "the fallback reads the trades in two queries" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
+    @amzn.account
+
+    queries = capture_sql_queries { @amzn.avg_cost }
+
+    assert_equal 2, queries.count { |sql| sql.include?('FROM "trades"') }
   end
 
   test "calculates total return trend" do
