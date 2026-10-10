@@ -58,7 +58,7 @@ class KrakenAccount::Processor
       return unless account
 
       external_id = "kraken_trade_#{txid}"
-      return if account.entries.exists?(external_id: external_id, source: "kraken")
+      existing = account.entries.find_by(external_id: external_id, source: "kraken")
 
       type = trade["type"].to_s.downcase
       return unless %w[buy sell].include?(type)
@@ -67,7 +67,14 @@ class KrakenAccount::Processor
       base_symbol, quote_symbol = infer_pair_symbols(pair, trade)
       return if base_symbol.blank?
 
-      qty = trade["vol"].to_d
+      return reconcile_with_ledger(existing, txid, type, base_symbol, quote_symbol) if existing
+
+      # `vol` is gross. When the fee is taken in the base asset -- an order-level
+      # choice Kraken makes per fill -- the units that actually moved are fewer,
+      # and TradesHistory gives no way to tell: it reports every fee converted to
+      # the quote currency, with no fee-currency field. The ledger is where the
+      # truth is, so prefer it and fall back to `vol`.
+      qty = ledger_qty_for(txid, base_symbol) || trade["vol"].to_d
       return if qty.zero?
 
       price = trade["price"].to_d
@@ -84,7 +91,11 @@ class KrakenAccount::Processor
       # `cost` is the fill's actual cash figure and can differ from `vol * price`
       # by rounding, so it is kept rather than recomputed.
       trade_qty = type == "buy" ? qty : -qty
-      entry_amount = type == "buy" ? cost : -cost
+      # Same reasoning as the quantity: `cost` is what the fill was worth, not
+      # what left the account. A fee charged in the quote currency comes out on
+      # top of it, and the ledger's quote row nets the two already -- whichever
+      # currency the fee was actually taken in.
+      entry_amount = ledger_cash_for(txid, quote_symbol) || (type == "buy" ? cost : -cost)
       label = type == "buy" ? "Buy" : "Sell"
 
       account.entries.create!(
@@ -106,6 +117,79 @@ class KrakenAccount::Processor
       )
     rescue StandardError => e
       Rails.logger.error "KrakenAccount::Processor - failed to process trade #{txid}: #{e.message}"
+    end
+
+    # A trade imported before its ledger rows were available -- before the API
+    # key was granted "Query ledger entries", or before the ledger backfill
+    # reached it -- holds TradesHistory's gross `vol` and `cost`. Once the rows
+    # arrive, correct it from them, as a fresh import would have. Only what the
+    # ledger answers is touched, an unchanged entry is not rewritten, and one the
+    # user edited or locked is left alone.
+    def reconcile_with_ledger(entry, txid, type, base_symbol, quote_symbol)
+      return if entry.protected_from_sync?
+
+      trade = entry.entryable
+      return unless trade.is_a?(Trade)
+
+      qty = ledger_qty_for(txid, base_symbol)
+      cash = ledger_cash_for(txid, quote_symbol)
+      signed_qty = qty && (type == "buy" ? qty : -qty)
+
+      qty_changed = signed_qty && signed_qty != trade.qty
+      cash_changed = cash && cash != entry.amount
+      return unless qty_changed || cash_changed
+
+      label = type == "buy" ? "Buy" : "Sell"
+      # Entry.transaction, not entry.transaction: delegated_type makes the
+      # instance method the Transaction entryable accessor.
+      Entry.transaction do
+        trade.update!(qty: signed_qty) if qty_changed
+        entry.update!(
+          amount: cash_changed ? cash : entry.amount,
+          name: qty_changed ? "#{label} #{qty.round(8)} #{base_symbol}" : entry.name
+        )
+      end
+    end
+
+    # A trade's ledger rows carry its txid in `refid`, one row per asset moved.
+    # The row for the base asset holds what was really received or given up:
+    # Kraken applies `balance = previous + amount - fee`, so a fee charged in the
+    # base asset is already netted out there and nowhere else.
+    def ledger_qty_for(txid, base_symbol)
+      row = ledger_row_for(txid, base_symbol)
+      return nil if row.nil?
+
+      net = (row["amount"].to_d - row["fee"].to_d).abs
+      net.zero? ? nil : net
+    end
+
+    # The quote-currency side of the same trade: what actually moved in or out of
+    # the cash balance. Sure's sign convention is the ledger's inverted -- there a
+    # buy shows the quote asset leaving as a negative amount; here money out is
+    # positive.
+    def ledger_cash_for(txid, quote_symbol)
+      return nil if quote_symbol.blank?
+
+      row = ledger_row_for(txid, quote_symbol)
+      return nil if row.nil?
+
+      net = -(row["amount"].to_d - row["fee"].to_d)
+      net.zero? ? nil : net
+    end
+
+    def ledger_row_for(txid, symbol)
+      rows = ledgers_by_refid[txid.to_s]
+      return nil if rows.blank?
+
+      wanted = KrakenAccount::SecurityResolver.canonical_asset(symbol)
+      rows.find { |ledger| KrakenAccount::SecurityResolver.canonical_asset(ledger["asset"]) == wanted }
+    end
+
+    def ledgers_by_refid
+      @ledgers_by_refid ||= begin
+        ledgers = kraken_account.raw_transactions_payload&.dig("ledgers") || {}
+        ledgers.values.group_by { |ledger| ledger["refid"].to_s }
+      end
     end
 
     def infer_pair_symbols(pair, trade)

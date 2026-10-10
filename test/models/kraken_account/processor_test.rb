@@ -86,6 +86,87 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  # ---------------------------------------------------------------------------
+  # the ledger is the source of truth for what actually moved
+  # ---------------------------------------------------------------------------
+
+  # `vol` is gross. When Kraken takes the fee in the base asset -- an order-level
+  # choice it makes per fill -- fewer units arrive, and TradesHistory cannot say
+  # so: it reports every fee converted to the quote currency, with no
+  # fee-currency field. The ledger nets it, because Kraken applies
+  # `balance = previous + amount - fee` there.
+  test "takes a buy's quantity from the ledger, net of a base-asset fee" do
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000200"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00", fee: "0.00")
+    )
+
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 0.000998.to_d, buy.trade.qty
+  end
+
+  # `cost` is what the fill was worth, not what left the account: a fee charged
+  # in the quote currency comes out on top of it.
+  test "takes a sell's cash movement from the ledger, net of a quote-currency fee" do
+    set_ledgers(
+      "l3" => ledger_row("sell_tx", "XXBT", amount: "-0.00200000", fee: "0.00000000"),
+      "l4" => ledger_row("sell_tx", "ZUSD", amount: "120.00", fee: "0.20")
+    )
+
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    sell = @account.entries.find_by!(external_id: "kraken_trade_sell_tx", source: "kraken")
+    assert_equal(-119.80.to_d, sell.amount)
+  end
+
+  test "falls back to the reported volume and cost when the trade has no ledger rows" do
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 0.001.to_d, buy.trade.qty
+    assert_equal 50.to_d, buy.amount
+  end
+
+  # A trade imported before the ledger permission was granted holds the gross
+  # `vol` and `cost`. When its rows arrive, the next sync corrects it rather
+  # than skipping it as already imported.
+  test "corrects a trade imported without ledger rows once they arrive" do
+    KrakenAccount::Processor.new(@kraken_account).process
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 0.001.to_d, buy.trade.qty
+
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000200"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00", fee: "0.10")
+    )
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy.reload
+    assert_equal 0.000998.to_d, buy.trade.reload.qty
+    assert_equal 50.10.to_d, buy.amount
+
+    assert_no_changes -> { buy.reload.updated_at } do
+      KrakenAccount::Processor.new(@kraken_account).process
+    end
+  end
+
+  test "leaves a trade the user edited alone when its ledger rows arrive" do
+    KrakenAccount::Processor.new(@kraken_account).process
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    buy.update!(user_modified: true)
+
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000200"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00", fee: "0.10")
+    )
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    assert_equal 0.001.to_d, buy.trade.reload.qty
+    assert_equal 50.to_d, buy.reload.amount
+  end
+
   test "trade import is idempotent by txid" do
     assert_difference -> { @account.entries.where(source: "kraken").count }, 2 do
       KrakenAccount::Processor.new(@kraken_account).process
@@ -178,6 +259,21 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
   end
 
   private
+
+    def set_ledgers(ledgers)
+      @kraken_account.update!(
+        raw_transactions_payload: @kraken_account.raw_transactions_payload.merge("ledgers" => ledgers)
+      )
+    end
+
+    # A trade's ledger rows carry its txid in `refid`, one row per asset moved.
+    def ledger_row(refid, asset, amount:, fee:)
+      {
+        "refid" => refid, "time" => Time.current.to_f, "type" => "trade",
+        "subtype" => "", "aclass" => "currency", "asset" => asset,
+        "amount" => amount, "fee" => fee, "balance" => "0.00000000"
+      }
+    end
 
     def trade_payload(type, volume, cost, fee)
       price = volume.to_d.zero? ? 0.to_d : cost.to_d / volume.to_d
