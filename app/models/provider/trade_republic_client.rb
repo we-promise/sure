@@ -99,6 +99,9 @@ class Provider::TradeRepublicClient
     "aktien entfernt", "shares removed", "aktien gesendet", "shares sent"
   ].freeze
   TOTAL_TITLES = [ "gesamt", "total", "totaal", "gesamtbetrag" ].freeze
+  # The Overview row "0.626409 × €7.982" carries the exact share price that
+  # the rounded total is computed from.
+  TRANSACTION_TITLES = [ "transaction", "transaktion", "transactie" ].freeze
   PRICE_TITLES = [
     "share price", "aandelenkoers", "aktienkurs", "anteilskurs",
     "execution price", "kurs"
@@ -132,6 +135,11 @@ class Provider::TradeRepublicClient
   RETRY_INTERVAL = 1.day
   RETRY_WINDOW = 30.days
   PRICE_BACKFILL_ATTEMPTED_AT_KEY = "price_backfill_attempted_at"
+  # Marks a trade price read from the detail (a share price, quotation or
+  # Transaction row). A stored price without it was derived from the rounded
+  # total, so the price backfill fetches the detail again.
+  PRICE_SOURCE_KEY = "price_source"
+  PRICE_SOURCE_DETAIL = "detail"
   SYMBOL_LOOKUP_ATTEMPTED_AT_KEY = "symbol_lookup_attempted_at"
   SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY = "symbol_lookup_first_attempted_at"
   # Stored trades whose detail is still incomplete after a fetch; the backlog
@@ -540,13 +548,14 @@ class Provider::TradeRepublicClient
       !(detail.is_a?(Hash) && detail.stringify_keys["isin"].present?)
     end
 
-    # Complete trades (isin + quantity) that still lack a share price — usually
-    # stored before we parsed execution price / fees from timeline details.
+    # Complete trades (isin + quantity) without a price read from the detail:
+    # the price is missing, or was derived from the rounded total, usually
+    # because the trade was stored before its price rows were parsed.
     # Trade Republic sometimes publishes the price late, so an unsuccessful
     # attempt is retried at most once per RETRY_INTERVAL until the trade is
     # RETRY_WINDOW old.
     def trade_detail_needs_price_backfill?(event, now = Time.current)
-      return false unless trade_detail_missing_price?(event)
+      return false unless trade_detail_price_unconfirmed?(event)
 
       attempted_at = detail_time(event, PRICE_BACKFILL_ATTEMPTED_AT_KEY)
       return true if attempted_at.nil?
@@ -579,13 +588,13 @@ class Provider::TradeRepublicClient
       attempted_at <= now - RETRY_INTERVAL
     end
 
-    def trade_detail_missing_price?(event)
+    def trade_detail_price_unconfirmed?(event)
       return false unless requires_trade_detail?(event)
       return false unless Provider::TradeRepublicTimelineEvent.importable?(event)
       return false unless trade_detail_complete?(event)
 
       detail = (event["detail"] || event[:detail]).stringify_keys
-      detail["price"].to_s.strip.blank?
+      detail["price"].to_s.strip.blank? || detail[PRICE_SOURCE_KEY].blank?
     end
 
     # Earlier syncs stored this listing on bond positions and trades.
@@ -1581,7 +1590,7 @@ class Provider::TradeRepublicClient
         if kind == :backfill
           result = fetched ? prefer_richer_event(item, fetched) : item
           detail_backfill_count += 1 if detail_backfill_improved?(item, result)
-          if self.class.trade_detail_missing_price?(result)
+          if self.class.trade_detail_price_unconfirmed?(result)
             fetched = with_price_backfill_attempt(result)
           elsif self.class.incomplete_trade_detail_event?(result) || self.class.dividend_detail_missing?(result)
             fetched = with_detail_backfill_attempt(result)
@@ -1604,7 +1613,7 @@ class Provider::TradeRepublicClient
     def detail_backfill_improved?(before, after)
       return self.class.trade_detail_complete?(after) if self.class.incomplete_trade_detail_event?(before)
 
-      self.class.trade_detail_missing_price?(before) && !self.class.trade_detail_missing_price?(after)
+      self.class.trade_detail_price_unconfirmed?(before) && !self.class.trade_detail_price_unconfirmed?(after)
     end
 
     def with_price_backfill_attempt(event) = with_attempt_marker(event, PRICE_BACKFILL_ATTEMPTED_AT_KEY)
@@ -1708,6 +1717,8 @@ class Provider::TradeRepublicClient
       # par is 0.9267.
       price ||= quotation / 100 if quotation
       dividend_per_share = decimal_from_row(find_row(rows, DIVIDEND_PER_SHARE_TITLES))
+      price ||= transaction_unit_price(find_row(rows, TRANSACTION_TITLES))
+      price_source = PRICE_SOURCE_DETAIL if price
       if price.nil? && quantity&.nonzero? && amount
         # Provider cash totals embed costs: buy total = gross + fees/taxes,
         # sell total = gross - fees/taxes. Recover share price accordingly.
@@ -1723,6 +1734,7 @@ class Provider::TradeRepublicClient
         "name" => detail_name(item, raw),
         "quantity" => decimal_string(quantity),
         "price" => decimal_string(price),
+        PRICE_SOURCE_KEY => price_source,
         "amount" => decimal_string(amount&.abs),
         "currency" => currency_from_row(total) || currency_from_row(shares) || currency_from_row(price_row),
         "fees" => decimal_string(fee_amount),
@@ -1747,8 +1759,24 @@ class Provider::TradeRepublicClient
 
     def find_row(rows, titles) = rows.find { |row| titles.include?(row["title"].to_s.downcase.strip) }
 
+    # "0.626409 × €7.982"; Saveback writes "x". The displayValue holds the
+    # price alone. A bond's row quotes percent of par, not a unit price.
+    def transaction_unit_price(row)
+      return nil unless row
+
+      row_text = row.dig("detail", "text").to_s
+      text = row.dig("detail", "displayValue", "text").presence || row_text.split(/\s[×x]\s+/i, 2).second
+      return nil if text.blank? || text.include?("%") || row_text.include?("%")
+
+      price = decimal_from_text(text)
+      price if price&.positive?
+    end
+
     def decimal_from_row(row)
-      text = row&.dig("detail", "text") || row&.dig("detail", "value", "text")
+      decimal_from_text(row&.dig("detail", "text") || row&.dig("detail", "value", "text"))
+    end
+
+    def decimal_from_text(text)
       return nil if text.blank?
 
       normalized = text.to_s.gsub(/[^\d,.-]/, "")
