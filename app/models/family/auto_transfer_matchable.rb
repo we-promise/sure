@@ -15,6 +15,12 @@ module Family::AutoTransferMatchable
   # date_window: 30 vs. 4 widening that dialog already applies.
   MANUAL_MATCH_EXCHANGE_RATE_TOLERANCE = 0.1
 
+  # A future-dated rate is only ever a legitimate match for a timezone skew between
+  # a data source and the server (at most a day), not for the provider catching up
+  # on missed days -- unlike the backward direction, it must stay tight so a stale
+  # transaction can't be matched against an unrelated, much-later rate.
+  RATE_LOOKAHEAD_DAYS = 1
+
   # Read at call time rather than frozen into a constant at boot, so a bad value falls back
   # instead of raising inside every sync: Family::Syncer and Account::Syncer both call
   # auto_match_transfers! without a tolerance of their own.
@@ -53,7 +59,9 @@ module Family::AutoTransferMatchable
         include_rejected:,
         restrict_cross_currency_to_linked_accounts:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
-        upper_exchange_rate_bound: 1 + exchange_rate_tolerance
+        upper_exchange_rate_bound: 1 + exchange_rate_tolerance,
+        rate_lookback_days: ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS,
+        rate_lookahead_days: RATE_LOOKAHEAD_DAYS
       }
     ])
   end
@@ -195,14 +203,41 @@ module Family::AutoTransferMatchable
     # off so a user can still find and confirm a real cross-currency transfer that happens to
     # involve a manual account, rather than being forced into creating a duplicate.
     #
-    # The cross-currency branch prefers the direct pair rate. Exchange rates are only
-    # synced from each account currency to the family currency, so a transfer between
-    # two non-family currencies (e.g. RUB -> THB in a USD family) has no direct rate;
-    # the cross rate is then derived through the family currency
-    # (RUB -> USD / THB -> USD). The rates are plain LEFT JOINs on the unique
-    # (from, to, date) index, so each joins at most one row and the planner can hash
-    # them; a missing rate leaves the tolerance check NULL, which drops the pair.
-    # A zero direct rate is treated as missing so it cannot mask a usable derived rate.
+    # The cross-currency branch needs up to three rates per candidate: the direct pair
+    # (outflow -> inflow currency), and -- when no direct rate is usable -- the cross rate
+    # derived through the family currency (outflow -> family) / (inflow -> family), since
+    # exchange rates are only ever synced from an account currency to the family currency.
+    # A transfer between two non-family currencies (e.g. RUB -> THB in a USD family) has no
+    # direct rate at all, only the two legs to USD.
+    #
+    # Each of those three lookups also needs a *nearest-date* fallback, not an exact-date
+    # match: a rate is missing on the exact transaction date most commonly because the daily
+    # FX sync hasn't caught up yet (transactions dated "today", or "tomorrow" from a timezone
+    # offset between a data source and the server). Doing that nearest-date search with a
+    # LEFT JOIN LATERAL directly against the cross-currency candidate rows was measured (see
+    # PR #3701) to push the query past Postgres's JIT cost threshold, because the candidate
+    # row count from the entries x entries join is much larger than the number of distinct
+    # currency-pair/date combinations that actually need a rate. So the lookup is split in
+    # two: `cross_currency_candidates` computes the candidate rows once; `rate_lookup_keys`
+    # collects the distinct (from_currency, to_currency, date) triples those candidates need
+    # across all three lookup kinds; `nearest_rates` resolves the nearest-date rate once per
+    # distinct triple (bounded by currency pairs x dates, not by candidate rows) using a plain
+    # range join deduplicated with `DISTINCT ON`, not a per-row `LATERAL` -- a `LATERAL` here
+    # still runs once per row of whichever side it's attached to, and `nearest_rates` is itself
+    # referenced three times below, which forces Postgres to materialize it without real
+    # cardinality statistics; the planner then underestimates its row count and can pick a
+    # Nested Loop over a Hash Join for the three joins back onto `cross_currency_candidates`,
+    # which is far more expensive at scale than the nearest-date search itself. The outer query
+    # then joins `nearest_rates` back onto the candidates three times by equality.
+    #
+    # The nearest-date search excludes a zero cached rate outright (er.rate <> 0) rather than
+    # masking it after the join, so a zero rate is treated as missing and the search reaches
+    # for the next-nearest real rate instead of only falling through when the *exact* date's
+    # rate happens to be zero.
+    #
+    # On a tie in date-distance between a cached rate before and after the reference date, the
+    # search prefers the past-dated rate: the forward window exists only to cover timezone
+    # skew, so it must never outrank real historical data.
     #
     # Candidates are ordered by match_rank before date_diff: exact same-currency matches
     # (rank 0) come before FX-tolerance guesses (rank 1). auto_match_transfers! consumes
@@ -258,68 +293,118 @@ module Family::AutoTransferMatchable
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL)
           UNION ALL
           SELECT
-            inflow_candidates.entryable_id AS inflow_transaction_id,
-            outflow_candidates.entryable_id AS outflow_transaction_id,
-            ABS(inflow_candidates.date - outflow_candidates.date) AS date_diff,
+            cross_currency_matches.inflow_transaction_id,
+            cross_currency_matches.outflow_transaction_id,
+            cross_currency_matches.date_diff,
             1 AS match_rank,
-            rejected_transfers.id AS rejected_transfer_id
-          FROM entries inflow_candidates
-          JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
-          JOIN entries outflow_candidates ON (
-            outflow_candidates.entryable_type = 'Transaction' AND
-            outflow_candidates.excluded = FALSE AND
-            outflow_candidates.amount > 0 AND
-            outflow_candidates.account_id <> inflow_candidates.account_id AND
-            outflow_candidates.date BETWEEN inflow_candidates.date - :date_window AND inflow_candidates.date + :date_window AND
-            outflow_candidates.currency <> inflow_candidates.currency
-          )
-          JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
-          LEFT JOIN exchange_rates direct_rates ON (
-            direct_rates.date = outflow_candidates.date AND
-            direct_rates.from_currency = outflow_candidates.currency AND
-            direct_rates.to_currency = inflow_candidates.currency
-          )
-          LEFT JOIN exchange_rates outflow_family_rates ON (
-            outflow_family_rates.date = outflow_candidates.date AND
-            outflow_family_rates.from_currency = outflow_candidates.currency AND
-            outflow_family_rates.to_currency = :family_currency
-          )
-          LEFT JOIN exchange_rates inflow_family_rates ON (
-            inflow_family_rates.date = outflow_candidates.date AND
-            inflow_family_rates.from_currency = inflow_candidates.currency AND
-            inflow_family_rates.to_currency = :family_currency
-          )
-          LEFT JOIN transfers existing_transfers ON (
-            existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
-            existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
-          )
-          LEFT JOIN rejected_transfers ON (
-            rejected_transfers.inflow_transaction_id = inflow_candidates.entryable_id AND
-            rejected_transfers.outflow_transaction_id = outflow_candidates.entryable_id
-          )
-          WHERE
-            inflow_candidates.entryable_type = 'Transaction' AND
-            inflow_candidates.excluded = FALSE AND
-            inflow_candidates.amount < 0 AND
-            inflow_accounts.family_id = :family_id AND
-            outflow_accounts.family_id = :family_id AND
-            inflow_accounts.status IN ('draft', 'active') AND
-            outflow_accounts.status IN ('draft', 'active') AND
-            existing_transfers.id IS NULL AND
-            (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
-            ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * COALESCE(
-              NULLIF(direct_rates.rate, 0),
-              (CASE WHEN outflow_candidates.currency = :family_currency THEN 1 ELSE outflow_family_rates.rate END) /
-                NULLIF(CASE WHEN inflow_candidates.currency = :family_currency THEN 1 ELSE inflow_family_rates.rate END, 0)
-            ), 0))
-              BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
-            (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
-            (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
-            (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
-            (
-              :restrict_cross_currency_to_linked_accounts = FALSE OR
-              (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")})
+            cross_currency_matches.rejected_transfer_id
+          FROM (
+            WITH cross_currency_candidates AS (
+              SELECT
+                inflow_candidates.entryable_id AS inflow_transaction_id,
+                outflow_candidates.entryable_id AS outflow_transaction_id,
+                ABS(inflow_candidates.date - outflow_candidates.date) AS date_diff,
+                inflow_candidates.amount AS inflow_amount,
+                outflow_candidates.amount AS outflow_amount,
+                outflow_candidates.currency AS outflow_currency,
+                inflow_candidates.currency AS inflow_currency,
+                outflow_candidates.date AS outflow_date,
+                rejected_transfers.id AS rejected_transfer_id
+              FROM entries inflow_candidates
+              JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
+              JOIN entries outflow_candidates ON (
+                outflow_candidates.entryable_type = 'Transaction' AND
+                outflow_candidates.excluded = FALSE AND
+                outflow_candidates.amount > 0 AND
+                outflow_candidates.account_id <> inflow_candidates.account_id AND
+                outflow_candidates.date BETWEEN inflow_candidates.date - :date_window AND inflow_candidates.date + :date_window AND
+                outflow_candidates.currency <> inflow_candidates.currency
+              )
+              JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
+              LEFT JOIN transfers existing_transfers ON (
+                existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
+                existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
+              )
+              LEFT JOIN rejected_transfers ON (
+                rejected_transfers.inflow_transaction_id = inflow_candidates.entryable_id AND
+                rejected_transfers.outflow_transaction_id = outflow_candidates.entryable_id
+              )
+              WHERE
+                inflow_candidates.entryable_type = 'Transaction' AND
+                inflow_candidates.excluded = FALSE AND
+                inflow_candidates.amount < 0 AND
+                inflow_accounts.family_id = :family_id AND
+                outflow_accounts.family_id = :family_id AND
+                inflow_accounts.status IN ('draft', 'active') AND
+                outflow_accounts.status IN ('draft', 'active') AND
+                existing_transfers.id IS NULL AND
+                (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
+                (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
+                (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
+                (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
+                (
+                  :restrict_cross_currency_to_linked_accounts = FALSE OR
+                  (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")})
+                )
+            ),
+            rate_lookup_keys AS (
+              SELECT DISTINCT outflow_currency AS from_currency, inflow_currency AS to_currency, outflow_date AS ref_date
+              FROM cross_currency_candidates
+              UNION
+              SELECT DISTINCT outflow_currency, :family_currency, outflow_date
+              FROM cross_currency_candidates
+              WHERE outflow_currency <> :family_currency
+              UNION
+              SELECT DISTINCT inflow_currency, :family_currency, outflow_date
+              FROM cross_currency_candidates
+              WHERE inflow_currency <> :family_currency
+            ),
+            nearest_rates AS (
+              SELECT DISTINCT ON (rate_lookup_keys.from_currency, rate_lookup_keys.to_currency, rate_lookup_keys.ref_date)
+                rate_lookup_keys.from_currency,
+                rate_lookup_keys.to_currency,
+                rate_lookup_keys.ref_date,
+                er.rate
+              FROM rate_lookup_keys
+              JOIN exchange_rates er ON (
+                er.from_currency = rate_lookup_keys.from_currency AND
+                er.to_currency = rate_lookup_keys.to_currency AND
+                er.rate <> 0 AND
+                er.date BETWEEN rate_lookup_keys.ref_date - :rate_lookback_days AND rate_lookup_keys.ref_date + :rate_lookahead_days
+              )
+              ORDER BY
+                rate_lookup_keys.from_currency, rate_lookup_keys.to_currency, rate_lookup_keys.ref_date,
+                ABS(er.date - rate_lookup_keys.ref_date) ASC, er.date ASC
             )
+            SELECT
+              cross_currency_candidates.inflow_transaction_id,
+              cross_currency_candidates.outflow_transaction_id,
+              cross_currency_candidates.date_diff,
+              cross_currency_candidates.rejected_transfer_id
+            FROM cross_currency_candidates
+            LEFT JOIN nearest_rates direct_rates ON (
+              direct_rates.from_currency = cross_currency_candidates.outflow_currency AND
+              direct_rates.to_currency = cross_currency_candidates.inflow_currency AND
+              direct_rates.ref_date = cross_currency_candidates.outflow_date
+            )
+            LEFT JOIN nearest_rates outflow_family_rates ON (
+              outflow_family_rates.from_currency = cross_currency_candidates.outflow_currency AND
+              outflow_family_rates.to_currency = :family_currency AND
+              outflow_family_rates.ref_date = cross_currency_candidates.outflow_date
+            )
+            LEFT JOIN nearest_rates inflow_family_rates ON (
+              inflow_family_rates.from_currency = cross_currency_candidates.inflow_currency AND
+              inflow_family_rates.to_currency = :family_currency AND
+              inflow_family_rates.ref_date = cross_currency_candidates.outflow_date
+            )
+            WHERE
+              ABS(cross_currency_candidates.inflow_amount / NULLIF(cross_currency_candidates.outflow_amount * COALESCE(
+                direct_rates.rate,
+                (CASE WHEN cross_currency_candidates.outflow_currency = :family_currency THEN 1 ELSE outflow_family_rates.rate END) /
+                  NULLIF(CASE WHEN cross_currency_candidates.inflow_currency = :family_currency THEN 1 ELSE inflow_family_rates.rate END, 0)
+              ), 0))
+                BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound
+          ) cross_currency_matches
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.match_rank ASC, transfer_match_candidates.date_diff ASC
       SQL

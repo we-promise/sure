@@ -572,6 +572,114 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "matches multi-currency transfer when exact-date rate is missing but an earlier in-window rate exists" do
+    link_account!(@depository)
+    link_account!(@credit_card)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 2.days.ago.to_date, rate: 1.4)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "matches multi-currency transfer when exact-date rate is missing but a later in-window rate exists (timezone offset case)" do
+    link_account!(@depository)
+    link_account!(@credit_card)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 1.day.from_now.to_date, rate: 1.4)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not match multi-currency transfer when the only cached rate is outside the lookback window" do
+    link_account!(@depository)
+    link_account!(@credit_card)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 10.days.ago.to_date, rate: 1.4)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "picks the nearest in-window rate by date distance, not the first one that happens to match" do
+    link_account!(@depository)
+    link_account!(@credit_card)
+    # Farther rate (distance 4) would satisfy the tolerance if chosen; nearer rate
+    # (distance 1) would not. Asserting no match proves the nearer rate wins.
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 4.days.ago.to_date, rate: 1.4)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 1.day.ago.to_date, rate: 2.0)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "on an equal-distance tie between a past and future rate, prefers the past rate" do
+    link_account!(@depository)
+    link_account!(@credit_card)
+    # Both rates are exactly 1 day from the outflow date, so date-distance alone
+    # can't break the tie. The forward window exists only to cover timezone skew,
+    # so on a tie the past (historical) rate must win over the future one.
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 1.day.ago.to_date, rate: 1.4)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 1.day.from_now.to_date, rate: 5.0)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not match multi-currency transfer when the only cached rate is more than one day in the future" do
+    link_account!(@depository)
+    link_account!(@credit_card)
+    # The forward window only exists to cover a timezone skew between a data source
+    # and the server (at most a day) -- unlike the 5-day backward lookback, it must
+    # not reach further, or a stale transaction could be matched against an
+    # unrelated, much-later rate.
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 2.days.from_now.to_date, rate: 1.4)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "a family-currency-derived rate also falls back to the nearest in-window date" do
+    link_account!(@depository)
+    link_account!(@credit_card)
+    # No direct GBP -> CAD rate at all; only the two legs to USD (the family
+    # currency), and only as of 2 days before the outflow date.
+    ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: 2.days.ago.to_date, rate: 1.25)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 2.days.ago.to_date, rate: 0.72)
+
+    # 400 GBP = 500 USD ~= 694.44 CAD; the provider paid out 680 CAD (-2%)
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 400, currency: "GBP")
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -680, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
   test "same-currency matching ignores amount-mismatched busy-window entries" do
     noise_transaction_ids = []
 
@@ -618,7 +726,13 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "outflow_candidates.excluded = FALSE"
     assert_includes sql, ":account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id"
     assert_includes sql, "outflow_candidates.amount = -inflow_candidates.amount"
-    assert_includes sql, "LEFT JOIN exchange_rates direct_rates"
+    assert_includes sql, "WITH cross_currency_candidates AS"
+    assert_includes sql, "rate_lookup_keys AS"
+    assert_includes sql, "nearest_rates AS"
+    assert_includes sql, "SELECT DISTINCT ON (rate_lookup_keys.from_currency, rate_lookup_keys.to_currency, rate_lookup_keys.ref_date)"
+    assert_includes sql, "er.rate <> 0"
+    assert_includes sql, "rate_lookup_keys.ref_date - :rate_lookback_days AND rate_lookup_keys.ref_date + :rate_lookahead_days"
+    assert_includes sql, "LEFT JOIN nearest_rates direct_rates"
     assert_includes sql, "to_currency = :family_currency"
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)"
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
