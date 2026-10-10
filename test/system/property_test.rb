@@ -51,6 +51,11 @@ class PropertiesEditTest < ApplicationSystemTestCase
             end
             click_on "Edit"
           end
+        rescue Capybara::ElementNotFound
+          # A Turbo morph can close the menu after the trigger click without
+          # detaching a Selenium node. Retry through the same bounded path;
+          # the final field assertion still reports a missing/wrong form.
+          next false
         rescue Selenium::WebDriver::Error::WebDriverError => e
           raise unless e.message.match?(
             /does not belong to the document|stale element reference/i,
