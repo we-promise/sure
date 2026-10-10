@@ -33,6 +33,40 @@ class Holding::CurrentForInvestmentAccountsTest < ActiveSupport::TestCase
     assert_equal [ latest.id ], described_query.pluck(:id)
   end
 
+  test "resolves the latest provider import day per account" do
+    other_account = @family.accounts.create!(
+      name: "Second investment",
+      balance: 100,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    first_provider = AccountProvider.create!(
+      account: @account,
+      provider: coinstats_item.coinstats_accounts.create!(name: "First", currency: "USD")
+    )
+    second_provider = AccountProvider.create!(
+      account: other_account,
+      provider: coinstats_item.coinstats_accounts.create!(name: "Second", currency: "USD")
+    )
+
+    current_first = create_holding("AAPL", date: Date.current, account_provider: first_provider)
+    stale_first = create_holding("STALE", date: 1.day.ago.to_date, account_provider: first_provider)
+    stale_first.update_columns(updated_at: 1.day.ago)
+
+    # The second account last imported yesterday; that day is still its latest.
+    current_second = other_account.holdings.create!(
+      security: Security.create!(ticker: "MSFT", name: "MSFT"),
+      date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD",
+      account_provider: second_provider
+    )
+    current_second.update_columns(updated_at: 1.day.ago)
+
+    relation = Holding::CurrentForInvestmentAccounts.new([ @account.id, other_account.id ]).relation
+
+    assert_equal [ current_first.id, current_second.id ].sort, relation.pluck(:id).sort
+  end
+
   private
     def described_query
       Holding::CurrentForInvestmentAccounts.new([ @account.id ]).relation
