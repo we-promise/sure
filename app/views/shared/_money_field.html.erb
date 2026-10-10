@@ -5,14 +5,24 @@
                    elsif form.object && form.object.respond_to?(currency_method)
                      form.object.public_send(currency_method)
                    end
-   currency = Money::Currency.new(currency_value || options[:default_currency] || "USD") %>
+   currency = Money::Currency.new(currency_value || options[:default_currency] || "USD")
+   # A text input has no native min/max constraint, so the bounds the old
+   # number_field enforced (the caller's, or these defaults) are handed to
+   # money_field_controller, which checks the evaluated amount against them.
+   amount_min = options[:min] || -99999999999999
+   amount_max = options[:max] || 99999999999999 %>
 
-<div class="form-field <%= options[:container_class] %>"
+<div class="form-field group <%= options[:container_class] %>"
      data-controller="money-field"
      data-money-field-separator-value="<%= currency.separator %>"
      data-money-field-separator-currency-value="<%= currency.iso_code %>"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
-     <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>>
+     <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>
+     data-money-field-min-value="<%= amount_min %>"
+     data-money-field-max-value="<%= amount_max %>"
+     data-money-field-invalid-message-value="<%= t(".invalid_amount") %>"
+     data-money-field-min-message-value="<%= t(".below_min", min: amount_min) %>"
+     data-money-field-max-message-value="<%= t(".above_max", max: amount_max) %>">
   <% if options[:label_tooltip] %>
     <div class="form-field__header">
       <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
@@ -48,25 +58,24 @@
           <%= currency.symbol %>
         </span>
 
-        <%= form.number_field amount_method,
+        <%= form.text_field amount_method,
           class: class_names("form-field__input", options[:input_class]),
           inline: true,
           placeholder: options[:placeholder] || "100",
+          inputmode: "decimal",
           value: if options[:value]
             sprintf("%.#{options[:precision].presence || currency.default_precision}f", options[:value])
           elsif form.object && form.object.respond_to?(amount_method)
             val = form.object.public_send(amount_method)
             sprintf("%.#{options[:precision].presence || currency.default_precision}f", val) if val.present?
           end,
-          min: options[:min] || -99999999999999,
-          max: options[:max] || 99999999999999,
           step: options[:step] || currency.step,
           disabled: options[:disabled],
           autofocus: options[:autofocus],
           data: (options[:amount_data] || {}).merge({
             "money-field-target": "amount",
             "auto-submit-form-target": ("auto" if options[:auto_submit]),
-            action: [ options.dig(:amount_data, :action), "paste->money-field#pasteAmount" ].compact.join(" ")
+            action: [ options.dig(:amount_data, :action), "paste->money-field#pasteAmount", "blur->money-field#normalizeAmount" ].compact.join(" ")
           }.compact),
           required: options[:required] %>
       </div>
@@ -95,6 +104,46 @@
                         } %>
         </div>
       <% end %>
+    </div>
+
+    <%# The decimal keypad (inputmode="decimal") iOS/Android show for this
+        field has no +/-×÷ keys, so an expression can only be typed with a
+        physical keyboard. This row gives touch users the same four
+        operators; hidden until the field has focus so it doesn't clutter
+        every money field on the page. Bound to "mousedown"/"touchstart"
+        (not "click") so preventDefault in the controller stops the tap from
+        blurring the input, which would otherwise dismiss the on-screen
+        keyboard — touchstart matters on touch devices where the synthetic
+        mousedown following a tap can lag, and preventDefault on touchstart
+        also suppresses that synthetic mousedown, so there's no double
+        insert. Also bound to "keydown.enter"/"keydown.space" (DS::Button
+        renders type="button", so it never submits the form and needs no
+        preventDefault guard against that): mousedown/touchstart alone never
+        fire for keyboard activation (Tab to the button, then Enter/Space),
+        which would otherwise make these buttons pointer/touch-only.
+        Absolutely positioned (against .form-field, which is
+        already `position: relative`) rather than a normal flow sibling:
+        toggling a flow element's display shifts everything below it at the
+        exact moment the field blurs — i.e. exactly when a user clicks past
+        it to the next field — which was intermittently swallowing that
+        click in a system test. Styled flush against the field's own bottom
+        edge (full width, no top border, matching background/border/radius)
+        rather than as a separate floating card with its own border and
+        gap, so out-of-flow positioning doesn't read as visually detached
+        from the field it belongs to. %>
+    <div class="hidden group-focus-within:flex items-center gap-1 absolute left-0 right-0 top-full -mt-px z-10 bg-container border border-t-0 border-secondary rounded-b-md p-1">
+      <%= render DS::Button.new(text: "+", variant: :outline, size: :sm,
+            data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator keydown.enter->money-field#insertOperator keydown.space->money-field#insertOperator", "money-field-operator-param": "+" },
+            aria: { label: t(".operator_add") }) %>
+      <%= render DS::Button.new(text: "−", variant: :outline, size: :sm,
+            data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator keydown.enter->money-field#insertOperator keydown.space->money-field#insertOperator", "money-field-operator-param": "-" },
+            aria: { label: t(".operator_subtract") }) %>
+      <%= render DS::Button.new(text: "×", variant: :outline, size: :sm,
+            data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator keydown.enter->money-field#insertOperator keydown.space->money-field#insertOperator", "money-field-operator-param": "*" },
+            aria: { label: t(".operator_multiply") }) %>
+      <%= render DS::Button.new(text: "÷", variant: :outline, size: :sm,
+            data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator keydown.enter->money-field#insertOperator keydown.space->money-field#insertOperator", "money-field-operator-param": "/" },
+            aria: { label: t(".operator_divide") }) %>
     </div>
   </div>
 </div>

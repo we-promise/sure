@@ -46,7 +46,9 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
 
     get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
 
-    assert_select "input[name=amount][step='1.0'][min='1.0']"
+    # The amount is a text field (it accepts expressions), so the minimum is
+    # enforced by money_field_controller rather than a native min attribute.
+    assert_select ".form-field[data-money-field-min-value='1.0'] input[name=amount][step='1.0']"
   end
 
   # Turbo caches the page as it was left, so a drawer still open when the user
