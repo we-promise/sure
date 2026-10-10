@@ -6,6 +6,15 @@ require "test_helper"
 # verbatim copies from main (test/support/legacy_income_statement_*.rb), and
 # each test runs both over the same data across the class's full option
 # matrix (account scoping, trade inclusion, stats interval).
+#
+# One deliberate exception: exchange_rates_join_sql now reuses the nearest
+# stored rate within a backward lookback window, where the legacy copies join
+# on exact date equality. The fixture below keeps every currency-converted row
+# on either side of that difference - an exact-date rate, or no rate within the
+# window at all - so the two implementations still agree on every other
+# scoping rule. Adding a rate that falls inside the window for a transaction
+# with no exact-date rate would fail these tests by design rather than by
+# regression; assert that case in IncomeStatementTest instead.
 class IncomeStatement::ScopedTransactionsQueryEquivalenceTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
@@ -40,7 +49,9 @@ class IncomeStatement::ScopedTransactionsQueryEquivalenceTest < ActiveSupport::T
 
     ExchangeRate.create! from_currency: "EUR", to_currency: "USD", date: 5.days.ago.to_date, rate: 2
     create_transaction(account: @eur, amount: 40, currency: "EUR", date: 5.days.ago.to_date)
-    create_transaction(account: @eur, amount: 10, currency: "EUR", date: 10.days.ago.to_date) # no rate row, falls back to 1
+    # Predates the only stored rate, so no rate falls in its backward lookback
+    # window and both implementations fall back to 1.
+    create_transaction(account: @eur, amount: 10, currency: "EUR", date: 10.days.ago.to_date)
 
     create_transaction(account: @retirement, amount: 300, date: 5.days.ago.to_date) # tax-advantaged, excluded
     create_transaction(account: @unreported, amount: 45, date: 5.days.ago.to_date) # exclude_from_reports, excluded
