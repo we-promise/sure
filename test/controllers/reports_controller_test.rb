@@ -98,6 +98,33 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "spending vs normal is a preview section" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+    get reports_path
+    assert_select "section[data-section-key='spending_vs_normal']", count: 0
+
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    get reports_path
+    assert_response :ok
+    assert_select "section[data-section-key='spending_vs_normal']" do
+      assert_select "[data-controller='spending-treemap']"
+    end
+  end
+
+  test "the spending baseline starts at the first transaction in the user's own finances" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    hidden = Account.create!(family: @family, owner: users(:family_member), name: "Not shared", currency: @family.currency, balance: 0, accountable: Depository.new)
+    hidden_date = 200.days.ago.to_date
+    create_transaction(account: hidden, date: hidden_date, amount: 10)
+    own_first = Entry.where(account_id: @family.income_statement(user: @user).eligible_accounts.select(:id), entryable_type: "Transaction").minimum(:date)
+    assert_operator own_first, :>, hidden_date, "fixture data must start after the hidden transaction for this test to mean anything"
+
+    get reports_path
+
+    baseline = controller.instance_variable_get(:@spending_comparison).baseline_period
+    assert(baseline.nil? || baseline.start_date >= own_first, "baseline started at #{baseline&.start_date}, before the user's first visible transaction")
+  end
+
   # The desktop app clones these into the tray when a download such as the CSV
   # export ends, since it has no download list of its own, and reads their data
   # attributes for its native notification.

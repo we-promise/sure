@@ -181,6 +181,9 @@
               <h2 class="text-base font-medium">
                 <%= t(section[:title]) %>
               </h2>
+              <% if section[:preview] %>
+                <%= render DS::Pill.new(label: t("shared.preview")) %>
+              <% end %>
             </div>
             <button
               type="button"

@@ -1,0 +1,104 @@
+<%# locals: (comparison:, start_date:, end_date:) %>
+<%
+  currency = Current.family.currency
+  money = ->(amount) { Money.new(amount, currency).format }
+  whole = ->(amount) { Money.new(amount, currency).format(precision: 0) }
+  category_href = ->(category) { transactions_path(q: { categories: [ category.filter_value ], start_date: start_date, end_date: end_date }) }
+  node = ->(row) do
+    {
+      name: row.category.name,
+      total: row.total.to_f,
+      total_label: whole.call(row.total),
+      total_full: money.call(row.total),
+      normal_label: row.normal && money.call(row.normal),
+      change_label: row.change && money.call(row.change.abs),
+      change_sign: row.change && (row.change.negative? ? -1 : 1),
+      ratio: row.ratio&.to_f,
+      href: category_href.call(row.category)
+    }
+  end
+  tree = comparison.rows.select { |row| row.total.positive? }.map do |row|
+    node.call(row).merge(children: row.subcategories.select { |sub| sub.total.positive? }.map { |sub| node.call(sub) })
+  end
+  changes = comparison.rows.select { |row| row.change && row.change.abs >= 1 }.sort_by { |row| -row.change }
+  max_change = changes.map { |row| row.change.abs }.max
+%>
+<div class="@container space-y-4">
+  <p class="text-sm text-secondary">
+    <% if comparison.comparable? %>
+      <%= t("reports.spending_vs_normal.summary",
+            total: whole.call(comparison.total),
+            normal: whole.call(comparison.normal_total),
+            baseline_start: l(comparison.baseline_period.start_date, format: :long),
+            baseline_end: l(comparison.baseline_period.end_date, format: :long)) %>
+    <% else %>
+      <%= t("reports.spending_vs_normal.no_history", total: whole.call(comparison.total)) %>
+    <% end %>
+  </p>
+
+  <% if tree.empty? %>
+    <p class="text-sm text-secondary py-6 text-center"><%= t("reports.spending_vs_normal.no_spending") %></p>
+  <% else %>
+    <div class="grid grid-cols-1 @3xl:grid-cols-5 gap-6">
+      <div class="@3xl:col-span-3 min-w-0">
+        <h3 class="text-sm font-medium text-secondary mb-2"><%= t("reports.spending_vs_normal.treemap_title") %></h3>
+        <div class="privacy-sensitive"
+             data-controller="spending-treemap"
+             data-spending-treemap-tree-value="<%= tree.to_json %>"
+             data-spending-treemap-labels-value="<%= {
+               normal: t("reports.spending_vs_normal.tooltip.normal"),
+               more: t("reports.spending_vs_normal.tooltip.more"),
+               less: t("reports.spending_vs_normal.tooltip.less"),
+               no_normal: t("reports.spending_vs_normal.tooltip.no_normal"),
+               open: t("reports.spending_vs_normal.tooltip.open"),
+               legend: {
+                 much_less: t("reports.spending_vs_normal.legend.much_less"),
+                 less: t("reports.spending_vs_normal.legend.less"),
+                 slightly_less: t("reports.spending_vs_normal.legend.slightly_less"),
+                 normal: t("reports.spending_vs_normal.legend.normal"),
+                 slightly_more: t("reports.spending_vs_normal.legend.slightly_more"),
+                 more: t("reports.spending_vs_normal.legend.more"),
+                 much_more: t("reports.spending_vs_normal.legend.much_more")
+               }
+             }.to_json %>"
+             data-spending-treemap-comparable-value="<%= comparison.comparable? %>"
+             role="img"
+             aria-label="<%= t("reports.spending_vs_normal.treemap_aria") %>">
+          <div class="h-[360px] md:h-[440px] w-full" data-spending-treemap-target="chart"></div>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-xs text-secondary" data-spending-treemap-target="legend"></div>
+        </div>
+      </div>
+
+      <div class="@3xl:col-span-2 min-w-0">
+        <h3 class="text-sm font-medium text-secondary mb-2"><%= t("reports.spending_vs_normal.changes_title") %></h3>
+        <% if changes.empty? %>
+          <p class="text-sm text-secondary"><%= comparison.comparable? ? t("reports.spending_vs_normal.no_changes") : t("reports.spending_vs_normal.no_history_short") %></p>
+        <% else %>
+          <ul class="space-y-1" data-testid="spending-changes">
+            <% changes.each do |row| %>
+              <% width = (row.change.abs / max_change * 100).round(1) %>
+              <li>
+                <%= link_to category_href.call(row.category),
+                      class: "grid grid-cols-[minmax(0,9rem)_1fr_5rem] items-center gap-2 rounded-md px-1 py-1 hover:bg-container-inset text-sm",
+                      title: t("reports.spending_vs_normal.change_title", category: row.category.name, total: money.call(row.total), normal: money.call(row.normal)) do %>
+                  <span class="truncate text-primary"><%= row.category.name %></span>
+                  <span class="grid grid-cols-2 h-3" aria-hidden="true">
+                    <span class="flex justify-end">
+                      <% if row.change.negative? %><span class="h-3 rounded-l bg-info" style="width: <%= width %>%"></span><% end %>
+                    </span>
+                    <span class="flex justify-start border-l border-secondary">
+                      <% if row.change.positive? %><span class="h-3 rounded-r bg-destructive" style="width: <%= width %>%"></span><% end %>
+                    </span>
+                  </span>
+                  <span class="text-right text-secondary privacy-sensitive tabular-nums">
+                    <%= row.change.negative? ? "−" : "+" %><%= whole.call(row.change.abs) %>
+                  </span>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>
