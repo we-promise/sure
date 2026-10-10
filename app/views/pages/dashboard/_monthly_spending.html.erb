@@ -1,0 +1,88 @@
+<%# locals: (monthly_spending:, filter_error: nil, view_params:) %>
+<div id="monthly-spending-section" class="px-4 space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <%= render DS::Pill.new(label: t(".preview")) %>
+    <div class="flex flex-wrap gap-2">
+      <%= render DS::Menu.new(variant: :button) do |menu| %>
+        <% menu.with_button(text: t(".period"), variant: :outline, icon: "calendar") %>
+        <% monthly_spending_period_options.each do |label, from, to| %>
+          <% menu.with_item(text: label, href: root_path(view_params.merge("monthly_spending_from" => from, "monthly_spending_to" => to)), variant: :link, frame: "dashboard_sections") %>
+        <% end %>
+      <% end %>
+      <%= render DS::Popover.new(variant: :button, max_width: "32rem") do |popover| %>
+        <% popover.with_button(text: t(".filters"), variant: :outline, icon: "list-filter") %>
+        <% popover.with_custom_content do %>
+          <%= form_with url: root_path, method: :get, data: { turbo_frame: "dashboard_sections" }, class: "p-4 space-y-4 max-h-128 overflow-y-auto" do %>
+            <% view_params.except("monthly_spending_from", "monthly_spending_to", "monthly_spending_account_ids", "monthly_spending_category_ids").each do |key, value| %>
+              <% Array(value).each do |item| %>
+                <%= hidden_field_tag value.is_a?(Array) ? "#{key}[]" : key, item, id: nil %>
+              <% end %>
+            <% end %>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="space-y-1">
+                <%= label_tag "monthly_spending_from", t(".from"), class: "block text-sm text-primary" %>
+                <%= month_field_tag "monthly_spending_from", monthly_spending.from.strftime("%Y-%m"), required: true, autocomplete: "off", max: Date.current.strftime("%Y-%m"), class: "w-full bg-container text-primary rounded-lg border border-secondary min-h-11 text-base focus-ring" %>
+              </div>
+              <div class="space-y-1">
+                <%= label_tag "monthly_spending_to", t(".to"), class: "block text-sm text-primary" %>
+                <%= month_field_tag "monthly_spending_to", monthly_spending.to.strftime("%Y-%m"), required: true, autocomplete: "off", max: Date.current.strftime("%Y-%m"), class: "w-full bg-container text-primary rounded-lg border border-secondary min-h-11 text-base focus-ring" %>
+              </div>
+            </div>
+            <p class="text-xs text-secondary"><%= t(".range_hint") %></p>
+            <%= render DS::FilterChecklist.new(name: "monthly_spending_account_ids", label: t(".accounts"), options: monthly_spending.accounts.map { |a| { id: a.id.to_s, name: a.name } }, selected_ids: monthly_spending.account_ids) %>
+            <%= render DS::FilterChecklist.new(name: "monthly_spending_category_ids", label: t(".categories"), options: monthly_spending.categories, selected_ids: monthly_spending.category_ids) %>
+            <%= render DS::Button.new(text: t(".apply"), type: :submit, full_width: true) %>
+          <% end %>
+        <% end %>
+      <% end %>
+      <%= render DS::Link.new(text: t(".reset"), variant: :ghost, href: root_path(view_params.except("monthly_spending_from", "monthly_spending_to", "monthly_spending_account_ids", "monthly_spending_category_ids")), data: { turbo_frame: "dashboard_sections" }) %>
+    </div>
+  </div>
+  <% if filter_error %>
+    <%= render DS::Alert.new(message: t(".invalid_filters"), variant: :warning, live: :status) %>
+  <% else %>
+    <% data = monthly_spending.as_json %>
+    <p class="text-sm text-secondary"><%= t(".scope", from: l(monthly_spending.from, format: :short_month_year), to: l(monthly_spending.to, format: :short_month_year), accounts: data[:filters][:account_ids].size, categories: data[:filters][:category_ids].size) %></p>
+    <p class="text-xs text-secondary"><%= t(".basis_hint") %></p>
+    <% if data[:missing_exchange_rates].positive? %>
+      <%= render DS::Alert.new(message: t(".fx_warning", count: data[:missing_exchange_rates]), variant: :warning) %>
+    <% end %>
+    <% if data[:empty_selection] %>
+      <p class="text-sm text-secondary" role="status"><%= t(".empty_selection") %></p>
+    <% elsif data[:months].all? { |month| month[:total].to_d.zero? } %>
+      <p class="text-sm text-secondary" role="status"><%= t(".no_expenses") %></p>
+    <% else %>
+      <%= render DS::MonthlySpendingChart.new(data: data) %>
+      <p class="text-xs text-secondary"><%= t(".interaction_hint") %></p>
+      <% catalog = data[:categories].index_by { |category| category[:id] } %>
+      <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs text-secondary" aria-label="<%= t(".categories") %>">
+        <% data[:months].flat_map { |month| month[:categories].pluck(:id) }.uniq.each do |id| %>
+          <span class="inline-flex items-center gap-2"><%= tag.span class: "size-2 rounded-full", style: "background-color: #{catalog.fetch(id)[:color]}", aria: { hidden: true } %><%= catalog.fetch(id)[:name] %></span>
+        <% end %>
+      </div>
+      <%= render DS::Disclosure.new(title: t(".all_months")) do %>
+        <%= render DS::Table.new(rows: data[:months], inset: true, label: t(".all_months")) do |table| %>
+          <% table.with_column(t(".month")) { |month| l(Date.iso8601(month[:month]), format: :short_month_year) } %>
+          <% table.with_column(t(".amount"), numeric: true, class: "privacy-sensitive") { |month| format_money(Money.new(month[:total].to_d, data[:currency])) } %>
+          <% table.with_column(t(".status")) { |month| [ (t(".partial") if month[:partial]), (t(".provisional") if month[:missing_exchange_rates].positive?) ].compact.join(" · ") } %>
+        <% end %>
+      <% end %>
+      <% data[:months].reverse_each do |month| %>
+        <% month_title = l(Date.iso8601(month[:month]), format: :month_year).capitalize %>
+        <%= render DS::Disclosure.new(open: month == data[:months].last, data: { month: month[:month] }) do |detail| %>
+          <% detail.with_summary_content do %>
+            <span class="text-sm text-primary"><%= month_title %><%= " · #{t('.partial')}" if month[:partial] %></span>
+            <span class="text-sm text-primary tabular-nums privacy-sensitive"><%= format_money(Money.new(month[:total].to_d, data[:currency])) %></span>
+          <% end %>
+          <% if month[:missing_exchange_rates].positive? %>
+            <p class="text-xs text-warning mb-2"><%= t(".provisional") %></p>
+          <% end %>
+          <%= render DS::Table.new(rows: month[:categories].sort_by { |category| -category[:amount].to_d }, inset: true, label: month_title) do |table| %>
+            <% table.with_column(t(".category")) { |category| catalog.fetch(category[:id])[:name] } %>
+            <% table.with_column(t(".amount"), numeric: true, class: "privacy-sensitive") { |category| format_money(Money.new(category[:amount].to_d, data[:currency])) } %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

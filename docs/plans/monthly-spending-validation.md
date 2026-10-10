@@ -1,0 +1,70 @@
+# Monatsausgaben – lokaler Prüfbericht
+
+Stand: 10. Oktober 2026. Branch: `feature/monthly-spending-dashboard`, Basis `94e71a8c2` (`origin/main`). Autor ausschließlich für dieses Repository: `hescher <github@johecker.com>`.
+
+Der lokale Preview umfasst Rails-Web, mobiles Web, API und die öffentliche Flutter-App. Kein Push, PR, Merge oder Deployment. Das Projekt bis Feedback-Auswertung und v3 ist weiterhin offen; siehe [Projektplan](monthly-spending-dashboard.md).
+
+## Ergebnisse
+
+| Prüfung | Ergebnis |
+| --- | --- |
+| Vollständige Rails-Tests | 11.061 Tests, 46.985 Assertions, keine Fehler/Failures, 34 Skips. |
+| Vollständige Flutter-Tests | 195 Tests bestanden. Nach dem letzten kleinen UI-Feinschliff zusätzlich alle sieben Monatsblock-Widgettests bestanden. |
+| Feature-Browsertests und Property-Test isoliert | Final 3 Tests, 21 Assertions, keine Fehler/Failures. Echte Chrome-Emulation mit 390 px; kein Seitenüberlauf, interne Chart-Navigation, Tastatur, Suche, explizit leere Auswahl und Reset. |
+| Vollständige Browser-Suite | 237 Tests, 1.177 Assertions, keine Failures, zwei Errors. Bestehender Property-Test findet „Edit“ im Gesamtlauf nicht; isoliert bestanden. Ein Screenshot-Rennen während Turbo-Ersetzung im neuen Test wurde durch eine explizite Wartebedingung korrigiert und fokussiert erfolgreich nachgeprüft. Gesamtsuite nach dieser Testkorrektur nicht erneut komplett ausgeführt; vor PR bleibt dieses Gate offen. |
+| RuboCop | 2.899 Dateien ohne Befunde. Finale Testkorrektur zusätzlich einzeln ohne Befunde. |
+| ERB-Lint | 756 Dateien, keine Fehler. |
+| Biome-Lint | Projektcheck ohne Befunde; neue DS-Controller zusätzlich explizit mit Biome geprüft, da sie außerhalb der Standard-Include-Regel liegen. |
+| Biome-Format | Projektweite Prüfung meldet 73 bestehende Formatfehler in unveränderten `app/javascript`-Dateien. Neue DS-Dateien bestehen den expliziten Format-/Lint-Check. Kein pauschales Umformatieren fremder Dateien. |
+| Flutter analyze | Drei bestehende Info-Befunde in unverändertem `intro_screen_web.dart` (dart:html, Web-Library, Escape); Exit 1. Keine neuen Befunde. |
+| Brakeman | Keine Fehler oder Security-Warnungen; neun bereits ignorierte Befunde. |
+| API-Dokumentation | rswag: 439 Beispiele, keine Failures, 89 Pending im dokumentationsbezogenen Dry-run; OpenAPI regeneriert. Verhalten separat durch Minitest geprüft. |
+| Git | Whitespace-Prüfung bestanden; temporäre Preview- und Lint-Hilfsdateien nicht Bestandteil des Commits. |
+
+## Relevante überprüfte Fälle
+
+- Gemeinsame Kontoberechtigungen und persönliche Preview-Freigabe, Familiengrenzen, OAuth/API-Key statt Browser-Session und fehlender Read-Scope.
+- Haupt-/Unterkategorien, nicht kategorisierte Buchungen, Nullmonate und Dezember/Januar; Teilmonat und familienbezogener Stichtag.
+- Bruttoausgaben, Erstattungen, Transfers, ausstehende/ausgeschlossene und zukünftige Buchungen, Reporting-Präferenzen sowie FX-Konvertierung und fehlende Kurse.
+- Alle/Keine-Auswahl, ungültige/unberechtigte IDs, maximal 36 Monate und kein unbemerkter Rückfall auf ungefilterte Ergebnisse.
+- Flutter: schmale Anzeige, große Schrift, Privacy-Modus, langsame konkurrierende Antworten, Fehler/alter Server/Preview aus, Monatswechsel und Filter-Presets.
+- Diagrammskalierung auch bei kleinen Beträgen unter einer Währungseinheit.
+
+## Bei der Prüfung behoben
+
+- Reset verwendete anfänglich die POST-Voreinstellung von `DS::Button`; durch expliziten GET-Link ersetzt.
+- Große native Schrift konnte Monatsbeschriftungen überlaufen lassen; Balkenbreite und Chart-Höhe passen sich dem Textmaßstab an.
+- Initiale native Vorschau erschien vor bestätigter Berechtigung; der Block bleibt nun bis zum ersten erfolgreichen API-Ergebnis verborgen.
+- Diagramm mit nur sehr kleinen Beträgen war unnötig flach; Skalierung verwendet den tatsächlichen positiven Höchstbetrag.
+- Native Filter erklären jetzt auch Bereiche über 36 Monate; Kategorie-Details zeigen die passenden Segmentfarben.
+
+## Noch keine Abnahme
+
+Reale iOS-/Android-Geräte und Builds, Screenreader, 100k-Lastmessung, exakte Buchungsdrilldowns, dauerhafte Filterdefaults, Offline-Cache und zusätzliche Web-Größen/Theme-Varianten bleiben offen. Flutter verwendet die bestehenden Sprachen EN/SV, das Web EN/DE. Das frühere öffentliche Swift-Experiment wurde entfernt ([PR #3235](https://github.com/we-promise/sure/pull/3235)); eine weitere Swift-App ist nicht als geliefert anzusehen.
+
+Vergleichsüberlagerungen folgen gemäß Projektplan in v2. CI, Review, Merge, Preview-Deployment, reales Nutzerfeedback und v3-Abnahme können erst mit den jeweiligen Ergebnissen abgeschlossen werden.
+
+## Befehle zur Wiederholung
+
+Im vorhandenen Entwicklungscontainer, Repository `/workspace`:
+
+```sh
+bin/rails test
+DISABLE_PARALLELIZATION=true bin/rails test:system
+DISABLE_PARALLELIZATION=true bin/rails test test/system/monthly_spending_test.rb test/system/property_test.rb
+bin/rubocop
+bundle exec erb_lint --lint-all
+npm run lint
+npm run format:check
+bundle exec brakeman --no-pager
+bundle exec rake rswag:specs:swaggerize
+```
+
+Im Flutter-Verzeichnis mit Flutter 3.32.4 / Dart 3.8.1:
+
+```sh
+flutter test
+flutter analyze
+```
+
+Die Screenshots im gemeinsamen Workspace zeigen tatsächlich gerenderte Komponenten mit synthetischen Testdaten: `monthly-spending-desktop.png`, `monthly-spending-mobile.png`, `monthly-spending-flutter.png`.

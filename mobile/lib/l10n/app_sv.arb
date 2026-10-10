@@ -302,5 +302,43 @@
   "chatListMinutesAgo": "för {minutes} min sedan",
   "chatListHoursAgo": "för {hours} tim sedan",
   "chatListDaysAgo": "för {days} d sedan",
-  "chatConversationStartFailed": "Det gick inte att starta konversationen. Försök igen."
+  "chatConversationStartFailed": "Det gick inte att starta konversationen. Försök igen.",
+  "monthlySpendingTitle": "Utgifter per månad",
+  "monthlySpendingPreview": "Förhandsvisning",
+  "monthlySpendingFilters": "Filter",
+  "monthlySpendingReset": "Återställ",
+  "monthlySpendingError": "Det gick inte att läsa utgifterna. Anslut till servern och försök igen.",
+  "monthlySpendingInvalid": "Välj 1–36 månader i ordning samt tillgängliga konton och kategorier.",
+  "monthlySpendingScope": "{accounts} konton · {categories} kategorier",
+  "monthlySpendingBasis": "Bokförda bruttoutgifter i hushållets valuta. Överföringar och väntande poster ingår inte; återbetalningar räknas som inkomst.",
+  "monthlySpendingFx": "Preliminärt: valutakurser saknas. Ursprungliga belopp ingår utan omräkning.",
+  "monthlySpendingEmptySelection": "Välj minst ett konto och en kategori för att visa utgifter.",
+  "monthlySpendingEmpty": "Inga utgifter att rapportera för detta urval.",
+  "monthlySpendingChartHidden": "Diagrammet är dolt i integritetsläge.",
+  "monthlySpendingHint": "Tryck på en stapel för detaljer; svep åt sidan för fler månader. * Pågående månad.",
+  "monthlySpendingPartial": "Pågående månad",
+  "monthlySpendingDetails": "Månadsdetaljer",
+  "monthlySpendingFrom": "Från månad",
+  "monthlySpendingTo": "Till månad",
+  "monthlySpendingAccounts": "Konton",
+  "monthlySpendingCategories": "Kategorier",
+  "monthlySpendingApply": "Tillämpa",
+  "monthlySpendingSearch": "Sök",
+  "monthlySpendingAll": "Alla",
+  "monthlySpendingNone": "Inga",
+  "monthlySpendingNoResults": "Inga träffar",
+  "@monthlySpendingScope": {
+    "placeholders": {
+      "accounts": {
+        "type": "int"
+      },
+      "categories": {
+        "type": "int"
+      }
+    }
+  },
+  "monthlySpendingChooseMonth": "Välj valfri månad",
+  "monthlySpendingLastTwelve": "Senaste 12 månaderna",
+  "monthlySpendingThisYear": "Detta år",
+  "monthlySpendingPreviousYear": "Föregående år"
 }

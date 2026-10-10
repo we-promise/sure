@@ -974,5 +974,43 @@
   },
 
   "chatConversationStartFailed": "Failed to start conversation. Please try again.",
-  "@chatConversationStartFailed": { "description": "Fallback snackbar shown when creating a new conversation from the first message fails." }
+  "@chatConversationStartFailed": { "description": "Fallback snackbar shown when creating a new conversation from the first message fails." },
+  "monthlySpendingTitle": "Spending by month",
+  "monthlySpendingPreview": "Preview",
+  "monthlySpendingFilters": "Filters",
+  "monthlySpendingReset": "Reset",
+  "monthlySpendingError": "Unable to load spending. Connect to the server and try again.",
+  "monthlySpendingInvalid": "Choose 1–36 months in order and available accounts and categories.",
+  "monthlySpendingScope": "{accounts} accounts · {categories} categories",
+  "monthlySpendingBasis": "Posted gross expenses in family currency. Transfers and pending entries are excluded; refunds remain income.",
+  "monthlySpendingFx": "Provisional: missing exchange rates. Original amounts are included without conversion.",
+  "monthlySpendingEmptySelection": "Select at least one account and category to show spending.",
+  "monthlySpendingEmpty": "No reportable expenses for this selection.",
+  "monthlySpendingChartHidden": "Chart hidden in privacy mode.",
+  "monthlySpendingHint": "Tap a bar for details; swipe sideways for more months. * Month in progress.",
+  "monthlySpendingPartial": "Month in progress",
+  "monthlySpendingDetails": "Month details",
+  "monthlySpendingFrom": "From month",
+  "monthlySpendingTo": "To month",
+  "monthlySpendingAccounts": "Accounts",
+  "monthlySpendingCategories": "Categories",
+  "monthlySpendingApply": "Apply",
+  "monthlySpendingSearch": "Search",
+  "monthlySpendingAll": "All",
+  "monthlySpendingNone": "None",
+  "monthlySpendingNoResults": "No matches",
+  "@monthlySpendingScope": {
+    "placeholders": {
+      "accounts": {
+        "type": "int"
+      },
+      "categories": {
+        "type": "int"
+      }
+    }
+  },
+  "monthlySpendingChooseMonth": "Choose any month",
+  "monthlySpendingLastTwelve": "Last 12 months",
+  "monthlySpendingThisYear": "This year",
+  "monthlySpendingPreviousYear": "Previous year"
 }

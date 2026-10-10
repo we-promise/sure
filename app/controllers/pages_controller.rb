@@ -15,6 +15,7 @@ class PagesController < ApplicationController
     "insights_feed"      => { col_span: "full",   grow: false, min_height: 0, width_toggle: true },
     "cashflow_sankey"    => { col_span: "full",   grow: false, min_height: 384, width_toggle: true },
     "money_flow"         => { col_span: "single", grow: false, min_height: 0,   width_toggle: true },
+    "monthly_spending"   => { col_span: "full", grow: false, min_height: 0, width_toggle: true },
     "spending_trend"     => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
@@ -29,7 +30,9 @@ class PagesController < ApplicationController
   # Query params that shape what the dashboard shows without being saved
   # anywhere. Customize mode carries them through its links and hide/add
   # buttons so the widgets don't jump back to their defaults.
-  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [] } ].freeze
+  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month,
+    :monthly_spending_from, :monthly_spending_to,
+    { money_flow_account_ids: [], monthly_spending_account_ids: [], monthly_spending_category_ids: [] } ].freeze
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -71,6 +74,7 @@ class PagesController < ApplicationController
   def update_section_hidden
     section_key = params[:section_key]
     return head :not_found unless DASHBOARD_SECTION_LAYOUTS.key?(section_key)
+    return head :not_found if section_key == "monthly_spending" && !preview_features_enabled?
 
     hidden = ActiveModel::Type::Boolean.new.cast(params[:hidden])
     Current.user.update_dashboard_section_hidden(section_key, hidden)
@@ -167,6 +171,7 @@ class PagesController < ApplicationController
             collapsible: true
           }
         },
+        "monthly_spending" => -> { monthly_spending_section },
         "spending_trend" => -> {
           {
             key: "spending_trend",
@@ -232,7 +237,7 @@ class PagesController < ApplicationController
     # investment summary never has anything to show, and without insights
     # neither does the feed.
     def hidden_dashboard_section(key)
-      return nil if key == "insights_feed" && !preview_features_enabled?
+      return nil if %w[insights_feed monthly_spending].include?(key) && !preview_features_enabled?
 
       visible = case key
       when "investment_summary" then investment_summary_available?
@@ -284,6 +289,39 @@ class PagesController < ApplicationController
       }
     end
 
+    def monthly_spending_section
+      return nil unless preview_features_enabled?
+
+      selection = {
+        from: monthly_spending_month_param(:monthly_spending_from),
+        to: monthly_spending_month_param(:monthly_spending_to),
+        account_ids: params[:monthly_spending_account_ids],
+        category_ids: params[:monthly_spending_category_ids]
+      }
+      begin
+        spending = IncomeStatement::MonthlySpending.new(dashboard_income_statement, params: selection)
+      rescue IncomeStatement::MonthlySpending::InvalidSelection
+        filter_error = true
+        # Only render default filter controls; never show unfiltered results
+        # after rejecting the user's selection.
+        spending = IncomeStatement::MonthlySpending.new(dashboard_income_statement)
+      end
+      {
+        key: "monthly_spending",
+        title: "pages.dashboard.monthly_spending.title",
+        partial: "pages/dashboard/monthly_spending",
+        layout: section_layout("monthly_spending"),
+        locals: { monthly_spending: spending, filter_error: filter_error, view_params: dashboard_view_params },
+        visible: @accounts.any?, collapsible: true
+      }
+    end
+
+    def monthly_spending_month_param(key)
+      value = params[key]
+      return if value.nil?
+      value.is_a?(String) && value.match?(/\A\d{4}-\d{2}\z/) ? "#{value}-01" : value
+    end
+
     def build_dashboard_sections
       hidden_keys = Current.user.dashboard_hidden_sections
       builders = dashboard_section_builders
@@ -307,7 +345,12 @@ class PagesController < ApplicationController
       keys = dashboard_section_builders.keys
       saved = Current.user.dashboard_section_order & keys
       unsaved = keys - saved
-      (unsaved & %w[insights_feed]) + saved + (unsaved - %w[insights_feed])
+      order = (unsaved & %w[insights_feed]) + saved + (unsaved - %w[insights_feed])
+      if unsaved.include?("monthly_spending")
+        order.delete("monthly_spending")
+        order.insert(order.index("money_flow") + 1, "monthly_spending")
+      end
+      order
     end
 
     # Resolves a section's layout guardrails, applying the user's height preset

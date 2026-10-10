@@ -3361,6 +3361,122 @@ components:
           "$ref": "#/components/schemas/FinancialPeriod"
         sankey:
           "$ref": "#/components/schemas/CashFlowSankey"
+    MonthlySpending:
+      type: object
+      required:
+      - currency
+      - basis
+      - as_of
+      - period
+      - filters
+      - accounts
+      - categories
+      - months
+      - empty_selection
+      - missing_exchange_rates
+      properties:
+        currency:
+          type: string
+        basis:
+          type: string
+          enum:
+          - gross_expense
+        as_of:
+          type: string
+          format: date
+        period:
+          type: object
+          required:
+          - from
+          - to
+          - end_date
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
+        filters:
+          type: object
+          required:
+          - account_ids
+          - category_ids
+          properties:
+            account_ids:
+              type: array
+              items:
+                type: string
+            category_ids:
+              type: array
+              items:
+                type: string
+        accounts:
+          type: array
+          items:
+            "$ref": "#/components/schemas/MonthlySpendingOption"
+        categories:
+          type: array
+          items:
+            "$ref": "#/components/schemas/MonthlySpendingOption"
+        months:
+          type: array
+          minItems: 1
+          maxItems: 36
+          items:
+            type: object
+            required:
+            - month
+            - partial
+            - total
+            - missing_exchange_rates
+            - categories
+            properties:
+              month:
+                type: string
+                format: date
+              partial:
+                type: boolean
+              total:
+                type: string
+                description: Exact decimal amount in family currency
+              missing_exchange_rates:
+                type: integer
+                minimum: 0
+              categories:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - id
+                  - amount
+                  properties:
+                    id:
+                      type: string
+                    amount:
+                      type: string
+                      description: Exact decimal amount in family currency
+        empty_selection:
+          type: boolean
+        missing_exchange_rates:
+          type: integer
+          minimum: 0
+    MonthlySpendingOption:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+          nullable: true
     CashFlow:
       type: object
       required:
@@ -8112,6 +8228,78 @@ paths:
                 "$ref": "#/components/schemas/MerchantDetail"
         '404':
           description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/monthly_spending":
+    get:
+      summary: Show monthly gross spending by root category (preview)
+      tags:
+      - Cash Flow
+      description: Shared web/mobile aggregation in family currency for the authenticated
+        user’s eligible finance accounts. Decimal strings; missing FX uses the existing
+        1:1 fallback and explicitly marks affected results as provisional. Transfers,
+        pending entries and excluded entries are omitted. Refunds remain income. Requires
+        personal preview access. Older servers may return 404.
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: First month YYYY-MM-01; defaults to 11 months before to. Maximum
+          36 months inclusive.
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Last month YYYY-MM-01; defaults to current family-timezone month,
+          capped at today. Future months are rejected.
+      - name: account_ids[]
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+        description: Omitted means all eligible accounts. Send an empty-string item
+          for explicit none. Unknown or unavailable IDs return 422.
+      - name: category_ids[]
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+        description: Root category IDs (include children) or __uncategorized__. Omitted
+          means all; empty-string item means none. Unknown IDs return 422.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: monthly spending returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MonthlySpending"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: preview disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid selection
           content:
             application/json:
               schema:

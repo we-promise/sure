@@ -1041,4 +1041,98 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get chatConversationStartFailed =>
       'Det gick inte att starta konversationen. Försök igen.';
+
+  @override
+  String get monthlySpendingTitle => 'Utgifter per månad';
+
+  @override
+  String get monthlySpendingPreview => 'Förhandsvisning';
+
+  @override
+  String get monthlySpendingFilters => 'Filter';
+
+  @override
+  String get monthlySpendingReset => 'Återställ';
+
+  @override
+  String get monthlySpendingError =>
+      'Det gick inte att läsa utgifterna. Anslut till servern och försök igen.';
+
+  @override
+  String get monthlySpendingInvalid =>
+      'Välj 1–36 månader i ordning samt tillgängliga konton och kategorier.';
+
+  @override
+  String monthlySpendingScope(int accounts, int categories) {
+    return '$accounts konton · $categories kategorier';
+  }
+
+  @override
+  String get monthlySpendingBasis =>
+      'Bokförda bruttoutgifter i hushållets valuta. Överföringar och väntande poster ingår inte; återbetalningar räknas som inkomst.';
+
+  @override
+  String get monthlySpendingFx =>
+      'Preliminärt: valutakurser saknas. Ursprungliga belopp ingår utan omräkning.';
+
+  @override
+  String get monthlySpendingEmptySelection =>
+      'Välj minst ett konto och en kategori för att visa utgifter.';
+
+  @override
+  String get monthlySpendingEmpty =>
+      'Inga utgifter att rapportera för detta urval.';
+
+  @override
+  String get monthlySpendingChartHidden =>
+      'Diagrammet är dolt i integritetsläge.';
+
+  @override
+  String get monthlySpendingHint =>
+      'Tryck på en stapel för detaljer; svep åt sidan för fler månader. * Pågående månad.';
+
+  @override
+  String get monthlySpendingPartial => 'Pågående månad';
+
+  @override
+  String get monthlySpendingDetails => 'Månadsdetaljer';
+
+  @override
+  String get monthlySpendingFrom => 'Från månad';
+
+  @override
+  String get monthlySpendingTo => 'Till månad';
+
+  @override
+  String get monthlySpendingAccounts => 'Konton';
+
+  @override
+  String get monthlySpendingCategories => 'Kategorier';
+
+  @override
+  String get monthlySpendingApply => 'Tillämpa';
+
+  @override
+  String get monthlySpendingSearch => 'Sök';
+
+  @override
+  String get monthlySpendingAll => 'Alla';
+
+  @override
+  String get monthlySpendingNone => 'Inga';
+
+  @override
+  String get monthlySpendingNoResults => 'Inga träffar';
+
+  @override
+  String get monthlySpendingChooseMonth => 'Välj valfri månad';
+
+  @override
+  String get monthlySpendingLastTwelve => 'Senaste 12 månaderna';
+
+  @override
+  String get monthlySpendingThisYear => 'Detta år';
+
+  @override
+  String get monthlySpendingPreviousYear => 'Föregående år';
 }
