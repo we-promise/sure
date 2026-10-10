@@ -234,10 +234,10 @@ Die öffentlich verfügbare mobile Implementierung liegt unter `mobile/` im Sure
 | Lastmessung | 10k/100k-Baseline, p95, Payload und Query-Zahl vor Rollout messen. Eine gruppierte Monatsabfrage vorhanden; Performanceziele bisher unbestätigt. |
 | Vergleich | Vorjahr-/Monatsüberlagerung, gleiche Tage und klare Vergleichsbasis in v2; noch nicht implementiert. |
 | Große Ansicht | Eigene Expand-/Fullscreen-Ansicht noch offen; bestehender Block-Breitenumschalter unterstützt. |
-| Gespeicherte Filter | Web-URL erhält Filter über Reload/Zurück; Flutter im Widget-Zustand. Persönliche dauerhafte Filterdefaults und Offline-Cache noch offen. |
-| Web-Darstellung | 390 px und Desktop im Browser geprüft. 320 px, Tablet, halbe Breite, Hell/Dunkel und viele Kategorien zusätzlich manuell abnehmen. |
+| Gespeicherte Filter | Web speichert validierte Filter pro Nutzer in Datenbank-Präferenzen; Flutter lokal pro Server/Nutzer auf dem Gerät. Mitwandernde Zeiträume und Reset umgesetzt. Synchronisation zwischen Web und App sowie Offline-Cache bleiben offen. |
+| Web-Darstellung | 320/390 px, Tablet (768 px) und Desktop im Browser geprüft; kein Seitenüberlauf bei den geprüften Breiten. Halbe Breite, weitere Theme-Varianten und viele Kategorien zusätzlich manuell abnehmen. |
 | Swift | Nur falls anderer Zielclient gemeint: Repository bestimmen und eigenen Lieferstrang umsetzen; nicht als geliefert zählen. |
-| Review, CI und Rollout | Lokaler Commit zuerst. Push/PR, Maintainer-Review, Merge, Images, Preview-Deployment und tatsächliches Feedback sind weitere Schritte. |
+| Review, CI und Rollout | Lokale Commits, isolierte Preview und erste Feedback-Verbesserungen liegen vor. Push/PR, native CI-Builds, Maintainer-Review, Merge und Produktionsrollout bleiben offen; weitere Feedback-Runden bis v3 folgen. |
 
 ### Prüfprotokoll
 

@@ -4,7 +4,7 @@ Stand: 10. Oktober 2026. Branch: `feature/monthly-spending-dashboard`, Basis `94
 
 Der lokale Preview umfasst Rails-Web, mobiles Web, API und die öffentliche Flutter-App. Kein Push, PR oder Merge. Eine separate lokale Preview ist nach Nutzerwahl deployed; kein Produktionsupdate. Das Projekt bis Feedback-Auswertung und v3 ist weiterhin offen; siehe [Projektplan](monthly-spending-dashboard.md).
 
-## Ergebnisse
+## Erster Prüfstand vor den Feedback-Iterationen
 
 | Prüfung | Ergebnis |
 | --- | --- |
@@ -40,9 +40,9 @@ Der lokale Preview umfasst Rails-Web, mobiles Web, API und die öffentliche Flut
 
 ## Noch keine Abnahme
 
-Reale iOS-/Android-Geräte und Builds, Screenreader, 100k-Lastmessung, exakte Buchungsdrilldowns, dauerhafte Filterdefaults, Offline-Cache und zusätzliche Web-Größen/Theme-Varianten bleiben offen. Flutter verwendet die bestehenden Sprachen EN/SV, das Web EN/DE. Das frühere öffentliche Swift-Experiment wurde entfernt ([PR #3235](https://github.com/we-promise/sure/pull/3235)); eine weitere Swift-App ist nicht als geliefert anzusehen.
+Reale iOS-/Android-Geräte und Builds, Screenreader, 100k-Lastmessung, exakte Buchungsdrilldowns, Offline-Cache und zusätzliche Web-Größen/Theme-Varianten bleiben offen. Dauerhafte Filter sind inzwischen umgesetzt; Web und native App synchronisieren ihre Auswahl noch nicht. Flutter verwendet die bestehenden Sprachen EN/SV, das Web EN/DE. Das frühere öffentliche Swift-Experiment wurde entfernt ([PR #3235](https://github.com/we-promise/sure/pull/3235)); eine weitere Swift-App ist nicht als geliefert anzusehen.
 
-Vergleichsüberlagerungen folgen gemäß Projektplan in v2. CI, Review, Merge, Preview-Deployment, reales Nutzerfeedback und v3-Abnahme können erst mit den jeweiligen Ergebnissen abgeschlossen werden.
+Vergleichsüberlagerungen folgen gemäß Projektplan in v2. Die separate Preview ist deployed und erstes Nutzerfeedback umgesetzt. CI, Review, Merge, Produktionsrollout, weitere Feedback-Runden und v3-Abnahme bleiben offen.
 
 ## Befehle zur Wiederholung
 
@@ -102,3 +102,38 @@ Umgesetzt am 10. Oktober 2026:
 - Schnellzeiträume und graue Hervorhebung des ausgewählten Monats bleiben bestehen. Zusätzliche sichtbare Filterhinweise sind auf Nutzerwunsch vertagt. Native Builds und die übrigen Release-Gates bleiben offen.
 
 Die V1-Ergänzungen aus Code-Commit `7abaddb36` sind in der separaten Preview unter `http://localhost:3100` deployt. Host-Healthcheck 200, Web/DB/Redis gesund, Worker läuft; Monats-API-Smoke inklusive Authentifizierung, explizit leerer Auswahl und ungültigem Zeitraum erfolgreich. Deutsche Kategorieanteile in der laufenden Ansicht bestätigt; Preview-Daten und bestehendes Nutzerlayout erhalten. Native App weiterhin nur als getesteter Quellstand, kein neuer nativer Build deployt.
+
+
+## PR-Vorbereitung (10. Oktober 2026)
+
+- Branch erneut gegen `origin/main` geprüft: Basis weiterhin `94e71a8c2`, keine neuen Main-Commits und kein Rebase erforderlich.
+- Vollständige RuboCop-Prüfung erfolgreich; ERB-Lint 757 Dateien ohne Fehler; Biome-Lint 136 Dateien ohne Befunde. Vier beteiligte Stimulus-Controller inklusive DS-Pfad zusätzlich explizit mit `biome check` geprüft.
+- Projektweite Formatprüfung gegen einen unveränderten Main-Dateistand verglichen: jeweils exakt dieselben 73 Dateien mit Formatbefunden, keine neuen betroffenen Dateien. Temporäre Main-Kopie anschließend entfernt.
+- Brakeman: null Fehler, null Sicherheitswarnungen, neun bestehende ignorierte Befunde. API-Konsistenzprüfung erfolgreich; Read-Scope, persönliche Freigabe und Benutzer-/Familienkontengrenzen im Code und vorhandenen Tests geprüft.
+- Flutter-Web-Release-Build erfolgreich. Android-SDK fehlt lokal; iOS benötigt macOS/Xcode. Die bestehenden Mobile-PR-Workflows bauen Android und iOS und müssen nach Push/PR erfolgreich durchlaufen. Kein nativer Build als lokal bestanden gewertet.
+- Der bestehende Property-Systemtest reproduzierte erneut ein geschlossenes Edit-Menü während Turbo-Morph. Seine bereits begrenzte Wiederholung behandelt nun auch `Capybara::ElementNotFound`; unverändert abschließende Prüfung des erwarteten Formularwerts. Keine Änderung am produktiven Property-Verhalten.
+
+Die früheren Ergebnisabschnitte dokumentieren die jeweiligen Zwischenstände. Abschließende Gesamtläufe und PR-Freigabe werden erst nach ihrem tatsächlichen Ergebnis ergänzt.
+
+
+Zusätzliche echte Preview-Anzeigeprüfung: 320 × 740 und 768 × 1024 px, jeweils Seitenbreite exakt gleich Viewportbreite. Bei 320 px liegt das Filterpanel vollständig im Viewport (x=8–312, y=219–731); Anwenden bleibt im festen Fußbereich erreichbar. Tabletansicht zeigt gestapelte Balken, Summen und Kategorieanteile; aktueller Monat nach Neuladen vollständig im internen Scrollbereich sichtbar. Gespeicherte Auswahl beim erneuten Preview-Besuch erhalten. Keine dauerhafte Änderung der Nutzerfilter; temporäre Viewportvorgabe und Prüftab anschließend entfernt. Screenshot: `monthly-spending-tablet-pr-check.png` im gemeinsamen Windows-Workspace. Light-Theme, echte Geräte und Screenreader weiterhin nicht als zusätzlich abgenommen gewertet.
+
+Flutter erneut vollständig: 199 Tests bestanden. `flutter analyze --no-fatal-infos` (wie Mobile CI) erfolgreich, ausschließlich die drei bestehenden Info-Befunde in `intro_screen_web.dart`.
+
+
+## Abschließender lokaler PR-Prüfstand
+
+| Prüfung | Tatsächliches Ergebnis |
+| --- | --- |
+| Rails vollständig | 11.067 Tests, 47.015 Assertions, 0 Failures/Errors; 34 bestehende Skips. |
+| Browser vollständig nach Testkorrektur | 239 Tests, 1,191 Assertions, 0 Failures/Errors, 0 Skips; gleicher Seed 52247 wie beim reproduzierten Property-Menüfehler. |
+| Flutter vollständig | 199 Tests bestanden. |
+| Flutter Web Release | Build erfolgreich; kein nativer Android-/iOS-Build lokal durchgeführt. |
+| Flutter analyze mit CI-Option | Erfolgreich; drei bestehende Info-Befunde. |
+| RuboCop / ERB / Biome-Lint | Vollständige Checks bestanden; ERB 757 Dateien, Biome 136 Dateien. DS-Controller zusätzlich explizit bestanden. |
+| Biome Format | 73 bestehende Befunde in exakt denselben Dateien wie pristine Main; keine neuen Formatfehler. |
+| Brakeman | 0 Fehler, 0 Security-Warnungen, 9 bestehende ignorierte Befunde. |
+| OpenAPI | Erneut generiert, unverändert; 439 Dokumentationsbeispiele, 0 Failures, 89 dokumentationsbezogene Pending. |
+| Git / Main | Whitespace-Prüfung bestanden; Basis weiterhin aktuelles `origin/main` 94e71a8c2. |
+
+Lokale Pflichtchecks für die PR-Vorbereitung abgeschlossen. Kein Push und keine PR erstellt. Der lokale PR-Entwurf liegt als `monthly-spending-pr.md` im gemeinsamen Windows-Workspace. Native CI-Builds bleiben vor Merge erforderlich; die weiteren Geräte-, Zugänglichkeits- und Performance-Gates gelten vor breitem Rollout. Die isolierte Preview bleibt auf Funktionscommit `7abaddb36`: die anschließende Testkorrektur und Dokumentation ändern keine Laufzeitfunktion und erfordern keinen erneuten Image-Build.
