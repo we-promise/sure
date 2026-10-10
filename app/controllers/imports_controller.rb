@@ -86,6 +86,12 @@ class ImportsController < ApplicationController
       return
     end
 
+    # These types require a file; without one (e.g. a dropped multipart part) don't fall through to a bogus TransactionImport.
+    if file.blank? && (document_upload_request? || sure_import_request?)
+      redirect_to new_import_path, alert: t("imports.create.missing_upload")
+      return
+    end
+
     # Handle PDF file uploads - process with AI
     if file.present? && Import::ALLOWED_PDF_MIME_TYPES.include?(file.content_type)
       unless valid_pdf_file?(file)

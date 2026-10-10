@@ -98,6 +98,17 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.missing_upload"), flash[:alert]
   end
 
+  test "create with DocumentImport or SureImport type but no file redirects back with an alert" do
+    %w[DocumentImport SureImport].each do |type|
+      assert_no_difference "Import.count" do
+        post imports_url, params: { import: { type: type } }
+      end
+
+      assert_redirected_to new_import_url
+      assert_equal I18n.t("imports.create.missing_upload"), flash[:alert]
+    end
+  end
+
   test "uploads supported non-pdf document for vector store without creating import" do
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.csv .pdf])
