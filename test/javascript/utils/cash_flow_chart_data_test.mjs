@@ -41,8 +41,28 @@ test("accepts empty graphs", () => {
       currency: "USD",
       sankey: { basis: "net_by_category", nodes: [], links: [] },
     }),
-    { nodes: [], links: [] },
+    { basis: "net_by_category", nodes: [], links: [] },
   );
+});
+test("accepts a graph grouped by account", () => {
+  const body = payload();
+  body.sankey.basis = "net_by_account";
+  body.sankey.nodes[1] = {
+    id: "account_one",
+    name: "Checking",
+    kind: "account",
+    value: "12.345",
+    percentage: "100.0",
+    color: "#737373",
+  };
+  const graph = cashFlowChartData(body);
+  assert.equal(graph.basis, "net_by_account");
+  assert.equal(graph.nodes[1].kind, "account");
+});
+test("rejects an unknown basis", () => {
+  const body = payload();
+  body.sankey.basis = "net_by_merchant";
+  assert.throws(() => cashFlowChartData(body), /Invalid cash flow graph/);
 });
 test("rejects malformed, unsafe, and cyclic graphs", () => {
   for (const mutate of [
