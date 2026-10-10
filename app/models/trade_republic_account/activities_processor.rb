@@ -3,8 +3,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
   SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
   STOCK_PERK_EVENT_TYPE = "ACQUISITION_TRADE_PERK"
-  # Shares Trade Republic pays for: a portfolio trade with no counterpart in
-  # the cash account. Saveback books its amount; a stock bonus books no cash.
+  # Shares Trade Republic pays for: a trade only, without a cash leg.
   BROKER_FUNDED_TRADE_EVENT_TYPES = [ SAVEBACK_EVENT_TYPE, STOCK_PERK_EVENT_TYPE ].freeze
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
@@ -219,13 +218,12 @@ class TradeRepublicAccount::ActivitiesProcessor
       nil
     end
 
-    # A stock bonus is a gift: no cash moves anywhere, so its trade must not
-    # move the portfolio's cash either. Saveback keeps booking its amount.
+    # Trade Republic pays for Saveback and stock bonuses: no cash moves
+    # anywhere, so the trade must not move the portfolio's cash either.
     def process_broker_funded_trade(event, detail, external_id, date)
       return nil unless @trade_republic_account.holds_securities?
 
-      moves_cash = event[:eventType].to_s != STOCK_PERK_EVENT_TYPE
-      import_order_execution(event, detail, external_id, date, moves_cash: moves_cash) ? :trade : nil
+      import_order_execution(event, detail, external_id, date, moves_cash: false) ? :trade : nil
     end
 
     def process_round_up(event, detail, external_id, date)

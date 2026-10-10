@@ -677,7 +677,10 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Trade", trade.entryable_type
     assert_equal BigDecimal("0.09329"), trade.entryable.qty
     assert_equal "Buy", trade.entryable.investment_activity_label
-    assert_equal BigDecimal("3.74"), trade.amount
+    # Trade Republic pays for Saveback, so the portfolio's cash must not move;
+    # the value stays in the price for the cost basis.
+    assert_equal 0, trade.amount
+    assert_in_delta BigDecimal("3.74"), trade.entryable.qty * trade.entryable.price, BigDecimal("0.01")
     assert_equal "SAVEBACK_AGGREGATE", trade.entryable.extra.dig("trade_republic", "event_type")
 
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_saveback")
