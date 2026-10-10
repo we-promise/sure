@@ -236,8 +236,8 @@ class TradeRepublicItem::Importer
       portfolio_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
     end
 
-    # Incomplete trade-detail events, complete trades still missing a share
-    # price (stored before execution price/fees were parsed) and dividends
+    # Incomplete trade-detail events, complete trades without a price read from
+    # the detail (missing, or derived from the rounded total) and dividends
     # without their detail, in the client's backlog order.
     def events_needing_detail_enrichment
       portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
