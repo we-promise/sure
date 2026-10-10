@@ -2,6 +2,9 @@
 # include children: subtract those children before partitioning by direction, so
 # a refund in a child cannot be counted again in its parent's net amount.
 class IncomeStatement::Sankey
+  # The default colour of the Investment Contributions category.
+  INVESTED_COLOR = "#0d9488".freeze
+
   def initialize(statement, period:)
     @statement, @period = statement, period
   end
@@ -11,14 +14,21 @@ class IncomeStatement::Sankey
     groups = category_groups
     income = groups.sum { |group| side_total(group, :income) }.to_d
     spending = groups.sum { |group| side_total(group, :expense) }.to_d
-    capacity = [ income, spending ].max
+    # Non-zero only for a family that does not count investing as spending:
+    # it leaves the centre as its own outflow, next to spending.
+    invested = @statement.invested_total(period: @period).amount.to_d
+    capacity = [ income, spending + invested ].max
     unless capacity.zero?
       center = add_node("cash_flow_node", "Cash Flow", :cash_flow, capacity, 100)
       groups.each do |group|
         add_group(group, :income, income, center)
         add_group(group, :expense, spending, center)
       end
-      net = income - spending
+      unless invested.zero?
+        index = add_node("invested_node", "Invested", :invested, invested, percentage(invested, capacity), color: INVESTED_COLOR)
+        add_link(center, index, invested, percentage(invested, capacity))
+      end
+      net = income - spending - invested
       unless net.zero?
         kind = net.positive? ? :surplus : :deficit
         index = add_node("#{kind}_node", kind.to_s.capitalize, kind, net.abs, percentage(net.abs, capacity))
@@ -26,7 +36,7 @@ class IncomeStatement::Sankey
         add_link(source, target, net.abs, percentage(net.abs, capacity))
       end
     end
-    { basis: "net_by_category", income: decimal(income), spending: decimal(spending),
+    { basis: "net_by_category", income: decimal(income), spending: decimal(spending), invested: decimal(invested),
       net_savings: decimal(income - spending), nodes: @nodes, links: @links }
   end
 
@@ -80,10 +90,10 @@ class IncomeStatement::Sankey
       end
     end
 
-    def add_node(id, name, kind, value, percentage, category = nil)
+    def add_node(id, name, kind, value, percentage, category = nil, color: category&.color)
       @nodes << { id: id, name: name, kind: kind.to_s, value: decimal(value), percentage: decimal(percentage),
         category_id: category&.id, filter_value: category && !category.other_investments? ? category.filter_value : nil,
-        color: category&.color }
+        color: color }
       @nodes.size - 1
     end
 
