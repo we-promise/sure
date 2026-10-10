@@ -30,4 +30,13 @@ class DS::TooltipTest < ViewComponent::TestCase
   test "rejects unknown variants" do
     assert_raises(ArgumentError) { DS::Tooltip.new(variant: :neon) }
   end
+
+  test "bubble and content share a width cap with normal wrapping" do
+    # Guards against text spilling past the bubble when a tooltip sits
+    # inside a truncating ancestor (which leaks white-space: nowrap).
+    render_inline(DS::Tooltip.new(text: "A very long tooltip text that must wrap", variant: :surface))
+
+    assert_selector "[role=tooltip].max-w-\\[20rem\\]", visible: :all
+    assert_selector "[role=tooltip] .whitespace-normal.max-w-\\[20rem\\]", visible: :all, text: "A very long tooltip text that must wrap"
+  end
 end
