@@ -610,7 +610,7 @@ class SophtronItemsController < ApplicationController
 
     if turbo_frame_request?
       @manual_accounts = Account.uncached {
-        Current.family.accounts.visible_manual.order(:name).to_a
+        Current.family.accounts.visible_manual_for(Current.user).order(:name).to_a
       }
       @sophtron_items = Current.family.sophtron_items.ordered
       manual_accounts_stream = if @manual_accounts.any?

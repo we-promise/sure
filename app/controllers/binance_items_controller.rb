@@ -135,7 +135,7 @@ class BinanceItemsController < ApplicationController
     if turbo_frame_request?
       item = binance_account.binance_item.reload
       @binance_items = Current.family.binance_items.ordered.includes(:syncs)
-      @manual_accounts = Account.uncached { Current.family.accounts.visible_manual.order(:name).to_a }
+      @manual_accounts = Account.uncached { Current.family.accounts.visible_manual_for(Current.user).order(:name).to_a }
 
       flash.now[:notice] = t(".success")
       @account.reload

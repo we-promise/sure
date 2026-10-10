@@ -1082,4 +1082,35 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert Account.exists?(stale_account.id)
     assert SimplefinAccount.exists?(stale_sfa.id)
   end
+
+  test "complete_account_setup's stream lists only the manual accounts the viewer can access" do
+    own, shared, private_account = create_manual_accounts_for_scope_test
+
+    post complete_account_setup_simplefin_item_url(@simplefin_item),
+         params: { sync_start_date: Date.today.to_s },
+         headers: { "Turbo-Frame" => "modal" }
+
+    assert_turbo_stream action: "update", target: "manual-accounts"
+    assert_includes response.body, own.name
+    assert_includes response.body, shared.name
+    assert_not_includes response.body, private_account.name
+  end
+
+  private
+    # The #manual-accounts list rebuilt in this response must match /accounts
+    # for the viewer: their own manual accounts and those shared with them,
+    # never a member's account that was not shared.
+    def create_manual_accounts_for_scope_test
+      admin = users(:family_admin)
+      member = users(:family_member)
+      build = ->(name, owner) {
+        Account.create!(family: families(:dylan_family), owner: owner, name: name, currency: "USD", balance: 0,
+                        accountable: Depository.create!(subtype: "checking"))
+      }
+      own = build.call("Admin Own Manual Marker", admin)
+      shared = build.call("Member Shared Manual Marker", member)
+      shared.account_shares.create!(user: admin, permission: "read_only")
+      private_account = build.call("Member Private Manual Marker", member)
+      [ own, shared, private_account ]
+  end
 end
