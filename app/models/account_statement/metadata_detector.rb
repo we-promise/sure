@@ -35,7 +35,7 @@ class AccountStatement::MetadataDetector
   MAX_CSV_COLUMNS = 100
   MAX_CSV_DATE_SAMPLES = 250
   MAX_CSV_SAMPLE_BYTES = 256
-  MAX_PDF_PAGES = 2
+  MAX_PDF_METADATA_PAGES = 2
 
   attr_reader :statement, :content
 
@@ -160,7 +160,7 @@ class AccountStatement::MetadataDetector
     # top of a statement. Any reader failure leaves filename detection as the
     # fallback instead of failing the upload.
     def pdf_text
-      Pdf::TextExtractor.pages(content, max_pages: MAX_PDF_PAGES).join("\n")
+      Pdf::TextExtractor.pages(content, max_pages: MAX_PDF_METADATA_PAGES).join("\n")
     rescue StandardError => e
       Rails.logger.info("AccountStatement::MetadataDetector - PDF text unavailable: #{e.class}")
       ""
