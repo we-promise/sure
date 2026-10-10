@@ -36,6 +36,7 @@ es:
       files_hint: PDF, CSV o XLSX. Máximo %{max_size} MB por archivo.
       files_label: Archivos de extracto
       inbox_upload: Subir
+      period_hint: "Sure lee el periodo del PDF si lo indica, o de una fecha en el nombre del archivo (p. ej. 2026-04). También puedes indicarlo en el extracto."
     index:
       account_label: Cuenta
       confidence: "Coincidencia del %{confidence}"

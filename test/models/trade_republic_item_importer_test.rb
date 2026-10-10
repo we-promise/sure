@@ -1074,6 +1074,43 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal [ "incomplete-ok" ], enrich_ids
   end
 
+  test "detail enrichment tries never-attempted events first, then the least recently attempted" do
+    attempted_key = Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY
+    incomplete = ->(id, timestamp, attempted_at = nil) {
+      {
+        "id" => id,
+        "timestamp" => timestamp,
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "category" => "orderExecution",
+        "detail" => { "amount" => -100.0, attempted_key => attempted_at }.compact
+      }
+    }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-ROTATE",
+      currency: "EUR",
+      raw_timeline_payload: [
+        incomplete.call("old-recent-attempt", "2024-01-01T10:00:00Z", 1.hour.ago.iso8601),
+        incomplete.call("old-early-attempt", "2024-02-01T10:00:00Z", 2.days.ago.iso8601),
+        incomplete.call("new-never-attempted", "2025-11-18T11:19:31Z"),
+        {
+          "id" => "needs-price",
+          "timestamp" => 1.day.ago.iso8601,
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "category" => "orderExecution",
+          "detail" => { "isin" => "US0378331005", "quantity" => "1", "amount" => -100.0 }
+        }
+      ]
+    )
+
+    enrich_ids = TradeRepublicItem::Importer.new(@item, provider: mock("provider"))
+      .send(:events_needing_detail_enrichment)
+      .map { |event| event["id"] }
+
+    assert_equal %w[new-never-attempted needs-price old-early-attempt old-recent-attempt], enrich_ids
+  end
+
   test "events needing detail enrichment include complete trades missing share price" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",
@@ -1234,7 +1271,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       portfolio.reload.raw_timeline_payload.first.dig("detail", Provider::TradeRepublicClient::SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY)
   end
 
-  test "isins_needing_symbol_lookup skips trades that already have a ticker" do
+  test "isins_needing_symbol_lookup skips trades that already have a ticker and bonds" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",
       name: "Portfolio",
@@ -1258,6 +1295,12 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
             "quantity" => "1",
             "amount" => "10"
           }
+        },
+        {
+          "id" => "bond",
+          "category" => "orderExecution",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "detail" => { "isin" => "IT0005377152", "quantity" => "2677.95", "amount" => "2498.31", "instrument_type" => "bond" }
         }
       ]
     )

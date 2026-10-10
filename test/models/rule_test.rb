@@ -10,6 +10,101 @@ class RuleTest < ActiveSupport::TestCase
     @groceries_category = @family.categories.create!(name: "Groceries")
   end
 
+  test "rejects a null byte in the rule name" do
+    rule = @family.rules.build(name: "bad\0name", resource_type: "transaction")
+    rule.actions.build(action_type: "exclude_transaction")
+
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:name, :invalid)
+
+    rule.name = " \0 "
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:name, :invalid)
+
+    rule.name = "\0"
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:name, :invalid)
+  end
+
+  test "rejects invalid text encoding in rule fields" do
+    invalid_text = "bad\xFF".dup.force_encoding("UTF-8")
+    rule = @family.rules.build(name: invalid_text, resource_type: "transaction")
+    rule.actions.build(action_type: "exclude_transaction")
+
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:name, :invalid)
+
+    rule.name = "Valid name"
+    rule.resource_type = invalid_text
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:resource_type, :invalid)
+  end
+
+  test "rejects null bytes and invalid encoding in condition and action metadata" do
+    invalid_text = "bad\xFF".dup.force_encoding("UTF-8")
+    rule = @family.rules.build(resource_type: "transaction")
+    condition = rule.conditions.build(condition_type: "transaction_name", operator: "like\0", value: "coffee")
+    action = rule.actions.build(action_type: "exclude_transaction\0")
+
+    assert_not rule.valid?
+    assert condition.errors.of_kind?(:operator, :invalid)
+    assert action.errors.of_kind?(:action_type, :invalid)
+
+    condition.operator = "like"
+    condition.value = invalid_text
+    action.action_type = "set_transaction_name"
+    action.value = invalid_text
+
+    assert_not rule.valid?
+    assert condition.errors.of_kind?(:value, :invalid)
+    assert action.errors.of_kind?(:value, :invalid)
+
+    condition.condition_type = invalid_text
+    assert_not rule.valid?
+    assert condition.errors.of_kind?(:condition_type, :invalid)
+  end
+
+  test "rejects invalid encoding in a multi-value action" do
+    invalid_text = "bad\xFF".dup.force_encoding("UTF-8")
+    rule = @family.rules.build(resource_type: "transaction")
+    action = rule.actions.build(action_type: "set_transaction_tags", value: [ invalid_text ])
+
+    assert_not rule.valid?
+    assert action.errors.of_kind?(:value, :invalid)
+  end
+
+  test "rejects a null byte in a nested condition value" do
+    rule = @family.rules.build(resource_type: "transaction")
+    compound = rule.conditions.build(condition_type: "compound", operator: "and")
+    condition = compound.sub_conditions.build(condition_type: "transaction_name", operator: "like", value: "bad\0value")
+    rule.actions.build(action_type: "exclude_transaction")
+
+    assert_not rule.valid?
+    assert condition.errors.of_kind?(:value, :invalid)
+  end
+
+  test "rejects a null byte in an action value" do
+    rule = @family.rules.build(resource_type: "transaction")
+    action = rule.actions.build(action_type: "set_transaction_name", value: "bad\0value")
+
+    assert_not rule.valid?
+    assert action.errors.of_kind?(:value, :invalid)
+  end
+
+  test "allows other whitespace and Unicode in rule text" do
+    rule = @family.rules.build(name: "咖啡\n提醒", resource_type: "transaction")
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "café\tshop")
+    rule.actions.build(action_type: "set_transaction_name", value: "Tea\nshop")
+
+    assert rule.valid?
+  end
+
+  test "create_from_grouping returns nil for a null byte" do
+    assert_no_difference "Rule.count" do
+      assert_nil Rule.create_from_grouping(@family, "bad\0name", @groceries_category)
+    end
+  end
+
   test "basic rule" do
     transaction_entry = create_transaction(date: Date.current, account: @account, merchant: @whole_foods_merchant)
 

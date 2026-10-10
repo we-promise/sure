@@ -1097,6 +1097,83 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
   end
 
+  test "maps card funding, card credit and stamp duty events to cash categories" do
+    categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
+    assert_equal "POC_CREATED", categories["CARD_AFT"]
+    assert_equal "PAYMENT_RECEIVED", categories["CARD_OCT"]
+    assert_equal "POC_CREATED", categories["STAMP_DUTY_TAX_PAID"]
+
+    %w[CARD_AFT CARD_OCT STAMP_DUTY_TAX_PAID].each do |event_type|
+      assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+  end
+
+  test "maps credit card top-ups and stock bonuses" do
+    categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
+    assert_equal "PAYMENT_RECEIVED", categories["PAYMENT_INBOUND_CREDIT_CARD"]
+    assert_equal "POC_CREATED", categories["ACQUISITION_TRADE_PERK"]
+
+    %w[PAYMENT_INBOUND_CREDIT_CARD ACQUISITION_TRADE_PERK].each do |event_type|
+      assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+    assert Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "ACQUISITION_TRADE_PERK")
+  end
+
+  test "normalize_event_detail names a stock bonus after its asset" do
+    detail = @client.send(:normalize_event_detail, stock_bonus_detail,
+      item: { "title" => "Stock Bonus", "subtitle" => "Redeemed", "eventType" => "ACQUISITION_TRADE_PERK" })
+
+    assert_equal "US0231351067", detail["isin"]
+    assert_equal "Amazon.com", detail["name"]
+    assert_equal "0.055", detail["quantity"]
+    assert_equal "10.04", detail["amount"]
+  end
+
+  test "stamp duty cancellations are not treated as declined events" do
+    cancellation = {
+      "eventType" => "STAMP_DUTY_TAX_PAID",
+      "title" => "Stamp duty (Portfolio)",
+      "subtitle" => "Cancellation of stamp duty"
+    }
+
+    assert Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(cancellation)
+    assert_not Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation)
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation.merge("status" => "CANCELED"))
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(
+      "eventType" => "CARD_TRANSACTION", "subtitle" => "Cancelled"
+    )
+  end
+
+  test "a voided stamp duty charge is blocked, not treated as a cancellation" do
+    voided = {
+      "eventType" => "STAMP_DUTY_TAX_PAID",
+      "title" => "Stamp duty (Portfolio)",
+      "subtitle" => "Cancelled"
+    }
+
+    assert_not Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(voided)
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(voided)
+    assert_not Provider::TradeRepublicTimelineEvent.importable?(voided)
+  end
+
+  test "a failed badge still blocks a stamp duty cancellation" do
+    cancellation = {
+      "eventType" => "STAMP_DUTY_TAX_PAID",
+      "title" => "Stamp duty (Portfolio)",
+      "subtitle" => "Cancellation of stamp duty"
+    }
+
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation.merge("badge" => "Failed"))
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation.merge("badge" => "Declined"))
+    assert_not Provider::TradeRepublicTimelineEvent.importable?(cancellation.merge("badge" => "Failed"))
+  end
+
+  test "ignores tax report corrections and source of wealth checks" do
+    %w[TAX_YEAR_END_REPORT_CORRECTED AML_SOURCE_OF_WEALTH_RESPONSE_EXECUTED].each do |event_type|
+      assert_equal :ignored, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+  end
+
   test "ignores Legal documents timeline rows without an event type" do
     assert_equal :ignored, Provider::TradeRepublicTimelineEvent.classify(
       "title" => "Legal documents",
@@ -1393,6 +1470,49 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(stored, 25.hours.from_now)
   end
 
+  test "detail backfill marks a stored trade that stays incomplete" do
+    freeze_time
+    event = {
+      "id" => "trade-1",
+      "timestamp" => 2.days.ago.iso8601,
+      "category" => "orderExecution",
+      "eventType" => "TRADING_TRADE_EXECUTED",
+      "detail" => { "amount" => -100.0, "currency" => "EUR" }
+    }
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| { "sections" => [] } }
+
+    events, = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ event ])
+
+    stored = events.find { |candidate| candidate["id"] == "trade-1" }
+    assert_equal Time.current.iso8601, stored.dig("detail", Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY)
+  end
+
+  test "detail backfill leaves no attempt marker on a trade it completes" do
+    event = {
+      "id" => "trade-1",
+      "timestamp" => 2.days.ago.iso8601,
+      "category" => "orderExecution",
+      "eventType" => "TRADING_TRADE_EXECUTED",
+      "detail" => { "amount" => -1024.92, "currency" => "EUR" }
+    }
+    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+      { "sections" => [
+        { "title" => "Overview", "type" => "table", "data" => [
+          { "title" => "Shares", "detail" => { "text" => "2" } },
+          { "title" => "Share price", "detail" => { "text" => "€511.96" } },
+          { "title" => "Total", "detail" => { "text" => "€1,024.92" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
+      ] }
+    end
+
+    events, = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ event ])
+
+    stored = events.find { |candidate| candidate["id"] == "trade-1" }
+    assert Provider::TradeRepublicClient.trade_detail_complete?(stored)
+    assert_nil stored.dig("detail", Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY)
+  end
+
   test "price backfill stops retrying once the trade is older than the retry window" do
     trade = {
       "category" => "orderExecution",
@@ -1612,6 +1732,24 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     assert_equal [ "dividend-1" ], requested
     assert_equal "US0378331005", enriched.find { |event| event["id"] == "dividend-1" }.dig("detail", "isin")
+  end
+
+  test "detail backfill marks a stored dividend that stays without details" do
+    freeze_time
+    stored = {
+      "id" => "dividend-1",
+      "timestamp" => "2024-12-27T10:00:00Z",
+      "eventType" => "SSP_CORPORATE_ACTION_CASH",
+      "category" => "DIVIDEND",
+      "status" => "EXECUTED",
+      "detail" => { "amount" => 4.3, "currency" => "EUR" }
+    }
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| { "sections" => [] } }
+
+    enriched, = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ stored ])
+
+    dividend = enriched.find { |event| event["id"] == "dividend-1" }
+    assert_equal Time.current.iso8601, dividend.dig("detail", Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY)
   end
 
   test "trade savings saveback and round-up events request timeline details" do
@@ -1925,7 +2063,9 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       enrich_events: [ { "id" => "fail-soft", "eventType" => "SAVINGS_PLAN_INVOICE_CREATED" } ]
     )
 
-    assert_empty enriched
+    # The failed attempt is recorded, so the backlog moves on to other events.
+    assert_equal [ "fail-soft" ], enriched.map { |event| event["id"] }
+    assert enriched.first.dig("detail", Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY).present?
     assert_equal [ "detail fetch failed for event fail-soft" ], warnings
 
     assert_raises(Provider::TradeRepublicClient::Timeout) do
@@ -2235,7 +2375,425 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "XETR", symbols.dig("NL0000303709", "exchange_slug")
   end
 
+  test "bonds skip the shared BOND listing and are named by issuer, coupon and maturity" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      requested << payload[:type]
+      case payload[:type]
+      when "instrument"
+        {
+          "name" => "ITALIEN 19/40",
+          "shortName" => "Mar 2040",
+          "typeId" => "bond",
+          "bondInfo" => { "issuerName" => "Italy", "interestRate" => 0.031, "interestRateType" => "FIXED_INTEREST_RATE" },
+          "exchanges" => [
+            { "slug" => "LSX", "symbolAtExchange" => "BOND", "active" => true },
+            { "slug" => "XFRA", "symbolAtExchange" => "FIT537715", "active" => false }
+          ]
+        }
+      when "ticker"
+        { "last" => { "price" => "84.04" } }
+      else
+        {}
+      end
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "bonds", "positions" => [
+          { "instrumentId" => "IT0005377152", "name" => "März 2040", "netSize" => "2677.95", "averageBuyIn" => "0.927073" }
+        ] }
+      ]
+    }, known_instrument_symbols: { "IT0005377152" => { "symbol" => "BOND", "exchange_slug" => "LSX" } })
+
+    assert_empty warnings
+    assert_includes requested, "instrument"
+    position = positions.first
+    assert_equal "Italy 3.1% Mar 2040", position["name"]
+    assert_equal "bond", position["instrument_type"]
+    assert_nil position["symbol"]
+    assert_nil position["exchange_slug"]
+  end
+
+  test "bonds keep the portfolio name when the instrument subscription fails" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      raise Provider::TradeRepublicClient::ProviderUnavailable, "instrument unavailable" if payload[:type] == "instrument"
+
+      { "last" => { "price" => "84.04" } }
+    end
+
+    positions, = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "bonds", "positions" => [
+          { "instrumentId" => "IT0005377152", "name" => "März 2040", "netSize" => "2677.95" }
+        ] }
+      ]
+    })
+
+    assert_equal "März 2040", positions.first["name"]
+    assert_equal "bond", positions.first["instrument_type"]
+  end
+
+  test "pick_instrument_exchange_symbol ignores bond listings" do
+    payload = {
+      "typeId" => "bond",
+      "exchanges" => [ { "slug" => "LSX", "symbolAtExchange" => "BOND", "active" => true } ]
+    }
+
+    assert_nil @client.send(:pick_instrument_exchange_symbol, payload, "FR0014001NN8")
+  end
+
+  test "normalize_event_detail reads a bond purchase from the nested breakdown" do
+    detail = @client.send(:normalize_event_detail, bond_purchase_detail, item: { "title" => "März 2040", "subtitle" => "Kauforder" })
+
+    assert_equal "IT0005377152", detail["isin"]
+    assert_equal "2677.95", detail["quantity"]
+    assert_equal "0.9267", detail["price"]
+    assert_equal "2498.31", detail["amount"]
+    assert_equal "1.0", detail["fees"]
+    assert_equal "bond", detail["instrument_type"]
+    assert_equal "2481.66", (BigDecimal(detail["quantity"]) * BigDecimal(detail["price"])).round(2).to_s("F")
+  end
+
+  test "normalize_event_detail signs a bond sale negative" do
+    detail = @client.send(:normalize_event_detail, bond_purchase_detail, item: { "title" => "März 2040", "subtitle" => "Verkaufsorder" })
+
+    assert_equal "-2677.95", detail["quantity"]
+  end
+
+  test "share trades do not pick up bond titles" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Übersicht", "data" => [
+          { "title" => "Aktien", "detail" => { "text" => "2" } },
+          { "title" => "Quotation", "detail" => { "text" => "50 %" } },
+          { "title" => "Summe", "detail" => { "text" => "9,99 €" } },
+          { "title" => "Gesamt", "detail" => { "text" => "1.024,92 €" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
+      ]
+    }, item: { "title" => "Core S&P 500", "subtitle" => "Kauforder" })
+
+    assert_equal "1024.92", detail["amount"]
+    assert_equal "512.46", detail["price"]
+    assert_nil detail["instrument_type"]
+  end
+
+  test "rows of a nested untitled table do not override the share trade overview" do
+    breakdown = {
+      "sections" => [
+        { "type" => "table", "data" => [
+          { "title" => "Aktien", "detail" => { "text" => "99" } },
+          { "title" => "Kurs", "detail" => { "text" => "1,00 €" } },
+          { "title" => "Gesamt", "detail" => { "text" => "5,00 €" } }
+        ] }
+      ]
+    }
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Übersicht", "type" => "table", "data" => [
+          { "title" => "Aktien", "detail" => { "text" => "2" } },
+          { "title" => "Kurs", "detail" => { "text" => "511,96 €" } },
+          {
+            "title" => "Transaktion",
+            "detail" => { "text" => "1.023,92 €", "action" => { "type" => "infoPage", "payload" => breakdown } }
+          },
+          { "title" => "Gesamt", "detail" => { "text" => "1.024,92 €" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
+      ]
+    }, item: { "title" => "Core S&P 500", "subtitle" => "Kauforder" })
+
+    assert_equal "2.0", detail["quantity"]
+    assert_equal "511.96", detail["price"]
+    assert_equal "1024.92", detail["amount"]
+  end
+
+  test "a nested untitled table does not supply a missing share trade price" do
+    fx_breakdown = {
+      "sections" => [
+        { "type" => "table", "data" => [ { "title" => "Kurs", "detail" => { "text" => "1,0850" } } ] }
+      ]
+    }
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Übersicht", "type" => "table", "data" => [
+          { "title" => "Aktien", "detail" => { "text" => "2" } },
+          {
+            "title" => "Wechselkurs",
+            "detail" => { "text" => "1,0850", "action" => { "type" => "infoPage", "payload" => fx_breakdown } }
+          },
+          { "title" => "Gesamt", "detail" => { "text" => "1.024,92 €" } }
+        ] }
+      ]
+    }, item: { "title" => "Core S&P 500", "subtitle" => "Kauforder" })
+
+    assert_equal "512.46", detail["price"]
+  end
+
+  test "normalize_event_detail reads an English bond purchase" do
+    # Sure connects with locale "en", so this is the detail it actually receives.
+    detail = @client.send(:normalize_event_detail, bond_purchase_detail_en, item: { "title" => "Mar 2040", "subtitle" => "Buy Order" })
+
+    assert_equal "IT0005377152", detail["isin"]
+    assert_equal "2677.95", detail["quantity"]
+    assert_equal "0.9267", detail["price"]
+    assert_equal "2498.31", detail["amount"]
+    assert_equal "1.0", detail["fees"]
+    assert_equal "bond", detail["instrument_type"]
+  end
+
+  test "an English bond purchase takes its total from the breakdown" do
+    raw = bond_purchase_detail_en
+    raw["sections"][1]["data"].reject! { |row| row["title"] == "Total" }
+
+    detail = @client.send(:normalize_event_detail, raw, item: { "title" => "Mar 2040", "subtitle" => "Buy Order" })
+
+    assert_equal "2498.31", detail["amount"]
+  end
+
+  test "bond_name combines issuer, fixed coupon and maturity" do
+    italy = { "name" => "ITALIEN 19/40", "shortName" => "Mar 2040",
+              "bondInfo" => { "issuerName" => "Italy", "interestRate" => "0.031", "interestRateType" => "FIXED_INTEREST_RATE" } }
+    france = { "name" => "FRANKREICH 21/72", "shortName" => "May 2072",
+               "bondInfo" => { "issuerName" => "France", "interestRate" => 0.005, "interestRateType" => "FIXED_INTEREST_RATE" } }
+    zero = { "shortName" => "Feb 2030",
+             "bondInfo" => { "issuerName" => "Germany", "interestRate" => "0", "interestRateType" => "FIXED_INTEREST_RATE" } }
+
+    assert_equal "Italy 3.1% Mar 2040", @client.send(:bond_name, italy)
+    assert_equal "France 0.5% May 2072", @client.send(:bond_name, france)
+    assert_equal "Germany 0% Feb 2030", @client.send(:bond_name, zero)
+  end
+
+  test "bond_name leaves out a coupon that is not fixed or not a number" do
+    floating = { "name" => "ITALIEN 19/40", "shortName" => "Mar 2040",
+                 "bondInfo" => { "issuerName" => "Italy", "interestRate" => "0.031", "interestRateType" => "FLOATING_INTEREST_RATE" } }
+    unparseable = { "name" => "ITALIEN 19/40", "shortName" => "Mar 2040",
+                    "bondInfo" => { "issuerName" => "Italy", "interestRate" => "n/a", "interestRateType" => "FIXED_INTEREST_RATE" } }
+
+    assert_equal "Italy Mar 2040", @client.send(:bond_name, floating)
+    assert_equal "Italy Mar 2040", @client.send(:bond_name, unparseable)
+  end
+
+  test "bond_name falls back to the instrument name without an issuer" do
+    assert_equal "ITALIEN 19/40", @client.send(:bond_name, { "name" => "ITALIEN 19/40", "shortName" => "Mar 2040" })
+    assert_equal "ITALIEN 19/40", @client.send(:bond_name, { "name" => "ITALIEN 19/40", "shortName" => "Mar 2040", "bondInfo" => "n/a" })
+    assert_nil @client.send(:bond_name, nil)
+  end
+
+  test "bond_placeholder_listing? only matches BOND on LSX" do
+    assert Provider::TradeRepublicClient.bond_placeholder_listing?("BOND", "LSX")
+    assert Provider::TradeRepublicClient.bond_placeholder_listing?(" bond ", "lsx")
+    assert_not Provider::TradeRepublicClient.bond_placeholder_listing?("BOND", "XETR")
+    assert_not Provider::TradeRepublicClient.bond_placeholder_listing?("BAS", "LSX")
+  end
+
+  test "enrich_trade_instrument_symbols does not look up bond trades" do
+    looked_up = []
+    @client.define_singleton_method(:instrument_exchange_symbol) do |_websocket, isin|
+      looked_up << isin
+      nil
+    end
+    @client.define_singleton_method(:instrument_name) { |_websocket, _isin| "ITALIEN 19/40" }
+    unresolved = []
+    events = [
+      {
+        "id" => "buy-bond",
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "category" => "orderExecution",
+        "detail" => { "isin" => "IT0005377152", "quantity" => "2677.95", "instrument_type" => "bond" }
+      }
+    ]
+
+    @client.send(:enrich_trade_instrument_symbols, Object.new, events, unresolved: unresolved)
+
+    assert_empty looked_up
+    assert_empty unresolved
+    assert_nil events.first.dig("detail", "symbol")
+    assert_equal "ITALIEN 19/40", events.first.dig("detail", "instrument_name")
+  end
+
+  test "enrich_trade_instrument_symbols stamps the instrument name on bond trades once per ISIN" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      requested << payload[:id] if payload[:type] == "instrument"
+      next {} unless payload[:id] == "IT0005377152"
+
+      {
+        "name" => "ITALIEN 19/40",
+        "shortName" => "Mar 2040",
+        "typeId" => "bond",
+        "bondInfo" => { "issuerName" => "Italy", "interestRate" => "0.031", "interestRateType" => "FIXED_INTEREST_RATE" }
+      }
+    end
+    bond = ->(id, isin, extra = {}) {
+      {
+        "id" => id,
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "category" => "orderExecution",
+        "detail" => { "isin" => isin, "quantity" => "1000", "instrument_type" => "bond" }.merge(extra)
+      }
+    }
+    events = [
+      bond.call("buy", "IT0005377152"),
+      bond.call("sell", "IT0005377152"),
+      bond.call("named", "FR0014001NN8", "instrument_name" => "FRANKREICH 21/72"),
+      bond.call("unknown", "DE0001102580")
+    ]
+
+    @client.send(:enrich_trade_instrument_symbols, Object.new, events)
+
+    assert_equal %w[IT0005377152 DE0001102580], requested
+    assert_equal [ "Italy 3.1% Mar 2040", "Italy 3.1% Mar 2040", "FRANKREICH 21/72", nil ],
+      events.map { |event| event.dig("detail", "instrument_name") }
+  end
+
+  test "bond instrument names stay within the instrument lookup budget" do
+    requested = 0
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
+      requested += 1
+      { "name" => "Bond" }
+    end
+    events = (1..3).map do |index|
+      { "id" => "buy-#{index}", "detail" => { "isin" => "XS000000000#{index}", "instrument_type" => "bond" } }
+    end
+
+    @client.send(:stamp_bond_instrument_names!, Object.new, events, budget: 2)
+
+    assert_equal 2, requested
+    assert_nil events.last.dig("detail", "instrument_name")
+  end
+
+  test "bond names already looked up are stamped after the lookup budget is spent" do
+    @client.define_singleton_method(:instrument_name) { |_websocket, isin| "Bond #{isin}" }
+    events = [
+      { "id" => "buy-a", "detail" => { "isin" => "XS0000000001", "instrument_type" => "bond" } },
+      { "id" => "buy-b", "detail" => { "isin" => "XS0000000002", "instrument_type" => "bond" } },
+      { "id" => "sell-a", "detail" => { "isin" => "XS0000000001", "instrument_type" => "bond" } }
+    ]
+
+    @client.send(:stamp_bond_instrument_names!, Object.new, events, budget: 1)
+
+    assert_equal [ "Bond XS0000000001", nil, "Bond XS0000000001" ],
+      events.map { |event| event.dig("detail", "instrument_name") }
+  end
+
   private
+
+    # Same shape as bond_purchase_detail, in English, as Sure receives it.
+    def bond_purchase_detail_en
+      row = ->(title, text) { { "title" => title, "detail" => { "text" => text, "type" => "text" }, "style" => "plain" } }
+      breakdown = {
+        "id" => "00000000-0000-0000-0000-000000000000",
+        "sections" => [
+          { "title" => "Transaction", "type" => "title" },
+          { "type" => "table", "data" => [
+            row.call("Face value", "€2,677.95"),
+            row.call("Quotation", "92.67 %"),
+            row.call("Accrued interest", "€18.35"),
+            row.call("Total", "€2,498.31")
+          ] }
+        ]
+      }
+
+      {
+        "id" => "bond-purchase-en",
+        "sections" => [
+          {
+            "title" => "You invested €2,498.31",
+            "type" => "header",
+            "data" => { "subtitleText" => "18 Nov 2025 · 11:19 AM", "status" => "executed" },
+            "action" => { "type" => "instrumentDetail", "payload" => "IT0005377152" }
+          },
+          { "title" => "Overview", "type" => "table", "data" => [
+            { "title" => "Buy", "detail" => { "text" => "Executed", "functionalStyle" => "EXECUTED", "type" => "status" } },
+            row.call("Asset", "Mar 2040"),
+            {
+              "title" => "Transaction",
+              "detail" => {
+                "text" => "€2,481.66",
+                "type" => "text",
+                "action" => { "type" => "infoPage", "payload" => breakdown, "displayMode" => "bottomSheet" }
+              }
+            },
+            row.call("Fee", "€1.00"),
+            row.call("Total", "€2,498.31")
+          ] }
+        ]
+      }
+    end
+
+    # Trimmed from a real Trade Republic bond purchase shared in #4012.
+    def bond_purchase_detail
+      row = ->(title, text) { { "title" => title, "detail" => { "text" => text, "type" => "text" }, "style" => "plain" } }
+      breakdown = {
+        "id" => "00000000-0000-0000-0000-000000000000",
+        "sections" => [
+          { "title" => "Transaktion", "type" => "title" },
+          { "type" => "table", "data" => [
+            row.call("Nennwert", "2.677,95 €"),
+            row.call("Quotation", "92,67 %"),
+            row.call("Stückzinsen", "18,35 €"),
+            row.call("Summe", "2.498,31 €")
+          ] }
+        ]
+      }
+
+      {
+        "id" => "bond-purchase",
+        "sections" => [
+          {
+            "title" => "Du hast 2.498,31 € investiert",
+            "type" => "header",
+            "data" => { "subtitleText" => "18 Nov. 2025 · 11:19", "status" => "executed" },
+            "action" => { "type" => "instrumentDetail", "payload" => "IT0005377152" }
+          },
+          { "title" => "Übersicht", "type" => "table", "data" => [
+            { "title" => "Kauf", "detail" => { "text" => "Ausgeführt", "functionalStyle" => "EXECUTED", "type" => "status" } },
+            row.call("Asset", "März 2040"),
+            {
+              "title" => "Transaktion",
+              "detail" => {
+                "text" => "2.481,66 €",
+                "type" => "text",
+                "action" => { "type" => "infoPage", "payload" => breakdown, "displayMode" => "bottomSheet" }
+              }
+            },
+            row.call("Gebühr", "1,00 €"),
+            row.call("Summe", "2.498,31 €")
+          ] }
+        ]
+      }
+    end
+
+    # Trimmed from a real Trade Republic stock bonus (ACQUISITION_TRADE_PERK).
+    def stock_bonus_detail
+      row = ->(title, text) { { "title" => title, "detail" => { "text" => text, "type" => "text" }, "style" => "plain" } }
+
+      {
+        "id" => "stock-bonus",
+        "sections" => [
+          {
+            "title" => "Amazon.com stock bonus",
+            "type" => "header",
+            "data" => { "icon" => { "asset" => "logos/US0231351067/v2", "badge" => nil }, "status" => "executed" }
+          },
+          { "title" => "Overview", "type" => "table", "data" => [
+            { "title" => "Buy", "detail" => { "text" => "Completed", "functionalStyle" => "EXECUTED", "type" => "status" } },
+            row.call("Asset", "Amazon.com"),
+            {
+              "title" => "Transaction",
+              "detail" => { "text" => "0.055 × € 182.46", "displayValue" => { "text" => "€ 182.46", "prefix" => "0.055 ×" }, "type" => "text" }
+            },
+            row.call("Fee", "Free"),
+            row.call("Total", "€ 10.04")
+          ] }
+        ]
+      }
+    end
 
     def timeline_pass(events, newest_event_id, outcome: :finished)
       Provider::TradeRepublicClient::TimelinePass.new(events: events, newest_event_id: newest_event_id, warnings: [], outcome: outcome, cursor: nil)
