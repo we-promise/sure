@@ -526,18 +526,25 @@ class EnableBankingItem::Importer
           end
         end
 
-        existing_ids = existing_transactions.map { |tx|
+        # IDs present in this fetch, whether or not we already had a stored row
+        # for them. A stored row is *replaced* (not just skipped) when the ASPSP
+        # redelivers the same transaction_id/entry_reference in the current
+        # window: EnableBankingEntry::Processor's counterparty fields are
+        # deliberately assigned even when blank (see its own comment) so a
+        # corrected or removed counterparty IBAN clears the old value -- but
+        # only if the fresh row this fetch just returned actually reaches
+        # storage instead of being discarded as "not new" because the ID
+        # already existed.
+        refetched_ids = all_transactions.map { |tx|
           EnableBankingEntry::Processor.compute_external_id(tx)
         }.compact.to_set
 
-        new_transactions = all_transactions.select do |tx|
+        retained_existing_transactions = existing_transactions.reject do |tx|
           ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
-          ext_id.present? && !existing_ids.include?(ext_id)
+          ext_id.present? && refetched_ids.include?(ext_id)
         end
 
-        if new_transactions.any? || removed_pending
-          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
-        end
+        enable_banking_account.upsert_enable_banking_transactions_snapshot!(retained_existing_transactions + all_transactions)
       elsif removed_pending
         enable_banking_account.upsert_enable_banking_transactions_snapshot!(
           existing_transactions
@@ -581,15 +588,23 @@ class EnableBankingItem::Importer
       keyed_with_index = normalized.each_with_index.group_by do |tx, _index|
         base_key = build_transaction_base_key(tx)
         if distinct_ibans_by_base_key[base_key].size >= 2
-          # A blank-IBAN row (e.g. a pending duplicate that hasn't gained
-          # account data yet) can't be attributed to any one of the split
-          # transactions, but it must still collapse into ONE of them
-          # rather than forming a third, phantom transaction -- so it
-          # aliases to the first (sorted) IBAN bucket in the group. It's
-          # ranked below any real member of that bucket just below, so it
-          # only "wins" the bucket when no fuller row claims it.
-          iban = counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) || distinct_ibans_by_base_key[base_key].first
-          "#{base_key}\x1F#{iban}"
+          iban = counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator])
+          if iban
+            "#{base_key}\x1F#{iban}"
+          else
+            # A blank-IBAN row can't be attributed to any ONE of the >=2
+            # distinct real transactions sharing this content pattern --
+            # picking one (e.g. alphabetically) risks silently merging it
+            # into the wrong transaction (or dropping it if it's actually a
+            # third, distinct payee that also lacks IBAN data), which is
+            # worse than the alternative. It's kept apart from both real
+            # IBAN buckets in its own shared bucket instead: if there turn
+            # out to be several such ambiguous rows, they still collapse
+            # into each other (the "several blank rows can never be told
+            # apart, so nothing is lost by merging them" case), but never
+            # into a bucket with a known, different counterparty.
+            "#{base_key}\x1Fambiguous"
+          end
         else
           base_key
         end
@@ -598,22 +613,54 @@ class EnableBankingItem::Importer
       duplicates_removed = 0
 
       # Within each duplicate group, keep the richest representative --
-      # BOOK over PDNG, then a present counterparty IBAN -- rather than
-      # whichever row the API happened to return first. Array order isn't a
-      # reliability signal, and picking the first row arbitrarily could
-      # discard a settled/IBAN-bearing row in favor of a thinner one (or, in
-      # a bucket a blank-IBAN row aliases into, discard the row that
-      # actually owns that IBAN).
+      # BOOK over PDNG, same as before IBAN existed -- rather than whichever
+      # row the API happened to return first. Status ranks above IBAN
+      # presence here (unlike an earlier version of this method): picking a
+      # still-pending row over a settled one just because it had richer
+      # account data would leave the transaction permanently stuck pending
+      # (PENDING_PROVIDERS-gated balances/analytics exclude it) on every
+      # future sync, which is worse than the IBAN gap it would have closed.
+      # Instead, when the BOOK-preferred representative itself lacks IBAN
+      # data that a PDNG sibling in the same group carries (some ASPSPs drop
+      # counterparty data once a transaction settles), that counterparty data
+      # is merged into the representative's own fields below -- so both the
+      # settled status and the counterparty data survive, instead of trading
+      # one for the other. This merges the full set of fields
+      # EnableBankingEntry::Processor reads for the counterparty (the account
+      # hash carrying the IBAN, the additional_identification fallback it
+      # uses when there's no IBAN, and the agent hash it reads the bank name
+      # from), not only an IBAN-bearing account hash -- a PDNG sibling that
+      # carries only additional_identification (no IBAN yet) is a valid
+      # donor too, and any of the three fields the representative itself
+      # lacks should still be filled in even when it does have some data
+      # already (e.g. an IBAN but no bank name).
       result = keyed_with_index.values.map do |group|
         duplicates_removed += group.size - 1 if group.size > 1
 
-        group.min_by do |tx, index|
+        representative, index = group.min_by do |tx, index|
           [
             tx[:status].to_s == "BOOK" ? 0 : 1,
-            counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]).present? ? 0 : 1,
             index
           ]
         end
+
+        account_key, agent_key, additional_key = counterparty_field_keys(representative[:credit_debit_indicator])
+        missing_keys = [ account_key, agent_key, additional_key ].select { |key| representative[key].blank? }
+
+        if missing_keys.any?
+          donor = group.map(&:first).find do |tx|
+            missing_keys.any? { |key| tx[key].present? }
+          end
+
+          if donor
+            fields_to_merge = missing_keys.each_with_object({}) do |key, hash|
+              hash[key] = donor[key] if donor[key].present?
+            end
+            representative = representative.merge(fields_to_merge) if fields_to_merge.any?
+          end
+        end
+
+        [ representative, index ]
       end.sort_by { |_tx, index| index }.map(&:first)
 
       if duplicates_removed > 0
@@ -661,12 +708,23 @@ class EnableBankingItem::Importer
     end
 
     def counterparty_iban_for_content_key(tx, direction)
-      account_key = direction == "CRDT" ? :debtor_account : :creditor_account
+      account_key, = counterparty_field_keys(direction)
       # Normalized the same way EnableBankingEntry::Processor stores it:
       # without this, two representations of the same duplicate transaction
-      # with differently-formatted IBANs (spaces vs none) would produce
-      # different content keys and defeat the dedup this key exists for.
-      tx.dig(account_key, :iban).to_s.gsub(/[[:space:]]+/, "").upcase.presence
+      # with differently-formatted IBANs (spaces/punctuation vs none) would
+      # produce different content keys and defeat the dedup this key exists for.
+      IbanNormalizable.normalize(tx.dig(account_key, :iban))
+    end
+
+    # Mirrors EnableBankingEntry::Processor#counterparty_account_info's own
+    # direction-based key selection, so the fields merged here during
+    # dedup are exactly the fields that processor later reads.
+    def counterparty_field_keys(direction)
+      if direction == "CRDT"
+        [ :debtor_account, :debtor_agent, :debtor_account_additional_identification ]
+      else
+        [ :creditor_account, :creditor_agent, :creditor_account_additional_identification ]
+      end
     end
 
     class PaginationTruncatedError < StandardError; end

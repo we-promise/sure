@@ -46,6 +46,19 @@ class EnableBankingEntry::Processor
   # ID fields *and* two distinct payments with byte-identical date/amount/
   # currency/direction/creditor/debtor/remittance text, which is rare enough
   # to prefer stability for the common case.
+  #
+  # The same gap exists, for the same reason, when transaction_id/entry_reference
+  # IS present but reused by the ASPSP across two genuinely distinct payments
+  # (the API docs don't guarantee uniqueness -- see the importer's dedup key
+  # comment): the dedup pass can now correctly keep both as separate raw rows
+  # when their counterparty IBANs differ, but they still compute the SAME
+  # external_id here and get collapsed into one Entry during import, silently
+  # dropping one real transaction. Folding IBAN into this branch's ID would
+  # have the identical every-existing-transaction-becomes-a-duplicate problem
+  # as above, just triggered by a much more common ASPSP behavior (a present
+  # but reused transaction_id, vs. an absent one) -- so it's deliberately
+  # left as the wider, still-open half of this same accepted tradeoff rather
+  # than patched narrowly here.
   def self.compute_external_id(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
     id = data[:transaction_id].presence || data[:entry_reference].presence
@@ -226,12 +239,19 @@ class EnableBankingEntry::Processor
       # same key, so consumers (rules, search, transfer matching) never need
       # to know which provider populated it. See issue #3306 for the
       # opposite, hardcoded-provider-list anti-pattern this avoids.
-      # Always assigned (even to nil), not just when present: Account::ProviderImportAdapter
-      # deep-merges this hash into the persisted extra, which only overwrites keys that are
-      # actually present in the incoming hash. Omitting these keys when the current payload
-      # lacks counterparty data (e.g. a booked re-delivery of a transaction whose earlier
-      # pending version had it) would leave the old, now-stale value in place instead of
-      # clearing it.
+      # Always assigned, even to nil. A nil value does not clear what an earlier sync
+      # captured: some ASPSPs drop the account data on the booked re-delivery of a
+      # transaction whose pending version had it, so Account::ProviderImportAdapter only
+      # replaces the stored values when this payload actually carries counterparty data.
+      #
+      # Passed through this same `extra` hash for
+      # Account::ProviderImportAdapter#import_transaction to pick up, but NOT
+      # actually stored in the plain jsonb `extra` column: the adapter pops
+      # these two keys out before merging the rest into `extra`, and assigns
+      # them to Transaction's own deterministically encrypted
+      # counterparty_iban/counterparty_account_id columns instead. A third
+      # party's bank account number must not sit at rest in plaintext, unlike
+      # fx_rate/mcc/pending above.
       cp = counterparty_account_info
       result[:counterparty_iban] = cp[:iban]
       result[:counterparty_account_id] = cp[:iban].blank? ? cp[:other_id] : nil
@@ -254,12 +274,13 @@ class EnableBankingEntry::Processor
         end
 
         {
-          # Normalized (no spaces, upcased) so it matches the same
-          # convention as accounts.iban/merchants.iban -- required for
-          # equality lookups/comparisons elsewhere (transfer matching, rule
+          # Normalized so it matches the same convention as
+          # accounts.iban/merchants.iban -- required for equality
+          # lookups/comparisons elsewhere (transfer matching, rule
           # conditions) to actually line up, regardless of whether an ASPSP
-          # happens to include spaces in its IBAN formatting.
-          iban: data.dig(account_key, :iban).to_s.gsub(/[[:space:]]+/, "").upcase.presence,
+          # happens to include spaces or other punctuation in its IBAN
+          # formatting.
+          iban: IbanNormalizable.normalize(data.dig(account_key, :iban)),
           other_id: data.dig(additional_key, :identification).presence,
           bank_name: data.dig(agent_key, :name).presence
         }

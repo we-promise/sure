@@ -98,6 +98,17 @@ class Transfer < ApplicationRecord
   def reject!
     Transfer.transaction do
       RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
+      dismiss_fabricated_counterpart_suggestion!
+      destroy!
+    end
+  end
+
+  # User-initiated unlink. Unlike the plain destroy! (also used when an
+  # account is deleted or merged), this records that the user doesn't want
+  # a fabricated counterpart back.
+  def unlink!
+    Transfer.transaction do
+      dismiss_fabricated_counterpart_suggestion!
       destroy!
     end
   end
@@ -108,6 +119,20 @@ class Transfer < ApplicationRecord
         next if transaction.nil?
         next unless Transaction.exists?(transaction.id)
         begin
+          # This leg didn't exist before Family::AutoTransferMatchable
+          # fabricated it as a stand-in counterpart (see
+          # #auto_create_missing_transfer_counterparts!) -- unlike a real,
+          # bank-synced transaction, there's no underlying data for it to
+          # revert to, so unlinking it must remove it entirely rather than
+          # downgrade it to a phantom "standard" transaction the user never
+          # created.
+          if transaction.extra&.dig("auto_generated_transfer_counterpart") == true
+            account = transaction.entry.account
+            transaction.entry.destroy!
+            account.sync_later
+            next
+          end
+
           transaction.update!(kind: "standard")
           # The entry survives this destroy (only the Transfer join row and
           # fee transactions go away), but its idempotency_key must not: a
@@ -123,6 +148,17 @@ class Transfer < ApplicationRecord
       end
       super
     end
+  end
+
+  # Removing a fabricated leg alone isn't enough: the next sync would find the
+  # outflow unmatched again and fabricate the same counterpart (see
+  # Family::AutoTransferMatchable#auto_create_missing_transfer_counterparts!).
+  # Rejecting or unlinking it is the user saying "this isn't a transfer", so
+  # record that on the outflow the same way dismissing the suggestion does.
+  def dismiss_fabricated_counterpart_suggestion!
+    return unless inflow_transaction&.extra&.dig("auto_generated_transfer_counterpart") == true
+
+    outflow_transaction&.dismiss_counterparty_transfer_suggestion!
   end
 
   def confirm!

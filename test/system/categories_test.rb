@@ -58,6 +58,21 @@ class CategoriesTest < ApplicationSystemTestCase
     assert_equal "pizza", @user.family.categories.find_by!(name: "Takeout").lucide_icon
   end
 
+  test "picking a color updates the avatar preview" do
+    visit categories_url
+    click_link I18n.t("categories.new.new_category")
+
+    avatar = find("[data-color-icon-picker-target='avatar']")
+    initial_color = avatar.evaluate_script("getComputedStyle(this).color")
+
+    find("summary[aria-label='#{I18n.t("categories.form.trigger_label")}']").click
+
+    color = Category::COLORS.find { |c| hex_to_rgb(c) != initial_color }
+    find("input[type='radio'][value='#{color}']", visible: :all).find(:xpath, "..").click
+
+    assert_equal hex_to_rgb(color), avatar.evaluate_script("getComputedStyle(this).color")
+  end
+
   test "reopening the icon picker clears the previous search" do
     visit categories_url
     click_link I18n.t("categories.new.new_category")
@@ -71,6 +86,11 @@ class CategoriesTest < ApplicationSystemTestCase
     end
 
     picker.click
+    # Wait for the close handler before reopening; browsers can coalesce
+    # back-to-back details toggles and skip the intermediate closed state.
+    within "[data-controller='list-filter']", visible: :all do
+      assert_field I18n.t("ds.icon_picker.search_placeholder"), with: "", visible: :all
+    end
     picker.click
 
     within "[data-controller='list-filter']" do
@@ -118,4 +138,9 @@ class CategoriesTest < ApplicationSystemTestCase
 
     assert_operator page_scroll_width, :<=, viewport_width
   end
+
+  private
+    def hex_to_rgb(hex)
+      "rgb(#{hex.delete_prefix("#").scan(/../).map { |c| c.to_i(16) }.join(", ")})"
+    end
 end

@@ -22,5 +22,6 @@ pt-PT:
           opposite_amounts: "Tem de ter montantes opostos"
           within_days: "Tem de ser dentro de %{count} dias"
   transfer:
+    counterpart_name: Transferência de %{from_account}
     name: Transferência para %{to_account}
     payment_name: Pagamento para %{to_account}

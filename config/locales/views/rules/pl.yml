@@ -1,52 +1,147 @@
 ---
 pl:
+  rule:
+    conditions:
+      condition:
+        value_placeholder: Wpisz wartość
+      condition_group:
+        add_condition: Dodaj warunek
+        all: wszystkie
+        and_prefix: i
+        any: dowolny
+        match: pasuje
+        of_the_following_conditions: z poniższych warunków
   rules:
-    no_action: Brak akcji
-    no_condition: Brak warunku
     actions:
+      to_label: na
       value_placeholder: Wprowadź wartość
     apply_all:
-      button: Zastosuj wszystkie
-      confirm_title: Zastosować wszystkie reguły
-      confirm_message: Za chwilę zastosujesz %{count} reguł wpływających na %{transactions} unikalnych transakcji. Potwierdź, jeśli chcesz kontynuować.
-      confirm_button: Potwierdź i zastosuj wszystkie
-      success: Wszystkie reguły zostały dodane do kolejki wykonania
+      ai_cost_message: 'Maksymalna liczba transakcji do skategoryzowania przez AI:
+        %{transactions}.'
       ai_cost_title: Szacowanie kosztu AI
-      ai_cost_message: To użyje AI do kategoryzacji maksymalnie %{transactions} transakcji.
-      estimated_cost: 'Szacowany koszt: ~$%{cost}'
+      button: Zastosuj wszystkie
+      confirm_button: Potwierdź i zastosuj wszystkie
+      confirm_message: 'Liczba reguł do zastosowania: %{count}. Liczba unikalnych
+        transakcji, na które wpłyną: %{transactions}. Potwierdź, jeśli chcesz kontynuować.'
+      confirm_title: Zastosować wszystkie reguły
       cost_unavailable_model: Szacowanie kosztu niedostępne dla modelu "%{model}".
-      cost_unavailable_no_provider: Szacowanie kosztu niedostępne (brak skonfigurowanego dostawcy LLM).
-      cost_warning: Mogą zostać naliczone koszty, sprawdź u dostawcy modelu aktualny cennik.
+      cost_unavailable_no_provider: Szacowanie kosztu niedostępne (brak skonfigurowanego
+        dostawcy LLM).
+      cost_warning: Mogą zostać naliczone koszty, sprawdź u dostawcy modelu aktualny
+        cennik.
+      estimated_cost: 'Szacowany koszt: ~$%{cost}'
+      success: Wszystkie reguły zostały dodane do kolejki wykonania
       view_usage: Zobacz historię użycia
+    clear_ai_cache:
+      button: Zresetuj cache AI
+      confirm_body: Czy na pewno chcesz zresetować cache AI? Umożliwi to regułom AI
+        ponowne przetworzenie wszystkich transakcji. Może to wygenerować dodatkowe
+        koszty API.
+      confirm_button: Zresetuj cache
+      confirm_title: Zresetować cache AI?
+      success: Trwa czyszczenie cache AI. To może potrwać chwilę.
+    condition_filters:
+      operators:
+        contains: Zawiera
+        does_not_contain: Nie zawiera
+        equal_to: Równe
+        greater_or_equal_to: Większe lub równe
+        greater_than: Większe niż
+        is_empty: Jest puste
+        is_equal_to: Jest równe
+        is_not_empty: Nie jest puste
+        less_than: Mniejsze niż
+        less_than_or_equal_to: Mniejsze lub równe
+        not_equal_to: Różne od
+      transaction_type:
+        equal_to: Równe
+        expense: Wydatek
+        income: Przychód
+        transfer: Przelew
+    confirm:
+      ai_cost_no_estimate_html: 'Liczba transakcji do skategoryzowania przez AI: %{count}.'
+      ai_cost_title: Szacowany koszt AI
+      ai_cost_with_estimate_html: 'Liczba transakcji do skategoryzowania przez AI:
+        %{count}. Szacowany koszt: <span class="font-semibold">~$%{cost}</span>'
+      apply_notice_html: Zaraz zastosujesz tę regułę do <span class="text-primary
+        font-medium">%{count} %{resource}</span> spełniających podane kryteria reguły.
+        Potwierdź, jeśli chcesz kontynuować tę zmianę.
+      confirm_changes: Potwierdź zmiany
+      cost_unavailable_model: Szacowanie kosztu niedostępne dla modelu "%{model}".
+      cost_unavailable_no_provider: Szacowanie kosztu niedostępne (nie skonfigurowano
+        dostawcy LLM).
+      cost_warning: Mogą wystąpić koszty. Sprawdź aktualny cennik u dostawcy modelu.
+      title: Potwierdź zmiany
+      title_with_name: Potwierdź zmiany w "%{name}"
+      view_usage_history: Zobacz historię użycia
+    destroy:
+      success: Reguła usunięta
+    destroy_all:
+      success: Usunięto wszystkie reguły
+    form:
+      add_action: Dodaj akcję
+      add_condition: Dodaj warunek
+      add_condition_group: Dodaj grupę warunków
+      all_past_and_future: Wszystkie przeszłe i przyszłe %{resource}
+      rule_name_label: Nazwa reguły (opcjonalnie)
+      rule_name_placeholder: Wpisz nazwę tej reguły
+      starting_from: Od
+      then: WTEDY
+    index:
+      ai_cost_warning: Akcje reguł z AI generują koszty. Filtruj jak najwęziej, żeby
+        uniknąć zbędnych wydatków.
+      delete_all_rules: Usuń wszystkie reguły
+      new_rule: Nowa reguła
+      no_rules_description: Skonfiguruj reguły, żeby automatycznie wykonywać akcje
+        na transakcjach i innych danych przy każdej synchronizacji konta.
+      no_rules_title: Brak reguł
+      page_title: Reguły
+      rules_heading: Reguły
+      sort_by: 'Sortuj według:'
+      sort_name: Nazwa
+      sort_updated_at: Data aktualizacji
+      toggle_sort_direction: Zmień kierunek sortowania
+    no_action: Brak akcji
+    no_condition: Brak warunku
     recent_runs:
-      title: Ostatnie uruchomienia
-      description: Zobacz historię wykonania reguł, w tym status powodzenia/niepowodzenia oraz liczbę transakcji.
-      unnamed_rule: Reguła bez nazwy
       columns:
         date_time: Data/godzina
         execution_type: Typ
-        status: Status
         rule_name: Nazwa reguły
+        status: Status
         transactions_counts:
-          queued: W kolejce
-          processed: Przetworzone
+          blocked: Zablokowane
           modified: Zmodyfikowane
+          processed: Przetworzone
+          queued: W kolejce
+      description: Zobacz historię wykonania reguł, w tym status powodzenia/niepowodzenia
+        oraz liczbę transakcji.
       execution_types:
         manual: Ręczne
         scheduled: Zaplanowane
       statuses:
+        failed: Błąd
         pending: Oczekujące
         success: Pomyślnie
-        failed: Błąd
-    clear_ai_cache:
-      button: Zresetuj cache AI
-      confirm_title: Zresetować cache AI?
-      confirm_body: Czy na pewno chcesz zresetować cache AI? Umożliwi to regułom AI ponowne przetworzenie wszystkich transakcji. Może to wygenerować dodatkowe koszty API.
-      confirm_button: Zresetuj cache
-      success: Trwa czyszczenie cache AI. To może potrwać chwilę.
-    condition_filters:
-      transaction_type:
-        income: Przychód
-        expense: Wydatek
-        transfer: Przelew
-        equal_to: Równe
+      title: Ostatnie uruchomienia
+      unnamed_rule: Reguła bez nazwy
+    rule:
+      action_label_to: "%{label} na %{value}"
+      all_past_and_future: Wszystkie przeszłe i przyszłe %{resource}
+      and_more_actions:
+        few: i jeszcze %{count} akcje
+        many: i jeszcze %{count} akcji
+        one: i jeszcze 1 akcja
+        other: i jeszcze %{count} akcji
+      and_more_conditions:
+        few: i jeszcze %{count} warunki
+        many: i jeszcze %{count} warunków
+        one: i jeszcze 1 warunek
+        other: i jeszcze %{count} warunków
+      delete: Usuń
+      edit: Edytuj
+      on_or_after: "%{resource} w dniu %{date} lub później"
+      re_apply_rule: Zastosuj regułę ponownie
+      then: WTEDY
+    update:
+      success: Reguła zaktualizowana

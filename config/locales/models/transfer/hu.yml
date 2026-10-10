@@ -18,5 +18,6 @@ hu:
               must_have_single_currency: Az átutalásnak egyetlen pénznemben kell lennie
               outflow_cannot_be_in_multiple_transfers: A kimenő tranzakció nem szerepelhet több átutalásban
   transfer:
+    counterpart_name: "Átutalás innen: %{from_account}"
     name: "Átutalás ide: %{to_account}"
     payment_name: "Fizetés ide: %{to_account}"

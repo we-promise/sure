@@ -1,5 +1,5 @@
 class MercuryItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -30,11 +30,6 @@ class MercuryItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   # TODO: Implement data import from provider API
   # This method should fetch the latest data from the provider and import it.

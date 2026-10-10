@@ -66,6 +66,9 @@ module SettingsHelper
     when "monobank"
       return { status: :off } unless @monobank_items&.any?
       sync_based_summary(key)
+    when "fio"
+      return { status: :off } unless @fio_items&.any?
+      sync_based_summary(key)
     when "simplefin"
       return { status: :off } unless @simplefin_items&.any?
       sync_based_summary(key)
@@ -124,6 +127,18 @@ module SettingsHelper
     else
       { status: :off }
     end
+  end
+
+  def financekit_provider_summary(connections)
+    return { status: :off } if connections.empty?
+
+    items = connections.map { |connection| connection[:item] }
+    count = connections.flat_map { |connection| connection[:accounts].map(&:id) }.uniq.size
+    {
+      status: items.any? { |item| item.status == "repair_required" } ? :warn : :ok,
+      meta: t("settings.providers.financekit.linked_accounts", count: count),
+      last_synced_at: items.filter_map(&:last_imported_at).max
+    }
   end
 
   def settings_nav_footer

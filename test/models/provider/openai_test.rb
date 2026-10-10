@@ -8,6 +8,37 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject_model = "gpt-4.1"
   end
 
+  test "effective_model uses Setting when ENV is unset" do
+    Setting.stubs(:openai_model).returns("llama3")
+    with_env_overrides("OPENAI_MODEL" => nil) do
+      assert_equal "llama3", Provider::Openai.effective_model
+    end
+  end
+
+  test "effective_model treats blank ENV as unset and uses Setting" do
+    Setting.stubs(:openai_model).returns("llama3")
+    with_env_overrides("OPENAI_MODEL" => "") do
+      assert_equal "llama3", Provider::Openai.effective_model
+    end
+  end
+
+  test "effective_model prefers ENV over Setting" do
+    Setting.stubs(:openai_model).returns("llama3")
+    with_env_overrides("OPENAI_MODEL" => "gpt-4o") do
+      assert_equal "gpt-4o", Provider::Openai.effective_model
+    end
+  end
+
+  test "effective_model falls back to default when ENV and Setting are blank" do
+    with_env_overrides("OPENAI_MODEL" => "") do
+      Setting.stubs(:openai_model).returns(nil)
+      assert_equal Provider::Openai::DEFAULT_MODEL, Provider::Openai.effective_model
+
+      Setting.stubs(:openai_model).returns("")
+      assert_equal Provider::Openai::DEFAULT_MODEL, Provider::Openai.effective_model
+    end
+  end
+
   test "request_timeout uses ENV then Setting then default" do
     Setting.stubs(:openai_request_timeout).returns(nil)
     with_env_overrides("OPENAI_REQUEST_TIMEOUT" => nil) do

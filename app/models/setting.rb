@@ -16,6 +16,14 @@ class Setting < RailsSettings::Base
   field :anthropic_base_url, type: :string, default: ENV["ANTHROPIC_BASE_URL"]
   field :llm_provider, type: :string, default: ENV.fetch("LLM_PROVIDER", "openai")
 
+  # Jev (TypeSafe) — a classification provider, not an LLM. Reachable either
+  # through OpenRouter's Decisions API (the default) or TypeSafe's own endpoint.
+  # Deliberately no OPENROUTER_API_KEY fallback: an operator holding that key
+  # for an unrelated purpose should not silently enable Jev.
+  field :jev_api_key, type: :string, default: ENV["JEV_API_KEY"]
+  field :jev_endpoint, type: :string, default: ENV["JEV_ENDPOINT"]
+  field :jev_model, type: :string, default: ENV["JEV_MODEL"]
+
   # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
   # merchant detection, enhance-merchants, PDF processing). Defaults track
   # Ollama's historical 2048-token baseline so local small-context models work
@@ -32,6 +40,7 @@ class Setting < RailsSettings::Base
   field :ai_response_timeout, type: :integer, default: ENV["AI_RESPONSE_TIMEOUT"]&.to_i
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
+  field :external_assistant_model, type: :string
   field :external_assistant_agent_id, type: :string
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
@@ -56,6 +65,16 @@ class Setting < RailsSettings::Base
     url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
   end
 
+  def self.brand_fetch_icon_url(identifier, fallback: "lettermark", namespace: nil, width: nil, height: nil)
+    return nil if identifier.blank? || brand_fetch_client_id.blank?
+
+    w = width || brand_fetch_logo_size
+    h = height || brand_fetch_logo_size
+    path = [ namespace, identifier ].compact_blank.join("/")
+
+    "https://cdn.brandfetch.io/#{path}/icon/fallback/#{fallback}/w/#{w}/h/#{h}?c=#{brand_fetch_client_id}"
+  end
+
   # Provider selection
   field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")
   field :securities_provider, type: :string, default: ENV.fetch("SECURITIES_PROVIDER", "twelve_data")
@@ -68,6 +87,9 @@ class Setting < RailsSettings::Base
   field :eodhd_api_key, type: :string, default: ENV["EODHD_API_KEY"]
   field :alpha_vantage_api_key, type: :string, default: ENV["ALPHA_VANTAGE_API_KEY"]
   field :tinkoff_invest_api_key, type: :string, default: ENV["TINKOFF_INVEST_API_KEY"]
+  # Mansa API (mansaapi.com) — African exchanges, including NGX (Nigeria),
+  # which none of the providers above cover. See Provider::Mansa.
+  field :mansa_api_key, type: :string, default: ENV["MANSA_API_KEY"]
 
   # Property valuation (AVM) provider API keys
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
@@ -87,10 +109,12 @@ class Setting < RailsSettings::Base
       eodhd_api_key
       alpha_vantage_api_key
       tinkoff_invest_api_key
+      mansa_api_key
       rentcast_api_key
       realie_api_key
       openai_access_token
       anthropic_access_token
+      jev_api_key
       external_assistant_token
     ].freeze
 

@@ -21,5 +21,6 @@ ru:
           same_family: Должен быть в пределах одной семьи
           within_days: Должен быть в пределах %{count} дней
   transfer:
+    counterpart_name: Перевод с %{from_account}
     name: Перевод на %{to_account}
     payment_name: Платеж на %{to_account}

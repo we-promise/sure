@@ -35,10 +35,10 @@ nl:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
       brand_fetch_settings:
-        description: Voer het Client ID in dat door Brand Fetch is verstrekt
+        description: Voer het Client ID in dat door Brandfetch is verstrekt
         label: Client ID
         placeholder: Voer hier uw Client ID in
-        title: Brand Fetch instellingen
+        title: Brandfetch instellingen
       openai_settings:
         description: Voer het toegangstoken in en configureer optioneel een aangepaste OpenAI-compatibele provider
         env_configured_message: Succesvol geconfigureerd via omgevingsvariabelen.

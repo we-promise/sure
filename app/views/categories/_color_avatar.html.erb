@@ -3,6 +3,6 @@
 <span
       data-color-icon-picker-target="avatar"
       class="w-14 h-14 flex items-center justify-center rounded-full"
-      style="background-color: color-mix(in oklab, <%= category.color %> 10%, transparent); color: <%= category.color %>">
+      style="--avatar-color: <%= category.color %>; background-color: color-mix(in oklab, var(--avatar-color) 10%, transparent); color: var(--avatar-color)">
   <%= icon(category.lucide_icon, size: "2xl", color: "current") %>
 </span>

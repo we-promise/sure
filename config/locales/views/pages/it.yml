@@ -74,6 +74,11 @@ it:
         classifications:
           asset: "Attività"
           liability: "Passività"
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Flusso di cassa"
+          surplus: "Avanzo"
+          deficit: "Disavanzo"
       cashflow_sankey:
         title: "Flusso di cassa"
         zoom_out: "Torna al flusso completo"

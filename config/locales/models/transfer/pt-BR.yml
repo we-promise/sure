@@ -18,5 +18,6 @@ pt-BR:
               outflow_cannot_be_in_multiple_transfers: Transação de saída não pode
                 fazer parte de múltiplas transferências
   transfer:
+    counterpart_name: Transferência de %{from_account}
     name: Transferência para %{to_account}
     payment_name: Pagamento para %{to_account}
