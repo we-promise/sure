@@ -1,6 +1,8 @@
 require "test_helper"
 
 class RuleImportTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @family = families(:dylan_family)
     @category = @family.categories.create!(
@@ -306,6 +308,36 @@ class RuleImportTest < ActiveSupport::TestCase
 
     action = updated_rule.actions.first
     assert_equal "auto_categorize", action.action_type
+  end
+
+  test "re-importing an email rule with wider conditions does not email existing matches" do
+    account = @family.accounts.create!(name: "Baseline test", balance: 1000, currency: "USD", accountable: Depository.new)
+    Entry.create!(account: account, name: "Coffee shop", date: 90.days.ago.to_date, amount: 10, currency: "USD", entryable: Transaction.new)
+    tea = Entry.create!(account: account, name: "Tea house", date: 60.days.ago.to_date, amount: 20, currency: "USD", entryable: Transaction.new).transaction
+
+    rule = @family.rules.create!(
+      name: "Coffee alerts",
+      resource_type: "transaction",
+      active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+      actions_attributes: [ { action_type: "send_email_notification" } ]
+    )
+    # Rule::Action's create-time seed does not run today (its after_update_commit
+    # names the same method and replaces it), so take that baseline here.
+    rule.actions.first.send(:seed_notification_baseline)
+
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Coffee alerts","transaction",true,,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"house\"}]","[{\"action_type\":\"send_email_notification\"}]"
+    CSV
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+      RuleJob.perform_now(Rule.find(rule.id))
+    end
+    assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), tea.id
   end
 
   test "validates resource_type" do

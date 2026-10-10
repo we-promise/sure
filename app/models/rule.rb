@@ -20,6 +20,27 @@ class Rule < ApplicationRecord
   validate :min_actions
   validate :no_duplicate_actions
 
+  # An email rule records the transactions it already matches as delivered, so it
+  # only reports what appears afterwards (see Rule::Action#seed_notification_baseline).
+  # That baseline describes the match set of the conditions and effective date it
+  # was taken under. An edit that changes them can bring older transactions into
+  # range, and the next run would email them as new, so the baseline is taken
+  # again. Active or not: Apply all runs inactive rules too, and the action's own
+  # seed does not check `active` either.
+  #
+  # The change is noted before the update, while nested attributes still hold it
+  # in memory: once autosave has run, a destroyed condition is gone from the
+  # association and a saved one no longer reports a pending change.
+  #
+  # after_update, not after_update_commit: it runs inside the save's transaction,
+  # after the nested conditions and actions are written (it is declared after
+  # accepts_nested_attributes_for, so it runs after their autosave), and reads
+  # them on the same connection as saved. The new baseline commits together with
+  # the edit, so nothing can see the new conditions without it, and if writing it
+  # fails the edit rolls back rather than leaving a stale baseline behind.
+  before_update :note_match_criteria_change
+  after_update :seed_notification_baseline, if: :match_criteria_changed?
+
   def action_executors
     registry.action_executors
   end
@@ -175,6 +196,21 @@ class Rule < ApplicationRecord
           end
         end
       end
+    end
+
+    def note_match_criteria_change
+      @match_criteria_changed = will_save_change_to_effective_date? ||
+        association(:conditions).target.any?(&:match_criteria_changing?)
+    end
+
+    def match_criteria_changed?
+      @match_criteria_changed == true
+    end
+
+    def seed_notification_baseline
+      return unless actions.exists?(action_type: "send_email_notification")
+
+      NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)
     end
 
     def normalize_name
