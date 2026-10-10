@@ -616,7 +616,7 @@ tr:
         monobank: Ukrayna Monobank kartlarını ve kumbaralarını kişisel bir API token ile senkronize edin.
         fio: Bir Fio banka hesabını salt okunur bir API token ile senkronize edin.
         coinspot: CoinSpot bakiyelerini, AUD değerlerini, transferleri, para yatırma, para çekme ve emir geçmişini salt okunur bir API anahtarıyla senkronize edin.
-        onchain_wallet: Gözetimsiz Bitcoin, EVM ve Solana cüzdanlarını herkese açık adresleri üzerinden takip edin.
+        onchain_wallet: Gözetimsiz Bitcoin, EVM, Solana ve Polkadot cüzdanlarını herkese açık adresleri üzerinden takip edin.
         trading212: Trading 212 yatırım portföyünüzü salt okunur bir API anahtarıyla senkronize edin.
         trade_republic: Trade Republic yatırım hesabınızı güvenli, salt okunur web girişiyle senkronize edin.
       up_panel:
