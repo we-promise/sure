@@ -22,6 +22,10 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
         the history series. The default is the last 5 years at 1 month.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?
