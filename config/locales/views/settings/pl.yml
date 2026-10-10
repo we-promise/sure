@@ -435,6 +435,7 @@ pl:
         application_id_placeholder_update: Wpisz nowe ID, aby zaktualizować
         callback_url_instruction: Dla URL callback użyj %{callback_url}.
         client_certificate_label: Certyfikat klienta (z kluczem prywatnym)
+        keep_client_certificate_hint: "Pozostaw puste, aby zachować bieżący certyfikat"
         config_locked_message: Rozłącz wszystkie połączone banki, zanim zmienisz te
           dane uwierzytelniające.
         config_locked_title: Konfiguracja zablokowana

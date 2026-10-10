@@ -86,7 +86,7 @@ tr:
       remaining: '%{amount} kaldı'
       paid_headline: '%{amount} ödendi'
     add_bill: Fatura ekle
-    manage: Yönet
+    manage: Görüntüle
     find_payment: Ödeme bul
     add_payment: Ödeme ekle
     review_match: Eşleşmeyi incele
@@ -252,8 +252,8 @@ tr:
       paid_so_far: Şu ana kadar ödenen
       hero_past_due: '%{amount} gecikmiş'
       hero_next_seven: Önümüzdeki 7 günde ödenecek %{amount}
-      add_bill: Fatura ekle
-      add_income: Gelir ekle
+      add_bill: Yeni fatura
+      add_income: Yeni gelir
       review_with_ai: AI ile incele
       detected_review:
         one: İşlemlerinizde %{count} yinelenen ödeme bulduk. Buradaki toplamların gerçekte ödediğinizle eşleşmesi için gözden geçirin.
@@ -293,7 +293,7 @@ tr:
       this_month: Bu ay
       later: Bu aydan sonra
       paid_this_month: Bu ay ödenenler
-      dormant: Pasif
+      dormant: Duraklatıldı
       kpi_remaining: Bu ay kalan
       kpi_paid: Bu ay ödenen
       kpi_next_seven: Önümüzdeki 7 günde ödenecek

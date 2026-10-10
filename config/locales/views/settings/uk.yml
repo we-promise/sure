@@ -549,6 +549,7 @@ uk:
         application_id_placeholder_new: "Введіть ідентифікатор програми"
         application_id_placeholder_update: "Введіть новий ID для оновлення"
         client_certificate_label: "Сертифікат клієнта (з приватним ключем)"
+        keep_client_certificate_hint: "Залиште порожнім, щоб зберегти поточний сертифікат"
         save_and_connect: "Зберегти та підключити"
         update_connection: "Оновити з'єднання"
         connected_bank: "Підключений банк"

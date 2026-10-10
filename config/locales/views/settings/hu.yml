@@ -373,6 +373,7 @@ hu:
         application_id_placeholder_new: "Add meg az alkalmazásazonosítót"
         application_id_placeholder_update: "Add meg az új azonosítót a frissítéshez"
         client_certificate_label: "Ügyfél-tanúsítvány (privát kulccsal)"
+        keep_client_certificate_hint: "Hagyd üresen az aktuális tanúsítvány megtartásához"
         save_and_connect: "Mentés és csatlakozás"
         update_connection: "Kapcsolat frissítése"
         connected_bank: "Csatlakoztatott bank"

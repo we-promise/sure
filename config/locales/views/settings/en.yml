@@ -602,6 +602,7 @@ en:
         application_id_placeholder_new: "Enter application ID"
         application_id_placeholder_update: "Enter new ID to update"
         client_certificate_label: "Client Certificate (with Private Key)"
+        keep_client_certificate_hint: "Leave blank to keep the current certificate"
         save_and_connect: "Save and connect"
         update_connection: "Update connection"
         connected_bank: "Connected Bank"

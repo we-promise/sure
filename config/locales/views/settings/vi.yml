@@ -417,6 +417,7 @@ vi:
         application_id_placeholder_new: "Nhập ID ứng dụng"
         application_id_placeholder_update: "Nhập ID mới để cập nhật"
         client_certificate_label: "Chứng chỉ khách hàng (kèm khóa riêng)"
+        keep_client_certificate_hint: "Để trống để giữ chứng chỉ hiện tại"
         save_and_connect: "Lưu và kết nối"
         update_connection: "Cập nhật kết nối"
         connected_bank: "Ngân hàng đã kết nối"

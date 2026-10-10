@@ -194,3 +194,4 @@ pt-BR:
       enable_banking_panel:
         callback_url_instruction: "Para a URL de retorno de chamada, use %{callback_url}."
         connection_error: Erro de conexão
+        keep_client_certificate_hint: "Deixe em branco para manter o certificado atual"

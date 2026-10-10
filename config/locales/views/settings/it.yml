@@ -450,6 +450,7 @@ it:
         application_id_placeholder_new: "Inserisci ID applicazione"
         application_id_placeholder_update: "Inserisci nuovo ID per aggiornare"
         client_certificate_label: "Certificato client (con chiave privata)"
+        keep_client_certificate_hint: "Lascia vuoto per mantenere il certificato attuale"
         save_and_connect: "Salva e connetti"
         update_connection: "Aggiorna connessione"
         connected_bank: "Banca collegata"

@@ -369,6 +369,7 @@ ru:
         application_id_placeholder_update: Введите новый ID для обновления
         callback_url_instruction: Для URL обратного вызова используйте %{callback_url}.
         client_certificate_label: Клиентский сертификат (с приватным ключом)
+        keep_client_certificate_hint: "Оставьте пустым, чтобы сохранить текущий сертификат"
         config_locked_message: Отключите все связанные банки перед изменением этих
           учётных данных.
         config_locked_title: Конфигурация заблокирована

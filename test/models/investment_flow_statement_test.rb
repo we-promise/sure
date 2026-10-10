@@ -41,6 +41,90 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_includes aggregate_queries.first, '"entries"."account_id" IN (SELECT DISTINCT "accounts"."id"'
   end
 
+  test "a matched provider contribution still counts once after resync" do
+    family = families(:dylan_family)
+    brokerage = Account::ProviderImportAdapter.new(accounts(:investment))
+    checking = Account::ProviderImportAdapter.new(accounts(:depository))
+    period = Period.custom(start_date: Date.current, end_date: Date.current)
+    expenses_before = IncomeStatement.new(family).expense_totals(period: period).total
+
+    inflow = brokerage.import_transaction(
+      external_id: "plaid_brokerage_contribution", amount: -500, currency: "USD",
+      date: Date.current, name: "Contribution", source: "plaid",
+      investment_activity_label: "Contribution"
+    )
+    outflow = checking.import_transaction(
+      external_id: "plaid_checking_to_brokerage", amount: 500, currency: "USD",
+      date: Date.current, name: "Transfer to brokerage", source: "plaid"
+    )
+    family.auto_match_transfers!
+    assert inflow.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
+    # Auto-matched transfers are suggestions; the kinds are set on confirm.
+    inflow.transaction.transfer.confirm!
+
+    # The next sync replays the brokerage row; the matched inflow keeps funds_movement.
+    brokerage.import_transaction(
+      external_id: "plaid_brokerage_contribution", amount: -500, currency: "USD",
+      date: Date.current, name: "Contribution", source: "plaid",
+      investment_activity_label: "Contribution"
+    )
+    assert_equal "funds_movement", inflow.transaction.reload.kind
+    assert_equal "investment_contribution", outflow.transaction.reload.kind
+
+    totals = InvestmentFlowStatement.new(family).period_totals(period: period)
+    assert_equal Money.new(500, "USD"), totals.contributions
+
+    expenses_after = IncomeStatement.new(family).expense_totals(period: period).total
+    assert_equal 500, expenses_after - expenses_before, "the contribution is budgeted once, on the cash leg"
+  end
+
+  test "a matched provider withdrawal still counts once" do
+    family = families(:dylan_family)
+    period = Period.custom(start_date: Date.current, end_date: Date.current)
+
+    outflow = accounts(:investment).entries.create!(
+      name: "Withdrawal", amount: 300, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "standard", investment_activity_label: "Withdrawal")
+    )
+    accounts(:depository).entries.create!(
+      name: "From brokerage", amount: -300, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "standard")
+    )
+    family.auto_match_transfers!
+    assert outflow.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
+    # Auto-matched transfers are suggestions; the kinds are set on confirm.
+    outflow.transaction.transfer.confirm!
+    outflow.transaction.reload
+    assert_equal "funds_movement", outflow.transaction.kind
+
+    totals = InvestmentFlowStatement.new(family).period_totals(period: period)
+    assert_equal Money.new(300, "USD"), totals.withdrawals
+    assert_equal Money.new(0, "USD"), totals.contributions
+  end
+
+  test "movements between investment and crypto accounts are not contributions" do
+    family = families(:dylan_family)
+    period = Period.custom(start_date: Date.current, end_date: Date.current)
+
+    inflow = create_matched_contribution(family, from: accounts(:crypto), to: accounts(:investment))
+    assert_equal "funds_movement", inflow.transaction.kind
+
+    totals = InvestmentFlowStatement.new(family).period_totals(period: period)
+    assert_equal Money.new(0, "USD"), totals.contributions
+  end
+
+  test "a matched contribution respects the viewer's account visibility" do
+    family = families(:dylan_family)
+    period = Period.custom(start_date: Date.current, end_date: Date.current)
+    create_matched_contribution(family, from: accounts(:depository), to: accounts(:investment))
+
+    member = users(:family_member)
+    assert_not family.accounts.included_in_finances_for(member).include?(accounts(:investment))
+
+    assert_equal Money.new(250, "USD"), InvestmentFlowStatement.new(family).period_totals(period: period).contributions
+    assert_equal Money.new(0, "USD"), InvestmentFlowStatement.new(family, user: member).period_totals(period: period).contributions
+  end
+
   test "period totals leave out a leg of a still-pending auto-match" do
     period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
     checking = @family.accounts.create!(owner: @user, name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
@@ -54,7 +138,65 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(50, "USD"), totals.contributions
   end
 
+  test "a still-pending provider contribution counts like a confirmed one" do
+    family = families(:dylan_family)
+    period = Period.custom(start_date: Date.current, end_date: Date.current)
+
+    inflow = accounts(:investment).entries.create!(
+      name: "Contribution", amount: -250, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "standard", investment_activity_label: "Contribution")
+    )
+    accounts(:depository).entries.create!(
+      name: "Transfer out", amount: 250, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "standard")
+    )
+    family.auto_match_transfers!
+    assert inflow.transaction.reload.transfer.pending?, "expected a pending auto-match"
+    assert_equal "standard", inflow.transaction.kind
+
+    assert_equal Money.new(250, "USD"), InvestmentFlowStatement.new(family).period_totals(period: period).contributions
+
+    inflow.transaction.transfer.confirm!
+    assert_equal Money.new(250, "USD"), InvestmentFlowStatement.new(family).period_totals(period: period).contributions
+  end
+
+  test "a still-pending movement between investment and crypto accounts is not a contribution" do
+    family = families(:dylan_family)
+    period = Period.custom(start_date: Date.current, end_date: Date.current)
+
+    inflow = accounts(:investment).entries.create!(
+      name: "Contribution", amount: -250, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "standard", investment_activity_label: "Contribution")
+    )
+    accounts(:crypto).entries.create!(
+      name: "Transfer out", amount: 250, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "standard")
+    )
+    family.auto_match_transfers!
+    assert inflow.transaction.reload.transfer.pending?, "expected a pending auto-match"
+
+    assert_equal Money.new(0, "USD"), InvestmentFlowStatement.new(family).period_totals(period: period).contributions
+  end
+
   private
+    def create_matched_contribution(family, from:, to:)
+      inflow = to.entries.create!(
+        name: "Contribution", amount: -250, date: Date.current, currency: "USD",
+        entryable: Transaction.new(kind: "investment_contribution", investment_activity_label: "Contribution")
+      )
+      outflow = from.entries.create!(
+        name: "Transfer out", amount: 250, date: Date.current, currency: "USD",
+        entryable: Transaction.new(kind: "standard")
+      )
+      family.auto_match_transfers!
+      assert inflow.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
+      # Auto-matched transfers are suggestions; the kinds are set on confirm.
+      inflow.transaction.transfer.confirm!
+      inflow.transaction.reload
+      assert_equal outflow.transaction.id, inflow.transaction.transfer.outflow_transaction_id
+      inflow
+    end
+
     def create_flow(label:, amount:, date:)
       @account.entries.create!(
         name: label,
