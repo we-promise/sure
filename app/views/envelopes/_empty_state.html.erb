@@ -1,0 +1,16 @@
+<div class="bg-container rounded-xl shadow-border-xs py-16 px-6 text-center">
+  <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-4">
+    <%= icon("mail", size: "2xl") %>
+  </div>
+  <h2 class="text-lg font-semibold text-primary"><%= t(".heading") %></h2>
+  <p class="text-sm text-secondary mt-1 max-w-md mx-auto"><%= t(".body") %></p>
+  <div class="mt-5">
+    <%= render DS::Link.new(
+      text: t(".new_envelope"),
+      variant: "primary",
+      href: new_envelope_path,
+      icon: "plus",
+      frame: :modal
+    ) %>
+  </div>
+</div>
