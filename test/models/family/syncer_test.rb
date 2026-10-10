@@ -1,6 +1,7 @@
 require "test_helper"
 
 class Family::SyncerTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
   setup do
     @family = families(:dylan_family)
   end
@@ -52,40 +53,13 @@ class Family::SyncerTest < ActiveSupport::TestCase
     syncer.perform_sync(family_sync)
   end
 
-  test "only applies active rules during sync" do
-    family_sync = syncs(:family)
-
-    # Create an active rule
-    active_rule = @family.rules.create!(
-      resource_type: "transaction",
-      active: true,
-      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
-    )
-
-    # Create a disabled rule
-    disabled_rule = @family.rules.create!(
-      resource_type: "transaction",
-      active: false,
-      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
-    )
-
+  test "applies rules in one ordered run per family after sync" do
     syncer = Family::Syncer.new(@family)
 
-    # Stub the relation to return our specific instances so expectations work
-    @family.rules.stubs(:where).with(active: true).returns([ active_rule ])
-
-    # Expect apply_later to be called only for the active rule
-    active_rule.expects(:apply_later).once
-    disabled_rule.expects(:apply_later).never
-
-    # Mock the account and plaid item syncs to avoid side effects
-    Account.any_instance.stubs(:sync_later)
-    syncable_item_associations.each do |association|
-      association.klass.any_instance.stubs(:sync_later)
+    assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
+      syncer.perform_post_sync
     end
-
-    syncer.perform_sync(family_sync)
-    syncer.perform_post_sync
+    assert_no_enqueued_jobs(only: RuleJob)
   end
 
   private

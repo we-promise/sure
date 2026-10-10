@@ -443,4 +443,38 @@ class RuleTest < ActiveSupport::TestCase
     assert_nil transaction_entry2.transaction.category,
       "Transaction on other account should not be categorized"
   end
+
+  test "new rules are added at the end of the run order" do
+    first = create_exclude_rule
+    second = create_exclude_rule
+
+    assert_equal first.position + 1, second.position
+    assert_equal [ first, second ], @family.rules.ordered.to_a
+  end
+
+  test "update_positions! sets the order of all rules of the family" do
+    first = create_exclude_rule
+    second = create_exclude_rule
+
+    Rule.update_positions!(@family, [ second.id, first.id ])
+
+    assert_equal [ second, first ], @family.rules.ordered.to_a
+  end
+
+  test "update_positions! rejects foreign and incomplete id lists" do
+    first = create_exclude_rule
+    second = create_exclude_rule
+    foreign = rules(:one)
+
+    assert_raises(ArgumentError) { Rule.update_positions!(@family, [ first.id, second.id, foreign.id ]) }
+    assert_raises(ArgumentError) { Rule.update_positions!(@family, [ first.id ]) }
+    assert_raises(ArgumentError) { Rule.update_positions!(@family, [ first.id, first.id ]) }
+    assert_equal 1, foreign.reload.position
+    assert_equal [ first, second ], @family.rules.ordered.to_a
+  end
+
+  private
+    def create_exclude_rule
+      @family.rules.create!(resource_type: "transaction", actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    end
 end

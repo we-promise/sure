@@ -32,10 +32,6 @@ vi:
       new_rule: Quy tắc mới
       ai_cost_warning: Các hành động quy tắc sử dụng AI sẽ tốn chi phí. Hãy lọc càng hẹp càng tốt để tránh chi phí không cần thiết.
       rules_heading: Quy tắc
-      sort_by: "Sắp xếp theo:"
-      sort_name: Tên
-      sort_updated_at: Ngày cập nhật
-      toggle_sort_direction: Đổi chiều sắp xếp
       no_rules_title: Chưa có quy tắc
       no_rules_description: Thiết lập quy tắc để thực hiện hành động trên giao dịch và dữ liệu khác mỗi lần đồng bộ tài khoản.
     confirm:

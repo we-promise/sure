@@ -253,7 +253,7 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     # Completing the batch without the health write would hide it from the
     # recovery sweep, which only looks for incomplete batches. Rolling it back
     # has to take the scheduling with it, or recovery redoes work already
-    # queued and RuleJob records a second RuleRun for the same capture.
+    # queued and a second RuleRun is recorded for the same capture.
     assert_nil batch.reload.downstream_completed_at
     assert_nil FinancekitItem.find(@item.id).last_downstream_at
     assert_equal enqueued_before, enqueued_jobs.size,

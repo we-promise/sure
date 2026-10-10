@@ -8,6 +8,7 @@ de:
       export: CSV exportieren
       print_report: Bericht drucken
       drag_to_reorder: "Bereich per Drag & Drop neu anordnen"
+      sections_aria: Berichtsbereiche
       toggle_section: "Sichtbarkeit des Bereichs umschalten"
       periods:
         monthly: Monatlich

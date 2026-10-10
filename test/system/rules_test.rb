@@ -35,6 +35,29 @@ class RulesTest < ApplicationSystemTestCase
     assert_selector "td", text: "20 / 20 / 10 / 10"
   end
 
+  test "reorders rules with the keyboard" do
+    family = @user.family
+    family.rules.destroy_all
+    first = family.rules.create!(name: "First rule", resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    second = family.rules.create!(name: "Second rule", resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+
+    visit rules_path
+
+    grip = find("[data-sortable-list-id='#{first.id}'] button[data-action*='handleKeyDown']")
+    grip.send_keys(:enter)
+    grip.send_keys(:arrow_down)
+    grip.send_keys(:enter)
+
+    assert_selector "[data-sortable-list-target='item']:first-child[data-sortable-list-id='#{second.id}']"
+    # The order is saved by a fetch Capybara cannot wait on, so poll for it.
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + Capybara.default_max_wait_time
+    sleep 0.05 until family.rules.ordered.pluck(:id) == [ second.id, first.id ] ||
+      Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+    assert_equal [ second.id, first.id ], family.rules.ordered.pluck(:id)
+  end
+
   test "rules page renders gracefully when a condition has an unsupported condition_type" do
     @user.update!(locale: "de")
     rule = @user.family.rules.create!(

@@ -654,6 +654,7 @@ Rails.application.routes.draw do
 
     collection do
       delete :destroy_all
+      patch :reorder
       get :confirm_all
       post :apply_all
       post :clear_ai_cache

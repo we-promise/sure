@@ -25,6 +25,8 @@ en:
       action_label_to: "%{label} to %{value}"
       all_past_and_future: All past and future %{resource}
       on_or_after: "%{resource} on or after %{date}"
+      stop_processing: Stop
+      stop_processing_hint: Rules further down don't change transactions matched by this rule.
     form:
       rule_name_label: Rule name (optional)
       rule_name_placeholder: Enter a name for this rule
@@ -34,16 +36,16 @@ en:
       all_past_and_future: All past and future %{resource}
       starting_from: Starting from
       then: THEN
+      stop_processing_label: Stop processing further rules
+      stop_processing_description: Rules further down the list don't change transactions this rule matches.
     index:
       page_title: Rules
       delete_all_rules: Delete all rules
       new_rule: New rule
       ai_cost_warning: AI-enabled rule actions will cost money.  Be sure to filter as narrowly as possible to avoid unnecessary costs.
       rules_heading: Rules
-      sort_by: "Sort by:"
-      sort_name: Name
-      sort_updated_at: Updated At
-      toggle_sort_direction: Toggle sort direction
+      order_hint: Rules run from top to bottom. Once a rule sets a field on a transaction, rules further down don't change that field. Tags are added by every matching rule. Drag rules to change the order.
+      reorder_rule: "Move rule %{name}. Press Enter or Space to grab it, then use the arrow keys to move it."
       no_rules_title: No rules yet
       no_rules_description: Set up rules to perform actions to your transactions and other data on every account sync.
     confirm:

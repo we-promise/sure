@@ -32,10 +32,6 @@ it:
       new_rule: Nuova regola
       ai_cost_warning: Le azioni delle regole con AI comporteranno dei costi. Filtra nel modo più specifico possibile per evitare costi inutili.
       rules_heading: Regole
-      sort_by: "Ordina per:"
-      sort_name: Nome
-      sort_updated_at: Data aggiornamento
-      toggle_sort_direction: Cambia direzione ordinamento
       no_rules_title: Nessuna regola ancora
       no_rules_description: Configura regole per eseguire azioni sulle tue transazioni e altri dati ad ogni sincronizzazione del conto.
     confirm:
