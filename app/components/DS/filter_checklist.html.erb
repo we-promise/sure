@@ -1,6 +1,7 @@
 <fieldset class="space-y-2" data-controller="DS--filter-checklist">
   <legend class="text-sm font-medium text-primary"><%= label %></legend>
   <%= render DS::SearchInput.new(placeholder: t("ds.filter_checklist.search", label: label), data: { DS__filter_checklist_target: "search", action: "input->DS--filter-checklist#search" }) %>
+  <p class="hidden text-sm text-secondary" data-DS--filter-checklist-target="empty"><%= t("ds.filter_checklist.no_results") %></p>
   <div class="flex gap-2">
     <%= render DS::Button.new(text: t("ds.filter_checklist.all"), variant: :ghost, size: :sm, data: { action: "DS--filter-checklist#all" }) %>
     <%= render DS::Button.new(text: t("ds.filter_checklist.none"), variant: :ghost, size: :sm, data: { action: "DS--filter-checklist#none" }) %>
@@ -14,5 +15,4 @@
       </label>
     <% end %>
   </div>
-  <p class="hidden text-sm text-secondary" data-DS--filter-checklist-target="empty"><%= t("ds.filter_checklist.no_results") %></p>
 </fieldset>

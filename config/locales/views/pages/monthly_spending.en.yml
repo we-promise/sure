@@ -33,7 +33,8 @@
           "status": "Status",
           "period": "Period",
           "last_twelve": "Last 12 months",
-          "this_year": "This year"
+          "this_year": "This year",
+          "invalid_period": "Choose a start no later than the end, at most 36 months, ending no later than the current month."
         }
       }
     },
@@ -43,6 +44,13 @@
         "all": "All",
         "none": "None",
         "no_results": "No matches"
+      },
+      "month_picker": {
+        "month": "Month",
+        "year": "Year",
+        "choose_month": "Month…",
+        "choose_year": "Year…",
+        "invalid_value": "Invalid value: %{value}. Choose a month and year."
       }
     }
   }

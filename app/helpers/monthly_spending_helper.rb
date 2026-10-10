@@ -1,4 +1,9 @@
 module MonthlySpendingHelper
+  def monthly_spending_selected_ids(key, default)
+    value = params[key]
+    value.is_a?(Array) && value.all? { |id| id.is_a?(String) } ? value.reject(&:blank?) : default
+  end
+
   def monthly_spending_period_options
     month = Date.current.beginning_of_month
     [

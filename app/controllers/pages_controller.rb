@@ -132,7 +132,14 @@ class PagesController < ApplicationController
     end
 
     def dashboard_view_params
-      params.permit(*DASHBOARD_VIEW_PARAMS).to_h
+      params.permit(*DASHBOARD_VIEW_PARAMS).to_h.tap do |view|
+        # Keep one canonical URL representation even when the browser form
+        # submits separate month/year controls. Customization and presets carry it.
+        %i[monthly_spending_from monthly_spending_to].each do |key|
+          value = monthly_spending_month_param(key)
+          view[key.to_s] = value.delete_suffix("-01") if value.is_a?(String)
+        end
+      end
     end
 
     # Each widget builds its own data, so a hidden widget's builder is never
@@ -317,9 +324,19 @@ class PagesController < ApplicationController
     end
 
     def monthly_spending_month_param(key)
+      if params.key?("#{key}_year") || params.key?("#{key}_month")
+        year, month = params["#{key}_year"], params["#{key}_month"]
+        if year.is_a?(String) && month.is_a?(String) && year.match?(/\A\d{1,4}\z/) && month.match?(/\A\d{1,2}\z/)
+          return format("%04d-%02d-01", year.to_i, month.to_i)
+        end
+        return "#{year}-#{month}"
+      end
       value = params[key]
       return if value.nil?
-      value.is_a?(String) && value.match?(/\A\d{4}-\d{2}\z/) ? "#{value}-01" : value
+      if value.is_a?(String) && (match = value.match(/\A(\d{4})-(\d{1,2})\z/))
+        return format("%04d-%02d-01", match[1].to_i, match[2].to_i)
+      end
+      value
     end
 
     def build_dashboard_sections

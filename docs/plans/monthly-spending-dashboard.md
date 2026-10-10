@@ -252,3 +252,13 @@ Am 10. Oktober 2026 nach Nutzerwahl „Separate Preview-Instanz“ auf diesem Wi
 Eigenes Compose-Projekt `sure-monthly-preview` mit PostgreSQL, Redis, Web und Worker; 36 Monate synthetische EUR-Buchungen mit zwei Konten. Die vorhandene Sure-Instanz und deren Daten wurden nicht geändert. Anmeldung und sichtbarer Monatsblock im Browser sowie echte API-Antworten für Read-Zugriff, explizit leere Auswahl, ungültigen Zeitraum und fehlende Authentifizierung geprüft. Preview Features beim Demo-Benutzer bereits an.
 
 Compose-Datei, Seed und Start-/Stop-Hinweise liegen im gemeinsamen Workspace unter `preview-deployment/`; Zugangsdaten ausschließlich in dortigen lokalen Dateien, nicht im Repository. Native Builds und Zugriff von einem weiteren Gerät sind noch keine abgeschlossene Lieferung. Die v3-Abschlusskriterien aus Abschnitt 10 bleiben offen.
+
+
+## Preview-Feedback: Monatsfilter und Summen (10. Oktober 2026)
+
+- Gemeldet: freies Monatsfeld akzeptiert `2025-2` nicht und springt nach einem Fehler zum Standardmonat; zusätzliche Monatssummen-Tabelle wirkt redundant.
+- Behoben: plattformnative Monat-/Jahr-Auswahllisten, Normalisierung alter URLs mit einstelligen Monaten, Erhaltung ungültiger Entwürfe inklusive Konto-/Kategorienauswahl. Clientvalidierung blockiert umgekehrte, zukünftige und über 36 Monate lange Bereiche; Backendvalidierung bleibt maßgeblich.
+- Monatsbeträge stehen direkt über den Balken im Web und in Flutter. Die bisher sichtbare Gesamttabelle ist ausschließlich als nicht fokussierbare Screenreader-Alternative vorhanden. Beträge und Diagrammgeometrie beachten weiterhin den Privatsphärenmodus.
+- Filterinhalt scrollt innerhalb einer an die Viewporthöhe begrenzten Fläche; Anwenden bleibt im Fußbereich. Popovers werden auch vertikal innerhalb des Viewports gehalten. Suchhinweise stehen unmittelbar unter dem Suchfeld.
+- Gezielte Regression: einstelliger Monat, erhaltene ungültige Auswahl, blockierter Zeitraum mit anschließender Korrektur, Tastaturbedienung und 390-px-Webansicht. Flutter: sieben Widgettests inkl. 320-px-Breite, doppelter Schriftgröße und Privatsphäre; gesamte Flutter-Suite 195 Tests erfolgreich.
+- Weitere Wünsche zur nächsten Iteration: klarer „bis heute“-Hinweis am laufenden Monat, aktive Filter besser sichtbar, gespeicherte persönliche Filterauswahl. Vorjahresvergleich nur mit nachvollziehbarer Behandlung unvollständiger Monate.

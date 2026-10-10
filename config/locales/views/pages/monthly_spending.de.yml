@@ -33,7 +33,8 @@
           "status": "Status",
           "period": "Zeitraum",
           "last_twelve": "Letzte 12 Monate",
-          "this_year": "Dieses Jahr"
+          "this_year": "Dieses Jahr",
+          "invalid_period": "Der Beginn darf nicht nach dem Ende liegen. Wähle höchstens 36 Monate und kein Ende nach dem aktuellen Monat."
         }
       }
     },
@@ -43,6 +44,13 @@
         "all": "Alle",
         "none": "Keine",
         "no_results": "Keine Treffer"
+      },
+      "month_picker": {
+        "month": "Monat",
+        "year": "Jahr",
+        "choose_month": "Monat…",
+        "choose_year": "Jahr…",
+        "invalid_value": "Ungültiger Wert: %{value}. Wähle Monat und Jahr."
       }
     }
   }

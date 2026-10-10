@@ -200,7 +200,7 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
     };
     final textScaler = MediaQuery.textScalerOf(context);
     return SizedBox(
-      height: 180 + textScaler.scale(60),
+      height: 180 + textScaler.scale(100),
       child: ListView.separated(
         controller: _scroll,
         scrollDirection: Axis.horizontal,
@@ -208,6 +208,17 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
         separatorBuilder: (_, __) => const SizedBox(width: SureSpacing.md),
         itemBuilder: (context, index) {
           final month = data.months[index];
+          final totalText = _money(month.total, data.currency);
+          final totalStyle = Theme.of(context).textTheme.bodySmall;
+          final totalPainter = TextPainter(
+            text: TextSpan(text: totalText, style: totalStyle),
+            textDirection: Directionality.of(context),
+            textScaler: textScaler,
+          )..layout();
+          final barWidth =
+              math.max(textScaler.scale(72), totalPainter.width + 16);
+          final graphHeight = 180 + totalPainter.height + SureSpacing.sm;
+          totalPainter.dispose();
           final label =
               '${_monthLabel(month.month)}, ${_money(month.total, data.currency)}${month.partial ? ', ${AppLocalizations.of(context).monthlySpendingPartial}' : ''}';
           return Semantics(
@@ -215,7 +226,7 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
             selected: month.month == _selectedMonth,
             label: label,
             child: SizedBox(
-              width: math.max(72.0, textScaler.scale(72)),
+              width: barWidth,
               child: InkWell(
                 onTap: () => setState(() {
                   _selectedMonth = month.month;
@@ -223,7 +234,7 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
                 child: ExcludeSemantics(
                   child: Column(children: [
                     SizedBox(
-                      height: 180,
+                      height: graphHeight,
                       child: Container(
                         decoration: BoxDecoration(
                             border: Border(
@@ -232,6 +243,8 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
                         child: Column(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
+                              Text(totalText, style: totalStyle, maxLines: 1),
+                              const SizedBox(height: SureSpacing.sm),
                               for (final entry
                                   in month.amounts.entries.toList().reversed)
                                 Container(

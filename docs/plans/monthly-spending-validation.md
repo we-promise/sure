@@ -74,3 +74,15 @@ Die Screenshots im gemeinsamen Workspace zeigen tatsächlich gerenderte Komponen
 Separates lokales Compose-Projekt `sure-monthly-preview`, URL `http://localhost:3100`, App-Code `d6d652cd8`. Web, DB und Redis gesund; Worker läuft. Eigene Datenbank/Volumes und synthetische EUR-Daten; vorhandene Sure-Instanz unverändert. Port nur an `127.0.0.1` gebunden.
 
 HTTP-Healthcheck 200; erfolgreiche Demo-Anmeldung und Monatsblock im Browser. Echte Monats-API: 200 mit zwölf EUR-Monaten und `private, no-store`; 401 ohne Schlüssel; explizit leere Kontenauswahl liefert einen leeren Bericht; umgekehrter Zeitraum liefert 422. Temporärer ausschließlich für diesen Check erzeugter Demo-Schlüssel nach der Prüfung entfernt. Kein nativer App-Build deployt.
+
+
+## Preview-Feedback: Monatsfilter und Summen (10. Oktober 2026)
+
+- Gemeldet: freies Monatsfeld akzeptiert `2025-2` nicht und springt nach einem Fehler zum Standardmonat; zusätzliche Monatssummen-Tabelle wirkt redundant.
+- Behoben: plattformnative Monat-/Jahr-Auswahllisten, Normalisierung alter URLs mit einstelligen Monaten, Erhaltung ungültiger Entwürfe inklusive Konto-/Kategorienauswahl. Clientvalidierung blockiert umgekehrte, zukünftige und über 36 Monate lange Bereiche; Backendvalidierung bleibt maßgeblich.
+- Monatsbeträge stehen direkt über den Balken im Web und in Flutter. Die bisher sichtbare Gesamttabelle ist ausschließlich als nicht fokussierbare Screenreader-Alternative vorhanden. Beträge und Diagrammgeometrie beachten weiterhin den Privatsphärenmodus.
+- Filterinhalt scrollt innerhalb einer an die Viewporthöhe begrenzten Fläche; Anwenden bleibt im Fußbereich. Popovers werden auch vertikal innerhalb des Viewports gehalten. Suchhinweise stehen unmittelbar unter dem Suchfeld.
+- Gezielte Regression: einstelliger Monat, erhaltene ungültige Auswahl, blockierter Zeitraum mit anschließender Korrektur, Tastaturbedienung und 390-px-Webansicht. Flutter: sieben Widgettests inkl. 320-px-Breite, doppelter Schriftgröße und Privatsphäre; gesamte Flutter-Suite 195 Tests erfolgreich.
+- Weitere Wünsche zur nächsten Iteration: klarer „bis heute“-Hinweis am laufenden Monat, aktive Filter besser sichtbar, gespeicherte persönliche Filterauswahl. Vorjahresvergleich nur mit nachvollziehbarer Behandlung unvollständiger Monate.
+
+Feedback-Validierung: gesamte Rails-Suite 11.063 Tests / 46.996 Assertions, null Fehler; drei gezielte Browser-Systemtests / 20 Assertions erfolgreich.

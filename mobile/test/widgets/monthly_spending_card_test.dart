@@ -48,6 +48,10 @@ void main() {
     expect(find.text('Spending by month'), findsOneWidget);
     expect(find.text('Food'), findsOneWidget);
     expect(find.text('Month in progress'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(ListView), matching: find.text(r'$30.00')),
+        findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -107,7 +111,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(InkWell, 'Dec 2024').first);
     await tester.pumpAndSettle();
-    expect(find.text(r'$20.00'), findsNWidgets(2));
+    expect(find.text(r'$20.00'), findsNWidgets(3));
     await tester.tap(find.text('Filters'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Previous year'));

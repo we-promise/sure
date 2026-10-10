@@ -1,5 +1,5 @@
 <div class="flex gap-3" data-controller="DS--monthly-spending-chart">
-  <div class="hidden sm:flex flex-col justify-between h-56 text-xs text-secondary tabular-nums privacy-sensitive" aria-hidden="true">
+  <div class="hidden sm:flex flex-col justify-between h-56 mt-6 text-xs text-secondary tabular-nums privacy-sensitive" aria-hidden="true">
     <span><%= money(max_total) %></span>
     <span><%= money(max_total / 2) %></span>
     <span><%= money(0) %></span>
@@ -7,8 +7,9 @@
   <div class="min-w-0 flex-1 overflow-x-auto focus-ring" role="region" tabindex="0" aria-label="<%= t("pages.dashboard.monthly_spending.chart_label") %>" data-DS--monthly-spending-chart-target="scroller">
     <div class="flex gap-3 min-w-full">
       <% data[:months].each do |month| %>
-        <button type="button" class="min-w-16 flex-1 rounded-lg focus-ring cursor-pointer text-primary" data-DS--monthly-spending-chart-target="bar" data-month="<%= month[:month] %>" data-action="DS--monthly-spending-chart#select" aria-pressed="false" aria-label="<%= accessible_label(month) %>">
-          <span class="flex h-56 flex-col justify-end border-b border-primary privacy-sensitive" aria-hidden="true">
+        <button type="button" class="min-w-20 flex-1 pt-6 rounded-lg focus-ring cursor-pointer text-primary" data-DS--monthly-spending-chart-target="bar" data-month="<%= month[:month] %>" style="min-width: <%= [money(month[:total]).length + 1, 10].max %>ch" data-action="DS--monthly-spending-chart#select" aria-pressed="false" aria-label="<%= accessible_label(month) %>">
+          <span class="relative flex h-56 flex-col justify-end border-b border-primary privacy-sensitive" aria-hidden="true">
+            <%= tag.span money(month[:total]), class: "absolute inset-x-0 pb-1 text-xs font-medium tabular-nums whitespace-nowrap", style: "bottom: #{percentage(month[:total])}%", data: { monthly_spending_total: month[:month] } %>
             <% month[:categories].reverse_each do |segment| %>
               <%= tag.span class: "block w-full shrink-0", style: "height: #{percentage(segment[:amount])}%; background-color: #{categories.fetch(segment[:id])[:color]}" %>
             <% end %>

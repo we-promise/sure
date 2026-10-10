@@ -69,4 +69,24 @@ class MonthlySpendingTest < ApplicationSystemTestCase
     page.driver.browser.execute_script("arguments[0].scrollIntoView({block: 'start', inline: 'nearest'})", section.native)
     section.native.save_screenshot(Rails.root.join("tmp/screenshots/monthly-spending-mobile.png").to_s)
   end
+
+  test "month picker prevents invalid ranges without overwriting the draft" do
+    page.current_window.resize_to(1280, 1000)
+    sign_in @user
+    within "#monthly-spending-section" do
+      assert_selector "[data-monthly-spending-total]", count: 12
+      click_on I18n.t("pages.dashboard.monthly_spending.filters")
+      select Date.current.year.to_s, from: "monthly_spending_from_year"
+      select I18n.t("date.month_names")[Date.current.month], from: "monthly_spending_from_month"
+      select (Date.current.year - 1).to_s, from: "monthly_spending_to_year"
+      assert_button I18n.t("pages.dashboard.monthly_spending.apply"), disabled: true
+      assert_text I18n.t("pages.dashboard.monthly_spending.invalid_period")
+      assert_equal Date.current.month.to_s, find("#monthly_spending_from_month").value
+      select Date.current.year.to_s, from: "monthly_spending_to_year"
+      assert_button I18n.t("pages.dashboard.monthly_spending.apply"), disabled: false
+      click_on I18n.t("pages.dashboard.monthly_spending.apply")
+    end
+    assert_no_selector "#monthly-spending-section select", visible: true
+    assert_selector "[data-monthly-spending-total]", count: 1
+  end
 end

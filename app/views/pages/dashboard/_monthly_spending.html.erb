@@ -12,26 +12,27 @@
       <%= render DS::Popover.new(variant: :button, max_width: "32rem") do |popover| %>
         <% popover.with_button(text: t(".filters"), variant: :outline, icon: "list-filter") %>
         <% popover.with_custom_content do %>
-          <%= form_with url: root_path, method: :get, data: { turbo_frame: "dashboard_sections" }, class: "p-4 space-y-4 max-h-128 overflow-y-auto" do %>
+          <%= form_with url: root_path, method: :get, data: { turbo_frame: "dashboard_sections", controller: "monthly-spending-filter", monthly_spending_filter_current_month_value: Date.current.strftime("%Y-%m"), action: "change->monthly-spending-filter#validate submit->monthly-spending-filter#submit" }, class: "flex flex-col", html: { style: "max-height: min(32rem, calc(100dvh - 2rem))" } do %>
+            <div class="p-4 space-y-4 overflow-y-auto min-h-0">
             <% view_params.except("monthly_spending_from", "monthly_spending_to", "monthly_spending_account_ids", "monthly_spending_category_ids").each do |key, value| %>
               <% Array(value).each do |item| %>
                 <%= hidden_field_tag value.is_a?(Array) ? "#{key}[]" : key, item, id: nil %>
               <% end %>
             <% end %>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div class="space-y-1">
-                <%= label_tag "monthly_spending_from", t(".from"), class: "block text-sm text-primary" %>
-                <%= month_field_tag "monthly_spending_from", monthly_spending.from.strftime("%Y-%m"), required: true, autocomplete: "off", max: Date.current.strftime("%Y-%m"), class: "w-full bg-container text-primary rounded-lg border border-secondary min-h-11 text-base focus-ring" %>
-              </div>
-              <div class="space-y-1">
-                <%= label_tag "monthly_spending_to", t(".to"), class: "block text-sm text-primary" %>
-                <%= month_field_tag "monthly_spending_to", monthly_spending.to.strftime("%Y-%m"), required: true, autocomplete: "off", max: Date.current.strftime("%Y-%m"), class: "w-full bg-container text-primary rounded-lg border border-secondary min-h-11 text-base focus-ring" %>
-              </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <%= render DS::MonthPicker.new(name: "monthly_spending_from", label: t(".from"), value: view_params["monthly_spending_from"] || monthly_spending.from.strftime("%Y-%m"), data: { monthly_spending_filter_target: "from" }) %>
+              <%= render DS::MonthPicker.new(name: "monthly_spending_to", label: t(".to"), value: view_params["monthly_spending_to"] || monthly_spending.to.strftime("%Y-%m"), data: { monthly_spending_filter_target: "to" }) %>
             </div>
             <p class="text-xs text-secondary"><%= t(".range_hint") %></p>
-            <%= render DS::FilterChecklist.new(name: "monthly_spending_account_ids", label: t(".accounts"), options: monthly_spending.accounts.map { |a| { id: a.id.to_s, name: a.name } }, selected_ids: monthly_spending.account_ids) %>
-            <%= render DS::FilterChecklist.new(name: "monthly_spending_category_ids", label: t(".categories"), options: monthly_spending.categories, selected_ids: monthly_spending.category_ids) %>
-            <%= render DS::Button.new(text: t(".apply"), type: :submit, full_width: true) %>
+            <%= render DS::FilterChecklist.new(name: "monthly_spending_account_ids", label: t(".accounts"), options: monthly_spending.accounts.map { |a| { id: a.id.to_s, name: a.name } }, selected_ids: monthly_spending_selected_ids(:monthly_spending_account_ids, monthly_spending.account_ids)) %>
+            <%= render DS::FilterChecklist.new(name: "monthly_spending_category_ids", label: t(".categories"), options: monthly_spending.categories, selected_ids: monthly_spending_selected_ids(:monthly_spending_category_ids, monthly_spending.category_ids)) %>
+            </div>
+            <div class="p-4 border-t border-primary space-y-3 shrink-0">
+              <div class="hidden" data-monthly-spending-filter-target="error">
+                <%= render DS::Alert.new(message: t(".invalid_period"), variant: :warning, live: :status) %>
+              </div>
+              <%= render DS::Button.new(text: t(".apply"), type: :submit, full_width: true, data: { monthly_spending_filter_target: "submit" }) %>
+            </div>
           <% end %>
         <% end %>
       <% end %>
@@ -60,13 +61,13 @@
           <span class="inline-flex items-center gap-2"><%= tag.span class: "size-2 rounded-full", style: "background-color: #{catalog.fetch(id)[:color]}", aria: { hidden: true } %><%= catalog.fetch(id)[:name] %></span>
         <% end %>
       </div>
-      <%= render DS::Disclosure.new(title: t(".all_months")) do %>
-        <%= render DS::Table.new(rows: data[:months], inset: true, label: t(".all_months")) do |table| %>
+      <div class="sr-only" role="region" aria-label="<%= t(".all_months") %>">
+        <%= render DS::Table.new(rows: data[:months], inset: true) do |table| %>
           <% table.with_column(t(".month")) { |month| l(Date.iso8601(month[:month]), format: :short_month_year) } %>
           <% table.with_column(t(".amount"), numeric: true, class: "privacy-sensitive") { |month| format_money(Money.new(month[:total].to_d, data[:currency])) } %>
           <% table.with_column(t(".status")) { |month| [ (t(".partial") if month[:partial]), (t(".provisional") if month[:missing_exchange_rates].positive?) ].compact.join(" · ") } %>
         <% end %>
-      <% end %>
+      </div>
       <% data[:months].reverse_each do |month| %>
         <% month_title = l(Date.iso8601(month[:month]), format: :month_year).capitalize %>
         <%= render DS::Disclosure.new(open: month == data[:months].last, data: { month: month[:month] }) do |detail| %>
