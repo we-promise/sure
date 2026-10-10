@@ -14,8 +14,8 @@ class SnaptradeDataHelpersTest < ActiveSupport::TestCase
       parse_date(value)
     end
 
-    def test_resolve_security(symbol, symbol_data)
-      resolve_security(symbol, symbol_data)
+    def test_resolve_security(symbol, symbol_data, account: nil, account_provider_id: nil)
+      resolve_security(symbol, symbol_data, account: account, account_provider_id: account_provider_id)
     end
 
     def test_extract_currency(data, symbol_data = {}, fallback = nil)
@@ -146,6 +146,189 @@ class SnaptradeDataHelpersTest < ActiveSupport::TestCase
     assert_equal "RACECOND", result.ticker
   end
 
+  test "resolve_security prefers the row on the exchange SnapTrade reports, whichever was created first" do
+    xnys_first = Security.create!(ticker: "DUPA", name: "Dup A", exchange_operating_mic: "XNYS")
+    Security.create!(ticker: "DUPA", name: "Dup A")
+    Security.create!(ticker: "DUPB", name: "Dup B")
+    xnys_last = Security.create!(ticker: "DUPB", name: "Dup B", exchange_operating_mic: "XNYS")
+
+    symbol_data = { "exchange" => { "mic_code" => "XNYS" } }
+
+    assert_equal xnys_first, @helper.test_resolve_security("DUPA", symbol_data)
+    assert_equal xnys_last, @helper.test_resolve_security("DUPB", symbol_data)
+  end
+
+  test "resolve_security without an exchange prefers an online priced row over an older unpriced one" do
+    Security.create!(ticker: "DUPC", name: "Dup C", exchange_operating_mic: "XASX", offline: true)
+    Security.create!(ticker: "DUPC", name: "Dup C", exchange_operating_mic: "XNAS")
+    priced = Security.create!(ticker: "DUPC", name: "Dup C", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+
+    assert_equal priced, @helper.test_resolve_security("DUPC", {})
+  end
+
+  test "resolve_security leaves a different ticker alone when another ticker has duplicates" do
+    Security.create!(ticker: "DUPD", name: "Dup D")
+    Security.create!(ticker: "DUPD", name: "Dup D", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    other = Security.create!(ticker: "SOLO", name: "Solo")
+
+    assert_equal other, @helper.test_resolve_security("SOLO", { "exchange" => { "mic_code" => "XNYS" } })
+  end
+
+  test "resolve_security race retry picks the same row as the ordered lookup" do
+    priced = nil
+    Security.define_singleton_method(:create!) do |*|
+      # Another process creates both rows between the lookup and the create.
+      Security.new(ticker: "RACEDUP", name: "Unpriced").save!
+      priced = Security.new(ticker: "RACEDUP", name: "Priced", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance").tap(&:save!)
+      raise ActiveRecord::RecordNotUnique
+    end
+
+    result = @helper.test_resolve_security("RACEDUP", {})
+
+    assert_not_nil priced
+    assert_equal priced, result
+  ensure
+    Security.singleton_class.send(:remove_method, :create!)
+  end
+
+  test "resolve_security race retry still prefers the row on the reported exchange" do
+    reported = nil
+    Security.define_singleton_method(:create!) do |*|
+      Security.new(ticker: "RACEMIC", name: "Priced", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance").save!
+      reported = Security.new(ticker: "RACEMIC", name: "Reported", exchange_operating_mic: "XNAS").tap(&:save!)
+      raise ActiveRecord::RecordNotUnique
+    end
+
+    result = @helper.test_resolve_security("RACEMIC", { "exchange" => { "mic_code" => "XNAS" } })
+
+    assert_not_nil reported
+    assert_equal reported, result
+  ensure
+    Security.singleton_class.send(:remove_method, :create!)
+  end
+
+  test "resolve_security matches a row SnapTrade created on the reported exchange" do
+    Security.create!(ticker: "DUPS", name: "Other exchange", exchange_operating_mic: "XASX", price_provider: "yahoo_finance")
+    snaptrade_row = Security.create!(ticker: "DUPS", name: "SnapTrade row", exchange_mic: "XNYS")
+
+    assert_equal snaptrade_row, @helper.test_resolve_security("DUPS", { "exchange" => { "mic_code" => "XNYS" } })
+  end
+
+  test "resolve_security follows the account's latest holding when its position already moved rows" do
+    account = accounts(:investment)
+    earlier = Security.create!(ticker: "DUPL", name: "Earlier row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    latest = Security.create!(ticker: "DUPL", name: "Latest row")
+    hold(account, earlier, date: 2.days.ago.to_date)
+    hold(account, latest, date: 1.day.ago.to_date)
+
+    assert_equal latest, @helper.test_resolve_security("DUPL", {}, account: account)
+  end
+
+  test "resolve_security keeps a holding the user remapped to another row of the same ticker" do
+    account = accounts(:investment)
+    provider_row = Security.create!(ticker: "DUPR", name: "Provider row")
+    remapped_to = Security.create!(ticker: "DUPR", name: "Remapped row", exchange_operating_mic: "XNYS")
+    hold(account, remapped_to, date: 1.day.ago.to_date, provider_security: provider_row)
+
+    assert_equal remapped_to, @helper.test_resolve_security("DUPR", {}, account: account)
+  end
+
+  # Another provider linked to the same account can hold the same ticker on
+  # another row. Without an external_id the import adapter matches holdings by
+  # security, date and currency alone, so following that holding would make
+  # SnapTrade overwrite it.
+  test "resolve_security does not follow another provider's holding" do
+    account = accounts(:investment)
+    snaptrade = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+    other = AccountProvider.create!(account: account, provider: other_provider_account)
+    theirs = Security.create!(ticker: "DUPO", name: "Other provider's row", exchange_operating_mic: "XNAS")
+    ours = Security.create!(ticker: "DUPO", name: "SnapTrade's row")
+    hold(account, ours, date: 3.days.ago.to_date, account_provider: snaptrade)
+    hold(account, theirs, date: 1.day.ago.to_date, account_provider: other)
+
+    assert_equal ours, @helper.test_resolve_security("DUPO", {}, account: account, account_provider_id: snaptrade.id)
+  end
+
+  # Holdings materialized from the account's trades carry no provider, and a
+  # remap there is the user's choice, so they still count.
+  test "resolve_security still follows a holding with no provider" do
+    account = accounts(:investment)
+    snaptrade = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+    Security.create!(ticker: "DUPM", name: "Priced row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    materialized = Security.create!(ticker: "DUPM", name: "Materialized row")
+    hold(account, materialized, date: 1.day.ago.to_date)
+
+    assert_equal materialized, @helper.test_resolve_security("DUPM", {}, account: account, account_provider_id: snaptrade.id)
+  end
+
+  # The last tier has no identity signal: with no held position and no row on
+  # SnapTrade's reported exchange, two online, priced rows for different
+  # markets are told apart only by age. This documents that known limit, and
+  # that the pick is recorded for support rather than made silently.
+  test "resolve_security picks the older of two priced rows differing only by exchange, and logs it" do
+    account = accounts(:investment)
+    snaptrade = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+    older = Security.create!(ticker: "DUPX", name: "Dup X", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    newer = Security.create!(ticker: "DUPX", name: "Dup X", exchange_operating_mic: "XNAS", price_provider: "yahoo_finance")
+    # Rewriting the older row moves its tuple behind the newer one.
+    older.update!(name: "Dup X (renamed)")
+
+    assert_difference -> { DebugLogEntry.count }, 2 do
+      2.times { assert_equal older, @helper.test_resolve_security("DUPX", {}, account: account, account_provider_id: snaptrade.id) }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal [ "provider_sync", "warn", "snaptrade", TestHelper.name ],
+                 [ entry.category, entry.level, entry.provider_key, entry.source ]
+    assert_equal [ account.family, account, snaptrade ], [ entry.family, entry.account, entry.account_provider ]
+    assert_equal "DUPX", entry.metadata["ticker"]
+    assert_equal older.id, entry.metadata["chosen_security_id"]
+    assert_equal [ older.id, newer.id ], entry.metadata["candidates"].map { |c| c["id"] }
+    assert_equal [ "XNYS", "XNAS" ], entry.metadata["candidates"].map { |c| c["exchange_operating_mic"] }
+  end
+
+  test "resolve_security logs a fallback pick when the reported exchange matches no row, and without an account" do
+    older = Security.create!(ticker: "DUPU", name: "Dup U", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    Security.create!(ticker: "DUPU", name: "Dup U", exchange_operating_mic: "XNAS", price_provider: "yahoo_finance")
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      assert_equal older, @helper.test_resolve_security("DUPU", { "exchange" => { "mic_code" => "XTSE" } })
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "XTSE", entry.metadata["reported_exchange"]
+    assert_nil entry.family
+    assert_nil entry.account_provider
+  end
+
+  test "resolve_security does not log when the ticker has a single row" do
+    only = Security.create!(ticker: "ONLY", name: "Only row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_equal only, @helper.test_resolve_security("ONLY", {})
+    end
+  end
+
+  test "resolve_security does not log when the held position decides" do
+    account = accounts(:investment)
+    Security.create!(ticker: "DUPHL", name: "Priced row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    held = Security.create!(ticker: "DUPHL", name: "Held row", exchange_operating_mic: "XNAS", price_provider: "yahoo_finance")
+    hold(account, held, date: 1.day.ago.to_date)
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_equal held, @helper.test_resolve_security("DUPHL", {}, account: account)
+    end
+  end
+
+  test "resolve_security does not log when the reported exchange decides" do
+    Security.create!(ticker: "DUPE", name: "Dup E", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    reported = Security.create!(ticker: "DUPE", name: "Dup E", exchange_operating_mic: "XNAS", price_provider: "yahoo_finance")
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_equal reported, @helper.test_resolve_security("DUPE", { "exchange" => { "mic_code" => "XNAS" } })
+    end
+  end
+
   # === extract_currency tests ===
 
   test "extract_currency handles hash with code key (symbol access)" do
@@ -184,4 +367,18 @@ class SnaptradeDataHelpersTest < ActiveSupport::TestCase
     result = @helper.test_extract_currency(data, {}, nil)
     assert_nil result
   end
+
+  private
+
+    def hold(account, security, date:, provider_security: nil, account_provider: nil)
+      account.holdings.create!(
+        security: security, provider_security: provider_security, date: date,
+        qty: 1, price: 100, amount: 100, currency: "USD", account_provider: account_provider
+      )
+    end
+
+    def other_provider_account
+      item = families(:dylan_family).coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+      item.coinstats_accounts.create!(name: "Other provider", currency: "USD")
+    end
 end

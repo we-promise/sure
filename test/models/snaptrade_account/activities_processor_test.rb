@@ -1053,6 +1053,20 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 0, Entry.where(external_id: "trade_orphan").count
   end
 
+  test "a trade resolves to the security the account already holds when its ticker has duplicate rows" do
+    held = Security.create!(ticker: "DUPT", name: "Held row")
+    Security.create!(ticker: "DUPT", name: "Priced row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    @account.holdings.create!(
+      security: held, date: 1.day.ago.to_date, qty: 10, price: 100, amount: 1000, currency: "USD",
+      account_provider_id: @snaptrade_account.account_provider&.id
+    )
+    held.update!(name: "Held row (renamed)")
+
+    process_activities(build_trade_activity(id: "dup_trade", type: "BUY", symbol: "DUPT", units: 1, price: 100))
+
+    assert_equal held, snaptrade_entry("dup_trade").entryable.security
+  end
+
   private
 
     def process_activities(*activities)

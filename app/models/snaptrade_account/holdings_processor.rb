@@ -97,7 +97,7 @@ class SnaptradeAccount::HoldingsProcessor
       Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing holding for ticker: #{ticker}"
 
       # Resolve or create the security
-      security = resolve_security(ticker, symbol_data)
+      security = resolve_security(ticker, symbol_data, account: account, account_provider_id: @snaptrade_account.account_provider&.id)
       return unless security
 
       # Parse values
