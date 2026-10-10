@@ -16,7 +16,8 @@ class Rule::Action < ApplicationRecord
     value_will_change! if rows.present?
   end
 
-  validates :action_type, presence: true
+  validates :action_type, presence: true, if: -> { action_type.to_s.valid_encoding? }
+  validates_with DatabaseTextValidator, attributes: %i[action_type value]
   before_validation :build_split_value, if: -> { action_type == "split_transaction" && split_rows.present? }
   validate :split_config_valid, if: -> { action_type == "split_transaction" }
 
@@ -42,7 +43,13 @@ class Rule::Action < ApplicationRecord
   # actions don't require a schema change. A single scalar value round-trips
   # unchanged, which keeps existing single-value rows backward compatible.
   def value=(val)
-    val = val.reject(&:blank?).join(",") if val.is_a?(Array)
+    if val.is_a?(Array)
+      val = val.reject do |item|
+        next false if item.is_a?(String) && !item.valid_encoding?
+
+        item.blank?
+      end.join(",")
+    end
     super(val)
   end
 

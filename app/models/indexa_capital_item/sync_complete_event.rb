@@ -10,13 +10,6 @@ class IndexaCapitalItem::SyncCompleteEvent
       account.broadcast_sync_complete
     end
 
-    indexa_capital_item.broadcast_replace_to(
-      indexa_capital_item.family,
-      target: "indexa_capital_item_#{indexa_capital_item.id}",
-      partial: "indexa_capital_items/indexa_capital_item",
-      locals: { indexa_capital_item: indexa_capital_item }
-    )
-
     indexa_capital_item.family.broadcast_sync_complete
   end
 end

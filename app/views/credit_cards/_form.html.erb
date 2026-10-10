@@ -48,6 +48,19 @@
       </div>
     <% end %>
 
+    <% lunchflow_account = account.provider_account_for("LunchflowAccount") if account.persisted? %>
+    <% if lunchflow_account %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="space-y-1">
+          <p class="text-sm" id="lunchflow_balance_toggle_label"><%= t("credit_cards.form.treat_balance_as_available_credit_label") %></p>
+          <p class="text-secondary text-xs"><%= t("credit_cards.form.treat_balance_as_available_credit_description") %></p>
+        </div>
+        <%= form.fields_for :lunchflow, lunchflow_account do |lf_form| %>
+          <%= lf_form.toggle :treat_balance_as_available_credit, "aria-labelledby": "lunchflow_balance_toggle_label" %>
+        <% end %>
+      </div>
+    <% end %>
+
     <% simplefin_account = account.provider_account_for("SimplefinAccount") if account.persisted? %>
     <% if simplefin_account %>
       <div class="space-y-1">

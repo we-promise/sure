@@ -24,6 +24,21 @@ class Provider::TradeRepublicClient
   class WafRequired < Error; end
   class Timeout < Error; end
   class MalformedResponse < Error; end
+  # The websocket failed during the history backfill. The sync is retried
+  # without the backfill, so one bad backfill page cannot block the rest of
+  # the import, and the failure counts towards abandoning the backfill.
+  # The pages read before the failure and the cursor to resume at are kept.
+  class TimelineBackfillInterrupted < TransientProviderError
+    attr_reader :topic, :reason, :cursor, :events
+
+    def initialize(message = nil, topic:, reason:, cursor:, events: [])
+      @topic = topic
+      @reason = reason
+      @cursor = cursor
+      @events = events
+      super(message)
+    end
+  end
 
   ERROR_STATUS = {
     401 => AuthenticationRequired,
@@ -42,7 +57,10 @@ class Provider::TradeRepublicClient
   TRADE_DETAIL_EVENT_TYPES = %w[
     SAVEBACK_AGGREGATE
     SPARE_CHANGE_AGGREGATE
+    ACQUISITION_TRADE_PERK
   ].freeze
+  # A stock bonus is titled "Stock Bonus"; its asset row names the stock.
+  STOCK_PERK_EVENT_TYPE = "ACQUISITION_TRADE_PERK"
   # New dividends also fetch timelineDetailV2 so provider_detail keeps the
   # ISIN, share count, dividend per share and withholding tax. The imported
   # cash amount still comes from the timeline list.
@@ -65,7 +83,12 @@ class Provider::TradeRepublicClient
   # that merely echo the ISIN (common on TIB).
   INSTRUMENT_EXCHANGE_PREFERENCE = %w[XETR TDG].freeze
   INSTRUMENT_EXCHANGE_LAST_RESORT = %w[LSX].freeze
-  INSTRUMENT_SYMBOL_CATEGORIES = %w[stocksAndETFs bonds].freeze
+  # Bonds are left out: Trade Republic lists every bond on LSX under the same
+  # placeholder symbol "BOND", so they resolve by ISIN instead.
+  INSTRUMENT_SYMBOL_CATEGORIES = %w[stocksAndETFs].freeze
+  BOND_INSTRUMENT_TYPE = "bond"
+  BOND_PLACEHOLDER_SYMBOL = "BOND"
+  BOND_PLACEHOLDER_EXCHANGE = "LSX"
   FEE_TITLES = [
     "gebühr", "fee", "fees", "kosten", "costs", "cost", "commission", "kommission"
   ].freeze
@@ -76,12 +99,31 @@ class Provider::TradeRepublicClient
     "aktien entfernt", "shares removed", "aktien gesendet", "shares sent"
   ].freeze
   TOTAL_TITLES = [ "gesamt", "total", "totaal", "gesamtbetrag" ].freeze
+  # The Overview row "0.626409 × €7.982" carries the exact share price that
+  # the rounded total is computed from.
+  TRANSACTION_TITLES = [ "transaction", "transaktion", "transactie" ].freeze
   PRICE_TITLES = [
     "share price", "aandelenkoers", "aktienkurs", "anteilskurs",
     "execution price", "kurs"
   ].freeze
+  # Bond executions list a nominal amount and a price in percent of par
+  # instead of shares and a share price.
+  NOMINAL_TITLES = [ "nennwert", "face value" ].freeze
+  QUOTATION_TITLES = [ "quotation" ].freeze
+  BOND_TOTAL_TITLES = [ "summe", "total" ].freeze
   SELL_SUBTITLE_MARKERS = %w[sell verkauf verkaufen verkopen].freeze
   MAX_TIMELINE_PAGES = 50
+  TIMELINE_TOPICS = %w[timelineTransactions timelineActivityLog].freeze
+  # A history backfill that keeps failing on the same cursor (for example an
+  # expired one) is abandoned instead of being retried forever.
+  MAX_TIMELINE_BACKFILL_FAILURES = 5
+  MAX_TIMELINE_CURSOR_LENGTH = 1_024
+  # Stored per topic in trade_republic_items.timeline_cursors:
+  #   { topic => { "newest_event_id", "backfill_cursor", "backfill_stop_event_id", "backfill_failures" } }
+  # A backfill without a stop event reads the history to the end of the topic;
+  # one with a stop event fills a gap of new events down to that event.
+  TIMELINE_BACKFILL_KEYS = %w[backfill_cursor backfill_stop_event_id backfill_failures].freeze
+  private_constant :TIMELINE_BACKFILL_KEYS
   MAX_TIMELINE_DETAILS = 200
   # Reserve this many detail fetches for newly discovered trade events each
   # sync. The remainder drains the oldest stored incomplete events; leftover
@@ -93,10 +135,19 @@ class Provider::TradeRepublicClient
   RETRY_INTERVAL = 1.day
   RETRY_WINDOW = 30.days
   PRICE_BACKFILL_ATTEMPTED_AT_KEY = "price_backfill_attempted_at"
+  # Marks a trade price read from the detail (a share price, quotation or
+  # Transaction row). A stored price without it was derived from the rounded
+  # total, so the price backfill fetches the detail again.
+  PRICE_SOURCE_KEY = "price_source"
+  PRICE_SOURCE_DETAIL = "detail"
   SYMBOL_LOOKUP_ATTEMPTED_AT_KEY = "symbol_lookup_attempted_at"
   SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY = "symbol_lookup_first_attempted_at"
+  # Stored trades whose detail is still incomplete after a fetch; the backlog
+  # retries the least recently attempted first.
+  DETAIL_BACKFILL_ATTEMPTED_AT_KEY = "detail_backfill_attempted_at"
   RETRY_MARKER_KEYS = [
-    PRICE_BACKFILL_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY
+    PRICE_BACKFILL_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY,
+    DETAIL_BACKFILL_ATTEMPTED_AT_KEY
   ].freeze
   # Cap instrument lookups for sold / historical trade ISINs that are absent
   # from the current portfolio snapshot.
@@ -109,6 +160,21 @@ class Provider::TradeRepublicClient
   Result = Struct.new(:data, keyword_init: true) do
     def [](key) = data[key]
   end
+
+  # One walk through a timeline topic. `outcome` is :finished (end of the
+  # topic), :caught_up (reached the stop event), :budget_exhausted (`cursor`
+  # is where to continue), :stalled (pagination broke off at `cursor`) or
+  # :failed (the page at `cursor` raised `error`).
+  TimelinePass = Data.define(:events, :newest_event_id, :warnings, :outcome, :cursor, :error) do
+    def initialize(error: nil, **attributes) = super
+  end
+  # One topic's events this sync and its state for the next sync.
+  # `head_complete` is false when the newest pages stalled.
+  TopicSync = Data.define(:events, :newest_event_id, :warnings, :head_complete, :state)
+  # `cursors` holds the next per-topic state: the newest event id the head
+  # pass stops at, and the history backfill position. `topic_event_ids` lists
+  # the ids of the events each topic fetched.
+  TimelineSync = Data.define(:events, :newest_event_id, :warnings, :pagination_complete, :detail_backfill_count, :cursors, :topic_event_ids)
 
   attr_reader :phone_number, :pin
 
@@ -290,22 +356,28 @@ class Provider::TradeRepublicClient
     end
   end
 
-  def sync(session_txt:, known_newest_event_id: nil, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
+  def sync(session_txt:, known_newest_event_id: nil, timeline_cursors: {}, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
     raise ConfigurationError, "session_txt is required" if session_txt.blank?
 
+    interrupted_backfills = {}
     with_retry do
       sync_once(
         session_txt: session_txt,
         known_newest_event_id: known_newest_event_id,
+        timeline_cursors: timeline_cursors,
         timeline_max_pages: timeline_max_pages,
         enrich_events: enrich_events,
         symbol_lookup_isins: symbol_lookup_isins,
-        known_instrument_symbols: known_instrument_symbols
+        known_instrument_symbols: known_instrument_symbols,
+        interrupted_backfills: interrupted_backfills
       )
+    rescue TimelineBackfillInterrupted => e
+      interrupted_backfills = interrupted_backfills.merge(e.topic => { reason: e.reason, cursor: e.cursor, events: e.events })
+      raise
     end
   end
 
-  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
+  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, timeline_cursors: {}, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {}, interrupted_backfills: {})
     session = new_session(session_blob: session_txt)
     account_response = session.get("/api/v2/auth/account")
     return Result.new(data: { "status" => "session_expired" }) if [ 401, 403 ].include?(account_response.code.to_i)
@@ -363,29 +435,28 @@ class Provider::TradeRepublicClient
       instrument_symbols = known_symbols.dup
       unresolved_symbol_isins = []
 
-      events = []
-      newest_event_id = nil
-      timeline_warnings = []
-      timeline_complete = false
-      detail_backfill_count = 0
+      timeline = nil
       begin
-        events, newest_event_id, timeline_warnings, timeline_complete, detail_backfill_count = collect_all_timeline(
+        timeline = collect_all_timeline(
           websocket,
           known_newest_event_id: known_newest_event_id,
           max_pages: timeline_max_pages.to_i,
-          enrich_events: enrich_events
+          enrich_events: enrich_events,
+          timeline_cursors: timeline_cursors,
+          interrupted_backfills: interrupted_backfills
         )
         instrument_symbols = enrich_trade_instrument_symbols(
           websocket,
-          events,
+          timeline.events,
           known_symbols: known_symbols,
           extra_isins: symbol_lookup_isins,
           unresolved: unresolved_symbol_isins
         )
-        warnings.concat(timeline_warnings)
-        # Timeline domain reflects list pagination only. Detail backlog drains
-        # across later syncs and must not freeze newest_event_id.
-        domain_statuses["timeline"] = timeline_complete ? "success" : "partial"
+        warnings.concat(timeline.warnings)
+        # Timeline domain reflects the newest pages only. The history backfill
+        # and detail backlog drain across later syncs and must not freeze
+        # newest_event_id.
+        domain_statuses["timeline"] = timeline.pagination_complete ? "success" : "partial"
       rescue MalformedResponse, ProviderUnavailable => e
         raise if e.is_a?(TransientProviderError)
         warnings << "timeline fetch failed: #{e.message}"
@@ -401,12 +472,14 @@ class Provider::TradeRepublicClient
           "currency" => money_currency(cash)
         }.compact),
         "positions" => positions,
-        "events" => events,
+        "events" => timeline&.events || [],
         "instrument_symbols" => instrument_symbols,
         "unresolved_symbol_isins" => unresolved_symbol_isins,
-        "newest_event_id" => newest_event_id,
-        "timeline_pagination_complete" => timeline_complete,
-        "detail_backfill_count" => detail_backfill_count,
+        "newest_event_id" => timeline&.newest_event_id,
+        "timeline_pagination_complete" => timeline&.pagination_complete || false,
+        "timeline_cursors" => timeline&.cursors,
+        "timeline_topic_event_ids" => timeline&.topic_event_ids,
+        "detail_backfill_count" => timeline&.detail_backfill_count || 0,
         "warnings" => warnings,
         "position_warnings" => position_warnings
       })
@@ -419,6 +492,22 @@ class Provider::TradeRepublicClient
 
   class << self
     def available? = !!defined?(WebSocket::Driver)
+
+    # Stops the given topics' backfills that read further back in history.
+    # Gap backfills fetch events newer than anything stored, so they keep
+    # running.
+    def stop_timeline_history_backfills(timeline_cursors, topics:)
+      timeline_cursors.to_h.to_h do |topic, state|
+        history_backfill = topics.include?(topic) && state.is_a?(Hash) &&
+          state["backfill_cursor"].present? && state["backfill_stop_event_id"].blank?
+        [ topic, history_backfill ? state.except(*TIMELINE_BACKFILL_KEYS) : state ]
+      end
+    end
+
+
+    def pending_timeline_backfills(timeline_cursors)
+      timeline_cursors.to_h.count { |_topic, state| state.is_a?(Hash) && state["backfill_cursor"].present? }
+    end
 
     def requires_trade_detail?(item)
       return false unless item.is_a?(Hash)
@@ -459,13 +548,14 @@ class Provider::TradeRepublicClient
       !(detail.is_a?(Hash) && detail.stringify_keys["isin"].present?)
     end
 
-    # Complete trades (isin + quantity) that still lack a share price — usually
-    # stored before we parsed execution price / fees from timeline details.
+    # Complete trades (isin + quantity) without a price read from the detail:
+    # the price is missing, or was derived from the rounded total, usually
+    # because the trade was stored before its price rows were parsed.
     # Trade Republic sometimes publishes the price late, so an unsuccessful
     # attempt is retried at most once per RETRY_INTERVAL until the trade is
     # RETRY_WINDOW old.
     def trade_detail_needs_price_backfill?(event, now = Time.current)
-      return false unless trade_detail_missing_price?(event)
+      return false unless trade_detail_price_unconfirmed?(event)
 
       attempted_at = detail_time(event, PRICE_BACKFILL_ATTEMPTED_AT_KEY)
       return true if attempted_at.nil?
@@ -474,6 +564,16 @@ class Provider::TradeRepublicClient
       return false if traded_at && traded_at <= now - RETRY_WINDOW
 
       attempted_at <= now - RETRY_INTERVAL
+    end
+
+    # Backlog order for stored events needing details: never-attempted events
+    # first, oldest first, then the least recently attempted, so events that
+    # stay incomplete can't hold the budget on every sync. Price backfills
+    # carry no detail attempt; trade_detail_needs_price_backfill? paces them.
+    def detail_backfill_sort_key(event)
+      return [ 0, "" ] unless event.is_a?(Hash)
+
+      [ detail_time(event, DETAIL_BACKFILL_ATTEMPTED_AT_KEY).to_i, (event["timestamp"] || event[:timestamp]).to_s ]
     end
 
     # Stored trades whose ISIN found no usable exchange symbol are retried at
@@ -488,13 +588,42 @@ class Provider::TradeRepublicClient
       attempted_at <= now - RETRY_INTERVAL
     end
 
-    def trade_detail_missing_price?(event)
+    def trade_detail_price_unconfirmed?(event)
       return false unless requires_trade_detail?(event)
       return false unless Provider::TradeRepublicTimelineEvent.importable?(event)
       return false unless trade_detail_complete?(event)
 
       detail = (event["detail"] || event[:detail]).stringify_keys
-      detail["price"].to_s.strip.blank?
+      detail["price"].to_s.strip.blank? || detail[PRICE_SOURCE_KEY].blank?
+    end
+
+    # Earlier syncs stored this listing on bond positions and trades.
+    def bond_placeholder_listing?(symbol, exchange_slug)
+      symbol.to_s.strip.casecmp?(BOND_PLACEHOLDER_SYMBOL) &&
+        exchange_slug.to_s.strip.casecmp?(BOND_PLACEHOLDER_EXCHANGE)
+    end
+
+    def bond?(detail)
+      detail.is_a?(Hash) && detail.with_indifferent_access[:instrument_type].to_s == BOND_INSTRUMENT_TYPE
+    end
+
+    # The ISIN of a stored or new trade that still needs an exchange ticker,
+    # or nil. Bonds never get one.
+    def symbol_lookup_isin(event)
+      return nil unless event.is_a?(Hash)
+      return nil unless requires_trade_detail?(event)
+      return nil unless Provider::TradeRepublicTimelineEvent.importable?(event)
+
+      detail = event["detail"] || event[:detail]
+      return nil unless detail.is_a?(Hash)
+
+      detail = detail.stringify_keys
+      isin = detail["isin"].to_s.presence
+      return nil if isin.blank? || bond?(detail)
+
+      symbol = detail["symbol"].to_s.strip.presence
+      usable = symbol.present? && !symbol.casecmp?(isin) && detail["exchange_slug"].to_s.strip.present?
+      isin unless usable
     end
 
     def instrument_symbols_from_positions(positions)
@@ -769,11 +898,19 @@ class Provider::TradeRepublicClient
 
         private_market = position["categoryType"].to_s == "privateMarkets"
         price = position_price(websocket, isin, position["categoryType"])
+        # Bond tickers are quoted in percent of par (e.g. 84.04 = 84.04%),
+        # while netSize is the nominal amount in currency units. Convert the
+        # ticker quote to a per-unit price so quantity * price yields the
+        # market value. Fallback prices below are already per unit.
+        price = bond_unit_price(price) if price.present? && position["categoryType"].to_s == "bonds"
         price = private_market_quotes[isin] if price.blank? && private_market_quotes.present?
         # Private-market funds have no exchange quote. Without a
         # privateMarketsPositions unit price, value them at the average buy-in
         # rather than zero. Other categories keep the unpriced warning.
         price = decimal_string(position["averageBuyIn"] || position["avgCost"]) if price.blank? && private_market
+        # Non-numeric quotes ("N/A") and non-finite ones ("NaN", "Infinity")
+        # would corrupt the balance; keep the position unvalued instead.
+        price = nil unless finite_decimal(price)
 
         if price.present?
           prices[isin] = price
@@ -784,6 +921,11 @@ class Provider::TradeRepublicClient
       valid_positions.each do |position|
         isin = position["instrumentId"].presence || position["isin"]
         next if instruments.key?(isin)
+
+        if position["categoryType"].to_s == "bonds"
+          instruments[isin] = bond_instrument(websocket, isin)
+          next
+        end
         next unless INSTRUMENT_SYMBOL_CATEGORIES.include?(position["categoryType"].to_s)
 
         known = known_symbols[isin]
@@ -800,8 +942,9 @@ class Provider::TradeRepublicClient
         instrument = instruments[isin] || {}
         {
           "isin" => isin,
-          "name" => position["name"],
+          "name" => instrument[:name].presence || position["name"],
           "category" => portfolio_category(position["categoryType"]),
+          "instrument_type" => instrument[:instrument_type],
           "quantity" => decimal_string(quantity),
           "average_cost" => decimal_string(position["averageBuyIn"] || position["avgCost"]),
           "price" => prices[isin],
@@ -810,6 +953,20 @@ class Provider::TradeRepublicClient
         }.compact
       end
       [ positions, warnings ]
+    end
+
+    def bond_unit_price(percent_price)
+      value = finite_decimal(percent_price)
+      (value / 100).to_s("F") if value
+    end
+
+    def finite_decimal(value)
+      return nil if value.blank?
+
+      decimal = BigDecimal(value.to_s)
+      decimal if decimal.finite?
+    rescue ArgumentError
+      nil
     end
 
     def position_price(websocket, isin, category_type)
@@ -910,10 +1067,46 @@ class Provider::TradeRepublicClient
     # Returns { symbol:, exchange_slug: } from the instrument subscription, or
     # nil when Trade Republic has no usable exchange ticker for this ISIN.
     def instrument_exchange_symbol(websocket, isin)
-      payload = optional_subscribe(websocket, type: "instrument", id: isin)
+      payload = instrument_payload(websocket, isin)
+      pick_instrument_exchange_symbol(payload, isin) if payload
+    end
+
+    # The portfolio names a bond by its localized maturity ("März 2040"); the
+    # instrument name also carries the issuer ("ITALIEN 19/40").
+    def bond_instrument(websocket, isin)
+      { name: instrument_name(websocket, isin), instrument_type: BOND_INSTRUMENT_TYPE }.compact
+    end
+
+    def instrument_name(websocket, isin)
+      bond_name(instrument_payload(websocket, isin))
+    end
+
+    # Bonds are named like the market lists them: issuer, coupon and maturity
+    # ("Italy 3.1% Mar 2040"). The instrument name is the exchange's German
+    # name ("ITALIEN 19/40") even with locale "en", so it is only the fallback.
+    def bond_name(payload)
       return nil unless payload.is_a?(Hash)
 
-      pick_instrument_exchange_symbol(payload, isin)
+      bond_info = payload["bondInfo"].is_a?(Hash) ? payload["bondInfo"] : {}
+      issuer = bond_info["issuerName"].to_s.strip.presence
+      maturity = payload["shortName"].to_s.strip.presence
+      return payload["name"].to_s.strip.presence unless issuer && maturity
+
+      [ issuer, bond_coupon(bond_info), maturity ].compact.join(" ")
+    end
+
+    # A fixed coupon never changes, so it can go in a name that is only set
+    # when the security is created. Floating rates are left out.
+    def bond_coupon(bond_info)
+      return nil unless bond_info["interestRateType"] == "FIXED_INTEREST_RATE"
+
+      rate = finite_decimal(bond_info["interestRate"])
+      "#{(rate * 100).round(4).to_s("F").delete_suffix(".0")}%" if rate
+    end
+
+    def instrument_payload(websocket, isin)
+      payload = optional_subscribe(websocket, type: "instrument", id: isin)
+      payload if payload.is_a?(Hash)
     rescue TransientProviderError, RateLimited
       raise
     rescue Error
@@ -950,28 +1143,44 @@ class Provider::TradeRepublicClient
       end
 
       stamp_instrument_symbols_on_events!(events, symbols)
+      stamp_bond_instrument_names!(websocket, events, budget: MAX_INSTRUMENT_LOOKUPS - looked_up)
       symbols
     end
 
-    def trade_isins_missing_symbols(events, known_symbols)
-      missing = []
+    # A sold bond has no position to name its ISIN security after, and its
+    # timeline title only names the maturity ("März 2040"). Stamp the
+    # instrument name on bond trades while they pass through a sync, so the
+    # security is created with it.
+    def stamp_bond_instrument_names!(websocket, events, budget:)
+      names = {}
       Array(events).each do |event|
         next unless event.is_a?(Hash)
-        next unless self.class.requires_trade_detail?(event)
-        next unless Provider::TradeRepublicTimelineEvent.importable?(event)
 
         detail = event["detail"] || event[:detail]
-        next unless detail.is_a?(Hash)
+        next unless self.class.bond?(detail)
 
         detail = detail.stringify_keys
         isin = detail["isin"].to_s.presence
-        next if isin.blank?
-        next if known_symbols.key?(isin)
-        next if usable_trade_symbol?(detail["symbol"], isin) && detail["exchange_slug"].to_s.strip.present?
+        next if isin.blank? || detail["instrument_name"].present?
 
-        missing << isin
+        unless names.key?(isin)
+          next if names.size >= budget
+
+          names[isin] = instrument_name(websocket, isin)
+        end
+        next if names[isin].blank?
+
+        detail["instrument_name"] = names[isin]
+        event["detail"] = detail
       end
-      missing.uniq
+      events
+    end
+
+    def trade_isins_missing_symbols(events, known_symbols)
+      Array(events).filter_map do |event|
+        isin = self.class.symbol_lookup_isin(event)
+        isin unless isin.nil? || known_symbols.key?(isin)
+      end.uniq
     end
 
     def stamp_instrument_symbols_on_events!(events, symbols)
@@ -1022,6 +1231,8 @@ class Provider::TradeRepublicClient
     end
 
     def pick_instrument_exchange_symbol(payload, isin)
+      return nil if payload["typeId"].to_s == BOND_INSTRUMENT_TYPE
+
       candidates = Array(payload["exchanges"]).filter_map do |exchange|
         next unless exchange.is_a?(Hash)
         next if exchange.key?("active") && !ActiveModel::Type::Boolean.new.cast(exchange["active"])
@@ -1086,29 +1297,20 @@ class Provider::TradeRepublicClient
       nil
     end
 
-    def collect_timeline(websocket, known_newest_event_id:, max_pages:)
-      collect_timeline_topic(
-        websocket,
-        topic: "timelineTransactions",
-        known_newest_event_id: known_newest_event_id,
-        max_pages: max_pages
-      )
-    end
-
-    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [])
-      transaction_events, transaction_newest, transaction_warnings, transaction_complete = collect_timeline_topic(
-        websocket,
-        topic: "timelineTransactions",
-        known_newest_event_id: known_newest_event_id,
-        max_pages: max_pages
-      )
-      activity_events, activity_newest, activity_warnings, activity_complete = collect_timeline_topic(
-        websocket,
-        topic: "timelineActivityLog",
-        known_newest_event_id: known_newest_event_id,
-        max_pages: max_pages
-      )
-      skeleton_events = (transaction_events + activity_events).uniq do |event|
+    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [], timeline_cursors: {}, interrupted_backfills: {})
+      timeline_cursors = (timeline_cursors || {}).to_h.stringify_keys
+      topics = TIMELINE_TOPICS.index_with do |topic|
+        state = timeline_cursors[topic].is_a?(Hash) ? timeline_cursors[topic].stringify_keys : {}
+        sync_timeline_topic(
+          websocket,
+          topic: topic,
+          state: state,
+          fallback_newest_event_id: known_newest_event_id,
+          max_pages: max_pages,
+          interrupted_backfill: interrupted_backfills[topic]
+        )
+      end.values
+      skeleton_events = topics.flat_map(&:events).uniq do |event|
         event["id"].presence || event.slice("timestamp", "eventType", "title", "subtitle", "detail")
       end
       events, detail_warnings, detail_backfill_count = enrich_timeline_details(
@@ -1119,57 +1321,186 @@ class Provider::TradeRepublicClient
       # Backfilled stored events are older than this sync's pages and must not
       # pull the list cursor backwards.
       newest_event = skeleton_events.max_by { |event| event["timestamp"].to_s }
-      # Pagination completeness only — pending details drain on later syncs.
-      timeline_complete = transaction_complete != false && activity_complete != false
-      [
-        events,
-        newest_event&.dig("id") || transaction_newest || activity_newest,
-        transaction_warnings + activity_warnings + detail_warnings,
-        timeline_complete,
-        detail_backfill_count
-      ]
+      TimelineSync.new(
+        events: events,
+        newest_event_id: newest_event&.dig("id") || topics.filter_map(&:newest_event_id).first,
+        warnings: topics.flat_map(&:warnings) + detail_warnings,
+        # Newest pages only — the history backfill and pending details drain on
+        # later syncs.
+        pagination_complete: topics.all?(&:head_complete),
+        detail_backfill_count: detail_backfill_count,
+        cursors: TIMELINE_TOPICS.zip(topics.map(&:state)).to_h.compact_blank,
+        topic_event_ids: TIMELINE_TOPICS.zip(topics.map { |topic| topic.events.filter_map { |event| event["id"].presence&.to_s } }).to_h
+      )
     end
 
-    def collect_timeline_topic(websocket, topic:, known_newest_event_id:, max_pages:)
+    # Reads a topic's newest pages down to the event the previous sync stopped
+    # at, then continues the history backfill. When more pages remain than the
+    # budget allows (a first sync of a long history, or a gap of new events
+    # since the last sync) the backfill takes over from where the newest pages
+    # ran out, so older events are imported over several syncs.
+    #
+    # The per-topic newest event is authoritative. The item's single
+    # newest_event_id only seeds topics synced before per-topic state existed.
+    def sync_timeline_topic(websocket, topic:, state:, fallback_newest_event_id:, max_pages:, interrupted_backfill: nil)
+      known_newest_event_id = state["newest_event_id"].presence || fallback_newest_event_id.presence
+      head = collect_timeline_topic(websocket, topic: topic, known_newest_event_id: known_newest_event_id, max_pages: max_pages)
+      events = head.events
+      warnings = head.warnings.dup
+      head_complete = head.outcome != :stalled
+
+      if head_complete
+        state = state.merge("newest_event_id" => head.newest_event_id || known_newest_event_id).compact
+        if head.outcome == :budget_exhausted
+          # A gap stops at the previous newest event. A backfill that was still
+          # running is replaced, so the new one reads down to its stop event
+          # (or to the end of the topic) to cover that range too.
+          stop_event_id = state["backfill_cursor"].present? ? state["backfill_stop_event_id"] : known_newest_event_id
+          state = start_timeline_backfill(state, topic: topic, cursor: head.cursor, stop_event_id: stop_event_id, warnings: warnings)
+        end
+      end
+
+      if interrupted_backfill
+        # The websocket failed during this topic's backfill, and the sync is
+        # now being retried without it. The pages read before the failure are
+        # kept and the backfill resumes at the failed page on the next sync.
+        # Backfills of other topics still run.
+        if state["backfill_cursor"].present?
+          events += interrupted_backfill[:events]
+          state = timeline_backfill_stopped(state, cursor: interrupted_backfill[:cursor], topic: topic, reason: interrupted_backfill[:reason], warnings: warnings)
+        end
+      elsif state["backfill_cursor"].present?
+        backfill_events, state = continue_timeline_backfill(websocket, topic: topic, state: state, max_pages: max_pages, warnings: warnings)
+        events += backfill_events
+      end
+
+      TopicSync.new(events: events, newest_event_id: head.newest_event_id, warnings: warnings, head_complete: head_complete, state: state)
+    end
+
+    def start_timeline_backfill(state, topic:, cursor:, stop_event_id:, warnings:)
+      state = state.except(*TIMELINE_BACKFILL_KEYS)
+      return state unless storable_timeline_cursor?(cursor, topic: topic, warnings: warnings)
+
+      state.merge("backfill_cursor" => cursor, "backfill_stop_event_id" => stop_event_id).compact
+    end
+
+    # Returns the backfilled events and the topic state for the next sync.
+    def continue_timeline_backfill(websocket, topic:, state:, max_pages:, warnings:)
+      pass = collect_timeline_topic(
+        websocket,
+        topic: topic,
+        known_newest_event_id: state["backfill_stop_event_id"],
+        max_pages: max_pages,
+        start_cursor: state["backfill_cursor"]
+      )
+      warnings.concat(pass.warnings)
+
+      case pass.outcome
+      when :finished, :caught_up
+        [ pass.events, state.except(*TIMELINE_BACKFILL_KEYS) ]
+      when :budget_exhausted
+        next_state = start_timeline_backfill(state, topic: topic, cursor: pass.cursor, stop_event_id: state["backfill_stop_event_id"], warnings: warnings)
+        [ pass.events, next_state ]
+      else
+        reason = pass.error&.class&.name&.demodulize || "pagination stalled"
+        if pass.error.is_a?(Timeout) || pass.error.is_a?(TransientProviderError)
+          raise TimelineBackfillInterrupted.new(
+            "Trade Republic timeline backfill for #{topic} was interrupted",
+            topic: topic,
+            reason: reason,
+            cursor: pass.cursor,
+            events: pass.events
+          )
+        end
+
+        [ pass.events, timeline_backfill_stopped(state, cursor: pass.cursor, topic: topic, reason: reason, warnings: warnings) ]
+      end
+    end
+
+    # Resumes after the last page that was read. Abandoning counts failures
+    # in a row at the same position, so a pass that moved forward starts the
+    # count again.
+    def timeline_backfill_stopped(state, cursor:, topic:, reason:, warnings:)
+      return state.except(*TIMELINE_BACKFILL_KEYS) unless storable_timeline_cursor?(cursor, topic: topic, warnings: warnings)
+
+      state = state.except("backfill_failures") if cursor != state["backfill_cursor"]
+      timeline_backfill_failed(state.merge("backfill_cursor" => cursor), topic: topic, reason: reason, warnings: warnings)
+    end
+
+    # Keeps the cursor so the next sync retries the same page, until the
+    # backfill has failed too often in a row.
+    def timeline_backfill_failed(state, topic:, reason:, warnings:)
+      failures = state["backfill_failures"].to_i + 1
+      if failures >= MAX_TIMELINE_BACKFILL_FAILURES
+        warnings << "timeline history backfill for #{topic} abandoned after #{failures} failed attempts (#{reason})"
+        return state.except(*TIMELINE_BACKFILL_KEYS)
+      end
+
+      warnings << "timeline history backfill failed for #{topic} (#{reason})"
+      state.merge("backfill_failures" => failures)
+    end
+
+    # Cursors come from the provider and are stored, so only short scalars
+    # are kept.
+    def storable_timeline_cursor?(cursor, topic:, warnings:)
+      return true if (cursor.is_a?(String) || cursor.is_a?(Integer)) && cursor.to_s.length <= MAX_TIMELINE_CURSOR_LENGTH
+
+      warnings << "timeline pagination cursor for #{topic} cannot be stored; older history is not imported"
+      false
+    end
+
+    def collect_timeline_topic(websocket, topic:, known_newest_event_id:, max_pages:, start_cursor: nil)
       items = []
-      newest_event_id = nil
-      cursor = nil
       warnings = []
+      cursor = start_cursor
+      seen_cursors = Set.new([ start_cursor ].compact)
+      page_budget = [ max_pages, MAX_TIMELINE_PAGES ].min
       pages = 0
-      seen_cursors = Set.new
-      reached_known_event = false
-      complete = true
-      while pages < [ max_pages, MAX_TIMELINE_PAGES ].min
+      outcome = :finished
+      error = nil
+      loop do
+        if pages >= page_budget
+          outcome = cursor.present? ? :budget_exhausted : :stalled
+          break
+        end
         payload = { type: topic }
         payload[:after] = cursor if cursor
-        response = subscribe(websocket, payload)
+        begin
+          response = subscribe(websocket, payload)
+        rescue Timeout, MalformedResponse, ProviderUnavailable => e
+          # The newest pages fail as a whole; a backfill keeps what it read.
+          raise if start_cursor.nil?
+
+          error = e
+          outcome = :failed
+          break
+        end
         page_items = response.is_a?(Hash) ? Array(response["items"]) : []
-        break if page_items.empty?
-        page_items.each do |item|
-          id = item["id"].to_s
-          reached_known_event ||= known_newest_event_id.present? && id == known_newest_event_id.to_s
-          items << item
-          newest_event_id ||= id.presence
-        end
-        cursor = response.dig("cursors", "after")
-        break if cursor.blank?
-        if reached_known_event
+        items.concat(page_items)
+        if known_newest_event_id.present? && page_items.any? { |item| item["id"].to_s == known_newest_event_id.to_s }
+          outcome = :caught_up
           break
         end
-        if seen_cursors.include?(cursor)
+        # An empty page only ends the topic when it carries no next cursor.
+        next_cursor = response.dig("cursors", "after") if response.is_a?(Hash)
+        break if next_cursor.blank?
+        if seen_cursors.include?(next_cursor)
           warnings << "timeline pagination cursor repeated for #{topic}"
-          complete = false
+          outcome = :stalled
           break
         end
-        seen_cursors << cursor
+        seen_cursors << next_cursor
+        cursor = next_cursor
         pages += 1
       end
-      if cursor.present? && !reached_known_event && pages >= [ max_pages, MAX_TIMELINE_PAGES ].min
-        warnings << "timeline pagination truncated for #{topic}"
-        complete = false
-      end
-      events = items.map { |item| build_skeleton_event(item, warnings: warnings) }
-      [ events, newest_event_id, warnings, complete ]
+      TimelinePass.new(
+        events: items.map { |item| build_skeleton_event(item, warnings: warnings) },
+        newest_event_id: items.filter_map { |item| item["id"].to_s.presence }.first,
+        warnings: warnings,
+        outcome: outcome,
+        cursor: cursor,
+        error: error
+      )
     end
 
     def build_skeleton_event(item, warnings: nil)
@@ -1187,7 +1518,8 @@ class Provider::TradeRepublicClient
     # dividend events, drain oldest stored incomplete / price-backfill trades
     # next, then spend any leftover on additional new events. Failed attempts
     # still consume budget so a bad event cannot starve the rest of the queue
-    # forever within one sync. Stored dividends are not backfilled.
+    # forever within one sync. Stored dividends without their detail are
+    # backfilled too.
     def enrich_timeline_details(websocket, events, enrich_events: [])
       warnings = []
       events = Array(events)
@@ -1196,6 +1528,7 @@ class Provider::TradeRepublicClient
           (self.class.incomplete_trade_detail_event?(event) || self.class.dividend_detail_missing?(event))
       end
       new_ids = new_candidates.to_set { |event| event["id"].to_s }
+      page_ids = events.filter_map { |event| event["id"].presence&.to_s }.to_set
       backlog_candidates = Array(enrich_events).select do |event|
         next false unless event.is_a?(Hash)
 
@@ -1203,8 +1536,11 @@ class Provider::TradeRepublicClient
         next false if item["id"].blank?
         next false if new_ids.include?(item["id"].to_s)
 
+        # A dividend on this sync's pages is handled there: a new one is
+        # fetched above, and one that already has its details needs nothing.
         self.class.incomplete_trade_detail_event?(item) ||
-          self.class.trade_detail_needs_price_backfill?(item)
+          self.class.trade_detail_needs_price_backfill?(item) ||
+          (self.class.dividend_detail_missing?(item) && !page_ids.include?(item["id"].to_s))
       end
 
       budget = MAX_TIMELINE_DETAILS
@@ -1254,7 +1590,11 @@ class Provider::TradeRepublicClient
         if kind == :backfill
           result = fetched ? prefer_richer_event(item, fetched) : item
           detail_backfill_count += 1 if detail_backfill_improved?(item, result)
-          fetched = with_price_backfill_attempt(result) if self.class.trade_detail_missing_price?(result)
+          if self.class.trade_detail_price_unconfirmed?(result)
+            fetched = with_price_backfill_attempt(result)
+          elsif self.class.incomplete_trade_detail_event?(result) || self.class.dividend_detail_missing?(result)
+            fetched = with_detail_backfill_attempt(result)
+          end
         end
         enriched_by_id[item["id"].to_s] = fetched if fetched
       end
@@ -1273,13 +1613,17 @@ class Provider::TradeRepublicClient
     def detail_backfill_improved?(before, after)
       return self.class.trade_detail_complete?(after) if self.class.incomplete_trade_detail_event?(before)
 
-      self.class.trade_detail_missing_price?(before) && !self.class.trade_detail_missing_price?(after)
+      self.class.trade_detail_price_unconfirmed?(before) && !self.class.trade_detail_price_unconfirmed?(after)
     end
 
-    def with_price_backfill_attempt(event)
+    def with_price_backfill_attempt(event) = with_attempt_marker(event, PRICE_BACKFILL_ATTEMPTED_AT_KEY)
+
+    def with_detail_backfill_attempt(event) = with_attempt_marker(event, DETAIL_BACKFILL_ATTEMPTED_AT_KEY)
+
+    def with_attempt_marker(event, key)
       event = event.stringify_keys
       detail = (event["detail"] || {}).stringify_keys
-      event.merge("detail" => detail.merge(PRICE_BACKFILL_ATTEMPTED_AT_KEY => Time.current.iso8601))
+      event.merge("detail" => detail.merge(key => Time.current.iso8601))
     end
 
     # Test/helper wrapper: enrich a raw timeline page without touching the list cursor.
@@ -1347,13 +1691,19 @@ class Provider::TradeRepublicClient
     end
 
     def normalize_event_detail(raw, item: nil)
-      rows = collect_sections(raw).flat_map { |section| Array(section["data"]) }.select { |row| row.is_a?(Hash) }
+      rows = section_rows(collect_sections(raw))
       shares = find_row(rows, SHARE_TITLES)
       total = find_row(rows, TOTAL_TITLES)
       price_row = find_row(rows, PRICE_TITLES)
       fees = find_row(rows, FEE_TITLES)
       taxes = find_row(rows, TAX_TITLES)
-      quantity = decimal_from_row(shares) || quantity_from_raw(raw)
+      # A bond's nominal and quote sit in an untitled table inside an infoPage
+      # bottom sheet. Only bond fields read it, so an unrelated nested table
+      # can't fill in a share trade's price or total.
+      bond_rows = rows + section_rows(collect_sections(raw, untitled_tables: true)) unless shares
+      nominal = find_row(bond_rows, NOMINAL_TITLES) unless shares
+      total ||= find_row(bond_rows, BOND_TOTAL_TITLES) if nominal
+      quantity = decimal_from_row(shares) || decimal_from_row(nominal) || quantity_from_raw(raw)
       title = shares&.dig("title").to_s.downcase
       quantity = -quantity.abs if title.include?("entfernt") || title.include?("removed") || title.include?("gesendet") || title.include?("sent")
       subtitle = item&.dig("subtitle").to_s.downcase
@@ -1362,7 +1712,13 @@ class Provider::TradeRepublicClient
       fee_amount = decimal_from_row(fees)
       tax_amount = decimal_from_row(taxes)
       price = decimal_from_row(price_row)
+      quotation = decimal_from_row(find_row(bond_rows, QUOTATION_TITLES)) if nominal
+      # Per unit of nominal, like a bond position's averageBuyIn: 92,67 % of
+      # par is 0.9267.
+      price ||= quotation / 100 if quotation
       dividend_per_share = decimal_from_row(find_row(rows, DIVIDEND_PER_SHARE_TITLES))
+      price ||= transaction_unit_price(find_row(rows, TRANSACTION_TITLES))
+      price_source = PRICE_SOURCE_DETAIL if price
       if price.nil? && quantity&.nonzero? && amount
         # Provider cash totals embed costs: buy total = gross + fees/taxes,
         # sell total = gross - fees/taxes. Recover share price accordingly.
@@ -1375,31 +1731,52 @@ class Provider::TradeRepublicClient
 
       {
         "isin" => find_isin(item) || find_isin(raw) || find_logo_isin(raw),
-        "name" => item&.dig("title") || find_asset_name(raw),
+        "name" => detail_name(item, raw),
         "quantity" => decimal_string(quantity),
         "price" => decimal_string(price),
+        PRICE_SOURCE_KEY => price_source,
         "amount" => decimal_string(amount&.abs),
         "currency" => currency_from_row(total) || currency_from_row(shares) || currency_from_row(price_row),
         "fees" => decimal_string(fee_amount),
         "taxes" => decimal_string(tax_amount),
-        "dividend_per_share" => decimal_string(dividend_per_share)
+        "dividend_per_share" => decimal_string(dividend_per_share),
+        "instrument_type" => (BOND_INSTRUMENT_TYPE if nominal)
       }.compact
     end
 
-    def collect_sections(node, result = [])
+    def collect_sections(node, result = [], untitled_tables: false)
       case node
       when Hash
-        result << node if node.key?("title") && node["data"].is_a?(Array)
-        node.each_value { |value| collect_sections(value, result) }
-      when Array then node.each { |value| collect_sections(value, result) }
+        section = untitled_tables ? node["type"] == "table" && !node.key?("title") : node.key?("title")
+        result << node if section && node["data"].is_a?(Array)
+        node.each_value { |value| collect_sections(value, result, untitled_tables:) }
+      when Array then node.each { |value| collect_sections(value, result, untitled_tables:) }
       end
       result
     end
 
+    def section_rows(sections) = sections.flat_map { |section| Array(section["data"]) }.select { |row| row.is_a?(Hash) }
+
     def find_row(rows, titles) = rows.find { |row| titles.include?(row["title"].to_s.downcase.strip) }
 
+    # "0.626409 × €7.982"; Saveback writes "x". The displayValue holds the
+    # price alone. A bond's row quotes percent of par, not a unit price.
+    def transaction_unit_price(row)
+      return nil unless row
+
+      row_text = row.dig("detail", "text").to_s
+      text = row.dig("detail", "displayValue", "text").presence || row_text.split(/\s[×x]\s+/i, 2).second
+      return nil if text.blank? || text.include?("%") || row_text.include?("%")
+
+      price = decimal_from_text(text)
+      price if price&.positive?
+    end
+
     def decimal_from_row(row)
-      text = row&.dig("detail", "text") || row&.dig("detail", "value", "text")
+      decimal_from_text(row&.dig("detail", "text") || row&.dig("detail", "value", "text"))
+    end
+
+    def decimal_from_text(text)
       return nil if text.blank?
 
       normalized = text.to_s.gsub(/[^\d,.-]/, "")
@@ -1450,6 +1827,12 @@ class Provider::TradeRepublicClient
         isin ||= value[%r{\Alogos/([A-Z]{2}[A-Z0-9]{9}\d)/}, 1] if value.is_a?(String)
       end
       isin
+    end
+
+    def detail_name(item, raw)
+      return find_asset_name(raw) || item&.dig("title") if item&.dig("eventType") == STOCK_PERK_EVENT_TYPE
+
+      item&.dig("title") || find_asset_name(raw)
     end
 
     def find_asset_name(raw)
