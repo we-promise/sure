@@ -30,7 +30,13 @@ class FamilyMerchant < Merchant
       [ merchant, true ]
     rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
       raise if e.is_a?(ActiveRecord::RecordInvalid) && !e.record.errors.of_kind?(:name, :taken)
-      [ family.merchants.find_by!(name: name), false ]
+      # Another unique index (e.g. family_id + iban) can raise the same
+      # RecordNotUnique; only a same-name row means a concurrent create won.
+      begin
+        [ family.merchants.find_by!(name: name), false ]
+      rescue ActiveRecord::RecordNotFound
+        raise e
+      end
     end
   end
 
