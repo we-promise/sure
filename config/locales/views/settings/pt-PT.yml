@@ -536,6 +536,7 @@ pt-PT:
         application_id_placeholder_new: "Introduza o application ID"
         application_id_placeholder_update: "Introduza o novo ID para atualizar"
         client_certificate_label: "Client Certificate (com Chave Privada)"
+        keep_client_certificate_hint: "Deixe em branco para manter o certificado atual"
         save_and_connect: "Guardar e ligar"
         update_connection: "Atualizar ligação"
         connected_bank: "Banco Ligado"
