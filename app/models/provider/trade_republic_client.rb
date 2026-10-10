@@ -57,7 +57,10 @@ class Provider::TradeRepublicClient
   TRADE_DETAIL_EVENT_TYPES = %w[
     SAVEBACK_AGGREGATE
     SPARE_CHANGE_AGGREGATE
+    ACQUISITION_TRADE_PERK
   ].freeze
+  # A stock bonus is titled "Stock Bonus"; its asset row names the stock.
+  STOCK_PERK_EVENT_TYPE = "ACQUISITION_TRADE_PERK"
   # New dividends also fetch timelineDetailV2 so provider_detail keeps the
   # ISIN, share count, dividend per share and withholding tax. The imported
   # cash amount still comes from the timeline list.
@@ -1586,7 +1589,7 @@ class Provider::TradeRepublicClient
 
       {
         "isin" => find_isin(item) || find_isin(raw) || find_logo_isin(raw),
-        "name" => item&.dig("title") || find_asset_name(raw),
+        "name" => detail_name(item, raw),
         "quantity" => decimal_string(quantity),
         "price" => decimal_string(price),
         "amount" => decimal_string(amount&.abs),
@@ -1661,6 +1664,12 @@ class Provider::TradeRepublicClient
         isin ||= value[%r{\Alogos/([A-Z]{2}[A-Z0-9]{9}\d)/}, 1] if value.is_a?(String)
       end
       isin
+    end
+
+    def detail_name(item, raw)
+      return find_asset_name(raw) || item&.dig("title") if item&.dig("eventType") == STOCK_PERK_EVENT_TYPE
+
+      item&.dig("title") || find_asset_name(raw)
     end
 
     def find_asset_name(raw)

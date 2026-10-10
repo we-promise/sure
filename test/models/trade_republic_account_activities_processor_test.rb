@@ -341,6 +341,115 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Card purchase", entry.transaction.extra.dig("trade_republic", "subtitle")
   end
 
+  test "card funding transactions are imported as card payments" do
+    import_event({
+      id: "evt_card_aft",
+      timestamp: "2026-02-21T11:13:04Z",
+      eventType: "CARD_AFT",
+      title: "Revolut",
+      status: "EXECUTED",
+      detail: { amount: -100.0, signed_amount: -100.0, currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_card_aft")
+    assert_equal BigDecimal("100.0"), entry.amount
+    assert_equal "Revolut", entry.name
+  end
+
+  test "card credit transactions are imported as money in" do
+    import_event({
+      id: "evt_card_oct",
+      timestamp: "2026-03-16T18:01:01Z",
+      eventType: "CARD_OCT",
+      title: "Refund Globalblue.com",
+      status: "EXECUTED",
+      detail: { amount: 2.96, signed_amount: 2.96, currency: "EUR" }
+    })
+
+    assert_equal BigDecimal("-2.96"), Entry.find_by!(external_id: "trade_republic_event_evt_card_oct").amount
+  end
+
+  test "credit card top-ups are imported as money in" do
+    import_event({
+      id: "evt_credit_card_cash_in",
+      timestamp: "2024-12-11T10:00:00Z",
+      eventType: "PAYMENT_INBOUND_CREDIT_CARD",
+      title: "Cash In",
+      status: "EXECUTED",
+      detail: { amount: 500.0, signed_amount: 500.0, currency: "EUR" }
+    })
+
+    assert_equal BigDecimal("-500"), Entry.find_by!(external_id: "trade_republic_event_evt_credit_card_cash_in").amount
+  end
+
+  test "stamp duty is imported as a charge and its cancellation as a refund" do
+    @tr_account.update!(raw_timeline_payload: [
+      {
+        id: "evt_stamp_duty",
+        timestamp: "2026-02-18T14:34:02Z",
+        eventType: "STAMP_DUTY_TAX_PAID",
+        title: "Stamp duty (Portfolio)",
+        status: "EXECUTED",
+        detail: { amount: -22.24, signed_amount: -22.24, currency: "EUR" }
+      },
+      {
+        id: "evt_stamp_duty_cancel",
+        timestamp: "2026-02-18T09:37:01Z",
+        eventType: "STAMP_DUTY_TAX_PAID",
+        title: "Stamp duty (Portfolio)",
+        subtitle: "Cancellation of stamp duty",
+        status: "EXECUTED",
+        detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+      }
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+
+    assert_equal BigDecimal("22.24"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty").amount
+    assert_equal BigDecimal("-20.99"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel").amount
+  end
+
+  test "stamp duty cancellation without a status is still imported as a refund" do
+    import_event({
+      id: "evt_stamp_duty_cancel_no_status",
+      timestamp: "2026-02-18T09:37:01Z",
+      eventType: "STAMP_DUTY_TAX_PAID",
+      title: "Stamp duty (Portfolio)",
+      subtitle: "Cancellation of stamp duty",
+      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+    })
+
+    assert_equal BigDecimal("-20.99"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel_no_status").amount
+  end
+
+  test "a stamp duty refund on a portfolio account is not booked as a contribution" do
+    import_event({
+      id: "evt_stamp_duty_refund",
+      timestamp: "2026-02-18T09:37:01Z",
+      eventType: "STAMP_DUTY_TAX_PAID",
+      title: "Stamp duty (Portfolio)",
+      subtitle: "Cancellation of stamp duty",
+      status: "EXECUTED",
+      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+    })
+
+    transaction = Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_refund").transaction
+    assert_nil transaction.investment_activity_label
+    assert_equal "standard", transaction.kind
+  end
+
+  test "a voided stamp duty charge is not imported as a refund" do
+    import_event({
+      id: "evt_stamp_duty_voided",
+      timestamp: "2026-02-18T09:37:01Z",
+      eventType: "STAMP_DUTY_TAX_PAID",
+      title: "Stamp duty (Portfolio)",
+      subtitle: "Cancelled",
+      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
+    })
+
+    assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_voided")
+  end
+
   test "category direction wins over the provider signed amount" do
     import_event({
       id: "evt_incoming_signed",
@@ -568,10 +677,36 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Trade", trade.entryable_type
     assert_equal BigDecimal("0.09329"), trade.entryable.qty
     assert_equal "Buy", trade.entryable.investment_activity_label
-    assert_equal BigDecimal("3.74"), trade.amount
+    # Trade Republic pays for Saveback, so the portfolio's cash must not move;
+    # the value stays in the price for the cost basis.
+    assert_equal 0, trade.amount
+    assert_in_delta BigDecimal("3.74"), trade.entryable.qty * trade.entryable.price, BigDecimal("0.01")
     assert_equal "SAVEBACK_AGGREGATE", trade.entryable.extra.dig("trade_republic", "event_type")
 
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_saveback")
+  end
+
+  test "a stock bonus imports as a portfolio trade without a cash leg" do
+    cash_account, cash_sure = create_linked_cash_account!
+
+    bonus = stock_bonus_event
+    @tr_account.update!(raw_timeline_payload: [ bonus ])
+    cash_account.update!(raw_timeline_payload: [ bonus ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    trade = find_trade("trade_republic_event_evt_stock_bonus")
+    assert_equal "Trade", trade.entryable_type
+    assert_equal BigDecimal("0.055"), trade.entryable.qty
+    # No cash moved, so the portfolio's cash must not move either; the value
+    # stays in the price for the cost basis.
+    assert_equal 0, trade.amount
+    assert_in_delta BigDecimal("10.04"), trade.entryable.qty * trade.entryable.price, BigDecimal("0.01")
+    assert_equal "ACQUISITION_TRADE_PERK", trade.entryable.extra.dig("trade_republic", "event_type")
+
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_stock_bonus")
+    assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_stock_bonus")
   end
 
   test "round up imports as a portfolio trade and a cash outflow when split" do
@@ -1678,6 +1813,25 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
           quantity: "0.09329",
           isin: "DE000A0F5UH1",
           name: "STOXX Global Dividend 100 EUR (Dist)"
+        }
+      }
+    end
+
+    # Shaped like a stored stock bonus: no status, no amount on the timeline,
+    # shares and value from the detail.
+    def stock_bonus_event
+      {
+        id: "evt_stock_bonus",
+        timestamp: "2025-06-25T14:52:12.282+0000",
+        eventType: "ACQUISITION_TRADE_PERK",
+        title: "Stock Bonus",
+        subtitle: "Redeemed",
+        detail: {
+          amount: "10.04",
+          currency: "EUR",
+          quantity: "0.055",
+          isin: "US0231351067",
+          name: "Amazon.com"
         }
       }
     end
