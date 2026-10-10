@@ -28,7 +28,7 @@
             <%= render DS::CompactRow.new(header: true, show_date: true, show_notes: Current.user.transactions_show_notes?) do |row| %>
               <% row.with_checkbox do %>
                 <%= check_box_tag "selection_entry",
-                    class: "checkbox checkbox--light hidden @5xl/compact-table:block",
+                    class: "checkbox checkbox--light hidden @3xl/compact-table:block",
                     data: {
                       action: "bulk-select#togglePageSelection",
                       checkbox_toggle_target: "selectionEntry"
@@ -45,7 +45,7 @@
             <%= render DS::CompactRow.new(header: true, show_notes: Current.user.transactions_show_notes?) do |row| %>
               <% row.with_checkbox do %>
                 <%= check_box_tag "selection_entry",
-                    class: "checkbox checkbox--light hidden @5xl/compact-table:block",
+                    class: "checkbox checkbox--light hidden @3xl/compact-table:block",
                     data: {
                       action: "bulk-select#togglePageSelection",
                       checkbox_toggle_target: "selectionEntry"

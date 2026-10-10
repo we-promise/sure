@@ -19,8 +19,9 @@ class DS::CompactRow < DesignSystemComponent
   # secondary-colored label row (used for the list's column headers), so
   # header labels can never drift out of alignment with the data rows below
   # them — both are built from the exact same column widths.
-  # Place the table inside an @container/compact-table wrapper. Below 64rem
-  # of available table width, rows use their mobile content and amount only.
+  # Place the table inside an @container/compact-table wrapper. Below 48rem
+  # of available table width, rows use their mobile content and amount only;
+  # the optional Notes and Labels cells additionally wait for 64rem (@5xl).
   #
   #   <%= render DS::CompactRow.new(header: true, show_date: true) do |row| %>
   #     <% row.with_date { t("transactions.show.date_label") } %>
@@ -70,7 +71,7 @@ class DS::CompactRow < DesignSystemComponent
   # bulk-select toggle unhides the input; headers never reveal it.
   def checkbox_wrapper_classes
     class_names(
-      "w-6 shrink-0 justify-center hidden @5xl/compact-table:flex",
+      "w-6 shrink-0 justify-center hidden @3xl/compact-table:flex",
       @header ? nil : "has-[input:not(.hidden)]:flex"
     )
   end
@@ -82,10 +83,10 @@ class DS::CompactRow < DesignSystemComponent
       </div>
 
       <% if @show_date %>
-        <div role="<%= cell_role %>" class="hidden @5xl/compact-table:flex w-24 shrink-0 text-secondary text-sm truncate pr-2"><%= date %></div>
+        <div role="<%= cell_role %>" class="hidden @3xl/compact-table:flex w-24 shrink-0 text-secondary text-sm truncate pr-2"><%= date %></div>
       <% end %>
 
-      <div role="<%= cell_role %>" class="flex items-center gap-2 @5xl/compact-table:gap-3 flex-[5] min-w-0">
+      <div role="<%= cell_role %>" class="flex items-center gap-2 @3xl/compact-table:gap-3 flex-[5] min-w-0">
         <%= primary %>
       </div>
 
@@ -99,7 +100,7 @@ class DS::CompactRow < DesignSystemComponent
         </div>
       <% end %>
 
-      <div role="<%= cell_role %>" class="hidden @5xl/compact-table:flex min-w-0 items-center gap-1 flex-[2]">
+      <div role="<%= cell_role %>" class="hidden @3xl/compact-table:flex min-w-0 items-center gap-1 flex-[2]">
         <% if category? %>
           <%= category %>
         <% else %>
@@ -116,7 +117,7 @@ class DS::CompactRow < DesignSystemComponent
       </div>
 
       <% if @show_balance %>
-        <div role="<%= cell_role %>" class="hidden @5xl/compact-table:flex w-30 shrink-0 justify-end tabular-nums">
+        <div role="<%= cell_role %>" class="hidden @3xl/compact-table:flex w-30 shrink-0 justify-end tabular-nums">
           <%= balance %>
         </div>
       <% end %>
@@ -127,7 +128,7 @@ class DS::CompactRow < DesignSystemComponent
     def row_type_classes
       class_names(
         "group text-sm font-medium py-2 px-3",
-        @indent ? "pl-6 @5xl/compact-table:pl-8" : nil,
+        @indent ? "pl-6 @3xl/compact-table:pl-8" : nil,
         @muted ? "opacity-50 text-secondary" : "text-primary"
       )
     end

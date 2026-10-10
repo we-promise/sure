@@ -1,4 +1,4 @@
-<span id="category_name_mobile_<%= transaction.id %>" class="text-secondary @5xl/compact-table:hidden min-w-0 truncate">
+<span id="category_name_mobile_<%= transaction.id %>" class="text-secondary @3xl/compact-table:hidden min-w-0 truncate">
   <% if transaction.category_editable? %>
     <%= transaction.category&.display_name || Category.uncategorized.display_name %>
   <% else %>

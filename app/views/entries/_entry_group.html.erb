@@ -4,7 +4,7 @@
   <div class="py-2 px-4 flex items-center justify-between font-medium text-xs text-secondary">
     <div class="flex pl-0.5 items-center gap-4">
         <%= check_box_tag "#{date}_entries_selection",
-                          class: ["checkbox checkbox--light hidden", ((compact ? "@5xl/compact-table:block" : "lg:block") if entries.any?)],
+                          class: ["checkbox checkbox--light hidden", ((compact ? "@3xl/compact-table:block" : "lg:block") if entries.any?)],
                           id: "selection_entry_#{date}",
                           data: {
                             action: "bulk-select#toggleGroupSelection",

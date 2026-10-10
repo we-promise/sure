@@ -18,7 +18,7 @@
       <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
-            class: "checkbox checkbox--light hidden @5xl/compact-table:block",
+            class: "checkbox checkbox--light hidden @3xl/compact-table:block",
             data: {
               id: entry.id,
               entry_type: entry.entryable_type,
@@ -49,7 +49,7 @@
                 <% end %>
               <% else %>
                 <% if transaction.merchant&.present? %>
-                  <span class="hidden @5xl/compact-table:inline text-secondary font-normal"><%= transaction.merchant.name %> • </span>
+                  <span class="hidden @3xl/compact-table:inline text-secondary font-normal"><%= transaction.merchant.name %> • </span>
                 <% end %>
                 <%= link_to(
                       entry.name,
