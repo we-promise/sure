@@ -333,12 +333,32 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     page.current_window.resize_to(1400, 900)
 
     visit transactions_url
+    assert page.evaluate_script("matchMedia('(pointer: fine)').matches"),
+      "the desktop test browser must expose a fine pointer"
     assert_in_delta 6.0, compact_row_padding_top(dom_id(@entry)), 0.5,
       "global list rows should tighten to 6px on fine pointers"
 
     visit account_url(accounts(:depository), tab: "activity")
     assert_in_delta 8.0, compact_row_padding_top(dom_id(@entry)), 0.5,
       "account activity rows should stay roomy at 8px"
+  end
+
+  test "global list rows stay roomy on coarse pointers" do
+    browser = page.driver.browser
+    skip "Touch emulation requires Chrome" unless browser.respond_to?(:execute_cdp)
+
+    begin
+      browser.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: true)
+      page.current_window.resize_to(1400, 900)
+
+      visit transactions_url
+      assert page.evaluate_script("matchMedia('(pointer: coarse)').matches"),
+        "the touch test browser must expose a coarse pointer"
+      assert_in_delta 8.0, compact_row_padding_top(dom_id(@entry)), 0.5,
+        "global list rows should stay roomy at 8px on touch screens"
+    ensure
+      browser.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: false)
+    end
   end
 
   private

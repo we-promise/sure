@@ -25,6 +25,8 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     Capybara.register_driver :selenium_remote_chrome do |app|
       options = Selenium::WebDriver::Chrome::Options.new
       options.add_argument("--window-size=1400,1400")
+      # Headless Chrome can report no pointer; desktop tests use a mouse.
+      options.add_argument("--blink-settings=primaryPointerType=4,availablePointerTypes=4")
 
       Capybara::Selenium::Driver.new(
         app,
@@ -56,6 +58,8 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       else
         Selenium::WebDriver::Chrome::Options.new.tap do |chrome_options|
           chrome_options.add_argument("--window-size=1400,1400")
+          # Match the desktop mouse used by the remote test browser.
+          chrome_options.add_argument("--blink-settings=primaryPointerType=4,availablePointerTypes=4")
           chrome_options.add_argument("--headless=new") if headless
           chrome_options.add_argument("--no-sandbox")
           chrome_options.add_argument("--disable-dev-shm-usage")
