@@ -261,6 +261,62 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert_equal 0, @family.backfill_provider_merchant_logos
   end
 
+  test "convert_to_family_merchant_for clears a website submitted blank and inherits an omitted one" do
+    @provider_merchant.update!(website_url: "https://acme.example")
+
+    cleared = @provider_merchant.convert_to_family_merchant_for(@family, name: "Acme Cleared", website_url: "")
+    inherited = @provider_merchant.convert_to_family_merchant_for(@family, name: "Acme Inherited")
+
+    assert_nil cleared.website_url
+    assert_equal "https://acme.example", inherited.website_url
+  end
+
+  test "convert_to_family_merchant_for reuses an existing same-name family merchant instead of raising" do
+    existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568", website_url: "https://old.example")
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, website_url: "https://new.example")
+
+    assert_equal existing.id, converted.id
+    assert_equal 1, @family.merchants.where(name: "Acme Synced").count
+    assert_equal "https://new.example", existing.reload.website_url
+  end
+
+  test "convert_to_family_merchant_for clears a reused merchant's website when submitted blank" do
+    existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568", website_url: "https://old.example")
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, website_url: "")
+
+    assert_equal existing.id, converted.id
+    assert_nil existing.reload.website_url
+  end
+
+  test "convert_to_family_merchant_for leaves a reused merchant's website untouched when omitted" do
+    existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568", website_url: "https://old.example")
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, name: "Acme Synced")
+
+    assert_equal existing.id, converted.id
+    assert_equal "https://old.example", existing.reload.website_url
+  end
+
+  test "convert_to_family_merchant_for applies a submitted color when reusing a merchant" do
+    existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568")
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, color: "#db5a54")
+
+    assert_equal existing.id, converted.id
+    assert_equal "#db5a54", existing.reload.color
+  end
+
+  test "convert_to_family_merchant_for leaves a reused merchant's color untouched when blank or omitted" do
+    existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568")
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, color: "")
+
+    assert_equal existing.id, converted.id
+    assert_equal "#4da568", existing.reload.color
+  end
+
   private
     def with_brandfetch
       Setting.stubs(:brand_fetch_client_id).returns("test_client_id")

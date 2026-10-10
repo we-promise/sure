@@ -260,6 +260,45 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "funds_movement", entry.transaction.reload.kind
   end
 
+  test "deriving a matched leg's kind on re-import costs one query per row" do
+    amounts = [ 150.00, 160.00, 170.00 ]
+    amounts.each_with_index do |amount, i|
+      Account::ProviderImportAdapter.new(accounts(:loan)).import_transaction(
+        external_id: "up_loan_inflow_batch_#{i}", amount: -amount, currency: "USD",
+        date: Date.current, name: "Loan Repayment Received", source: "up"
+      )
+      @adapter.import_transaction(
+        external_id: "up_checking_outflow_batch_#{i}", amount: amount, currency: "USD",
+        date: Date.current, name: "Loan Repayment", source: "up"
+      )
+    end
+    @family.auto_match_transfers!
+
+    # Up flags the outgoing legs as internal transfers, so the kind is derived
+    # from each leg's transfer; without the hint the adapter derives nothing.
+    reimport = lambda do |kind|
+      ActiveRecord::Base.uncached do
+        capture_sql_queries do
+          amounts.each_with_index do |amount, i|
+            Account::ProviderImportAdapter.new(@account).import_transaction(
+              external_id: "up_checking_outflow_batch_#{i}", amount: amount, currency: "USD",
+              date: Date.current, name: "Loan Repayment", source: "up", kind: kind
+            )
+          end
+        end
+      end
+    end
+
+    without_derivation = reimport.call(nil)
+    with_derivation = reimport.call("funds_movement")
+
+    assert_equal without_derivation.size + amounts.size, with_derivation.size,
+      "the transfer, its legs and their accounts should load in one query per row"
+    amounts.each_index do |i|
+      assert_equal "loan_payment", @account.entries.find_by!(external_id: "up_checking_outflow_batch_#{i}").transaction.kind
+    end
+  end
+
   test "updates existing transaction instead of creating duplicate" do
     # Create initial transaction
     entry = @adapter.import_transaction(
@@ -1990,4 +2029,22 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "outgoing_payment_sent", refreshed.extra.dig("wise", "status"),
       "the provider's own namespace should still refresh"
   end
+
+  private
+
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end

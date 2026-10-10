@@ -101,25 +101,48 @@ class Family::AutoMerchantDetector
     end
 
     def find_or_create_ai_merchant(auto_detection)
-      # Strategy 1: Find existing merchant by website_url (most reliable for deduplication)
+      # Strategy 1: Find an existing merchant by website_url (most reliable for
+      # deduplication). Provider-sourced merchants (Plaid etc.) are vetted
+      # shared data and stay reusable across families. AI-sourced ones were
+      # created from some family's own transaction text (before #3842), so
+      # they're only reused when already assigned to this family — otherwise
+      # another family's crafted name/logo would surface here.
       if auto_detection.business_url.present?
-        existing = ProviderMerchant.find_by(website_url: auto_detection.business_url)
+        existing = reusable_provider_merchants.find_by(website_url: auto_detection.business_url)
         return existing if existing
       end
 
-      # Strategy 2: Find by exact name match
-      existing = ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
+      # Strategy 2: Find an AI-sourced merchant by exact name match, limited
+      # to the ones this family already uses (see Strategy 1).
+      existing = family_ai_provider_merchants.find_by(name: auto_detection.business_name)
       return existing if existing
 
-      # Strategy 3: Create new merchant (ProviderMerchant generates the logo from the website)
-      ProviderMerchant.create!(
-        source: "ai",
-        name: auto_detection.business_name,
+      # Strategy 3: no shared merchant to reuse. Create a merchant scoped to
+      # this family rather than a globally-shared ProviderMerchant, so a
+      # family can't use LLM-extracted data derived from its own transaction
+      # description/notes to create a record visible to every other family
+      # (issue #3842).
+      merchant, _created = FamilyMerchant.find_or_create_with_name(
+        family,
+        auto_detection.business_name,
         website_url: auto_detection.business_url
       )
-    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
-      # Race condition: another process created the merchant between our find and create
-      ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
+      merchant
+    rescue ActiveRecord::RecordInvalid => e
+      # A name the model rejects (e.g. the reserved Merchant::NO_MERCHANT_FILTER_VALUE)
+      # leaves this transaction without a merchant, as before, instead of
+      # failing the whole detection batch. The name itself isn't logged since
+      # it's derived from the family's transaction text.
+      Rails.logger.warn("Skipping invalid AI-detected merchant for family #{family.id}: #{e.record.errors.attribute_names.join(', ')}")
+      nil
+    end
+
+    def family_ai_provider_merchants
+      ProviderMerchant.where(source: "ai", id: family.transactions.select(:merchant_id))
+    end
+
+    def reusable_provider_merchants
+      ProviderMerchant.where.not(source: "ai").or(family_ai_provider_merchants)
     end
 
     def enhance_provider_merchant(merchant, auto_detection)
