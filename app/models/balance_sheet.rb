@@ -73,9 +73,9 @@ class BalanceSheet
       when "name_desc"
         accounts.sort_by(&:name).reverse
       when "balance_asc"
-        accounts.sort_by(&:balance)
+        accounts.sort_by(&:converted_balance)
       when "balance_desc"
-        accounts.sort_by(&:balance).reverse
+        accounts.sort_by(&:converted_balance).reverse
       else
         accounts
       end

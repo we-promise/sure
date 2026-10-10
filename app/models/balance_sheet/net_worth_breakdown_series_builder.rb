@@ -113,7 +113,8 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
         currency: family.currency,
         period: period,
         interval: INTERVAL,
-        favorable_direction: favorable_direction
+        favorable_direction: favorable_direction,
+        user: user
       ).balance_series
     end
 
@@ -131,7 +132,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
     end
 
     def cache_key(period)
-      shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
+      shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_f : nil
       key = [
         "balance_sheet_net_worth_breakdown_series",
         CACHE_VERSION,

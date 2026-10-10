@@ -303,7 +303,7 @@ RSpec.configure do |config|
           },
           AccountDetail: {
             type: :object,
-            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status created_at updated_at],
+            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency ownership_percentage owned_balance owned_balance_cents classification account_type status created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
@@ -312,6 +312,9 @@ RSpec.configure do |config|
               cash_balance: { type: :string },
               cash_balance_cents: { type: :integer, description: 'Signed cash balance in minor currency units' },
               currency: { type: :string },
+              ownership_percentage: { type: :number, description: "The authenticated user's ownership share of the account (0-100). Balances above are always the full account value." },
+              owned_balance: { type: :string, description: "The authenticated user's share of the balance, formatted" },
+              owned_balance_cents: { type: :integer, description: "The authenticated user's share of the balance in minor currency units" },
               classification: { type: :string },
               account_type: { type: :string, nullable: true },
               subtype: { type: :string, nullable: true },

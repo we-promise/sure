@@ -1,10 +1,11 @@
 class Balance::ChartSeriesBuilder
   def initialize(account_ids:, currency:, period: Period.last_30_days, interval: nil,
-                 favorable_direction: "up", account_active_until_dates: {})
+                 favorable_direction: "up", account_active_until_dates: {}, user: nil)
     @account_ids = account_ids
     @currency = currency
     @period = period
     @interval = interval
+    @user = user
     @favorable_direction = favorable_direction
     @account_active_until_dates = account_active_until_dates.compact
       .transform_keys(&:to_s)
@@ -62,7 +63,25 @@ class Balance::ChartSeriesBuilder
   end
 
   private
-    attr_reader :account_ids, :currency, :period, :favorable_direction, :account_active_until_dates
+    attr_reader :account_ids, :currency, :period, :favorable_direction, :account_active_until_dates, :user
+
+    # When a user is given, each account is scaled to that user's ownership share
+    # (see Account#ownership_percentage_for). Without one, accounts count in full.
+    # Exposes the factor as selected_accounts.viewer_fraction.
+    def viewer_fraction_sql
+      <<~SQL.squish
+        CASE
+          WHEN CAST(:viewer_id AS uuid) IS NULL THEN 1
+          WHEN accounts.owner_id = CAST(:viewer_id AS uuid) THEN accounts.ownership_percentage / 100.0
+          ELSE COALESCE(
+            (SELECT s.ownership_percentage / 100.0
+             FROM account_shares s
+             WHERE s.account_id = accounts.id AND s.user_id = CAST(:viewer_id AS uuid)),
+            1
+          )
+        END AS viewer_fraction
+      SQL
+    end
 
     def interval
       @interval || period.interval
@@ -108,7 +127,8 @@ class Balance::ChartSeriesBuilder
           end_date: period.end_date,
           interval: interval,
           sign_multiplier: sign_multiplier,
-          account_active_until_dates_json: account_active_until_dates.to_json
+          account_active_until_dates_json: account_active_until_dates.to_json,
+          viewer_id: user&.id
         }
       ])
     rescue => e
@@ -127,7 +147,8 @@ class Balance::ChartSeriesBuilder
           start_date: period.start_date,
           end_date: period.end_date,
           interval: interval,
-          account_active_until_dates_json: account_active_until_dates.to_json
+          account_active_until_dates_json: account_active_until_dates.to_json,
+          viewer_id: user&.id
         }
       ])
     rescue => e
@@ -158,7 +179,7 @@ class Balance::ChartSeriesBuilder
             AS account_window(account_id, active_until_date)
         ),
         selected_accounts AS (
-          SELECT accounts.*, account_windows.active_until_date
+          SELECT accounts.*, account_windows.active_until_date, #{viewer_fraction_sql}
           FROM accounts
           LEFT JOIN account_windows ON account_windows.account_id = accounts.id
           WHERE accounts.id = ANY(array[:account_ids]::uuid[])
@@ -166,23 +187,23 @@ class Balance::ChartSeriesBuilder
         SELECT
           d.date,
           -- Use flows_factor: already handles asset (+1) vs liability (-1)
-          COALESCE(SUM(last_bal.end_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * :sign_multiplier::integer), 0) AS end_balance,
-          COALESCE(SUM(last_bal.end_cash_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * :sign_multiplier::integer), 0) AS end_cash_balance,
+          COALESCE(SUM(last_bal.end_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * accounts.viewer_fraction * :sign_multiplier::integer), 0) AS end_balance,
+          COALESCE(SUM(last_bal.end_cash_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * accounts.viewer_fraction * :sign_multiplier::integer), 0) AS end_cash_balance,
           -- Holdings only for assets (flows_factor = 1)
           COALESCE(SUM(
             CASE WHEN last_bal.flows_factor = 1
               THEN last_bal.end_non_cash_balance
               ELSE 0
-            END * COALESCE(er.rate, 1) * :sign_multiplier::integer
+            END * COALESCE(er.rate, 1) * accounts.viewer_fraction * :sign_multiplier::integer
           ), 0) AS end_holdings_balance,
           -- Previous balances
-          COALESCE(SUM(last_bal.start_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * :sign_multiplier::integer), 0) AS start_balance,
-          COALESCE(SUM(last_bal.start_cash_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * :sign_multiplier::integer), 0) AS start_cash_balance,
+          COALESCE(SUM(last_bal.start_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * accounts.viewer_fraction * :sign_multiplier::integer), 0) AS start_balance,
+          COALESCE(SUM(last_bal.start_cash_balance * last_bal.flows_factor * COALESCE(er.rate, 1) * accounts.viewer_fraction * :sign_multiplier::integer), 0) AS start_cash_balance,
           COALESCE(SUM(
             CASE WHEN last_bal.flows_factor = 1
               THEN last_bal.start_non_cash_balance
               ELSE 0
-            END * COALESCE(er.rate, 1) * :sign_multiplier::integer
+            END * COALESCE(er.rate, 1) * accounts.viewer_fraction * :sign_multiplier::integer
           ), 0) AS start_holdings_balance
         FROM dates d
         LEFT JOIN selected_accounts accounts
@@ -244,7 +265,7 @@ class Balance::ChartSeriesBuilder
             AS account_window(account_id, active_until_date)
         ),
         selected_accounts AS (
-          SELECT accounts.*, account_windows.active_until_date
+          SELECT accounts.*, account_windows.active_until_date, #{viewer_fraction_sql}
           FROM accounts
           LEFT JOIN account_windows ON account_windows.account_id = accounts.id
           WHERE accounts.id = ANY(array[:account_ids]::uuid[])
@@ -260,7 +281,7 @@ class Balance::ChartSeriesBuilder
             COALESCE(SUM(
               CASE
                 WHEN last_basis.cost_basis IS NOT NULL
-                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
+                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1) * accounts.viewer_fraction
                 ELSE 0
               END
             ), 0) AS gains

@@ -15,6 +15,9 @@
           <%= tag.p converted_balance_display, class: "text-sm font-medium text-secondary privacy-sensitive" %>
         <% end %>
       </div>
+      <% if ownership_share_display %>
+        <%= tag.p ownership_share_display, class: "text-sm text-secondary privacy-sensitive" %>
+      <% end %>
     </div>
 
     <div class="flex items-center gap-2">
