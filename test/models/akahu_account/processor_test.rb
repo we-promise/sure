@@ -37,6 +37,20 @@ class AkahuAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "NZD", @account.currency
   end
 
+  test "transaction processor prunes malformed pending rows but keeps false and current rows" do
+    malformed = create_pending_entry("akahu_malformed", "maybe")
+    false_flag = create_pending_entry("akahu_false", "off")
+    current = create_pending_entry("akahu_current", "maybe")
+
+    pruned = AkahuAccount::Transactions::Processor.new(@akahu_account)
+      .send(:prune_stale_pending_entries, [ current.external_id ])
+
+    assert_equal 1, pruned
+    assert_not Entry.exists?(malformed.id)
+    assert Entry.exists?(false_flag.id)
+    assert Entry.exists?(current.id)
+  end
+
   test "logs account processing failures without raw exception message" do
     sensitive_message = "provider returned account holder details"
     error = RuntimeError.new(sensitive_message)
@@ -135,4 +149,13 @@ class AkahuAccount::ProcessorTest < ActiveSupport::TestCase
       @contexts[name] = context
     end
   end
+
+  private
+    def create_pending_entry(external_id, pending)
+      @account.entries.create!(
+        name: external_id, date: 10.days.ago.to_date, amount: 10, currency: "NZD",
+        source: "akahu", external_id: external_id,
+        entryable: Transaction.new(extra: { "akahu" => { "pending" => pending } })
+      )
+    end
 end
