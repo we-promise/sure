@@ -26,6 +26,51 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     patch password_reset_path(token: @user.generate_token_for(:password_reset)),
       params: { user: { password: "password", password_confirmation: "password" } }
     assert_redirected_to new_session_url
+
+    assert SecurityAuditLog.exists?(user: @user, event_type: "password_changed")
+  end
+
+  test "update with an invalid password does not write an audit log" do
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+        params: { user: { password: "short", password_confirmation: "short" } }
+    end
+    assert_response :unprocessable_entity
+  end
+
+  test "update rejects a mismatched confirmation" do
+    original_digest = @user.password_digest
+
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+        params: { user: { password: "password", password_confirmation: "different" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
+  end
+
+  test "update with a blank password does not report success or write an audit log" do
+    original_digest = @user.password_digest
+
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+        params: { user: { password: "", password_confirmation: "" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
+  end
+
+  test "rolls back the password change when the audit log write fails" do
+    SecurityAuditLog.stubs(:log_password_changed!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+    original_digest = @user.password_digest
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "password", password_confirmation: "password" } }
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
   end
 
   test "all actions redirect when password features are disabled" do

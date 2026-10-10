@@ -13,7 +13,9 @@ pt-BR:
     create:
       code_already_used: Esse código já foi usado. Insira o próximo código do seu aplicativo autenticador.
       invalid_code: Código de verificação inválido. Tente novamente.
+      setup_failed: Algo deu errado ao ativar a autenticação de dois fatores. Tente novamente.
     disable:
+      failure: Algo deu errado ao desativar a autenticação de dois fatores. Tente novamente.
       success: Autenticação de dois fatores foi desabilitada
     new:
       code_label: Código de Verificação

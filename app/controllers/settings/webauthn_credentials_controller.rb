@@ -43,22 +43,39 @@ class Settings::WebauthnCredentialsController < ApplicationController
       user_presence: true
     )
 
-    Current.user.webauthn_credentials.create!(
-      nickname: webauthn_credential_name,
-      credential_id: credential.id,
-      public_key: credential.public_key,
-      sign_count: credential.sign_count,
-      transports: webauthn_credential_transports
-    )
+    ActiveRecord::Base.transaction do
+      stored_credential = Current.user.webauthn_credentials.create!(
+        nickname: webauthn_credential_name,
+        credential_id: credential.id,
+        public_key: credential.public_key,
+        sign_count: credential.sign_count,
+        transports: webauthn_credential_transports
+      )
+
+      SecurityAuditLog.log_webauthn_credential_added!(user: Current.user, credential: stored_credential, request: request, actor: Current.true_user)
+    end
 
     render json: { redirect_url: settings_security_path }
-  rescue WebAuthn::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique, ActionController::BadRequest, ActionController::ParameterMissing
+  rescue WebAuthn::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique, ActiveRecord::ActiveRecordError, ActionController::BadRequest, ActionController::ParameterMissing
     render json: { error: t("webauthn_credentials.failure") }, status: :unprocessable_entity
   end
 
   def destroy
-    Current.user.webauthn_credentials.find(params[:id]).destroy!
+    credential = Current.user.webauthn_credentials.find(params[:id])
+    credential.destroy!
+
+    # Log-and-continue, not transactional: a failed audit write shouldn't
+    # block removing a security key the user believes is compromised.
+    # Mirrors Settings::ApiKeysController#destroy.
+    begin
+      SecurityAuditLog.log_webauthn_credential_removed!(user: Current.user, credential: credential, request: request, actor: Current.true_user)
+    rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.error("[Settings::WebauthnCredentials] Failed to write audit log for removed credential #{credential.id}: #{e.message}")
+    end
+
     redirect_to settings_security_path, notice: t("webauthn_credentials.success")
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
+    redirect_to settings_security_path, alert: t("webauthn_credentials.failure")
   end
 
   private

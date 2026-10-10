@@ -108,6 +108,7 @@ zh-CN:
         continue: 继续前往 API 密钥设置
       create:
         success: API 密钥已成功创建
+        creation_failed: "无法创建 API 密钥，请重试。"
       destroy:
         not_found: 找不到 API 密钥
         cannot_revoke: 此 API 密钥不能撤销
