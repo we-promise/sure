@@ -112,7 +112,43 @@ class UpItem::ImporterTest < ActiveSupport::TestCase
     assert_empty @up_account.raw_transactions_payload.select { |tx| UpEntry::Processor.pending?(tx) }
   end
 
+  # Pruning decides "pending" as Transaction#pending? does. A ::boolean cast
+  # raised on "maybe", failing the step on every sync, and read "no" as settled.
+  [ "maybe", "no" ].each do |flag|
+    test "prunes a disappeared held transaction whose stored flag is #{flag.inspect}" do
+      import_with(transactions: [ held_transaction(id: "tx_h3", amount: "-8.00") ])
+      process_transactions
+      entry = pending_entries.sole
+      reflag(entry, flag)
+      assert entry.reload.entryable.pending?
+
+      import_with(transactions: [])
+      result = process_transactions
+
+      assert_equal 1, result[:pruned_pending]
+      assert_not Entry.exists?(entry.id), "a #{flag.inspect}-flagged held entry missing from the fetch should be pruned"
+    end
+  end
+
+  test "keeps a disappeared transaction whose stored flag is the string \"false\"" do
+    import_with(transactions: [ held_transaction(id: "tx_h4", amount: "-8.00") ])
+    process_transactions
+    entry = pending_entries.sole
+    reflag(entry, "false")
+
+    import_with(transactions: [])
+    result = process_transactions
+
+    assert_equal 0, result[:pruned_pending]
+    assert Entry.exists?(entry.id)
+  end
+
   private
+
+    def reflag(entry, flag)
+      transaction = entry.entryable
+      transaction.update!(extra: transaction.extra.merge("up" => transaction.extra["up"].merge("pending" => flag)))
+    end
 
     def import_with(transactions:)
       provider = FakeUpProvider.new(transactions: transactions)
@@ -127,7 +163,7 @@ class UpItem::ImporterTest < ActiveSupport::TestCase
       @account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(source: "up")
-        .where("(transactions.extra -> 'up' ->> 'pending')::boolean = true")
+        .where(Transaction.pending_sql("transactions", providers: %w[up]))
     end
 
     def held_transaction(id:, amount:, date: "2026-01-15T00:00:00+11:00")

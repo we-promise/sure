@@ -2,9 +2,13 @@ class TradeRepublicAccount::ActivitiesProcessor
   include TradeRepublicAccount::DataHelpers
 
   SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
+  STOCK_PERK_EVENT_TYPE = "ACQUISITION_TRADE_PERK"
+  # Shares Trade Republic pays for: a trade only, without a cash leg.
+  BROKER_FUNDED_TRADE_EVENT_TYPES = [ SAVEBACK_EVENT_TYPE, STOCK_PERK_EVENT_TYPE ].freeze
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
   SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
+  SETTLEMENT_AMOUNT_TOLERANCE = BigDecimal("0.01")
   ACTIVITY_LABELS_BY_KEY = {
     "contribution" => "Contribution",
     "withdrawal" => "Withdrawal",
@@ -15,6 +19,8 @@ class TradeRepublicAccount::ActivitiesProcessor
   }.freeze
   CASH_UNLABELED_KEYS = %w[contribution withdrawal].freeze
   SETTLEMENT_COUNTERPART_PREFIX = "trade_republic_settlement_"
+  # Keeps the diagnostics entry small for accounts with a long backlog.
+  MAX_LOGGED_INCOMPLETE_EXECUTIONS = 50
 
   def initialize(trade_republic_account, exchange_securities: {})
     @trade_republic_account = trade_republic_account
@@ -59,6 +65,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     reconcile_stale_saveback_cash_transactions!
     reconcile_non_importable_entries!
     reconcile_settlement_counterparts!
+    capture_incomplete_executions
 
     { trades: trade_count, transactions: transaction_count }
   end
@@ -144,11 +151,12 @@ class TradeRepublicAccount::ActivitiesProcessor
         .to_set
     end
 
-    # Saveback and Round Up stay classified as POC_CREATED at the client
-    # boundary so other cash withdrawals are unchanged. Routing happens here
-    # by eventType: Saveback is a trade only; Round Up is a trade plus cash
-    # outflow when both accounts are linked. Crypto trades go to the Crypto
-    # account once it is linked, except a portfolio copy the user edited.
+    # Saveback, stock bonuses and Round Up stay classified as POC_CREATED at
+    # the client boundary so other cash withdrawals are unchanged. Routing
+    # happens here by eventType: Saveback and stock bonuses are a trade only;
+    # Round Up is a trade plus cash outflow when both accounts are linked.
+    # Crypto trades go to the Crypto account once it is linked, except a
+    # portfolio copy the user edited.
     def processable_event?(event)
       event_type = event[:eventType].to_s
 
@@ -157,7 +165,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         return false if @trade_republic_account.crypto? && protected_portfolio_trade?(event)
       end
 
-      return @trade_republic_account.holds_securities? if saveback_event?(event_type)
+      return @trade_republic_account.holds_securities? if broker_funded_trade_event?(event_type)
       return true if round_up_event?(event_type)
 
       category = event[:category].to_s
@@ -183,7 +191,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       detail = event[:detail] || {}
       event_type = event[:eventType].to_s
 
-      return process_saveback(event, detail, external_id, date) if saveback_event?(event_type)
+      return process_broker_funded_trade(event, detail, external_id, date) if broker_funded_trade_event?(event_type)
       return process_round_up(event, detail, external_id, date) if round_up_event?(event_type)
 
       case event_category(event)
@@ -214,10 +222,12 @@ class TradeRepublicAccount::ActivitiesProcessor
       nil
     end
 
-    def process_saveback(event, detail, external_id, date)
+    # Trade Republic pays for Saveback and stock bonuses: no cash moves
+    # anywhere, so the trade must not move the portfolio's cash either.
+    def process_broker_funded_trade(event, detail, external_id, date)
       return nil unless @trade_republic_account.holds_securities?
 
-      import_order_execution(event, detail, external_id, date) ? :trade : nil
+      import_order_execution(event, detail, external_id, date, moves_cash: false) ? :trade : nil
     end
 
     def process_round_up(event, detail, external_id, date)
@@ -266,19 +276,22 @@ class TradeRepublicAccount::ActivitiesProcessor
       [ detail[:isin].to_s, date, parse_decimal(detail[:quantity])&.abs ]
     end
 
-    def saveback_event?(event_type)
-      event_type == SAVEBACK_EVENT_TYPE
+    def broker_funded_trade_event?(event_type)
+      BROKER_FUNDED_TRADE_EVENT_TYPES.include?(event_type)
     end
 
     def round_up_event?(event_type)
       event_type == ROUND_UP_EVENT_TYPE
     end
 
-    def import_order_execution(event, detail, external_id, date)
+    def import_order_execution(event, detail, external_id, date, moves_cash: true)
       isin = detail[:isin].to_s
       quantity = parse_decimal(detail[:quantity])
 
-      return false if isin.blank? || quantity.nil? || quantity.zero?
+      if isin.blank? || quantity.nil? || quantity.zero?
+        record_incomplete_execution(event, date, missing: [ ("isin" if isin.blank?), ("quantity" if quantity.nil? || quantity.zero?) ].compact)
+        return false
+      end
 
       security = resolve_security(
         isin,
@@ -326,7 +339,9 @@ class TradeRepublicAccount::ActivitiesProcessor
         security:       security,
         quantity:       signed_quantity,
         price:          price,
-        amount:         signed_amount,
+        # Without a cash leg the value lives in qty and price, which is all
+        # the cost basis needs.
+        amount:         moves_cash ? signed_amount : 0,
         fee:            fee,
         currency:       detail[:currency].presence || currency,
         date:           date,
@@ -357,23 +372,28 @@ class TradeRepublicAccount::ActivitiesProcessor
       true
     end
 
-    # The timeline list amount is what Trade Republic booked against the cash
-    # balance, fees and taxes included. Unlike cash movements (see
+    # The cash leg of an order. The detail total ("Total" / "Summe") is what
+    # Trade Republic books against the cash balance, fees and taxes included.
+    # The timeline list amount usually matches it, but not for some sales with
+    # withheld tax (#4057), so the detail total wins once the detail is
+    # fetched; before that, `amount` is the list amount anyway.
+    # The list amount still gives the direction: unlike cash movements (see
     # import_cash_movement), order executions carry a consistent sign across
-    # topics: negative for buys, positive for sales. Payloads that only carry
-    # a magnitude fall back to the traded quantity; without either signal the
-    # direction is unknown and nothing is booked.
+    # topics, negative for buys and positive for sales. Payloads that only
+    # carry a magnitude fall back to the traded quantity; without either
+    # signal the direction is unknown and nothing is booked.
     # Buys count as investment contributions in budgets; sale proceeds are a
     # funds movement rather than income. Neither gets a category.
     def import_order_settlement(event, detail, external_id, date)
       signed_amount = parse_decimal(detail[:signed_amount])
-      amount = signed_amount || parse_decimal(detail[:amount])
+      amount = parse_decimal(detail[:amount])&.nonzero? || signed_amount
       return false unless amount && !amount.zero?
 
       quantity = parse_decimal(detail[:quantity])
       return false if signed_amount.nil? && (quantity.nil? || quantity.zero?)
 
       outflow = signed_amount ? signed_amount.negative? : quantity.positive?
+      capture_settlement_amount_mismatch(event, external_id, signed_amount, outflow ? amount.abs : -amount.abs)
 
       import_cash_movement(
         event,
@@ -385,6 +405,28 @@ class TradeRepublicAccount::ActivitiesProcessor
         sign: outflow ? 1 : -1,
         kind: outflow ? "investment_contribution" : "funds_movement",
         settles_trade: true
+      )
+    end
+
+    # Records an order whose list amount and detail total differ, when the
+    # booked amount changes (a new entry or a correction), not on every sync.
+    def capture_settlement_amount_mismatch(event, external_id, list_amount, booked_amount)
+      return if list_amount.nil? || (list_amount.abs - booked_amount.abs).abs <= SETTLEMENT_AMOUNT_TOLERANCE
+      return if account.entries.where(external_id: external_id, source: "trade_republic").pick(:amount) == booked_amount
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Trade Republic order booked at its detail total instead of the timeline amount",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: {
+          event_id: event[:id],
+          timeline_amount: list_amount.abs.to_s("F"),
+          detail_amount: booked_amount.abs.to_s("F")
+        }
       )
     end
 
@@ -588,20 +630,25 @@ class TradeRepublicAccount::ActivitiesProcessor
     def event_category(event)
       signed_amount = parse_decimal(event.dig(:detail, :signed_amount) || event.dig(:detail, :amount))
       return CATEGORY_WITHDRAWAL if event[:eventType].to_s == "CARD_CASH_BACK" && signed_amount&.negative?
+      # Trade Republic reports a stamp duty cancellation with the same event
+      # type and sign as the charge; it is a refund to the account.
+      return CATEGORY_DEPOSIT if Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
 
       event[:category].to_s.presence ||
         Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES[event[:eventType].to_s].to_s
     end
 
     def cash_label_key(event, default:)
+      return "tax_refund" if Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
+
       case event[:eventType].to_s
-      when "CARD_TRANSACTION", "card_successful_transaction", "CARD_CASH_BACK"
+      when "CARD_TRANSACTION", "card_successful_transaction", "CARD_CASH_BACK", "CARD_AFT"
         "card_payment"
       when "CARD_ATM_WITHDRAWAL"
         "cash_withdrawal"
       when "CARD_ORDER_FEE"
         "card_fee"
-      when "card_refund", "CARD_REFUND"
+      when "card_refund", "CARD_REFUND", "CARD_OCT"
         "card_refund"
       when "TAX_REFUND", "SSP_TAX_CORRECTION", "ssp_tax_correction_invoice"
         "tax_refund"
@@ -933,6 +980,40 @@ class TradeRepublicAccount::ActivitiesProcessor
         .where(kind: "cash")
         .joins(:account_provider)
         .exists?
+    end
+
+    def record_incomplete_execution(event, date, missing:)
+      (@incomplete_executions ||= []) << {
+        event_id: event[:id],
+        event_type: event[:eventType],
+        date: date.iso8601,
+        missing: missing
+      }
+    end
+
+    # Order executions whose detail has no ISIN or quantity yet can't become
+    # trades; later syncs fetch their detail again. One entry per run lists
+    # them, so the gap shows in diagnostics instead of being silent.
+    def capture_incomplete_executions
+      executions = @incomplete_executions.to_a
+      @incomplete_executions = nil
+      return if executions.empty?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "warn",
+        message: "#{executions.size} Trade Republic #{"order execution".pluralize(executions.size)} not imported yet: " \
+          "the detail has no ISIN or quantity",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: {
+          trade_republic_account_id: @trade_republic_account.id,
+          incomplete_count: executions.size,
+          executions: executions.first(MAX_LOGGED_INCOMPLETE_EXECUTIONS)
+        }
+      )
     end
 
     def record_unknown_event(event)

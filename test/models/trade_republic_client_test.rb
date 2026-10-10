@@ -1097,6 +1097,83 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
   end
 
+  test "maps card funding, card credit and stamp duty events to cash categories" do
+    categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
+    assert_equal "POC_CREATED", categories["CARD_AFT"]
+    assert_equal "PAYMENT_RECEIVED", categories["CARD_OCT"]
+    assert_equal "POC_CREATED", categories["STAMP_DUTY_TAX_PAID"]
+
+    %w[CARD_AFT CARD_OCT STAMP_DUTY_TAX_PAID].each do |event_type|
+      assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+  end
+
+  test "maps credit card top-ups and stock bonuses" do
+    categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
+    assert_equal "PAYMENT_RECEIVED", categories["PAYMENT_INBOUND_CREDIT_CARD"]
+    assert_equal "POC_CREATED", categories["ACQUISITION_TRADE_PERK"]
+
+    %w[PAYMENT_INBOUND_CREDIT_CARD ACQUISITION_TRADE_PERK].each do |event_type|
+      assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+    assert Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "ACQUISITION_TRADE_PERK")
+  end
+
+  test "normalize_event_detail names a stock bonus after its asset" do
+    detail = @client.send(:normalize_event_detail, stock_bonus_detail,
+      item: { "title" => "Stock Bonus", "subtitle" => "Redeemed", "eventType" => "ACQUISITION_TRADE_PERK" })
+
+    assert_equal "US0231351067", detail["isin"]
+    assert_equal "Amazon.com", detail["name"]
+    assert_equal "0.055", detail["quantity"]
+    assert_equal "10.04", detail["amount"]
+  end
+
+  test "stamp duty cancellations are not treated as declined events" do
+    cancellation = {
+      "eventType" => "STAMP_DUTY_TAX_PAID",
+      "title" => "Stamp duty (Portfolio)",
+      "subtitle" => "Cancellation of stamp duty"
+    }
+
+    assert Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(cancellation)
+    assert_not Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation)
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation.merge("status" => "CANCELED"))
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(
+      "eventType" => "CARD_TRANSACTION", "subtitle" => "Cancelled"
+    )
+  end
+
+  test "a voided stamp duty charge is blocked, not treated as a cancellation" do
+    voided = {
+      "eventType" => "STAMP_DUTY_TAX_PAID",
+      "title" => "Stamp duty (Portfolio)",
+      "subtitle" => "Cancelled"
+    }
+
+    assert_not Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(voided)
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(voided)
+    assert_not Provider::TradeRepublicTimelineEvent.importable?(voided)
+  end
+
+  test "a failed badge still blocks a stamp duty cancellation" do
+    cancellation = {
+      "eventType" => "STAMP_DUTY_TAX_PAID",
+      "title" => "Stamp duty (Portfolio)",
+      "subtitle" => "Cancellation of stamp duty"
+    }
+
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation.merge("badge" => "Failed"))
+    assert Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(cancellation.merge("badge" => "Declined"))
+    assert_not Provider::TradeRepublicTimelineEvent.importable?(cancellation.merge("badge" => "Failed"))
+  end
+
+  test "ignores tax report corrections and source of wealth checks" do
+    %w[TAX_YEAR_END_REPORT_CORRECTED AML_SOURCE_OF_WEALTH_RESPONSE_EXECUTED].each do |event_type|
+      assert_equal :ignored, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+  end
+
   test "ignores Legal documents timeline rows without an event type" do
     assert_equal :ignored, Provider::TradeRepublicTimelineEvent.classify(
       "title" => "Legal documents",
@@ -2687,6 +2764,32 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
             },
             row.call("Gebühr", "1,00 €"),
             row.call("Summe", "2.498,31 €")
+          ] }
+        ]
+      }
+    end
+
+    # Trimmed from a real Trade Republic stock bonus (ACQUISITION_TRADE_PERK).
+    def stock_bonus_detail
+      row = ->(title, text) { { "title" => title, "detail" => { "text" => text, "type" => "text" }, "style" => "plain" } }
+
+      {
+        "id" => "stock-bonus",
+        "sections" => [
+          {
+            "title" => "Amazon.com stock bonus",
+            "type" => "header",
+            "data" => { "icon" => { "asset" => "logos/US0231351067/v2", "badge" => nil }, "status" => "executed" }
+          },
+          { "title" => "Overview", "type" => "table", "data" => [
+            { "title" => "Buy", "detail" => { "text" => "Completed", "functionalStyle" => "EXECUTED", "type" => "status" } },
+            row.call("Asset", "Amazon.com"),
+            {
+              "title" => "Transaction",
+              "detail" => { "text" => "0.055 × € 182.46", "displayValue" => { "text" => "€ 182.46", "prefix" => "0.055 ×" }, "type" => "text" }
+            },
+            row.call("Fee", "Free"),
+            row.call("Total", "€ 10.04")
           ] }
         ]
       }
