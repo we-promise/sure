@@ -86,7 +86,7 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
       SimplefinHoldingsApplyJob.perform_now(@sfa.id)
     end
 
-    holding = @account.holdings.find_by(external_id: "simplefin_h_vanguard")
+    holding = @account.holdings.find_by(external_id: "simplefin_h_vanguard_#{Date.current}")
     refute_nil holding
 
     # Price should be derived from market_value / shares, NOT from value / shares
@@ -118,7 +118,7 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
       SimplefinHoldingsApplyJob.perform_now(@sfa.id)
     end
 
-    holding = @account.holdings.find_by(external_id: "simplefin_h_fallback")
+    holding = @account.holdings.find_by(external_id: "simplefin_h_fallback_#{Date.current}")
     refute_nil holding
 
     # Price derived from market_value
