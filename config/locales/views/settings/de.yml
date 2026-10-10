@@ -254,6 +254,7 @@ de:
         application_id_placeholder_new: Application ID eintragen
         application_id_placeholder_update: Neue ID eintragen, um sie zu ändern
         client_certificate_label: Client-Zertifikat (mit Private Key)
+        keep_client_certificate_hint: "Leer lassen, um das aktuelle Zertifikat beizubehalten"
         config_locked_message: Trenn alle verknüpften Banken, bevor du diese Zugangsdaten änderst.
         config_locked_title: Konfiguration gesperrt
         configured: Eingerichtet

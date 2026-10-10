@@ -1,8 +1,11 @@
 class EnableBankingItemsController < ApplicationController
   include EnableBankingItems::MapsHelper
   before_action :set_enable_banking_item, only: [ :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
-  before_action :require_admin!, only: [ :new, :create, :link_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
+  before_action :require_admin!, only: [ :new, :create, :link_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :select_bank, :authorize, :callback, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
   skip_before_action :verify_authenticity_token, only: [ :callback ]
+
+  OAUTH_STATE_SESSION_KEY = :enable_banking_oauth_states
+  MAX_PENDING_OAUTH_STATES = 5
 
   def new
     @enable_banking_item = Current.family.enable_banking_items.build
@@ -112,7 +115,7 @@ class EnableBankingItemsController < ApplicationController
       redirect_url = target_item.begin_authorization!(
         aspsp_name: aspsp_name,
         redirect_url: enable_banking_callback_url,
-        state: target_item.id,
+        state: issue_oauth_state_for(target_item),
         psu_type: psu_type,
         language: language
       )
@@ -157,8 +160,10 @@ class EnableBankingItemsController < ApplicationController
       return
     end
 
-    # Find the enable_banking_item by ID from state
-    enable_banking_item = Current.family.enable_banking_items.find_by(id: state)
+    # The state must match the one issued to this browser session, so a
+    # callback link crafted by someone else cannot attach their bank
+    # authorization code to this family's connection.
+    enable_banking_item = consume_oauth_state(state)
 
     unless enable_banking_item.present?
       redirect_to settings_providers_path, alert: t(".item_not_found", default: "Connection not found.")
@@ -200,7 +205,7 @@ class EnableBankingItemsController < ApplicationController
       # method (decoupled banks included) instead of falling back to a default.
       redirect_url = @enable_banking_item.begin_authorization!(
         redirect_url: enable_banking_callback_url,
-        state: @enable_banking_item.id,
+        state: issue_oauth_state_for(@enable_banking_item),
         language: language
       )
 
@@ -506,19 +511,52 @@ class EnableBankingItemsController < ApplicationController
   end
 
   private
+    # Pending states map state => item id, so parallel flows (two tabs) each
+    # keep their own entry. Only the newest few are kept.
+    def issue_oauth_state_for(item)
+      state = SecureRandom.urlsafe_base64(32)
+      pending = pending_oauth_states.merge(state => item.id)
+      session[OAUTH_STATE_SESSION_KEY] = pending.to_a.last(MAX_PENDING_OAUTH_STATES).to_h
+      state
+    end
+
+    # An entry is removed only when it matches, so a stray callback with a
+    # made-up state cannot cancel a real flow in progress.
+    def consume_oauth_state(state)
+      pending = pending_oauth_states
+      matched = pending.keys.find { |candidate| ActiveSupport::SecurityUtils.secure_compare(candidate, state.to_s) }
+      return unless matched
+
+      item_id = pending.delete(matched)
+      session[OAUTH_STATE_SESSION_KEY] = pending
+      Current.family.enable_banking_items.find_by(id: item_id)
+    end
+
+    def pending_oauth_states
+      pending = session[OAUTH_STATE_SESSION_KEY]
+      pending.is_a?(Hash) ? pending.to_h : {}
+    end
 
     def set_enable_banking_item
       @enable_banking_item = Current.family.enable_banking_items.find(params[:id])
     end
 
     def enable_banking_item_params
-      params.require(:enable_banking_item).permit(
+      permitted = params.require(:enable_banking_item).permit(
         :name,
         :sync_start_date,
         :country_code,
         :application_id,
         :client_certificate
       )
+      # The panel never pre-fills the stored credentials, so a blank one on
+      # update means "keep the current value".
+      if @enable_banking_item&.persisted?
+        %i[application_id client_certificate].each do |credential|
+          permitted.delete(credential) if permitted[credential].blank?
+        end
+      end
+      permitted
     end
 
     def enable_banking_callback_url

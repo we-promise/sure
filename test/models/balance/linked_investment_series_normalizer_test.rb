@@ -187,7 +187,7 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal opening_date.strftime("%Y-%m-%d"), normalized.values.first.date_formatted
   end
 
-  test "normalizer does not duplicate anchor point when coarse sample lands on exact opening date" do
+  test "normalizer resets first point to opening balance when sample lands on exact opening date" do
     account = families(:empty).accounts.create!(
       name: "Linked Exact Date",
       balance: 0,
@@ -225,8 +225,96 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     normalized = normalizer.normalize
 
     assert_equal opening_date, normalized.start_date
+    # Still one point per date (no duplicated anchor), but the first point now
+    # carries the balance before the first activity instead of the day's closing balance.
     assert_equal [ opening_date, Date.current ], normalized.values.map(&:date)
-    assert_equal Money.new(100, "USD"), normalized.values.first.value
+    assert_equal Money.new(0, "USD"), normalized.values.first.value
+    assert_equal Money.new(110, "USD"), normalized.trend.value
+  end
+
+  test "normalizer resets first point to zero on daily all-time chart starting at first deposit" do
+    account = families(:empty).accounts.create!(
+      name: "Linked Daily Exact",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account.account_providers.create!(provider: coinstats_account)
+
+    first_activity_date = 10.days.ago.to_date
+    account.entries.create!(
+      name: "Initial Deposit",
+      date: first_activity_date,
+      amount: 4703_99,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+
+    raw_series = Series.new(
+      start_date: first_activity_date,
+      end_date: Date.current,
+      interval: "1 day",
+      values: [
+        Series::Value.new(date: first_activity_date, date_formatted: "", value: Money.new(4703_99, "USD")),
+        Series::Value.new(date: 5.days.ago.to_date, date_formatted: "", value: Money.new(4705_37, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(4705_37, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series)
+    normalized = normalizer.normalize
+
+    assert_equal first_activity_date, normalized.start_date
+    assert_equal [ first_activity_date, 5.days.ago.to_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(0, "USD"), normalized.values.first.value
+    # "vs. beginning" now measures against the pre-activity balance (#3959).
+    assert_equal Money.new(4705_37, "USD"), normalized.trend.value
+  end
+
+  test "normalizer resets first point to opening anchor balance when sample lands on anchor date" do
+    account = families(:empty).accounts.create!(
+      name: "Linked Exact Anchor Date",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account.account_providers.create!(provider: coinstats_account)
+
+    opening_date = 7.days.ago.to_date
+    account.set_opening_anchor_balance(balance: 5000, date: opening_date)
+    account.entries.create!(
+      name: "Trade",
+      date: opening_date,
+      amount: 100,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+
+    raw_series = Series.new(
+      start_date: 14.days.ago.to_date,
+      end_date: Date.current,
+      interval: "1 week",
+      values: [
+        Series::Value.new(date: 14.days.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: opening_date, date_formatted: "", value: Money.new(5100, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(5200, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series)
+    normalized = normalizer.normalize
+
+    assert_equal opening_date, normalized.start_date
+    assert_equal [ opening_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(5000, "USD"), normalized.values.first.value
   end
 
   test "normalizer returns series unmodified when linked account has no history" do
@@ -466,6 +554,64 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
 
     assert_equal anchor_date, normalized.start_date
     assert_equal [ anchor_date, 10.days.ago.to_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(5000, "USD"), normalized.values.first.value
+  end
+
+  test "normalizer keeps first point when inception comes from holdings, not activity" do
+    account = families(:empty).accounts.create!(
+      name: "Linked Holdings First",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = account.account_providers.create!(provider: coinstats_account)
+
+    # Real pre-existing balance, anchored before the provider started syncing.
+    anchor_date = 30.days.ago.to_date
+    account.set_opening_anchor_balance(balance: 5000, date: anchor_date)
+
+    # Provider holdings exist, but no posted provider activity yet (only pending).
+    holdings_start_date = 10.days.ago.to_date
+    security = Security.create!(ticker: "TST", name: "Test")
+    Holding.create!(
+      account: account,
+      security: security,
+      date: holdings_start_date,
+      qty: 10,
+      price: 500,
+      amount: 5000,
+      currency: "USD",
+      account_provider_id: account_provider.id
+    )
+    account.entries.create!(
+      date: holdings_start_date,
+      name: "Pending Transaction",
+      amount: 100,
+      currency: "USD",
+      source: "plaid",
+      entryable: Transaction.new(extra: { "plaid" => { "pending" => true } })
+    )
+
+    raw_series = Series.new(
+      start_date: holdings_start_date,
+      end_date: Date.current,
+      interval: "1 day",
+      values: [
+        Series::Value.new(date: holdings_start_date, date_formatted: "", value: Money.new(5000, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(5100, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series)
+    normalized = normalizer.normalize
+
+    # The first point is genuine supported history (no activity on that date),
+    # so it must keep its value instead of being reset to 0.
+    assert_equal holdings_start_date, normalized.start_date
+    assert_equal [ holdings_start_date, Date.current ], normalized.values.map(&:date)
     assert_equal Money.new(5000, "USD"), normalized.values.first.value
   end
 end

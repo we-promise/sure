@@ -16,8 +16,8 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Resolving a payment is the ACT surface, so it owns the drawer slot -- the
-  # same one transactions, trades and transfers use. The bill's own story moved
-  # to its own page, so nothing competes for it.
+  # same one transactions, trades and transfers use. The bill opens in that
+  # same slot, so View bill swaps one for the other instead of stacking two.
   test "show renders the occurrence dialog in a single drawer frame" do
     get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
 
@@ -25,8 +25,32 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
   end
 
-  # Turbo caches the page as it was left, so a drawer still open when "View
-  # full bill" navigated away would come back from Back as a stray dialog.
+  # A manual payment is typed into the same boxed money and date fields as
+  # every other form, in the bill's own currency, which can't be changed here.
+  test "the manual payment form uses the app's money and date fields" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "form[action=?]", recurring_occurrence_allocations_path(@occurrence) do
+      assert_select ".form-field[data-controller~='money-field'] input[name=amount][value=?]", "15.99"
+      assert_select "input.privacy-sensitive.privacy-sensitive-interactive[name=amount]"
+      assert_select "select[name=currency][disabled] option[selected][value=?]", "USD"
+      assert_select ".form-field input[type=date][name=paid_on]"
+    end
+  end
+
+  # A whole-unit currency steps by 1. With a 0.01 minimum as the step base,
+  # every whole amount was off-step and the browser refused to submit it.
+  test "the manual payment steps from its minimum in the bill's currency" do
+    @occurrence.update!(currency: "JPY")
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_select "input[name=amount][step='1.0'][min='1.0']"
+  end
+
+  # Turbo caches the page as it was left, so a drawer still open when the user
+  # navigated away would come back from Back as a stray dialog.
   # Visited directly, the dialog is the page, and Back has to restore it.
   test "the dialog is left out of Turbo's page cache in the drawer, not on a direct visit" do
     get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
@@ -46,6 +70,14 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "form[action=?] button[data-turbo-frame=_top]", toggle_status_recurring_transaction_path(@series)
+  end
+
+  # Like every other link into the bill's drawer, a hover doesn't render the
+  # bill ahead of a click that may never come.
+  test "View bill swaps to the bill's drawer without a hover prefetch" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_select "a[href=?][data-turbo-frame=drawer][data-turbo-prefetch=false]", bill_path(@series, occurrence: @occurrence.id)
   end
 
   test "recurring occurrence feedback is localized in German" do
@@ -90,7 +122,7 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       "show.skip" => "Überspringen",
       "show.snooze_week" => "Um eine Woche verschieben",
       "show.reopen" => "Wieder öffnen",
-      "show.view_bill" => "Vollständige Rechnung anzeigen",
+      "show.view_bill" => "Rechnung anzeigen",
       "mark_paid.success" => "Rechnung als bezahlt markiert",
       "skip.success" => "Rechnung übersprungen",
       "reopen.success" => "Rechnung wieder geöffnet",
