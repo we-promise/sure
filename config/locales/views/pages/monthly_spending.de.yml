@@ -34,7 +34,8 @@
           "period": "Zeitraum",
           "last_twelve": "Letzte 12 Monate",
           "this_year": "Dieses Jahr",
-          "invalid_period": "Der Beginn darf nicht nach dem Ende liegen. Wähle höchstens 36 Monate und kein Ende nach dem aktuellen Monat."
+          "invalid_period": "Der Beginn darf nicht nach dem Ende liegen. Wähle höchstens 36 Monate und kein Ende nach dem aktuellen Monat.",
+          "share": "Anteil"
         }
       }
     },

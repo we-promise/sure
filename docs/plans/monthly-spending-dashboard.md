@@ -262,3 +262,15 @@ Compose-Datei, Seed und Start-/Stop-Hinweise liegen im gemeinsamen Workspace unt
 - Filterinhalt scrollt innerhalb einer an die Viewporthöhe begrenzten Fläche; Anwenden bleibt im Fußbereich. Popovers werden auch vertikal innerhalb des Viewports gehalten. Suchhinweise stehen unmittelbar unter dem Suchfeld.
 - Gezielte Regression: einstelliger Monat, erhaltene ungültige Auswahl, blockierter Zeitraum mit anschließender Korrektur, Tastaturbedienung und 390-px-Webansicht. Flutter: sieben Widgettests inkl. 320-px-Breite, doppelter Schriftgröße und Privatsphäre; gesamte Flutter-Suite 195 Tests erfolgreich.
 - Weitere Wünsche zur nächsten Iteration: klarer „bis heute“-Hinweis am laufenden Monat, aktive Filter besser sichtbar, gespeicherte persönliche Filterauswahl. Vorjahresvergleich nur mit nachvollziehbarer Behandlung unvollständiger Monate.
+
+
+## V1-Feedback: Kategorieanteile und gespeicherte Filter
+
+Umgesetzt am 10. Oktober 2026:
+
+- Kategorieanteile in Web und Flutter, bezogen auf die gefilterte Monatssumme. Eine Nachkommastelle, lokalisierte Darstellung; keine Division durch null. Anteile werden im Datenschutzmodus zusammen mit den Geldbeträgen verborgen.
+- Webfilter liegen pro Nutzer in bestehenden Datenbank-Präferenzen. Anwenden und Zeitraummenü speichern validierte Einstellungen per CSRF-geschütztem POST. GET und ungültige Entwürfe ändern die gespeicherte Auswahl nicht. Bestehende URL-Filter können weiterhin die aktuelle Ansicht vorgeben.
+- Letzte zwölf Monate und dieses Jahr bleiben mitwandernde Zeiträume; ein gewähltes Kalenderjahr oder manuell veränderte Monatsgrenzen bleiben fest. Reset löscht die persönliche Auswahl und stellt den Standard wieder her.
+- Native Filter liegen auf dem Gerät, getrennt nach Server-URL und Nutzer-ID. Nur IDs und Zeitraumwahl, keine finanziellen Ergebnisse. Wiederherstellung erfolgt vor der ersten Abfrage; Speichern nach erfolgreicher Antwort. Veraltete IDs bleiben über Reset korrigierbar. Keine Synchronisation der nativen Filter mit den Webpräferenzen in dieser Iteration.
+- Prüfung: Rails komplett 11.067 Tests / 47.015 Assertions ohne Fehler (34 bestehende Skips); vier gezielte Browser-Systemtests / 24 Assertions erfolgreich. Flutter komplett 199 Tests erfolgreich. Ruby-/ERB-/JavaScript-Lint für Änderungen grün. Flutter analyze meldet weiterhin ausschließlich die drei bekannten Hinweise in intro_screen_web.dart.
+- Schnellzeiträume und graue Hervorhebung des ausgewählten Monats bleiben bestehen. Zusätzliche sichtbare Filterhinweise sind auf Nutzerwunsch vertagt. Native Builds und die übrigen Release-Gates bleiben offen.

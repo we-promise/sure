@@ -5,16 +5,17 @@
     <div class="flex flex-wrap gap-2">
       <%= render DS::Menu.new(variant: :button) do |menu| %>
         <% menu.with_button(text: t(".period"), variant: :outline, icon: "calendar") %>
-        <% monthly_spending_period_options.each do |label, from, to| %>
-          <% menu.with_item(text: label, href: root_path(view_params.merge("monthly_spending_from" => from, "monthly_spending_to" => to)), variant: :link, frame: "dashboard_sections") %>
+        <% monthly_spending_period_options.each do |label, period| %>
+          <% menu.with_item(text: label, href: monthly_spending_filters_path, params: view_params.except("monthly_spending_from", "monthly_spending_to").merge("monthly_spending_period" => period), variant: :button, frame: "dashboard_sections") %>
         <% end %>
       <% end %>
       <%= render DS::Popover.new(variant: :button, max_width: "32rem") do |popover| %>
         <% popover.with_button(text: t(".filters"), variant: :outline, icon: "list-filter") %>
         <% popover.with_custom_content do %>
-          <%= form_with url: root_path, method: :get, data: { turbo_frame: "dashboard_sections", controller: "monthly-spending-filter", monthly_spending_filter_current_month_value: Date.current.strftime("%Y-%m"), action: "change->monthly-spending-filter#validate submit->monthly-spending-filter#submit" }, class: "flex flex-col", html: { style: "max-height: min(32rem, calc(100dvh - 2rem))" } do %>
+          <%= form_with url: monthly_spending_filters_path, method: :post, data: { turbo_frame: "dashboard_sections", controller: "monthly-spending-filter", monthly_spending_filter_current_month_value: Date.current.strftime("%Y-%m"), action: "change->monthly-spending-filter#validate submit->monthly-spending-filter#submit" }, class: "flex flex-col", html: { style: "max-height: min(32rem, calc(100dvh - 2rem))" } do %>
             <div class="p-4 space-y-4 overflow-y-auto min-h-0">
-            <% view_params.except("monthly_spending_from", "monthly_spending_to", "monthly_spending_account_ids", "monthly_spending_category_ids").each do |key, value| %>
+            <%= hidden_field_tag :monthly_spending_period, view_params["monthly_spending_period"] || "last_twelve", data: { monthly_spending_filter_target: "period" } %>
+            <% view_params.except("monthly_spending_from", "monthly_spending_to", "monthly_spending_period", "monthly_spending_account_ids", "monthly_spending_category_ids").each do |key, value| %>
               <% Array(value).each do |item| %>
                 <%= hidden_field_tag value.is_a?(Array) ? "#{key}[]" : key, item, id: nil %>
               <% end %>
@@ -36,7 +37,7 @@
           <% end %>
         <% end %>
       <% end %>
-      <%= render DS::Link.new(text: t(".reset"), variant: :ghost, href: root_path(view_params.except("monthly_spending_from", "monthly_spending_to", "monthly_spending_account_ids", "monthly_spending_category_ids")), data: { turbo_frame: "dashboard_sections" }) %>
+      <%= render DS::Button.new(text: t(".reset"), variant: :ghost, href: monthly_spending_filters_path, params: view_params.except("monthly_spending_from", "monthly_spending_to", "monthly_spending_period", "monthly_spending_account_ids", "monthly_spending_category_ids").merge(reset: true), method: :post, data: { turbo_frame: "dashboard_sections" }) %>
     </div>
   </div>
   <% if filter_error %>
@@ -81,6 +82,7 @@
           <%= render DS::Table.new(rows: month[:categories].sort_by { |category| -category[:amount].to_d }, inset: true, label: month_title) do |table| %>
             <% table.with_column(t(".category")) { |category| catalog.fetch(category[:id])[:name] } %>
             <% table.with_column(t(".amount"), numeric: true, class: "privacy-sensitive") { |category| format_money(Money.new(category[:amount].to_d, data[:currency])) } %>
+            <% table.with_column(t(".share"), numeric: true, class: "privacy-sensitive") { |category| monthly_spending_share(category[:amount], month[:total]) } %>
           <% end %>
         <% end %>
       <% end %>

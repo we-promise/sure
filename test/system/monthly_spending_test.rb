@@ -88,5 +88,19 @@ class MonthlySpendingTest < ApplicationSystemTestCase
     end
     assert_no_selector "#monthly-spending-section select", visible: true
     assert_selector "[data-monthly-spending-total]", count: 1
+    visit root_path
+    assert_selector "[data-monthly-spending-total]", count: 1
+    assert_text I18n.t("pages.dashboard.monthly_spending.share").upcase
+  end
+
+  test "period presets save through the menu and survive a new dashboard visit" do
+    sign_in @user
+    within "#monthly-spending-section" do
+      click_on I18n.t("pages.dashboard.monthly_spending.period")
+      click_on I18n.t("pages.dashboard.monthly_spending.this_year")
+    end
+    assert_selector "[data-monthly-spending-total]", count: Date.current.month
+    visit root_path
+    assert_selector "[data-monthly-spending-total]", count: Date.current.month
   end
 end

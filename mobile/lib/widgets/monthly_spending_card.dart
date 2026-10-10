@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/monthly_spending.dart';
 import '../providers/privacy_provider.dart';
 import '../services/monthly_spending_service.dart';
+import '../services/monthly_spending_preferences.dart';
 import '../theme/sure_colors.dart';
 import '../theme/sure_spacing.dart';
 import '../utils/money_masker.dart';
@@ -15,7 +16,8 @@ import 'sure_text_field.dart';
 
 class MonthlySpendingCard extends StatefulWidget {
   const MonthlySpendingCard(
-      {super.key, required this.loader, this.revision = 0});
+      {super.key, required this.loader, this.revision = 0, this.preferenceKey});
+  final String? preferenceKey;
   final MonthlySpendingLoader loader;
   final int revision;
 
@@ -24,7 +26,8 @@ class MonthlySpendingCard extends StatefulWidget {
 }
 
 class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
-  MonthlySpendingSelection _selection = const MonthlySpendingSelection();
+  MonthlySpendingSelection _selection =
+      const MonthlySpendingSelection(period: 'last_twelve');
   MonthlySpendingResult? _result;
   bool _loading = true;
   bool _hasPreviewAccess = false;
@@ -35,13 +38,29 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    final request = ++_request;
+    final key = widget.preferenceKey;
+    final saved =
+        key == null ? null : await MonthlySpendingPreferences.load(key);
+    if (!mounted || request != _request) return;
+    _selection = saved ?? const MonthlySpendingSelection(period: 'last_twelve');
+    await _load();
   }
 
   @override
   void didUpdateWidget(covariant MonthlySpendingCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.revision != widget.revision) _load();
+    if (oldWidget.preferenceKey != widget.preferenceKey) {
+      _hasPreviewAccess = false;
+      _result = null;
+      _restore();
+    } else if (oldWidget.revision != widget.revision) {
+      _load();
+    }
   }
 
   @override
@@ -51,21 +70,24 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool save = false}) async {
+    final preferenceKey = widget.preferenceKey;
     final request = ++_request;
     setState(() {
       _loading = true;
     });
     MonthlySpendingResult result;
     try {
-      result = await widget.loader(_selection);
+      result = await widget
+          .loader(_selection.resolved(_result?.data?.asOf ?? DateTime.now()));
     } catch (_) {
       result = const MonthlySpendingResult(MonthlySpendingStatus.error);
     }
     if (!mounted || request != _request) return;
     setState(() {
       _result = result;
-      if (result.status == MonthlySpendingStatus.ready) {
+      if (result.status == MonthlySpendingStatus.ready ||
+          result.status == MonthlySpendingStatus.invalidSelection) {
         _hasPreviewAccess = true;
       } else if (result.status == MonthlySpendingStatus.unavailable ||
           result.status == MonthlySpendingStatus.unauthorized) {
@@ -77,6 +99,11 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
         _selectedMonth = months.isEmpty ? null : months.last.month;
       }
     });
+    if (save &&
+        result.status == MonthlySpendingStatus.ready &&
+        preferenceKey != null) {
+      await MonthlySpendingPreferences.save(preferenceKey, _selection);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scroll.hasClients) {
         _scroll.jumpTo(_scroll.position.maxScrollExtent);
@@ -100,11 +127,18 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
     final selection = await showModalBottomSheet<MonthlySpendingSelection>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _SpendingFilters(data: data),
+      builder: (_) => _SpendingFilters(data: data, period: _selection.period),
     );
     if (!mounted || selection == null) return;
     _selection = selection;
-    await _load();
+    await _load(save: true);
+  }
+
+  Future<void> _reset() async {
+    _selection = const MonthlySpendingSelection(period: 'last_twelve');
+    final key = widget.preferenceKey;
+    if (key != null) await MonthlySpendingPreferences.save(key, _selection);
+    if (mounted) await _load();
   }
 
   @override
@@ -139,10 +173,7 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
             SureButton(
                 label: l.monthlySpendingReset,
                 variant: SureButtonVariant.ghost,
-                onPressed: () {
-                  _selection = const MonthlySpendingSelection();
-                  _load();
-                }),
+                onPressed: _reset),
           ]),
         ] else ...[
           Wrap(spacing: SureSpacing.md, runSpacing: SureSpacing.md, children: [
@@ -153,10 +184,7 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
             SureButton(
                 label: l.monthlySpendingReset,
                 variant: SureButtonVariant.ghost,
-                onPressed: () {
-                  _selection = const MonthlySpendingSelection();
-                  _load();
-                }),
+                onPressed: _reset),
           ]),
           const SizedBox(height: SureSpacing.md),
           Text('${_monthLabel(data.from)} – ${_monthLabel(data.to)}'),
@@ -322,7 +350,18 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
             const SizedBox(width: SureSpacing.sm),
             Expanded(child: Text(categories[entry.key]?.name ?? entry.key)),
             const SizedBox(width: SureSpacing.md),
-            Text(_money(entry.value, data.currency)),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(_money(entry.value, data.currency)),
+              if (month.total > 0)
+                Text(
+                    context.watch<PrivacyProvider>().hidden
+                        ? '•••'
+                        : (NumberFormat.percentPattern(
+                                Localizations.localeOf(context).toString())
+                              ..maximumFractionDigits = 1)
+                            .format(entry.value / month.total),
+                    style: Theme.of(context).textTheme.bodySmall),
+            ]),
           ]),
         ),
       if (entries.isEmpty) Text(l.monthlySpendingEmpty),
@@ -331,13 +370,15 @@ class _MonthlySpendingCardState extends State<MonthlySpendingCard> {
 }
 
 class _SpendingFilters extends StatefulWidget {
-  const _SpendingFilters({required this.data});
+  const _SpendingFilters({required this.data, this.period});
   final MonthlySpendingData data;
+  final String? period;
   @override
   State<_SpendingFilters> createState() => _SpendingFiltersState();
 }
 
 class _SpendingFiltersState extends State<_SpendingFilters> {
+  late String _period;
   late String _from;
   late String _to;
   late Set<String> _accounts;
@@ -346,6 +387,7 @@ class _SpendingFiltersState extends State<_SpendingFilters> {
   @override
   void initState() {
     super.initState();
+    _period = widget.period ?? 'custom';
     _from = widget.data.from;
     _to = widget.data.to;
     _accounts = widget.data.accountIds.toSet();
@@ -408,7 +450,8 @@ class _SpendingFiltersState extends State<_SpendingFilters> {
         fromMonth.month +
         1;
     final validPeriod = monthCount >= 1 && monthCount <= 36;
-    void setPeriod(DateTime from, DateTime to) => setState(() {
+    void setPeriod(DateTime from, DateTime to, String period) => setState(() {
+          _period = period;
           _from = from.toIso8601String().substring(0, 10);
           _to = to.toIso8601String().substring(0, 10);
         });
@@ -435,20 +478,27 @@ class _SpendingFiltersState extends State<_SpendingFilters> {
                         variant: SureButtonVariant.ghost,
                         onPressed: () => setPeriod(
                             DateTime(asOf.year, asOf.month - 11),
-                            DateTime(asOf.year, asOf.month))),
+                            DateTime(asOf.year, asOf.month),
+                            'last_twelve')),
                     SureButton(
                         label: l.monthlySpendingThisYear,
                         variant: SureButtonVariant.ghost,
                         onPressed: () => setPeriod(DateTime(asOf.year),
-                            DateTime(asOf.year, asOf.month))),
+                            DateTime(asOf.year, asOf.month), 'this_year')),
                     SureButton(
                         label: l.monthlySpendingPreviousYear,
                         variant: SureButtonVariant.ghost,
                         onPressed: () => setPeriod(DateTime(asOf.year - 1),
-                            DateTime(asOf.year - 1, 12))),
+                            DateTime(asOf.year - 1, 12), 'previous_year')),
                   ]),
-              picker(l.monthlySpendingFrom, _from, (value) => _from = value),
-              picker(l.monthlySpendingTo, _to, (value) => _to = value),
+              picker(l.monthlySpendingFrom, _from, (value) {
+                _from = value;
+                _period = 'custom';
+              }),
+              picker(l.monthlySpendingTo, _to, (value) {
+                _to = value;
+                _period = 'custom';
+              }),
               _SpendingChecklist(
                   title: l.monthlySpendingAccounts,
                   options: widget.data.accounts,
@@ -466,6 +516,7 @@ class _SpendingFiltersState extends State<_SpendingFilters> {
                     : () => Navigator.pop(
                         context,
                         MonthlySpendingSelection(
+                            period: _period,
                             from: _from,
                             to: _to,
                             accountIds: _accounts.toList(),

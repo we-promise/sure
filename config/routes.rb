@@ -335,6 +335,7 @@ Rails.application.routes.draw do
   patch "release_highlight/dismiss", to: "release_highlights#dismiss"
   get "feedback", to: "pages#feedback"
   get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
+  post "dashboard/monthly-spending/filters", to: "pages#update_monthly_spending_filters", as: :monthly_spending_filters
   patch "dashboard/preferences", to: "pages#update_preferences"
   patch "dashboard/sections/:section_key/hidden", to: "pages#update_section_hidden", as: :dashboard_section_hidden
 

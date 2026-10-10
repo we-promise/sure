@@ -67,4 +67,51 @@ class MonthlySpendingDashboardTest < ActionDispatch::IntegrationTest
       assert_select "[data-monthly-spending-total]", count: 0
     end
   end
+
+  test "applying filters persists per user and reset restores defaults" do
+    @user.update!(preferences: { "preview_features_enabled" => true })
+    post monthly_spending_filters_path, params: {
+      monthly_spending_from_year: "2025", monthly_spending_from_month: "2",
+      monthly_spending_to_year: "2025", monthly_spending_to_month: "4",
+      monthly_spending_period: "last_twelve", monthly_spending_account_ids: [ "" ]
+    }
+    assert_response :see_other
+    follow_redirect!
+    assert_select "select[name='monthly_spending_from_month'] option[selected][value='2']"
+    assert_equal "custom", @user.reload.preferences.dig("monthly_spending_filters", "period")
+    get root_url
+    assert_select "select[name='monthly_spending_from_year'] option[selected][value='2025']"
+    assert_select "input[name='monthly_spending_account_ids[]'][checked]", count: 0
+    other = users(:family_member)
+    assert_nil other.preferences&.[]("monthly_spending_filters")
+    post monthly_spending_filters_path, params: { reset: "true" }
+    follow_redirect!
+    assert_nil @user.reload.preferences["monthly_spending_filters"]
+  end
+
+  test "saved rolling period moves across the year and invalid drafts do not replace it" do
+    @user.update!(preferences: { "preview_features_enabled" => true })
+    travel_to Date.new(2025, 12, 10) do
+      post monthly_spending_filters_path, params: { monthly_spending_period: "last_twelve", monthly_spending_account_ids: [ "" ] }
+      assert_response :see_other
+      assert_equal "last_twelve", @user.reload.preferences.dig("monthly_spending_filters", "period")
+    end
+    travel_to Date.new(2026, 1, 10) do
+      get root_url
+      assert_select "select[name='monthly_spending_from_month'] option[selected][value='2']"
+      assert_select "select[name='monthly_spending_to_year'] option[selected][value='2026']"
+      saved = @user.reload.preferences["monthly_spending_filters"].deep_dup
+      post monthly_spending_filters_path, params: { monthly_spending_from: "2026-12", monthly_spending_to: "2026-01" }
+      follow_redirect!
+      assert_select "#monthly-spending-section [role='status']"
+      assert_equal saved, @user.reload.preferences["monthly_spending_filters"]
+    end
+  end
+
+  test "saving filters requires personal preview access" do
+    @user.update!(preferences: { "preview_features_enabled" => false })
+    post monthly_spending_filters_path, params: { monthly_spending_period: "last_twelve" }
+    assert_response :not_found
+    assert_nil @user.reload.preferences["monthly_spending_filters"]
+  end
 end

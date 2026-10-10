@@ -31,7 +31,7 @@ class PagesController < ApplicationController
   # anywhere. Customize mode carries them through its links and hide/add
   # buttons so the widgets don't jump back to their defaults.
   DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month,
-    :monthly_spending_from, :monthly_spending_to,
+    :monthly_spending_from, :monthly_spending_to, :monthly_spending_period,
     { money_flow_account_ids: [], monthly_spending_account_ids: [], monthly_spending_category_ids: [] } ].freeze
 
   # Selectable height presets (px) for grow widgets.
@@ -41,7 +41,33 @@ class PagesController < ApplicationController
   skip_authentication only: %i[redis_configuration_error privacy terms]
   before_action :ensure_intro_guest!, only: :intro
 
+  def update_monthly_spending_filters
+    return head :not_found unless preview_features_enabled?
+    preferences = User::MonthlySpendingPreferences.new(Current.user)
+    if params[:reset] == "true"
+      preferences.reset
+    else
+      period = params[:monthly_spending_period] || "last_twelve"
+      dates = User::MonthlySpendingPreferences.period_dates(period)
+      raise IncomeStatement::MonthlySpending::InvalidSelection, "Unknown period" if dates.nil? && period != "custom"
+      selection = {
+        from: monthly_spending_month_param(:monthly_spending_from) || dates&.first&.iso8601,
+        to: monthly_spending_month_param(:monthly_spending_to) || dates&.last&.iso8601,
+        account_ids: params[:monthly_spending_account_ids],
+        category_ids: params[:monthly_spending_category_ids]
+      }
+      spending = IncomeStatement::MonthlySpending.new(Current.family.income_statement, params: selection)
+      preferences.save(spending, period: period)
+    end
+    redirect_to root_path(dashboard_view_params.except("monthly_spending_from", "monthly_spending_to", "monthly_spending_period", "monthly_spending_account_ids", "monthly_spending_category_ids")), status: :see_other
+  rescue IncomeStatement::MonthlySpending::InvalidSelection
+    redirect_to root_path(dashboard_view_params), status: :see_other
+  end
+
   def dashboard
+    unless params.keys.any? { |key| key.start_with?("monthly_spending_") }
+      params.merge!(User::MonthlySpendingPreferences.new(Current.user).query_params)
+    end
     if Current.user&.ui_layout_intro?
       redirect_to chats_path and return
     end

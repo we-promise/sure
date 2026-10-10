@@ -88,3 +88,15 @@ HTTP-Healthcheck 200; erfolgreiche Demo-Anmeldung und Monatsblock im Browser. Ec
 Feedback-Validierung: gesamte Rails-Suite 11.063 Tests / 46.996 Assertions, null Fehler; drei gezielte Browser-Systemtests / 20 Assertions erfolgreich.
 
 Feedback-Preview aus Code-Commit `ca98cf98e` erneut unter `http://localhost:3100` deployt. Web/Worker aktualisiert, vorhandene isolierte Preview-Daten und Layout behalten. Host-Healthcheck 200 und API-Smoke erfolgreich; im laufenden Browser Summenbeschriftungen und Monat-/Jahr-Auswahl bestätigt. Umgekehrter Entwurf blockiert Anwenden, bleibt stehen und lässt sich korrigieren. Native Änderungen sind getestet, weiterhin kein nativer App-Build deployt.
+
+
+## V1-Feedback: Kategorieanteile und gespeicherte Filter
+
+Umgesetzt am 10. Oktober 2026:
+
+- Kategorieanteile in Web und Flutter, bezogen auf die gefilterte Monatssumme. Eine Nachkommastelle, lokalisierte Darstellung; keine Division durch null. Anteile werden im Datenschutzmodus zusammen mit den Geldbeträgen verborgen.
+- Webfilter liegen pro Nutzer in bestehenden Datenbank-Präferenzen. Anwenden und Zeitraummenü speichern validierte Einstellungen per CSRF-geschütztem POST. GET und ungültige Entwürfe ändern die gespeicherte Auswahl nicht. Bestehende URL-Filter können weiterhin die aktuelle Ansicht vorgeben.
+- Letzte zwölf Monate und dieses Jahr bleiben mitwandernde Zeiträume; ein gewähltes Kalenderjahr oder manuell veränderte Monatsgrenzen bleiben fest. Reset löscht die persönliche Auswahl und stellt den Standard wieder her.
+- Native Filter liegen auf dem Gerät, getrennt nach Server-URL und Nutzer-ID. Nur IDs und Zeitraumwahl, keine finanziellen Ergebnisse. Wiederherstellung erfolgt vor der ersten Abfrage; Speichern nach erfolgreicher Antwort. Veraltete IDs bleiben über Reset korrigierbar. Keine Synchronisation der nativen Filter mit den Webpräferenzen in dieser Iteration.
+- Prüfung: Rails komplett 11.067 Tests / 47.015 Assertions ohne Fehler (34 bestehende Skips); vier gezielte Browser-Systemtests / 24 Assertions erfolgreich. Flutter komplett 199 Tests erfolgreich. Ruby-/ERB-/JavaScript-Lint für Änderungen grün. Flutter analyze meldet weiterhin ausschließlich die drei bekannten Hinweise in intro_screen_web.dart.
+- Schnellzeiträume und graue Hervorhebung des ausgewählten Monats bleiben bestehen. Zusätzliche sichtbare Filterhinweise sind auf Nutzerwunsch vertagt. Native Builds und die übrigen Release-Gates bleiben offen.

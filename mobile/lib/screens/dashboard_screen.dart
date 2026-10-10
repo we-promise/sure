@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/account.dart';
 import '../models/monthly_spending.dart';
 import '../services/monthly_spending_service.dart';
+import '../services/api_config.dart';
 import '../widgets/monthly_spending_card.dart';
 import '../providers/auth_provider.dart';
 import '../providers/accounts_provider.dart';
@@ -532,6 +533,8 @@ class DashboardScreenState extends State<DashboardScreen> {
 
                 SliverToBoxAdapter(
                   child: MonthlySpendingCard(
+                    preferenceKey: authProvider.user == null ? null : '${ApiConfig.baseUrl}:${authProvider.user!.id}',
+                    key: ValueKey('monthly:${ApiConfig.baseUrl}:${authProvider.user?.id}'),
                     loader: _loadMonthlySpending,
                     revision: _monthlySpendingRevision,
                   ),

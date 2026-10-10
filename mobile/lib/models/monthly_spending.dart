@@ -41,11 +41,35 @@ class SpendingMonth {
 
 class MonthlySpendingSelection {
   const MonthlySpendingSelection(
-      {this.from, this.to, this.accountIds, this.categoryIds});
+      {this.from, this.to, this.accountIds, this.categoryIds, this.period});
+  final String? period;
   final String? from;
   final String? to;
   final List<String>? accountIds;
   final List<String>? categoryIds;
+
+  MonthlySpendingSelection resolved(DateTime now) {
+    String date(DateTime value) => value.toIso8601String().substring(0, 10);
+    String? start = from;
+    String? end = to;
+    if (period == 'last_twelve') {
+      // Let the server choose its current month and reporting time zone.
+      start = null;
+      end = null;
+    } else if (period == 'this_year') {
+      start = date(DateTime(now.year));
+      end = date(DateTime(now.year, now.month));
+    } else if (period == 'previous_year') {
+      start = date(DateTime(now.year - 1));
+      end = date(DateTime(now.year - 1, 12));
+    }
+    return MonthlySpendingSelection(
+        from: start,
+        to: end,
+        accountIds: accountIds,
+        categoryIds: categoryIds,
+        period: period);
+  }
 
   Map<String, dynamic> get query => {
         if (from != null) 'from': from!,

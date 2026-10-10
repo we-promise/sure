@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["from", "to", "error", "submit"];
+  static targets = ["from", "to", "error", "submit", "period"];
   static values = { currentMonth: String };
 
   connect() {
@@ -14,7 +14,8 @@ export default class extends Controller {
     return year > 0 && month >= 1 && month <= 12 ? year * 12 + month - 1 : null;
   }
 
-  validate() {
+  validate(event) {
+    if (event?.target.tagName === "SELECT") this.periodTarget.value = "custom";
     const from = this.monthIndex(this.fromTarget);
     const to = this.monthIndex(this.toTarget);
     const [year, month] = this.currentMonthValue.split("-").map(Number);

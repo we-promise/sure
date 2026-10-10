@@ -34,7 +34,8 @@
           "period": "Period",
           "last_twelve": "Last 12 months",
           "this_year": "This year",
-          "invalid_period": "Choose a start no later than the end, at most 36 months, ending no later than the current month."
+          "invalid_period": "Choose a start no later than the end, at most 36 months, ending no later than the current month.",
+          "share": "Share"
         }
       }
     },

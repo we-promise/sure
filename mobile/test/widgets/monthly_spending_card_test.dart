@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sure_mobile/services/monthly_spending_preferences.dart';
 import 'package:sure_mobile/l10n/app_localizations.dart';
 import 'package:sure_mobile/models/monthly_spending.dart';
 import 'package:sure_mobile/providers/privacy_provider.dart';
@@ -18,7 +20,10 @@ void main() {
               emptySelection: empty, missingRates: rates)));
 
   Widget app(MonthlySpendingLoader loader,
-          {bool hidden = false, double scale = 1, int revision = 0}) =>
+          {bool hidden = false,
+          double scale = 1,
+          int revision = 0,
+          String? preferenceKey}) =>
       ChangeNotifierProvider(
         create: (_) => PrivacyProvider(initialHidden: hidden),
         child: MaterialApp(
@@ -32,7 +37,9 @@ void main() {
                       textScaler: TextScaler.linear(scale)),
                   child: SingleChildScrollView(
                       child: MonthlySpendingCard(
-                          loader: loader, revision: revision)))),
+                          loader: loader,
+                          revision: revision,
+                          preferenceKey: preferenceKey)))),
         ),
       );
 
@@ -47,6 +54,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Spending by month'), findsOneWidget);
     expect(find.text('Food'), findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
     expect(find.text('Month in progress'), findsOneWidget);
     expect(
         find.descendant(
@@ -61,6 +69,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Chart hidden in privacy mode.'), findsOneWidget);
     expect(find.text(r'$30.00'), findsNothing);
+    expect(find.text('100%'), findsNothing);
     expect(find.text(r'$••••'), findsWidgets);
   });
 
@@ -135,5 +144,33 @@ void main() {
     request.complete(const MonthlySpendingResult(MonthlySpendingStatus.error));
     await tester.pumpAndSettle();
     expect(find.text('Spending by month'), findsNothing);
+  });
+  testWidgets(
+      'saved filters restore before loading and invalid selections remain resettable',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await MonthlySpendingPreferences.save(
+        'server:user',
+        const MonthlySpendingSelection(
+            period: 'custom',
+            from: '2024-12-01',
+            to: '2025-01-01',
+            accountIds: ['deleted']));
+    final selections = <MonthlySpendingSelection>[];
+    await tester.pumpWidget(app((selection) async {
+      selections.add(selection);
+      return const MonthlySpendingResult(
+          MonthlySpendingStatus.invalidSelection);
+    }, preferenceKey: 'server:user'));
+    await tester.pumpAndSettle();
+    expect(selections.single.from, '2024-12-01');
+    expect(selections.single.accountIds, ['deleted']);
+    expect(find.text('Reset'), findsOneWidget);
+    await tester.tap(find.text('Reset'));
+    await tester.pumpAndSettle();
+    expect(selections.last.from, isNull);
+    expect(selections.last.accountIds, isNull);
+    expect((await MonthlySpendingPreferences.load('server:user'))!.period,
+        'last_twelve');
   });
 }
