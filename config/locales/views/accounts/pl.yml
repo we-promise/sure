@@ -1,54 +1,84 @@
 ---
 pl:
+  account:
+    entries:
+      destroy:
+        success: Wpis został usunięty.
   accounts:
-    not_authorized: Nie masz uprawnień do zarządzania tym kontem
     account:
-      edit: Edytuj
-      link_lunchflow: Połącz z Lunch Flow
-      link_provider: Połącz z dostawcą
-      unlink_provider: Odłącz od dostawcy
-      troubleshoot: Rozwiąż problem
-      enable: Włącz konto
-      disable: Wyłącz konto
-      set_default: Ustaw jako domyślne
-      remove_default: Usuń status domyślnego
+      change_simplefin_account: Zmień konto SimpleFIN
+      complete_setup: Dokończ konfigurację
       default_label: Domyślne
       delete: Usuń konto
+      disable: Wyłącz konto
+      edit: Edytuj
+      enable: Włącz konto
+      exclude_from_reports: Wyklucz ze wszystkich raportów
+      excluded_from_reports_indicator: Wykluczone z raportów
+      include_in_reports: Uwzględnij w raportach
+      link_lunchflow: Połącz z Lunch Flow
+      link_provider: Połącz z dostawcą
+      remove_default: Usuń status domyślnego
+      set_default: Ustaw jako domyślne
       sharing: Udostępnianie
+      troubleshoot: Rozwiąż problem
+      unlink_provider: Odłącz od dostawcy
     chart:
       data_not_available: Dane niedostępne dla wybranego okresu
+    confirm_unlink:
+      confirm_button: Potwierdź i odłącz
+      description_html: Zaraz odłączysz <strong>%{account_name}</strong> od <strong>%{provider_name}</strong>.
+        Konto zostanie przekształcone w konto ręczne.
+      title: Odłączyć konto od dostawcy?
+      warning_can_delete: Po odłączeniu będzie można usunąć konto, jeśli zajdzie taka
+        potrzeba
+      warning_manual_updates: Trzeba będzie ręcznie dodawać transakcje i aktualizować
+        salda
+      warning_no_sync: Konto nie będzie już synchronizować się automatycznie z dostawcą
+      warning_title: Co to oznacza
+      warning_transactions_kept: Wszystkie istniejące transakcje i salda zostaną zachowane
     create:
       success: Utworzono konto %{type}
-    set_default:
-      depository_only: Tylko konta gotówkowe i karty kredytowe mogą być ustawione jako domyślne.
     destroy:
-      success: Zaplanowano usunięcie konta %{type}
       cannot_delete_linked: Nie można usunąć połączonego konta. Najpierw je odłącz.
+      failed: Usunięcie zasobu nie powiodło się. Spróbuj ponownie później.
+      success: Zaplanowano usunięcie konta %{type}
     empty:
       empty_message: Dodaj konto przez połączenie, import lub ręczne wprowadzenie.
       new_account: Nowe konto
       no_accounts: Brak kont
     form:
-      balance: 'Saldo na dzień:'
-      opening_balance_date_label: Data salda początkowego
-      name_label: Nazwa konta
-      name_placeholder: Przykładowa nazwa konta
       additional_details: Dodatkowe informacje
-      institution_name_label: Nazwa instytucji
-      institution_name_placeholder: np. PKO Bank Polski
+      balance: 'Saldo na dzień:'
+      enable_category_matcher_hint: Po włączeniu sugerowana przez dostawcę kategoria
+        jest stosowana do importowanych transakcji. Wyłącz, żeby nowe transakcje zostawały
+        bez kategorii.
+      enable_category_matcher_label: Włącz dopasowywanie kategorii
+      exclude_from_reports: Wyklucz ze wszystkich raportów
       institution_domain_label: Domena instytucji
       institution_domain_placeholder: np. pkobp.pl
+      institution_name_label: Nazwa instytucji
+      institution_name_placeholder: np. PKO Bank Polski
+      name_label: Nazwa konta
+      name_placeholder: Przykładowa nazwa konta
       notes_label: Notatki
-      notes_placeholder: Zapisz dodatkowe informacje, takie jak numery kont, kody rozliczeniowe, IBAN, numery routingowe itp.
+      notes_placeholder: Zapisz dodatkowe informacje, takie jak numery kont, kody
+        rozliczeniowe, IBAN, numery routingowe itp.
+      opening_balance_date_label: Data salda początkowego
     index:
       accounts: Konta
+      cancel_sync: Anuluj synchronizację
       manual_accounts:
         other_accounts: Inne konta
       new_account: Nowe konto
       sync: Synchronizuj wszystko
-    sync_all:
-      syncing: Trwa synchronizacja kont...
     new:
+      container:
+        close: Zamknij
+        navigate: Nawiguj
+        next: Dalej
+        previous: Wstecz
+        select: Wybierz
       import_accounts: Importuj konta
       method_selector:
         connected_entry: Połącz konto
@@ -58,6 +88,15 @@ pl:
         manual_entry: Wprowadź saldo konta
         title: Jak chcesz je dodać?
       title: Co chcesz dodać?
+    not_authorized: Nie masz uprawnień do zarządzania tym kontem
+    select_provider:
+      already_linked: Konto jest już połączone z dostawcą
+      description: Wybierz dostawcę, którego chcesz użyć do połączenia %{account_name}
+      no_providers: Obecnie nie skonfigurowano żadnych dostawców
+      title: Wybierz dostawcę do połączenia
+    set_default:
+      depository_only: Tylko konta gotówkowe i karty kredytowe mogą być ustawione
+        jako domyślne.
     show:
       activity:
         amount: Kwota
@@ -77,82 +116,105 @@ pl:
         pending: Oczekujące
         search:
           placeholder: Szukaj wpisów po nazwie
+        search_placeholder: Szukaj wpisów po nazwie
         status: Status
         title: Aktywność
       chart:
         balance: Saldo
         owed: Kwota zadłużenia
+      header:
+        complete_setup: Dokończ konfigurację
+      limited_fx_history_warning: Historia kursów walut jest dostępna dopiero od %{date}.
+        Transakcje sprzed tej daty używają przybliżonych przeliczeń walut. Może się
+        tak zdarzyć, gdy dostawca kursów oferuje tylko ograniczone okno historyczne.
       menu:
         confirm_accept: Usuń "%{name}"
-        confirm_body_html: "<p>Usuwając to konto, usuniesz jego historię wartości, co wpłynie na różne aspekty Twojego ogólnego bilansu. Ta akcja będzie miała bezpośredni wpływ na obliczenia majątku netto i wykresy konta.</p><br /> <p>Po usunięciu nie będzie możliwości przywrócenia informacji o koncie, ponieważ trzeba będzie dodać je ponownie jako nowe konto.</p>"
+        confirm_body_html: "<p>Usuwając to konto, usuniesz jego historię wartości,
+          co wpłynie na różne aspekty Twojego ogólnego bilansu. Ta akcja będzie miała
+          bezpośredni wpływ na obliczenia majątku netto i wykresy konta.</p><br />
+          <p>Po usunięciu nie będzie możliwości przywrócenia informacji o koncie,
+          ponieważ trzeba będzie dodać je ponownie jako nowe konto.</p>"
         confirm_title: Usunąć konto?
+        delete_account: Usuń konto
         edit: Edytuj
+        exclude_from_reports: Wyklucz ze wszystkich raportów
         import: Importuj transakcje
         import_trades: Importuj transakcje giełdowe
         import_transactions: Importuj transakcje
+        include_in_reports: Uwzględnij w raportach
         manage: Zarządzaj kontami
-    update:
-      success: Zaktualizowano konto %{type}
+        sharing: Udostępnianie
+        statements: Wyciągi
+      tabs:
+        activity: Aktywność
+        holdings: Portfel
+        overview: Przegląd
+        schedule: Harmonogram
+        statements: Wyciągi
     sidebar:
-      missing_data: Brak danych historycznych
-      missing_data_description: "%{product} używa zewnętrznych dostawców do pobierania historycznych kursów walut, cen papierów wartościowych i innych danych. Te dane są wymagane do dokładnego obliczania historycznych sald kont."
       configure_providers: Skonfiguruj tutaj swoich dostawców.
+      missing_data: Brak danych historycznych
+      missing_data_description: "%{product} używa zewnętrznych dostawców do pobierania
+        historycznych kursów walut, cen papierów wartościowych i innych danych. Te
+        dane są wymagane do dokładnego obliczania historycznych sald kont."
+      new_account: Nowe konto
+      new_account_group: Nowe %{account_group}
+      new_asset: Nowe aktywo
+      new_debt: Nowe zobowiązanie
       tabs:
         all: Wszystkie
         assets: Aktywa
         debts: Zobowiązania
-      new_asset: Nowe aktywo
-      new_debt: Nowe zobowiązanie
-      new_account: Nowe konto
-      new_account_group: Nowe %{account_group}
-    types:
-      depository: Gotówka
-      investment: Inwestycje
-      crypto: Kryptowaluty
-      property: Nieruchomość
-      vehicle: Pojazd
-      bond: Obligacje
-      other_asset: Inne aktywo
-      credit_card: Karta kredytowa
-      loan: Pożyczka
-      other_liability: Inne zobowiązanie
-    tax_treatments:
-      taxable: Opodatkowane
-      tax_deferred: Odroczony podatek
-      tax_exempt: Zwolnione z podatku
-      tax_advantaged: Preferencyjne podatkowo
-    tax_treatment_descriptions:
-      taxable: Zyski opodatkowane przy realizacji
-      tax_deferred: Wpłaty odliczalne, opodatkowanie przy wypłacie
-      tax_exempt: Wpłaty po opodatkowaniu, zyski nieopodatkowane
-      tax_advantaged: Specjalne korzyści podatkowe pod pewnymi warunkami
     subtype_regions:
-      us: Stany Zjednoczone
-      uk: Wielka Brytania
-      ca: Kanada
       au: Australia
+      ca: Kanada
       eu: Europa
       generic: Ogólne
-    confirm_unlink:
-      title: Odłączyć konto od dostawcy?
-      description_html: Zaraz odłączysz <strong>%{account_name}</strong> od <strong>%{provider_name}</strong>. Konto zostanie przekształcone w konto ręczne.
-      warning_title: Co to oznacza
-      warning_no_sync: Konto nie będzie już synchronizować się automatycznie z dostawcą
-      warning_manual_updates: Trzeba będzie ręcznie dodawać transakcje i aktualizować salda
-      warning_transactions_kept: Wszystkie istniejące transakcje i salda zostaną zachowane
-      warning_can_delete: Po odłączeniu będzie można usunąć konto, jeśli zajdzie taka potrzeba
-      confirm_button: Potwierdź i odłącz
+      in: Indie
+      uk: Wielka Brytania
+      us: Stany Zjednoczone
+    sync_all:
+      syncing: Trwa synchronizacja kont...
+    tax_treatment_descriptions:
+      tax_advantaged: Specjalne korzyści podatkowe pod pewnymi warunkami
+      tax_deferred: Wpłaty odliczalne, opodatkowanie przy wypłacie
+      tax_exempt: Wpłaty po opodatkowaniu, zyski nieopodatkowane
+      taxable: Zyski opodatkowane przy realizacji
+    tax_treatments:
+      tax_advantaged: Preferencyjne podatkowo
+      tax_deferred: Odroczony podatek
+      tax_exempt: Zwolnione z podatku
+      taxable: Opodatkowane
+    types:
+      bond: Obligacje
+      credit_card: Karta kredytowa
+      crypto: Kryptowaluty
+      depository: Gotówka
+      investment: Inwestycje
+      loan: Pożyczka
+      other_asset: Inne aktywo
+      other_liability: Inne zobowiązanie
+      property: Nieruchomość
+      vehicle: Pojazd
+    types_plural:
+      credit_card: Karty kredytowe
+      crypto: Kryptowaluty
+      depository: Gotówka
+      investment: Inwestycje
+      loan: Pożyczki
+      other_asset: Inne aktywa
+      other_liability: Inne zobowiązania
+      property: Nieruchomości
+      vehicle: Pojazdy
     unlink:
-      success: Konto zostało pomyślnie odłączone. Teraz jest kontem ręcznym.
-      not_linked: Konto nie jest połączone z dostawcą
       error: 'Nie udało się odłączyć konta: %{error}'
       generic_error: Wystąpił nieoczekiwany błąd. Spróbuj ponownie.
-    select_provider:
-      title: Wybierz dostawcę do połączenia
-      description: Wybierz dostawcę, którego chcesz użyć do połączenia %{account_name}
-      already_linked: Konto jest już połączone z dostawcą
-      no_providers: Obecnie nie skonfigurowano żadnych dostawców
+      not_linked: Konto nie jest połączone z dostawcą
+      success: Konto zostało pomyślnie odłączone. Teraz jest kontem ręcznym.
+    update:
+      success: Zaktualizowano konto %{type}
   email_confirmations:
     new:
       invalid_token: Nieprawidłowy lub wygasły link potwierdzający.
-      success_login: Twój adres e-mail został potwierdzony. Zaloguj się przy użyciu nowego adresu e-mail.
+      success_login: Twój adres e-mail został potwierdzony. Zaloguj się przy użyciu
+        nowego adresu e-mail.

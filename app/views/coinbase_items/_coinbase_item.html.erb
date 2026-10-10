@@ -22,11 +22,7 @@
         <div class="flex items-center gap-2">
           <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-          <div class="flex items-center justify-center h-8 w-8 rounded-full" style="background-color: rgba(0, 82, 255, 0.1);">
-            <div class="flex items-center justify-center">
-              <%= icon "bitcoin", size: "sm", class: "text-[#0052FF]" %>
-            </div>
-          </div>
+          <%= render ProviderLogo.new(provider_key: :coinbase) %>
 
           <div class="pl-1 text-sm">
             <div class="flex items-center gap-2">

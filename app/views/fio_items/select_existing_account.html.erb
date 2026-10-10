@@ -1,0 +1,62 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", account_name: @account.name)) %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <% if @fio_account.nil? %>
+        <% if @discovered_account %>
+          <p class="text-sm text-secondary"><%= t(".already_linked") %></p>
+        <% else %>
+          <p class="text-sm text-secondary"><%= t(".awaiting_first_sync") %></p>
+          <%= render DS::Button.new(
+            text: t(".sync_now"),
+            icon: "refresh-cw",
+            variant: "primary",
+            href: sync_fio_item_path(@fio_item),
+            method: :post,
+            disabled: @fio_item.syncing?,
+            data: { turbo_frame: "_top" }
+          ) %>
+        <% end %>
+
+        <div class="flex justify-end pt-4">
+          <%= render DS::Link.new(
+            text: t(".cancel"),
+            href: @return_to || accounts_path,
+            variant: :secondary,
+            data: { turbo_frame: "_top", action: "DS--dialog#close" }
+          ) %>
+        </div>
+      <% else %>
+        <p class="text-sm text-secondary"><%= t(".description") %></p>
+
+        <%= form_with url: link_existing_account_fio_items_path,
+                      method: :post,
+                      data: { turbo_frame: "_top" },
+                      class: "space-y-4" do %>
+          <%= hidden_field_tag :fio_item_id, @fio_item.id %>
+          <%= hidden_field_tag :account_id, @account.id %>
+          <%= hidden_field_tag :fio_account_id, @fio_account.id %>
+          <%= hidden_field_tag :return_to, @return_to %>
+
+          <div class="border border-primary rounded-lg p-3">
+            <div class="font-medium text-sm text-primary"><%= @fio_account.name %></div>
+            <div class="text-xs text-secondary mt-1">
+              <%= [ [ @fio_account.fio_account_id, @fio_account.bank_id ].compact_blank.join("/").presence, @fio_account.currency ].compact_blank.join(" · ") %>
+            </div>
+          </div>
+
+          <div class="flex gap-2 justify-end pt-4">
+            <%= render DS::Link.new(
+              text: t(".cancel"),
+              href: @return_to || accounts_path,
+              variant: :secondary,
+              data: { turbo_frame: "_top", action: "DS--dialog#close" }
+            ) %>
+            <%= render DS::Button.new(text: t(".link_account"), type: "submit") %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

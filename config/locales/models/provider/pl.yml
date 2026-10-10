@@ -1,0 +1,19 @@
+---
+pl:
+  providers:
+    property_valuation:
+      missing_fields: Podaj nazwę i pełny amerykański adres (ulica, miasto, stan i
+        kod ZIP).
+      not_configured: Ten dostawca danych o nieruchomościach nie jest skonfigurowany.
+      preview_expired: Podgląd tej nieruchomości wygasł. Wyszukaj adres ponownie.
+    realie:
+      errors:
+        location_mismatch: Realie dopasowało nieruchomość w innym mieście lub kodzie
+          ZIP. Sprawdź adres jeszcze raz.
+        no_property: Realie nie zwróciło nieruchomości dla tego adresu.
+        no_valuation: Realie nie zwróciło wyceny dla tej nieruchomości.
+        not_found: Realie nie znalazło nieruchomości pasującej do tego adresu.
+    rentcast:
+      errors:
+        no_valuation: RentCast nie zwrócił szacowanej wartości dla tego adresu.
+        not_found: RentCast nie znalazł nieruchomości pasującej do tego adresu.

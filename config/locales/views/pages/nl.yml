@@ -4,6 +4,11 @@ nl:
     changelog:
       title: Wat is er nieuw
     dashboard:
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Kasstroom"
+          surplus: "Overschot"
+          deficit: "Tekort"
       welcome: "Welkom terug, %{name}"
       subtitle: "Dit gebeurt er met uw financiën"
       new: "Nieuw"

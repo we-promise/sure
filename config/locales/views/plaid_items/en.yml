@@ -25,6 +25,7 @@ en:
       no_accounts_description: We could not load any accounts from this financial
         institution.
       no_accounts_title: No accounts found
+      provider_name: Plaid
       requires_update: Reconnect
       status: Last synced %{timestamp} ago
       status_never: Requires data sync
