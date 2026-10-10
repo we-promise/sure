@@ -435,6 +435,7 @@ pl:
         application_id_placeholder_update: Wpisz nowe ID, aby zaktualizować
         callback_url_instruction: Dla URL callback użyj %{callback_url}.
         client_certificate_label: Certyfikat klienta (z kluczem prywatnym)
+        keep_client_certificate_hint: "Pozostaw puste, aby zachować bieżący certyfikat"
         config_locked_message: Rozłącz wszystkie połączone banki, zanim zmienisz te
           dane uwierzytelniające.
         config_locked_title: Konfiguracja zablokowana
@@ -690,7 +691,7 @@ pl:
         mercury: Synchronizuj automatycznie swoje firmowe konta bankowe Mercury.
         monobank: Synchronizuj ukraińskie karty i skarbonki Monobank za pomocą osobistego
           tokenu API.
-        onchain_wallet: Śledź portfele Bitcoin, EVM, Solana i Cosmos Hub z samodzielną kontrolą
+        onchain_wallet: Śledź portfele Bitcoin, EVM, Solana, Cosmos i Polkadot z samodzielną kontrolą
           kluczy na podstawie ich publicznych adresów.
         plaid: Połącz tysiące amerykańskich instytucji finansowych przez Plaid.
         plaid_eu: Połącz europejskie instytucje finansowe przez Plaid (PSD2 / otwarta

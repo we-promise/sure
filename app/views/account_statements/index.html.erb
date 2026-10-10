@@ -22,7 +22,7 @@
         <%# Its own row on wide screens, so the three fields line up with each
             other rather than with the bottom of this hint. Stacked, it still
             follows the file field it describes. %>
-        <p class="text-xs text-secondary -mt-1 lg:col-start-1 lg:row-start-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %></p>
+        <p class="text-xs text-secondary -mt-1 lg:col-start-1 lg:row-start-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %> <%= t("account_statements.form.period_hint") %></p>
         <%= form.collection_select :account_id,
                                    @accounts,
                                    :id,

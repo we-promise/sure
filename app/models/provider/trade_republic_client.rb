@@ -24,6 +24,21 @@ class Provider::TradeRepublicClient
   class WafRequired < Error; end
   class Timeout < Error; end
   class MalformedResponse < Error; end
+  # The websocket failed during the history backfill. The sync is retried
+  # without the backfill, so one bad backfill page cannot block the rest of
+  # the import, and the failure counts towards abandoning the backfill.
+  # The pages read before the failure and the cursor to resume at are kept.
+  class TimelineBackfillInterrupted < TransientProviderError
+    attr_reader :topic, :reason, :cursor, :events
+
+    def initialize(message = nil, topic:, reason:, cursor:, events: [])
+      @topic = topic
+      @reason = reason
+      @cursor = cursor
+      @events = events
+      super(message)
+    end
+  end
 
   ERROR_STATUS = {
     401 => AuthenticationRequired,
@@ -42,7 +57,10 @@ class Provider::TradeRepublicClient
   TRADE_DETAIL_EVENT_TYPES = %w[
     SAVEBACK_AGGREGATE
     SPARE_CHANGE_AGGREGATE
+    ACQUISITION_TRADE_PERK
   ].freeze
+  # A stock bonus is titled "Stock Bonus"; its asset row names the stock.
+  STOCK_PERK_EVENT_TYPE = "ACQUISITION_TRADE_PERK"
   # New dividends also fetch timelineDetailV2 so provider_detail keeps the
   # ISIN, share count, dividend per share and withholding tax. The imported
   # cash amount still comes from the timeline list.
@@ -82,6 +100,17 @@ class Provider::TradeRepublicClient
   ].freeze
   SELL_SUBTITLE_MARKERS = %w[sell verkauf verkaufen verkopen].freeze
   MAX_TIMELINE_PAGES = 50
+  TIMELINE_TOPICS = %w[timelineTransactions timelineActivityLog].freeze
+  # A history backfill that keeps failing on the same cursor (for example an
+  # expired one) is abandoned instead of being retried forever.
+  MAX_TIMELINE_BACKFILL_FAILURES = 5
+  MAX_TIMELINE_CURSOR_LENGTH = 1_024
+  # Stored per topic in trade_republic_items.timeline_cursors:
+  #   { topic => { "newest_event_id", "backfill_cursor", "backfill_stop_event_id", "backfill_failures" } }
+  # A backfill without a stop event reads the history to the end of the topic;
+  # one with a stop event fills a gap of new events down to that event.
+  TIMELINE_BACKFILL_KEYS = %w[backfill_cursor backfill_stop_event_id backfill_failures].freeze
+  private_constant :TIMELINE_BACKFILL_KEYS
   MAX_TIMELINE_DETAILS = 200
   # Reserve this many detail fetches for newly discovered trade events each
   # sync. The remainder drains the oldest stored incomplete events; leftover
@@ -109,6 +138,21 @@ class Provider::TradeRepublicClient
   Result = Struct.new(:data, keyword_init: true) do
     def [](key) = data[key]
   end
+
+  # One walk through a timeline topic. `outcome` is :finished (end of the
+  # topic), :caught_up (reached the stop event), :budget_exhausted (`cursor`
+  # is where to continue), :stalled (pagination broke off at `cursor`) or
+  # :failed (the page at `cursor` raised `error`).
+  TimelinePass = Data.define(:events, :newest_event_id, :warnings, :outcome, :cursor, :error) do
+    def initialize(error: nil, **attributes) = super
+  end
+  # One topic's events this sync and its state for the next sync.
+  # `head_complete` is false when the newest pages stalled.
+  TopicSync = Data.define(:events, :newest_event_id, :warnings, :head_complete, :state)
+  # `cursors` holds the next per-topic state: the newest event id the head
+  # pass stops at, and the history backfill position. `topic_event_ids` lists
+  # the ids of the events each topic fetched.
+  TimelineSync = Data.define(:events, :newest_event_id, :warnings, :pagination_complete, :detail_backfill_count, :cursors, :topic_event_ids)
 
   attr_reader :phone_number, :pin
 
@@ -290,22 +334,28 @@ class Provider::TradeRepublicClient
     end
   end
 
-  def sync(session_txt:, known_newest_event_id: nil, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
+  def sync(session_txt:, known_newest_event_id: nil, timeline_cursors: {}, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
     raise ConfigurationError, "session_txt is required" if session_txt.blank?
 
+    interrupted_backfills = {}
     with_retry do
       sync_once(
         session_txt: session_txt,
         known_newest_event_id: known_newest_event_id,
+        timeline_cursors: timeline_cursors,
         timeline_max_pages: timeline_max_pages,
         enrich_events: enrich_events,
         symbol_lookup_isins: symbol_lookup_isins,
-        known_instrument_symbols: known_instrument_symbols
+        known_instrument_symbols: known_instrument_symbols,
+        interrupted_backfills: interrupted_backfills
       )
+    rescue TimelineBackfillInterrupted => e
+      interrupted_backfills = interrupted_backfills.merge(e.topic => { reason: e.reason, cursor: e.cursor, events: e.events })
+      raise
     end
   end
 
-  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
+  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, timeline_cursors: {}, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {}, interrupted_backfills: {})
     session = new_session(session_blob: session_txt)
     account_response = session.get("/api/v2/auth/account")
     return Result.new(data: { "status" => "session_expired" }) if [ 401, 403 ].include?(account_response.code.to_i)
@@ -363,29 +413,28 @@ class Provider::TradeRepublicClient
       instrument_symbols = known_symbols.dup
       unresolved_symbol_isins = []
 
-      events = []
-      newest_event_id = nil
-      timeline_warnings = []
-      timeline_complete = false
-      detail_backfill_count = 0
+      timeline = nil
       begin
-        events, newest_event_id, timeline_warnings, timeline_complete, detail_backfill_count = collect_all_timeline(
+        timeline = collect_all_timeline(
           websocket,
           known_newest_event_id: known_newest_event_id,
           max_pages: timeline_max_pages.to_i,
-          enrich_events: enrich_events
+          enrich_events: enrich_events,
+          timeline_cursors: timeline_cursors,
+          interrupted_backfills: interrupted_backfills
         )
         instrument_symbols = enrich_trade_instrument_symbols(
           websocket,
-          events,
+          timeline.events,
           known_symbols: known_symbols,
           extra_isins: symbol_lookup_isins,
           unresolved: unresolved_symbol_isins
         )
-        warnings.concat(timeline_warnings)
-        # Timeline domain reflects list pagination only. Detail backlog drains
-        # across later syncs and must not freeze newest_event_id.
-        domain_statuses["timeline"] = timeline_complete ? "success" : "partial"
+        warnings.concat(timeline.warnings)
+        # Timeline domain reflects the newest pages only. The history backfill
+        # and detail backlog drain across later syncs and must not freeze
+        # newest_event_id.
+        domain_statuses["timeline"] = timeline.pagination_complete ? "success" : "partial"
       rescue MalformedResponse, ProviderUnavailable => e
         raise if e.is_a?(TransientProviderError)
         warnings << "timeline fetch failed: #{e.message}"
@@ -401,12 +450,14 @@ class Provider::TradeRepublicClient
           "currency" => money_currency(cash)
         }.compact),
         "positions" => positions,
-        "events" => events,
+        "events" => timeline&.events || [],
         "instrument_symbols" => instrument_symbols,
         "unresolved_symbol_isins" => unresolved_symbol_isins,
-        "newest_event_id" => newest_event_id,
-        "timeline_pagination_complete" => timeline_complete,
-        "detail_backfill_count" => detail_backfill_count,
+        "newest_event_id" => timeline&.newest_event_id,
+        "timeline_pagination_complete" => timeline&.pagination_complete || false,
+        "timeline_cursors" => timeline&.cursors,
+        "timeline_topic_event_ids" => timeline&.topic_event_ids,
+        "detail_backfill_count" => timeline&.detail_backfill_count || 0,
         "warnings" => warnings,
         "position_warnings" => position_warnings
       })
@@ -419,6 +470,22 @@ class Provider::TradeRepublicClient
 
   class << self
     def available? = !!defined?(WebSocket::Driver)
+
+    # Stops the given topics' backfills that read further back in history.
+    # Gap backfills fetch events newer than anything stored, so they keep
+    # running.
+    def stop_timeline_history_backfills(timeline_cursors, topics:)
+      timeline_cursors.to_h.to_h do |topic, state|
+        history_backfill = topics.include?(topic) && state.is_a?(Hash) &&
+          state["backfill_cursor"].present? && state["backfill_stop_event_id"].blank?
+        [ topic, history_backfill ? state.except(*TIMELINE_BACKFILL_KEYS) : state ]
+      end
+    end
+
+
+    def pending_timeline_backfills(timeline_cursors)
+      timeline_cursors.to_h.count { |_topic, state| state.is_a?(Hash) && state["backfill_cursor"].present? }
+    end
 
     def requires_trade_detail?(item)
       return false unless item.is_a?(Hash)
@@ -769,11 +836,19 @@ class Provider::TradeRepublicClient
 
         private_market = position["categoryType"].to_s == "privateMarkets"
         price = position_price(websocket, isin, position["categoryType"])
+        # Bond tickers are quoted in percent of par (e.g. 84.04 = 84.04%),
+        # while netSize is the nominal amount in currency units. Convert the
+        # ticker quote to a per-unit price so quantity * price yields the
+        # market value. Fallback prices below are already per unit.
+        price = bond_unit_price(price) if price.present? && position["categoryType"].to_s == "bonds"
         price = private_market_quotes[isin] if price.blank? && private_market_quotes.present?
         # Private-market funds have no exchange quote. Without a
         # privateMarketsPositions unit price, value them at the average buy-in
         # rather than zero. Other categories keep the unpriced warning.
         price = decimal_string(position["averageBuyIn"] || position["avgCost"]) if price.blank? && private_market
+        # Non-numeric quotes ("N/A") and non-finite ones ("NaN", "Infinity")
+        # would corrupt the balance; keep the position unvalued instead.
+        price = nil unless finite_decimal(price)
 
         if price.present?
           prices[isin] = price
@@ -810,6 +885,20 @@ class Provider::TradeRepublicClient
         }.compact
       end
       [ positions, warnings ]
+    end
+
+    def bond_unit_price(percent_price)
+      value = finite_decimal(percent_price)
+      (value / 100).to_s("F") if value
+    end
+
+    def finite_decimal(value)
+      return nil if value.blank?
+
+      decimal = BigDecimal(value.to_s)
+      decimal if decimal.finite?
+    rescue ArgumentError
+      nil
     end
 
     def position_price(websocket, isin, category_type)
@@ -1086,29 +1175,20 @@ class Provider::TradeRepublicClient
       nil
     end
 
-    def collect_timeline(websocket, known_newest_event_id:, max_pages:)
-      collect_timeline_topic(
-        websocket,
-        topic: "timelineTransactions",
-        known_newest_event_id: known_newest_event_id,
-        max_pages: max_pages
-      )
-    end
-
-    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [])
-      transaction_events, transaction_newest, transaction_warnings, transaction_complete = collect_timeline_topic(
-        websocket,
-        topic: "timelineTransactions",
-        known_newest_event_id: known_newest_event_id,
-        max_pages: max_pages
-      )
-      activity_events, activity_newest, activity_warnings, activity_complete = collect_timeline_topic(
-        websocket,
-        topic: "timelineActivityLog",
-        known_newest_event_id: known_newest_event_id,
-        max_pages: max_pages
-      )
-      skeleton_events = (transaction_events + activity_events).uniq do |event|
+    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [], timeline_cursors: {}, interrupted_backfills: {})
+      timeline_cursors = (timeline_cursors || {}).to_h.stringify_keys
+      topics = TIMELINE_TOPICS.index_with do |topic|
+        state = timeline_cursors[topic].is_a?(Hash) ? timeline_cursors[topic].stringify_keys : {}
+        sync_timeline_topic(
+          websocket,
+          topic: topic,
+          state: state,
+          fallback_newest_event_id: known_newest_event_id,
+          max_pages: max_pages,
+          interrupted_backfill: interrupted_backfills[topic]
+        )
+      end.values
+      skeleton_events = topics.flat_map(&:events).uniq do |event|
         event["id"].presence || event.slice("timestamp", "eventType", "title", "subtitle", "detail")
       end
       events, detail_warnings, detail_backfill_count = enrich_timeline_details(
@@ -1119,57 +1199,186 @@ class Provider::TradeRepublicClient
       # Backfilled stored events are older than this sync's pages and must not
       # pull the list cursor backwards.
       newest_event = skeleton_events.max_by { |event| event["timestamp"].to_s }
-      # Pagination completeness only — pending details drain on later syncs.
-      timeline_complete = transaction_complete != false && activity_complete != false
-      [
-        events,
-        newest_event&.dig("id") || transaction_newest || activity_newest,
-        transaction_warnings + activity_warnings + detail_warnings,
-        timeline_complete,
-        detail_backfill_count
-      ]
+      TimelineSync.new(
+        events: events,
+        newest_event_id: newest_event&.dig("id") || topics.filter_map(&:newest_event_id).first,
+        warnings: topics.flat_map(&:warnings) + detail_warnings,
+        # Newest pages only — the history backfill and pending details drain on
+        # later syncs.
+        pagination_complete: topics.all?(&:head_complete),
+        detail_backfill_count: detail_backfill_count,
+        cursors: TIMELINE_TOPICS.zip(topics.map(&:state)).to_h.compact_blank,
+        topic_event_ids: TIMELINE_TOPICS.zip(topics.map { |topic| topic.events.filter_map { |event| event["id"].presence&.to_s } }).to_h
+      )
     end
 
-    def collect_timeline_topic(websocket, topic:, known_newest_event_id:, max_pages:)
+    # Reads a topic's newest pages down to the event the previous sync stopped
+    # at, then continues the history backfill. When more pages remain than the
+    # budget allows (a first sync of a long history, or a gap of new events
+    # since the last sync) the backfill takes over from where the newest pages
+    # ran out, so older events are imported over several syncs.
+    #
+    # The per-topic newest event is authoritative. The item's single
+    # newest_event_id only seeds topics synced before per-topic state existed.
+    def sync_timeline_topic(websocket, topic:, state:, fallback_newest_event_id:, max_pages:, interrupted_backfill: nil)
+      known_newest_event_id = state["newest_event_id"].presence || fallback_newest_event_id.presence
+      head = collect_timeline_topic(websocket, topic: topic, known_newest_event_id: known_newest_event_id, max_pages: max_pages)
+      events = head.events
+      warnings = head.warnings.dup
+      head_complete = head.outcome != :stalled
+
+      if head_complete
+        state = state.merge("newest_event_id" => head.newest_event_id || known_newest_event_id).compact
+        if head.outcome == :budget_exhausted
+          # A gap stops at the previous newest event. A backfill that was still
+          # running is replaced, so the new one reads down to its stop event
+          # (or to the end of the topic) to cover that range too.
+          stop_event_id = state["backfill_cursor"].present? ? state["backfill_stop_event_id"] : known_newest_event_id
+          state = start_timeline_backfill(state, topic: topic, cursor: head.cursor, stop_event_id: stop_event_id, warnings: warnings)
+        end
+      end
+
+      if interrupted_backfill
+        # The websocket failed during this topic's backfill, and the sync is
+        # now being retried without it. The pages read before the failure are
+        # kept and the backfill resumes at the failed page on the next sync.
+        # Backfills of other topics still run.
+        if state["backfill_cursor"].present?
+          events += interrupted_backfill[:events]
+          state = timeline_backfill_stopped(state, cursor: interrupted_backfill[:cursor], topic: topic, reason: interrupted_backfill[:reason], warnings: warnings)
+        end
+      elsif state["backfill_cursor"].present?
+        backfill_events, state = continue_timeline_backfill(websocket, topic: topic, state: state, max_pages: max_pages, warnings: warnings)
+        events += backfill_events
+      end
+
+      TopicSync.new(events: events, newest_event_id: head.newest_event_id, warnings: warnings, head_complete: head_complete, state: state)
+    end
+
+    def start_timeline_backfill(state, topic:, cursor:, stop_event_id:, warnings:)
+      state = state.except(*TIMELINE_BACKFILL_KEYS)
+      return state unless storable_timeline_cursor?(cursor, topic: topic, warnings: warnings)
+
+      state.merge("backfill_cursor" => cursor, "backfill_stop_event_id" => stop_event_id).compact
+    end
+
+    # Returns the backfilled events and the topic state for the next sync.
+    def continue_timeline_backfill(websocket, topic:, state:, max_pages:, warnings:)
+      pass = collect_timeline_topic(
+        websocket,
+        topic: topic,
+        known_newest_event_id: state["backfill_stop_event_id"],
+        max_pages: max_pages,
+        start_cursor: state["backfill_cursor"]
+      )
+      warnings.concat(pass.warnings)
+
+      case pass.outcome
+      when :finished, :caught_up
+        [ pass.events, state.except(*TIMELINE_BACKFILL_KEYS) ]
+      when :budget_exhausted
+        next_state = start_timeline_backfill(state, topic: topic, cursor: pass.cursor, stop_event_id: state["backfill_stop_event_id"], warnings: warnings)
+        [ pass.events, next_state ]
+      else
+        reason = pass.error&.class&.name&.demodulize || "pagination stalled"
+        if pass.error.is_a?(Timeout) || pass.error.is_a?(TransientProviderError)
+          raise TimelineBackfillInterrupted.new(
+            "Trade Republic timeline backfill for #{topic} was interrupted",
+            topic: topic,
+            reason: reason,
+            cursor: pass.cursor,
+            events: pass.events
+          )
+        end
+
+        [ pass.events, timeline_backfill_stopped(state, cursor: pass.cursor, topic: topic, reason: reason, warnings: warnings) ]
+      end
+    end
+
+    # Resumes after the last page that was read. Abandoning counts failures
+    # in a row at the same position, so a pass that moved forward starts the
+    # count again.
+    def timeline_backfill_stopped(state, cursor:, topic:, reason:, warnings:)
+      return state.except(*TIMELINE_BACKFILL_KEYS) unless storable_timeline_cursor?(cursor, topic: topic, warnings: warnings)
+
+      state = state.except("backfill_failures") if cursor != state["backfill_cursor"]
+      timeline_backfill_failed(state.merge("backfill_cursor" => cursor), topic: topic, reason: reason, warnings: warnings)
+    end
+
+    # Keeps the cursor so the next sync retries the same page, until the
+    # backfill has failed too often in a row.
+    def timeline_backfill_failed(state, topic:, reason:, warnings:)
+      failures = state["backfill_failures"].to_i + 1
+      if failures >= MAX_TIMELINE_BACKFILL_FAILURES
+        warnings << "timeline history backfill for #{topic} abandoned after #{failures} failed attempts (#{reason})"
+        return state.except(*TIMELINE_BACKFILL_KEYS)
+      end
+
+      warnings << "timeline history backfill failed for #{topic} (#{reason})"
+      state.merge("backfill_failures" => failures)
+    end
+
+    # Cursors come from the provider and are stored, so only short scalars
+    # are kept.
+    def storable_timeline_cursor?(cursor, topic:, warnings:)
+      return true if (cursor.is_a?(String) || cursor.is_a?(Integer)) && cursor.to_s.length <= MAX_TIMELINE_CURSOR_LENGTH
+
+      warnings << "timeline pagination cursor for #{topic} cannot be stored; older history is not imported"
+      false
+    end
+
+    def collect_timeline_topic(websocket, topic:, known_newest_event_id:, max_pages:, start_cursor: nil)
       items = []
-      newest_event_id = nil
-      cursor = nil
       warnings = []
+      cursor = start_cursor
+      seen_cursors = Set.new([ start_cursor ].compact)
+      page_budget = [ max_pages, MAX_TIMELINE_PAGES ].min
       pages = 0
-      seen_cursors = Set.new
-      reached_known_event = false
-      complete = true
-      while pages < [ max_pages, MAX_TIMELINE_PAGES ].min
+      outcome = :finished
+      error = nil
+      loop do
+        if pages >= page_budget
+          outcome = cursor.present? ? :budget_exhausted : :stalled
+          break
+        end
         payload = { type: topic }
         payload[:after] = cursor if cursor
-        response = subscribe(websocket, payload)
+        begin
+          response = subscribe(websocket, payload)
+        rescue Timeout, MalformedResponse, ProviderUnavailable => e
+          # The newest pages fail as a whole; a backfill keeps what it read.
+          raise if start_cursor.nil?
+
+          error = e
+          outcome = :failed
+          break
+        end
         page_items = response.is_a?(Hash) ? Array(response["items"]) : []
-        break if page_items.empty?
-        page_items.each do |item|
-          id = item["id"].to_s
-          reached_known_event ||= known_newest_event_id.present? && id == known_newest_event_id.to_s
-          items << item
-          newest_event_id ||= id.presence
-        end
-        cursor = response.dig("cursors", "after")
-        break if cursor.blank?
-        if reached_known_event
+        items.concat(page_items)
+        if known_newest_event_id.present? && page_items.any? { |item| item["id"].to_s == known_newest_event_id.to_s }
+          outcome = :caught_up
           break
         end
-        if seen_cursors.include?(cursor)
+        # An empty page only ends the topic when it carries no next cursor.
+        next_cursor = response.dig("cursors", "after") if response.is_a?(Hash)
+        break if next_cursor.blank?
+        if seen_cursors.include?(next_cursor)
           warnings << "timeline pagination cursor repeated for #{topic}"
-          complete = false
+          outcome = :stalled
           break
         end
-        seen_cursors << cursor
+        seen_cursors << next_cursor
+        cursor = next_cursor
         pages += 1
       end
-      if cursor.present? && !reached_known_event && pages >= [ max_pages, MAX_TIMELINE_PAGES ].min
-        warnings << "timeline pagination truncated for #{topic}"
-        complete = false
-      end
-      events = items.map { |item| build_skeleton_event(item, warnings: warnings) }
-      [ events, newest_event_id, warnings, complete ]
+      TimelinePass.new(
+        events: items.map { |item| build_skeleton_event(item, warnings: warnings) },
+        newest_event_id: items.filter_map { |item| item["id"].to_s.presence }.first,
+        warnings: warnings,
+        outcome: outcome,
+        cursor: cursor,
+        error: error
+      )
     end
 
     def build_skeleton_event(item, warnings: nil)
@@ -1187,7 +1396,8 @@ class Provider::TradeRepublicClient
     # dividend events, drain oldest stored incomplete / price-backfill trades
     # next, then spend any leftover on additional new events. Failed attempts
     # still consume budget so a bad event cannot starve the rest of the queue
-    # forever within one sync. Stored dividends are not backfilled.
+    # forever within one sync. Stored dividends without their detail are
+    # backfilled too.
     def enrich_timeline_details(websocket, events, enrich_events: [])
       warnings = []
       events = Array(events)
@@ -1196,6 +1406,7 @@ class Provider::TradeRepublicClient
           (self.class.incomplete_trade_detail_event?(event) || self.class.dividend_detail_missing?(event))
       end
       new_ids = new_candidates.to_set { |event| event["id"].to_s }
+      page_ids = events.filter_map { |event| event["id"].presence&.to_s }.to_set
       backlog_candidates = Array(enrich_events).select do |event|
         next false unless event.is_a?(Hash)
 
@@ -1203,8 +1414,11 @@ class Provider::TradeRepublicClient
         next false if item["id"].blank?
         next false if new_ids.include?(item["id"].to_s)
 
+        # A dividend on this sync's pages is handled there: a new one is
+        # fetched above, and one that already has its details needs nothing.
         self.class.incomplete_trade_detail_event?(item) ||
-          self.class.trade_detail_needs_price_backfill?(item)
+          self.class.trade_detail_needs_price_backfill?(item) ||
+          (self.class.dividend_detail_missing?(item) && !page_ids.include?(item["id"].to_s))
       end
 
       budget = MAX_TIMELINE_DETAILS
@@ -1375,7 +1589,7 @@ class Provider::TradeRepublicClient
 
       {
         "isin" => find_isin(item) || find_isin(raw) || find_logo_isin(raw),
-        "name" => item&.dig("title") || find_asset_name(raw),
+        "name" => detail_name(item, raw),
         "quantity" => decimal_string(quantity),
         "price" => decimal_string(price),
         "amount" => decimal_string(amount&.abs),
@@ -1450,6 +1664,12 @@ class Provider::TradeRepublicClient
         isin ||= value[%r{\Alogos/([A-Z]{2}[A-Z0-9]{9}\d)/}, 1] if value.is_a?(String)
       end
       isin
+    end
+
+    def detail_name(item, raw)
+      return find_asset_name(raw) || item&.dig("title") if item&.dig("eventType") == STOCK_PERK_EVENT_TYPE
+
+      item&.dig("title") || find_asset_name(raw)
     end
 
     def find_asset_name(raw)

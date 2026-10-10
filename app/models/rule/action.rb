@@ -1,7 +1,8 @@
 class Rule::Action < ApplicationRecord
   belongs_to :rule, touch: true
 
-  validates :action_type, presence: true
+  validates :action_type, presence: true, if: -> { action_type.to_s.valid_encoding? }
+  validates_with DatabaseTextValidator, attributes: %i[action_type value]
 
   # Pre-seed (watermark): when a send_email_notification action is created — on a
   # new rule OR added to an existing one — record all currently-matching
@@ -25,7 +26,13 @@ class Rule::Action < ApplicationRecord
   # actions don't require a schema change. A single scalar value round-trips
   # unchanged, which keeps existing single-value rows backward compatible.
   def value=(val)
-    val = val.reject(&:blank?).join(",") if val.is_a?(Array)
+    if val.is_a?(Array)
+      val = val.reject do |item|
+        next false if item.is_a?(String) && !item.valid_encoding?
+
+        item.blank?
+      end.join(",")
+    end
     super(val)
   end
 

@@ -9,6 +9,7 @@ en:
       ethereum: Ethereum
       gnosis: Gnosis
       optimism: Optimism
+      polkadot: Polkadot
       polygon: Polygon
       solana: Solana
     institution_name: Self-custody wallets

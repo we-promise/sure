@@ -9,6 +9,7 @@ ca:
       ethereum: Ethereum
       gnosis: Gnosis
       optimism: Optimism
+      polkadot: Polkadot
       polygon: Polygon
       solana: Solana
     institution_name: Carteres d'autocustòdia

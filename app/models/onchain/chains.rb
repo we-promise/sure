@@ -94,6 +94,8 @@ module Onchain
 
     COSMOS = "cosmos"
 
+    POLKADOT = "polkadot"
+
     BUILTIN = [
       Definition.new(
         key: BITCOIN,
@@ -127,6 +129,13 @@ module Onchain
         native: NativeAsset.new(symbol: "ATOM", name: "Cosmos Hub", decimals: 6),
         token_kind: nil,
         adapter_class_name: "Onchain::CosmosAdapter",
+        adapter_options: {}
+      ),
+      Definition.new(
+        key: POLKADOT,
+        native: NativeAsset.new(symbol: "DOT", name: "Polkadot", decimals: 10),
+        token_kind: nil,
+        adapter_class_name: "Onchain::PolkadotAdapter",
         adapter_options: {}
       )
     ].freeze
