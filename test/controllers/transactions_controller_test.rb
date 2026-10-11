@@ -758,7 +758,7 @@ end
       transfer_outflow_money: Money.new(0, "USD")
     )
 
-    Transaction::Search.expects(:new).with(family, filters: {}, accessible_account_ids: [ account.id ]).returns(search)
+    Transaction::Search.expects(:new).with(family, filters: {}, accessible_account_ids: [ account.id ], user: users(:empty)).returns(search)
     search.expects(:totals).once.returns(totals)
 
     get transactions_url
@@ -782,7 +782,7 @@ end
       transfer_outflow_money: Money.new(0, "USD")
     )
 
-    Transaction::Search.expects(:new).with(family, filters: { "categories" => [ "Food" ], "types" => [ "expense" ] }, accessible_account_ids: [ account.id ]).returns(search)
+    Transaction::Search.expects(:new).with(family, filters: { "categories" => [ "Food" ], "types" => [ "expense" ] }, accessible_account_ids: [ account.id ], user: users(:empty)).returns(search)
     search.expects(:totals).once.returns(totals)
 
     get transactions_url(q: { categories: [ "Food" ], types: [ "expense" ] })
@@ -805,7 +805,7 @@ end
       transfer_outflow_money: Money.new(3000, "USD")
     )
 
-    Transaction::Search.expects(:new).with(family, filters: { "types" => [ "transfer" ] }, accessible_account_ids: [ account.id ]).returns(search)
+    Transaction::Search.expects(:new).with(family, filters: { "types" => [ "transfer" ] }, accessible_account_ids: [ account.id ], user: users(:empty)).returns(search)
     search.expects(:totals).once.returns(totals)
 
     get transactions_url(q: { types: [ "transfer" ] })
@@ -1697,6 +1697,65 @@ end
       "a member without access to the admin-only account must not reuse the admin's cached uncategorized count"
   ensure
     Rails.cache = original_cache
+  end
+
+  test "index shows an unread dot once and marks the rows read" do
+    @user.update_column(:transactions_read_before, 1.hour.ago)
+    entry = create_transaction(account: accounts(:depository), external_id: "unread-index", source: "simplefin", name: "Fresh from the bank")
+
+    get transactions_url
+    assert_response :success
+    assert_select "##{dom_id(entry)} span[role=img][title=?]", I18n.t("transactions.transaction.unread")
+    assert_not_includes @user.unread_entries.pluck(:id), entry.id
+
+    get transactions_url
+    assert_select "##{dom_id(entry)} span[role=img][title=?]", I18n.t("transactions.transaction.unread"), count: 0
+  end
+
+  test "index does not mark rows read for hover prefetch requests" do
+    @user.update_column(:transactions_read_before, 1.hour.ago)
+    entry = create_transaction(account: accounts(:depository), external_id: "unread-prefetch", source: "simplefin")
+
+    get transactions_url, headers: { "X-Sec-Purpose" => "prefetch" }
+
+    assert_includes @user.unread_entries.pluck(:id), entry.id
+    # The page marks the rows itself once it is displayed.
+    assert_select "[data-controller=unread-marker][data-unread-marker-entry-ids-value*=?]", entry.id
+  end
+
+  test "index renders no client-side marker for regular requests" do
+    get transactions_url
+
+    assert_select "[data-controller=unread-marker]", count: 0
+  end
+
+  test "paging through the unread filter shows every unread transaction" do
+    @user.update_column(:transactions_read_before, 1.hour.ago)
+    unread_ids = 15.times.map { |i| create_transaction(account: accounts(:depository), external_id: "page-#{i}", source: "simplefin").id }
+
+    get transactions_url(q: { status: [ "unread" ] }, per_page: 10)
+    seen = rendered_entry_ids
+    get transactions_url(q: { status: [ "unread" ] }, per_page: 10, page: 2)
+    seen += rendered_entry_ids
+
+    assert_equal unread_ids.sort, seen.uniq.sort
+    assert_empty @user.unread_entries
+  end
+
+  test "index offers mark all as read only while something is unread" do
+    @user.update_column(:transactions_read_before, 1.hour.ago)
+    Entry.where(account: @user.accessible_accounts).update_all(created_at: 2.hours.ago)
+
+    get transactions_url(per_page: 10)
+    assert_select "form[action^=?]", transactions_read_path, count: 0
+
+    # Ten newer rows push the unread one to page 2, so page 1 does not mark it.
+    10.times { |i| create_transaction(account: accounts(:depository), name: "Manual #{i}") }
+    create_transaction(account: accounts(:depository), external_id: "unread-button", source: "simplefin", date: 1.year.ago.to_date)
+    get transactions_url(per_page: 10)
+    assert_select "form[action^=?]", transactions_read_path
+    # The button carries when the list was loaded, so a later sync stays unread.
+    assert_select "form[action^=?][action*=?]", transactions_read_path, "as_of="
   end
 
   test "index with ai_status=current renders the AI filter badge" do

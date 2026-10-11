@@ -1,7 +1,8 @@
 class AccountsController < ApplicationController
-  include StreamExtensions
+  include StreamExtensions, UnreadEntriesTrackable
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
+  before_action :note_unread_as_of, only: :show
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
@@ -170,6 +171,12 @@ class AccountsController < ApplicationController
     end
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries, split_parents: @split_parents)
+
+    # Activity is the first tab, so it is on screen unless another tab was asked for.
+    if @tab.blank? || @tab == "activity"
+      track_unread_entries(@entries)
+      @has_unread = Current.user.unread_entries.where(account_id: @account.id).exists?
+    end
   end
 
   def sync

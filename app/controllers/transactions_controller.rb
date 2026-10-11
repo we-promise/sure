@@ -1,7 +1,8 @@
 class TransactionsController < ApplicationController
-  include EntryableResource
+  include EntryableResource, UnreadEntriesTrackable
 
   before_action :set_entry_for_unlock, only: :unlock
+  before_action :note_unread_as_of, only: :index
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 
@@ -22,7 +23,7 @@ class TransactionsController < ApplicationController
   def index
     @q = search_params
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
-    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: @accessible_account_ids)
+    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: @accessible_account_ids, user: Current.user)
 
     base_scope = @search.transactions_scope
                        .reverse_chronological
@@ -49,11 +50,21 @@ class TransactionsController < ApplicationController
                          }
                        )
 
-    @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
+    # Rendering marks rows read, so under the unread filter every render is a
+    # fresh first page of what is still unread. Honouring ?page=2 would offset
+    # past rows that moved up after the previous page was marked read.
+    page_override = @search.unread_filter? ? { page: 1 } : {}
+    @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]), **page_override)
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
     # Preload split parent data
     entry_ids = @transactions.map { |t| t.entry.id }
+
+    # With the unread filter the totals must count this page before rendering
+    # it marks the rows read.
+    @search.totals if @search.unread_filter?
+    track_unread_entries(@transactions.map(&:entry))
+    @has_unread = @search.transactions_scope.merge(Entry.unread_by(Current.user)).exists?
 
     # Load split parent entries for grouped display (only when grouping is enabled)
     @split_parents = if Current.user.show_split_grouped?
@@ -733,24 +744,7 @@ class TransactionsController < ApplicationController
     end
 
     def search_params
-      cleaned_params = params.fetch(:q, {})
-              .permit(
-                :start_date, :end_date, :search, :amount,
-                :amount_operator, :active_accounts_only,
-                accounts: [], account_ids: [],
-                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: []
-              )
-              .to_h
-              .compact_blank
-
-      cleaned_params.delete(:amount_operator) unless cleaned_params[:amount].present?
-
-      if cleaned_params[:ai_status]
-        cleaned_params[:ai_status] &= Transaction::Search::AI_STATUSES
-        cleaned_params.delete(:ai_status) if cleaned_params[:ai_status].empty?
-      end
-
-      cleaned_params
+      Transaction::Search.clean_filters(params.fetch(:q, {}))
     end
 
     def store_params!

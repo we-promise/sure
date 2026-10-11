@@ -23,4 +23,15 @@
                            nil %>
     <%= form.label :status, t(".pending"), value: "pending", class: "text-sm text-primary" %>
   </div>
+  <div class="flex items-center gap-3" data-filter-name="unread">
+    <%= form.check_box :status,
+                           {
+                             multiple: true,
+                             checked: @q[:status]&.include?("unread"),
+                             class: "checkbox checkbox--light"
+                           },
+                           "unread",
+                           nil %>
+    <%= form.label :status, t(".unread"), value: "unread", class: "text-sm text-primary" %>
+  </div>
 </div>

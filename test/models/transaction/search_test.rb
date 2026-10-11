@@ -1010,6 +1010,64 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(42, "USD"), totals.expense_money
   end
 
+  test "unread status filter returns only the user's unread synced transactions" do
+    user = users(:family_admin)
+    user.update_column(:transactions_read_before, 1.hour.ago)
+    unread = create_transaction(account: @checking_account, external_id: "unread-1", source: "simplefin")
+    read = create_transaction(account: @checking_account, external_id: "read-1", source: "simplefin")
+    manual = create_transaction(account: @checking_account)
+    user.mark_entries_read!([ read.id ])
+
+    search = Transaction::Search.new(@family, filters: { status: [ "unread" ] }, user: user)
+    ids = search.transactions_scope.pluck("entries.id")
+
+    assert_equal [ unread.id ], ids
+    assert_equal 1, search.totals.count
+    assert_not_includes ids, manual.id
+  end
+
+  test "unread status combines with pending and confirmed" do
+    user = users(:family_admin)
+    user.update_column(:transactions_read_before, 1.hour.ago)
+    unread = create_transaction(account: @checking_account, external_id: "unread-2", source: "simplefin")
+    create_transaction(
+      account: @checking_account, external_id: "unread-pending", source: "simplefin",
+      entryable: Transaction.new(extra: { "simplefin" => { "pending" => true } })
+    )
+
+    search = Transaction::Search.new(@family, filters: { status: [ "confirmed", "unread" ] }, user: user)
+
+    assert_equal [ unread.id ], search.transactions_scope.pluck("entries.id")
+  end
+
+  test "unread status is ignored without a user" do
+    entry = create_transaction(account: @checking_account)
+
+    search = Transaction::Search.new(@family, filters: { status: [ "unread" ] })
+
+    assert_includes search.transactions_scope.pluck("entries.id"), entry.id
+  end
+
+  test "unread totals never leak into a search without the user" do
+    user = users(:family_admin)
+    user.update_column(:transactions_read_before, 1.hour.ago)
+    create_transaction(account: @checking_account, external_id: "unread-3", source: "simplefin")
+    create_transaction(account: @checking_account)
+    filters = { status: [ "unread" ] }
+
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    begin
+      unread_totals = Transaction::Search.new(@family, filters: filters, user: user).totals
+      userless_totals = Transaction::Search.new(@family, filters: filters).totals
+
+      assert_equal 1, unread_totals.count
+      assert_equal 2, userless_totals.count
+    ensure
+      Rails.cache = original_cache
+    end
+  end
+
   test "ai_status current returns transactions whose auto-assigned category still applies" do
     tx_a = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
     tx_a.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
@@ -1119,5 +1177,23 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     assert_equal [ tx.id ], history_ids
     assert_empty current_ids
+  end
+
+  test "clean_filters drops blanks, a lone amount operator and unknown ai statuses" do
+    raw = ActionController::Parameters.new(
+      search: "Coffee", amount: "", amount_operator: "greater",
+      ai_status: [ "bogus" ], tags: [], unknown: "x"
+    )
+
+    assert_equal({ "search" => "Coffee" }, Transaction::Search.clean_filters(raw))
+  end
+
+  test "clean_filters keeps an amount operator with an amount and known ai statuses" do
+    raw = ActionController::Parameters.new(amount: "10", amount_operator: "greater", ai_status: [ "current", "bogus" ])
+
+    assert_equal(
+      { "amount" => "10", "amount_operator" => "greater", "ai_status" => [ "current" ] },
+      Transaction::Search.clean_filters(raw)
+    )
   end
 end

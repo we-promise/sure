@@ -37,7 +37,7 @@
     </div>
   <% elsif param_key == "status" %>
     <div class="flex items-center gap-2 px-1">
-      <%= icon(param_value.downcase == "pending" ? "clock" : "check", size: "sm") %>
+      <%= icon({ "pending" => "clock", "unread" => "circle-dot" }.fetch(param_value.downcase, "check"), size: "sm") %>
       <p><%= t(".#{param_value.downcase}") %></p>
     </div>
   <% elsif param_key == "merchants" && param_value == Merchant::NO_MERCHANT_FILTER_VALUE %>
