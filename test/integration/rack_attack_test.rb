@@ -39,6 +39,7 @@ class RackAttackTest < ActionDispatch::IntegrationTest
       oidc_account_link/ip oidc_account_link/email
       api_login/ip api_login/email
       api_sso_link/ip api_sso_link/email
+      api_signup/ip
     ].each do |name|
       assert_includes throttles, name, "#{name} should have rate limiting configured"
     end
@@ -92,6 +93,11 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     sso_link_request = throttle_request("/api/v1/auth/sso_link", method: "POST")
     assert_equal "203.0.113.5", sso_link_block.call(sso_link_request)
     assert_nil api_login_block.call(sso_link_request)
+
+    signup_block = Rack::Attack.throttles["api_signup/ip"].block
+    signup_request = throttle_request("/api/v1/auth/signup", method: "POST")
+    assert_equal "203.0.113.5", signup_block.call(signup_request)
+    assert_nil signup_block.call(api_login_request)
   end
 
   test "api login and sso-link email throttles discriminate JSON bodies, the documented mobile format" do

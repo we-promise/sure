@@ -4568,7 +4568,8 @@ paths:
       - Auth
       description: Creates a new user and family. The first user on a fresh instance
         is assigned the super_admin role; later family creators are assigned an admin
-        role.
+        role. On invite-only instances with a default family, the user joins that
+        family as a member instead.
       parameters: []
       responses:
         '201':
@@ -4614,7 +4615,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: invite code required or invalid
+          description: invite code required or invalid, or signups closed
           content:
             application/json:
               schema:
@@ -4718,6 +4719,12 @@ paths:
                         type: boolean
         '401':
           description: invalid credentials, MFA required, or account deactivated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: local login disabled (SSO-only instance)
           content:
             application/json:
               schema:
@@ -4976,9 +4983,10 @@ paths:
       description: Creates a new user and family from a previously issued linking
         code. Links the SSO identity via OidcIdentity, logs the JIT account creation
         via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have
-        allow_account_creation enabled. The first user on a fresh instance is assigned
-        the super_admin role; later family creators are assigned an admin-capable
-        role.
+        allow_account_creation enabled, and self-hosted instances must not have signups
+        closed or invite-only; a pending invitation for the email bypasses both. The
+        first user on a fresh instance is assigned the super_admin role; later family
+        creators are assigned an admin-capable role.
       parameters: []
       responses:
         '200':
