@@ -189,4 +189,20 @@ module SnaptradeAccount::DataHelpers
         fallback_currency
       end
     end
+
+    # SnapTrade reports option `units` in contracts while quoting `price` per
+    # underlying share. Standard options represent 100 underlying shares per
+    # contract; mini options (`is_mini_option: true`) represent 10.
+    def contract_multiplier(symbol_data, option_data = nil)
+      data = option_data.presence || symbol_data
+      return 1 unless data.is_a?(Hash)
+
+      data = data.with_indifferent_access
+      is_option = option_data.present? ||
+                  data[:option_type].present? ||
+                  !data[:is_mini_option].nil?
+      return 1 unless is_option
+
+      ActiveModel::Type::Boolean.new.cast(data[:is_mini_option]) ? 10 : 100
+    end
 end

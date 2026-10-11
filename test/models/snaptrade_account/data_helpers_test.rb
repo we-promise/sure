@@ -7,7 +7,8 @@ class SnaptradeAccount::DataHelpersTest < ActiveSupport::TestCase
     include SnaptradeAccount::DataHelpers
 
     public :parse_decimal, :parse_date, :resolve_security, :extract_currency,
-           :extract_security_name, :extract_exchange, :extract_country_code
+           :extract_security_name, :extract_exchange, :extract_country_code,
+           :contract_multiplier
   end
 
   setup do
@@ -153,5 +154,28 @@ class SnaptradeAccount::DataHelpersTest < ActiveSupport::TestCase
     assert_nil @helper.extract_country_code({ underlying_symbol: "TQQQ" })
     assert_nil @helper.extract_country_code({ underlying_symbol: [ "invalid" ] })
     assert_nil @helper.extract_country_code({ underlying_symbol: 123 })
+  end
+
+  # ==========================================================================
+  # contract_multiplier tests
+  # ==========================================================================
+
+  test "contract_multiplier returns 1 for non-option securities and malformed input" do
+    assert_equal 1, @helper.contract_multiplier({ symbol: "AAPL", description: "Apple Inc." })
+    assert_equal 1, @helper.contract_multiplier({})
+    assert_equal 1, @helper.contract_multiplier(nil)
+    assert_equal 1, @helper.contract_multiplier("invalid")
+  end
+
+  test "contract_multiplier returns 100 for standard option contracts" do
+    assert_equal 100, @helper.contract_multiplier({ option_type: "CALL", is_mini_option: false })
+    assert_equal 100, @helper.contract_multiplier({ "option_type" => "PUT" })
+    assert_equal 100, @helper.contract_multiplier({}, { ticker: "TQQQ  260220C00051000" })
+  end
+
+  test "contract_multiplier returns 10 for mini option contracts" do
+    assert_equal 10, @helper.contract_multiplier({ option_type: "CALL", is_mini_option: true })
+    assert_equal 10, @helper.contract_multiplier({ "is_mini_option" => "true" })
+    assert_equal 10, @helper.contract_multiplier({}, { "ticker" => "AAPL7 260116C00200000", "is_mini_option" => true })
   end
 end

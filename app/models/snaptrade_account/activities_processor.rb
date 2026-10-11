@@ -253,6 +253,12 @@ class SnaptradeAccount::ActivitiesProcessor
         quantity.abs
       end
 
+      # SnapTrade reports option `units` in contracts while quoting `price` per
+      # underlying share. Normalize `price` to per-contract so `qty * price`
+      # represents total contract value across all downstream consumers.
+      multiplier = contract_multiplier(symbol_data, option_data)
+      price *= multiplier if price
+
       case rule[:zero_amount]
       when :unconditional
         amount = BigDecimal("0.0")

@@ -1077,7 +1077,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
 
     trade = entry.entryable
     assert_equal 2.0, trade.qty
-    assert_equal 0.57, trade.price.to_f
+    assert_equal 57.0, trade.price.to_f
     assert_equal 114.05, entry.amount.to_f
     assert_equal "Buy", trade.investment_activity_label
 
@@ -1112,7 +1112,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
 
     trade = entry.entryable
     assert_equal(-6.0, trade.qty)
-    assert_equal 30.70, trade.price.to_f
+    assert_equal 3070.0, trade.price.to_f
     assert_equal(-18415.94, entry.amount.to_f)
     assert_equal "Sell", trade.investment_activity_label
 
@@ -1134,7 +1134,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
         expiration_date: "2027-01-15",
         units: -5.0,
         price: 14.0,
-        amount: 70.0,
+        amount: 7000.0,
         underlying_symbol: "U"
       )
     )
@@ -1147,6 +1147,8 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "U     270115C00015000", trade.security.ticker
     assert_equal "U $15 CALL (2027-01-15)", trade.security.name
     assert_not_equal "U", trade.security.ticker
+    assert_equal BigDecimal("1400.0"), trade.price
+    assert_equal BigDecimal("-7000.0"), entry.amount
   end
 
   # Modeled on real Fidelity option exercise activity (JNJ call exercise)
@@ -1291,6 +1293,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert entry.entryable.is_a?(Trade)
     assert_equal "TQQQ  260220C00051000", entry.entryable.security.ticker
     assert_equal "TQQQ $51 CALL (2026-02-20)", entry.entryable.security.name
+    assert_equal BigDecimal("57.0"), entry.entryable.price
   end
 
   test "option_ticker_and_data extracts ticker and data or returns nil when absent or malformed" do
@@ -1354,7 +1357,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "AAPL7 260116C00200000", entry.entryable.security.ticker
     assert_equal "AAPL $200 CALL (2026-01-16)", entry.entryable.security.name
     assert_equal BigDecimal("3.0"), entry.entryable.qty
-    assert_equal BigDecimal("1.25"), entry.entryable.price
+    assert_equal BigDecimal("12.5"), entry.entryable.price
     assert_equal BigDecimal("37.50"), entry.amount
   end
 
@@ -1386,6 +1389,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not_nil entry
     assert_equal "SPY   250620P00500000", entry.entryable.security.ticker
     assert_equal "SPY   250620P00500000", entry.entryable.security.name
+    assert_equal BigDecimal("500.0"), entry.entryable.price
   end
 
   test "retains underlying exchange and currency metadata when option_symbol lacks underlying_symbol" do
@@ -1502,7 +1506,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "ARCA", security.exchange_mic
     assert_equal "US", security.country_code
     assert_equal BigDecimal("5.2"), entry.entryable.qty
-    assert_equal BigDecimal("0.4"), entry.entryable.price
+    assert_equal BigDecimal("40.0"), entry.entryable.price
     assert_equal BigDecimal("263.82"), entry.amount
   end
 
@@ -1536,7 +1540,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     pre_existing_entry = @account.entries.create!(
       external_id: "opt_resync_test_001",
       source: "snaptrade",
-      amount: BigDecimal("-70.0"),
+      amount: BigDecimal("-7000.0"),
       currency: "USD",
       date: Date.current,
       name: "sell 5.000 U call",
@@ -1557,7 +1561,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
         expiration_date: "2027-01-15",
         units: -5.0,
         price: 14.0,
-        amount: 70.0,
+        amount: 7000.0,
         underlying_symbol: "U"
       )
     )
@@ -1567,6 +1571,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal entry_id, updated_entry.id, "Existing entry should be updated in-place"
     assert_equal "U     270115C00015000", updated_entry.entryable.security.ticker
     assert_equal "U $15 CALL (2027-01-15)", updated_entry.entryable.security.name
+    assert_equal BigDecimal("1400.0"), updated_entry.entryable.price
     assert_nil snaptrade_debug_log("opt_resync_test_001", level: "error")
   end
 
@@ -1603,6 +1608,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not_equal stale_id, reclassified_entry.id, "Stale Transaction should be replaced by Trade"
     assert reclassified_entry.entryable.is_a?(Trade)
     assert_equal "TQQQ  260220C00051000", reclassified_entry.entryable.security.ticker
+    assert_equal BigDecimal("57.0"), reclassified_entry.entryable.price
     assert_nil snaptrade_debug_log("opt_txn_reclass_001", level: "error")
   end
 
@@ -1643,6 +1649,409 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     log = snaptrade_debug_log("opt_locked_reclass_001", level: "warn")
     assert_not_nil log
     assert_includes log.message, "Skipping reclassification of protected entry"
+  end
+
+  # Synthetic edge case: option activities where amount is omitted (all real k8s activities include amount)
+  test "derives option trade amount from contract-normalized price and fee when amount is omitted" do
+    process_activities(
+      build_option_activity(
+        id: "opt_missing_amt_buy",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: 0.57,
+        amount: nil,
+        fee: 0.05
+      ),
+      build_option_activity(
+        id: "opt_missing_amt_sell",
+        type: "SELL",
+        ticker: "NKE   261218C00050000",
+        option_type: "CALL",
+        strike_price: 50.0,
+        expiration_date: "2026-12-18",
+        units: 6.0,
+        price: 30.70,
+        amount: nil,
+        fee: 4.06
+      ),
+      build_option_activity(
+        id: "opt_missing_amt_mini",
+        type: "BUY",
+        ticker: "AAPL7 260116C00200000",
+        option_type: "CALL",
+        strike_price: 200.0,
+        expiration_date: "2026-01-16",
+        units: 3.0,
+        price: 1.25,
+        amount: nil,
+        fee: 0.50,
+        is_mini_option: true
+      )
+    )
+
+    buy_entry = snaptrade_entry("opt_missing_amt_buy")
+    assert_equal BigDecimal("2.0"), buy_entry.entryable.qty
+    assert_equal BigDecimal("57.0"), buy_entry.entryable.price
+    assert_equal BigDecimal("114.05"), buy_entry.amount
+
+    sell_entry = snaptrade_entry("opt_missing_amt_sell")
+    assert_equal BigDecimal("-6.0"), sell_entry.entryable.qty
+    assert_equal BigDecimal("3070.0"), sell_entry.entryable.price
+    assert_equal BigDecimal("-18415.94"), sell_entry.amount
+
+    mini_entry = snaptrade_entry("opt_missing_amt_mini")
+    assert_equal BigDecimal("3.0"), mini_entry.entryable.qty
+    assert_equal BigDecimal("12.5"), mini_entry.entryable.price
+    assert_equal BigDecimal("38.0"), mini_entry.amount
+  end
+
+  # Synthetic edge case: option activities where price is omitted (all real k8s activities include price)
+  test "derives per-contract option trade price from amount, quantity, and fee when price is omitted" do
+    process_activities(
+      build_option_activity(
+        id: "opt_missing_price_buy",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: nil,
+        amount: -114.05,
+        fee: 0.05
+      ),
+      build_option_activity(
+        id: "opt_missing_price_sell",
+        type: "SELL",
+        ticker: "NKE   261218C00050000",
+        option_type: "CALL",
+        strike_price: 50.0,
+        expiration_date: "2026-12-18",
+        units: -6.0,
+        price: nil,
+        amount: 18415.94,
+        fee: 4.06
+      ),
+      build_option_activity(
+        id: "opt_missing_price_mini",
+        type: "BUY",
+        ticker: "AAPL7 260116C00200000",
+        option_type: "CALL",
+        strike_price: 200.0,
+        expiration_date: "2026-01-16",
+        units: 3.0,
+        price: nil,
+        amount: -37.50,
+        is_mini_option: true
+      )
+    )
+
+    buy_entry = snaptrade_entry("opt_missing_price_buy")
+    assert_equal BigDecimal("2.0"), buy_entry.entryable.qty
+    assert_equal BigDecimal("57.0"), buy_entry.entryable.price
+    assert_equal BigDecimal("114.05"), buy_entry.amount
+
+    sell_entry = snaptrade_entry("opt_missing_price_sell")
+    assert_equal BigDecimal("-6.0"), sell_entry.entryable.qty
+    assert_equal BigDecimal("3070.0"), sell_entry.entryable.price
+    assert_equal BigDecimal("-18415.94"), sell_entry.amount
+
+    mini_entry = snaptrade_entry("opt_missing_price_mini")
+    assert_equal BigDecimal("3.0"), mini_entry.entryable.qty
+    assert_equal BigDecimal("12.5"), mini_entry.entryable.price
+    assert_equal BigDecimal("37.50"), mini_entry.amount
+  end
+
+  # Modeled on real Fidelity option buy activity (TQQQ call) materialized through Holding::Materializer
+  test "materializes standard option holdings and calculated cost basis at per-contract value" do
+    purchase_date = 2.days.ago.to_date
+
+    process_activities(
+      build_option_activity(
+        id: "opt_mat_std_001",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: 0.57,
+        amount: -114.05,
+        fee: 0.05,
+        settlement_date: purchase_date.to_s
+      )
+    )
+
+    security = Security.find_by!(ticker: "TQQQ  260220C00051000")
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    purchase_holding = @account.holdings.find_by!(security: security, date: purchase_date)
+    current_holding = @account.holdings.find_by!(security: security, date: Date.current)
+
+    assert_equal BigDecimal("2.0"), purchase_holding.qty
+    assert_equal BigDecimal("57.0"), purchase_holding.price
+    assert_equal BigDecimal("114.0"), purchase_holding.amount
+    assert_equal BigDecimal("57.0"), purchase_holding.cost_basis
+    assert_equal "calculated", purchase_holding.cost_basis_source
+    assert_equal Money.new(57.0, "USD"), purchase_holding.avg_cost
+
+    assert_equal BigDecimal("2.0"), current_holding.qty
+    assert_equal BigDecimal("57.0"), current_holding.price
+    assert_equal BigDecimal("114.0"), current_holding.amount
+    assert_equal BigDecimal("57.0"), current_holding.cost_basis
+    assert_equal Money.new(57.0, "USD"), current_holding.avg_cost
+
+    # Also verify reverse materialization when current snapshot is present
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    reverse_purchase_holding = @account.holdings.find_by!(security: security, date: purchase_date)
+    assert_equal BigDecimal("114.0"), reverse_purchase_holding.amount
+    assert_equal BigDecimal("57.0"), reverse_purchase_holding.cost_basis
+  end
+
+  # Synthetic edge case: mini-option contract (is_mini_option: true, 10 shares/contract) — no mini options in k8s
+  test "materializes mini-option holdings and calculated cost basis at 10x per-contract value" do
+    purchase_date = 2.days.ago.to_date
+
+    process_activities(
+      build_option_activity(
+        id: "opt_mat_mini_001",
+        type: "BUY",
+        ticker: "AAPL7 260116C00200000",
+        option_type: "CALL",
+        strike_price: 200.0,
+        expiration_date: "2026-01-16",
+        units: 3.0,
+        price: 1.25,
+        amount: -37.50,
+        is_mini_option: true,
+        settlement_date: purchase_date.to_s
+      )
+    )
+
+    security = Security.find_by!(ticker: "AAPL7 260116C00200000")
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    purchase_holding = @account.holdings.find_by!(security: security, date: purchase_date)
+    current_holding = @account.holdings.find_by!(security: security, date: Date.current)
+
+    assert_equal BigDecimal("3.0"), purchase_holding.qty
+    assert_equal BigDecimal("12.5"), purchase_holding.price
+    assert_equal BigDecimal("37.5"), purchase_holding.amount
+    assert_equal BigDecimal("12.5"), purchase_holding.cost_basis
+    assert_equal "calculated", purchase_holding.cost_basis_source
+    assert_equal Money.new(12.5, "USD"), purchase_holding.avg_cost
+
+    assert_equal BigDecimal("37.5"), current_holding.amount
+    assert_equal BigDecimal("12.5"), current_holding.cost_basis
+  end
+
+  # Modeled on Fidelity TQQQ call and real Robinhood Unity call round-trip option trades (buy 5 @ $10.85/sh, sell 5 @ $14.00/sh)
+  test "calculates realized gain/loss for option buy and sell using per-contract prices" do
+    purchase_date = 2.days.ago.to_date
+    sell_date = Date.current
+
+    process_activities(
+      build_option_activity(
+        id: "opt_gain_buy_001",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 1.0,
+        price: 0.57,
+        amount: -57.00,
+        settlement_date: purchase_date.to_s
+      ),
+      build_option_activity(
+        id: "opt_gain_sell_001",
+        type: "SELL",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: -1.0,
+        price: 1.00,
+        amount: 100.00,
+        settlement_date: sell_date.to_s
+      ),
+      build_option_activity(
+        id: "opt_rh_u_buy",
+        type: "BUY",
+        symbol: { "symbol" => "U", "description" => "Unity Software Inc." },
+        ticker: "U     270115C00015000",
+        option_type: "CALL",
+        strike_price: 15.0,
+        expiration_date: "2027-01-15",
+        units: 5.0,
+        price: 10.85,
+        amount: -5425.0,
+        fee: 0.20,
+        underlying_symbol: "U",
+        settlement_date: purchase_date.to_s
+      ),
+      build_option_activity(
+        id: "opt_rh_u_sell",
+        type: "SELL",
+        symbol: { "symbol" => "U", "description" => "Unity Software Inc." },
+        ticker: "U     270115C00015000",
+        option_type: "CALL",
+        strike_price: 15.0,
+        expiration_date: "2027-01-15",
+        units: -5.0,
+        price: 14.0,
+        amount: 7000.0,
+        fee: 0.21,
+        underlying_symbol: "U",
+        settlement_date: sell_date.to_s
+      )
+    )
+
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    sell_trade = snaptrade_entry("opt_gain_sell_001").entryable
+    gain_loss = sell_trade.realized_gain_loss
+
+    assert_not_nil gain_loss
+    assert_equal Money.new(100.0, "USD"), gain_loss.current
+    assert_equal Money.new(57.0, "USD"), gain_loss.previous
+    assert_equal Money.new(43.0, "USD"), gain_loss.value
+
+    rh_sell_trade = snaptrade_entry("opt_rh_u_sell").entryable
+    rh_gain_loss = rh_sell_trade.realized_gain_loss
+
+    assert_not_nil rh_gain_loss
+    assert_equal Money.new(7000.0, "USD"), rh_gain_loss.current
+    assert_equal Money.new(5425.0, "USD"), rh_gain_loss.previous
+    assert_equal Money.new(1575.0, "USD"), rh_gain_loss.value
+  end
+
+  # Synthetic edge case: option contract EXTERNAL_ASSET_TRANSFER (real JNJ transfer was type=TRANSFER, a cash activity)
+  test "processes option asset transfers and preserves transfer cost-basis rules" do
+    buy_date = 3.days.ago.to_date
+    transfer_out_date = 2.days.ago.to_date
+    transfer_in_date = Date.yesterday
+
+    process_activities(
+      build_option_activity(
+        id: "opt_xfer_buy",
+        type: "BUY",
+        ticker: "JNJ   260116C00125000",
+        option_type: "CALL",
+        strike_price: 125.0,
+        expiration_date: "2026-01-16",
+        units: 2.0,
+        price: 54.15,
+        amount: -10830.00,
+        underlying_symbol: "JNJ",
+        settlement_date: buy_date.to_s
+      ),
+      build_option_activity(
+        id: "opt_xfer_out",
+        type: "EXTERNAL_ASSET_TRANSFER_OUT",
+        ticker: "JNJ   260116C00125000",
+        option_type: "CALL",
+        strike_price: 125.0,
+        expiration_date: "2026-01-16",
+        units: -1.0,
+        price: 54.35,
+        amount: nil,
+        underlying_symbol: "JNJ",
+        settlement_date: transfer_out_date.to_s
+      )
+    )
+
+    security = Security.find_by!(ticker: "JNJ   260116C00125000")
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    xfer_out_entry = snaptrade_entry("opt_xfer_out")
+    assert_equal "Transfer", xfer_out_entry.entryable.investment_activity_label
+    assert_equal BigDecimal("-1.0"), xfer_out_entry.entryable.qty
+    assert_equal BigDecimal("5435.0"), xfer_out_entry.entryable.price
+    assert_equal BigDecimal("0.0"), xfer_out_entry.amount
+    assert_nil xfer_out_entry.entryable.realized_gain_loss, "outbound transfer must not realize gain"
+
+    after_out_holding = @account.holdings.find_by!(security: security, date: Date.current)
+    assert_equal BigDecimal("1.0"), after_out_holding.qty
+    assert_equal BigDecimal("5415.0"), after_out_holding.cost_basis
+    assert_equal Money.new(5415.0, "USD"), after_out_holding.avg_cost
+
+    # Now import an inbound option transfer and verify cost basis becomes unknown
+    process_activities(
+      build_option_activity(
+        id: "opt_xfer_in",
+        type: "EXTERNAL_ASSET_TRANSFER_IN",
+        ticker: "JNJ   260116C00125000",
+        option_type: "CALL",
+        strike_price: 125.0,
+        expiration_date: "2026-01-16",
+        units: 1.0,
+        price: 54.35,
+        amount: nil,
+        underlying_symbol: "JNJ",
+        settlement_date: transfer_in_date.to_s
+      )
+    )
+
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    xfer_in_entry = snaptrade_entry("opt_xfer_in")
+    assert_equal "Transfer", xfer_in_entry.entryable.investment_activity_label
+    assert_equal BigDecimal("1.0"), xfer_in_entry.entryable.qty
+    assert_equal BigDecimal("5435.0"), xfer_in_entry.entryable.price
+    assert_equal BigDecimal("0.0"), xfer_in_entry.amount
+
+    after_in_holding = @account.holdings.find_by!(security: security, date: Date.current)
+    assert_equal BigDecimal("2.0"), after_in_holding.qty
+    assert_nil after_in_holding.cost_basis, "inbound transfer must clear calculated cost basis"
+    assert_nil after_in_holding.cost_basis_source
+    assert_nil after_in_holding.avg_cost
+  end
+
+  # Synthetic edge case: PortfolioCache price-source precedence (db > trade > holding) for option contracts
+  test "enforces db > trade > holding price precedence for option contracts in PortfolioCache" do
+    process_activities(
+      build_option_activity(
+        id: "opt_cache_buy_001",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: 0.57,
+        amount: -114.00,
+        settlement_date: Date.current.to_s
+      )
+    )
+
+    security = Security.find_by!(ticker: "TQQQ  260220C00051000")
+
+    @account.holdings.create!(
+      security: security,
+      date: Date.current,
+      currency: "USD",
+      qty: 2.0,
+      price: 60.0,
+      amount: 120.0
+    )
+
+    cache_without_db = Holding::PortfolioCache.new(@account, use_holdings: true)
+    assert_equal BigDecimal("60.0"), cache_without_db.get_price(security.id, Date.current, source: "holding").price
+    assert_equal BigDecimal("57.0"), cache_without_db.get_price(security.id, Date.current, source: "trade").price
+    assert_equal BigDecimal("57.0"), cache_without_db.get_price(security.id, Date.current).price,
+      "trade price (priority 2, per-contract $57.00) must beat holding price (priority 3)"
+
+    Security::Price.create!(security: security, date: Date.current, price: 62.0, currency: "USD")
+
+    cache_with_db = Holding::PortfolioCache.new(@account, use_holdings: true)
+    assert_equal BigDecimal("62.0"), cache_with_db.get_price(security.id, Date.current).price,
+      "db price (priority 1) must beat trade price (priority 2) and holding price (priority 3)"
   end
 
   private
@@ -1698,7 +2107,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
       activity
     end
 
-    def build_option_activity(id:, type:, ticker:, strike_price:, option_type:, expiration_date:, units:, price:, amount: nil, fee: nil, underlying_symbol: nil, symbol: nil, description: nil, settlement_date: Date.current.to_s)
+    def build_option_activity(id:, type:, ticker:, strike_price:, option_type:, expiration_date:, units:, price:, amount: nil, fee: nil, underlying_symbol: nil, symbol: nil, description: nil, is_mini_option: false, settlement_date: Date.current.to_s)
       underlying = underlying_symbol || ticker.split.first
       activity = {
         "id" => id,
@@ -1714,7 +2123,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
           "option_type" => option_type,
           "strike_price" => strike_price,
           "expiration_date" => expiration_date,
-          "is_mini_option" => false,
+          "is_mini_option" => is_mini_option,
           "underlying_symbol" => {
             "id" => SecureRandom.uuid,
             "symbol" => underlying,
