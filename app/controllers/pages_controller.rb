@@ -48,9 +48,9 @@ class PagesController < ApplicationController
     @investment_statement = Current.family.investment_statement
     @accounts = Current.user.accessible_accounts.visible.with_attached_logo
 
+    @dashboard_view_params = dashboard_view_params
     @dashboard_sections, @hidden_dashboard_sections = build_dashboard_sections
     @customizing_dashboard = params[:customize].present?
-    @dashboard_view_params = dashboard_view_params
     @just_hidden_section = params[:hidden_section]
     @just_shown_section = params[:shown_section]
 
@@ -129,8 +129,19 @@ class PagesController < ApplicationController
       end
     end
 
+    # The spending filter is carried as the widget resolved it: a selection
+    # that covers every category with spending is the unfiltered state, so it
+    # is dropped here rather than re-sent by every other control, where it
+    # would pin today's list and leave out categories another month or
+    # period adds. Resolved only while the widget is shown, so a hidden
+    # widget's queries still never run.
     def dashboard_view_params
-      params.permit(*DASHBOARD_VIEW_PARAMS).to_h
+      view_params = params.permit(*DASHBOARD_VIEW_PARAMS).to_h
+      if view_params.key?(:spending_category_ids) && !Current.user.dashboard_hidden_sections.include?("spending_trend")
+        category_ids = spending_trend_filter[:category_ids]
+        category_ids ? view_params[:spending_category_ids] = category_ids : view_params.delete(:spending_category_ids)
+      end
+      view_params
     end
 
     # Each widget builds its own data, so a hidden widget's builder is never
@@ -163,7 +174,7 @@ class PagesController < ApplicationController
               # to this broader set, not `accounts`, so the view needs it to
               # know when the drill-down links can safely omit account_ids.
               accessible_account_ids: Current.user.accessible_accounts.pluck(:id).map(&:to_s),
-              view_params: dashboard_view_params,
+              view_params: @dashboard_view_params,
               col_span: section_layout("money_flow")[:col_span]
             },
             visible: @accounts.any?,
@@ -177,8 +188,8 @@ class PagesController < ApplicationController
             partial: "pages/dashboard/spending_trend",
             layout: section_layout("spending_trend"),
             locals: {
-              spending_trend_data: build_spending_trend_data(dashboard_income_statement, spending_trend_month_param, spending_trend_category_ids_param),
-              view_params: dashboard_view_params
+              spending_trend_data: build_spending_trend_data(dashboard_income_statement, spending_trend_month_param, spending_trend_filter),
+              view_params: @dashboard_view_params
             },
             visible: @accounts.any?,
             collapsible: true
@@ -569,28 +580,47 @@ class PagesController < ApplicationController
       ids.presence
     end
 
+    # The selected month (capped at today while it's in progress) and the
+    # month before it, which the widget compares against.
+    def spending_trend_periods(selected_month)
+      month_start = selected_month.beginning_of_month
+      current_period = Period.custom(start_date: month_start, end_date: [ month_start.end_of_month, Date.current ].min)
+      previous_month_start = (month_start - 1.month).beginning_of_month
+      previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
+      [ current_period, previous_period ]
+    end
+
+    # The category filter's options and the selection it resolves to. A
+    # selection is treated as unfiltered when it checks every option and
+    # every option has spending behind it (its own, or its category
+    # group's): that draws exactly what the unfiltered chart does. A picked
+    # category with no spending in view keeps the filter, so it survives a
+    # month where it's empty. Memoized: the view params and the widget both
+    # read it.
+    def spending_trend_filter
+      @spending_trend_filter ||= begin
+        category_ids = spending_trend_category_ids_param
+        options = spending_trend_category_options(dashboard_income_statement, spending_trend_periods(spending_trend_month_param), category_ids)
+        category_ids = nil if options.all? { |option| option[:checked] && option[:live] }
+        { category_ids: category_ids, category_options: options }
+      end
+    end
+
     # Cumulative daily spending for the selected month (capped at today while
     # the month is in progress) against the previous month's full curve, so
     # the two lines share one day-of-month axis. The header totals compare the
     # same number of elapsed days; only the chart draws the previous month out
     # to its final day.
     #
-    # `category_ids` narrows both months to the same categories, so the
-    # comparison stays like-for-like.
-    def build_spending_trend_data(income_statement, selected_month, category_ids = nil)
+    # The category filter (see spending_trend_filter) narrows both months to
+    # the same categories, so the comparison stays like-for-like.
+    def build_spending_trend_data(income_statement, selected_month, category_filter)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
-      current_period = Period.custom(start_date: month_start, end_date: [ month_end, Date.current ].min)
-
-      previous_month_start = (month_start - 1.month).beginning_of_month
-      previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
-
-      category_options = spending_trend_category_options(income_statement, [ current_period, previous_period ], category_ids)
-      # A selection covering every offered category draws exactly what the
-      # unfiltered chart does, so treat it as unfiltered: the button reads
-      # "All categories" and the month links don't pin today's list, which
-      # would leave out categories that only another month has.
-      category_ids = nil if category_options.all? { |option| option[:checked] }
+      current_period, previous_period = spending_trend_periods(month_start)
+      previous_month_start = previous_period.start_date
+      category_ids = category_filter[:category_ids]
+      category_options = category_filter[:category_options]
 
       current_daily = income_statement.daily_expense_series(period: current_period, category_ids: category_ids).index_by(&:date)
       previous_daily = income_statement.daily_expense_series(period: previous_period, category_ids: category_ids).index_by(&:date)
@@ -637,25 +667,30 @@ class PagesController < ApplicationController
       }
     end
 
-    # The filter's options: the categories the chart is drawn from (spending
-    # in either month), the parents of those that are subcategories so the
-    # list keeps its hierarchy, and anything already selected. Ordered like
-    # the transactions category filter, with Uncategorized first. An option
-    # is checked when it was picked, or its parent was (picking a parent
-    # covers its subcategories), or nothing was picked at all.
+    # The filter's options, by category group (a top-level category and
+    # its subcategories): every group with spending in either month, plus
+    # any group with a picked category. A group is listed whole, so the
+    # parent/subcategory cascade sees every child; picking a parent covers
+    # them all. Ordered like the transactions category filter, with
+    # Uncategorized first. An option is checked when it was picked, or its
+    # parent was, or nothing was picked at all; it's `live` when its group
+    # has spending in view.
     def spending_trend_category_options(income_statement, periods, category_ids)
       used_ids = periods.flat_map { |period| income_statement.daily_expense_category_ids(period: period) }.uniq
-      offered_ids = used_ids.compact.map(&:to_s) + Array(category_ids)
+      selected_ids = Array(category_ids)
 
       categories = Current.family.categories.alphabetically_by_hierarchy.to_a
-      parent_ids = categories.select { |c| offered_ids.include?(c.id) }.filter_map(&:parent_id)
-      categories.select! { |c| offered_ids.include?(c.id) || parent_ids.include?(c.id) }
-      categories.unshift(Category.uncategorized) if used_ids.include?(nil) || offered_ids.include?(Category::UNCATEGORIZED_FILTER_VALUE)
+      group_of = ->(category) { category.parent_id || category.id }
+      live_groups = categories.select { |c| used_ids.include?(c.id) }.map(&group_of)
+      shown_groups = live_groups + categories.select { |c| selected_ids.include?(c.id) }.map(&group_of)
+      categories.select! { |c| shown_groups.include?(group_of.call(c)) }
+      categories.unshift(Category.uncategorized) if used_ids.include?(nil) || selected_ids.include?(Category::UNCATEGORIZED_FILTER_VALUE)
 
       categories.map do |category|
         value = category.persisted? ? category.id : category.filter_value
         checked = category_ids.nil? || category_ids.include?(value) || category_ids.include?(category.parent_id)
-        { category: category, value: value, checked: checked }
+        live = category.persisted? ? live_groups.include?(group_of.call(category)) : used_ids.include?(nil)
+        { category: category, value: value, checked: checked, live: live }
       end
     end
 

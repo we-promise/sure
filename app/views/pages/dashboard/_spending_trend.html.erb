@@ -20,8 +20,8 @@
   other_view_params = view_params.except(:spending_month, :spending_category_ids)
 %>
 <div id="spending-trend-section" class="px-4 space-y-4">
-  <%# Wraps so the month picker and category filter drop below the date on
-      narrow widths instead of overflowing the card. %>
+  <%# Both rows wrap, so on narrow widths the controls drop below the date
+      and then onto a second line instead of overflowing the card. %>
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-secondary hidden sm:block">
       <%= t(".date_range", start_date: l(period.date_range.begin, format: :long), end_date: l(period.date_range.end, format: :long)) %>
@@ -30,7 +30,7 @@
       <%= date_range_short %>
     </p>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <%= render DS::Tooltip.new(text: t(".period_scope_hint"), placement: "top-start") %>
 
       <%= render DS::Menu.new(variant: :button, placement: "bottom-end", max_height: "18rem") do |menu| %>
@@ -46,7 +46,8 @@
                text: I18n.l(month, format: :month_year).capitalize,
                href: root_path(other_view_params.merge(spending_month: month.iso8601, spending_category_ids: data[:category_ids]).compact),
                frame: "dashboard_sections",
-               selected: month == data[:month]
+               selected: month == data[:month],
+               data: { turbo_action: "advance" }
              ) %>
         <% end %>
       <% end %>

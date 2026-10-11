@@ -5,7 +5,9 @@
     pages/dashboard/filter_popover_option each) and an Apply button.
     hidden_fields carries every other dashboard view param (the widget's own
     month, the other widgets' months and filters) through the submit, so
-    applying this filter doesn't reset the rest of the dashboard. %>
+    applying this filter doesn't reset the rest of the dashboard. The submit
+    advances the address bar (as UI::PeriodPicker's links do), so the state
+    survives a refresh, a bookmark and Back. %>
 <%= render DS::Popover.new(variant: :button, no_padding: true) do |popover| %>
   <% popover.with_button(
        type: "button",
@@ -15,7 +17,7 @@
      ) %>
 
   <% popover.with_custom_content do %>
-    <%= form_with url: root_path, method: :get, data: { turbo_frame: "dashboard_sections" }, class: "p-3 w-56 space-y-2" do %>
+    <%= form_with url: root_path, method: :get, data: { turbo_frame: "dashboard_sections", turbo_action: "advance" }, class: "p-3 w-56 space-y-2" do %>
       <% hidden_fields.each do |name, value| %>
         <% if value.is_a?(Array) %>
           <% value.each do |item| %>

@@ -240,7 +240,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     PagesController.any_instance.expects(:build_money_flow_data).never
     PagesController.any_instance.expects(:build_spending_trend_data).never
 
-    get root_path
+    get root_path, params: { spending_category_ids: [ categories(:food_and_drink).id ] }
 
     assert_response :ok
     assert_select "section[data-section-key='net_worth_chart']"
@@ -1083,6 +1083,53 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal unfiltered, spending_trend_chart_data
     assert_not_includes spending_trend_category_values, other_category.id
     assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories_all")
+  end
+
+  test "dashboard spending trend lists a category group whole, so picking one subcategory stays narrow" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    food = @family.categories.create!(name: "Spending Filter Food")
+    groceries = @family.categories.create!(name: "Spending Filter Groceries", parent: food)
+    dining = @family.categories.create!(name: "Spending Filter Dining", parent: food)
+    create_transaction(account: account, name: "Groceries", amount: 40, date: selected_month, category: groceries)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+    # A sibling with no spending is still listed, so the parent/subcategory
+    # cascade sees every child of Food...
+    assert_includes spending_trend_category_values, dining.id
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ groceries.id ] }
+
+    # ...and picking Groceries alone leaves Food (and so Dining) unpicked,
+    # instead of the cascade checking Food and widening the filter.
+    assert_select "#spending-trend-section input[name='spending_category_ids[]'][value='#{groceries.id}'][checked]"
+    assert_select "#spending-trend-section input[name='spending_category_ids[]'][value='#{food.id}']:not([checked])"
+    assert_select "#spending-trend-section input[name='spending_category_ids[]'][value='#{dining.id}']:not([checked])"
+    assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories", count: 1)
+  end
+
+  test "dashboard controls drop a spending selection that covers every category" do
+    account, selected_month, previous_month = spending_trend_filter_setup
+    food = @family.categories.create!(name: "Spending Filter Food")
+    create_transaction(account: account, name: "Food", amount: 30, date: selected_month, category: food)
+    create_transaction(account: account, name: "No category", amount: 5, date: previous_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ food.id, Category::UNCATEGORIZED_FILTER_VALUE ] }
+    assert_response :ok
+
+    # Every category with spending is picked, which is the unfiltered state,
+    # so no other control re-sends today's list.
+    assert_select "input[type='hidden'][name='spending_category_ids[]']", count: 0
+    assert_nil dashboard_link_params("a[href*='period=last_90_days']")["spending_category_ids"]
+    assert_nil dashboard_link_params("#money-flow-section a[href*='money_flow_month=']")["spending_category_ids"]
+  end
+
+  test "dashboard widget controls advance the address bar so their state survives a refresh" do
+    get root_path
+
+    assert_select "#money-flow-section form[data-turbo-frame='dashboard_sections'][data-turbo-action='advance']"
+    assert_select "#spending-trend-section form[data-turbo-frame='dashboard_sections'][data-turbo-action='advance']"
+    assert_select "#money-flow-section a[href*='money_flow_month='][data-turbo-action='advance']"
+    assert_select "#spending-trend-section a[href*='spending_month='][data-turbo-action='advance']"
   end
 
   private

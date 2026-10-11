@@ -39,7 +39,8 @@
                text: I18n.l(month, format: :month_year).capitalize,
                href: root_path(other_view_params.merge(money_flow_month: month.iso8601, money_flow_account_ids: money_flow_data[:account_ids]).compact),
                frame: "dashboard_sections",
-               selected: month == money_flow_data[:month]
+               selected: month == money_flow_data[:month],
+               data: { turbo_action: "advance" }
              ) %>
         <% end %>
       <% end %>
