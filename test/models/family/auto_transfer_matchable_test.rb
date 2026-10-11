@@ -242,16 +242,6 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
   end
 
-  test "a zero direct rate does not mask a usable family currency cross rate" do
-    load_family_currency_rates
-    ExchangeRate.create!(from_currency: "GBP", to_currency: "CAD", date: 1.day.ago.to_date, rate: 0)
-
-    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
-    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -680, currency: "CAD")
-
-    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
-  end
-
   test "an exact same-currency match is not displaced by a closer cross-currency candidate" do
     load_family_currency_rates
     link_account!(@depository)
