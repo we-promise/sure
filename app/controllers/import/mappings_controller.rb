@@ -7,10 +7,18 @@ class Import::MappingsController < ApplicationController
   def update
     mapping = @import.mappings.find(params[:id])
 
-    mapping.update! \
-      create_when_empty: create_when_empty,
-      mappable: mappable,
-      value: mapping_params[:value]
+    if mapping.is_a?(Import::SecurityMapping)
+      # Security selections arrive as a combobox id in :value with no
+      # pre-existing mappable_id; resolve it now so the confirm screen reflects
+      # a matched state immediately.
+      mapping.update!(value: mapping_params[:value])
+      mapping.create_mappable!
+    else
+      mapping.update! \
+        create_when_empty: create_when_empty,
+        mappable: mappable,
+        value: mapping_params[:value]
+    end
 
     redirect_back_or_to import_confirm_path(@import)
   end

@@ -10,11 +10,14 @@ class TradeImport < Import
           mappings.accounts.mappable_for(row.account)
         end
 
-        # Try to find or create security with ticker only
-        security = find_or_create_security(
-          ticker: row.ticker,
-          exchange_operating_mic: row.exchange_operating_mic
-        )
+        # Prefer a user-mapped/auto-matched security from the security mapping
+        # step; fall back to direct resolution so auto-matched or edge rows
+        # (and the API flow, which adds no mapping step) still resolve.
+        security = mappings.securities.mappable_for(row.ticker) ||
+          find_or_create_security(
+            ticker: row.ticker,
+            exchange_operating_mic: row.exchange_operating_mic
+          )
 
         Trade.new(
           security: security,
@@ -41,6 +44,7 @@ class TradeImport < Import
   def mapping_steps
     base = []
     base << Import::AccountMapping if account.nil?
+    base << Import::SecurityMapping
     base
   end
 
