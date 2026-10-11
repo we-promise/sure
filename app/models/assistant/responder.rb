@@ -33,7 +33,11 @@ class Assistant::Responder
 
       function_tool_calls = function_tool_caller.fulfill_requests(response.function_requests)
       function_results = function_tool_calls.map(&:to_result)
-      in_flight_function_results.concat(function_results)
+      # Tag each result with its round. Providers that rebuild the in-flight
+      # history from function_results (generic Chat Completions, Anthropic)
+      # replay one tool-call message plus its results per round, so every
+      # follow-up request extends the previous one instead of rewriting it.
+      in_flight_function_results.concat(function_results.map { |result| result.merge(round: iteration) })
 
       emit(:response, {
         id: response.id,
