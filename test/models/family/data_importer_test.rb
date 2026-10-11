@@ -31,6 +31,51 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "imports a manually entered account iban" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Test Checking",
+          balance: "1500.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" },
+          iban: "DE89370400440532013000" # pipelock:ignore IBAN
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    result = importer.import!
+
+    assert_equal "DE89370400440532013000", result[:accounts].first.iban # pipelock:ignore IBAN
+  end
+
+  test "keeps an existing account iban when a re-imported file omits the key" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    account_data = {
+      id: "old-account-1",
+      name: "Test Checking",
+      balance: "1500.00",
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: { subtype: "checking" }
+    }
+
+    Family::DataImporter.new(@family, build_ndjson([
+      { type: "Account", data: account_data.merge(iban: "DE89370400440532013000") } # pipelock:ignore IBAN
+    ]), import_session: session).import!
+
+    Family::DataImporter.new(@family, build_ndjson([
+      { type: "Account", data: account_data }
+    ]), import_session: session).import!
+
+    assert_equal 1, @family.accounts.count
+    assert_equal "DE89370400440532013000", @family.accounts.first.iban # pipelock:ignore IBAN
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
@@ -495,6 +540,47 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     merchant = @family.merchants.find_by(name: "Amazon")
     assert_not_nil merchant
+  end
+
+  test "imports a manually entered merchant iban" do
+    ndjson = build_ndjson([
+      {
+        type: "Merchant",
+        data: {
+          id: "merchant-1",
+          name: "Landlord",
+          iban: "AT611904300234573201" # pipelock:ignore IBAN
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    merchant = @family.merchants.find_by(name: "Landlord")
+    assert_equal "AT611904300234573201", merchant.iban # pipelock:ignore IBAN
+  end
+
+  test "keeps an existing merchant iban when the imported file omits the key" do
+    merchant = @family.merchants.create!(name: "Landlord", iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    ndjson = build_ndjson([
+      { type: "Merchant", data: { id: "merchant-1", name: "Landlord" } }
+    ])
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal "AT611904300234573201", merchant.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "clears a merchant iban when the imported file sets it to null" do
+    merchant = @family.merchants.create!(name: "Landlord", iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    ndjson = build_ndjson([
+      { type: "Merchant", data: { id: "merchant-1", name: "Landlord", iban: nil } }
+    ])
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_nil merchant.reload.iban
   end
 
   test "imports recurring transactions with remapped account and merchant references" do

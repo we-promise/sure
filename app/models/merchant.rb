@@ -1,4 +1,6 @@
 class Merchant < ApplicationRecord
+  include Encryptable, IbanNormalizable
+
   TYPES = %w[FamilyMerchant ProviderMerchant].freeze
 
   # Merchant name key for i18n
@@ -8,6 +10,16 @@ class Merchant < ApplicationRecord
   # Using an opaque sentinel (rather than the translated display name) means a real
   # merchant can never collide with it, regardless of name or locale.
   NO_MERCHANT_FILTER_VALUE = "__no_merchant__"
+
+  # deterministic: true preserves equality lookups (find_by(source:, iban:))
+  # and the source+iban uniqueness index. Only meaningful for ProviderMerchant
+  # rows in practice, but lives on the shared base class like other
+  # provider-specific columns (provider_merchant_id, source).
+  # See Account#iban for the deliberate tradeoff this makes (accepted here
+  # for the same reason: DB-level uniqueness/lookup can't work otherwise).
+  if encryption_ready?
+    encrypts :iban, deterministic: true
+  end
 
   has_many :transactions, dependent: :nullify
   has_many :recurring_transactions, dependent: :destroy

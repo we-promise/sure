@@ -65,6 +65,16 @@ class FamilyMerchantTest < ActiveSupport::TestCase
     assert_equal "https://new.example", merchant.website_url
   end
 
+  test "find_or_create_with_name re-raises a unique violation that is not about the name" do
+    relation = @family.merchants
+
+    relation.stub :create!, ->(*) { raise ActiveRecord::RecordNotUnique, "index_merchants_on_family_id_and_iban" } do
+      assert_raises ActiveRecord::RecordNotUnique do
+        FamilyMerchant.find_or_create_with_name(@family, "No Such Merchant", iban: "AT611904300234573201") # pipelock:ignore IBAN
+      end
+    end
+  end
+
   test "find_or_create_with_name recovers from a RecordInvalid uniqueness conflict" do
     existing = FamilyMerchant.create!(family: @family, name: "Race Merchant")
     relation = @family.merchants

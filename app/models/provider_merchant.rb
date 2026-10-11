@@ -3,6 +3,11 @@ class ProviderMerchant < Merchant
 
   validates :name, uniqueness: { scope: [ :source ] }
   validates :source, presence: true
+  # Mirrors the DB-level partial unique index (source, iban) added alongside
+  # merchants.iban — without this, a duplicate submitted via the manual edit
+  # form raises ActiveRecord::RecordNotUnique (a 500) instead of a normal
+  # validation error the controller already knows how to render.
+  validates :iban, uniqueness: { scope: :source }, allow_nil: true
 
   def self.find_by_import_data(data, source)
     provider_merchant_id = data["provider_merchant_id"].presence
@@ -52,18 +57,20 @@ class ProviderMerchant < Merchant
         family,
         attributes[:name].presence || name,
         color: attributes[:color].presence || FamilyMerchant::COLORS.sample,
-        # A submitted blank website clears it; only an omitted one is inherited.
-        website_url: attributes.key?(:website_url) ? attributes[:website_url].presence : website_url
+        # A submitted blank website or iban clears it; only an omitted one is inherited.
+        website_url: attributes.key?(:website_url) ? attributes[:website_url].presence : website_url,
+        iban: attributes.key?(:iban) ? attributes[:iban].presence : inheritable_iban_for(family)
       )
 
       # find_or_create_with_name doesn't touch a merchant it reused, so
       # explicitly submitted attributes still need applying here; omitted
-      # ones leave the reused merchant untouched. A submitted website
+      # ones leave the reused merchant untouched. A submitted website or iban
       # (present or blank-to-clear) is honored; color can't be cleared
       # (FamilyMerchant requires it), so only a non-blank submission applies.
       if !created
         reuse_updates = {}
         reuse_updates[:website_url] = attributes[:website_url].presence if attributes.key?(:website_url)
+        reuse_updates[:iban] = attributes[:iban].presence if attributes.key?(:iban)
         reuse_updates[:color] = attributes[:color] if attributes[:color].present?
         family_merchant.update!(reuse_updates) if reuse_updates.any?
       end
@@ -110,6 +117,14 @@ class ProviderMerchant < Merchant
   end
 
   private
+    # The family's IBAN-unique index would reject an inherited IBAN that one of
+    # its merchants already holds, failing a name- or website-only edit on a
+    # field the user never touched; leave it off the converted merchant then.
+    def inheritable_iban_for(family)
+      return nil if iban.blank?
+
+      family.merchants.exists?(iban: iban) ? nil : iban
+    end
 
     def extract_domain(url)
       normalized_url = url.start_with?("http://", "https://") ? url : "https://#{url}"
