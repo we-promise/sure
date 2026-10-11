@@ -90,6 +90,7 @@ de:
       update: Aktualisieren
     errors:
       api_error: Bei der Kommunikation mit der Bank ist ein Fehler aufgetreten.
+      history_truncated: Nur ein Teil des Buchungsverlaufs konnte importiert werden, weil die Bank mehr Seiten geliefert hat, als ein Abgleich laden kann. Ältere Buchungen fehlen.
       network_unreachable: Der Bankdienst ist vorübergehend nicht erreichbar. Versuch es später noch einmal.
       session_invalid: Sitzung abgelaufen. Verbinde deine Bank neu.
       unexpected: Beim Abgleich ist ein unerwarteter Fehler aufgetreten.

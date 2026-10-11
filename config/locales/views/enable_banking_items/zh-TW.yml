@@ -3,6 +3,7 @@ zh-TW:
   enable_banking_items:
     errors:
       api_error: 與銀行通訊時發生錯誤。
+      history_truncated: 由於銀行傳回的頁數超過單次同步可載入的數量，只匯入了部分交易紀錄。較早的交易缺失。
       network_unreachable: 銀行服務暫時無法連線，請稍後再試。
       session_invalid: 工作階段已過期，請重新連線您的銀行。
       unexpected: 同步過程中發生未預期的錯誤。

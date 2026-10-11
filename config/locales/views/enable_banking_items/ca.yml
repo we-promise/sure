@@ -44,6 +44,7 @@ ca:
       update: Actualitza
     errors:
       api_error: S'ha produït un error de comunicació amb el banc.
+      history_truncated: Només s'ha pogut importar una part de l'historial de transaccions perquè el banc ha retornat més pàgines de les que es poden carregar en una sincronització. Falten les transaccions més antigues.
       network_unreachable: El servei bancari està temporalment inaccessible. Torna-ho
         a provar més tard.
       session_invalid: La sessió ha caducat. Torna a connectar el teu banc.

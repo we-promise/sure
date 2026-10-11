@@ -42,6 +42,7 @@ tr:
       update: Güncelle
     errors:
       api_error: Bankayla iletişim hatası oluştu.
+      history_truncated: Banka, bir senkronizasyonda yüklenebilecekten fazla sayfa döndürdüğü için işlem geçmişinin yalnızca bir kısmı içe aktarılabildi. Eski işlemler eksik.
       network_unreachable: Bankacılık hizmetine geçici olarak ulaşılamıyor. Lütfen
         daha sonra tekrar deneyin.
       session_invalid: Oturum süresi doldu. Lütfen bankanızla yeniden bağlantı kurun.

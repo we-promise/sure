@@ -46,6 +46,7 @@ fr:
       update: Mise à jour
     errors:
       api_error: Erreur de communication avec la banque.
+      history_truncated: Seule une partie de l'historique des transactions a pu être importée, car la banque a renvoyé plus de pages qu'une synchronisation ne peut en charger. Les transactions plus anciennes sont manquantes.
       network_unreachable:
         Le service bancaire est temporairement injoignable. Veuillez
         réessayer plus tard.

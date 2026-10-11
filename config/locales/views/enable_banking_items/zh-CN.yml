@@ -3,6 +3,7 @@ zh-CN:
   enable_banking_items:
     errors:
       api_error: 与银行通信时发生错误。
+      history_truncated: 由于银行返回的页数超过单次同步可加载的数量，只导入了部分交易历史。较早的交易缺失。
       network_unreachable: 银行服务暂时无法访问，请稍后再试。
       session_invalid: 会话已过期。请重新连接您的银行。
       unexpected: 同步过程中发生意外错误。
