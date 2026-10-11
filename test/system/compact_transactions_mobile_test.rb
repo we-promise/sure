@@ -350,51 +350,6 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     end
   end
 
-  test "compact cards share computed padding and search-to-table gap" do
-    # Cards converge on 12px desktop (8px horizontal / 12px vertical mobile),
-    # and the gap below search is a single mb-4 (16px) on both pages when no
-    # filter badges render. Measure computed geometry, not class names: the
-    # mb-4 lives on the inner search-row div, so measure from its rect.
-    [ [ 1400, { horizontal: "12px", vertical: "12px" } ],
-      [ 375, { horizontal: "8px", vertical: "12px" } ] ].each do |width, expected|
-      page.current_window.resize_to(width, 1200)
-
-      gaps = {}
-      [ [ transactions_url, "#transactions-search", "#transactions" ],
-        [ account_url(accounts(:depository), tab: "activity"), "#entries-search", nil ] ].each do |url, form_selector, card_selector|
-        visit url
-
-        card_selector ||= "##{form_selector.delete_prefix('#')}"
-        padding = page.evaluate_script(<<~JS, card_selector, form_selector)
-          ((cardSelector, formSelector) => {
-            const form = document.querySelector(formSelector);
-            const card = cardSelector === formSelector
-              ? form.closest('[data-controller="checkbox-toggle"]')
-              : document.querySelector(cardSelector);
-            const style = getComputedStyle(card);
-            const row = form.querySelector(".flex.gap-2.mb-4");
-            const table = document.querySelector('[role="table"]');
-            return {
-              paddingTop: style.paddingTop, paddingBottom: style.paddingBottom,
-              paddingLeft: style.paddingLeft, paddingRight: style.paddingRight,
-              gap: table.getBoundingClientRect().top - row.getBoundingClientRect().bottom
-            };
-          })(arguments[0], arguments[1])
-        JS
-
-        assert_equal expected[:vertical], padding["paddingTop"], "card top padding at #{width}px (#{url})"
-        assert_equal expected[:vertical], padding["paddingBottom"], "card bottom padding at #{width}px (#{url})"
-        assert_equal expected[:horizontal], padding["paddingLeft"], "card left padding at #{width}px (#{url})"
-        assert_equal expected[:horizontal], padding["paddingRight"], "card right padding at #{width}px (#{url})"
-        gaps[url] = padding["gap"]
-      end
-
-      assert_in_delta 16, gaps[transactions_url], 2, "transactions search-to-table gap at #{width}px"
-      assert_in_delta 16, gaps[account_url(accounts(:depository), tab: "activity")], 2, "account search-to-table gap at #{width}px"
-      assert_in_delta gaps[transactions_url], gaps[account_url(accounts(:depository), tab: "activity")], 2,
-        "search-to-table gap should match across views at #{width}px"
-    end
-  end
 
   test "badge list renders only with renderable badges in compact, always in standard" do
     # Compact hides the wrapper (and its mb-4) when no badge would render;
@@ -410,11 +365,83 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
 
     @user.update!(preferences: @user.preferences.merge("transactions_compact" => false))
 
-    visit transactions_url
+    # clear_filters resets the session-persisted search from the compact
+    # visits above: without it the restored Coffee badge — not the retained
+    # empty wrapper — would satisfy the presence assertion below.
+    visit transactions_url(clear_filters: true)
     assert_selector "#transaction-search-filters"
 
     visit transactions_url(q: { status: [ "", "" ] })
     assert_selector "#transaction-search-filters"
+  end
+
+  test "compact control rhythm is 8px while standard keeps its spacing" do
+    # No filtered visits in this test: the transactions page restores the
+    # last search from the session (store_params!), so any q visit would
+    # leak badges into the "no filter" measurements below.
+    @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
+
+    [ true, false ].each do |compact|
+      @user.update!(preferences: @user.preferences.merge("transactions_compact" => compact))
+      context = compact ? "compact" : "standard"
+
+      [ 1400, 375 ].each do |width|
+        page.current_window.resize_to(width, 1200)
+
+        {
+          transactions_url => "#transactions-search",
+          account_url(accounts(:depository), tab: "activity") => "#entries-search"
+        }.each do |url, form_selector|
+          gaps = measure_control_gaps(url, form_selector)
+
+          if compact
+            assert_not gaps["ulPresent"], "no badge wrapper without filters (#{context}, #{width}px, #{url})"
+            assert_in_delta 8, gaps["headerTop"] - gaps["rowBottom"], 2, "search-to-header gap (#{context}, #{width}px, #{url})"
+            assert_in_delta 8, gaps["rowsTop"] - gaps["headerBottom"], 2, "header-to-rows gap (#{context}, #{width}px, #{url})"
+            if gaps["newRowBottom"]
+              assert_in_delta 8, gaps["rowTop"] - gaps["newRowBottom"], 2, "new-row-to-search gap (#{context}, #{width}px, #{url})"
+            end
+          else
+            if url == transactions_url
+              # Standard Transactions retains the empty badge wrapper, and as
+              # a flex container its margins do not collapse: 16px stacks on
+              # the search row's own 16px.
+              assert gaps["ulPresent"], "empty badge wrapper retained in standard (#{context}, #{width}px)"
+              assert_in_delta 32, gaps["headerTop"] - gaps["rowBottom"], 2, "search-to-header gap with retained empty badge list (#{context}, #{width}px)"
+            else
+              assert_not gaps["ulPresent"], "account activity renders no badge list (#{context}, #{width}px)"
+              assert_in_delta 16, gaps["headerTop"] - gaps["rowBottom"], 2, "search-to-header gap (#{context}, #{width}px, #{url})"
+            end
+            assert_in_delta 16, gaps["rowsTop"] - gaps["headerBottom"], 2, "header-to-rows gap (#{context}, #{width}px, #{url})"
+            if gaps["newRowBottom"]
+              assert_in_delta 16, gaps["rowTop"] - gaps["newRowBottom"], 2, "new-row-to-search gap (#{context}, #{width}px, #{url})"
+            end
+          end
+        end
+      end
+    end
+  end
+
+  test "badge gaps follow the mode rhythm" do
+    # Separate test (fresh session): filtered visits persist via
+    # store_params!, so they must not precede no-filter measurements.
+    @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
+
+    [ true, false ].each do |compact|
+      @user.update!(preferences: @user.preferences.merge("transactions_compact" => compact))
+      context = compact ? "compact" : "standard"
+      expected = compact ? 8 : 16
+
+      [ 1400, 375 ].each do |width|
+        page.current_window.resize_to(width, 1200)
+
+        # Badge case (Transactions only; account activity renders no badges).
+        gaps = measure_control_gaps(transactions_url(q: { search: "Coffee" }), "#transactions-search")
+        assert gaps["ulTop"], "badge list renders with an active filter (#{context}, #{width}px)"
+        assert_in_delta expected, gaps["ulTop"] - gaps["rowBottom"], 2, "search-to-badges gap (#{context}, #{width}px)"
+        assert_in_delta expected, gaps["headerTop"] - gaps["ulBottom"], 2, "badges-to-header gap (#{context}, #{width}px)"
+      end
+    end
   end
 
   test "narrow desktop tables use mobile rows and retain selection and category information" do
@@ -556,6 +583,50 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
 
       system({ "RAILS_ENV" => "test" }, "bin/rails", "tailwindcss:build", exception: true)
       self.class.instance_variable_set(:@tailwind_css_built, true)
+    end
+
+    # Visible control-rhythm edges for the search/header/rows stack. Anchors
+    # resolve per layout: ARIA roles in compact mode, the uppercase grid
+    # header in standard mode. The mb-4/mb-2 margins live on the inner
+    # search-row div, so measure from its rect — the form rect may include
+    # that space. Rows are measured at the outer inset container: the inner
+    # white surface carries additional wrapper padding.
+    def measure_control_gaps(url, form_selector)
+      visit url
+      page.evaluate_script(<<~JS, form_selector)
+        ((formSelector) => {
+          const visible = (el) => el && el.getBoundingClientRect().height > 0;
+          const row = document.querySelector(`${formSelector} .flex.gap-2`);
+          const rowRect = row.getBoundingClientRect();
+          const out = { rowTop: rowRect.top, rowBottom: rowRect.bottom };
+          const newRow = document.querySelector("[data-testid='activity-menu']");
+          if (newRow) out.newRowBottom = newRow.getBoundingClientRect().bottom;
+          const ul = document.querySelector("#transaction-search-filters");
+          out.ulPresent = !!ul;
+          if (visible(ul)) {
+            const u = ul.getBoundingClientRect();
+            out.ulTop = u.top; out.ulBottom = u.bottom;
+          }
+          const columnheader = document.querySelector('[role="columnheader"]');
+          if (columnheader) {
+            const box = columnheader.closest(".bg-container-inset");
+            const b = box.getBoundingClientRect();
+            out.headerTop = b.top; out.headerBottom = b.bottom;
+            const rowsOuter = [...document.querySelectorAll(".bg-container-inset.rounded-xl.p-1")]
+              .filter(visible)
+              .find((el) => box.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
+            if (rowsOuter) out.rowsTop = rowsOuter.getBoundingClientRect().top;
+          } else {
+            const grid = [...document.querySelectorAll(".grid.uppercase")].find(visible);
+            const g = grid.getBoundingClientRect();
+            out.headerTop = g.top; out.headerBottom = g.bottom;
+            let sib = grid.nextElementSibling;
+            while (sib && sib.getBoundingClientRect().height === 0) sib = sib.nextElementSibling;
+            if (sib) out.rowsTop = sib.getBoundingClientRect().top;
+          }
+          return out;
+        })(arguments[0])
+      JS
     end
 
     def teardown

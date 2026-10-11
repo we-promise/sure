@@ -6,7 +6,7 @@
 <% renderable_badges = @q.reject { |key| key == "amount_operator" }.flat_map { |param_key, param_value| Array(param_value).reject(&:blank?).map { |value| [ param_key, value ] } } %>
 
 <% if !@compact_view || renderable_badges.any? %>
-<ul id="transaction-search-filters" class="flex items-center flex-wrap gap-2 mb-4">
+<ul id="transaction-search-filters" class="flex items-center flex-wrap gap-2 <%= @compact_view ? "mb-2" : "mb-4" %>">
   <% @q.reject { |key| key == "amount_operator" }.each do |param_key, param_value| %>
     <% unless param_value.blank? %>
       <% if param_key == "amount" %>

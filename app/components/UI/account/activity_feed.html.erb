@@ -1,6 +1,6 @@
 <%= turbo_frame_tag dom_id(account, "entries") do %>
   <div class="<%= "@container/compact-table" if compact? %> <%= compact? ? "px-2 py-3 lg:p-3" : "px-3 py-4 lg:p-4" %> bg-container shadow-border-xs rounded-xl" data-controller="checkbox-toggle">
-    <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
+    <div class="flex items-center justify-between <%= compact? ? "mb-2" : "mb-4" %>" data-testid="activity-menu">
       <%= tag.h2 t("accounts.show.activity.title"), class: "font-medium text-lg" %>
 
       <%# Show menu if: manual (can add balance) OR non-crypto (can add transactions) %>
@@ -52,7 +52,7 @@
               scope: :q,
               method: :get,
               data: { controller: "auto-submit-form", turbo_frame: dom_id(account, "entries") } do |form| %>
-        <div class="flex gap-2 mb-4">
+        <div class="flex gap-2 <%= compact? ? "mb-2" : "mb-4" %>">
           <div class="grow">
             <div class="flex items-center px-3 py-2 gap-2 border border-secondary rounded-lg focus-within:border-primary">
               <%= helpers.icon("search") %>
