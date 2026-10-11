@@ -146,6 +146,16 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Rent", response.body
   end
 
+  test "a bill row opens its drawer from anywhere on the row, like a transaction row" do
+    create_bill(name: "Rent", amount: 1200)
+
+    get bills_url
+    assert_response :success
+
+    assert_select "[data-controller~=clickable-row] a[data-clickable-row-target=link][data-turbo-frame=drawer]"
+    assert_select "[data-controller~=clickable-row].hover\\:bg-surface-hover", count: 0
+  end
+
   # A bill is something you owe. Income is not owed, an internal transfer is not owed,
   # and a paused row was explicitly set aside, so none of them belong on the list.
   test "index excludes income and inactive rows but shows debt payments" do
