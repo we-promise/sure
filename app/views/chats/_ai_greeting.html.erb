@@ -8,33 +8,35 @@
       <%= t(".commands_hint_html") %>
     </p>
 
-    <div class="space-y-3">
-      <p><%= t(".questions_intro") %></p>
+    <% if Current.user.ai_enabled? %>
+      <div class="space-y-3">
+        <p><%= t(".questions_intro") %></p>
 
-      <% questions = [
-        {
-          icon: "chart-area",
-          text: t(".evaluate_portfolio")
-        },
-        {
-          icon: "wallet-minimal",
-          text: t(".spending_insights")
-        },
-        {
-          icon: "alert-triangle",
-          text: t(".unusual_patterns")
-        }
-      ] %>
+        <% questions = [
+          {
+            icon: "chart-area",
+            text: t(".evaluate_portfolio")
+          },
+          {
+            icon: "wallet-minimal",
+            text: t(".spending_insights")
+          },
+          {
+            icon: "alert-triangle",
+            text: t(".unusual_patterns")
+          }
+        ] %>
 
-      <div class="space-y-2.5">
-        <% questions.each do |question| %>
-          <button data-action="chat#submitSampleQuestion"
-                  data-chat-question-param="<%= question[:text] %>"
-                  class="w-fit flex items-center gap-2 border border-tertiary rounded-full py-1.5 px-2.5 hover:bg-surface-inset">
-            <%= icon(question[:icon]) %> <%= question[:text] %>
-          </button>
-        <% end %>
+        <div class="space-y-2.5">
+          <% questions.each do |question| %>
+            <button data-action="chat#submitSampleQuestion"
+                    data-chat-question-param="<%= question[:text] %>"
+                    class="w-fit flex items-center gap-2 border border-tertiary rounded-full py-1.5 px-2.5 hover:bg-surface-inset">
+              <%= icon(question[:icon]) %> <%= question[:text] %>
+            </button>
+          <% end %>
+        </div>
       </div>
-    </div>
+    <% end %>
   </div>
 </div>

@@ -171,6 +171,103 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Still works", @account.reload.name
   end
 
+  test "updates lunch flow balance interpretation flag when linked" do
+    lunchflow_account = create_linked_lunchflow_account
+
+    get edit_credit_card_path(@account)
+    assert_response :success
+    assert_select "input[name='account[lunchflow][treat_balance_as_available_credit]']"
+
+    assert_enqueued_with(job: SyncJob) do
+      patch credit_card_path(@account), params: {
+        account: {
+          name: @account.name,
+          accountable_type: "CreditCard",
+          lunchflow: { treat_balance_as_available_credit: "1" }
+        }
+      }
+    end
+
+    assert_redirected_to @account
+    assert lunchflow_account.reload.treat_balance_as_available_credit?
+  end
+
+  test "clears lunch flow balance interpretation flag when toggled off" do
+    lunchflow_account = create_linked_lunchflow_account
+    lunchflow_account.update!(treat_balance_as_available_credit: true)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        lunchflow: { treat_balance_as_available_credit: "0" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_not lunchflow_account.reload.treat_balance_as_available_credit?
+  end
+
+  test "resyncs lunch flow when the card limit changes in available credit mode" do
+    lunchflow_account = create_linked_lunchflow_account
+    lunchflow_account.update!(treat_balance_as_available_credit: true)
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      patch credit_card_path(@account), params: {
+        account: { name: @account.name, accountable_type: "CreditCard",
+                   accountable_attributes: { id: @account.accountable.id, available_credit: 7500 } }
+      }
+    end
+
+    assert_redirected_to @account
+    assert lunchflow_account.reload.treat_balance_as_available_credit?, "a form without the flag keeps it"
+  end
+
+  test "turning the flag on and setting the limit together syncs once" do
+    create_linked_lunchflow_account
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      patch credit_card_path(@account), params: {
+        account: { name: @account.name, accountable_type: "CreditCard",
+                   accountable_attributes: { id: @account.accountable.id, available_credit: 7500 },
+                   lunchflow: { treat_balance_as_available_credit: "1" } }
+      }
+    end
+  end
+
+  test "a limit change does not resync lunch flow outside available credit mode" do
+    create_linked_lunchflow_account
+
+    assert_no_enqueued_jobs only: SyncJob do
+      patch credit_card_path(@account), params: {
+        account: { name: @account.name, accountable_type: "CreditCard",
+                   accountable_attributes: { id: @account.accountable.id, available_credit: 7500 } }
+      }
+    end
+  end
+
+  test "does not persist lunch flow flag when the account update fails" do
+    lunchflow_account = create_linked_lunchflow_account
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: "",
+        accountable_type: "CreditCard",
+        lunchflow: { treat_balance_as_available_credit: "1" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_not lunchflow_account.reload.treat_balance_as_available_credit?
+  end
+
+  test "hides the lunch flow toggle for accounts without a lunch flow link" do
+    get edit_credit_card_path(@account)
+
+    assert_response :success
+    assert_select "input[name='account[lunchflow][treat_balance_as_available_credit]']", count: 0
+  end
+
   test "updates SimpleFIN balance sign override when linked" do
     simplefin_account = create_linked_simplefin_account
 
@@ -259,6 +356,19 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
       )
       AccountProvider.create!(account: @account, provider: enable_banking_account)
       enable_banking_account
+    end
+
+    def create_linked_lunchflow_account
+      lunchflow_item = LunchflowItem.new(family: @account.family, name: "Test Lunch Flow", api_key: "test_key")
+      lunchflow_item.save!(validate: false)
+      lunchflow_account = lunchflow_item.lunchflow_accounts.create!(
+        name: "Linked card",
+        account_id: "lf_linked_card",
+        currency: "GBP",
+        current_balance: 4983.83
+      )
+      AccountProvider.create!(account: @account, provider: lunchflow_account)
+      lunchflow_account
     end
 
     def create_linked_simplefin_account
