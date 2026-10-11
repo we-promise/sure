@@ -209,4 +209,24 @@ class AccountImportTest < ActiveSupport::TestCase
   test "max_row_count is limited to 50" do
     assert_equal 50, @import.max_row_count
   end
+
+  # The accountable class came from a user-supplied mapping value straight
+  # through `constantize`, so any constant in the app could be instantiated
+  # and attached to an account.
+  test "import! refuses an account type that is not an accountable" do
+    @import.update!(
+      raw_file_str: "name,type,balance,currency\nSneaky,User,100.00,USD",
+      entity_type_col_label: "type",
+      name_col_label: "name",
+      amount_col_label: "balance",
+      currency_col_label: "currency"
+    )
+    @import.generate_rows_from_csv
+    @import.mappings.account_types.find_by(key: "User")&.update!(value: "User") ||
+      Import::AccountTypeMapping.create!(import: @import, key: "User", value: "User")
+
+    assert_no_difference "Account.count" do
+      assert_raises(ArgumentError) { @import.import! }
+    end
+  end
 end

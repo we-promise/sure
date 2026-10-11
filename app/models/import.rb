@@ -189,7 +189,9 @@ class Import < ApplicationRecord
         (csv_str || "").strip,
         headers: true,
         col_sep: col_sep,
-        converters: [ ->(str) { str&.strip } ],
+        # Undo the export-side formula escape so a file this app produced can
+        # be imported back unchanged (see CsvSanitizer).
+        converters: [ ->(str) { CsvSanitizer.unescape(str&.strip) } ],
         liberal_parsing: true
       )
     end
