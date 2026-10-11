@@ -1,41 +1,43 @@
 <%# locals: (transaction:) %>
 
 <div id="<%= dom_id(transaction, "transfer_match") %>" class="flex items-center gap-1">
-  <% if transaction.transfer.confirmed? %>
-    <span title="<%= transaction.transfer.payment? ? t("transactions.transfer_match.payment_confirmed") : t("transactions.transfer_match.transfer_confirmed") %>">
-      <%= icon "link-2", size: "sm", class: "text-secondary" %>
-    </span>
-  <% elsif transaction.transfer.pending? %>
-    <span class="hidden lg:inline">
-      <%= render DS::Pill.new(
-        label: t("transactions.transfer_match.auto_matched"),
-        tone: :neutral,
-        marker: false,
-        show_dot: false
-      ) %>
-    </span>
-    <span class="inline lg:hidden">
-      <%= render DS::Pill.new(
-        label: t("transactions.transfer_match.auto_matched_short"),
-        tone: :neutral,
-        marker: false,
-        show_dot: false
-      ) %>
-    </span>
+  <% if transaction.transfer %>
+    <% if transaction.transfer.confirmed? %>
+      <span title="<%= transaction.transfer.payment? ? t("transactions.transfer_match.payment_confirmed") : t("transactions.transfer_match.transfer_confirmed") %>">
+        <%= icon "link-2", size: "sm", class: "text-secondary" %>
+      </span>
+    <% elsif transaction.transfer.pending? %>
+      <span class="hidden lg:inline">
+        <%= render DS::Pill.new(
+          label: t("transactions.transfer_match.auto_matched"),
+          tone: :neutral,
+          marker: false,
+          show_dot: false
+        ) %>
+      </span>
+      <span class="inline lg:hidden">
+        <%= render DS::Pill.new(
+          label: t("transactions.transfer_match.auto_matched_short"),
+          tone: :neutral,
+          marker: false,
+          show_dot: false
+        ) %>
+      </span>
 
-    <%= button_to transfer_path(transaction.transfer, transfer: { status: "confirmed" }),
-                    method: :patch,
-                    class: "text-secondary flex items-center justify-center cursor-pointer",
-                    title: t("transactions.transfer_match.confirm_match") do %>
-      <%= icon "check", size: "sm", class: "text-secondary hover:text-primary" %>
-    <% end %>
+      <%= button_to transfer_path(transaction.transfer, transfer: { status: "confirmed" }),
+                      method: :patch,
+                      class: "text-secondary flex items-center justify-center cursor-pointer",
+                      title: t("transactions.transfer_match.confirm_match") do %>
+        <%= icon "check", size: "sm", class: "text-secondary hover:text-primary" %>
+      <% end %>
 
-    <%= button_to transfer_path(transaction.transfer, transfer: { status: "rejected" }),
-                    method: :patch,
-                    data: { turbo: false },
-                    class: "text-secondary hover:text-primary flex items-center justify-center cursor-pointer",
-                    title: t("transactions.transfer_match.reject_match") do %>
-      <%= icon "x", size: "sm", class: "text-subdued hover:text-primary" %>
+      <%= button_to transfer_path(transaction.transfer, transfer: { status: "rejected" }),
+                      method: :patch,
+                      data: { turbo: false },
+                      class: "text-secondary hover:text-primary flex items-center justify-center cursor-pointer",
+                      title: t("transactions.transfer_match.reject_match") do %>
+        <%= icon "x", size: "sm", class: "text-subdued hover:text-primary" %>
+      <% end %>
     <% end %>
   <% end %>
 </div>
