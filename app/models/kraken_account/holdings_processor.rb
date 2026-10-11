@@ -33,14 +33,15 @@ class KrakenAccount::HoldingsProcessor
     end
 
     def positions
-      raw_assets.group_by { |asset| KrakenAccount::SecurityResolver.canonical_asset(asset["symbol"] || asset[:symbol]) }.map do |canonical, assets|
+      priced = raw_assets.select { |asset| (asset["price_usd"] || asset[:price_usd]).present? }
+
+      priced.group_by { |asset| KrakenAccount::SecurityResolver.canonical_asset(asset["symbol"] || asset[:symbol]) }.map do |canonical, assets|
         next assets.first if assets.one?
 
-        priced = assets.find { |asset| (asset["price_usd"] || asset[:price_usd]).present? }
         {
           "symbol" => canonical,
           "balance" => assets.sum { |asset| (asset["balance"] || asset[:balance] || 0).to_d }.to_s("F"),
-          "price_usd" => priced && (priced["price_usd"] || priced[:price_usd]),
+          "price_usd" => assets.first["price_usd"] || assets.first[:price_usd],
           "source" => "spot"
         }
       end

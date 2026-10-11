@@ -73,6 +73,20 @@ class KrakenAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     KrakenAccount::HoldingsProcessor.new(@kraken_account).process
   end
 
+  test "leaves an unpriced wallet line out of the summed holding" do
+    @kraken_account.update!(raw_payload: { "assets" => [
+      { "symbol" => "DOT28.S", "price_symbol" => "DOT28", "balance" => "100.0", "price_usd" => nil, "source" => "spot" },
+      { "symbol" => "DOT", "price_symbol" => "DOT", "balance" => "2.0", "price_usd" => "5.0", "source" => "spot" }
+    ] })
+    import_adapter = mock
+    import_adapter.expects(:import_holding).once.with(
+      has_entries(quantity: 2.to_d, amount: 10.to_d, external_id: "kraken_DOT_spot_#{Date.current}")
+    )
+    Account::ProviderImportAdapter.stubs(:new).returns(import_adapter)
+
+    KrakenAccount::HoldingsProcessor.new(@kraken_account).process
+  end
+
   # Fiat at the exchange is cash the ledger already moved. Held as a holding
   # too it is valued twice, and it can never be reversed into history because
   # no trade ever moves it.
