@@ -132,6 +132,10 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
     )
   end
 
+  def label_with_required_marker(method, text:, required: false, **html_options)
+    build_label(method, label: text, required: required, label_html_options: html_options)
+  end
+
   private
     def build_field(method, options = {}, html_options = {}, &block)
       if options[:help_text].present?
@@ -191,8 +195,10 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
         ])
       end
 
-      return label(method, class: "form-field__label") if label_text == true
-      label(method, label_text, class: "form-field__label")
+      label_html_options = { class: "form-field__label" }.merge(options[:label_html_options] || {})
+
+      return label(method, label_html_options) if label_text == true
+      label(method, label_text, label_html_options)
     end
 
     def build_tooltip(tooltip_text)
