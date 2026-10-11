@@ -1,7 +1,7 @@
 class AccountsController < ApplicationController
   include StreamExtensions
 
-  before_action :set_account, only: %i[show sparkline sync set_default remove_default]
+  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
@@ -89,8 +89,8 @@ class AccountsController < ApplicationController
     # date beside a table shaded against another.
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
-    @q = params.fetch(:q, {}).permit(:search, :uncategorized, status: [])
-    entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
+    @q = activity_search_params
+    entries = @account.entries.excluding_split_parents.search(@q, family).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -194,6 +194,27 @@ class AccountsController < ApplicationController
     end
 
     redirect_to account_path(@account)
+  end
+
+  # Mirrors TransactionsController#clear_filter, but simpler: the account
+  # activity feed has no cross-request stored filters to update, so this only
+  # needs to redirect with one param removed from the current query string.
+  def clear_filter
+    q_params = activity_search_params.to_h
+
+    param_key = params[:param_key]
+    param_value = params[:param_value]
+
+    if q_params[param_key].is_a?(Array)
+      q_params[param_key].delete(param_value)
+      q_params.delete(param_key) if q_params[param_key].empty?
+    else
+      q_params.delete(param_key)
+    end
+
+    q_params.delete("amount_operator") unless q_params["amount"].present?
+
+    redirect_to account_path(@account, q: q_params.presence, tab: "activity", page: params[:page], per_page: params[:per_page])
   end
 
   def sparkline
@@ -370,6 +391,15 @@ class AccountsController < ApplicationController
 
     def family
       Current.family
+    end
+
+    def activity_search_params
+      q = params.fetch(:q, {}).permit(
+        :search, :start_date, :end_date, :amount, :amount_operator,
+        categories: [], tags: [], merchants: [], types: [], status: []
+      )
+      q.delete(:amount_operator) unless q[:amount].present?
+      q
     end
 
     # Shares the "per page" preference with TransactionsController's
