@@ -613,6 +613,14 @@ class SimplefinItem::Importer
           end
         end
 
+        # A response with provider errors is not a complete upstream inventory.
+        # Keep the accounts that were returned, but do not prune or repair
+        # linkages from a list that may omit a failed connection or account.
+        if partial_provider_response?(discovery_data)
+          Rails.logger.info("SimpleFin discovery: skipping inventory reconciliation because the response was partial")
+          return
+        end
+
         # Clean up orphaned SimplefinAccount records whose account_id no longer exists upstream.
         # This handles the case where a user deletes and re-adds an institution in SimpleFIN,
         # which generates new account IDs. Without this cleanup, both old (stale) and new
@@ -717,14 +725,21 @@ class SimplefinItem::Importer
         Rails.logger.debug("SimpleFIN raw: #{accounts_data.inspect}")
       end
 
-      # Handle errors if present in response
-      if accounts_data[:errors] && accounts_data[:errors].any?
-        if accounts_data[:accounts].to_a.any?
+      # Protocol v2 uses `errlist`; retain legacy `errors` compatibility.
+      # Prefer the structured v2 list if a transitional server returns both.
+      structured_errors = accounts_data[:errlist].presence
+      provider_errors = structured_errors || accounts_data[:errors]
+      if provider_errors.present?
+        # `gen.*` errors apply to the response as a whole. Any accounts returned
+        # alongside them may be stale or incomplete, so they cannot be imported
+        # as a successful partial response. Only `gen.auth` invalidates the item.
+        general_v2_error = structured_errors&.any? { |error| general_provider_error?(error) }
+        if accounts_data[:accounts].to_a.any? && !general_v2_error
           # Partial failure: record errors for visibility but continue processing accounts
-          record_errors(accounts_data[:errors])
+          record_errors(provider_errors, connections: accounts_data[:connections])
         else
           # Global failure: no accounts were returned; treat as fatal
-          handle_errors(accounts_data[:errors])
+          handle_errors(provider_errors)
           return nil
         end
       end
@@ -732,7 +747,7 @@ class SimplefinItem::Importer
       # Some servers return a top-level message/string rather than an errors array
       if accounts_data[:error].present?
         if accounts_data[:accounts].to_a.any?
-          record_errors([ accounts_data[:error] ])
+          record_errors([ accounts_data[:error] ], connections: accounts_data[:connections])
         else
           handle_errors([ accounts_data[:error] ])
           return nil
@@ -1000,7 +1015,7 @@ class SimplefinItem::Importer
     # requires_update - that would block sync for every other institution on
     # the same connection. The top-level handle_errors path is the correct
     # place to flag the item when the SimpleFIN token itself is dead.
-    def record_errors(errors)
+    def record_errors(errors, connections: nil)
       arr = Array(errors)
       return if arr.empty?
 
@@ -1012,37 +1027,21 @@ class SimplefinItem::Importer
       )
 
       arr.each do |error|
-        msg = if error.is_a?(String)
-          error
-        else
-          error[:description] || error[:message] || error[:error] || error.to_s
-        end
-        down = msg.to_s.downcase
-        category = if down.include?("timeout") || down.include?("timed out")
-          "network"
-        elsif down.include?("auth") || down.include?("reauth") || down.include?("forbidden") || down.include?("unauthorized") || down.include?("2fa") || down.include?("two-factor")
-          "auth"
-        elsif down.include?("429") || down.include?("rate limit")
-          "api"
-        else
-          "other"
-        end
-        register_error(message: msg, category: category)
+        context = provider_error_context(error, connections)
+        register_error(
+          message: provider_error_message(error),
+          category: provider_error_category(error),
+          account_id: context[:account_id],
+          name: context[:name]
+        )
       end
     end
 
     def handle_errors(errors)
-      error_messages = errors.map { |error| error.is_a?(String) ? error : (error[:description] || error[:message]) }.join(", ")
+      error_messages = errors.map { |error| provider_error_message(error) }.join(", ")
 
       # Mark item as requiring update for authentication-related errors
-      needs_update = errors.any? do |error|
-        if error.is_a?(String)
-          error.downcase.include?("reauthenticate") || error.downcase.include?("authentication")
-        else
-          error[:code] == "auth_failure" || error[:code] == "token_expired" ||
-          error[:type] == "authentication_error"
-        end
-      end
+      needs_update = errors.any? { |error| item_auth_error?(error) }
 
       if needs_update
         Rails.logger.warn("SimpleFin: marking item ##{simplefin_item.id} requires_update due to fatal auth error(s): #{error_messages}")
@@ -1074,6 +1073,63 @@ class SimplefinItem::Importer
         "SimpleFin API errors: #{error_messages}",
         :api_error
       )
+    end
+
+    def provider_error_message(error)
+      return error if error.is_a?(String)
+
+      error[:msg].presence || error[:description].presence || error[:message].presence || error[:error].presence || error.to_s
+    end
+
+    def provider_error_category(error)
+      code = error.is_a?(String) ? "" : error[:code].to_s
+      return "auth" if code.end_with?(".auth") || [ "auth_failure", "token_expired" ].include?(code)
+      return "api" if code == "gen.api"
+
+      message = provider_error_message(error).to_s.downcase
+      if message.include?("timeout") || message.include?("timed out")
+        "network"
+      elsif message.include?("auth") || message.include?("reauth") || message.include?("forbidden") || message.include?("unauthorized") || message.include?("2fa") || message.include?("two-factor")
+        "auth"
+      elsif message.include?("429") || message.include?("rate limit")
+        "api"
+      else
+        "other"
+      end
+    end
+
+    def general_provider_error?(error)
+      !error.is_a?(String) && error[:code].to_s.start_with?("gen.")
+    end
+
+    def partial_provider_response?(accounts_data)
+      accounts_data[:errlist].present? || accounts_data[:errors].present? || accounts_data[:error].present?
+    end
+
+    def provider_error_context(error, connections)
+      return {} if error.is_a?(String)
+
+      code = error[:code].to_s
+      if code.start_with?("act.")
+        { account_id: error[:account_id] }
+      elsif code.start_with?("con.")
+        connection_id = error[:conn_id]
+        connection = Array(connections).find { |candidate| candidate[:conn_id].to_s == connection_id.to_s }
+        { name: connection&.dig(:name).presence || connection_id }
+      else
+        {}
+      end
+    end
+
+    def item_auth_error?(error)
+      if error.is_a?(String)
+        message = error.downcase
+        return message.include?("reauthenticate") || message.include?("authentication")
+      end
+
+      code = error[:code].to_s
+      code == "gen.auth" || code == "auth_failure" || code == "token_expired" ||
+        error[:type] == "authentication_error"
     end
 
     # Classify exceptions into simple buckets for UI stats
