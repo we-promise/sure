@@ -1,6 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/custom_proxy_header.dart';
+import 'api_http_client.dart';
+import 'custom_certificate_service.dart';
 import 'custom_proxy_headers_service.dart';
 
 class ApiConfig {
@@ -10,13 +12,77 @@ class ApiConfig {
   // For production, use your actual server URL
   static const String _defaultBaseUrl = 'https://demo.sure.am';
   static const String _backendUrlKey = 'backend_url';
+  static const String backendConfigUpdatePendingKey =
+      'backend_config_update_pending';
   static String _baseUrl = _defaultBaseUrl;
 
   static String get baseUrl => _baseUrl;
   static String get defaultBaseUrl => _defaultBaseUrl;
 
+  static List<int>? _customCertificateBytes;
+  static String? _customCertificateName;
+
+  static List<int>? get customCertificateBytes => _customCertificateBytes;
+  static String? get customCertificateName => _customCertificateName;
+
+  static void applyBackendConfiguration({
+    required String baseUrl,
+    required List<CustomProxyHeader> customProxyHeaders,
+    required List<int>? customCertificateBytes,
+    String? customCertificateName,
+  }) {
+    final origin = Uri.parse(baseUrl);
+    ApiHttpClient.instance.configure(
+      trustedCertificateBytes: customCertificateBytes,
+      trustedOrigin: customCertificateBytes == null ? null : origin,
+    );
+    _baseUrl = baseUrl;
+    _customProxyHeaders = CustomProxyHeader.sanitize(customProxyHeaders);
+    _customCertificateBytes = customCertificateBytes == null
+        ? null
+        : List.unmodifiable(customCertificateBytes);
+    _customCertificateName = customCertificateName;
+  }
+
+  static void setCustomCertificate(List<int>? bytes, {String? name}) {
+    // Validate and install the trust material before publishing it as the
+    // active configuration.
+    ApiHttpClient.instance.configure(
+      trustedCertificateBytes: bytes,
+      trustedOrigin: bytes == null ? null : Uri.parse(_baseUrl),
+    );
+    _customCertificateBytes = bytes == null ? null : List.unmodifiable(bytes);
+    _customCertificateName = name;
+  }
+
   static void setBaseUrl(String url) {
+    final origin = Uri.parse(url);
+    ApiHttpClient.instance.configure(
+      trustedCertificateBytes: _customCertificateBytes,
+      trustedOrigin: _customCertificateBytes == null ? null : origin,
+    );
     _baseUrl = url;
+  }
+
+  static Future<void> beginBackendConfigUpdate(
+    SharedPreferences prefs,
+  ) async {
+    final stored =
+        await prefs.setBool(backendConfigUpdatePendingKey, true);
+    if (!stored) {
+      throw StateError('Failed to start backend configuration update.');
+    }
+  }
+
+  static Future<void> completeBackendConfigUpdate(
+    SharedPreferences prefs,
+  ) async {
+    if (prefs.containsKey(backendConfigUpdatePendingKey)) {
+      final removed = await prefs.remove(backendConfigUpdatePendingKey);
+      if (!removed) {
+        throw StateError('Failed to complete backend configuration update.');
+      }
+    }
   }
 
   // API key authentication mode
@@ -89,25 +155,63 @@ class ApiConfig {
   static Future<bool> initialize() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(backendConfigUpdatePendingKey) == true) {
+        await _recoverInterruptedBackendConfigUpdate(prefs);
+        return true;
+      }
       final savedUrl = prefs.getString(_backendUrlKey);
+      final baseUrl =
+          savedUrl != null && savedUrl.isNotEmpty ? savedUrl : _defaultBaseUrl;
+      final certificate =
+          await CustomCertificateService.instance.loadCertificate();
+      final certificateName =
+          await CustomCertificateService.instance.loadCertificateName();
+      final customProxyHeaders =
+          await CustomProxyHeadersService.instance.loadHeaders();
+      applyBackendConfiguration(
+        baseUrl: baseUrl,
+        customProxyHeaders: customProxyHeaders,
+        customCertificateBytes: certificate,
+        customCertificateName: certificateName,
+      );
 
       if (savedUrl != null && savedUrl.isNotEmpty) {
-        _baseUrl = savedUrl;
-        _customProxyHeaders = await CustomProxyHeadersService.instance.loadHeaders();
         return true;
       }
 
       // Seed first launch with the active development backend so the app can
       // go straight to login while still letting users override it later.
-      _baseUrl = _defaultBaseUrl;
       await prefs.setString(_backendUrlKey, _defaultBaseUrl);
-      _customProxyHeaders = await CustomProxyHeadersService.instance.loadHeaders();
       return true;
     } catch (e) {
       // If initialization fails, keep the default URL
-      _baseUrl = _defaultBaseUrl;
+      applyBackendConfiguration(
+        baseUrl: _defaultBaseUrl,
+        customProxyHeaders: const [],
+        customCertificateBytes: null,
+      );
       return true;
     }
+  }
+
+  static Future<void> _recoverInterruptedBackendConfigUpdate(
+    SharedPreferences prefs,
+  ) async {
+    // An update marker survives abrupt process termination. Clear every
+    // independently persisted value before removing the marker so startup can
+    // never combine values from different backend configurations.
+    await CustomCertificateService.instance.clearCertificate();
+    await CustomProxyHeadersService.instance.saveHeaders(const []);
+    final stored = await prefs.setString(_backendUrlKey, _defaultBaseUrl);
+    if (!stored) {
+      throw StateError('Failed to recover backend configuration.');
+    }
+    await completeBackendConfigUpdate(prefs);
+    applyBackendConfiguration(
+      baseUrl: _defaultBaseUrl,
+      customProxyHeaders: const [],
+      customCertificateBytes: null,
+    );
   }
 
   // API timeout settings

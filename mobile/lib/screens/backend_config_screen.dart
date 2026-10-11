@@ -1,10 +1,15 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import '../models/custom_proxy_header.dart';
+import '../services/api_http_client.dart';
 import '../services/api_config.dart';
+import '../services/custom_certificate_service.dart';
 import '../services/custom_proxy_headers_service.dart';
 import '../services/log_service.dart';
+import '../utils/certificate_fingerprint.dart';
 import '../widgets/custom_proxy_headers_editor.dart';
 import '../l10n/app_localizations.dart';
 
@@ -26,6 +31,8 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
   String? _errorMessage;
   String? _successMessage;
   List<CustomProxyHeader> _customHeaders = [];
+  Uint8List? _certificateBytes;
+  String? _certificateName;
 
   @override
   void initState() {
@@ -46,6 +53,10 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       final prefs = await SharedPreferences.getInstance();
       final savedUrl = prefs.getString('backend_url');
       headers = await CustomProxyHeadersService.instance.loadHeaders();
+      _certificateBytes =
+          await CustomCertificateService.instance.loadCertificate();
+      _certificateName =
+          await CustomCertificateService.instance.loadCertificateName();
       if (savedUrl != null && savedUrl.isNotEmpty) {
         urlToShow = savedUrl;
       }
@@ -67,6 +78,56 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
     }
   }
 
+  Future<void> _pickCertificate() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pem', 'crt', 'cer', 'der'],
+        withData: true,
+      );
+      if (result == null) return;
+      final file = result.files.single;
+      final bytes = file.bytes;
+      if (bytes == null ||
+          bytes.isEmpty ||
+          bytes.length > CustomCertificateService.maxCertificateBytes) {
+        throw const FormatException('Certificate is empty');
+      }
+
+      // Building the client validates that Dart can parse the selected file.
+      ApiHttpClient.instance.configure(
+        trustedCertificateBytes: bytes,
+        trustedOrigin: Uri.parse('https://certificate-validation.invalid'),
+      );
+      ApiHttpClient.instance.configure(
+        trustedCertificateBytes: ApiConfig.customCertificateBytes,
+        trustedOrigin: ApiConfig.customCertificateBytes == null
+            ? null
+            : Uri.parse(ApiConfig.baseUrl),
+      );
+      if (mounted) {
+        setState(() {
+          _certificateBytes = bytes;
+          _certificateName = file.name;
+          _errorMessage = null;
+        });
+      }
+    } catch (e) {
+      ApiHttpClient.instance.configure(
+        trustedCertificateBytes: ApiConfig.customCertificateBytes,
+        trustedOrigin: ApiConfig.customCertificateBytes == null
+            ? null
+            : Uri.parse(ApiConfig.baseUrl),
+      );
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              AppLocalizations.of(context).backendConfigCertificateInvalid;
+        });
+      }
+    }
+  }
+
   Future<void> _testConnection() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -79,6 +140,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
     });
 
     final previousHeaders = ApiConfig.customProxyHeaders;
+    final previousCertificate = ApiConfig.customCertificateBytes;
     try {
       // Normalize base URL by removing trailing slashes
       final normalizedUrl = _urlController.text.trim().replaceAll(
@@ -89,11 +151,17 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       // Apply the unsaved edits only for the duration of this probe so the
       // test reflects what the user is about to save. Restored in `finally`.
       ApiConfig.setCustomProxyHeaders(_customHeaders);
+      ApiHttpClient.instance.configure(
+        trustedCertificateBytes: _certificateBytes,
+        trustedOrigin:
+            _certificateBytes == null ? null : Uri.parse(normalizedUrl),
+      );
 
       // Check /sessions/new page to verify it's a Sure backend
       final sessionsUrl = Uri.parse('$normalizedUrl/sessions/new');
-      final sessionsResponse =
-          await http.get(sessionsUrl, headers: ApiConfig.htmlHeaders()).timeout(
+      final sessionsResponse = await ApiHttpClient.instance
+          .get(sessionsUrl, headers: ApiConfig.htmlHeaders())
+          .timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           throw Exception(l.backendConfigTimeout);
@@ -101,7 +169,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       );
 
       if (sessionsResponse.statusCode >= 200 &&
-          sessionsResponse.statusCode < 400) {
+          sessionsResponse.statusCode < 300) {
         if (mounted) {
           setState(() {
             _successMessage = l.backendConfigSuccess;
@@ -123,6 +191,11 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       }
     } finally {
       ApiConfig.setCustomProxyHeaders(previousHeaders);
+      ApiHttpClient.instance.configure(
+        trustedCertificateBytes: previousCertificate,
+        trustedOrigin:
+            previousCertificate == null ? null : Uri.parse(ApiConfig.baseUrl),
+      );
       if (mounted) {
         setState(() {
           _isTesting = false;
@@ -148,16 +221,55 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
             '',
           );
 
-      // Save URL to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('backend_url', normalizedUrl);
+      final previousUrl = prefs.getString('backend_url');
+      final previousHeaders =
+          await CustomProxyHeadersService.instance.loadHeaders();
+      final previousCertificate =
+          await CustomCertificateService.instance.loadCertificate();
+      final previousCertificateName =
+          await CustomCertificateService.instance.loadCertificateName();
 
-      // Save custom proxy headers
-      await CustomProxyHeadersService.instance.saveHeaders(_customHeaders);
-      ApiConfig.setCustomProxyHeaders(_customHeaders);
+      try {
+        await ApiConfig.beginBackendConfigUpdate(prefs);
+        if (_certificateBytes == null) {
+          await CustomCertificateService.instance.clearCertificate();
+        } else {
+          await CustomCertificateService.instance.saveCertificate(
+            _certificateBytes!,
+            _certificateName ?? 'certificate',
+          );
+        }
+        await CustomProxyHeadersService.instance.saveHeaders(_customHeaders);
+        await prefs.setString('backend_url', normalizedUrl);
 
-      // Update ApiConfig
-      ApiConfig.setBaseUrl(normalizedUrl);
+        ApiConfig.applyBackendConfiguration(
+          baseUrl: normalizedUrl,
+          customProxyHeaders: _customHeaders,
+          customCertificateBytes: _certificateBytes,
+          customCertificateName: _certificateName,
+        );
+        await ApiConfig.completeBackendConfigUpdate(prefs);
+      } catch (error, stackTrace) {
+        // Restore the URL first so a restart cannot pair the new origin with
+        // trust material from an incomplete configuration update.
+        if (previousUrl == null) {
+          await prefs.remove('backend_url');
+        } else {
+          await prefs.setString('backend_url', previousUrl);
+        }
+        await CustomProxyHeadersService.instance.saveHeaders(previousHeaders);
+        if (previousCertificate == null) {
+          await CustomCertificateService.instance.clearCertificate();
+        } else {
+          await CustomCertificateService.instance.saveCertificate(
+            Uint8List.fromList(previousCertificate),
+            previousCertificateName ?? 'certificate',
+          );
+        }
+        await ApiConfig.completeBackendConfigUpdate(prefs);
+        Error.throwWithStackTrace(error, stackTrace);
+      }
 
       // Notify parent that config is saved
       if (mounted && widget.onConfigSaved != null) {
@@ -196,6 +308,9 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       final uri = Uri.parse(trimmedValue);
       if (!uri.hasScheme || uri.host.isEmpty) {
         return l.backendConfigUrlInvalid;
+      }
+      if (_certificateBytes != null && uri.scheme.toLowerCase() != 'https') {
+        return l.backendConfigCertificateRequiresHttps;
       }
     } catch (e) {
       return l.backendConfigUrlInvalid;
@@ -374,7 +489,8 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                   subtitle: Text(
                     _customHeaders.isEmpty
                         ? l.backendConfigProxyHeadersSubtitle
-                        : l.backendConfigProxyHeadersCount(_customHeaders.length),
+                        : l.backendConfigProxyHeadersCount(
+                            _customHeaders.length),
                   ),
                   children: [
                     const SizedBox(height: 8),
@@ -403,6 +519,64 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.verified_user_outlined),
+                  title: Text(l.backendConfigCertificateLabel),
+                  subtitle: Text(
+                    _certificateName ?? l.backendConfigCertificateSubtitle,
+                  ),
+                  children: [
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _isLoading || _isTesting
+                                ? null
+                                : _pickCertificate,
+                            icon: const Icon(Icons.upload_file_outlined),
+                            label: Text(l.backendConfigCertificateChoose),
+                          ),
+                        ),
+                        if (_certificateBytes != null) ...[
+                          const SizedBox(width: 8),
+                          IconButton(
+                            tooltip: l.backendConfigCertificateRemove,
+                            onPressed: _isLoading || _isTesting
+                                ? null
+                                : () => setState(() {
+                                      _certificateBytes = null;
+                                      _certificateName = null;
+                                    }),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l.backendConfigCertificateHelp,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    if (_certificateBytes != null) ...[
+                      const SizedBox(height: 12),
+                      SelectableText(
+                        l.backendConfigCertificateFingerprint(
+                          certificateSha256Fingerprint(_certificateBytes!),
+                        ),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontFamily: 'monospace',
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+
                 // Test Connection Button
                 OutlinedButton.icon(
                   onPressed: _isTesting || _isLoading ? null : _testConnection,
@@ -413,7 +587,9 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.cable),
-                  label: Text(_isTesting ? l.backendConfigTesting : l.backendConfigTestButton),
+                  label: Text(_isTesting
+                      ? l.backendConfigTesting
+                      : l.backendConfigTestButton),
                 ),
 
                 const SizedBox(height: 12),
