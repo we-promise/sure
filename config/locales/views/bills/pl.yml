@@ -132,8 +132,8 @@ pl:
     find_payment: Znajdź płatność
     index:
       accept: Zastosuj
-      add_bill: Dodaj rachunek
-      add_income: Dodaj przychód
+      add_bill: Nowy rachunek
+      add_income: Nowy przychód
       all_automatic: wszystkie na autopłatności
       attention_overdue_total: "%{amount} zaległe"
       confidence: dopasowanie %{percent}%
@@ -147,7 +147,7 @@ pl:
         other: Znaleźliśmy %{count} cyklicznych płatności w Twoich transakcjach. Sprawdź
           je, aby sumy tutaj zgadzały się z tym, co faktycznie płacisz.
       detected_review_action: Sprawdź je
-      dormant: Uśpione
+      dormant: Wstrzymane
       empty:
         action: Znajdź transakcje cykliczne
         description: Rachunki to Twoje cykliczne wydatki. Sure wykrywa je automatycznie
@@ -216,7 +216,7 @@ pl:
         other: "%{count} rachunków nie jest uwzględnionych — brak dostępnego kursu
           wymiany"
     installment_progress: Płatność %{done_plus_one} z %{total}
-    manage: Zarządzaj
+    manage: Zobacz
     manage_payments: Zarządzaj płatnościami
     match:
       amount_off: różnica %{amount}
