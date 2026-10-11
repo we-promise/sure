@@ -4,6 +4,16 @@ it:
     show:
       title: Piano
       subtitle: "Decidi come destinare il tuo denaro: quanto spendere e quanto risparmiare."
+    bills_card:
+      nothing_owed: "Nient'altro da pagare questo mese."
+      overdue_count:
+        one: "1 scaduta"
+        other: "%{count} scadute"
+      owed_count:
+        one: "1 bolletta da pagare questo mese"
+        other: "%{count} bollette da pagare questo mese"
+      title: Bollette
+      view_bills: Vedi bollette
     budget_card:
       title: Questo mese
       edit_budget: Modifica budget
