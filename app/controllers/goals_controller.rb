@@ -1,6 +1,6 @@
 class GoalsController < ApplicationController
   before_action :require_preview_features!
-  before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive reopen consume record_consumption]
+  before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive reopen consume record_consumption release_consumption]
 
   FUNDABLE_TYPES = Goal::FUNDABLE_ACCOUNT_TYPES
   rescue_from ActiveRecord::RecordNotFound, with: :goal_not_found
@@ -35,6 +35,7 @@ class GoalsController < ApplicationController
   def show
     @open_pledges = @goal.open_pledges.reverse_chronological.to_a
     @unattributed_outflows = withdrawal_detector.unattributed_outflows.to_a
+    @consumed_entries = @goal.consumed_entries(eligible_consumption_accounts.map(&:id)).to_a
     @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ @goal.name, nil ]
@@ -169,6 +170,18 @@ class GoalsController < ApplicationController
   # Renders the dialog. The write lives in its own action below.
   def consume
     @consumption_accounts = eligible_consumption_accounts
+  end
+
+  def release_consumption
+    txn = @goal.consumed_entries(eligible_consumption_accounts.map(&:id))
+               .find_by(entryable_id: params[:transaction_id])
+               &.entryable
+    raise Goal::ConsumptionRefused.new(:transaction_not_found) if txn.nil?
+
+    @goal.release_consumption!(txn)
+    redirect_to goal_path(@goal), notice: t("goals.release_consumption.success")
+  rescue Goal::ConsumptionRefused => e
+    redirect_to goal_path(@goal), alert: t("goals.consume.errors.#{e.reason}")
   end
 
   def record_consumption
