@@ -565,6 +565,64 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.font-mono", count: 0
   end
 
+  test "sparkline does not trigger auto-sync" do
+    Sync.destroy_all
+    Family.any_instance.expects(:sync_later).never
+
+    get sparkline_account_url(@account)
+
+    assert_response :success
+  end
+
+  test "sparkline echoes the requesting sidebar frame id" do
+    frame_id = "mobile_all_#{dom_id(@account, :sparkline)}_0123456789ab"
+
+    get sparkline_account_url(@account), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id}", count: 1
+    assert_select "##{frame_id}_chart", count: 1
+  end
+
+  test "sparkline ignores a frame id that is not a sparkline frame" do
+    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "x\"><script>" }
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(@account, :sparkline)}", count: 1
+  end
+
+  test "sparkline etag depends on the requesting frame" do
+    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "tab_#{dom_id(@account, :sparkline)}_0123456789ab" }
+    etag = response.headers["ETag"]
+
+    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "tab_#{dom_id(@account, :sparkline)}_0123456789ab", "If-None-Match" => etag }
+    assert_response :not_modified
+
+    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "all_#{dom_id(@account, :sparkline)}_0123456789ab", "If-None-Match" => etag }
+    assert_response :success
+  end
+
+  test "sparkline ignores a frame id that only contains the sparkline id" do
+    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "other_#{dom_id(@account, :sparkline)}_0123456789ab" }
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(@account, :sparkline)}", count: 1
+  end
+
+  test "sidebar sparkline frames have unique ids and survive navigation" do
+    get account_url(@account)
+    assert_response :success
+
+    frames = css_select("turbo-frame[id*='_sparkline']")
+    ids = frames.map { |frame| frame["id"] }
+
+    assert_operator ids.size, :>, 1
+    assert_equal ids.uniq, ids
+    assert frames.all? { |frame| frame["data-turbo-permanent"] == "true" }
+    assert_includes ids.join(" "), "all_#{dom_id(@account, :sparkline)}_"
+    assert_includes ids.join(" "), "mobile_tab_#{dom_id(@account, :sparkline)}_"
+  end
+
   test "destroys account" do
     delete account_url(@account)
     assert_redirected_to accounts_path

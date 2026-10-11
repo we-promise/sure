@@ -1,6 +1,9 @@
 class AccountsController < ApplicationController
   include StreamExtensions
 
+  # Sparkline frames load lazily from the sidebar on every page and render no
+  # layout: skip layout-only setup and never start an auto-sync from them.
+  skip_before_action :sync_family, :set_default_chat, :restore_active_tabs, :detect_os, only: :sparkline
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
@@ -201,7 +204,8 @@ class AccountsController < ApplicationController
 
     # Short-circuit with 304 Not Modified when the client already has the latest version.
     # We defer the expensive series computation until we know the content is stale.
-    if stale?(etag: etag_key, last_modified: @account.family.latest_sync_completed_at)
+    # The frame id is part of the response body, so it is part of the ETag.
+    if stale?(etag: [ etag_key, turbo_frame_request_id ], last_modified: @account.family.latest_sync_completed_at)
       @sparkline_series = @account.sparkline_series
       render layout: false
     end
