@@ -73,6 +73,7 @@ module Assistant
         Function::CreateCategory,
         Function::UpdateCategory,
         Function::GetMerchants,
+        Function::GetUncategorizedTransactions,
         Function::UpdateTransaction,
         Function::CreateTransaction,
         Function::DeleteTransaction,
