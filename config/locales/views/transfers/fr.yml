@@ -10,6 +10,7 @@ fr:
       success: Transfert supprimé
     form:
       amount: Montant
+      category: Catégorie
       date: Date
       destination_amount: Montant de destination
       destination_amount_display: "Montant de destination : %{amount}"
@@ -25,11 +26,12 @@ fr:
       submit: Créer le transfert
       to: Vers
       transfer: Transfert
+      uncategorized: Non classé
     new:
       title: Nouveau transfert
     show:
       amount: Montant
-      category: Catégorie
+      category: Catégorie (compte source)
       date: Date
       delete: Supprimer le transfert
       delete_subtitle:

@@ -7,6 +7,7 @@ vi:
       success: Chuyển khoản đã được xóa
     form:
       amount: Số tiền
+      category: Danh mục
       date: Ngày
       destination_amount: Số tiền đích
       destination_amount_display: "Số tiền đích: %{amount}"
@@ -19,6 +20,7 @@ vi:
       submit: Tạo chuyển khoản
       to: Đến
       transfer: Chuyển khoản
+      uncategorized: Chưa phân loại
     new:
       title: Chuyển khoản mới
     show:

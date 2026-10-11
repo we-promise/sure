@@ -27,6 +27,51 @@ class TransfersTest < ApplicationSystemTestCase
     end
   end
 
+  test "transfer to an investment account defaults to the investment contributions category" do
+    investment_category = ensure_investment_contributions_category(@user.family)
+    transfer_date = Date.current
+
+    click_on "New transaction"
+    click_on "Transfer"
+    assert_text "New transfer"
+
+    select_ds("From", accounts(:depository))
+    select_ds("To", accounts(:investment))
+
+    fill_in "transfer[amount]", with: 100
+    fill_in "Date", with: transfer_date
+
+    click_button "Create transfer"
+
+    within "#entry-group-#{transfer_date}" do
+      assert_text investment_category.name
+    end
+    assert_equal investment_category, Transfer.order(:created_at).last.outflow_transaction.category
+  end
+
+  test "can pick a category when creating a transfer" do
+    category = @user.family.categories.create!(name: "Rainy day")
+    transfer_date = Date.current
+
+    click_on "New transaction"
+    click_on "Transfer"
+    assert_text "New transfer"
+
+    select_ds("From", accounts(:depository))
+    select_ds("To", accounts(:credit_card))
+    select_ds("Category", category)
+
+    fill_in "transfer[amount]", with: 100
+    fill_in "Date", with: transfer_date
+
+    click_button "Create transfer"
+
+    within "#entry-group-#{transfer_date}" do
+      assert_text "Rainy day"
+    end
+    assert_equal category, Transfer.order(:created_at).last.outflow_transaction.category
+  end
+
   test "shows exchange rate field for different currencies" do
     # Create an account with a different currency
     eur_account = @user.family.accounts.create!(

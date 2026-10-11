@@ -10,6 +10,7 @@ ca:
       success: Transferència eliminada
     form:
       amount: Import
+      category: Categoria
       date: Data
       destination_amount: Import rebut
       destination_amount_display: 'Import rebut: %{amount}'
@@ -22,6 +23,7 @@ ca:
       submit: Crea transferència
       to: A
       transfer: Transferència
+      uncategorized: Sense categoria
       bank_charges: Comissions bancàries
       outgoing_fee: Comissió de la transferència emesa
       incoming_fee: Comissió de la transferència rebuda

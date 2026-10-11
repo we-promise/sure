@@ -7,6 +7,7 @@ nb:
       success: Overføring fjernet
     form:
       amount: Beløp
+      category: Kategori
       date: Dato
       expense: Utgift
       from: Fra
@@ -15,6 +16,7 @@ nb:
       submit: Opprett overføring
       to: Til
       transfer: Overføring
+      uncategorized: Ukategorisert
     new:
       title: Ny overføring
     show:

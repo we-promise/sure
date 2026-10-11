@@ -7,6 +7,7 @@ zh-CN:
       success: 转账已移除
     form:
       amount: 金额
+      category: 分类
       date: 日期
       expense: 支出
       from: 转出账户
@@ -19,6 +20,7 @@ zh-CN:
       destination_amount_display: 目标金额：%{amount}
       exchange_rate_display: 汇率：%{rate}
       source_amount: 来源金额
+      uncategorized: 未分类
     new:
       title: 新建转账
     show:

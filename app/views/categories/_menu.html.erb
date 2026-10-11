@@ -3,10 +3,10 @@
 <%= render DS::Popover.new(variant: "button") do |popover| %>
   <% popover.with_button(class: "block w-full overflow-hidden") do %>
     <div class="hidden min-w-0 w-full lg:flex">
-      <%= render partial: "categories/badge", locals: { category: transaction.category } %>
+      <%= render partial: "categories/badge", locals: { category: display_category_for(transaction) } %>
     </div>
     <div class="flex lg:hidden">
-      <%= render partial: "categories/badge_mobile", locals: { category: transaction.category } %>
+      <%= render partial: "categories/badge_mobile", locals: { category: display_category_for(transaction) } %>
     </div>
   <% end %>
 

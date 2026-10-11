@@ -11,6 +11,7 @@ de:
       success: Überweisung entfernt
     form:
       amount: Betrag
+      category: Kategorie
       date: Datum
       expense: Ausgabe
       from: Von
@@ -26,6 +27,7 @@ de:
       incoming_fee: Gebühr für den Eingang
       outgoing_fee: Gebühr für den Ausgang
       source_amount: Betrag beim Absender
+      uncategorized: Nicht kategorisiert
     new:
       title: Neue Überweisung
     show:
