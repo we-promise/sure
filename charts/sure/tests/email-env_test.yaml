@@ -1,0 +1,86 @@
+suite: Email environment rendering
+templates:
+  - templates/web-deployment.yaml
+  - templates/worker-deployment.yaml
+
+tests:
+  - it: renders email values into Rails SMTP environment variables
+    set:
+      email:
+        sender: do-not-reply@example.com
+        appDomain: app.example.com
+        smtpAddress: smtp.example.com
+        smtpPort: 2465
+        smtpUsername: smtp-user
+        smtpTlsEnabled: true
+        smtpTlsSkipVerify: false
+      rails:
+        secret:
+          enabled: true
+          values:
+            SECRET_KEY_BASE: test-secret-key-base
+            SMTP_PASSWORD: test-smtp-password
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: EMAIL_SENDER
+            value: do-not-reply@example.com
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: APP_DOMAIN
+            value: app.example.com
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_ADDRESS
+            value: smtp.example.com
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_PORT
+            value: "2465"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_USERNAME
+            value: smtp-user
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-sure-app
+                key: SMTP_PASSWORD
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_TLS_ENABLED
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_TLS_SKIP_VERIFY
+            value: "false"
+
+  - it: allows rails.extraEnv to override generated email env vars
+    set:
+      email:
+        smtpAddress: smtp.example.com
+        smtpPort: 2465
+      rails:
+        extraEnv:
+          SMTP_ADDRESS: override.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_ADDRESS
+            value: override.example.com
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_PORT
+            value: "2465"
