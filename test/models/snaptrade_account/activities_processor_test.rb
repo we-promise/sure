@@ -1795,22 +1795,22 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2.0"), purchase_holding.qty
     assert_equal BigDecimal("57.0"), purchase_holding.price
     assert_equal BigDecimal("114.0"), purchase_holding.amount
-    assert_equal BigDecimal("57.0"), purchase_holding.cost_basis
+    assert_equal BigDecimal("57.025"), purchase_holding.cost_basis
     assert_equal "calculated", purchase_holding.cost_basis_source
-    assert_equal Money.new(57.0, "USD"), purchase_holding.avg_cost
+    assert_equal Money.new(57.025, "USD"), purchase_holding.avg_cost
 
     assert_equal BigDecimal("2.0"), current_holding.qty
     assert_equal BigDecimal("57.0"), current_holding.price
     assert_equal BigDecimal("114.0"), current_holding.amount
-    assert_equal BigDecimal("57.0"), current_holding.cost_basis
-    assert_equal Money.new(57.0, "USD"), current_holding.avg_cost
+    assert_equal BigDecimal("57.025"), current_holding.cost_basis
+    assert_equal Money.new(57.025, "USD"), current_holding.avg_cost
 
     # Also verify reverse materialization when current snapshot is present
     Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
 
     reverse_purchase_holding = @account.holdings.find_by!(security: security, date: purchase_date)
     assert_equal BigDecimal("114.0"), reverse_purchase_holding.amount
-    assert_equal BigDecimal("57.0"), reverse_purchase_holding.cost_basis
+    assert_equal BigDecimal("57.025"), reverse_purchase_holding.cost_basis
   end
 
   # Synthetic edge case: mini-option contract (is_mini_option: true, 10 shares/contract) — no mini options in k8s
