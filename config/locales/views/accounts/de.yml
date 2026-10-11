@@ -137,6 +137,7 @@ de:
       new_account_group: "Neue %{account_group}"
     types:
       depository: Bankkonto
+      physical_cash: Bargeld
       investment: Investment
       crypto: Krypto
       property: Immobilie
@@ -191,6 +192,7 @@ de:
       loan: Kredite
       other_asset: Sonstige Vermögenswerte
       other_liability: Sonstige Verbindlichkeiten
+      physical_cash: Bargeld
       property: Immobilien
       vehicle: Fahrzeuge
 
