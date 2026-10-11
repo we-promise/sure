@@ -236,6 +236,13 @@ en:
         label: API Key
         placeholder: Enter your Realie API key here
         usage: "%{used} of %{limit} monthly requests used"
+      terrascoutx_settings:
+        title: TerraScoutX
+        description: Enter your TerraScoutX API key to look up US property details and values when adding a property. The value is the county assessor's appraised value from the latest tax roll TerraScoutX holds, not an automated market estimate, so it lags the market and can sit well below it in states that cap assessments, such as California. Coverage varies by county. Keys are free and limited to 2,000 API requests per month, shared between property lookups and daily valuation refreshes. If your key allows more, raise the cap with the TERRASCOUTX_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the TERRASCOUTX_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your TerraScoutX API key here
+        usage: "%{used} of %{limit} monthly requests used"
       tiingo_settings:
         title: Tiingo
         description: Enter the API token provided by Tiingo. Free tier supports 50 unique symbols per hour with 30+ years of historical data.

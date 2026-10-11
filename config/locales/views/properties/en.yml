@@ -25,6 +25,7 @@ en:
     avm_providers:
       rentcast: RentCast
       realie: Realie
+      terrascoutx: TerraScoutX
     new:
       title: Enter property manually
       next: "Next"
@@ -35,6 +36,10 @@ en:
       avm_submit: "Look up property"
       avm_preview_title: "Confirm property details"
       avm_preview_description: "Here's what %{provider} found. Review the details before adding the property — nothing has been created yet."
+      avm_descriptions:
+        terrascoutx: "Enter a name for the property and its address. %{provider} will look up the property details and the county's assessed value from its latest tax roll. That is not a current market estimate."
+      avm_roll_value_notes:
+        terrascoutx: "%{provider} reports the county's assessed value from its latest tax roll. It is not a current market estimate, so it can differ from what the property would sell for."
       avm_preview_no_record: "%{provider} couldn't find a property record at this address, so the value shown is an estimate based on the surrounding area. Double-check the address before continuing."
       avm_preview_back: "Back"
       avm_preview_confirm: "Add property"
