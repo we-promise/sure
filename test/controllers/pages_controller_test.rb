@@ -168,6 +168,48 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{dashboard_section_hidden_path("balance_sheet")}'] input[name='spending_category_ids[]'][value='#{category.id}']"
   end
 
+  test "each dashboard control keeps the other widgets' months and filters" do
+    account = accounts(:depository)
+    category = categories(:food_and_drink)
+    # Relative months, so each stays inside the widgets' 12-month menus.
+    money_flow_month, spending_month, other_month = (1..3).map { |i| i.months.ago.beginning_of_month.to_date.iso8601 }
+    view_params = {
+      start_date: "2026-08-01", end_date: "2026-08-31",
+      money_flow_month: money_flow_month, money_flow_account_ids: [ account.id ],
+      spending_month: spending_month, spending_category_ids: [ category.id ]
+    }
+
+    get root_path(view_params)
+    assert_response :ok
+
+    # Applying money flow's account filter keeps the spending trend's state
+    # (and the custom period); its own accounts come from the checkboxes.
+    assert_select "#money-flow-section form input[type='hidden'][name='spending_category_ids[]'][value='#{category.id}']"
+    assert_select "#money-flow-section form input[type='hidden'][name='spending_month'][value='#{spending_month}']"
+    assert_select "#money-flow-section form input[type='hidden'][name='start_date'][value='2026-08-01']"
+    assert_select "#money-flow-section form input[type='hidden'][name='money_flow_account_ids[]']", count: 0
+
+    # ...and the other way round.
+    assert_select "#spending-trend-section form input[type='hidden'][name='money_flow_account_ids[]'][value='#{account.id}']"
+    assert_select "#spending-trend-section form input[type='hidden'][name='money_flow_month'][value='#{money_flow_month}']"
+    assert_select "#spending-trend-section form input[type='hidden'][name='spending_category_ids[]']", count: 0
+
+    # Month links keep the other widget's state too.
+    money_flow_link = dashboard_link_params("#money-flow-section a[href*='money_flow_month=#{other_month}']")
+    assert_equal [ category.id ], money_flow_link["spending_category_ids"]
+    assert_equal spending_month, money_flow_link["spending_month"]
+    spending_link = dashboard_link_params("#spending-trend-section a[href*='spending_month=#{other_month}']")
+    assert_equal [ account.id ], spending_link["money_flow_account_ids"]
+    assert_equal money_flow_month, spending_link["money_flow_month"]
+
+    # Picking a preset period keeps every widget's state but drops the custom range.
+    period_link = dashboard_link_params("a[href*='period=last_90_days']")
+    assert_equal [ account.id ], period_link["money_flow_account_ids"]
+    assert_equal [ category.id ], period_link["spending_category_ids"]
+    assert_nil period_link["start_date"]
+    assert_nil period_link["end_date"]
+  end
+
   test "customize mode focuses the widget that was just added back, or its re-add button once hidden" do
     @user.update_dashboard_section_hidden("net_worth_chart", true)
 
@@ -1050,6 +1092,10 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     def spending_trend_chart_data
       JSON.parse(css_select("[data-controller='spending-chart']").first["data-spending-chart-data-value"])
+    end
+
+    def dashboard_link_params(selector)
+      Rack::Utils.parse_nested_query(URI.parse(css_select(selector).first["href"]).query)
     end
 
     def spending_trend_category_values

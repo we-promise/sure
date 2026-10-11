@@ -1,4 +1,4 @@
-<%# locals: (spending_trend_data:) %>
+<%# locals: (spending_trend_data:, view_params:) %>
 <%
   data = spending_trend_data
   period = data[:current_period]
@@ -15,6 +15,9 @@
   previous_comparison_day = data[:previous_comparison_day]
   date_range_short = data[:date_range_short]
   category_options = data[:category_options]
+  # The other widgets' months and filters, carried through this widget's
+  # links and form so changing it doesn't reset them.
+  other_view_params = view_params.except(:spending_month, :spending_category_ids)
 %>
 <div id="spending-trend-section" class="px-4 space-y-4">
   <%# Wraps so the month picker and category filter drop below the date on
@@ -41,7 +44,7 @@
           <% menu.with_item(
                variant: :link,
                text: I18n.l(month, format: :month_year).capitalize,
-               href: root_path({ spending_month: month.iso8601, spending_category_ids: data[:category_ids] }.compact),
+               href: root_path(other_view_params.merge(spending_month: month.iso8601, spending_category_ids: data[:category_ids]).compact),
                frame: "dashboard_sections",
                selected: month == data[:month]
              ) %>
@@ -52,7 +55,7 @@
             button_text: data[:category_ids] ? t(".filter_categories", count: category_options.count { |option| option[:checked] }) : t(".filter_categories_all"),
             search_label: t(".search_categories"),
             apply_text: t(".apply"),
-            hidden_fields: { spending_month: data[:month].iso8601 },
+            hidden_fields: other_view_params.merge(spending_month: data[:month].iso8601),
             list_controllers: "list-filter category-filter"
           } do %>
         <%# Same cascade as the transactions category filter: a parent is

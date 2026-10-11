@@ -27,8 +27,9 @@ class PagesController < ApplicationController
   MONEY_FLOW_CHART_MONTHS = 6
 
   # Query params that shape what the dashboard shows without being saved
-  # anywhere. Customize mode carries them through its links and hide/add
-  # buttons so the widgets don't jump back to their defaults.
+  # anywhere. Customize mode, the period picker and each widget's own month
+  # links and filter forms carry them along, so changing one control doesn't
+  # jump the other widgets back to their defaults.
   DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
 
   # Selectable height presets (px) for grow widgets.
@@ -162,6 +163,7 @@ class PagesController < ApplicationController
               # to this broader set, not `accounts`, so the view needs it to
               # know when the drill-down links can safely omit account_ids.
               accessible_account_ids: Current.user.accessible_accounts.pluck(:id).map(&:to_s),
+              view_params: dashboard_view_params,
               col_span: section_layout("money_flow")[:col_span]
             },
             visible: @accounts.any?,
@@ -174,7 +176,10 @@ class PagesController < ApplicationController
             title: "pages.dashboard.spending_trend.title",
             partial: "pages/dashboard/spending_trend",
             layout: section_layout("spending_trend"),
-            locals: { spending_trend_data: build_spending_trend_data(dashboard_income_statement, spending_trend_month_param, spending_trend_category_ids_param) },
+            locals: {
+              spending_trend_data: build_spending_trend_data(dashboard_income_statement, spending_trend_month_param, spending_trend_category_ids_param),
+              view_params: dashboard_view_params
+            },
             visible: @accounts.any?,
             collapsible: true
           }
