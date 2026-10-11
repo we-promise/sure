@@ -326,7 +326,7 @@ en:
         target_amount: Target amount
         target_balance: "Target balance"
         target_balance_pending: "Worked out when you save"
-        target_balance_hint: "From your median monthly spending over the months above. Refreshed each month."
+        target_balance_hint: "From your median monthly spending over the months above. Recomputed each month."
         target_date: Target date
         color: Color
         notes: Notes (optional)
