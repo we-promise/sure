@@ -1,0 +1,9 @@
+---
+sv:
+  other_assets:
+    edit:
+      edit: Redigera %{account}
+      balance_tracking_info: "Övriga tillgångar spåras via manuella värderingar med 'Nytt saldo', inte transaktioner. Kassaflödet påverkar inte kontosaldot."
+    new:
+      title: Ange tillgångsdetaljer
+      balance_tracking_info: "Övriga tillgångar spåras via manuella värderingar med 'Nytt saldo', inte transaktioner. Kassaflödet påverkar inte kontosaldot."

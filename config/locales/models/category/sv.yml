@@ -1,0 +1,29 @@
+---
+sv:
+  models:
+    category:
+      uncategorized: Okategoriserat
+      other_investments: Övriga investeringar
+      investment_contributions: Investeringsinsättningar
+      defaults:
+        income: Inkomst
+        food_and_drink: Mat & dryck
+        groceries: Livsmedel
+        shopping: Shopping
+        transportation: Transport
+        travel: Resor
+        entertainment: Nöje
+        healthcare: Sjukvård
+        personal_care: Personlig vård
+        home_improvement: Hemförbättring
+        mortgage_rent: Bolån / Hyra
+        utilities: El & vatten
+        subscriptions: Prenumerationer
+        insurance: Försäkring
+        sports_and_fitness: Sport & träning
+        gifts_and_donations: Gåvor & donationer
+        taxes: Skatter
+        loan_payments: Lånebetalningar
+        services: Tjänster
+        fees: Avgifter
+        savings_and_investments: Sparande & investeringar

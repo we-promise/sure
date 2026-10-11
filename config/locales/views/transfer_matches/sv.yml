@@ -1,0 +1,24 @@
+---
+sv:
+  transfer_matches:
+    create:
+      success: Överföring skapad
+    new:
+      header:
+        title: Matcha överföring eller betalning
+        subtitle: Matcha motsvarande transaktion i ett annat konto eller skapa en om den inte finns.
+      from_account: Från konto
+      from_account_named: "Från konto: %{name}"
+      to_account: Till konto
+      to_account_named: "Till konto: %{name}"
+      outflow_transaction: Utgående transaktion
+      inflow_transaction: Inkommande transaktion
+      create_transfer_match: Skapa överföringsmatchning
+    matching_fields:
+      select_method: Välj en metod för att matcha dina transaktioner.
+      match_existing_recommended: Matcha befintlig transaktion (rekommenderas)
+      create_new_transaction: Skapa ny transaktion
+      matching_method: Matchningsmetod
+      matching_transaction: Matchande transaktion
+      target_account: Målkonto
+      no_matching_transactions: Vi kunde inte hitta någon transaktion att matcha från dina andra konton. Välj ett konto så skapar vi en ny inkommande transaktion åt dig.

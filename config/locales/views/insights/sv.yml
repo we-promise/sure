@@ -1,0 +1,102 @@
+---
+sv:
+  insights:
+    notification:
+      title: Ny finansiell insikt
+      body: Öppna Sure för att granska din senaste AI-insikt.
+    index:
+      title: Insikter
+      subtitle: Vad som händer i din ekonomi, uppdateras varje natt.
+      refresh: Sök efter nya insikter
+      empty:
+        title: Inga insikter ännu
+        description: Insikter dyker upp här när det finns tillräcklig aktivitet på dina konton. De uppdateras automatiskt varje natt.
+    refresh:
+      queued: Vi genererar nya insikter. Kolla tillbaka om en minut.
+      checking: Kontrollerar…
+    card:
+      acknowledged: "Insikt avvisad"
+      acknowledge: Förstått
+      acknowledge_title: Dölj tills siffrorna ändras
+      new: Ny
+    feed:
+      view_all: Visa alla insikter
+      header: Senaste
+      header_new: Ny
+      acknowledge_aria: "Förstått: %{title}"
+    types:
+      spending_anomaly: Utgifter
+      cash_flow_warning: Kassaflöde
+      net_worth_milestone: Nettoförmögenhet
+      subscription_audit: Prenumerationer
+      savings_rate_change: Sparkvot
+      idle_cash: Inaktiva kontanter
+      budget_at_risk: Budget
+      budget_on_track: Budget
+      maintained_goal_depleted: Reserv
+    meta:
+      next_n_days:
+        one: Nästa dag
+        other: Nästa %{count} dagar
+      last_n_days:
+        one: Senaste dagen
+        other: Senaste %{count} dagarna
+      date_range: "%{from} till %{to}"
+    figures:
+      vs_previous: jämfört med föregående månad
+      today: idag
+      on_pace: i fas
+      of_budget: av budgeten
+      need_attention: behöver uppmärksamhet
+      days_overdue:
+        one: "%{count} dag försenad"
+        other: "%{count} dagar försenad"
+      idle_days:
+        one: inaktiv %{count} dag
+        other: inaktiv %{count} dagar
+    actions:
+      spending_anomaly: Visa %{category}-transaktioner
+      cash_flow_warning: Granska återkommande transaktioner
+      net_worth_milestone: Visa nettoförmögenhetsrapport
+      subscription_audit: Granska återkommande transaktioner
+      savings_rate_change: Visa den månadens transaktioner
+      idle_cash: Gå till konto
+      budget: Visa budget
+      maintained_goal_depleted: Visa reserv
+    titles:
+      spending_anomaly:
+        above: "%{category}-utgifterna ökar"
+        below: "%{category}-utgifterna minskar"
+      cash_flow_warning:
+        low: Ditt kassasaldo kan bli lågt
+        negative: Ditt kassasaldo kan bli negativt
+      net_worth_milestone: "Nettoförmögenhetsmilstolpe: %{milestone}"
+      maintained_goal_depleted: "%{goal} har sjunkit under sin nivå"
+      subscription_audit: "Är %{name} fortfarande aktiv?"
+      savings_rate_change:
+        up: Din sparkvot förbättrades i %{month}
+        down: Din sparkvot sjönk i %{month}
+      idle_cash: Inaktiva kontanter i %{account}
+      budget_at_risk:
+        one: En kategori behöver uppmärksamhet i din budget
+        other: "%{count} kategorier behöver uppmärksamhet i din budget"
+      budget_on_track: Din budget håller kursen
+    templates:
+      spending_anomaly:
+        above: Du ligger på väg att spendera %{projected_spend} på %{category} den här månaden, cirka %{deviation_pct}% mer än ditt genomsnitt de senaste månaderna på %{baseline_spend}.
+        below: Du ligger på väg att spendera %{projected_spend} på %{category} den här månaden, cirka %{deviation_pct}% mindre än ditt genomsnitt de senaste månaderna på %{baseline_spend}.
+      cash_flow_warning:
+        low: Baserat på dina kommande återkommande transaktioner och typiska utgifter kan ditt kassasaldo sjunka till %{projected_low} omkring %{projected_low_date}.
+        negative: Baserat på dina kommande återkommande transaktioner och typiska utgifter kan ditt kassasaldo falla till %{projected_low} omkring %{projected_low_date}.
+      net_worth_milestone: Din nettoförmögenhet passerade %{milestone} och ligger nu på %{net_worth}.
+      maintained_goal_depleted: "%{goal} håller %{saved} av de %{target} den är avsedd att behålla. Den är %{missing} kort."
+      subscription_audit: "%{name} (%{amount}) har inte dykt upp sedan den förväntades den %{expected_on}. Den kan ha avslutats, eller avgiften kan ha flyttats."
+      savings_rate_change:
+        up: Du sparade %{current_rate}% av din inkomst i %{month}, upp %{change_pp} procentenheter från %{previous_rate}% månaden innan.
+        down: Du sparade %{current_rate}% av din inkomst i %{month}, ner %{change_pp} procentenheter från %{previous_rate}% månaden innan.
+        down_negative: "Du spenderade mer än du tjänade i %{month}: din sparkvot föll till %{current_rate}%, från %{previous_rate}% månaden innan."
+      idle_cash: "%{account} håller %{balance} utan aktivitet de senaste %{idle_days} dagarna."
+      budget_at_risk:
+        over: "%{categories} gick över budget den här månaden. Du har använt %{budget_spent_pct}% av din totala budget hittills."
+        near: "%{categories} närmar sig sina gränser den här månaden. Du har använt %{budget_spent_pct}% av din totala budget hittills."
+      budget_on_track: Du har spenderat %{spent} av din budget på %{budgeted} (%{budget_spent_pct}%) och allt håller sig inom gränserna.

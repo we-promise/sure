@@ -1,0 +1,252 @@
+---
+sv:
+  indexa_capital_items:
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "Inga konton hittades"
+      synced:
+        one: "%{count} konto synkat"
+        other: "%{count} konton synkade"
+      synced_with_setup: "%{linked} synkade, %{unlinked} behöver konfigureras"
+    institution_summary:
+      none: "Inga institutioner anslutna"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutioner"
+    errors:
+      provider_not_configured: "IndexaCapital-leverantören är inte konfigurerad"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Importerar konton från IndexaCapital..."
+        processing: "Bearbetar innehav och aktiviteter..."
+        calculating: "Beräknar saldon..."
+        importing_data: "Importerar kontodata..."
+        checking_setup: "Kontrollerar kontokonfiguration..."
+        needs_setup: "%{count} konton behöver konfigureras..."
+      success: "Synk startad"
+
+    # Panel (settings view)
+    panel:
+      setup_instructions: "Konfigurationsinstruktioner:"
+      step_1: "Besök din Indexa Capital-instrumentpanel för att skapa en skrivskyddad API-token"
+      step_2: "Klistra in din API-token nedan och klicka på Spara"
+      step_3: "Efter en lyckad anslutning, gå till fliken Konton för att konfigurera nya konton"
+      field_descriptions: "Fältbeskrivningar:"
+      optional: "(Valfritt)"
+      required: "(obligatoriskt)"
+      optional_with_default: "(valfritt, standard %{default_value})"
+      alternative_auth: "Eller använd användarnamn/lösenord-autentisering istället..."
+      save_button: "Spara konfiguration"
+      update_button: "Uppdatera konfiguration"
+      fields:
+        api_token:
+          label: "API-token"
+          description: "Din skrivskyddade API-token från Indexa Capital-instrumentpanelen"
+          placeholder_new: "Klistra in din API-token här"
+          placeholder_update: "Ange ny API-token för att uppdatera"
+        username:
+          label: "Användarnamn"
+          description: "Ditt Indexa Capital-användarnamn/e-postadress"
+          placeholder_new: "Klistra in användarnamn här"
+          placeholder_update: "Ange nytt användarnamn för att uppdatera"
+        document:
+          label: "Dokument-ID"
+          description: "Ditt Indexa Capital-dokument/ID"
+          placeholder_new: "Klistra in dokument-ID här"
+          placeholder_update: "Ange nytt dokument-ID för att uppdatera"
+        password:
+          label: "Lösenord"
+          description: "Ditt Indexa Capital-lösenord"
+          placeholder_new: "Klistra in lösenord här"
+          placeholder_update: "Ange nytt lösenord för att uppdatera"
+
+    # CRUD success messages
+    create:
+      success: "IndexaCapital-anslutningen skapades"
+    update:
+      success: "IndexaCapital-anslutningen uppdaterades"
+    destroy:
+      success: "IndexaCapital-anslutningen togs bort"
+    index:
+      title: "IndexaCapital-anslutningar"
+
+    # Loading states
+    loading:
+      loading_message: "Laddar IndexaCapital-konton..."
+      loading_title: "Laddar"
+
+    # Account linking
+    link_accounts:
+      all_already_linked:
+        one: "Det valda kontot (%{names}) är redan kopplat"
+        other: "Alla %{count} valda konton är redan kopplade: %{names}"
+      api_error: "API-fel: %{message}"
+      invalid_account_names:
+        one: "Kan inte koppla konto med tomt namn"
+        other: "Kan inte koppla %{count} konton med tomma namn"
+      link_failed: "Det gick inte att koppla konton"
+      no_accounts_selected: "Välj minst ett konto"
+      no_api_key: "IndexaCapital-inloggningsuppgifter hittades inte. Konfigurera dem i Leverantörsinställningar."
+      partial_invalid: "Kopplade %{created_count} konto/konton, %{already_linked_count} var redan kopplade, %{invalid_count} konto/konton hade ogiltiga namn"
+      partial_success: "Kopplade %{created_count} konto/konton. %{already_linked_count} konto/konton var redan kopplade: %{already_linked_names}"
+      success:
+        one: "Kopplade %{count} konto"
+        other: "Kopplade %{count} konton"
+
+    # Provider item display (used in _item partial)
+    indexa_capital_item:
+      accounts_need_setup: "Konton behöver konfigureras"
+      delete: "Ta bort anslutning"
+      deletion_in_progress: "borttagning pågår..."
+      error: "Fel"
+      more_accounts_available:
+        one: "%{count} till konto tillgängligt"
+        other: "%{count} till konton tillgängliga"
+      no_accounts_description: "Den här anslutningen har inga kopplade konton ännu."
+      no_accounts_title: "Inga konton"
+      provider_name: "IndexaCapital"
+      requires_update: "Anslutningen behöver uppdateras"
+      setup_action: "Konfigurera nya konton"
+      setup_description: "%{linked} av %{total} konton kopplade. Välj kontotyper för dina nyligen importerade IndexaCapital-konton."
+      setup_needed: "Nya konton redo att konfigureras"
+      status: "Synkat %{timestamp} sedan — %{summary}"
+      status_never: "Aldrig synkat"
+      syncing: "Synkar..."
+      total: "Totalt"
+      unlinked: "Okopplade"
+      update_credentials: "Uppdatera inloggningsuppgifter"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "konton valda"
+      api_error: "API-fel: %{message}"
+      cancel: "Avbryt"
+      configure_name_in_provider: "Kan inte importera - konfigurera kontonamn i IndexaCapital"
+      description: "Välj de konton du vill koppla till ditt %{product_name}-konto."
+      link_accounts: "Koppla valda konton"
+      no_accounts_found: "Inga konton hittades. Kontrollera dina IndexaCapital-inloggningsuppgifter."
+      no_api_key: "IndexaCapital-inloggningsuppgifter är inte konfigurerade. Konfigurera dem i Inställningar."
+      no_credentials_configured: "Konfigurera dina IndexaCapital-inloggningsuppgifter först i Leverantörsinställningar."
+      no_name_placeholder: "(Inget namn)"
+      title: "Välj IndexaCapital-konton"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "Det här kontot är redan kopplat till en leverantör"
+      all_accounts_already_linked: "Alla IndexaCapital-konton är redan kopplade"
+      api_error: "API-fel: %{message}"
+      balance_label: "Saldo:"
+      cancel: "Avbryt"
+      cancel_button: "Avbryt"
+      configure_name_in_provider: "Kan inte importera - konfigurera kontonamn i IndexaCapital"
+      connect_hint: "Anslut ett IndexaCapital-konto för att aktivera automatisk synk."
+      description: "Välj ett IndexaCapital-konto att koppla till det här kontot. Transaktioner synkas och dedupliceras automatiskt."
+      header: "Koppla med IndexaCapital"
+      link_account: "Koppla konto"
+      link_button: "Koppla det här kontot"
+      linking_to: "Kopplar till:"
+      no_account_specified: "Inget konto angivet"
+      no_accounts: "Inga okopplade IndexaCapital-konton hittades."
+      no_accounts_found: "Inga IndexaCapital-konton hittades. Kontrollera dina inloggningsuppgifter."
+      no_api_key: "IndexaCapital-inloggningsuppgifter är inte konfigurerade. Konfigurera dem i Inställningar."
+      no_credentials_configured: "Konfigurera dina IndexaCapital-inloggningsuppgifter först i Leverantörsinställningar."
+      no_name_placeholder: "(Inget namn)"
+      settings_link: "Gå till Leverantörsinställningar"
+      subtitle: "Välj ett IndexaCapital-konto"
+      title: "Koppla %{account_name} med IndexaCapital"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "Det här kontot är redan kopplat till en leverantör"
+      api_error: "API-fel: %{message}"
+      invalid_account_name: "Kan inte koppla konto med tomt namn"
+      provider_account_already_linked: "Det här IndexaCapital-kontot är redan kopplat till ett annat konto"
+      provider_account_not_found: "IndexaCapital-kontot hittades inte"
+      missing_parameters: "Obligatoriska parametrar saknas"
+      no_api_key: "IndexaCapital-inloggningsuppgifter hittades inte. Konfigurera dem i Leverantörsinställningar."
+      success: "Kopplade %{account_name} med IndexaCapital"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Kontotyp:"
+      accounts_count:
+        one: "%{count} konto tillgängligt"
+        other: "%{count} konton tillgängliga"
+      all_accounts_linked: "Alla dina IndexaCapital-konton har redan konfigurerats."
+      api_error: "API-fel: %{message}"
+      creating: "Skapar konton..."
+      fetch_failed: "Det gick inte att hämta konton"
+      import_selected: "Importera valda konton"
+      instructions: "Välj de konton du vill importera från IndexaCapital. Du kan välja flera konton."
+      no_accounts: "Inga okopplade konton hittades från den här IndexaCapital-anslutningen."
+      no_accounts_to_setup: "Inga konton att konfigurera"
+      no_api_key: "IndexaCapital-inloggningsuppgifter är inte konfigurerade. Kontrollera dina anslutningsinställningar."
+      select_all: "Välj alla"
+      account_types:
+        skip: "Hoppa över det här kontot"
+        depository: "Löne- eller sparkonto"
+        credit_card: "Kreditkort"
+        investment: "Investeringskonto"
+        crypto: "Kryptovalutakonto"
+        loan: "Lån eller bolån"
+        other_asset: "Övrig tillgång"
+      subtype_labels:
+        depository: "Kontountertyp:"
+        credit_card: ""
+        investment: "Investeringstyp:"
+        crypto: ""
+        loan: "Lånetyp:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkort konfigureras automatiskt som kreditkortskonton."
+        other_asset: "Inga ytterligare alternativ behövs för övriga tillgångar."
+        crypto: "Kryptovalutakonton konfigureras för att följa innehav och transaktioner."
+      subtypes:
+        depository:
+          checking: "Lönekonto"
+          savings: "Sparkonto"
+          hsa: "Hälsosparkonto (HSA)"
+          cd: "Insättningscertifikat (CD)"
+          money_market: "Penningmarknadskonto"
+        investment:
+          brokerage: "Mäklarkonto"
+          pension: "Pension"
+          retirement: "Pensionssparande"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "Thrift Savings Plan"
+          "529_plan": "529 Plan"
+          hsa: "Hälsosparkonto (HSA)"
+          mutual_fund: "Fond"
+          ira: "Traditionell IRA"
+          roth_ira: "Roth IRA"
+          angel: "Ängelinvestering"
+        loan:
+          mortgage: "Bolån"
+          student: "Studielån"
+          auto: "Billån"
+          other: "Övrigt lån"
+      balance: "Saldo"
+      cancel: "Avbryt"
+      choose_account_type: "Välj rätt kontotyp för varje IndexaCapital-konto:"
+      create_accounts: "Skapa konton"
+      creating_accounts: "Skapar konton..."
+      historical_data_range: "Historiskt dataintervall:"
+      subtitle: "Välj rätt kontotyper för dina importerade konton"
+      sync_start_date_help: "Välj hur långt tillbaka du vill synka transaktionshistorik."
+      sync_start_date_label: "Börja synka transaktioner från:"
+      title: "Konfigurera dina IndexaCapital-konton"
+
+    # Complete account setup
+    complete_account_setup:
+      all_skipped: "Alla konton hoppades över. Inga konton skapades."
+      creation_failed: "Det gick inte att skapa konton: %{error}"
+      no_accounts: "Inga konton att konfigurera."
+      success: "Skapade %{count} konto/konton."
+
+    # Preload accounts
+    preload_accounts:
+      no_credentials_configured: "Konfigurera dina IndexaCapital-inloggningsuppgifter först i Leverantörsinställningar."

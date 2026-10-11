@@ -1,0 +1,36 @@
+---
+sv:
+  activerecord:
+    attributes:
+      goal:
+        name: Namn
+        target_amount: Målbelopp
+        currency: Valuta
+        target_date: Måldatum
+        color: Färg
+        notes: Anteckningar
+        state: Status
+        linked_accounts: Länkade konton
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Välj minst ett konto för att finansiera detta mål.
+              whole_account_conflict_on_restore: "Kan inte återställa detta mål: ”%{account_name}” är nu helt öronmärkt för ”%{goal_name}”. Ange ett belopp på ett av dem först."
+            target_mode:
+              months_requires_maintained: Endast en reserv du underhåller kan ha ett mål angivet i månaders utgifter.
+            target_months:
+              blank: Ange hur många månaders utgifter denna reserv ska täcka.
+              only_with_months_mode: Månaders utgifter gäller bara när målet är satt på det sättet.
+            linked_accounts:
+              must_be_fundable: Alla länkade konton måste vara kontanter eller investeringskonton.
+              currency_mismatch: Alla länkade konton måste ha samma valuta.
+              must_belong_to_family: Länkade konton måste tillhöra samma familj som målet.
+            kind:
+              locked_while_released: Öppna detta mål igen innan du gör det till en reserv.
+              locked_once_consumed: Detta mål har redan registrerat pengar som spenderade och kan därför inte bli en reserv.
+            target_amount:
+              below_consumed: Kan inte sätta ett mål lägre än vad som redan registrerats som spenderat för detta mål.
+            currency:
+              locked_after_linked: Kan inte ändra valuta efter att målet har länkats till konton.

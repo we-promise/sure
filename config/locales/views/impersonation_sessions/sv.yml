@@ -1,0 +1,25 @@
+---
+sv:
+  impersonation_sessions:
+    approve:
+      success: Begäran godkänd
+    complete:
+      success: Sessionen avslutad
+    create:
+      success: Begäran skickad till användaren. Väntar på godkännande.
+    join:
+      success: Anslöt till sessionen
+    leave:
+      success: Lämnade sessionen
+    reject:
+      success: Begäran nekad
+    super_admin_bar:
+      super_admin: Superadministratör
+      jobs: Jobb
+      impersonating: Imiterar
+      leave: Lämna
+      terminate: Avsluta
+      join_a_session: Anslut till en session
+      join: Anslut
+      uuid_placeholder: UUID
+      request_impersonation: Begär imitation

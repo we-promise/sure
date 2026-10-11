@@ -1,0 +1,78 @@
+---
+sv:
+  coinbase_items:
+    create:
+      default_name: Coinbase
+      success: Ansluten till Coinbase! Dina konton synkroniseras nu.
+    update:
+      success: Coinbase-konfigurationen har uppdaterats.
+    destroy:
+      success: Coinbase-anslutningen är schemalagd för borttagning.
+    setup_accounts:
+      title: Importera Coinbase-plånböcker
+      subtitle: Välj vilka plånböcker som ska spåras
+      instructions: Välj de plånböcker du vill importera. Ej valda plånböcker finns fortfarande kvar om du vill lägga till dem senare.
+      no_accounts: Alla plånböcker har importerats.
+      accounts_count:
+        one: "%{count} plånbok tillgänglig"
+        other: "%{count} plånböcker tillgängliga"
+      select_all: Markera alla
+      import_selected: Importera valda
+      cancel: Avbryt
+      creating: Importerar...
+    complete_account_setup:
+      success:
+        one: "Importerade %{count} plånbok"
+        other: "Importerade %{count} plånböcker"
+      none_selected: Inga plånböcker valda
+      no_accounts: Inga plånböcker att importera
+    coinbase_item:
+      provider_name: Coinbase
+      syncing: Synkroniserar...
+      reconnect: Autentiseringsuppgifterna behöver uppdateras
+      deletion_in_progress: Tar bort...
+      sync_status:
+        no_accounts: Inga konton hittades
+        all_synced:
+          one: "%{count} konto synkroniserat"
+          other: "%{count} konton synkroniserade"
+        partial_sync: "%{linked_count} synkroniserade, %{unlinked_count} behöver konfigureras"
+      status: "Senast synkroniserad för %{timestamp} sedan"
+      status_with_summary: "Senast synkroniserad för %{timestamp} sedan - %{summary}"
+      status_never: Aldrig synkroniserad
+      update_credentials: Uppdatera autentiseringsuppgifter
+      delete: Ta bort
+      no_accounts_title: Inga konton hittades
+      no_accounts_message: Dina Coinbase-plånböcker visas här efter synkronisering.
+      setup_needed: Plånböcker redo att importeras
+      setup_description: Välj vilka Coinbase-plånböcker du vill spåra.
+      setup_action: Importera plånböcker
+      import_wallets_menu: Importera plånböcker
+      more_wallets_available:
+        one: "%{count} till plånbok tillgänglig för import"
+        other: "%{count} till plånböcker tillgängliga för import"
+    select_existing_account:
+      title: Länka Coinbase-konto
+      no_accounts_found: Inga Coinbase-konton hittades.
+      wait_for_sync: Vänta tills Coinbase har synkroniserat klart
+      check_provider_health: Kontrollera att dina Coinbase API-uppgifter är giltiga
+      balance: Saldo
+      currently_linked_to: "Just nu länkat till: %{account_name}"
+      link: Länka
+      cancel: Avbryt
+    link_existing_account:
+      success: Länkat till Coinbase-konto
+      errors:
+        only_manual: Endast manuella konton kan länkas till Coinbase
+        invalid_coinbase_account: Ogiltigt Coinbase-konto
+  coinbase_item:
+    syncer:
+      checking_credentials: Kontrollerar autentiseringsuppgifter...
+      credentials_invalid: Ogiltiga API-uppgifter. Kontrollera din API-nyckel och hemlighet.
+      importing_accounts: Importerar konton från Coinbase...
+      checking_configuration: Kontrollerar kontokonfiguration...
+      accounts_need_setup:
+        one: "%{count} konto behöver konfigureras"
+        other: "%{count} konton behöver konfigureras"
+      processing_accounts: Bearbetar kontodata...
+      calculating_balances: Beräknar saldon...

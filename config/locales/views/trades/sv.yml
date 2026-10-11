@@ -1,0 +1,72 @@
+---
+sv:
+  trades:
+    api_errors:
+      activity_label_must_match_type: "investment_activity_label måste vara %{label} när typen är %{type}"
+      invalid_activity_label: Ogiltig investeringsaktivitetsetikett
+      invalid_type: Ogiltig typ
+      supported_types: "typen måste vara en av: %{types}"
+    form:
+      account: Överföringskonto (valfritt)
+      account_prompt: Sök konto
+      amount: Belopp
+      fee: Transaktionsavgift
+      holding: Tickersymbol
+      holding_optional: Tickersymbol (valfritt)
+      price: Pris per aktie
+      qty: Antal
+      submit: Lägg till transaktion
+      ticker_placeholder: AAPL
+      type: Typ
+      type_buy: Köp
+      type_sell: Sälj
+      type_deposit: Insättning
+      type_withdrawal: Uttag
+      type_dividend: Utdelning
+      type_interest: Ränta
+      dividend_requires_security: Ett värdepapper krävs för utdelningar
+      trade_requires_security: Ett värdepapper (ticker) krävs för köp- och säljaffärer
+    header:
+      buy: Köp
+      sell: Sälj
+      dividend: Utdelning
+      interest: Ränta
+      contribution: Insättning
+      exchange: Byte
+      fee: Avgift
+      other: Övrigt
+      reinvestment: Återinvestering
+      sweep_in: Sweep in
+      sweep_out: Sweep out
+      transfer: Överföring
+      withdrawal: Uttag
+      current_market_price_label: Aktuellt marknadspris
+      overview: Översikt
+      purchase_price_label: Inköpspris
+      purchase_qty_label: Inköpt antal
+      symbol_label: Symbol
+      total_return_label: Orealiserad vinst/förlust
+    new:
+      title: Ny transaktion
+    show:
+      additional: Ytterligare
+      amount_label: Belopp
+      buy: Köp
+      category_label: Kategori
+      cost_per_share_label: Kostnad per aktie
+      date_label: Datum
+      delete: Ta bort
+      fee_label: Transaktionsavgift
+      delete_subtitle: Den här åtgärden kan inte ångras
+      delete_title: Ta bort affär
+      details: Detaljer
+      provider_disabled_warning: "Prisuppdateringar pausade — leverantören %{provider} är inaktiverad. Aktivera den igen i Inställningar eller koppla innehavet till en annan leverantör."
+      exclude_subtitle: Den här affären kommer inte att inkluderas i rapporter och beräkningar
+      exclude_title: Exkludera från analys
+      no_category: Ingen kategori
+      note_label: Anteckning
+      note_placeholder: Lägg till eventuella ytterligare anteckningar här...
+      quantity_label: Antal
+      sell: Sälj
+      settings: Inställningar
+      type_label: Typ

@@ -1,0 +1,15 @@
+---
+sv:
+  recurring_allocations:
+    over_allocation: Det skulle allokera mer än transaktionens belopp
+    missing_rate: Ingen växelkurs tillgänglig; ange beloppet manuellt
+    already_allocated: Denna transaktion är redan tillämpad på denna räkning
+    invalid: Betalningen kunde inte registreras
+    create:
+      success: Betalning tillämpad
+    destroy:
+      success: Betalning avlänkad
+    confirm:
+      success: Betalning tillämpad på räkningen
+    reject:
+      success: "Avfärdad. Den transaktionen föreslås inte för denna räkning igen."

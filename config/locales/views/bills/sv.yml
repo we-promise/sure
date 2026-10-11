@@ -1,0 +1,327 @@
+---
+sv:
+  bills:
+    row_overdue: Förfallen
+    row_today: Idag
+    detect:
+      found:
+        one: Hittade 1 möjlig räkning. Granska den nedan.
+        other: Hittade %{count} möjliga räkningar. Granska dem nedan.
+      none_found: Inga nya återkommande mönster hittades. Du kan lägga till räkningar manuellt.
+      already_running: Identifiering pågår redan. Kontrollera igen om en stund.
+    feed:
+      calendar_name: Sure Räkningar
+    ai_prompts:
+      due_before_paycheck: Vad förfaller innan min nästa lön?
+      subscriptions_up: Vilka prenumerationer har ökat i pris i år?
+      monthly_subscriptions: Vad betalar jag månadsvis för prenumerationer?
+      safe_to_spend: Hur mycket är säkert att spendera denna period?
+    smart_configurations:
+      show:
+        trigger: Låt AI konfigurera
+        title: "AI-förslag för %{name}"
+        intro: Markera de ändringar som ska tillämpas. Omarkerade lämnas exakt som de är.
+        no_changes: Denna räkning matchar redan sin betalningshistorik. Inget att ändra.
+        failed: Kunde inte analysera denna räkning just nu. Dess konfiguration är oförändrad.
+        field_name: Namn
+        field_amount: Belopp
+        field_schedule: Schema
+        field_category: Kategori
+        field_kind: Typ
+        field_autopay: Autobetalning
+        uncategorized: Okategoriserad
+        autopay_off: "Av"
+        autopay_on: "På"
+        apply: Tillämpa markerade
+    detail:
+      current: Aktuell
+      next_payment: Nästa betalning
+      around: "runt %{date}"
+      rules: Hur denna räkning matchas
+      rule_named: "%{name}"
+      rule_amount_range: "från %{min} till %{max}"
+      rule_aliases: "Matchar även %{names}"
+      rule_learned_tolerance: "Belopp inom %{percent} av det vanliga beloppet matchar denna räkning"
+      history_title: Senaste 12 månaderna
+      history_aria: Betalningar under de senaste tolv månaderna
+      key_metrics: Per år
+      year: År
+      spent_per_year: Spenderat
+      avg_payment: Genomsnittlig betalning
+      average: Genomsnittligt betalt
+      range: "%{min} till %{max}"
+      annualized: Per år
+      ytd: Betalt i år
+      last_account: Senast använt konto
+      upcoming: Kommande
+      recent_payments: Senaste betalningar
+      manual_payment: Manuell betalning
+      history: Historik
+      payment_count:
+        one: "1 betalning"
+        other: "%{count} betalningar"
+      notes: Anteckningar
+      trial_chip: "Provperioden slutar %{date}"
+      renews_chip: "Förnyas %{date}"
+      cancelled_chip: "Avbruten %{date}"
+      price_changes: Prisändringar
+      price_change_line: "%{from} → %{to}"
+    month_pulse:
+      bill_count:
+        one: 1 räkning
+        other: "%{count} räkningar"
+      left_to_pay: kvar att betala
+      pulse_paid: betalt
+      pulse_overdue: förfallet
+      pulse_next_seven: nästa 7 dagar
+      pulse_bar_aria: "%{percent}% av denna månads räkningar betalda"
+      next_up: Nästa på tur
+      view_upcoming: Visa kommande
+      # Fältet har en egen kolumn, så datumet står ensamt istället för
+      # att läsas som en mening som radens underrader gör.
+      date_today: Idag
+      date_tomorrow: Imorgon
+      unconvertible:
+        one: "1 räkning ingår inte, ingen växelkurs tillgänglig"
+        other: "%{count} räkningar ingår inte, ingen växelkurs tillgänglig"
+    summary:
+      remaining: "%{amount} kvar"
+      paid_headline: "%{amount} betalt"
+      cost_line: "I genomsnitt %{average} per betalning, cirka %{annualized} per år"
+    pane:
+      close: Fäll ihop detaljer
+    add_bill: Lägg till räkning
+    manage: Hantera
+    find_payment: Hitta betalning
+    add_payment: Lägg till betalning
+    review_match: Granska matchning
+    resolve: Lös
+    manage_payments: Hantera betalningar
+    view_full_bill: Visa hela räkningen
+    match:
+      same_merchant: Samma handlare
+      name_matches: Namnet matchar
+      exact_amount: Exakt belopp
+      amount_off: "%{amount} avvikelse"
+      due_date: Förfallodatum matchar
+      days_before:
+        one: 1 dag före förfallodatum
+        other: "%{count} dagar före förfallodatum"
+      days_after:
+        one: 1 dag efter förfallodatum
+        other: "%{count} dagar efter förfallodatum"
+    attention:
+      needs_review: Matchning behöver granskas
+      partial: "Delvis · %{amount} kvar"
+      amount_changed: Beloppet har ändrats
+      overdue:
+        one: 1 dag försenad
+        other: "%{count} dagar försenad"
+    paid_label: Betald
+    paid_over_short: Betald, över
+    installment_progress: "Betalning %{done_plus_one} av %{total}"
+    partial_progress: "%{paid} av %{expected} betalt"
+    cancelled_still_scheduled: "Du markerade denna som avbruten %{date}, men den är fortfarande schemalagd, så framtida räkningar fortsätter att dyka upp."
+    paid_over: "Betalade %{paid}, mer än förväntat"
+    remaining_label: kvar
+    debt_payment: "· skuldbetalning"
+    paid_from: "från %{account}"
+    amount_range: "sträcker sig från %{min} till %{max}"
+    possible_duplicate: Möjlig dubblett
+    due_label:
+      overdue:
+        one: "Försenad med 1 dag, förfallodatum var %{date}"
+        other: "Försenad med %{count} dagar, förfallodatum var %{date}"
+      today: "Förfaller idag"
+      settled: "Förfallodatum var %{date}"
+      due_since: "Förfaller %{date}"
+      snoozed: "Snoozad till %{date}"
+      upcoming:
+        one: "Förfaller imorgon, %{date}"
+        other: "Förfaller om %{count} dagar, %{date}"
+    views:
+      aria_label: Räkningsvyer
+      overview: Översikt
+      calendar: Kalender
+      # Namngiven för inkomst snarare än för en lön: en deklarerad inkomstserie
+      # kan vara en pension, en faktura eller en förmån, och detta är den enda
+      # platsen i appen där inkomst läggs till eller hanteras. "Plan" hindrar
+      # den från att utlova den intäktsrapportering som Rapporter redan äger.
+      paycheck: Inkomstplan
+      all: Alla räkningar
+    pay_period:
+      paycheck_on: "Lön %{date}"
+      before_next_paycheck: Innan din nästa lön
+      due_before_date: "%{amount} förfaller innan %{date}"
+    paycheck:
+      unconvertible:
+        one: "1 åtagande ingår inte, ingen växelkurs tillgänglig"
+        other: "%{count} åtaganden ingår inte, ingen växelkurs tillgänglig"
+      income_section_title: Inkomstschema
+      manage: Hantera
+      add_income: Lägg till inkomst
+      income_paused: Pausad, inte planerad
+      income_detected: Identifierad automatiskt, sätter inte löningsdagar
+      income_next_payday: "nästa %{date}"
+      income_source_count:
+        one: "%{count} inkomstkälla"
+        other: "%{count} inkomstkällor"
+      next_on: "Nästa %{date}"
+      no_upcoming_income: Ingen inkomst schemalagd härifrån och framåt.
+      empty:
+        title: Deklarera ditt inkomstschema
+        description: Lägg till din inkomst för att se vad varje löning behöver täcka. Identifierade inflöden sätter aldrig dina löningsdagar på egen hand -- det gör du.
+        action: Lägg till inkomst
+      all_clear:
+        title: Inget att täcka
+        description: "Inga räkningar förfaller mellan nu och %{date}, så inget under den perioden är avsatt."
+      # De tre orden sidan bygger på: förfaller nu, reserverat för senare,
+      # säkert efter räkningar. Allt som lägger ihop två av dem behöver en
+      # mycket god anledning, för hela uppgiften här är att hålla dem isär.
+      safe_after_bills: Säkert efter räkningar
+      short_after_bills: Otillräckligt efter räkningar
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} inkomstkällor"
+      before_next_paycheck: "Innan %{date}"
+      no_income_arriving: Ingen inkomst kommer in
+      income_amount: "%{amount} inkomst"
+      due_this_period: Förfaller denna period
+      reserved_ahead: Reserverat i förväg
+      # Stapelns nyckel använder korta former så att tre kolumner får plats på
+      # en mobil; rubriken bär den fullständiga frasen.
+      safe_short: Säkert
+      short_short: Otillräckligt
+      reserved_footer:
+        one: Reserverat i förväg för 1 senare räkning
+        other: "Reserverat i förväg för %{count} senare räkningar"
+      bills_this_period:
+        one: Räkningar denna period · 1
+        other: "Räkningar denna period · %{count}"
+      bills_before_payday:
+        one: Räkningar innan din nästa löning · 1
+        other: "Räkningar innan din nästa löning · %{count}"
+      of_total: "av %{amount}"
+      # Gapet innan nästa löning, uttryckt som en nyhet snarare än ritat som
+      # en löneperiod. Kompakt med avsikt: den måste märkas utan att bli
+      # sidans identitet.
+      bridge_label: Innan din nästa lön
+      bridge_amount: "· %{amount} förfaller"
+      bridge_split: "Förfaller innan %{date}, täcks av de %{cash} du har på dina konton."
+      shortfall_label: Otillräckligt innan din nästa löning
+      shortfall_amount: "· %{amount}"
+      shortfall_split: "%{obligations} förfaller innan %{date} och dina konton innehåller %{cash}."
+      shortfall_largest: "Största kommande åtagande:"
+      review_plan: Granska plan
+      allocation_aria: "Av %{income} inkomst förfaller %{due} nu, %{reserved} är reserverat för senare, och %{safe} är säkert att spendera."
+      allocation_aria_short: "%{income} av inkomsten går till det som är förpliktat här, och ytterligare %{short} behövs."
+    reset_feed_token:
+      done: Kalenderlänken har återställts. Kalenderappar som använder den gamla länken slutar uppdateras; prenumerera på nytt med den nya.
+      confirm: Återställ kalenderflödets länk? Varje tidigare delad länk slutar fungera.
+    calendar:
+      subscribe_ical: Prenumerera (iCal)
+      reset_feed: Återställ länk
+      previous_month: Föregående månad
+      next_month: Nästa månad
+      today: Idag
+      month_totals: "%{expected} förväntat · %{paid} betalt"
+      empty_month: Inga räkningar förfaller denna månad.
+    all:
+      search_placeholder: Sök räkningar
+      any_status: Alla statusar
+      status_filters:
+        overdue: Förfallen
+        due: Förfaller snart
+        partial: Delvis betald
+        paid: Betald
+        paused: Pausad
+        ended: Avvisad
+      subscription_monthly: Per månad
+      subscription_annual: Per år
+      subscription_active: Aktiv
+      subscription_price_changes: Prisändringar i år
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      any_type: Alla typer
+      sort_due: Efter nästa förfallodatum
+      sort_name: Efter namn
+      sort_amount: Efter belopp
+      no_matches_title: Inget matchar
+      no_matches_description: Prova att rensa ett filter eller sökningen.
+      col_name: Namn
+      col_type: Typ
+      col_frequency: Frekvens
+      col_amount: Belopp
+      col_next: Nästa förfallodatum
+      next_short: "nästa %{date}"
+      col_status: Status
+      col_actions: Åtgärder
+      monthly_equivalent: "%{amount}/mån"
+      types:
+        bill: Räkning
+        subscription: Prenumeration
+        installment: Avbetalningsplan
+        income: Inkomst
+        transfer: Överföring
+        other: Annat
+    show:
+      edit: Redigera räkning
+    index:
+      left_to_pay: kvar att betala
+      paid_so_far: Betalt hittills
+      hero_past_due: "%{amount} förfallet"
+      hero_next_seven: "%{amount} förfaller under de närmaste 7 dagarna"
+      add_bill: Lägg till räkning
+      add_income: Lägg till inkomst
+      review_with_ai: Granska med AI
+      detected_review:
+        one: Vi hittade 1 återkommande betalning i dina transaktioner. Gå igenom den så att summorna här stämmer med vad du faktiskt betalar.
+        other: Vi hittade %{count} återkommande betalningar i dina transaktioner. Gå igenom dem så att summorna här stämmer med vad du faktiskt betalar.
+      detected_review_action: Granska dem
+      needs_review: Behöver granskas
+      notice_trial: "%{name}s provperiod slutar %{date}"
+      notice_renewal: "%{name} förnyas %{date}"
+      notice_price: "%{name} ändrade pris: %{from} → %{to} (%{percent})"
+      notices_routine:
+        one: "1 mindre ändring"
+        other: "%{count} mindre ändringar"
+      suggestion_line: "%{entry} liknar en betalning för %{bill}"
+      suggestion_unknown_entry: En transaktion
+      confidence: "%{percent}% matchning"
+      accept: Tillämpa
+      reject: Inte denna räkning
+      title: Räkningar
+      summary_label: Förfaller denna månad
+      summary_count:
+        one: "1 räkning förfaller"
+        other: "%{count} räkningar förfaller"
+      summary_needs_action:
+        one: "1 behöver din uppmärksamhet"
+        other: "%{count} behöver din uppmärksamhet"
+      all_automatic: "alla på autobetalning"
+      recurring_label: Återkommande åtagande
+      recurring_monthly: "%{amount} per månad"
+      recurring_annual: "%{amount} per år"
+      unconvertible:
+        one: "1 räkning ingår inte, ingen växelkurs tillgänglig"
+        other: "%{count} räkningar ingår inte, ingen växelkurs tillgänglig"
+      overdue: Förfallen
+      needs_attention: Behöver uppmärksamhet
+      attention_overdue_total: "%{amount} förfallet"
+      this_month: Denna månad
+      later: Efter denna månad
+      paid_this_month: Betalt denna månad
+      dormant: Vilande
+      kpi_remaining: Kvar denna månad
+      kpi_paid: Betalt denna månad
+      kpi_next_seven: Förfaller nästa 7 dagar
+      kpi_past_due: Förfallet
+      paid_count:
+        one: "1 räkning avklarad"
+        other: "%{count} räkningar avklarade"
+      needs_action_count:
+        one: "1 behöver din uppmärksamhet"
+        other: "%{count} behöver din uppmärksamhet"
+      empty:
+        title: Inga räkningar ännu
+        description: Räkningar är dina återkommande utgifter. Sure hittar dem automatiskt i din transaktionshistorik, och du kan lägga till en betalningslänk till var och en så att du kan betala direkt härifrån.
+        action: Hitta återkommande transaktioner
+        no_history_description: Inga transaktioner ännu. Anslut ett konto eller importera historik och Sure hittar dina räkningar automatiskt, eller lägg till en manuellt.

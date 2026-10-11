@@ -1,0 +1,76 @@
+---
+sv:
+  binance_items:
+    create:
+      default_name: Binance
+      success: Anslutningen till Binance lyckades! Ditt konto synkroniseras nu.
+    update:
+      success: Binance-konfigurationen har uppdaterats.
+    destroy:
+      success: Binance-anslutningen är schemalagd för borttagning.
+    setup_accounts:
+      title: Importera Binance-konto
+      subtitle: Välj vilka portföljer som ska spåras
+      instructions: Välj de Binance-portföljer du vill importera. Endast portföljer med saldon visas.
+      no_accounts: Alla konton har importerats.
+      accounts_count:
+        one: "%{count} konto tillgängligt"
+        other: "%{count} konton tillgängliga"
+      select_all: Markera alla
+      import_selected: Importera markerade
+      cancel: Avbryt
+      creating: Importerar...
+    complete_account_setup:
+      invalid_sync_start_date: Startdatum för synkronisering måste vara ett giltigt datum i det förflutna.
+      success:
+        one: "Importerade %{count} konto"
+        other: "Importerade %{count} konton"
+      none_selected: Inga konton valda
+      no_accounts: Inga konton att importera
+    binance_item:
+      provider_name: Binance
+      syncing: Synkroniserar...
+      reconnect: Inloggningsuppgifterna behöver uppdateras
+      deletion_in_progress: Tar bort...
+      sync_status:
+        no_accounts: Inga konton hittades
+        all_synced:
+          one: "%{count} konto synkroniserat"
+          other: "%{count} konton synkroniserade"
+        partial_sync: "%{linked_count} synkroniserade, %{unlinked_count} behöver konfigureras"
+      status: "Senast synkroniserat för %{timestamp} sedan"
+      status_with_summary: "Senast synkroniserat för %{timestamp} sedan - %{summary}"
+      status_never: Aldrig synkroniserat
+      update_credentials: Uppdatera inloggningsuppgifter
+      delete: Ta bort
+      no_accounts_title: Inga konton hittades
+      no_accounts_message: Din Binance-portfölj visas här efter synkronisering.
+      setup_needed: Konto redo att importeras
+      setup_description: Välj vilka Binance-portföljer du vill spåra.
+      setup_action: Importera konto
+      import_accounts_menu: Importera konto
+      stale_rate_warning: "Saldot är ungefärligt — den exakta växelkursen för %{date} gick inte att hämta. Uppdateras vid nästa synkronisering."
+    select_existing_account:
+      title: Länka Binance-konto
+      no_accounts_found: Inga Binance-konton hittades.
+      wait_for_sync: Vänta på att Binance slutför synkroniseringen
+      check_provider_health: Kontrollera att dina Binance API-uppgifter är giltiga
+      currently_linked_to: "Länkat till för närvarande: %{account_name}"
+      link: Länka
+      cancel: Avbryt
+    link_existing_account:
+      success: Länkningen till Binance-kontot lyckades
+      errors:
+        only_manual: Endast manuella konton kan länkas till Binance
+        invalid_binance_account: Ogiltigt Binance-konto
+  binance_item:
+    syncer:
+      checking_credentials: Kontrollerar inloggningsuppgifter...
+      credentials_invalid: Ogiltiga API-uppgifter. Kontrollera din API-nyckel och hemliga nyckel.
+      importing_accounts: Importerar konton från Binance...
+      checking_configuration: Kontrollerar kontokonfiguration...
+      accounts_need_setup:
+        one: "%{count} konto behöver konfigureras"
+        other: "%{count} konton behöver konfigureras"
+      processing_accounts: Bearbetar kontodata...
+      calculating_balances: Beräknar saldon...

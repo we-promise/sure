@@ -1,0 +1,9 @@
+---
+sv:
+  sure_import:
+    preflight:
+      missing_reference: "Rad %{line} %{type} refererar till saknad %{field} %{value}."
+      skipped_missing_reference: "Rad %{line} %{type} refererar till saknad %{field} %{value}. Den kommer att hoppas över vid import."
+      skipped_missing_merchant_reference: "Rad %{line} %{type} refererar till en handlare (%{value}) som inte finns med i denna export. Detta kan hända med en export som togs innan providertilldelade handlare lades till i Sure-exporter. Den kommer att importeras utan den handlaren."
+      skipped_unnamed_recurring: "Rad %{line} %{type} har inget namn och refererar till en handlare (%{value}) som inte finns med i denna export. Den kommer att hoppas över vid import."
+      provider_merchant_diff: "Rad %{line} ProviderMerchant %{name} finns redan med ett annat %{fields}. Den befintliga handlaren behålls."

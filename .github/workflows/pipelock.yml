@@ -49,6 +49,7 @@ jobs:
             config/locales/views/reports/pt-BR.yml
             config/locales/views/reports/ro.yml
             config/locales/views/reports/ru.yml
+            config/locales/views/reports/sv.yml
             config/locales/views/reports/tr.yml
             config/locales/views/reports/uk.yml
             config/locales/views/reports/vi.yml

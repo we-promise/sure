@@ -1,0 +1,575 @@
+---
+sv:
+  import:
+    qif_category_selections:
+      update:
+        success: "Kategorier och taggar sparade."
+      show:
+        title: "Konfigurera och välj"
+        description: "Granska det upptäckta datumformatet, välj sedan vilka kategorier och taggar från din QIF-fil som ska tas med i %{product_name}."
+        categories_heading: Kategorier
+        categories_found:
+          one: "1 kategori hittad"
+          other: "%{count} kategorier hittade"
+        category_name_col: Kategorinamn
+        transactions_col: Transaktioner
+        tags_heading: Taggar
+        tags_found:
+          one: "1 tagg hittad"
+          other: "%{count} taggar hittade"
+        tag_name_col: Taggnamn
+        txn_count:
+          one: "1 transaktion"
+          other: "%{count} transaktioner"
+        split_warning_title: Delade transaktioner upptäckta
+        split_warning_description: "Den här QIF-filen innehåller delade transaktioner. Granska de upptäckta delade kategorierna och taggarna nedan innan du importerar."
+        split_badge: delad
+        empty_state_primary: Inga kategorier eller taggar hittades i den här QIF-filen.
+        empty_state_secondary: Alla transaktioner importeras utan kategorier eller taggar.
+        submit: Fortsätt till granskning
+    cleans:
+      show:
+        not_configured: "Konfigurera din import innan du fortsätter."
+        description: Redigera din data i tabellen nedan. Röda celler är ogiltiga.
+        errors_notice: Du har fel i din data. Håll muspekaren över felet för att se
+          detaljer.
+        errors_notice_mobile: Du har fel i din data. Tryck på felindikatorn för att se
+          detaljer.
+        title: Rensa din data
+        data_cleaned: Din data har rensats
+        next_step: Nästa steg
+        all_rows: Alla rader
+        error_rows: Felrader
+    configurations:
+      update:
+        success: Importen konfigurerades.
+      account_import:
+        leave_empty: Lämna tomt
+        default: Standard
+        entity_type: Entitetstyp
+        name: Namn
+        balance: Saldo
+        currency: Valuta
+        balance_date: Saldodatum
+        date_format: Datumformat
+        select_format: Välj format
+        apply_configuration: Använd konfiguration
+      transaction_import:
+        date_label: Datum
+        select_column: Välj kolumn
+        select_format: Välj format
+        amount_label: Belopp
+        default: Standard
+        currency_label: Valuta
+        format_label: Format
+        amount_type_strategy_label: Strategi för beloppstyp
+        select_strategy: Välj strategi
+        set: Ange
+        as_amount_type_column: som beloppstypkolumn
+        select_value: Välj värde
+        as_identifier_value: som identifierarvärde
+        treat_as_html: "Behandla \"<span class=\"font-medium\">%{value}</span>\" som"
+        income_inflow: Inkomst (inflöde)
+        expense_outflow: Utgift (utflöde)
+        select_type: Välj typ
+        leave_empty: Lämna tomt
+        account_label: Konto
+        name_label: Namn
+        category_label: Kategori
+        tags_label: Taggar
+        notes_label: Anteckningar
+        apply_configuration: Använd konfiguration
+        incomes_are_positive: Inkomster är positiva
+        incomes_are_negative: Inkomster är negativa
+        amount_type_label: Beloppstyp
+        select_convention: Välj konvention
+        date_format_label: Datumformat
+        rows_to_skip_label: Hoppa över första n raderna
+      trade_import:
+        select_column: Välj kolumn
+        date_label: Datum
+        quantity_label: Antal
+        buys_are_positive: Köp är positivt antal
+        buys_are_negative: Köp är negativt antal
+        default: Standard
+        currency_label: Valuta
+        format_label: Format
+        select_format: Välj format
+        ticker_label: Ticker
+        leave_empty: Lämna tomt
+        stock_exchange_code_label: Börskod
+        price_label: Pris
+        account_label: Konto
+        name_label: Namn
+        note_label: Anteckning
+        no_security_provider_warning: Leverantören för värdepapperspriser är inte konfigurerad. Dina affärsimporter fungerar, men Sure fyller inte i historiska priser i efterhand. Gå till dina inställningar för att konfigurera detta.
+        date_format_label: Datumformat
+        apply_configuration: Använd konfiguration
+      category_import:
+        button_label: Fortsätt
+        description: Ladda upp en enkel CSV-fil (som den vi genererar när du
+          exporterar din data). Vi mappar kolumnerna automatiskt för dig.
+        instructions: Välj fortsätt för att läsa in din CSV och gå vidare till rensningssteget.
+      merchant_import:
+        button_label: Fortsätt
+        description: Ladda upp en CSV-fil med dina handlare. Vi mappar kolumnerna automatiskt för dig.
+        instructions: Välj fortsätt för att läsa in din CSV och gå vidare till rensningssteget.
+      mint_import:
+        date_format_label: Datumformat
+        account_optional: Konto (valfritt)
+        amount: Belopp
+        apply_configuration: Använd konfiguration
+        category_optional: Kategori (valfritt)
+        currency: Valuta
+        date: Datum
+        format: Format
+        incomes_negative: Inkomster är negativa
+        incomes_positive: Inkomster är positiva
+        intro: Vi har förkonfigurerat din Mint-import åt dig. Fortsätt till nästa steg.
+        leave_empty: Lämna tomt
+        name_optional: Namn (valfritt)
+        select_format: Välj format
+        tags_optional: Taggar (valfritt)
+      actual_import:
+        preconfigured_notice: Vi har förkonfigurerat din Actual Budget-import åt dig. Fortsätt till nästa steg.
+        leave_empty: Lämna tomt
+        date_label: Datum
+        date_format_label: Datumformat
+        amount_label: Belopp
+        signage_convention_label: Teckenkonvention
+        incomes_are_negative: Inkomster är negativa
+        incomes_are_positive: Inkomster är positiva
+        account_label: Konto (valfritt)
+        name_label: Betalningsmottagare (valfritt)
+        category_label: Kategori (valfritt)
+        notes_label: Anteckningar (valfritt)
+        apply_configuration: Använd konfiguration
+      ynab_import:
+        preconfigured_notice: Vi har förkonfigurerat din YNAB-import åt dig. Fortsätt till nästa steg.
+        amount_notice: Belopp upptäcks automatiskt från kolumnerna Utflöde och Inflöde.
+        leave_empty: Lämna tomt
+        date_label: Datum
+        date_format_label: Datumformat
+        account_label: Konto (valfritt)
+        name_label: Betalningsmottagare (valfritt)
+        category_label: Kategori (valfritt)
+        notes_label: Notering (valfritt)
+        apply_configuration: Använd konfiguration
+      rule_import:
+        description: Konfigurera din regelimport. Regler skapas eller uppdateras baserat
+          på CSV-datan.
+        process_button: Bearbeta regler
+        process_help: Klicka på knappen nedan för att bearbeta din CSV och generera regelrader.
+      show:
+        description: Välj de kolumner som motsvarar varje fält i din CSV.
+        title: Konfigurera din import
+        template_found: Mallkonfiguration hittad
+        template_description: Vi hittade en konfiguration från en tidigare import för det här kontot. Vill du använda den för den här importen?
+        manually_configure: Konfigurera manuellt
+        apply_template: Använd mall
+        sample_caption: Exempeldata från din uppladdade CSV
+    confirms:
+      sure_import:
+        title: Bekräfta din import
+        description: Granska datan som kommer importeras från din exportfil.
+        summary: Importsammanfattning
+        empty_summary: Vi kunde inte hitta några importerbara poster i den här filen. Den kan vara tom, eller raderna kanske inte matchar det förväntade exportformatet (varje rad ska vara ett JSON-objekt med nycklarna "type" och "data", med typer som denna import stöder).
+        publish_button: Starta import
+        cancel: Avbryt
+      mappings:
+        create_account: Skapa konto
+        csv_mapping_label: "%{mapping} i CSV"
+        sure_mapping_label: "%{mapping} i %{product_name}"
+        no_accounts: Du har inga konton ännu. Skapa ett konto som
+          vi kan använda för (otilldelade) rader i din CSV eller gå tillbaka till rensningssteget
+          och ange ett kontonamn vi kan använda.
+        rows_label: Rader
+        unassigned_account: Behöver du skapa ett nytt konto för otilldelade rader?
+        next: Nästa
+      show:
+        invalid_data: "Du har ogiltig data, redigera tills alla fel är åtgärdade"
+        account_mapping_description: Koppla alla konton från din importerade fil till
+          %{product_name}s befintliga konton. Du kan även lägga till nya konton eller lämna dem
+          okategoriserade.
+        account_mapping_title: Koppla dina konton
+        account_type_mapping_description: Koppla alla kontotyper från din importerade fil
+          till %{product_name}s
+        account_type_mapping_title: Koppla dina kontotyper
+        category_mapping_description: Koppla alla kategorier från din importerade fil
+          till %{product_name}s befintliga kategorier. Du kan även lägga till nya kategorier eller lämna
+          dem okategoriserade.
+        category_mapping_title: Koppla dina kategorier
+        tag_mapping_description: Koppla alla taggar från din importerade fil till %{product_name}s
+          befintliga taggar. Du kan även lägga till nya taggar eller lämna dem okategoriserade.
+        tag_mapping_title: Koppla dina taggar
+    uploads:
+      handle_qif_upload:
+        qif_uploaded: "QIF-filen laddades upp."
+        qif_account_required: Välj ett konto för QIF-importen
+      update:
+        qif_uploaded: "QIF-filen laddades upp."
+      show:
+        csv_invalid: "Måste vara giltig CSV med rubriker och minst en datarad"
+        drop_csv_title: Släpp CSV för att ladda upp
+        drop_csv_subtitle: Din fil laddas upp automatiskt
+        upload_csv_tab: Ladda upp CSV
+        copy_paste_tab: Kopiera och klistra in
+        account_optional_label: Konto (valfritt)
+        multi_account_import: Import av flera konton
+        upload_csv_button: Ladda upp CSV
+        paste_csv_placeholder: Klistra in innehållet i din CSV-fil här
+        download_sample_csv: Ladda ner en exempel-CSV
+        to_see_format: för att se det obligatoriska CSV-formatet
+        qif_title: Ladda upp QIF-fil
+        qif_description: Välj ett konto för filer med ett enskilt konto, eller lämna tomt när din QIF-export innehåller kontonamn.
+        qif_account_label: Konto
+        qif_account_placeholder: Välj ett konto…
+        qif_file_prompt: för att lägga till din QIF-fil här
+        qif_file_hint: endast .qif-filer
+        qif_submit: Ladda upp QIF
+        browse: Bläddra
+        csv_file_prompt: för att lägga till din CSV-fil här
+        description: Klistra in eller ladda upp din CSV-fil nedan. Läs igenom instruktionerna
+          i tabellen nedan innan du börjar.
+        instructions_1: Nedan är ett exempel på en CSV med kolumner som är tillgängliga för import.
+        instructions_2: Din CSV måste ha en rubrikrad
+        instructions_3: Du kan namnge dina kolumner som du vill. Du mappar
+          dem i ett senare steg.
+        instructions_4: Kolumner markerade med en asterisk (*) är obligatorisk data.
+        instructions_5: Inga kommatecken, inga valutasymboler och inga parenteser i siffror.
+        title: Importera din data
+      sure_import:
+        title: Importera från export
+        description: Ladda upp all.ndjson-filen från din dataexport för att återställa dina konton, transaktioner, kategorier och mer.
+        drop_title: Släpp NDJSON för att ladda upp
+        drop_subtitle: Din fil laddas upp automatiskt
+        browse: Bläddra
+        browse_hint: för att lägga till din all.ndjson-fil här
+        upload_button: Ladda upp NDJSON
+        hint_html: Ladda upp filen <strong>all.ndjson</strong> från din dataexport-ZIP
+        ndjson_invalid: Måste vara giltig NDJSON med minst en post
+  imports:
+    mapping_labels:
+      account_type: "Kontotyp"
+      account: "Konto"
+      category: "Kategori"
+      tag: "Tagg"
+    dry_run_resources:
+      transactions: "Transaktioner"
+      balances: "Saldon"
+      accounts: "Konton"
+      categories: "Kategorier"
+      tags: "Taggar"
+      rules: "Regler"
+      merchants: "Handlare"
+      recurring_transactions: "Återkommande transaktioner"
+      transfers: "Överföringar"
+      rejected_transfers: "Avvisade överföringar"
+      trades: "Affärer"
+      holdings: "Innehav"
+      valuations: "Värderingar"
+      budgets: "Budgetar"
+      budget_categories: "Budgetkategorier"
+    column_labels:
+      date: "Datum"
+      amount: "Belopp"
+      name: "Namn"
+      currency: "Valuta"
+      category: "Kategori"
+      tags: "Taggar"
+      account: "Konto"
+      notes: "Anteckningar"
+      qty: "Antal"
+      ticker: "Ticker"
+      exchange: "Börs"
+      price: "Pris"
+      entity_type: "Typ"
+      category_parent: "Överordnad kategori"
+      category_color: "Färg"
+      category_icon: "Lucide-ikon"
+      merchant_color: "Färg"
+      merchant_website: "Webbadress"
+    summary:
+      title: "Importsammanfattning"
+      subtitle: "Vad som hände med varje transaktion på detta kontoutdrag i %{account}."
+      subtitle_no_account: "Vad som hände med varje transaktion på detta kontoutdrag."
+      extracted: "Hittades på kontoutdraget"
+      already_recorded: "Redan registrerad"
+      already_recorded_hint: "Matchad mot en transaktion som redan fanns på kontot, och markerad som avstämd."
+      imported: "Importerad som ny"
+      awaiting_review: "Väntar på att importeras"
+      fully_reconciled:
+        one: "Inget behövde importeras — kontoutdragets enda transaktion fanns redan registrerad."
+        other: "Inget behövde importeras — alla %{count} transaktioner fanns redan registrerade."
+      statement_evidence_html: "Avstämd mot %{statement}."
+      close: "Stäng"
+    update:
+      account_saved: "Kontot sparades."
+      account_locked: "Den här importen har redan publicerats, så dess konto kan inte ändras. Återställ den först om du behöver importera den någon annanstans."
+      invalid_account: "Kontot hittades inte."
+    publish:
+      started: "Din import har startat i bakgrunden."
+      max_rows_exceeded: "Din import överskrider maxantalet rader på %{max}."
+    revert:
+      started: "Importen återställs i bakgrunden."
+    cancel:
+      cancelled: "Import markerad som misslyckad. Du kan försöka igen från importsidan."
+      not_cancellable: "Den här importen kan inte markeras som misslyckad just nu — jobbet kan fortfarande köra. Försök igen när den har varit inaktiv i en timme."
+    apply_template:
+      template_applied: "Mall tillämpad."
+      no_template_found: "Ingen mall hittades, konfigurera din import manuellt."
+    destroy:
+      deleted: "Din import har tagits bort."
+    failure:
+      title: Importen misslyckades
+      description: Kontrollera att filformatet är korrekt, att det inte finns fel och att alla obligatoriska fält är ifyllda, sedan försök igen.
+      try_again: Försök igen
+    success:
+      title: Importen lyckades
+      description: Din importerade data har lagts till i appen och är nu redo att användas.
+      back_to_dashboard: Tillbaka till översikten
+      verification:
+        title: Verifiering av inläsning
+        checked: Kontrollerat
+        mismatches: Avvikelser
+        status:
+          not_verified: Inte verifierad
+          matched: Matchad
+          mismatch: Avvikelse
+          failed: Misslyckades
+          reverted: Återställd
+    importing:
+      title: Import pågår
+      description: "Din import pågår. Kolla importmenyn för statusuppdateringar eller klicka på 'Kontrollera status' för att uppdatera sidan. Du kan fortsätta använda appen som vanligt."
+      check_status: Kontrollera status
+      back_to_dashboard: Tillbaka till översikten
+    revert_failure:
+      title: Återställning av import misslyckades
+      description: Försök igen
+      try_again: Försök igen
+    date_format:
+      heading: Datumformat
+      description: "Datumformatet upptäcktes automatiskt från din fil. Ändra det om datumen ser fel ut."
+      preview: "Första tolkade datumet"
+      error_title: "Kunde inte upptäcka datumformat"
+      error_description: "Inget av de stödda datumformaten kunde tolka datumen i den här filen. Kontrollera att filen innehåller giltiga datumposter."
+    type_labels:
+      transaction_import: "Transaktionsimport"
+      trade_import: "Affärsimport"
+      account_import: "Kontoimport"
+      mint_import: "Mint-import"
+      actual_import: "Actual-import"
+      ynab_import: "YNAB-import"
+      qif_import: "QIF-import"
+      category_import: "Kategoriimport"
+      rule_import: "Regelimport"
+      merchant_import: "Handlarimport"
+      pdf_import: "PDF-import"
+      document_import: "Dokumentimport"
+      sure_import: "Sure-import"
+    steps:
+      upload: Ladda upp
+      configure: Konfigurera
+      clean: Rensa
+      map: Koppla
+      confirm: Bekräfta
+      select: Välj
+      label: "Steg %{step}"
+      progress: "Steg %{step} av %{total}"
+    empty:
+      message: Inga importer hittades.
+    index:
+      title: Importer
+      new: Ny import
+    table:
+      title: Importer
+      header:
+        date: Datum
+        operation: Åtgärd
+        status: Status
+        actions: Åtgärder
+      row:
+        type_labels:
+          transaction_import: "Transaktion"
+          trade_import: "Affär"
+          account_import: "Konto"
+          mint_import: "Mint"
+          actual_import: "Actual"
+          ynab_import: "YNAB"
+          qif_import: "QIF"
+          category_import: "Kategori"
+          rule_import: "Regel"
+          merchant_import: "Handlare"
+          pdf_import: "PDF"
+          document_import: "Dokument"
+          sure_import: "Sure"
+        status:
+          in_progress: Pågår
+          uploading: Bearbetar rader
+          reverting: Återställer
+          revert_failed: Återställning misslyckades
+          complete: Klar
+          failed: Misslyckades
+        actions:
+          revert: Återställ
+          confirm_revert: Detta tar bort transaktioner som importerades, men du kan fortfarande granska och importera om din data när du vill.
+          delete: Ta bort
+          view: Visa
+          mark_failed: Markera som misslyckad
+          confirm_mark_failed: Den här importen har varit inaktiv en stund och bakgrundsjobbet avbröts troligen. Markera den som misslyckad så du kan försöka igen? Ingen importerad data behålls.
+      empty: Inga importer ännu.
+    new:
+      description: Importera från ett finansverktyg eller ladda upp rådatafiler.
+      tab_financial_tools: Finansverktyg och filer
+      tab_raw_data: Rådata
+      import_ynab: Importera från YNAB
+      import_accounts: Importera konton
+      import_categories: Importera kategorier
+      import_merchants: Importera handlare
+      import_mint: Importera från Mint
+      import_actual: Importera från Actual Budget
+      import_portfolio: Importera investeringar
+      import_rules: Importera regler
+      import_transactions: Importera transaktioner
+      import_qif: Importera från Quicken (QIF)
+      import_sure: Importera från Sure
+      import_sure_description: Fullständig .ndjson-exportfil
+      import_file: Importera dokument
+      import_file_description: AI-driven analys för PDF:er och sökbar filuppladdning
+      requires_account: Importera konton först för att låsa upp det här alternativet.
+      resume: Återuppta %{type}
+      sources: Källor
+      title: Ny import
+    create:
+      file_too_large: Filen är för stor. Maxstorlek är %{max_size}MB.
+      invalid_file_type: Ogiltig filtyp. Ladda upp en CSV-fil.
+      csv_uploaded: CSV laddades upp.
+      ndjson_uploaded: NDJSON-filen laddades upp.
+      pdf_too_large: PDF-filen är för stor. Maxstorlek är %{max_size}MB.
+      pdf_processing: Din PDF bearbetas. Du får ett e-postmeddelande när analysen är klar.
+      invalid_pdf: Den uppladdade filen är inte en giltig PDF.
+      duplicate_pdf_unavailable: Den här PDF:en är redan sparad som ett kontoutdrag du inte har åtkomst till.
+      document_too_large: Dokumentfilen är för stor. Maxstorlek är %{max_size}MB.
+      invalid_document_file_type: Ogiltig dokumentfiltyp för den aktiva vektorlagringen.
+      document_uploaded: Dokumentet laddades upp.
+      document_upload_failed: Vi kunde inte ladda upp dokumentet till vektorlagringen. Försök igen.
+      invalid_ndjson_file_type: Ogiltig filtyp eller format. Ladda upp en giltig .ndjson- eller .json-exportfil.
+      document_provider_not_configured: Ingen vektorlagring är konfigurerad för dokumentuppladdningar.
+    show:
+      finalize_upload: Slutför din filuppladdning.
+      finalize_mappings: Slutför dina kopplingar innan du fortsätter.
+    ready:
+      description: Här är en sammanfattning av de nya posterna som läggs till på ditt konto
+        när du publicerar den här importen.
+      title: Bekräfta din importdata
+      summary_item_label: Post
+      summary_count_label: Antal
+      empty_summary: Vi kunde inte hitta några importerbara poster i den här filen. Den kan vara tom, eller raderna kanske inte matchar det förväntade exportformatet (varje rad ska vara ett JSON-objekt med nycklarna "type" och "data", med typer som denna import stöder).
+      publish_import: Publicera import
+      back_to_imports: Tillbaka till importer
+      missing_merchant_warning_title: Vissa handlare saknas i den här exporten
+      missing_merchant_warning_description:
+        one: >-
+          1 handlarreferens i den här filen pekar på en handlare som inte ingår. Detta kan hända
+          med en export som gjordes innan leverantörstilldelade handlare lades till i Sure-exporter. Du kan fortfarande
+          publicera den här importen — den berörda posten importeras bara utan handlare, och du kan tagga
+          den senare.
+        other: >-
+          %{count} handlarreferenser i den här filen pekar på handlare som inte ingår. Detta kan hända
+          med en export som gjordes innan leverantörstilldelade handlare lades till i Sure-exporter. Du kan fortfarande
+          publicera den här importen — de berörda posterna importeras bara utan handlare, och du kan tagga
+          dem senare.
+      skipped_recurring_description:
+        one: >-
+          1 återkommande transaktion saknar namn och dess handlare saknas, så den hoppas över.
+          Automatiskt upptäckta återkommande transaktioner byggs om efter importen.
+        other: >-
+          %{count} återkommande transaktioner saknar namn och deras handlare saknas, så de hoppas över.
+          Automatiskt upptäckta återkommande transaktioner byggs om efter importen.
+      reused_taxonomy_notice_title: Vissa kategorier, taggar eller handlare finns redan
+      reused_taxonomy_notice_description:
+        one: >-
+          1 kategori, tagg eller handlare i den här filen finns redan på ditt konto (till
+          exempel från onboardingens standardkategorier). Den återanvänds och uppdateras med den här filens
+          data istället för att skapa en dubblett.
+        other: >-
+          %{count} kategorier, taggar eller handlare i den här filen finns redan på ditt konto (till
+          exempel från onboardingens standardkategorier). De återanvänds och uppdateras med den här filens
+          data istället för att skapa dubbletter.
+      provider_merchant_diff_title: Vissa handlare finns redan med olika uppgifter
+      provider_merchant_diff_description:
+        one: >-
+          1 handlare i den här filen finns redan med olika uppgifter. Den befintliga handlaren
+          behålls och den här filens värden tillämpas inte.
+        other: >-
+          %{count} handlare i den här filen finns redan med olika uppgifter. De befintliga handlarna
+          behålls och den här filens värden tillämpas inte.
+      provider_merchant_diff_summary: Visa skillnader
+      provider_merchant_diff_none: inga
+      provider_merchant_diff_fields:
+        website_url: Webbplats
+        name: Namn
+        provider_merchant_id: Leverantörs-ID
+      provider_merchant_diff_row: "%{field}: behåller %{kept}, filen har %{imported}"
+    errors:
+      custom_column_requires_inflow: "Anpassade kolumnimporter kräver att en inflödeskolumn väljs"
+      interrupted: "Bakgrundsjobbet avbröts innan det slutfördes. Importerad data rullades tillbaka — du kan försöka igen."
+      presumed_lost: "Markerad som misslyckad efter att bakgrundsjobbet antogs vara förlorat. Importerad data rullades tillbaka — du kan försöka igen."
+    document_types:
+      bank_statement: Bankutdrag
+      credit_card_statement: Kreditkortsutdrag
+      investment_statement: Investeringsutdrag
+      financial_document: Finansiellt dokument
+      contract: Avtal
+      other: Annat dokument
+      unknown: Okänt dokument
+    pdf_import:
+      processing_title: Bearbetar din PDF
+      processing_description: Vi analyserar ditt dokument med AI. Detta kan ta en stund. Du får ett e-postmeddelande när analysen är klar.
+      check_status: Kontrollera status
+      back_to_dashboard: Tillbaka till översikten
+      failed_title: Bearbetningen misslyckades
+      failed_description: Vi kunde inte bearbeta din PDF. Försök igen eller kontakta support.
+      try_again: Försök igen
+      delete_import: Ta bort import
+      complete_title: Dokument analyserat
+      complete_description: Vi har analyserat din PDF och här är vad vi hittade.
+      document_type_label: Dokumenttyp
+      source_statement: Källkontoutdrag
+      summary_label: Sammanfattning
+      email_sent_notice: Ett e-postmeddelande har skickats till dig med nästa steg.
+      back_to_imports: Tillbaka till importer
+      unknown_state_title: Okänt tillstånd
+      unknown_state_description: Den här importen är i ett oväntat tillstånd. Gå tillbaka till importer.
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Bearbetningen misslyckades: %{error}"
+      errors:
+        provider_not_configured: AI-leverantör inte konfigurerad
+        provider_no_pdf_support: AI-leverantören stöder inte PDF-bearbetning
+      ready_for_review_title: Redo för granskning
+      ready_for_review_description:
+        one: "%{count} transaktion från ditt kontoutdrag finns inte på det här kontot ännu. Granska och publicera den för att lägga till den."
+        other: "%{count} transaktioner från ditt kontoutdrag finns inte på det här kontot ännu. Granska och publicera dem för att lägga till dem."
+      transactions_extracted: Extraherade transaktioner
+      transactions_extracted_count:
+        one: "%{count} transaktion"
+        other: "%{count} transaktioner"
+      select_account: Importera till konto
+      select_account_placeholder: Välj ett konto...
+      select_account_hint: Välj vilket konto dessa transaktioner ska importeras till.
+      no_accounts: Inga konton tillgängliga. Skapa ett konto först.
+      create_account: Skapa konto
+      save_account: Spara
+      publish_transactions:
+        one: "Publicera %{count} transaktion"
+        other: "Publicera %{count} transaktioner"
+      review_transactions: Granska transaktioner
+      view_summary: Visa importsammanfattning
+      already_recorded_note:
+        one: "%{count} fanns redan på det här kontot och matchades mot kontoutdraget."
+        other: "%{count} fanns redan på det här kontot och matchades mot kontoutdraget."
+      complete_fully_reconciled:
+        one: "Varje transaktion på det här kontoutdraget fanns redan på ditt konto. %{count} matchades och markerades som avstämd — inget behövde importeras."
+        other: "Varje transaktion på det här kontoutdraget fanns redan på ditt konto. Alla %{count} matchades och markerades som avstämda — inget behövde importeras."
+      select_account_to_continue: Välj ett konto ovan för att fortsätta.
+      unknown_document_type: Okänt

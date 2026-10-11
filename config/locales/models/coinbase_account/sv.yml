@@ -1,0 +1,5 @@
+---
+sv:
+  coinbase:
+    processor:
+      paid_via: "Betald via %{method}"

@@ -1,0 +1,24 @@
+---
+sv:
+  activerecord:
+    attributes:
+      user:
+        email: E-post
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        first_name: Förnamn
+        last_name: Efternamn
+        password: Lösenord
+        password_confirmation: Bekräfta lösenord
+    errors:
+      models:
+        user:
+          attributes:
+            base:
+              cannot_deactivate_admin_with_other_users: Admin kan inte radera kontot
+                medan andra användare finns. Radera alla medlemmar först.
+              provider_item_has_other_accounts: Användaren äger konton som är kopplade till en provideranslutning som även har konton ägda av en annan användare. Flytta eller koppla bort dessa konton innan du ändrar familj/grupp-medlemskap.
+              cannot_remove_last_super_admin: Kan inte ta bort den sista aktiva
+                superadministratören. Utse en annan användare till superadministratör först.
+            profile_image:
+              invalid_file_size: filstorleken måste vara mindre än %{max_megabytes}MB

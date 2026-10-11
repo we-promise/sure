@@ -1,0 +1,32 @@
+---
+sv:
+  helpers:
+    label:
+      user:
+        invite_code: Inbjudningskod
+    submit:
+      user:
+        create: Fortsätt
+  registrations:
+    closed: Registreringen är för närvarande stängd.
+    create:
+      failure: Det uppstod ett problem vid registreringen.
+      invalid_invite_code: Ogiltig inbjudningskod, försök igen.
+      success: Du har registrerat dig.
+    new:
+      invitation_message: "%{inviter} har bjudit in dig att gå med som %{role}"
+      join_family_title: Gå med i %{family} %{moniker}
+      role_admin: administratör
+      role_guest: gäst
+      role_member: medlem
+      submit: Skapa konto
+      title: Skapa ditt konto
+      welcome_body: För att komma igång måste du registrera ett nytt konto. Du kommer
+        sedan att kunna konfigurera ytterligare inställningar i appen.
+      welcome_title: Välkommen till självhostad %{product_name}!
+      password_placeholder: Ange ditt lösenord
+      password_requirements:
+        length: Minst 8 tecken
+        case: Versaler och gemener
+        number: En siffra (0-9)
+        special: "Ett specialtecken (!, @, #, $, %, osv)"

@@ -1,0 +1,48 @@
+---
+sv:
+  family_exports:
+    access_denied: Åtkomst nekad
+    create:
+      success: Exporten har startat. Du kan ladda ner den om en liten stund.
+    delete_confirmation: Är du säker på att du vill ta bort den här exporten? Detta går inte att ångra.
+    delete_failed_confirmation: Är du säker på att du vill ta bort den här misslyckade exporten?
+    cancel:
+      cancelled: Exporten markerad som misslyckad. Du kan skapa en ny export direkt.
+      not_cancellable: Den här exporten kan inte markeras som misslyckad just nu — jobbet kan fortfarande köra. Försök igen när den har varit inaktiv i en timme.
+    destroy:
+      success: Exporten togs bort
+    export_not_ready: Exporten är inte redo för nedladdning
+    exporting: Exporterar...
+    new:
+      dialog_title: Exportera din data
+      dialog_subtitle: Ladda ner all din finansiella data
+      whats_included: "Det här ingår:"
+      accounts_and_balances: Alla konton och saldon
+      transaction_history: Transaktionshistorik
+      investment_trades: Investeringsaffärer
+      categories_tags_rules: Kategorier, taggar och regler
+      note_label: Obs
+      note_description: Den här exporten innehåller all din data, men bara viss data kan importeras tillbaka via CSV-importen. Vi stöder import av konton, transaktioner (med kategori och taggar) samt affärer. Övrig kontodata kan inte importeras och är endast till för dina egna register.
+      cancel: Avbryt
+      export_data: Exportera data
+    index:
+      title: Exporter
+      new: Ny export
+    table:
+      title: Exporter
+      header:
+        date: Datum
+        filename: Filnamn
+        status: Status
+        actions: Åtgärder
+      row:
+        status:
+          in_progress: Pågår
+          complete: Klar
+          failed: Misslyckades
+        actions:
+          delete: Ta bort
+          download: Ladda ner
+          mark_failed: Markera som misslyckad
+          confirm_mark_failed: Den här exporten har varit inaktiv en stund och bakgrundsjobbet avbröts troligen. Markera den som misslyckad? Du kan skapa en ny export direkt.
+      empty: Inga exporter ännu.
