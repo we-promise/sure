@@ -111,6 +111,8 @@ class Settings::ProvidersController < ApplicationController
   def connect_form
     provider_key = params[:provider_key]
 
+    # Not FAMILY_PANELS_BY_KEY[provider_key]: Brakeman reads that as the param
+    # choosing the partial to render.
     panel = FAMILY_PANELS.find { |p| p[:key] == provider_key }
     if panel
       @panel_key     = panel[:key]
@@ -215,6 +217,7 @@ class Settings::ProvidersController < ApplicationController
     ].freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
+    FAMILY_PANELS_BY_KEY = FAMILY_PANELS.index_by { |p| p[:key] }.freeze
 
     # Maps panel key → ActiveRecord model name for sync health queries
     PANEL_SYNCABLE_TYPES = {

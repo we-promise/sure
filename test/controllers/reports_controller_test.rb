@@ -54,7 +54,9 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
                                        currency: "USD", accountable: Investment.new)
     security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
 
-    ExchangeRate.create!(from_currency: "EUR", to_currency: "GBP", date: date, rate: 0.8)
+    # The fixtures already hold EUR->GBP for today and yesterday, so on the 1st
+    # and 2nd of a month a fresh row for its first day breaks uniqueness.
+    ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "GBP", date: date).update!(rate: 0.8)
     ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: date, rate: 1.25)
     account.holdings.create!(security: security, date: date, qty: 5, price: 150,
                              amount: BigDecimal(750), currency: "GBP", cost_basis: 100)
@@ -539,15 +541,22 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     income_href = transactions_path(q: { categories: [ income_category.name ], start_date: start_date, end_date: end_date })
     uncategorized_href = transactions_path(q: { categories: [ Category.uncategorized.filter_value ], start_date: start_date, end_date: end_date })
 
-    assert_select "tr[data-category='category-#{expense_category.id}'] a[href=?]", expense_href, text: expense_category.name
-    assert_select "tr[data-category='category-#{income_category.id}'] a[href=?]", income_href, text: income_category.name
-    assert_select "tr[data-category='category-uncategorized'] a[href=?]", uncategorized_href, text: Category.uncategorized.name
+    assert_select "tr[data-category='category-#{expense_category.id}'] a[href=?]", expense_href, text: /#{Regexp.escape(expense_category.name)}/
+    assert_select "tr[data-category='category-#{income_category.id}'] a[href=?]", income_href, text: /#{Regexp.escape(income_category.name)}/
+    assert_select "tr[data-category='category-uncategorized'] a[href=?]", uncategorized_href, text: /#{Regexp.escape(Category.uncategorized.name)}/
 
-    # Hit target via stretched ::before, anchored to the category cell's flex
-    # wrapper. Deliberately NOT the <tr>: CSS 2.1 9.3.1 leaves position:relative
-    # undefined on table rows and WebKit does not implement it, so anchoring
-    # there let the overlay escape and swallow every click on the page in Safari.
-    assert_select "tr.group\\/category-row[data-category='category-#{expense_category.id}'] td div.relative a[class*='before:absolute'][class*='before:inset-0']"
+    # Full-row hit target via a normal flex <a> wrapping icon+name+count —
+    # deliberately not a `position: relative`/`absolute` stretched-link inside
+    # the <table>, which caused a WebKit scrollHeight bug (see #3093).
+    assert_select "tr[data-category='category-#{expense_category.id}'] a.flex.items-center"
+    assert_select "tr[data-category='category-#{expense_category.id}'].relative", 0
+    assert_select "tr[data-category='category-#{expense_category.id}'] a[class*='before:absolute']", 0
+
+    # Amount and percentage cells are each wrapped in their own normal-flow
+    # <a> to the same href, so the full row remains clickable without a
+    # stretched-link overlay spanning the <tr>.
+    assert_select "tr[data-category='category-#{expense_category.id}'] td:nth-child(2) a[href=?]", expense_href
+    assert_select "tr[data-category='category-#{expense_category.id}'] td:nth-child(3) a[href=?]", expense_href
   end
 
   test "index uncategorized category link stays on the stable filter value while the displayed text is localized" do
@@ -563,7 +572,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     href = transactions_path(q: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ], start_date: start_date, end_date: end_date })
-    assert_select "tr[data-category='category-uncategorized'] a[href=?]", href, text: localized_name
+    assert_select "tr[data-category='category-uncategorized'] a[href=?]", href, text: /#{Regexp.escape(localized_name)}/
   end
 
   test "index excludes tax-advantaged account transactions from activity breakdown" do

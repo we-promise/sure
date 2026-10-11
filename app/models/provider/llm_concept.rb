@@ -44,7 +44,11 @@ module Provider::LlmConcept
   ChatMessage = Data.define(:id, :output_text)
   ChatStreamChunk = Data.define(:type, :data, :usage)
   ChatResponse = Data.define(:id, :model, :messages, :function_requests)
-  ChatFunctionRequest = Data.define(:id, :call_id, :function_name, :function_args)
+  ChatFunctionRequest = Data.define(:id, :call_id, :function_name, :function_args, :extra_content) do
+    def initialize(id:, call_id:, function_name:, function_args:, extra_content: nil)
+      super
+    end
+  end
 
   def chat_response(
     prompt,

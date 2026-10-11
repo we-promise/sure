@@ -1,5 +1,5 @@
 <div id="coinspot-providers-panel" class="space-y-4">
-  <% items = local_assigns[:coinspot_items] || @coinspot_items %>
+  <% items = local_assigns[:coinspot_items] || @coinspot_items || Current.family.coinspot_items.active.ordered %>
 
   <%= render DS::Alert.new(
         variant: :warning,
@@ -48,7 +48,7 @@
                 icon: "refresh-cw",
                 variant: :outline,
                 size: :sm,
-                href: sync_coinspot_item_path(item),
+                href: sync_coinspot_item_path(item, source: "panel"),
                 method: :post,
                 disabled: item.syncing?
               ) %>

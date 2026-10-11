@@ -108,6 +108,66 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-stream[action=replace][target=?]", "insights-feed", count: 0
   end
 
+  # The layout renders the lightbulb twice (desktop header, mobile top nav), so
+  # the badge is replaced by attribute, not id, and its wrapper stays even at 0
+  # so a later stream still has something to target.
+  test "layout renders a badge target in both lightbulb copies" do
+    get root_url
+
+    assert_response :success
+    assert_select "[data-insights-badge]", count: 2
+  end
+
+  test "acknowledge refreshes the unread badge in both lightbulb copies" do
+    unread = @user.family.insights.active.count
+    assert_operator unread, :>, 1, "fixtures need more than one unread insight"
+
+    patch acknowledge_insight_url(@insight), as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=replace][targets=?]", "[data-insights-badge]" do
+      assert_select "template [data-insights-badge]", text: (unread - 1).to_s
+    end
+  end
+
+  test "acknowledging the last unread insight empties the badge but keeps its target" do
+    @user.family.insights.active.where.not(id: @insight.id).update_all(status: "read")
+
+    patch acknowledge_insight_url(@insight), as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=replace][targets=?]", "[data-insights-badge]" do
+      assert_select "template [data-insights-badge]", text: ""
+    end
+  end
+
+  test "the badge stream still caps the count at 9+" do
+    11.times do |i|
+      @user.family.insights.create!(insight_type: "idle_cash", priority: "low", status: "active",
+        title: "Extra #{i}", body: "body", dedup_key: "idle_cash:cap:#{i}", generated_at: Time.current)
+    end
+
+    patch acknowledge_insight_url(@insight), as: :turbo_stream
+
+    assert_select "turbo-stream[action=replace][targets=?]", "[data-insights-badge]" do
+      assert_select "template [data-insights-badge]", text: "9+"
+    end
+  end
+
+  test "unacknowledge refreshes the unread badge" do
+    @insight.acknowledge!
+
+    unread = @user.family.insights.active.count
+
+    patch unacknowledge_insight_url(@insight), as: :turbo_stream
+
+    # Undo restores the insight as read, so the unread count holds.
+    assert_response :success
+    assert_select "turbo-stream[action=replace][targets=?]", "[data-insights-badge]" do
+      assert_select "template [data-insights-badge]", text: unread.to_s
+    end
+  end
+
   test "unacknowledge restores the insight as read and re-renders the list" do
     @insight.acknowledge!
 
@@ -180,6 +240,22 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
     assert other_insight.reload.active?
+  end
+
+  test "an insight about an account not everyone can see is neither shown nor changed" do
+    hidden = @user.family.insights.create!(
+      insight_type: "idle_cash", priority: "low", status: "active", title: "Idle cash in Private",
+      body: "Body", metadata: { "account_id" => accounts(:connected).id },
+      dedup_key: "idle_cash:private:2026-07", generated_at: Time.current
+    )
+
+    get insights_url
+    assert_no_match "Idle cash in Private", response.body
+    assert hidden.reload.active?, "viewing the feed does not mark a hidden row read"
+
+    patch acknowledge_insight_url(hidden), as: :turbo_stream
+    assert_response :not_found
+    assert hidden.reload.active?
   end
 
   test "refresh enqueues insight generation for the family" do

@@ -98,7 +98,7 @@
 
   <% if ibkr_item.persisted? %>
     <div class="flex flex-wrap justify-end gap-2">
-      <%= button_to sync_ibkr_item_path(ibkr_item),
+      <%= button_to sync_ibkr_item_path(ibkr_item, source: "panel"),
                     method: :post,
                     class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
                     disabled: ibkr_item.syncing? do %>

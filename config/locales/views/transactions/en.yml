@@ -35,6 +35,9 @@ en:
       category_search_placeholder: Search categories
       create_category: 'Create "%{name}"'
       create_category_error: Could not create category
+      create_as_subcategory: Add as a subcategory…
+      choose_parent: 'Create "%{name}" under:'
+      back_to_categories: Back
       date: Date
       description: Description
       description_placeholder: Describe transaction
@@ -58,7 +61,11 @@ en:
       updated: Transaction updated
     new:
       new_transaction: New transaction
+    transaction_category:
+      set_on_outflow: "The category belongs to the outgoing side of this transfer and can only be changed there"
     show:
+      category_set_on_hidden_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side, on an account you cannot access, and can only be changed there."
+      category_set_on_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side and can only be changed there, so budgets count it once."
       keep_both: No, keep both
       loan_payment: Loan Payment
       mark_recurring: Mark as Recurring

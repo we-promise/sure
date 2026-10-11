@@ -38,8 +38,6 @@ tr:
           member: Üye
           super_admin: Süper Yönetici
         section_title: Aileler / Gruplar
-        summary:
-          trials_expiring_7_days: Önümüzdeki 7 gün içinde sona erecek denemeler
         table:
           family_accounts: Aile hesapları
           family_transactions: Aile işlemleri

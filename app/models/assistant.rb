@@ -65,6 +65,7 @@ module Assistant
         Function::ImportBankStatement,
         Function::SearchFamilyFiles,
         Function::CreateGoal,
+        Function::SetOpeningBalance,
         Function::GetTags,
         Function::CreateTag,
         Function::UpdateTag,

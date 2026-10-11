@@ -22,7 +22,7 @@ class FioItemsController < ApplicationController
     token = attributes[:token].to_s.strip
 
     if token.blank?
-      render_provider_panel_error(t(".token_required"))
+      render_provider_panel("fio", alert: t(".token_required"))
       return
     end
 
@@ -32,9 +32,9 @@ class FioItemsController < ApplicationController
       sync_start_date: attributes[:sync_start_date].presence
     )
 
-    render_provider_panel(:notice, t(".success"))
+    redirect_to settings_providers_path, notice: t(".success"), status: :see_other
   rescue ActiveRecord::RecordInvalid => e
-    render_provider_panel_error(e.record.errors.full_messages.join(", "))
+    render_provider_panel("fio", alert: e.record.errors.full_messages.join(", "))
   end
 
   # Rotate the token and/or rename the connection and/or move its sync start date.
@@ -53,9 +53,9 @@ class FioItemsController < ApplicationController
       # sync can find out whether Fio still accepts it. Without this the connection sits
       # marked healthy until the next scheduled run.
       @fio_item.sync_later unless @fio_item.syncing?
-      render_provider_panel(:notice, t(".success"))
+      render_provider_panel("fio", notice: t(".success"))
     else
-      render_provider_panel_error(@fio_item.errors.full_messages.join(", "))
+      render_provider_panel("fio", alert: @fio_item.errors.full_messages.join(", "))
     end
   end
 
@@ -100,6 +100,7 @@ class FioItemsController < ApplicationController
   def sync
     @fio_item.update!(history_unlock_required_at: nil) if @fio_item.history_unlock_required_at.present?
     @fio_item.sync_later unless @fio_item.syncing?
+    return render_provider_panel("fio", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -357,38 +358,6 @@ class FioItemsController < ApplicationController
         },
         skip_initial_sync: true
       )
-    end
-
-    # Re-render the providers settings panel (Turbo) or redirect with a flash.
-    def render_provider_panel(flash_type, message)
-      if turbo_frame_request?
-        flash.now[flash_type] = message
-        @fio_items = Current.family.fio_items.active.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "fio-providers-panel",
-            partial: "settings/providers/fio_panel",
-            locals: { fio_items: @fio_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, { flash_type => message, status: :see_other }
-      end
-    end
-
-    # Re-render the providers panel with an error (Turbo) or redirect with alert.
-    def render_provider_panel_error(message)
-      @error_message = message
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "fio-providers-panel",
-          partial: "settings/providers/fio_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
     end
 
     # Validate the return_to param as a safe in-app relative path, or nil.

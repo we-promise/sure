@@ -14,7 +14,8 @@
   maturity_lbl  = Settings::ProviderCard.maturity_label(entry[:maturity])
   details_data  = entry[:auto_open_param].present? ? { controller: "auto-open", auto_open_param_value: entry[:auto_open_param] } : {}
 %>
-<%= tag.details open: open,
+<%= tag.details id: ("#{entry[:turbo_id]}-connection" if entry[:turbo_id]),
+                open: open,
                 class: "group bg-container shadow-border-xs rounded-xl #{border_class}",
                 data: details_data do %>
   <summary class="min-h-15 px-4 py-3.5 cursor-pointer rounded-xl list-none [&::-webkit-details-marker]:hidden">
@@ -44,9 +45,7 @@
                  configuration: entry[:configuration],
                  provider_setup_encryption_warning: provider_setup_encryption_warning %>
     <% else %>
-      <turbo-frame id="<%= entry[:turbo_id] %>-providers-panel">
-        <%= render "settings/providers/#{entry[:partial]}" %>
-      </turbo-frame>
+      <%= render "settings/providers/#{entry[:partial]}" %>
     <% end %>
   </div>
 <% end %>

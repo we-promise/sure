@@ -1,6 +1,7 @@
 class RulesController < ApplicationController
   include StreamExtensions
 
+  before_action :require_non_guest!, except: %i[index]
   before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index
@@ -53,7 +54,7 @@ class RulesController < ApplicationController
     if @rule.save
       redirect_to confirm_rule_path(@rule, reload_on_close: true)
     else
-      render :new, status: :unprocessable_entity
+      render_invalid_rule :new
     end
   end
 
@@ -80,7 +81,7 @@ class RulesController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to rules_path, notice: t(".success") }
       end
     else
-      render :edit, status: :unprocessable_entity
+      render_invalid_rule :edit
     end
   end
 
@@ -118,6 +119,25 @@ class RulesController < ApplicationController
   end
 
   private
+    def render_invalid_rule(template)
+      # A native select cannot preserve an invalid option on resubmission.
+      invalid_selector = @rule.errors[:resource_type].any? ||
+        @rule.actions.any? { |action| action.errors[:action_type].any? } ||
+        @rule.conditions.any? { |condition| invalid_condition_selector?(condition) }
+
+      if invalid_selector
+        render plain: @rule.errors.full_messages.to_sentence, status: :unprocessable_entity
+        return
+      end
+
+      render template, status: :unprocessable_entity
+    end
+
+    def invalid_condition_selector?(condition)
+      condition.errors[:condition_type].any? || condition.errors[:operator].any? ||
+        condition.sub_conditions.any? { |sub_condition| invalid_condition_selector?(sub_condition) }
+    end
+
     # Names the provider that will actually run, and prices against it.
     #
     # This previously hardcoded :openai, so an Anthropic install was quoted the

@@ -55,6 +55,21 @@ class KrakenAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     KrakenAccount::HoldingsProcessor.new(@kraken_account).process
   end
 
+  # Fiat at the exchange is cash the ledger already moved. Held as a holding
+  # too it is valued twice, and it can never be reversed into history because
+  # no trade ever moves it.
+  test "does not import a fiat balance as a holding" do
+    @kraken_account.update!(raw_payload: { "assets" => [
+      { "symbol" => "EUR", "price_symbol" => "EUR", "balance" => "500", "price_usd" => "1.1", "source" => "spot" },
+      { "symbol" => "ZUSD", "price_symbol" => "USD", "balance" => "50", "price_usd" => "1.0", "source" => "spot" }
+    ] })
+    import_adapter = mock
+    import_adapter.expects(:import_holding).never
+    Account::ProviderImportAdapter.stubs(:new).returns(import_adapter)
+
+    KrakenAccount::HoldingsProcessor.new(@kraken_account).process
+  end
+
   test "does not overwrite a different provider holding with the same security/date/currency" do
     binance_item = BinanceItem.create!(family: @family, name: "Binance", api_key: "b", api_secret: "s")
     binance_account = binance_item.binance_accounts.create!(name: "Binance", account_type: "combined", currency: "USD")
