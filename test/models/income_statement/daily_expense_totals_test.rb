@@ -36,6 +36,20 @@ class IncomeStatement::DailyExpenseTotalsTest < ActiveSupport::TestCase
     assert_equal 10, series.first.total
   end
 
+  test "excludes both legs of a still-pending auto-matched transfer" do
+    other_account = @family.accounts.create! name: "Savings", currency: @family.currency, balance: 1000, accountable: Depository.new
+
+    outflow_entry = create_transaction(account: @checking, amount: 200, date: Date.current)
+    inflow_entry = create_transaction(account: other_account, amount: -200, date: Date.current)
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    create_transaction(account: @checking, amount: 10, date: Date.current)
+
+    series = daily_series
+
+    assert_equal 1, series.size
+    assert_equal 10, series.first.total
+  end
+
   test "excludes entries marked as excluded" do
     create_transaction(account: @checking, amount: 100, date: Date.current, excluded: true)
     create_transaction(account: @checking, amount: 10, date: Date.current)

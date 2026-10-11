@@ -64,6 +64,26 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     end
   end
 
+  test "candidate_patterns skips legs of a still-pending auto-matched transfer" do
+    account = @family.accounts.first
+    other_account = @family.accounts.where.not(id: account.id).first
+
+    3.times do |i|
+      outflow_entry = account.entries.create!(
+        date: (i + 1).months.ago.to_date, amount: 42.00, currency: "USD",
+        name: "Recurring-looking pending match", entryable: Transaction.new(kind: "standard")
+      )
+      inflow_entry = other_account.entries.create!(
+        date: (i + 1).months.ago.to_date, amount: -42.00, currency: "USD",
+        name: "Recurring-looking pending match", entryable: Transaction.new(kind: "standard")
+      )
+      Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    end
+
+    bill_names = @identifier.candidate_patterns(sign: :outflow, min_occurrences: 2).map { |p| p[:name] }
+    assert_not_includes bill_names, "Recurring-looking pending match"
+  end
+
   test "candidate_patterns offers undeclared recurring shapes and skips claimed, junk, and wrong-sign ones" do
     account = @family.accounts.first
 

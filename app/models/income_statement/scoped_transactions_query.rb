@@ -57,6 +57,11 @@ module IncomeStatement::ScopedTransactionsQuery
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
     end
 
+    # See Transaction.pending_transfer_legs.
+    def exclude_pending_transfers_sql(t)
+      "AND NOT #{Transaction.pending_transfer_leg_sql(t)}"
+    end
+
     def pending_providers_sql(t = "t")
       Transaction.pending_providers_sql(t)
     end

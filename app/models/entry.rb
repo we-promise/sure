@@ -116,6 +116,7 @@ class Entry < ApplicationRecord
       .where(accounts: { status: %w[draft active] })
       .where(transactions: { category_id: nil })
       .where.not(transactions: { kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS })
+      .merge(Transaction.excluding_pending_transfer_legs)
       .where(entries: { excluded: false })
   }
 

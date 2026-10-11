@@ -319,6 +319,7 @@ class RecurringTransactionsController < ApplicationController
         .merge(Entry.excluding_split_parents)
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
         .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+        .merge(Transaction.excluding_pending_transfer_legs)
 
       if @picker_query.present?
         pattern = "%#{ActiveRecord::Base.sanitize_sql_like(@picker_query)}%"

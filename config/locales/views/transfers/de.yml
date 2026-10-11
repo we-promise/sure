@@ -52,3 +52,4 @@ de:
       uncategorized: Nicht kategorisiert
     update:
       success: Überweisung aktualisiert
+      already_resolved: Diese Überweisung wurde bereits bestätigt oder abgelehnt.

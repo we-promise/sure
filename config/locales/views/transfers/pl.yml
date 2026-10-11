@@ -53,3 +53,4 @@ pl:
       uncategorized: Bez kategorii
     update:
       success: Przelew został zaktualizowany
+      already_resolved: Ten przelew został już potwierdzony lub odrzucony.

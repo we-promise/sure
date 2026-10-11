@@ -21,6 +21,12 @@ module Transaction::Transferable
     transfer_as_inflow || transfer_as_outflow
   end
 
+  # Ruby counterpart of Transaction.pending_transfer_legs for totals built
+  # from loaded rows: a pending auto-match leg is still "standard".
+  def counts_as_transfer?
+    transfer? || transfer&.pending? || false
+  end
+
   def transfer_match_candidates(
     date_window: 30,
     exchange_rate_tolerance: Family::AutoTransferMatchable.manual_match_exchange_rate_tolerance

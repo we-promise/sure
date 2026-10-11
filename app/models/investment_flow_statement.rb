@@ -27,7 +27,7 @@ class InvestmentFlowStatement
       .where(entries: { date: period.date_range })
       .where(investment_activity_label: %w[Contribution Withdrawal])
 
-    scope = base.where(kind: %w[standard investment_contribution])
+    scope = base.where(kind: %w[standard investment_contribution]).excluding_pending_transfer_legs
       .or(matched_investment_flows(base))
 
     if user
@@ -55,7 +55,9 @@ class InvestmentFlowStatement
     # (Transfer#kind_for_leg), so the kind filter above would drop it. Count it
     # when the other leg is outside the investment/crypto accounts, the same
     # endpoint rule Transfer.kind_for_account uses. Movements between investment
-    # or crypto accounts stay internal and are not counted.
+    # or crypto accounts stay internal and are not counted. A still-pending
+    # auto-match keeps the leg's own kind until it is confirmed
+    # (Transfer#confirm!), so it is counted by the same rule as a confirmed one.
     def matched_investment_flows(base)
       matched_flow(base, label: "Contribution", leg: :inflow_transaction_id, counterpart: :outflow_transaction)
         .or(matched_flow(base, label: "Withdrawal", leg: :outflow_transaction_id, counterpart: :inflow_transaction))
@@ -64,6 +66,7 @@ class InvestmentFlowStatement
     def matched_flow(base, label:, leg:, counterpart:)
       base
         .where(kind: "funds_movement")
+        .or(base.where(kind: %w[standard investment_contribution]).pending_transfer_legs)
         .where("transactions.investment_activity_label = ?", label)
         .where(entries: { account_id: family.accounts.where(accountable_type: INVESTMENT_ACCOUNT_TYPES).select(:id) })
         .where(

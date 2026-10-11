@@ -267,6 +267,9 @@ class RecurringTransaction
               .where(excluded: false)
               .where(date: window_min..window_max)
               .where("transactions.kind NOT IN (?) OR transactions.id IN (?)", Transaction::TRANSFER_KINDS, transfer_destinations.keys)
+              # A pending auto-matched leg keeps its standard kind until confirmed,
+              # so it would slip past the kind check; it is only a suggestion.
+              .merge(Transaction.excluding_pending_transfer_legs)
               .where.not(id: RecurringAllocation.where.not(entry_id: nil).where(state: "confirmed").select(:entry_id))
               .includes(:entryable)
               .to_a

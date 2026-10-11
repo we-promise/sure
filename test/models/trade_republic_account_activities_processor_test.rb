@@ -1223,7 +1223,12 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     cash_entry = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_counterpart")
     counterpart = @account.entries.find_by!(external_id: "trade_republic_settlement_evt_counterpart")
 
-    cash_entry.transaction.transfer.reject!
+    # The settlement transfer is created confirmed, and Transfer#reject! only
+    # resolves pending suggestions. Unlinking a confirmed transfer is a
+    # destroy!, so record the rejection the way a user-side unlink would.
+    transfer = cash_entry.transaction.transfer
+    RejectedTransfer.find_or_create_by!(inflow_transaction_id: transfer.inflow_transaction_id, outflow_transaction_id: transfer.outflow_transaction_id)
+    transfer.destroy!
     TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
     assert_nil cash_entry.transaction.reload.transfer
     assert_nil counterpart.transaction.reload.transfer
@@ -1457,6 +1462,9 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     deposit = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_funded").transaction
     assert_equal bank_outflow.transaction, deposit.transfer&.outflow_transaction
+    # Auto-matches are pending suggestions; `kind` is only applied on confirmation.
+    assert_equal "standard", deposit.reload.kind
+    deposit.transfer.confirm!
     assert_equal "funds_movement", deposit.reload.kind
   end
 

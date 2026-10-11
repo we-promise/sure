@@ -16,6 +16,16 @@ class Transfer < ApplicationRecord
   validate :transfer_within_date_range
   validate :transfer_has_same_family
 
+  # Whether a leg counts in budgets, reports and search totals depends on
+  # the Transfer row itself (a pending match keeps both legs "standard"),
+  # but those caches are keyed on Family#entries_cache_version. Creating,
+  # confirming, rejecting or destroying a transfer writes no entry, so bump
+  # both legs' entries here to invalidate those caches.
+  after_create :touch_leg_entries
+  after_update :touch_leg_entries, if: :saved_change_to_status?
+  # Deleting a leg's entry or account already changes the entry count.
+  after_destroy :touch_leg_entries, unless: :destroyed_by_association
+
   class << self
     # The outflow leg's kind for a transfer into this account. Transfer::Creator,
     # Family::DataImporter, auto-matching, rules and manual matches all call
@@ -120,7 +130,8 @@ class Transfer < ApplicationRecord
   end
 
   def reject!
-    Transfer.transaction do
+    with_lock do
+      raise ActiveRecord::RecordNotFound, "Transfer is no longer pending" unless pending?
       RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
       destroy!
     end
@@ -150,7 +161,10 @@ class Transfer < ApplicationRecord
   end
 
   def confirm!
-    update!(status: "confirmed")
+    with_lock do
+      apply_transfer_kind! if pending? && !kinds_applied?
+      update!(status: "confirmed")
+    end
   end
 
   def date
@@ -172,6 +186,42 @@ class Transfer < ApplicationRecord
   end
 
   private
+    def touch_leg_entries
+      Entry.where(entryable_type: "Transaction", entryable_id: [ inflow_transaction_id, outflow_transaction_id ])
+           .update_all(updated_at: Time.current)
+    end
+
+    # Auto-match creates transfers without touching kind, so the legs keep
+    # whatever kind they were imported with (usually "standard", but a
+    # provider can label a leg, e.g. a negative amount on a Loan arrives as
+    # loan_payment) until confirmed. Skipping legs that already carry the
+    # transfer's kinds avoids re-deriving kind/category for transfers that
+    # arrived pending with their kinds set by another path -- e.g.
+    # Family::DataImporter or Demo::Generator. Confirming one of those must
+    # not silently overwrite its category.
+    def kinds_applied?
+      return true unless inflow_transaction && outflow_transaction
+
+      inflow_transaction.kind == kind_for_leg(inflow_transaction) &&
+        outflow_transaction.kind == kind_for_leg(outflow_transaction)
+    end
+
+    # Only ever needed for transfers coming out of auto-match, since manual
+    # creation paths (Transfer::Creator, TransferMatchesController) already
+    # set kind/category at creation time with status "confirmed".
+    def apply_transfer_kind!
+      return unless inflow_transaction && outflow_transaction
+
+      kind = kind_for_leg(outflow_transaction)
+      inflow_transaction.update!(kind: "funds_movement")
+      outflow_transaction.update!(kind: kind)
+
+      if kind == "investment_contribution" && outflow_transaction.category_id.blank?
+        category = from_account.family.investment_contributions_category
+        outflow_transaction.update!(category: category) if category.present?
+      end
+    end
+
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
       errors.add(:base, :different_accounts) if to_account == from_account

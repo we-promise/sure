@@ -14,7 +14,12 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
     count_modified_resources(scope) do |txn|
       entry = txn.entry
-      unless txn.transfer?
+      # `txn.transfer?` alone is kind-based, and a pending auto-match leg
+      # keeps kind == "standard" until confirmed (Transfer#confirm!). Without
+      # also checking the association, this would try to build a second
+      # Transfer against an already-matched transaction and blow up on the
+      # inflow/outflow uniqueness validation.
+      unless txn.transfer? || txn.transfer.present?
         transfer = build_transfer(target_account, entry)
         Transfer.transaction do
           transfer.save!

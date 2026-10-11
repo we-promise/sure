@@ -48,3 +48,4 @@ it:
       uncategorized: Non categorizzata
     update:
       success: Bonifico aggiornato
+      already_resolved: Questo trasferimento è già stato confermato o rifiutato.

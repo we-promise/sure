@@ -393,6 +393,25 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert_empty series.recurring_occurrences.flat_map(&:allocations)
   end
 
+  test "a pending auto-matched transfer does not pay a recurring transfer until confirmed" do
+    series = create_series(name: "Payment to Loan", amount: 500, day_offset: 0, destination: accounts(:loan))
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    outflow = create_entry(amount: 500, date: Date.current, name: "Payment to Loan")
+    inflow = accounts(:loan).entries.create!(
+      date: Date.current, amount: -500, currency: "USD", name: "Payment to Loan",
+      entryable: Transaction.new(kind: "standard")
+    )
+    transfer = Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "pending")
+
+    assert_equal 0, @matcher.run!
+    assert_not occurrence.reload.paid?
+
+    transfer.confirm!
+
+    assert_equal 1, Matcher.new(@family).run!
+    assert_equal outflow.id, occurrence.reload.allocations.sole.entry_id
+  end
+
   test "backfill closes a recurring transfer's past occurrence from its transfer" do
     series = create_series(name: "Payment to Loan", amount: 500, day_offset: -30, destination: accounts(:loan))
     occurrence = series.recurring_occurrences.order(:due_on).first

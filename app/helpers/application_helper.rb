@@ -300,7 +300,7 @@ module ApplicationHelper
       items = item.reject do |i|
         i.is_a?(Entry) &&
         i.entryable.is_a?(Transaction) &&
-        i.entryable.transfer?
+        i.entryable.counts_as_transfer?
       end
       # Keep the group's currency when every entry is excluded from the total.
       total = items.sum(Money.new(0, item.first.currency), &money_method)

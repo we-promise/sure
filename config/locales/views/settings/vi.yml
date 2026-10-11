@@ -234,6 +234,7 @@ vi:
       accounts_label: Tài khoản
       advanced_section_title: Nâng cao
       ai_prompts_label: Câu lệnh AI
+      auto_matches_label: Tự động khớp lệnh chuyển khoản
       api_key_label: Khóa API
       payment_label: Thanh toán
       categories_label: Danh mục
