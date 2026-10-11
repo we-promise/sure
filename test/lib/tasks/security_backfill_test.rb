@@ -49,6 +49,23 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     refute_includes at_rest, "tx-1"
   end
 
+  # Guards the task's field list: dropping :account_number from the
+  # SnaptradeAccount entry would leave the model-level encryption test green
+  # while pre-encryption rows stayed plaintext.
+  test "backfill encrypts a plaintext SnapTrade account number" do
+    account = snaptrade_accounts(:fidelity_401k)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE snaptrade_accounts SET account_number = ? WHERE id = ?", "5544332211", account.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    assert_equal "5544332211", account.reload.account_number
+    at_rest = ActiveRecord::Base.connection.select_value(
+      SnaptradeAccount.where(id: account.id).select(:account_number).to_sql)
+    refute_includes at_rest.to_s, "5544332211",
+      "account_number must be stored as ciphertext after the backfill"
+  end
+
   # Several payload columns default to {} — Rails presence checks treat empty
   # Hash/Array as absent, so the backfill must gate on nil-ness or empty
   # payloads stay plaintext and raise on every read once keys are live.
