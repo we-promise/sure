@@ -215,16 +215,78 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
   test "rounds amounts to the stored scale so children sum exactly" do
     params = { split: { splits: [
       { name: "A", amount: "33.33335" },
-      { name: "B", amount: (@entry.amount - BigDecimal("33.33335")).to_s }
+      { name: "B", amount: "66.66660" }
     ] } }
 
     post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
-    if response.successful?
-      assert_equal @entry.amount, @entry.reload.child_entries.sum(:amount),
-                   "persisted children must still sum to the parent"
-    else
-      assert_response :unprocessable_entity
+    assert_response :created
+    assert_equal [ BigDecimal("33.3334"), BigDecimal("66.6666") ],
+                 @entry.reload.child_entries.order(:name).map(&:amount)
+  end
+
+  test "rejects amounts that only sum to the parent before rounding" do
+    params = { split: { splits: [
+      { name: "A", amount: "33.33335" },
+      { name: "B", amount: "66.66665" }
+    ] } }
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "returns 422 when a split element is not an object" do
+    [ [ true ], [ nil ], [ "x" ], [ 1 ], [ [ { amount: "100" } ] ] ].each do |splits|
+      post api_v1_transaction_split_url(@transaction), params: { split: { splits: splits } },
+           headers: api_headers(@api_key), as: :json
+      assert_response :unprocessable_entity, "splits: #{splits.inspect}"
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
     end
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "a split read back and re-sent keeps each child's exclusion and exact amount" do
+    params = { split: { splits: [
+      { name: "Excluded", amount: "50.0049", excluded: true },
+      { name: "Counted",  amount: "49.9951" }
+    ] } }
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :created
+
+    get api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key)
+    children = JSON.parse(response.body)["children"]
+    assert_equal [ [ "Excluded", "50.0049", true ], [ "Counted", "49.9951", false ] ],
+                 children.map { |c| c.values_at("name", "amount_decimal", "excluded") }
+
+    resent = children.map { |c| { name: c["name"] == "Counted" ? "Renamed" : c["name"], amount: c["amount_decimal"], excluded: c["excluded"] } }
+    patch api_v1_transaction_split_url(@transaction), params: { split: { splits: resent } },
+          headers: api_headers(@api_key), as: :json
+    assert_response :success
+
+    assert_equal [ [ "Excluded", BigDecimal("50.0049"), true ], [ "Renamed", BigDecimal("49.9951"), false ] ],
+                 @entry.reload.child_entries.order(:name).map { |c| [ c.name, c.amount, c.excluded ] }
+  end
+
+  test "showing a split does not query per child" do
+    splits = 5.times.map { |i| { name: "Part #{i}", amount: (@entry.amount / 5).to_s } }
+    post api_v1_transaction_split_url(@transaction), params: { split: { splits: splits } },
+         headers: api_headers(@api_key), as: :json
+    assert_response :created
+
+    selects = ->(&block) do
+      count = 0
+      counter = ->(*, payload) { count += 1 if payload[:sql].start_with?("SELECT") && payload[:name] != "SCHEMA" }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record", &block)
+      count
+    end
+
+    five = selects.call { get api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key) }
+    assert_response :success
+
+    patch api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+    two = selects.call { get api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key) }
+
+    assert_equal two, five, "query count must not grow with the number of children"
   end
 
   test "defaults a missing child name to the parent name" do

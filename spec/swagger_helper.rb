@@ -89,8 +89,21 @@ RSpec.configure do |config|
               amount_decimal: { type: :string, description: 'Exact stored amount; children must sum to this' },
               amount_cents: { type: :integer, description: 'Absolute amount in minor units' },
               currency: { type: :string },
-              children: { type: :array, items: { '$ref' => '#/components/schemas/Transaction' } }
+              children: { type: :array, items: { '$ref' => '#/components/schemas/SplitChild' } }
             }
+          },
+          SplitChild: {
+            allOf: [
+              { '$ref' => '#/components/schemas/Transaction' },
+              {
+                type: :object,
+                required: %w[amount_decimal excluded],
+                properties: {
+                  amount_decimal: { type: :string, description: 'Exact stored amount; send this back when replacing the split' },
+                  excluded: { type: :boolean, description: 'Whether this child is excluded from totals' }
+                }
+              }
+            ]
           },
           Pagination: {
             type: :object,

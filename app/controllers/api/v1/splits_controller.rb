@@ -8,6 +8,8 @@
 # split editor", which an API consumer cannot reach. These actions close that
 # gap using the same model calls the UI makes.
 class Api::V1::SplitsController < Api::V1::BaseController
+  include Api::V1::TransactionLookup
+
   AlreadySplit = Class.new(StandardError)
   NotSplit = Class.new(StandardError)
 
@@ -25,7 +27,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
   def show
     return render_not_split unless @entry.split_parent?
 
-    render :show
+    render_split
   end
 
   # POST /api/v1/transactions/:transaction_id/split
@@ -52,7 +54,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
     @entry.sync_account_later
     @entry.reload
 
-    render :show, status: :created
+    render_split status: :created
   rescue AlreadySplit
     render_unprocessable("Transaction cannot be split", [ "Transaction is already split" ])
   rescue ActiveRecord::RecordInvalid => e
@@ -83,7 +85,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
     @entry.sync_account_later
     @entry.reload
 
-    render :show
+    render_split
   rescue NotSplit
     render_not_split
   rescue ActiveRecord::RecordInvalid => e
@@ -135,19 +137,26 @@ class Api::V1::SplitsController < Api::V1::BaseController
     end
 
     def set_transaction
-      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:transaction_id])
+      load_accessible_transaction(params[:transaction_id])
+    end
 
-      family = current_resource_owner.family
-      @transaction = family.transactions
-        .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
-        .find(params[:transaction_id])
-      @entry = @transaction.entry
-    rescue ActiveRecord::RecordNotFound
-      render json: {
-        error: "not_found",
-        message: "Transaction not found"
-      }, status: :not_found
+    # Loaded from the Transaction side because that is the direction the
+    # transaction partial reads in (transaction.entry.account). Preloading
+    # child_entries.entryable does not help: the polymorphic pair has no
+    # inverse, so each child would reload its entry and account.
+    def render_split(status: :ok)
+      @children = Transaction
+        .joins(:entry)
+        .where(entries: { parent_entry_id: @entry.id })
+        .preload(
+          { entry: :account },
+          :category, :merchant, :tags,
+          transfer_as_outflow: { inflow_transaction: { entry: :account } },
+          transfer_as_inflow: { outflow_transaction: { entry: :account } }
+        )
+        .order("entries.created_at")
+
+      render :show, status: status
     end
 
     # Addressing a child by id resolves to its parent, so a caller holding any
@@ -175,7 +184,12 @@ class Api::V1::SplitsController < Api::V1::BaseController
       end
 
       raw.map do |s|
-        s = s.permit(:name, :amount, :category_id, :excluded) if s.respond_to?(:permit)
+        unless s.respond_to?(:permit)
+          render_unprocessable("each split must be an object")
+          return nil
+        end
+
+        s = s.permit(:name, :amount, :category_id, :excluded)
         category_id = s[:category_id].presence
         if category_id && !family_category_ids.include?(category_id)
           render_unprocessable("Unknown category: #{category_id}")

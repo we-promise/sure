@@ -12,6 +12,12 @@ amount_money = @entry.amount_money
 json.amount_cents (amount_money.amount * amount_money.currency.minor_unit_conversion).round(0).to_i.abs
 
 json.currency @entry.currency
-json.children @entry.child_entries.includes(:entryable, :account).order(:created_at) do |child|
-  json.partial! "api/v1/transactions/transaction", transaction: child.entryable
+json.children @children do |child|
+  json.partial! "api/v1/transactions/transaction", transaction: child
+
+  # PATCH replaces every child, so a client editing one field has to send the
+  # rest back unchanged. The transaction partial carries neither of these: its
+  # amount is display-rounded, and it never emits the exclusion flag.
+  json.amount_decimal child.entry.amount.to_s
+  json.excluded child.entry.excluded
 end

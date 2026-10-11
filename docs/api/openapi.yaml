@@ -91,7 +91,21 @@ components:
         children:
           type: array
           items:
-            "$ref": "#/components/schemas/Transaction"
+            "$ref": "#/components/schemas/SplitChild"
+    SplitChild:
+      allOf:
+      - "$ref": "#/components/schemas/Transaction"
+      - type: object
+        required:
+        - amount_decimal
+        - excluded
+        properties:
+          amount_decimal:
+            type: string
+            description: Exact stored amount; send this back when replacing the split
+          excluded:
+            type: boolean
+            description: Whether this child is excluded from totals
     Pagination:
       type: object
       required:
