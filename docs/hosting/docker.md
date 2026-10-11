@@ -55,12 +55,18 @@ This command will do the following:
 
 At this point, you should have `compose.yml` in your directory (and optionally `bin/db-backup.sh` generated alongside `compose.yml` when using backups).
 
-### Step 3 (optional): Configure your environment
+### Step 3: Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
-That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
+The app needs a secret key of your own before it will start. This key signs sessions and, on self-hosted installs, is also the source of the keys that encrypt stored credentials such as bank connection tokens, so it must be unique to your install and kept private.
 
-If you're running the app locally and don't care much about security, you can skip this step.
+> [!IMPORTANT]
+> **Upgrading an install that never set `SECRET_KEY_BASE`?** Earlier versions of the example compose file fell back to a built-in key, and your stored credentials (bank connections and similar) are encrypted with keys derived from it. Generating a new key would make that data unreadable. Keep the app working by first putting the old value into `.env`:
+>
+> ```txt
+> SECRET_KEY_BASE="a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13"
+> ```
+>
+> That value is public, so treat moving off it as a follow-up: until then, anyone holding a copy of your database or backups can decrypt those credentials. Do not add new random `ACTIVE_RECORD_ENCRYPTION_*` keys to an existing install either; they must match the keys your data was encrypted with.
 
 #### Create your environment file
 
@@ -100,6 +106,18 @@ Fill in this file with the following variables:
 SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
+
+#### Set explicit encryption keys (recommended)
+
+Without explicit keys, the app derives its Active Record encryption keys from `SECRET_KEY_BASE`. On a new install, setting them explicitly lets you rotate `SECRET_KEY_BASE` later without losing access to encrypted data. Generate three values:
+
+```bash
+for k in PRIMARY_KEY DETERMINISTIC_KEY KEY_DERIVATION_SALT; do echo "ACTIVE_RECORD_ENCRYPTION_$k=$(openssl rand -hex 32)"; done
+```
+
+Add the three lines to `.env`. Set all three or none; a partial set stops the app from starting.
+
+Back up `SECRET_KEY_BASE` and these keys somewhere other than your database backups (a password manager works well). If they are lost, encrypted data such as bank connections cannot be recovered.
 
 #### Using HTTPS
 
