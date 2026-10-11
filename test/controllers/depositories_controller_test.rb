@@ -160,6 +160,17 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_nil flash[:alert]
   end
 
+  test "create with an institution domain fetches an icon for the new account" do
+    assert_enqueued_with(job: AccountLogoFetchJob) do
+      post depositories_path, params: {
+        account: { name: "Krungsri savings", balance: 100, currency: "USD", accountable_type: "Depository",
+                   institution_domain: "https://www.krungsri.com/", accountable_attributes: { subtype: "savings" } }
+      }
+    end
+
+    assert_equal "krungsri.com", Account.order(:created_at).last.read_attribute(:institution_domain)
+  end
+
   test "update with a chosen icon skips the automatic fetch for a new domain" do
     Account::LogoFetcher.any_instance.expects(:fetch).with(source: "yandex").returns(true)
 
