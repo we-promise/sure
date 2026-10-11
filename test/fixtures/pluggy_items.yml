@@ -1,0 +1,7 @@
+one:
+  family: dylan_family
+  name: Test Pluggy
+  client_id: test_client
+  client_secret: test_secret
+  pluggy_item_id: item-1
+  status: good
