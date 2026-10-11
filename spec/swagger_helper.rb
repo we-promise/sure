@@ -1760,13 +1760,13 @@ RSpec.configure do |config|
             type: :object, required: %w[basis income spending net_savings nodes links],
             description: 'Refunds net within each category. Parent direct amounts exclude child totals before partitioning by direction. Graph income/spending may differ from gross monthly totals; net savings agrees. Decimal strings retain FX precision. Empty flow has empty nodes and links.',
             properties: {
-              basis: { type: :string, enum: [ 'net_by_category' ] },
+              basis: { type: :string, enum: %w[net_by_category net_by_account], description: 'net_by_account (group_by=account) replaces the Cash Flow node with one account node per account, each balanced by Surplus or Deficit' },
               income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
               nodes: { type: :array, items: {
                 type: :object, required: %w[id name kind value percentage category_id filter_value color],
                 properties: {
                   id: { type: :string, description: 'Stable direction-prefixed category identifier or structural identifier' },
-                  name: { type: :string }, kind: { type: :string, enum: %w[income expense cash_flow surplus deficit] },
+                  name: { type: :string }, kind: { type: :string, enum: %w[income expense cash_flow account surplus deficit] },
                   value: { type: :string, description: 'Nonnegative decimal in envelope currency' },
                   percentage: { type: :string, description: 'Percentage of parent, or side total for root categories; structural balancing nodes use central capacity' },
                   category_id: { type: :string, format: :uuid, nullable: true },
