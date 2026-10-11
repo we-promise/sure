@@ -30,6 +30,15 @@
           title: t("transactions.transaction.pending_tooltip")
         ) %>
       <% end %>
+      <% if entry.reconciled? %>
+        <%= render DS::Pill.new(
+          label: t("transactions.transaction.reconciled"),
+          tone: :success,
+          marker: false,
+          icon: "circle-check",
+          title: t("transactions.transaction.reconciled_tooltip")
+        ) %>
+      <% end %>
     </div>
   </div>
 </div>
