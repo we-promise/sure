@@ -544,6 +544,75 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_not initial_token.reload.revoked?, "the still-valid old token should be left alone, not silently revoked"
   end
 
+  test "should not refresh a token of another oauth application" do
+    user = users(:family_admin)
+    third_party_app = Doorkeeper::Application.create!(
+      name: "Third Party",
+      redirect_uri: "https://example.com/callback",
+      scopes: "read"
+    )
+    initial_token = Doorkeeper::AccessToken.create!(
+      application: third_party_app,
+      resource_owner_id: user.id,
+      expires_in: 2.hours.to_i,
+      scopes: "read",
+      use_refresh_token: true
+    )
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/refresh", params: { refresh_token: initial_token.refresh_token }
+    end
+
+    assert_response :unauthorized
+    assert_equal "Invalid refresh token", JSON.parse(response.body)["error"]
+    assert_not initial_token.reload.revoked?
+  end
+
+  test "should not refresh a token of another oauth application bound to a device" do
+    user = users(:family_admin)
+    device = user.mobile_devices.create!(@device_info)
+    third_party_app = Doorkeeper::Application.create!(
+      name: "Third Party",
+      redirect_uri: "https://example.com/callback",
+      scopes: "read"
+    )
+    initial_token = Doorkeeper::AccessToken.create!(
+      application: third_party_app,
+      resource_owner_id: user.id,
+      mobile_device_id: device.id,
+      expires_in: 2.hours.to_i,
+      scopes: "read",
+      use_refresh_token: true
+    )
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/refresh", params: { refresh_token: initial_token.refresh_token, device: @device_info }
+    end
+
+    assert_response :unauthorized
+    assert_equal "Invalid refresh token", JSON.parse(response.body)["error"]
+    assert_not initial_token.reload.revoked?
+  end
+
+  test "should not refresh a mobile application token without a device" do
+    user = users(:family_admin)
+    initial_token = Doorkeeper::AccessToken.create!(
+      application: @shared_app,
+      resource_owner_id: user.id,
+      expires_in: 2.hours.to_i,
+      scopes: "read_write",
+      use_refresh_token: true
+    )
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/refresh", params: { refresh_token: initial_token.refresh_token }
+    end
+
+    assert_response :unauthorized
+    assert_equal "Invalid refresh token", JSON.parse(response.body)["error"]
+    assert_not initial_token.reload.revoked?
+  end
+
   test "should not refresh with invalid refresh token" do
     assert_no_difference("Doorkeeper::AccessToken.count") do
       post "/api/v1/auth/refresh", params: {

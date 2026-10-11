@@ -465,6 +465,8 @@ Sure supports both:
 - OAuth bearer tokens issued through its discovery and registration endpoints (`/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `POST /register`)
 - Static bearer tokens configured with `MCP_API_TOKEN` and `MCP_USER_EMAIL`
 
+OAuth access tokens expire after 2 hours and are renewed with the `refresh_token` grant. After upgrading from a version that issued 1-year tokens, existing OAuth clients must be re-authorized once; see [MCP Server](mcp.md#1-oauth-20--dynamic-client-registration-recommended).
+
 **Static-token environment variables:**
 ```bash
 MCP_API_TOKEN=your-secret-token    # Bearer token the agent sends to authenticate

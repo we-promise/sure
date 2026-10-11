@@ -346,7 +346,7 @@ module Api
         # Find the access token associated with this refresh token
         access_token = Doorkeeper::AccessToken.by_refresh_token(refresh_token)
 
-        if access_token.nil? || access_token.revoked?
+        if access_token.nil? || access_token.revoked? || !mobile_app_token?(access_token)
           render json: { error: "Invalid refresh token" }, status: :unauthorized
           return
         end
@@ -391,6 +391,16 @@ module Api
       end
 
       private
+
+        # This endpoint renews tokens with a fixed 30-day lifetime, so it only
+        # accepts tokens the mobile app got from MobileDevice#issue_token!.
+        # Tokens of other OAuth applications must renew through /oauth/token,
+        # where Doorkeeper keeps the token's own lifetime (access_token_expires_in
+        # for tokens it issued) instead of extending it to 30 days.
+        def mobile_app_token?(access_token)
+          access_token.mobile_device_id.present? &&
+            access_token.application_id == MobileDevice.shared_oauth_application.id
+        end
 
         def user_signup_params
           params.require(:user).permit(:email, :password, :first_name, :last_name)

@@ -22,7 +22,7 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     assert json["client_id"].present?
     assert_equal "Claude", json["client_name"]
     assert_equal [ "https://claude.ai/callback" ], json["redirect_uris"]
-    assert_equal [ "authorization_code" ], json["grant_types"]
+    assert_equal [ "authorization_code", "refresh_token" ], json["grant_types"]
     assert_equal "none", json["token_endpoint_auth_method"]
     assert_nil json["client_secret"], "Public client must not return a secret"
 

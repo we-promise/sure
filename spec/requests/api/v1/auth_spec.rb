@@ -206,7 +206,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '401', 'invalid or revoked refresh token, or account deactivated' do
+      response '401', 'invalid or revoked refresh token, a token not issued to the mobile app, or account deactivated' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end

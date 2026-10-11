@@ -4850,7 +4850,7 @@ paths:
                   created_at:
                     type: integer
         '401':
-          description: invalid or revoked refresh token, or account deactivated
+          description: invalid or revoked refresh token, a token not issued to the mobile app, or account deactivated
           content:
             application/json:
               schema:
