@@ -3,13 +3,19 @@ class AccountLogoFetchJob < ApplicationJob
 
   PACE_KEY = "account_logo_fetch_pace"
 
-  # Domain changes usually come one at a time and fetch at once. A bulk save
-  # (an import) commits many together, so each further one within a minute
-  # waits one more step, as the nightly backfill spaces fetches for the
-  # iTunes Search API limit. The counter lives in the shared cache.
+  # Spaces fetches for the iTunes Search API limit: each one claims the next
+  # free time slot in the shared cache (Redis in production), so imports, the
+  # nightly backfill and single domain changes share one queue. A claim lasts
+  # until its slot has passed; a lone domain change usually fetches at once.
   def self.perform_paced(account)
-    slot = Rails.cache.increment(PACE_KEY, 1, expires_in: 1.minute).to_i - 1
-    set(wait: [ slot, 0 ].max * AccountLogoBackfillJob::SPACING).perform_later(account)
+    spacing = AccountLogoBackfillJob::SPACING.to_i
+    now = Time.current.to_i
+    # The next slot others claimed is only a hint where to start probing.
+    slot = [ now / spacing, Rails.cache.read(PACE_KEY).to_i ].max
+    slot += 1 until Rails.cache.write("#{PACE_KEY}:#{slot}", true, unless_exist: true, expires_in: (slot * spacing - now + 60).seconds)
+    Rails.cache.write(PACE_KEY, slot + 1, expires_in: 1.day)
+
+    set(wait: [ slot * spacing - now, 0 ].max.seconds).perform_later(account)
   end
 
   def perform(account)

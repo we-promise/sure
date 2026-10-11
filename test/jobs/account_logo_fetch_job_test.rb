@@ -9,11 +9,35 @@ class AccountLogoFetchJobTest < ActiveJob::TestCase
   test "paces fetches queued together" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
 
-    freeze_time do
+    travel_to Time.zone.at(1_800_000_000) do
       3.times { AccountLogoFetchJob.perform_paced(@account) }
 
-      waits = enqueued_jobs.map { |job| (job[:at] || Time.current.to_f) - Time.current.to_f }
-      assert_equal [ 0, 20, 40 ], waits.map(&:round)
+      assert_equal [ 0, 20, 40 ], enqueued_waits
+    end
+  end
+
+  test "keeps pacing after a minute while earlier slots are still pending" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    travel_to Time.zone.at(1_800_000_000)
+    10.times { AccountLogoFetchJob.perform_paced(@account) }
+    clear_enqueued_jobs
+
+    travel 90.seconds
+    AccountLogoFetchJob.perform_paced(@account)
+
+    assert_equal [ 110 ], enqueued_waits
+  end
+
+  test "does not reuse a slot claimed by another worker" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+
+    travel_to Time.zone.at(1_800_000_000) do
+      cache.write("#{AccountLogoFetchJob::PACE_KEY}:#{1_800_000_000 / 20}", true)
+      AccountLogoFetchJob.perform_paced(@account)
+
+      assert_equal [ 20 ], enqueued_waits
     end
   end
 
@@ -62,4 +86,9 @@ class AccountLogoFetchJobTest < ActiveJob::TestCase
 
     AccountLogoFetchJob.perform_now(@account)
   end
+
+  private
+    def enqueued_waits
+      enqueued_jobs.map { |job| ((job[:at] || Time.current.to_f) - Time.current.to_f).round }
+    end
 end

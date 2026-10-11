@@ -31,6 +31,29 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "restores the Brandfetch logo choice so no fetched icon replaces it" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Test Checking",
+          balance: "1500.00",
+          currency: "USD",
+          institution_domain: "tbank.ru",
+          prefer_brandfetch_logo: true,
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" }
+        }
+      }
+    ])
+
+    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+
+    assert account.reload.prefer_brandfetch_logo?
+    assert_not account.logo_auto_fetchable?
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {

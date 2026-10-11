@@ -17,7 +17,7 @@ class AccountLogoBackfillJob < ApplicationJob
     batch = accounts.limit(batch_size).to_a if batch.empty? && cursor
 
     Rails.cache.write(CURSOR_KEY, (batch.last.id if batch.size == batch_size))
-    batch.each_with_index { |account, index| AccountLogoFetchJob.set(wait: index * SPACING).perform_later(account) }
+    batch.each { |account| AccountLogoFetchJob.perform_paced(account) }
   end
 
   private
