@@ -673,6 +673,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.text "client_certificate"
     t.string "country_code"
     t.datetime "created_at", null: false
+    t.date "effective_sync_start_date"
     t.uuid "family_id", null: false
     t.string "institution_color"
     t.string "institution_domain"
@@ -691,6 +692,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.string "session_id"
     t.string "status", default: "good"
     t.date "sync_start_date"
+    t.string "sync_strategy", default: "date", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_enable_banking_items_on_family_id"
     t.index ["requested_consent_valid_until"], name: "index_enable_banking_items_on_requested_consent_for_stale_ip", where: "((last_psu_ip IS NOT NULL) AND (session_expires_at IS NULL))"

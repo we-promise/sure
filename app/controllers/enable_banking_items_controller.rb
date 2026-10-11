@@ -344,9 +344,37 @@ class EnableBankingItemsController < ApplicationController
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
 
-    # Update sync start date from form if provided
-    if params[:sync_start_date].present?
-      @enable_banking_item.update!(sync_start_date: params[:sync_start_date])
+    # Update sync strategy/start date from form if provided. Scoped to just
+    # these two params (not the general enable_banking_item_params allowlist,
+    # which also includes fields like client_certificate that must never be
+    # settable from this endpoint). sync_start_date is only touched when the
+    # param key is actually present in the request — the date field is
+    # disabled (and so omitted by the browser) when "longest" is selected, so
+    # a prior date isn't wiped just because it wasn't resubmitted.
+    setup_params = params.permit(:sync_start_date, :sync_strategy)
+    setup_attrs = {}
+
+    if setup_params[:sync_strategy].present?
+      # Enum assignment raises ArgumentError (not RecordInvalid) for a value
+      # outside EnableBankingItem.sync_strategies, which the rescue below
+      # doesn't handle - reject it the same way as any other invalid input.
+      unless EnableBankingItem.sync_strategies.key?(setup_params[:sync_strategy])
+        redirect_to accounts_path, alert: t(".invalid_sync_strategy", default: "Invalid sync strategy."), status: :see_other
+        return
+      end
+
+      setup_attrs[:sync_strategy] = setup_params[:sync_strategy]
+    end
+
+    setup_attrs[:sync_start_date] = setup_params[:sync_start_date] if setup_params.key?(:sync_start_date)
+
+    if setup_attrs.any?
+      begin
+        @enable_banking_item.update!(setup_attrs)
+      rescue ActiveRecord::RecordInvalid => e
+        redirect_to accounts_path, alert: e.record.errors.full_messages.to_sentence, status: :see_other
+        return
+      end
     end
 
     created_count = 0
@@ -545,6 +573,7 @@ class EnableBankingItemsController < ApplicationController
       permitted = params.require(:enable_banking_item).permit(
         :name,
         :sync_start_date,
+        :sync_strategy,
         :country_code,
         :application_id,
         :client_certificate

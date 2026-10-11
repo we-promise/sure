@@ -126,6 +126,8 @@ class EnableBankingItem::Importer
 
     linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
 
+    effective_date_froms = []
+
     linked_accounts_query.each do |enable_banking_account|
       begin
         balances_failed += 1 unless fetch_and_update_balance(enable_banking_account)
@@ -133,6 +135,7 @@ class EnableBankingItem::Importer
         result = fetch_and_store_transactions(enable_banking_account)
         if result[:success]
           transactions_imported += result[:transactions_count]
+          effective_date_froms << result[:effective_date_from] if result[:effective_date_from].present?
         else
           transactions_failed += 1
           @sync_error = promote_session_invalid(@sync_error, result[:error])
@@ -141,6 +144,25 @@ class EnableBankingItem::Importer
         transactions_failed += 1
         @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
         Rails.logger.error "EnableBankingItem::Importer - Failed to process account #{enable_banking_account.uid}: #{e.message}"
+      end
+    end
+
+    if effective_date_froms.any?
+      # Only accounts still doing their initial (non-incremental) fetch on
+      # this particular sync contribute here - once an account has stored
+      # transactions it drops out of effective_date_froms for good, even
+      # though its previously recorded boundary may be more restrictive than
+      # whatever a later-added account reports on its own initial fetch.
+      # Only ever extend the stored boundary (never move it earlier) so a
+      # later sync can't silently erase an earlier account's shortfall.
+      # EnableBankingItem#reset_effective_sync_start_date_when_requested_date_changes
+      # clears it back to nil whenever sync_start_date itself changes, which
+      # is the only case this value should ever move earlier.
+      latest_effective_date_from = effective_date_froms.max
+      current_effective_date_from = enable_banking_item.effective_sync_start_date
+
+      if current_effective_date_from.nil? || latest_effective_date_from > current_effective_date_from
+        enable_banking_item.update_column(:effective_sync_start_date, latest_effective_date_from)
       end
     end
 
@@ -474,6 +496,33 @@ class EnableBankingItem::Importer
       )
     end
 
+    # Surfaces "every WRONG_TRANSACTIONS_PERIOD retry was exhausted" (corrected
+    # date_from, strategy: longest where allowed, and the full 89/60/30-day
+    # ladder — see Provider::EnableBanking#next_transactions_attempt) as a
+    # support-visible diagnostic before the error propagates and the sync is
+    # reported as failed for this account, same rationale as
+    # capture_pagination_truncation_debug_log/capture_pdng_unsupported_debug_log.
+    def capture_transactions_period_exhausted_debug_log(enable_banking_account, requested_strategy:, requested_date_from:, error:)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Enable Banking rejected every transactions-period retry (WRONG_TRANSACTIONS_PERIOD); sync failed for this account",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          requested_strategy: requested_strategy.to_s,
+          requested_date_from: requested_date_from&.iso8601,
+          error_type: error.error_type.to_s,
+          provider_error: sanitized_provider_error(error)
+        }
+      )
+    end
+
     def sanitized_error_message(error)
       return error.message unless error.is_a?(Provider::EnableBanking::EnableBankingError)
 
@@ -518,14 +567,55 @@ class EnableBankingItem::Importer
 
     def fetch_and_store_transactions(enable_banking_account)
       start_date = determine_sync_start_date(enable_banking_account)
+      allow_longest_retry = allow_longest_retry_for(enable_banking_account)
+      # allow_longest_retry gates whether a failed *date*-strategy request may
+      # escalate into strategy: longest on WRONG_TRANSACTIONS_PERIOD (see
+      # allow_longest_retry_for) - it's independent of, and must not gate,
+      # whether the user chose "longest" as their initial strategy outright.
+      initial_strategy = initial_strategy_for(enable_banking_account)
       include_pending = include_pending?
 
-      all_transactions = fetch_paginated_transactions(
-        enable_banking_account,
-        start_date: start_date,
-        transaction_status: "BOOK",
-        psu_headers: enable_banking_item.build_psu_headers
-      )
+      begin
+        all_transactions = fetch_paginated_transactions(
+          enable_banking_account,
+          start_date: start_date,
+          transaction_status: "BOOK",
+          psu_headers: enable_banking_item.build_psu_headers,
+          strategy: initial_strategy,
+          allow_longest_retry: allow_longest_retry
+        )
+      rescue Provider::EnableBanking::EnableBankingError => e
+        if e.wrong_transactions_period?
+          capture_transactions_period_exhausted_debug_log(
+            enable_banking_account, requested_strategy: initial_strategy, requested_date_from: start_date, error: e
+          )
+        end
+        raise
+      end
+
+      # Only the initial (non-incremental) fetch for a "date" strategy item can
+      # tell us whether the bank actually honored the requested date -
+      # determine_sync_start_date's incremental branch requests a rolling
+      # catch-up window that has nothing to do with sync_start_date, and
+      # would otherwise stomp this with an unrelated value on every routine
+      # sync. Captured before the PDNG fetch below (fetch_paginated_transactions
+      # resets @last_effective_date_from on every call).
+      if !stored_transactions?(enable_banking_account) && enable_banking_item.date?
+        # @last_effective_date_from is nil when a WRONG_TRANSACTIONS_PERIOD
+        # retry escalated all the way to an unbounded strategy: "longest"
+        # request with no corrected date (Provider::EnableBanking#
+        # next_transactions_attempt's final rung, reached when the ASPSP's
+        # error response carries no corrected_date_from to retry with a
+        # tighter bound). That confirms the exact requested date was
+        # rejected, but not where the bank's actual boundary is - the
+        # earliest transaction actually returned is only an activity date,
+        # not a confirmed boundary (an account can simply have no early
+        # activity within an otherwise fully-available history, the same
+        # false-positive risk sync_start_date_shortfall? was rewritten to
+        # avoid in the first place). Leave effective_date_from unset here
+        # rather than guess: no notice is preferable to a wrong one.
+        effective_date_from = @last_effective_date_from
+      end
 
       if include_pending
         # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG) with _pending: true
@@ -552,11 +642,19 @@ class EnableBankingItem::Importer
         # Trade Republic rejects the same request with a 400 (:bad_request) instead of a
         # 422 (:validation_error), so both error types are treated as "PDNG unsupported". (Issue #392)
         begin
+          # Never strategy: "longest" or allow_longest_retry here (see
+          # class-level notes near fetch_paginated_transactions): Enable
+          # Banking's docs don't confirm strategy compatibility with
+          # transaction_status=PDNG, and pending transactions are a short,
+          # ASPSP-limited window regardless of history depth — there's no
+          # "longest history of pending transactions" to ask for.
           pending_transactions = fetch_paginated_transactions(
             enable_banking_account,
             start_date: start_date,
             transaction_status: "PDNG",
-            psu_headers: enable_banking_item.build_psu_headers
+            psu_headers: enable_banking_item.build_psu_headers,
+            strategy: nil,
+            allow_longest_retry: false
           )
         rescue Provider::EnableBanking::EnableBankingError => e
           raise unless [ :validation_error, :bad_request ].include?(e.error_type)
@@ -660,7 +758,7 @@ class EnableBankingItem::Importer
         )
       end
 
-      { success: true, transactions_count: transactions_count }
+      { success: true, transactions_count: transactions_count, effective_date_from: effective_date_from }
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Error fetching transactions for account #{enable_banking_account.uid}: #{e.message}"
       { success: false, transactions_count: 0, error: handle_sync_error(e) }
@@ -737,11 +835,12 @@ class EnableBankingItem::Importer
 
     class PaginationTruncatedError < StandardError; end
 
-    def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {})
+    def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {}, strategy: nil, allow_longest_retry: false)
       all_transactions = []
       continuation_key = nil
       previous_continuation_key = nil
       page_count = 0
+      @last_effective_date_from = nil
 
       loop do
         page_count += 1
@@ -757,7 +856,9 @@ class EnableBankingItem::Importer
             date_from: start_date,
             continuation_key: continuation_key,
             transaction_status: transaction_status,
-            psu_headers: psu_headers
+            psu_headers: psu_headers,
+            strategy: strategy,
+            allow_longest_retry: allow_longest_retry
           )
         rescue Provider::EnableBanking::EnableBankingError => e
           # Some ASPSPs (e.g. Trade Republic via Enable Banking) issue a continuation_key
@@ -794,6 +895,18 @@ class EnableBankingItem::Importer
 
         transactions = transactions_data[:transactions] || []
         all_transactions.concat(transactions)
+
+        # A WRONG_TRANSACTIONS_PERIOD retry inside the provider may have
+        # changed the window (corrected date_from, strategy: "longest", or a
+        # fallback-ladder rung). Continuation requests must repeat the exact
+        # query parameters of the page they continue, otherwise the ASPSP can
+        # reject them mid-pagination and the rescue above would keep a
+        # silently truncated result.
+        if transactions_data.key?(:effective_date_from)
+          start_date = transactions_data[:effective_date_from]
+          @last_effective_date_from = start_date
+        end
+        strategy = transactions_data[:effective_strategy] if transactions_data.key?(:effective_strategy)
 
         previous_continuation_key = continuation_key
         continuation_key = transactions_data[:continuation_key]
@@ -865,12 +978,10 @@ class EnableBankingItem::Importer
     end
 
     def determine_sync_start_date(enable_banking_account)
-      has_stored_transactions = enable_banking_account.raw_transactions_payload.to_a.any?
-
       # Use user-configured sync_start_date if set, otherwise default
       user_start_date = enable_banking_item.sync_start_date
 
-      if has_stored_transactions
+      if stored_transactions?(enable_banking_account)
         # For incremental syncs, get transactions from 7 days before last sync
         if enable_banking_item.last_synced_at
           enable_banking_item.last_synced_at.to_date - 7.days
@@ -878,8 +989,35 @@ class EnableBankingItem::Importer
           30.days.ago.to_date
         end
       else
-        # Initial sync: use user's configured date or default to 3 months
-        user_start_date || 3.months.ago.to_date
+        # Initial sync: user's configured date, or no date at all when the
+        # user chose "longest" (strategy: "longest" then requests full
+        # available history instead of a bounded window), or the 3-month
+        # default.
+        enable_banking_item.longest? ? nil : (user_start_date || 3.months.ago.to_date)
       end
+    end
+
+    # Only an initial sync (no stored transactions yet) with the user's
+    # explicit "date" strategy is allowed to escalate all the way to
+    # strategy: "longest" on WRONG_TRANSACTIONS_PERIOD (see
+    # Provider::EnableBanking#next_transactions_attempt). An incremental
+    # catch-up sync must never silently balloon into a full-history refetch
+    # just because it hit this error once.
+    def allow_longest_retry_for(enable_banking_account)
+      !stored_transactions?(enable_banking_account) && enable_banking_item.date?
+    end
+
+    # The user's "longest" choice only applies to the initial sync:
+    # determine_sync_start_date already returns a bounded incremental window
+    # once transactions are stored, and sending strategy: "longest" alongside
+    # it would re-fetch the full available history on every routine sync.
+    def initial_strategy_for(enable_banking_account)
+      return nil unless enable_banking_item.longest?
+
+      stored_transactions?(enable_banking_account) ? nil : "longest"
+    end
+
+    def stored_transactions?(enable_banking_account)
+      enable_banking_account.raw_transactions_payload.to_a.any?
     end
 end

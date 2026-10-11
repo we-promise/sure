@@ -2,6 +2,7 @@ class EnableBankingItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
+  enum :sync_strategy, { date: "date", longest: "longest" }, default: :date
 
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
@@ -15,6 +16,14 @@ class EnableBankingItem < ApplicationRecord
   validates :country_code, presence: true
   validates :application_id, presence: true
   validates :client_certificate, presence: true, on: :create
+
+  # A stale effective_sync_start_date from a previous requested date would
+  # otherwise linger and be compared against the new sync_start_date in
+  # sync_start_date_shortfall?, producing a false read in either direction.
+  # The importer records a fresh boundary via update_column (bypassing this
+  # callback), so this only fires on requested-date changes made through the
+  # normal save path (controller updates), not on importer writes.
+  before_save :reset_effective_sync_start_date_when_requested_date_changes
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -70,6 +79,37 @@ class EnableBankingItem < ApplicationRecord
     return if psu_type.blank? || aspsp_psu_types.blank?
     unless aspsp_psu_types.include?(psu_type)
       errors.add(:psu_type, "must be one of the ASPSP supported types")
+    end
+  end
+
+  # sync_start_date has no bearing once sync_strategy is "longest" (the
+  # importer requests full available history instead), so the presence/bounds
+  # check below only applies to the "date" strategy. Bounds mirror the
+  # setup_accounts form's client-side min/max, now also enforced server-side.
+  validate :sync_start_date_within_bounds, if: :date?
+
+  def sync_start_date_within_bounds
+    if sync_start_date.blank?
+      # A nonblank value that failed date coercion is cast to nil by Rails,
+      # which would otherwise be indistinguishable from intentional absence.
+      if sync_start_date_before_type_cast.present?
+        errors.add(:sync_start_date, "is not a valid date")
+        return
+      end
+
+      # A brand-new connection is created before the setup modal collects
+      # sync_start_date (EnableBankingItemsController#create/#authorize), and
+      # the importer falls back to its 3-month default until the field is
+      # set. Blank is therefore only invalid once a value has been stored -
+      # this guards against clearing it later, not the pre-setup window.
+      errors.add(:sync_start_date, "can't be blank") if sync_start_date_in_database.present?
+      return
+    end
+
+    return unless new_record? || will_save_change_to_sync_start_date? || will_save_change_to_sync_strategy?
+
+    if sync_start_date > Date.current || sync_start_date < 2.years.ago.to_date
+      errors.add(:sync_start_date, "must be within the last 2 years")
     end
   end
 
@@ -269,6 +309,21 @@ class EnableBankingItem < ApplicationRecord
     accounts.any?
   end
 
+  # True when the ASPSP couldn't honor the requested sync_start_date -
+  # effective_sync_start_date is the date the bank actually granted for the
+  # initial sync (see EnableBankingItem::Importer#fetch_and_store_transactions),
+  # which may be later than what was requested after a WRONG_TRANSACTIONS_PERIOD
+  # retry corrected it. Comparing against that confirmed boundary, rather than
+  # against the earliest imported transaction, avoids a false "limited history"
+  # notice for an account that simply has no transactions early in an otherwise
+  # fully-honored window. A small buffer avoids false positives from ordinary
+  # banking-day rounding in the retry.
+  def sync_start_date_shortfall?
+    return false unless date? && sync_start_date.present? && effective_sync_start_date.present?
+
+    effective_sync_start_date > sync_start_date + 3.days
+  end
+
   def linked_accounts_count
     enable_banking_accounts.joins(:account_provider).count
   end
@@ -358,6 +413,10 @@ class EnableBankingItem < ApplicationRecord
   end
 
   private
+
+    def reset_effective_sync_start_date_when_requested_date_changes
+      self.effective_sync_start_date = nil if will_save_change_to_sync_start_date?
+    end
 
     # Authentication approach preference, lowest number wins.
     # REDIRECT is the smoothest (PSU authenticates entirely on the ASPSP page).
