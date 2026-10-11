@@ -72,26 +72,32 @@ class BalanceSheet::NetWorthVelocity
       (value.respond_to?(:amount) ? value.amount : value).to_d
     end
 
+    # Every account that has history by the window's end must have it from the
+    # window's start. One account with a long history must not vouch for another
+    # that opens inside the window: its balance arrives from nothing, and the
+    # series counts that as growth. An account that opens after the window ends
+    # reads zero throughout it, so it does not hold that window back.
     def history_covers?(window)
-      history_began_on = latest_account_start_date
-      history_began_on.present? && history_began_on <= window.start_date
+      starts = account_start_dates.values.select { |date| date <= window.end_date }
+      starts.any? && starts.max <= window.start_date
     end
 
-    # The date from which EVERY account the series is built from has history: the
-    # latest of their first entries. One account with a long history must not
-    # vouch for another that opens inside the window, whose balance arrives from
-    # nothing and would read as growth. Accounts with no entries add nothing to
-    # the series, so they do not hold it back.
+    # The first date each account has history, as Account#history_start_date
+    # reads it for an unlinked account: its first entry or its first balance,
+    # whichever is earlier. The series is drawn from Balance rows, so an account
+    # with balances but no entries counts. Accounts with neither add nothing to
+    # the series and are left out.
     #
     # Pending transactions are left out: the series is not drawn from them, so one
     # dated before the real history must not stand in for it. Taken over the
     # accounts the series is built from, not the family's, for a viewer who can
     # see only some of them.
-    def latest_account_start_date
-      return @latest_account_start_date if defined?(@latest_account_start_date)
-
-      account_ids = BalanceSheet::HistoricalAccountScope.new(balance_sheet.family, user: balance_sheet.user).account_ids
-      @latest_account_start_date = Entry.where(account_id: account_ids).excluding_pending
-        .group(:account_id).minimum(:date).values.max
+    def account_start_dates
+      @account_start_dates ||= begin
+        account_ids = BalanceSheet::HistoricalAccountScope.new(balance_sheet.family, user: balance_sheet.user).account_ids
+        entry_starts = Entry.where(account_id: account_ids).excluding_pending.group(:account_id).minimum(:date)
+        balance_starts = Balance.where(account_id: account_ids).group(:account_id).minimum(:date)
+        entry_starts.merge(balance_starts) { |_account_id, entry_start, balance_start| [ entry_start, balance_start ].min }
+      end
     end
 end

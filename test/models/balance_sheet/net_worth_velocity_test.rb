@@ -120,6 +120,50 @@ class BalanceSheet::NetWorthVelocityTest < ActiveSupport::TestCase
     assert_not_nil velocity.momentum
   end
 
+  # The series reads Balance rows, not entries, so an account whose history is
+  # only balances (a provider that sends balances without transactions) arrives
+  # from nothing just the same and must hold the figures back.
+  test "velocity is withheld when an account with only balances starts inside the period" do
+    track(history_from: @prior.start_date) { |date| level(date, prior_gain: 1_000, current_gain: 3_000) }
+    newcomer = @family.accounts.create!(name: "Balances only", currency: "USD", balance: 0, accountable: Depository.new)
+    ((@period.start_date + 3)..@today).each { |date| create_balance(account: newcomer, date: date, balance: 5_000) }
+
+    assert_empty newcomer.entries, "precondition: no entries, only balances"
+    assert_nil velocity.velocity
+    assert_nil velocity.momentum
+  end
+
+  # An account that opens after a window ends reads zero throughout it, so it
+  # cannot distort that window and must not withhold it.
+  test "an account opened after the prior period does not withhold momentum" do
+    track(history_from: @prior.start_date) { |date| level(date, prior_gain: 1_000, current_gain: 3_000) }
+    newcomer = @family.accounts.create!(name: "New", currency: "USD", balance: 0, accountable: Depository.new)
+    newcomer.entries.create!(
+      name: "Opening", date: @period.start_date, amount: 5_000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+    (@period.start_date..@today).each { |date| create_balance(account: newcomer, date: date, balance: 5_000) }
+
+    assert_not_nil velocity.velocity
+    assert_not_nil velocity.momentum
+  end
+
+  test "an account opened after a past period does not withhold its figures" do
+    earlier = @today - 200
+    track(history_from: earlier - 120, from: earlier - 120, to: @today) { 1_000 }
+    newcomer = @family.accounts.create!(name: "New", currency: "USD", balance: 0, accountable: Depository.new)
+    newcomer.entries.create!(
+      name: "Opening", date: @today - 10, amount: 5_000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+    period = Period.custom(start_date: earlier - 29, end_date: earlier)
+
+    result = BalanceSheet::NetWorthVelocity.new(BalanceSheet.new(@family), period: period)
+
+    assert_not_nil result.velocity
+    assert_not_nil result.momentum
+  end
+
   # The series is not drawn from a pending transaction, so one dated before the
   # real history must not stand in for it.
   test "a pending transaction dated before the history does not count as history" do
