@@ -87,15 +87,9 @@ class EnableBankingItem::Importer
       # Enable Banking API returns accounts as an array of UIDs (strings) in the session response
       # We need to handle both array of strings and array of hashes
       session_data[:accounts].each do |account_data|
-        # Handle both string UIDs and hash objects
-        # Use identification_hash as the stable identifier across sessions
-        uid = if account_data.is_a?(String)
-          account_data
-        elsif account_data.is_a?(Hash)
-          (account_data[:identification_hash] || account_data[:uid] || account_data["identification_hash"] || account_data["uid"])&.to_s
-        else
-          nil
-        end
+        # Unique per product across sessions, even when several products share an
+        # IBAN (handles both string UIDs and hash objects).
+        uid = EnableBankingItem.stable_account_uid(account_data, session_data[:accounts])
 
         next unless uid.present?
 
@@ -106,7 +100,7 @@ class EnableBankingItem::Importer
           # For string UIDs, we don't have account data to update - skip the import_account call
           # The account data will be fetched via balances/transactions endpoints
           if account_data.is_a?(Hash)
-            import_account(account_data)
+            import_account(account_data, session_data[:accounts])
             accounts_updated += 1
           end
         rescue => e
@@ -207,14 +201,14 @@ class EnableBankingItem::Importer
       nil
     end
 
-    def import_account(account_data)
-      # Use identification_hash as the stable identifier across sessions
-      uid = account_data[:identification_hash] || account_data[:uid]
+    def import_account(account_data, siblings = [])
+      # Unique per product, even when several products share an IBAN.
+      uid = EnableBankingItem.stable_account_uid(account_data, siblings)
 
       enable_banking_account = find_enable_banking_account_by_hash(uid)
       return unless enable_banking_account
 
-      enable_banking_account.upsert_enable_banking_snapshot!(account_data)
+      enable_banking_account.upsert_enable_banking_snapshot!(account_data, uid: uid)
       enable_banking_account.save!
     end
 
@@ -857,7 +851,7 @@ class EnableBankingItem::Importer
         current_uid = ad[:uid]
         next if identification_hash.blank? || current_uid.blank?
 
-        eb_acc = find_enable_banking_account_by_hash(identification_hash)
+        eb_acc = find_enable_banking_account_by_hash(EnableBankingItem.stable_account_uid(ad, accounts_data))
         next unless eb_acc
         # Update the API account_id (UUID) if it has changed (UIDs are session-scoped)
         eb_acc.update!(account_id: current_uid) if eb_acc.account_id != current_uid

@@ -234,4 +234,38 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     assert_nil item.authorization_id
     assert_nil item.last_psu_ip
   end
+
+  # --- stable_account_uid (IBAN-shared products, e.g. card + current account) ---
+
+  test "stable_account_uid returns the primary hash when there is no collision" do
+    accounts = [
+      { "uid" => "u1", "identification_hash" => "PRIMARY_A", "identification_hashes" => [ "PRIMARY_A", "X" ] },
+      { "uid" => "u2", "identification_hash" => "PRIMARY_B", "identification_hashes" => [ "PRIMARY_B", "Y" ] }
+    ]
+
+    assert_equal "PRIMARY_A", EnableBankingItem.stable_account_uid(accounts[0], accounts)
+    assert_equal "PRIMARY_B", EnableBankingItem.stable_account_uid(accounts[1], accounts)
+  end
+
+  test "stable_account_uid disambiguates products that share an IBAN+currency hash" do
+    # Both accounts share the primary (IBAN+currency) hash, but each carries a
+    # distinguishing hash (resource_id / card-number based) the other lacks.
+    accounts = [
+      { "uid" => "card", "identification_hash" => "SHARED",
+        "identification_hashes" => [ "IBAN", "SHARED", "RESOURCE_CARD" ] },
+      { "uid" => "checking", "identification_hash" => "SHARED",
+        "identification_hashes" => [ "IBAN", "SHARED", "RESOURCE_CHK", "CHK_IDENT" ] }
+    ]
+
+    card_uid = EnableBankingItem.stable_account_uid(accounts[0], accounts)
+    chk_uid  = EnableBankingItem.stable_account_uid(accounts[1], accounts)
+
+    assert_equal "RESOURCE_CARD", card_uid
+    assert_equal "RESOURCE_CHK", chk_uid
+    assert_not_equal card_uid, chk_uid # the whole point: no collapse into one account
+  end
+
+  test "stable_account_uid passes through plain string uids" do
+    assert_equal "b358f511", EnableBankingItem.stable_account_uid("b358f511", [ "b358f511", "ee2ab3ad" ])
+  end
 end

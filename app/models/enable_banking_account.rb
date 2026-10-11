@@ -89,7 +89,7 @@ class EnableBankingAccount < ApplicationRecord
     CASH_ACCOUNT_TYPE_MAP[account_type&.upcase]&.dig(:subtype)
   end
 
-  def upsert_enable_banking_snapshot!(account_snapshot)
+  def upsert_enable_banking_snapshot!(account_snapshot, uid: nil)
     snapshot = account_snapshot.with_indifferent_access
 
     raw_account_id = snapshot[:account_id]
@@ -113,7 +113,7 @@ class EnableBankingAccount < ApplicationRecord
       currency: parse_currency(snapshot[:currency]) || parse_currency(currency) || "EUR",
       name: build_account_name(snapshot),
       account_id: snapshot[:uid],
-      uid: snapshot[:identification_hash] || snapshot[:uid],
+      uid: uid.presence || snapshot[:identification_hash] || snapshot[:uid],
       iban: account_id_data[:iban] || snapshot[:iban],
       account_type: snapshot[:cash_account_type] || snapshot[:account_type],
       account_status: "active",
