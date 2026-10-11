@@ -305,6 +305,7 @@ services:
 
   web:
     image: ghcr.io/we-promise/sure:stable
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     volumes:
       - app-storage:/rails/storage
     ports:
@@ -337,6 +338,7 @@ services:
 
   worker:
     image: ghcr.io/we-promise/sure:stable
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     command: bundle exec sidekiq
     volumes:
       - app-storage:/rails/storage
@@ -358,6 +360,7 @@ services:
 
   db:
     image: pgvector/pgvector:pg16-trixie
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -407,6 +410,7 @@ services:
 
   redis:
     image: redis:latest
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     restart: unless-stopped
     volumes:
       - redis-data:/data

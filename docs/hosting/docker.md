@@ -154,6 +154,13 @@ With both changes in place, `http://127.0.0.1:3000/` and `http://[::1]:3000/` bo
 
 If you are running behind a reverse proxy that terminates TLS, nothing else changes — `proxy_pass http://[::1]:3000` and `proxy_pass http://127.0.0.1:3000` both work because the `[::]` bind is dual-stack.
 
+#### Running as custom UID/GID (optional)
+
+If you want to run the app as a specific user and group (e.g., to match the permissions of your host system), you can set the `APP_UID` and `APP_GID` environment variables in your `.env` file or directly in the `compose.yml` file.
+
+
+This will ensure that the app runs with the specified user and group IDs inside the container.
+
 #### Local development bind
 
 For `bin/dev` on your own machine, the server now defaults to Rails' native `localhost` bind (`127.0.0.1` + `[::1]`) — only reachable from the same machine. If you need external access (phone on the same WiFi, devcontainer port forwarding, LAN testing), set the Rails-native env var:
