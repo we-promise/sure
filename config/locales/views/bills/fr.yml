@@ -119,8 +119,8 @@ fr:
     find_payment: Trouver le paiement
     index:
       accept: Appliquer
-      add_bill: Ajouter une facture
-      add_income: Ajouter un revenu
+      add_bill: Nouvelle facture
+      add_income: Nouveau revenu
       all_automatic: toutes en prélèvement automatique
       attention_overdue_total: "%{amount} en retard"
       confidence: "%{percent} % de correspondance"
@@ -128,7 +128,7 @@ fr:
         one: Nous avons trouvé 1 paiement récurrent dans vos transactions. Vérifiez-le pour que les totaux affichés ici correspondent à ce que vous payez réellement.
         other: Nous avons trouvé %{count} paiements récurrents dans vos transactions. Vérifiez-les pour que les totaux affichés ici correspondent à ce que vous payez réellement.
       detected_review_action: Les vérifier
-      dormant: Inactive
+      dormant: En pause
       empty:
         action: Trouver les transactions récurrentes
         description: Les factures sont vos dépenses récurrentes. Sure les détecte automatiquement dans votre historique de transactions, et vous pouvez ajouter un lien de paiement à chacune pour régler directement depuis ici.
@@ -180,7 +180,7 @@ fr:
         one: 1 facture n'est pas incluse, aucun taux de change disponible
         other: "%{count} factures ne sont pas incluses, aucun taux de change disponible"
     installment_progress: Paiement %{done_plus_one} sur %{total}
-    manage: Gérer
+    manage: Voir
     manage_payments: Gérer les paiements
     match:
       amount_off: "%{amount} d'écart"

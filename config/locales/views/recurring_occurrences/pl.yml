@@ -46,7 +46,7 @@ pl:
       skipped: Pominięto
       snooze_week: Odłóż o tydzień
       unlink: Odłącz
-      view_bill: Zobacz cały rachunek
+      view_bill: Zobacz rachunek
     skip:
       success: Rachunek pominięty
     snooze:
