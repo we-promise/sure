@@ -57,6 +57,12 @@ jobs:
 
       - name: Validate Pipelock deployment contracts
         shell: bash
+        env:
+          # compose.example.ai.yml requires SECRET_KEY_BASE to be set (no
+          # working default is shipped anymore, see #3142) — this is only
+          # for `docker compose config` syntax validation below, never used
+          # to run anything, so a placeholder is fine here.
+          SECRET_KEY_BASE: ci-placeholder-only-not-used-to-run-anything
         run: |
           set -euo pipefail
 

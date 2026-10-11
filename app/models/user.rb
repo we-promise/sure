@@ -95,6 +95,46 @@ class User < ApplicationRecord
   end
 
   class << self
+    # Deterministic encrypted lookups (User.find_by(email:)) silently miss
+    # not-yet-backfilled legacy plaintext rows for #email/#unconfirmed_email
+    # specifically, because they combine `encrypts ..., downcase: true` with
+    # a model-level `normalizes` declaration on the same attribute - see the
+    # extend_queries KNOWN LIMITATION in
+    # config/initializers/active_record_encryption.rb. The literal SQL
+    # fallback below matches legacy plaintext rows directly (their column
+    # value *is* the plaintext) without risking a false match on
+    # already-encrypted rows, whose ciphertext never equals the plaintext
+    # value. Run `bin/rails security:backfill_encryption` after upgrading so
+    # this fallback becomes unnecessary going forward.
+    def find_by_email(email)
+      return nil if email.blank?
+
+      normalized = email.to_s.strip.downcase
+      find_by(email: normalized) || find_by([ "LOWER(email) = ?", normalized ])
+    end
+
+    # `authenticate_by` (Rails' timing-safe login helper) has the same
+    # not-yet-backfilled-row blind spot internally, since it looks the
+    # record up via `find_by(email:)`. This does the same job on top of
+    # #find_by_email: every non-blank attempt costs exactly one bcrypt
+    # digest - a password check for a user with a local password, a dummy
+    # hash for an unknown email or an SSO-only user - so response time does
+    # not reveal whether, or how, an email is registered. Blank passwords
+    # return nil without hashing on every path, like `authenticate_by`.
+    def authenticate_by_email(email:, password:)
+      password = password.to_s
+      return nil if password.empty?
+
+      user = find_by_email(email)
+
+      if user&.password_digest.present?
+        user if user.authenticate(password)
+      else
+        new(password: password)
+        nil
+      end
+    end
+
     def human_attribute_name(attribute, options = {})
       locale = options[:locale] || I18n.locale
       moniker = I18n.with_locale(locale) do

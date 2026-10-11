@@ -215,4 +215,16 @@ class SophtronItemTest < ActiveSupport::TestCase
     assert_empty manual_item.automatic_sync_sophtron_accounts
     assert_equal [ first_account, second_account ], manual_item.manual_sync_sophtron_accounts.to_a
   end
+
+  test "declares credentials and raw payloads as encrypted" do
+    skip "Encryption not configured" unless SophtronItem.encryption_ready?
+
+    encrypted = Array(SophtronItem.encrypted_attributes).map(&:to_s)
+    assert_includes encrypted, "user_id"
+    assert_includes encrypted, "access_key"
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_institution_payload"
+    assert_includes encrypted, "raw_customer_payload"
+    assert_includes encrypted, "raw_job_payload"
+  end
 end

@@ -21,4 +21,12 @@ class SophtronAccountTest < ActiveSupport::TestCase
     assert_equal "Apple / Goldman Sachs", account.institution_metadata["name"]
     assert_equal "ui-apple", account.institution_metadata["user_institution_id"]
   end
+
+  test "declares raw payloads as encrypted" do
+    skip "Encryption not configured" unless SophtronAccount.encryption_ready?
+
+    encrypted = Array(SophtronAccount.encrypted_attributes).map(&:to_s)
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_transactions_payload"
+  end
 end
