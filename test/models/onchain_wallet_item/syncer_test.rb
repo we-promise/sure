@@ -97,6 +97,29 @@ class OnchainWalletItem::SyncerTest < ActiveSupport::TestCase
     assert_equal "Trade", @account.entries.find_by!(external_id: "onchain_#{@onchain_account.id}_tx1").entryable_type
   end
 
+  test "post sync revalues an asset that did not move on chain" do
+    stub_wallet(quantity: "2")
+    security = Onchain::SecurityResolver.resolve(symbol: @onchain_account.symbol, name: @onchain_account.name)
+    Security::Price.create!(security: security, date: 1.day.ago.to_date, price: 100, currency: "USD")
+    OnchainWalletItem::Syncer.new(@item).perform_sync(@sync)
+    assert_equal 200, @account.reload.balance
+
+    Security::Price.create!(security: security, date: Date.current, price: 150, currency: "USD")
+    OnchainWalletItem::Syncer.new(@item).perform_sync(@item.syncs.create!)
+    OnchainWalletItem::Syncer.new(@item).perform_post_sync
+
+    assert_equal 300, @account.reload.balance
+  end
+
+  test "post sync still revalues when the movement repair fails" do
+    OnchainWalletAccount::Processor.any_instance.stubs(:repair_display_only_movements).raises(StandardError)
+    OnchainWalletAccount::Processor.any_instance.expects(:revalue).once
+
+    assert_difference "DebugLogEntry.count", 1 do
+      OnchainWalletItem::Syncer.new(@item).perform_post_sync
+    end
+  end
+
   private
     def stub_wallet(quantity: "1", assets: nil)
       stub_fake_snapshot(

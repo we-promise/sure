@@ -88,7 +88,7 @@ en:
       remaining: "%{amount} remaining"
       paid_headline: "%{amount} paid"
     add_bill: Add bill
-    manage: Manage
+    manage: View
     find_payment: Find payment
     add_payment: Add payment
     review_match: Review match
@@ -267,8 +267,8 @@ en:
       paid_so_far: Paid so far
       hero_past_due: "%{amount} past due"
       hero_next_seven: "%{amount} due in the next 7 days"
-      add_bill: Add bill
-      add_income: Add income
+      add_bill: New bill
+      add_income: New income
       review_with_ai: Review with AI
       detected_review:
         one: We found 1 recurring payment in your transactions. Check it over so the totals here match what you actually pay.
@@ -308,7 +308,7 @@ en:
       this_month: This month
       later: After this month
       paid_this_month: Paid this month
-      dormant: Dormant
+      dormant: Paused
       kpi_remaining: Remaining this month
       kpi_paid: Paid this month
       kpi_next_seven: Due next 7 days

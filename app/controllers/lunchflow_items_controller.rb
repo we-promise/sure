@@ -637,10 +637,11 @@ class LunchflowItemsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@lunchflow_item),
           partial: "lunchflow_items/lunchflow_item",
-          locals: { lunchflow_item: @lunchflow_item }
+          locals: { lunchflow_item: @lunchflow_item, visible_accounts: @lunchflow_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else
