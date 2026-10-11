@@ -11,9 +11,12 @@
     but it recedes so the rows that want something from you carry the weight.
     It recedes through lead_tone, on the name and the amount: opacity on the
     whole row took the secondary text below 3:1 in light mode. %>
-<%# The row reads as interactive without dressing up as a button: a hover tint
-    and the name underlining, the same cues the transaction list uses. %>
-<div class="flex items-center gap-3 @lg:gap-4 px-4 py-3 transition-colors hover:bg-surface-hover">
+<%# Same recipe as a transaction row: p-3 growing to p-4, no hover tint, the
+    name underlining under the pointer, and clickable-row sending a click on any
+    bare part of the row (padding, the empty verb slot) to the drawer link. %>
+<div class="flex items-center gap-3 @lg:gap-4 p-3 @lg:p-4"
+     data-controller="clickable-row"
+     data-action="click->clickable-row#open">
   <%# The bulk of the row is the inspect control. Only the trailing verb sits
       outside it, so there are no anchors inside anchors. The link has no
       padding of its own, so its ring is pushed out into the row's: clear of
@@ -22,8 +25,8 @@
       the series' current occurrence, so opening a settled row described the
       NEXT one and reported it unpaid. %>
   <%= link_to bill_path(series, display: "drawer", occurrence: occurrence.id),
-        data: { turbo_frame: "drawer", turbo_prefetch: false },
-        class: "flex items-center gap-3 @lg:gap-4 min-w-0 flex-1 group rounded-lg focus-ring outline-offset-4" do %>
+        data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
+        class: "flex items-center gap-3 @lg:gap-4 min-w-0 flex-1 rounded-lg focus-ring outline-offset-4" do %>
     <%# A date rail, and only a date. It used to print "Overdue" beside a
         subline already reading "14 days overdue", which spent the row's one
         piece of temporal context saying the same word twice. The colour still
@@ -38,7 +41,7 @@
 
     <% if series.merchant&.logo_url.present? %>
       <%= image_tag Setting.transform_brand_fetch_url(series.merchant.logo_url),
-            class: "w-9 h-9 rounded-full shrink-0",
+            class: "w-9 h-9 rounded-full shrink-0 border border-secondary",
             loading: "lazy" %>
     <% else %>
       <%= render DS::FilledIcon.new(
@@ -50,7 +53,7 @@
     <% end %>
 
     <div class="min-w-0 flex-1">
-      <p class="<%= lead_tone %> text-sm font-medium truncate group-hover:underline">
+      <p class="<%= lead_tone %> text-sm font-medium truncate hover:underline">
         <%= series.display_name %>
       </p>
       <%# Says WHY this row needs a look, when it does, among the bill's other
