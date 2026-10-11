@@ -144,6 +144,7 @@
           <%= t(".ring.including_used", amount: @goal.consumed_amount_money.format(precision: 0)) %>
         </p>
       <% end %>
+      <p class="text-xs text-subdued mt-0.5"><%= t(".ring.basis.#{@goal.contributions_basis? ? "contributions" : "balance"}") %></p>
       <% if @goal.contributions_basis? %>
         <p class="text-xs text-secondary tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.market_value", amount: @goal.market_value_money.format(precision: 0)) %></p>
       <% end %>

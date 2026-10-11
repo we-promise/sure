@@ -194,6 +194,38 @@
       <% end %>
     </div>
 
+    <%# What progress counts. Only differs for an account that moves with the
+        market, but a plain-cash goal reads the same either way, so the choice
+        is always offered rather than revealed by the accounts ticked above.
+        A completed goal's basis is frozen with its snapshot, so there the
+        choice is shown disabled; disabled radios are not submitted, so an
+        ordinary edit still saves. Checked against the stored basis, so a
+        refused switch re-renders showing the basis that was kept. %>
+    <% basis_locked = goal.progress_basis_locked? %>
+    <fieldset>
+      <legend class="block text-sm font-medium text-primary"><%= t("goals.form.fields.progress_basis") %></legend>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1.5">
+        <% Goal::PROGRESS_BASES.each do |basis| %>
+          <label class="flex items-start gap-2 rounded-lg border border-primary p-3 <%= basis_locked ? "cursor-not-allowed opacity-60" : "cursor-pointer" %> has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
+            <%= f.radio_button :progress_basis, basis,
+                               checked: basis == (basis_locked ? goal.progress_basis_in_database : goal.progress_basis),
+                               disabled: basis_locked,
+                               class: "radio mt-0.5 shrink-0" %>
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-primary"><%= t("goals.form.progress_bases.#{basis}.label") %></span>
+              <span class="block text-xs text-secondary"><%= t("goals.form.progress_bases.#{basis}.hint") %></span>
+            </span>
+          </label>
+        <% end %>
+      </div>
+      <% if basis_locked %>
+        <p class="mt-1.5 text-xs text-secondary"><%= t("goals.form.progress_basis_locked") %></p>
+      <% end %>
+      <% goal.errors.messages_for(:progress_basis).each do |message| %>
+        <p class="mt-1.5 text-xs text-destructive"><%= message %></p>
+      <% end %>
+    </fieldset>
+
     <%= f.text_area :notes,
                     label: t("goals.form.fields.notes"),
                     rows: 2,

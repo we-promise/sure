@@ -34,9 +34,11 @@ class Goal < ApplicationRecord
   validates :name, presence: true, length: { maximum: 255 }
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
-  # before_save (not before_validation) so it only mutates on persistence, not
-  # on every valid? call — a goal can be inspected without its basis flipping.
-  before_save :default_progress_basis_for_investment
+  # What progress counts: "balance" is what the linked accounts are worth
+  # today, "contributions" only what was put in (market gains taken out). The
+  # user chooses; nothing re-bases a goal behind their back (#3964).
+  PROGRESS_BASES = %w[balance contributions].freeze
+  validates :progress_basis, inclusion: { in: PROGRESS_BASES }
   # A reserve measured in months is derived, not typed: computing it only in
   # the monthly job would leave a brand-new one wrong until the 1st, so the
   # feature's first impression would be its least convincing moment. Fired on
@@ -69,6 +71,7 @@ class Goal < ApplicationRecord
   validate :currency_locked_once_linked
   validate :restore_must_not_recreate_whole_account_conflict
   validate :kind_locked_while_released
+  validate :progress_basis_locked_once_completed
   validate :kind_locked_once_consumed
   validate :target_must_cover_what_was_consumed
   # A reserve has no deadline. Normalising here rather than rejecting: the form
@@ -94,6 +97,11 @@ class Goal < ApplicationRecord
   # they belong to are the same fact. Still inside the save transaction, so a
   # later failure takes both back.
   after_save :apply_state_change_side_effects, if: :saved_change_to_state?
+  # The basis decides what current_balance counts, so the balance-derived memos
+  # filled before the save describe the old basis. Cleared the way a state
+  # transition clears them, or the instance the controller renders keeps
+  # reporting the figure the user just switched away from.
+  after_save :reset_state_dependent_caches!, if: :saved_change_to_progress_basis?
 
   monetize :target_amount
 
@@ -437,6 +445,13 @@ class Goal < ApplicationRecord
 
   def contributions_basis?
     progress_basis == "contributions"
+  end
+
+  # Whether the basis is frozen with a completion snapshot (see
+  # progress_basis_locked_once_completed). The form reads it to stop offering
+  # a choice the model would refuse.
+  def progress_basis_locked?
+    persisted? && !completed_amount_in_database.nil?
   end
 
   def one_off?
@@ -1299,16 +1314,6 @@ class Goal < ApplicationRecord
       errors.add(:linked_accounts, :must_be_fundable)
     end
 
-    # Goals funded by an investment account default to the contributions basis
-    # (so a market swing doesn't move them); depository-only goals stay on the
-    # balance basis. Only auto-set when the basis is still the default.
-    def default_progress_basis_for_investment
-      return unless goal_accounts.any? { |ga| ga.account&.investment? }
-      return unless progress_basis.blank? || progress_basis == "balance"
-
-      self.progress_basis = "contributions"
-    end
-
     def linked_accounts_must_match_goal_currency
       return if currency.blank?
 
@@ -1368,6 +1373,19 @@ class Goal < ApplicationRecord
       return unless state_in_database.in?(RELEASED_STATES)
 
       errors.add(:kind, :locked_while_released)
+    end
+
+    # A completed goal reports `completed_amount`, frozen on the basis it had
+    # when it closed. Switching basis afterwards would label that figure with
+    # the other basis, so the switch waits for a reopen, which thaws the
+    # snapshot. The persisted snapshot, for the reason kind_locked_while_released
+    # reads the persisted state: a write that also sets `state: "active"` skips
+    # the transition that clears it. An archived goal that never completed has
+    # no snapshot and reports the live figure, so its basis stays editable.
+    def progress_basis_locked_once_completed
+      return unless progress_basis_locked? && will_save_change_to_progress_basis?
+
+      errors.add(:progress_basis, :locked_once_completed)
     end
 
     def clear_target_date_for_maintained
