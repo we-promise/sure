@@ -59,17 +59,17 @@ class DS::Tooltip < ApplicationComponent
     # constraint even when an ancestor leaks white-space: nowrap (e.g. a
     # truncating row) that would otherwise let text spill past the bubble.
     if variant == :surface
-      "chart-tooltip text-sm max-w-[20rem]"
+      "chart-tooltip text-sm max-w-80"
     else
-      "bg-inverse text-sm px-1.5 py-1 rounded-md max-w-[20rem]"
+      "bg-inverse text-sm px-1.5 py-1 rounded-md max-w-80"
     end
   end
 
   def content_classes
     if variant == :surface
-      "text-primary font-normal max-w-[20rem] whitespace-normal"
+      "text-primary font-normal max-w-80 whitespace-normal"
     else
-      "text-inverse font-normal max-w-[20rem] whitespace-normal"
+      "text-inverse font-normal max-w-80 whitespace-normal"
     end
   end
 

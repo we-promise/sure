@@ -274,6 +274,17 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     end
   end
 
+  test "account filter popover reuses the shared menu without the account tab" do
+    visit account_url(accounts(:depository), tab: "activity")
+    find("#activity-status-filter-button").click
+
+    within "#transaction-filters-menu" do
+      assert_selector "[role='tab'], button", text: I18n.t("transactions.search.filters.date")
+      assert_no_selector "[role='tab'], button", text: I18n.t("transactions.search.filters.account")
+      assert_selector "form, [type='submit']"
+    end
+  end
+
   test "narrow desktop tables use mobile rows and retain selection and category information" do
     page.current_window.resize_to(1400, 900)
     @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false, "transactions_show_notes" => true))

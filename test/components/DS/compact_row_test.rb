@@ -25,7 +25,7 @@ class DS::CompactRowTest < ViewComponent::TestCase
       row.with_primary { "Coffee" }
     end
 
-    assert_selector "div.py-2[class*='pointer:fine']"
+    assert_selector "div.py-2[class*='pointer-fine']"
   end
 
   test "wraps row content in a single flex container" do

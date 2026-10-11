@@ -36,7 +36,7 @@ class DS::TooltipTest < ViewComponent::TestCase
     # inside a truncating ancestor (which leaks white-space: nowrap).
     render_inline(DS::Tooltip.new(text: "A very long tooltip text that must wrap", variant: :surface))
 
-    assert_selector "[role=tooltip].max-w-\\[20rem\\]", visible: :all
-    assert_selector "[role=tooltip] .whitespace-normal.max-w-\\[20rem\\]", visible: :all, text: "A very long tooltip text that must wrap"
+    assert_selector "[role=tooltip].max-w-80", visible: :all
+    assert_selector "[role=tooltip] .whitespace-normal.max-w-80", visible: :all, text: "A very long tooltip text that must wrap"
   end
 end
