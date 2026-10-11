@@ -32,5 +32,5 @@ fr:
               only_with_months_mode: Les mois de dépenses ne s'appliquent que si la cible est exprimée ainsi.
             linked_accounts:
               currency_mismatch: Tous les comptes liés doivent partager la même devise.
-              must_be_fundable: Tous les comptes liés doivent être des comptes de trésorerie ou d'investissement.
+              must_be_fundable: Tous les comptes liés doivent être des comptes de trésorerie, d'investissement ou de cryptomonnaies.
               must_belong_to_family: Les comptes liés doivent appartenir au même foyer que l'objectif.

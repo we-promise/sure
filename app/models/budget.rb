@@ -215,9 +215,9 @@ class Budget < ApplicationRecord
 
   # What goals have already spoken for, out of THE SAME accounts. Restricting
   # to `cash_accounts` is the point: Goal::FUNDABLE_ACCOUNT_TYPES also includes
-  # Investment, and subtracting an earmark held on a brokerage account from a
-  # cash figure that never counted it would show a "really free" amount that is
-  # too low — or negative — with nothing on the page to explain why.
+  # Investment and Crypto, and subtracting an earmark held on a brokerage account
+  # or wallet from a cash figure that never counted it would show a "really free"
+  # amount that is too low — or negative — with nothing on the page to explain why.
   #
   # Built from the shared pool rather than summing allocated_amount, because a
   # whole-account link reserves no fixed slice and would otherwise count as

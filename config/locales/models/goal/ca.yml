@@ -24,7 +24,7 @@ ca:
               blank: Indica quants mesos de despeses ha de cobrir aquesta reserva.
               only_with_months_mode: Els mesos de despeses només s'apliquen quan l'objectiu es defineix d'aquesta manera.
             linked_accounts:
-              must_be_fundable: Tots els comptes enllaçats han de ser comptes d'efectiu o d'inversió.
+              must_be_fundable: Tots els comptes enllaçats han de ser comptes d'efectiu, d'inversió o de criptomonedes.
               currency_mismatch: Tots els comptes enllaçats han de tenir la mateixa moneda.
               must_belong_to_family: Els comptes enllaçats han de pertànyer a la mateixa família que l'objectiu.
             kind:
