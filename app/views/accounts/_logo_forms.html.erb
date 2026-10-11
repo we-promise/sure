@@ -3,7 +3,7 @@
     the account form because forms cannot nest, and loads the icons into the
     logo frame only. The account-logo-picker controller fills in the domain
     and name typed in the account form before it submits. %>
-<%= form_with url: logo_options_account_path(account), method: :get, id: dom_id(account, :logo_options), class: "hidden", data: { turbo_frame: dom_id(account, :logo_field) } do %>
+<%= form_with url: account.persisted? ? logo_options_account_path(account) : logo_options_accounts_path, method: :get, id: dom_id(account, :logo_options), class: "hidden", data: { turbo_frame: dom_id(account, :logo_field) } do %>
   <%= hidden_field_tag :institution_domain, account.institution_domain, id: nil %>
   <%= hidden_field_tag :institution_name, account.institution_name, id: nil %>
 <% end %>

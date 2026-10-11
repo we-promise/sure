@@ -63,7 +63,7 @@
           </p>
         </div>
 
-        <% if logo && account.persisted? %>
+        <% if logo %>
           <div class="space-y-2"
                data-controller="account-logo-picker"
                data-account-logo-picker-pending-value="<%= t("accounts.logo_field.pending") %>"
@@ -93,6 +93,6 @@
   <%= form.submit %>
 <% end %>
 
-<% if logo && account.persisted? %>
+<% if logo %>
   <%= render "accounts/logo_forms", account: account %>
 <% end %>

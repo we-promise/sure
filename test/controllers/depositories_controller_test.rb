@@ -171,6 +171,33 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "krungsri.com", Account.order(:created_at).last.read_attribute(:institution_domain)
   end
 
+  test "create applies the icon picked in the new account form instead of fetching one" do
+    Account::LogoFetcher.any_instance.expects(:fetch).with(source: "appstore:1").returns(true)
+
+    assert_no_enqueued_jobs only: AccountLogoFetchJob do
+      post depositories_path, params: { account: { name: "Krungsri savings", balance: 100, currency: "USD", accountable_type: "Depository",
+                   institution_domain: "krungsri.com", accountable_attributes: { subtype: "savings" } }.merge(logo_choice: "appstore:1") }
+    end
+
+    assert_redirected_to account_path(Account.order(:created_at).last)
+    assert_nil flash[:alert]
+  end
+
+  test "create attaches an icon uploaded in the new account form" do
+    post depositories_path, params: { account: { name: "Krungsri savings", balance: 100, currency: "USD", accountable_type: "Depository",
+                   institution_domain: "krungsri.com", accountable_attributes: { subtype: "savings" } }.merge(logo: fixture_file_upload("square-placeholder.png", "image/png")) }
+
+    assert Account.order(:created_at).last.logo.attached?
+  end
+
+  test "new account form offers the picker without an account id" do
+    get new_depository_path
+
+    assert_response :success
+    assert_select "[data-controller=account-logo-picker] button[form=?]", "logo_options_account"
+    assert_select "form#logo_options_account[action=?][data-turbo-frame=?]", logo_options_accounts_path, "logo_field_account"
+  end
+
   test "update with a chosen icon skips the automatic fetch for a new domain" do
     Account::LogoFetcher.any_instance.expects(:fetch).with(source: "yandex").returns(true)
 

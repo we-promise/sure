@@ -741,6 +741,17 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "tbank.ru", @account.reload.institution_domain
   end
 
+  test "logo_options for a new account searches the typed domain" do
+    Account::LogoFetcher.expects(:new).with { |account| account.new_record? && account.institution_domain == "krungsri.com" }
+      .returns(stub(candidates: []))
+
+    get logo_options_accounts_url, params: { institution_domain: "krungsri.com", institution_name: "Krungsri" },
+                                   headers: { "Turbo-Frame" => "logo_field_account" }
+
+    assert_response :success
+    assert_select "turbo-frame#logo_field_account"
+  end
+
   test "logo_options outside the frame goes to the account" do
     get logo_options_account_url(@account)
 

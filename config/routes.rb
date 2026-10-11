@@ -676,6 +676,7 @@ Rails.application.routes.draw do
 
     collection do
       post :sync_all
+      get :logo_options, action: :new_logo_options
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"

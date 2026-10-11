@@ -212,9 +212,14 @@ class AccountsController < ApplicationController
   def logo_options
     return redirect_to account_path(@account) unless turbo_frame_request?
 
-    # The form may hold a domain or name that is not saved yet.
-    @account.assign_attributes(params.permit(:institution_domain, :institution_name))
-    render partial: "accounts/logo_field", locals: { account: @account, candidates: Account::LogoFetcher.new(@account).candidates }
+    render_logo_options(@account)
+  end
+
+  # The same for the form of an account that is not created yet.
+  def new_logo_options
+    return redirect_to accounts_path unless turbo_frame_request?
+
+    render_logo_options(Current.family.accounts.build)
   end
 
   def toggle_active
@@ -339,6 +344,12 @@ class AccountsController < ApplicationController
   end
 
   private
+    # The form may hold a domain or name that is not saved yet.
+    def render_logo_options(account)
+      account.assign_attributes(params.permit(:institution_domain, :institution_name))
+      render partial: "accounts/logo_field", locals: { account: account, candidates: Account::LogoFetcher.new(account).candidates }
+    end
+
     # Built here rather than in the template: assembling a chart payload is
     # domain work, and `show` asks for it exactly once per request, so there
     # is nothing to memoise.
