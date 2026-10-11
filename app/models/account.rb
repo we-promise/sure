@@ -1,5 +1,5 @@
 class Account < ApplicationRecord
-  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
+  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Logoable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
 
@@ -119,8 +119,6 @@ class Account < ApplicationRecord
       )
       .distinct
   }
-
-  has_one_attached :logo, dependent: :purge_later
 
   # People paste whole URLs ("https://www.tbank.ru/") into the domain field,
   # but the Brandfetch logo URL needs the bare host ("tbank.ru").
@@ -635,18 +633,6 @@ class Account < ApplicationRecord
   # Budget#available_to_allocate.
   def free_to_earmark
     balance.to_d - goal_earmarked_total
-  end
-
-  def logo_url
-    if institution_domain.present? && Setting.brand_fetch_client_id.present?
-      logo_size = Setting.brand_fetch_logo_size
-
-      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
-    elsif provider&.logo_url.present?
-      provider.logo_url
-    elsif logo.attached?
-      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
-    end
   end
 
   def destroy_later

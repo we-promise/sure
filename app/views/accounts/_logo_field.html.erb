@@ -1,0 +1,73 @@
+<%# locals: (account:, candidates: nil) %>
+<%# Sits inside the account form and only previews: the account-logo-picker
+    controller around it (accounts/_form) keeps the choice in a hidden field,
+    and saving the form applies it. "Pick icon" submits the form rendered
+    after the account form (accounts/_logo_forms) through its `form` attribute,
+    with the domain and name currently typed in the account form. %>
+<%= turbo_frame_tag dom_id(account, :logo_field), class: "block space-y-2", data: { testid: "account-logo-field" } do %>
+  <div class="space-y-1" data-account-logo-picker-target="preview">
+    <div data-account-logo-picker-target="image">
+      <%= render "accounts/logo", account: account, size: "lg" %>
+    </div>
+    <p class="text-xs text-secondary" data-account-logo-picker-target="caption"><%= account_logo_caption(account) %></p>
+  </div>
+
+  <%# The shapes the preview switches to: an uploaded file (its src is set
+      in the browser) and, for "Remove", the automatic icon. %>
+  <template data-account-logo-picker-target="blank">
+    <%= render "accounts/logo", account: account, size: "lg", url: "data:," %>
+  </template>
+  <% if account.logo.attached? %>
+    <template data-account-logo-picker-target="fallback">
+      <%= render "accounts/logo", account: account, size: "lg", url: account.fallback_logo_url %>
+    </template>
+  <% end %>
+
+  <div class="flex flex-wrap items-center gap-2">
+    <%= render DS::Button.new(
+          text: t("accounts.logo_field.pick"),
+          variant: :outline,
+          size: :sm,
+          icon: "images",
+          type: "submit",
+          form: dom_id(account, :logo_options),
+          data: { action: "account-logo-picker#search", turbo_submits_with: t("accounts.logo_field.searching") }
+        ) %>
+    <% if account.logo.attached? %>
+      <%= render DS::Button.new(
+            text: t("accounts.logo_field.remove"),
+            variant: :outline,
+            size: :sm,
+            icon: "trash-2",
+            type: "button",
+            data: { action: "account-logo-picker#remove" }
+          ) %>
+    <% end %>
+  </div>
+
+  <% if candidates %>
+    <% options = account_logo_options(account, candidates) %>
+    <% if options.empty? %>
+      <p class="text-xs text-secondary"><%= t("accounts.logo_field.empty") %></p>
+    <% else %>
+      <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+        <% options.each do |option| %>
+          <%= tag.button type: "button", title: option.title,
+                         data: {
+                           account_logo_picker_target: "option",
+                           action: "account-logo-picker#choose",
+                           account_logo_picker_choice_param: (option.source unless option.current),
+                           account_logo_picker_label_param: option.label
+                         },
+                         class: "flex flex-col items-center gap-1 p-2 rounded-lg border min-w-0 hover:bg-surface-hover cursor-pointer #{option.current ? "border-primary" : "border-secondary"}" do %>
+            <%= render "accounts/logo", account: account, size: "lg", url: option.src %>
+            <span class="text-xs text-primary truncate w-full text-center"><%= option.label %></span>
+            <span class="text-xs text-secondary truncate w-full text-center">
+              <%= option.current ? t("accounts.logo_field.current") : option.detail %>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

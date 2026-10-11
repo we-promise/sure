@@ -84,6 +84,12 @@ module AccountableResource
     # other submitted fields. Keep them available for the 422 form without
     # persisting them.
     update_params = account_params.except(:return_to, :balance, :opening_balance_date)
+    # An uploaded logo is meant to be seen, so it takes over from Brandfetch.
+    update_params[:prefer_brandfetch_logo] = false if account_params[:logo].present?
+    # An icon picked or uploaded in this form wins over the automatic fetch
+    # that a domain change would otherwise queue.
+    logo_choice = params.dig(:account, :logo_choice).presence
+    @account.logo_chosen = logo_choice.present? || account_params[:logo].present?
 
     # The balance change and the attribute update are one form, so they commit
     # or roll back as one. `set_current_balance` writes a valuation and the
@@ -123,6 +129,15 @@ module AccountableResource
     unless saved
       render :edit, status: :unprocessable_entity
       return
+    end
+
+    # The icon picked in the form downloads only on save, after the account
+    # committed, and an upload in the same submit wins over it.
+    if logo_choice && account_params[:logo].blank? && !@account.choose_logo(logo_choice)
+      flash[:alert] = t("accounts.update.logo_not_applied")
+      # The choice held back the automatic fetch; with it gone, that fetch
+      # replaces or drops an automatic icon left from an earlier domain.
+      AccountLogoFetchJob.perform_later(@account)
     end
 
     redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type.name.underscore.humanize)
@@ -172,7 +187,7 @@ module AccountableResource
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
         :institution_name, :institution_domain, :notes, :exclude_from_reports,
-        :enable_category_matcher,
+        :enable_category_matcher, :logo,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end

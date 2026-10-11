@@ -20,8 +20,16 @@ en:
         currency: Currency
         family: "%{moniker}"
         family_id: "%{moniker}"
+        logo: Logo
         name: Name
         subtype: Subtype
+    errors:
+      models:
+        account:
+          attributes:
+            logo:
+              invalid_content_type: must be a PNG, JPEG, GIF, WebP or ICO image
+              too_large: must be smaller than %{max_size} MB
     models:
       account: Account
       account/credit: Credit Card

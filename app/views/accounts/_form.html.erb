@@ -1,4 +1,6 @@
-<%# locals: (account:, url:) %>
+<%# locals: (account:, url:, logo: true) %>
+<%# `logo: false` hides the icon block for forms whose controller does not
+    save it (properties). %>
 
 <% if @error_message.present? %>
   <%= render DS::Alert.new(message: @error_message, variant: :error) %>
@@ -61,6 +63,20 @@
           </p>
         </div>
 
+        <% if logo && account.persisted? %>
+          <div class="space-y-2"
+               data-controller="account-logo-picker"
+               data-account-logo-picker-pending-value="<%= t("accounts.logo_field.pending") %>"
+               data-account-logo-picker-removal-value="<%= t("accounts.logo_field.removal") %>">
+            <%= form.label :logo, t(".logo_label"), class: "form-field__label" %>
+            <%= render "accounts/logo_field", account: account %>
+            <%= hidden_field_tag "#{form.object_name}[logo_choice]", nil, id: nil, data: { account_logo_picker_target: "choice" } %>
+            <%= form.file_field :logo, accept: Account::LOGO_CONTENT_TYPES.join(","), class: "form-field__input",
+                                data: { account_logo_picker_target: "file", action: "account-logo-picker#showFile" } %>
+            <p class="text-xs text-secondary"><%= t(".logo_hint") %></p>
+          </div>
+        <% end %>
+
         <%= form.text_area :notes,
             label: t(".notes_label"),
             placeholder: t(".notes_placeholder"),
@@ -75,4 +91,8 @@
   </div>
 
   <%= form.submit %>
+<% end %>
+
+<% if logo && account.persisted? %>
+  <%= render "accounts/logo_forms", account: account %>
 <% end %>

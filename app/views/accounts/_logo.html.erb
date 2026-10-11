@@ -1,4 +1,4 @@
-<%# locals: (account:, size: "md", color: nil) %>
+<%# locals: (account:, size: "md", color: nil, url: account.logo_url) %>
 
 <% size_classes = {
   "sm" => "w-6 h-6",
@@ -7,9 +7,9 @@
   "full" => "w-full h-full"
 } %>
 
-<% if account.logo_url.present? %>
-  <%= image_tag account.logo_url,
-        class: "shrink-0 rounded-full #{size_classes[size]}",
+<% if url.present? %>
+  <%= image_tag url,
+        class: "shrink-0 rounded-full object-contain #{size_classes[size]}",
         loading: "lazy" %>
 <% else %>
   <%= render DS::FilledIcon.new(
