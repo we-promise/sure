@@ -236,6 +236,13 @@ en:
         label: API Key
         placeholder: Enter your Realie API key here
         usage: "%{used} of %{limit} monthly requests used"
+      chimnie_settings:
+        title: Chimnie
+        description: Enter your Chimnie API key to value UK residential properties by their UPRN. Create a free key at dashboard.chimnie.com (sign-up requires a business or custom-domain email address; Gmail, Outlook and similar addresses are not accepted). UPRN valuations are free and refreshed monthly; Sure caps them at 1,000 requests per month, which you can change with the CHIMNIE_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the CHIMNIE_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your Chimnie API key here
+        usage: "%{used} of %{limit} monthly requests used"
       tiingo_settings:
         title: Tiingo
         description: Enter the API token provided by Tiingo. Free tier supports 50 unique symbols per hour with 30+ years of historical data.
