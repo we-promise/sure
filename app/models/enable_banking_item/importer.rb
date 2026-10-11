@@ -1,4 +1,6 @@
 class EnableBankingItem::Importer
+  include CurrencyNormalizable
+
   # Maximum number of pagination requests to prevent infinite loops
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
@@ -232,7 +234,8 @@ class EnableBankingItem::Importer
         return false
       end
 
-      balance = select_current_balance(balances)
+      currency, kept, skipped = split_balances_by_currency(balances, enable_banking_account)
+      balance = select_current_balance(kept)
 
       unless balance.present?
         mark_balance_unavailable(enable_banking_account)
@@ -240,7 +243,6 @@ class EnableBankingItem::Importer
       end
 
       amount = balance.dig(:balance_amount, :amount) || balance[:amount]
-      currency = balance.dig(:balance_amount, :currency) || balance[:currency]
 
       unless amount.present?
         mark_balance_unavailable(enable_banking_account)
@@ -256,8 +258,10 @@ class EnableBankingItem::Importer
 
       enable_banking_account.update!(
         current_balance: parsed_amount,
-        currency: currency.presence || enable_banking_account.currency
+        currency: balance_currency(balance) || enable_banking_account.currency
       )
+      # Only now is the chosen-currency balance known to be the one in use.
+      capture_skipped_currency_balances(enable_banking_account, currency, skipped)
 
       true
     rescue Provider::EnableBanking::EnableBankingError => e
@@ -272,6 +276,65 @@ class EnableBankingItem::Importer
       capture_balance_sync_error(enable_banking_account, e)
       mark_balance_unavailable(enable_banking_account)
       false
+    end
+
+    # Multi-currency wallets such as PayPal report one balance per currency
+    # under the same balance type (EUR, CAD, USD, ...). Keep the balances in
+    # the currency the accounts endpoint reports for the account, else in the
+    # first currency listed, which is the wallet's primary one. Otherwise
+    # select_current_balance takes the last entry of each type, so an empty
+    # USD balance replaced the EUR one and switched the account to USD.
+    # Returns the chosen currency, the balances in it and the ones left out.
+    def split_balances_by_currency(balances, enable_banking_account)
+      currencies = balances.filter_map { |balance| balance_currency(balance) }.uniq
+      return [ currencies.first, balances, [] ] if currencies.size <= 1
+
+      account_currency = snapshot_currency(enable_banking_account)
+      currency = currencies.include?(account_currency) ? account_currency : currencies.first
+      kept, skipped = balances.partition { |balance| balance_currency(balance) == currency }
+      [ currency, kept, skipped ]
+    end
+
+    def balance_currency(balance)
+      parse_currency(balance.dig(:balance_amount, :currency) || balance[:currency])
+    end
+
+    # Read from the raw snapshot, not the stored column: the stored currency
+    # may already be the wrong one picked from a multi-currency response.
+    # PayPal reports XXX (no currency) for the wallet; parse_currency turns
+    # that into nil, so the first listed currency is used.
+    def snapshot_currency(enable_banking_account)
+      payload = enable_banking_account.raw_payload
+      parse_currency(payload.with_indifferent_access[:currency]) if payload.is_a?(Hash)
+    end
+
+    # A non-zero balance in another currency is money the account leaves out;
+    # make that visible to support instead of dropping it silently.
+    def capture_skipped_currency_balances(enable_banking_account, currency, skipped)
+      funded = skipped.filter_map do |balance|
+        amount = balance.dig(:balance_amount, :amount) || balance[:amount]
+        next if amount.blank? || amount.to_d.zero?
+
+        { currency: balance_currency(balance), balance_type: balance[:balance_type], amount: amount.to_s }
+      end
+      return if funded.empty?
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "info",
+        message: "Enable Banking account holds balances in other currencies; only the #{currency} balance is used",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          currency: currency,
+          other_balances: funded
+        }
+      )
     end
 
     def select_current_balance(balances)
