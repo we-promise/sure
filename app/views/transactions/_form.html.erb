@@ -1,6 +1,7 @@
-<%# locals: (entry:, account_currencies:, manual_accounts:, categories:, merchants:, tags:) %>
+<%# locals: (entry:, account_currencies:, manual_accounts:, categories:, merchants:, tags:, recent_transaction_names: []) %>
+<% auto_generate_names = Current.family.auto_generate_transaction_names? %>
 
-<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: "transaction-form", action: "turbo:before-cache@document->transaction-form#refreshIdempotencyKey pageshow@window->transaction-form#refreshIdempotencyKeyIfPersisted", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
+<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: auto_generate_names ? "transaction-form transaction-name-preview" : "transaction-form", action: "turbo:before-cache@document->transaction-form#refreshIdempotencyKey pageshow@window->transaction-form#refreshIdempotencyKeyIfPersisted", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
   <% if entry.errors.any? %>
     <%= render "shared/form_errors", model: entry %>
   <% end %>
@@ -24,7 +25,39 @@
   </section>
 
   <section class="space-y-2">
-    <%= f.text_field :name, label: t(".description"), placeholder: t(".description_placeholder"), required: true %>
+    <div class="relative">
+      <%= f.text_field :name, label: t(".description"),
+        placeholder: auto_generate_names ? t(".description_placeholder_optional") : t(".description_placeholder"),
+        required: !auto_generate_names,
+        autocomplete: "off",
+        role: (auto_generate_names && recent_transaction_names.present? ? "combobox" : nil),
+        "aria-autocomplete": (auto_generate_names && recent_transaction_names.present? ? "list" : nil),
+        "aria-expanded": (auto_generate_names && recent_transaction_names.present? ? "false" : nil),
+        "aria-controls": (auto_generate_names && recent_transaction_names.present? ? "transaction_name_suggestions" : nil),
+        data: {
+          transaction_name_preview_target: "name",
+          action: "input->transaction-name-preview#filterSuggestions focus->transaction-name-preview#showSuggestions blur->transaction-name-preview#scheduleHideSuggestions keydown->transaction-name-preview#handleKeydown"
+        } %>
+
+      <% if auto_generate_names && recent_transaction_names.present? %>
+        <ul id="transaction_name_suggestions"
+            role="listbox"
+            class="absolute z-50 p-1.5 w-full min-w-48 max-h-64 overflow-auto rounded-lg shadow-lg bg-container mt-1.5 hidden"
+            data-transaction-name-preview-target="suggestions">
+          <% recent_transaction_names.each_with_index do |name, index| %>
+            <li id="transaction_name_suggestion_<%= index %>"
+                role="option"
+                aria-selected="false"
+                data-transaction-name-preview-target="suggestionOption"
+                data-name="<%= name %>"
+                data-action="mousedown->transaction-name-preview#selectSuggestion"
+                class="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded-lg cursor-pointer hover:bg-container-inset-hover">
+              <%= name %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
 
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id, data: { transaction_form_target: "account" } %>

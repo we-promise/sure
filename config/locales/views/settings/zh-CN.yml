@@ -118,6 +118,8 @@ zh-CN:
         dashboard_two_column_title: 双栏布局
         dashboard_two_column_description: 在大屏幕上以两列显示仪表盘组件；关闭后，组件将以单列堆叠显示。
         split_grouped_title: 将拆分交易分组显示
+        auto_generate_transaction_names_title: "自动生成交易名称"
+        auto_generate_transaction_names_description: "手动输入的交易名称留空时，将根据所选分类和商户自动填写（例如“娱乐 - Netflix”）。如果两者都未选择，名称仍为必填。适用于整个家庭，且仅影响新交易。"
         split_grouped_description: 在交易列表中按父级分组显示拆分交易；关闭后，拆分子项将作为独立行显示。
     preferences:
       show:

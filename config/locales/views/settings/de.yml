@@ -96,6 +96,8 @@ de:
         page_title: Darstellung
         split_grouped_description: Zeigt geteilte Transaktionen in der Liste gebündelt unter ihrer Ursprungsbuchung. Ist die Option aus, erscheint jede Teilbuchung als eigene Zeile.
         split_grouped_title: Geteilte Transaktionen gruppieren
+        auto_generate_transaction_names_title: Transaktionsnamen automatisch erzeugen
+        auto_generate_transaction_names_description: Bleibt der Name einer manuell erfassten Transaktion leer, wird er aus der gewählten Kategorie und dem Händler gebildet (z. B. „Unterhaltung - Netflix“). Ist beides nicht gewählt, bleibt der Name Pflicht. Gilt für den ganzen Haushalt und nur für neue Transaktionen.
         theme_dark: Dunkel
         theme_light: Hell
         theme_subtitle: Wähle das Erscheinungsbild der App
