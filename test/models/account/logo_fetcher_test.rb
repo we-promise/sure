@@ -67,6 +67,20 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     assert_not @account.logo_auto?
   end
 
+  test "a picked icon is applied even if an automatic job dropped the old icon meanwhile" do
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "sberbank.ru.png",
+                         metadata: { "logo_source" => "google", "logo_key" => "google", "logo_auto" => true })
+    fetcher = Account::LogoFetcher.new(@account)
+    fetcher.stubs(:icon_for).with do
+      Account.find(@account.id).logo.purge
+      true
+    end.returns(Account::LogoFetcher::Icon.new(key: "yandex", source: "yandex", name: nil, body: png(120), size: 120,
+                                               content_type: "image/png", extension: "png"))
+
+    assert fetcher.fetch(source: "yandex")
+    assert_equal "yandex", @account.reload.logo_source
+  end
+
   test "an automatic fetch yields to an icon chosen while it searched" do
     icon = Account::LogoFetcher::Icon.new(key: "google", source: "google", name: nil, body: png(180), size: 180, content_type: "image/png", extension: "png")
     fetcher = Account::LogoFetcher.new(@account)

@@ -115,7 +115,7 @@ module Account::Logoable
 
       # A cleared override may fall back to the provider's domain.
       if institution_domain.present?
-        AccountLogoFetchJob.perform_later(self)
+        AccountLogoFetchJob.perform_paced(self)
       elsif logo_auto?
         # The automatic icon belonged to the institution that was removed.
         logo.purge_later

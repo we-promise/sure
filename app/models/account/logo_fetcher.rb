@@ -95,10 +95,13 @@ class Account::LogoFetcher
       [ account.logo.attachment&.blob_id, account.prefer_brandfetch_logo? ]
     end
 
+    # A pick yields to an icon uploaded or picked meanwhile and to a Brandfetch
+    # switch, not to an automatic fetch attaching or dropping its own icon.
     def changed_since?(logo_before, auto:)
       return false if logo_state == logo_before
+      return true if auto
 
-      auto || !account.logo_auto? || account.prefer_brandfetch_logo? != logo_before.last
+      (account.logo.attached? && !account.logo_auto?) || account.prefer_brandfetch_logo? != logo_before.last
     end
 
     def domain

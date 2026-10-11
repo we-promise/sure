@@ -6,6 +6,17 @@ class AccountLogoFetchJobTest < ActiveJob::TestCase
     @account.update_columns(institution_domain: "tbank.ru")
   end
 
+  test "paces fetches queued together" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    freeze_time do
+      3.times { AccountLogoFetchJob.perform_paced(@account) }
+
+      waits = enqueued_jobs.map { |job| (job[:at] || Time.current.to_f) - Time.current.to_f }
+      assert_equal [ 0, 20, 40 ], waits.map(&:round)
+    end
+  end
+
   test "picks a logo automatically" do
     Account::LogoFetcher.any_instance.expects(:fetch).with(auto: true).returns(true)
 
