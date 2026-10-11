@@ -88,6 +88,28 @@ class Family::SyncerTest < ActiveSupport::TestCase
     syncer.perform_post_sync
   end
 
+  # Issue #2925: merchants whose website arrived before Brandfetch was
+  # configured get their logo on the next sync.
+  test "backfills provider merchant logos after sync" do
+    @family.expects(:backfill_provider_merchant_logos).once
+
+    Family::Syncer.new(@family).perform_post_sync
+  end
+
+  test "a logo backfill failure does not stop rules from being applied" do
+    rule = @family.rules.create!(
+      resource_type: "transaction",
+      active: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
+    )
+    @family.rules.stubs(:where).with(active: true).returns([ rule ])
+    ProviderMerchant.stubs(:backfill_logos).raises(StandardError, "boom")
+
+    rule.expects(:apply_later).once
+
+    Family::Syncer.new(@family).perform_post_sync
+  end
+
   private
     def syncable_item_associations
       Family.reflect_on_all_associations(:has_many).select do |association|

@@ -6,8 +6,12 @@ class ProviderMerchant::Enhancer
   end
 
   def enhance
-    return { enhanced: 0, deduplicated: 0 } unless llm_provider
-    return { enhanced: 0, deduplicated: 0 } if unenhanced_merchants.none?
+    # Runs before the LLM checks: generating a logo from a known website needs no
+    # LLM, and merchants that already have a website are never sent to it (issue #2925).
+    logos = @family.backfill_provider_merchant_logos
+
+    return { enhanced: 0, deduplicated: 0, logos: logos } unless llm_provider
+    return { enhanced: 0, deduplicated: 0, logos: logos } if unenhanced_merchants.none?
 
     Rails.logger.info("Enhancing #{unenhanced_merchants.count} provider merchants for family #{@family.id}")
 
@@ -29,10 +33,9 @@ class ProviderMerchant::Enhancer
         next unless merchant
         next if merchant.website_url.present? # Skip if already enhanced (race condition guard)
 
-        # Step 1: Update the provider merchant with website + logo
-        updates = { website_url: enhancement.business_url }
-        updates[:logo_url] = build_logo_url(enhancement.business_url) if Setting.brand_fetch_client_id.present?
-        merchant.update!(updates)
+        # Step 1: Update the provider merchant's website. ProviderMerchant generates
+        # the Brandfetch logo itself, keeping a logo the provider already supplied.
+        merchant.update!(website_url: enhancement.business_url)
         enhanced_count += 1
 
         # Step 2: Deduplicate — find other merchants with the same website_url
@@ -45,7 +48,7 @@ class ProviderMerchant::Enhancer
 
     Rails.logger.info("Enhanced #{enhanced_count} merchants, deduplicated #{deduplicated_count} for family #{@family.id}")
 
-    { enhanced: enhanced_count, deduplicated: deduplicated_count }
+    { enhanced: enhanced_count, deduplicated: deduplicated_count, logos: logos }
   end
 
   private
@@ -83,20 +86,5 @@ class ProviderMerchant::Enhancer
                                        .where(type: "ProviderMerchant")
                                        .where(website_url: [ nil, "" ])
                                        .to_a
-    end
-
-    def build_logo_url(business_url)
-      return nil unless Setting.brand_fetch_client_id.present? && business_url.present?
-      domain = extract_domain(business_url)
-      return nil unless domain.present?
-      size = Setting.brand_fetch_logo_size
-      "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
-    end
-
-    def extract_domain(url)
-      normalized_url = url.start_with?("http://", "https://") ? url : "https://#{url}"
-      URI.parse(normalized_url).host&.sub(/\Awww\./, "")
-    rescue URI::InvalidURIError
-      url.sub(/\Awww\./, "")
     end
 end
