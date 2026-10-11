@@ -49,6 +49,21 @@ class Provider::BrexTest < ActiveSupport::TestCase
     end
   end
 
+  # HTTParty resends caller-supplied headers on a redirect; its host-change
+  # protection only covers basic_auth. The credential lives in a custom header
+  # here, so a redirect off the allow-listed host would carry it along.
+  test "does not follow a redirect off the allow-listed host with the credential" do
+    # Pagination appends ?limit=…, so match the path rather than the exact URL:
+    # an unmatched stub would make WebMock raise, Brex would wrap that as a
+    # BrexError, and this test would pass without a redirect ever happening.
+    stub_request(:get, %r{\Ahttps://api\.brex\.com/v2/accounts/cash})
+      .to_return(status: 302, headers: { "Location" => "https://evil.example/collect" })
+    leak = stub_request(:get, "https://evil.example/collect").to_return(status: 200, body: "{}")
+
+    assert_raises(Provider::Brex::BrexError) { Provider::Brex.new("test_token").get_accounts }
+    assert_not_requested leak
+  end
+
   test "BrexError includes error_type" do
     error = Provider::Brex::BrexError.new("Test error", :unauthorized)
     assert_equal "Test error", error.message
