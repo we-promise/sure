@@ -1,0 +1,116 @@
+<div class="space-y-4 pb-6 lg:pb-12">
+  <header class="flex items-start gap-3 sm:gap-4">
+    <div class="hidden sm:block">
+      <%= render Envelopes::AvatarComponent.new(envelope: @envelope, size: "xl") %>
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-semibold text-primary break-words"><%= @envelope.name %></h1>
+        <%= render Envelopes::StatusPillComponent.new(envelope: @envelope) %>
+      </div>
+      <p class="text-sm text-secondary mt-1">
+        <% if @envelope.category %>
+          <%= t(".header.category", category: @envelope.category.name_with_parent) %>
+        <% else %>
+          <%= t(".header.no_category") %>
+        <% end %>
+        <%= t(".header.separator") %>
+        <%= @envelope.sinking_fund? ? t(".header.sinking_fund") : t(".header.virtual_goal") %>
+      </p>
+    </div>
+    <div class="shrink-0">
+      <%= render DS::Menu.new do |menu| %>
+        <% menu.with_item(variant: "link", text: t(".edit"), icon: "pencil", href: edit_envelope_path(@envelope), data: { turbo_frame: :modal }) %>
+        <% menu.with_item(
+             variant: "button",
+             text: t(".delete"),
+             icon: "trash-2",
+             href: envelope_path(@envelope),
+             method: :delete,
+             destructive: true,
+             confirm: CustomConfirm.for_resource_deletion(@envelope.name)
+           ) %>
+      <% end %>
+    </div>
+  </header>
+
+  <% if @envelope.negative? %>
+    <%= render DS::Alert.new(
+      variant: "warning",
+      title: t(".negative_banner.title"),
+      message: t(".negative_banner.body", amount: @envelope.current_balance_money.format(precision: 0)),
+      live: :polite
+    ) %>
+  <% end %>
+
+  <section class="bg-container rounded-xl shadow-border-xs p-5 sm:p-6">
+    <p class="text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".balance.available") %></p>
+    <p class="text-3xl font-medium tabular-nums mt-1 privacy-sensitive <%= @envelope.negative? ? "text-destructive" : "text-primary" %>">
+      <%= @envelope.current_balance_money.format(precision: 0) %>
+    </p>
+
+    <% if @envelope.has_target? %>
+      <div class="mt-4">
+        <div class="flex items-baseline justify-between text-xs text-secondary mb-1.5 tabular-nums privacy-sensitive">
+          <span><%= t(".balance.of_target", target: @envelope.target_amount_money.format(precision: 0)) %></span>
+          <span><%= @envelope.progress_percent %>%</span>
+        </div>
+        <div class="h-2 w-full rounded-full overflow-hidden" style="background-color: var(--budget-unused-fill);">
+          <div class="h-full rounded-full"
+               style="width: <%= @envelope.progress_percent %>%; background-color: <%= @envelope.negative? ? "var(--color-destructive)" : "var(--color-success)" %>;"></div>
+        </div>
+        <% if @envelope.reached? %>
+          <p class="text-xs text-success mt-2"><%= t(".balance.reached") %></p>
+        <% elsif @envelope.months_to_target %>
+          <p class="text-xs text-secondary mt-2"><%= t(".balance.months_to_target", count: @envelope.months_to_target) %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <dl class="mt-5 grid grid-cols-2 gap-4 border-t border-subdued pt-4">
+      <div>
+        <dt class="text-xs text-secondary"><%= t(".balance.contributed") %></dt>
+        <dd class="text-sm font-medium text-primary tabular-nums mt-0.5 privacy-sensitive"><%= @envelope.total_contributed_money.format(precision: 0) %></dd>
+        <dd class="text-xs text-subdued mt-0.5 tabular-nums privacy-sensitive"><%= t(".balance.contribution_rate", amount: @envelope.monthly_contribution_money.format(precision: 0)) %></dd>
+      </div>
+      <div>
+        <dt class="text-xs text-secondary"><%= t(".balance.spent") %></dt>
+        <dd class="text-sm font-medium text-primary tabular-nums mt-0.5 privacy-sensitive"><%= @envelope.total_spent_money.format(precision: 0) %></dd>
+        <% if @envelope.category %>
+          <dd class="text-xs text-subdued mt-0.5"><%= t(".balance.spent_via", category: @envelope.category.name) %></dd>
+        <% end %>
+      </div>
+    </dl>
+  </section>
+
+  <% if @envelope.category %>
+    <section class="bg-container rounded-xl shadow-border-xs p-5">
+      <h2 class="text-sm font-medium text-primary mb-3"><%= t(".recent.heading") %></h2>
+      <% if @recent_entries.any? %>
+        <ul class="divide-y divide-subdued">
+          <% @recent_entries.each do |entry| %>
+            <% amount = entry.converted_amount.to_d %>
+            <li class="flex items-center justify-between gap-3 py-2.5">
+              <div class="min-w-0">
+                <p class="text-sm text-primary truncate"><%= entry.name %></p>
+                <p class="text-xs text-subdued tabular-nums"><%= I18n.l(entry.date, format: :long) %></p>
+              </div>
+              <span class="text-sm tabular-nums privacy-sensitive <%= amount.negative? ? "text-success" : "text-primary" %>">
+                <%= amount.negative? ? "+" : "−" %><%= Money.new(amount.abs, @envelope.currency).format(precision: 0) %>
+              </span>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-sm text-secondary"><%= t(".recent.empty") %></p>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% if @envelope.notes.present? %>
+    <section class="bg-container rounded-xl shadow-border-xs p-5">
+      <h2 class="text-sm font-medium text-primary mb-2"><%= t(".notes") %></h2>
+      <p class="text-sm text-secondary whitespace-pre-line"><%= @envelope.notes %></p>
+    </section>
+  <% end %>
+</div>
