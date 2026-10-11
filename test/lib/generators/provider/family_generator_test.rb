@@ -22,6 +22,30 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     ERB.new(template, trim_mode: "-").result(context.instance_eval { binding })
   end
 
+  # A generated view must be plain ERB once Thor has rendered it: no Ruby string
+  # building its tags, and source that Action View can compile.
+  def assert_plain_erb(generated)
+    assert_not_includes generated, %("<" +)
+    assert_parses ActionView::Template::Handlers::ERB::Erubi.new(generated).src
+  end
+
+  # Renders a generated view the way Rails would, from a real view path, so relative
+  # translation keys and strict locals behave as they do in the app. Redbark has the
+  # model, routes and fixtures the generated views call, so it stands in for a new
+  # provider here.
+  def render_generated_view(generated, partial: nil, template: nil, **options)
+    Dir.mktmpdir do |dir|
+      virtual_path = partial ? partial.sub(%r{([^/]+)\z}, '_\\1') : template
+      file = File.join(dir, "generated", "#{virtual_path}.html.erb")
+      FileUtils.mkdir_p(File.dirname(file))
+      File.write(file, generated)
+
+      controller = Class.new(ApplicationController) { prepend_view_path dir }
+      target = partial ? { partial: "generated/#{partial}" } : { template: "generated/#{template}", layout: false }
+      controller.renderer.render(**target, **options)
+    end
+  end
+
   test "the unlinking scaffold renders to valid Ruby and carries the disposition seam" do
     rendered = render_template("unlinking_concern.rb.tt", class_name: "Gocardless", file_name: "gocardless")
 
@@ -199,5 +223,55 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_not_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "family"
     assert_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "family_id"
     assert_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "institution_id"
+  end
+
+  test "the generated item card is plain ERB" do
+    generated = render_template("item_partial.html.erb.tt", file_name: "gocardless")
+
+    assert_plain_erb generated
+    assert_equal "<%# locals: (gocardless_item:) %>\n", generated.lines.first
+    assert_includes generated, "<%= tag.div id: dom_id(gocardless_item) do %>"
+  end
+
+  test "the generated item card renders the accounts of the item it is given" do
+    Current.session = Session.create!(user: users(:family_admin))
+    item = redbark_items(:one)
+    linked = accounts(:depository)
+    generated = render_template("item_partial.html.erb.tt", file_name: "redbark")
+    render_card = -> { render_generated_view(generated, partial: "redbark_items/redbark_item", locals: { redbark_item: item.reload }) }
+
+    before = render_card.call
+    AccountProvider.create!(account: linked, provider: redbark_accounts(:savings_account))
+    after = render_card.call
+
+    assert_includes after, item.name
+    assert_not_includes before, linked.name
+    assert_includes after, linked.name
+    assert_not_includes after, accounts(:investment).name
+  end
+
+  test "the generated setup accounts view is plain ERB that renders" do
+    assert_plain_erb render_template("setup_accounts.html.erb.tt", file_name: "gocardless")
+
+    item = redbark_items(:one)
+    html = render_generated_view(render_template("setup_accounts.html.erb.tt", file_name: "redbark"),
+                                 template: "redbark_items/setup_accounts",
+                                 assigns: { redbark_item: item, unlinked_accounts: item.redbark_accounts })
+
+    assert_includes html, redbark_accounts(:savings_account).name
+    assert_includes html, "/redbark_items/#{item.id}/complete_account_setup"
+  end
+
+  test "the generated select existing account view is plain ERB that renders" do
+    assert_plain_erb render_template("select_existing_account.html.erb.tt", file_name: "gocardless")
+
+    account = accounts(:depository)
+    html = render_generated_view(render_template("select_existing_account.html.erb.tt", file_name: "redbark"),
+                                 template: "redbark_items/select_existing_account",
+                                 assigns: { account: account, redbark_accounts: [ redbark_accounts(:savings_account) ] })
+
+    assert_includes html, account.name
+    assert_includes html, redbark_accounts(:savings_account).name
+    assert_includes html, "/redbark_items/link_existing_account"
   end
 end
