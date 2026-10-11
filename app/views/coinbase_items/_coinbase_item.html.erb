@@ -1,4 +1,4 @@
-<%# locals: (coinbase_item:) %>
+<%# locals: (coinbase_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(coinbase_item) do %>
   <%# Compute unlinked count early so it's available for both menu and bottom section %>
@@ -103,8 +103,8 @@
 
     <% unless coinbase_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if coinbase_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: coinbase_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -115,7 +115,7 @@
            end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: coinbase_item
+          provider_item: coinbase_item, show_account_details: visible_accounts.size == coinbase_item.accounts.size
         ) %>
 
         <% if unlinked_count.to_i > 0 && coinbase_item.accounts.empty? %>

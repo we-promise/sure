@@ -1,4 +1,4 @@
-<%# locals: (trade_republic_item:) %>
+<%# locals: (trade_republic_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(trade_republic_item) do %>
   <% unlinked_count = trade_republic_item.unlinked_accounts_count %>
@@ -80,48 +80,52 @@
 
     <% unless trade_republic_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if trade_republic_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: trade_republic_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <% stats = trade_republic_item.syncs.ordered.first&.sync_stats || {} %>
-        <%= render ProviderSyncSummary.new(stats: stats, provider_item: trade_republic_item) %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: trade_republic_item, show_account_details: visible_accounts.size == trade_republic_item.accounts.size) %>
 
-        <% quality = trade_republic_item.data_quality_summary %>
-        <% reconciliation = trade_republic_item.reconciliation_summary %>
-        <% expenses = trade_republic_item.expense_summary %>
-        <div class="rounded-lg border border-secondary bg-container-inset p-3 space-y-3">
-          <div class="flex items-center justify-between gap-2">
-            <p class="text-sm font-medium text-primary"><%= t(".data_quality.title") %></p>
-            <% if Current.user&.admin? %>
-              <%= button_to repair_trade_republic_item_path(trade_republic_item), method: :post,
-                          class: "text-xs text-primary underline", data: { turbo: false } do %>
-                <%= t(".data_quality.repair") %>
-              <% end %>
-            <% end %>
-          </div>
-          <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-xs">
-            <span class="text-secondary"><%= t(".data_quality.positions", count: quality[:positions]) %></span>
-            <span class="text-secondary"><%= t(".data_quality.unpriced", count: quality[:unpriced_positions]) %></span>
-            <span class="text-secondary"><%= t(".data_quality.events", count: quality[:events]) %></span>
-            <span class="text-secondary"><%= t(".data_quality.unknown", count: quality[:unknown_events]) %></span>
-            <span class="text-secondary"><%= t(".data_quality.pending_trade_details", count: quality[:pending_trade_details]) %></span>
-          </div>
-          <div class="grid gap-2 sm:grid-cols-2 text-xs">
-            <% expense_money = Money.new(expenses[:total].round(2), trade_republic_item.currency) %>
-            <span class="text-secondary"><%= t(".data_quality.expenses", count: expenses[:count], amount: format_money(expense_money)) %></span>
-            <span class="text-secondary"><%= t(".data_quality.reconciliation", matched: reconciliation.count { |check| check[:reconciled] }, total: reconciliation.size) %></span>
-          </div>
-          <% recent_syncs = trade_republic_item.sync_history(limit: 3) %>
-          <% if recent_syncs.any? %>
-            <div class="border-t border-secondary pt-2 space-y-1">
-              <p class="text-xs font-medium text-primary"><%= t(".data_quality.sync_history") %></p>
-              <% recent_syncs.each do |recent_sync| %>
-                <p class="text-xs text-secondary"><%= l(recent_sync.created_at, format: :short) %> · <%= t(".data_quality.sync_status.#{recent_sync.status}", default: recent_sync.status.to_s.humanize) %></p>
+        <%# The data-quality figures are totals over every account on the
+            connection, so a viewer shared only some of them doesn't see them (#3630). %>
+        <% if visible_accounts.size == trade_republic_item.accounts.size %>
+          <% quality = trade_republic_item.data_quality_summary %>
+          <% reconciliation = trade_republic_item.reconciliation_summary %>
+          <% expenses = trade_republic_item.expense_summary %>
+          <div class="rounded-lg border border-secondary bg-container-inset p-3 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-medium text-primary"><%= t(".data_quality.title") %></p>
+              <% if Current.user&.admin? %>
+                <%= button_to repair_trade_republic_item_path(trade_republic_item), method: :post,
+                            class: "text-xs text-primary underline", data: { turbo: false } do %>
+                  <%= t(".data_quality.repair") %>
+                <% end %>
               <% end %>
             </div>
-          <% end %>
-        </div>
+            <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+              <span class="text-secondary"><%= t(".data_quality.positions", count: quality[:positions]) %></span>
+              <span class="text-secondary"><%= t(".data_quality.unpriced", count: quality[:unpriced_positions]) %></span>
+              <span class="text-secondary"><%= t(".data_quality.events", count: quality[:events]) %></span>
+              <span class="text-secondary"><%= t(".data_quality.unknown", count: quality[:unknown_events]) %></span>
+              <span class="text-secondary"><%= t(".data_quality.pending_trade_details", count: quality[:pending_trade_details]) %></span>
+            </div>
+            <div class="grid gap-2 sm:grid-cols-2 text-xs">
+              <% expense_money = Money.new(expenses[:total].round(2), trade_republic_item.currency) %>
+              <span class="text-secondary"><%= t(".data_quality.expenses", count: expenses[:count], amount: format_money(expense_money)) %></span>
+              <span class="text-secondary"><%= t(".data_quality.reconciliation", matched: reconciliation.count { |check| check[:reconciled] }, total: reconciliation.size) %></span>
+            </div>
+            <% recent_syncs = trade_republic_item.sync_history(limit: 3) %>
+            <% if recent_syncs.any? %>
+              <div class="border-t border-secondary pt-2 space-y-1">
+                <p class="text-xs font-medium text-primary"><%= t(".data_quality.sync_history") %></p>
+                <% recent_syncs.each do |recent_sync| %>
+                  <p class="text-xs text-secondary"><%= l(recent_sync.created_at, format: :short) %> · <%= t(".data_quality.sync_status.#{recent_sync.status}", default: recent_sync.status.to_s.humanize) %></p>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
 
         <% if Current.user&.admin? %>
           <% if unlinked_count > 0 && trade_republic_item.accounts.empty? %>

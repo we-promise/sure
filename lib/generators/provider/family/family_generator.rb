@@ -448,7 +448,9 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     section = <<~ERB
 
     <% if #{items_var}.any? %>
-      <%= render #{items_var}.sort_by(&:created_at) %>
+      <% #{items_var}.sort_by(&:created_at).each do |item| %>
+        <%= render item, visible_accounts: visible_card_accounts(item) %>
+      <% end %>
     <% end %>
 
     ERB

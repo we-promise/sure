@@ -1,4 +1,4 @@
-<%# locals: (kraken_item:, unlinked_count: kraken_item.unlinked_accounts_count) %>
+<%# locals: (kraken_item:, unlinked_count: kraken_item.unlinked_accounts_count, visible_accounts:) %>
 
 <%= tag.div id: dom_id(kraken_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -77,9 +77,9 @@
 
     <% unless kraken_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if kraken_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: kraken_item.accounts %>
-          <% kraken_item.stale_rate_accounts.each do |kraken_account| %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+          <% kraken_item.stale_rate_accounts.where(accounts: { id: visible_accounts.map(&:id) }).each do |kraken_account| %>
             <div class="flex items-center gap-2 text-xs text-warning px-1">
               <span class="font-mono">~</span>
               <%= icon "triangle-alert", size: "sm" %>
@@ -89,7 +89,7 @@
         <% end %>
 
         <% stats = kraken_item.syncs.ordered.first&.sync_stats || {} %>
-        <%= render ProviderSyncSummary.new(stats: stats, provider_item: kraken_item) %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: kraken_item, show_account_details: visible_accounts.size == kraken_item.accounts.size) %>
 
         <% if unlinked_count.to_i > 0 && kraken_item.accounts.empty? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">

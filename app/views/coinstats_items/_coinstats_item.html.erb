@@ -1,4 +1,4 @@
-<%# locals: (coinstats_item:) %>
+<%# locals: (coinstats_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(coinstats_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -78,8 +78,8 @@
 
     <% unless coinstats_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if coinstats_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: coinstats_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -90,7 +90,7 @@
            end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: coinstats_item
+          provider_item: coinstats_item, show_account_details: visible_accounts.size == coinstats_item.accounts.size
         ) %>
 
         <% if coinstats_item.accounts.empty? %>
