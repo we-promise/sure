@@ -39,18 +39,7 @@
       <%= bills_rail_date(occurrence) %>
     </div>
 
-    <% if series.merchant&.logo_url.present? %>
-      <%= image_tag Setting.transform_brand_fetch_url(series.merchant.logo_url),
-            class: "w-9 h-9 rounded-full shrink-0 border border-secondary",
-            loading: "lazy" %>
-    <% else %>
-      <%= render DS::FilledIcon.new(
-            variant: :text,
-            text: series.display_name,
-            size: "lg",
-            rounded: true
-          ) %>
-    <% end %>
+    <%= render "bills/series_avatar", series: series %>
 
     <div class="min-w-0 flex-1">
       <p class="<%= lead_tone %> text-sm font-medium truncate hover:underline">
