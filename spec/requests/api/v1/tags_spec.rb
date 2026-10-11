@@ -107,6 +107,22 @@ RSpec.describe 'API V1 Tags', type: :request do
         run_test!
       end
 
+      response '403', 'guest users cannot modify tags' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:user) do
+          family.users.create!(
+            email: 'api-guest@example.com',
+            password: 'password123',
+            password_confirmation: 'password123',
+            role: 'guest'
+          )
+        end
+        let(:body) { { tag: { name: 'Guest tag' } } }
+
+        run_test!
+      end
+
       response '422', 'validation error - missing name' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 

@@ -11,10 +11,12 @@
       <p class="text-sm text-secondary"><%= t(".description") %></p>
     </div>
 
-    <%= render DS::Button.new(
-      text: t(".try_again"),
-      full_width: true,
-      href: revert_import_path(import)
-    ) %>
+    <% unless Current.user&.guest? && import.family_config? %>
+      <%= render DS::Button.new(
+        text: t(".try_again"),
+        full_width: true,
+        href: revert_import_path(import)
+      ) %>
+    <% end %>
   </div>
 </div>

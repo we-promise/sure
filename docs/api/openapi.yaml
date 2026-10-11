@@ -5608,7 +5608,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or guest user
           content:
             application/json:
               schema:
@@ -7123,7 +7123,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope or guest user
           content:
             application/json:
               schema:
@@ -7435,6 +7435,14 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ImportResponse"
+        '403':
+          description: guest users cannot import family configuration
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/ErrorResponseWithImportId"
         '422':
           description: validation error or publish rejection
           content:
@@ -8082,6 +8090,12 @@ paths:
                 "$ref": "#/components/schemas/MerchantImportResult"
         '401':
           description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guest users cannot import merchants
           content:
             application/json:
               schema:
@@ -9227,6 +9241,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TagDetail"
+        '403':
+          description: guest users cannot modify tags
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: validation error - missing name
           content:

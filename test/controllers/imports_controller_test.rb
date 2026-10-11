@@ -476,6 +476,20 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
+  test "member cannot delete import whose entries are in a read only shared account" do
+    import = imports(:transaction)
+    import.update!(status: :failed)
+    entries(:transaction).update!(import: import, account: accounts(:credit_card))
+
+    sign_in users(:family_member)
+    assert_no_difference([ "Import.count", "Entry.count" ]) do
+      delete import_url(import)
+    end
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
   test "member cannot publish QIF import whose embedded account matches a read only shared account" do
     import = qif_import_with_embedded_account(accounts(:credit_card).name)
     QifImport.any_instance.expects(:publish_later).never

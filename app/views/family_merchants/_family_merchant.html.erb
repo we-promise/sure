@@ -16,16 +16,18 @@
       </p>
     </div>
   </td>
-  <td class="py-3 px-4 text-sm text-right align-middle">
-    <%= render DS::Menu.new do |menu| %>
-      <% menu.with_item(variant: "link", text: t(".edit"), href: edit_family_merchant_path(family_merchant), icon: "pencil", data: { turbo_frame: "modal" }) %>
-      <% menu.with_item(
-        variant: "button",
-        text: t(".delete"),
-        href: family_merchant_path(family_merchant),
-        icon: "trash-2",
-        method: :delete,
-        confirm: CustomConfirm.for_resource_deletion(family_merchant.name)) %>
-    <% end %>
-  </td>
+  <% unless Current.user&.guest? %>
+    <td class="py-3 px-4 text-sm text-right align-middle">
+      <%= render DS::Menu.new do |menu| %>
+        <% menu.with_item(variant: "link", text: t(".edit"), href: edit_family_merchant_path(family_merchant), icon: "pencil", data: { turbo_frame: "modal" }) %>
+        <% menu.with_item(
+          variant: "button",
+          text: t(".delete"),
+          href: family_merchant_path(family_merchant),
+          icon: "trash-2",
+          method: :delete,
+          confirm: CustomConfirm.for_resource_deletion(family_merchant.name)) %>
+      <% end %>
+    </td>
+  <% end %>
 </tr>

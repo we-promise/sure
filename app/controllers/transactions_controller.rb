@@ -608,6 +608,7 @@ class TransactionsController < ApplicationController
     end
 
     def needs_rule_notification?(transaction)
+      return false if Current.user.guest?
       return false if Current.user.rule_prompts_disabled
 
       if Current.user.rule_prompt_dismissed_at.present?

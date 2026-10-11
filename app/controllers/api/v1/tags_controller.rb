@@ -15,6 +15,7 @@ module Api
     class TagsController < BaseController
       before_action -> { authorize_scope!(:read) }, only: %i[index show]
       before_action -> { authorize_scope!(:read_write) }, only: %i[create update destroy]
+      before_action :reject_guest_writes!, only: %i[create update destroy]
       before_action :set_tag, only: %i[show update destroy]
 
       # List all tags belonging to the family

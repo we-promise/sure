@@ -1,22 +1,24 @@
 <%= content_for :page_title, t(".tags") %>
 <%= content_for :page_actions do %>
-  <%= render DS::Menu.new do |menu| %>
-    <% menu.with_item(
-          variant: "button",
-          text: t(".delete_all"),
-          href: destroy_all_tags_path,
-          method: :delete,
-          icon: "trash-2",
-          confirm: CustomConfirm.for_resource_deletion("all tags", high_severity: true)) %>
-  <% end %>
+  <% unless Current.user&.guest? %>
+    <%= render DS::Menu.new do |menu| %>
+      <% menu.with_item(
+            variant: "button",
+            text: t(".delete_all"),
+            href: destroy_all_tags_path,
+            method: :delete,
+            icon: "trash-2",
+            confirm: CustomConfirm.for_resource_deletion("all tags", high_severity: true)) %>
+    <% end %>
 
-  <%= render DS::Link.new(
-    text: t(".new"),
-    variant: "primary",
-    href: new_tag_path,
-    icon: "plus",
-    frame: :modal
-  ) %>
+    <%= render DS::Link.new(
+      text: t(".new"),
+      variant: "primary",
+      href: new_tag_path,
+      icon: "plus",
+      frame: :modal
+    ) %>
+  <% end %>
 <% end %>
 
 <div class="bg-container rounded-xl shadow-border-xs p-4">
@@ -39,12 +41,14 @@
       <div class="text-center flex flex-col items-center max-w-[300px]">
         <p class="text-primary mb-1 font-medium text-sm"><%= t(".empty") %></p>
 
-        <%= render DS::Link.new(
-          text: t(".new"),
-          icon: "plus",
-          href: new_tag_path,
-          frame: :modal
-        ) %>
+        <% unless Current.user&.guest? %>
+          <%= render DS::Link.new(
+            text: t(".new"),
+            icon: "plus",
+            href: new_tag_path,
+            frame: :modal
+          ) %>
+        <% end %>
       </div>
     </div>
   <% end %>
