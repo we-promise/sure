@@ -263,8 +263,10 @@ class Setting < RailsSettings::Base
       if respond_to?(key_str)
         public_send(key_str)
       else
-        # Fall back to individual dynamic entry lookup
-        find_by(var: dynamic_key_name(key_str))&.value
+        # Fall back to dynamic entries, read from rails-settings-cached's
+        # shared settings cache (one query per cache cycle) instead of one
+        # query per key (N+1).
+        _all_settings[dynamic_key_name(key_str)]
       end
     end
 
