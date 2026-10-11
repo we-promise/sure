@@ -943,9 +943,12 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Gamma income", response.body
     # DS::Table renders the desktop table's cells from blocks written in this
     # view, so their relative keys still have to resolve against bills/all.
-    assert_select "table td", text: I18n.t("bills.all.types.bill")
+    assert_select "table td", text: /Alpha bill/
+    assert_select "table tr[data-controller~=clickable-row] a[data-clickable-row-target=link][data-turbo-frame=drawer]", minimum: 3
+    # Only a live row skips its status; the paused one says it where the date goes.
+    assert_select "table td .rounded-full", text: I18n.t("recurring_transactions.status.paused")
     assert_select ".translation_missing", false
-    # Seven columns can overflow just above @3xl, where the table replaces the
+    # The columns can overflow just above @3xl, where the table replaces the
     # cards: the scroll area is named, so a keyboard can reach the columns.
     assert_select "[role=region][aria-label=?]", I18n.t("bills.views.all")
 

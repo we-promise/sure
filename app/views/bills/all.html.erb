@@ -81,68 +81,74 @@
         desktop one. Switched on the container, not the viewport: the app
         shell's sidebars can squeeze a desktop window to phone-list widths,
         and a viewport breakpoint cannot see that. %>
+    <%# Same recipe as the overview rows and a transaction row: the face, the
+        name over what it is, the figure at the end, and a click anywhere on the
+        row opens the drawer. A live row says nothing about its status; a paused
+        or dismissed one says it where a date would be, because it has no next
+        due, and recedes. %>
     <div class="@container">
-    <div class="@3xl:hidden bg-container rounded-xl shadow-border-xs divide-y divide-subdued">
+    <div class="@3xl:hidden bg-container rounded-xl shadow-border-xs">
       <% @all_series.each do |series| %>
-        <div class="flex items-center gap-3 p-3">
-          <%= link_to bill_path(series), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "flex items-center gap-3 min-w-0 flex-1 group" do %>
+        <div class="flex items-center gap-3 p-3"
+             data-controller="clickable-row"
+             data-action="click->clickable-row#open">
+          <%= link_to bill_path(series), data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" }, class: "flex items-center gap-3 min-w-0 flex-1 rounded-lg focus-ring outline-offset-4" do %>
+            <%= render "bills/series_avatar", series: series %>
             <div class="min-w-0 flex-1">
-              <p class="text-sm font-medium text-primary truncate group-hover:underline"><%= series.display_name %></p>
-              <p class="text-xs text-secondary truncate">
-                <%= frequency_label(series) %>
-                <% if series.next_expected_date %>
-                  &middot; <%= t(".next_short", date: bills_upcoming_date(series.next_expected_date)) %>
-                <% end %>
-              </p>
+              <p class="text-sm font-medium <%= bills_series_tone(series) %> truncate hover:underline"><%= series.display_name %></p>
+              <p class="text-xs text-secondary truncate"><%= bills_series_subline(series) %></p>
             </div>
             <div class="shrink-0 text-right">
-              <p class="text-sm font-medium text-primary privacy-sensitive">
+              <p class="text-sm font-medium <%= bills_series_amount_tone(series) %> privacy-sensitive">
                 <%= format_money(Money.new(series.amount.abs, series.currency)) %>
               </p>
-              <p class="text-xs">
-                <%= render DS::Pill.new(label: t("recurring_transactions.status.#{series.status}"), tone: recurring_status_pill_tone(series.status), marker: false) %>
-              </p>
+              <%# Under the figure, where the table puts it in its own column: the
+                  subline already spends its width on the schedule. %>
+              <% if series.active? %>
+                <% if series.next_expected_date %>
+                  <p class="text-xs text-secondary"><%= bills_upcoming_date(series.next_expected_date) %></p>
+                <% end %>
+              <% else %>
+                <p class="text-xs">
+                  <%= render DS::Pill.new(label: t("recurring_transactions.status.#{series.status}"), tone: recurring_status_pill_tone(series.status), marker: false) %>
+                </p>
+              <% end %>
             </div>
           <% end %>
 
           <div class="shrink-0">
-            <%= render DS::Menu.new do |menu| %>
-              <% menu.with_item(
-                  variant: "link",
-                  text: t("recurring_transactions.edit.trigger_label"),
-                  icon: "pencil",
-                  href: edit_recurring_transaction_path(series),
-                  data: { turbo_frame: :modal }) %>
-              <% menu.with_item(
-                  variant: "button",
-                  text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
-                  icon: series.active? ? "pause" : "play",
-                  href: toggle_status_recurring_transaction_path(series),
-                  method: :post) %>
-              <% menu.with_item(
-                  variant: "button",
-                  text: t("recurring_transactions.actions.delete"),
-                  icon: "trash-2",
-                  href: recurring_transaction_path(series),
-                  method: :delete,
-                  destructive: true,
-                  confirm: t(series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: series.display_name)) %>
-            <% end %>
+            <%= render "bills/series_menu", series: series %>
           </div>
         </div>
       <% end %>
     </div>
 
-    <%= render DS::Table.new(rows: @all_series, label: t("bills.views.all"), class: "hidden @3xl:block") do |table| %>
+    <%= render DS::Table.new(
+          rows: @all_series,
+          label: t("bills.views.all"),
+          class: "hidden @3xl:block",
+          row_opts: ->(_series) { { data: { controller: "clickable-row", action: "click->clickable-row#open" } } }
+        ) do |table| %>
       <% table.with_column(t(".col_name")) do |series| %>
-        <%= link_to series.display_name, bill_path(series), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "font-medium hover:underline" %>
+        <div class="flex items-center gap-3 @lg:gap-4">
+          <%= render "bills/series_avatar", series: series %>
+          <div class="min-w-0">
+            <%= link_to series.display_name, bill_path(series), data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" }, class: "block truncate font-medium #{bills_series_tone(series)} hover:underline" %>
+            <p class="text-xs text-secondary truncate"><%= bills_series_subline(series) %></p>
+          </div>
+        </div>
       <% end %>
-      <% table.with_column(t(".col_type"), class: "text-secondary") { |series| t(".types.#{series.bill_type}") } %>
-      <% table.with_column(t(".col_frequency"), class: "text-secondary") { |series| frequency_label(series) } %>
+      <% table.with_column(t(".col_next"), class: "text-secondary") do |series| %>
+        <% if series.active? %>
+          <%= series.next_expected_date ? bills_upcoming_date(series.next_expected_date) : "–" %>
+        <% else %>
+          <%= render DS::Pill.new(label: t("recurring_transactions.status.#{series.status}"), tone: recurring_status_pill_tone(series.status), marker: false) %>
+        <% end %>
+      <% end %>
       <% table.with_column(t(".col_amount"), numeric: true, class: "privacy-sensitive") do |series| %>
         <% amount = Money.new(series.amount.abs, series.currency) %>
         <% monthly = series.monthly_equivalent_amount.abs %>
-        <%= format_money(amount) %>
+        <span class="font-medium <%= bills_series_amount_tone(series) %>"><%= format_money(amount) %></span>
         <%# A monthly bill's monthly equivalent is its own amount, so the
             second line said "$5.99" under "$5.99". It only carries
             information for the other cadences. %>
@@ -150,35 +156,8 @@
           <p class="text-xs text-secondary"><%= t(".monthly_equivalent", amount: format_money(monthly)) %></p>
         <% end %>
       <% end %>
-      <% table.with_column(t(".col_next"), class: "text-secondary") do |series| %>
-        <%= series.next_expected_date ? bills_upcoming_date(series.next_expected_date) : "–" %>
-      <% end %>
-      <% table.with_column(t(".col_status")) do |series| %>
-        <%= render DS::Pill.new(label: t("recurring_transactions.status.#{series.status}"), tone: recurring_status_pill_tone(series.status), marker: false) %>
-      <% end %>
       <% table.with_column(t(".col_actions"), align: :right) do |series| %>
-        <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(
-              variant: "link",
-              text: t("recurring_transactions.edit.trigger_label"),
-              icon: "pencil",
-              href: edit_recurring_transaction_path(series),
-              data: { turbo_frame: :modal }) %>
-          <% menu.with_item(
-              variant: "button",
-              text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
-              icon: series.active? ? "pause" : "play",
-              href: toggle_status_recurring_transaction_path(series),
-              method: :post) %>
-          <% menu.with_item(
-              variant: "button",
-              text: t("recurring_transactions.actions.delete"),
-              icon: "trash-2",
-              href: recurring_transaction_path(series),
-              method: :delete,
-              destructive: true,
-              confirm: t(series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: series.display_name)) %>
-        <% end %>
+        <%= render "bills/series_menu", series: series %>
       <% end %>
     <% end %>
     </div>
