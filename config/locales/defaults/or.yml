@@ -39,6 +39,7 @@ or:
       default: "%Y-%m-%d"
       long: "%B %d, %Y"
       short: "%b %d"
+      short_with_year: "%b %d, %Y"
     month_names:
     -
     - ଜାନୁୟାରୀ

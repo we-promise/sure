@@ -20,6 +20,7 @@ en:
       showing_period: "Showing data from %{start} to %{end}"
       previous_period: "Previous period"
       next_period: "Next period"
+      shortcut_hint: "%{action} (%{key})"
       today: "Today"
       period_label:
         quarterly: "Q%{quarter} %{year}"

@@ -8,3 +8,19 @@ pl:
       subtype_prompt: Wybierz typ konta
     new:
       title: Wprowadź saldo konta
+    subtypes:
+      cd:
+        long: Lokata terminowa
+        short: Lokata
+      checking:
+        long: Konto bieżące
+        short: Bieżące
+      hsa:
+        long: Konto oszczędnościowe na cele zdrowotne
+        short: Zdrowotne
+      money_market:
+        long: Rynek pieniężny
+        short: Pieniężny
+      savings:
+        long: Oszczędnościowe
+        short: Oszczędności

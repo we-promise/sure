@@ -43,6 +43,7 @@ id:
       default: "%d %B %Y"
       long: "%A, %d %B %Y"
       short: "%d.%m.%Y"
+      short_with_year: "%d %b %Y"
     month_names:
     -
     - Januari

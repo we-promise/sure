@@ -22,12 +22,12 @@ ca:
         not_expected: No previst
     create:
       duplicates:
-        one: S'ha omès 1 extracte duplicat.
+        one: S'ha omès %{count} extracte duplicat.
         other: S'han omès %{count} extractes duplicats.
       invalid_file_type: Puja un extracte en PDF, CSV o XLSX dins del límit de mida.
       no_files: Selecciona com a mínim un fitxer d'extracte.
       success:
-        one: 1 extracte pujat.
+        one: '%{count} extracte pujat.'
         other: "%{count} extractes pujats."
     destroy:
       failure: No s'ha pogut eliminar l'extracte.
@@ -41,7 +41,7 @@ ca:
       account_label: Compte
       confidence: Coincidència %{confidence}
       empty_linked: Encara no hi ha extractes enllaçats.
-      empty_unmatched: La safata sense aparellar està buida.
+      empty_unmatched: La safata d'extractes està buida.
       leave_unmatched: Deixa sense aparellar
       linked_title: Extractes enllaçats
       no_suggestion: Sense suggeriment
@@ -76,7 +76,7 @@ ca:
       delete: Elimina
       difference: Diferència
       download: Descarrega
-      institution_name_hint: Pista de la institució
+      institution_name_hint: Pista de l'entitat
       ledger_amount: Llibre de Sure
       link_suggestion: Suggeriment d'enllaç
       linked_to: Enllaçat a %{account}.

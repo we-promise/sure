@@ -171,6 +171,75 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Still works", @account.reload.name
   end
 
+  test "updates SimpleFIN balance sign override when linked" do
+    simplefin_account = create_linked_simplefin_account
+
+    get edit_credit_card_path(@account)
+    assert_response :success
+    assert_match "balance_sign_override", response.body
+    assert_match I18n.t("credit_cards.form.simplefin_balance_sign_label"), response.body
+
+    assert_enqueued_with(job: SyncJob) do
+      patch credit_card_path(@account), params: {
+        account: {
+          name: @account.name,
+          accountable_type: "CreditCard",
+          simplefin: { balance_sign_override: "credit" }
+        }
+      }
+    end
+
+    assert_redirected_to @account
+    assert_equal "credit", simplefin_account.reload.balance_sign_override
+  end
+
+  test "clears SimpleFIN balance sign override when automatic is selected" do
+    simplefin_account = create_linked_simplefin_account
+    simplefin_account.update!(balance_sign_override: "credit")
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        simplefin: { balance_sign_override: "" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil simplefin_account.reload.balance_sign_override
+  end
+
+  test "does not persist SimpleFIN override when the account update fails" do
+    simplefin_account = create_linked_simplefin_account
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: "",
+        accountable_type: "CreditCard",
+        simplefin: { balance_sign_override: "credit" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil simplefin_account.reload.balance_sign_override
+  end
+
+  test "normalizes an unsupported SimpleFIN balance sign to automatic" do
+    simplefin_account = create_linked_simplefin_account
+    simplefin_account.update!(balance_sign_override: "credit")
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        simplefin: { balance_sign_override: "unsupported" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil simplefin_account.reload.balance_sign_override
+  end
+
   private
     def create_linked_enable_banking_account
       enable_banking_item = EnableBankingItem.create!(
@@ -190,5 +259,23 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
       )
       AccountProvider.create!(account: @account, provider: enable_banking_account)
       enable_banking_account
+    end
+
+    def create_linked_simplefin_account
+      simplefin_item = SimplefinItem.create!(
+        family: @account.family,
+        name: "Test SimpleFIN",
+        access_url: "https://example.com/token"
+      )
+      simplefin_account = SimplefinAccount.create!(
+        simplefin_item: simplefin_item,
+        name: "Linked card",
+        account_id: "simplefin-linked-card",
+        currency: "USD",
+        account_type: "credit",
+        current_balance: -25
+      )
+      AccountProvider.create!(account: @account, provider: simplefin_account)
+      simplefin_account
     end
 end

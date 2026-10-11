@@ -57,6 +57,24 @@ class CategoryTest < ActiveSupport::TestCase
     assert_nil category.parent
   end
 
+  test "a parent must belong to the same family" do
+    other_family = families(:empty)
+    foreign_parent = other_family.categories.create!(name: "Foreign Parent", color: "#123456")
+
+    category = @family.categories.new(name: "Cross Family Child", color: "#000000", parent: foreign_parent)
+
+    assert_not category.valid?
+    assert category.errors.of_kind?(:parent, :invalid)
+  end
+
+  test "a parent from the same family is accepted" do
+    parent = categories(:food_and_drink)
+    category = @family.categories.create!(name: "Same Family Child", color: "#000000", parent: parent)
+
+    assert_equal parent, category.parent
+    assert_equal parent.color, category.color, "subcategories inherit their parent's color"
+  end
+
   test "subcategory can only be one level deep" do
     category = categories(:subcategory)
 

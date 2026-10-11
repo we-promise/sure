@@ -20,7 +20,7 @@ ca:
       save: Desa la configuració de compartició
       shared: Compartit
       shared_with_count:
-        one: Compartit amb 1 membre
+        one: Compartit amb %{count} membre
         other: Compartit amb %{count} membres
       subtitle: Controla qui pot veure i interactuar amb aquest compte
       title: Compartició de comptes

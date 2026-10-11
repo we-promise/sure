@@ -3,6 +3,14 @@ en:
   rules:
     no_action: No Action
     no_condition: No condition
+    category_rule_cta:
+      close: Close
+      create_rule: Create rule
+      description: You can create a rule to automatically categorize transactions like this one
+      dont_show_again: Don't show this again
+      hide_for_today: Hide for today
+      hide_for_today_hint: "Hide for today pauses these suggestions for 24 hours."
+      message: Updated to %{category_name}
     rule:
       edit: Edit
       re_apply_rule: Re-apply rule

@@ -33,6 +33,15 @@ tr:
       sell: Sat
       symbol_label: Sembol
       total_return_label: Gerçekleşmemiş kar/zarar
+      contribution: Katkı
+      exchange: Değişim
+      fee: Ücret
+      other: Diğer
+      reinvestment: Yeniden yatırım
+      sweep_in: Sweep girişi
+      sweep_out: Sweep çıkışı
+      transfer: Transfer
+      withdrawal: Çekim
     new:
       title: Yeni işlem
     show:
@@ -59,3 +68,8 @@ tr:
       sell: Sat
       settings: Ayarlar
       type_label: Tür
+    api_errors:
+      activity_label_must_match_type: type %{type} olduğunda investment_activity_label %{label} olmalıdır
+      invalid_activity_label: Geçersiz yatırım aktivitesi etiketi
+      invalid_type: Geçersiz tür
+      supported_types: 'type şunlardan biri olmalıdır: %{types}'

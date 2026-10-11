@@ -5,19 +5,18 @@
 <%# Both halves are addable from every view, but only the one this view is
     about earns a header button: Add income on the Income plan, Add bill
     everywhere else. The other half and the AI review live in the overflow
-    menu, so the header carries one action instead of a toolbar of three. %>
+    menu, so the header carries one action instead of a toolbar of three.
+    Laid out the way Transactions lays out New transaction: the menu first,
+    the primary action last, and a round + in its place on a phone. A display
+    class makes DS::Link drop its own inline-flex row, so the button brings
+    items-center gap-1 back or its + touches the label. %>
 <% income_first = active == "paycheck" %>
+<% add_text = income_first ? t("bills.index.add_income") : t("bills.index.add_bill") %>
+<% add_href = income_first ? new_recurring_transaction_path(income: true) : new_recurring_transaction_path %>
 <header class="flex justify-between items-center gap-2 text-primary font-medium">
   <h1 class="text-xl"><%= t("bills.index.title") %></h1>
 
   <div class="flex items-center gap-2 shrink-0">
-    <%= render DS::Link.new(
-          text: income_first ? t("bills.index.add_income") : t("bills.index.add_bill"),
-          icon: "plus",
-          variant: "primary",
-          href: income_first ? new_recurring_transaction_path(income: true) : new_recurring_transaction_path,
-          frame: :modal
-        ) %>
     <%= render DS::Menu.new do |menu| %>
       <% menu.with_item(
            variant: "link",
@@ -39,10 +38,31 @@
              data: { action: "app-layout#openRightSidebar" }) %>
       <% end %>
     <% end %>
+
+    <%= render DS::Link.new(
+          text: add_text,
+          icon: "plus",
+          variant: "primary",
+          href: add_href,
+          frame: :modal,
+          class: "hidden md:inline-flex items-center gap-1"
+        ) %>
+    <%= render DS::Link.new(
+          icon: "plus",
+          variant: "icon-inverse",
+          href: add_href,
+          frame: :modal,
+          class: "rounded-full md:hidden",
+          aria: { label: add_text }
+        ) %>
   </div>
 </header>
 
-<%= render DS::SegmentedControl.new(aria_label: t("bills.views.aria_label")) do |control| %>
+<%# The control's own track is the page's colour in light mode, so on the
+    page it showed only the selected pill and loose words. surface-inset is the
+    track DS::Tabs gives Transactions' view switch, and the budgets owner
+    switcher already overrides it the same way. %>
+<%= render DS::SegmentedControl.new(aria_label: t("bills.views.aria_label"), class: "bg-surface-inset") do |control| %>
   <% control.with_segment(t("bills.views.overview"), active: active == "overview", href: bills_path) %>
   <% control.with_segment(t("bills.views.calendar"), active: active == "calendar", href: bills_path(view: "calendar")) %>
   <% control.with_segment(t("bills.views.paycheck"), active: active == "paycheck", href: bills_path(view: "paycheck")) %>

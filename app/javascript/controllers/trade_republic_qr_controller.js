@@ -98,7 +98,9 @@ export default class extends Controller {
 
       if (result.status !== "pending") {
         this.statusTarget.textContent = this.successTextValue;
-        window.Turbo.visit(this.returnUrlValue);
+        // "replace" forces a fetch; an advance visit to the same path with only
+        // a new #anchor is treated as a same-page scroll and never reloads.
+        window.Turbo.visit(this.returnUrlValue, { action: "replace" });
         return;
       }
 

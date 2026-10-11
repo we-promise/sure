@@ -18,9 +18,11 @@
       <%= icon("chevron-right", size: "sm", class: "ml-auto shrink-0 text-subdued transition-colors group-hover:text-secondary") %>
     <% end %>
 
-    <%# Dynamic provider links - only admins can create provider connections %>
-    <% if Current.user&.admin? %>
+    <%# Dynamic provider links. Admins may connect anything; a member may only
+        connect providers whose credential is scoped to the single connection
+        they authenticate (see ProviderItemOwnable). %>
     <% provider_configs.each do |config| %>
+      <% next unless Current.user&.admin? || config[:member_connectable] %>
       <% link_path = config[:new_account_path].call(accountable_type, params[:return_to]) %>
       <% is_lunchflow = config[:key] == "lunchflow" %>
 
@@ -28,7 +30,6 @@
                   class: "group text-primary flex items-center gap-4 w-full text-center focus:outline-hidden focus:bg-surface-hover border border-transparent focus:border focus:border-primary px-2 hover:bg-surface-hover rounded-lg p-2",
                   data: is_lunchflow ? {
                     turbo_frame: "modal",
-                    turbo_action: "advance",
                     lunchflow_preload_target: "link"
                   } : { turbo_frame: "modal", turbo_prefetch: "false" } do %>
         <span class="flex w-8 h-8 shrink-0 grow-0 items-center justify-center rounded-lg bg-alpha-black-50 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]">
@@ -47,7 +48,6 @@
 
         <%= icon("chevron-right", size: "sm", class: "ml-auto shrink-0 text-subdued transition-colors group-hover:text-secondary") %>
       <% end %>
-    <% end %>
     <% end %>
 
   </div>

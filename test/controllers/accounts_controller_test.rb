@@ -16,6 +16,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "show filters account activity to uncategorized transactions" do
+    uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
+    categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))
+
+    get account_url(@account, q: { uncategorized: "1" })
+
+    assert_response :success
+    assert_select "input#q_uncategorized[checked]"
+    assert_match uncategorized.name, response.body
+    assert_no_match categorized.name, response.body
+  end
+
   test "index delegates whole-row account clicks to the account link" do
     get accounts_url
 
@@ -168,6 +180,13 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # checked option instead of the custom row.
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
+  end
+
+  test "show renders without missing translations" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_empty response.body.scan(/translation missing: [\w.]+/).uniq
   end
 
   test "sync all requests fresh Plaid transactions before syncing the family" do
@@ -421,6 +440,20 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "option[value=gains][selected]"
     assert_select "p", text: I18n.t("UI.account.chart.title.total_gains")
+  end
+
+  # The chart and the Schedule tab's forecast card read one projection. The
+  # chart used to build one and the Schedule partial a second, for the same
+  # date, on every render of a loan's page.
+  test "a loan account page builds its payoff projection once for the chart and the Schedule tab" do
+    loan_account = accounts(:loan)
+    projection = loan_account.loan.payoff_projection(as_of: Date.current)
+    Loan.any_instance.expects(:payoff_projection).once.returns(projection)
+
+    get account_url(loan_account)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("loans.tabs.schedule.forecasted_payoff_date")
   end
 
   test "remembers selected per_page across account navigation" do
@@ -788,6 +821,96 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     ActionController::Base.perform_caching = original_perform_caching
     ActionView::Base.logger = original_view_logger
     Rails.logger = original_rails_logger
+  end
+
+  # --- member-owned connections (issue #3579) ------------------------------
+
+  test "an owner is not shown a connection carrying an account they cannot see" do
+    # Ownership must not widen exposure: the card renders the item's accounts
+    # unfiltered (and is re-rendered by a viewer-less broadcast), so the whole
+    # card is withheld rather than shown with a filtered list.
+    member = users(:family_member)
+    family = families(:dylan_family)
+    item = PlaidItem.create!(
+      family: family, plaid_id: "item_card_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Owned Bank", owner: member
+    )
+    hidden = Account.create!(
+      family: family, owner: users(:family_admin), name: "Not Shared With Member",
+      balance: 100, currency: "USD", accountable: Depository.new
+    )
+    hidden.account_shares.destroy_all
+    plaid_account = PlaidAccount.create!(
+      plaid_item: item, name: "Hidden Feed", plaid_id: "acct_card_#{SecureRandom.hex(4)}",
+      plaid_type: "depository", plaid_subtype: "checking", currency: "USD",
+      current_balance: 100, available_balance: 100
+    )
+    AccountProvider.create!(account: hidden, provider: plaid_account)
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(item)}", count: 0
+    assert_no_match(/Not Shared With Member/, response.body)
+  end
+
+  test "an owner is shown their freshly connected item before it has any accounts" do
+    # The case ownership visibility exists for: just connected, nothing synced.
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_fresh_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Fresh Bank", owner: member
+    )
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(item)}", count: 1
+  end
+
+
+  test "an owner sees the management controls on their own connection card" do
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_ctrl_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Controls Bank", owner: member
+    )
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 1
+  end
+
+  test "a member demoted to guest loses the controls on a connection they own" do
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_demote_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Demoted Bank", owner: member
+    )
+    member.update!(role: :guest)
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
+  end
+
+  test "a member sees no controls on a connection someone else owns" do
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_noctrl_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Admin Bank", owner: users(:family_admin)
+    )
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
   end
 end
 

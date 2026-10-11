@@ -5,6 +5,34 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:family_admin)
   end
 
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { name: "Renamed Lunch Flow" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "lunchflow-providers-panel"
+    assert_includes response.body, %(id="lunchflow-providers-panel")
+    assert_equal "Renamed Lunch Flow", lunchflow_items(:one).reload.name
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post lunchflow_items_url,
+         params: { lunchflow_item: { name: "Second Lunch Flow", api_key: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "lunchflow-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Api key can't be blank")
+  end
+
+  test "invalid non-Turbo update redirects back instead of rendering a missing template" do
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { name: "" } },
+          headers: { "HTTP_REFERER" => settings_providers_url }
+
+    assert_redirected_to settings_providers_url
+    assert_match "Name can't be blank", flash[:alert]
+  end
+
   test "setup accounts renders German subtype options without English fallbacks" do
     ensure_tailwind_build
     @user.update!(locale: "de")
@@ -121,6 +149,34 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "Ein unerwarteter Fehler ist aufgetreten. Versuch es später noch einmal."
   end
 
+  test "select accounts masks the iban to the last 4 characters" do
+    provider = mock("lunchflow_provider")
+    provider.stubs(:get_accounts).returns(accounts: [
+      { id: "acc_1", name: "Checking", iban: "DE89370400440532013000", institution_name: "Test Bank", currency: "EUR", status: "active" } # pipelock:ignore IBAN
+    ])
+    Provider::LunchflowAdapter.stubs(:build_provider).returns(provider)
+
+    get select_accounts_lunchflow_items_url
+
+    assert_response :success
+    assert_includes response.body, "•3000"
+    refute_includes response.body, "DE89370400440532013000" # pipelock:ignore IBAN
+  end
+
+  test "select existing account masks the iban to the last 4 characters" do
+    provider = mock("lunchflow_provider")
+    provider.stubs(:get_accounts).returns(accounts: [
+      { id: "acc_1", name: "Checking", iban: "DE89370400440532013000", institution_name: "Test Bank", currency: "EUR", status: "active" } # pipelock:ignore IBAN
+    ])
+    Provider::LunchflowAdapter.stubs(:build_provider).returns(provider)
+
+    get select_existing_account_lunchflow_items_url(account_id: accounts(:depository).id)
+
+    assert_response :success
+    assert_includes response.body, "•3000"
+    refute_includes response.body, "DE89370400440532013000" # pipelock:ignore IBAN
+  end
+
   test "invalid non-Turbo create redirects instead of rendering a missing template" do
     assert_no_difference "LunchflowItem.count" do
       post lunchflow_items_url, params: {
@@ -131,7 +187,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    assert_redirected_to accounts_path
+    assert_redirected_to settings_providers_path
     assert_match "Api key can't be blank", flash[:alert]
   end
 end

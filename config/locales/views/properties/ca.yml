@@ -24,6 +24,7 @@ ca:
       title: Introdueix l'immoble manualment
     edit:
       edit: Edita %{account}
+      title: Introdueix l'immoble manualment
     form:
       address_line1: Adreça
       address_line1_placeholder: Carrer Major 123
@@ -45,6 +46,16 @@ ca:
     new:
       next: Següent
       title: Introdueix l'immoble manualment
+      avm_option: Afegeix mitjançant %{provider}
+      avm_title: Afegeix un immoble mitjançant %{provider}
+      avm_description: Introdueix un nom per a l'immoble i la seva adreça. %{provider} en cercarà les dades i el valor de mercat estimat.
+      avm_us_only: '%{provider} només admet immobles situats als Estats Units.'
+      avm_submit: Cerca l'immoble
+      avm_preview_title: Confirma les dades de l'immoble
+      avm_preview_description: Això és el que ha trobat %{provider}. Revisa les dades abans d'afegir l'immoble; encara no s'ha creat res.
+      avm_preview_no_record: '%{provider} no ha trobat cap registre d''immoble en aquesta adreça, de manera que el valor que es mostra és una estimació basada en la zona. Comprova l''adreça abans de continuar.'
+      avm_preview_back: Enrere
+      avm_preview_confirm: Afegeix l'immoble
     overview:
       living_area: Superfície habitable
       market_value: Valor de mercat
@@ -89,3 +100,10 @@ ca:
         trend: Tendència
         unknown: Desconegut
         year_built: Any de construcció
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    form_tabs:
+      address: Adreça
+      overview: Resum
+      value: Valor

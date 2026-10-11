@@ -1,0 +1,111 @@
+---
+tr:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Hareket bulundu
+      explanation: Bu adres biçimi birden fazla ağda kullanılıyor ve her ağdaki bakiyeler farklı. Takip etmek istediğiniz ağı seçin.
+      no_activity_found: Hiçbir şey bulunamadı
+      subtitle: '%{address}'
+      title: Hangi ağ?
+    destroy:
+      success: Gözetimsiz cüzdan bağlantısı silinmek üzere zamanlandı.
+    disconnect_asset:
+      success: '%{symbol} takibi durduruldu. Hesabı ve geçmişi korundu.'
+    disconnect_wallet:
+      success:
+        one: Bu adresteki %{count} varlığın takibi durduruldu.
+        other: Bu adresteki %{count} varlığın takibi durduruldu.
+    enable_crypto_prices:
+      not_self_hosted: Bu kurulumda piyasa verisi sağlayıcıları sunucu yöneticisi tarafından yapılandırılır.
+      success: Kripto fiyatları etkinleştirildi. Cüzdan değerleri bir sonraki senkronizasyondan sonra görünür.
+    errors:
+      address_required: Bir cüzdan adresi girin.
+      already_linked: Bu adres bu ağda zaten takip ediliyor. Hangi varlıkların takip edileceğini değiştirmek için "Token'ları incele" seçeneğini kullanın.
+      chain_unreachable: Bu ağın herkese açık blok gezginine ulaşılamadı. Biraz sonra tekrar deneyin.
+      rate_limited: Herkese açık blok gezgini şu anda istekleri sınırlıyor. Birkaç dakika sonra tekrar deneyin.
+      unexpected: Bu cüzdan okunurken bir sorun oluştu. Ayrıntılar destek için kaydedildi.
+      unrecognized_address: Bu, desteklenen herhangi bir ağdaki bir adrese benzemiyor.
+      wallet_not_found: Bu cüzdan bu bağlantı tarafından takip edilmiyor.
+    link_wallet:
+      errors:
+        none_tracked: 'Hiçbir şey takip edilmedi: %{assets} eklenemedi. Biraz sonra tekrar deneyin.'
+        nothing_selected: Takip edilecek en az bir varlık seçin.
+        some_failed: '%{assets} takip edilemedi ve dışarıda bırakıldı.'
+      success:
+        one: Bu cüzdandan %{count} varlık takip ediliyor.
+        other: Bu cüzdandan %{count} varlık takip ediliyor.
+    manage:
+      assets_truncated: Bu adres, tek bir okumada gösterilebilecekten daha fazla token içeriyor; bu nedenle yalnızca en güvenilir %{count} token listeleniyor. Zaten takip edilenlerin senkronizasyonu devam eder.
+      disconnect_asset: Takibi durdur
+      disconnect_asset_confirm: '%{symbol} takibi durdurulsun mu? Hesabı ve geçmişi korunur, ancak artık güncellenmez.'
+      disconnect_wallet: Cüzdanın bağlantısını kes
+      disconnect_wallet_confirm: Bu adresteki tüm varlıkların takibi durdurulsun mu?
+      history_note: Bağlantıyı kesmek hesapları ve geçmişlerini korur; yalnızca güncellenmeleri durur.
+      history_truncated: Bu adresin tüm transferleri okunamadı — geçmiş tek bir senkronizasyonun kapsayabileceğinden uzun ya da blok gezgini isteği reddetti. Bakiyeler eksiksizdir; bazı transferler eksik.
+      native: Yerel
+      no_wallets: Henüz takip edilen cüzdan yok.
+      review_tokens: Token'ları incele
+      subtitle: Bu bağlantının okuduğu her adres ve her birinde takip edilenler.
+      title: Gözetimsiz cüzdanları yönet
+    new_wallet:
+      address_label: Cüzdan adresi
+      address_placeholder: bc1..., 0x... veya bir Solana adresi
+      bitcoin_single_address_note: Bitcoin her seferinde tek bir adres olarak takip edilir. Genişletilmiş anahtarlar (xpub/ypub/zpub) desteklenmez; bu nedenle fonları türetilmiş adreslere dağıtan bir cüzdan yalnızca girdiğiniz adresin bakiyesini gösterir.
+      chain_auto_detect: Otomatik algıla
+      chain_label: Ağ
+      continue: Devam
+      read_only_note: Yalnızca herkese açık zincir verileri okunur. Asla kurtarma ifadesi (seed phrase) veya özel anahtar girmeyin.
+      subtitle: Anahtarlarına sahip olduğunuz bir cüzdanı herkese açık adresinden takip edin.
+      title: Gözetimsiz cüzdan ekle
+    onchain_wallet_item:
+      assets_tracked:
+        one: '%{count} varlık takip ediliyor'
+        other: '%{count} varlık takip ediliyor'
+      sync: Şimdi senkronize et
+      syncing: Senkronize ediliyor...
+    wallet_card:
+      addresses_tracked:
+        one: '%{count} adres takip ediliyor'
+        other: '%{count} adres takip ediliyor'
+      deletion_in_progress: Kaldırılıyor...
+      delete: Bağlantıyı kaldır
+      needs_attention: Dikkat gerektiriyor
+      no_wallets_message: Burada görmek için sağlayıcı ayarlarından bir adres bağlayın.
+      no_wallets_title: Henüz bağlı cüzdan yok
+      status: '%{timestamp} önce senkronize edildi'
+      sync: Şimdi senkronize et
+      status_never: Henüz senkronize edilmedi
+      syncing: Senkronize ediliyor...
+    price_provider_warning:
+      body: Hiçbir etkin piyasa verisi sağlayıcısı kripto fiyatlandıramıyor; bu nedenle bu cüzdanlar miktarları takip ediyor ancak değer olarak sıfır gösteriyor.
+      enable: Kripto fiyatlarını etkinleştir
+      exchange_rate_body: Kripto USD cinsinden fiyatlandırılıyor ve bunu %{currency} para birimine çevirecek bir döviz kuru sağlayıcısı yapılandırılmamış; bu nedenle bu cüzdanlar miktarları takip ediyor ancak değer olarak sıfır gösteriyor. EXCHANGE_RATE_PROVIDER değişkenini ayarlayın — Frankfurter API anahtarı gerektirmez.
+      exchange_rate_title: Döviz kuru sağlayıcısı yapılandırılmamış
+      link: Piyasa verisi ayarlarını aç
+      title: Kripto fiyatları yapılandırılmamış
+    provider_connection:
+      description: Anahtarlarına sahip olduğunuz bir cüzdanı herkese açık adresinden takip edin.
+      name: Gözetimsiz cüzdan
+    review_tokens:
+      save: Takip edilen varlıkları kaydet
+      subtitle: '%{chain} · %{address}'
+      title: Takip edilen varlıkları incele
+    token_review:
+      import_selected: Seçilen varlıkları takip et
+      subtitle: '%{chain} · %{address}'
+      title: Neyin takip edileceğini seçin
+    token_review_form:
+      assets_truncated: Bu adres, tek bir okumada gösterilebilecekten daha fazla token içeriyor; bu nedenle yalnızca en güvenilir %{count} token listeleniyor.
+      cancel: İptal
+      explanation: Bilinen bir fiyatı olan varlıklar işaretlidir. Diğerleri işaretsiz bırakılır — cüzdanlara istenmeyen (spam) airdrop'lar gelir ve bunlar takip edilse bile bir değer taşımaz.
+      native: Yerel
+      no_price: Fiyat bilgisi yok; yalnızca miktar olarak takip edilir
+      nothing_found: Bu adreste bu ağda görebildiğimiz hiçbir şey yok.
+    update:
+      success: Gözetimsiz cüzdan bağlantısı güncellendi.
+    update_tokens:
+      errors:
+        no_changes: Hiçbir şey değişmedi; aynı varlıklar hâlâ işaretli.
+        none_tracked: 'Hiçbir şey değişmedi: %{assets} eklenemedi. Biraz sonra tekrar deneyin.'
+        some_failed: '%{assets} takip edilemedi ve dışarıda bırakıldı.'
+      success: Takip edilen varlıklar güncellendi (%{created} eklendi, %{removed} kaldırıldı).

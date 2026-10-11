@@ -31,4 +31,10 @@ class TooltipComponentPreview < ViewComponent::Preview
       end
     end
   end
+
+  def with_custom_trigger
+    render DS::Tooltip.new(text: "Groceries, Vacation, Reimbursable", variant: :surface) do |tooltip|
+      tooltip.with_trigger { render DS::Pill.new(label: "3 tags", tone: :neutral, marker: false) }
+    end
+  end
 end

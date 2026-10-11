@@ -32,17 +32,6 @@
     <% end %>
   </div>
 
-  <!-- Summary: trials expiring in next 7 days -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-    <div class="bg-container-inset rounded-lg p-4">
-      <div class="flex items-center gap-2 mb-2">
-        <%= icon "calendar-clock", class: "w-5 h-5 text-secondary" %>
-        <p class="text-xs font-medium text-secondary uppercase"><%= t(".summary.trials_expiring_7_days") %></p>
-      </div>
-      <p class="text-2xl font-semibold text-primary"><%= @trials_expiring_in_7_days %></p>
-    </div>
-  </div>
-
   <!-- Families/Groups & Users -->
   <div>
     <h2 class="text-lg font-semibold text-primary mb-3"><%= t(".section_title") %></h2>

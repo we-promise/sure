@@ -9,9 +9,12 @@ ru:
         any: любые
         match: совпадение
         of_the_following_conditions: из следующих условий
+      condition:
+        value_placeholder: Введите значение
   rules:
     actions:
       value_placeholder: Введите значение
+      to_label: на
     apply_all:
       ai_cost_message: Это использует ИИ для категоризации до %{transactions} операций.
       ai_cost_title: Оценка стоимости ИИ
@@ -42,6 +45,18 @@ ru:
         expense: Расход
         income: Доход
         transfer: Перевод
+      operators:
+        contains: Содержит
+        does_not_contain: Не содержит
+        equal_to: Равно
+        is_equal_to: Равно
+        not_equal_to: Не равно
+        is_empty: Пусто
+        is_not_empty: Не пусто
+        greater_than: Больше
+        greater_or_equal_to: Больше или равно
+        less_than: Меньше
+        less_than_or_equal_to: Меньше или равно
     confirm:
       ai_cost_no_estimate_html: Это использует ИИ для категоризации %{count} операций.
       ai_cost_title: Оценка стоимости ИИ
@@ -111,7 +126,7 @@ ru:
       title: Недавние запуски
       unnamed_rule: Безымянное правило
     rule:
-      action_label_to: "%{label} к %{value}"
+      action_label_to: "%{label} на %{value}"
       all_past_and_future: Все прошлые и будущие %{resource}
       and_more_actions:
         few: и ещё %{count} действия
@@ -121,7 +136,7 @@ ru:
       and_more_conditions:
         few: и ещё %{count} условия
         many: и ещё %{count} условий
-        one: и ещё 1 условие
+        one: и ещё %{count} условие
         other: и ещё %{count} условий
       delete: Удалить
       edit: Редактировать

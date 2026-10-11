@@ -35,6 +35,9 @@ en:
       category_search_placeholder: Search categories
       create_category: 'Create "%{name}"'
       create_category_error: Could not create category
+      create_as_subcategory: Add as a subcategory…
+      choose_parent: 'Create "%{name}" under:'
+      back_to_categories: Back
       date: Date
       description: Description
       description_placeholder: Describe transaction
@@ -58,7 +61,11 @@ en:
       updated: Transaction updated
     new:
       new_transaction: New transaction
+    transaction_category:
+      set_on_outflow: "The category belongs to the outgoing side of this transfer and can only be changed there"
     show:
+      category_set_on_hidden_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side, on an account you cannot access, and can only be changed there."
+      category_set_on_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side and can only be changed there, so budgets count it once."
       keep_both: No, keep both
       loan_payment: Loan Payment
       mark_recurring: Mark as Recurring
@@ -111,7 +118,28 @@ en:
       payee: "Payee"
       description: "Description"
       memo: "Memo"
+      original_description: "Original description"
+      payment_channel: "Payment channel"
+      transaction_code: "Transaction code"
       provider_extras: "Provider extras"
+      plaid_payment_meta_label: "Payment meta · %{name}"
+      plaid_counterparty_label: "Counterparty %{index}"
+      # Provider field names. The set is open-ended — anything not listed falls
+      # back to a humanized form of the provider's own identifier.
+      provider_extra_fields:
+        by_order_of: "By order of"
+        confidence_level: "Confidence level"
+        entity_id: "Entity ID"
+        logo_url: "Logo URL"
+        name: "Name"
+        payee: "Payee"
+        payer: "Payer"
+        phone_number: "Phone number"
+        ppd_id: "PPD ID"
+        reason: "Reason"
+        reference_number: "Reference number"
+        type: "Type"
+        website: "Website"
       transfer_or_debt_payment: "Transfer or Debt Payment?"
       open_matcher: "Open matcher"
       convert: "Convert"
@@ -245,6 +273,7 @@ en:
         category: Category
         tag: Tag
         merchant: Merchant
+        ai: AI
     convert_to_trade:
       title: Convert to Security Trade
       description: Convert this transaction into a trade with security details
@@ -313,6 +342,13 @@ en:
           transfer: Transfer
           confirmed: Confirmed
           pending: Pending
+          ai_current: AI
+          ai_history: AI history
+        ai_filter:
+          current: AI
+          current_description: Category is still the one assigned automatically (AI or Bayes).
+          history: AI history
+          history_description: Was auto-categorized, but the category has been changed since.
         type_filter:
           expense: Expense
           income: Income

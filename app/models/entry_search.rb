@@ -7,6 +7,7 @@ class EntrySearch
   attribute :amount_operator, :string
   attribute :types, :string
   attribute :status, array: true
+  attribute :uncategorized, :boolean
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
@@ -58,6 +59,15 @@ class EntrySearch
       query
     end
 
+    # Uncategorized means what it means everywhere else (the Transactions
+    # "Uncategorized" filter, the uncategorized badge, Quick Categorize):
+    # Entry.uncategorized_transactions, which skips transfers and excluded entries.
+    def apply_uncategorized_filter(scope, uncategorized)
+      return scope unless uncategorized
+
+      scope.where(id: Entry.uncategorized_transactions.select(:id))
+    end
+
     def apply_status_filter(scope, statuses)
       return scope unless statuses.present?
       return scope if statuses.uniq.sort == %w[confirmed pending] # Both selected = no filter
@@ -101,6 +111,7 @@ class EntrySearch
     query = self.class.apply_amount_filter(query, amount, amount_operator)
     query = self.class.apply_accounts_filter(query, accounts, account_ids)
     query = self.class.apply_status_filter(query, status)
+    query = self.class.apply_uncategorized_filter(query, uncategorized)
     query
   end
 end

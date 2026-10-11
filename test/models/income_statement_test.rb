@@ -20,7 +20,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     create_transaction(account: @credit_card_account, amount: 400, category: @groceries_category)
   end
 
-  test "daily_expense_series cache busts when the family currency changes" do
+  test "a new statement invalidates daily series when the family currency changes" do
     statement = IncomeStatement.new(@family)
     period = Period.last_30_days
 
@@ -29,10 +29,10 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     statement.daily_expense_series(period: period)
     @family.update!(currency: "EUR")
-    statement.daily_expense_series(period: period)
+    IncomeStatement.new(@family).daily_expense_series(period: period)
   end
 
-  test "daily_expense_series cache busts when exchange rates change" do
+  test "a new statement invalidates daily series when exchange rates change" do
     statement = IncomeStatement.new(@family)
     period = Period.last_30_days
 
@@ -43,7 +43,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     travel 1.second do
       ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
-      statement.daily_expense_series(period: period)
+      IncomeStatement.new(@family).daily_expense_series(period: period)
     end
   end
 

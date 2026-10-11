@@ -42,11 +42,10 @@
       <%= styled_form_with url: account_statements_path, scope: :account_statement, multipart: true, class: "space-y-3" do |form| %>
         <%= form.hidden_field :account_id, value: account.id %>
         <div>
-          <%= form.label :files, t("account_statements.form.files_label"), class: "form-field__label" %>
           <%= form.file_field :files,
+                              label: t("account_statements.form.files_label"),
                               multiple: true,
-                              accept: AccountStatement::ACCEPTED_FILE_EXTENSIONS.join(","),
-                              class: "form-field__input" %>
+                              accept: AccountStatement::ACCEPTED_FILE_EXTENSIONS.join(",") %>
           <p class="text-xs text-secondary mt-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %></p>
         </div>
         <%= form.submit t("account_statements.form.account_upload") %>

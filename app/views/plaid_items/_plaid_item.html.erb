@@ -40,7 +40,7 @@
           </div>
         </div>
 
-        <% if Current.user&.admin? %>
+        <% if plaid_item.manageable_by?(Current.user) %>
           <div class="flex items-center gap-2">
             <% if plaid_item.requires_update? %>
               <%= render DS::Link.new(
@@ -83,6 +83,13 @@
 
     <% unless plaid_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
+        <%# NOTE: no per-viewer filtering here. This partial is also rendered
+            by PlaidItem::SyncCompleteEvent from the sync job, where
+            Current.user is nil (same gotcha as accounts/_sync_controls), so a
+            viewer-dependent filter would empty the list for everyone on every
+            broadcast. Visibility is decided in AccountsController#visible_provider_items
+            instead, which only shows an owner a card whose accounts they can
+            already see. %>
         <% if plaid_item.accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: plaid_item.accounts %>
         <% end %>

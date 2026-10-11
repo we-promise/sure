@@ -52,6 +52,11 @@
     <div class="flex items-center gap-2">
       <p><%= Category.uncategorized_name %></p>
     </div>
+  <% elsif param_key == "ai_status" %>
+    <div class="flex items-center gap-2 px-1">
+      <%= icon(param_value == "current" ? "sparkles" : "history", size: "sm") %>
+      <p><%= t(".ai_#{param_value}") %></p>
+    </div>
   <% else %>
     <div class="flex items-center gap-2">
       <p><%= param_value %></p>

@@ -24,14 +24,9 @@ class EnableBankingItem::SyncCompleteEvent
       locals: { enable_banking_item: enable_banking_item }
     )
 
-    # Update the Settings > Providers panel
-    enable_banking_items = family.enable_banking_items.ordered.includes(:syncs)
-    enable_banking_item.broadcast_replace_to(
-      family,
-      target: "enable_banking-providers-panel",
-      partial: "settings/providers/enable_banking_panel",
-      locals: { enable_banking_items: enable_banking_items, family: family }
-    )
+    # The Settings > Providers panel is not streamed here: it is admin-only and
+    # holds the connection's credentials, and every family member subscribes to
+    # this stream. The sync toast below makes each browser re-fetch its own page.
 
     # Let family handle sync notifications
     family.broadcast_sync_complete

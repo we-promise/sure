@@ -194,7 +194,6 @@ class Assistant::Responder
             messages << {
               role: "tool",
               tool_call_id: fn_result[:call_id],
-              name: fn_result[:name],
               content: content
             }
           end
