@@ -35,6 +35,31 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 1911.72, credit_card.cash_balance
   end
 
+  test "balances-only import preserves a pinned currency and provider snapshot currency" do
+    depository = accounts(:depository)
+    simplefin_account = create_simplefin_account("sf_currency_pin", "Checking", "checking", 100)
+    depository.update!(simplefin_account_id: simplefin_account.id, currency: "CAD")
+    depository.lock_attr!(:currency)
+
+    @importer.send(:import_account_minimal_and_balance, { id: simplefin_account.account_id, name: "Checking", balance: 100, currency: "USD" })
+
+    assert_equal "CAD", depository.reload.currency
+    assert_equal "USD", simplefin_account.reload.currency
+  end
+
+  test "balances-only import honors a pin on an AccountProvider-only link" do
+    depository = accounts(:depository)
+    simplefin_account = create_simplefin_account("sf_currency_pin_ap_only", "Checking", "checking", 100)
+    depository.update!(currency: "CAD")
+    AccountProvider.create!(account: depository, provider: simplefin_account)
+    depository.lock_attr!(:currency)
+
+    @importer.send(:import_account_minimal_and_balance, { id: simplefin_account.account_id, name: "Checking", balance: 100, currency: "USD" })
+
+    assert_equal "CAD", depository.reload.currency
+    assert_equal "USD", simplefin_account.reload.currency
+  end
+
   test "balances-only import honors a credit balance sign override" do
     credit_card = accounts(:credit_card)
     simplefin_account = create_simplefin_account("sf_credit_override_1", "Store Card", "credit", -48.48)

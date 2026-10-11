@@ -16,6 +16,12 @@ class Account < ApplicationRecord
   belongs_to :import, optional: true
 
   has_many :account_shares, dependent: :destroy
+  # SimpleFIN links may be stored in the legacy FK or only in the provider-link table.
+  # Prefer the legacy association when both represent the same canonical link.
+  def simplefin_linked_account
+    simplefin_account || account_providers.find_by(provider_type: "SimplefinAccount")&.provider
+  end
+
   has_many :shared_users, through: :account_shares, source: :user
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
   has_many :entries, dependent: :destroy

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
+  include BalanceTestHelper
+
   include ActionView::RecordIdentifier
   include OnchainTestHelper
   include EntriesTestHelper
@@ -14,6 +16,136 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_response :success
     assert_select "p.ml-auto.privacy-sensitive"
+  end
+
+  test "unlinked account editor keeps the existing manual balance form" do
+    get edit_depository_url(@account)
+
+    assert_response :success
+    assert_select "input#account_balance"
+    assert_select "input#account_pin_currency", count: 0
+    assert_select "input#account_use_provider_currency", count: 0
+  end
+
+  test "SimpleFIN account editor exposes supported currencies and pin/reset controls" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account)
+
+    get edit_depository_url(@account)
+
+    assert_response :success
+    assert_select "select#account_currency option[value='USD']"
+    assert_select "input#account_pin_currency[type=checkbox]"
+    assert_select "input#account_use_provider_currency[type=checkbox]"
+  end
+
+  test "SimpleFIN AccountProvider-only links expose and apply pin and reset controls" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_ap_only", currency: "USD", account_type: "checking", current_balance: 100)
+    AccountProvider.create!(account: @account, provider: simplefin_account)
+    @account.update!(currency: "CAD")
+
+    get edit_depository_url(@account)
+    assert_response :success
+    assert_select "select#account_currency"
+
+    patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "CAD", pin_currency: "1" } }
+    assert_redirected_to account_url(@account)
+    assert @account.reload.locked?(:currency)
+
+    assert_enqueued_with(job: SyncJob) do
+      patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "USD", use_provider_currency: "1" } }
+    end
+    assert_redirected_to account_url(@account)
+    refute @account.reload.locked?(:currency)
+  end
+
+  test "currency pin and reset preserve historical balance currency and values" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_history", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account, currency: "USD")
+    @account.balances.destroy_all
+    historical_date = 1.day.ago.to_date
+    historical = create_balance(account: @account, date: historical_date, balance: 100, cash_balance: 100, currency: "USD")
+    ExchangeRate.create!(date: historical_date, from_currency: "USD", to_currency: "CAD", rate: 1.5)
+
+    patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "CAD", pin_currency: "1" } }
+    assert_redirected_to account_url(@account)
+    assert_equal [ [ "USD", 100.to_d, 100.to_d ] ], @account.balances.where(id: historical.id).pluck(:currency, :balance, :cash_balance)
+    cad_history = Balance::ChartSeriesBuilder.new(account_ids: [ @account.id ], currency: @account.reload.currency, period: Period.custom(start_date: historical_date, end_date: historical_date), interval: "1 day").balance_series
+    assert_equal 0, cad_history.last.value.amount
+
+    patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "USD", use_provider_currency: "1" } }
+    assert_redirected_to account_url(@account)
+    assert_equal [ [ "USD", 100.to_d, 100.to_d ] ], @account.balances.where(id: historical.id).pluck(:currency, :balance, :cash_balance)
+    assert_equal "CAD", @account.reload.currency
+    usd_history = Balance::ChartSeriesBuilder.new(account_ids: [ @account.id ], currency: @account.currency, period: Period.custom(start_date: historical_date, end_date: historical_date), interval: "1 day").balance_series
+    assert_equal 0, usd_history.last.value.amount
+  end
+
+  test "create ignores SimpleFIN currency control parameters as account attributes" do
+    assert_difference "Account.count", 1 do
+      post depositories_url, params: { account: { name: "Manual account", currency: "CAD", accountable_type: "Depository", balance: "0", pin_currency: "1", use_provider_currency: "1" } }
+    end
+
+    assert_response :redirect
+    created = Account.order(:created_at).last
+    refute created.locked?(:currency)
+    assert_equal "CAD", created.currency
+  end
+
+  test "unrelated linked account edit does not pin currency" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_unrelated", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account, currency: "USD")
+
+    patch depository_url(@account), params: { account: { name: "Renamed checking", accountable_type: "Depository", currency: "USD", pin_currency: "0", use_provider_currency: "0" } }
+
+    assert_redirected_to account_url(@account)
+    refute @account.reload.locked?(:currency)
+  end
+
+  test "SimpleFIN currency selection pins an equal current value; provider reset unlocks and syncs" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_update", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account, currency: "USD")
+
+    patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "USD", pin_currency: "1", use_provider_currency: "0" } }
+
+    assert_redirected_to account_url(@account)
+    assert @account.reload.locked?(:currency)
+
+    assert_enqueued_with(job: SyncJob) do
+      patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "CAD", pin_currency: "0", use_provider_currency: "1" } }
+    end
+
+    assert_redirected_to account_url(@account)
+    assert_equal "USD", @account.reload.currency
+    refute @account.locked?(:currency)
+  end
+
+  test "SimpleFIN account currency input is stored canonically" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_lowercase", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account, currency: "USD")
+
+    patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "cad" } }
+
+    assert_redirected_to account_url(@account)
+    assert_equal "CAD", @account.reload.currency
+  end
+
+  test "SimpleFIN account currency rejects unsupported codes without changing state" do
+    item = SimplefinItem.create!(family: @user.family, name: "SimpleFIN", access_url: "https://example.com/token")
+    simplefin_account = item.simplefin_accounts.create!(name: "Checking", account_id: "editor_currency_invalid", currency: "USD", account_type: "checking", current_balance: 100)
+    @account.update!(simplefin_account: simplefin_account, currency: "USD")
+
+    patch depository_url(@account), params: { account: { name: @account.name, accountable_type: "Depository", currency: "ZZZ", pin_currency: "1" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "USD", @account.reload.currency
+    refute @account.locked?(:currency)
   end
 
   test "show filters account activity to uncategorized transactions" do

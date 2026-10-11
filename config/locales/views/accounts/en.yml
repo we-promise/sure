@@ -40,6 +40,10 @@ en:
       no_accounts: No accounts yet
     form:
       balance: "Balance on date:"
+      currency: Currency
+      simplefin_currency_hint: Changing this currency only changes account-level formatting. Existing balances, entries, and FX amounts remain in their recorded currencies; they are not relabeled or converted. Charts for this account currency include only matching-currency balance history, so history in another currency may not appear.
+      pin_currency: Keep this currency when SimpleFIN syncs
+      use_provider_currency: Use provider currency on next sync
       opening_balance_date_label: Opening balance date
       name_label: Account name
       name_placeholder: Example account name

@@ -15,6 +15,23 @@
       <%= form.money_field :balance, label: t(".balance"), required: true, default_currency: Current.family.currency %>
     <% end %>
 
+    <% if account.persisted? && account.simplefin_linked_account.present? %>
+      <% simplefin_account = account.simplefin_linked_account %>
+      <% currency_codes = Current.family.enabled_currency_codes(extra: [account.currency, simplefin_account.currency]) %>
+      <%= form.select :currency,
+                      currency_codes.map { |code| [code, code] },
+                      { label: t(".currency"), selected: account.currency } %>
+      <p class="text-sm text-secondary"><%= t(".simplefin_currency_hint") %></p>
+      <div class="flex items-center gap-2">
+        <%= form.check_box :pin_currency, { checked: account.locked?(:currency) }, "1", "0" %>
+        <%= form.label :pin_currency, t(".pin_currency"), class: "text-sm text-primary" %>
+      </div>
+      <div class="flex items-center gap-2">
+        <%= form.check_box :use_provider_currency, {}, "1", "0" %>
+        <%= form.label :use_provider_currency, t(".use_provider_currency"), class: "text-sm text-primary" %>
+      </div>
+    <% end %>
+
     <% if account.new_record? && !account.linked? %>
       <%= form.date_field :opening_balance_date,
           label: t(".opening_balance_date_label"),

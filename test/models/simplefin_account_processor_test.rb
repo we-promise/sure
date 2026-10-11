@@ -28,6 +28,67 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("123.45"), acct.reload.balance
   end
 
+  test "keeps a user-pinned currency while preserving the provider currency" do
+    sfin_acct = SimplefinAccount.create!(simplefin_item: @item, name: "Checking", account_id: "currency_pin", currency: "USD", account_type: "checking", current_balance: BigDecimal("100"))
+    acct = accounts(:depository)
+    acct.update!(simplefin_account: sfin_acct, currency: "CAD")
+    acct.lock_attr!(:currency)
+    sfin_acct.update!(currency: "USD", raw_payload: { currency: "USD" })
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal "USD", sfin_acct.reload.currency
+    assert_equal "USD", sfin_acct.raw_payload.with_indifferent_access[:currency]
+    assert_equal "CAD", acct.reload.currency
+  end
+
+  test "an unlocked account follows the provider currency" do
+    sfin_acct = SimplefinAccount.create!(simplefin_item: @item, name: "Checking", account_id: "currency_follow", currency: "CAD", account_type: "checking", current_balance: BigDecimal("100"))
+    acct = accounts(:depository)
+    acct.update!(simplefin_account: sfin_acct, currency: "USD")
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal "CAD", acct.reload.currency
+  end
+
+  test "pinning the current currency still prevents later provider changes" do
+    sfin_acct = SimplefinAccount.create!(simplefin_item: @item, name: "Checking", account_id: "currency_equal_pin", currency: "CAD", account_type: "checking", current_balance: BigDecimal("100"))
+    acct = accounts(:depository)
+    acct.update!(simplefin_account: sfin_acct, currency: "USD")
+    acct.lock_attr!(:currency)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal "USD", acct.reload.currency
+  end
+
+  test "AccountProvider-only link honors a pinned currency in full processing" do
+    sfin_acct = SimplefinAccount.create!(simplefin_item: @item, name: "Checking", account_id: "currency_pin_ap_only", currency: "USD", account_type: "checking", current_balance: BigDecimal("100"))
+    acct = accounts(:depository)
+    acct.update!(currency: "CAD")
+    AccountProvider.create!(account: acct, provider: sfin_acct)
+    acct.lock_attr!(:currency)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal "CAD", acct.reload.currency
+    assert_equal "USD", sfin_acct.reload.currency
+  end
+
+  test "unlocking currency allows the provider currency to apply again" do
+    sfin_acct = SimplefinAccount.create!(simplefin_item: @item, name: "Checking", account_id: "currency_reset", currency: "CAD", account_type: "checking", current_balance: BigDecimal("100"))
+    acct = accounts(:depository)
+    acct.update!(simplefin_account: sfin_acct, currency: "USD")
+    acct.lock_attr!(:currency)
+    acct.unlock_attr!(:currency)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal "CAD", acct.reload.currency
+    refute acct.locked?(:currency)
+  end
+
   test "credit override preserves an ambiguous provider balance as a credit" do
     sfin_acct = SimplefinAccount.create!(
       simplefin_item: @item,
