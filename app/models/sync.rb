@@ -320,9 +320,21 @@ class Sync < ApplicationRecord
 
   protected
     def cancel_pending_descendants!
-      children.incomplete.find_each do |child|
-        child.with_lock { child.mark_stale! if child.pending? }
-        child.cancel_pending_descendants!
+      # Load all descendant IDs in a single recursive CTE query to avoid N+1.
+      quoted_id = self.class.connection.quote(id)
+      descendant_ids = self.class.connection.select_values(<<~SQL.squish)
+        WITH RECURSIVE descendants AS (
+          SELECT id FROM syncs WHERE parent_id = #{quoted_id}
+          UNION ALL
+          SELECT s.id FROM syncs s INNER JOIN descendants d ON s.parent_id = d.id
+        )
+        SELECT id FROM descendants
+      SQL
+
+      return if descendant_ids.empty?
+
+      Sync.where(id: descendant_ids).incomplete.find_each do |descendant|
+        descendant.with_lock { descendant.mark_stale! if descendant.pending? }
       end
     end
 
