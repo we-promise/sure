@@ -123,12 +123,16 @@ class Provider::Chimnie < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        # 429s are retried too: the 1 request/second limit is per API key, so
+        # concurrent lookups or refresh jobs in other processes can trip it
+        # despite the per-instance throttle. Chimnie sends no Retry-After, so
+        # back off from 1s.
         faraday.request(:retry, {
           max: 3,
           interval: 1.0,
           interval_randomness: 0.5,
           backoff_factor: 2,
-          exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed ]
+          exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed, Faraday::TooManyRequestsError ]
         })
         faraday.request :json
         faraday.response :raise_error

@@ -60,7 +60,10 @@ class SyncPropertyValuationsJob < ApplicationJob
       end
 
       provider = providers[property.avm_provider]
-      next unless provider # API key was removed after the property was linked
+      unless provider # API key was removed after the property was linked
+        capture_failure(property, account, "Skipping refresh: #{property.avm_provider} is not configured", level: "warn")
+        next
+      end
       next unless provider.requests_remaining?
 
       # The account was created in the provider's currency, but the user can

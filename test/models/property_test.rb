@@ -15,6 +15,18 @@ class PropertyTest < ActiveSupport::TestCase
     assert_equal "Chimnie valuation", @account.entries.valuations.find_by(date: Date.current).name
   end
 
+  test "a later manual edit on the same day drops the provider label" do
+    @property.update!(avm_provider: "chimnie")
+    @account.set_current_balance(560_000)
+    @property.name_avm_valuation!
+    entry = @account.entries.valuations.find_by(date: Date.current)
+
+    @account.update_reconciliation(entry, balance: 570_000, date: Date.current)
+
+    assert_equal "Manual value update", entry.reload.name
+    assert_equal 570_000, entry.amount
+  end
+
   test "leaves manual value updates alone for properties without a provider" do
     @property.update!(avm_provider: nil)
     @account.set_current_balance(560_000)

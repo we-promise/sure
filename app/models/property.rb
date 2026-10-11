@@ -56,7 +56,8 @@ class Property < ApplicationRecord
 
   # Balance updates are recorded as "Manual value update" reconciliations;
   # rename the one an AVM provider just wrote so the activity feed shows
-  # where the value came from.
+  # where the value came from. Account::ReconciliationManager resets the name
+  # on any later write to that day's entry.
   def name_avm_valuation!(date = Date.current)
     return if avm_provider.blank?
 

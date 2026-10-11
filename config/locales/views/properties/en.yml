@@ -106,6 +106,7 @@ en:
     refresh_valuation:
       queued: "The valuation refresh has started. The new value will appear shortly."
       not_linked: "This property isn't linked to a valuation provider."
+      not_configured: "%{provider} isn't configured. Add its API key in Settings → Self-Hosting to refresh this valuation."
     subtypes:
       apartment:
         short: Apartment

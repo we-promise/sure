@@ -117,13 +117,29 @@ class Provider::ChimnieTest < ActiveSupport::TestCase
     end
   end
 
-  test "maps 429 responses to a rate limit error" do
+  test "retries 429 responses, since the per-key limit is shared across processes" do
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    stub_request(:get, VALUATION_URL)
+      .with(query: hash_including("fields"))
+      .to_return({ status: 429, body: { "statusCode" => 429 }.to_json }, { status: 200, body: valuation_response_body })
+
+    response = @provider.fetch_property_valuation(external_id: "999000000001")
+
+    assert response.success?
+    assert_equal 425_000, response.data.valuation
+    assert_requested :get, VALUATION_URL, query: hash_including("fields"), times: 2
+    assert_equal 1, ProviderRequestCount.count_for("chimnie")
+  end
+
+  test "maps persistent 429 responses to a rate limit error" do
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
     stub_valuation(status: 429, body: { "statusCode" => 429, "message" => "Rate limit exceeded" }.to_json)
 
     response = @provider.fetch_property_valuation(external_id: "999000000001")
 
     assert_not response.success?
     assert_instance_of Provider::Chimnie::RateLimitError, response.error
+    assert_requested :get, VALUATION_URL, query: hash_including("fields"), times: 4
   end
 
   test "counts requests against the monthly budget" do

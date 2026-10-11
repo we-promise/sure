@@ -650,6 +650,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
 
   test "refresh_valuation queues a forced refresh of the property" do
     @account.property.update!(avm_provider: "chimnie", avm_external_id: "999000000001")
+    Provider::Registry.stubs(:chimnie).returns(mock)
 
     assert_enqueued_with(job: SyncPropertyValuationsJob, args: [ { property_id: @account.property.id, force: true } ]) do
       post refresh_valuation_property_path(@account)
@@ -666,6 +667,27 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to account_path(@account)
+  end
+
+  test "refresh_valuation refuses when the provider is no longer configured" do
+    @account.property.update!(avm_provider: "chimnie", avm_external_id: "999000000001")
+    Provider::Registry.stubs(:chimnie).returns(nil)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post refresh_valuation_property_path(@account)
+    end
+
+    assert_redirected_to account_path(@account)
+    assert_match "Chimnie isn't configured", flash[:alert]
+  end
+
+  test "method selector shows provider logos for valuation providers" do
+    Provider::Registry.stubs(:chimnie).returns(mock)
+
+    get new_property_path(step: "method_select")
+
+    assert_response :success
+    assert_select "a[href*='method=chimnie']", text: /CH\s+Add via Chimnie/
   end
 
   test "refresh_valuation is scoped to the current family" do

@@ -155,7 +155,9 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
   test "skips properties whose provider is no longer configured" do
     Provider::Registry.stubs(:rentcast).returns(nil)
 
-    SyncPropertyValuationsJob.new.perform
+    assert_difference "DebugLogEntry.count" => 1 do
+      SyncPropertyValuationsJob.new.perform
+    end
 
     assert_nil @property.reload.avm_last_synced_on
   end
