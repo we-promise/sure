@@ -705,7 +705,8 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "can reject a match when only the outflow account is accessible" do
-    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+    # Confirmed, so the legs carry transfer kinds that rejecting must reset
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan, status: "confirmed")
 
     assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 1 do
       patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
@@ -845,11 +846,11 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       accounts(:loan).tap { |loan| loan.update!(owner: users(:family_member)) }
     end
 
-    def cross_owner_transfer(outflow_account:, inflow_account:)
+    def cross_owner_transfer(outflow_account:, inflow_account:, status: "pending")
       outflow = create_transaction(account: outflow_account, amount: 250, kind: "funds_movement")
       inflow = create_transaction(account: inflow_account, amount: -250, kind: "funds_movement")
 
-      Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+      Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: status)
     end
 
     def attach_fee(transfer, account:)
