@@ -1,5 +1,11 @@
 <%= render "transactions/searches/form" %>
 
+<%# Strict badge set (blank array members excluded) used only to decide
+    whether compact mode needs the badge wrapper at all. Standard mode keeps
+    the legacy rendering below untouched. %>
+<% renderable_badges = @q.reject { |key| key == "amount_operator" }.flat_map { |param_key, param_value| Array(param_value).reject(&:blank?).map { |value| [ param_key, value ] } } %>
+
+<% if !@compact_view || renderable_badges.any? %>
 <ul id="transaction-search-filters" class="flex items-center flex-wrap gap-2 mb-4">
   <% @q.reject { |key| key == "amount_operator" }.each do |param_key, param_value| %>
     <% unless param_value.blank? %>
@@ -17,9 +23,11 @@
         <%= render partial: "transactions/searches/filters/badge", locals: { param_key: "amount", param_value: "#{amount_operator} #{param_value}" } %>
       <% else %>
         <% Array(param_value).each do |value| %>
+          <% next if @compact_view && value.blank? %>
           <%= render partial: "transactions/searches/filters/badge", locals: { param_key: param_key, param_value: value } %>
         <% end %>
       <% end %>
     <% end %>
   <% end %>
 </ul>
+<% end %>

@@ -350,6 +350,73 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     end
   end
 
+  test "compact cards share computed padding and search-to-table gap" do
+    # Cards converge on 12px desktop (8px horizontal / 12px vertical mobile),
+    # and the gap below search is a single mb-4 (16px) on both pages when no
+    # filter badges render. Measure computed geometry, not class names: the
+    # mb-4 lives on the inner search-row div, so measure from its rect.
+    [ [ 1400, { horizontal: "12px", vertical: "12px" } ],
+      [ 375, { horizontal: "8px", vertical: "12px" } ] ].each do |width, expected|
+      page.current_window.resize_to(width, 1200)
+
+      gaps = {}
+      [ [ transactions_url, "#transactions-search", "#transactions" ],
+        [ account_url(accounts(:depository), tab: "activity"), "#entries-search", nil ] ].each do |url, form_selector, card_selector|
+        visit url
+
+        card_selector ||= "##{form_selector.delete_prefix('#')}"
+        padding = page.evaluate_script(<<~JS, card_selector, form_selector)
+          ((cardSelector, formSelector) => {
+            const form = document.querySelector(formSelector);
+            const card = cardSelector === formSelector
+              ? form.closest('[data-controller="checkbox-toggle"]')
+              : document.querySelector(cardSelector);
+            const style = getComputedStyle(card);
+            const row = form.querySelector(".flex.gap-2.mb-4");
+            const table = document.querySelector('[role="table"]');
+            return {
+              paddingTop: style.paddingTop, paddingBottom: style.paddingBottom,
+              paddingLeft: style.paddingLeft, paddingRight: style.paddingRight,
+              gap: table.getBoundingClientRect().top - row.getBoundingClientRect().bottom
+            };
+          })(arguments[0], arguments[1])
+        JS
+
+        assert_equal expected[:vertical], padding["paddingTop"], "card top padding at #{width}px (#{url})"
+        assert_equal expected[:vertical], padding["paddingBottom"], "card bottom padding at #{width}px (#{url})"
+        assert_equal expected[:horizontal], padding["paddingLeft"], "card left padding at #{width}px (#{url})"
+        assert_equal expected[:horizontal], padding["paddingRight"], "card right padding at #{width}px (#{url})"
+        gaps[url] = padding["gap"]
+      end
+
+      assert_in_delta 16, gaps[transactions_url], 2, "transactions search-to-table gap at #{width}px"
+      assert_in_delta 16, gaps[account_url(accounts(:depository), tab: "activity")], 2, "account search-to-table gap at #{width}px"
+      assert_in_delta gaps[transactions_url], gaps[account_url(accounts(:depository), tab: "activity")], 2,
+        "search-to-table gap should match across views at #{width}px"
+    end
+  end
+
+  test "badge list renders only with renderable badges in compact, always in standard" do
+    # Compact hides the wrapper (and its mb-4) when no badge would render;
+    # standard keeps the legacy output, including degenerate blank pills.
+    visit transactions_url
+    assert_no_selector "#transaction-search-filters"
+
+    visit transactions_url(q: { search: "coffee" })
+    assert_selector "#transaction-search-filters", text: "coffee"
+
+    visit transactions_url(q: { status: [ "", "" ] })
+    assert_no_selector "#transaction-search-filters"
+
+    @user.update!(preferences: @user.preferences.merge("transactions_compact" => false))
+
+    visit transactions_url
+    assert_selector "#transaction-search-filters"
+
+    visit transactions_url(q: { status: [ "", "" ] })
+    assert_selector "#transaction-search-filters"
+  end
+
   test "narrow desktop tables use mobile rows and retain selection and category information" do
     page.current_window.resize_to(1400, 900)
     @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false, "transactions_show_notes" => true))
