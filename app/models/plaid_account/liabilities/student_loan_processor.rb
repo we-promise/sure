@@ -48,6 +48,9 @@ class PlaidAccount::Liabilities::StudentLoanProcessor
     # origination, or before it, is nil rather than zero: a term of no months
     # is not a term, and it would make the loan look amortisable over a
     # schedule that cannot exist.
+    #
+    # RedbarkAccount::LoanDetailsProcessor#term_months_between counts a term the
+    # same way; a change to the rule here belongs there too.
     def term_months
       return nil unless origination_date && expected_payoff_date
 
