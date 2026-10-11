@@ -6,31 +6,45 @@ class Account::LogoFetcher::Client
   MAX_REDIRECTS = 3
   # The IEND chunk with its CRC, which closes every complete PNG.
   PNG_END = "IEND\xAEB`\x82".b
+  # Store pages and search results stay well under this.
+  MAX_BODY = 5.megabytes
 
-  def get(url, redirects_left = MAX_REDIRECTS)
-    response = connection.get(url)
+  BodyTooLarge = Class.new(StandardError)
+
+  # The body of a 200 response, following https redirects, or nil. Bodies
+  # are read in chunks and dropped once they pass `max_bytes`, so a redirect
+  # to an oversized file never sits in memory whole.
+  def get(url, max_bytes: MAX_BODY, redirects_left: MAX_REDIRECTS)
+    body = +""
+    response = connection.get(url) do |request|
+      request.options.on_data = proc do |chunk, received|
+        raise BodyTooLarge if received > max_bytes
+
+        body << chunk
+      end
+    end
     location = response.headers["location"].to_s
 
     if response.status.in?(300..399)
-      get(location, redirects_left - 1) if redirects_left.positive? && location.start_with?("https://")
+      get(location, max_bytes:, redirects_left: redirects_left - 1) if redirects_left.positive? && location.start_with?("https://")
     elsif response.status == 200
-      response
+      body
     end
-  rescue Faraday::Error => e
-    Rails.logger.info("Account logo request failed: url=#{url} error=#{e.message}")
+  rescue Faraday::Error, BodyTooLarge => e
+    Rails.logger.info("Account logo request failed: url=#{url} error=#{e.class}: #{e.message}")
     nil
   end
 
   def json(url)
-    body = get(url)&.body
+    body = get(url)
     JSON.parse(body) if body
   rescue JSON::ParserError
     nil
   end
 
   def icon(url, key:, source:, name: nil, auto: true)
-    body = get(url)&.body&.b
-    return if body.nil? || body.bytesize > Account::LOGO_MAX_SIZE
+    body = get(url, max_bytes: Account::LOGO_MAX_SIZE)&.b
+    return if body.nil?
 
     size, content_type, extension = image_format(body)
     Account::LogoFetcher::Icon.new(key:, source:, name:, body:, size:, content_type:, extension:, auto:) if size.to_i >= MIN_SIZE

@@ -164,6 +164,14 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     end
   end
 
+  test "drops an icon over the size limit while reading it" do
+    stub_request(:get, GOOGLE_URL).to_return(status: 200, body: png(180) + "\x00" * Account::LOGO_MAX_SIZE)
+    stub_request(:get, DUCKDUCKGO_URL).to_return(status: 404)
+    stub_request(:get, YANDEX_URL).to_return(status: 200, body: png(120))
+
+    assert_equal [ "yandex" ], Account::LogoFetcher.new(@account).candidates.map(&:key)
+  end
+
   test "skips a PNG or JPEG cut short" do
     stub_request(:get, GOOGLE_URL).to_return(status: 200, body: png(180).byteslice(0, 24))
     stub_request(:get, DUCKDUCKGO_URL).to_return(status: 200, body: jpeg(128).delete_suffix("\xFF\xD9".b))
