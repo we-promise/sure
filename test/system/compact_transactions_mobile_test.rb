@@ -285,6 +285,71 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     end
   end
 
+  test "account New menu stays next to its button in the compact container" do
+    # The compact activity card is a @container/compact-table size container.
+    # A fixed-position menu panel inside one resolves against the container
+    # rather than the viewport, so without a size-container guard the New
+    # menu dropdown opens displaced from its button.
+    [ true, false ].each do |compact|
+      @user.update!(preferences: @user.preferences.merge("transactions_compact" => compact))
+
+      [ 1400, 375 ].each do |width|
+        page.current_window.resize_to(width, 1200)
+        visit account_url(accounts(:depository), tab: "activity")
+
+        menu = find("[data-testid='activity-menu'] [data-controller='DS--menu']")
+        menu.find("button").click
+        assert_selector "[data-DS--menu-target='content']:not(.hidden)"
+
+        # Inline styles persist across open/close cycles, so wait until the
+        # visible panel's geometry stops changing rather than trusting that
+        # coordinates were freshly written.
+        settled = nil
+        deadline = Time.now + 3
+        previous = nil
+        loop do
+          current = page.evaluate_script(<<~JS)
+            (() => {
+              const menu = document.querySelector("[data-testid='activity-menu'] [data-controller='DS--menu']");
+              const panel = menu.querySelector("[data-DS--menu-target='content']");
+              const r = panel.getBoundingClientRect();
+              return [ r.top, r.bottom, r.left, r.right ];
+            })()
+          JS
+          if previous && current.zip(previous).all? { |a, b| (a - b).abs < 1 }
+            settled = current
+            break
+          end
+          previous = current
+          assert Time.now < deadline, "menu panel geometry never settled (compact: #{compact}, width: #{width})"
+          sleep 0.1
+        end
+
+        geometry = page.evaluate_script(<<~JS)
+          (() => {
+            const menu = document.querySelector("[data-testid='activity-menu'] [data-controller='DS--menu']");
+            const button = menu.querySelector("button");
+            const b = button.getBoundingClientRect();
+            return {
+              buttonTop: b.top, buttonBottom: b.bottom, buttonLeft: b.left, buttonRight: b.right,
+              viewportWidth: window.innerWidth
+            };
+          })()
+        JS
+        geometry["panelTop"], geometry["panelBottom"], geometry["panelLeft"], geometry["panelRight"] = settled
+
+        context = "(compact: #{compact}, width: #{width})"
+        vertical_gap = [ (geometry["panelTop"] - geometry["buttonBottom"]).abs,
+                         (geometry["buttonTop"] - geometry["panelBottom"]).abs ].min
+        assert_operator vertical_gap, :<=, 15, "menu panel should open immediately above or below its button #{context}"
+        assert_operator geometry["panelLeft"], :<=, geometry["buttonRight"], "menu panel should overlap its button horizontally #{context}"
+        assert_operator geometry["panelRight"], :>=, geometry["buttonLeft"], "menu panel should overlap its button horizontally #{context}"
+        assert_operator geometry["panelLeft"], :>=, -1, "menu panel should stay inside the viewport #{context}"
+        assert_operator geometry["panelRight"], :<=, geometry["viewportWidth"] + 1, "menu panel should stay inside the viewport #{context}"
+      end
+    end
+  end
+
   test "narrow desktop tables use mobile rows and retain selection and category information" do
     page.current_window.resize_to(1400, 900)
     @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false, "transactions_show_notes" => true))
