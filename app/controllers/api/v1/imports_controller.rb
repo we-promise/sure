@@ -71,7 +71,22 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
     # 2. Build the import object with permitted config attributes
     @import = family.imports.build(import_config_params.merge(type: type))
-    @import.account_id = params[:account_id] if params[:account_id].present?
+
+    # The target account must be writable by the API user (owner or
+    # full_control share). Unknown, malformed, cross-family, unshared and
+    # read-only ids all get the same response, so it does not reveal which
+    # accounts exist.
+    if params[:account_id].present?
+      account = family.accounts.writable_by(current_resource_owner).find_by(id: params[:account_id])
+      unless account
+        return render json: {
+          error: "validation_failed",
+          message: "Import could not be created",
+          errors: [ "Account not found" ]
+        }, status: :unprocessable_entity
+      end
+      @import.account = account
+    end
 
     # 3. Attach the uploaded file if present (with validation)
     if params[:file].present?
@@ -137,7 +152,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
   end
 
   def preflight
-    preflight_result = Import::Preflight.new(family: current_resource_owner.family, params: preflight_params).call
+    preflight_result = Import::Preflight.new(family: current_resource_owner.family, params: preflight_params, user: current_resource_owner).call
     render json: preflight_result.payload, status: preflight_result.status
   rescue ActiveRecord::RecordNotFound
     render json: {

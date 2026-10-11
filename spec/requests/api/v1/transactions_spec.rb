@@ -36,6 +36,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Checking Account',
       balance: 1000,
       currency: 'USD',
@@ -237,6 +238,23 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
+      response '404', 'account not found or not writable by the API user' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            transaction: {
+              account_id: SecureRandom.uuid,
+              date: Date.current.to_s,
+              amount: 50.00,
+              name: 'Test purchase'
+            }
+          }
+        end
+
+        run_test!
+      end
+
       response '422', 'validation error - missing account_id' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -343,7 +361,39 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '404', 'transaction not found' do
+      response '403', 'account is shared with the API user to annotate only; only category, merchant, tags and notes can change' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:member) do
+          family.users.create!(
+            email: 'api-member@example.com',
+            password: 'password123',
+            password_confirmation: 'password123',
+            role: 'member'
+          )
+        end
+
+        let(:'X-Api-Key') do
+          ApiKey.create!(
+            user: member,
+            name: 'API Docs Member Key',
+            key: ApiKey.generate_secure_key,
+            scopes: %w[read_write],
+            source: 'web'
+          ).plain_key
+        end
+
+        let(:body) { { transaction: { amount: 10 } } }
+
+        before do
+          user
+          account.share_with!(member, permission: 'read_write')
+        end
+
+        run_test!
+      end
+
+      response '404', 'transaction not found, or its account is shared with the API user read-only' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
@@ -365,7 +415,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '404', 'transaction not found' do
+      response '404', 'transaction not found, or the API user has no full_control on its account' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
