@@ -19,11 +19,14 @@ class CategoriesTest < ApplicationSystemTestCase
   test "locking categories hides in-app creation" do
     visit categories_url
 
-    find("button[aria-label='#{I18n.t("categories.index.lock_categories")}']").click
+    find("[data-DS--menu-target='button']", match: :first).click
+    click_button I18n.t("categories.index.lock_categories")
 
     assert_text I18n.t("categories.index.locked_message")
-    assert_selector "button[aria-label='#{I18n.t("categories.index.unlock_categories")}']"
     assert_no_link I18n.t("categories.index.new")
+
+    find("[data-DS--menu-target='button']", match: :first).click
+    assert_button I18n.t("categories.index.unlock_categories")
   end
 
   test "trying to create a duplicate category fails" do

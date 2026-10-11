@@ -123,6 +123,9 @@
         <p class="hidden px-3 py-1 text-xs text-destructive"
            role="alert"
            data-category-select-target="createError"></p>
+
+        <p class="hidden px-3 py-1 text-xs text-secondary"
+           data-category-select-target="emptyMessage"><%= helpers.t("transactions.form.no_matching_categories") %></p>
       </div>
 
       <%# Shown in place of the list after "Add as a subcategory…": pick a top-level parent. %>

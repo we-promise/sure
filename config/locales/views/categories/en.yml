@@ -35,11 +35,11 @@ en:
       categories_incomes: Income categories
       delete_all: Delete all
       empty: No categories found
-      lock_categories: Lock categories
+      lock_categories: Lock category creation
       locked_message: Category creation is locked. Imports and bank syncs can still add categories.
       merge: Merge categories
       new: New category
-      unlock_categories: Unlock categories
+      unlock_categories: Unlock category creation
     merge:
       title: Merge categories
       description: Select a target category and the categories to merge into it. Matching transactions and budget lines will move to the target.

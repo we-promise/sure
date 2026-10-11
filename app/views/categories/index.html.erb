@@ -1,18 +1,15 @@
 <%= content_for :page_title, t(".categories") %>
 <%= content_for :page_actions do %>
-  <% if Current.user.admin? %>
-    <% locked = Current.family.categories_locked? %>
-    <%= render DS::Button.new(
-      variant: :icon,
-      icon: locked ? "lock" : "lock-open",
-      href: toggle_lock_categories_path(locked: !locked),
-      method: :patch,
-      title: locked ? t(".unlock_categories") : t(".lock_categories"),
-      aria: { label: locked ? t(".unlock_categories") : t(".lock_categories") }
-    ) %>
-  <% end %>
-
   <%= render DS::Menu.new do |menu| %>
+    <% if Current.user.admin? %>
+      <% locked = Current.family.categories_locked? %>
+      <% menu.with_item(
+          variant: "button",
+          text: locked ? t(".unlock_categories") : t(".lock_categories"),
+          href: toggle_lock_categories_path(locked: !locked),
+          method: :patch,
+          icon: locked ? "lock-open" : "lock") %>
+    <% end %>
     <% menu.with_item(
         variant: "link",
         text: t(".merge"),

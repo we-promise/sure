@@ -107,7 +107,6 @@ class CategoriesController < ApplicationController
 
   def toggle_lock
     locked = case params.require(:locked)
-    
     when true, "true" then true
     when false, "false" then false
     end
