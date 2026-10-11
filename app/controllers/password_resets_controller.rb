@@ -38,6 +38,8 @@ class PasswordResetsController < ApplicationController
     end
 
     if @user.update(password_params)
+      # The user is signed out on this path, so every session goes (CWE-613).
+      @user.sessions.destroy_all
       redirect_to new_session_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity
