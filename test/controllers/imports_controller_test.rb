@@ -28,7 +28,10 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select "turbo-frame#modal"
-    assert_select "form[data-turbo-frame=_top] input[type=file][onchange='this.form.requestSubmit()']", count: 2
+    # The file inputs submit through the auto-submit-form controller rather
+    # than an inline onchange handler, which the Content Security Policy blocks.
+    assert_select "form[data-turbo-frame=_top][data-controller~=auto-submit-form] input[type=file][data-auto-submit-form-target=auto]", count: 2
+    assert_select "input[type=file][onchange]", count: 0
   end
 
   test "cancel marks a lost import as failed" do
