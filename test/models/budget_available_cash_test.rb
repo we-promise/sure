@@ -118,17 +118,18 @@ class BudgetAvailableCashTest < ActiveSupport::TestCase
     assert_equal 1_200, @budget.available_cash
   end
 
-  # A missing rate leaves the amount as it stands rather than raising: a panel
-  # wrong by the spread beats the whole budget page failing to render.
-  test "a missing rate leaves the figure standing rather than raising" do
-    Account.create!(
-      family: @family, accountable: Depository.new,
-      name: "EUR pot", currency: "EUR", balance: 1_000
-    )
-
+  test "missing rates cannot turn a reserved foreign balance into free cash" do
+    account = Account.create!(family: @family, accountable: Depository.new,
+                             name: "EUR pot", currency: "EUR", balance: 1_000)
+    @family.goals.create!(name: "Mixed", target_amount: 1_000, currency: "USD") do |goal|
+      goal.goal_accounts.build(account: account)
+    end
     ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
 
-    assert_equal 1_000, @budget.available_cash
+    assert_equal 0, @budget.available_cash
+    assert_equal 0, @budget.earmarked_for_goals
+    assert_equal 0, @budget.free_cash
+    assert @budget.cash_conversion_incomplete?
   end
 
   private

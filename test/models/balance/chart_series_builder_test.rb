@@ -64,6 +64,63 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal expected, builder.balance_series.map { |v| v.value.amount }
   end
 
+  test "strict currency conversion refuses a missing rate instead of assuming one" do
+    account = accounts(:depository)
+    account.balances.destroy_all
+    create_balance(account: account, date: Date.current, balance: 100)
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ], currency: "EUR",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      strict_currency_conversion: true
+    )
+
+    error = assert_raises(Money::ConversionError) { builder.balance_series }
+    assert_equal "USD", error.from_currency
+    assert_equal "EUR", error.to_currency
+  end
+
+  test "strict currency conversion keeps history when a foreign balance is zero without a usable rate" do
+    foreign = accounts(:depository)
+    native = accounts(:credit_card)
+    foreign.balances.destroy_all
+    native.balances.destroy_all
+    native.update!(currency: "EUR")
+    create_balance(account: foreign, date: Date.current, balance: 0)
+    create_balance(account: native, date: Date.current, balance: 50)
+
+    [ nil, 0, -1 ].each do |rate|
+      ExchangeRate.where(from_currency: "USD", to_currency: "EUR").delete_all
+      ExchangeRate.create!(date: Date.current, from_currency: "USD", to_currency: "EUR", rate: rate) if rate
+      builder = Balance::ChartSeriesBuilder.new(
+        account_ids: [ foreign.id, native.id ], currency: "EUR",
+        period: Period.custom(start_date: Date.current, end_date: Date.current),
+        strict_currency_conversion: true
+      )
+
+      series = builder.balance_series
+      assert_equal 1, series.size
+      assert_equal(-50, series.first.value.amount)
+      assert_equal(-50, series.first.trend.previous.amount)
+    end
+  end
+
+  test "strict currency conversion uses historical rates without changing native balances" do
+    account = accounts(:depository)
+    account.balances.destroy_all
+    create_balance(account: account, date: 1.day.ago.to_date, balance: 100)
+    create_balance(account: account, date: Date.current, balance: 100)
+    ExchangeRate.create!(date: 1.day.ago.to_date, from_currency: "USD", to_currency: "EUR", rate: 2)
+    ExchangeRate.create!(date: Date.current, from_currency: "USD", to_currency: "EUR", rate: 3)
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ], currency: "EUR",
+      period: Period.custom(start_date: 1.day.ago.to_date, end_date: Date.current),
+      strict_currency_conversion: true
+    )
+
+    assert_equal [ 200, 300 ], builder.balance_series.map { |value| value.value.amount }
+    assert_equal [ 100, 100 ], account.balances.order(:date).pluck(:end_balance)
+  end
+
   test "combines asset and liability accounts properly" do
     asset_account = accounts(:depository)
     liability_account = accounts(:credit_card)

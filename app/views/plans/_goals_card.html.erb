@@ -115,6 +115,10 @@
       <% end %>
     </div>
 
+    <% goals.each do |goal| %>
+      <%= render "goals/currency_warning", goal: goal %>
+    <% end %>
+
   <% end %>
 
   <% if family_has_goals %>

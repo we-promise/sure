@@ -37,6 +37,27 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
                  "the depleted reserve's bar stayed neutral"
   end
 
+  test "shows a warning when a paused goal discovers a missing historical pace rate" do
+    account = @user.family.accounts.create!(name: "Euro reserve", accountable: Depository.new,
+                                           currency: "EUR", balance: 100)
+    goal = @user.family.goals.create!(name: "Paused trip", target_amount: 1_000, currency: "USD",
+                                     target_date: 4.months.from_now.to_date, state: "paused") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    ExchangeRate.stubs(:provider).returns(nil)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
+    account.entries.create!(name: "Reserve deposit", date: 20.days.ago.to_date, amount: -100,
+                            currency: "EUR", entryable: Transaction.new)
+    assert_equal 120, goal.current_balance
+    assert_not goal.currency_conversion_incomplete?, "current backing has a usable rate"
+
+    get plan_url
+
+    assert_response :success
+    assert_select "a[href=?]", goal_path(goal)
+    assert_select "p", text: I18n.t("goals.currency_warning.body", currency: goal.currency)
+  end
+
   test "redirects users without preview access to budgets" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
 

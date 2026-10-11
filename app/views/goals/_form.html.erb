@@ -5,7 +5,7 @@
      targets inside its own element. Scoped to the selector, dateFieldTargets
      came back empty and picking "Reserve to maintain" never hid the date. %>
 <div data-controller="goal-form goal-kind"
-     data-goal-form-currency-value="<%= Current.family.primary_currency_code %>"
+     data-goal-form-currency-value="<%= goal.currency.presence || Current.family.primary_currency_code %>"
      data-goal-form-require-account-value="<%= !goal.persisted? %>"
      data-goal-form-suggested-with-date-value="<%= t("goals.form.suggested_with_date") %>"
      data-goal-form-suggested-no-date-value="<%= t("goals.form.suggested_no_date") %>"
@@ -113,6 +113,7 @@
         <span class="block text-sm font-medium text-primary"><%= t("goals.form.fields.funding_accounts") %></span>
         <p class="text-xs text-secondary mt-0.5"><%= t("goals.form.fields.funding_accounts_hint") %></p>
         <p class="text-xs text-subdued mt-0.5"><%= t("goals.form.fields.earmark_hint") %></p>
+        <p class="text-xs text-secondary mt-0.5"><%= t("goals.form.fields.currency_conversion_hint", currency: goal.currency.presence || Current.family.primary_currency_code) %></p>
       </div>
       <%# Its own controller, not goal-form: that one is already at 10 targets
           against the 7 the project guidelines suggest, and this needs none of
@@ -140,6 +141,7 @@
               <% linked_ga = linked_allocation_by_account[account.id] %>
               <div class="px-3 py-2.5 hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>"
                    data-balance="<%= account.balance.to_d %>"
+                   data-currency="<%= account.currency %>"
                    data-earmarked-by-others="<%= earmarked_by_other_goals(account, pooled: pooled_allocations, current_goal: goal) %>"
                    data-whole-account-claimed="<%= whole_account_claimed_by_other_goals?(account, pooled: pooled_allocations, current_goal: goal) %>">
               <div class="flex items-center gap-3">
