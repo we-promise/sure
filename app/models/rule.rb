@@ -11,6 +11,13 @@ class Rule < ApplicationRecord
 
   before_validation :normalize_name
 
+  # Re-watermark email notifications when an edit changes which transactions the
+  # rule matches (its conditions or its effective date). Rule::Action only seeds
+  # the baseline when an action becomes send_email_notification, so without this
+  # the next run would email every older transaction the edited rule now matches.
+  before_update :detect_matching_scope_change
+  after_update_commit :reseed_notification_baseline, if: -> { @matching_scope_changed }
+
   validates :resource_type, presence: true, if: -> { resource_type.to_s.valid_encoding? }
   validates :name, length: { minimum: 1 }, allow_nil: true, if: -> { name.to_s.valid_encoding? }
   validates_with DatabaseTextValidator, attributes: %i[name resource_type]
@@ -148,6 +155,27 @@ class Rule < ApplicationRecord
       end
 
       scope
+    end
+
+    def detect_matching_scope_change
+      @matching_scope_changed ||= will_save_change_to_effective_date? || conditions_changed?(conditions)
+    end
+
+    def conditions_changed?(association)
+      return false unless association.loaded?
+
+      association.target.any? do |condition|
+        condition.new_record? || condition.marked_for_destruction? || condition.changed? ||
+          conditions_changed?(condition.sub_conditions)
+      end
+    end
+
+    def reseed_notification_baseline
+      @matching_scope_changed = false
+      return unless actions.where(action_type: "send_email_notification").exists?
+
+      conditions.reset
+      NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)
     end
 
     def min_actions

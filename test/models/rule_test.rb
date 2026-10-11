@@ -1,7 +1,7 @@
 require "test_helper"
 
 class RuleTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:empty)
@@ -443,4 +443,50 @@ class RuleTest < ActiveSupport::TestCase
     assert_nil transaction_entry2.transaction.category,
       "Transaction on other account should not be categorized"
   end
+
+  test "editing a condition re-seeds the email baseline so older matches are not emailed" do
+    create_transaction(date: 90.days.ago.to_date, account: @account, name: "Coffee shop")
+    create_transaction(date: 60.days.ago.to_date, account: @account, name: "Tea house")
+    rule = create_email_rule(value: "coffee")
+
+    rule.update!(conditions_attributes: [ { id: rule.conditions.first.id, value: "house" } ])
+
+    assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+      rule.apply
+    end
+  end
+
+  test "clearing the effective date re-seeds the email baseline" do
+    create_transaction(date: 60.days.ago.to_date, account: @account, name: "Coffee shop")
+    rule = create_email_rule(value: "coffee", effective_date: 30.days.ago.to_date)
+
+    rule.update!(effective_date: nil)
+
+    assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+      rule.apply
+    end
+  end
+
+  test "renaming a rule does not re-seed, so a match not yet emailed is still emailed" do
+    rule = create_email_rule(value: "coffee")
+    new_entry = create_transaction(date: Date.current, account: @account, name: "Coffee shop")
+
+    rule.update!(name: "Coffee alerts")
+
+    assert_enqueued_with(job: RuleEmailNotificationJob) do
+      rule.apply
+    end
+    assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), new_entry.transaction.id
+  end
+
+  private
+    def create_email_rule(value:, effective_date: nil)
+      @family.rules.create!(
+        resource_type: "transaction",
+        active: true,
+        effective_date: effective_date,
+        conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: value } ],
+        actions_attributes: [ { action_type: "send_email_notification" } ]
+      )
+    end
 end
