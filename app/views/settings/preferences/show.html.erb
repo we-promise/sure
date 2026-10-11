@@ -267,6 +267,20 @@
   <% end %>
 <% end %>
 
+<% if @user.assistant_notes_available? %>
+  <%= settings_section title: t(".assistant_notes.title"), subtitle: t(".assistant_notes.subtitle") do %>
+    <%= styled_form_with model: @user, url: settings_preferences_path, method: :patch, class: "space-y-4" do |form| %>
+      <%= form.text_area :assistant_notes,
+            label: t(".assistant_notes.label"),
+            placeholder: t(".assistant_notes.placeholder"),
+            rows: 6,
+            maxlength: User::ASSISTANT_NOTES_MAX_LENGTH %>
+      <p class="text-xs text-secondary"><%= t(".assistant_notes.hint", limit: User::ASSISTANT_NOTES_MAX_LENGTH.to_fs(:delimited)) %></p>
+      <%= form.submit t(".assistant_notes.save") %>
+    <% end %>
+  <% end %>
+<% end %>
+
 <%# Preview features toggle — visible to all users, not just admins. Lives at
     the bottom of Preferences as a standalone card (no section header) so the
     toggle row is the entire surface. Posts directly to
