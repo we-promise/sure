@@ -23,6 +23,19 @@ class Provider::Chimnie < Provider
 
   UPRN_FORMAT = /\A\d{1,12}\z/
 
+  # Runs a hook immediately before every HTTP attempt, including retries, so
+  # each one is throttled and counted against the monthly budget.
+  class BeforeEachAttempt < Faraday::Middleware
+    def initialize(app, hook)
+      super(app)
+      @hook = hook
+    end
+
+    def on_request(_env)
+      @hook.call
+    end
+  end
+
   def initialize(api_key)
     @api_key = api_key # pipelock:ignore
   end
@@ -34,9 +47,6 @@ class Provider::Chimnie < Provider
     with_provider_response do
       uprn = self.class.normalize_uprn(external_id)
       raise Error.new(I18n.t("providers.chimnie.errors.invalid_uprn")) if uprn.nil?
-
-      throttle_request
-      record_monthly_request!
 
       response = client.get("#{base_url}/residential/uprn/#{uprn}") do |req|
         req.params["fields"] = FREE_VALUATION_FIELDS.join(",")
@@ -134,6 +144,11 @@ class Provider::Chimnie < Provider
           backoff_factor: 2,
           exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed, Faraday::TooManyRequestsError ]
         })
+        # After the retry middleware, so it runs for each attempt.
+        faraday.use BeforeEachAttempt, -> {
+          throttle_request
+          record_monthly_request!
+        }
         faraday.request :json
         faraday.response :raise_error
         faraday.options.timeout = 10
