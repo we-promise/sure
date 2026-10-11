@@ -1,6 +1,20 @@
 class Transaction < ApplicationRecord
   include Entryable, Transferable, Ruleable, Splittable
 
+  SORT_OPTIONS = %w[date_desc amount_desc amount_asc].freeze
+
+  scope :sorted, ->(sort) {
+    case sort
+    when "amount_desc", "amount_asc"
+      direction = sort == "amount_asc" ? :asc : :desc
+      # Match the magnitude shown in the list, regardless of cash direction.
+      with_entry.reorder(Arel.sql("ABS(entries.amount)") => direction)
+                .order("entries.date" => :desc, "entries.created_at" => :desc, "entries.id" => :desc)
+    else
+      reverse_chronological
+    end
+  }
+
   belongs_to :category, optional: true
   belongs_to :merchant, optional: true
   belongs_to :transfer, optional: true

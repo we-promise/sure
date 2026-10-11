@@ -1,6 +1,11 @@
 ---
 en:
   transactions:
+    sort:
+      date_desc: Newest first
+      amount_desc: "Amount: high to low"
+      amount_asc: "Amount: low to high"
+      amount_hint: Sorted by absolute amount in each transaction's currency, without currency conversion. Split transactions are shown individually.
     bulk_updates:
       new:
         cancel: Cancel
