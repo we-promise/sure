@@ -606,9 +606,11 @@ class PagesController < ApplicationController
 
     # Cumulative daily spending for the selected month (capped at today while
     # the month is in progress) against an average month drawn from the
-    # dashboard's time period (see average_month_spending_series), so the two
-    # lines share one day-of-month axis. The header compares the same number
-    # of elapsed days; only the chart draws the comparison out to its last day.
+    # dashboard's time period (IncomeStatement#average_month_expense_series:
+    # MTD retraces this month, LM is last month's curve, 7D covers only its
+    # own days and leaves the rest blank), so the two lines share one
+    # day-of-month axis. The header compares the same number of elapsed days;
+    # only the chart draws the comparison out to its last day.
     #
     # The category filter (an IncomeStatement::ExpenseCategoryFilter) narrows
     # both lines to the same categories, so the comparison stays
@@ -620,7 +622,6 @@ class PagesController < ApplicationController
       category_ids = category_filter.category_ids
 
       current_daily = income_statement.daily_expense_series(period: current_period, category_ids: category_ids).index_by(&:date)
-      comparison_daily = income_statement.daily_expense_series(period: comparison_period, category_ids: category_ids).index_by(&:date)
 
       # The selected month always owns the axis: days of the month past its
       # end (an average's day 31 in a 30-day month) fold into the final
@@ -629,7 +630,8 @@ class PagesController < ApplicationController
       axis_labels = spending_trend_axis_labels(month_start, axis_days)
 
       current_series = cumulative_spending_series(current_period, current_daily)
-      previous_header_series = average_month_spending_series(comparison_period, comparison_daily)
+      previous_header_series = income_statement.average_month_expense_series(period: comparison_period, category_ids: category_ids)
+        .map { |average_day| { day: average_day.day, value: average_day.total&.to_f&.round(2) } }
       previous_series = fold_extra_days(previous_header_series, axis_days)
         .map { |point| point.merge(date_formatted: axis_labels[point[:day] - 1]) }
 
@@ -698,23 +700,6 @@ class PagesController < ApplicationController
 
       series.first(axis_days).tap do |folded|
         folded[-1] = folded[-1].merge(value: series.last[:value])
-      end
-    end
-
-    # The comparison line: an average month made only from the days inside
-    # the dashboard's time period. Each day of the month averages the spend
-    # on the period's dates that fall on that day, and the line accumulates
-    # those averages. A day of the month the period never reaches has no
-    # value (nil, a gap in the line). So MTD retraces this month, LM is last
-    # month's curve, YTD in January stops at today and 7D has seven points.
-    def average_month_spending_series(period, daily_totals)
-      dates_by_day = period.date_range.group_by(&:day)
-      cumulative = 0.to_d
-
-      (1..dates_by_day.keys.max).map do |day|
-        dates = dates_by_day[day]
-        cumulative += dates.sum { |date| daily_totals[date] ? daily_totals[date].total.to_d : 0 } / dates.size if dates
-        { day: day, value: dates && cumulative.to_f.round(2) }
       end
     end
 
