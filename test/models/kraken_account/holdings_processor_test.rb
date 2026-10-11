@@ -55,6 +55,24 @@ class KrakenAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     KrakenAccount::HoldingsProcessor.new(@kraken_account).process
   end
 
+  test "sums staked and spot balances of one asset into a single holding" do
+    @kraken_account.update!(raw_payload: { "assets" => [
+      { "symbol" => "ETH.B", "price_symbol" => "ETH", "balance" => "8.4089457773", "price_usd" => "2500.0", "source" => "spot" },
+      { "symbol" => "ETH", "price_symbol" => "ETH", "balance" => "0.0004896965", "price_usd" => "2500.0", "source" => "spot" }
+    ] })
+    import_adapter = mock
+    import_adapter.expects(:import_holding).once.with(
+      has_entries(
+        quantity: "8.4094354738".to_d,
+        amount: "21023.5886845".to_d,
+        external_id: "kraken_ETH_spot_#{Date.current}"
+      )
+    )
+    Account::ProviderImportAdapter.stubs(:new).returns(import_adapter)
+
+    KrakenAccount::HoldingsProcessor.new(@kraken_account).process
+  end
+
   # Fiat at the exchange is cash the ledger already moved. Held as a holding
   # too it is valued twice, and it can never be reversed into history because
   # no trade ever moves it.

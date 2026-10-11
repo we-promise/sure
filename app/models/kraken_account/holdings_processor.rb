@@ -10,7 +10,7 @@ class KrakenAccount::HoldingsProcessor
   def process
     return unless account&.accountable_type == "Crypto"
 
-    raw_assets.each { |asset| process_asset(asset) }
+    positions.each { |asset| process_asset(asset) }
   rescue StandardError => e
     Rails.logger.error "KrakenAccount::HoldingsProcessor - error: #{e.message}"
     nil
@@ -30,6 +30,20 @@ class KrakenAccount::HoldingsProcessor
 
     def raw_assets
       kraken_account.raw_payload&.dig("assets") || []
+    end
+
+    def positions
+      raw_assets.group_by { |asset| KrakenAccount::SecurityResolver.canonical_asset(asset["symbol"] || asset[:symbol]) }.map do |canonical, assets|
+        next assets.first if assets.one?
+
+        priced = assets.find { |asset| (asset["price_usd"] || asset[:price_usd]).present? }
+        {
+          "symbol" => canonical,
+          "balance" => assets.sum { |asset| (asset["balance"] || asset[:balance] || 0).to_d }.to_s("F"),
+          "price_usd" => priced && (priced["price_usd"] || priced[:price_usd]),
+          "source" => "spot"
+        }
+      end
     end
 
     def process_asset(asset)
