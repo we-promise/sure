@@ -2351,6 +2351,96 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal weekly_tag.id, rule.actions.first.value
   end
 
+  test "imports a split rule action whose rows carry foreign ids by dropping them" do
+    foreign_category = categories(:food_and_drink)
+    own_tag = @family.tags.create!(name: "Shared")
+
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Split With Foreign Ids",
+          resource_type: "transaction",
+          active: true,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: "rent" } ],
+          actions: [
+            {
+              action_type: "split_transaction",
+              value: {
+                splits: [
+                  { type: "percentage", name: "A", share: "50", category_id: foreign_category.id, tag_ids: [ own_tag.id, SecureRandom.uuid ] },
+                  { type: "percentage", name: "B", share: "50", category: "Housing" }
+                ]
+              }.to_json
+            }
+          ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    first, second = JSON.parse(@family.rules.find_by!(name: "Split With Foreign Ids").actions.sole.value)["splits"]
+    assert_nil first["category_id"]
+    assert_equal [ own_tag.id ], first["tag_ids"]
+    assert_equal @family.categories.find_by!(name: "Housing").id, second["category_id"]
+  end
+
+  test "remaps raw split ids from an older export through the imported records" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "source-category", name: "Groceries", color: "#407706" } },
+      { type: "Tag", data: { id: "source-tag", name: "Shared", color: "#00FF00" } },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Raw Id Split",
+          resource_type: "transaction",
+          active: true,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: "market" } ],
+          actions: [
+            {
+              action_type: "split_transaction",
+              value: {
+                splits: [
+                  { type: "percentage", name: "A", share: "50", category_id: "source-category", tag_ids: [ "source-tag" ] },
+                  { type: "percentage", name: "B", share: "50" }
+                ]
+              }.to_json
+            }
+          ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    first = JSON.parse(@family.rules.find_by!(name: "Raw Id Split").actions.sole.value)["splits"].first
+    assert_equal @family.categories.find_by!(name: "Groceries").id, first["category_id"]
+    assert_equal [ @family.tags.find_by!(name: "Shared").id ], first["tag_ids"]
+  end
+
+  test "rejects a non-string split value with a validation error" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Scalar Split",
+          resource_type: "transaction",
+          active: true,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: "x" } ],
+          actions: [ { action_type: "split_transaction", value: 5 } ]
+        }
+      }
+    ])
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
+  end
+
   test "preserves explicit false rule operand values" do
     importer = Family::DataImporter.new(@family, "")
 

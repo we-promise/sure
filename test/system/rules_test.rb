@@ -57,6 +57,89 @@ class RulesTest < ApplicationSystemTestCase
     assert_text "Nicht unterstützt (name)"
   end
 
+  test "fixed split summary follows edits to the exact amount condition" do
+    rule = @user.family.rules.create!(
+      name: "Fixed split",
+      resource_type: "transaction",
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_amount", operator: "=", value: "100")
+      ],
+      actions: [
+        Rule::Action.new(
+          action_type: "split_transaction",
+          value: {
+            splits: [
+              { type: "fixed", name: "A", share: "70" },
+              { type: "fixed", name: "B", share: "30" }
+            ]
+          }.to_json
+        )
+      ]
+    )
+
+    visit edit_rule_path(rule)
+
+    within "dialog" do
+      summary = find("[data-rule--split-action-target='summary']")
+      assert_selector "[data-rule--split-action-target='summary'].text-success", text: "100.00 / 100.00"
+
+      find("[data-rules-target='conditionsList'] input[name$='[value]']").fill_in(with: "120")
+
+      assert_selector "[data-rule--split-action-target='summary'].text-destructive", text: "100.00 / 120.00"
+      assert_no_selector "[data-rule--split-action-target='summary'].text-success"
+      assert_equal "100.00 / 120.00", summary.text
+    end
+  end
+
+  test "split rows save category, merchant and tags picked in the rule form" do
+    merchant = @user.family.merchants.create!(name: "Split Landlord")
+    rule = @user.family.rules.create!(
+      name: "Percentage split",
+      resource_type: "transaction",
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "rent")
+      ],
+      actions: [
+        Rule::Action.new(
+          action_type: "split_transaction",
+          value: {
+            splits: [
+              { type: "percentage", name: "Mine", share: "50" },
+              { type: "percentage", name: "Theirs", share: "50" }
+            ]
+          }.to_json
+        )
+      ]
+    )
+
+    visit edit_rule_path(rule)
+
+    within "dialog" do
+      first_row = all("[data-rule--split-action-target='row']", minimum: 2).first
+
+      within first_row do
+        find("select[aria-label='Split category']").select(categories(:food_and_drink).name)
+        find("select[aria-label='Split merchant']").select(merchant.name)
+        find("button[aria-label='Split tags']").click
+        find("[role='option'][data-tag-name='#{tags(:one).name}']").click
+        # Wait for the picked tag to land in the trigger, then close the menu so it can't sit
+        # over the submit button on a slower runner.
+        find("[data-tag-select-target='selectionContainer']", text: tags(:one).name)
+        find("button[aria-label='Split tags']").click
+        assert_no_selector "[data-tag-select-target='menu']", visible: true
+      end
+
+      click_button "Update Rule"
+    end
+
+    assert_text "Rule updated", wait: 10
+
+    mine = JSON.parse(rule.reload.actions.sole.value)["splits"].first
+    assert_equal categories(:food_and_drink).id, mine["category_id"]
+    assert_equal merchant.id, mine["merchant_id"]
+    assert_equal [ tags(:one).id ], mine["tag_ids"]
+  end
+
   test "creates a transaction rule through the modal with dynamically added condition and action" do
     visit new_rule_path(resource_type: "transaction")
 

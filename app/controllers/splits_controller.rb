@@ -3,7 +3,7 @@ class SplitsController < ApplicationController
   before_action :require_split_write_permission!, only: %i[create update destroy]
 
   def new
-    @categories = grouped_categories
+    set_form_options
   end
 
   def create
@@ -12,14 +12,7 @@ class SplitsController < ApplicationController
       return
     end
 
-    raw_splits = split_params[:splits]
-    raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
-
-    splits = raw_splits.map do |s|
-      { name: s[:name], amount: s[:amount].to_d * -1, category_id: s[:category_id].presence, excluded: s[:excluded] }
-    end
-
-    @entry.split!(splits)
+    @entry.split!(build_splits)
     @entry.sync_account_later
 
     redirect_back_or_to transactions_path, notice: t("splits.create.success")
@@ -35,8 +28,8 @@ class SplitsController < ApplicationController
       return
     end
 
-    @categories = grouped_categories
-    @children = @entry.child_entries.includes(:entryable)
+    set_form_options
+    @children = @entry.child_entries.includes(entryable: :tags)
   end
 
   def update
@@ -47,12 +40,7 @@ class SplitsController < ApplicationController
       return
     end
 
-    raw_splits = split_params[:splits]
-    raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
-
-    splits = raw_splits.map do |s|
-      { name: s[:name], amount: s[:amount].to_d * -1, category_id: s[:category_id].presence, excluded: s[:excluded] }
-    end
+    splits = build_splits
 
     Entry.transaction do
       @entry.unsplit!
@@ -95,7 +83,32 @@ class SplitsController < ApplicationController
     end
 
     def split_params
-      params.require(:split).permit(splits: [ :name, :amount, :category_id, :excluded ])
+      params.require(:split).permit(splits: [ :name, :amount, :category_id, :merchant_id, :excluded, tag_ids: [] ])
+    end
+
+    def set_form_options
+      @categories = grouped_categories
+      @merchants = Current.family.available_merchants_for(Current.user).alphabetically
+      @tags = Current.family.tags.alphabetically
+    end
+
+    # Builds Entry#split! input from submitted params. Category, merchant and tag ids are
+    # re-scoped to the current family (Entry::SplitReferences, shared with rule-driven splits)
+    # rather than trusted, so a crafted request can't attach another family's records.
+    def build_splits
+      references = Entry::SplitReferences.new(Current.family, merchants: Current.family.available_merchants_for(Current.user))
+
+      raw_splits = split_params[:splits] || []
+      raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
+
+      raw_splits.map do |s|
+        {
+          name: s[:name],
+          amount: s[:amount].to_d * -1,
+          excluded: s[:excluded],
+          **references.scope(category_id: s[:category_id], merchant_id: s[:merchant_id], tag_ids: s[:tag_ids])
+        }
+      end
     end
 
     def grouped_categories

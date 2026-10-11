@@ -1,0 +1,59 @@
+<%# locals: (form:, idx:, split: {}, categories:, merchants:, tags:) %>
+
+<%# Same styled builder (form-field wrappers) and DS::TagSelect as the rest of the rule form, so
+    the split fields match the action-type select next to them. %>
+<div class="p-2 rounded-md border border-secondary bg-container flex flex-col gap-2" data-rule--split-action-target="row">
+  <%= fields "#{form.object_name}[split_rows][#{idx}]", builder: StyledFormBuilder do |row| %>
+    <%= row.text_field :name,
+          value: split["name"],
+          placeholder: t("rules.actions.split.name_placeholder"),
+          autocomplete: "off",
+          aria: { label: t("rules.actions.split.name_placeholder") } %>
+
+    <div class="flex items-center gap-2">
+      <%= row.select :type,
+            [ [ t("rules.actions.split.type_fixed"), "fixed" ], [ t("rules.actions.split.type_percentage"), "percentage" ] ],
+            { selected: split["type"] == "fixed" ? "fixed" : "percentage", container_class: "flex-1 min-w-0" },
+            aria: { label: t("rules.actions.split.type_label") },
+            data: { rule__split_action_target: "typeSelect", action: "change->rule--split-action#updateSummary" } %>
+
+      <%= row.number_field :share,
+            value: split["share"],
+            step: "0.01",
+            min: "0",
+            placeholder: "0.00",
+            autocomplete: "off",
+            container_class: "w-28 shrink-0",
+            aria: { label: t("rules.actions.split.share_label") },
+            data: { rule__split_action_target: "shareInput", action: "input->rule--split-action#updateSummary" } %>
+
+      <%= icon(
+        "trash-2",
+        size: "sm",
+        as_button: true,
+        aria: { label: t("rules.actions.split.remove_split") },
+        data: { action: "rule--split-action#removeRow" }) %>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+      <%= row.select :category_id,
+            categories,
+            { selected: split["category_id"], include_blank: t("splits.new.uncategorized"), container_class: "min-w-0" },
+            aria: { label: t("rules.actions.split.category_label") } %>
+
+      <%= row.select :merchant_id,
+            merchants,
+            { selected: split["merchant_id"], include_blank: t("rules.actions.split.no_merchant"), container_class: "min-w-0" },
+            aria: { label: t("rules.actions.split.merchant_label") } %>
+    </div>
+
+    <%= render DS::TagSelect.new(
+          form: row,
+          tags: tags,
+          selected_ids: Array(split["tag_ids"]),
+          label: t("rules.actions.split.tags_label"),
+          show_label: false,
+          compact: true
+        ) %>
+  <% end %>
+</div>

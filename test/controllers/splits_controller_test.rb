@@ -32,6 +32,25 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal parent_index + 1, child_index
   end
 
+  test "new gives each split row's pickers their own ids and labelled controls" do
+    get new_transaction_split_path(@entry)
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    ids = doc.css("[data-split-transaction-target='row'] [id]").map { |node| node["id"] }
+    assert_empty ids.tally.select { |_id, count| count > 1 }.keys
+
+    trigger = doc.at_css("#split_splits_0_category_id_trigger")
+    assert_not_nil trigger
+    assert_equal "split_splits_0_category_id_label split_splits_0_category_id_trigger", trigger["aria-labelledby"]
+
+    %w[merchant_id tag_ids].each do |field|
+      label = doc.at_css("label[for='split_splits_0_#{field}']")
+      assert_not_nil label, "missing label for #{field}"
+      assert_equal "button", doc.at_css("#split_splits_0_#{field}")&.name
+    end
+  end
+
   test "create with valid params splits transaction" do
     assert_difference "Entry.count", 2 do
       post transaction_split_path(@entry), params: {
@@ -155,6 +174,48 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert children.last.excluded?
   end
 
+  test "create with merchant and tags sets them on children" do
+    assert_difference "Entry.count", 2 do
+      post transaction_split_path(@entry), params: {
+        split: {
+          splits: [
+            { name: "Groceries", amount: "-70", category_id: "", merchant_id: merchants(:amazon).id, tag_ids: [ tags(:one).id, tags(:two).id ] },
+            { name: "Household", amount: "-30", category_id: "" }
+          ]
+        }
+      }
+    end
+
+    children = @entry.child_entries.order(:amount)
+    groceries = children.find { |c| c.name == "Groceries" }
+    household = children.find { |c| c.name == "Household" }
+
+    assert_equal merchants(:amazon).id, groceries.entryable.merchant_id
+    assert_equal [ tags(:one), tags(:two) ].sort_by(&:id), groceries.entryable.tags.sort_by(&:id)
+    assert_nil household.entryable.merchant_id
+  end
+
+  test "create ignores merchant and tags belonging to another family" do
+    other_family = families(:empty)
+    foreign_merchant = other_family.merchants.create!(name: "Foreign merchant", type: "FamilyMerchant")
+    foreign_tag = other_family.tags.create!(name: "Foreign tag")
+
+    assert_difference "Entry.count", 2 do
+      post transaction_split_path(@entry), params: {
+        split: {
+          splits: [
+            { name: "Groceries", amount: "-70", category_id: "", merchant_id: foreign_merchant.id, tag_ids: [ foreign_tag.id ] },
+            { name: "Household", amount: "-30", category_id: "" }
+          ]
+        }
+      }
+    end
+
+    groceries = @entry.child_entries.order(:amount).find { |c| c.name == "Groceries" }
+    assert_nil groceries.entryable.merchant_id
+    assert_empty groceries.entryable.tags
+  end
+
   # Edit action tests
   test "edit renders with existing children pre-filled" do
     @entry.split!([
@@ -247,6 +308,26 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     children = @entry.child_entries.order(:amount)
     refute children.first.excluded?
     assert children.last.excluded?
+  end
+
+  test "update sets merchant and tags on children" do
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    patch transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Part 1", amount: "-60", category_id: "", merchant_id: merchants(:netflix).id, tag_ids: [ tags(:three).id ] },
+          { name: "Part 2", amount: "-40", category_id: "" }
+        ]
+      }
+    }
+
+    part_one = @entry.reload.child_entries.order(:amount).find { |c| c.name == "Part 1" }
+    assert_equal merchants(:netflix).id, part_one.entryable.merchant_id
+    assert_equal [ tags(:three) ], part_one.entryable.tags
   end
 
   # Destroy from child tests
