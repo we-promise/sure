@@ -132,7 +132,7 @@ class DS::CompactRow < DesignSystemComponent
     def row_type_classes
       class_names(
         "group text-sm font-medium px-3",
-        @density == :compact ? "py-2 [@media(pointer:fine)]:py-1.5" : "py-2",
+        @density == :compact ? "py-2 pointer-fine:py-1.5" : "py-2",
         @indent ? "pl-6 @3xl/compact-table:pl-8" : nil,
         @muted ? "opacity-50 text-secondary" : "text-primary"
       )
