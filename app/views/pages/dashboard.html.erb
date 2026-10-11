@@ -259,7 +259,9 @@
         </div>
         <div class="py-4" data-dashboard-section-target="content">
           <%= render partial: section[:partial], locals: section[:locals] %>
-          <% if section[:key] == "cashflow_sankey" && preview_features_enabled? %>
+          <%# The experimental Sankey comparison is opt-in: preview features alone
+              no longer put a second chart (and its feedback prompt) on the dashboard. %>
+          <% if section[:key] == "cashflow_sankey" && preview_features_enabled? && Current.user.cashflow_preview_enabled? %>
             <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: section[:locals][:sankey_data] %>
           <% end %>
         </div>

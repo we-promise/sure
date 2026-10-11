@@ -1224,6 +1224,38 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path(spending_month: selected_month.iso8601, customize: true, hidden_section: "spending_trend")
   end
 
+  test "dashboard hides the experimental Sankey comparison unless the user opts in" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "section[data-section-key='cashflow_sankey']"
+    assert_select "#cashflow-preview", count: 0
+  end
+
+  test "dashboard renders the experimental Sankey comparison once the user opts in" do
+    @user.update!(preferences: (@user.preferences || {}).merge(
+      "preview_features_enabled" => true,
+      "cashflow_preview_enabled" => true
+    ))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-preview"
+  end
+
+  test "update_preferences persists the Sankey comparison opt-in" do
+    patch "/dashboard/preferences", params: { preferences: { cashflow_preview_enabled: true } }, as: :json
+    assert_response :ok
+    assert_equal true, @user.reload.cashflow_preview_enabled?
+
+    patch "/dashboard/preferences", params: { preferences: { cashflow_preview_enabled: false } }, as: :json
+    assert_response :ok
+    assert_equal false, @user.reload.cashflow_preview_enabled?
+  end
+
   private
     def money_flow_bars
       JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])

@@ -15,7 +15,15 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
     legacy = css_select("[data-controller='sankey-chart']").map { |chart| chart["data-sankey-chart-data-value"] }
     assert_equal 2, legacy.length
 
+    # Preview features alone no longer render the comparison chart: it takes the
+    # explicit per-user opt-in on top of them.
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    get root_path
+    assert_response :success
+    assert_select "#cashflow-preview", count: 0
+
+    enable_preview_chart
+
     get root_path
     assert_response :success
     assert_select "#cashflow-sankey-chart + #cashflow-preview", count: 1
@@ -27,14 +35,16 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
 
   test "a family member's preview opt-in does not expose the preview to this user" do
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => false))
-    @user.family.users.where.not(id: @user.id).first.update!(preferences: { "preview_features_enabled" => true })
+    enable_preview_chart(@user.family.users.where.not(id: @user.id).first)
+
     get root_path
+
     assert_response :success
     assert_select "#cashflow-preview", count: 0
   end
 
   test "self-hosted production preview needs no operator key or survey configuration" do
-    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    enable_preview_chart
     config = Rails.configuration.x.posthog
     config.stubs(:api_key).returns(nil)
     stub_managed_survey(nil)
@@ -56,7 +66,7 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
   end
 
   test "self-hosted development renders bundled feedback only with testing override" do
-    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    enable_preview_chart
     config = Rails.configuration.x.posthog
     config.stubs(:api_key).returns(nil)
     config.stubs(:feedback_enabled).returns(true)
@@ -87,7 +97,7 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
   end
 
   test "managed app and demo use the configured environment survey without the shared feedback client" do
-    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    enable_preview_chart
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     Rails.env.stubs(:production?).returns(true)
     [ "app-survey", "demo-survey" ].each do |survey_id|
@@ -98,6 +108,15 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
   end
 
   private
+    # The experimental Sankey comparison chart is opt-in on top of preview
+    # features, so it renders only when the user has both enabled.
+    def enable_preview_chart(user = @user)
+      user.update!(preferences: (user.preferences || {}).merge(
+        "preview_features_enabled" => true,
+        "cashflow_preview_enabled" => true
+      ))
+    end
+
     def stub_managed_survey(survey_id)
       config = Rails.configuration.x.posthog
       surveys = config.feedback_surveys
