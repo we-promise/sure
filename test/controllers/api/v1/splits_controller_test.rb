@@ -267,6 +267,32 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
                  @entry.reload.child_entries.order(:name).map { |c| [ c.name, c.amount, c.excluded ] }
   end
 
+  test "returns 422 for amounts too large to store, even when they sum to the parent" do
+    huge = "1#{"0" * 20}"
+    params = { split: { splits: [
+      { name: "A", amount: huge },
+      { name: "B", amount: "-#{huge}" },
+      { name: "C", amount: @entry.amount.to_s }
+    ] } }
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "a rejected replacement leaves the existing split untouched" do
+    post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+    assert_response :created
+    before = @entry.reload.child_entries.order(:id).pluck(:id, :name, :amount)
+
+    patch api_v1_transaction_split_url(@transaction), params: { split: { splits: [ { name: "Too small", amount: "1.00" } ] } },
+          headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+
+    assert_equal before, @entry.reload.child_entries.order(:id).pluck(:id, :name, :amount)
+    assert @entry.excluded?, "parent stays excluded while still split"
+  end
+
   test "showing a split does not query per child" do
     splits = 5.times.map { |i| { name: "Part #{i}", amount: (@entry.amount / 5).to_s } }
     post api_v1_transaction_split_url(@transaction), params: { split: { splits: splits } },

@@ -17,6 +17,9 @@ class Api::V1::SplitsController < Api::V1::BaseController
   # assignment, so raw values that sum to the parent can persist as a total
   # that does not: 33.33335 + 66.66665 becomes 33.3334 + 66.6667 = 100.0001.
   AMOUNT_SCALE = 4
+  # 15 integer digits. Oversized amounts that cancel out pass split!'s sum
+  # check and then overflow the column, which surfaces as a 500.
+  AMOUNT_LIMIT = BigDecimal(10)**15
   before_action :ensure_read_scope, only: [ :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction
@@ -196,11 +199,17 @@ class Api::V1::SplitsController < Api::V1::BaseController
           return nil
         end
 
+        amount = BigDecimal(s[:amount].to_s)
+        unless amount.finite? && amount.abs < AMOUNT_LIMIT
+          render_unprocessable("split amount is out of range")
+          return nil
+        end
+
         {
           # Documented as optional, defaulting to the parent's name; Entry
           # validates presence, so apply the default rather than 422 on it.
           name: s[:name].presence || @entry.name,
-          amount: BigDecimal(s[:amount].to_s).round(AMOUNT_SCALE),
+          amount: amount.round(AMOUNT_SCALE),
           category_id: category_id,
           excluded: s[:excluded]
         }
