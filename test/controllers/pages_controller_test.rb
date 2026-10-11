@@ -145,7 +145,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     view_params = {
       start_date: "2026-08-01", end_date: "2026-08-31",
       money_flow_month: "2026-07-01", money_flow_account_ids: [ accounts(:depository).id ],
-      spending_month: "2026-06-01"
+      spending_month: "2026-06-01", spending_category_ids: [ categories(:food_and_drink).id ]
     }
 
     patch dashboard_section_hidden_path("net_worth_chart"), params: view_params.merge(hidden: true)
@@ -158,6 +158,14 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "a[href='#{root_path(start_date: "2026-08-01", end_date: "2026-08-31", spending_month: "2026-06-01")}']", text: I18n.t("pages.dashboard.customize.done")
     assert_select "form[action='#{dashboard_section_hidden_path("balance_sheet")}'] input[name='spending_month'][value='2026-06-01']"
+  end
+
+  test "customize mode carries the spending trend category filter through its links and buttons" do
+    category = categories(:food_and_drink)
+    get root_path(customize: true, spending_month: "2026-06-01", spending_category_ids: [ category.id ])
+
+    assert_select "a[href='#{root_path(spending_month: "2026-06-01", spending_category_ids: [ category.id ])}']", text: I18n.t("pages.dashboard.customize.done")
+    assert_select "form[action='#{dashboard_section_hidden_path("balance_sheet")}'] input[name='spending_category_ids[]'][value='#{category.id}']"
   end
 
   test "customize mode focuses the widget that was just added back, or its re-add button once hidden" do
@@ -185,6 +193,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     IncomeStatement.any_instance.expects(:income_totals).never
     IncomeStatement.any_instance.expects(:expense_totals).never
     IncomeStatement.any_instance.expects(:net_category_totals).never
+    IncomeStatement.any_instance.expects(:daily_expense_series).never
+    IncomeStatement.any_instance.expects(:daily_expense_category_ids).never
     PagesController.any_instance.expects(:build_money_flow_data).never
     PagesController.any_instance.expects(:build_spending_trend_data).never
 
@@ -894,6 +904,145 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "dashboard spending trend category filter narrows both months and the header totals" do
+    account, selected_month, previous_month = spending_trend_filter_setup
+    food = @family.categories.create!(name: "Spending Filter Food")
+    rent = @family.categories.create!(name: "Spending Filter Rent")
+
+    create_transaction(account: account, name: "Food now", amount: 30, date: selected_month, category: food)
+    create_transaction(account: account, name: "Rent now", amount: 500, date: selected_month + 1.day, category: rent)
+    create_transaction(account: account, name: "Food before", amount: 20, date: previous_month, category: food)
+    create_transaction(account: account, name: "Rent before", amount: 500, date: previous_month + 1.day, category: rent)
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ food.id ] }
+    assert_response :ok
+
+    chart = spending_trend_chart_data
+    assert_equal 30.0, chart.fetch("current").last.fetch("value")
+    assert_equal 20.0, chart.fetch("previous").last.fetch("value")
+    assert_equal [ money_text(30), money_text(20) ], spending_trend_header_totals
+    assert_equal money_text(10), spending_trend_header_delta
+    assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories", count: 1)
+  end
+
+  test "dashboard spending trend category filter includes a picked parent's subcategories" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    food = @family.categories.create!(name: "Spending Filter Food")
+    groceries = @family.categories.create!(name: "Spending Filter Groceries", parent: food)
+    rent = @family.categories.create!(name: "Spending Filter Rent")
+
+    create_transaction(account: account, name: "Food", amount: 10, date: selected_month, category: food)
+    create_transaction(account: account, name: "Groceries", amount: 40, date: selected_month, category: groceries)
+    create_transaction(account: account, name: "Rent", amount: 500, date: selected_month, category: rent)
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ food.id ] }
+    assert_equal 50.0, spending_trend_chart_data.fetch("current").last.fetch("value")
+    assert_select "#spending-trend-section input[name='spending_category_ids[]'][value='#{groceries.id}'][checked]"
+
+    # A subcategory on its own counts only itself.
+    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ groceries.id ] }
+    assert_equal 40.0, spending_trend_chart_data.fetch("current").last.fetch("value")
+  end
+
+  test "dashboard spending trend category filter offers the categories the chart is drawn from" do
+    account, selected_month, previous_month = spending_trend_filter_setup
+    food = @family.categories.create!(name: "Spending Filter Food")
+    groceries = @family.categories.create!(name: "Spending Filter Groceries", parent: food)
+    rent = @family.categories.create!(name: "Spending Filter Rent")
+    unused = @family.categories.create!(name: "Spending Filter Unused")
+    salary = @family.categories.create!(name: "Spending Filter Salary")
+
+    create_transaction(account: account, name: "Groceries", amount: 40, date: selected_month, category: groceries)
+    create_transaction(account: account, name: "Rent before", amount: 500, date: previous_month, category: rent)
+    create_transaction(account: account, name: "No category", amount: 5, date: selected_month)
+    create_transaction(account: account, name: "Paycheck", amount: -900, date: selected_month, category: salary)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+    assert_response :ok
+
+    offered = spending_trend_category_values
+    # Spending in either month, plus the parent that keeps a subcategory's
+    # place in the list, with Uncategorized first.
+    assert_equal Category::UNCATEGORIZED_FILTER_VALUE, offered.first
+    assert_includes offered, groceries.id
+    assert_includes offered, food.id
+    assert_includes offered, rent.id
+    # Income and categories with no spending play no part in the chart.
+    assert_not_includes offered, salary.id
+    assert_not_includes offered, unused.id
+    assert_select "#spending-trend-section input[name='spending_category_ids[]']:not([checked])", count: 0
+    assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories_all")
+  end
+
+  test "dashboard spending trend treats picking every offered category as unfiltered" do
+    account, selected_month, previous_month = spending_trend_filter_setup
+    food = @family.categories.create!(name: "Spending Filter Food")
+    create_transaction(account: account, name: "Food", amount: 30, date: selected_month, category: food)
+    create_transaction(account: account, name: "No category", amount: 5, date: previous_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+    unfiltered = spending_trend_chart_data
+    every_option = spending_trend_category_values
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: every_option }
+
+    assert_equal unfiltered, spending_trend_chart_data
+    assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories_all")
+    # Nothing is pinned, so another month's categories aren't left out.
+    assert_select "#spending-trend-section a[href='#{root_path(spending_month: (selected_month - 1.month).iso8601)}']"
+  end
+
+  test "dashboard spending trend filters uncategorized spending" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    food = @family.categories.create!(name: "Spending Filter Food")
+    create_transaction(account: account, name: "Food", amount: 30, date: selected_month, category: food)
+    create_transaction(account: account, name: "No category", amount: 5, date: selected_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ Category::UNCATEGORIZED_FILTER_VALUE ] }
+
+    assert_equal 5.0, spending_trend_chart_data.fetch("current").last.fetch("value")
+  end
+
+  test "dashboard spending trend month links keep the category filter" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    food = @family.categories.create!(name: "Spending Filter Food")
+    rent = @family.categories.create!(name: "Spending Filter Rent")
+    create_transaction(account: account, name: "Food", amount: 30, date: selected_month, category: food)
+    create_transaction(account: account, name: "Rent", amount: 500, date: selected_month, category: rent)
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ food.id ] }
+
+    other_month = selected_month - 1.month
+    assert_select "#spending-trend-section a[href='#{root_path(spending_month: other_month.iso8601, spending_category_ids: [ food.id ])}']"
+    assert_select "#spending-trend-section form input[type='hidden'][name='spending_month'][value='#{selected_month.iso8601}']"
+
+    # A picked category keeps its option (and the filter) in a month where it
+    # has no spending, rather than the filter silently resetting.
+    get root_path, params: { spending_month: other_month.iso8601, spending_category_ids: [ food.id ] }
+    assert_includes spending_trend_category_values, food.id
+    assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories", count: 1)
+  end
+
+  test "dashboard spending trend ignores unknown and other families' category ids" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    food = @family.categories.create!(name: "Spending Filter Food")
+    create_transaction(account: account, name: "Food", amount: 30, date: selected_month, category: food)
+    create_transaction(account: account, name: "No category", amount: 5, date: selected_month)
+
+    other_family = Family.create!(name: "Other Family", currency: "USD")
+    other_category = other_family.categories.create!(name: "Not mine")
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+    unfiltered = spending_trend_chart_data
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ other_category.id, "not-a-uuid", SecureRandom.uuid ] }
+
+    assert_response :ok
+    assert_equal unfiltered, spending_trend_chart_data
+    assert_not_includes spending_trend_category_values, other_category.id
+    assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories_all")
+  end
+
   private
     def money_flow_bars
       JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
@@ -901,6 +1050,17 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     def spending_trend_chart_data
       JSON.parse(css_select("[data-controller='spending-chart']").first["data-spending-chart-data-value"])
+    end
+
+    def spending_trend_category_values
+      css_select("#spending-trend-section input[name='spending_category_ids[]']").map { |input| input["value"] }
+    end
+
+    # A dedicated account and two fully past months, so fixture transactions
+    # (dated relative to today) stay out of the expected totals.
+    def spending_trend_filter_setup
+      account = @family.accounts.create!(name: "Spending Filter Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+      [ account, 2.months.ago.beginning_of_month.to_date, 3.months.ago.beginning_of_month.to_date ]
     end
 
     # The two large figures in the widget header: the selected month's

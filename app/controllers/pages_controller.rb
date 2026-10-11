@@ -29,7 +29,7 @@ class PagesController < ApplicationController
   # Query params that shape what the dashboard shows without being saved
   # anywhere. Customize mode carries them through its links and hide/add
   # buttons so the widgets don't jump back to their defaults.
-  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [] } ].freeze
+  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -174,7 +174,7 @@ class PagesController < ApplicationController
             title: "pages.dashboard.spending_trend.title",
             partial: "pages/dashboard/spending_trend",
             layout: section_layout("spending_trend"),
-            locals: { spending_trend_data: build_spending_trend_data(dashboard_income_statement, spending_trend_month_param) },
+            locals: { spending_trend_data: build_spending_trend_data(dashboard_income_statement, spending_trend_month_param, spending_trend_category_ids_param) },
             visible: @accounts.any?,
             collapsible: true
           }
@@ -552,12 +552,27 @@ class PagesController < ApplicationController
       current_month
     end
 
+    # Category ids (and the uncategorized sentinel) from the family's own
+    # categories. Not narrowed to the categories with spending this month, so
+    # a selection survives switching to a month where some of it is empty.
+    # nil means every category (the widget's default, unfiltered state).
+    def spending_trend_category_ids_param
+      ids = Array(params[:spending_category_ids]).reject(&:blank?).map(&:to_s)
+      return nil if ids.empty?
+
+      ids &= [ *Current.family.categories.pluck(:id), Category::UNCATEGORIZED_FILTER_VALUE ]
+      ids.presence
+    end
+
     # Cumulative daily spending for the selected month (capped at today while
     # the month is in progress) against the previous month's full curve, so
     # the two lines share one day-of-month axis. The header totals compare the
     # same number of elapsed days; only the chart draws the previous month out
     # to its final day.
-    def build_spending_trend_data(income_statement, selected_month)
+    #
+    # `category_ids` narrows both months to the same categories, so the
+    # comparison stays like-for-like.
+    def build_spending_trend_data(income_statement, selected_month, category_ids = nil)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
       current_period = Period.custom(start_date: month_start, end_date: [ month_end, Date.current ].min)
@@ -565,8 +580,15 @@ class PagesController < ApplicationController
       previous_month_start = (month_start - 1.month).beginning_of_month
       previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
 
-      current_daily = income_statement.daily_expense_series(period: current_period).index_by(&:date)
-      previous_daily = income_statement.daily_expense_series(period: previous_period).index_by(&:date)
+      category_options = spending_trend_category_options(income_statement, [ current_period, previous_period ], category_ids)
+      # A selection covering every offered category draws exactly what the
+      # unfiltered chart does, so treat it as unfiltered: the button reads
+      # "All categories" and the month links don't pin today's list, which
+      # would leave out categories that only another month has.
+      category_ids = nil if category_options.all? { |option| option[:checked] }
+
+      current_daily = income_statement.daily_expense_series(period: current_period, category_ids: category_ids).index_by(&:date)
+      previous_daily = income_statement.daily_expense_series(period: previous_period, category_ids: category_ids).index_by(&:date)
 
       # The selected month always owns the axis: when the previous month is
       # longer, its extra days fold into the final visible point so the curve
@@ -604,8 +626,32 @@ class PagesController < ApplicationController
         delta: Money.new(current_total - previous_total, currency),
         previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
         previous_comparison_day: previous_comparison_day,
-        date_range_short: spending_trend_compact_date_range(current_period)
+        date_range_short: spending_trend_compact_date_range(current_period),
+        category_options: category_options,
+        category_ids: category_ids
       }
+    end
+
+    # The filter's options: the categories the chart is drawn from (spending
+    # in either month), the parents of those that are subcategories so the
+    # list keeps its hierarchy, and anything already selected. Ordered like
+    # the transactions category filter, with Uncategorized first. An option
+    # is checked when it was picked, or its parent was (picking a parent
+    # covers its subcategories), or nothing was picked at all.
+    def spending_trend_category_options(income_statement, periods, category_ids)
+      used_ids = periods.flat_map { |period| income_statement.daily_expense_category_ids(period: period) }.uniq
+      offered_ids = used_ids.compact.map(&:to_s) + Array(category_ids)
+
+      categories = Current.family.categories.alphabetically_by_hierarchy.to_a
+      parent_ids = categories.select { |c| offered_ids.include?(c.id) }.filter_map(&:parent_id)
+      categories.select! { |c| offered_ids.include?(c.id) || parent_ids.include?(c.id) }
+      categories.unshift(Category.uncategorized) if used_ids.include?(nil) || offered_ids.include?(Category::UNCATEGORIZED_FILTER_VALUE)
+
+      categories.map do |category|
+        value = category.persisted? ? category.id : category.filter_value
+        checked = category_ids.nil? || category_ids.include?(value) || category_ids.include?(category.parent_id)
+        { category: category, value: value, checked: checked }
+      end
     end
 
     # Compact range for narrow viewports ("Sep 01 - 6, 2026"). The period
