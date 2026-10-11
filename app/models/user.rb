@@ -753,6 +753,42 @@ class User < ApplicationRecord
     preferences&.dig("preview_features_enabled") == true
   end
 
+  # Release reminders for locked money: how each person hears
+  # that a term deposit is about to be released or renewed, and how many days
+  # ahead. Stored in `preferences`; the feed is the default so nobody gets an
+  # e-mail they did not ask for.
+  ACCOUNT_RELEASE_CHANNELS = %w[insight email both off].freeze
+
+  def account_release_channel
+    channel = preferences&.dig("account_release_channel")
+    channel.in?(ACCOUNT_RELEASE_CHANNELS) ? channel : "insight"
+  end
+
+  def account_release_lead_days
+    days = Integer(preferences&.dig("account_release_lead_days").to_s, exception: false)
+    days && Account::ReleaseReminder::LEAD_DAYS_RANGE.cover?(days) ? days : Account::ReleaseReminder::DEFAULT_LEAD_DAYS
+  end
+
+  def account_release_insights?
+    account_release_channel.in?(%w[insight both])
+  end
+
+  def account_release_emails?
+    account_release_channel.in?(%w[email both])
+  end
+
+  # The availability widget asks once to check how accounts were classified
+  # by availability (they were set from their subtype by a backfill).
+  def liquidity_review_dismissed?
+    preferences&.dig("liquidity_review_dismissed_at").present?
+  end
+
+  def dismiss_liquidity_review!
+    with_lock do
+      update!(preferences: (preferences || {}).merge("liquidity_review_dismissed_at" => Time.current.iso8601))
+    end
+  end
+
   private
     def apply_ui_layout_defaults
       self.ui_layout = (ui_layout.presence || self.class.default_ui_layout)

@@ -5,6 +5,7 @@ other_asset:
   balance: 550
   currency: USD
   accountable_type: OtherAsset
+  liquidity: long_term
   accountable: one
   status: active
 
@@ -15,6 +16,7 @@ other_liability:
   balance: 200
   currency: USD
   accountable_type: OtherLiability
+  liquidity: long_term
   accountable: one
   status: active
 
@@ -57,6 +59,7 @@ investment:
   cash_balance: 5000
   currency: USD
   accountable_type: Investment
+  liquidity: short_term
   accountable: one
   status: active
 
@@ -67,6 +70,7 @@ loan:
   balance: 500000
   currency: USD
   accountable_type: Loan
+  liquidity: long_term
   accountable: one
   status: active
 
@@ -77,6 +81,7 @@ property:
   balance: 550000
   currency: USD
   accountable_type: Property
+  liquidity: long_term
   accountable: one
   status: active
 
@@ -87,6 +92,7 @@ vehicle:
   balance: 18000
   currency: USD
   accountable_type: Vehicle
+  liquidity: long_term
   accountable: one
   status: active
 
@@ -97,5 +103,6 @@ crypto:
   balance: 10000
   currency: USD
   accountable_type: Crypto
+  liquidity: short_term
   accountable: one
   status: active

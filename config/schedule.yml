@@ -103,3 +103,10 @@ refresh_maintained_goal_targets:
   active_job: true
   queue: "scheduled"
   description: "Recomputes the floor of reserves expressed in months of expenses"
+
+notify_account_releases:
+  cron: "15 6 * * *" # daily at 6:15 AM UTC, after insights
+  class: "AccountReleaseNotificationJob"
+  active_job: true
+  queue: "scheduled"
+  description: "E-mails release reminders for locked accounts to members who chose e-mail (preview)"

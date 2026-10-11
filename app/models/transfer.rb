@@ -20,26 +20,50 @@ class Transfer < ApplicationRecord
     # The outflow leg's kind for a transfer into this account. Transfer::Creator,
     # Family::DataImporter, auto-matching, rules and manual matches all call
     # it (the inflow leg is always funds_movement, see kind_for_leg).
-    # from_account: an investment/crypto destination only counts as a
-    # contribution when the source isn't itself an investment/crypto account,
-    # otherwise it's a plain funds movement.
-    def kind_for_account(account, from_account: nil)
+    # `from_account` and `date` are the outflow leg's account and booking
+    # date. An investment/crypto destination only counts as a contribution
+    # when the source isn't itself a savings account (investment, crypto or
+    # bound on that date); otherwise it's a plain funds movement. They also
+    # decide whether money moved into a bound bank account counts as saving.
+    def kind_for_account(account, from_account: nil, date: nil)
       if account.loan?
         "loan_payment"
       elsif account.credit_card?
         "cc_payment"
-      elsif account.investment? || account.crypto?
-        if from_account && (from_account.investment? || from_account.crypto?)
-          "funds_movement"
-        else
-          "investment_contribution"
-        end
+      elsif (account.investment? || account.crypto?) && (from_account.nil? || !savings_account?(from_account, date))
+        "investment_contribution"
       elsif account.liability?
         "cc_payment"
+      elsif saving_into?(account, source: from_account, date: date)
+        "investment_contribution"
       else
         "funds_movement"
       end
     end
+
+    # Money moved from available money into a bank account that is locked or
+    # long-term on the booking date (term deposit, building savings, HSA)
+    # counts as saving, like a contribution to a brokerage account. Property,
+    # vehicles and other assets stay out: a down payment or money lent to a
+    # friend is not saving. A locked account past its release date is
+    # available again, so a transfer into it stays a plain funds movement.
+    # Moving money between two savings accounts is not new saving either, and
+    # neither is borrowed money (a loan or credit card as the source).
+    def saving_into?(destination, source: nil, date: nil)
+      return false unless bound_savings_account?(destination, date)
+      return true if source.nil?
+
+      source.available_on?(date || source.liquidity_today) && !savings_account?(source, date)
+    end
+
+    def savings_account?(account, date = nil)
+      account.investment? || account.crypto? || bound_savings_account?(account, date)
+    end
+
+    private
+      def bound_savings_account?(account, date)
+        account.depository? && !account.available_on?(date || account.liquidity_today)
+      end
   end
 
   def has_source_fee?
@@ -106,7 +130,7 @@ class Transfer < ApplicationRecord
   def kind_for_leg(transaction)
     return "funds_movement" if transaction.id == inflow_transaction_id
 
-    Transfer.kind_for_account(to_account, from_account: from_account)
+    Transfer.kind_for_account(to_account, from_account: from_account, date: outflow_transaction&.entry&.date)
   end
 
   # Based on the destination account rather than outflow_transaction.kind,
@@ -116,7 +140,7 @@ class Transfer < ApplicationRecord
   def categorizable?
     return false unless to_account
 
-    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(Transfer.kind_for_account(to_account, from_account: from_account))
+    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(Transfer.kind_for_account(to_account, from_account: from_account, date: outflow_transaction&.entry&.date))
   end
 
   def reject!

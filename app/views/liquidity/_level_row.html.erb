@@ -1,0 +1,31 @@
+<%# locals: (key:, label:, dot_class:, share:, amount:, accounts:, overview:) %>
+
+<%= render DS::Disclosure.new(summary_class: "cursor-pointer p-4 rounded-lg flex items-center justify-between focus-ring", body_class: nil, data: { liquidity_level: key }) do |disclosure| %>
+  <% disclosure.with_summary_content do %>
+    <div class="min-w-40 flex items-center gap-2">
+      <%= disclosure_chevron %>
+      <span class="h-2.5 w-2.5 rounded-full shrink-0 <%= dot_class %>" aria-hidden="true"></span>
+      <p><%= label %></p>
+    </div>
+
+    <div class="flex items-center text-right gap-2">
+      <p class="w-16 shrink-0 text-secondary privacy-sensitive"><%= share && number_to_percentage(share, precision: 0) %></p>
+      <p class="w-28 shrink-0 privacy-sensitive"><%= amount %></p>
+    </div>
+  <% end %>
+
+  <ul>
+    <% accounts.each do |account| %>
+      <li class="pl-10 pr-4 py-3 flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <%= link_to account.name, account_path(account), class: "truncate block" %>
+          <% badge = account.asset? && liquidity_badge_label(account, overview.date) %>
+          <% if badge %>
+            <p class="text-xs text-secondary font-normal"><%= badge %></p>
+          <% end %>
+        </div>
+        <p class="w-28 shrink-0 text-right privacy-sensitive"><%= format_money(Money.new(account.converted_balance, overview.currency), precision: 0) %></p>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

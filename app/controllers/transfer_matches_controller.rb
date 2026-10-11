@@ -18,8 +18,8 @@ class TransferMatchesController < ApplicationController
 
       # Use DESTINATION (inflow) account for kind, matching Transfer::Creator logic
       destination_account = @transfer.inflow_transaction.entry.account
-      source_account = @transfer.outflow_transaction.entry.account
-      outflow_kind = Transfer.kind_for_account(destination_account, from_account: source_account)
+      outflow_entry = @transfer.outflow_transaction.entry
+      outflow_kind = Transfer.kind_for_account(destination_account, from_account: outflow_entry.account, date: outflow_entry.date)
       outflow_attrs = { kind: outflow_kind }
 
       if outflow_kind == "investment_contribution"

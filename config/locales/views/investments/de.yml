@@ -95,6 +95,15 @@ de:
       riester:
         short: Riester
         long: Riester-Rente
+      ruerup:
+        short: Rürup
+        long: Rürup-Rente (Basisrente)
+      bav:
+        short: bAV
+        long: Betriebliche Altersvorsorge (bAV)
+      vl:
+        short: VL
+        long: Vermögenswirksame Leistungen (VL)
       pension:
         short: Pension
         long: Pension

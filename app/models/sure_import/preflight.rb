@@ -258,12 +258,23 @@ class SureImport::Preflight
           next
         end
 
+        validate_account_liquidity(record)
+
         subtype = data.dig("accountable", "subtype").presence || data["subtype"].presence
         next if subtype.blank?
         subtype_map = accountable_class.const_defined?(:SUBTYPES) ? accountable_class::SUBTYPES : {}
         next if subtype_map.blank? || subtype_map.key?(subtype)
         add_error(:invalid_accountable_subtype, "Line #{record[:line_number]} Account has invalid #{accountable_type} subtype #{subtype.inspect}.")
       end
+    end
+
+    # Availability is optional and never blocks an import: an unknown level
+    # falls back to the subtype default, as for a new account.
+    def validate_account_liquidity(record)
+      liquidity = record[:data]["liquidity"]
+      return if liquidity.blank? || liquidity.to_s.in?(Account::Liquidity::LEVELS)
+
+      add_warning(:invalid_account_liquidity, "Line #{record[:line_number]} Account has unknown liquidity #{liquidity.inspect}; it is ignored, so a new account takes its subtype default and an existing one keeps its current setting.")
     end
 
     def validate_split_lines

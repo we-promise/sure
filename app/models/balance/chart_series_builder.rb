@@ -1,12 +1,17 @@
 class Balance::ChartSeriesBuilder
   def initialize(account_ids:, currency:, period: Period.last_30_days, interval: nil,
-                 favorable_direction: "up", account_active_until_dates: {})
+                 favorable_direction: "up", account_active_until_dates: {}, account_active_from_dates: {})
     @account_ids = account_ids
     @currency = currency
     @period = period
     @interval = interval
     @favorable_direction = favorable_direction
     @account_active_until_dates = account_active_until_dates.compact
+      .transform_keys(&:to_s)
+      .transform_values { |date| date.to_date.iso8601 }
+    # Accounts that only count from a date on (a locked deposit in the
+    # available net worth series counts from its release date).
+    @account_active_from_dates = account_active_from_dates.compact
       .transform_keys(&:to_s)
       .transform_values { |date| date.to_date.iso8601 }
   end
@@ -62,7 +67,7 @@ class Balance::ChartSeriesBuilder
   end
 
   private
-    attr_reader :account_ids, :currency, :period, :favorable_direction, :account_active_until_dates
+    attr_reader :account_ids, :currency, :period, :favorable_direction, :account_active_until_dates, :account_active_from_dates
 
     def interval
       @interval || period.interval
@@ -108,7 +113,8 @@ class Balance::ChartSeriesBuilder
           end_date: period.end_date,
           interval: interval,
           sign_multiplier: sign_multiplier,
-          account_active_until_dates_json: account_active_until_dates.to_json
+          account_active_until_dates_json: account_active_until_dates.to_json,
+          account_active_from_dates_json: account_active_from_dates.to_json
         }
       ])
     rescue => e
@@ -157,10 +163,18 @@ class Balance::ChartSeriesBuilder
           FROM jsonb_each_text(CAST(:account_active_until_dates_json AS jsonb))
             AS account_window(account_id, active_until_date)
         ),
+        account_starts AS (
+          SELECT
+            account_start.account_id::uuid AS account_id,
+            account_start.active_from_date::date AS active_from_date
+          FROM jsonb_each_text(CAST(:account_active_from_dates_json AS jsonb))
+            AS account_start(account_id, active_from_date)
+        ),
         selected_accounts AS (
-          SELECT accounts.*, account_windows.active_until_date
+          SELECT accounts.*, account_windows.active_until_date, account_starts.active_from_date
           FROM accounts
           LEFT JOIN account_windows ON account_windows.account_id = accounts.id
+          LEFT JOIN account_starts ON account_starts.account_id = accounts.id
           WHERE accounts.id = ANY(array[:account_ids]::uuid[])
         )
         SELECT
@@ -186,7 +200,8 @@ class Balance::ChartSeriesBuilder
           ), 0) AS start_holdings_balance
         FROM dates d
         LEFT JOIN selected_accounts accounts
-          ON accounts.active_until_date IS NULL OR d.date <= accounts.active_until_date
+          ON (accounts.active_until_date IS NULL OR d.date <= accounts.active_until_date)
+          AND (accounts.active_from_date IS NULL OR d.date >= accounts.active_from_date)
         LEFT JOIN LATERAL (
           SELECT b.end_balance,
                  b.end_cash_balance,

@@ -132,6 +132,29 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal account.updated_at.iso8601, response_body["updated_at"]
   end
 
+  test "should show account availability" do
+    account = accounts(:depository)
+    account.update!(subtype: "cd", available_on: Date.new(2030, 3, 31))
+
+    get "/api/v1/accounts/#{account.id}", headers: api_headers(@api_key)
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    assert_equal "locked", response_body["liquidity"]
+    assert_equal "2030-03-31", response_body["available_on"]
+    assert_equal false, response_body["available_now"]
+  end
+
+  test "should show an immediately available account as available now" do
+    get "/api/v1/accounts/#{accounts(:depository).id}", headers: api_headers(@api_key)
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    assert_equal "immediate", response_body["liquidity"]
+    assert_nil response_body["available_on"]
+    assert_equal true, response_body["available_now"]
+  end
+
   test "should return 404 for unknown account on show" do
     get "/api/v1/accounts/#{SecureRandom.uuid}", headers: api_headers(@api_key)
 
