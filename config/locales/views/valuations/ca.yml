@@ -28,6 +28,7 @@ ca:
       account_updated: Compte actualitzat
     errors:
       amount_required: L'import és obligatori
+      duplicate_date: Aquesta data ja té una actualització de saldo. Actualitza la pàgina i torna-ho a provar.
     form:
       amount: Import
       submit: Afegeix actualització de saldo

@@ -28,6 +28,7 @@ it:
       entry_updated: Voce aggiornata
     errors:
       amount_required: L'importo è obbligatorio
+      duplicate_date: Questa data ha già un aggiornamento del saldo. Aggiorna la pagina e riprova.
     form:
       amount: Importo
       submit: Aggiungi aggiornamento saldo

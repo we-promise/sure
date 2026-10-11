@@ -28,6 +28,7 @@ hu:
       entry_updated: Bejegyzés frissítve
     errors:
       amount_required: Az összeg megadása kötelező
+      duplicate_date: Ehhez a dátumhoz már tartozik egyenlegfrissítés. Frissítsd az oldalt, és próbáld újra.
     form:
       amount: Összeg
       submit: Egyenlegfrissítés hozzáadása
