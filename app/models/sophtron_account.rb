@@ -16,6 +16,7 @@
 # @attr [JSONB] raw_payload Raw account data from Sophtron API
 # @attr [JSONB] raw_transactions_payload Raw transaction data from Sophtron API
 # @attr [DateTime] last_updated When Sophtron last updated this account
+# @attr [String, nil] balance_sign_override Credit card meaning: "credit", "debt", or nil for automatic
 class SophtronAccount < ApplicationRecord
   include CurrencyNormalizable
 
@@ -30,7 +31,9 @@ class SophtronAccount < ApplicationRecord
   scope :automatic_sync, -> { where(manual_sync: false) }
 
   validates :name, :currency, presence: true
+  validates :balance_sign_override, inclusion: { in: %w[credit debt], allow_nil: true }
   validate :has_balance
+
   # Returns the linked Maybe Account for this Sophtron account.
   #
   # @return [Account, nil] The linked Maybe Account, or nil if not linked

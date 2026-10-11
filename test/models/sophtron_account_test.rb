@@ -21,4 +21,45 @@ class SophtronAccountTest < ActiveSupport::TestCase
     assert_equal "Apple / Goldman Sachs", account.institution_metadata["name"]
     assert_equal "ui-apple", account.institution_metadata["user_institution_id"]
   end
+
+  test "accepts only supported balance sign overrides" do
+    account = build_sophtron_account
+
+    account.balance_sign_override = "credit"
+    assert account.valid?
+
+    account.balance_sign_override = "debt"
+    assert account.valid?
+
+    account.balance_sign_override = nil
+    assert account.valid?
+
+    account.balance_sign_override = "unsupported"
+    refute account.valid?
+  end
+
+  test "database rejects an unsupported balance sign override" do
+    account = build_sophtron_account
+    account.balance_sign_override = "unsupported"
+
+    assert_raises ActiveRecord::StatementInvalid do
+      account.save!(validate: false)
+    end
+  end
+
+  private
+    def build_sophtron_account
+      item = families(:dylan_family).sophtron_items.create!(
+        name: "Sophtron Connection",
+        user_id: "developer-user",
+        access_key: Base64.strict_encode64("secret-key")
+      )
+
+      item.sophtron_accounts.create!(
+        account_id: "card-override",
+        name: "Card",
+        currency: "USD",
+        balance: 25
+      )
+    end
 end

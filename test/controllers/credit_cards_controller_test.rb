@@ -337,6 +337,82 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_nil simplefin_account.reload.balance_sign_override
   end
 
+  test "hides the Sophtron balance sign select for accounts without a Sophtron link" do
+    get edit_credit_card_path(@account)
+
+    assert_response :success
+    assert_no_match I18n.t("credit_cards.form.sophtron_balance_sign_label"), response.body
+  end
+
+  test "updates Sophtron balance sign override when linked" do
+    sophtron_account = create_linked_sophtron_account
+
+    get edit_credit_card_path(@account)
+    assert_response :success
+    assert_match "account[sophtron][balance_sign_override]", response.body
+    assert_match I18n.t("credit_cards.form.sophtron_balance_sign_label"), response.body
+
+    assert_enqueued_with(job: SyncJob) do
+      patch credit_card_path(@account), params: {
+        account: {
+          name: @account.name,
+          accountable_type: "CreditCard",
+          sophtron: { balance_sign_override: "credit" }
+        }
+      }
+    end
+
+    assert_redirected_to @account
+    assert_equal "credit", sophtron_account.reload.balance_sign_override
+  end
+
+  test "clears Sophtron balance sign override when automatic is selected" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.update!(balance_sign_override: "credit")
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil sophtron_account.reload.balance_sign_override
+  end
+
+  test "does not persist Sophtron override when the account update fails" do
+    sophtron_account = create_linked_sophtron_account
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: "",
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "credit" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil sophtron_account.reload.balance_sign_override
+  end
+
+  test "normalizes an unsupported Sophtron balance sign to automatic" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.update!(balance_sign_override: "credit")
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "unsupported" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil sophtron_account.reload.balance_sign_override
+  end
+
   private
     def create_linked_enable_banking_account
       enable_banking_item = EnableBankingItem.create!(
@@ -387,5 +463,21 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
       )
       AccountProvider.create!(account: @account, provider: simplefin_account)
       simplefin_account
+    end
+
+    def create_linked_sophtron_account
+      sophtron_item = @account.family.sophtron_items.create!(
+        name: "Test Sophtron",
+        user_id: "developer-user",
+        access_key: Base64.strict_encode64("secret-key")
+      )
+      sophtron_account = sophtron_item.sophtron_accounts.create!(
+        name: "Linked card",
+        account_id: "sophtron-linked-card",
+        currency: "USD",
+        balance: -25
+      )
+      AccountProvider.create!(account: @account, provider: sophtron_account)
+      sophtron_account
     end
 end

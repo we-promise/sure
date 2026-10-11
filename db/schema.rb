@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2486,6 +2486,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.string "account_type"
     t.decimal "available_balance", precision: 19, scale: 4
     t.decimal "balance", precision: 19, scale: 4
+    t.string "balance_sign_override"
     t.datetime "created_at", null: false
     t.string "currency"
     t.string "customer_id"
@@ -2501,6 +2502,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
     t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
+    t.check_constraint "balance_sign_override::text = ANY (ARRAY['credit'::character varying::text, 'debt'::character varying::text])", name: "chk_sophtron_accounts_balance_sign_override"
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
