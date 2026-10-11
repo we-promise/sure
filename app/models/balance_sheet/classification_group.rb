@@ -30,8 +30,11 @@ class BalanceSheet::ClassificationGroup
     accounts.any?(&:syncing?)
   end
 
-  # For now, we group by accountable type. This can be extended in the future to support arbitrary user groupings.
-  def account_groups
+  # Groups by account type unless another dimension is given (see
+  # AccountGrouping). The split into assets and debts always stays above.
+  def account_groups(by: nil, user: nil)
+    return dimension_groups(by, user: user) if by.present? && by.to_s != AccountGrouping::DEFAULT_PRIMARY
+
     groups = accounts.group_by(&:accountable_type)
                      .transform_keys { |at| Accountable.from_type(at) }
                      .map do |accountable, account_rows|
@@ -55,6 +58,22 @@ class BalanceSheet::ClassificationGroup
 
   private
     attr_reader :accounts
+
+    def dimension_groups(dimension, user:)
+      AccountGrouping.new(dimension, user: user).group(accounts).map do |group|
+        # Prefixed so an asset and a debt group with the same value stay apart.
+        key = "#{classification}_#{AccountGrouping.group_key(dimension, group.key)}"
+
+        BalanceSheet::AccountGroup.new(
+          key: key,
+          name: group.name,
+          color: AccountGrouping.color_for(key),
+          accountable_type: nil,
+          accounts: group.accounts,
+          classification_group: self
+        )
+      end
+    end
 
     def normalize_classification!(classification)
       raise ArgumentError, "Invalid classification: #{classification}" unless %w[asset liability].include?(classification)

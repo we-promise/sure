@@ -1,0 +1,30 @@
+<%# locals: (account:, color:) %>
+
+<%= link_to account_path(account),
+          class: class_names(
+            "block flex items-center gap-2 px-3 py-2 rounded-lg",
+            page_active?(account_path(account)) ? "bg-container" : "hover:bg-surface-hover"
+          ),
+          data: page_active?(account_path(account)) ? { active_account: true } : {},
+          title: account.name do %>
+  <%= render "accounts/logo", account: account, size: "sm", color: color %>
+
+  <div class="min-w-0 grow">
+    <div class="flex items-center gap-2 mb-0.5">
+      <%= tag.p account.name, class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) %>
+      <% if account.shared? %>
+        <%= icon("users", class: "w-3 h-3 text-secondary shrink-0") %>
+      <% end %>
+    </div>
+    <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
+  </div>
+
+  <div class="ml-auto text-right grow h-10">
+    <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
+    <%= turbo_frame_tag dom_id(account, :sparkline), src: sparkline_account_path(account), loading: "lazy", data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
+      <div class="flex items-center w-8 h-4 ml-auto">
+        <div class="w-6 h-px bg-loader"></div>
+      </div>
+    <% end %>
+  </div>
+<% end %>
