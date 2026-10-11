@@ -67,7 +67,8 @@
           <div class="space-y-2"
                data-controller="account-logo-picker"
                data-account-logo-picker-pending-value="<%= t("accounts.logo_field.pending") %>"
-               data-account-logo-picker-removal-value="<%= t("accounts.logo_field.removal") %>">
+               data-account-logo-picker-removal-value="<%= t("accounts.logo_field.removal") %>"
+               data-account-logo-picker-provider-domain-value="<%= account.provider&.institution_domain %>">
             <%= form.label :logo, t(".logo_label"), class: "form-field__label" %>
             <%= render "accounts/logo_field", account: account %>
             <%= hidden_field_tag "#{form.object_name}[logo_choice]", nil, id: nil, data: { account_logo_picker_target: "choice" } %>

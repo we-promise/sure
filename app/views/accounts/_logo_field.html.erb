@@ -32,7 +32,8 @@
           type: "submit",
           form: dom_id(account, :logo_options),
           # The account form opts out of Turbo; this submit must stay in it to fill the logo frame.
-          data: { turbo: true, action: "account-logo-picker#search", turbo_submits_with: t("accounts.logo_field.searching") }
+          data: { turbo: true, action: "account-logo-picker#search", account_logo_picker_target: "pick",
+                  turbo_submits_with: t("accounts.logo_field.searching") }
         ) %>
     <% if account.logo.attached? %>
       <%= render DS::Button.new(
@@ -45,6 +46,8 @@
           ) %>
     <% end %>
   </div>
+
+  <p class="text-xs text-secondary hidden" data-account-logo-picker-target="pickHint"><%= t("accounts.logo_field.domain_needed") %></p>
 
   <% if candidates %>
     <% options = account_logo_options(account, candidates) %>

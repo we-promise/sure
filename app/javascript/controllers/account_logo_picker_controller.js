@@ -1,5 +1,18 @@
 import { Controller } from "@hotwired/stimulus";
 
+// A whole domain, as Account.normalize_institution_domain leaves it.
+const DOMAIN = /^([a-z0-9-]+\.)+(xn--[a-z0-9-]+|[a-z]{2,})$/;
+
+function normalizeDomain(value) {
+  return (value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//, "")
+    .split(/[/?#]/)[0]
+    .replace(/:\d+$/, "")
+    .replace(/^www\./, "");
+}
+
 // Previews the icon chosen in the account form. Nothing is saved until the
 // form is submitted: a picked or removed icon travels in a hidden field, an
 // upload in the file field.
@@ -13,8 +26,44 @@ export default class extends Controller {
     "option",
     "fallback",
     "blank",
+    "pick",
+    "pickHint",
   ];
-  static values = { pending: String, removal: String };
+  static values = { pending: String, removal: String, providerDomain: String };
+
+  connect() {
+    this.domainField = this.element
+      .closest("form")
+      ?.elements.namedItem("account[institution_domain]");
+    this.domainField?.addEventListener("input", this.updatePick);
+  }
+
+  disconnect() {
+    this.domainField?.removeEventListener("input", this.updatePick);
+  }
+
+  pickTargetConnected() {
+    this.updatePick();
+  }
+
+  // "Pick icon" stays clickable when there is no domain yet, so a hover or a
+  // tap can say why it does nothing; a disabled button would show neither.
+  updatePick = () => {
+    if (!this.hasPickTarget) return;
+
+    const ready = this.domainReady();
+    this.pickTarget.setAttribute("aria-disabled", String(!ready));
+    this.pickTarget.classList.toggle("opacity-50", !ready);
+    this.pickTarget.classList.toggle("cursor-not-allowed", !ready);
+    this.pickTarget.title = ready ? "" : this.pickHintTarget.textContent.trim();
+    if (ready) this.pickHintTarget.classList.add("hidden");
+  };
+
+  // A linked account may take its domain from the provider while the field is blank.
+  domainReady() {
+    const typed = normalizeDomain(this.domainField?.value);
+    return DOMAIN.test(typed || this.providerDomainValue);
+  }
 
   // The picker reloads the icon block from the server, which shows the saved
   // icon, so an earlier choice starts over; a selected file is kept.
@@ -28,7 +77,14 @@ export default class extends Controller {
   }
 
   // The picker searches what the account form holds now, not what was saved.
-  search({ currentTarget }) {
+  search(event) {
+    if (!this.domainReady()) {
+      event.preventDefault();
+      this.pickHintTarget.classList.remove("hidden");
+      return;
+    }
+
+    const { currentTarget } = event;
     const typed = this.element.closest("form").elements;
     const query = currentTarget.form.elements;
 

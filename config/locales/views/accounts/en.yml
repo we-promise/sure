@@ -40,6 +40,7 @@ en:
       yandex: From Yandex
     logo_field:
       current: current
+      domain_needed: Enter the institution domain, such as tbank.ru, to pick an icon.
       empty: No icons found for this domain. Upload your own below.
       pick: Pick icon
       pending: Applied when you save
