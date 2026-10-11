@@ -52,6 +52,33 @@ class Family::SyncerTest < ActiveSupport::TestCase
     syncer.perform_sync(family_sync)
   end
 
+  test "eager-loads rule actions and conditions to avoid N+1 queries" do
+    # Create several active rules, each with actions and conditions, so an
+    # un-eager-loaded loop would fire 2*N extra queries.
+    3.times do
+      @family.rules.create!(
+        resource_type: "transaction",
+        active: true,
+        actions: [ Rule::Action.new(action_type: "exclude_transaction") ],
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "coffee") ]
+      )
+    end
+
+    syncer = Family::Syncer.new(@family)
+
+    # Stub transfer matching so its queries don't affect the count.
+    @family.stubs(:auto_match_transfers!)
+
+    # Stub apply_later so only the ActiveRecord loading queries are counted.
+    Rule.any_instance.stubs(:apply_later)
+
+    # With eager loading the query count is constant (rules + actions +
+    # conditions = 3), regardless of the number of rules.
+    assert_queries_count(3) do
+      syncer.perform_post_sync
+    end
+  end
+
   test "only applies active rules during sync" do
     family_sync = syncs(:family)
 
@@ -71,8 +98,12 @@ class Family::SyncerTest < ActiveSupport::TestCase
 
     syncer = Family::Syncer.new(@family)
 
-    # Stub the relation to return our specific instances so expectations work
-    @family.rules.stubs(:where).with(active: true).returns([ active_rule ])
+    # Stub the relation to return our specific instances so expectations work.
+    # The stub returns a mock relation that also responds to .includes (chained
+    # after .where in perform_post_sync) so the array isn't sent an unknown method.
+    mock_relation = mock("active_rules_relation")
+    mock_relation.stubs(:includes).returns([ active_rule ])
+    @family.rules.stubs(:where).with(active: true).returns(mock_relation)
 
     # Expect apply_later to be called only for the active rule
     active_rule.expects(:apply_later).once
