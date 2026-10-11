@@ -61,6 +61,12 @@ class Settings::HostingsController < ApplicationController
   end
 
   def update
+    if hosting_params.key?(:openai_reasoning_effort)
+      raw_effort = hosting_params[:openai_reasoning_effort].presence
+      effort = Provider::Openai.normalize_reasoning_effort(raw_effort)
+      raise Setting::ValidationError, t(".invalid_reasoning_effort") if raw_effort.present? && effort.nil?
+    end
+
     if hosting_params.key?(:onboarding_state)
       onboarding_state = hosting_params[:onboarding_state].to_s
       Setting.onboarding_state = onboarding_state
@@ -178,8 +184,6 @@ class Settings::HostingsController < ApplicationController
       sync_auto_sync_scheduler!
     end
 
-    update_encrypted_setting(:openai_access_token)
-
     # Validate OpenAI configuration before updating
     if hosting_params.key?(:openai_uri_base) || hosting_params.key?(:openai_model)
       Setting.validate_openai_config!(
@@ -187,6 +191,8 @@ class Settings::HostingsController < ApplicationController
         model: hosting_params[:openai_model]
       )
     end
+
+    update_encrypted_setting(:openai_access_token)
 
     if hosting_params.key?(:openai_uri_base)
       Setting.openai_uri_base = hosting_params[:openai_uri_base]
@@ -198,6 +204,10 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:openai_json_mode)
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
+    end
+
+    if hosting_params.key?(:openai_reasoning_effort)
+      Setting.openai_reasoning_effort = effort
     end
 
     update_encrypted_setting(:anthropic_access_token)
@@ -324,7 +334,7 @@ class Settings::HostingsController < ApplicationController
     # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :ai_health_probe_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :openai_reasoning_effort, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :ai_health_probe_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
     end
 
     def load_external_assistant_models

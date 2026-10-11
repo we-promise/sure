@@ -128,6 +128,7 @@ class Provider::Openai::PdfProcessor
         ],
         response_format: { type: "json_object" }
       }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
       response = client.chat(parameters: params)
 
@@ -192,6 +193,7 @@ class Provider::Openai::PdfProcessor
       else
         params[:max_tokens] = max_response_tokens
       end
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
       response = client.chat(parameters: params)
 

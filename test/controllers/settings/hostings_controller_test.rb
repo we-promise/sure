@@ -1234,6 +1234,180 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.tinkoff_invest_api_key = nil
   end
 
+  [ "high", " HIGH " ].each do |env_value|
+    test "shows effective environment backed reasoning effort for #{env_value.inspect}" do
+      with_self_hosting do
+        Setting.openai_reasoning_effort = "low"
+
+        with_env_overrides("OPENAI_REASONING_EFFORT" => env_value) do
+          get settings_hosting_url
+
+          assert_response :success
+          assert_select "select[name='setting[openai_reasoning_effort]'][disabled]" do
+            assert_select "option[selected][value='high']", count: 1
+          end
+        end
+      end
+    ensure
+      Setting.openai_reasoning_effort = nil
+    end
+  end
+
+  test "shows saved reasoning effort when there is no environment override" do
+    with_self_hosting do
+      with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+        Setting.openai_reasoning_effort = "low"
+
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select[name='setting[openai_reasoning_effort]']:not([disabled])" do
+          assert_select "option[selected][value='low']", count: 1
+        end
+      end
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
+  test "shows provider default when reasoning effort is unset" do
+    with_self_hosting do
+      with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+        Setting.openai_reasoning_effort = nil
+
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select[name='setting[openai_reasoning_effort]']:not([disabled])" do
+          assert_select "option[selected][value='']", count: 1
+        end
+      end
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
+  test "can update openai reasoning effort with a valid value" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "low" } }
+
+      assert_equal "low", Setting.openai_reasoning_effort
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
+  test "blank openai reasoning effort clears the setting" do
+    with_self_hosting do
+      Setting.openai_reasoning_effort = "low"
+
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "" } }
+
+      assert_nil Setting.openai_reasoning_effort
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
+  test "normalizes openai reasoning effort like the provider resolver does" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: " High " } }
+
+      assert_equal "high", Setting.openai_reasoning_effort
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
+  test "rejects invalid openai reasoning effort" do
+    with_self_hosting do
+      Setting.openai_reasoning_effort = nil
+
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "turbo" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Reasoning effort must be one of/, flash[:alert])
+      assert_nil Setting.openai_reasoning_effort
+    end
+  end
+
+  test "invalid reasoning effort leaves all OpenAI settings unchanged" do
+    original_settings = {
+      openai_access_token: "original-token",
+      openai_uri_base: "https://saved.example.com/v1",
+      openai_model: "saved-model",
+      openai_json_mode: "strict",
+      openai_reasoning_effort: "low"
+    }
+    with_self_hosting do
+      original_settings.each { |key, value| Setting.public_send("#{key}=", value) }
+
+      patch settings_hosting_url, params: { setting: {
+        openai_access_token: "new-token",
+        openai_uri_base: "https://new.example.com/v1",
+        openai_model: "new-model",
+        openai_json_mode: "none",
+        openai_reasoning_effort: "turbo"
+      } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Reasoning effort must be one of/, flash[:alert])
+      Setting.clear_cache
+      original_settings.each do |key, value|
+        assert_equal value, Setting.public_send(key), "#{key} changed after rejected update"
+      end
+    end
+  ensure
+    original_settings&.each_key { |key| Setting.public_send("#{key}=", nil) }
+  end
+
+  test "invalid reasoning effort leaves earlier settings and provider side effects unchanged" do
+    original_settings = {
+      brand_fetch_client_id: "original-brand-client",
+      auto_sync_enabled: false,
+      securities_providers: "twelve_data,tiingo",
+      openai_reasoning_effort: "low"
+    }
+    previous_settings = original_settings.keys.to_h { |key| [ key, Setting.public_send(key) ] }
+
+    with_self_hosting do
+      original_settings.each { |key, value| Setting.public_send("#{key}=", value) }
+      tiingo_security = Security.create!(
+        ticker: "REJECTED-TIINGO", exchange_operating_mic: "XLON",
+        price_provider: "tiingo", offline: false,
+        failed_fetch_count: 2, failed_fetch_at: 1.hour.ago
+      )
+      yahoo_security = Security.create!(
+        ticker: "REJECTED-YAHOO", exchange_operating_mic: "XLON",
+        price_provider: "yahoo_finance", offline: true, offline_reason: "provider_disabled",
+        failed_fetch_count: 4, failed_fetch_at: 1.day.ago
+      )
+      state_fields = %w[offline offline_reason failed_fetch_count failed_fetch_at]
+      original_tiingo_state = tiingo_security.reload.attributes.slice(*state_fields)
+      original_yahoo_state = yahoo_security.reload.attributes.slice(*state_fields)
+      AutoSyncScheduler.expects(:sync!).never
+
+      patch settings_hosting_url, params: { setting: {
+        brand_fetch_client_id: "new-brand-client",
+        auto_sync_enabled: "1",
+        securities_providers: [ "twelve_data", "yahoo_finance" ],
+        openai_reasoning_effort: "turbo"
+      } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Reasoning effort must be one of/, flash[:alert])
+      Setting.clear_cache
+      original_settings.each do |key, value|
+        assert_equal value, Setting.public_send(key), "#{key} changed after rejected update"
+      end
+      assert_equal original_tiingo_state, tiingo_security.reload.attributes.slice(*state_fields)
+      assert_equal original_yahoo_state, yahoo_security.reload.attributes.slice(*state_fields)
+    end
+  ensure
+    previous_settings&.each { |key, value| Setting.public_send("#{key}=", value) }
+    Setting.securities_providers = ""
+  end
+
   private
     def enable_preview_features!
       @user = users(:family_admin)
