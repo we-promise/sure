@@ -964,6 +964,19 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Beta paused", response.body
   end
 
+  # Content sits on a surface everywhere else in the app. The filters belong to
+  # the list they filter, and the table takes the inset tray a table inside a
+  # card gets, as the transaction list does.
+  test "the all view keeps its filters and its table on one card" do
+    create_bill(name: "Alpha bill", amount: 10)
+
+    get bills_url(view: "all")
+
+    assert_response :success
+    assert_select "div.bg-container.rounded-xl.shadow-border-xs form[method=get] input[name='q[search]']"
+    assert_select "div.bg-container.rounded-xl.shadow-border-xs div.bg-container-inset table"
+  end
+
   test "the calendar renders the month grid with paid and overdue states" do
     paid_bill = create_bill(name: "Paid on time", amount: 40, expected_day_of_month: 5)
     paid_occurrence = paid_bill.recurring_occurrences.find_by!(due_on: Date.current.beginning_of_month + 4)
@@ -981,6 +994,20 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Paid on time", response.body
     assert_match "Still owed", response.body
     assert_match Date.current.strftime("%B %Y"), response.body
+  end
+
+  # The totals and the feed links used to sit loose on the page background,
+  # either side of the grid's card.
+  test "the calendar holds its totals and its feed links on the grid's surface" do
+    create_bill(name: "Rent", amount: 100, expected_day_of_month: 5)
+
+    get bills_url(view: "calendar")
+
+    assert_response :success
+    assert_select "section.bg-surface-inset h2", text: /#{Regexp.escape(I18n.t("bills.index.title"))}/
+    assert_select "section.bg-surface-inset div.bg-container p", text: /#{Regexp.escape(Money.new(100, "USD").format.to_s)}/
+    assert_select "section.bg-surface-inset div.bg-container a", text: I18n.t("bills.calendar.subscribe_ical")
+    assert_select "section.bg-surface-inset div.bg-container button", text: I18n.t("bills.calendar.reset_feed")
   end
 
   # The calendar loads paused bills too, and painted a paused bill's leftover
@@ -1387,6 +1414,18 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.income_next_payday", date: I18n.l(payday, format: :short)), response.body
     assert_no_match(/#{Regexp.escape(I18n.l(Date.current - 1, format: :short))}/, response.body,
       "the stale column date must not appear anywhere on the page")
+  end
+
+  # The schedule was a bare disclosure: its eyebrow, headline and Manage sat on
+  # the page background. It is a card now, like the pulse on the overview.
+  test "the income schedule sits on a card" do
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 6)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_select "details.bg-container.rounded-xl.shadow-border-xs > summary",
+                  text: /#{Regexp.escape(I18n.t("bills.paycheck.income_section_title"))}/
   end
 
   # An auto-detected inflow sat in the list looking exactly like a real payday
