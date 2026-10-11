@@ -514,6 +514,10 @@ class Account::ProviderImportAdapter
         end
       end
 
+      # A new row for a later day starts without the user's corrections, which
+      # live on the earlier day's row. Carry them forward from that row.
+      carried = holding.new_record? ? previous_holding_for(security: security, currency: currency, date: date, account_provider_id: account_provider_id) : nil
+
       # Reconcile cost_basis to respect priority hierarchy
       reconciled = Holding::CostBasisReconciler.reconcile(
         existing_holding: holding.persisted? ? holding : nil,
@@ -533,7 +537,11 @@ class Account::ProviderImportAdapter
       }
 
       # Only update security if not locked by user
-      if holding.new_record? || holding.security_replaceable_by_provider?
+      if carried&.security_locked?
+        attributes[:security] = carried.security
+        attributes[:provider_security_id] = carried.provider_security_id || security.id
+        attributes[:security_locked] = true
+      elsif holding.new_record? || holding.security_replaceable_by_provider?
         attributes[:security] = security
         # Track the provider's original security so reset_security_to_provider! works
         # Only set if not already set (preserves original if user remapped then unlocked)
@@ -541,7 +549,11 @@ class Account::ProviderImportAdapter
       end
 
       # Only update cost_basis if reconciliation says to
-      if reconciled[:should_update]
+      if carried&.cost_basis_locked?
+        attributes[:cost_basis] = carried.cost_basis
+        attributes[:cost_basis_source] = carried.cost_basis_source
+        attributes[:cost_basis_locked] = true
+      elsif reconciled[:should_update]
         attributes[:cost_basis] = reconciled[:cost_basis]
         attributes[:cost_basis_source] = reconciled[:cost_basis_source]
       end
@@ -1048,6 +1060,22 @@ class Account::ProviderImportAdapter
   end
 
   private
+
+    # The latest earlier holding of the security the provider reports. A
+    # remapped row records that security in provider_security_id; an
+    # unremapped one has it as its own security. Only the latest row counts, so
+    # a correction the user has since undone is not revived from an older day.
+    def previous_holding_for(security:, currency:, date:, account_provider_id:)
+      scope = account.holdings
+        .where(currency: currency)
+        .where("holdings.date < ?", date)
+        .where(
+          "holdings.provider_security_id = :id OR (holdings.provider_security_id IS NULL AND holdings.security_id = :id)",
+          id: security.id
+        )
+      scope = scope.where(account_provider_id: account_provider_id) if account_provider_id.present?
+      scope.order(date: :desc).first
+    end
 
     # Loads the transfer together with both legs, their entries and accounts in
     # one joined query, so Transfer#kind_for_leg reads them without the lazy
