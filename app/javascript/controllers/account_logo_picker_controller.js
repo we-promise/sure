@@ -31,15 +31,22 @@ export default class extends Controller {
   ];
   static values = { pending: String, removal: String, providerDomain: String };
 
+  // Stimulus connects targets before connect(), so the field is looked up
+  // on demand and the button state is set again once listening.
   connect() {
-    this.domainField = this.element
+    this.listenedField = this.domainField;
+    this.listenedField?.addEventListener("input", this.updatePick);
+    this.updatePick();
+  }
+
+  get domainField() {
+    return this.element
       .closest("form")
       ?.elements.namedItem("account[institution_domain]");
-    this.domainField?.addEventListener("input", this.updatePick);
   }
 
   disconnect() {
-    this.domainField?.removeEventListener("input", this.updatePick);
+    this.listenedField?.removeEventListener("input", this.updatePick);
   }
 
   pickTargetConnected() {

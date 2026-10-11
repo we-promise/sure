@@ -62,12 +62,13 @@ module Account::Logoable
     logo.blob.metadata["logo_key"] || logo_source if logo.attached?
   end
 
-  # Whether the stored logo is the icon with `key` for the current domain.
-  # Favicon keys name only the service, so the domain it was fetched for has
-  # to match too; icons stored before that was recorded carry it in their
-  # filename ("tbank.ru.png").
-  def stored_logo?(key)
+  # Whether the stored logo is the icon with `key` for the current domain,
+  # and, given its `body`, still the same image. Favicon keys name only the
+  # service, so the domain it was fetched for has to match too; icons stored
+  # before that was recorded carry it in their filename ("tbank.ru.png").
+  def stored_logo?(key, body: nil)
     return false unless logo.attached? && logo_key == key
+    return false if body && logo.blob.checksum != Digest::MD5.base64digest(body)
 
     (logo.blob.metadata["logo_domain"] || logo.filename.base) == institution_domain
   end

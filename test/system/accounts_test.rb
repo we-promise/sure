@@ -31,6 +31,16 @@ class AccountsTest < ApplicationSystemTestCase
     assert_equal "false", find_button("Pick icon")["aria-disabled"]
   end
 
+  test "pick icon is ready in the edit form of an account with a saved domain" do
+    account = accounts(:depository)
+    account.update!(institution_domain: "tbank.ru")
+    visit account_url(account)
+    open_account_edit_dialog
+    find("summary", text: "Additional details").click
+
+    assert_equal "false", find_button("Pick icon")["aria-disabled"]
+  end
+
   test "can create investment account" do
     assert_account_created("Investment")
   end

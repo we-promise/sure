@@ -715,7 +715,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     @account.update!(institution_domain: "krungsri.com")
     @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "krungsri.com.png",
                          metadata: { "logo_source" => "yandex", "logo_key" => "yandex", "logo_auto" => true })
-    icons = [ logo_icon("appstore:123", "appstore", 512, name: "krungsri"), logo_icon("yandex", "yandex", 120) ]
+    icons = [ logo_icon("appstore:123", "appstore", 512, name: "krungsri"),
+              logo_icon("yandex", "yandex", 120, body: file_fixture("square-placeholder.png").binread) ]
     Account::LogoFetcher.any_instance.stubs(:candidates).returns(icons)
 
     get logo_options_account_url(@account), headers: { "Turbo-Frame" => dom_id(@account, :logo_field) }
@@ -750,6 +751,17 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "turbo-frame#logo_field_account"
+  end
+
+  test "logo_options keeps an icon selectable when its source now serves a different image" do
+    @account.update!(institution_domain: "krungsri.com")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "krungsri.com.png",
+                         metadata: { "logo_source" => "yandex", "logo_key" => "yandex", "logo_auto" => true })
+    Account::LogoFetcher.any_instance.stubs(:candidates).returns([ logo_icon("yandex", "yandex", 120) ])
+
+    get logo_options_account_url(@account), headers: { "Turbo-Frame" => dom_id(@account, :logo_field) }
+
+    assert_select "button[data-account-logo-picker-choice-param=yandex]"
   end
 
   test "logo_options outside the frame goes to the account" do
@@ -969,8 +981,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
-    def logo_icon(key, source, size, name: nil)
-      Account::LogoFetcher::Icon.new(key:, source:, name:, body: "\x89PNG".b, size:, content_type: "image/png", extension: "png")
+    def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
+      Account::LogoFetcher::Icon.new(key:, source:, name:, body:, size:, content_type: "image/png", extension: "png")
     end
 end
 

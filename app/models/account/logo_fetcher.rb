@@ -118,7 +118,7 @@ class Account::LogoFetcher
     end
 
     def favicon_icons
-      FAVICON_SOURCES.keys.filter_map { |source| favicon_icon(source) }
+      client.in_parallel(FAVICON_SOURCES.keys.map { |source| -> { favicon_icon(source) } }).compact
     end
 
     def favicon_icon(source)
