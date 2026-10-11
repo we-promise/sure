@@ -71,11 +71,12 @@ class Account::LogoFetcher
     return false unless icon
 
     # The search takes seconds. Under the row lock, which the account form's
-    # save also holds, a fetch yields to an icon chosen, uploaded or removed
-    # meanwhile and to a domain changed meanwhile. Touching the account busts
-    # the sidebar cache, which an attachment alone does not.
+    # save also holds, a fetch yields to a domain changed meanwhile and to an
+    # icon chosen, uploaded or removed meanwhile; a user's pick still replaces
+    # an icon an automatic fetch attached in the meantime. Touching the account
+    # busts the sidebar cache, which an attachment alone does not.
     account.with_lock do
-      if logo_state != logo_before || account.institution_domain != fetched_for || (auto && !account.logo_auto_fetchable?)
+      if account.institution_domain != fetched_for || changed_since?(logo_before, auto:) || (auto && !account.logo_auto_fetchable?)
         false
       else
         account.logo.attach(
@@ -92,6 +93,12 @@ class Account::LogoFetcher
   private
     def logo_state
       [ account.logo.attachment&.blob_id, account.prefer_brandfetch_logo? ]
+    end
+
+    def changed_since?(logo_before, auto:)
+      return false if logo_state == logo_before
+
+      auto || !account.logo_auto? || account.prefer_brandfetch_logo? != logo_before.last
     end
 
     def domain

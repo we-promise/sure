@@ -53,6 +53,20 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     assert @account.prefer_brandfetch_logo?
   end
 
+  test "a picked icon replaces an automatic one attached while it downloaded" do
+    fetcher = Account::LogoFetcher.new(@account)
+    fetcher.stubs(:icon_for).with do
+      Account.find(@account.id).logo.attach(io: file_fixture("square-placeholder.png").open, filename: "tbank.ru.png",
+                                            metadata: { "logo_source" => "google", "logo_key" => "google", "logo_auto" => true })
+      true
+    end.returns(Account::LogoFetcher::Icon.new(key: "yandex", source: "yandex", name: nil, body: png(120), size: 120,
+                                               content_type: "image/png", extension: "png"))
+
+    assert fetcher.fetch(source: "yandex")
+    assert_equal "yandex", @account.reload.logo_source
+    assert_not @account.logo_auto?
+  end
+
   test "an automatic fetch yields to an icon chosen while it searched" do
     icon = Account::LogoFetcher::Icon.new(key: "google", source: "google", name: nil, body: png(180), size: 180, content_type: "image/png", extension: "png")
     fetcher = Account::LogoFetcher.new(@account)
