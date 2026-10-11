@@ -113,7 +113,14 @@ class RecurringTransaction
       # ended rows, so detection can never recreate a bill the user already
       # declared by hand or dismissed. Only an unclaimed pattern creates a
       # row, and it lands as `suggested`, awaiting confirmation.
-      existing_by_identity = family.recurring_transactions.to_a.group_by { |recurring| identity_key(recurring) }
+      #
+      # A claimed series reads its recurrence_rules (sync_monthly_rule_day and
+      # Schedule.for) and its accounts (accounts_belong_to_family on update!),
+      # so preload them here instead of querying once per claimed series.
+      existing_by_identity = family.recurring_transactions
+        .includes(:recurrence_rules, :account, :destination_account)
+        .to_a
+        .group_by { |recurring| identity_key(recurring) }
 
       recurring_patterns.each do |pattern|
         identity = [ pattern[:merchant_id] ? [ :merchant, pattern[:merchant_id] ] : [ :name, pattern[:name] ],
