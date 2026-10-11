@@ -31,7 +31,8 @@
           icon: "images",
           type: "submit",
           form: dom_id(account, :logo_options),
-          data: { action: "account-logo-picker#search", turbo_submits_with: t("accounts.logo_field.searching") }
+          # The account form opts out of Turbo; this submit must stay in it to fill the logo frame.
+          data: { turbo: true, action: "account-logo-picker#search", turbo_submits_with: t("accounts.logo_field.searching") }
         ) %>
     <% if account.logo.attached? %>
       <%= render DS::Button.new(

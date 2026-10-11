@@ -224,7 +224,7 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     frame = dom_id(@account, :logo_field)
     assert_select "[data-controller=account-logo-picker]" do
       assert_select "turbo-frame##{frame}" do
-        assert_select "button[form=?][data-action='account-logo-picker#search']", dom_id(@account, :logo_options)
+        assert_select "button[form=?][data-action='account-logo-picker#search'][data-turbo=true]", dom_id(@account, :logo_options)
         assert_select "button[type=button][data-action='account-logo-picker#remove']"
         assert_select "template[data-account-logo-picker-target=fallback]"
       end
