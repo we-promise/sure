@@ -53,6 +53,11 @@ class InvestmentStatement::Totals
     # post. A Transaction has no trades row, so it never reaches the
     # direction branches or trades_count.
     #
+    # Income is summed signed and then negated, as Portfolio::FlowClassifier
+    # requires: a negative amount is money in, so a margin-interest charge or
+    # a dividend reversal carrying an income label reduces the total instead
+    # of adding to it.
+    #
     # The direction branches additionally exclude income labels rather than
     # relying on qty: 0 to keep the buckets disjoint. Without this guard such
     # a row would be counted twice: once by direction and once as income.
@@ -72,8 +77,8 @@ class InvestmentStatement::Totals
         SELECT
           COALESCE(SUM(CASE WHEN trades.qty > 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as contributions,
           COALESCE(SUM(CASE WHEN trades.qty < 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as withdrawals,
-          COALESCE(SUM(CASE WHEN #{label_sql} = 'Dividend' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as dividends,
-          COALESCE(SUM(CASE WHEN #{label_sql} = 'Interest' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as interest,
+          COALESCE(-SUM(CASE WHEN #{label_sql} = 'Dividend' THEN entries.amount * COALESCE(er.rate, 1) ELSE 0 END), 0) as dividends,
+          COALESCE(-SUM(CASE WHEN #{label_sql} = 'Interest' THEN entries.amount * COALESCE(er.rate, 1) ELSE 0 END), 0) as interest,
           COUNT(trades.id) as trades_count
         FROM entries
         LEFT JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'
