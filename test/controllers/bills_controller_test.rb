@@ -944,6 +944,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # DS::Table renders the desktop table's cells from blocks written in this
     # view, so their relative keys still have to resolve against bills/all.
     assert_select "table td", text: /Alpha bill/
+    # The name column takes what the others leave and truncates inside it, so a
+    # long bank-style name cannot widen the table past its card.
+    assert_select "table td.w-full.max-w-0 a.truncate", text: /Alpha bill/
     assert_select "table tr[data-controller~=clickable-row] a[data-clickable-row-target=link][data-turbo-frame=drawer]", minimum: 3
     # Only a live row skips its status; the paused one says it where the date goes.
     assert_select "table td .rounded-full", text: I18n.t("recurring_transactions.status.paused")

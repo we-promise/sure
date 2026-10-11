@@ -129,7 +129,11 @@
           class: "hidden @3xl:block",
           row_opts: ->(_series) { { data: { controller: "clickable-row", action: "click->clickable-row#open" } } }
         ) do |table| %>
-      <% table.with_column(t(".col_name")) do |series| %>
+      <%# w-full max-w-0 is the table idiom for "take what the other columns
+          leave, and truncate inside it": a bank-style name is one long
+          unbreakable run, and without it the column grows past the card and
+          pushes the actions menu out of reach. %>
+      <% table.with_column(t(".col_name"), class: "w-full max-w-0") do |series| %>
         <div class="flex items-center gap-3 @lg:gap-4">
           <%= render "bills/series_avatar", series: series %>
           <div class="min-w-0">
