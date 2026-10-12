@@ -157,7 +157,9 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
     assert_not_nil User.find_by(email: JIT_EMAIL), "header-asserted user should be JIT'd"
   end
 
-  test "cookie session is retained when the asserted header user cannot be established" do
+  # The proxy switched the browser to an identity Sure can't log in. A's
+  # cookie must not carry over to whoever the proxy now says is there.
+  test "a cookie session is rejected when the header asserts another identity that JIT cannot create" do
     Rails.application.config.stubs(:remote_user_allow_jit).returns(false)
     user = users(:family_admin)
     sign_in(user)
@@ -165,9 +167,41 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
 
     get root_url, headers: { HEADER_NAME => JIT_EMAIL }
 
+    assert_redirected_to new_session_url
+    refute Session.exists?(id: cookie_session.id)
+    assert cookies[:session_token].blank?
+    assert_nil User.find_by(email: JIT_EMAIL)
+  end
+
+  test "a cookie session is rejected when the header asserts another identity that removal blocked" do
+    removed = users(:family_member)
+    removed_email = removed.email
+    assert removed.permanently_remove!
+
+    user = users(:family_admin)
+    sign_in(user)
+    cookie_session = user.sessions.order(:created_at).last
+
+    assert_no_difference -> { User.count } do
+      get root_url, headers: { HEADER_NAME => removed_email }
+    end
+
+    assert_redirected_to new_session_url
+    refute Session.exists?(id: cookie_session.id)
+    assert cookies[:session_token].blank?
+  end
+
+  test "a cookie session is kept when the header asserts the same identity" do
+    user = users(:family_admin)
+    sign_in(user)
+    cookie_session = user.sessions.order(:created_at).last
+
+    assert_no_difference -> { Session.count } do
+      get root_url, headers: { HEADER_NAME => user.email.upcase }
+    end
+
     assert_response :success
     assert Session.exists?(id: cookie_session.id)
-    assert_nil User.find_by(email: JIT_EMAIL)
   end
 
   test "IP allowlist: request from a non-allowlisted IP is ignored" do

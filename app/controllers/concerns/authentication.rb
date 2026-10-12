@@ -23,7 +23,7 @@ module Authentication
     def authenticate_user!
       cookie_session = find_session_by_cookie
 
-      if cookie_session && cookie_session_disagrees_with_resolved_header_user?(cookie_session)
+      if cookie_session && cookie_session_disagrees_with_header_identity?(cookie_session)
         cookie_session.destroy
         cookies.delete(:session_token)
         cookie_session = nil
@@ -45,13 +45,20 @@ module Authentication
       end_impersonation_if_target_inactive!
     end
 
-    def cookie_session_disagrees_with_resolved_header_user?(session)
-      user, = resolved_remote_header_user
-      user.present? && session.user != user
+    # Compares the trusted assertion itself, not the user it resolves to. A
+    # proxy that asserts B is authoritative that the browser now belongs to B,
+    # even when B has no Sure account or is blocked. Keeping A's cookie in
+    # that case would hand B the session of whoever signed in before.
+    def cookie_session_disagrees_with_header_identity?(session)
+      asserted_email = trusted_remote_user_email
+      asserted_email.present? && session.user.email != asserted_email
     end
 
     def create_session_by_remote_header
-      user, created = resolved_remote_header_user
+      user_email = trusted_remote_user_email
+      return unless user_email
+
+      user, created = find_or_create_remote_header_user(user_email)
       return unless user
 
       if created
@@ -91,17 +98,6 @@ module Authentication
       end
     rescue User::InactiveError
       nil
-    end
-
-    # Returns [ user, created ] for the header assertion, or [ nil, false ] when
-    # there isn't one or it can't be honored. Memoized because the cookie-vs-header
-    # check and the session build both need it, and resolving twice would mean a
-    # second lookup — or a second JIT creation attempt — on the same request.
-    def resolved_remote_header_user
-      return @resolved_remote_header_user if defined?(@resolved_remote_header_user)
-
-      user_email = trusted_remote_user_email
-      @resolved_remote_header_user = user_email ? find_or_create_remote_header_user(user_email) : [ nil, false ]
     end
 
     # Most recent session that looks like the same client coming back. Keyed on
