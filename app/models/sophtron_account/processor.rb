@@ -57,13 +57,13 @@ class SophtronAccount::Processor
   # @return [void]
   # @raise [StandardError] if the account or its current balance anchor cannot be updated
   def process_account!
-    if sophtron_account.current_account.blank?
+    account = sophtron_account.current_account
+    if account.blank?
       Rails.logger.error("Sophtron account #{sophtron_account.id} has no associated Account")
       return
     end
 
     # Update account balance from latest Sophtron data
-    account = sophtron_account.current_account
     observed = sophtron_account.balance || sophtron_account.available_balance || 0
     balance = signed_balance(account, observed)
 
