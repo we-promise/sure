@@ -624,6 +624,134 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, eb_extra["pending"]
   end
 
+  # --- unidentified_hold? unit tests ---
+
+  test "unidentified_hold? returns true when both id fields and counterparty are absent" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: "2026-08-01",
+      transaction_amount: { amount: "26.57", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      status: "BOOK"
+    }
+    assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns true when creditor has empty or blank name" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" }
+    }
+    assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
+
+    tx2 = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor: { name: nil }
+    }
+    assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx2)
+  end
+
+  test "unidentified_hold? returns false when transaction_id is present" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: "txn_123",
+      credit_debit_indicator: "DBIT",
+      creditor: nil
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns false when entry_reference is present" do
+    tx = {
+      entry_reference: "ref_123",
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor: nil
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns false when creditor name is present" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Kaufland" }
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns false when creditor_name string is present" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor_name: "Kaufland"
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns false for incoming CRDT when debtor is present" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      debtor: { name: "Alice" }
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns true for incoming CRDT when debtor is absent" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      debtor: nil
+    }
+    assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "pending_payload? returns true for an unidentified hold" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor: nil
+    }
+    assert_equal true, EnableBankingEntry::Processor.pending_payload?(tx)
+  end
+
+  test "stores pending true in extra for unidentified holds" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "26.57", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "5168XXXXXXXX1234" ],
+      status: "BOOK"
+    }
+
+    assert_difference "@account.entries.count", 1 do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+
+    content_id = EnableBankingEntry::Processor.compute_external_id(tx)
+    entry = @account.entries.find_by!(external_id: content_id)
+    eb_extra = entry.transaction&.extra&.dig("enable_banking")
+    assert_equal true, eb_extra["pending"]
+    assert entry.transaction.pending?
+  end
+
   test "does not add enable_banking extra key when no extra data present" do
     tx = {
       entry_reference: "ref_noextra",

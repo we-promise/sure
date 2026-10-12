@@ -528,16 +528,18 @@ class EnableBankingItem::Importer
       )
 
       if include_pending
-        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG) with _pending: true
+        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG or an unidentified hold) with _pending: true
         all_transactions = all_transactions.map do |tx|
           tx_ia = tx.with_indifferent_access
-          tx_ia[:status] == "PDNG" ? tx_ia.merge(_pending: true) : tx_ia
+          is_pending = tx_ia[:status] == "PDNG" || EnableBankingEntry::Processor.unidentified_hold?(tx_ia)
+          is_pending ? tx_ia.merge(_pending: true) : tx_ia
         end
       else
         # If include_pending is false, we must filter out any pending transactions
-        # that were returned (e.g. if the bank ignores transaction_status="BOOK").
+        # that were returned (e.g. if the bank ignores transaction_status="BOOK" or returns unfinalized holds).
         all_transactions = all_transactions.reject do |tx|
-          tx.with_indifferent_access[:status] == "PDNG"
+          tx_ia = tx.with_indifferent_access
+          tx_ia[:status] == "PDNG" || EnableBankingEntry::Processor.unidentified_hold?(tx_ia)
         end
       end
 

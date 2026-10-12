@@ -82,7 +82,39 @@ class EnableBankingEntry::Processor
     data[:transaction_id].blank? && data[:entry_reference].blank?
   end
 
-  # True when the ASPSP has flagged this raw payload as not yet settled.
+  # True when the ASPSP supplied neither transaction_id nor entry_reference, and
+  # no counterparty information (creditor or debtor) is available. Certain
+  # institutions (such as DSK Bank Bulgaria) expose un-finalized card holds this
+  # way even under a "BOOK" status payload.
+  #
+  # @return [Boolean]
+  def self.unidentified_hold?(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    return false unless identifierless?(data)
+
+    creditor = if data[:creditor].is_a?(Hash)
+      data.dig(:creditor, :name)
+    elsif data[:creditor].is_a?(String)
+      data[:creditor]
+    end.presence || data[:creditor_name].presence
+
+    return false if creditor.present?
+
+    if data[:credit_debit_indicator] == "CRDT"
+      debtor = if data[:debtor].is_a?(Hash)
+        data.dig(:debtor, :name)
+      elsif data[:debtor].is_a?(String)
+        data[:debtor]
+      end.presence || data[:debtor_name].presence
+
+      return false if debtor.present?
+    end
+
+    true
+  end
+
+  # True when the ASPSP has flagged this raw payload as not yet settled, or when
+  # the payload represents an unidentified card hold.
   #
   # Named pending_payload? rather than the bare pending? that Transaction#pending?
   # already uses, on purpose: this checks the incoming provider hash, not a
@@ -90,7 +122,8 @@ class EnableBankingEntry::Processor
   #
   # @return [Boolean]
   def self.pending_payload?(raw_transaction_data)
-    raw_transaction_data.with_indifferent_access[:_pending] == true
+    data = raw_transaction_data.with_indifferent_access
+    data[:_pending] == true || unidentified_hold?(data)
   end
 
   # External ids of the rows stored under a synthesised content hash, which are
@@ -271,7 +304,7 @@ class EnableBankingEntry::Processor
       end
 
       eb[:merchant_category_code] = data[:merchant_category_code] if data[:merchant_category_code].present?
-      eb[:pending] = true if data[:_pending] == true
+      eb[:pending] = true if self.class.pending_payload?(data)
 
       eb.compact!
       eb.empty? ? nil : { enable_banking: eb }
