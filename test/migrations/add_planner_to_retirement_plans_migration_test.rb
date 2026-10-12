@@ -3,61 +3,69 @@
 require "test_helper"
 require Rails.root.join("db/migrate/20261008150200_add_planner_to_retirement_plans")
 
-# A database can already carry the planner's columns and tables when this
-# migration runs: one that built them from an earlier migration of its own
-# records that version, not this one, so this one is still pending there. `up`
-# must then leave the columns, the tables, their constraints and every saved
-# plan, stream and linked account exactly as it found them. The schema changes
+# The migration owns five columns and four check constraints on
+# retirement_plans, and the retirement_plan_streams and retirement_plan_accounts
+# tables with their indexes, foreign keys and constraints. `down` must remove
+# those and nothing else, `up` must put them back as they were, and `up` must
+# not quietly adopt columns it did not create -- a rollback would then drop
+# them, and every plan's streams and accounts with them. The schema changes
 # roll back with the test's transaction.
 class AddPlannerToRetirementPlansMigrationTest < ActiveSupport::TestCase
-  TABLES = %i[retirement_plans retirement_plan_streams retirement_plan_accounts].freeze
-  PLANNER_COLUMNS = %w[birth_year end_age inflation_rate mode streams_seeded_on].freeze
-  PLANNER_CHECKS = %w[
+  PLAN_COLUMNS = %w[birth_year end_age inflation_rate mode streams_seeded_on].freeze
+  PLAN_CONSTRAINTS = %w[
     chk_retirement_plans_birth_year chk_retirement_plans_end_age
     chk_retirement_plans_inflation_rate chk_retirement_plans_mode
   ].freeze
-  STREAM_CHECKS = %w[
-    chk_retirement_plan_streams_amount chk_retirement_plan_streams_kind
-    chk_retirement_plan_streams_source chk_retirement_plan_streams_years
-  ].freeze
+  TABLES = %w[retirement_plan_accounts retirement_plan_streams].freeze
 
-  test "up over existing planner columns and tables changes nothing and keeps every plan, stream and account" do
-    plan_id = insert_plan_with_stream_and_account
-    before = snapshot
-
-    assert_nothing_raised { migrate(:up) }
-
-    assert_equal before, snapshot
-    assert_equal [ [ "1980", "95", "fire" ] ],
-      connection.select_rows("SELECT birth_year::text, end_age::text, mode FROM retirement_plans WHERE id = #{connection.quote(plan_id)}")
-    assert_equal 1, connection.select_value("SELECT count(*) FROM retirement_plan_streams WHERE retirement_plan_id = #{connection.quote(plan_id)}")
-    assert_equal 1, connection.select_value("SELECT count(*) FROM retirement_plan_accounts WHERE retirement_plan_id = #{connection.quote(plan_id)}")
-  end
-
-  # `down` is the plain reversal, so it doubles as the way to reach a database
-  # that never had the planner.
-  test "down removes the planner, and up on a database without it adds it back" do
-    plan_id = insert_plan_with_stream_and_account
+  test "down then up restores the columns, the tables and their constraints" do
+    before = shape
 
     migrate(:down)
-    assert_not connection.table_exists?(:retirement_plan_streams), "precondition: the streams table is gone"
-    assert_not connection.table_exists?(:retirement_plan_accounts), "precondition: the accounts table is gone"
-    assert_empty PLANNER_COLUMNS & connection.columns(:retirement_plans).map(&:name), "precondition: the columns are gone"
-    assert_empty PLANNER_CHECKS & connection.check_constraints(:retirement_plans).map(&:name), "precondition: the checks are gone"
+    migrate(:up)
+
+    assert_equal before, shape
+    assert_equal [ "integer", 90, false ], before[:plan_columns]["end_age"]
+    assert_equal [ "numeric(6,4)", BigDecimal("0.03"), false ], before[:plan_columns]["inflation_rate"]
+    assert_equal [ "character varying", "traditional", false ], before[:plan_columns]["mode"]
+    assert_equal %w[traditional fire], before[:plan_constraints]["chk_retirement_plans_mode"]
+    assert_equal %w[expense income one_off],
+      before[:tables]["retirement_plan_streams"][:constraints]["chk_retirement_plan_streams_kind"]
+    assert_equal %w[seeded_living_costs seeded_loan manual],
+      before[:tables]["retirement_plan_streams"][:constraints]["chk_retirement_plan_streams_source"]
+    assert_includes before[:tables]["retirement_plan_accounts"][:indexes],
+      [ "idx_retirement_plan_accounts_unique", %w[retirement_plan_id account_id], true ]
+  end
+
+  test "down removes exactly the columns, constraints and tables that up adds" do
+    columns_up, constraints_up, tables_up = plan_column_names, plan_constraint_names, connection.tables
+
+    migrate(:down)
+    columns_down, constraints_down, tables_down = plan_column_names, plan_constraint_names, connection.tables
 
     migrate(:up)
 
-    columns = connection.columns(:retirement_plans).index_by(&:name)
-    assert_equal PLANNER_COLUMNS, PLANNER_COLUMNS & columns.keys
-    assert_equal [ false, 90 ], [ columns["end_age"].null, columns["end_age"].default ]
-    assert_equal [ false, "traditional" ], [ columns["mode"].null, columns["mode"].default ]
-    assert_equal PLANNER_CHECKS, PLANNER_CHECKS & connection.check_constraints(:retirement_plans).map(&:name)
-    assert_equal STREAM_CHECKS, connection.check_constraints(:retirement_plan_streams).map(&:name).sort
-    assert connection.index_exists?(:retirement_plan_accounts, [ :retirement_plan_id, :account_id ],
-                                    unique: true, name: "idx_retirement_plan_accounts_unique")
-    # The plan itself survived the round trip, now with the new defaults.
-    assert_equal [ [ "90", "traditional" ] ],
-      connection.select_rows("SELECT end_age::text, mode FROM retirement_plans WHERE id = #{connection.quote(plan_id)}")
+    assert_equal PLAN_COLUMNS, columns_up - columns_down
+    assert_equal PLAN_CONSTRAINTS, constraints_up - constraints_down
+    assert_equal TABLES, (tables_up - tables_down).sort
+    assert_empty columns_down - columns_up
+    assert_empty constraints_down - constraints_up
+    assert_empty tables_down - tables_up
+    assert_equal columns_up.sort, plan_column_names.sort
+    assert_equal constraints_up.sort, plan_constraint_names.sort
+    assert_equal tables_up.sort, connection.tables.sort
+  end
+
+  test "up refuses columns it did not create rather than adopting them" do
+    before = shape
+
+    error = assert_raises(ActiveRecord::StatementInvalid) do
+      ActiveRecord::Base.transaction(requires_new: true) { migrate(:up) }
+    end
+
+    assert_match(/DuplicateColumn: ERROR:  column "birth_year" of relation "retirement_plans" already exists/,
+      error.message)
+    assert_equal before, shape
   end
 
   private
@@ -67,35 +75,47 @@ class AddPlannerToRetirementPlansMigrationTest < ActiveSupport::TestCase
       ActiveRecord::Migration.suppress_messages { AddPlannerToRetirementPlans.new.migrate(direction) }
     end
 
-    def insert_plan_with_stream_and_account
-      user = users(:family_admin)
-      account = accounts(:depository)
-      connection.execute("DELETE FROM retirement_plans WHERE user_id = #{connection.quote(user.id)}")
-      plan_id = connection.select_value(<<~SQL)
-        INSERT INTO retirement_plans (user_id, birth_year, end_age, mode, created_at, updated_at)
-        VALUES (#{connection.quote(user.id)}, 1980, 95, 'fire', now(), now())
-        RETURNING id
-      SQL
-      connection.execute(<<~SQL)
-        INSERT INTO retirement_plan_streams (retirement_plan_id, kind, name, annual_amount, source, created_at, updated_at)
-        VALUES (#{connection.quote(plan_id)}, 'expense', 'Living costs', 40000, 'manual', now(), now());
-        INSERT INTO retirement_plan_accounts (retirement_plan_id, account_id, created_at, updated_at)
-        VALUES (#{connection.quote(plan_id)}, #{connection.quote(account.id)}, now(), now())
-      SQL
-      plan_id
+    def plan_column_names
+      connection.columns(:retirement_plans).map(&:name)
     end
 
-    # Each table's columns, indexes, foreign keys and check constraints, and
-    # every row in it.
-    def snapshot
-      TABLES.index_with do |table|
-        {
-          columns: connection.columns(table).map { |c| [ c.name, c.sql_type, c.null, c.default ] },
-          indexes: connection.indexes(table).map { |i| [ i.name, i.columns, i.unique ] },
-          foreign_keys: connection.foreign_keys(table).map { |k| [ k.name, k.to_table, k.on_delete ] },
-          check_constraints: connection.check_constraints(table).map { |c| [ c.name, c.expression ] },
-          rows: connection.select_rows("SELECT * FROM #{table} ORDER BY id")
-        }
-      end
+    def plan_constraint_names
+      connection.check_constraints(:retirement_plans).map(&:name)
+    end
+
+    # What this migration declares, read back from the catalog.
+    def shape
+      plan_columns = connection.columns(:retirement_plans).select { |c| PLAN_COLUMNS.include?(c.name) }
+      {
+        plan_columns: column_shapes(plan_columns),
+        plan_constraints: PLAN_CONSTRAINTS.index_with { |name| constraint_literals(:retirement_plans, name) }.compact,
+        tables: TABLES.select { |table| connection.table_exists?(table) }.index_with { |table| table_shape(table) }
+      }
+    end
+
+    def table_shape(table)
+      {
+        columns: column_shapes(connection.columns(table)),
+        indexes: connection.indexes(table).map { |i| [ i.name, i.columns, i.unique ] }.sort,
+        foreign_keys: connection.foreign_keys(table).map { |k| [ k.column, k.to_table, k.on_delete ] }.sort,
+        constraints: connection.check_constraints(table).map(&:name).sort
+                               .index_with { |name| constraint_literals(table, name) }
+      }
+    end
+
+    def column_shapes(columns)
+      columns.to_h { |c| [ c.name, [ c.sql_type, c.default || c.default_function, c.null ] ] }.sort.to_h
+    end
+
+    # The literals a check constraint compares against, in order. Compared
+    # rather than the rendered predicate: a constraint loaded from schema.rb and
+    # one created by `add_check_constraint` print the same check with different
+    # casts.
+    def constraint_literals(table, name)
+      definition = connection.select_value(
+        "SELECT pg_get_constraintdef(oid) FROM pg_constraint " \
+        "WHERE conname = #{connection.quote(name)} AND conrelid = #{connection.quote(table.to_s)}::regclass"
+      )
+      definition&.scan(/'([^']*)'|\b(\d+(?:\.\d+)?)\b/)&.map { |quoted, number| quoted || number }
     end
 end
