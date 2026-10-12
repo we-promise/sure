@@ -65,6 +65,8 @@ class AccountStatement < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :with_account, -> { where.not(account_id: nil) }
   scope :unmatched, -> { where(account_id: nil).where(review_status: "unmatched") }
+  # Rejecting a suggestion leaves the statement accountless, so it stays in the inbox to be linked by hand or deleted.
+  scope :inbox, -> { where(account_id: nil).where(review_status: %w[unmatched rejected]) }
   scope :for_month, ->(month) {
     month_start = month.to_date.beginning_of_month
     month_end = month_start.end_of_month
