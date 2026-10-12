@@ -796,6 +796,69 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not_equal "Card Authorization Hold", entry.name
   end
 
+  test "masked_card_descriptor? detects masked card numbers in remittance or bank transaction code" do
+    assert EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "474836xxxxxx6879 003015315475" ])
+    assert EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: "474836XXXXXX6879")
+    assert EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "474836******6879" ])
+    assert EnableBankingEntry::Processor.masked_card_descriptor?(bank_transaction_code: { description: "474836xxxxxx6879" })
+
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "Supermarket" ])
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "Salary" ])
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: nil)
+  end
+
+  test "unidentified_hold? returns true when transaction_id is present but remittance is a masked card descriptor" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: "txn_hold_123",
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ]
+    }
+    assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "reconciles and claims unfinalized card hold when settled booked transaction arrives" do
+    # 1. First sync: unfinalized card hold arrives with status BOOK, CRDT, no counterparty, masked remittance
+    hold_tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    hold_entry = EnableBankingEntry::Processor.new(hold_tx, enable_banking_account: @enable_banking_account).process
+    assert_not_nil hold_entry
+    assert_equal BigDecimal("14.97"), hold_entry.amount
+    assert_equal "Card Authorization Hold", hold_entry.name
+    assert hold_entry.transaction.pending?
+
+    # 2. Later sync: settled booked transaction arrives with real creditor, DBIT, and identifiers
+    settled_tx = {
+      entry_reference: "ref_settled_999",
+      transaction_id: "txn_settled_999",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Billa" },
+      remittance_information: [ "BILLA DANKT 0007114" ],
+      status: "BOOK"
+    }
+
+    settled_entry = EnableBankingEntry::Processor.new(settled_tx, enable_banking_account: @enable_banking_account).process
+    assert_not_nil settled_entry
+
+    # Should have claimed the pending hold entry instead of creating a duplicate
+    assert_equal hold_entry.id, settled_entry.id, "Settled transaction must claim the pending hold row"
+    assert_equal "enable_banking_txn_settled_999", settled_entry.external_id
+    assert_not settled_entry.transaction.pending?, "Pending flag must be cleared upon settlement"
+    assert_equal 1, @account.entries.where(source: "enable_banking").count
+  end
+
   test "does not add enable_banking extra key when no extra data present" do
     tx = {
       entry_reference: "ref_noextra",
