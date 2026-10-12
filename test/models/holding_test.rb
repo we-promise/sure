@@ -87,8 +87,9 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, fee: 10, date: 1.day.ago.to_date)
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, fee: 5, date: Date.current)
 
-    # (10 * 212 + 10 + 15 * 216 + 5) / 25 = 5,375 / 25
-    assert_equal Money.new(BigDecimal("215")), @amzn.avg_cost
+    # (10 * 212 + 10 + 15 * 216 + 5) / 25 = 5,375 / 25. Within a hair: the
+    # tracker carries a fee as fee / qty per unit, as the calculators do.
+    assert_in_delta 215, @amzn.avg_cost.amount, BigDecimal("1e-20")
   end
 
   # The fallback's COALESCE(rate, 1) counted a foreign purchase at 1:1 when its
@@ -134,15 +135,71 @@ class HoldingTest < ActiveSupport::TestCase
     end
   end
 
-  # The missing-rate check rides on the totals query instead of adding a round
-  # trip to a path that exists to avoid N+1 queries.
-  test "the fallback reads the trades in two queries" do
-    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
+  # Rates ride on the trades query instead of a lookup per trade, on a path
+  # that exists to avoid N+1 queries.
+  test "the fallback reads the trades and the splits once each" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 2.days.ago.to_date, currency: "CAD")
+    create_trade(@amzn.security, account: @account, qty: 5, price: 216.00, date: 1.day.ago.to_date, currency: "CAD")
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 2.days.ago.to_date, rate: 0.75)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 0.75)
     @amzn.account
 
     queries = capture_sql_queries { @amzn.avg_cost }
 
-    assert_equal 2, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
+    assert_equal 2, queries.size
+  end
+
+  # The fallback replays the trades through the calculators' tracker. As an
+  # average of every purchase ever made, it still counted the first round of a
+  # position sold in full and bought again.
+  test "the fallback starts a position bought again after a full close from a clean basis" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100.00, date: 3.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: -10, price: 120.00, date: 2.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 5, price: 200.00, date: 1.day.ago.to_date)
+
+    assert_equal Money.new(200), @amzn.avg_cost
+  end
+
+  # A sale's gain is measured against the holding on its own date, which after
+  # a full close holds nothing, so that holding keeps what the units cost.
+  test "the fallback keeps the cost of what a position held on the day it closes" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100.00, date: 2.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 5, price: 130.00, date: 1.day.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: -15, price: 150.00, date: Date.current)
+
+    # (10 * 100 + 5 * 130) / 15 = 1,650 / 15
+    assert_equal Money.new(110), @amzn.avg_cost
+  end
+
+  # Units moved in have a cost nothing here knows, but only while they are held.
+  test "the fallback knows the basis again once moved-in units are sold in full" do
+    moved_in = create_trade(@amzn.security, account: @account, qty: 5, price: 100.00, date: 4.days.ago.to_date)
+    moved_in.entryable.update!(investment_activity_label: "Transfer")
+    create_trade(@amzn.security, account: @account, qty: -5, price: 120.00, date: 3.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 150.00, date: 1.day.ago.to_date)
+
+    assert_equal Money.new(150), @amzn.avg_cost
+  end
+
+  test "the fallback keeps the basis unknown while moved-in units are held" do
+    moved_in = create_trade(@amzn.security, account: @account, qty: 5, price: 100.00, date: 2.days.ago.to_date)
+    moved_in.entryable.update!(investment_activity_label: "Transfer")
+    create_trade(@amzn.security, account: @account, qty: 10, price: 150.00, date: 1.day.ago.to_date)
+
+    assert_nil @amzn.avg_cost
+  end
+
+  # A split changes the share count, not the money invested. Summed as they
+  # stood, the purchases mixed pre- and post-split units.
+  test "the fallback carries the cost across a split" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100.00, date: 3.days.ago.to_date)
+    Security::Split.create!(security: @amzn.security, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+    create_trade(@amzn.security, account: @account, qty: 10, price: 60.00, date: 1.day.ago.to_date)
+
+    # (10 * 100 + 10 * 60) / (10 * 2 + 10) = 1,600 / 30
+    assert_in_delta BigDecimal("53.333333"), @amzn.avg_cost.amount, BigDecimal("0.000001")
   end
 
   test "calculates total return trend" do
