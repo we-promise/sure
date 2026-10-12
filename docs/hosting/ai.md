@@ -1459,6 +1459,7 @@ Read and analysis:
 
 Write:
 - `update_transaction`, `update_budget`, `create_goal`
+- `unmatch_transfer` - Unlink a wrongly matched transfer
 - `create_tag` / `update_tag`, `create_category` / `update_category`
 
 Documents:

@@ -147,6 +147,7 @@ At the time of writing, `tools/list` includes:
 | `get_categories` | Categories with hierarchy and pagination |
 | `create_goal` | Create a savings goal linked to depository accounts |
 | `set_opening_balance` | Set a manual account's opening balance and the date it applies from, reporting whether the current balance changes. Supports `dry_run` |
+| `unmatch_transfer` | Unlink a confirmed or pending transfer (by either transaction's id) so a wrong match can be redone; rejects the pairing for auto-match by default. Supports `dry_run` |
 | `create_tag` / `update_tag` | Manage tags |
 | `create_category` / `update_category` | Manage categories |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |

@@ -66,6 +66,7 @@ module Assistant
         Function::SearchFamilyFiles,
         Function::CreateGoal,
         Function::SetOpeningBalance,
+        Function::UnmatchTransfer,
         Function::GetTags,
         Function::CreateTag,
         Function::UpdateTag,
