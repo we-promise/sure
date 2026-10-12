@@ -44,12 +44,23 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "rejects chat creation for a consenting user when the assistant type is none" do
+    api_key = ApiKey.create!(
+      user: @user,
+      name: "Assistant Off Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_rw_#{SecureRandom.hex(8)}"
+    )
+
+    get "/api/v1/chats", headers: api_headers(api_key)
+    assert_response :success
+
     @user.family.update!(assistant_type: "none")
 
     assert_no_difference "Chat.count" do
       post "/api/v1/chats",
         params: { title: "New chat", message: "Hello AI" },
-        headers: bearer_auth_header(@write_token)
+        headers: api_headers(api_key)
     end
 
     assert_response :forbidden
@@ -204,5 +215,9 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
 
     def bearer_auth_header(token)
       { "Authorization" => "Bearer #{token.token}" }
+    end
+
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.plain_key }
     end
 end
