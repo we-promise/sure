@@ -364,11 +364,56 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to @account
     assert_equal "credit", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("-25"), @account.reload.balance
+    assert_equal @account, @account.syncs.order(:created_at).last.syncable
+    assert_empty sophtron_account.sophtron_item.syncs
+  end
+
+  test "applies a Sophtron sign override when the card requires manual sync" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.update!(manual_sync: true)
+
+    assert_no_difference -> { sophtron_account.sophtron_item.syncs.count } do
+      assert_difference -> { @account.syncs.count } => 1 do
+        patch credit_card_path(@account), params: {
+          account: {
+            name: @account.name,
+            accountable_type: "CreditCard",
+            sophtron: { balance_sign_override: "debt" }
+          }
+        }
+      end
+    end
+
+    assert_redirected_to @account
+    assert_equal "debt", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("25"), @account.reload.balance
+    assert_equal BigDecimal("25"), @account.current_anchor_balance
+  end
+
+  test "applies a Sophtron sign override when the parent item requires manual sync" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.sophtron_item.update!(manual_sync: true)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "credit" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_equal "credit", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("-25"), @account.reload.balance
+    assert_empty sophtron_account.sophtron_item.syncs
+    assert_equal 1, @account.syncs.count
   end
 
   test "clears Sophtron balance sign override when automatic is selected" do
     sophtron_account = create_linked_sophtron_account
     sophtron_account.update!(balance_sign_override: "credit")
+    @account.update!(balance: -25)
 
     patch credit_card_path(@account), params: {
       account: {
@@ -380,6 +425,8 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to @account
     assert_nil sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("25"), @account.reload.balance
+    assert_equal BigDecimal("25"), @account.current_anchor_balance
   end
 
   test "does not persist Sophtron override when the account update fails" do

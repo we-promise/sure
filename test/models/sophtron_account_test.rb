@@ -47,6 +47,29 @@ class SophtronAccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "apply_balance_sign_override! is a no-op when account is not linked" do
+    account = build_sophtron_account
+    account.balance_sign_override = "credit"
+
+    assert_nothing_raised do
+      account.apply_balance_sign_override!
+    end
+  end
+
+  test "apply_balance_sign_override! updates balance anchor and schedules account sync" do
+    sophtron_account = build_sophtron_account
+    sophtron_account.update!(balance: -25, balance_sign_override: "credit")
+    account = accounts(:credit_card)
+    AccountProvider.create!(account: account, provider: sophtron_account)
+
+    assert_difference -> { account.syncs.count } => 1 do
+      sophtron_account.apply_balance_sign_override!
+    end
+
+    assert_equal BigDecimal("-25"), account.reload.balance
+    assert_equal BigDecimal("-25"), account.current_anchor_balance
+  end
+
   private
     def build_sophtron_account
       item = families(:dylan_family).sophtron_items.create!(

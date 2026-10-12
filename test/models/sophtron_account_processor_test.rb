@@ -33,6 +33,7 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
     SophtronAccount::Processor.new(sophtron_account).send(:process_account!)
 
     assert_equal BigDecimal("-25"), acct.reload.balance
+    assert_equal BigDecimal("-25"), acct.current_anchor_balance
   end
 
   test "debt override preserves an ambiguous provider balance as debt" do
@@ -84,6 +85,21 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
     SophtronAccount::Processor.new(sophtron_account).send(:process_account!)
 
     assert_equal BigDecimal("400"), acct.reload.balance
+  end
+
+  test "process updates account balance and current anchor without scheduling an account sync" do
+    sophtron_account = create_sophtron_account(
+      account_id: "cc_process",
+      balance: BigDecimal("-50")
+    )
+    acct = link_account(accounts(:credit_card), sophtron_account)
+
+    assert_no_difference -> { acct.syncs.count } do
+      SophtronAccount::Processor.new(sophtron_account).process
+    end
+
+    assert_equal BigDecimal("50"), acct.reload.balance
+    assert_equal BigDecimal("50"), acct.current_anchor_balance
   end
 
   private

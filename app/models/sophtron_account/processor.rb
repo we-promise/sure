@@ -57,7 +57,7 @@ class SophtronAccount::Processor
     # - Other account types use Sophtron's native sign convention
     #
     # @return [void]
-    # @raise [ActiveRecord::RecordInvalid] if the account update fails
+    # @raise [StandardError] if the account or its current balance anchor cannot be updated
     def process_account!
       if sophtron_account.current_account.blank?
         Rails.logger.error("Sophtron account #{sophtron_account.id} has no associated Account")
@@ -71,12 +71,15 @@ class SophtronAccount::Processor
 
       # Normalize currency with fallback chain: parsed sophtron currency -> existing account currency -> USD
       currency = parse_currency(sophtron_account.currency) || account.currency || "USD"
-      # Update account balance
-      account.update!(
-        balance: balance,
-        cash_balance: balance,
-        currency: currency
-      )
+
+      # The anchor is what a later account sync reads. Write it here, without
+      # queueing that sync, so the caller can schedule one sync after every
+      # account has been updated.
+      ActiveRecord::Base.transaction do
+        account.update!(currency: currency, cash_balance: balance)
+        result = account.set_current_balance(balance, schedule_sync: false)
+        raise StandardError, "Failed to set current balance: #{result.error}" unless result.success?
+      end
     end
 
     # Processes all stored transactions for this account.

@@ -89,7 +89,7 @@ class CreditCardsController < ApplicationController
         provider_type: "SophtronAccount",
         attribute: :balance_sign_override,
         value: override
-      ) { |provider_account| provider_account.sophtron_item.sync_later }
+      ) { |provider_account| provider_account.apply_balance_sign_override! }
     end
 
     def update_provider_setting(provider_type:, attribute:, value:)

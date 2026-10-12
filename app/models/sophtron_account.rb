@@ -41,6 +41,21 @@ class SophtronAccount < ApplicationRecord
     account
   end
 
+  # Applies the current sign override to the stored provider balance and
+  # schedules the linked account sync.
+  #
+  # An item sync is not enough when this card or its parent item is marked for
+  # manual sync: SophtronItem::Syncer only processes automatic accounts, so the
+  # override would sit unused until the user finishes that flow.
+  #
+  # @return [void]
+  def apply_balance_sign_override!
+    return if current_account.blank?
+
+    SophtronAccount::Processor.new(self).process
+    current_account.sync_later
+  end
+
   def institution_name
     institution_metadata.to_h["name"].presence || sophtron_item&.institution_name
   end
