@@ -732,6 +732,8 @@ class TransactionsController < ApplicationController
       permitted
     end
 
+    # Permitted search filters from the q param, with blank values and
+    # unsupported ai_status / attachment_status values dropped.
     def search_params
       cleaned_params = params.fetch(:q, {})
               .permit(

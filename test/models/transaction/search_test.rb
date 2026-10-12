@@ -1204,6 +1204,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
   end
 
   private
+    # Attaches a small PDF to the transaction.
     def attach_file(transaction, filename: "invoice.pdf")
       transaction.attachments.attach(io: StringIO.new("invoice"), filename: filename, content_type: "application/pdf")
     end
