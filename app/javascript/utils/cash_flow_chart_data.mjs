@@ -12,7 +12,7 @@ export function cashFlowChartData(body) {
   const graph = body.sankey;
   if (
     !/^[A-Z]{3,5}$/.test(body.currency) ||
-    graph?.basis !== "net_by_category" ||
+    !["net_by_category", "net_by_account"].includes(graph?.basis) ||
     !Array.isArray(graph.nodes) ||
     !Array.isArray(graph.links)
   ) {
@@ -38,6 +38,7 @@ export function cashFlowChartData(body) {
         "income",
         "expense",
         "cash_flow",
+        "account",
         "surplus",
         "deficit",
         "invested",
@@ -86,7 +87,7 @@ export function cashFlowChartData(body) {
     });
   }
   if (queue.length !== nodes.length) throw new Error("Cyclic cash flow graph");
-  return { nodes, links };
+  return { basis: graph.basis, nodes, links };
 }
 
 // Sure also supports currencies (such as DOGE/USDC) outside Intl's three-letter
