@@ -41,7 +41,7 @@ class SophtronAccountTest < ActiveSupport::TestCase
     Account.any_instance.stubs(:sync_later).raises(StandardError, "sync scheduling failed")
 
     assert_raises StandardError do
-      sophtron_account.update_balance_sign_override!("credit")
+      sophtron_account.apply_balance_sign_override!("credit")
     end
 
     assert_nil sophtron_account.reload.balance_sign_override

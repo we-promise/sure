@@ -88,7 +88,7 @@ class CreditCardsController < ApplicationController
       provider_account = @account.provider_account_for("SophtronAccount")
       return unless provider_account.present?
 
-      provider_account.update_balance_sign_override!(override)
+      provider_account.apply_balance_sign_override!(override)
     rescue StandardError => e
       DebugLogEntry.capture(
         category: "provider_sync_error",

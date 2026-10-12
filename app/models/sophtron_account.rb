@@ -41,28 +41,23 @@ class SophtronAccount < ApplicationRecord
     account
   end
 
-  # Saves the override and applies its balance atomically so a failed application
-  # leaves the previous setting in place and the same selection can be retried.
-  def update_balance_sign_override!(override)
-    transaction(requires_new: true) do
-      update!(balance_sign_override: override)
-      apply_balance_sign_override! if saved_change_to_balance_sign_override?
-    end
-  end
-
-  # Applies the current sign override to the stored provider balance and
-  # schedules the linked account sync.
+  # Saves the override, applies it to the stored provider balance, and schedules
+  # the linked account sync atomically. A failure leaves the previous setting in
+  # place so the same selection can be retried.
   #
   # An item sync is not enough when this card or its parent item is marked for
   # manual sync: SophtronItem::Syncer only processes automatic accounts, so the
   # override would sit unused until the user finishes that flow.
   #
   # @return [void]
-  def apply_balance_sign_override!
-    return if current_account.blank?
+  def apply_balance_sign_override!(override)
+    transaction(requires_new: true) do
+      update!(balance_sign_override: override)
+      next unless saved_change_to_balance_sign_override? && current_account.present?
 
-    SophtronAccount::Processor.new(self).process_account!
-    current_account.sync_later
+      SophtronAccount::Processor.new(self).process_account!
+      current_account.sync_later
+    end
   end
 
   def institution_name
