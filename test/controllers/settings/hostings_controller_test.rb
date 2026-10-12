@@ -711,6 +711,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can turn the in-app assistant off" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { family: { assistant_type: "mcp_only" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "mcp_only", users(:family_admin).family.reload.assistant_type
+
+      get settings_hosting_url
+      assert_response :success
+      assert_select "select[name='family[assistant_type]'] option[value='mcp_only'][selected]"
+    end
+  end
+
   test "can update external assistant settings" do
     with_self_hosting do
       Assistant::External::ModelCatalog.any_instance.stubs(:models).returns([
