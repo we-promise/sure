@@ -83,13 +83,13 @@ class EnableBankingEntry::Processor
   end
 
   # Pattern matching masked card authorization descriptors (e.g. "474836xxxxxx6879 003015315475")
-  # commonly returned by ASPSPs like DSK Bank Bulgaria for unfinalized card holds.
+  # commonly returned by certain ASPSPs for unfinalized card holds.
   MASKED_CARD_DESCRIPTOR = /\A\d{4,6}[xX*]{4,8}\d{4}(?:\s+\d+)?\z/
 
   # True when the ASPSP supplied neither transaction_id nor entry_reference, and
   # no counterparty information (creditor or debtor) is available, or when the
-  # descriptor is a masked card authorization hold. Certain institutions (such as
-  # DSK Bank Bulgaria) expose un-finalized card holds this way even under a "BOOK"
+  # descriptor is a masked card authorization hold. Certain institutions
+  # expose un-finalized card holds this way even under a "BOOK"
   # status payload.
   #
   # @return [Boolean]
@@ -351,7 +351,7 @@ class EnableBankingEntry::Processor
         # Enable Banking: DBIT = debit from account (outflow), CRDT = credit to account (inflow)
         # Therefore: DBIT → +absolute_amount, CRDT → -absolute_amount
         #
-        # For unidentified card authorization holds (e.g. DSK Bank Bulgaria), the ASPSP
+        # For unidentified card authorization holds, the ASPSP
         # erroneously returns credit_debit_indicator: "CRDT" for an authorization hold on an outflow.
         # When remittance contains a masked card descriptor, force to positive (outflow/expense)
         # so it appears as a pending expense and matches the settled expense when it arrives.

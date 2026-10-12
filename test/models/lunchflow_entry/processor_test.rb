@@ -419,7 +419,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
   end
 
   test "normalizes inverted positive hold amount to positive expense, suppresses merchant, and sets name" do
-    # DSK Bank Bulgaria hold returned via Lunchflow with positive amount (credit), masked card PAN
+    # Unidentified hold returned via Lunchflow with positive amount (credit), masked card PAN
     hold_data = {
       id: "",
       accountId: 456,

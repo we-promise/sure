@@ -5,11 +5,11 @@ class LunchflowEntry::Processor
   include LunchflowTransactionHash
 
   # Pattern matching masked card authorization descriptors (e.g. "474836xxxxxx6879 003015315475")
-  # commonly returned by ASPSPs like DSK Bank Bulgaria for unfinalized card holds.
+  # commonly returned by certain ASPSPs for unfinalized card holds.
   MASKED_CARD_DESCRIPTOR = /\A\d{4,6}[xX*]{4,8}\d{4}(?:\s+\d+)?\z/
 
   # True when the transaction's merchant or description matches a masked card authorization descriptor.
-  # Certain institutions (such as DSK Bank Bulgaria) expose unfinalized card holds with masked card
+  # Certain institutions expose unfinalized card holds with masked card
   # numbers instead of merchant names, and sometimes with inverted signs.
   #
   # @return [Boolean]
@@ -201,7 +201,7 @@ class LunchflowEntry::Processor
       # Sure expects opposite convention (expenses positive, income negative)
       # So we negate the amount to convert from Lunchflow to Sure format.
       #
-      # For unidentified card authorization holds (e.g. DSK Bank Bulgaria), the ASPSP
+      # For unidentified card authorization holds, the ASPSP
       # erroneously reports the authorization hold as positive credit (inflow).
       # Force these holds to positive (outflow/expense in Sure) so they appear as pending expenses
       # and match the settled expense when it arrives.
