@@ -1638,6 +1638,23 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Candidate outflow", rejected_transfer.outflow_transaction.entry.name
   end
 
+  test "imports a pending transfer without applying transfer kinds" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" } },
+      { type: "Account", data: { id: "savings", name: "Savings", balance: "2500", currency: "USD", accountable_type: "Depository" } },
+      { type: "Transaction", data: { id: "pending-outflow", account_id: "checking", date: "2024-01-15", amount: "100.00", name: "Pending outflow", currency: "USD", kind: "standard" } },
+      { type: "Transaction", data: { id: "pending-inflow", account_id: "savings", date: "2024-01-15", amount: "-100.00", name: "Pending inflow", currency: "USD", kind: "standard" } },
+      { type: "Transfer", data: { id: "transfer-1", inflow_transaction_id: "pending-inflow", outflow_transaction_id: "pending-outflow", status: "pending" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    transfer = Transfer.joins(inflow_transaction: :entry).find_by!(entries: { name: "Pending inflow" })
+    assert transfer.pending?
+    assert_equal "standard", transfer.inflow_transaction.kind
+    assert_equal "standard", transfer.outflow_transaction.kind
+  end
+
   test "skips rejected transfers with missing transactions under strict import" do
     session = @family.import_sessions.create!(expected_chunks: 1)
 
@@ -1881,6 +1898,35 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     category = @family.categories.find_by(name: "Coffee")
     assert_not_nil category
     assert_equal category.id, action.value
+  end
+
+  test "rejects invalid rule references before creating related records" do
+    valid_condition = { condition_type: "transaction_name", operator: "like", value: "coffee" }
+    cases = [
+      [ { condition_type: "transaction_category", operator: "=", value: "Bad\0Category" },
+        { action_type: "exclude_transaction" }, "value" ],
+      [ valid_condition,
+        { action_type: "set_transaction_merchant", value_ref: { name: "Bad\0Merchant" } }, "value_ref" ],
+      [ valid_condition,
+        { action_type: "set_transaction_tags", value_ref: [ { name: "Safe" }, { name: "Bad\0Tag" } ] }, "value_ref" ]
+    ]
+    counts = [ @family.rules.count, @family.categories.count, @family.merchants.count, @family.tags.count ]
+
+    cases.each do |condition, action, field|
+      ndjson = build_ndjson([ {
+        type: "Rule", version: 1,
+        data: { name: "Invalid reference", resource_type: "transaction", conditions: [ condition ], actions: [ action ] }
+      } ])
+
+      error = assert_raises(Family::DataImporter::InvalidRecordError) do
+        Family::DataImporter.new(@family, ndjson).import!
+      end
+
+      assert_equal "invalid_import_record", error.code
+      assert_equal field, error.details[:field]
+      assert_equal "(invalid text)", error.details[:value]
+      assert_equal counts, [ @family.rules.count, @family.categories.count, @family.merchants.count, @family.tags.count ]
+    end
   end
 
   test "imports transaction_tag rule condition by remapping the tag name to an id" do
