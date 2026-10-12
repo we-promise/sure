@@ -43,6 +43,19 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "feature_disabled", response_body["error"]
   end
 
+  test "rejects chat creation for a consenting user when the assistant type is none" do
+    @user.family.update!(assistant_type: "none")
+
+    assert_no_difference "Chat.count" do
+      post "/api/v1/chats",
+        params: { title: "New chat", message: "Hello AI" },
+        headers: bearer_auth_header(@write_token)
+    end
+
+    assert_response :forbidden
+    assert_equal "feature_disabled", JSON.parse(response.body)["error"]
+  end
+
   test "should list chats with read scope" do
     get "/api/v1/chats", headers: bearer_auth_header(@read_token)
     assert_response :success

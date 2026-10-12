@@ -330,8 +330,7 @@ class Settings::HostingsController < ApplicationController
     def load_external_assistant_models
       @external_assistant_models = []
       @external_assistant_catalog_error = nil
-      effective_type = ENV["ASSISTANT_TYPE"].presence || Current.family.assistant_type
-      return unless effective_type == "external"
+      return unless Current.family.effective_assistant_type == "external"
 
       config = Assistant::External.config
       return unless config.url.present? && config.token.present?

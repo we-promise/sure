@@ -416,6 +416,10 @@ Any AI agent that supports JSON-RPC 2.0 can connect to the MCP endpoint. The age
 3. Use the JSON-RPC 2.0 format for requests
 4. Handle the protocol methods: `initialize`, `tools/list`, `tools/call`
 
+### Using MCP without the in-app chat
+
+MCP does not depend on the in-app assistant. To use only your own agent, set the assistant type to **Off (keep MCP available)** in **Settings -> Self-Hosting**, or set `ASSISTANT_TYPE=none` for the whole instance. The chat sidebar and its entry points disappear; `/mcp`, OAuth, and **Settings -> MCP** keep working.
+
 ## Troubleshooting
 
 ### "unauthorized" error
