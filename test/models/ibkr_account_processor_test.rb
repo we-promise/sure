@@ -210,6 +210,30 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_equal 0, @account.entries.find_by(external_id: "ibkr_trade_1001").entryable.fee
   end
 
+  # An API edit without the user-modified flag still locks what it changed.
+  test "a separate commission edited through the API is left alone" do
+    legacy = import_legacy_commission("1001", "1.25")
+    legacy.update!(notes: "billed twice, disputed")
+    legacy.lock_saved_attributes!
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    assert_equal "billed twice, disputed", legacy.reload.notes
+    assert_equal 0, @account.entries.find_by(external_id: "ibkr_trade_1001").entryable.fee
+  end
+
+  # Auto-categorization locks the category too, so that lock alone is not the
+  # user's, or no commission would ever move onto its trade.
+  test "a separate commission only auto-categorized still moves onto the trade" do
+    legacy = import_legacy_commission("1001", "1.25")
+    legacy.entryable.lock_attr!(:category_id)
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    assert_nil @account.entries.find_by(external_id: "ibkr_trade_fee_1001")
+    assert_equal BigDecimal("1.25"), @account.entries.find_by(external_id: "ibkr_trade_1001").entryable.fee
+  end
+
   # The import rewrites an edited trade, but it never wrote a fee before, so it
   # must not start overwriting one the user set. The cash follows that fee.
   test "a trade whose fee the user edited keeps it" do

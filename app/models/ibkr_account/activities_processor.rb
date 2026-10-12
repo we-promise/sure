@@ -151,11 +151,16 @@ class IbkrAccount::ActivitiesProcessor
       commission.abs
     end
 
-    # Attaching a receipt does not mark an entry modified, and destroying the
-    # entry would take the receipt with it.
+    # Neither attaching a receipt nor an API edit made without the user-modified
+    # flag marks an entry modified, and destroying it would take what the user
+    # gave it with it. An API edit still locks what it changed, so a lock only a
+    # person sets counts: one on the entry itself, or on its tags. A lock on the
+    # category or merchant does not, since auto-categorization sets those too.
     def users_commission_entry?(entry)
-      entry.protected_from_sync? ||
-        (entry.entryable.is_a?(Transaction) && entry.entryable.attachments.attached?)
+      return true if entry.protected_from_sync? || entry.locked_attributes.present?
+
+      transaction = entry.entryable
+      transaction.is_a?(Transaction) && (transaction.attachments.attached? || transaction.locked?(:tag_ids))
     end
 
     # The fee of an existing trade the user edited, nil for any other.
