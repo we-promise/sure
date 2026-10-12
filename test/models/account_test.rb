@@ -16,6 +16,65 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "a destroy that raises leaves a pending_deletion account disabled" do
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    error = assert_raises(StandardError) { @account.destroy }
+
+    assert_equal "destroy failed", error.message
+    assert_equal "disabled", @account.reload.status
+  end
+
+  test "a disabled account can be scheduled for deletion again after a failed destroy" do
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+    assert_raises(StandardError) { @account.destroy }
+    @account.unstub(:cleanup_transfers)
+    @account.reload
+
+    assert_enqueued_with(job: DestroyJob, args: [ @account ]) do
+      @account.destroy_later
+    end
+    assert_equal "pending_deletion", @account.reload.status
+  end
+
+  test "a failed direct destroy still disables an active account" do
+    assert @account.active?
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    assert_raises(StandardError) { @account.destroy }
+
+    assert_equal "disabled", @account.reload.status
+  end
+
+  test "disable from active is unchanged" do
+    assert @account.active?
+
+    @account.disable!
+
+    assert_equal "disabled", @account.reload.status
+  end
+
+  test "no event other than the failed-deletion recovery leaves pending_deletion" do
+    @account.mark_for_deletion!
+
+    assert_not @account.may_activate?
+    assert_not @account.may_enable?
+    assert_not @account.may_disable?
+    assert_not @account.may_mark_for_deletion?
+    permitted = @account.aasm.events(permitted: true).map(&:name)
+    assert_empty permitted - [ :restore_after_failed_deletion ]
+  end
+
+  test "the failed-deletion recovery only fires from pending_deletion" do
+    assert @account.active?
+    assert_not @account.aasm.may_fire_event?(:restore_after_failed_deletion)
+
+    @account.disable!
+    assert_not @account.aasm.may_fire_event?(:restore_after_failed_deletion)
+  end
+
   test "default owner prefers a family admin before a super admin" do
     family = families(:empty)
     admin = users(:empty)

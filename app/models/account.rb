@@ -190,6 +190,14 @@ class Account < ApplicationRecord
     event :mark_for_deletion do
       transitions from: [ :draft, :active, :disabled ], to: :pending_deletion
     end
+
+    # The only way out of pending_deletion: Account#destroy fires it when the
+    # destroy raises, so the account is visible again and can be re-deleted.
+    # A separate event rather than widening `disable`, which would let every
+    # `disable!`/`may_disable?` caller act on an account being deleted.
+    event :restore_after_failed_deletion do
+      transitions from: :pending_deletion, to: :disabled
+    end
   end
 
   class << self
@@ -646,9 +654,14 @@ class Account < ApplicationRecord
   def destroy
     super
   rescue => e
-    # If destruction fails, transition back to disabled state
-    # This provides a cleaner recovery path than the generic scheduled_for_deletion flag
-    disable! if may_disable?
+    # If destruction fails, leave the account disabled so it stays visible and
+    # can be deleted again. DestroyJob's scheduled_for_deletion reset is for
+    # provider items; accounts track deletion in `status`.
+    if may_restore_after_failed_deletion?
+      restore_after_failed_deletion!
+    elsif may_disable?
+      disable!
+    end
     raise e
   end
 
