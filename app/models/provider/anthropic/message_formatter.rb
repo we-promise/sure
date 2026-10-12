@@ -30,8 +30,8 @@ class Provider::Anthropic::MessageFormatter
 
     # One assistant tool_use turn plus its user tool_result turn per round, in
     # order, so each follow-up request extends the previous one and prompt
-    # caching keeps working. Untagged results form a single round.
-    @function_results.chunk_while { |a, b| a[:round] == b[:round] }.each do |round_results|
+    # caching keeps working.
+    Assistant::Responder.group_by_round(@function_results).each do |round_results|
       messages << { role: "assistant", content: round_results.map { |fr| tool_use_block_from_result(fr) } }
       messages << { role: "user", content: round_results.map { |fr| tool_result_block(fr) } }
     end

@@ -685,11 +685,9 @@ class Provider::Openai < Provider
       end
 
       # For each tool round, add the assistant message that made the tool calls
-      # followed by the tool messages with the results. Assistant::Responder
-      # tags each result with its :round; replaying the rounds in order keeps
-      # each follow-up request an append-only extension of the previous one, so
-      # prefix caches stay valid. Untagged results form a single round.
-      function_results.chunk_while { |a, b| a[:round] == b[:round] }.each do |round_results|
+      # followed by the tool messages with the results, in order, so each
+      # follow-up request extends the previous one and prefix caches stay valid.
+      Assistant::Responder.group_by_round(function_results).each do |round_results|
         # Build assistant message with tool_calls
         tool_calls = round_results.map do |fn_result|
           # Shared with ToolCall::Function.serialize_arguments so history and
