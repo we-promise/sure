@@ -268,16 +268,30 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "returns 422 for amounts too large to store, even when they sum to the parent" do
-    huge = "1#{"0" * 20}"
+    # The second is under the limit as sent and only reaches it once rounded.
+    [ "1#{"0" * 20}", "999999999999999.99995" ].each do |huge|
+      params = { split: { splits: [
+        { name: "A", amount: huge },
+        { name: "B", amount: "-#{huge}" },
+        { name: "C", amount: @entry.amount.to_s }
+      ] } }
+
+      post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+      assert_response :unprocessable_entity, "amount: #{huge}"
+      assert_not @entry.reload.split_parent?
+    end
+  end
+
+  test "accepts the largest amount the column can store" do
+    max = "999999999999999.9999"
     params = { split: { splits: [
-      { name: "A", amount: huge },
-      { name: "B", amount: "-#{huge}" },
+      { name: "A", amount: max },
+      { name: "B", amount: "-#{max}" },
       { name: "C", amount: @entry.amount.to_s }
     ] } }
 
     post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
-    assert_response :unprocessable_entity
-    assert_not @entry.reload.split_parent?
+    assert_response :created
   end
 
   test "a rejected replacement leaves the existing split untouched" do

@@ -199,7 +199,10 @@ class Api::V1::SplitsController < Api::V1::BaseController
           return nil
         end
 
+        # Round before the range check: 999999999999999.99995 is under the
+        # limit as sent and at it once rounded.
         amount = BigDecimal(s[:amount].to_s)
+        amount = amount.round(AMOUNT_SCALE) if amount.finite?
         unless amount.finite? && amount.abs < AMOUNT_LIMIT
           render_unprocessable("split amount is out of range")
           return nil
@@ -209,7 +212,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
           # Documented as optional, defaulting to the parent's name; Entry
           # validates presence, so apply the default rather than 422 on it.
           name: s[:name].presence || @entry.name,
-          amount: amount.round(AMOUNT_SCALE),
+          amount: amount,
           category_id: category_id,
           excluded: s[:excluded]
         }
