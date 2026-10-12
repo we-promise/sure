@@ -145,6 +145,41 @@ class Trade < ApplicationRecord
     trades.each { |trade| trade.preloaded_exchange_rates = rates }
   end
 
+  # Set by callers that list many disposals: each disposal's same-day trades in
+  # the security and its split that day, so finding out whether it was traded
+  # again later that day, and replaying the day if it was, costs two queries
+  # for the list rather than up to two per disposal.
+  def self.preload_same_day_trades(trades)
+    return if trades.empty?
+
+    rows = Trade
+      .with_entry
+      .includes(:entry)
+      .where(
+        security_id: trades.map(&:security_id).uniq,
+        entries: { account_id: trades.map { |t| t.entry.account_id }.uniq, date: trades.map { |t| t.entry.date }.uniq }
+      )
+      .order("entries.created_at ASC, entries.id ASC")
+      .group_by { |t| [ t.entry.account_id, t.security_id, t.entry.date ] }
+
+    splits = Security::Split
+      .where(security_id: trades.map(&:security_id).uniq, ex_date: trades.map { |t| t.entry.date }.uniq)
+      .index_by { |split| [ split.security_id, split.ex_date ] }
+
+    trades.each do |trade|
+      trade.preload_same_day(
+        trades: rows[[ trade.entry.account_id, trade.security_id, trade.entry.date ]] || [],
+        split: splits[[ trade.security_id, trade.entry.date ]]
+      )
+    end
+  end
+
+  def preload_same_day(trades:, split:)
+    @preloaded_same_day_trades = trades
+    @preloaded_same_day_split = split
+    remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+  end
+
   # The currency this disposal's basis is carried in, where it can be answered
   # without a query. `Holding#avg_cost` is Money in the HOLDING's own currency,
   # which is not always the account's, and that is what the proceeds are
@@ -206,6 +241,61 @@ class Trade < ApplicationRecord
       end
     end
 
+    # The day's closing snapshot holds the basis at the sale unless the security
+    # was traded again later that day. Then it is the day before's, carried
+    # through the day's trades up to the sale; see Trade::BasisAtSale.
+    #
+    # Only where the day before has a snapshot, or nothing before it does: one
+    # further back would skip the trades and splits in between. And only where
+    # the snapshots are carried in the account's currency, the one the replay
+    # converts trades into. Otherwise the closing snapshot it is, as before.
+    def avg_cost_at_sale
+      holding = basis_holding
+      day = same_day_trades
+      position = day.index { |trade| trade.id == id }
+      return holding&.avg_cost if position.nil? || position == day.size - 1
+
+      opening = opening_holding
+      return holding&.avg_cost if opening && opening.date != entry.date - 1
+      return holding&.avg_cost if [ holding, opening ].compact.any? { |h| h.currency != entry.account.currency }
+
+      Trade::BasisAtSale.new(self, opening: opening, split: same_day_split, earlier: day.first(position)).average_cost
+    end
+
+    def same_day_split
+      return @preloaded_same_day_split if defined?(@preloaded_same_day_split)
+
+      Security::Split.find_by(security_id: security_id, ex_date: entry.date)
+    end
+
+    # This security's trades in the account on the sale's date, in the order
+    # the calculators apply them.
+    def same_day_trades
+      return @preloaded_same_day_trades if defined?(@preloaded_same_day_trades)
+
+      entry.account.trades
+        .with_entry
+        .includes(:entry)
+        .where(security_id: security_id, entries: { date: entry.date })
+        .order("entries.created_at ASC, entries.id ASC")
+        .to_a
+    end
+
+    # The latest snapshot before the sale's date.
+    def opening_holding
+      if defined?(@preloaded_holdings)
+        (@preloaded_holdings || [])
+          .select { |h| h.security_id == security_id && h.date < entry.date }
+          .max_by(&:date)
+      else
+        entry.account.holdings
+          .where(security_id: security_id)
+          .where("date < ?", entry.date)
+          .order(date: :desc)
+          .first
+      end
+    end
+
     def calculate_realized_gain_loss
       return nil unless sell?
       # Moving an asset to another account you own realises nothing. Without
@@ -213,11 +303,11 @@ class Trade < ApplicationRecord
       # difference is booked as a gain the user never made.
       return nil if internal_movement?
 
-      holding = basis_holding
+      avg_cost = avg_cost_at_sale
 
-      return nil unless holding&.avg_cost
+      return nil unless avg_cost
 
-      cost_basis = holding.avg_cost * qty.abs
+      cost_basis = avg_cost * qty.abs
       # A disposal's fee is what selling cost, so it comes off the proceeds.
       sale_proceeds = converted_to_basis_currency(price_money * qty.abs - fee_money, cost_basis.currency)
 
