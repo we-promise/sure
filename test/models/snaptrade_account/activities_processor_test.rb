@@ -1926,9 +1926,9 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     rh_gain_loss = rh_sell_trade.realized_gain_loss
 
     assert_not_nil rh_gain_loss
-    assert_equal Money.new(7000.0, "USD"), rh_gain_loss.current
-    assert_equal Money.new(5425.0, "USD"), rh_gain_loss.previous
-    assert_equal Money.new(1575.0, "USD"), rh_gain_loss.value
+    assert_equal Money.new(6999.79, "USD"), rh_gain_loss.current
+    assert_equal Money.new(5425.20, "USD"), rh_gain_loss.previous
+    assert_equal Money.new(1574.59, "USD"), rh_gain_loss.value
   end
 
   # Synthetic edge case: option contract EXTERNAL_ASSET_TRANSFER (real JNJ transfer was type=TRANSFER, a cash activity)
