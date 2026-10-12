@@ -253,8 +253,7 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
     # Focus is back in the search, so Escape closes the menu, not the
     # New transaction dialog around it.
     def assert_keyboard_back_in_search
-      assert page.evaluate_script("document.activeElement.matches(\"[data-category-select-target='search']\")"),
-        "focus should return to the category search"
+      assert_equal "search", active_element_attribute("data-category-select-target")
       send_escape
       assert_no_selector "[data-category-select-target='menu']", visible: true
       assert_selector "dialog[open]"
