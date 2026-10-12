@@ -3,6 +3,28 @@
 class WiseActivity::Processor
   JAR_ACTIVITY_TYPES = %w[INTERBALANCE BALANCE_CASHBACK BALANCE_ASSET_FEE].freeze
 
+  # Splits a Wise amount string like "<positive>+ 1,000.50 EUR</positive>"
+  # into [BigDecimal value, currency code]. Either part is nil when absent.
+  def self.parse_money(str)
+    stripped = ActionController::Base.helpers.strip_tags(str.to_s)
+    number = stripped.scan(/[\d,]+\.?\d*/).first
+    [ number&.delete(",")&.to_d, stripped.scan(/\b[A-Z]{3}\b/).first ]
+  end
+
+  # INTERBALANCE covers both Jar moves and currency conversions between the
+  # profile's own balances. For a conversion Wise reports the target amount
+  # as primaryAmount and the source amount as secondaryAmount, so the two
+  # currencies differ.
+  def self.conversion_currencies(activity)
+    return nil unless activity["type"].to_s == "INTERBALANCE"
+
+    target = parse_money(activity["primaryAmount"]).last
+    source = parse_money(activity["secondaryAmount"]).last
+    return nil if source.blank? || target.blank? || source == target
+
+    { source: source, target: target }
+  end
+
   def initialize(activity, wise_account:)
     @activity = activity.with_indifferent_access
     @wise_account = wise_account
@@ -14,7 +36,7 @@ class WiseActivity::Processor
       return :skipped
     end
 
-    import_adapter.import_transaction(
+    import_entry(
       external_id: external_id,
       amount: amount,
       currency: currency,
@@ -39,6 +61,13 @@ class WiseActivity::Processor
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
     end
 
+    # Imports through the adapter; Wise's amount also reaches an entry a
+    # person acted on (WiseItem::AmountCorrection).
+    def import_entry(**attributes)
+      entry = import_adapter.import_transaction(**attributes)
+      WiseItem::AmountCorrection.apply(entry, amount: attributes[:amount], currency: attributes[:currency])
+    end
+
     def account
       @account ||= wise_account.current_account
     end
@@ -47,7 +76,7 @@ class WiseActivity::Processor
     # Other activity types use the opaque activity id.
     def external_id
       if activity_type == "INTERBALANCE"
-        side = wise_account.jar? ? "inflow" : "outflow"
+        side = wise_account.jar? || conversion_target? ? "inflow" : "outflow"
         "wise_interbalance_#{resource_id}_#{side}"
       else
         "wise_activity_#{activity[:id]}"
@@ -66,9 +95,26 @@ class WiseActivity::Processor
       activity.dig(:resource, :id).to_s
     end
 
+    def conversion
+      return @conversion if defined?(@conversion)
+
+      @conversion = wise_account.jar? ? nil : self.class.conversion_currencies(activity)
+    end
+
+    def conversion_source?
+      conversion.present? && conversion[:source] == wise_account.currency
+    end
+
+    def conversion_target?
+      conversion.present? && conversion[:target] == wise_account.currency
+    end
+
     # Expenses (outflow) → positive in Sure.
     # Incomes (inflow / interest) → negative in Sure.
     def amount
+      return parse_amount(activity[:secondaryAmount]).abs if conversion_source?
+      return -parse_amount.abs if conversion_target?
+
       raw = parse_amount
       case activity_type
       when "BALANCE_ASSET_FEE"
@@ -93,6 +139,9 @@ class WiseActivity::Processor
     end
 
     def currency
+      return conversion[:source] if conversion_source?
+      return conversion[:target] if conversion_target?
+
       parse_currency || wise_account.currency
     end
 
@@ -101,7 +150,11 @@ class WiseActivity::Processor
 
       case activity_type
       when "INTERBALANCE"
-        if wise_account.jar?
+        if conversion_source?
+          I18n.t("wise_items.activities.transfer_to_jar", jar: conversion[:target])
+        elsif conversion_target?
+          I18n.t("wise_items.activities.transfer_from_jar", jar: conversion[:source])
+        elsif wise_account.jar?
           deposit_direction? ? I18n.t("wise_items.activities.jar_deposit") : I18n.t("wise_items.activities.jar_withdrawal")
         else
           deposit_direction? ? I18n.t("wise_items.activities.transfer_to_jar", jar: jar_name_for_standard) : I18n.t("wise_items.activities.transfer_from_jar", jar: jar_name_for_standard)
@@ -141,9 +194,8 @@ class WiseActivity::Processor
     #   "1,000 EUR"                          → 1000.0
     #   "<positive>+ 1.12 EUR</positive>"    → 1.12
     #   "0.83 EUR"                           → 0.83
-    def parse_amount
-      stripped = strip_html(activity[:primaryAmount]).strip
-      stripped.scan(/[\d,]+\.?\d*/).first.to_s.delete(",").to_d
+    def parse_amount(raw = activity[:primaryAmount])
+      self.class.parse_money(raw).first || 0.to_d
     end
 
     def parse_currency

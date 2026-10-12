@@ -182,6 +182,37 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 1, eur_account.raw_transactions_payload.size
   end
 
+  test "routes an outgoing cross-currency payout only to the funding balance" do
+    balances = %w[GBP PLN].each_with_index.map do |currency, i|
+      { "id" => "3000000#{i}", "amount" => { "value" => 100.0, "currency" => currency }, "type" => "STANDARD" }
+    end
+    borderless = [ { "id" => 88888001, "recipientId" => 99999001,
+                     "balances" => [ { "id" => 30000000 }, { "id" => 30000001 } ] } ]
+    payout = build_transfer(id: 9, source_currency: "GBP", target_currency: "PLN", target_account: 1234)
+    provider = FakeWiseProvider.new(balances: balances, borderless_accounts: borderless, transfers: [ payout ],
+                                    raise_on: { get_balance_statements: "forbidden" })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal [ 9 ], @wise_item.wise_accounts.find_by(currency: "GBP").raw_transactions_payload.map { |t| t["id"] }
+    assert_empty Array(@wise_item.wise_accounts.find_by(currency: "PLN").raw_transactions_payload)
+  end
+
+  test "drops previously stored transfers that did not move money in the STANDARD balance" do
+    payout = build_transfer(id: 10, source_currency: "GBP", target_currency: "PLN", target_account: 1234)
+    local = build_transfer(id: 11, source_currency: "PLN", target_currency: "PLN", target_account: 1234)
+    pln = @wise_item.wise_accounts.create!(balance_id: "10000001", currency: "PLN", name: "Wise PLN",
+                                           raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
+                                           raw_transactions_payload: [ payout, local ])
+    balances = [ { "id" => "10000001", "amount" => { "value" => 0.0, "currency" => "PLN" }, "type" => "STANDARD" } ]
+    provider = FakeWiseProvider.new(balances: balances, transfers: [],
+                                    raise_on: { get_balance_statements: "forbidden" })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal [ 11 ], pln.reload.raw_transactions_payload.map { |t| t["id"] }
+  end
+
   test "imports standard account balance statements and honors configured history start" do
     @wise_item.update!(sync_start_date: Date.new(2024, 1, 1))
     statements = [
@@ -489,6 +520,87 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert standard.raw_transactions_payload.any? { |a| a["type"] == "INTERBALANCE" }
   end
 
+  test "routes currency conversions only to the source and target STANDARD balances" do
+    balances = %w[GBP EUR CHF USD].each_with_index.map do |currency, i|
+      {
+        "id" => "2000000#{i}",
+        "amount" => { "value" => 100.0, "currency" => currency },
+        "reservedAmount" => { "value" => 0.0, "currency" => currency },
+        "type" => "STANDARD"
+      }
+    end
+    gbp_to_eur = build_interbalance("To <strong>EUR</strong>", resource_id: "7001",
+                                    primary: "117.50 EUR", secondary: "100 GBP")
+    usd_to_chf = build_interbalance("To <strong>CHF</strong>", resource_id: "7002",
+                                    primary: "1,345.20 CHF", secondary: "1,500 USD")
+    provider = FakeWiseProvider.new(balances: balances, activities: [ gbp_to_eur, usd_to_chf ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    routed = @wise_item.wise_accounts.to_h do |wise_account|
+      [ wise_account.currency, wise_account.raw_transactions_payload.map { |a| a["id"] } ]
+    end
+
+    assert_equal [ "interbalance_7001" ], routed["GBP"]
+    assert_equal [ "interbalance_7001" ], routed["EUR"]
+    assert_equal [ "interbalance_7002" ], routed["CHF"]
+    assert_equal [ "interbalance_7002" ], routed["USD"]
+  end
+
+  test "drops previously stored conversions that do not involve the STANDARD balance" do
+    balances = [
+      { "id" => "20000001", "amount" => { "value" => 100.0, "currency" => "GBP" }, "type" => "STANDARD" }
+    ]
+    own = build_interbalance("To <strong>EUR</strong>", resource_id: "7005", primary: "117.50 EUR", secondary: "100 GBP")
+    other = build_interbalance("To <strong>CHF</strong>", resource_id: "7006", primary: "1,345.20 CHF", secondary: "1,500 USD")
+    transfer = build_transfer(id: 4242, source_currency: "GBP", target_currency: "GBP")
+    gbp = @wise_item.wise_accounts.create!(balance_id: "20000001", currency: "GBP", name: "Wise GBP",
+                                           raw_payload: { "type" => "STANDARD" },
+                                           raw_transactions_payload: [ transfer, own, other ])
+    provider = FakeWiseProvider.new(balances: balances, transfers: [ transfer ], activities: [])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal [ 4242, "interbalance_7005" ], gbp.reload.raw_transactions_payload.map { |t| t["id"] }
+  end
+
+  test "routes a cross-currency JAR move to the source STANDARD balance but not the jar-currency one" do
+    balances = [
+      { "id" => "20000001", "amount" => { "value" => 100.0, "currency" => "GBP" }, "type" => "STANDARD" },
+      { "id" => "20000002", "amount" => { "value" => 100.0, "currency" => "EUR" }, "type" => "STANDARD" }
+    ]
+    savings = {
+      "id" => "20000003",
+      "amount" => { "value" => 0.0, "currency" => "EUR" },
+      "totalWorth" => { "value" => 0.0, "currency" => "EUR" },
+      "type" => "SAVINGS",
+      "name" => "Holiday"
+    }
+    move = build_interbalance("To <strong>Holiday</strong>", resource_id: "7003",
+                              primary: "117.50 EUR", secondary: "100 GBP")
+    provider = FakeWiseProvider.new(balances: balances, savings_balances: [ savings ], activities: [ move ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal 1, @wise_item.wise_accounts.find_by(balance_id: "20000001").raw_transactions_payload.size
+    assert_empty Array(@wise_item.wise_accounts.find_by(balance_id: "20000002").raw_transactions_payload)
+    assert_equal 1, @wise_item.wise_accounts.find_by(balance_id: "20000003").raw_transactions_payload.size
+  end
+
+  test "does not route a same-currency JAR move to a STANDARD balance in another currency" do
+    balances = [
+      { "id" => "20000001", "amount" => { "value" => 100.0, "currency" => "GBP" }, "type" => "STANDARD" },
+      { "id" => "20000002", "amount" => { "value" => 100.0, "currency" => "EUR" }, "type" => "STANDARD" }
+    ]
+    move = build_interbalance("To <strong>Jar</strong>", resource_id: "7004")
+    provider = FakeWiseProvider.new(balances: balances, activities: [ move ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_empty Array(@wise_item.wise_accounts.find_by(balance_id: "20000001").raw_transactions_payload)
+    assert_equal 1, @wise_item.wise_accounts.find_by(balance_id: "20000002").raw_transactions_payload.size
+  end
+
   test "routes BALANCE_CASHBACK only to JAR account" do
     savings = {
       "id" => "10000002",
@@ -550,16 +662,17 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
       }
     end
 
-    def build_interbalance(title, resource_id:)
+    def build_interbalance(title, resource_id:, primary: "1,000 EUR", secondary: nil)
       {
         "id" => "interbalance_#{resource_id}",
         "type" => "INTERBALANCE",
         "resource" => { "type" => "BALANCE_TRANSACTION", "id" => resource_id },
         "title" => title,
-        "primaryAmount" => "1,000 EUR",
+        "primaryAmount" => primary,
+        "secondaryAmount" => secondary,
         "status" => "COMPLETED",
         "createdOn" => 7.days.ago.iso8601
-      }
+      }.compact
     end
 
     def build_cashback(resource_id)

@@ -43,8 +43,15 @@ class WiseStatement::Processor
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
     end
 
+    # Imports through the adapter; Wise's amount also reaches an entry a
+    # person acted on (WiseItem::AmountCorrection).
+    def import_entry(**attributes)
+      entry = import_adapter.import_transaction(**attributes)
+      WiseItem::AmountCorrection.apply(entry, amount: attributes[:amount], currency: attributes[:currency])
+    end
+
     def import_main_transaction
-      import_adapter.import_transaction(
+      import_entry(
         external_id: "wise_statement_#{transaction_id}",
         amount: amount,
         currency: currency,
@@ -58,7 +65,7 @@ class WiseStatement::Processor
     # The statement amount excludes fees, so the fee is imported as its own
     # entry (mirroring WiseEntry::Processor) to preserve the balance impact.
     def import_fee_transaction
-      import_adapter.import_transaction(
+      import_entry(
         external_id: "wise_statement_#{transaction_id}_fee",
         amount: fee,
         currency: currency,

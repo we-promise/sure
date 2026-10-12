@@ -388,7 +388,17 @@ class WiseItem::Importer
           transactions_imported += jar_activities.size
         else
           account_statements = statements[wise_account.id] || []
-          existing_legacy = Array(wise_account.raw_transactions_payload).reject { |transaction| transaction["wise_statement"].present? }
+          # Stored activities are re-routed too, so snapshots saved before
+          # INTERBALANCE routing honored currency drop rows for other balances.
+          existing_legacy = Array(wise_account.raw_transactions_payload).reject do |transaction|
+            next true if transaction["wise_statement"].present?
+
+            if jar_activity?(transaction)
+              !activity_for_account?(transaction, wise_account)
+            else
+              !transfer_for_account?(transaction, wise_account)
+            end
+          end
           existing_statements = Array(wise_account.raw_transactions_payload).select { |transaction| transaction["wise_statement"].present? }
           # `transfers` is fetched profile-wide as soon as ANY account still
           # needs the legacy fallback (see #legacy_transfer_import_needed?),
@@ -400,10 +410,7 @@ class WiseItem::Importer
             if existing_statements.any?
               []
             else
-              transfers.select do |t|
-                t["sourceCurrency"] == wise_account.currency ||
-                  t["targetCurrency"] == wise_account.currency
-              end
+              transfers.select { |t| transfer_for_account?(t, wise_account) }
             end
           # Also include INTERBALANCE activities so the standard account shows outflows to the JAR.
           interbalance = activities.select { |a| activity_for_account?(a, wise_account) }
@@ -422,6 +429,15 @@ class WiseItem::Importer
       end
 
       { transactions_imported: transactions_imported, transactions_failed: transactions_failed }
+    end
+
+    # An outgoing transfer only touches the balance it was paid from, and an
+    # incoming one only the balance it landed in. Matching either currency
+    # would also book e.g. a GBP-funded payout in PLN on the PLN balance.
+    def transfer_for_account?(transfer, wise_account)
+      outgoing = WiseEntry::Processor.outgoing?(transfer, recipient_id: wise_account.raw_payload&.dig("recipient_id"))
+      currency = outgoing ? transfer["sourceCurrency"] : transfer["targetCurrency"]
+      currency.blank? || currency == wise_account.currency
     end
 
     def merge_transaction_payloads(transactions)
@@ -475,23 +491,45 @@ class WiseItem::Importer
     # Routes an activity to the given WiseAccount.
     # JAR: receives INTERBALANCE where the activity title's <strong> tag matches the JAR name,
     #      plus BALANCE_CASHBACK and BALANCE_ASSET_FEE.
-    # STANDARD: receives all INTERBALANCE activities (outflow side of JAR transfers).
+    # STANDARD: receives INTERBALANCE activities that move money in its own
+    #      currency: the outflow side of JAR transfers, and either side of a
+    #      currency conversion between the profile's balances. Activities are
+    #      fetched profile-wide, so without this filter every balance would show
+    #      every conversion in some other currency.
     def activity_for_account?(activity, wise_account)
       type = activity["type"]
 
       case type
       when "INTERBALANCE"
         if wise_account.jar?
-          jar_name_in_title = activity["title"].to_s.scan(/<strong>([^<]+)<\/strong>/).flatten.last.to_s.strip
-          jar_name_in_title.present? && jar_name_in_title.casecmp?(wise_account.name.to_s.strip)
+          jar_title_match?(activity, wise_account)
         else
-          true
+          standard_interbalance_for_account?(activity, wise_account)
         end
       when "BALANCE_ASSET_FEE", "BALANCE_CASHBACK"
         wise_account.jar?
       else
         false
       end
+    end
+
+    def standard_interbalance_for_account?(activity, wise_account)
+      conversion = WiseActivity::Processor.conversion_currencies(activity)
+
+      if conversion
+        return true if conversion[:source] == wise_account.currency
+        # A cross-currency move into a JAR has no STANDARD target side.
+        conversion[:target] == wise_account.currency &&
+          wise_item.wise_accounts.none? { |other| other.jar? && jar_title_match?(activity, other) }
+      else
+        currency = WiseActivity::Processor.parse_money(activity["primaryAmount"]).last
+        currency.blank? || currency == wise_account.currency
+      end
+    end
+
+    def jar_title_match?(activity, jar_account)
+      jar_name_in_title = activity["title"].to_s.scan(/<strong>([^<]+)<\/strong>/).flatten.last.to_s.strip
+      jar_name_in_title.present? && jar_name_in_title.casecmp?(jar_account.name.to_s.strip)
     end
 
     # Called after entries have been created to link interbalance pairs as Sure Transfers.

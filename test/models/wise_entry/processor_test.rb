@@ -47,6 +47,35 @@ class WiseEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "incoming", entry.entryable.extra.dig("wise", "direction")
   end
 
+  test "books an incoming cross-currency transfer in the target currency" do
+    transfer = build_transfer(id: 1003, target_account: 99999001, source_value: 100.0, target_value: 115.4,
+                              source_currency: "GBP", target_currency: "EUR")
+
+    entry = WiseEntry::Processor.new(transfer, wise_account: @wise_account).process
+
+    assert_equal BigDecimal("-115.4"), entry.amount
+    assert_equal "EUR", entry.currency
+  end
+
+  # An older build booked these pay-ins in their source currency. A
+  # person's category does not make that figure theirs, so the corrected
+  # one reaches the entry; an amount they changed themselves stays.
+  test "corrects an entry a person categorized, but not one whose amount they changed" do
+    categorized, changed = [ 1007, 1008 ].map do |id|
+      @account.entries.create!(external_id: "wise_transfer_#{id}", source: "wise", amount: -100, currency: "GBP", date: Date.new(2026, 1, 15),
+                               name: "Top-up", user_modified: true, entryable: Transaction.new)
+    end
+    changed.update!(locked_attributes: { "amount" => Time.current.iso8601 })
+
+    [ 1007, 1008 ].each do |id|
+      WiseEntry::Processor.new(build_transfer(id: id, target_account: 99999001, source_value: 100.0, target_value: 115.4,
+                                              source_currency: "GBP", target_currency: "EUR"), wise_account: @wise_account).process
+    end
+
+    assert_equal [ BigDecimal("-115.4"), "EUR" ], categorized.reload.values_at(:amount, :currency)
+    assert_equal [ BigDecimal("-100"), "GBP" ], changed.reload.values_at(:amount, :currency)
+  end
+
   test "uses status-based fallback when no recipient_id stored" do
     @wise_account.update!(raw_payload: { "type" => "STANDARD" })
 
