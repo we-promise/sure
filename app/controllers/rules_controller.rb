@@ -5,14 +5,7 @@ class RulesController < ApplicationController
   before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index
-    @sort_by = params[:sort_by] || "name"
-    @direction = params[:direction] || "asc"
-
-    allowed_columns = [ "name", "updated_at" ]
-    @sort_by = "name" unless allowed_columns.include?(@sort_by)
-    @direction = "asc" unless [ "asc", "desc" ].include?(@direction)
-
-    @rules = Current.family.rules.includes(conditions: :sub_conditions).order(@sort_by => @direction)
+    @rules = Current.family.rules.includes(conditions: :sub_conditions).ordered
 
     # Fetch recent rule runs with pagination
     recent_runs_scope = RuleRun
@@ -65,6 +58,7 @@ class RulesController < ApplicationController
   end
 
   def confirm
+    @active_rules_above_count = @rule.active_rules_above.count
     # Compute provider, model, and cost estimation for auto-categorize actions
     if @rule.actions.any? { |a| a.action_type == "auto_categorize" }
       @selected_model, @estimated_cost = auto_categorize_estimate(@rule)
@@ -88,6 +82,13 @@ class RulesController < ApplicationController
   def destroy
     @rule.destroy
     redirect_to rules_path, notice: t(".success")
+  end
+
+  def reorder
+    Rule.update_positions!(Current.family, params.require(:rule_ids))
+    head :no_content
+  rescue ArgumentError
+    head :unprocessable_entity
   end
 
   def destroy_all
@@ -210,7 +211,7 @@ class RulesController < ApplicationController
 
     def rule_params
       params.require(:rule).permit(
-        :resource_type, :effective_date, :active, :name,
+        :resource_type, :effective_date, :active, :name, :stop_processing,
         conditions_attributes: [
           :id, :condition_type, :operator, :value, :_destroy,
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]

@@ -76,6 +76,14 @@ class Rule::Action < ApplicationRecord
     executor.options
   end
 
+  def claimed_attributes
+    executor.claimed_attributes
+  end
+
+  def reserves_claimed_attributes?
+    executor.reserves_claimed_attributes? && executor.actionable?(value)
+  end
+
   def value_display
     custom_display = executor.value_display(value)
     return custom_display if custom_display.present?
