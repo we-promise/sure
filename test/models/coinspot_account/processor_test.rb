@@ -233,9 +233,9 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
     assert_not_includes record.to_json, "bc1qsecretdestinationaddress"
   end
 
-  # ExchangeRate validates presence but not numericality, so a zero or negative
-  # rate is storable -- multiplying by one writes a zeroed valuation instead of
-  # failing.
+  # ExchangeRate no longer stores a zero or negative rate, but the converter
+  # still guards against one: multiplying by it would write a zeroed valuation
+  # instead of failing.
   test "refuses to convert with a non-positive exchange rate" do
     @family.update!(currency: "USD")
     ExchangeRate.stubs(:find_or_fetch_rate).returns(

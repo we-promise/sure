@@ -33,6 +33,19 @@ module Trading212Account::DataHelpers
       nil
     end
 
+    # T212 quotes London listings in pence (GBX). Prices and amounts are
+    # stored in the major unit, as the price providers do.
+    MINOR_UNIT_CURRENCIES = {
+      "GBX" => { currency: "GBP", multiplier: BigDecimal("0.01") }
+    }.freeze
+
+    def normalize_minor_units(currency_code, *amounts)
+      conversion = MINOR_UNIT_CURRENCIES[currency_code.to_s.upcase]
+      return [ currency_code, *amounts ] unless conversion
+
+      [ conversion[:currency], *amounts.map { |amount| amount && amount * conversion[:multiplier] } ]
+    end
+
     # T212 tickers look like "AAPL_US_EQ". Derive a standard ticker by taking
     # the first segment, which is the instrument symbol on its primary exchange.
     def standard_ticker(t212_ticker)

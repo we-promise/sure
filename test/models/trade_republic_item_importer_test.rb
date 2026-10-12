@@ -170,6 +170,248 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal %w[evt_old evt_recovered], account.reload.raw_timeline_payload.map { |event| event["id"] }
   end
 
+  test "passes the stored timeline cursors and persists the returned ones" do
+    stored = { "timelineTransactions" => { "newest_event_id" => "evt_old", "backfill_cursor" => "page-9" } }
+    @item.update!(timeline_cursors: stored)
+    returned = { "timelineTransactions" => { "newest_event_id" => "evt_new", "backfill_cursor" => "page-11" } }
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with { |args| args[:timeline_cursors] == stored }.returns(timeline_cursor_result(returned))
+
+    result = TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal returned, @item.reload.timeline_cursors
+    assert_equal 1, result[:timeline_backfill_count]
+  end
+
+  test "clears the backfill once the client reports it finished" do
+    @item.update!(timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "evt_old", "backfill_cursor" => "page-9" } })
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result({}))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal({}, @item.reload.timeline_cursors)
+  end
+
+  test "keeps the timeline cursors when the timeline fetch fails" do
+    stored = { "timelineTransactions" => { "newest_event_id" => "evt_old", "backfill_cursor" => "page-9" } }
+    @item.update!(timeline_cursors: stored)
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result(
+      {},
+      "domain_statuses" => { "account_metadata" => "success", "cash" => "success", "portfolio" => "success", "timeline" => "failed", "instrument_metadata" => "success" }
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal stored, @item.reload.timeline_cursors
+  end
+
+  test "keeps the timeline cursors when the result has none" do
+    stored = { "timelineTransactions" => { "newest_event_id" => "evt_old", "backfill_cursor" => "page-9" } }
+    @item.update!(timeline_cursors: stored)
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result(nil))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal stored, @item.reload.timeline_cursors
+  end
+
+  test "drops the timeline cursors when a full timeline fetch is forced" do
+    @item.trade_republic_accounts.create!(kind: "portfolio", name: "Portfolio", trade_republic_account_id: "DE-CURSOR", currency: "EUR")
+    @item.update!(newest_event_id: "evt_old", timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "evt_old" } })
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with { |args| args[:known_newest_event_id].nil? && args[:timeline_cursors] == {} }.returns(timeline_cursor_result({}))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal({}, @item.reload.timeline_cursors)
+  end
+
+  test "stops the history backfill once the stored timeline is full" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-CURSOR",
+      currency: "EUR",
+      raw_timeline_payload: [
+        { "id" => "evt_2", "timestamp" => "2026-08-02", "category" => "PAYMENT_RECEIVED" },
+        { "id" => "evt_3", "timestamp" => "2026-08-03", "category" => "PAYMENT_RECEIVED" }
+      ]
+    )
+    @item.update!(newest_event_id: "evt_3", timeline_cursors: { "timelineTransactions" => { "newest_event_id" => "evt_3", "backfill_cursor" => "page-9" } })
+    gap = { "newest_event_id" => "act_9", "backfill_cursor" => "act-page-2", "backfill_stop_event_id" => "act_1" }
+    returned = {
+      "timelineTransactions" => { "newest_event_id" => "evt_3", "backfill_cursor" => "page-10", "backfill_failures" => 1 },
+      "timelineActivityLog" => gap
+    }
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result(
+      returned,
+      "events" => [ { "id" => "evt_1", "timestamp" => "2026-08-01", "category" => "PAYMENT_RECEIVED" } ]
+    ))
+
+    with_max_timeline_events(2) do
+      DebugLogEntry.expects(:capture).with { |args| args[:message] == "Trade Republic sync warning: timeline history exceeds 2 events; older history is not imported" }
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+
+    # The activity log's gap backfill fetches newer events and keeps running.
+    assert_equal({ "timelineTransactions" => { "newest_event_id" => "evt_3" }, "timelineActivityLog" => gap }, @item.reload.timeline_cursors)
+  end
+
+  test "stops the history backfill when the cap drops a fetched event without an id" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-CURSOR",
+      currency: "EUR",
+      raw_timeline_payload: [
+        { "id" => "evt_2", "timestamp" => "2026-08-02", "category" => "PAYMENT_RECEIVED" },
+        { "id" => "evt_3", "timestamp" => "2026-08-03", "category" => "PAYMENT_RECEIVED" }
+      ]
+    )
+    returned = { "timelineTransactions" => { "newest_event_id" => "evt_3", "backfill_cursor" => "page-10" } }
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result(
+      returned,
+      "events" => [ { "timestamp" => "2026-08-01", "category" => "PAYMENT_RECEIVED", "title" => "Card" } ]
+    ))
+
+    with_max_timeline_events(2) do
+      DebugLogEntry.expects(:capture).with { |args| args[:message] == "Trade Republic sync warning: timeline history exceeds 2 events; older history is not imported" }
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+
+    assert_equal({ "timelineTransactions" => { "newest_event_id" => "evt_3" } }, @item.reload.timeline_cursors)
+  end
+
+  test "keeps the history backfill when a stored event without an id falls off the cap" do
+    stored = { "timestamp" => "2026-08-01", "category" => "PAYMENT_RECEIVED", "title" => "Card" }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-CURSOR",
+      currency: "EUR",
+      raw_timeline_payload: [ stored, { "id" => "evt_2", "timestamp" => "2026-08-02", "category" => "PAYMENT_RECEIVED" } ]
+    )
+    returned = { "timelineTransactions" => { "newest_event_id" => "evt_3", "backfill_cursor" => "page-10" } }
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result(
+      returned,
+      "events" => [ stored, { "id" => "evt_3", "timestamp" => "2026-08-03", "category" => "PAYMENT_RECEIVED" } ]
+    ))
+
+    with_max_timeline_events(2) do
+      DebugLogEntry.expects(:capture).never
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+
+    assert_equal returned, @item.reload.timeline_cursors
+  end
+
+  test "stops the history backfill only for the topic whose fetched events fall off the cap" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-CURSOR",
+      currency: "EUR",
+      raw_timeline_payload: [
+        { "id" => "evt_2", "timestamp" => "2026-08-02", "category" => "PAYMENT_RECEIVED" },
+        { "id" => "evt_3", "timestamp" => "2026-08-03", "category" => "PAYMENT_RECEIVED" }
+      ]
+    )
+    activity = { "newest_event_id" => "act_9", "backfill_cursor" => "act-page-10" }
+    returned = {
+      "timelineTransactions" => { "newest_event_id" => "evt_3", "backfill_cursor" => "page-10" },
+      "timelineActivityLog" => activity
+    }
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result(
+      returned,
+      "events" => [ { "id" => "evt_1", "timestamp" => "2026-08-01", "category" => "PAYMENT_RECEIVED" } ],
+      "timeline_topic_event_ids" => { "timelineTransactions" => [ "evt_1" ], "timelineActivityLog" => [] }
+    ))
+
+    with_max_timeline_events(2) do
+      DebugLogEntry.expects(:capture).with { |args| args[:message] == "Trade Republic sync warning: timeline history exceeds 2 events; older history is not imported" }
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+
+    # The activity log's older events may still fit, so its backfill keeps running.
+    assert_equal({ "timelineTransactions" => { "newest_event_id" => "evt_3" }, "timelineActivityLog" => activity }, @item.reload.timeline_cursors)
+  end
+
+  test "events needing detail enrichment include dividends without details" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-DIVIDEND",
+      currency: "EUR",
+      raw_timeline_payload: [
+        {
+          "id" => "dividend-missing",
+          "timestamp" => "2024-12-27T14:58:41Z",
+          "eventType" => "SSP_CORPORATE_ACTION_CASH",
+          "category" => "DIVIDEND",
+          "status" => "EXECUTED",
+          "detail" => { "amount" => 4.3, "currency" => "EUR" }
+        },
+        {
+          "id" => "dividend-complete",
+          "timestamp" => "2024-12-28T10:00:00Z",
+          "eventType" => "SSP_CORPORATE_ACTION_CASH",
+          "category" => "DIVIDEND",
+          "status" => "EXECUTED",
+          "detail" => { "isin" => "US0378331005", "amount" => 4.3, "currency" => "EUR" }
+        }
+      ]
+    )
+
+    enrich_ids = TradeRepublicItem::Importer.new(@item, provider: mock("provider"))
+      .send(:events_needing_detail_enrichment)
+      .map { |event| event["id"] || event[:id] }
+
+    assert_equal [ "dividend-missing" ], enrich_ids
+  end
+
+  test "keeps the history backfill when only stored events fall off the cap" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-CURSOR",
+      currency: "EUR",
+      raw_timeline_payload: [
+        { "id" => "evt_1", "timestamp" => "2026-08-01", "category" => "PAYMENT_RECEIVED" },
+        { "id" => "evt_2", "timestamp" => "2026-08-02", "category" => "PAYMENT_RECEIVED" }
+      ]
+    )
+    returned = { "timelineTransactions" => { "newest_event_id" => "evt_3", "backfill_cursor" => "page-10" } }
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(timeline_cursor_result(
+      returned,
+      "events" => [ { "id" => "evt_3", "timestamp" => "2026-08-03", "category" => "PAYMENT_RECEIVED" } ]
+    ))
+
+    with_max_timeline_events(2) do
+      DebugLogEntry.expects(:capture).never
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+
+    assert_equal returned, @item.reload.timeline_cursors
+  end
+
   test "session expiry marks item requires_update and preserves stored payloads" do
     @item.trade_republic_accounts.create!(
       name: "Existing",
@@ -263,6 +505,32 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1234.56"), portfolio.reload.current_balance
     assert_equal false, portfolio.holdings_snapshot_complete?
     assert_equal "617.28", portfolio.raw_positions_payload.first["price"]
+  end
+
+  test "non-finite position prices preserve the last known portfolio balance" do
+    portfolio = @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Existing portfolio",
+      currency: "EUR",
+      trade_republic_account_id: "DE5555",
+      current_balance: BigDecimal("1234.56"),
+      raw_positions_payload: [ { "isin" => "KEEP", "quantity" => "2", "price" => "617.28" } ]
+    )
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE5555", "currency" => "EUR" },
+      "cash" => { "amount" => "0", "currency" => "EUR" },
+      "positions" => [ { "isin" => "KEEP", "quantity" => "2", "price" => "NaN" } ],
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal BigDecimal("1234.56"), portfolio.reload.current_balance
   end
 
   test "cash success with timeline failure updates cash but preserves timeline and cursor" do
@@ -430,14 +698,8 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       "warnings" => []
     ))
 
-    original = TradeRepublicItem::Importer::MAX_TIMELINE_EVENTS
-    TradeRepublicItem::Importer.send(:remove_const, :MAX_TIMELINE_EVENTS)
-    TradeRepublicItem::Importer.const_set(:MAX_TIMELINE_EVENTS, 2)
-    begin
+    with_max_timeline_events(2) do
       TradeRepublicItem::Importer.new(@item, provider: provider).import
-    ensure
-      TradeRepublicItem::Importer.send(:remove_const, :MAX_TIMELINE_EVENTS)
-      TradeRepublicItem::Importer.const_set(:MAX_TIMELINE_EVENTS, original)
     end
 
     cash = @item.trade_republic_accounts.find_by!(kind: "cash")
@@ -491,7 +753,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       "timestamp" => "2026-08-01T10:00:00Z",
       "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
       "category" => "orderExecution",
-      "detail" => { "amount" => -25.0, "isin" => "IE00B4L5Y983", "quantity" => "0.25", "price" => "100.00" }
+      "detail" => { "amount" => -25.0, "isin" => "IE00B4L5Y983", "quantity" => "0.25", "price" => "100.00", "price_source" => "detail" }
     }
     needs_price = {
       "id" => "trade-needs-price",
@@ -812,7 +1074,44 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal [ "incomplete-ok" ], enrich_ids
   end
 
-  test "events needing detail enrichment include complete trades missing share price" do
+  test "detail enrichment tries never-attempted events first, then the least recently attempted" do
+    attempted_key = Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY
+    incomplete = ->(id, timestamp, attempted_at = nil) {
+      {
+        "id" => id,
+        "timestamp" => timestamp,
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "category" => "orderExecution",
+        "detail" => { "amount" => -100.0, attempted_key => attempted_at }.compact
+      }
+    }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-ROTATE",
+      currency: "EUR",
+      raw_timeline_payload: [
+        incomplete.call("old-recent-attempt", "2024-01-01T10:00:00Z", 1.hour.ago.iso8601),
+        incomplete.call("old-early-attempt", "2024-02-01T10:00:00Z", 2.days.ago.iso8601),
+        incomplete.call("new-never-attempted", "2025-11-18T11:19:31Z"),
+        {
+          "id" => "needs-price",
+          "timestamp" => 1.day.ago.iso8601,
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "category" => "orderExecution",
+          "detail" => { "isin" => "US0378331005", "quantity" => "1", "amount" => -100.0 }
+        }
+      ]
+    )
+
+    enrich_ids = TradeRepublicItem::Importer.new(@item, provider: mock("provider"))
+      .send(:events_needing_detail_enrichment)
+      .map { |event| event["id"] }
+
+    assert_equal %w[new-never-attempted needs-price old-early-attempt old-recent-attempt], enrich_ids
+  end
+
+  test "events needing detail enrichment include complete trades without a price read from the detail" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",
       name: "Portfolio",
@@ -841,6 +1140,20 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
             "quantity" => "1",
             "amount" => "500.00",
             "price" => "500.00",
+            "price_source" => "detail",
+            "currency" => "EUR"
+          }
+        },
+        {
+          "id" => "derived-price",
+          "timestamp" => "2024-03-30T10:00:00Z",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "category" => "orderExecution",
+          "detail" => {
+            "isin" => "IE00B5BMR087",
+            "quantity" => "0.055",
+            "amount" => "10.04",
+            "price" => "182.54545454545454545454545454545",
             "currency" => "EUR"
           }
         }
@@ -851,7 +1164,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       .send(:events_needing_detail_enrichment)
       .map { |event| event["id"] || event[:id] }
 
-    assert_equal [ "needs-price" ], enrich_ids
+    assert_equal [ "needs-price", "derived-price" ], enrich_ids
   end
 
   test "apply_instrument_symbols stamps merged timeline events that lacked a ticker" do
@@ -972,7 +1285,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       portfolio.reload.raw_timeline_payload.first.dig("detail", Provider::TradeRepublicClient::SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY)
   end
 
-  test "isins_needing_symbol_lookup skips trades that already have a ticker" do
+  test "isins_needing_symbol_lookup skips trades that already have a ticker and bonds" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",
       name: "Portfolio",
@@ -996,6 +1309,12 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
             "quantity" => "1",
             "amount" => "10"
           }
+        },
+        {
+          "id" => "bond",
+          "category" => "orderExecution",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "detail" => { "isin" => "IT0005377152", "quantity" => "2677.95", "amount" => "2498.31", "instrument_type" => "bond" }
         }
       ]
     )
@@ -1010,5 +1329,29 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
 
     def client_result(data)
       Provider::TradeRepublicClient::Result.new(data: data)
+    end
+
+    def timeline_cursor_result(timeline_cursors, overrides = {})
+      client_result({
+        "status" => "ok",
+        "account" => { "brokerage_account_id" => "DE-CURSOR", "currency" => "EUR" },
+        "cash" => { "amount" => "1", "currency" => "EUR" },
+        "positions" => [],
+        "events" => [],
+        "newest_event_id" => nil,
+        "timeline_pagination_complete" => true,
+        "timeline_cursors" => timeline_cursors,
+        "warnings" => []
+      }.merge(overrides))
+    end
+
+    def with_max_timeline_events(limit)
+      original = TradeRepublicItem::Importer::MAX_TIMELINE_EVENTS
+      TradeRepublicItem::Importer.send(:remove_const, :MAX_TIMELINE_EVENTS)
+      TradeRepublicItem::Importer.const_set(:MAX_TIMELINE_EVENTS, limit)
+      yield
+    ensure
+      TradeRepublicItem::Importer.send(:remove_const, :MAX_TIMELINE_EVENTS)
+      TradeRepublicItem::Importer.const_set(:MAX_TIMELINE_EVENTS, original)
     end
 end

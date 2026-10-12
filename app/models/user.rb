@@ -236,9 +236,9 @@ class User < ApplicationRecord
   end
 
   def ai_available?
+    effective_type = family&.effective_assistant_type || "builtin"
+    return false if effective_type == "mcp_only"
     return true unless Rails.application.config.app_mode.self_hosted?
-
-    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
 
     case effective_type
     when "external"
@@ -691,6 +691,14 @@ class User < ApplicationRecord
   # Per-widget height preset override ("compact" | "auto" | "tall"); nil = use default.
   def dashboard_section_height(section_key)
     preferences&.dig("dashboard_section_layout", section_key, "height")
+  end
+
+  CASHFLOW_SANKEY_GROUPINGS = IncomeStatement::CashFlowGraph::GROUPINGS.keys.freeze
+
+  # Preview cash-flow Sankey: flows by category (default) or through each account.
+  def cashflow_sankey_group_by
+    group_by = preferences&.dig("cashflow_sankey_group_by")
+    CASHFLOW_SANKEY_GROUPINGS.include?(group_by) ? group_by : "category"
   end
 
   # Per-widget column-span override ("single" | "full"); nil = use default.
