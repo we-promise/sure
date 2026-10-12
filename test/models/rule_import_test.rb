@@ -350,6 +350,98 @@ class RuleImportTest < ActiveSupport::TestCase
     end
   end
 
+  test "reports a validation error for a null byte in an imported condition" do
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [
+        "Invalid condition rule",
+        "transaction",
+        true,
+        nil,
+        [ { condition_type: "transaction_name", operator: "like", value: "bad\0value" } ].to_json,
+        [ { action_type: "exclude_transaction" } ].to_json
+      ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    error = assert_raises(ActiveRecord::RecordInvalid) { import.send(:import!) }
+    assert_match(/value is invalid/i, error.message)
+    assert_nil @family.rules.find_by(name: "Invalid condition rule")
+  end
+
+  test "rejects an imported name with a trailing null byte" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    import.generate_rows_from_csv
+    row = import.rows.first
+    row.name = "Invalid name\0"
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      import.send(:create_or_update_rule_from_row, row)
+    end
+
+    assert_match(/Name is invalid/, error.message)
+    assert_nil @family.rules.find_by(name: "Invalid name")
+  end
+
+  test "rejects an imported resource type with a trailing null byte" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    import.generate_rows_from_csv
+    row = import.rows.first
+    row.resource_type = "transaction\0"
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      import.send(:create_or_update_rule_from_row, row)
+    end
+
+    assert_match(/Resource type is invalid/, error.message)
+  end
+
+  test "rejects null bytes in imported references before looking them up" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    counts = [ @family.categories.count, @family.merchants.count, @family.tags.count ]
+
+    {
+      resolve_import_condition_value: [ "transaction_category", "transaction_merchant", "transaction_tag" ],
+      resolve_import_action_value: [ "set_transaction_category", "set_transaction_merchant", "set_transaction_tags" ]
+    }.each do |resolver, types|
+      type_key = resolver == :resolve_import_condition_value ? "condition_type" : "action_type"
+
+      types.each do |type|
+        error = assert_raises(ActiveRecord::RecordInvalid, type) do
+          import.send(resolver, { type_key => type, "value" => "Bad\0reference" })
+        end
+        assert_match(/Value is invalid/, error.message)
+      end
+    end
+
+    assert_equal counts, [ @family.categories.count, @family.merchants.count, @family.tags.count ]
+  end
+
+  test "rejects null bytes in imported operator and action type" do
+    [
+      [ "like\0", "exclude_transaction" ],
+      [ "like", "exclude_transaction\0" ]
+    ].each do |operator, action_type|
+      csv = CSV.generate do |rows|
+        rows << %w[name resource_type active effective_date conditions actions]
+        rows << [
+          "Invalid metadata rule", "transaction", true, nil,
+          [ { condition_type: "transaction_name", operator: operator, value: "coffee" } ].to_json,
+          [ { action_type: action_type } ].to_json
+        ]
+      end
+
+      import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+      import.generate_rows_from_csv
+
+      error = assert_raises(ActiveRecord::RecordInvalid) { import.send(:import!) }
+      assert_match(/is invalid/, error.message)
+      assert_nil @family.rules.find_by(name: "Invalid metadata rule")
+    end
+  end
+
   test "imports valid JSON conditions whose values contain escaped quotes" do
     csv = CSV.generate do |out|
       out << %w[name resource_type active effective_date conditions actions]
