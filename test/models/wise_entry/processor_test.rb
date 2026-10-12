@@ -47,6 +47,16 @@ class WiseEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "incoming", entry.entryable.extra.dig("wise", "direction")
   end
 
+  test "books an incoming cross-currency transfer in the target currency" do
+    transfer = build_transfer(id: 1003, target_account: 99999001, source_value: 100.0, target_value: 115.4,
+                              source_currency: "GBP", target_currency: "EUR")
+
+    entry = WiseEntry::Processor.new(transfer, wise_account: @wise_account).process
+
+    assert_equal BigDecimal("-115.4"), entry.amount
+    assert_equal "EUR", entry.currency
+  end
+
   test "uses status-based fallback when no recipient_id stored" do
     @wise_account.update!(raw_payload: { "type" => "STANDARD" })
 
