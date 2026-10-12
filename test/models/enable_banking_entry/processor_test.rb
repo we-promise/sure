@@ -674,22 +674,24 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx2)
   end
 
-  test "unidentified_hold? returns false when transaction_id is present without masked card descriptor" do
+  test "unidentified_hold? returns false when transaction_id is present" do
     tx = {
       entry_reference: nil,
       transaction_id: "txn_123",
       credit_debit_indicator: "DBIT",
-      creditor: nil
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879" ]
     }
     assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
   end
 
-  test "unidentified_hold? returns false when entry_reference is present without masked card descriptor" do
+  test "unidentified_hold? returns false when entry_reference is present" do
     tx = {
       entry_reference: "ref_123",
       transaction_id: nil,
       credit_debit_indicator: "DBIT",
-      creditor: nil
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879" ]
     }
     assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
   end
@@ -827,17 +829,6 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "Supermarket" ])
     assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "Salary" ])
     assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: nil)
-  end
-
-  test "unidentified_hold? returns true when transaction_id is present but remittance is a masked card descriptor" do
-    tx = {
-      entry_reference: nil,
-      transaction_id: "txn_hold_123",
-      credit_debit_indicator: "DBIT",
-      creditor: nil,
-      remittance_information: [ "474836xxxxxx6879 003015315475" ]
-    }
-    assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
   end
 
   test "reconciles and claims unfinalized card hold when settled booked transaction arrives" do

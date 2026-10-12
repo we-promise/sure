@@ -93,12 +93,14 @@ class EnableBankingEntry::Processor
   end
 
   # True when the transaction represents an unfinalized card authorization hold
-  # (masked card descriptor in remittance or transaction code, and no legitimate counterparty name).
+  # (missing provider identifiers, no legitimate counterparty name, and a masked
+  # card descriptor in remittance or transaction code).
   # Certain institutions expose un-finalized card holds this way even under a "BOOK" status payload.
   #
   # @return [Boolean]
   def self.unidentified_hold?(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
+    return false unless identifierless?(data)
     return false if party_name(data, :creditor).present?
 
     if data[:credit_debit_indicator] == "CRDT"
