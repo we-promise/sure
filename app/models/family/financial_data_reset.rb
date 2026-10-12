@@ -46,6 +46,7 @@ class Family::FinancialDataReset
     coinbase_items
     coinstats_items
     enable_banking_items
+    truelayer_items
     ibkr_items
     indexa_capital_items
     kraken_items

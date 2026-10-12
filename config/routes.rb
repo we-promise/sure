@@ -265,6 +265,21 @@ Rails.application.routes.draw do
       post :new_connection
     end
   end
+  resources :truelayer_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :callback
+      post :connect
+      get :select_existing_account
+      post :link_existing_account
+    end
+    member do
+      post :sync
+      post :reauthorize
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
