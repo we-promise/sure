@@ -638,6 +638,19 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_inflow_tags, transfer.inflow_transaction.reload.tag_ids
   end
 
+  test "confirming requires write permission on both transfer sides" do
+    # family_member: full_control on depository (outflow), read_only on credit_card (inflow)
+    sign_in users(:family_member)
+    transfer = transfers(:one)
+    original_inflow_kind = transfer.inflow_transaction.kind
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+    assert_redirected_to transactions_url
+    assert transfer.reload.pending?
+    assert_equal original_inflow_kind, transfer.inflow_transaction.reload.kind
+  end
+
   test "can add notes to transfer" do
     transfer = transfers(:one)
     assert_nil transfer.notes
@@ -647,6 +660,28 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to transactions_url
     assert_equal "Transfer updated", flash[:notice]
     assert_equal "Test notes", transfer.reload.notes
+  end
+
+  test "confirming a transfer keeps the outflow category" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update!(category: categories(:food_and_drink))
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+    assert_redirected_to transactions_url
+    assert transfer.reload.confirmed?
+    assert_equal categories(:food_and_drink), transfer.outflow_transaction.reload.category
+  end
+
+  test "confirming a transfer keeps its notes" do
+    transfer = transfers(:one)
+    transfer.update!(notes: "Rent split")
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+    assert_redirected_to transactions_url
+    assert transfer.reload.confirmed?
+    assert_equal "Rent split", transfer.notes
   end
 
   test "handles rejection without FrozenError" do
@@ -670,7 +705,8 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "can reject a match when only the outflow account is accessible" do
-    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+    # Confirmed, so the legs carry transfer kinds that rejecting must reset
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan, status: "confirmed")
 
     assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 1 do
       patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
@@ -810,11 +846,11 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       accounts(:loan).tap { |loan| loan.update!(owner: users(:family_member)) }
     end
 
-    def cross_owner_transfer(outflow_account:, inflow_account:)
+    def cross_owner_transfer(outflow_account:, inflow_account:, status: "pending")
       outflow = create_transaction(account: outflow_account, amount: 250, kind: "funds_movement")
       inflow = create_transaction(account: inflow_account, amount: -250, kind: "funds_movement")
 
-      Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+      Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: status)
     end
 
     def attach_fee(transfer, account:)

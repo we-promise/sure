@@ -3,7 +3,7 @@
 module Holding::TradeCalculatorHelpers
   private
     # Converts a trade's price into the account's currency at the rate of the
-    # day it was made, falling back to the raw price when no rate is available.
+    # day it was made, or nil when there is no rate for that day.
     def converted_trade_price(trade, date:)
       convert_to_account_currency(trade.price, trade, date: date)
     end
@@ -35,16 +35,24 @@ module Holding::TradeCalculatorHelpers
       return price unless trade.qty&.positive?
 
       fee = converted_trade_fee(trade, date: date)
+      return nil if price.nil? || fee.nil?
       return price if fee.zero?
 
       price + (fee / trade.qty)
     end
 
     # The rate on the trade's own day: a basis is what was paid then, and must
-    # not drift with the exchange rate afterwards.
+    # not drift with the exchange rate afterwards. A rate the trade carries
+    # itself (`extra["exchange_rate"]`, e.g. IBKR's fx_rate_to_base) comes
+    # first, as it does for the cash balance in Balance::SyncCache. No rate means
+    # the amount in the account's currency is unknown -- not the raw figure,
+    # which is what a rate of 1.0 would give -- the same answer
+    # Trade#calculate_realized_gain_loss gives.
     def convert_to_account_currency(amount, trade, date:)
-      Money.new(amount, trade.currency).exchange_to(account.currency, date: date).amount
+      Money.new(amount, trade.currency)
+        .exchange_to(account.currency, date: date, custom_rate: trade.exchange_rate)
+        .amount
     rescue Money::ConversionError
-      amount
+      nil
     end
 end
