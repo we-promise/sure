@@ -122,7 +122,9 @@ class Holding::CostBasisFallback
 
     # The trade's own rate, else the table's for its day -- never a lookup, so
     # never a fetch. A rate Trade's validation would refuse (not a finite
-    # number above zero) converts nothing, as in Money#exchange_to.
+    # number above zero) converts nothing, and neither does one Money#exchange_to
+    # would refuse: it reads the rate with #to_d, which takes "0x1", say, as
+    # zero where Float takes it as 1. The figure used is the one #to_d reads.
     def convert_to_account_currency(amount, trade, date:)
       return amount if trade.currency == account.currency
 
@@ -135,9 +137,10 @@ class Holding::CostBasisFallback
     def usable_rate(value)
       return nil if value.nil?
 
-      rate = Float(value.to_s, exception: false)
-      return nil if rate.nil? || !rate.finite? || rate <= 0
+      float = Float(value.to_s, exception: false)
+      return nil if float.nil? || !float.finite? || float <= 0
 
-      value.to_d
+      rate = value.to_d
+      rate.finite? && rate.positive? ? rate : nil
     end
 end

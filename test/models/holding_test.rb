@@ -128,7 +128,7 @@ class HoldingTest < ActiveSupport::TestCase
   test "the fallback ignores a rate string that is not a plain decimal" do
     entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
 
-    [ "n/a", "1e999999" ].each do |rate|
+    [ "n/a", "1e999999", "0x1" ].each do |rate|
       entry.entryable.update_column(:extra, { "exchange_rate" => rate })
 
       assert_nil @amzn.avg_cost, rate
