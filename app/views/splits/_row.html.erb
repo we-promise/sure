@@ -34,9 +34,9 @@
       <% end %>
     </div>
 
-    <%# Equal grid columns (not fixed-width flex items) so the three pickers always share the
-        row's width instead of overflowing the dialog. %>
-    <div class="grid grid-cols-1 md:grid-cols-3 items-start gap-2">
+    <%# Category and merchant share a row and tags get their own, like in the rule form, so the
+        category badge has room for real category names. %>
+    <div class="grid grid-cols-1 md:grid-cols-2 items-start gap-2">
       <div class="category-select-container min-w-0">
         <%= row.collection_select :category_id,
               categories,
@@ -57,7 +57,7 @@
             ) %>
       </div>
 
-      <div class="min-w-0">
+      <div class="min-w-0 md:col-span-2">
         <%= render DS::TagSelect.new(
               form: row,
               tags: tags,
