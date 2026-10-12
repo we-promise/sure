@@ -373,22 +373,25 @@ module Assistant::Function::RuleSupport
         .includes(:category, :merchant, entry: :account)
         .order("entries.date DESC, entries.id DESC")
         .limit(sample_size)
+        .to_a
 
       {
         match_count: match_count,
         visible_match_count: visible.count,
         sample: sample.map { |txn| serialize_sample(txn) },
         actions: rule.actions.reject(&:marked_for_destruction?).map { |a| describe_action(rule, a) },
-        preview_token: preview_token(rule, match_count, sample_size: sample_size)
+        preview_token: preview_token(rule, match_count, shown: sample.size)
       }.compact
     end
 
-    # Issued for a saved rule when the preview listed matches (a zero
-    # sample_size shows none). Signed, and bound to the user, the rule's
+    # Issued for a saved rule when the preview listed matches: none for a zero
+    # sample_size, or when every match is in an account the user can't see.
+    # A rule matching nothing gets one, so a rule meant for future
+    # transactions can be activated. Signed, and bound to the user, the rule's
     # definition and the match count.
-    def preview_token(rule, match_count, sample_size:)
+    def preview_token(rule, match_count, shown:)
       return nil unless rule.persisted? && rule.changes.empty?
-      return nil if sample_size.zero? && match_count.positive?
+      return nil if match_count.positive? && shown.zero?
 
       preview_verifier.generate(
         { "rule_id" => rule.id, "user_id" => user.id, "definition" => definition_digest(rule), "match_count" => match_count },

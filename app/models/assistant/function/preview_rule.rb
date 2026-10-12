@@ -25,7 +25,8 @@ class Assistant::Function::PreviewRule < Assistant::Function
         rewrites far more transactions than intended.
 
         For a saved rule it also returns preview_token, which apply_rule needs.
-        No token is issued with sample_size 0, since no matches are shown.
+        No token is issued when no matches are shown: with sample_size 0, or
+        when every match is in an account you cannot see.
       INSTRUCTIONS
     end
   end

@@ -53,6 +53,26 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_nil preview[:preview_token]
   end
 
+  test "a preview whose matches are all in accounts the user can't see issues no token" do
+    create_transaction(name: "ZXQ Coffee Shop", account: accounts(:other_asset))
+
+    preview = Assistant::Function::PreviewRule.new(users(:family_member)).call("rule_id" => @rule.id)[:preview]
+
+    assert_equal 1, preview[:match_count]
+    assert_empty preview[:sample]
+    assert_nil preview[:preview_token]
+  end
+
+  test "a rule matching nothing can be activated for future transactions" do
+    preview = Assistant::Function::PreviewRule.new(@user).call("rule_id" => @rule.id)[:preview]
+    assert_equal 0, preview[:match_count]
+
+    result = @fn.call("rule_id" => @rule.id, "preview_token" => preview[:preview_token])
+
+    assert result[:success], result.inspect
+    assert @rule.reload.active
+  end
+
   test "refuses a token once the matches change, and returns a fresh one" do
     create_transaction(name: "ZXQ Coffee Shop")
     token = preview_token
