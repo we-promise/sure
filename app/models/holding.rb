@@ -60,6 +60,20 @@ class Holding < ApplicationRecord
     calculate_avg_cost
   end
 
+  # The weighted-average cost of the position immediately before `entry`,
+  # replayed from this security's trades as calculate_avg_cost does, or nil
+  # when it is unknown. Realized gain prices a sale at this figure: average
+  # cost does not move on a sale, but a sale that closes the position leaves
+  # a row with nothing held and no basis, so `avg_cost` has no figure to give.
+  #
+  # Trades count when they sort strictly before `entry` in Entry.chronological
+  # order, so a buy earlier the same day counts and the sale itself does not.
+  # A split with an ex-date on or before the sale's date counts, since a split
+  # applies at the open of its ex-date.
+  def avg_cost_before(entry)
+    calculate_avg_cost(through: entry.date, before: entry)
+  end
+
   def trend
     @trend ||= calculate_trend
   end
@@ -282,11 +296,15 @@ class Holding < ApplicationRecord
     # relieved at the running average, a split rescales the position at the
     # open of its ex-date, and a transfer in makes the cost unknown until the
     # position is closed. Returns nil when the cost is unknown.
-    def calculate_avg_cost
+    #
+    # `through` is the last day replayed, the holding's own date by default.
+    # `before`, an entry on that day, stops the replay just short of it
+    # (avg_cost_before).
+    def calculate_avg_cost(through: date, before: nil)
       tracker = Holding::CostBasisTracker.new
       position = BigDecimal("0")
       transferred = false
-      splits = Security::Split.where(security_id: security_id, ex_date: ..date).order(:ex_date).to_a
+      splits = Security::Split.where(security_id: security_id, ex_date: ..through).order(:ex_date).to_a
 
       apply_splits = lambda do |through|
         while splits.any? && splits.first.ex_date <= through
@@ -296,7 +314,7 @@ class Holding < ApplicationRecord
         end
       end
 
-      avg_cost_trade_rows.each do |trade_date, qty, unit_cost, internal_movement|
+      avg_cost_trade_rows(through: through, before: before).each do |trade_date, qty, unit_cost, internal_movement|
         apply_splits.call(trade_date)
         previous_position = position
 
@@ -315,7 +333,7 @@ class Holding < ApplicationRecord
         # the calculators: a position that was never positive held no units.
         transferred = false if previous_position.positive? && position <= 0
       end
-      apply_splits.call(date)
+      apply_splits.call(through)
 
       return nil if transferred
 
@@ -326,13 +344,14 @@ class Holding < ApplicationRecord
       Money.new(average.round(self.class.columns_hash["cost_basis"].scale), currency) if average
     end
 
-    # This security's trades up to the holding's date, oldest first in
-    # Entry.chronological order, as [date, qty, unit cost, internal movement?].
+    # This security's trades up to `through`, or strictly before the entry
+    # `before` in the same order, oldest first in Entry.chronological order,
+    # as [date, qty, unit cost, internal movement?].
     # Unit cost is in the account's currency and includes the fee on a
     # purchase (Holding::TradeCalculatorHelpers#effective_trade_price); it is
     # nil when a foreign trade has no usable rate for its day, which the
     # tracker treats as an unknown cost until the position closes.
-    def avg_cost_trade_rows
+    def avg_cost_trade_rows(through:, before:)
       # The rate a trade carries itself (extra["exchange_rate"], e.g. IBKR's
       # fx_rate_to_base) comes before the table's, as in the calculators and
       # Balance::SyncCache; a trade in the account's own currency converts at 1.
@@ -360,6 +379,13 @@ class Holding < ApplicationRecord
         "COALESCE(trades.investment_activity_label IN (?), FALSE)", Trade::INTERNAL_MOVEMENT_LABELS
       ])
 
+      cutoff = if before
+        # A row comparison, so it sorts exactly as the reorder below does.
+        [ "(entries.date, entries.created_at, entries.id) < (?, ?, ?)", before.date, before.created_at, before.id ]
+      else
+        [ "entries.date <= ?", through ]
+      end
+
       account.trades
         .with_entry
         .joins(ActiveRecord::Base.sanitize_sql_array([
@@ -370,7 +396,7 @@ class Holding < ApplicationRecord
           )", account.currency
         ]))
         .where(security_id: security_id)
-        .where("entries.date <= ?", date)
+        .where(*cutoff)
         .reorder("entries.date ASC, entries.created_at ASC, entries.id ASC")
         .pluck(Arel.sql("entries.date"), Arel.sql("trades.qty"), Arel.sql(unit_cost), Arel.sql(internal_movement))
     end

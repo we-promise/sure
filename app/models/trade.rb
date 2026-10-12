@@ -214,10 +214,16 @@ class Trade < ApplicationRecord
       return nil if internal_movement?
 
       holding = basis_holding
+      return nil unless holding
 
-      return nil unless holding&.avg_cost
+      # A sale that closes the position leaves a snapshot with nothing held and
+      # no basis, so the cost has to come from the trades before the sale.
+      # Average cost does not move on a sale, so where the snapshot has a
+      # figure it is the same one.
+      avg_cost = holding.avg_cost || holding.avg_cost_before(entry)
+      return nil unless avg_cost
 
-      cost_basis = holding.avg_cost * qty.abs
+      cost_basis = avg_cost * qty.abs
       # A disposal's fee is what selling cost, so it comes off the proceeds.
       sale_proceeds = converted_to_basis_currency(price_money * qty.abs - fee_money, cost_basis.currency)
 

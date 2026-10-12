@@ -149,6 +149,79 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal(40) ] * 4, trades.map { |t| t.realized_gain_loss.value.amount }
   end
 
+  # A sale that closes the position leaves a snapshot holding nothing, with no
+  # stored basis, so the snapshot cannot say what the units cost. Average cost
+  # does not move on a sale, so the sale is priced at the average before it:
+  # 10 at 100 and 10 at 200 is 3,000 for 20, sold at 180 for 3,600, a 600
+  # gain. Replaying through the sale itself closes the position and leaves no
+  # figure at all.
+  test "a sale that closes the position realises its gain against the cost before the sale" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    sell = create_trade(security, account: account, qty: -20, date: Date.new(2026, 3, 4), price: 180).entryable
+    closed_snapshot(account, security, Date.new(2026, 3, 4))
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain, "a closing sale still realises a gain"
+    assert_equal BigDecimal(3000), gain.previous.amount
+    assert_equal BigDecimal(600), gain.value.amount
+  end
+
+  # Bought and sold on one day, the only snapshot is the closed one and there
+  # is no earlier day to read a cost from. The buy sorts before the sale in
+  # Entry.chronological order, so it is the cost: 10 at 100 sold at 130 is a
+  # 300 gain.
+  test "a position bought and sold on the same day realises its gain" do
+    account, security = cross_currency_account
+    date = Date.new(2026, 3, 4)
+    create_trade(security, account: account, qty: 10, date: date, price: 100)
+    sell = create_trade(security, account: account, qty: -10, date: date, price: 130).entryable
+    closed_snapshot(account, security, date)
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain, "the same day's buy is the cost"
+    assert_equal BigDecimal(300), gain.value.amount
+  end
+
+  # A split applies at the open of its ex-date, before that day's trades. 10
+  # bought at 100 become 20 at 50 on a 2-for-1 split; all 20 sold that day at
+  # 70 is 1,400 against 1,000, a 400 gain. Pricing the 20 units at the
+  # pre-split 100 would report a 600 loss.
+  test "a closing sale after a split uses the split-adjusted cost" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    security.splits.create!(ex_date: Date.new(2026, 3, 4), numerator: 2, denominator: 1, source: "manual")
+    sell = create_trade(security, account: account, qty: -20, date: Date.new(2026, 3, 4), price: 70).entryable
+    closed_snapshot(account, security, Date.new(2026, 3, 4))
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain
+    assert_equal BigDecimal(1000), gain.previous.amount
+    assert_equal BigDecimal(400), gain.value.amount
+  end
+
+  # A sale that leaves units held keeps reading the snapshot's own figure. The
+  # stored 160 is deliberately not what the trades replay to (150), so this
+  # fails if the replay ever displaces a basis the snapshot has: 5 sold at 180
+  # is 900 against 800, a 100 gain.
+  test "a partial sale's realized gain is unchanged" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    sell = create_trade(security, account: account, qty: -5, date: Date.new(2026, 3, 4), price: 180).entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 4), qty: 15, price: 180,
+                             amount: BigDecimal(2700), currency: "USD", cost_basis: 160)
+
+    gain = sell.realized_gain_loss
+
+    assert_equal BigDecimal(800), gain.previous.amount
+    assert_equal BigDecimal(100), gain.value.amount
+  end
+
   test "build_name generates buy trade name" do
     name = Trade.build_name("buy", 10, "AAPL")
     assert_equal "Buy 10.0 shares of AAPL", name
@@ -318,6 +391,13 @@ class TradeTest < ActiveSupport::TestCase
                                amount: BigDecimal(750), currency: "USD", cost_basis: 100)
 
       create_trade(security, account: account, qty: -2, date: date, price: 150, fee: fee, currency: "EUR").entryable
+    end
+
+    # The snapshot the calculators write on the day a position closes: nothing
+    # held and no basis.
+    def closed_snapshot(account, security, date)
+      account.holdings.create!(security: security, date: date, qty: 0, price: 0,
+                               amount: 0, currency: "USD", cost_basis: nil)
     end
 
     def cross_currency_account
