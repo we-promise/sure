@@ -52,8 +52,9 @@ class HoldingTest < ActiveSupport::TestCase
     nvda_qty   = BigDecimal("5") + BigDecimal("30")
     expected_nvda = nvda_total / nvda_qty
 
-    assert_equal Money.new(expected_amzn), @amzn.avg_cost
-    assert_equal Money.new(expected_nvda), @nvda.avg_cost
+    # At the four places `cost_basis` is stored at, as the calculators store it
+    assert_equal Money.new(expected_amzn.round(4)), @amzn.avg_cost
+    assert_equal Money.new(expected_nvda.round(4)), @nvda.avg_cost
   end
 
   test "calculates average cost basis from another currency" do
@@ -79,8 +80,8 @@ class HoldingTest < ActiveSupport::TestCase
     expected_nvda_usd = nvda_total_usd / nvda_qty
 
     ExchangeRate.stubs(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1))
-    assert_equal Money.new(expected_amzn_usd, "CAD").exchange_to("USD"), @amzn.avg_cost
-    assert_equal Money.new(expected_nvda_usd, "CAD").exchange_to("USD"), @nvda.avg_cost
+    assert_equal Money.new(expected_amzn_usd.round(4), "CAD").exchange_to("USD"), @amzn.avg_cost
+    assert_equal Money.new(expected_nvda_usd.round(4), "CAD").exchange_to("USD"), @nvda.avg_cost
   end
 
   test "the average cost includes what the purchases cost in fees" do
@@ -136,13 +137,104 @@ class HoldingTest < ActiveSupport::TestCase
 
   # The missing-rate check rides on the totals query instead of adding a round
   # trip to a path that exists to avoid N+1 queries.
-  test "the fallback reads the trades in two queries" do
+  test "the fallback reads the trades and the splits in one query each" do
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
     @amzn.account
 
     queries = capture_sql_queries { @amzn.avg_cost }
 
-    assert_equal 2, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
+  end
+
+  # The fallback answers for a holding with no stored basis, so it has to give
+  # the figure the holding calculators would store (#3566): the same tracker,
+  # relieving sells, splitting, and releasing a transfer once the position closes.
+  test "the fallback relieves a full sell, so a rebuy starts a clean basis" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100, date: 10.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: -10, price: 150, date: 5.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 200, date: 1.day.ago.to_date)
+
+    assert_equal Money.new(BigDecimal("200")), @amzn.avg_cost
+  end
+
+  test "the fallback relieves a partial sell at the running average" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100, date: 10.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: -5, price: 150, date: 5.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 5, price: 200, date: 1.day.ago.to_date)
+
+    # 5 left at 100, plus 5 at 200: 1,500 for 10 units
+    assert_equal Money.new(BigDecimal("150")), @amzn.avg_cost
+  end
+
+  test "a transfer in stops making the fallback unknown once the position is closed" do
+    transfer_in = create_trade(@amzn.security, account: @account, qty: 10, price: 100, date: 10.days.ago.to_date)
+    transfer_in.entryable.update!(investment_activity_label: "Transfer")
+    create_trade(@amzn.security, account: @account, qty: -10, price: 150, date: 5.days.ago.to_date)
+
+    create_trade(@amzn.security, account: @account, qty: 10, price: 200, date: 1.day.ago.to_date)
+
+    assert_equal Money.new(BigDecimal("200")), @amzn.avg_cost
+  end
+
+  test "the fallback stays unknown while transferred-in units are held" do
+    transfer_in = create_trade(@amzn.security, account: @account, qty: 10, price: 100, date: 10.days.ago.to_date)
+    transfer_in.entryable.update!(investment_activity_label: "Transfer")
+    create_trade(@amzn.security, account: @account, qty: -5, price: 150, date: 5.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 200, date: 1.day.ago.to_date)
+
+    assert_nil @amzn.avg_cost
+  end
+
+  test "an outbound transfer is relieved like a sell in the fallback" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100, date: 10.days.ago.to_date)
+    transfer_out = create_trade(@amzn.security, account: @account, qty: -10, price: 100, date: 5.days.ago.to_date)
+    transfer_out.entryable.update!(investment_activity_label: "Transfer")
+    create_trade(@amzn.security, account: @account, qty: 10, price: 200, date: 1.day.ago.to_date)
+
+    assert_equal Money.new(BigDecimal("200")), @amzn.avg_cost
+  end
+
+  test "the fallback applies a stock split at the open of its ex-date" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100, date: 10.days.ago.to_date)
+    @amzn.security.splits.create!(ex_date: 5.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+    create_trade(@amzn.security, account: @account, qty: 10, price: 60, date: 5.days.ago.to_date)
+
+    # 1,000 for 20 post-split units, plus 600 for 10: 1,600 for 30, at the
+    # four places `cost_basis` is stored at
+    assert_equal Money.new(BigDecimal("53.3333")), @amzn.avg_cost
+  end
+
+  test "a buy with no rate stops making the fallback unknown once the position is closed" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100, date: 10.days.ago.to_date, currency: "CAD")
+    create_trade(@amzn.security, account: @account, qty: -10, price: 150, date: 5.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 200, date: 1.day.ago.to_date)
+
+    assert_equal Money.new(BigDecimal("200")), @amzn.avg_cost
+  end
+
+  test "the fallback agrees with the forward calculator" do
+    account = families(:empty).accounts.create!(name: "Parity Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    security = create_security("PRTY", prices: (0..12).map { |days| { date: days.days.ago.to_date, price: 120 } })
+
+    create_trade(security, account: account, qty: 10, price: 100, fee: 10, date: 12.days.ago.to_date)
+    create_trade(security, account: account, qty: -4, price: 130, date: 10.days.ago.to_date)
+    transfer_in = create_trade(security, account: account, qty: 3, price: 90, date: 9.days.ago.to_date)
+    transfer_in.entryable.update!(investment_activity_label: "Transfer")
+    create_trade(security, account: account, qty: -9, price: 140, date: 8.days.ago.to_date)
+    create_trade(security, account: account, qty: 8, price: 110, fee: 4, date: 7.days.ago.to_date)
+    security.splits.create!(ex_date: 6.days.ago.to_date, numerator: 3, denominator: 2, source: "manual")
+    transfer_out = create_trade(security, account: account, qty: -3, price: 75, date: 5.days.ago.to_date)
+    transfer_out.entryable.update!(investment_activity_label: "Transfer")
+    create_trade(security, account: account, qty: 6, price: 80, date: 3.days.ago.to_date)
+
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    holdings = account.holdings.where(security: security).where("date >= ?", 7.days.ago.to_date).order(:date).to_a
+
+    assert holdings.all? { |holding| holding.cost_basis.present? }, "every compared day needs a calculated basis"
+    holdings.each do |holding|
+      assert_equal holding.cost_basis, holding.send(:calculate_avg_cost)&.amount, holding.date.to_s
+    end
   end
 
   test "calculates total return trend" do

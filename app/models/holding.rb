@@ -275,39 +275,64 @@ class Holding < ApplicationRecord
         previous: start_amount
     end
 
-    # Calculates weighted average cost from buy trades.
-    # Returns nil if no trades exist (cost basis is unknown).
+    # The weighted-average cost of the position on this holding's date, worked
+    # out from the trades the way the holding calculators work it out
+    # (Holding::ForwardCalculator#apply_trades), so a holding with no stored
+    # basis shows the figure the next materialization would store: sells are
+    # relieved at the running average, a split rescales the position at the
+    # open of its ex-date, and a transfer in makes the cost unknown until the
+    # position is closed. Returns nil when the cost is unknown.
     def calculate_avg_cost
-      trades = account.trades
-        .with_entry
-        .joins(ActiveRecord::Base.sanitize_sql_array([
-          "LEFT JOIN exchange_rates ON (
-            exchange_rates.date = entries.date AND
-            exchange_rates.from_currency = trades.currency AND
-            exchange_rates.to_currency = ?
-          )", account.currency
-        ]))
-        .where(security_id: security.id)
-        .where("trades.qty > 0 AND entries.date <= ?", date)
+      tracker = Holding::CostBasisTracker.new
+      position = BigDecimal("0")
+      transferred = false
+      splits = Security::Split.where(security_id: security_id, ex_date: ..date).order(:ex_date).to_a
 
-      # An internal movement is not a purchase: securities moved in from elsewhere were
-      # acquired at a price nothing here knows, so treating the day they
-      # arrived as their cost states a number that looks authoritative and is
-      # wrong — a coin bought at 30k and moved in at 60k would report no gain.
-      #
-      # One internal movement makes the whole position unknown, rather than just its own
-      # row. Averaging the purchases alone and applying that to every unit is
-      # the same fabrication in a quieter form: buy one at 30k, receive one, and
-      # the position would report 30k a unit for two units it did not cost that.
-      return nil if trades.where(investment_activity_label: Trade::INTERNAL_MOVEMENT_LABELS).exists?
+      apply_splits = lambda do |through|
+        while splits.any? && splits.first.ex_date <= through
+          ratio = splits.shift.ratio
+          tracker.split(ratio)
+          position = Security::Split.scale(position, ratio)
+        end
+      end
 
-      # IS DISTINCT FROM, because `!=` is NULL for an unlabelled row and would
-      # drop the ordinary purchases that carry no label at all.
-      trades = trades.where(
-        "trades.investment_activity_label NOT IN (?) OR trades.investment_activity_label IS NULL",
-        Trade::INTERNAL_MOVEMENT_LABELS
-      )
+      avg_cost_trade_rows.each do |trade_date, qty, unit_cost, internal_movement|
+        apply_splits.call(trade_date)
+        previous_position = position
 
+        # Units moved in were acquired at a price nothing here knows -- a coin
+        # bought at 30k and moved in at 60k would report no gain -- so they
+        # make the whole position's cost unknown. Units moved out are relieved
+        # at the running average, like a sell.
+        if internal_movement && qty.positive?
+          transferred = true
+        else
+          tracker.apply(unit_cost, qty)
+        end
+
+        position += qty
+        # Only a genuine downward crossing through zero clears the mark, as in
+        # the calculators: a position that was never positive held no units.
+        transferred = false if previous_position.positive? && position <= 0
+      end
+      apply_splits.call(date)
+
+      return nil if transferred
+
+      # Rounded to the scale `cost_basis` is stored at, so the figure is the one
+      # the next materialization writes, not one a per-unit fee leaves at
+      # 214.99999... when the stored basis reads 215.
+      average = tracker.average_cost
+      Money.new(average.round(self.class.columns_hash["cost_basis"].scale), currency) if average
+    end
+
+    # This security's trades up to the holding's date, oldest first in
+    # Entry.chronological order, as [date, qty, unit cost, internal movement?].
+    # Unit cost is in the account's currency and includes the fee on a
+    # purchase (Holding::TradeCalculatorHelpers#effective_trade_price); it is
+    # nil when a foreign trade has no usable rate for its day, which the
+    # tracker treats as an unknown cost until the position closes.
+    def avg_cost_trade_rows
       # The rate a trade carries itself (extra["exchange_rate"], e.g. IBKR's
       # fx_rate_to_base) comes before the table's, as in the calculators and
       # Balance::SyncCache; a trade in the account's own currency converts at 1.
@@ -315,7 +340,9 @@ class Holding < ApplicationRecord
       # directly can hold the same rate as a string, which Trade's validation
       # and Money#exchange_to both accept -- so a plain decimal string counts
       # too. Anything else, an exponent or an absurd length included, is not
-      # cast, so it cannot overflow numeric and fail the query.
+      # cast, so it cannot overflow numeric and fail the query. A rate of zero
+      # or less converts nothing, so it counts as missing, as it does in
+      # Money#exchange_to.
       rate = <<~SQL.squish
         COALESCE(
           CASE jsonb_typeof(trades.extra->'exchange_rate')
@@ -327,24 +354,24 @@ class Holding < ApplicationRecord
         )
       SQL
       foreign = ActiveRecord::Base.sanitize_sql_array([ "trades.currency <> ?", account.currency ])
+      factor = "CASE WHEN #{foreign} THEN CASE WHEN #{rate} > 0 THEN #{rate} END ELSE 1 END"
+      unit_cost = "CASE WHEN trades.qty > 0 THEN (trades.price + COALESCE(trades.fee, 0) / trades.qty) * #{factor} END"
+      internal_movement = ActiveRecord::Base.sanitize_sql_array([
+        "COALESCE(trades.investment_activity_label IN (?), FALSE)", Trade::INTERNAL_MOVEMENT_LABELS
+      ])
 
-      # A foreign purchase with no usable rate for its day has a cost nothing
-      # here knows, so the position's is unknown too, as with an internal
-      # movement -- counting it at 1:1 would state a figure that looks measured
-      # and is not. A rate of zero or less converts nothing, so it counts as
-      # missing, as it does in Money#exchange_to. Checked in the same query as
-      # the totals rather than in another round trip.
-      total_cost, total_qty, rate_missing = trades.pick(
-        Arel.sql("SUM((trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END)"),
-        Arel.sql("SUM(trades.qty)"),
-        Arel.sql("BOOL_OR(#{foreign} AND (#{rate} IS NULL OR #{rate} <= 0))")
-      )
-      return nil if rate_missing
-
-      # Return nil when no trades exist - cost basis is genuinely unknown
-      # Previously this fell back to current market price, which was misleading
-      return nil unless total_qty && total_qty > 0
-
-      Money.new(total_cost / total_qty, currency)
+      account.trades
+        .with_entry
+        .joins(ActiveRecord::Base.sanitize_sql_array([
+          "LEFT JOIN exchange_rates ON (
+            exchange_rates.date = entries.date AND
+            exchange_rates.from_currency = trades.currency AND
+            exchange_rates.to_currency = ?
+          )", account.currency
+        ]))
+        .where(security_id: security_id)
+        .where("entries.date <= ?", date)
+        .reorder("entries.date ASC, entries.created_at ASC, entries.id ASC")
+        .pluck(Arel.sql("entries.date"), Arel.sql("trades.qty"), Arel.sql(unit_cost), Arel.sql(internal_movement))
     end
 end
