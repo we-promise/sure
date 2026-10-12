@@ -28,7 +28,8 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     )
     AccountProvider.create!(account: @account, provider: @enable_banking_account)
 
-    @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: mock())
+    @provider = mock()
+    @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @provider)
     @importer.stubs(:include_pending?).returns(false)
     @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
   end
@@ -128,19 +129,97 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     assert_equal 1, snapshot_count, "a transient empty fetch must not erase history"
   end
 
-  test "an incomplete fetch does not replace the window" do
+  test "an unsupported PDNG fetch still reconciles the complete booked window" do
     @importer.stubs(:include_pending?).returns(true)
-    sync([ rotating_tx("aaa") ], pending: [])
+    sync_and_process([ rotating_tx("aaa") ], pending: [])
     assert_equal 1, snapshot_count
+    assert_equal 1, entry_count
 
-    # PDNG unsupported: only part of the requested set arrived, so the stored
-    # window must survive rather than be replaced by booked-only rows.
+    # The BOOK request succeeded in full; only PDNG was refused. Declaring the
+    # whole fetch incomplete would leave the booked rotation unreconciled.
+    unsupported = Provider::EnableBanking::EnableBankingError.new("PDNG unsupported", :validation_error)
+    sync_and_process([ rotating_tx("bbb") ], pending_raises: unsupported)
+
+    stored = @enable_banking_account.raw_transactions_payload.map(&:with_indifferent_access)
+    assert_equal 1, stored.count, "the complete booked window must still be replaced"
+    assert_equal "txn_bbb", stored.first[:transaction_id]
+    assert_equal 1, entry_count, "a rotated identifier must not insert a second entry"
+  end
+
+  test "an unsupported PDNG fetch keeps stored pending rows" do
+    @importer.stubs(:include_pending?).returns(true)
+    pending_row = rotating_tx("pend", amount: "55.00", counterparty: "Pending Co").merge(_pending: true)
+    @enable_banking_account.upsert_enable_banking_transactions_snapshot!([ pending_row ])
+
     unsupported = Provider::EnableBanking::EnableBankingError.new("PDNG unsupported", :validation_error)
     sync([ rotating_tx("bbb") ], pending_raises: unsupported)
 
     stored = @enable_banking_account.raw_transactions_payload.map(&:with_indifferent_access)
-    assert_equal 2, stored.count, "an incomplete fetch must not cost the stored window"
-    assert stored.any? { |t| t[:transaction_id] == "txn_aaa" }, "the pre-existing row must survive"
+    assert stored.any? { |t| t[:transaction_id] == "txn_pend" },
+      "PDNG was never fetched, so stored pending rows cannot be shown to be gone"
+  end
+
+  test "a truncated pagination run does not replace the window" do
+    sync([ rotating_tx("aaa") ])
+    assert_equal 1, snapshot_count
+
+    # Real pagination this time: the ASPSP repeats its continuation_key, which
+    # fetch_paginated_transactions tolerates by returning the pages it did get.
+    @importer.unstub(:fetch_paginated_transactions)
+    @provider.stubs(:get_account_transactions)
+             .returns({ transactions: [ rotating_tx("bbb") ], continuation_key: "k1" })
+             .then.returns({ transactions: [], continuation_key: "k1" })
+
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    stored = @enable_banking_account.reload.raw_transactions_payload.map(&:with_indifferent_access)
+    assert_equal 2, stored.count, "a partial page set must not evict rows it never covered"
+    assert stored.any? { |t| t[:transaction_id] == "txn_aaa" }, "the unfetched row must survive"
+  end
+
+  test "a reordered response does not move annotations between repeated movements" do
+    a = rotating_tx("a", amount: "10.00", counterparty: "Repeat")
+    b = rotating_tx("b", amount: "10.00", counterparty: "Repeat")
+    sync_and_process([ a, b ])
+    assert_equal 2, entry_count
+
+    b_id = EnableBankingEntry::Processor.compute_external_id(b.with_indifferent_access)
+    b_entry = Entry.find_by!(account_id: @account.id, source: "enable_banking", external_id: b_id)
+    b_entry.update!(notes: "belongs to b")
+
+    # b keeps its identifier, a rotates to c, and the order flips.
+    c = rotating_tx("c", amount: "10.00", counterparty: "Repeat")
+    sync_and_process([ b, c ])
+
+    assert_equal 2, entry_count, "pairing must not orphan an entry and insert a replacement"
+    assert_equal "belongs to b", Entry.find_by(account_id: @account.id, source: "enable_banking", external_id: b_id)&.notes,
+      "an unchanged identifier must keep its own annotations"
+  end
+
+  test "a numeric timestamp is read as a timestamp, not as a four-digit year" do
+    start_date = Date.new(2026, 9, 12)
+    # 1791072000 is 2026-10-04, well inside the window. Read as digits it is also
+    # a parseable date in the year 1791, so a plain Date.parse discards a recent
+    # transaction outright. Other epochs raise instead and are kept regardless of
+    # their age; both readings are wrong, and neither matches in_fetched_window?.
+    in_window = { transaction_id: "epoch_in", booking_date: 1791072000 }
+    out_of_window = { transaction_id: "epoch_out", booking_date: Date.new(2026, 1, 5).to_time.to_i }
+
+    kept = @importer.send(:filter_transactions_by_date, [ in_window, out_of_window ], start_date)
+
+    assert_equal [ "epoch_in" ], kept.map { |tx| tx[:transaction_id] }
+  end
+
+  test "a failed snapshot write rolls back the re-keyed identifiers" do
+    sync_and_process([ rotating_tx("aaa") ])
+    entry = Entry.find_by!(account_id: @account.id, source: "enable_banking")
+    old_external_id = entry.external_id
+
+    @enable_banking_account.stubs(:upsert_enable_banking_transactions_snapshot!).raises(ActiveRecord::StatementInvalid, "boom")
+    sync([ rotating_tx("bbb") ])
+
+    assert_equal old_external_id, entry.reload.external_id,
+      "re-keying must not outlive the snapshot write it was paired with"
   end
 
   test "rows dated with a unix timestamp are matched to the window" do
