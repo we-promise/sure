@@ -16,19 +16,12 @@ class AddDayCountConventionToLoans < ActiveRecord::Migration[8.1]
   CONVENTIONS = %w[thirty_360 actual_365 actual_actual].freeze
   CONSTRAINT = "chk_loans_day_count_convention"
 
-  def up
+  def change
     add_column :loans, :day_count_convention, :string,
-      null: false, default: "thirty_360", if_not_exists: true
-
-    return if check_constraint_exists?(:loans, name: CONSTRAINT)
+      null: false, default: "thirty_360"
 
     add_check_constraint :loans,
       "day_count_convention IN (#{CONVENTIONS.map { |v| "'#{v}'" }.join(', ')})",
       name: CONSTRAINT
-  end
-
-  def down
-    remove_check_constraint :loans, name: CONSTRAINT, if_exists: true
-    remove_column :loans, :day_count_convention, if_exists: true
   end
 end
