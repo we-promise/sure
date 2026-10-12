@@ -9,3 +9,18 @@ en:
       one: "Lunchflow import: transaction fetch failed for %{count} account"
       other: "Lunchflow import: transaction fetch failed for %{count} accounts"
     lunchflow_import_error: "Lunchflow import: %{error}"
+    truelayer_accounts_failed:
+      one: "TrueLayer import: %{count} account failed to update"
+      other: "TrueLayer import: %{count} accounts failed to update"
+    truelayer_transactions_failed:
+      one: "TrueLayer import: transaction fetch failed for %{count} account"
+      other: "TrueLayer import: transaction fetch failed for %{count} accounts"
+    truelayer_balances_failed:
+      one: "TrueLayer import: balance fetch failed for %{count} account"
+      other: "TrueLayer import: balance fetch failed for %{count} accounts"
+    truelayer_processing_failed:
+      one: "TrueLayer import: %{count} account could not be processed"
+      other: "TrueLayer import: %{count} accounts could not be processed"
+    truelayer_entries_failed:
+      one: "TrueLayer import: %{count} transaction could not be imported"
+      other: "TrueLayer import: %{count} transactions could not be imported"
