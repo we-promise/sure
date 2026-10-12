@@ -640,16 +640,20 @@ class Family < ApplicationRecord
 
   # Used for invalidating entry related aggregation queries
   def entries_cache_version
-    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}"
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}-#{categories_version}"
   end
 
-  # Used for invalidating caches keyed on entries (e.g. the transactions
-  # index's uncategorized count). Unlike #entries_cache_version, includes
-  # .count so a hard-deleted entry busts the cache even when it didn't hold
-  # the current max updated_at, and uses full-precision timestamps so two
-  # updates within the same second still produce distinct versions.
+  # Used for caches keyed on entries (e.g. the transactions index's
+  # uncategorized count). Counts capture deletions, and full-precision
+  # timestamps distinguish updates within the same second.
   def entries_version
-    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}"
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}-#{categories_version}"
+  end
+
+  # Category deletion can nullify a late assignment without touching its
+  # entry; category metadata also affects cached entry results.
+  def categories_version
+    "#{categories.count}-#{categories.maximum(:updated_at)&.to_f || 0}"
   end
 
   # Used for invalidating caches keyed on recurring transactions (e.g. the
