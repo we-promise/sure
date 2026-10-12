@@ -85,11 +85,24 @@ class CreditCardsController < ApplicationController
       override = sophtron_params[:balance_sign_override]
       override = nil unless override.in?(%w[credit debt])
 
-      update_provider_setting(
-        provider_type: "SophtronAccount",
-        attribute: :balance_sign_override,
-        value: override
-      ) { |provider_account| provider_account.apply_balance_sign_override! }
+      provider_account = @account.provider_account_for("SophtronAccount")
+      return unless provider_account.present?
+
+      provider_account.update_balance_sign_override!(override)
+    rescue StandardError => e
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to apply Sophtron balance sign override",
+        source: "CreditCardsController#update_sophtron_settings",
+        provider_key: "sophtron",
+        family: Current.family,
+        account: @account,
+        account_provider: provider_account&.account_provider,
+        metadata: { error_class: e.class.name, error_message: e.message, balance_sign_override: override }
+      )
+      flash.delete(:notice)
+      flash[:alert] = t("credit_cards.update.sophtron_balance_sign_error")
     end
 
     def update_provider_setting(provider_type:, attribute:, value:)

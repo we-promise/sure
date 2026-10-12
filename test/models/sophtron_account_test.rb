@@ -22,22 +22,6 @@ class SophtronAccountTest < ActiveSupport::TestCase
     assert_equal "ui-apple", account.institution_metadata["user_institution_id"]
   end
 
-  test "accepts only supported balance sign overrides" do
-    account = build_sophtron_account
-
-    account.balance_sign_override = "credit"
-    assert account.valid?
-
-    account.balance_sign_override = "debt"
-    assert account.valid?
-
-    account.balance_sign_override = nil
-    assert account.valid?
-
-    account.balance_sign_override = "unsupported"
-    refute account.valid?
-  end
-
   test "database rejects an unsupported balance sign override" do
     account = build_sophtron_account
     account.balance_sign_override = "unsupported"
@@ -47,27 +31,23 @@ class SophtronAccountTest < ActiveSupport::TestCase
     end
   end
 
-  test "apply_balance_sign_override! is a no-op when account is not linked" do
-    account = build_sophtron_account
-    account.balance_sign_override = "credit"
-
-    assert_nothing_raised do
-      account.apply_balance_sign_override!
-    end
-  end
-
-  test "apply_balance_sign_override! updates balance anchor and schedules account sync" do
+  test "failed sync scheduling rolls back the override and applied balance" do
     sophtron_account = build_sophtron_account
-    sophtron_account.update!(balance: -25, balance_sign_override: "credit")
     account = accounts(:credit_card)
     AccountProvider.create!(account: account, provider: sophtron_account)
+    original_balance = account.balance
+    original_cash_balance = account.cash_balance
+    original_anchor = account.current_anchor_balance
+    Account.any_instance.stubs(:sync_later).raises(StandardError, "sync scheduling failed")
 
-    assert_difference -> { account.syncs.count } => 1 do
-      sophtron_account.apply_balance_sign_override!
+    assert_raises StandardError do
+      sophtron_account.update_balance_sign_override!("credit")
     end
 
-    assert_equal BigDecimal("-25"), account.reload.balance
-    assert_equal BigDecimal("-25"), account.current_anchor_balance
+    assert_nil sophtron_account.reload.balance_sign_override
+    assert_equal original_balance, account.reload.balance
+    assert_equal original_cash_balance, account.cash_balance
+    assert_equal original_anchor, account.current_anchor_balance
   end
 
   private

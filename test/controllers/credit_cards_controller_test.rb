@@ -341,7 +341,7 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     get edit_credit_card_path(@account)
 
     assert_response :success
-    assert_no_match I18n.t("credit_cards.form.sophtron_balance_sign_label"), response.body
+    assert_select "select[name='account[sophtron][balance_sign_override]']", count: 0
   end
 
   test "updates Sophtron balance sign override when linked" do
@@ -349,8 +349,8 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
 
     get edit_credit_card_path(@account)
     assert_response :success
-    assert_match "account[sophtron][balance_sign_override]", response.body
-    assert_match I18n.t("credit_cards.form.sophtron_balance_sign_label"), response.body
+    assert_select "select[name='account[sophtron][balance_sign_override]']"
+    SophtronAccount::Transactions::Processor.expects(:new).never
 
     assert_enqueued_with(job: SyncJob) do
       patch credit_card_path(@account), params: {
@@ -365,7 +365,8 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to @account
     assert_equal "credit", sophtron_account.reload.balance_sign_override
     assert_equal BigDecimal("-25"), @account.reload.balance
-    assert_equal @account, @account.syncs.order(:created_at).last.syncable
+    assert_equal BigDecimal("-25"), @account.current_anchor_balance
+    assert_equal 1, @account.syncs.count
     assert_empty sophtron_account.sophtron_item.syncs
   end
 
@@ -389,6 +390,50 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "debt", sophtron_account.reload.balance_sign_override
     assert_equal BigDecimal("25"), @account.reload.balance
     assert_equal BigDecimal("25"), @account.current_anchor_balance
+  end
+
+  test "failed Sophtron balance application rolls back and can be retried" do
+    sophtron_account = create_linked_sophtron_account
+    original_balance = @account.balance
+    original_cash_balance = @account.cash_balance
+    original_anchor = @account.current_anchor_balance
+    submission = {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "credit" }
+      }
+    }
+    Account.any_instance.stubs(:set_current_balance).returns(
+      Account::CurrentBalanceManager::Result.new(success?: false, error: "anchor write failed")
+    )
+
+    assert_no_enqueued_jobs only: SyncJob do
+      patch credit_card_path(@account), params: submission
+    end
+
+    assert_redirected_to @account
+    assert_equal I18n.t("credit_cards.update.sophtron_balance_sign_error"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_nil sophtron_account.reload.balance_sign_override
+    assert_equal original_balance, @account.reload.balance
+    assert_equal original_cash_balance, @account.cash_balance
+    assert_equal original_anchor, @account.current_anchor_balance
+    diagnostic = DebugLogEntry.find_by!(source: "CreditCardsController#update_sophtron_settings")
+    assert_equal @account.family, diagnostic.family
+    assert_equal sophtron_account.account_provider, diagnostic.account_provider
+    assert_equal "sophtron", diagnostic.provider_key
+
+    Account.any_instance.unstub(:set_current_balance)
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      patch credit_card_path(@account), params: submission
+    end
+
+    assert_redirected_to @account
+    assert_equal "credit", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("-25"), @account.reload.balance
+    assert_equal BigDecimal("-25"), @account.current_anchor_balance
   end
 
   test "applies a Sophtron sign override when the parent item requires manual sync" do

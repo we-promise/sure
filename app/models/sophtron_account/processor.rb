@@ -46,41 +46,42 @@ class SophtronAccount::Processor
     process_transactions
   end
 
-  private
-
-    # Updates the linked Maybe Account's balance from Sophtron data.
-    #
-    # Handles sign conventions for different account types:
-    # - Credit cards negate the provider balance unless a balance sign
-    #   override says the amount is debt or a genuine credit
-    # - Loans always use inverted signs (negated)
-    # - Other account types use Sophtron's native sign convention
-    #
-    # @return [void]
-    # @raise [StandardError] if the account or its current balance anchor cannot be updated
-    def process_account!
-      if sophtron_account.current_account.blank?
-        Rails.logger.error("Sophtron account #{sophtron_account.id} has no associated Account")
-        return
-      end
-
-      # Update account balance from latest Sophtron data
-      account = sophtron_account.current_account
-      observed = sophtron_account.balance || sophtron_account.available_balance || 0
-      balance = signed_balance(account, observed)
-
-      # Normalize currency with fallback chain: parsed sophtron currency -> existing account currency -> USD
-      currency = parse_currency(sophtron_account.currency) || account.currency || "USD"
-
-      # The anchor is what a later account sync reads. Write it here, without
-      # queueing that sync, so the caller can schedule one sync after every
-      # account has been updated.
-      ActiveRecord::Base.transaction do
-        account.update!(currency: currency, cash_balance: balance)
-        result = account.set_current_balance(balance, schedule_sync: false)
-        raise StandardError, "Failed to set current balance: #{result.error}" unless result.success?
-      end
+  # Updates the linked Maybe Account's balance from Sophtron data.
+  #
+  # Handles sign conventions for different account types:
+  # - Credit cards negate the provider balance unless a balance sign
+  #   override says the amount is debt or a genuine credit
+  # - Loans always use inverted signs (negated)
+  # - Other account types use Sophtron's native sign convention
+  #
+  # @return [void]
+  # @raise [StandardError] if the account or its current balance anchor cannot be updated
+  def process_account!
+    if sophtron_account.current_account.blank?
+      Rails.logger.error("Sophtron account #{sophtron_account.id} has no associated Account")
+      return
     end
+
+    # Update account balance from latest Sophtron data
+    account = sophtron_account.current_account
+    observed = sophtron_account.balance || sophtron_account.available_balance || 0
+    balance = signed_balance(account, observed)
+
+    # Normalize currency with fallback chain: parsed sophtron currency -> existing account currency -> USD
+    currency = parse_currency(sophtron_account.currency) || account.currency || "USD"
+
+    # The anchor is what a later account sync reads. Write it here, without
+    # queueing that sync, so the caller can schedule one sync after every
+    # account has been updated.
+    ActiveRecord::Base.transaction do
+      account.update!(currency: currency)
+      result = account.set_current_balance(balance, schedule_sync: false)
+      raise StandardError, "Failed to set current balance: #{result.error}" unless result.success?
+      account.update!(cash_balance: balance) unless result.historical?
+    end
+  end
+
+  private
 
     # Processes all stored transactions for this account.
     #

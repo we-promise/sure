@@ -41,6 +41,15 @@ class SophtronAccount < ApplicationRecord
     account
   end
 
+  # Saves the override and applies its balance atomically so a failed application
+  # leaves the previous setting in place and the same selection can be retried.
+  def update_balance_sign_override!(override)
+    transaction(requires_new: true) do
+      update!(balance_sign_override: override)
+      apply_balance_sign_override! if saved_change_to_balance_sign_override?
+    end
+  end
+
   # Applies the current sign override to the stored provider balance and
   # schedules the linked account sync.
   #
@@ -52,7 +61,7 @@ class SophtronAccount < ApplicationRecord
   def apply_balance_sign_override!
     return if current_account.blank?
 
-    SophtronAccount::Processor.new(self).process
+    SophtronAccount::Processor.new(self).process_account!
     current_account.sync_later
   end
 

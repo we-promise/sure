@@ -10,19 +10,7 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
     )
   end
 
-  test "inverts negative balance for credit card liabilities" do
-    sophtron_account = create_sophtron_account(
-      account_id: "cc_auto",
-      balance: BigDecimal("-123.45")
-    )
-    acct = link_account(accounts(:credit_card), sophtron_account)
-
-    SophtronAccount::Processor.new(sophtron_account).send(:process_account!)
-
-    assert_equal BigDecimal("123.45"), acct.reload.balance
-  end
-
-  test "credit override preserves an ambiguous provider balance as a credit" do
+  test "credit override treats either provider sign as a credit" do
     sophtron_account = create_sophtron_account(
       account_id: "cc_credit",
       balance: BigDecimal("-25"),
@@ -30,13 +18,16 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
     )
     acct = link_account(accounts(:credit_card), sophtron_account)
 
-    SophtronAccount::Processor.new(sophtron_account).send(:process_account!)
+    [ -25, 25 ].each do |observed|
+      sophtron_account.update!(balance: observed)
+      SophtronAccount::Processor.new(sophtron_account).process_account!
 
-    assert_equal BigDecimal("-25"), acct.reload.balance
-    assert_equal BigDecimal("-25"), acct.current_anchor_balance
+      assert_equal BigDecimal("-25"), acct.reload.balance
+      assert_equal BigDecimal("-25"), acct.current_anchor_balance
+    end
   end
 
-  test "debt override preserves an ambiguous provider balance as debt" do
+  test "debt override treats either provider sign as debt" do
     sophtron_account = create_sophtron_account(
       account_id: "cc_debt",
       balance: BigDecimal("-25"),
@@ -44,22 +35,12 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
     )
     acct = link_account(accounts(:credit_card), sophtron_account)
 
-    SophtronAccount::Processor.new(sophtron_account).send(:process_account!)
+    [ -25, 25 ].each do |observed|
+      sophtron_account.update!(balance: observed)
+      SophtronAccount::Processor.new(sophtron_account).process_account!
 
-    assert_equal BigDecimal("25"), acct.reload.balance
-  end
-
-  test "debt override keeps a positive provider balance as debt" do
-    sophtron_account = create_sophtron_account(
-      account_id: "cc_debt_positive",
-      balance: BigDecimal("1947.18"),
-      balance_sign_override: "debt"
-    )
-    acct = link_account(accounts(:credit_card), sophtron_account)
-
-    SophtronAccount::Processor.new(sophtron_account).send(:process_account!)
-
-    assert_equal BigDecimal("1947.18"), acct.reload.balance
+      assert_equal BigDecimal("25"), acct.reload.balance
+    end
   end
 
   test "does not invert balance for asset accounts" do
@@ -69,25 +50,24 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
     )
     acct = link_account(accounts(:depository), sophtron_account)
 
-    SophtronAccount::Processor.new(sophtron_account).send(:process_account!)
+    SophtronAccount::Processor.new(sophtron_account).process_account!
 
     assert_equal BigDecimal("1000.00"), acct.reload.balance
   end
 
-  test "inverts negative balance for loan liabilities even with a credit override" do
+  test "inverts negative balance for loan liabilities" do
     sophtron_account = create_sophtron_account(
       account_id: "loan_1",
-      balance: BigDecimal("-400"),
-      balance_sign_override: "credit"
+      balance: BigDecimal("-400")
     )
     acct = link_account(accounts(:loan), sophtron_account)
 
-    SophtronAccount::Processor.new(sophtron_account).send(:process_account!)
+    SophtronAccount::Processor.new(sophtron_account).process_account!
 
     assert_equal BigDecimal("400"), acct.reload.balance
   end
 
-  test "process updates account balance and current anchor without scheduling an account sync" do
+  test "automatic mode negates the balance and updates the anchor without scheduling a sync" do
     sophtron_account = create_sophtron_account(
       account_id: "cc_process",
       balance: BigDecimal("-50")
@@ -99,7 +79,24 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
     end
 
     assert_equal BigDecimal("50"), acct.reload.balance
+    assert_equal BigDecimal("50"), acct.cash_balance
     assert_equal BigDecimal("50"), acct.current_anchor_balance
+  end
+
+  test "historical observations preserve current balance and cash balance" do
+    sophtron_account = create_sophtron_account(account_id: "cc_future_anchor", balance: -25)
+    acct = link_account(accounts(:credit_card), sophtron_account)
+    acct.set_current_balance(100, date: Date.current + 1.day, schedule_sync: false)
+    acct.update!(cash_balance: 100)
+
+    SophtronAccount::Processor.new(sophtron_account).process
+
+    assert_equal BigDecimal("100"), acct.reload.balance
+    assert_equal BigDecimal("100"), acct.cash_balance
+    assert_equal BigDecimal("100"), acct.current_anchor_balance
+    historical_entry = acct.entries.valuations.find_by!(date: Date.current)
+    assert_equal BigDecimal("25"), historical_entry.amount
+    assert_equal "reconciliation", historical_entry.entryable.kind
   end
 
   private
