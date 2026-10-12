@@ -318,7 +318,28 @@ class LunchflowItem::Importer
             new_count = 0
             updated_count = 0
             merged = []
-            transactions_data[:transactions].each do |tx|
+
+            incoming_transactions = transactions_data[:transactions]
+            if include_pending
+              # Tag unidentified card holds as isPending: true
+              incoming_transactions = incoming_transactions.map do |tx|
+                next tx unless tx.is_a?(Hash)
+                if LunchflowEntry::Processor.unidentified_hold?(tx) && !ActiveModel::Type::Boolean.new.cast(tx.with_indifferent_access[:isPending])
+                  tx.merge("isPending" => true)
+                else
+                  tx
+                end
+              end
+            else
+              # If include_pending is disabled, filter out pending transactions and unidentified holds
+              incoming_transactions = incoming_transactions.reject do |tx|
+                next false unless tx.is_a?(Hash)
+                tx_ia = tx.with_indifferent_access
+                ActiveModel::Type::Boolean.new.cast(tx_ia[:isPending]) || LunchflowEntry::Processor.unidentified_hold?(tx_ia)
+              end
+            end
+
+            incoming_transactions.each do |tx|
               next unless tx.is_a?(Hash)
 
               stored = existing_pool[transaction_key.call(tx)].shift
@@ -346,7 +367,7 @@ class LunchflowItem::Importer
               Rails.logger.info "LunchflowItem::Importer - Storing #{new_count} new and #{updated_count} updated transactions (#{existing_transactions.count} existing) for account #{lunchflow_account.account_id}"
               lunchflow_account.upsert_lunchflow_transactions_snapshot!(merged + leftover)
             else
-              Rails.logger.info "LunchflowItem::Importer - No new or updated transactions to store (all #{transactions_data[:transactions].count} unchanged) for account #{lunchflow_account.account_id}"
+              Rails.logger.info "LunchflowItem::Importer - No new or updated transactions to store (all #{incoming_transactions.count} unchanged) for account #{lunchflow_account.account_id}"
             end
           rescue => e
             Rails.logger.error "LunchflowItem::Importer - Failed to store transactions for account #{lunchflow_account.account_id}: #{e.message}"

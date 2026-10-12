@@ -752,6 +752,50 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert entry.transaction.pending?
   end
 
+  test "normalizes CRDT amount to positive (outflow) and name to Card Authorization Hold for masked card holds" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    processor = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account)
+    entry = processor.process
+
+    assert_not_nil entry
+    assert_equal BigDecimal("14.97"), entry.amount, "Must be positive outflow in Sure convention"
+    assert_equal "Card Authorization Hold", entry.name
+    assert_nil entry.transaction.merchant
+    assert_equal "474836xxxxxx6879 003015315475", entry.notes
+    assert entry.transaction.pending?
+  end
+
+  test "does not invert CRDT amount for legitimate incoming transfer without card descriptor" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      debtor: nil,
+      remittance_information: [ "Gift from grandma" ],
+      status: "BOOK"
+    }
+
+    processor = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account)
+    entry = processor.process
+
+    assert_not_nil entry
+    assert_equal BigDecimal("-50.00"), entry.amount, "Must remain negative inflow in Sure convention"
+    assert_not_equal "Card Authorization Hold", entry.name
+  end
+
   test "does not add enable_banking extra key when no extra data present" do
     tx = {
       entry_reference: "ref_noextra",

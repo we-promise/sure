@@ -82,15 +82,19 @@ class EnableBankingEntry::Processor
     data[:transaction_id].blank? && data[:entry_reference].blank?
   end
 
+  # Pattern matching masked card authorization descriptors (e.g. "474836xxxxxx6879 003015315475")
+  # commonly returned by ASPSPs like DSK Bank Bulgaria for unfinalized card holds.
+  MASKED_CARD_DESCRIPTOR = /\A\d{4,6}[xX*]{4,8}\d{4}(?:\s+\d+)?\z/
+
   # True when the ASPSP supplied neither transaction_id nor entry_reference, and
-  # no counterparty information (creditor or debtor) is available. Certain
-  # institutions (such as DSK Bank Bulgaria) expose un-finalized card holds this
-  # way even under a "BOOK" status payload.
+  # no counterparty information (creditor or debtor) is available, or when the
+  # descriptor is a masked card authorization hold. Certain institutions (such as
+  # DSK Bank Bulgaria) expose un-finalized card holds this way even under a "BOOK"
+  # status payload.
   #
   # @return [Boolean]
   def self.unidentified_hold?(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
-    return false unless identifierless?(data)
 
     creditor = if data[:creditor].is_a?(Hash)
       data.dig(:creditor, :name)
@@ -110,7 +114,22 @@ class EnableBankingEntry::Processor
       return false if debtor.present?
     end
 
-    true
+    identifierless?(data) || masked_card_descriptor?(data)
+  end
+
+  # True when the transaction's remittance information or bank transaction code
+  # consists of a masked card descriptor.
+  #
+  # @return [Boolean]
+  def self.masked_card_descriptor?(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    remittance = data[:remittance_information]
+    return true if Array.wrap(remittance).any? { |line| line.to_s.strip.match?(MASKED_CARD_DESCRIPTOR) }
+
+    btc = data.dig(:bank_transaction_code, :description)
+    return true if btc.to_s.strip.match?(MASKED_CARD_DESCRIPTOR)
+
+    false
   end
 
   # True when the ASPSP has flagged this raw payload as not yet settled, or when
@@ -234,6 +253,8 @@ class EnableBankingEntry::Processor
     end
 
     def name
+      return "Card Authorization Hold" if self.class.unidentified_hold?(data) && self.class.masked_card_descriptor?(data)
+
       # Build name from available Enable Banking transaction fields
       # Priority: counterparty name > bank_transaction_code description > remittance_information
 
@@ -260,6 +281,8 @@ class EnableBankingEntry::Processor
     end
 
     def merchant
+      return nil if self.class.unidentified_hold?(data) && self.class.masked_card_descriptor?(data)
+
       # Use the counterparty when it is human readable; otherwise fall back to remittance
       # for CARD-* transactions where the remittance often contains the actual merchant
       merchant_name = merchant_name_candidate
@@ -327,7 +350,18 @@ class EnableBankingEntry::Processor
         # Sure convention: positive = outflow (expense/debit from account), negative = inflow (income/credit)
         # Enable Banking: DBIT = debit from account (outflow), CRDT = credit to account (inflow)
         # Therefore: DBIT → +absolute_amount, CRDT → -absolute_amount
-        credit_debit_indicator == "CRDT" ? -absolute_amount : absolute_amount
+        #
+        # For unidentified card authorization holds (e.g. DSK Bank Bulgaria), the ASPSP
+        # erroneously returns credit_debit_indicator: "CRDT" for an authorization hold on an outflow.
+        # When remittance contains a masked card descriptor, force to positive (outflow/expense)
+        # so it appears as a pending expense and matches the settled expense when it arrives.
+        if self.class.unidentified_hold?(data) && self.class.masked_card_descriptor?(data)
+          absolute_amount
+        elsif credit_debit_indicator == "CRDT"
+          -absolute_amount
+        else
+          absolute_amount
+        end
       rescue ArgumentError => e
         Rails.logger.error "Failed to parse Enable Banking transaction amount: #{raw_amount.inspect} - #{e.message}"
         raise

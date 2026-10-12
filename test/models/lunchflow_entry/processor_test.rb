@@ -403,4 +403,88 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal Date.new(2025, 7, 14), result.date,
       "Transaction at 21:20 EDT should land on July 14, not July 15"
   end
+
+  # --- unidentified card hold tests ---
+
+  test "unidentified_hold? detects masked card descriptors in merchant or description" do
+    assert LunchflowEntry::Processor.unidentified_hold?(merchant: "474836xxxxxx6879 003015315475")
+    assert LunchflowEntry::Processor.unidentified_hold?(merchant: "474836XXXXXX6879")
+    assert LunchflowEntry::Processor.unidentified_hold?(merchant: "474836******6879")
+    assert LunchflowEntry::Processor.unidentified_hold?(merchant: nil, description: "474836xxxxxx6879 003015315475")
+    assert LunchflowEntry::Processor.unidentified_hold?(merchant: "", description: "474836xxxxxx6879")
+
+    assert_not LunchflowEntry::Processor.unidentified_hold?(merchant: "Uber", description: "474836xxxxxx6879")
+    assert_not LunchflowEntry::Processor.unidentified_hold?(merchant: "Amazon", description: "Order 123")
+    assert_not LunchflowEntry::Processor.unidentified_hold?(merchant: "Card 123", description: nil)
+  end
+
+  test "normalizes inverted positive hold amount to positive expense, suppresses merchant, and sets name" do
+    # DSK Bank Bulgaria hold returned via Lunchflow with positive amount (credit), masked card PAN
+    hold_data = {
+      id: "",
+      accountId: 456,
+      amount: 14.97, # Erroneously positive credit in Lunchflow
+      currency: "EUR",
+      date: "2025-01-20",
+      merchant: "474836xxxxxx6879 003015315475",
+      description: "474836xxxxxx6879 003015315475",
+      isPending: false # Even if API returned false/missing
+    }
+
+    result = LunchflowEntry::Processor.new(
+      hold_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result
+    assert_equal BigDecimal("14.97"), result.amount, "Must be positive outflow in Sure convention"
+    assert_equal "Card Authorization Hold", result.name
+    assert_nil result.entryable.merchant
+    assert_equal "474836xxxxxx6879 003015315475", result.notes
+    assert result.entryable.pending?
+    assert_equal true, result.entryable.extra.dig("lunchflow", "pending")
+  end
+
+  test "skips creating pending hold when posted version exists even though names diverge" do
+    # Posted transaction arrived first with real merchant name "BILLA" and amount -14.97 (negative = expense in Lunchflow)
+    posted_data = {
+      id: "lf_txn_posted_billa",
+      accountId: 456,
+      amount: -14.97,
+      currency: "EUR",
+      date: "2025-01-20",
+      merchant: "BILLA",
+      description: "Supermarket purchase",
+      isPending: false
+    }
+
+    posted_entry = LunchflowEntry::Processor.new(
+      posted_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil posted_entry
+    assert_equal "lunchflow_lf_txn_posted_billa", posted_entry.external_id
+
+    # Pending card hold arrives later with masked card number and inverted positive amount
+    hold_data = {
+      id: "",
+      accountId: 456,
+      amount: 14.97,
+      currency: "EUR",
+      date: "2025-01-19",
+      merchant: "474836xxxxxx6879 003015315475",
+      description: "474836xxxxxx6879 003015315475"
+    }
+
+    result = LunchflowEntry::Processor.new(
+      hold_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    # Must match the existing posted version and skip duplicate creation
+    assert_equal posted_entry.id, result.id, "Hold must match existing posted entry despite diverging names"
+    assert_equal "lunchflow_lf_txn_posted_billa", result.external_id
+    assert_equal 1, @account.entries.where(source: "lunchflow").count
+  end
 end

@@ -4,6 +4,29 @@ class LunchflowEntry::Processor
   include CurrencyNormalizable
   include LunchflowTransactionHash
 
+  # Pattern matching masked card authorization descriptors (e.g. "474836xxxxxx6879 003015315475")
+  # commonly returned by ASPSPs like DSK Bank Bulgaria for unfinalized card holds.
+  MASKED_CARD_DESCRIPTOR = /\A\d{4,6}[xX*]{4,8}\d{4}(?:\s+\d+)?\z/
+
+  # True when the transaction's merchant or description matches a masked card authorization descriptor.
+  # Certain institutions (such as DSK Bank Bulgaria) expose unfinalized card holds with masked card
+  # numbers instead of merchant names, and sometimes with inverted signs.
+  #
+  # @return [Boolean]
+  def self.unidentified_hold?(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    merchant_name = data[:merchant].to_s.strip
+    description = data[:description].to_s.strip
+
+    if merchant_name.match?(MASKED_CARD_DESCRIPTOR)
+      true
+    elsif merchant_name.blank? && description.match?(MASKED_CARD_DESCRIPTOR)
+      true
+    else
+      false
+    end
+  end
+
   # lunchflow_transaction is the raw hash fetched from Lunchflow API and converted to JSONB
   # Transaction structure: { id, accountId, amount, currency, date, merchant, description, isPending }
   def initialize(lunchflow_transaction, lunchflow_account:)
@@ -18,9 +41,10 @@ class LunchflowEntry::Processor
       return nil
     end
 
-    # If this is a pending transaction with a temporary ID, check if a posted version already exists
-    # This prevents duplicate entries when posted transactions arrive before pending ones
-    if is_pending? && external_id.start_with?("lunchflow_pending_")
+    # If this is a pending transaction (with a temporary ID or an unidentified hold),
+    # check if a posted version already exists. This prevents duplicate entries when posted
+    # transactions arrive before pending ones.
+    if is_pending? && (external_id.start_with?("lunchflow_pending_") || self.class.unidentified_hold?(data))
       existing_posted = find_existing_posted_version
       if existing_posted
         Rails.logger.info "LunchflowEntry::Processor - Skipping pending transaction (posted version already exists): pending=#{external_id}, posted=#{existing_posted.external_id}"
@@ -129,14 +153,19 @@ class LunchflowEntry::Processor
     end
 
     def name
-      data[:merchant].presence || "Unknown transaction"
+      if self.class.unidentified_hold?(data)
+        "Card Authorization Hold"
+      else
+        data[:merchant].presence || "Unknown transaction"
+      end
     end
 
     def notes
-      data[:description].presence
+      data[:description].presence || (data[:merchant].presence if self.class.unidentified_hold?(data))
     end
 
     def merchant
+      return nil if self.class.unidentified_hold?(data)
       return nil unless data[:merchant].present?
 
       # Create a stable merchant ID from the merchant name
@@ -169,9 +198,18 @@ class LunchflowEntry::Processor
       end
 
       # Lunchflow likely uses standard convention where negative is expense, positive is income
-      # Maybe expects opposite convention (expenses positive, income negative)
-      # So we negate the amount to convert from Lunchflow to Maybe format
-      -parsed_amount
+      # Sure expects opposite convention (expenses positive, income negative)
+      # So we negate the amount to convert from Lunchflow to Sure format.
+      #
+      # For unidentified card authorization holds (e.g. DSK Bank Bulgaria), the ASPSP
+      # erroneously reports the authorization hold as positive credit (inflow).
+      # Force these holds to positive (outflow/expense in Sure) so they appear as pending expenses
+      # and match the settled expense when it arrives.
+      if self.class.unidentified_hold?(data)
+        parsed_amount.abs
+      else
+        -parsed_amount
+      end
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse Lunchflow transaction amount: #{data[:amount].inspect} - #{e.message}"
       raise
@@ -213,9 +251,9 @@ class LunchflowEntry::Processor
     def extra_metadata
       metadata = {}
 
-      # Store pending status from Lunchflow API when present
-      if data.key?(:isPending)
-        metadata[:lunchflow] = { pending: ActiveModel::Type::Boolean.new.cast(data[:isPending]) }
+      # Store pending status from Lunchflow API when present or when an unidentified hold
+      if data.key?(:isPending) || self.class.unidentified_hold?(data)
+        metadata[:lunchflow] = { pending: is_pending? }
       end
 
       metadata
@@ -223,7 +261,7 @@ class LunchflowEntry::Processor
 
     # Check if this transaction is marked as pending
     def is_pending?
-      ActiveModel::Type::Boolean.new.cast(data[:isPending])
+      self.class.unidentified_hold?(data) || ActiveModel::Type::Boolean.new.cast(data[:isPending])
     end
 
     # Find an existing posted version of this pending transaction
@@ -241,11 +279,12 @@ class LunchflowEntry::Processor
         .where("date BETWEEN ? AND ?", date, date + 8)
         .where("external_id NOT LIKE 'lunchflow_pending_%'")
         .where("external_id IS NOT NULL")
+        .where.not(external_id: external_id)
         .order(date: :asc) # Closest date first (prefer same-day posted, then next day, etc.)
 
       # Add merchant name matching for better precision
-      # Only if merchant name is present in the transaction data
-      if data[:merchant].present?
+      # Only if merchant name is present in the transaction data and it's not an unidentified hold
+      if data[:merchant].present? && !self.class.unidentified_hold?(data)
         query = query.where(name: name)
       end
 
