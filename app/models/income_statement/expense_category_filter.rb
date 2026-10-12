@@ -28,11 +28,13 @@ class IncomeStatement::ExpenseCategoryFilter
     @category_ids = category_ids unless @options.all? { |option| option.checked && option.live }
   end
 
-  # How many categories the selection names, as the user sees it: a checked
-  # parent counts once, not once per subcategory it covers.
+  # How many categories the selection covers, counted where spending is
+  # filed: a category with subcategories counts as its subcategories, not
+  # itself as well. So a picked parent with all 8 subcategories counts 8,
+  # and unchecking one of them lowers the count by one.
   def selected_count
-    checked_parent_ids = options.select(&:checked).filter_map { |option| option.category.id }
-    options.count { |option| option.checked && !checked_parent_ids.include?(option.category.parent_id) }
+    parent_ids = options.filter_map { |option| option.category.parent_id }
+    options.count { |option| option.checked && !parent_ids.include?(option.category.id) }
   end
 
   private

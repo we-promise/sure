@@ -980,7 +980,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ food.id ] }
     assert_equal 50.0, spending_trend_chart_data.fetch("current").last.fetch("value")
     assert_select "#spending-trend-section input[name='spending_category_ids[]'][value='#{groceries.id}'][checked]"
-    # One category picked, however many subcategories it covers.
+    # Food's only subcategory: Food itself isn't counted on top of it.
     assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories", count: 1)
 
     # A subcategory on its own counts only itself.

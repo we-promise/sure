@@ -52,10 +52,12 @@ class IncomeStatement::ExpenseCategoryFilterTest < ActiveSupport::TestCase
     assert_equal [ @unused.id ], filter.category_ids
   end
 
-  test "selected count counts a picked parent once, not once per subcategory" do
-    assert_equal 1, build_filter([ @food.id, @groceries.id, @dining.id ]).selected_count
-    assert_equal 2, build_filter([ @food.id, @groceries.id, @dining.id, Category::UNCATEGORIZED_FILTER_VALUE ]).selected_count
-    assert_equal 1, build_filter([ @groceries.id ]).selected_count
+  test "selected count counts a parent as its subcategories, so narrowing a group lowers it" do
+    # Food (both subcategories) + Rent
+    assert_equal 3, build_filter([ @food.id, @groceries.id, @dining.id, @rent.id ]).selected_count
+    # ...one subcategory unchecked, which unchecks Food too
+    assert_equal 2, build_filter([ @groceries.id, @rent.id ]).selected_count
+    assert_equal 1, build_filter([ Category::UNCATEGORIZED_FILTER_VALUE ]).selected_count
   end
 
   private
