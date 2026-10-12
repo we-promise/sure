@@ -86,35 +86,26 @@ class EnableBankingEntry::Processor
   # commonly returned by certain ASPSPs for unfinalized card holds.
   MASKED_CARD_DESCRIPTOR = /\A\d{4,6}[xX*]{4,8}\d{4}(?:\s+\d+)?\z/
 
-  # True when the ASPSP supplied neither transaction_id nor entry_reference, and
-  # no counterparty information (creditor or debtor) is available, or when the
-  # descriptor is a masked card authorization hold. Certain institutions
-  # expose un-finalized card holds this way even under a "BOOK"
-  # status payload.
+  def self.party_name(data, key)
+    value = data[key]
+    nested = value.is_a?(Hash) ? value[:name] : (value if value.is_a?(String))
+    nested.presence || data[:"#{key}_name"].presence
+  end
+
+  # True when the transaction represents an unfinalized card authorization hold
+  # (masked card descriptor in remittance or transaction code, and no legitimate counterparty name).
+  # Certain institutions expose un-finalized card holds this way even under a "BOOK" status payload.
   #
   # @return [Boolean]
   def self.unidentified_hold?(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
-
-    creditor = if data[:creditor].is_a?(Hash)
-      data.dig(:creditor, :name)
-    elsif data[:creditor].is_a?(String)
-      data[:creditor]
-    end.presence || data[:creditor_name].presence
-
-    return false if creditor.present?
+    return false if party_name(data, :creditor).present?
 
     if data[:credit_debit_indicator] == "CRDT"
-      debtor = if data[:debtor].is_a?(Hash)
-        data.dig(:debtor, :name)
-      elsif data[:debtor].is_a?(String)
-        data[:debtor]
-      end.presence || data[:debtor_name].presence
-
-      return false if debtor.present?
+      return false if party_name(data, :debtor).present?
     end
 
-    identifierless?(data) || masked_card_descriptor?(data)
+    masked_card_descriptor?(data)
   end
 
   # True when the transaction's remittance information or bank transaction code
@@ -253,7 +244,7 @@ class EnableBankingEntry::Processor
     end
 
     def name
-      return "Card Authorization Hold" if self.class.unidentified_hold?(data) && self.class.masked_card_descriptor?(data)
+      return "Card Authorization Hold" if self.class.unidentified_hold?(data)
 
       # Build name from available Enable Banking transaction fields
       # Priority: counterparty name > bank_transaction_code description > remittance_information
@@ -281,7 +272,7 @@ class EnableBankingEntry::Processor
     end
 
     def merchant
-      return nil if self.class.unidentified_hold?(data) && self.class.masked_card_descriptor?(data)
+      return nil if self.class.unidentified_hold?(data)
 
       # Use the counterparty when it is human readable; otherwise fall back to remittance
       # for CARD-* transactions where the remittance often contains the actual merchant
@@ -353,9 +344,9 @@ class EnableBankingEntry::Processor
         #
         # For unidentified card authorization holds, the ASPSP
         # erroneously returns credit_debit_indicator: "CRDT" for an authorization hold on an outflow.
-        # When remittance contains a masked card descriptor, force to positive (outflow/expense)
-        # so it appears as a pending expense and matches the settled expense when it arrives.
-        if self.class.unidentified_hold?(data) && self.class.masked_card_descriptor?(data)
+        # Force these holds to positive (outflow/expense in Sure) so they appear as pending expenses
+        # and match the settled expense when it arrives.
+        if self.class.unidentified_hold?(data)
           absolute_amount
         elsif credit_debit_indicator == "CRDT"
           -absolute_amount

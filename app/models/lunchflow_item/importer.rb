@@ -291,7 +291,7 @@ class LunchflowItem::Importer
         # leaving the entry stuck with a "Pending" badge (#2735). We now refresh
         # the stored snapshot in place when the upstream payload changes, while
         # still deduplicating by key to prevent unbounded growth.
-        if transactions_data[:transactions].present?
+        if transactions_data[:transactions].present? || !include_pending
           begin
             existing_transactions = lunchflow_account.raw_transactions_payload.to_a
 
@@ -319,7 +319,13 @@ class LunchflowItem::Importer
             updated_count = 0
             merged = []
 
-            incoming_transactions = transactions_data[:transactions]
+            pending_or_hold = lambda do |tx|
+              next false unless tx.is_a?(Hash)
+              tx_ia = tx.with_indifferent_access
+              ActiveModel::Type::Boolean.new.cast(tx_ia[:isPending]) || LunchflowEntry::Processor.unidentified_hold?(tx_ia)
+            end
+
+            incoming_transactions = transactions_data[:transactions] || []
             if include_pending
               # Tag unidentified card holds as isPending: true
               incoming_transactions = incoming_transactions.map do |tx|
@@ -332,11 +338,7 @@ class LunchflowItem::Importer
               end
             else
               # If include_pending is disabled, filter out pending transactions and unidentified holds
-              incoming_transactions = incoming_transactions.reject do |tx|
-                next false unless tx.is_a?(Hash)
-                tx_ia = tx.with_indifferent_access
-                ActiveModel::Type::Boolean.new.cast(tx_ia[:isPending]) || LunchflowEntry::Processor.unidentified_hold?(tx_ia)
-              end
+              incoming_transactions = incoming_transactions.reject(&pending_or_hold)
             end
 
             incoming_transactions.each do |tx|
@@ -362,10 +364,12 @@ class LunchflowItem::Importer
             # Keep any stored rows the current response no longer returned — a normal
             # sync never prunes the snapshot (unchanged prior behaviour).
             leftover = existing_pool.values.flatten(1)
+            leftover = leftover.reject(&pending_or_hold) unless include_pending
+            merged_snapshot = merged + leftover
 
-            if new_count > 0 || updated_count > 0
+            if new_count > 0 || updated_count > 0 || merged_snapshot.size != existing_transactions.size
               Rails.logger.info "LunchflowItem::Importer - Storing #{new_count} new and #{updated_count} updated transactions (#{existing_transactions.count} existing) for account #{lunchflow_account.account_id}"
-              lunchflow_account.upsert_lunchflow_transactions_snapshot!(merged + leftover)
+              lunchflow_account.upsert_lunchflow_transactions_snapshot!(merged_snapshot)
             else
               Rails.logger.info "LunchflowItem::Importer - No new or updated transactions to store (all #{incoming_transactions.count} unchanged) for account #{lunchflow_account.account_id}"
             end

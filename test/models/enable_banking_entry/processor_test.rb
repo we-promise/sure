@@ -626,7 +626,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
   # --- unidentified_hold? unit tests ---
 
-  test "unidentified_hold? returns true when both id fields and counterparty are absent" do
+  test "unidentified_hold? returns true when counterparty is absent and remittance has masked card descriptor" do
     tx = {
       entry_reference: nil,
       transaction_id: nil,
@@ -634,17 +634,33 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       transaction_amount: { amount: "26.57", currency: "EUR" },
       credit_debit_indicator: "DBIT",
       creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
       status: "BOOK"
     }
     assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
   end
 
-  test "unidentified_hold? returns true when creditor has empty or blank name" do
+  test "unidentified_hold? returns false when remittance lacks masked card descriptor" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: "2026-08-01",
+      transaction_amount: { amount: "26.57", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "Arbitrary transfer" ],
+      status: "BOOK"
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns true when creditor has empty or blank name and remittance has masked card descriptor" do
     tx = {
       entry_reference: nil,
       transaction_id: nil,
       credit_debit_indicator: "DBIT",
-      creditor: { name: "" }
+      creditor: { name: "" },
+      remittance_information: [ "474836xxxxxx6879" ]
     }
     assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
 
@@ -652,12 +668,13 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       entry_reference: nil,
       transaction_id: nil,
       credit_debit_indicator: "DBIT",
-      creditor: { name: nil }
+      creditor: { name: nil },
+      remittance_information: [ "474836xxxxxx6879" ]
     }
     assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx2)
   end
 
-  test "unidentified_hold? returns false when transaction_id is present" do
+  test "unidentified_hold? returns false when transaction_id is present without masked card descriptor" do
     tx = {
       entry_reference: nil,
       transaction_id: "txn_123",
@@ -667,7 +684,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
   end
 
-  test "unidentified_hold? returns false when entry_reference is present" do
+  test "unidentified_hold? returns false when entry_reference is present without masked card descriptor" do
     tx = {
       entry_reference: "ref_123",
       transaction_id: nil,
@@ -682,7 +699,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       entry_reference: nil,
       transaction_id: nil,
       credit_debit_indicator: "DBIT",
-      creditor: { name: "Kaufland" }
+      creditor: { name: "Kaufland" },
+      remittance_information: [ "474836xxxxxx6879" ]
     }
     assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
   end
@@ -692,7 +710,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       entry_reference: nil,
       transaction_id: nil,
       credit_debit_indicator: "DBIT",
-      creditor_name: "Kaufland"
+      creditor_name: "Kaufland",
+      remittance_information: [ "474836xxxxxx6879" ]
     }
     assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
   end
@@ -703,18 +722,20 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       transaction_id: nil,
       credit_debit_indicator: "CRDT",
       creditor: nil,
-      debtor: { name: "Alice" }
+      debtor: { name: "Alice" },
+      remittance_information: [ "474836xxxxxx6879" ]
     }
     assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
   end
 
-  test "unidentified_hold? returns true for incoming CRDT when debtor is absent" do
+  test "unidentified_hold? returns true for incoming CRDT when debtor is absent and remittance has masked card descriptor" do
     tx = {
       entry_reference: nil,
       transaction_id: nil,
       credit_debit_indicator: "CRDT",
       creditor: nil,
-      debtor: nil
+      debtor: nil,
+      remittance_information: [ "474836xxxxxx6879" ]
     }
     assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
   end
@@ -724,7 +745,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       entry_reference: nil,
       transaction_id: nil,
       credit_debit_indicator: "DBIT",
-      creditor: nil
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879" ]
     }
     assert_equal true, EnableBankingEntry::Processor.pending_payload?(tx)
   end

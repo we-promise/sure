@@ -608,7 +608,7 @@ class EnableBankingItem::Importer
       unless include_pending
         removed_pending = existing_transactions.reject! do |tx|
           tx = tx.with_indifferent_access
-          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
         end
       end
 
@@ -634,7 +634,7 @@ class EnableBankingItem::Importer
         if include_pending
           removed_pending ||= existing_transactions.reject! do |tx|
             tx = tx.with_indifferent_access
-            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
             next false unless pending_flag
 
             fp = EnableBankingEntry::Processor.compute_external_id(tx)
