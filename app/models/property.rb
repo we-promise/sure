@@ -54,6 +54,20 @@ class Property < ApplicationRecord
     "original purchase price"
   end
 
+  # Balance updates are recorded as "Manual value update" reconciliations;
+  # rename the one an AVM provider just wrote so the activity feed shows
+  # where the value came from. Account::ReconciliationManager resets the name
+  # on any later write to that day's entry.
+  def name_avm_valuation!(date = Date.current)
+    return if avm_provider.blank?
+
+    entry = account.entries.valuations.find_by(date: date)
+    return unless entry&.entryable&.reconciliation?
+
+    provider_name = I18n.t("properties.avm_providers.#{avm_provider}", default: avm_provider.titleize)
+    entry.update!(name: I18n.t("providers.property_valuation.entry_name", provider: provider_name))
+  end
+
   private
     def first_valuation_amount
       account.entries.valuations.order(:date).first&.amount_money || account.balance_money
