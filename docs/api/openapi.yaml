@@ -1311,6 +1311,8 @@ components:
       - id
       - resource_type
       - active
+      - position
+      - stop_processing
       - conditions
       - actions
       - created_at
@@ -1332,6 +1334,14 @@ components:
           type: string
           format: date
           nullable: true
+        position:
+          type: integer
+          description: Run order within the family; rules run from the lowest position
+            up and the top rule wins per attribute
+        stop_processing:
+          type: boolean
+          description: When true, rules further down do not change transactions this
+            rule matches
         conditions:
           type: array
           items:
