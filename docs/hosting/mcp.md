@@ -148,7 +148,7 @@ At the time of writing, `tools/list` includes:
 | `create_goal` | Create a savings goal linked to depository accounts |
 | `set_opening_balance` | Set a manual account's opening balance and the date it applies from, reporting whether the current balance changes. Supports `dry_run` |
 | `create_tag` / `update_tag` | Manage tags |
-| `create_category` / `update_category` | Manage categories |
+| `create_category` / `update_category` / `delete_category` | Manage categories: create, rename, recolor, move between parents, and delete (optionally moving transactions to a replacement) |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
 | `update_budget` | Update budget allocations for a month |
 | `import_bank_statement` | Import bank statement data |
