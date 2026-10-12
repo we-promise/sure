@@ -704,14 +704,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "can turn the in-app assistant off" do
     with_self_hosting do
-      patch settings_hosting_url, params: { family: { assistant_type: "none" } }
+      patch settings_hosting_url, params: { family: { assistant_type: "mcp_only" } }
 
       assert_redirected_to settings_hosting_url
-      assert_equal "none", users(:family_admin).family.reload.assistant_type
+      assert_equal "mcp_only", users(:family_admin).family.reload.assistant_type
 
       get settings_hosting_url
       assert_response :success
-      assert_select "select[name='family[assistant_type]'] option[value='none'][selected]"
+      assert_select "select[name='family[assistant_type]'] option[value='mcp_only'][selected]"
     end
   end
 

@@ -21,12 +21,12 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#netWorthChart[data-time-series-chart-selectable-value='true'][draggable='false']"
   end
 
-  test "dashboard has no chat sidebar or toggle when the assistant type is none" do
+  test "dashboard has no chat sidebar or toggle when the assistant type is mcp_only" do
     get root_path
     assert_select "#chat-container", count: 1
     assert_select "[data-action='app-layout#toggleRightSidebar']", count: 1
 
-    @family.update!(assistant_type: "none")
+    @family.update!(assistant_type: "mcp_only")
     get root_path
 
     assert_response :ok

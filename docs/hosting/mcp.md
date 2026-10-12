@@ -418,7 +418,7 @@ Any AI agent that supports JSON-RPC 2.0 can connect to the MCP endpoint. The age
 
 ### Using MCP without the in-app chat
 
-MCP does not depend on the in-app assistant. To use only your own agent, set the assistant type to **Off (keep MCP available)** in **Settings -> Self-Hosting**, or set `ASSISTANT_TYPE=none` for the whole instance. The chat sidebar and its entry points disappear; `/mcp`, OAuth, and **Settings -> MCP** keep working.
+MCP does not depend on the in-app assistant. To use only your own agent, set the assistant type to **None in app (connect your own agent via MCP)** in **Settings -> Self-Hosting**, or set `ASSISTANT_TYPE=mcp_only` for the whole instance. The chat sidebar and its entry points disappear; `/mcp`, OAuth, and **Settings -> MCP** keep working.
 
 ## Troubleshooting
 

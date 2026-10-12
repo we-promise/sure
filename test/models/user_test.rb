@@ -485,9 +485,9 @@ class UserTest < ActiveSupport::TestCase
     @user.family.update!(assistant_type: "builtin")
   end
 
-  test "ai_available? is false when the assistant type is none, even with a provider configured" do
+  test "ai_available? is false when the assistant type is mcp_only, even with a provider configured" do
     previous = Setting.openai_access_token
-    @user.family.update!(assistant_type: "none")
+    @user.family.update!(assistant_type: "mcp_only")
     with_env_overrides OPENAI_ACCESS_TOKEN: nil do
       Setting.openai_access_token = "token"
 
@@ -502,10 +502,10 @@ class UserTest < ActiveSupport::TestCase
     Setting.openai_access_token = previous
   end
 
-  test "ASSISTANT_TYPE=none overrides the family assistant type" do
+  test "ASSISTANT_TYPE=mcp_only overrides the family assistant type" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     @user.family.update!(assistant_type: "external")
-    with_env_overrides ASSISTANT_TYPE: "none", EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
+    with_env_overrides ASSISTANT_TYPE: "mcp_only", EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
       assert_not @user.ai_available?
       assert_not @user.family.assistant_enabled?
     end

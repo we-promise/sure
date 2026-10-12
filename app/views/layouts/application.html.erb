@@ -1,6 +1,6 @@
 <% intro_mode = Current.user&.ui_layout_intro? %>
 <% home_path = intro_mode ? chats_path : root_path %>
-<%# Assistant type "none" removes every chat surface. MCP is unaffected. %>
+<%# Assistant type "mcp_only" removes every chat surface. MCP is unaffected. %>
 <% assistant_enabled = Current.family.assistant_enabled? %>
 <% mobile_nav_items = if intro_mode
   [

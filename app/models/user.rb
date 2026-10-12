@@ -197,7 +197,7 @@ class User < ApplicationRecord
 
   def ai_available?
     effective_type = family&.effective_assistant_type || "builtin"
-    return false if effective_type == "none"
+    return false if effective_type == "mcp_only"
     return true unless Rails.application.config.app_mode.self_hosted?
 
     case effective_type

@@ -45,7 +45,7 @@ class ChatTest < ActiveSupport::TestCase
     user_message = chat.messages.find_by!(type: "UserMessage")
     pending = chat.messages.find_by!(type: "AssistantMessage", status: "pending")
 
-    @user.family.update!(assistant_type: "none")
+    @user.family.update!(assistant_type: "mcp_only")
     Assistant.expects(:for_chat).never
 
     AssistantResponseJob.perform_now(user_message, pending)

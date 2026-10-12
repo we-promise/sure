@@ -43,10 +43,10 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "feature_disabled", response_body["error"]
   end
 
-  test "rejects chat creation for a consenting user when the assistant type is none" do
+  test "rejects chat creation for a consenting user when the assistant type is mcp_only" do
     api_key = ApiKey.create!(
       user: @user,
-      name: "Assistant Off Key",
+      name: "MCP Only Key",
       scopes: [ "read_write" ],
       source: "web",
       display_key: "test_rw_#{SecureRandom.hex(8)}"
@@ -55,7 +55,7 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     get "/api/v1/chats", headers: api_headers(api_key)
     assert_response :success
 
-    @user.family.update!(assistant_type: "none")
+    @user.family.update!(assistant_type: "mcp_only")
 
     assert_no_difference "Chat.count" do
       post "/api/v1/chats",

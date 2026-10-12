@@ -331,7 +331,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools stay available to external agents when the in-app assistant is off" do
-    @user.family.update!(assistant_type: "none")
+    @user.family.update!(assistant_type: "mcp_only")
 
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("tools/list").to_json,
