@@ -1765,6 +1765,44 @@ end
     assert_no_match(/ai_status/, response.location)
   end
 
+  test "index with attachment_status=with lists only transactions that have a file" do
+    @entry.entryable.attachments.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
+
+    get transactions_url(q: { attachment_status: [ "with" ] })
+
+    assert_response :success
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with attachment_status=without hides transactions that have a file" do
+    @entry.entryable.attachments.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
+
+    get transactions_url(q: { attachment_status: [ "without" ] })
+
+    assert_response :success
+    assert_select "#entry_#{@entry.id}", count: 0
+  end
+
+  test "index ignores unsupported attachment_status values without rendering a badge" do
+    get transactions_url(q: { attachment_status: [ "bogus" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li", count: 0
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "clear_filter removes an attachment_status value and redirects" do
+    delete clear_filter_transactions_url(
+      param_key: "attachment_status",
+      param_value: "without",
+      q: { attachment_status: [ "without" ] }
+    )
+
+    assert_response :redirect
+    assert_includes response.location, "filter_cleared=1"
+    assert_no_match(/attachment_status/, response.location)
+  end
+
   test "update drops a category sent for a matched transfer's inflow leg" do
     outflow = Transaction.create!(kind: "investment_contribution")
     Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
