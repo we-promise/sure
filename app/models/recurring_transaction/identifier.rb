@@ -113,18 +113,12 @@ class RecurringTransaction
       # ended rows, so detection can never recreate a bill the user already
       # declared by hand or dismissed. Only an unclaimed pattern creates a
       # row, and it lands as `suggested`, awaiting confirmation.
-      #
-      # A claimed series reads its recurrence_rules (sync_monthly_rule_day and
-      # Schedule.for) and its accounts (accounts_belong_to_family on update!),
-      # so preload them here instead of querying once per claimed series.
-      existing_by_identity = family.recurring_transactions
-        .includes(:recurrence_rules, :account, :destination_account)
-        .to_a
-        .group_by { |recurring| identity_key(recurring) }
+      existing_by_identity = family.recurring_transactions.to_a.group_by { |recurring| identity_key(recurring) }
+
+      preload_series_to_refresh(recurring_patterns, existing_by_identity)
 
       recurring_patterns.each do |pattern|
-        identity = [ pattern[:merchant_id] ? [ :merchant, pattern[:merchant_id] ] : [ :name, pattern[:name] ],
-                     pattern[:currency], pattern[:account_id], nil ]
+        identity = pattern_identity(pattern)
         candidates = existing_by_identity[identity] || []
         claimed = nearest_within_tolerance(candidates, pattern[:expected_amount_avg])
 
@@ -336,6 +330,32 @@ class RecurringTransaction
         candidates
           .select { |recurring| within_tolerance?(target_amount, recurring.amount) }
           .min_by { |recurring| (recurring.amount - target_amount).abs }
+      end
+
+      # update_claimed_series reads each series' recurrence_rules
+      # (sync_monthly_rule_day, Schedule.for) and accounts
+      # (accounts_belong_to_family on update!). Batch-load them for only the
+      # series this run will refresh -- not the manual/ended tombstones or
+      # unmatched rows that stay in existing_by_identity purely for claiming.
+      # Read-only and best-effort: a series missed here just loads lazily.
+      def preload_series_to_refresh(recurring_patterns, existing_by_identity)
+        to_refresh = recurring_patterns.filter_map do |pattern|
+          claimed = nearest_within_tolerance(existing_by_identity[pattern_identity(pattern)] || [], pattern[:expected_amount_avg])
+          claimed unless claimed.nil? || claimed.manual? || claimed.ended?
+        end.uniq
+
+        return if to_refresh.empty?
+
+        ActiveRecord::Associations::Preloader.new(
+          records: to_refresh,
+          associations: [ :recurrence_rules, :account, :destination_account ]
+        ).call
+      end
+
+      # Same shape as identity_key, built from a detected pattern.
+      def pattern_identity(pattern)
+        [ pattern[:merchant_id] ? [ :merchant, pattern[:merchant_id] ] : [ :name, pattern[:name] ],
+          pattern[:currency], pattern[:account_id], nil ]
       end
 
       # Refreshes a claimed series' cadence bookkeeping and variance band.
