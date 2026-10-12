@@ -73,12 +73,14 @@
                  role="listitem"
                  aria-grabbed="false"
                  data-action="dragstart->sortable-list#dragStart dragend->sortable-list#dragEnd">
-              <button type="button"
-                      class="self-stretch flex items-center pl-3 cursor-grab active:cursor-grabbing text-secondary hover:text-primary rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      aria-label="<%= t(".reorder_rule", name: rule.name.presence || rule.primary_condition_title) %>"
-                      data-action="touchstart->sortable-list#touchStart touchmove->sortable-list#touchMove touchend->sortable-list#touchEnd touchcancel->sortable-list#touchCancel contextmenu->sortable-list#suppressContextMenu keydown->sortable-list#handleKeyDown">
-                <%= icon("grip-vertical", size: "sm") %>
-              </button>
+              <%= render DS::Button.new(
+                variant: :icon,
+                icon: "grip-vertical",
+                size: :sm,
+                class: "ml-2 shrink-0 cursor-grab active:cursor-grabbing",
+                aria_label: t(".reorder_rule", name: rule.name.presence || rule.primary_condition_title),
+                data: { action: "touchstart->sortable-list#touchStart touchmove->sortable-list#touchMove touchend->sortable-list#touchEnd touchcancel->sortable-list#touchCancel contextmenu->sortable-list#suppressContextMenu keydown->sortable-list#handleKeyDown" }
+              ) %>
               <div class="grow min-w-0">
                 <%= render "rule", rule: rule %>
               </div>

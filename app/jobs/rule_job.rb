@@ -1,5 +1,6 @@
 # Applies a single rule ("Apply rule" in the UI). Rules above it still count, so
-# it respects "top rule wins" and "stop processing" like the full run.
+# it respects "top rule wins" and "stop processing". They are matched against
+# the current data, not executed first (see Rule::Runner).
 class RuleJob < ApplicationJob
   queue_as :medium_priority
 

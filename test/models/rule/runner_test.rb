@@ -196,6 +196,64 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal [ "boom" ], runner.errors.map(&:message)
   end
 
+  test "every action of a rule works on the transactions it matched" do
+    @family.rules.create!(
+      name: "Rename and categorize",
+      resource_type: "transaction",
+      active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+      # The rename runs first and changes the name the condition reads
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_name", value: "Groceries store"),
+        Rule::Action.new(action_type: "set_transaction_category", value: @groceries.id)
+      ]
+    )
+    create_rule("Catch-all", "o", category: @dining)
+
+    run_active_rules
+
+    @whole_foods.reload
+    assert_equal "Groceries store", @whole_foods.entry.name
+    assert_equal @groceries, @whole_foods.category
+    assert_equal @dining, @other.reload.category
+  end
+
+  test "applying a single rule matches the rules above against the current data" do
+    create_rule("Rename", "Whole Foods", name: "Supermarket")
+    bottom = create_rule("Bottom", "Supermarket", category: @dining)
+
+    Rule::Runner.new(@family, rules: [ bottom ], execution_type: "manual").run
+
+    # The rename above is not simulated, so the rule below does not see it yet
+    assert_nil @whole_foods.reload.category
+
+    run_active_rules
+
+    assert_equal @dining, @whole_foods.reload.category
+  end
+
+  test "a rule with a broken action does not stop the rules below" do
+    broken = create_rule("Broken", "Whole Foods", category: @groceries)
+    broken.actions.first.update_column(:action_type, "unknown_action")
+    create_rule("Bottom", "Whole Foods", category: @dining)
+
+    runner = Rule::Runner.new(@family, rules: @family.rules, execution_type: "manual")
+    runs = runner.run
+
+    assert_equal [ "failed", "success" ], runs.map(&:status)
+    assert_equal @dining, @whole_foods.reload.category
+  end
+
+  test "a broken action above an applied rule does not stop it" do
+    broken = create_rule("Broken", "Whole Foods", category: @groceries)
+    broken.actions.first.update_column(:action_type, "unknown_action")
+    bottom = create_rule("Bottom", "Whole Foods", category: @dining)
+
+    Rule::Runner.new(@family, rules: [ bottom ], execution_type: "manual").run
+
+    assert_equal @dining, @whole_foods.reload.category
+  end
+
   test "raises LockBusy while another run holds the family lock" do
     create_rule("Top", "Whole Foods", category: @groceries)
 

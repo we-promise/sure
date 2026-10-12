@@ -85,6 +85,12 @@ class Rule < ApplicationRecord
     scope.where.not("transactions.id = ANY(?::uuid[])", PG::TextEncoder::Array.new.encode(ids.to_a))
   end
 
+  # The given transactions without re-checking the conditions, so they stay
+  # the same set while the actions change the fields the conditions read.
+  def scope_for_transaction_ids(ids)
+    registry.resource_scope.where("transactions.id = ANY(?::uuid[])", PG::TextEncoder::Array.new.encode(ids.to_a))
+  end
+
   # Whether this rule's conditions currently match the given transaction.
   def matches_transaction?(transaction)
     matching_scope.where(id: transaction.id).exists?

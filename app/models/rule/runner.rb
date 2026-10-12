@@ -7,8 +7,11 @@
 #   touched by any rule further down.
 #
 # Rules above the ones to execute are only matched (not executed), so applying a
-# single rule behaves exactly like its turn in the full run. Inactive rules
-# above it are skipped because they don't run nightly either.
+# single rule keeps the fields and transactions they claim or stop. They are
+# matched against the data as it is now: changes a rule above would make in a
+# full run (e.g. a rename another condition depends on) are not simulated, so
+# the result can differ from the full run until the rules above have run.
+# Inactive rules above are skipped because they don't run nightly either.
 #
 # One run per family at a time, guarded by a PostgreSQL advisory lock. A busy
 # lock raises LockBusy so the calling job can retry instead of dropping the run.
@@ -76,12 +79,21 @@ class Rule::Runner
 
     def record_claims(rule, matched_ids)
       rule.actions.each do |action|
-        next unless action.reserves_claimed_attributes?
-
-        action.claimed_attributes.each { |attribute| claimed_ids[attribute].merge(matched_ids) }
+        reserved_attributes(action).each { |attribute| claimed_ids[attribute].merge(matched_ids) }
       end
 
       stopped_ids.merge(matched_ids) if rule.stop_processing?
+    end
+
+    # An action that cannot be resolved (e.g. an unknown action_type from an
+    # import) sets nothing, so it claims nothing and must not abort the run.
+    def reserved_attributes(action)
+      return [] unless action.reserves_claimed_attributes?
+
+      action.claimed_attributes
+    rescue => e
+      Rails.logger.error("Rule::Runner could not read claims of action #{action.id}: #{e.class}: #{e.message}")
+      []
     end
 
     def execute(rule)
@@ -105,10 +117,14 @@ class Rule::Runner
           executed_at: executed_at
         )
 
+        # Every action works on the transactions matched now, not on a scope
+        # that re-checks the conditions: otherwise an action that changes a
+        # matched field (e.g. the name) would hide the transactions from the
+        # actions after it, while the claims below still reserve them.
         result = rule.apply(
           ignore_attribute_locks: ignore_attribute_locks,
           rule_run: rule_run,
-          scope: scope,
+          scope: rule.scope_for_transaction_ids(matched_ids),
           claimed_ids: claimed_ids
         )
 
