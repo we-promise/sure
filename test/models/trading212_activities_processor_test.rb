@@ -92,6 +92,139 @@ class Trading212ActivitiesProcessorTest < ActiveSupport::TestCase
     assert entry.entryable.qty.negative?
   end
 
+  test "stores a foreign-currency fill in the instrument currency with the wallet rate" do
+    @account.update!(currency: "CZK")
+    @trading212_account.update!(
+      currency: "CZK",
+      raw_orders_payload: [
+        {
+          "order" => {
+            "id" => 58204391732,
+            "status" => "FILLED",
+            "side" => "BUY",
+            "currency" => "CZK",
+            "filledValue" => 3000.0,
+            "instrument" => { "ticker" => "NET_US_EQ", "name" => "Cloudflare", "currency" => "USD" }
+          },
+          "fill" => {
+            "id" => 58209573886,
+            "quantity" => 0.4,
+            "price" => 350.0,
+            "filledAt" => "2026-10-01T13:30:03.000Z",
+            "walletImpact" => { "currency" => "CZK", "netValue" => 3000.0, "fxRate" => 0.04612801 }
+          }
+        }
+      ]
+    )
+
+    Trading212Account::ActivitiesProcessor.new(@trading212_account).process
+
+    entry = @account.entries.find_by(external_id: "trading212_order_58209573886")
+    assert_equal "USD", entry.currency
+    assert_equal BigDecimal("140"), entry.amount
+    assert_equal "USD", entry.entryable.currency
+    assert_equal BigDecimal("350"), entry.entryable.price
+    # 140 USD at the stored rate is the 3000 CZK the wallet was charged
+    assert_in_delta 3000, entry.amount * entry.entryable.exchange_rate, 0.001
+  end
+
+  test "treats a negative fill quantity on a sell order as a sale" do
+    @account.update!(currency: "CZK")
+    @trading212_account.update!(
+      currency: "CZK",
+      raw_orders_payload: [
+        {
+          "order" => {
+            "id" => 49502407922,
+            "status" => "FILLED",
+            "side" => "SELL",
+            "currency" => "CZK",
+            "quantity" => -2.0,
+            "instrument" => { "ticker" => "IGLDd_EQ", "name" => "iShares Physical Gold", "currency" => "EUR" }
+          },
+          "fill" => {
+            "id" => 49504676344,
+            "quantity" => -2.0,
+            "price" => 80.0,
+            "filledAt" => "2026-04-13T10:17:54.000Z",
+            "walletImpact" => { "currency" => "CZK", "netValue" => 3900.0, "fxRate" => 0.041 }
+          }
+        }
+      ]
+    )
+
+    Trading212Account::ActivitiesProcessor.new(@trading212_account).process
+
+    entry = @account.entries.find_by(external_id: "trading212_order_49504676344")
+    assert_equal "Sell", entry.entryable.investment_activity_label
+    assert_equal BigDecimal("-2"), entry.entryable.qty
+    assert_equal BigDecimal("-160"), entry.amount
+    assert_equal "Sell 2.0 shares of IGLDD", entry.name
+    assert_in_delta(-3900, entry.amount * entry.entryable.exchange_rate, 0.001)
+  end
+
+  test "stores a pence-quoted fill in pounds" do
+    @account.update!(currency: "CZK")
+    @trading212_account.update!(
+      currency: "CZK",
+      raw_orders_payload: [
+        {
+          "order" => {
+            "id" => "order_gbx",
+            "status" => "FILLED",
+            "side" => "BUY",
+            "currency" => "CZK",
+            "instrument" => { "ticker" => "SGLNl_EQ", "name" => "iShares Physical Gold", "currency" => "GBX" }
+          },
+          "fill" => {
+            "id" => "fill_gbx",
+            "quantity" => 0.5,
+            "price" => 5000.0,
+            "filledAt" => "2026-03-10T15:05:50.000Z",
+            "walletImpact" => { "currency" => "CZK", "netValue" => 750.0, "fxRate" => 3.5469545 }
+          }
+        }
+      ]
+    )
+
+    Trading212Account::ActivitiesProcessor.new(@trading212_account).process
+
+    entry = @account.entries.find_by(external_id: "trading212_order_fill_gbx")
+    assert_equal "GBP", entry.currency
+    assert_equal BigDecimal("25"), entry.amount
+    assert_equal BigDecimal("50"), entry.entryable.price
+    assert_in_delta 750, entry.amount * entry.entryable.exchange_rate, 0.001
+  end
+
+  test "books the wallet amount without a rate when the instrument is in the account currency" do
+    @trading212_account.update!(
+      raw_orders_payload: [
+        {
+          "order" => {
+            "id" => "order_same_ccy",
+            "status" => "FILLED",
+            "side" => "BUY",
+            "currency" => "USD",
+            "instrument" => { "ticker" => "AAPL_US_EQ", "name" => "Apple", "currency" => "USD" }
+          },
+          "fill" => {
+            "id" => "fill_same_ccy",
+            "quantity" => 10,
+            "price" => 175.0,
+            "filledAt" => "2024-06-15T10:30:00Z",
+            "walletImpact" => { "currency" => "USD", "netValue" => 1751.5 }
+          }
+        }
+      ]
+    )
+
+    Trading212Account::ActivitiesProcessor.new(@trading212_account).process
+
+    entry = @account.entries.find_by(external_id: "trading212_order_fill_same_ccy")
+    assert_equal BigDecimal("1751.5"), entry.amount
+    assert_nil entry.entryable.exchange_rate
+  end
+
   test "skips non-filled orders" do
     @trading212_account.update!(
       raw_orders_payload: [
@@ -293,6 +426,26 @@ class Trading212ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 1, result[:transactions]
     entry = @account.entries.find_by(external_id: "trading212_transaction_txn_003_free_cash")
     assert_not_nil entry
+    assert_equal "Interest", entry.entryable.investment_activity_label
+    assert entry.amount.negative?
+  end
+
+  test "processes LENDING_INTEREST as Interest" do
+    @trading212_account.update!(
+      raw_transactions_payload: [
+        {
+          "reference" => "txn_lending",
+          "type" => "LENDING_INTEREST",
+          "amount" => "0.04",
+          "dateTime" => "2026-10-06T03:58:08.084Z"
+        }
+      ]
+    )
+
+    result = Trading212Account::ActivitiesProcessor.new(@trading212_account).process
+
+    assert_equal 1, result[:transactions]
+    entry = @account.entries.find_by(external_id: "trading212_transaction_txn_lending")
     assert_equal "Interest", entry.entryable.investment_activity_label
     assert entry.amount.negative?
   end
