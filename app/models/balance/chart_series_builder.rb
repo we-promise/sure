@@ -232,11 +232,12 @@ class Balance::ChartSeriesBuilder
     #
     # Which securities count on a date follows the Holdings tab (Account#current_holdings).
     # Once an account has a provider holdings snapshot on or before the date, a security
-    # counts only if that snapshot holds it: a security the provider moved to another
-    # record, or stopped reporting without a closing row, is no longer held, and a
-    # calculated row left behind for it (the reverse calculator gap-fills to today, and
-    # stale calculated rows are not purged) does not bring it back. An account with no
-    # provider snapshot yet keeps every security's latest row, carried forward.
+    # counts only if that snapshot holds it at a nonzero quantity: a security the provider
+    # moved to another record, stopped reporting without a closing row, or reports at
+    # zero, is no longer held, and a calculated row after the snapshot (the reverse
+    # calculator gap-fills to today, and stale calculated rows are not purged) does not
+    # bring it back. An account with no provider snapshot yet keeps every security's
+    # latest row, carried forward.
     def gains_query
       <<~SQL
         WITH dates AS (
@@ -300,6 +301,7 @@ class Balance::ChartSeriesBuilder
                         AND ph.security_id = sec.security_id
                         AND ph.account_provider_id IS NOT NULL
                         AND ph.date = provider_snapshot.snapshot_date
+                        AND ph.qty <> 0
                     )
                   )
                 THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
