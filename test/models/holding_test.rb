@@ -237,6 +237,59 @@ class HoldingTest < ActiveSupport::TestCase
     end
   end
 
+  # The two paths convert differently: the fallback joins the rate stored for
+  # the trade's exact date, the calculators go through Money#exchange_to. With
+  # a rate on every trade date those must give the same figure.
+  test "the fallback agrees with the forward calculator for trades in another currency" do
+    account = families(:empty).accounts.create!(name: "FX Parity Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    security = create_security("FXPT", prices: (0..12).map { |days| { date: days.days.ago.to_date, price: 120 } })
+
+    { 12 => 0.70, 10 => 0.72, 8 => 0.75, 5 => 0.74, 3 => 0.73, 2 => 0.71 }.each do |days, rate|
+      ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: days.days.ago.to_date, rate: rate)
+    end
+
+    create_trade(security, account: account, qty: 10, price: 100, fee: 10, currency: "CAD", date: 12.days.ago.to_date)
+    create_trade(security, account: account, qty: -4, price: 130, currency: "CAD", date: 10.days.ago.to_date)
+    create_trade(security, account: account, qty: 6, price: 110, fee: 4, currency: "CAD", date: 8.days.ago.to_date)
+    security.splits.create!(ex_date: 6.days.ago.to_date, numerator: 3, denominator: 2, source: "manual")
+    # A rate the trade carries itself comes before the table's 0.74
+    own_rate = create_trade(security, account: account, qty: 4, price: 90, currency: "CAD", date: 5.days.ago.to_date)
+    own_rate.entryable.update!(exchange_rate: 0.8)
+    create_trade(security, account: account, qty: 3, price: 85, date: 4.days.ago.to_date)
+    create_trade(security, account: account, qty: -10, price: 140, currency: "CAD", date: 3.days.ago.to_date)
+    create_trade(security, account: account, qty: 5, price: 100, fee: 5, currency: "CAD", date: 2.days.ago.to_date)
+
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    holdings = account.holdings.where(security: security).order(:date).to_a
+
+    assert_equal 13, holdings.size
+    # (100 + 10 / 10) CAD at 0.70: the first day's basis is converted in USD
+    assert_equal BigDecimal("70.7"), holdings.first.cost_basis
+    assert holdings.all? { |holding| holding.cost_basis.present? }, "every compared day needs a calculated basis"
+    holdings.each do |holding|
+      assert_equal holding.cost_basis, holding.send(:calculate_avg_cost)&.amount, holding.date.to_s
+    end
+  end
+
+  # Known divergence, out of scope here (we-promise/sure#2012): with no rate
+  # stored for a foreign trade's own date, Money#exchange_to falls back to the
+  # nearest earlier rate, so the calculator stores a basis, while the fallback's
+  # exact-date join finds no rate and reports the cost as unknown. This pins
+  # both answers so a change to either path shows up here.
+  test "the fallback reports unknown where the calculator uses an earlier rate (#2012)" do
+    account = families(:empty).accounts.create!(name: "FX Gap Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    security = create_security("FXGP", prices: (0..5).map { |days| { date: days.days.ago.to_date, price: 120 } })
+
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 5.days.ago.to_date, rate: 0.70)
+    create_trade(security, account: account, qty: 10, price: 100, currency: "CAD", date: 3.days.ago.to_date)
+
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    holding = account.holdings.find_by!(security: security, date: 3.days.ago.to_date)
+
+    assert_equal BigDecimal("70"), holding.cost_basis
+    assert_nil holding.send(:calculate_avg_cost)
+  end
+
   test "calculates total return trend" do
     @amzn.stubs(:avg_cost).returns(Money.new(214.00))
     @nvda.stubs(:avg_cost).returns(Money.new(126.00))
