@@ -635,10 +635,11 @@ class MercuryItemsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@mercury_item),
           partial: "mercury_items/mercury_item",
-          locals: { mercury_item: @mercury_item }
+          locals: { mercury_item: @mercury_item, visible_accounts: @mercury_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else

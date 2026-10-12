@@ -23,7 +23,7 @@ class Holding::ForwardCalculator
 
       account.start_date.upto(Date.current).each do |date|
         trades = portfolio_cache.get_trades(date: date)
-        next_portfolio = apply_trades(current_portfolio, trades)
+        next_portfolio = apply_trades(apply_splits(current_portfolio, date), trades)
         holdings.concat(build_holdings(next_portfolio, date))
         current_portfolio = next_portfolio
       end
@@ -69,6 +69,19 @@ class Holding::ForwardCalculator
           cost_basis_unknown: @transferred_security_ids.include?(security_id)
         )
       end.compact
+    end
+
+    # A split takes effect at the open of its ex-date, before that day's trades,
+    # which are already in post-split shares (#249). It scales the position and
+    # its cost-basis tracker together, so total cost carries across unchanged.
+    def apply_splits(opening_portfolio, date)
+      opening_portfolio.to_h do |security_id, qty|
+        ratio = portfolio_cache.get_split_ratio(security_id, date)
+        next [ security_id, qty ] unless ratio
+
+        @cost_basis_trackers[security_id].split(ratio)
+        [ security_id, Security::Split.scale(qty, ratio) ]
+      end
     end
 
     # Applies the day's trades in order and returns the resulting portfolio, so the

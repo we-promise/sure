@@ -86,7 +86,7 @@ ca:
       remaining: '%{amount} pendents'
       paid_headline: '%{amount} pagats'
     add_bill: Afegeix una factura
-    manage: Gestiona
+    manage: Mostra
     find_payment: Cerca el pagament
     add_payment: Afegeix un pagament
     review_match: Revisa la coincidència
@@ -252,8 +252,8 @@ ca:
       paid_so_far: Pagat fins ara
       hero_past_due: '%{amount} vençuts'
       hero_next_seven: '%{amount} vencen en els pròxims 7 dies'
-      add_bill: Afegeix una factura
-      add_income: Afegeix un ingrés
+      add_bill: Nova factura
+      add_income: Nou ingrés
       review_with_ai: Revisa amb IA
       detected_review:
         one: Hem trobat %{count} pagament recurrent a les teves transaccions. Revisa'l perquè els totals d'aquí coincideixin amb el que pagues realment.
@@ -293,7 +293,7 @@ ca:
       this_month: Aquest mes
       later: Després d'aquest mes
       paid_this_month: Pagades aquest mes
-      dormant: Inactives
+      dormant: En pausa
       kpi_remaining: Pendent aquest mes
       kpi_paid: Pagat aquest mes
       kpi_next_seven: Venç en 7 dies
