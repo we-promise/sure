@@ -32,6 +32,11 @@ class Rule < ApplicationRecord
   # in memory: once autosave has run, a destroyed condition is gone from the
   # association and a saved one no longer reports a pending change.
   #
+  # A condition reporting a change is then checked against the stored criteria,
+  # one query, since the importers replace every condition on each re-import. An
+  # identical re-import must not re-seed: that would record a match still waiting
+  # for the next run as delivered, and it would never be emailed.
+  #
   # after_update, not after_update_commit: it runs inside the save's transaction,
   # after the nested conditions and actions are written (it is declared after
   # accepts_nested_attributes_for, so it runs after their autosave), and reads
@@ -200,7 +205,51 @@ class Rule < ApplicationRecord
 
     def note_match_criteria_change
       @match_criteria_changed = will_save_change_to_effective_date? ||
-        association(:conditions).target.any?(&:match_criteria_changing?)
+        (association(:conditions).target.any?(&:match_criteria_changing?) && condition_criteria_changing?)
+    end
+
+    # Whether the criteria this save leaves differ from the stored ones. The
+    # importers replace every condition, so each one reads as changing even when
+    # the new set holds the same criteria; only a different set re-seeds.
+    #
+    # Compares two signatures: the conditions as stored (one query), and the same
+    # rows with this save's pending changes laid over them. Order does not count
+    # (top-level conditions all apply, and a group's and/or reads its members
+    # either way), and neither does nil against "" (see
+    # Rule::Condition#match_criteria_changing?).
+    def condition_criteria_changing?
+      top_level_ids = Rule::Condition.where(rule_id: id).select(:id)
+      stored = Rule::Condition.where(rule_id: id).or(Rule::Condition.where(parent_id: top_level_ids)).to_a
+      stored_children = stored.group_by(&:parent_id)
+      stored_top_level = stored.select { |condition| condition.rule_id == id }
+
+      before = criteria_signature(stored_top_level) { |condition| stored_children[condition.id].to_a }
+      after = criteria_signature(pending_conditions(stored_top_level, association(:conditions).target)) do |condition|
+        stored_for_condition = condition.new_record? ? [] : stored_children[condition.id].to_a
+        pending_conditions(stored_for_condition, condition.association(:sub_conditions).target)
+      end
+
+      before != after
+    end
+
+    # The stored conditions as this save leaves them: in-memory copies replace
+    # their stored rows, new ones join, and those marked for destruction drop out.
+    def pending_conditions(stored, in_memory)
+      in_memory_by_id = in_memory.reject(&:new_record?).index_by(&:id)
+
+      (stored.map { |condition| in_memory_by_id.fetch(condition.id, condition) } + in_memory.select(&:new_record?))
+        .reject(&:marked_for_destruction?)
+    end
+
+    def criteria_signature(conditions, &children)
+      conditions.map do |condition|
+        [
+          condition.condition_type.to_s,
+          condition.operator.to_s,
+          condition.value.presence.to_s,
+          criteria_signature(children.call(condition)) { [] }
+        ]
+      end.sort
     end
 
     def match_criteria_changed?
