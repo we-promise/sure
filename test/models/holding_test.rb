@@ -191,6 +191,15 @@ class HoldingTest < ActiveSupport::TestCase
     assert_nil @amzn.avg_cost
   end
 
+  # Units held before the first imported trade: the replay does not know them,
+  # so a sale of them must not leave it short, holding less than nothing.
+  test "the fallback starts from a clean basis after a sale of units held before the imported trades" do
+    create_trade(@amzn.security, account: @account, qty: -10, price: 120.00, date: 2.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 5, price: 200.00, date: 1.day.ago.to_date)
+
+    assert_equal Money.new(200), @amzn.avg_cost
+  end
+
   # A split changes the share count, not the money invested. Summed as they
   # stood, the purchases mixed pre- and post-split units.
   test "the fallback carries the cost across a split" do

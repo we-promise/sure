@@ -27,7 +27,10 @@
 # The reverse calculator also counts units held before the first imported
 # trade, at an unknown cost; doing that here would turn the average of the
 # known purchases, which the fallback has always shown for such a holding, into
-# no figure at all, and is a change of its own.
+# no figure at all, and is a change of its own. A sale of more than the replay
+# holds sells such units, so it closes what the replay holds and goes no lower:
+# held short, the replay would count every later purchase as covering it and
+# show no basis for a position the account does hold.
 #
 # Unlike them, it never looks a rate up per trade: the trade's own rate comes
 # first, then the table's for that exact day, both read with the trades, so the
@@ -57,7 +60,7 @@ class Holding::CostBasisFallback
       end
 
       previous = position
-      position += event.qty
+      position = [ position + event.qty, 0 ].max
 
       # What the units cost just before the trade that closes the position,
       # before the tracker resets.
