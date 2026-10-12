@@ -198,6 +198,34 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("280.0"), buy_trade.amount
   end
 
+  # A receipt does not mark the entry modified, and deleting the entry would
+  # delete the receipt with it.
+  test "a separate commission with a receipt attached is left alone" do
+    legacy = import_legacy_commission("1001", "1.25")
+    legacy.entryable.attachments.attach(io: StringIO.new("receipt"), filename: "receipt.pdf", content_type: "application/pdf")
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    assert legacy.reload.entryable.attachments.attached?
+    assert_equal 0, @account.entries.find_by(external_id: "ibkr_trade_1001").entryable.fee
+  end
+
+  # The import rewrites an edited trade, but it never wrote a fee before, so it
+  # must not start overwriting one the user set. The cash follows that fee.
+  test "a trade whose fee the user edited keeps it" do
+    IbkrAccount::Processor.new(@ibkr_account).process
+    buy_trade = @account.entries.find_by(external_id: "ibkr_trade_1001")
+    buy_trade.entryable.update!(fee: 3)
+    buy_trade.update!(user_modified: true)
+
+    IbkrAccount::Processor.new(@ibkr_account.reload).process
+
+    buy_trade.reload
+    assert_equal 3, buy_trade.entryable.fee
+    assert_equal BigDecimal("283.0"), buy_trade.amount
+    assert_nil @account.entries.find_by(external_id: "ibkr_trade_fee_1001"), "the commission is not counted again beside it"
+  end
+
   test "processor computes weighted provider cost basis for grouped lots" do
     @ibkr_account.update!(
       raw_holdings_payload: [

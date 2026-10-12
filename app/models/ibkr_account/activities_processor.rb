@@ -54,7 +54,14 @@ class IbkrAccount::ActivitiesProcessor
       # the cost basis and the realized gain read, and into the entry's amount,
       # which is what moves cash -- money out is positive, so it adds to a buy
       # and takes from a sell's proceeds, as the manual trade form does.
-      commission = folded_commission(row, currency)
+      #
+      # A trade the user edited keeps the fee it has, and its cash follows that
+      # fee. The import rewrites the rest of an edited trade, as it always has,
+      # but it never wrote a fee before, so it must not start overwriting one
+      # the user set.
+      edited_fee = edited_trade_fee(external_id)
+      commission = edited_fee.nil? ? folded_commission(row, currency) : nil
+      fee = edited_fee || commission || 0
 
       Entry.transaction do
         import_adapter.import_trade(
@@ -62,14 +69,14 @@ class IbkrAccount::ActivitiesProcessor
           security: security,
           quantity: signed_quantity,
           price: native_price,
-          amount: native_amount + (commission || 0),
+          amount: native_amount + fee,
           currency: currency,
           date: date,
           name: build_trade_name(security.ticker, signed_quantity),
           source: "ibkr",
           activity_label: buy_sell == "SELL" ? "Sell" : "Buy",
           exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f,
-          fee: commission || 0
+          fee: fee
         )
 
         # Imported before the commission moved onto the trade, this would now
@@ -77,7 +84,10 @@ class IbkrAccount::ActivitiesProcessor
         legacy_commission_entry(row)&.destroy! if commission
       end
 
-      fees = commission.nil? && import_commission_transaction(row, security, date) ? 1 : 0
+      # A commission not on the trade stays a transaction of its own, unless an
+      # edited trade already carries a fee, which would count it twice.
+      separate = commission.nil? && (edited_fee.nil? || edited_fee.zero?)
+      fees = separate && import_commission_transaction(row, security, date) ? 1 : 0
       { imported: true, fees: fees }
     rescue => e
       Rails.logger.error("IbkrAccount::ActivitiesProcessor - Failed to process trade #{row[:trade_id]}: #{e.message}")
@@ -128,16 +138,32 @@ class IbkrAccount::ActivitiesProcessor
     # stays a transaction of its own: when there is none, when IBKR charged it
     # in another currency or did not say which -- `trades.fee` is in the
     # trade's, and the separate entry falls back to the account's -- or when the
-    # separate commission entry from an earlier import was edited or locked by
-    # the user, which a sync does not override.
+    # separate commission entry from an earlier import is the user's: edited,
+    # locked, or carrying a receipt.
     def folded_commission(row, trade_currency)
       commission = parse_decimal(row[:ib_commission])
       return nil if commission.nil? || commission.zero?
 
       return nil unless row[:ib_commission_currency].to_s.upcase == trade_currency
-      return nil if legacy_commission_entry(row)&.protected_from_sync?
+      legacy = legacy_commission_entry(row)
+      return nil if legacy && users_commission_entry?(legacy)
 
       commission.abs
+    end
+
+    # Attaching a receipt does not mark an entry modified, and destroying the
+    # entry would take the receipt with it.
+    def users_commission_entry?(entry)
+      entry.protected_from_sync? ||
+        (entry.entryable.is_a?(Transaction) && entry.entryable.attachments.attached?)
+    end
+
+    # The fee of an existing trade the user edited, nil for any other.
+    def edited_trade_fee(external_id)
+      entry = account.entries.find_by(external_id: external_id, source: "ibkr")
+      return nil unless entry&.protected_from_sync? && entry.entryable.is_a?(Trade)
+
+      entry.entryable.fee || 0
     end
 
     def legacy_commission_entry(row)
