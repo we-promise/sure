@@ -1,4 +1,4 @@
-<%# locals: (entry:, balance_trend: nil, view_ctx: "global", in_split_group: false) %>
+<%# locals: (entry:, balance_trend: nil, view_ctx: "global", in_split_group: false, show_date: false) %>
 
 <% transaction = entry.entryable %>
 <% transaction_security_logo_url = transaction.activity_security&.display_logo_url %>
@@ -151,6 +151,9 @@
                 </div>
 
                 <div class="text-secondary text-xs font-normal">
+                  <% if show_date %>
+                    <%= tag.time l(entry.date, format: :long), datetime: entry.date.iso8601 %> •
+                  <% end %>
                   <% if transaction.transfer? %>
                     <span class="text-secondary">
                       <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> •

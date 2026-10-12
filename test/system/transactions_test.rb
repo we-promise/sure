@@ -29,6 +29,26 @@ class TransactionsTest < ApplicationSystemTestCase
     visit transactions_url(per_page: @page_size)
   end
 
+  test "can sort by amount and return to date groups" do
+    large = create_transaction("Largest amount", 30.days.ago.to_date, 900)
+    small = create_transaction("Smallest amount", Date.current, 1)
+    visit transactions_url(per_page: @page_size, page: 2)
+
+    find("#transaction-sort-button").click
+    click_link "Amount: high to low"
+    assert_selector "#transactions turbo-frame[id^='entry_']:first-of-type", id: dom_id(large)
+    assert_no_selector "#transactions [data-bulk-select-target='group']"
+    assert_selector "##{dom_id(large)} time", text: I18n.l(large.date, format: :long)
+
+    find("#transaction-sort-button").click
+    click_link "Amount: low to high"
+    assert_selector "#transactions turbo-frame[id^='entry_']:first-of-type", id: dom_id(small)
+
+    find("#transaction-sort-button").click
+    click_link "Newest first"
+    assert_selector "#transactions [data-bulk-select-target='group']"
+  end
+
   test "can search for a transaction" do
     assert_selector "h1", text: "Transactions"
 

@@ -4,9 +4,10 @@
               method: :get,
               data: { controller: "auto-submit-form" } do |form| %>
   <%= hidden_field_tag :per_page, params[:per_page] %>
+  <%= hidden_field_tag :sort, transaction_sort %>
 
-  <div class="flex gap-2 mb-4">
-    <div class="grow">
+  <div class="flex flex-wrap gap-2 mb-4">
+    <div class="grow min-w-0">
       <div class="flex items-center px-3 py-2 gap-2 border border-secondary rounded-lg focus-within:ring-secondary focus-within:border-secondary">
         <%= icon("search") %>
         <%= form.text_field :search,
@@ -16,6 +17,14 @@
                             "data-auto-submit-form-target": "auto" %>
       </div>
     </div>
+
+    <%= render DS::Menu.new(variant: "button") do |menu| %>
+      <% menu.with_button(id: "transaction-sort-button", type: "button", text: t("transactions.sort.#{transaction_sort}"), variant: "outline", icon: "arrow-down-up") %>
+      <% Transaction::SORT_OPTIONS.each do |sort| %>
+        <% menu.with_item(variant: "link", text: t("transactions.sort.#{sort}"), selected: transaction_sort == sort,
+                          href: transactions_path(request.query_parameters.except("page").merge("sort" => sort))) %>
+      <% end %>
+    <% end %>
 
     <%= render DS::Popover.new(variant: "button", no_padding: true) do |popover| %>
       <% popover.with_button(

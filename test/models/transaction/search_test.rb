@@ -13,6 +13,38 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     @family.accounts.each { |account| account.entries.delete_all }
   end
 
+  test "display scope deduplicates transfers without changing totals" do
+    transfer = create_transfer(from_account: @checking_account, to_account: @credit_card_account, amount: 50)
+    outflow = transfer.outflow_transaction
+    inflow = transfer.inflow_transaction
+    search = Transaction::Search.new(@family)
+
+    assert_equal [ outflow.id ], search.display_transactions_scope.pluck(:id)
+    assert_equal [ outflow.id, inflow.id ].sort, search.transactions_scope.pluck(:id).sort
+    assert_equal 2, search.totals.count
+    assert_equal Money.new(50, "USD"), search.totals.transfer_inflow_money
+    assert_equal Money.new(50, "USD"), search.totals.transfer_outflow_money
+  end
+
+  test "display scope retains an inflow when its outflow is filtered or inaccessible" do
+    transfer = create_transfer(from_account: @checking_account, to_account: @credit_card_account, amount: 50)
+    inflow = transfer.inflow_transaction.reload
+    inflow.entry.update!(name: "Incoming only")
+    inflow.tags << tags(:one)
+
+    [
+      { filters: { account_ids: [ @credit_card_account.id ] } },
+      { filters: { search: "Incoming only" } },
+      { filters: { tags: [ tags(:one).name ] } },
+      { accessible_account_ids: [ @credit_card_account.id ] }
+    ].each do |options|
+      search = Transaction::Search.new(@family, **options)
+      assert_equal [ inflow.id ], search.display_transactions_scope.pluck(:id), options.inspect
+    end
+
+    assert_empty Transaction::Search.new(@family, accessible_account_ids: []).display_transactions_scope
+  end
+
   test "search filters by transaction types using kind enum" do
     # Create different types of transactions using the helper method
     standard_entry = create_transaction(
