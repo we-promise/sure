@@ -3,9 +3,10 @@
 # or with a new counterpart entry created in a target account.
 #
 # This is the same operation as TransferMatchesController#create and
-# Rule::ActionExecutor::SetAsTransferOrPayment, which predate this class and
-# still carry their own copies of it. Permission checks are the caller's job:
-# this class enforces only the data rules.
+# Rule::ActionExecutor::SetAsTransferOrPayment, which predate this class.
+# Kinds and the Investment Contributions category come from Transfer#confirm!,
+# as there. Permission checks are the caller's job: this class enforces only
+# the data rules.
 class Transfer::Matcher
   class Error < StandardError
     attr_reader :code
@@ -132,18 +133,7 @@ class Transfer::Matcher
           inflow, outflow = yield
           transfer = build_transfer(inflow, outflow)
           transfer.save!
-
-          # Kinds follow the destination account, as in Transfer::Creator.
-          destination_account = inflow.entry.account
-          outflow_attrs = { kind: Transfer.kind_for_account(destination_account) }
-
-          if outflow_attrs[:kind] == "investment_contribution"
-            category = destination_account.family.investment_contributions_category
-            outflow_attrs[:category] = category if category.present? && outflow.category_id.blank?
-          end
-
-          outflow.update!(outflow_attrs)
-          inflow.update!(kind: "funds_movement")
+          transfer.confirm!
         end
       end
 
