@@ -81,9 +81,11 @@ export default class extends Controller {
       this.comparisonDone = false;
     }
     this.state = detail.state;
-    this.comparisonResult = detail.graph
-      ? compareSankeyData(this.legacyDataValue, detail.graph)
-      : null;
+    // The legacy chart is by category only, so only that view can be compared.
+    this.comparisonResult =
+      detail.graph?.basis === "net_by_category"
+        ? compareSankeyData(this.legacyDataValue, detail.graph)
+        : null;
     this.element.dataset.sankeyComparison = this.comparisonResult || "";
     this.expandButtonTarget.disabled = !detail.ready;
     this.trackDisplay();

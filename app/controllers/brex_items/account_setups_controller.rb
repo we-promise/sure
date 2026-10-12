@@ -59,10 +59,11 @@ class BrexItems::AccountSetupsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@brex_item),
           partial: "brex_items/brex_item",
-          locals: { brex_item: @brex_item }
+          locals: { brex_item: @brex_item, visible_accounts: @brex_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     end

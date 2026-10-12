@@ -170,10 +170,11 @@ class CoinbaseItemsController < ApplicationController
       end
 
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "coinbase_items/coinbase_item",
-          locals: { coinbase_item: item }
+          locals: { coinbase_item: item, visible_accounts: item.accounts }
         ),
         manual_accounts_stream,
         *Array(flash_notification_stream_items)
@@ -253,10 +254,11 @@ class CoinbaseItemsController < ApplicationController
       @coinbase_items = Current.family.coinbase_items.ordered.includes(:syncs)
 
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@coinbase_item),
           partial: "coinbase_items/coinbase_item",
-          locals: { coinbase_item: @coinbase_item }
+          locals: { coinbase_item: @coinbase_item, visible_accounts: @coinbase_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else

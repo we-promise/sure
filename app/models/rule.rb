@@ -19,8 +19,9 @@ class Rule < ApplicationRecord
   # the same moment before anyone reordered them.
   scope :ordered, -> { order(:position, :created_at, :id) }
 
-  validates :resource_type, presence: true
-  validates :name, length: { minimum: 1 }, allow_nil: true
+  validates :resource_type, presence: true, if: -> { resource_type.to_s.valid_encoding? }
+  validates :name, length: { minimum: 1 }, allow_nil: true, if: -> { name.to_s.valid_encoding? }
+  validates_with DatabaseTextValidator, attributes: %i[name resource_type]
   validate :no_nested_compound_conditions
 
   # Every rule must have at least 1 action
@@ -240,6 +241,10 @@ class Rule < ApplicationRecord
     end
 
     def normalize_name
-      self.name = nil if name.is_a?(String) && name.strip.empty?
+      return unless name.is_a?(String)
+      return unless name.valid_encoding?
+      return if name.include?("\0")
+
+      self.name = nil if name.strip.empty?
     end
 end
