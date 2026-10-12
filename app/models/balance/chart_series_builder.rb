@@ -230,11 +230,13 @@ class Balance::ChartSeriesBuilder
     # the target currency, and aggregate unrealized gains (amount - cost_basis * qty).
     # Holdings only exist on asset accounts, so no liability sign handling is needed.
     #
-    # A security counts on a date only while its latest row is on the account's latest
-    # holding date on or before that date. Calculated holdings are written for every held
-    # security on every day (and gap-filled), so a security missing from that day's rows
-    # is no longer held: the provider moved the position to another security record, or
-    # stopped reporting it without a closing row. Balances already read holdings this way.
+    # Which securities count on a date follows the Holdings tab (Account#current_holdings).
+    # Once an account has a provider holdings snapshot on or before the date, a security
+    # counts only if that snapshot holds it: a security the provider moved to another
+    # record, or stopped reporting without a closing row, is no longer held, and a
+    # calculated row left behind for it (the reverse calculator gap-fills to today, and
+    # stale calculated rows are not purged) does not bring it back. An account with no
+    # provider snapshot yet keeps every security's latest row, carried forward.
     def gains_query
       <<~SQL
         WITH dates AS (
@@ -266,7 +268,17 @@ class Balance::ChartSeriesBuilder
             COALESCE(SUM(
               CASE
                 WHEN last_basis.cost_basis IS NOT NULL
-                  AND last_h.date = account_snapshot.date
+                  AND (
+                    provider_snapshot.date IS NULL
+                    OR EXISTS (
+                      SELECT 1
+                      FROM holdings ph
+                      WHERE ph.account_id = accounts.id
+                        AND ph.security_id = sec.security_id
+                        AND ph.account_provider_id IS NOT NULL
+                        AND ph.date = provider_snapshot.date
+                    )
+                  )
                 THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
                 ELSE 0
               END
@@ -274,13 +286,14 @@ class Balance::ChartSeriesBuilder
           FROM dates d
           LEFT JOIN selected_accounts accounts
             ON accounts.active_until_date IS NULL OR d.date <= accounts.active_until_date
-          -- The account's latest holding date on or before d: the snapshot it was in.
+          -- The account's latest provider holdings snapshot on or before d, if any.
           LEFT JOIN LATERAL (
             SELECT MAX(h.date) AS date
             FROM holdings h
             WHERE h.account_id = accounts.id
+              AND h.account_provider_id IS NOT NULL
               AND h.date <= d.date
-          ) account_snapshot ON TRUE
+          ) provider_snapshot ON TRUE
           LEFT JOIN account_securities sec ON sec.account_id = accounts.id
           LEFT JOIN LATERAL (
             SELECT h.date, h.amount, h.qty, h.currency

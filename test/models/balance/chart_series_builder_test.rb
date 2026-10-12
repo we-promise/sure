@@ -2,6 +2,7 @@ require "test_helper"
 
 class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
   include BalanceTestHelper
+  include EntriesTestHelper
 
   setup do
   end
@@ -481,16 +482,21 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal 200, series.values.last.trend.current.amount
   end
 
-  test "gains series stops counting a security record the account moved off" do
+  # The membership rule below is the Holdings tab's (`Account#current_holdings`):
+  # once an account has a provider snapshot on or before a date, a security counts
+  # on that date only if that snapshot holds it. These tests write provider rows,
+  # as a provider sync does; calculated rows stand in for gap-fills between syncs.
+  test "gains series stops counting a security record the provider moved the position off" do
     account = accounts(:investment)
     account.holdings.destroy_all
+    link = link_provider(account)
     old_record = Security.create!(ticker: "AAPL", name: "Apple Inc. (duplicate record)", exchange_operating_mic: "XXXX")
     new_record = securities(:aapl)
 
     # The provider reported the position on one record, then on another for the same ticker.
-    stale = create_holding(account: account, security: old_record, date: 5.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    stale = create_provider_holding(account: account, link: link, security: old_record, date: 5.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
     4.downto(0) do |days_ago|
-      create_holding(account: account, security: new_record, date: days_ago.days.ago.to_date, qty: 10, price: 110, cost_basis: 90)
+      create_provider_holding(account: account, link: link, security: new_record, date: days_ago.days.ago.to_date, qty: 10, price: 110, cost_basis: 90)
     end
 
     with_stale_row = gains_amounts(account, start_date: 5.days.ago.to_date)
@@ -502,56 +508,62 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal without_stale_row.drop(1), with_stale_row.drop(1)
   end
 
-  test "gains series stops counting a position whose rows end without a closing row" do
+  test "gains series stops counting a position the provider stops reporting" do
     account = accounts(:investment)
     account.holdings.destroy_all
+    link = link_provider(account)
 
-    # MSFT stops being reported two days ago, with no zero-quantity row and no sell.
+    # MSFT drops out of the provider's snapshot after two days ago, with no zero-quantity row and no sell.
     2.downto(0) do |days_ago|
-      create_holding(account: account, security: securities(:aapl), date: days_ago.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+      create_provider_holding(account: account, link: link, security: securities(:aapl), date: days_ago.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
     end
-    create_holding(account: account, security: securities(:msft), date: 2.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
+    create_provider_holding(account: account, link: link, security: securities(:msft), date: 2.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
 
     # AAPL 100 every day; MSFT 50 only on the day it was held.
     assert_equal [ 150, 100, 100 ], gains_amounts(account, start_date: 2.days.ago.to_date)
   end
 
-  test "gains series keeps counting every security held through the latest snapshot" do
+  test "gains series keeps counting every security in the latest provider snapshot across gap-filled days" do
     account = accounts(:investment)
     account.holdings.destroy_all
+    link = link_provider(account)
 
-    2.downto(0) do |days_ago|
-      create_holding(account: account, security: securities(:aapl), date: days_ago.days.ago.to_date, qty: 10, price: 100 + days_ago, cost_basis: 90)
+    create_provider_holding(account: account, link: link, security: securities(:aapl), date: 2.days.ago.to_date, qty: 10, price: 102, cost_basis: 90)
+    create_provider_holding(account: account, link: link, security: securities(:msft), date: 2.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
+    # No sync since: calculated gap-fill rows carry no cost_basis, and the position is unchanged.
+    1.downto(0) do |days_ago|
+      create_holding(account: account, security: securities(:aapl), date: days_ago.days.ago.to_date, qty: 10, price: 100 + days_ago, cost_basis: nil)
     end
-    create_holding(account: account, security: securities(:msft), date: 2.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
-    # Gap-filled rows (weekends, price gaps) carry no cost_basis but are still held.
     create_holding(account: account, security: securities(:msft), date: 1.day.ago.to_date, qty: 5, price: 60, cost_basis: nil)
     create_holding(account: account, security: securities(:msft), date: Date.current, qty: 5, price: 70, cost_basis: nil)
 
-    # AAPL 120, 110, 100; MSFT 50, 50, 100 (last row is today, so it counts today).
+    # AAPL 120, 110, 100; MSFT 50, 50, 100.
     assert_equal [ 170, 160, 200 ], gains_amounts(account, start_date: 2.days.ago.to_date)
   end
 
-  test "gains series carries the latest snapshot forward when the account has not synced since" do
+  test "gains series carries the latest provider snapshot forward when the account has not synced since" do
     account = accounts(:investment)
     account.holdings.destroy_all
+    link = link_provider(account)
 
-    create_holding(account: account, security: securities(:aapl), date: 3.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
-    create_holding(account: account, security: securities(:msft), date: 3.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
+    create_provider_holding(account: account, link: link, security: securities(:aapl), date: 3.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    create_provider_holding(account: account, link: link, security: securities(:msft), date: 3.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
 
     # No rows after three days ago at all: that snapshot is still the account's position.
     assert_equal [ 150, 150, 150, 150 ], gains_amounts(account, start_date: 3.days.ago.to_date)
   end
 
-  test "gains series judges each account against its own latest snapshot" do
+  test "gains series judges each account against its own provider snapshot" do
     synced = accounts(:investment)
     synced.holdings.destroy_all
     behind = synced.family.accounts.create!(name: "Not synced lately", balance: 1000, currency: "USD", accountable: Investment.new)
+    synced_link = link_provider(synced)
+    behind_link = link_provider(behind, name: "Second link")
 
     2.downto(0) do |days_ago|
-      create_holding(account: synced, security: securities(:aapl), date: days_ago.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+      create_provider_holding(account: synced, link: synced_link, security: securities(:aapl), date: days_ago.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
     end
-    create_holding(account: behind, security: securities(:msft), date: 2.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
+    create_provider_holding(account: behind, link: behind_link, security: securities(:msft), date: 2.days.ago.to_date, qty: 5, price: 60, cost_basis: 50)
 
     builder = Balance::ChartSeriesBuilder.new(
       account_ids: [ synced.id, behind.id ],
@@ -560,7 +572,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
       interval: "1 day"
     )
 
-    # The other account's later rows do not end this account's position.
+    # The other account's later snapshot does not end this account's position.
     assert_equal [ 150, 150, 150 ], builder.gains_series.map { |v| v.value.amount }
   end
 
@@ -600,6 +612,56 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal tab_gain, gains_amounts(account, start_date: Date.current).last
   end
 
+  # Review of we-promise/sure#4149 (Codex, P1). A linked account's provider snapshot
+  # is dated before today, so the reverse calculator gap-fills calculated rows for
+  # its securities through today. When the next snapshot moves the position to
+  # another record, the old record's calculated row on today is not purged: the
+  # cleanup removes only rows for securities the new snapshot holds.
+  test "a calculated row for a security the latest provider snapshot dropped is not counted" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    account.entries.destroy_all
+    link = link_provider(account)
+    old_record = Security.create!(ticker: "AAPL", name: "Apple Inc. (duplicate record)", exchange_operating_mic: "XXXX")
+
+    create_provider_holding(account: account, link: link, security: old_record, date: 1.day.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    Holding::Materializer.new(account, strategy: :reverse).materialize_holdings
+    create_provider_holding(account: account, link: link, security: securities(:aapl), date: Date.current, qty: 10, price: 110, cost_basis: 90)
+    Holding::Materializer.new(account, strategy: :reverse).materialize_holdings
+
+    assert account.holdings.exists?(security: old_record, date: Date.current, account_provider_id: nil),
+      "precondition: the old record's calculated row on today survives the second sync"
+    assert_equal [ securities(:aapl).id ], account.current_holdings.map(&:security_id)
+    tab_gain = account.current_holdings.sum { |h| h.amount - (h.cost_basis * h.qty) }
+
+    assert_equal [ 100, tab_gain ], gains_amounts(account, start_date: 1.day.ago.to_date)
+  end
+
+  # Review of we-promise/sure#4149 (CodeRabbit). Editing one holding re-materializes
+  # only that security (HoldingsController -> Balance::Materializer with
+  # security_ids:), so its rows reach today while the others' end at the last full
+  # sync. An account with no provider snapshot keeps every security's latest row,
+  # as the Holdings tab does.
+  test "a manual account keeps a security whose rows end before another security's" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    account.entries.destroy_all
+    create_trade(securities(:aapl), account: account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    create_trade(securities(:msft), account: account, qty: 5, date: 5.days.ago.to_date, price: 50)
+
+    travel_to(1.day.ago) { Holding::Materializer.new(account, strategy: :forward).materialize_holdings }
+    Holding::Materializer.new(account, strategy: :forward, security_ids: [ securities(:msft).id ]).materialize_holdings
+
+    last_dates = account.holdings.group(:security_id).maximum(:date)
+    assert_equal 1.day.ago.to_date, last_dates[securities(:aapl).id], "precondition: AAPL's rows end at yesterday's full sync"
+    assert_equal Date.current, last_dates[securities(:msft).id], "precondition: MSFT's rows reach today"
+    assert_equal [ securities(:aapl).id, securities(:msft).id ].sort, account.current_holdings.map(&:security_id).sort
+
+    yesterday, today = gains_amounts(account, start_date: 1.day.ago.to_date)
+    assert yesterday.positive?, "precondition: the position shows a gain"
+    assert_equal yesterday, today
+  end
+
   private
     def gains_amounts(account, start_date:)
       Balance::ChartSeriesBuilder.new(
@@ -608,6 +670,18 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
         period: Period.custom(start_date: start_date, end_date: Date.current),
         interval: "1 day"
       ).gains_series.map { |v| v.value.amount }
+    end
+
+    def link_provider(account, name: "Provider")
+      item = account.family.coinstats_items.create!(name: name, api_key: "test-key")
+      AccountProvider.create!(account: account, provider: item.coinstats_accounts.create!(name: name, currency: account.currency))
+    end
+
+    def create_provider_holding(account:, link:, security:, date:, qty:, price:, cost_basis:)
+      account.holdings.create!(
+        security: security, date: date, qty: qty, price: price, amount: qty * price,
+        currency: account.currency, cost_basis: cost_basis, cost_basis_source: "provider", account_provider: link
+      )
     end
 
     def create_holding(account:, security:, date:, qty:, price:, cost_basis:)
