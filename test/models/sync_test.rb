@@ -28,6 +28,52 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "completed", sync.status
   end
 
+  test "runs the sync in the family's timezone instead of the app default" do
+    account = accounts(:depository)
+    account.family.update_column(:timezone, "Pacific/Auckland")
+    sync = Sync.create!(syncable: account)
+
+    observed_zone_name = nil
+    account.define_singleton_method(:perform_sync) { |_sync| observed_zone_name = Time.zone.name }
+
+    sync.perform
+
+    assert_equal "Pacific/Auckland", observed_zone_name
+  end
+
+  test "Date.current inside perform reflects the family's local date, not UTC" do
+    account = accounts(:depository)
+    account.family.update_column(:timezone, "Pacific/Auckland")
+    sync = Sync.create!(syncable: account)
+
+    # 2026-01-14 23:00 UTC is already 2026-01-15 in Auckland (UTC+13 in
+    # January, southern-hemisphere DST) -- the exact mismatch from the
+    # review: a background job defaults to the app's zone (UTC), so a
+    # scheduled entry dated the 15th would still read as "not arrived" there
+    # even though it already has for the family.
+    observed_date = nil
+    account.define_singleton_method(:perform_sync) { |_sync| observed_date = Date.current }
+
+    travel_to Time.utc(2026, 1, 14, 23, 0, 0) do
+      sync.perform
+    end
+
+    assert_equal Date.new(2026, 1, 15), observed_date
+  end
+
+  test "falls back to the app's default timezone when the family's is missing" do
+    account = accounts(:depository)
+    account.family.update_column(:timezone, nil)
+    sync = Sync.create!(syncable: account)
+
+    observed_zone_name = nil
+    account.define_singleton_method(:perform_sync) { |_sync| observed_zone_name = Time.zone.name }
+
+    sync.perform
+
+    assert_equal Time.zone.name, observed_zone_name
+  end
+
   test "handles sync errors" do
     syncable = accounts(:depository)
     sync = Sync.create!(syncable: syncable)

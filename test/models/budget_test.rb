@@ -376,6 +376,41 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 150, spending_without_refund - spending_with_refund
   end
 
+  test "actual_spending excludes scheduled (future-dated) entries" do
+    travel_to Date.current.beginning_of_month do
+      family = families(:dylan_family)
+      budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+      account = accounts(:depository)
+
+      healthcare = Category.create!(
+        name: "Healthcare #{Time.now.to_f}",
+        family: family,
+        color: "#e74c3c"
+      )
+
+      budget.sync_budget_categories
+      budget_category = budget.budget_categories.find_by(category: healthcare)
+      budget_category.update!(budgeted_spending: 200)
+
+      # A bill scheduled for later this month -- hasn't happened yet
+      Entry.create!(
+        account: account,
+        entryable: Transaction.create!(category: healthcare),
+        date: Date.current + 10.days,
+        name: "Scheduled dentist bill",
+        amount: 150,
+        currency: "USD"
+      )
+
+      budget = Budget.find(budget.id)
+      budget.sync_budget_categories
+
+      assert_equal 0, budget.budget_category_actual_spending(
+        budget.budget_categories.find_by(category: healthcare)
+      )
+    end
+  end
+
   test "most_recent_initialized_budget returns latest initialized budget before this one" do
     family = families(:dylan_family)
 
