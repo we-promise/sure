@@ -340,6 +340,40 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), tea.id
   end
 
+  # Review of we-promise/sure#4150 (Codex, P1). The import clears the rule's
+  # conditions with destroy_all before it saves, so a row with no conditions left
+  # nothing for the rule to see changing, and a rule with no conditions matches
+  # every transaction.
+  test "re-importing an email rule with no conditions does not email existing matches" do
+    account = @family.accounts.create!(name: "Baseline test", balance: 1000, currency: "USD", accountable: Depository.new)
+    Entry.create!(account: account, name: "Coffee shop", date: 90.days.ago.to_date, amount: 10, currency: "USD", entryable: Transaction.new)
+    tea = Entry.create!(account: account, name: "Tea house", date: 60.days.ago.to_date, amount: 20, currency: "USD", entryable: Transaction.new).transaction
+
+    rule = @family.rules.create!(
+      name: "Coffee alerts",
+      resource_type: "transaction",
+      active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+      actions_attributes: [ { action_type: "send_email_notification" } ]
+    )
+    rule.actions.first.send(:seed_notification_baseline)
+    assert_not_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), tea.id, "precondition: Tea house is outside the baseline"
+
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Coffee alerts","transaction",true,,"[]","[{\"action_type\":\"send_email_notification\"}]"
+    CSV
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+    assert_empty rule.reload.conditions, "precondition: the import left the rule with no conditions"
+
+    assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+      RuleJob.perform_now(Rule.find(rule.id))
+    end
+    assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), tea.id
+  end
+
   test "validates resource_type" do
     csv = <<~CSV
       name,resource_type,active,effective_date,conditions,actions
