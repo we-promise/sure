@@ -1834,6 +1834,17 @@ end
     Rails.cache = original_cache
   end
 
+  test "an unconfirmed auto-matched transfer keeps its category menu in the list" do
+    outflow = create_transaction(account: accounts(:depository), amount: 500, name: "PENDING_MATCH_OUT").transaction
+    inflow = create_transaction(account: accounts(:credit_card), amount: -500).transaction
+    Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(outflow, "category_menu_desktop")} turbo-frame#category_dropdown"
+  end
+
   # --- Preview-gated compact / group_by_date / per_page ---
 
   test "standard list renders when preview disabled even if compact pref set" do
