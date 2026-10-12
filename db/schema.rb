@@ -2317,8 +2317,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.index ["retirement_plan_id"], name: "index_retirement_plan_streams_on_retirement_plan_id"
     t.check_constraint "annual_amount > 0::numeric", name: "chk_retirement_plan_streams_amount"
     t.check_constraint "end_year IS NULL OR start_year IS NULL OR end_year >= start_year", name: "chk_retirement_plan_streams_years"
-    t.check_constraint "kind::text = ANY (ARRAY['expense'::character varying, 'income'::character varying, 'one_off'::character varying]::text[])", name: "chk_retirement_plan_streams_kind"
-    t.check_constraint "source::text = ANY (ARRAY['seeded_living_costs'::character varying, 'seeded_loan'::character varying, 'manual'::character varying]::text[])", name: "chk_retirement_plan_streams_source"
+    t.check_constraint "kind::text = ANY (ARRAY['expense'::character varying::text, 'income'::character varying::text, 'one_off'::character varying::text])", name: "chk_retirement_plan_streams_kind"
+    t.check_constraint "source::text = ANY (ARRAY['seeded_living_costs'::character varying::text, 'seeded_loan'::character varying::text, 'manual'::character varying::text])", name: "chk_retirement_plan_streams_source"
   end
 
   create_table "retirement_plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2339,7 +2339,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.check_constraint "end_age >= 50 AND end_age <= 120", name: "chk_retirement_plans_end_age"
     t.check_constraint "expected_annual_return > '-1'::integer::numeric AND expected_annual_return <= 1::numeric", name: "chk_retirement_plans_expected_annual_return"
     t.check_constraint "inflation_rate > '-1'::integer::numeric AND inflation_rate <= 1::numeric", name: "chk_retirement_plans_inflation_rate"
-    t.check_constraint "mode::text = ANY (ARRAY['traditional'::character varying, 'fire'::character varying]::text[])", name: "chk_retirement_plans_mode"
+    t.check_constraint "mode::text = ANY (ARRAY['traditional'::character varying::text, 'fire'::character varying::text])", name: "chk_retirement_plans_mode"
     t.check_constraint "safe_withdrawal_rate > 0::numeric AND safe_withdrawal_rate <= 1::numeric", name: "chk_retirement_plans_safe_withdrawal_rate"
     t.check_constraint "savings_rate IS NULL OR savings_rate >= 0::numeric AND savings_rate <= 1::numeric", name: "chk_retirement_plans_savings_rate"
   end
