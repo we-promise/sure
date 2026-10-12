@@ -278,7 +278,19 @@ class Transaction::Search
       wanted = Array(statuses) & ATTACHMENT_STATUSES
       return query unless wanted.one?
 
-      attached_sql = "EXISTS (SELECT 1 FROM active_storage_attachments asa WHERE asa.record_type = 'Transaction' AND asa.record_id = transactions.id AND asa.name = 'attachments')"
+      # Splitting leaves files on the hidden parent, so a split child counts
+      # as attached when its parent is.
+      attached_sql = <<~SQL.squish
+        EXISTS (
+          SELECT 1 FROM active_storage_attachments asa
+          WHERE asa.record_type = 'Transaction'
+            AND asa.name = 'attachments'
+            AND asa.record_id IN (
+              transactions.id,
+              (SELECT pe.entryable_id FROM entries pe WHERE pe.id = entries.parent_entry_id)
+            )
+        )
+      SQL
 
       wanted == [ "with" ] ? query.where(attached_sql) : query.where.not(attached_sql)
     end
