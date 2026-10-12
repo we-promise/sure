@@ -2,6 +2,8 @@ require "test_helper"
 
 class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
   setup do
+    Rails.configuration.x.lunchflow.stubs(:include_pending).returns(true)
+
     @family = families(:dylan_family)
     @item = LunchflowItem.create!(
       family: @family,
