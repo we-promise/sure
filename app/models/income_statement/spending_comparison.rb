@@ -6,6 +6,9 @@
 # Sankey nets them, so a refunded purchase doesn't count as spending. Totals
 # come from the user-scoped IncomeStatement, so transfers, exclusions and
 # account sharing follow the rest of Reports.
+#
+# as_json is the shared representation for the public API (for the mobile
+# app); the Reports section renders the same rows.
 class IncomeStatement::SpendingComparison
   BASELINE_LENGTH = 1.year
   # Below this much history before the period there is nothing meaningful to
@@ -70,6 +73,22 @@ class IncomeStatement::SpendingComparison
 
   def normal_total
     comparable? ? rows.sum { |row| row.normal || 0 } : nil
+  end
+
+  # Amounts are decimal strings in the family currency; ratio is a decimal
+  # string too (0.5 = 50% more than normal). A parent's own spending, booked on
+  # the parent rather than a subcategory, is listed among its subcategories
+  # with the parent's id, so the subcategories add up to the parent.
+  def as_json(*)
+    {
+      currency: income_statement.family.currency,
+      period: period_json(period),
+      baseline_period: baseline_period && period_json(baseline_period),
+      comparable: comparable?,
+      total: decimal(total),
+      normal_total: normal_total && decimal(normal_total),
+      categories: rows.map { |row| row_json(row).merge(subcategories: row.subcategories.map { |sub| row_json(sub) }) }
+    }
   end
 
   private
@@ -146,6 +165,27 @@ class IncomeStatement::SpendingComparison
 
     def positive(value)
       [ value || 0, 0 ].max
+    end
+
+    def row_json(row)
+      {
+        id: row.category.id,
+        name: row.category.name,
+        color: row.category.color,
+        filter_value: row.category.filter_value,
+        total: decimal(row.total),
+        normal: row.normal && decimal(row.normal),
+        change: row.change && decimal(row.change),
+        ratio: row.ratio && decimal(row.ratio.round(4))
+      }
+    end
+
+    def period_json(p)
+      { start_date: p.start_date.iso8601, end_date: p.end_date.iso8601 }
+    end
+
+    def decimal(value)
+      value.to_d.to_s("F")
     end
 
     def key_for(category)

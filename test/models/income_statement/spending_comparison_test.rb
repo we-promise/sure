@@ -38,6 +38,37 @@ class IncomeStatement::SpendingComparisonTest < ActiveSupport::TestCase
     assert_not comparison.rows.any? { |r| r.category == @salary }, "income categories are not spending"
   end
 
+  test "as_json gives decimal strings, filter values and the parent's own spending" do
+    12.times { |i| create_transaction(account: @account, date: @baseline_start + i.months + 3.days, amount: 100, category: @groceries) }
+    create_transaction(account: @account, date: Date.new(2026, 9, 5), amount: 150, category: @groceries)
+    create_transaction(account: @account, date: Date.new(2026, 9, 12), amount: 50, category: @food)
+
+    json = comparison(history_start: @baseline_start).as_json
+    food = json[:categories].find { |c| c[:id] == @food.id }
+
+    assert_equal @family.currency, json[:currency]
+    assert_equal({ start_date: "2026-09-01", end_date: "2026-09-30" }, json[:period])
+    assert json[:comparable]
+    assert_equal "200.0", food[:total]
+    assert_equal "Food", food[:filter_value]
+    assert_kind_of String, food[:normal]
+    assert_kind_of String, food[:ratio]
+    assert_equal [ [ @groceries.id, "150.0" ], [ @food.id, "50.0" ] ], food[:subcategories].map { |s| [ s[:id], s[:total] ] }
+  end
+
+  test "as_json without history has no normal" do
+    create_transaction(account: @account, date: Date.new(2026, 9, 5), amount: 80, category: nil)
+
+    json = comparison.as_json
+    uncategorized = json[:categories].sole
+
+    assert_not json[:comparable]
+    assert_nil json[:baseline_period]
+    assert_nil json[:normal_total]
+    assert_nil uncategorized[:normal]
+    assert_equal Category::UNCATEGORIZED_FILTER_VALUE, uncategorized[:filter_value]
+  end
+
   test "normal is the year before the period, scaled to the period's length" do
     12.times { |i| create_transaction(account: @account, date: @baseline_start + i.months + 3.days, amount: 100, category: @groceries) }
     create_transaction(account: @account, date: Date.new(2026, 9, 5), amount: 300, category: @groceries)
