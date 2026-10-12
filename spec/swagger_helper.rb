@@ -53,6 +53,58 @@ RSpec.configure do |config|
           }
         },
         schemas: {
+          SplitRequest: {
+            type: :object,
+            required: %w[split],
+            properties: {
+              split: {
+                type: :object,
+                required: %w[splits],
+                properties: {
+                  splits: {
+                    type: :array,
+                    minItems: 1,
+                    description: 'Child transactions. Amounts must sum exactly to the parent amount.',
+                    items: {
+                      type: :object,
+                      required: %w[amount],
+                      properties: {
+                        name: { type: :string, nullable: true, description: 'Defaults to the parent name when omitted' },
+                        amount: { type: :string, description: 'Same sign convention as the transaction amount' },
+                        category_id: { type: :string, nullable: true },
+                        excluded: { type: :boolean, nullable: true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          Split: {
+            type: :object,
+            required: %w[transaction_id amount amount_decimal amount_cents currency children],
+            properties: {
+              transaction_id: { type: :string },
+              amount: { type: :string, description: 'Formatted parent amount, rounded for display' },
+              amount_decimal: { type: :string, description: 'Exact stored amount; children must sum to this' },
+              amount_cents: { type: :integer, description: 'Absolute amount in minor units' },
+              currency: { type: :string },
+              children: { type: :array, items: { '$ref' => '#/components/schemas/SplitChild' } }
+            }
+          },
+          SplitChild: {
+            allOf: [
+              { '$ref' => '#/components/schemas/Transaction' },
+              {
+                type: :object,
+                required: %w[amount_decimal excluded],
+                properties: {
+                  amount_decimal: { type: :string, description: 'Exact stored amount; send this back when replacing the split' },
+                  excluded: { type: :boolean, description: 'Whether this child is excluded from totals' }
+                }
+              }
+            ]
+          },
           Pagination: {
             type: :object,
             required: %w[page per_page total_count total_pages],
@@ -695,13 +747,15 @@ RSpec.configure do |config|
           },
           Rule: {
             type: :object,
-            required: %w[id resource_type active conditions actions created_at updated_at],
+            required: %w[id resource_type active position stop_processing conditions actions created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string, nullable: true },
               resource_type: { type: :string, enum: %w[transaction] },
               active: { type: :boolean },
               effective_date: { type: :string, format: :date, nullable: true },
+              position: { type: :integer, description: 'Run order within the family; rules run from the lowest position up and the top rule wins per attribute' },
+              stop_processing: { type: :boolean, description: 'When true, rules further down do not change transactions this rule matches' },
               conditions: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/RuleCondition' }
