@@ -406,13 +406,14 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
 
   # --- unidentified card hold tests ---
 
-  test "unidentified_hold? detects masked card descriptors in merchant or description" do
-    assert LunchflowEntry::Processor.unidentified_hold?(merchant: "474836xxxxxx6879 003015315475")
-    assert LunchflowEntry::Processor.unidentified_hold?(merchant: "474836XXXXXX6879")
+  test "unidentified_hold? detects masked card descriptors in merchant or description only when id is blank" do
+    assert LunchflowEntry::Processor.unidentified_hold?(id: nil, merchant: "474836xxxxxx6879 003015315475")
+    assert LunchflowEntry::Processor.unidentified_hold?(id: "", merchant: "474836XXXXXX6879")
     assert LunchflowEntry::Processor.unidentified_hold?(merchant: "474836******6879")
     assert LunchflowEntry::Processor.unidentified_hold?(merchant: nil, description: "474836xxxxxx6879 003015315475")
     assert LunchflowEntry::Processor.unidentified_hold?(merchant: "", description: "474836xxxxxx6879")
 
+    assert_not LunchflowEntry::Processor.unidentified_hold?(id: "lf_123", merchant: "474836xxxxxx6879 003015315475")
     assert_not LunchflowEntry::Processor.unidentified_hold?(merchant: "Uber", description: "474836xxxxxx6879")
     assert_not LunchflowEntry::Processor.unidentified_hold?(merchant: "Amazon", description: "Order 123")
     assert_not LunchflowEntry::Processor.unidentified_hold?(merchant: "Card 123", description: nil)
@@ -445,8 +446,27 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, result.entryable.extra.dig("lunchflow", "pending")
   end
 
-  test "skips creating pending hold when posted version exists even though names diverge" do
-    # Posted transaction arrived first with real merchant name "BILLA" and amount -14.97 (negative = expense in Lunchflow)
+  test "claims pending hold when settled transaction arrives and skips re-importing the claimed hold on next sync" do
+    # 1. Pending card hold arrives first with masked card number and inverted positive amount
+    hold_data = {
+      id: "",
+      accountId: 456,
+      amount: 14.97,
+      currency: "EUR",
+      date: "2025-01-19",
+      merchant: "474836xxxxxx6879 003015315475",
+      description: "474836xxxxxx6879 003015315475"
+    }
+
+    hold_entry = LunchflowEntry::Processor.new(
+      hold_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil hold_entry
+    assert hold_entry.entryable.pending?
+
+    # 2. Settled transaction arrives with real merchant name "BILLA" and amount -14.97 (negative = expense in Lunchflow)
     posted_data = {
       id: "lf_txn_posted_billa",
       accountId: 456,
@@ -463,28 +483,96 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
       lunchflow_account: @lunchflow_account
     ).process
 
-    assert_not_nil posted_entry
+    assert_equal hold_entry.id, posted_entry.id, "Posted transaction must claim the pending hold"
     assert_equal "lunchflow_lf_txn_posted_billa", posted_entry.external_id
+    assert_not posted_entry.entryable.reload.pending?
 
-    # Pending card hold arrives later with masked card number and inverted positive amount
+    # 3. Cached hold in raw_transactions_payload is re-processed on subsequent sync
+    reprocessed_hold = LunchflowEntry::Processor.new(
+      hold_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_equal posted_entry.id, reprocessed_hold.id, "Claimed hold must match the posted entry that claimed it"
+    assert_equal 1, @account.entries.where(source: "lunchflow").count
+  end
+
+  test "does not skip unidentified hold when an unrelated posted purchase has the same amount and date" do
+    # Unrelated posted purchase arrived first without claiming any hold
+    unrelated_posted = {
+      id: "lf_txn_unrelated",
+      accountId: 456,
+      amount: -14.97,
+      currency: "EUR",
+      date: "2025-01-20",
+      merchant: "BILLA",
+      description: "Earlier purchase",
+      isPending: false
+    }
+
+    posted_entry = LunchflowEntry::Processor.new(
+      unrelated_posted,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    # New unidentified hold for the same amount arrives
     hold_data = {
       id: "",
       accountId: 456,
       amount: 14.97,
       currency: "EUR",
-      date: "2025-01-19",
+      date: "2025-01-20",
       merchant: "474836xxxxxx6879 003015315475",
       description: "474836xxxxxx6879 003015315475"
     }
 
-    result = LunchflowEntry::Processor.new(
+    hold_entry = LunchflowEntry::Processor.new(
       hold_data,
       lunchflow_account: @lunchflow_account
     ).process
 
-    # Must match the existing posted version and skip duplicate creation
-    assert_equal posted_entry.id, result.id, "Hold must match existing posted entry despite diverging names"
-    assert_equal "lunchflow_lf_txn_posted_billa", result.external_id
-    assert_equal 1, @account.entries.where(source: "lunchflow").count
+    assert_not_equal posted_entry.id, hold_entry.id, "Unrelated posted purchase must not suppress a new hold"
+    assert hold_entry.entryable.pending?
+    assert_equal 2, @account.entries.where(source: "lunchflow").count
+  end
+
+  test "find_existing_posted_version excludes pending entries that have a real provider ID" do
+    # Pending entry that happened to have a real provider ID
+    pending_with_id = {
+      id: "lf_pending_real_id",
+      accountId: 456,
+      amount: -25.00,
+      currency: "EUR",
+      date: "2025-01-20",
+      merchant: "Coffee Shop",
+      description: "Coffee",
+      isPending: true
+    }
+
+    first_entry = LunchflowEntry::Processor.new(
+      pending_with_id,
+      lunchflow_account: @lunchflow_account
+    ).process
+    assert first_entry.entryable.pending?
+
+    # Second pending entry without ID for the same merchant and amount
+    pending_without_id = {
+      id: "",
+      accountId: 456,
+      amount: -25.00,
+      currency: "EUR",
+      date: "2025-01-20",
+      merchant: "Coffee Shop",
+      description: "Coffee",
+      isPending: true
+    }
+
+    second_entry = LunchflowEntry::Processor.new(
+      pending_without_id,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_equal first_entry.id, second_entry.id, "Pending entry with real ID must not be treated as a posted version"
+    assert_equal 2, @account.entries.where(source: "lunchflow").count
   end
 end

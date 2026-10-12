@@ -8,13 +8,16 @@ class LunchflowEntry::Processor
   # commonly returned by certain ASPSPs for unfinalized card holds.
   MASKED_CARD_DESCRIPTOR = /\A\d{4,6}[xX*]{4,8}\d{4}(?:\s+\d+)?\z/
 
-  # True when the transaction's merchant or description matches a masked card authorization descriptor.
-  # Certain institutions expose unfinalized card holds with masked card
+  # True when the transaction lacks a provider ID and its merchant or description
+  # matches a masked card authorization descriptor.
+  # Certain institutions expose unfinalized card holds with blank IDs, masked card
   # numbers instead of merchant names, and sometimes with inverted signs.
   #
   # @return [Boolean]
   def self.unidentified_hold?(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
+    return false if data[:id].present?
+
     merchant_name = data[:merchant].to_s.strip
     description = data[:description].to_s.strip
 
@@ -41,10 +44,10 @@ class LunchflowEntry::Processor
       return nil
     end
 
-    # If this is a pending transaction (with a temporary ID or an unidentified hold),
-    # check if a posted version already exists. This prevents duplicate entries when posted
-    # transactions arrive before pending ones.
-    if is_pending? && (external_id.start_with?("lunchflow_pending_") || self.class.unidentified_hold?(data))
+    # If this is a pending transaction with a temporary ID, check if a posted version already exists.
+    # This prevents duplicate entries when posted transactions arrive before pending ones, or when
+    # a stored hold snapshot is re-processed after a posted transaction has claimed it.
+    if is_pending? && external_id.start_with?("lunchflow_pending_")
       existing_posted = find_existing_posted_version
       if existing_posted
         Rails.logger.info "LunchflowEntry::Processor - Skipping pending transaction (posted version already exists): pending=#{external_id}, posted=#{existing_posted.external_id}"
@@ -267,24 +270,32 @@ class LunchflowEntry::Processor
     # Find an existing posted version of this pending transaction
     # Matches by: exact amount, currency, merchant name (if present), and date window
     # Uses same 8-day window as Account::ProviderImportAdapter reconciliation logic
-    # Note: Lunchflow never provides real IDs for pending transactions (they're always blank),
-    # so filtering by external_id NOT LIKE 'lunchflow_pending_%' is sufficient to exclude pending entries
     def find_existing_posted_version
       return nil unless account.present?
 
       query = account.entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(source: "lunchflow")
         .where(amount: amount)
         .where(currency: currency)
-        .where("date BETWEEN ? AND ?", date, date + 8)
-        .where("external_id NOT LIKE 'lunchflow_pending_%'")
-        .where("external_id IS NOT NULL")
+        .where("entries.date BETWEEN ? AND ?", date, date + 8)
+        .where("entries.external_id NOT LIKE 'lunchflow_pending_%'")
+        .where("entries.external_id IS NOT NULL")
         .where.not(external_id: external_id)
-        .order(date: :asc) # Closest date first (prefer same-day posted, then next day, etc.)
+        .where(Transaction.not_pending_sql("transactions", providers: "lunchflow"))
+        .order("entries.date ASC") # Closest date first (prefer same-day posted, then next day, etc.)
 
-      # Add merchant name matching for better precision
-      # Only if merchant name is present in the transaction data and it's not an unidentified hold
-      if data[:merchant].present? && !self.class.unidentified_hold?(data)
+      if self.class.unidentified_hold?(data)
+        # An unidentified hold has a masked-card descriptor instead of the real merchant name.
+        # Only match a posted entry if it explicitly claimed this hold's external_id during
+        # pending→posted reconciliation, preventing unrelated same-amount purchases from
+        # suppressing an active hold.
+        query = query.where(
+          "transactions.extra -> 'auto_claimed_pending_ids' @> ?",
+          [ external_id ].to_json
+        )
+      elsif data[:merchant].present?
+        # Add merchant name matching for better precision when merchant name is present
         query = query.where(name: name)
       end
 
