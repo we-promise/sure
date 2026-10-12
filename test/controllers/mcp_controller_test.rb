@@ -330,6 +330,27 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools stay available to external agents when the in-app assistant is off" do
+    @user.family.update!(assistant_type: "mcp_only")
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      assert_equal Assistant.function_classes(@user).size,
+                   JSON.parse(response.body)["result"]["tools"].size
+
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "get_accounts", arguments: {} }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_not result["isError"]
+      assert JSON.parse(result["content"][0]["text"]).key?("accounts")
+    end
+  end
+
   test "tools/list accepts and echoes a valid MCP session id" do
     with_mcp_cache do
       with_mcp_env do

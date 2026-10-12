@@ -34,7 +34,11 @@ class Family < ApplicationRecord
 
 
   MONIKERS = [ "Family", "Group" ].freeze
-  ASSISTANT_TYPES = %w[builtin external].freeze
+  # `mcp_only` removes the in-app assistant (chat, sidebar, chat-seeding
+  # buttons) without touching MCP: /mcp serves the same tool registry to
+  # external agents whatever this says. "Off" stays free for a future
+  # no-LLM-at-all switch; categorization still runs under `mcp_only`.
+  ASSISTANT_TYPES = %w[builtin external mcp_only].freeze
 
   # Which provider categorizes this family's transactions. Family-level rather
   # than a global Setting because it decides whose transaction descriptions get
@@ -169,6 +173,16 @@ class Family < ApplicationRecord
   # settings UI can never disagree about which provider is actually in force.
   def effective_categorization_provider
     ENV["CATEGORIZATION_PROVIDER"].presence || categorization_provider
+  end
+
+  # ENV-over-column precedence for the assistant, same shape as the provider
+  # above. Unknown ENV values pass through; callers treat them as builtin.
+  def effective_assistant_type
+    ENV["ASSISTANT_TYPE"].presence || assistant_type.presence || "builtin"
+  end
+
+  def assistant_enabled?
+    effective_assistant_type != "mcp_only"
   end
 
   # The provider that will actually categorize this family's transactions,
