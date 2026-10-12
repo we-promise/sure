@@ -981,6 +981,42 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_not_includes tool_call.keys, :extra_content
   end
 
+  test "build_generic_messages replays each tool round as its own assistant/tool pair" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    extra = { "google" => { "thought_signature" => "sig_round_2" } }
+    round_1 = [
+      { call_id: "call_a", name: "get_accounts", arguments: "{}", output: { "accounts" => [] }, round: 1 }
+    ]
+    round_2 = [
+      { call_id: "call_b", name: "get_categories", arguments: "{}", output: { "categories" => [] }, round: 2 },
+      { call_id: "call_c", name: "get_tags", arguments: "{}", output: { "tags" => [] }, extra_content: extra, round: 2 }
+    ]
+
+    build = ->(function_results) do
+      provider.send(:build_generic_messages, prompt: "hi", instructions: "system", function_results: function_results)
+    end
+    second_request = build.call(round_1)
+    third_request = build.call(round_1 + round_2)
+
+    # Each follow-up request must extend the previous one so prefix caches stay valid.
+    assert_equal second_request, third_request.first(second_request.size)
+
+    shape = third_request.map do |message|
+      message[:tool_calls] ? message[:tool_calls].map { |call| call[:id] } : message[:tool_call_id] || message[:role]
+    end
+    assert_equal [ "system", "user", [ "call_a" ], "call_a", [ "call_b", "call_c" ], "call_b", "call_c" ], shape
+
+    round_2_calls = third_request[4][:tool_calls]
+    assert_not round_2_calls.first.key?(:extra_content)
+    assert_equal extra, round_2_calls.last[:extra_content]
+    assert_not_includes third_request.to_json, "\"round\":", "the round tag must not leak into the request"
+  end
+
   private
     # Verify the response budget at the provider-to-processor boundary.
     # @param limit [Integer, nil] expected explicit cap or omitted cap

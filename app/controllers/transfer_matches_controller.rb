@@ -3,7 +3,7 @@ class TransferMatchesController < ApplicationController
 
   def new
     @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
-    @transfer_match_candidates = @entry.transaction.transfer_match_candidates
+    @transfer_match_candidates = writable_transfer_match_candidates
   end
 
   def create
@@ -15,19 +15,7 @@ class TransferMatchesController < ApplicationController
     @transfer = build_transfer
     Transfer.transaction do
       @transfer.save!
-
-      # Use DESTINATION (inflow) account for kind, matching Transfer::Creator logic
-      destination_account = @transfer.inflow_transaction.entry.account
-      outflow_kind = Transfer.kind_for_account(destination_account)
-      outflow_attrs = { kind: outflow_kind }
-
-      if outflow_kind == "investment_contribution"
-        category = destination_account.family.investment_contributions_category
-        outflow_attrs[:category] = category if category.present? && @transfer.outflow_transaction.category_id.blank?
-      end
-
-      @transfer.outflow_transaction.update!(outflow_attrs)
-      @transfer.inflow_transaction.update!(kind: "funds_movement")
+      @transfer.confirm!
     end
 
     @transfer.sync_account_later
@@ -38,6 +26,20 @@ class TransferMatchesController < ApplicationController
   private
     def set_entry
       @entry = Current.accessible_entries.find(params[:transaction_id])
+    end
+
+    # Family-wide candidates, limited to counterparts in accounts the user can
+    # write to (create would reject the others anyway).
+    def writable_transfer_match_candidates
+      candidates = @entry.transaction.transfer_match_candidates
+      counterpart_id = ->(candidate) { @entry.amount.negative? ? candidate.outflow_transaction_id : candidate.inflow_transaction_id }
+
+      writable_counterpart_ids = Entry
+        .where(entryable_type: "Transaction", entryable_id: candidates.map(&counterpart_id), account_id: @accounts.map(&:id))
+        .pluck(:entryable_id)
+        .to_set
+
+      candidates.select { |candidate| writable_counterpart_ids.include?(counterpart_id.call(candidate)) }
     end
 
     def transfer_match_params

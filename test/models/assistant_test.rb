@@ -213,7 +213,8 @@ class AssistantTest < ActiveSupport::TestCase
       [ first_tools ],
       [ second_tools ],
       [ final_text, final_response ],
-      expected_function_result_ids: [ [], [ "1" ], [ "1", "2", "3" ] ]
+      expected_function_result_ids: [ [], [ "1" ], [ "1", "2", "3" ] ],
+      expected_function_result_rounds: [ [], [ 1 ], [ 1, 2, 2 ] ]
     )
 
     assert_difference "AssistantMessage.count", 1 do
@@ -710,9 +711,10 @@ class AssistantTest < ActiveSupport::TestCase
       )
     end
 
-    def expect_provider_rounds(*rounds, expected_function_result_ids: nil)
+    def expect_provider_rounds(*rounds, expected_function_result_ids: nil, expected_function_result_rounds: nil)
       queued_rounds = rounds.dup
       queued_result_ids = expected_function_result_ids&.dup
+      queued_result_rounds = expected_function_result_rounds&.dup
       responses = rounds.map do |chunks|
         response_chunk = chunks.find { |chunk| chunk.type == "response" }
         provider_success_response(response_chunk.data)
@@ -724,6 +726,9 @@ class AssistantTest < ActiveSupport::TestCase
         assert_equal @expected_conversation_history, options[:messages]
         if queued_result_ids
           assert_equal queued_result_ids.shift, options[:function_results].map { |result| result[:call_id] }
+        end
+        if queued_result_rounds
+          assert_equal queued_result_rounds.shift, options[:function_results].map { |result| result[:round] }
         end
         chunks = queued_rounds.shift
         chunks.each { |chunk| options[:streamer].call(chunk) }
