@@ -126,6 +126,25 @@ class Goal::WithdrawalDetectorTest < ActiveSupport::TestCase
     assert_equal [ entry.id ], detect.map(&:id)
   end
 
+  # A flag PostgreSQL cannot cast to boolean used to raise and take the whole
+  # panel down, hiding the posted outflow beside it too.
+  test "ignores an outflow whose pending flag PostgreSQL cannot cast" do
+    posted = outflow(1_000)
+    outflow(1_200).entryable.update!(extra: { "simplefin" => { "pending" => "maybe" } })
+
+    assert_equal [ posted.id ], detect.map(&:id)
+  end
+
+  # Transaction#pending? calls "no" pending, so the detector must not offer it.
+  test "ignores an outflow whose pending flag is \"no\", as Transaction#pending? does" do
+    posted = outflow(1_000)
+    flagged = outflow(1_200)
+    flagged.entryable.update!(extra: { "simplefin" => { "pending" => "no" } })
+
+    assert flagged.entryable.pending?
+    assert_equal [ posted.id ], detect.map(&:id)
+  end
+
   private
     def detect(limit: 3)
       Goal::WithdrawalDetector.new(@goal).unattributed_outflows(limit: limit)

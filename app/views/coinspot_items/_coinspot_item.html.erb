@@ -1,4 +1,4 @@
-<%# locals: (coinspot_item:, unlinked_count: coinspot_item.unlinked_accounts_count) %>
+<%# locals: (coinspot_item:, unlinked_count: coinspot_item.unlinked_accounts_count, visible_accounts:) %>
 
 <%= tag.div id: dom_id(coinspot_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -77,9 +77,9 @@
 
     <% unless coinspot_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if coinspot_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: coinspot_item.accounts %>
-          <% coinspot_item.stale_rate_accounts.each do |coinspot_account| %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+          <% coinspot_item.stale_rate_accounts.where(accounts: { id: visible_accounts.map(&:id) }).each do |coinspot_account| %>
             <div class="flex items-center gap-2 text-xs text-warning px-1">
               <span class="font-mono">~</span>
               <%= icon "triangle-alert", size: "sm" %>
@@ -89,7 +89,7 @@
         <% end %>
 
         <% stats = coinspot_item.syncs.ordered.first&.sync_stats || {} %>
-        <%= render ProviderSyncSummary.new(stats: stats, provider_item: coinspot_item) %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: coinspot_item, show_account_details: visible_accounts.size == coinspot_item.accounts.size) %>
 
         <% if unlinked_count.to_i > 0 && coinspot_item.accounts.empty? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">

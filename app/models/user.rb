@@ -653,6 +653,14 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_section_layout", section_key, "height")
   end
 
+  CASHFLOW_SANKEY_GROUPINGS = IncomeStatement::CashFlowGraph::GROUPINGS.keys.freeze
+
+  # Preview cash-flow Sankey: flows by category (default) or through each account.
+  def cashflow_sankey_group_by
+    group_by = preferences&.dig("cashflow_sankey_group_by")
+    CASHFLOW_SANKEY_GROUPINGS.include?(group_by) ? group_by : "category"
+  end
+
   # Per-widget column-span override ("single" | "full"); nil = use default.
   def dashboard_section_width(section_key)
     preferences&.dig("dashboard_section_layout", section_key, "col_span")
