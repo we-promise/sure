@@ -511,16 +511,17 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
       end
     end
 
-    per_series_rule_queries = queries.grep(
-      /FROM "recurrence_rules" WHERE "recurrence_rules"\."recurring_transaction_id" = \$1/
-    )
-    per_series_account_queries = queries.grep(
-      /SELECT "accounts"\.\* FROM "accounts" WHERE "accounts"\."id" = \$1 LIMIT/
-    )
+    # One batched preload is fine; a query per claimed series is the N+1.
+    rule_queries = queries.grep(/FROM "recurrence_rules"/)
+    account_queries = queries.grep(/SELECT "accounts"\.\* FROM "accounts" WHERE "accounts"\."id"/)
 
-    assert_empty per_series_rule_queries
-    assert_empty per_series_account_queries
-    assert_equal [ 3 ], @family.recurring_transactions.where(name: names).pluck(:occurrence_count).uniq
+    assert_operator rule_queries.size, :<=, 1, "recurrence_rules loaded per series:\n#{rule_queries.join("
+")}"
+    assert_operator account_queries.size, :<=, 1, "accounts loaded per series:\n#{account_queries.join("
+")}"
+    @family.recurring_transactions.where(name: names).each do |recurring|
+      assert_equal 3, recurring.occurrence_count
+    end
   end
 
   test "updates manual recurring variance without per-recurring entry lookups" do
