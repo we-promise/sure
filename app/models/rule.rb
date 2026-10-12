@@ -86,6 +86,14 @@ class Rule < ApplicationRecord
     scope.where.not("transactions.id = ANY(?::uuid[])", PG::TextEncoder::Array.new.encode(ids.to_a))
   end
 
+  # Active rules that run before this one. "Apply rule" runs them first, so
+  # the result matches the full run.
+  def active_rules_above
+    ordered_ids = family.rules.ordered.pluck(:id)
+    above_ids = ordered_ids.take_while { |id| id != self.id }
+    family.rules.where(id: above_ids, active: true).ordered
+  end
+
   # The given transactions without re-checking the conditions, so they stay
   # the same set while the actions change the fields the conditions read.
   def scope_for_transaction_ids(ids)

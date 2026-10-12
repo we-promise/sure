@@ -1,6 +1,5 @@
-# Applies a single rule ("Apply rule" in the UI). Rules above it still count, so
-# it respects "top rule wins" and "stop processing". They are matched against
-# the current data, not executed first (see Rule::Runner).
+# Applies a single rule ("Apply rule" in the UI). The active rules above it run
+# first, so the result is the same as in the full run (see Rule::Runner).
 class RuleJob < ApplicationJob
   queue_as :medium_priority
 
@@ -13,9 +12,11 @@ class RuleJob < ApplicationJob
       execution_type: execution_type,
       ignore_attribute_locks: ignore_attribute_locks
     )
-    runner.run
+    rule_runs = runner.run
 
     # The RuleRun records the failure; re-raise so the job is marked failed.
-    raise runner.errors.first if runner.errors.any?
+    # A failing rule above is only recorded, because a retry would re-run all
+    # rules above as well. The applied rule runs last, so its error is last.
+    raise runner.errors.last if rule_runs.last&.status == "failed"
   end
 end

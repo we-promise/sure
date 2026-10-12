@@ -433,6 +433,27 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_match "~typesafe/jev-latest", response.body
   end
 
+  test "confirm says the active rules above run first" do
+    family = @user.family
+    family.rules.destroy_all
+    build = ->(name, active) do
+      family.rules.create!(name: name, resource_type: "transaction", active: active,
+        actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+    build.call("Active above", true)
+    build.call("Inactive above", false)
+    rule = build.call("Applied", true)
+    build.call("Below", true)
+
+    get confirm_rule_url(rule)
+    assert_response :success
+    assert_match I18n.t("rules.confirm.rules_above_notice", count: 1), response.body
+
+    get confirm_rule_url(family.rules.find_by!(name: "Active above"))
+    assert_response :success
+    assert_no_match "run first", response.body
+  end
+
   test "confirm does not name Jev when the family has not selected it" do
     rule = rules(:one)
     rule.actions.create!(action_type: "auto_categorize")

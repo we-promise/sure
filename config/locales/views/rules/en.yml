@@ -52,6 +52,9 @@ en:
       title: Confirm changes
       title_with_name: "Confirm changes to \"%{name}\""
       apply_notice_html: "You are about to apply this rule to <span class=\"text-primary font-medium\">%{count} %{resource}</span> that meet the specified rule criteria.  Please confirm if you wish to proceed with this change."
+      rules_above_notice:
+        one: The active rule above it runs first, so the result is the same as in the full run.
+        other: The %{count} active rules above it run first, so the result is the same as in the full run.
       ai_cost_title: AI Cost Estimation
       ai_cost_with_estimate_html: "This will use AI to categorize %{count} transaction(s). Estimated cost: <span class=\"font-semibold\">~$%{cost}</span>"
       ai_cost_no_estimate_html: "This will use AI to categorize %{count} transaction(s)."

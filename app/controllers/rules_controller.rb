@@ -58,6 +58,7 @@ class RulesController < ApplicationController
   end
 
   def confirm
+    @active_rules_above_count = @rule.active_rules_above.count
     # Compute provider, model, and cost estimation for auto-categorize actions
     if @rule.actions.any? { |a| a.action_type == "auto_categorize" }
       @selected_model, @estimated_cost = auto_categorize_estimate(@rule)

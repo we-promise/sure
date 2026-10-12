@@ -6,12 +6,11 @@
 # - Stop processing: a transaction matched by a rule with stop_processing is not
 #   touched by any rule further down.
 #
-# Rules above the ones to execute are only matched (not executed), so applying a
-# single rule keeps the fields and transactions they claim or stop. They are
-# matched against the data as it is now: changes a rule above would make in a
-# full run (e.g. a rename another condition depends on) are not simulated, so
-# the result can differ from the full run until the rules above have run.
+# Active rules above the ones requested run first, in order, so applying a
+# single rule gives the same result as its turn in the full run (e.g. it sees
+# a rename a rule above makes). Rules below the last requested rule don't run.
 # Inactive rules above are skipped because they don't run nightly either.
+# ignore_attribute_locks only applies to the requested rules.
 #
 # One run per family at a time, guarded by a PostgreSQL advisory lock. A busy
 # lock raises LockBusy so the calling job can retry instead of dropping the run.
@@ -56,21 +55,13 @@ class Rule::Runner
         break if remaining_ids.empty?
 
         if remaining_ids.delete?(rule.id)
-          rule_runs << execute(rule)
+          rule_runs << execute(rule, ignore_attribute_locks: ignore_attribute_locks)
         elsif rule.active?
-          match_without_executing(rule)
+          rule_runs << execute(rule, ignore_attribute_locks: false)
         end
       end
 
       rule_runs
-    end
-
-    # A rule above that cannot even be matched claims nothing; it must not
-    # keep the rules below it from running.
-    def match_without_executing(rule)
-      record_claims(rule, unstopped_scope(rule).pluck(:id))
-    rescue => e
-      Rails.logger.error("Rule::Runner could not match rule #{rule.id}: #{e.class}: #{e.message}")
     end
 
     def unstopped_scope(rule)
@@ -96,7 +87,7 @@ class Rule::Runner
       []
     end
 
-    def execute(rule)
+    def execute(rule, ignore_attribute_locks:)
       executed_at = Time.current
       matched_ids = []
       rule_run = nil

@@ -105,15 +105,37 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal @dining, @whole_foods.reload.category
   end
 
-  test "applying a single rule respects the rules above it" do
-    create_rule("Top", "Whole Foods", category: @groceries)
+  test "applying a single rule runs the active rules above it first" do
+    top = create_rule("Top", "Whole Foods", category: @groceries)
     bottom = create_rule("Bottom", "Whole Foods", category: @dining)
 
-    Rule::Runner.new(@family, rules: [ bottom ], execution_type: "manual").run
+    runs = Rule::Runner.new(@family, rules: [ bottom ], execution_type: "manual").run
 
-    # The top rule was only matched, not executed
-    assert_nil @whole_foods.reload.category
-    assert_equal 1, bottom.rule_runs.count
+    # Same as the full run: the top rule sets the category and wins
+    assert_equal @groceries, @whole_foods.reload.category
+    assert_equal [ top, bottom ], runs.map(&:rule)
+  end
+
+  test "applying a single rule does not run the rules below it" do
+    top = create_rule("Top", "Whole Foods", category: @groceries)
+    create_rule("Bottom", "Hardware", category: @dining)
+
+    Rule::Runner.new(@family, rules: [ top ], execution_type: "manual").run
+
+    assert_equal @groceries, @whole_foods.reload.category
+    assert_nil @other.reload.category
+  end
+
+  test "ignoring locks only applies to the applied rule, not the rules above" do
+    @whole_foods.entry.lock_attr!(:name)
+    create_rule("Top", "Whole Foods", name: "Renamed")
+    bottom = create_rule("Bottom", "Whole Foods", category: @dining)
+
+    Rule::Runner.new(@family, rules: [ bottom ], execution_type: "manual", ignore_attribute_locks: true).run
+
+    @whole_foods.reload
+    assert_equal "Whole Foods Market", @whole_foods.entry.name
+    assert_equal @dining, @whole_foods.category
   end
 
   test "applying a single rule respects stop processing above it" do
@@ -218,18 +240,24 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal @dining, @other.reload.category
   end
 
-  test "applying a single rule matches the rules above against the current data" do
+  test "applying a single rule sees the changes the rules above make" do
     create_rule("Rename", "Whole Foods", name: "Supermarket")
-    bottom = create_rule("Bottom", "Supermarket", category: @dining)
+    middle = create_rule("Middle", "Supermarket", category: @groceries)
+    create_rule("Catch-all", "o", category: @dining)
 
-    Rule::Runner.new(@family, rules: [ bottom ], execution_type: "manual").run
+    Rule::Runner.new(@family, rules: [ middle ], execution_type: "manual").run
 
-    # The rename above is not simulated, so the rule below does not see it yet
-    assert_nil @whole_foods.reload.category
+    @whole_foods.reload
+    single_result = [ @whole_foods.entry.name, @whole_foods.category ]
+    assert_equal [ "Supermarket", @groceries ], single_result
+    # The catch-all below the applied rule did not run
+    assert_nil @other.reload.category
 
     run_active_rules
 
-    assert_equal @dining, @whole_foods.reload.category
+    @whole_foods.reload
+    assert_equal single_result, [ @whole_foods.entry.name, @whole_foods.category ]
+    assert_equal @dining, @other.reload.category
   end
 
   test "a rule with a broken action does not stop the rules below" do
