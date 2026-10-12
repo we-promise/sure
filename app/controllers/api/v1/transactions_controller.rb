@@ -2,6 +2,7 @@
 
 class Api::V1::TransactionsController < Api::V1::BaseController
   include Pagy::Backend
+  include Api::V1::TransactionLookup
 
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
@@ -205,19 +206,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   private
 
     def set_transaction
-      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
-
-      family = current_resource_owner.family
-      @transaction = family.transactions
-        .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
-        .find(params[:id])
-      @entry = @transaction.entry
-    rescue ActiveRecord::RecordNotFound
-      render json: {
-        error: "not_found",
-        message: "Transaction not found"
-      }, status: :not_found
+      load_accessible_transaction(params[:id])
     end
 
     def ensure_read_scope
