@@ -13,6 +13,24 @@ class WiseEntry::Processor
     funds_credited credited
   ].freeze
 
+  # An expense if targetAccount does NOT match our Wise recipientId
+  # (i.e. money went TO an external account, not to us).
+  # An income if targetAccount == recipientId (money arrived at our Wise account).
+  # Falls back to status-based detection when no recipientId is stored.
+  def self.outgoing?(transfer, recipient_id:)
+    data = transfer.with_indifferent_access
+    if recipient_id.present?
+      return data[:targetAccount].to_s != recipient_id.to_s
+    end
+
+    # Status-based fallback
+    status = data[:status].to_s.downcase
+    return false if INCOMING_STATUSES.any? { |s| status.include?(s) }
+    return true  if OUTGOING_STATUSES.any? { |s| status.include?(s) }
+
+    true
+  end
+
   def initialize(wise_transaction, wise_account:)
     @wise_transaction = wise_transaction
     @wise_account = wise_account
@@ -55,15 +73,22 @@ class WiseEntry::Processor
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
     end
 
+    # Imports through the adapter; Wise's amount also reaches an entry a
+    # person acted on (WiseItem::AmountCorrection).
+    def import_entry(**attributes)
+      entry = import_adapter.import_transaction(**attributes)
+      WiseItem::AmountCorrection.apply(entry, amount: attributes[:amount], currency: attributes[:currency])
+    end
+
     def account
       @account ||= wise_account.current_account
     end
 
     def import_main_transaction
-      import_adapter.import_transaction(
+      import_entry(
         external_id: "wise_transfer_#{transfer_id}",
         amount: main_amount,
-        currency: source_currency,
+        currency: outgoing? ? source_currency : target_currency,
         date: date,
         name: name,
         source: "wise",
@@ -72,7 +97,7 @@ class WiseEntry::Processor
     end
 
     def import_fee_transaction
-      import_adapter.import_transaction(
+      import_entry(
         external_id: "wise_fee_#{transfer_id}",
         amount: fee,
         currency: source_currency,
@@ -126,23 +151,8 @@ class WiseEntry::Processor
       data[:targetCurrency].presence || wise_account.currency
     end
 
-    # An expense if targetAccount does NOT match our Wise recipientId
-    # (i.e. money went TO an external account, not to us).
-    # An income if targetAccount == recipientId (money arrived at our Wise account).
-    # Falls back to status-based detection when no recipientId is stored.
     def outgoing?
-      recipient_id = wise_account.raw_payload&.dig("recipient_id")
-
-      if recipient_id.present?
-        return data[:targetAccount].to_s != recipient_id.to_s
-      end
-
-      # Status-based fallback
-      status = data[:status].to_s.downcase
-      return false if INCOMING_STATUSES.any? { |s| status.include?(s) }
-      return true  if OUTGOING_STATUSES.any? { |s| status.include?(s) }
-
-      true
+      self.class.outgoing?(data, recipient_id: wise_account.raw_payload&.dig("recipient_id"))
     end
 
     def date
