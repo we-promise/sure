@@ -1771,6 +1771,7 @@ end
     get transactions_url(q: { attachment_status: [ "with" ] })
 
     assert_response :success
+    assert_select "#transaction-search-filters li p", text: "With attachment", count: 1
     assert_select "#entry_#{@entry.id}", count: 1
   end
 
@@ -1780,7 +1781,15 @@ end
     get transactions_url(q: { attachment_status: [ "without" ] })
 
     assert_response :success
+    assert_select "#transaction-search-filters li p", text: "Without attachment", count: 1
     assert_select "#entry_#{@entry.id}", count: 0
+  end
+
+  test "index offers the attachment filter in the filter menu" do
+    get transactions_url
+
+    assert_response :success
+    assert_select "#transaction-filters-menu input[type=checkbox][name='q[attachment_status][]']", count: 2
   end
 
   test "index ignores unsupported attachment_status values without rendering a badge" do
