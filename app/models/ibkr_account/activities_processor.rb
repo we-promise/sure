@@ -50,21 +50,34 @@ class IbkrAccount::ActivitiesProcessor
       date = trade_date_for(row)
       external_id = "ibkr_trade_#{row[:trade_id]}"
 
-      import_adapter.import_trade(
-        external_id: external_id,
-        security: security,
-        quantity: signed_quantity,
-        price: native_price,
-        amount: native_amount,
-        currency: currency,
-        date: date,
-        name: build_trade_name(security.ticker, signed_quantity),
-        source: "ibkr",
-        activity_label: buy_sell == "SELL" ? "Sell" : "Buy",
-        exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f
-      )
+      # The commission belongs to the trade: it goes into `trades.fee`, which
+      # the cost basis and the realized gain read, and into the entry's amount,
+      # which is what moves cash -- money out is positive, so it adds to a buy
+      # and takes from a sell's proceeds, as the manual trade form does.
+      commission = folded_commission(row, currency)
 
-      fees = import_commission_transaction(row, security, date) ? 1 : 0
+      Entry.transaction do
+        import_adapter.import_trade(
+          external_id: external_id,
+          security: security,
+          quantity: signed_quantity,
+          price: native_price,
+          amount: native_amount + (commission || 0),
+          currency: currency,
+          date: date,
+          name: build_trade_name(security.ticker, signed_quantity),
+          source: "ibkr",
+          activity_label: buy_sell == "SELL" ? "Sell" : "Buy",
+          exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f,
+          fee: commission || 0
+        )
+
+        # Imported before the commission moved onto the trade, this would now
+        # count it twice.
+        legacy_commission_entry(row)&.destroy! if commission
+      end
+
+      fees = commission.nil? && import_commission_transaction(row, security, date) ? 1 : 0
       { imported: true, fees: fees }
     rescue => e
       Rails.logger.error("IbkrAccount::ActivitiesProcessor - Failed to process trade #{row[:trade_id]}: #{e.message}")
@@ -109,6 +122,26 @@ class IbkrAccount::ActivitiesProcessor
     rescue => e
       Rails.logger.error("IbkrAccount::ActivitiesProcessor - Failed to process cash transaction #{row[:transaction_id]}: #{e.message}")
       false
+    end
+
+    # The commission as a positive fee in the trade's currency, or nil when it
+    # stays a transaction of its own: when there is none, when IBKR charged it
+    # in another currency or did not say which -- `trades.fee` is in the
+    # trade's, and the separate entry falls back to the account's -- or when the
+    # separate commission entry from an earlier import was edited or locked by
+    # the user, which a sync does not override.
+    def folded_commission(row, trade_currency)
+      commission = parse_decimal(row[:ib_commission])
+      return nil if commission.nil? || commission.zero?
+
+      return nil unless row[:ib_commission_currency].to_s.upcase == trade_currency
+      return nil if legacy_commission_entry(row)&.protected_from_sync?
+
+      commission.abs
+    end
+
+    def legacy_commission_entry(row)
+      account.entries.find_by(external_id: "ibkr_trade_fee_#{row[:trade_id]}", source: "ibkr")
     end
 
     def import_commission_transaction(row, security, date)
