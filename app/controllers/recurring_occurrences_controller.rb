@@ -118,7 +118,6 @@ class RecurringOccurrencesController < ApplicationController
       return scope if series.transfer?
 
       scope.where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
-        .merge(Transaction.excluding_pending_transfer_legs)
     end
 
     # Shared by both lists so they cannot disagree about which dates exist.

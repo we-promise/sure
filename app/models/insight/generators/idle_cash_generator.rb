@@ -34,8 +34,11 @@ class Insight::Generators::IdleCashGenerator < Insight::Generator
   private
     # Ordered so the pick is stable between runs — an unordered relation could
     # nudge a different pair of accounts each night, churning the feed.
+    #
+    # The feed is shared by the whole family and the insight names the account
+    # and its balance, so only accounts every active member can see qualify.
     def idle_accounts
-      family.accounts.visible
+      family.accounts.visible.accessible_by_all_active_members
         .where(accountable_type: "Depository", currency: family.currency)
         .where("balance >= ?", MIN_BALANCE)
         .where.not(id: Entry.where("date >= ?", IDLE_DAYS.days.ago.to_date).select(:account_id))

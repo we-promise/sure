@@ -36,7 +36,8 @@ module Family::AutoTransferMatchable
     outflow_transaction_id: nil,
     account_id: nil,
     include_rejected: true,
-    restrict_cross_currency_to_linked_accounts: false
+    restrict_cross_currency_to_linked_accounts: false,
+    require_common_writer: false
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -52,6 +53,7 @@ module Family::AutoTransferMatchable
         account_id:,
         include_rejected:,
         restrict_cross_currency_to_linked_accounts:,
+        require_common_writer:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
@@ -72,12 +74,11 @@ module Family::AutoTransferMatchable
       account_id: account&.id,
       include_rejected: false,
       exchange_rate_tolerance:,
-      restrict_cross_currency_to_linked_accounts: true
+      restrict_cross_currency_to_linked_accounts: true,
+      # Only pair accounts that at least one member can write to on both sides, so
+      # someone can always confirm or reject the match.
+      require_common_writer: true
     )
-    transaction_ids = candidates_scope.flat_map do |match|
-      [ match.inflow_transaction_id, match.outflow_transaction_id ]
-    end.uniq
-    transactions_by_id = Transaction.includes(entry: :account).where(id: transaction_ids).index_by(&:id)
 
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
@@ -88,14 +89,10 @@ module Family::AutoTransferMatchable
                used_transaction_ids.include?(match.outflow_transaction_id)
 
         # Skip this candidate when the transfer for this exact pair was not created
-        # (a concurrent sync claimed one of the transactions for a different pairing);
-        # marking it matched here would leave a transaction matched with no Transfer.
+        # (a concurrent sync claimed one of the transactions for a different pairing).
+        # A created transfer stays pending and leaves the transaction kinds untouched
+        # until the user confirms it (Transfer#confirm!).
         next unless find_or_create_transfer!(match)
-
-        # Auto-matched transfers start out "pending" and are purely a suggestion:
-        # the transaction `kind` (and any category assignment) is only applied
-        # once the user confirms the match, via Transfer#confirm!. This keeps
-        # budget/report totals and transaction display untouched until then.
 
         used_transaction_ids << match.inflow_transaction_id
         used_transaction_ids << match.outflow_transaction_id
@@ -160,6 +157,38 @@ module Family::AutoTransferMatchable
       raise ArgumentError, "exchange_rate_tolerance must be non-negative" if tolerance.negative?
 
       tolerance
+    end
+
+    # A family member who can write to (Account.writable_by) at least one side
+    # and to every side that has an owner, so someone can always unlink the
+    # match. An owner-less account (owner_id is nullified when its owner is
+    # removed from the family) does not block pairing: nobody can write to it,
+    # but the member on the other side can still reject the match. When the
+    # owner-less side is the outflow, the match can be rejected but not
+    # confirmed or edited, as before this condition existed.
+    def common_writer_condition_sql
+      <<~SQL.squish
+        (:require_common_writer = FALSE OR EXISTS (
+          SELECT 1 FROM users writers
+          WHERE
+            writers.family_id = :family_id AND
+            (inflow_accounts.owner_id IS NULL OR #{writer_can_write_sql("inflow_accounts")}) AND
+            (outflow_accounts.owner_id IS NULL OR #{writer_can_write_sql("outflow_accounts")}) AND
+            (#{writer_can_write_sql("inflow_accounts")} OR #{writer_can_write_sql("outflow_accounts")})
+        ))
+      SQL
+    end
+
+    # Mirrors Account.writable_by for the `writers` row: owner or full_control share.
+    def writer_can_write_sql(accounts_alias)
+      <<~SQL.squish
+        (writers.id = #{accounts_alias}.owner_id OR EXISTS (
+          SELECT 1 FROM account_shares writer_shares
+          WHERE writer_shares.account_id = #{accounts_alias}.id AND
+            writer_shares.user_id = writers.id AND
+            writer_shares.permission = 'full_control'
+        ))
+      SQL
     end
 
     # The second UNION branch below (cross-currency, FX-rate-tolerance matching) is a
@@ -238,7 +267,8 @@ module Family::AutoTransferMatchable
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
-            (:include_rejected = TRUE OR rejected_transfers.id IS NULL)
+            (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
+            #{common_writer_condition_sql}
           UNION ALL
           SELECT
             inflow_candidates.entryable_id AS inflow_transaction_id,
@@ -302,7 +332,8 @@ module Family::AutoTransferMatchable
             (
               :restrict_cross_currency_to_linked_accounts = FALSE OR
               (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")})
-            )
+            ) AND
+            #{common_writer_condition_sql}
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.match_rank ASC, transfer_match_candidates.date_diff ASC
       SQL

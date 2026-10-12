@@ -187,11 +187,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     # appearing under whatever category they retained (or under
     # Uncategorized once the matcher cleared the category). Filter
     # them out so the drilldown matches the aggregate.
-    #
-    # kind/category are only applied once the auto-matched transfer is
-    # confirmed (see Transfer#confirm!), so confirm it here to reach the
-    # same state this regression test is exercising.
-    outflow_entry = create_transaction(
+    create_transaction(
       date: @budget.start_date,
       account: accounts(:depository),
       amount: 500,
@@ -204,7 +200,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "BUG_1059_REPRO_INFLOW"
     )
     @family.auto_match_transfers!
-    outflow_entry.transaction.transfer.confirm!
+    Transfer.pending.find_each(&:confirm!)
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success
@@ -236,7 +232,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     # loan_payment is NOT in BUDGET_EXCLUDED_KINDS. The drilldown should
     # keep showing loan_payment transfers so the user can see what's
     # under Uncategorized (or whichever category they manually set).
-    outflow_entry = create_transaction(
+    create_transaction(
       date: @budget.start_date,
       account: accounts(:depository),
       amount: 500,
@@ -249,7 +245,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "MORTGAGE_REPRO_INFLOW"
     )
     @family.auto_match_transfers!
-    outflow_entry.transaction.transfer.confirm!
+    Transfer.pending.find_each(&:confirm!)
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success

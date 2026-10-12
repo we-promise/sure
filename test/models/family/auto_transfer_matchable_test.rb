@@ -19,6 +19,19 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "auto-matched transfers wait for confirmation before changing transaction kinds" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500)
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow_entry.entryable_id)
+    assert transfer.pending?
+    assert_equal "standard", outflow_entry.reload.entryable.kind
+    assert_equal "standard", inflow_entry.reload.entryable.kind
+    assert_nil outflow_entry.entryable.category
+  end
+
   test "concurrent unique-index race does not abort the surrounding transaction" do
     outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
@@ -62,15 +75,8 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     refute_equal "funds_movement", inflow_entry.entryable.kind
 
     # ...and matching did not stop at the skip: the non-conflicting candidate was
-    # still created, pending confirmation (auto-matches no longer touch `kind`
-    # until Transfer#confirm! is called).
-    good_in.reload
-    good_out.reload
-    good_transfer = Transfer.find_by(inflow_transaction_id: good_in.entryable_id, outflow_transaction_id: good_out.entryable_id)
-    assert good_transfer
-    assert good_transfer.pending?
-    refute_equal "funds_movement", good_in.entryable.kind
-    refute_equal "cc_payment", good_out.entryable.kind
+    # still created.
+    assert Transfer.exists?(inflow_transaction_id: good_in.entryable_id, outflow_transaction_id: good_out.entryable_id)
   end
 
   test "a :taken on one column from a different pairing is skipped, not marked" do
@@ -515,6 +521,77 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "does not auto-match accounts no single member can write to" do
+    # family_admin owns the credit card but has no access to the loan;
+    # family_member owns the loan but only has read_only on the card.
+    @loan.update!(owner: users(:family_member))
+
+    outflow = create_transaction(date: Date.current, account: @loan, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    # Manual matching still sees the pair; the controller scopes it per user.
+    candidates = @family.transfer_match_candidates(inflow_transaction_id: inflow.entryable_id)
+    assert_equal [ outflow.entryable_id ], candidates.map(&:outflow_transaction_id)
+  end
+
+  test "does not auto-match cross-currency accounts no single member can write to" do
+    load_exchange_prices
+    # Same ownership as above; both linked so only the writer condition blocks the match.
+    @loan.update!(owner: users(:family_member))
+    link_account!(@loan)
+    link_account!(@credit_card)
+
+    outflow = create_transaction(date: Date.current, account: @loan, amount: 1000)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "auto-matches across owners when a member can write to both accounts" do
+    # family_member owns the loan and has full_control on the depository
+    @loan.update!(owner: users(:family_member))
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_difference -> { Transfer.count }, 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "auto-matches an owner-less account against one a member can write to" do
+    # owner_id is nullified when the owner is removed; update! would reassign one
+    @loan.update_column(:owner_id, nil)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_difference -> { Transfer.count }, 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not auto-match two owner-less accounts nobody can write to" do
+    @loan.update_column(:owner_id, nil)
+    @credit_card.update_column(:owner_id, nil)
+    AccountShare.where(account: [ @loan, @credit_card ], permission: "full_control").delete_all
+
+    create_transaction(date: Date.current, account: @credit_card, amount: 500)
+    create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "does not match transactions outside the 4-day window" do
     create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
@@ -537,44 +614,17 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
-  test "auto-matched cash to investment assigns investment contribution category once confirmed" do
+  test "confirmed auto-match from cash to investment assigns investment contribution category" do
     investment = accounts(:investment)
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500)
 
-    @family.auto_match_transfers!
+    auto_match_and_confirm_transfers!
 
-    outflow_entry.reload
-
-    # Pending suggestion: kind/category not yet applied
-    assert_equal "standard", outflow_entry.entryable.kind
-    assert_nil outflow_entry.entryable.category
-
-    outflow_entry.entryable.transfer.confirm!
     outflow_entry.reload
 
     category = @family.investment_contributions_category
     assert_equal category, outflow_entry.entryable.category
-  end
-
-  test "confirming auto-matched investment transfers reuses contribution category lookup" do
-    investment = accounts(:investment)
-    category = @family.investment_contributions_category
-
-    outflow_1 = create_transaction(date: Date.current, account: @depository, amount: 500)
-    create_transaction(date: Date.current, account: investment, amount: -500)
-    outflow_2 = create_transaction(date: Date.current, account: @depository, amount: 700)
-    create_transaction(date: Date.current, account: investment, amount: -700)
-
-    assert_difference -> { Transfer.count }, 2 do
-      @family.auto_match_transfers!
-    end
-
-    outflow_1.reload.entryable.transfer.confirm!
-    outflow_2.reload.entryable.transfer.confirm!
-
-    assert_equal category, outflow_1.reload.entryable.category
-    assert_equal category, outflow_2.reload.entryable.category
   end
 
   test "does not match multi-currency transfer with missing exchange rate" do
@@ -637,20 +687,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)"
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
     assert_includes sql, ":restrict_cross_currency_to_linked_accounts = FALSE"
-  end
-
-  test "auto-matched transfers stay kind 'standard' until confirmed" do
-    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
-    inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
-
-    @family.auto_match_transfers!
-
-    outflow_entry.reload
-    inflow_entry.reload
-
-    assert_equal "standard", outflow_entry.entryable.kind
-    assert_equal "standard", inflow_entry.entryable.kind
-    assert outflow_entry.entryable.transfer.pending?
+    assert_equal 2, sql.scan(":require_common_writer = FALSE").size
   end
 
   test "does not auto-match transfers when the family has disabled auto match" do
@@ -666,13 +703,12 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
   # Regression tests for loan transfer kind assignment bug
   # The kind should be determined by the DESTINATION account (inflow), not the source (outflow)
-  test "loan payment (cash to loan) assigns loan_payment kind to outflow once confirmed" do
+  test "loan payment (cash to loan) assigns loan_payment kind to outflow" do
     # Cash → Loan: outflow from depository, inflow to loan
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
 
-    @family.auto_match_transfers!
-    outflow_entry.reload.entryable.transfer.confirm!
+    auto_match_and_confirm_transfers!
 
     outflow_entry.reload
     inflow_entry.reload
@@ -682,13 +718,12 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow_entry.entryable.kind
   end
 
-  test "loan disbursement (loan to cash) assigns funds_movement kind to outflow once confirmed" do
+  test "loan disbursement (loan to cash) assigns funds_movement kind to outflow" do
     # Loan → Cash: outflow from loan, inflow to depository
     outflow_entry = create_transaction(date: Date.current, account: @loan, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @depository, amount: -500)
 
-    @family.auto_match_transfers!
-    outflow_entry.reload.entryable.transfer.confirm!
+    auto_match_and_confirm_transfers!
 
     outflow_entry.reload
     inflow_entry.reload
@@ -699,13 +734,12 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow_entry.entryable.kind
   end
 
-  test "credit card payment (cash to credit card) assigns cc_payment kind to outflow once confirmed" do
+  test "credit card payment (cash to credit card) assigns cc_payment kind to outflow" do
     # Cash → Credit Card: outflow from depository, inflow to credit card
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
-    @family.auto_match_transfers!
-    outflow_entry.reload.entryable.transfer.confirm!
+    auto_match_and_confirm_transfers!
 
     outflow_entry.reload
     inflow_entry.reload
@@ -716,6 +750,11 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   end
 
   private
+    def auto_match_and_confirm_transfers!
+      @family.auto_match_transfers!
+      Transfer.pending.find_each(&:confirm!)
+    end
+
     # Simulates a live provider connection so `Account#manual?` (and the SQL
     # query's equivalent check) treats the account as linked. `AccountProvider`
     # validates its polymorphic `provider` association is present, so this needs

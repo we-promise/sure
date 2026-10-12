@@ -1053,6 +1053,1007 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 0, Entry.where(external_id: "trade_orphan").count
   end
 
+  # Modeled on real Fidelity option buy activity (TQQQ call) where symbol is nil
+  test "processes option buy trade when symbol is nil and option_symbol is present" do
+    process_activities(
+      build_option_activity(
+        id: "opt_buy_001",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: 0.57,
+        amount: -114.05,
+        fee: 0.05,
+        underlying_symbol: "TQQQ"
+      )
+    )
+
+    entry = snaptrade_entry("opt_buy_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+
+    trade = entry.entryable
+    assert_equal 2.0, trade.qty
+    assert_equal 57.0, trade.price.to_f
+    assert_equal 114.05, entry.amount.to_f
+    assert_equal "Buy", trade.investment_activity_label
+
+    security = trade.security
+    assert_equal "TQQQ  260220C00051000", security.ticker
+    assert_equal "TQQQ $51 CALL (2026-02-20)", security.name
+    assert_equal "XNAS", security.exchange_mic
+    assert_equal "US", security.country_code
+  end
+
+  # Modeled on real Fidelity option sell activity (NKE call) where symbol is nil
+  test "processes option sell trade when symbol is nil and option_symbol is present" do
+    process_activities(
+      build_option_activity(
+        id: "opt_sell_001",
+        type: "SELL",
+        ticker: "NKE   261218C00050000",
+        option_type: "CALL",
+        strike_price: 50.0,
+        expiration_date: "2026-12-18",
+        units: -6.0,
+        price: 30.70,
+        amount: 18415.94,
+        fee: 4.06,
+        underlying_symbol: "NKE"
+      )
+    )
+
+    entry = snaptrade_entry("opt_sell_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+
+    trade = entry.entryable
+    assert_equal(-6.0, trade.qty)
+    assert_equal 3070.0, trade.price.to_f
+    assert_equal(-18415.94, entry.amount.to_f)
+    assert_equal "Sell", trade.investment_activity_label
+
+    security = trade.security
+    assert_equal "NKE   261218C00050000", security.ticker
+    assert_equal "NKE $50 CALL (2026-12-18)", security.name
+  end
+
+  # Modeled on real Robinhood option sell activity (Unity call) where symbol contains the underlying equity
+  test "prioritizes option_symbol over underlying equity symbol for option trades" do
+    process_activities(
+      build_option_activity(
+        id: "opt_robinhood_001",
+        type: "SELL",
+        symbol: { "symbol" => "U", "description" => "Unity Software Inc." },
+        ticker: "U     270115C00015000",
+        option_type: "CALL",
+        strike_price: 15.0,
+        expiration_date: "2027-01-15",
+        units: -5.0,
+        price: 14.0,
+        amount: 7000.0,
+        underlying_symbol: "U"
+      )
+    )
+
+    entry = snaptrade_entry("opt_robinhood_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+
+    trade = entry.entryable
+    assert_equal "U     270115C00015000", trade.security.ticker
+    assert_equal "U $15 CALL (2027-01-15)", trade.security.name
+    assert_not_equal "U", trade.security.ticker
+    assert_equal BigDecimal("1400.0"), trade.price
+    assert_equal BigDecimal("-7000.0"), entry.amount
+  end
+
+  # Modeled on real Fidelity option exercise activity (JNJ call exercise)
+  test "processes option exercise trade preserving negative quantity" do
+    process_activities(
+      build_option_activity(
+        id: "opt_exercise_001",
+        type: "OPTIONEXERCISE",
+        ticker: "JNJ   260116C00125000",
+        option_type: "CALL",
+        strike_price: 125.0,
+        expiration_date: "2026-01-16",
+        units: -1.0,
+        price: 0.0,
+        amount: -5415.0,
+        underlying_symbol: "JNJ"
+      )
+    )
+
+    entry = snaptrade_entry("opt_exercise_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+
+    trade = entry.entryable
+    assert_equal(-1.0, trade.qty)
+    assert_equal "Other", trade.investment_activity_label
+    assert_equal "JNJ   260116C00125000", trade.security.ticker
+  end
+
+  # Modeled on real Robinhood option expiration activity (Allbirds call expiration)
+  test "processes option expiration trade with zero amount" do
+    process_activities(
+      build_option_activity(
+        id: "opt_expire_001",
+        type: "OPTIONEXPIRATION",
+        ticker: "BIRD  250117C00000500",
+        option_type: "CALL",
+        strike_price: 0.5,
+        expiration_date: "2025-01-17",
+        units: -80.0,
+        price: 0.0,
+        amount: 0.0,
+        underlying_symbol: "BIRD"
+      )
+    )
+
+    entry = snaptrade_entry("opt_expire_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+
+    trade = entry.entryable
+    assert_equal(-80.0, trade.qty)
+    assert_equal 0.0, entry.amount.to_f
+    assert_equal "BIRD  250117C00000500", trade.security.ticker
+    assert_equal "BIRD $0.5 CALL (2025-01-17)", trade.security.name
+  end
+
+  # Modeled on real Fidelity option transfer activity (JNJ call transfer)
+  test "falls back to option ticker for transaction description in cash activities" do
+    process_activities(
+      {
+        "id" => "opt_transfer_001",
+        "type" => "TRANSFER",
+        "amount" => 5435.0,
+        "units" => 1.0,
+        "price" => 0.0,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => nil,
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "JNJ   260116C00125000",
+          "option_type" => "CALL",
+          "strike_price" => 125.0,
+          "expiration_date" => "2026-01-16"
+        }
+      }
+    )
+
+    entry = snaptrade_entry("opt_transfer_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Transaction)
+    assert_equal "Transfer - JNJ   260116C00125000", entry.name
+  end
+
+  # Modeled on Robinhood option transfer activity where underlying equity is in symbol and option ticker is in option_symbol
+  test "prefers option ticker over underlying symbol for transaction description in cash activities" do
+    process_activities(
+      {
+        "id" => "opt_transfer_with_underlying_001",
+        "type" => "TRANSFER",
+        "amount" => 1500.0,
+        "units" => 1.0,
+        "price" => 0.0,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => {
+          "symbol" => "U",
+          "description" => "Unity Software Inc."
+        },
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "U     270115C00015000",
+          "option_type" => "CALL",
+          "strike_price" => 15.0,
+          "expiration_date" => "2027-01-15"
+        }
+      }
+    )
+
+    entry = snaptrade_entry("opt_transfer_with_underlying_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Transaction)
+    assert_equal "Transfer - U     270115C00015000", entry.name
+  end
+
+  # Modeled on SnapTrade payload with bare string underlying_symbol
+  test "processes option trade when underlying_symbol is a bare string instead of a hash" do
+    process_activities(
+      {
+        "id" => "opt_bare_underlying_001",
+        "type" => "BUY",
+        "units" => 2.0,
+        "price" => 0.57,
+        "amount" => -114.05,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => nil,
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "TQQQ  260220C00051000",
+          "option_type" => "CALL",
+          "strike_price" => 51.0,
+          "expiration_date" => "2026-02-20",
+          "underlying_symbol" => "TQQQ"
+        }
+      }
+    )
+
+    entry = snaptrade_entry("opt_bare_underlying_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    assert_equal "TQQQ  260220C00051000", entry.entryable.security.ticker
+    assert_equal "TQQQ $51 CALL (2026-02-20)", entry.entryable.security.name
+    assert_equal BigDecimal("57.0"), entry.entryable.price
+  end
+
+  test "option_ticker_and_data extracts ticker and data or returns nil when absent or malformed" do
+    processor = SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account)
+
+    ticker, data = processor.send(:option_ticker_and_data, { "option_symbol" => { "ticker" => "AAPL  260116C00200000" } })
+    assert_equal "AAPL  260116C00200000", ticker
+    assert_equal "AAPL  260116C00200000", data[:ticker]
+
+    ticker, = processor.send(:option_ticker_and_data, { option_symbol: { ticker: "AAPL  260116C00200000" } })
+    assert_equal "AAPL  260116C00200000", ticker
+
+    ticker, data = processor.send(:option_ticker_and_data, { "option_symbol" => nil })
+    assert_nil ticker
+    assert_nil data
+
+    ticker, data = processor.send(:option_ticker_and_data, { "option_symbol" => "AAPL" })
+    assert_nil ticker
+    assert_nil data
+
+    ticker, data = processor.send(:option_ticker_and_data, { "option_symbol" => { "ticker" => "" } })
+    assert_nil ticker
+    assert_nil data
+  end
+
+  test "processes mini-option trade with full payload when is_mini_option is true" do
+    process_activities(
+      {
+        "id" => "mini_opt_trade_001",
+        "type" => "BUY",
+        "units" => 3.0,
+        "price" => 1.25,
+        "amount" => -37.50,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => {
+          "symbol" => "AAPL",
+          "description" => "Apple Inc.",
+          "currency" => { "code" => "USD" },
+          "exchange" => { "mic_code" => "XNAS" }
+        },
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "AAPL7 260116C00200000",
+          "option_type" => "CALL",
+          "strike_price" => 200.0,
+          "expiration_date" => "2026-01-16",
+          "is_mini_option" => true,
+          "underlying_symbol" => {
+            "symbol" => "AAPL",
+            "currency" => { "code" => "USD" },
+            "exchange" => { "mic_code" => "XNAS" }
+          }
+        }
+      }
+    )
+
+    entry = snaptrade_entry("mini_opt_trade_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    assert_equal "AAPL7 260116C00200000", entry.entryable.security.ticker
+    assert_equal "AAPL $200 CALL (2026-01-16)", entry.entryable.security.name
+    assert_equal BigDecimal("3.0"), entry.entryable.qty
+    assert_equal BigDecimal("12.5"), entry.entryable.price
+    assert_equal BigDecimal("37.50"), entry.amount
+  end
+
+  # Modeled on SnapTrade option payload where underlying symbol is omitted
+  test "falls back to raw ticker when option symbol lacks underlying symbol details" do
+    process_activities(
+      {
+        "id" => "opt_bare_001",
+        "type" => "BUY",
+        "units" => 1.0,
+        "price" => 5.0,
+        "amount" => -500.0,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => nil,
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "SPY   250620P00500000",
+          "option_type" => "PUT",
+          "strike_price" => 500.0,
+          "expiration_date" => "2025-06-20",
+          "is_mini_option" => false,
+          "underlying_symbol" => nil
+        }
+      }
+    )
+
+    entry = snaptrade_entry("opt_bare_001")
+    assert_not_nil entry
+    assert_equal "SPY   250620P00500000", entry.entryable.security.ticker
+    assert_equal "SPY   250620P00500000", entry.entryable.security.name
+    assert_equal BigDecimal("500.0"), entry.entryable.price
+  end
+
+  test "retains underlying exchange and currency metadata when option_symbol lacks underlying_symbol" do
+    process_activities(
+      {
+        "id" => "opt_fallback_meta_001",
+        "type" => "BUY",
+        "units" => 2.0,
+        "price" => 0.57,
+        "amount" => -114.05,
+        "settlement_date" => Date.current.to_s,
+        "symbol" => {
+          "symbol" => "TQQQ",
+          "description" => "ProShares UltraPro QQQ",
+          "currency" => { "code" => "USD" },
+          "exchange" => { "mic_code" => "XNAS" }
+        },
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "TQQQ  260220C00051000",
+          "option_type" => "CALL",
+          "strike_price" => 51.0,
+          "expiration_date" => "2026-02-20",
+          "is_mini_option" => false
+        }
+      }
+    )
+
+    entry = snaptrade_entry("opt_fallback_meta_001")
+    assert_not_nil entry
+    security = entry.entryable.security
+    assert_equal "TQQQ  260220C00051000", security.ticker
+    assert_equal "TQQQ $51 CALL (2026-02-20)", security.name
+    assert_equal "XNAS", security.exchange_mic
+    assert_equal "US", security.country_code
+  end
+
+  # Modeled on official SnapTrade getAccountActivities documentation payload
+  test "processes option trade modeled on official SnapTrade API documentation payload" do
+    process_activities(
+      {
+        "id" => "2f7dc9b3-5c33-4668-3440-2b31e056ebe6",
+        "symbol" => {
+          "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+          "symbol" => "VAB.TO",
+          "raw_symbol" => "VAB",
+          "description" => "VANGUARD CDN AGGREGATE BOND INDEX ETF",
+          "currency" => {
+            "id" => "87b24961-b51e-4db8-9226-f198f6518a89",
+            "code" => "USD",
+            "name" => "US Dollar"
+          },
+          "exchange" => {
+            "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+            "code" => "TSX",
+            "mic_code" => "XTSE",
+            "name" => "Toronto Stock Exchange"
+          },
+          "type" => {
+            "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+            "code" => "cs",
+            "description" => "Common Stock"
+          }
+        },
+        "option_symbol" => {
+          "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+          "ticker" => "AAPL  261218C00240000",
+          "option_type" => "CALL",
+          "strike_price" => 240,
+          "expiration_date" => "2026-12-18T00:00:00.000Z",
+          "is_mini_option" => false,
+          "underlying_symbol" => {
+            "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+            "symbol" => "SPY",
+            "raw_symbol" => "VAB",
+            "description" => "SPDR S&P 500 ETF Trust",
+            "currency" => {
+              "id" => "87b24961-b51e-4db8-9226-f198f6518a89",
+              "code" => "USD",
+              "name" => "US Dollar"
+            },
+            "exchange" => {
+              "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+              "code" => "ARCX",
+              "mic_code" => "ARCA",
+              "name" => "NYSE ARCA"
+            }
+          }
+        },
+        "price" => 0.4,
+        "units" => 5.2,
+        "amount" => 263.82,
+        "currency" => {
+          "id" => "87b24961-b51e-4db8-9226-f198f6518a89",
+          "code" => "USD",
+          "name" => "US Dollar"
+        },
+        "type" => "BUY",
+        "option_type" => "BUY_TO_OPEN",
+        "description" => "WALT DISNEY UNIT DIST ON 21 SHS REC 12/31/21 PAY 01/06/22",
+        "trade_date" => "2024-03-22T16:27:55.000Z",
+        "settlement_date" => "2024-03-26T00:00:00.000Z",
+        "fee" => 0,
+        "institution" => "Robinhood"
+      }
+    )
+
+    entry = snaptrade_entry("2f7dc9b3-5c33-4668-3440-2b31e056ebe6")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    security = entry.entryable.security
+    assert_equal "AAPL  261218C00240000", security.ticker
+    assert_equal "SPY $240 CALL (2026-12-18)", security.name
+    assert_equal "ARCA", security.exchange_mic
+    assert_equal "US", security.country_code
+    assert_equal BigDecimal("5.2"), entry.entryable.qty
+    assert_equal BigDecimal("40.0"), entry.entryable.price
+    assert_equal BigDecimal("263.82"), entry.amount
+  end
+
+  # Modeled on SnapTrade payload with generic "COMMON STOCK" description (preserves 5-letter ticker case)
+  test "preserves raw ticker without titleize when description is generic type" do
+    process_activities(
+      {
+        "id" => "trade_generic_type_001",
+        "type" => "BUY",
+        "units" => 10.0,
+        "price" => 150.0,
+        "amount" => -1500.0,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => {
+          "symbol" => "GOOGL",
+          "description" => "COMMON STOCK"
+        }
+      }
+    )
+
+    entry = snaptrade_entry("trade_generic_type_001")
+    assert_not_nil entry
+    assert_equal "GOOGL", entry.entryable.security.ticker
+    assert_equal "GOOGL", entry.entryable.security.name
+  end
+
+  # Modeled on Robinhood resync: an option trade previously mis-imported as common stock
+  test "updates pre-existing misclassified trade to option contract on resync without error" do
+    equity_sec = Security.find_or_create_by!(ticker: "U") { |s| s.name = "Unity Software Inc." }
+    pre_existing_entry = @account.entries.create!(
+      external_id: "opt_resync_test_001",
+      source: "snaptrade",
+      amount: BigDecimal("-7000.0"),
+      currency: "USD",
+      date: Date.current,
+      name: "sell 5.000 U call",
+      entryable: Trade.new(security: equity_sec, qty: -5.0, price: 14.0, currency: "USD", investment_activity_label: "Sell")
+    )
+    entry_id = pre_existing_entry.id
+
+    assert_equal "U", pre_existing_entry.entryable.security.ticker
+
+    process_activities(
+      build_option_activity(
+        id: "opt_resync_test_001",
+        type: "SELL",
+        symbol: { "symbol" => "U", "description" => "Unity Software Inc." },
+        ticker: "U     270115C00015000",
+        option_type: "CALL",
+        strike_price: 15.0,
+        expiration_date: "2027-01-15",
+        units: -5.0,
+        price: 14.0,
+        amount: 7000.0,
+        underlying_symbol: "U"
+      )
+    )
+
+    updated_entry = snaptrade_entry("opt_resync_test_001")
+    assert_not_nil updated_entry
+    assert_equal entry_id, updated_entry.id, "Existing entry should be updated in-place"
+    assert_equal "U     270115C00015000", updated_entry.entryable.security.ticker
+    assert_equal "U $15 CALL (2027-01-15)", updated_entry.entryable.security.name
+    assert_equal BigDecimal("1400.0"), updated_entry.entryable.price
+    assert_nil snaptrade_debug_log("opt_resync_test_001", level: "error")
+  end
+
+  # Modeled on resync where an option activity was previously imported as a cash Transaction
+  test "reclassifies pre-existing Transaction entry to Trade on option resync without collision error" do
+    stale_entry = @account.entries.create!(
+      external_id: "opt_txn_reclass_001",
+      source: "snaptrade",
+      amount: 114.05,
+      currency: "USD",
+      date: Date.current,
+      name: "OPTION BUY TQQQ",
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+    stale_id = stale_entry.id
+
+    process_activities(
+      build_option_activity(
+        id: "opt_txn_reclass_001",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: 0.57,
+        amount: -114.05,
+        underlying_symbol: "TQQQ"
+      )
+    )
+
+    reclassified_entry = snaptrade_entry("opt_txn_reclass_001")
+    assert_not_nil reclassified_entry
+    assert_not_equal stale_id, reclassified_entry.id, "Stale Transaction should be replaced by Trade"
+    assert reclassified_entry.entryable.is_a?(Trade)
+    assert_equal "TQQQ  260220C00051000", reclassified_entry.entryable.security.ticker
+    assert_equal BigDecimal("57.0"), reclassified_entry.entryable.price
+    assert_nil snaptrade_debug_log("opt_txn_reclass_001", level: "error")
+  end
+
+  test "skips reclassifying pre-existing option Transaction when import_locked" do
+    locked_entry = @account.entries.create!(
+      external_id: "opt_locked_reclass_001",
+      source: "snaptrade",
+      amount: 114.05,
+      currency: "USD",
+      date: Date.current,
+      name: "OPTION BUY TQQQ (Manual Lock)",
+      import_locked: true,
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+    original_id = locked_entry.id
+
+    process_activities(
+      build_option_activity(
+        id: "opt_locked_reclass_001",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: 0.57,
+        amount: -114.05,
+        underlying_symbol: "TQQQ"
+      )
+    )
+
+    entry = snaptrade_entry("opt_locked_reclass_001")
+    assert_not_nil entry
+    assert_equal original_id, entry.id, "locked entry ID must be preserved"
+    assert entry.entryable.is_a?(Transaction), "locked entry must not be converted to Trade"
+    assert_equal BigDecimal("114.05"), entry.amount
+
+    log = snaptrade_debug_log("opt_locked_reclass_001", level: "warn")
+    assert_not_nil log
+    assert_includes log.message, "Skipping reclassification of protected entry"
+  end
+
+  # Synthetic edge case: option activities where amount is omitted (all real k8s activities include amount)
+  test "derives option trade amount from contract-normalized price and fee when amount is omitted" do
+    process_activities(
+      build_option_activity(
+        id: "opt_missing_amt_buy",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: 0.57,
+        amount: nil,
+        fee: 0.05
+      ),
+      build_option_activity(
+        id: "opt_missing_amt_sell",
+        type: "SELL",
+        ticker: "NKE   261218C00050000",
+        option_type: "CALL",
+        strike_price: 50.0,
+        expiration_date: "2026-12-18",
+        units: 6.0,
+        price: 30.70,
+        amount: nil,
+        fee: 4.06
+      ),
+      build_option_activity(
+        id: "opt_missing_amt_mini",
+        type: "BUY",
+        ticker: "AAPL7 260116C00200000",
+        option_type: "CALL",
+        strike_price: 200.0,
+        expiration_date: "2026-01-16",
+        units: 3.0,
+        price: 1.25,
+        amount: nil,
+        fee: 0.50,
+        is_mini_option: true
+      )
+    )
+
+    buy_entry = snaptrade_entry("opt_missing_amt_buy")
+    assert_equal BigDecimal("2.0"), buy_entry.entryable.qty
+    assert_equal BigDecimal("57.0"), buy_entry.entryable.price
+    assert_equal BigDecimal("114.05"), buy_entry.amount
+
+    sell_entry = snaptrade_entry("opt_missing_amt_sell")
+    assert_equal BigDecimal("-6.0"), sell_entry.entryable.qty
+    assert_equal BigDecimal("3070.0"), sell_entry.entryable.price
+    assert_equal BigDecimal("-18415.94"), sell_entry.amount
+
+    mini_entry = snaptrade_entry("opt_missing_amt_mini")
+    assert_equal BigDecimal("3.0"), mini_entry.entryable.qty
+    assert_equal BigDecimal("12.5"), mini_entry.entryable.price
+    assert_equal BigDecimal("38.0"), mini_entry.amount
+  end
+
+  # Synthetic edge case: option activities where price is omitted (all real k8s activities include price)
+  test "derives per-contract option trade price from amount, quantity, and fee when price is omitted" do
+    process_activities(
+      build_option_activity(
+        id: "opt_missing_price_buy",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: nil,
+        amount: -114.05,
+        fee: 0.05
+      ),
+      build_option_activity(
+        id: "opt_missing_price_sell",
+        type: "SELL",
+        ticker: "NKE   261218C00050000",
+        option_type: "CALL",
+        strike_price: 50.0,
+        expiration_date: "2026-12-18",
+        units: -6.0,
+        price: nil,
+        amount: 18415.94,
+        fee: 4.06
+      ),
+      build_option_activity(
+        id: "opt_missing_price_mini",
+        type: "BUY",
+        ticker: "AAPL7 260116C00200000",
+        option_type: "CALL",
+        strike_price: 200.0,
+        expiration_date: "2026-01-16",
+        units: 3.0,
+        price: nil,
+        amount: -37.50,
+        is_mini_option: true
+      )
+    )
+
+    buy_entry = snaptrade_entry("opt_missing_price_buy")
+    assert_equal BigDecimal("2.0"), buy_entry.entryable.qty
+    assert_equal BigDecimal("57.0"), buy_entry.entryable.price
+    assert_equal BigDecimal("114.05"), buy_entry.amount
+
+    sell_entry = snaptrade_entry("opt_missing_price_sell")
+    assert_equal BigDecimal("-6.0"), sell_entry.entryable.qty
+    assert_equal BigDecimal("3070.0"), sell_entry.entryable.price
+    assert_equal BigDecimal("-18415.94"), sell_entry.amount
+
+    mini_entry = snaptrade_entry("opt_missing_price_mini")
+    assert_equal BigDecimal("3.0"), mini_entry.entryable.qty
+    assert_equal BigDecimal("12.5"), mini_entry.entryable.price
+    assert_equal BigDecimal("37.50"), mini_entry.amount
+  end
+
+  # Modeled on real Fidelity option buy activity (TQQQ call) materialized through Holding::Materializer
+  test "materializes standard option holdings and calculated cost basis at per-contract value" do
+    purchase_date = 2.days.ago.to_date
+
+    process_activities(
+      build_option_activity(
+        id: "opt_mat_std_001",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: 0.57,
+        amount: -114.05,
+        fee: 0.05,
+        settlement_date: purchase_date.to_s
+      )
+    )
+
+    security = Security.find_by!(ticker: "TQQQ  260220C00051000")
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    purchase_holding = @account.holdings.find_by!(security: security, date: purchase_date)
+    current_holding = @account.holdings.find_by!(security: security, date: Date.current)
+
+    assert_equal BigDecimal("2.0"), purchase_holding.qty
+    assert_equal BigDecimal("57.0"), purchase_holding.price
+    assert_equal BigDecimal("114.0"), purchase_holding.amount
+    assert_equal BigDecimal("57.025"), purchase_holding.cost_basis
+    assert_equal "calculated", purchase_holding.cost_basis_source
+    assert_equal Money.new(57.025, "USD"), purchase_holding.avg_cost
+
+    assert_equal BigDecimal("2.0"), current_holding.qty
+    assert_equal BigDecimal("57.0"), current_holding.price
+    assert_equal BigDecimal("114.0"), current_holding.amount
+    assert_equal BigDecimal("57.025"), current_holding.cost_basis
+    assert_equal Money.new(57.025, "USD"), current_holding.avg_cost
+
+    # Also verify reverse materialization when current snapshot is present
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    reverse_purchase_holding = @account.holdings.find_by!(security: security, date: purchase_date)
+    assert_equal BigDecimal("114.0"), reverse_purchase_holding.amount
+    assert_equal BigDecimal("57.025"), reverse_purchase_holding.cost_basis
+  end
+
+  # Synthetic edge case: mini-option contract (is_mini_option: true, 10 shares/contract) — no mini options in k8s
+  test "materializes mini-option holdings and calculated cost basis at 10x per-contract value" do
+    purchase_date = 2.days.ago.to_date
+
+    process_activities(
+      build_option_activity(
+        id: "opt_mat_mini_001",
+        type: "BUY",
+        ticker: "AAPL7 260116C00200000",
+        option_type: "CALL",
+        strike_price: 200.0,
+        expiration_date: "2026-01-16",
+        units: 3.0,
+        price: 1.25,
+        amount: -37.50,
+        is_mini_option: true,
+        settlement_date: purchase_date.to_s
+      )
+    )
+
+    security = Security.find_by!(ticker: "AAPL7 260116C00200000")
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    purchase_holding = @account.holdings.find_by!(security: security, date: purchase_date)
+    current_holding = @account.holdings.find_by!(security: security, date: Date.current)
+
+    assert_equal BigDecimal("3.0"), purchase_holding.qty
+    assert_equal BigDecimal("12.5"), purchase_holding.price
+    assert_equal BigDecimal("37.5"), purchase_holding.amount
+    assert_equal BigDecimal("12.5"), purchase_holding.cost_basis
+    assert_equal "calculated", purchase_holding.cost_basis_source
+    assert_equal Money.new(12.5, "USD"), purchase_holding.avg_cost
+
+    assert_equal BigDecimal("37.5"), current_holding.amount
+    assert_equal BigDecimal("12.5"), current_holding.cost_basis
+  end
+
+  # Modeled on Fidelity TQQQ call and real Robinhood Unity call round-trip option trades (buy 5 @ $10.85/sh, sell 5 @ $14.00/sh)
+  test "calculates realized gain/loss for option buy and sell using per-contract prices" do
+    purchase_date = 2.days.ago.to_date
+    sell_date = Date.current
+
+    process_activities(
+      build_option_activity(
+        id: "opt_gain_buy_001",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 1.0,
+        price: 0.57,
+        amount: -57.00,
+        settlement_date: purchase_date.to_s
+      ),
+      build_option_activity(
+        id: "opt_gain_sell_001",
+        type: "SELL",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: -1.0,
+        price: 1.00,
+        amount: 100.00,
+        settlement_date: sell_date.to_s
+      ),
+      build_option_activity(
+        id: "opt_rh_u_buy",
+        type: "BUY",
+        symbol: { "symbol" => "U", "description" => "Unity Software Inc." },
+        ticker: "U     270115C00015000",
+        option_type: "CALL",
+        strike_price: 15.0,
+        expiration_date: "2027-01-15",
+        units: 5.0,
+        price: 10.85,
+        amount: -5425.0,
+        fee: 0.20,
+        underlying_symbol: "U",
+        settlement_date: purchase_date.to_s
+      ),
+      build_option_activity(
+        id: "opt_rh_u_sell",
+        type: "SELL",
+        symbol: { "symbol" => "U", "description" => "Unity Software Inc." },
+        ticker: "U     270115C00015000",
+        option_type: "CALL",
+        strike_price: 15.0,
+        expiration_date: "2027-01-15",
+        units: -5.0,
+        price: 14.0,
+        amount: 7000.0,
+        fee: 0.21,
+        underlying_symbol: "U",
+        settlement_date: sell_date.to_s
+      )
+    )
+
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    sell_trade = snaptrade_entry("opt_gain_sell_001").entryable
+    gain_loss = sell_trade.realized_gain_loss
+
+    assert_not_nil gain_loss
+    assert_equal Money.new(100.0, "USD"), gain_loss.current
+    assert_equal Money.new(57.0, "USD"), gain_loss.previous
+    assert_equal Money.new(43.0, "USD"), gain_loss.value
+
+    rh_sell_trade = snaptrade_entry("opt_rh_u_sell").entryable
+    rh_gain_loss = rh_sell_trade.realized_gain_loss
+
+    assert_not_nil rh_gain_loss
+    assert_equal Money.new(6999.79, "USD"), rh_gain_loss.current
+    assert_equal Money.new(5425.20, "USD"), rh_gain_loss.previous
+    assert_equal Money.new(1574.59, "USD"), rh_gain_loss.value
+  end
+
+  # Synthetic edge case: option contract EXTERNAL_ASSET_TRANSFER (real JNJ transfer was type=TRANSFER, a cash activity)
+  test "processes option asset transfers and preserves transfer cost-basis rules" do
+    buy_date = 3.days.ago.to_date
+    transfer_out_date = 2.days.ago.to_date
+    transfer_in_date = Date.yesterday
+
+    process_activities(
+      build_option_activity(
+        id: "opt_xfer_buy",
+        type: "BUY",
+        ticker: "JNJ   260116C00125000",
+        option_type: "CALL",
+        strike_price: 125.0,
+        expiration_date: "2026-01-16",
+        units: 2.0,
+        price: 54.15,
+        amount: -10830.00,
+        underlying_symbol: "JNJ",
+        settlement_date: buy_date.to_s
+      ),
+      build_option_activity(
+        id: "opt_xfer_out",
+        type: "EXTERNAL_ASSET_TRANSFER_OUT",
+        ticker: "JNJ   260116C00125000",
+        option_type: "CALL",
+        strike_price: 125.0,
+        expiration_date: "2026-01-16",
+        units: -1.0,
+        price: 54.35,
+        amount: nil,
+        underlying_symbol: "JNJ",
+        settlement_date: transfer_out_date.to_s
+      )
+    )
+
+    security = Security.find_by!(ticker: "JNJ   260116C00125000")
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    xfer_out_entry = snaptrade_entry("opt_xfer_out")
+    assert_equal "Transfer", xfer_out_entry.entryable.investment_activity_label
+    assert_equal BigDecimal("-1.0"), xfer_out_entry.entryable.qty
+    assert_equal BigDecimal("5435.0"), xfer_out_entry.entryable.price
+    assert_equal BigDecimal("0.0"), xfer_out_entry.amount
+    assert_nil xfer_out_entry.entryable.realized_gain_loss, "outbound transfer must not realize gain"
+
+    after_out_holding = @account.holdings.find_by!(security: security, date: Date.current)
+    assert_equal BigDecimal("1.0"), after_out_holding.qty
+    assert_equal BigDecimal("5415.0"), after_out_holding.cost_basis
+    assert_equal Money.new(5415.0, "USD"), after_out_holding.avg_cost
+
+    # Now import an inbound option transfer and verify cost basis becomes unknown
+    process_activities(
+      build_option_activity(
+        id: "opt_xfer_in",
+        type: "EXTERNAL_ASSET_TRANSFER_IN",
+        ticker: "JNJ   260116C00125000",
+        option_type: "CALL",
+        strike_price: 125.0,
+        expiration_date: "2026-01-16",
+        units: 1.0,
+        price: 54.35,
+        amount: nil,
+        underlying_symbol: "JNJ",
+        settlement_date: transfer_in_date.to_s
+      )
+    )
+
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    xfer_in_entry = snaptrade_entry("opt_xfer_in")
+    assert_equal "Transfer", xfer_in_entry.entryable.investment_activity_label
+    assert_equal BigDecimal("1.0"), xfer_in_entry.entryable.qty
+    assert_equal BigDecimal("5435.0"), xfer_in_entry.entryable.price
+    assert_equal BigDecimal("0.0"), xfer_in_entry.amount
+
+    after_in_holding = @account.holdings.find_by!(security: security, date: Date.current)
+    assert_equal BigDecimal("2.0"), after_in_holding.qty
+    assert_nil after_in_holding.cost_basis, "inbound transfer must clear calculated cost basis"
+    assert_nil after_in_holding.cost_basis_source
+    assert_nil after_in_holding.avg_cost
+  end
+
+  # Synthetic edge case: PortfolioCache price-source precedence (db > trade > holding) for option contracts
+  test "enforces db > trade > holding price precedence for option contracts in PortfolioCache" do
+    process_activities(
+      build_option_activity(
+        id: "opt_cache_buy_001",
+        type: "BUY",
+        ticker: "TQQQ  260220C00051000",
+        option_type: "CALL",
+        strike_price: 51.0,
+        expiration_date: "2026-02-20",
+        units: 2.0,
+        price: 0.57,
+        amount: -114.00,
+        settlement_date: Date.current.to_s
+      )
+    )
+
+    security = Security.find_by!(ticker: "TQQQ  260220C00051000")
+
+    @account.holdings.create!(
+      security: security,
+      date: Date.current,
+      currency: "USD",
+      qty: 2.0,
+      price: 60.0,
+      amount: 120.0
+    )
+
+    cache_without_db = Holding::PortfolioCache.new(@account, use_holdings: true)
+    assert_equal BigDecimal("60.0"), cache_without_db.get_price(security.id, Date.current, source: "holding").price
+    assert_equal BigDecimal("57.0"), cache_without_db.get_price(security.id, Date.current, source: "trade").price
+    assert_equal BigDecimal("57.0"), cache_without_db.get_price(security.id, Date.current).price,
+      "trade price (priority 2, per-contract $57.00) must beat holding price (priority 3)"
+
+    Security::Price.create!(security: security, date: Date.current, price: 62.0, currency: "USD")
+
+    cache_with_db = Holding::PortfolioCache.new(@account, use_holdings: true)
+    assert_equal BigDecimal("62.0"), cache_with_db.get_price(security.id, Date.current).price,
+      "db price (priority 1) must beat trade price (priority 2) and holding price (priority 3)"
+  end
+
   private
 
     def process_activities(*activities)
@@ -1103,6 +2104,39 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
         }
       end
 
+      activity
+    end
+
+    def build_option_activity(id:, type:, ticker:, strike_price:, option_type:, expiration_date:, units:, price:, amount: nil, fee: nil, underlying_symbol: nil, symbol: nil, description: nil, is_mini_option: false, settlement_date: Date.current.to_s)
+      underlying = underlying_symbol || ticker.split.first
+      activity = {
+        "id" => id,
+        "type" => type,
+        "symbol" => symbol,
+        "units" => units,
+        "price" => price,
+        "settlement_date" => settlement_date,
+        "currency" => { "code" => "USD" },
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => ticker,
+          "option_type" => option_type,
+          "strike_price" => strike_price,
+          "expiration_date" => expiration_date,
+          "is_mini_option" => is_mini_option,
+          "underlying_symbol" => {
+            "id" => SecureRandom.uuid,
+            "symbol" => underlying,
+            "raw_symbol" => underlying,
+            "description" => "#{underlying} Underlying Inc.",
+            "currency" => { "code" => "USD" },
+            "exchange" => { "code" => "NASDAQ", "mic_code" => "XNAS" }
+          }
+        }
+      }
+      activity["amount"] = amount unless amount.nil?
+      activity["fee"] = fee unless fee.nil?
+      activity["description"] = description if description.present?
       activity
     end
 end

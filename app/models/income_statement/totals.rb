@@ -78,7 +78,6 @@ class IncomeStatement::Totals
           AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-          #{exclude_pending_transfers_sql("at")}
         GROUP BY c.id, c.parent_id, #{classification_sql("at")};
       SQL
     end
@@ -105,7 +104,6 @@ class IncomeStatement::Totals
           AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-          #{exclude_pending_transfers_sql("at")}
         GROUP BY c.id, c.parent_id, #{classification_sql("at")}
       SQL
     end

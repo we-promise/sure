@@ -69,7 +69,6 @@ class RecurringTransaction
         .where("entries.date >= ?", lookback.ago.to_date)
         .where("entries.amount < 0")
         .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
-        .merge(Transaction.excluding_pending_transfer_legs)
         .includes(:entryable)
         .to_a
 
@@ -219,7 +218,6 @@ class RecurringTransaction
           .where("accounts.accountable_type IS NULL OR accounts.accountable_type NOT IN (?)", NON_BILLABLE_ACCOUNTABLE_TYPES)
           .where("entries.date >= ?", three_months_ago)
           .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
-          .merge(Transaction.excluding_pending_transfer_legs)
           .includes(:entryable)
           .to_a
 

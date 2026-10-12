@@ -52,4 +52,3 @@ tr:
       uncategorized: Kategorisiz
     update:
       success: Transfer güncellendi
-      already_resolved: Bu transfer zaten onaylandı veya reddedildi.

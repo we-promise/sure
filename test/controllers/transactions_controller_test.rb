@@ -573,28 +573,6 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(@entry.entryable, "tag_summary_mobile")}", text: /#{tags(:one).name}/
   end
 
-  test "a transfer-kind transaction with no Transfer row stays categorizable and selectable" do
-    # Mirrors Account::ProviderImportAdapter assigning a transfer kind to a
-    # standalone imported transaction with no Transfer behind it (e.g. an Up
-    # internal transfer or round-up): transfer? (kind-based) is true, but
-    # transfer (the association) is nil. It should render like any other
-    # transaction, not like a real confirmed transfer.
-    entry = create_transaction(account: accounts(:depository), amount: 100, kind: "funds_movement")
-
-    get transactions_url
-
-    assert_response :success
-    doc = Nokogiri::HTML::Document.parse(response.body)
-    row = doc.at_css("turbo-frame##{ActionView::RecordIdentifier.dom_id(entry)}")
-
-    checkbox = row.at_css("input[type='checkbox'][data-entry-type='Transaction']")
-    assert_not_nil checkbox
-    assert_nil checkbox["disabled"]
-
-    assert_not_nil row.at_css("[data-controller='DS--popover']"),
-      "expected the category menu (not the static transfer badge) to render"
-  end
-
   test "split parent rows mark amount as privacy-sensitive" do
     entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
 
@@ -1719,6 +1697,17 @@ end
       "a member without access to the admin-only account must not reuse the admin's cached uncategorized count"
   ensure
     Rails.cache = original_cache
+  end
+
+  test "an unconfirmed auto-matched transfer keeps its category menu in the list" do
+    outflow = create_transaction(account: accounts(:depository), amount: 500, name: "PENDING_MATCH_OUT").transaction
+    inflow = create_transaction(account: accounts(:credit_card), amount: -500).transaction
+    Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(outflow, "category_menu_desktop")} turbo-frame#category_dropdown"
   end
 
   test "index with ai_status=current renders the AI filter badge" do

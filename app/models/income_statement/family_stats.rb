@@ -51,7 +51,6 @@ class IncomeStatement::FamilyStats
             #{pending_providers_sql}
             #{exclude_tax_advantaged_sql}
             #{scope_to_account_ids_sql}
-            #{exclude_pending_transfers_sql("t")}
           GROUP BY period, #{classification_sql("t")}
         )
         SELECT

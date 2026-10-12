@@ -67,11 +67,17 @@ class AutoMatchesController < ApplicationController
                   writable_account_ids.include?(transfer.to_account&.id)
 
       begin
-        status == "confirmed" ? transfer.confirm! : transfer.reject!
-        updated_count += 1
+        # Reloads under a row lock, so a match a concurrent request already
+        # confirmed or rejected is skipped instead of being resolved twice.
+        transfer.with_lock do
+          next unless transfer.pending?
+
+          status == "confirmed" ? transfer.confirm! : transfer.reject!
+          updated_count += 1
+        end
       rescue ActiveRecord::RecordNotFound
-        # Already resolved by a concurrent action; skip it and keep going
-        # through the rest of the selection.
+        # Already rejected (destroyed) by a concurrent action; skip it and
+        # keep going through the rest of the selection.
         next
       end
     end
@@ -102,12 +108,9 @@ class AutoMatchesController < ApplicationController
     def cleanup_pending_auto_matches!
       family_transaction_ids = Current.family.transactions.select(:id)
       # Only clean up genuine auto-match suggestions -- both legs still
-      # kind == "standard". A
-      # pending transfer imported with a kind already set
-      # (Family::DataImporter, Demo::Generator) isn't an auto-match
-      # suggestion; destroying it here would also reset both legs' kind to
-      # "standard" (Transfer#destroy!), silently wiping e.g. an
-      # investment_contribution classification.
+      # kind == "standard". A pending transfer imported with a kind already
+      # set (Family::DataImporter, Demo::Generator) isn't an auto-match
+      # suggestion, so the toggle leaves it in place.
       Transfer.pending
         .where(inflow_transaction_id: family_transaction_ids)
         .where(outflow_transaction_id: family_transaction_ids)

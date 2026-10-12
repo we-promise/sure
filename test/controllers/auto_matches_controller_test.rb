@@ -127,6 +127,48 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "bulk update confirms the selected matches and applies their transfer kinds" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    transfer = outflow_entry.transaction.reload.transfer
+
+    patch bulk_update_auto_matches_url, params: { status: "confirmed", transfer_ids: [ transfer.id ] }
+
+    assert_redirected_to auto_matches_url
+    assert transfer.reload.confirmed?
+    assert_equal "cc_payment", outflow_entry.transaction.reload.kind
+    assert_equal "funds_movement", inflow_entry.transaction.reload.kind
+  end
+
+  test "bulk update rejects the selected matches" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    transfer = outflow_entry.transaction.reload.transfer
+
+    patch bulk_update_auto_matches_url, params: { status: "rejected", transfer_ids: [ transfer.id ] }
+
+    assert_not Transfer.exists?(transfer.id)
+    assert RejectedTransfer.exists?(inflow_transaction_id: inflow_entry.transaction.id, outflow_transaction_id: outflow_entry.transaction.id)
+  end
+
+  test "bulk update skips a match that was resolved after the list was loaded" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    transfer = outflow_entry.transaction.reload.transfer
+
+    # A concurrent request resolves the match between loading and locking it.
+    Transfer.any_instance.stubs(:pending?).returns(false)
+    Transfer.any_instance.expects(:reject!).never
+
+    patch bulk_update_auto_matches_url, params: { status: "rejected", transfer_ids: [ transfer.id ] }
+
+    assert_redirected_to auto_matches_url
+    assert Transfer.exists?(transfer.id)
+  end
+
   test "update_settings re-enables auto match" do
     @family.update!(auto_match_transfers_disabled: true)
 
@@ -155,10 +197,9 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # Regression for jjmata's round-3 finding: cleanup_pending_auto_matches!
-  # used to match every Transfer.pending for the family, so disabling the
-  # toggle would destroy (and thereby kind-reset, see Transfer#destroy!) a
-  # pending transfer that arrived with a kind already set by an import path
+  # cleanup_pending_auto_matches! used to match every Transfer.pending for
+  # the family, so disabling the toggle would also destroy a pending transfer
+  # that arrived with a kind already set by an import path
   # (Family::DataImporter, Demo::Generator) -- not a genuine auto-match
   # suggestion.
   test "update_settings disabling destroys genuine pending auto-matches but preserves imported pending transfers with a kind already set" do

@@ -29,4 +29,3 @@ pt-BR:
       settings: Configurações
     update:
       success: Transferência atualizada
-      already_resolved: Esta transferência já foi confirmada ou rejeitada.

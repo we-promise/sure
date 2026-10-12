@@ -137,6 +137,64 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
+  test "confirm! marks both legs with the destination account's transfer kinds" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+
+    transfer.confirm!
+
+    assert transfer.reload.confirmed?
+    assert_equal "cc_payment", transfer.outflow_transaction.reload.kind
+    assert_equal "funds_movement", transfer.inflow_transaction.reload.kind
+  end
+
+  test "confirm! assigns the investment contributions category to an uncategorized outflow" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+
+    transfer.confirm!
+
+    outflow = transfer.outflow_transaction.reload
+    assert_equal "investment_contribution", outflow.kind
+    assert_equal families(:dylan_family).investment_contributions_category, outflow.category
+  end
+
+  test "confirm! keeps an outflow category the user already set" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+    transfer.outflow_transaction.update!(category: categories(:income))
+
+    transfer.confirm!
+
+    assert_equal categories(:income), transfer.outflow_transaction.reload.category
+  end
+
+  test "reject! leaves the kind of a pending transfer's transactions alone" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.outflow_transaction.update!(kind: "one_time")
+
+    transfer.reject!
+
+    assert_equal "one_time", transfer.outflow_transaction.reload.kind
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
+  test "reject! keeps a transfer kind that predates a pending match" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.outflow_transaction.update!(kind: "funds_movement")
+
+    transfer.reject!
+
+    assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+  end
+
+  test "reject! resets the transfer kinds of a confirmed transfer" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.confirm!
+
+    transfer.reject!
+
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
   test "kind_for_account returns investment_contribution for investment accounts" do
     assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:investment))
   end
@@ -261,123 +319,11 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal 5, transfer.total_fee
   end
 
-  test "confirm! applies transfer kind and investment category to a pending transfer" do
-    investment = accounts(:investment)
-    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "standard")
-    inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500, kind: "standard")
+  private
+    def create_pending_transfer(from:, to:)
+      outflow_entry = create_transaction(date: Date.current, account: from, amount: 500)
+      inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)
 
-    transfer = Transfer.create!(
-      inflow_transaction: inflow_entry.transaction,
-      outflow_transaction: outflow_entry.transaction
-    )
-
-    assert transfer.pending?
-    assert_equal "standard", outflow_entry.transaction.reload.kind
-    assert_nil outflow_entry.transaction.category
-
-    transfer.confirm!
-
-    assert transfer.confirmed?
-    assert_equal "investment_contribution", outflow_entry.transaction.reload.kind
-    assert_equal "funds_movement", inflow_entry.transaction.reload.kind
-    assert_equal accounts(:depository).family.investment_contributions_category, outflow_entry.transaction.reload.category
-  end
-
-  test "confirm! keeps a pending transfer between investment accounts a funds movement" do
-    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "standard")
-    inflow_entry = create_transaction(date: Date.current, account: accounts(:crypto), amount: -500, kind: "standard")
-
-    transfer = Transfer.create!(
-      inflow_transaction: inflow_entry.transaction,
-      outflow_transaction: outflow_entry.transaction
-    )
-
-    transfer.confirm!
-
-    assert_equal "funds_movement", outflow_entry.transaction.reload.kind
-    assert_nil outflow_entry.transaction.category
-  end
-
-  test "confirm! does not overwrite an already-set category" do
-    investment = accounts(:investment)
-    category = categories(:food_and_drink)
-    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "standard")
-    inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500, kind: "standard")
-    outflow_entry.transaction.update!(category: category)
-
-    transfer = Transfer.create!(
-      inflow_transaction: inflow_entry.transaction,
-      outflow_transaction: outflow_entry.transaction
-    )
-
-    transfer.confirm!
-
-    assert_equal category, outflow_entry.transaction.reload.category
-    assert_equal "funds_movement", inflow_entry.transaction.reload.kind
-  end
-
-  test "confirm! on an already-confirmed transfer leaves both legs alone when both were reset to standard" do
-    transfer = transfers(:one)
-    transfer.confirm!
-
-    transfer.inflow_transaction.update!(kind: "standard")
-    transfer.outflow_transaction.update!(kind: "standard")
-    transfer.reload.confirm!
-
-    assert_equal "standard", transfer.inflow_transaction.reload.kind
-    assert_equal "standard", transfer.outflow_transaction.reload.kind
-  end
-
-  test "confirm! on an already-confirmed transfer does not re-apply kind" do
-    transfer = transfers(:one)
-    transfer.confirm!
-
-    transfer.outflow_transaction.update!(kind: "standard")
-    transfer.confirm!
-
-    assert_equal "standard", transfer.outflow_transaction.reload.kind
-  end
-
-  test "confirm! raises and does not apply kind when the transfer was concurrently rejected" do
-    investment = accounts(:investment)
-    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "standard")
-    inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500, kind: "standard")
-
-    transfer = Transfer.create!(
-      inflow_transaction: inflow_entry.transaction,
-      outflow_transaction: outflow_entry.transaction
-    )
-
-    # Simulate a reject that completes on another connection between the
-    # confirm request loading its in-memory @transfer and calling confirm!.
-    Transfer.find(transfer.id).reject!
-
-    assert_raises(ActiveRecord::RecordNotFound) { transfer.confirm! }
-
-    assert_equal "standard", outflow_entry.transaction.reload.kind
-    assert_equal "standard", inflow_entry.transaction.reload.kind
-    assert_nil outflow_entry.transaction.reload.category
-  end
-
-  test "reject! raises and does not revert kind when the transfer was concurrently confirmed" do
-    investment = accounts(:investment)
-    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "standard")
-    inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500, kind: "standard")
-
-    transfer = Transfer.create!(
-      inflow_transaction: inflow_entry.transaction,
-      outflow_transaction: outflow_entry.transaction
-    )
-
-    # Simulate a confirm that completes on another connection between the
-    # reject request loading its in-memory @transfer and calling reject!.
-    Transfer.find(transfer.id).confirm!
-
-    assert_raises(ActiveRecord::RecordNotFound) { transfer.reject! }
-
-    assert transfer.reload.confirmed?
-    assert_equal "investment_contribution", outflow_entry.transaction.reload.kind
-    assert_equal "funds_movement", inflow_entry.transaction.reload.kind
-    assert_equal accounts(:depository).family.investment_contributions_category, outflow_entry.transaction.reload.category
-  end
+      Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    end
 end
