@@ -498,10 +498,11 @@ class EnableBankingItemsController < ApplicationController
         # Optimistic removal of the specific account row if it exists in the DOM
         turbo_stream.remove(ActionView::RecordIdentifier.dom_id(@account)),
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "enable_banking_items/enable_banking_item",
-          locals: { enable_banking_item: item }
+          locals: { enable_banking_item: item, visible_accounts: item.accounts }
         ),
         turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
       ] + Array(flash_notification_stream_items)
@@ -542,13 +543,21 @@ class EnableBankingItemsController < ApplicationController
     end
 
     def enable_banking_item_params
-      params.require(:enable_banking_item).permit(
+      permitted = params.require(:enable_banking_item).permit(
         :name,
         :sync_start_date,
         :country_code,
         :application_id,
         :client_certificate
       )
+      # The panel never pre-fills the stored credentials, so a blank one on
+      # update means "keep the current value".
+      if @enable_banking_item&.persisted?
+        %i[application_id client_certificate].each do |credential|
+          permitted.delete(credential) if permitted[credential].blank?
+        end
+      end
+      permitted
     end
 
     def enable_banking_callback_url

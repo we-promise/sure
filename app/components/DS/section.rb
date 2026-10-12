@@ -22,9 +22,14 @@ class DS::Section < DesignSystemComponent
   #   for a list that can run long. It starts open.
   # @param persist_key [String, nil] remember a collapsed section on this device
   #   (persisted-disclosure); only for a collapsible section
-  # @param inset [Boolean] frame the section in container-inset, which is the
-  #   default here, unlike on DS::Table. Pass false when a parent's shell
+  # @param inset [Boolean] frame the section in a surface-inset shell, which is
+  #   the default here, unlike on DS::Table. Pass false when a parent's shell
   #   already frames it, such as one that stacks several sections.
+  #
+  # The shell is surface-inset because a section sits on the page, not in a
+  # card. container-inset is the page's own colour in light mode, so the shell
+  # vanished there: headings floated, and the cards sat 4px inside every other
+  # card's edge. Dark mode showed it, so the page changed shape with the theme.
   def initialize(title:, count:, collapsible: false, persist_key: nil, inset: true)
     @title = title
     @count = count
@@ -36,7 +41,7 @@ class DS::Section < DesignSystemComponent
   end
 
   def container_classes
-    "rounded-xl bg-container-inset p-1" if inset
+    "rounded-xl bg-surface-inset p-1" if inset
   end
 
   def persist_data
