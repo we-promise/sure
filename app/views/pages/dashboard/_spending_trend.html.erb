@@ -53,7 +53,7 @@
       <% end %>
 
       <%= render layout: "pages/dashboard/filter_popover", locals: {
-            button_text: data[:category_ids] ? t(".filter_categories", count: category_options.count { |option| option[:checked] }) : t(".filter_categories_all"),
+            button_text: data[:category_ids] ? t(".filter_categories", count: data[:selected_category_count]) : t(".filter_categories_all"),
             search_label: t(".search_categories"),
             apply_text: t(".apply"),
             hidden_fields: other_view_params.merge(spending_month: data[:month].iso8601),
@@ -63,11 +63,11 @@
             submitted only while all its subcategories are checked, and
             picking a parent covers its subcategories. %>
         <% category_options.each do |option| %>
-          <% category = option[:category] %>
+          <% category = option.category %>
           <%= render layout: "pages/dashboard/filter_popover_option", locals: {
                 name: "spending_category_ids[]",
-                value: option[:value],
-                checked: option[:checked],
+                value: option.value,
+                checked: option.checked,
                 filter_name: category.display_name,
                 checkbox_data: {
                   category_filter_target: "checkbox",

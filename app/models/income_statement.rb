@@ -290,12 +290,16 @@ class IncomeStatement
 
     # A predicate over a row's category_id for the given selection, expanding
     # each selected parent to its current subcategories (categories nest only
-    # one level deep).
+    # one level deep). Memoized per selection, since one request filters
+    # several periods the same way.
     def expense_category_matcher(category_ids)
-      selected = category_ids.map(&:to_s).to_set
-      selected.merge(categories.filter_map { |c| c.id.to_s if selected.include?(c.parent_id.to_s) })
+      key = category_ids.map(&:to_s).sort
+      (@expense_category_matchers ||= {})[key] ||= begin
+        selected = key.to_set
+        selected.merge(categories.filter_map { |c| c.id.to_s if selected.include?(c.parent_id.to_s) })
 
-      ->(category_id) { selected.include?(category_id.nil? ? Category::UNCATEGORIZED_FILTER_VALUE : category_id.to_s) }
+        ->(category_id) { selected.include?(category_id.nil? ? Category::UNCATEGORIZED_FILTER_VALUE : category_id.to_s) }
+      end
     end
 
     def family_stats(interval: "month")

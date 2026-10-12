@@ -74,13 +74,16 @@ class PagesController < ApplicationController
     return head :not_found unless DASHBOARD_SECTION_LAYOUTS.key?(section_key)
 
     hidden = ActiveModel::Type::Boolean.new.cast(params[:hidden])
+    # Resolved before the change: hiding the spending widget would otherwise
+    # skip resolving its own filter on the way out.
+    view_params = dashboard_view_params
     Current.user.update_dashboard_section_hidden(section_key, hidden)
     # Two param names rather than one, so hiding a widget and adding it back
     # never redirect to the same URL: Turbo morphs a same-URL visit as a
     # refresh, and a morph doesn't apply the autofocus that keeps keyboard
     # users on the widget they just changed.
     changed = hidden ? { hidden_section: section_key } : { shown_section: section_key }
-    redirect_to root_path(dashboard_view_params.merge(customize: true, **changed)), status: :see_other
+    redirect_to root_path(view_params.merge(customize: true, **changed)), status: :see_other
   end
 
   def changelog
@@ -133,12 +136,12 @@ class PagesController < ApplicationController
     # that covers every category with spending is the unfiltered state, so it
     # is dropped here rather than re-sent by every other control, where it
     # would pin today's list and leave out categories another month or
-    # period adds. Resolved only while the widget is shown, so a hidden
-    # widget's queries still never run.
+    # period adds. While the widget is hidden its ids are only checked
+    # against the family's categories, so its queries still never run.
     def dashboard_view_params
       view_params = params.permit(*DASHBOARD_VIEW_PARAMS).to_h
-      if view_params.key?(:spending_category_ids) && !Current.user.dashboard_hidden_sections.include?("spending_trend")
-        category_ids = spending_trend_filter[:category_ids]
+      if view_params.key?(:spending_category_ids)
+        category_ids = Current.user.dashboard_hidden_sections.include?("spending_trend") ? spending_trend_category_ids_param : spending_trend_filter.category_ids
         category_ids ? view_params[:spending_category_ids] = category_ids : view_params.delete(:spending_category_ids)
       end
       view_params
@@ -581,29 +584,26 @@ class PagesController < ApplicationController
     end
 
     # The selected month (capped at today while it's in progress) and the
-    # month before it, which the widget compares against.
+    # month before it, which the widget compares against. Memoized: the
+    # filter and the widget both need them.
     def spending_trend_periods(selected_month)
       month_start = selected_month.beginning_of_month
-      current_period = Period.custom(start_date: month_start, end_date: [ month_start.end_of_month, Date.current ].min)
-      previous_month_start = (month_start - 1.month).beginning_of_month
-      previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
-      [ current_period, previous_period ]
+      (@spending_trend_periods ||= {})[month_start] ||= begin
+        current_period = Period.custom(start_date: month_start, end_date: [ month_start.end_of_month, Date.current ].min)
+        previous_month_start = (month_start - 1.month).beginning_of_month
+        previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
+        [ current_period, previous_period ]
+      end
     end
 
-    # The category filter's options and the selection it resolves to. A
-    # selection is treated as unfiltered when it checks every option and
-    # every option has spending behind it (its own, or its category
-    # group's): that draws exactly what the unfiltered chart does. A picked
-    # category with no spending in view keeps the filter, so it survives a
-    # month where it's empty. Memoized: the view params and the widget both
-    # read it.
+    # The widget's category filter (IncomeStatement::ExpenseCategoryFilter).
+    # Memoized: the view params and the widget both read it.
     def spending_trend_filter
-      @spending_trend_filter ||= begin
-        category_ids = spending_trend_category_ids_param
-        options = spending_trend_category_options(dashboard_income_statement, spending_trend_periods(spending_trend_month_param), category_ids)
-        category_ids = nil if options.all? { |option| option[:checked] && option[:live] }
-        { category_ids: category_ids, category_options: options }
-      end
+      @spending_trend_filter ||= IncomeStatement::ExpenseCategoryFilter.new(
+        dashboard_income_statement,
+        periods: spending_trend_periods(spending_trend_month_param),
+        category_ids: spending_trend_category_ids_param
+      )
     end
 
     # Cumulative daily spending for the selected month (capped at today while
@@ -612,15 +612,15 @@ class PagesController < ApplicationController
     # same number of elapsed days; only the chart draws the previous month out
     # to its final day.
     #
-    # The category filter (see spending_trend_filter) narrows both months to
-    # the same categories, so the comparison stays like-for-like.
+    # The category filter (an IncomeStatement::ExpenseCategoryFilter) narrows
+    # both months to the same categories, so the comparison stays
+    # like-for-like.
     def build_spending_trend_data(income_statement, selected_month, category_filter)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
       current_period, previous_period = spending_trend_periods(month_start)
       previous_month_start = previous_period.start_date
-      category_ids = category_filter[:category_ids]
-      category_options = category_filter[:category_options]
+      category_ids = category_filter.category_ids
 
       current_daily = income_statement.daily_expense_series(period: current_period, category_ids: category_ids).index_by(&:date)
       previous_daily = income_statement.daily_expense_series(period: previous_period, category_ids: category_ids).index_by(&:date)
@@ -662,36 +662,10 @@ class PagesController < ApplicationController
         previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
         previous_comparison_day: previous_comparison_day,
         date_range_short: spending_trend_compact_date_range(current_period),
-        category_options: category_options,
+        category_options: category_filter.options,
+        selected_category_count: category_filter.selected_count,
         category_ids: category_ids
       }
-    end
-
-    # The filter's options, by category group (a top-level category and
-    # its subcategories): every group with spending in either month, plus
-    # any group with a picked category. A group is listed whole, so the
-    # parent/subcategory cascade sees every child; picking a parent covers
-    # them all. Ordered like the transactions category filter, with
-    # Uncategorized first. An option is checked when it was picked, or its
-    # parent was, or nothing was picked at all; it's `live` when its group
-    # has spending in view.
-    def spending_trend_category_options(income_statement, periods, category_ids)
-      used_ids = periods.flat_map { |period| income_statement.daily_expense_category_ids(period: period) }.uniq
-      selected_ids = Array(category_ids)
-
-      categories = Current.family.categories.alphabetically_by_hierarchy.to_a
-      group_of = ->(category) { category.parent_id || category.id }
-      live_groups = categories.select { |c| used_ids.include?(c.id) }.map(&group_of)
-      shown_groups = live_groups + categories.select { |c| selected_ids.include?(c.id) }.map(&group_of)
-      categories.select! { |c| shown_groups.include?(group_of.call(c)) }
-      categories.unshift(Category.uncategorized) if used_ids.include?(nil) || selected_ids.include?(Category::UNCATEGORIZED_FILTER_VALUE)
-
-      categories.map do |category|
-        value = category.persisted? ? category.id : category.filter_value
-        checked = category_ids.nil? || category_ids.include?(value) || category_ids.include?(category.parent_id)
-        live = category.persisted? ? live_groups.include?(group_of.call(category)) : used_ids.include?(nil)
-        { category: category, value: value, checked: checked, live: live }
-      end
     end
 
     # Compact range for narrow viewports ("Sep 01 - 6, 2026"). The period
