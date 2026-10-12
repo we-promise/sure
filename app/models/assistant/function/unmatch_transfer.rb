@@ -3,8 +3,9 @@
 # UnmatchTransfer — unlinks a transfer between two of the family's
 # transactions, confirmed or pending, so a wrong match can be undone (e.g. a
 # card payment paired with the account that funded it rather than the one that
-# paid it). Both transactions stay in the ledger and become standard
-# transactions again; balances don't change.
+# paid it). Both transactions stay in the ledger; a confirmed transfer's
+# become standard transactions again (a pending match never changed their
+# kinds, so those stay). Balances don't change.
 #
 # By default it rejects the pairing (Transfer#reject!, the Reject button), so
 # auto-match won't suggest it again. reject: false only unlinks
@@ -75,34 +76,54 @@ class Assistant::Function::UnmatchTransfer < Assistant::Function
       return error("not_found", "No transfer for '#{ref}' between accounts you can write to.")
     end
 
-    reject = params.key?("reject") ? ActiveModel::Type::Boolean.new.cast(params["reject"]) : true
-    snapshot = serialize_transfer(transfer)
+    # Only an explicit false skips the rejection; null counts as omitted.
+    reject = params["reject"].nil? || ActiveModel::Type::Boolean.new.cast(params["reject"])
 
     if ActiveModel::Type::Boolean.new.cast(params["dry_run"])
+      snapshot = serialize_transfer(transfer)
       return { success: true, dry_run: true, reject: reject, transfer: snapshot, message: "Would unlink #{snapshot[:name]}." }
     end
 
-    accounts = ([ transfer.from_account, transfer.to_account ] + transfer.fee_transactions.map { |t| t.entry.account }).compact.uniq
+    # Lock, then re-find within the writable scope: two concurrent calls can't
+    # both act on the transfer, a fee attached meanwhile is reported, and
+    # write access lost since the lookup is caught.
+    snapshot = accounts = nil
+    unmatched = Transfer.uncached do
+      Transfer.transaction do
+        locked = scoped_transfers.lock.find_by(id: transfer.id)
+        next false unless locked
 
-    # Lock and recheck, so two concurrent calls can't both act on the transfer.
-    unmatched = Transfer.transaction do
-      locked = Transfer.lock.find_by(id: transfer.id)
-      next false unless locked
-
-      reject ? locked.reject! : locked.destroy!
-      true
+        snapshot = serialize_transfer(locked)
+        accounts = ([ locked.from_account, locked.to_account ] + locked.fee_transactions.map { |t| t.entry.account }).compact.uniq
+        reject ? locked.reject! : locked.destroy!
+        true
+      end
     end
-    return error("not_found", "The transfer was already unlinked by another request.") unless unmatched
+    return error("not_found", "The transfer was already unlinked, or you can no longer write to its accounts.") unless unmatched
 
-    accounts.each(&:sync_later) if snapshot[:deleted_fee_transactions].any?
+    # A pending match never changed the kinds, so report what they are now.
+    kinds = Transaction.where(id: [ snapshot[:outflow][:id], snapshot[:inflow][:id] ]).pluck(:id, :kind).to_h
+    snapshot[:outflow][:kind_after] = kinds[snapshot[:outflow][:id]]
+    snapshot[:inflow][:kind_after] = kinds[snapshot[:inflow][:id]]
 
-    {
+    response = {
       success: true,
       unmatched: true,
       rejected: reject,
       transfer: snapshot,
-      message: "Unlinked #{snapshot[:name]}. Both transactions are standard transactions again."
+      message: "Unlinked #{snapshot[:name]}. Outflow kind is now #{snapshot[:outflow][:kind_after]}, inflow kind #{snapshot[:inflow][:kind_after]}."
     }
+
+    # Best-effort: the unlink has already committed.
+    if snapshot[:deleted_fee_transactions].any?
+      begin
+        accounts.each(&:sync_later)
+      rescue StandardError => e
+        response[:warning] = "Transfer unlinked, but the account sync for the deleted fees could not be enqueued (#{e.class}). Balances will recalculate on the next sync."
+      end
+    end
+
+    response
   end
 
   private
