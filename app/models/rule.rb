@@ -108,7 +108,7 @@ class Rule < ApplicationRecord
   # The transactions this rule currently matches, as a relation (e.g. for the
   # assistant's rule preview, which counts and samples them).
   def matching_resources
-    matching_resources_scope
+    matching_scope
   end
 
   # Creates a categorization rule for the Quick Categorize Wizard.
