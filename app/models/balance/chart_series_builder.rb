@@ -262,6 +262,29 @@ class Balance::ChartSeriesBuilder
           FROM holdings h
           WHERE h.account_id = ANY(array[:account_ids]::uuid[])
         ),
+        -- Each account's provider snapshot dates, and the date the next one starts.
+        provider_dates AS MATERIALIZED (
+          SELECT
+            snapshot.account_id,
+            snapshot.date,
+            LEAD(snapshot.date) OVER (PARTITION BY snapshot.account_id ORDER BY snapshot.date) AS next_date
+          FROM (
+            SELECT DISTINCT h.account_id, h.date
+            FROM holdings h
+            WHERE h.account_id = ANY(array[:account_ids]::uuid[])
+              AND h.account_provider_id IS NOT NULL
+          ) snapshot
+        ),
+        -- The account's latest provider snapshot on or before each series date. Resolved
+        -- once per (date, account) here: as a lateral beside the security join, Postgres
+        -- re-scanned the account's holdings for every (date, security).
+        provider_snapshots AS MATERIALIZED (
+          SELECT d.date, pd.account_id, pd.date AS snapshot_date
+          FROM dates d
+          JOIN provider_dates pd
+            ON pd.date <= d.date
+           AND (pd.next_date IS NULL OR d.date < pd.next_date)
+        ),
         daily_gains AS (
           SELECT
             d.date,
@@ -269,14 +292,14 @@ class Balance::ChartSeriesBuilder
               CASE
                 WHEN last_basis.cost_basis IS NOT NULL
                   AND (
-                    provider_snapshot.date IS NULL
+                    provider_snapshot.snapshot_date IS NULL
                     OR EXISTS (
                       SELECT 1
                       FROM holdings ph
                       WHERE ph.account_id = accounts.id
                         AND ph.security_id = sec.security_id
                         AND ph.account_provider_id IS NOT NULL
-                        AND ph.date = provider_snapshot.date
+                        AND ph.date = provider_snapshot.snapshot_date
                     )
                   )
                 THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
@@ -286,14 +309,9 @@ class Balance::ChartSeriesBuilder
           FROM dates d
           LEFT JOIN selected_accounts accounts
             ON accounts.active_until_date IS NULL OR d.date <= accounts.active_until_date
-          -- The account's latest provider holdings snapshot on or before d, if any.
-          LEFT JOIN LATERAL (
-            SELECT MAX(h.date) AS date
-            FROM holdings h
-            WHERE h.account_id = accounts.id
-              AND h.account_provider_id IS NOT NULL
-              AND h.date <= d.date
-          ) provider_snapshot ON TRUE
+          LEFT JOIN provider_snapshots provider_snapshot
+            ON provider_snapshot.date = d.date
+           AND provider_snapshot.account_id = accounts.id
           LEFT JOIN account_securities sec ON sec.account_id = accounts.id
           LEFT JOIN LATERAL (
             SELECT h.date, h.amount, h.qty, h.currency
