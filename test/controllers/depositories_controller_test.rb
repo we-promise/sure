@@ -224,12 +224,13 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.update.logo_not_applied"), flash[:alert]
   end
 
-  test "update falls back to the automatic fetch when the chosen icon fails for a new domain" do
+  test "update falls back to the paced automatic fetch when the chosen icon fails for a new domain" do
     Account::LogoFetcher.any_instance.expects(:fetch).returns(false)
+    AccountLogoFetchJob.expects(:perform_paced).once
 
-    assert_enqueued_jobs 1, only: AccountLogoFetchJob do
-      patch depository_path(@account), params: { account: { institution_domain: "krungsri.com", logo_choice: "yandex" } }
-    end
+    patch depository_path(@account), params: { account: { institution_domain: "krungsri.com", logo_choice: "yandex" } }
+
+    assert_redirected_to account_path(@account)
   end
 
   test "update lets an upload win over an icon chosen in the same form" do

@@ -47,6 +47,7 @@ export default class extends Controller {
 
   disconnect() {
     this.listenedField?.removeEventListener("input", this.updatePick);
+    this.revokePreview();
   }
 
   pickTargetConnected() {
@@ -135,10 +136,9 @@ export default class extends Controller {
     if (!file) return;
 
     this.choiceTarget.value = "";
-    this.showImage(
-      URL.createObjectURL(file),
-      `${file.name} · ${this.pendingValue}`,
-    );
+    this.revokePreview();
+    this.previewUrl = URL.createObjectURL(file);
+    this.showImage(this.previewUrl, `${file.name} · ${this.pendingValue}`);
     this.highlight(null);
   }
 
@@ -161,6 +161,14 @@ export default class extends Controller {
 
   clearFile() {
     if (this.hasFileTarget) this.fileTarget.value = "";
+    this.revokePreview();
+  }
+
+  revokePreview() {
+    if (!this.previewUrl) return;
+
+    URL.revokeObjectURL(this.previewUrl);
+    this.previewUrl = null;
   }
 
   highlight(selected) {

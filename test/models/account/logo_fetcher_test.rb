@@ -24,6 +24,33 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     assert_equal [ [ "duckduckgo", 128 ], [ "google", 64 ] ], candidates.map { |icon| [ icon.source, icon.size ] }
   end
 
+  test "reuses the icons found for the picker a moment ago" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+    google = stub_request(:get, GOOGLE_URL).to_return(status: 200, body: png(64))
+    stub_request(:get, DUCKDUCKGO_URL).to_return(status: 404)
+
+    first = Account::LogoFetcher.new(@account).candidates
+    second = Account::LogoFetcher.new(@account).candidates
+
+    assert_equal [ "google" ], second.map(&:key)
+    assert_equal first.map(&:body), second.map(&:body)
+    assert_requested google, times: 1
+  end
+
+  test "does not cache an empty picker search" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+    stub_request(:get, GOOGLE_URL).to_return(status: 404)
+    stub_request(:get, DUCKDUCKGO_URL).to_return(status: 404)
+
+    assert_empty Account::LogoFetcher.new(@account).candidates
+
+    stub_request(:get, GOOGLE_URL).to_return(status: 200, body: png(64))
+
+    assert_equal [ "google" ], Account::LogoFetcher.new(@account).candidates.map(&:key)
+  end
+
   test "prefers an app icon of the institution over favicons" do
     stub_request(:get, GOOGLE_URL).to_return(status: 200, body: png(180))
     stub_request(:get, DUCKDUCKGO_URL).to_return(status: 404)

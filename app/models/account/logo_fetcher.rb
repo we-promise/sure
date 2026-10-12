@@ -11,6 +11,9 @@ class Account::LogoFetcher
     "yandex" => ->(domain) { "https://favicon.yandex.net/favicon/v2/#{domain}?size=120" }
   }.freeze
 
+  CANDIDATES_CACHE_KEY = "account_logo_candidates"
+  CANDIDATES_CACHE_TTL = 5.minutes
+
   DOMAIN_FORMAT = /\A[a-z0-9-]+(\.[a-z0-9-]+)+\z/
   # Country-code TLDs that differ from the ISO country code the stores use.
   CCTLD_COUNTRIES = { "uk" => "gb" }.freeze
@@ -51,11 +54,14 @@ class Account::LogoFetcher
   # store pages behind a bot challenge.
   def candidates(for_picker: true)
     return [] unless domain
+    return search_candidates(for_picker:) unless for_picker
 
-    # Built here, not in the threads, so database reads stay on this thread's connection.
-    stores = [ app_store, google_play, (ru_store if for_picker) ].compact
-    icons = client.in_parallel([ -> { favicon_icons }, *stores.map { |store| -> { store.icons } } ]).flatten
-    icons.each_with_index.sort_by { |icon, index| [ -icon.size, index ] }.map(&:first)
+    # Opening the picker again, or for a sibling account of the same bank,
+    # reuses the icons found a moment ago instead of searching the stores anew.
+    key = [ CANDIDATES_CACHE_KEY, domain, search_term, countries ]
+    Rails.cache.read(key) || search_candidates(for_picker:).tap do |icons|
+      Rails.cache.write(key, icons, expires_in: CANDIDATES_CACHE_TTL) if icons.any?
+    end
   end
 
   # Attaches the icon with `source` key, or the largest one fit for an
@@ -79,18 +85,29 @@ class Account::LogoFetcher
       if account.institution_domain != fetched_for || changed_since?(logo_before, auto:) || (auto && !account.logo_auto_fetchable?)
         false
       else
+        # Attachment and flags go into one save: attach saves on its own only
+        # when the record has no other pending changes.
+        account.assign_attributes(prefer_brandfetch_logo: false, updated_at: Time.current)
         account.logo.attach(
           io: StringIO.new(icon.body),
           filename: "#{fetched_for}.#{icon.extension}",
           content_type: icon.content_type,
           metadata: { "logo_source" => icon.source, "logo_key" => icon.key, "logo_name" => icon.name,
                       "logo_domain" => fetched_for, "logo_auto" => auto }.compact
-        ) && account.update!(prefer_brandfetch_logo: false, updated_at: Time.current)
+        )
+        account.save
       end
     end
   end
 
   private
+    def search_candidates(for_picker:)
+      # Built here, not in the threads, so database reads stay on this thread's connection.
+      stores = [ app_store, google_play, (ru_store if for_picker) ].compact
+      icons = client.in_parallel([ -> { favicon_icons }, *stores.map { |store| -> { store.icons } } ]).flatten
+      icons.each_with_index.sort_by { |icon, index| [ -icon.size, index ] }.map(&:first)
+    end
+
     def logo_state
       [ account.logo.attachment&.blob_id, account.prefer_brandfetch_logo?, account.logo_auto? ]
     end

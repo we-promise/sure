@@ -154,7 +154,7 @@ module AccountableResource
       flash[:alert] = t("accounts.update.logo_not_applied")
       # The choice held back the automatic fetch; with it gone, that fetch
       # replaces or drops an automatic icon left from an earlier domain.
-      AccountLogoFetchJob.perform_later(@account)
+      AccountLogoFetchJob.perform_paced(@account)
     end
 
     # The account the 422 form renders when the exception carried none.
