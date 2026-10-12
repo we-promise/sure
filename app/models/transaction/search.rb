@@ -5,6 +5,8 @@ class Transaction::Search
   # Automatic-categorization provenance filter values (used by the view)
   AI_STATUSES = %w[current history].freeze
 
+  ATTACHMENT_STATUSES = %w[with without].freeze
+
   attribute :search, :string
   attribute :amount, :string
   attribute :amount_operator, :string
@@ -18,6 +20,7 @@ class Transaction::Search
   attribute :merchants, array: true
   attribute :tags, array: true
   attribute :ai_status, array: true
+  attribute :attachment_status, array: true
   attribute :active_accounts_only, :boolean, default: true
 
   attr_reader :family, :accessible_account_ids
@@ -45,6 +48,7 @@ class Transaction::Search
       query = apply_merchant_filter(query, merchants)
       query = apply_tag_filter(query, tags)
       query = apply_ai_status_filter(query, ai_status)
+      query = apply_attachment_status_filter(query, attachment_status)
       query = EntrySearch.apply_search_filter(query, search)
       query = EntrySearch.apply_date_filters(query, start_date, end_date)
       query = EntrySearch.apply_amount_filter(query, amount, amount_operator)
@@ -266,6 +270,29 @@ class Transaction::Search
       sql = "EXISTS (SELECT 1 FROM data_enrichments de WHERE de.enrichable_type = 'Transaction' AND de.enrichable_id = transactions.id AND de.attribute_name = 'category_id' AND de.source IN (:sources)"
       sql += " AND #{extra_condition}" if extra_condition
       sql + ")"
+    end
+
+    # EXISTS, not a join: several files on one transaction would duplicate
+    # it in the list and double-count it in totals.
+    def apply_attachment_status_filter(query, statuses)
+      wanted = Array(statuses) & ATTACHMENT_STATUSES
+      return query unless wanted.one?
+
+      # Splitting leaves files on the hidden parent, so a split child counts
+      # as attached when its parent is.
+      attached_sql = <<~SQL.squish
+        EXISTS (
+          SELECT 1 FROM active_storage_attachments asa
+          WHERE asa.record_type = 'Transaction'
+            AND asa.name = 'attachments'
+            AND asa.record_id IN (
+              transactions.id,
+              (SELECT pe.entryable_id FROM entries pe WHERE pe.id = entries.parent_entry_id)
+            )
+        )
+      SQL
+
+      wanted == [ "with" ] ? query.where(attached_sql) : query.where.not(attached_sql)
     end
 
     # Filter transactions by status (pending or confirmed)
