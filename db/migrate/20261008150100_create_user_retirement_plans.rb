@@ -1,9 +1,13 @@
 class CreateUserRetirementPlans < ActiveRecord::Migration[8.1]
-  def change
+  def up
+    # A database can already have this table from an earlier migration that
+    # recorded a different version, so this one is still pending there. Every
+    # step below skips what exists, leaving the table and its plans as they are.
+
     # One plan per user, not per family. The figures a plan drives are built
     # from the accounts its user can see, so a shared plan would project a
     # different set of accounts for every member who opened it.
-    create_table :retirement_plans, id: :uuid, default: -> { "gen_random_uuid()" } do |t|
+    create_table :retirement_plans, id: :uuid, default: -> { "gen_random_uuid()" }, if_not_exists: true do |t|
       t.references :user, null: false, type: :uuid, index: { unique: true }, foreign_key: { on_delete: :cascade }
 
       t.decimal :safe_withdrawal_rate, precision: 5, scale: 4, null: false, default: "0.04"
@@ -18,17 +22,30 @@ class CreateUserRetirementPlans < ActiveRecord::Migration[8.1]
 
     # A zero rate divides the FI number by zero; above one withdraws more than
     # the whole portfolio each year.
-    add_check_constraint :retirement_plans,
+    add_check_constraint_unless_named :retirement_plans,
       "safe_withdrawal_rate > 0 AND safe_withdrawal_rate <= 1",
       name: "chk_retirement_plans_safe_withdrawal_rate"
 
     # A return of -100% or worse leaves nothing to compound.
-    add_check_constraint :retirement_plans,
+    add_check_constraint_unless_named :retirement_plans,
       "expected_annual_return > -1 AND expected_annual_return <= 1",
       name: "chk_retirement_plans_expected_annual_return"
 
-    add_check_constraint :retirement_plans,
+    add_check_constraint_unless_named :retirement_plans,
       "savings_rate IS NULL OR (savings_rate >= 0 AND savings_rate <= 1)",
       name: "chk_retirement_plans_savings_rate"
   end
+
+  def down
+    drop_table :retirement_plans
+  end
+
+  private
+    # Skips on the name alone: a constraint already under that name is the one
+    # a re-run must not add again, whatever options it was created with.
+    def add_check_constraint_unless_named(table, expression, name:)
+      return if check_constraint_exists?(table, name: name)
+
+      add_check_constraint table, expression, name: name
+    end
 end
