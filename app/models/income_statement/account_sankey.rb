@@ -3,8 +3,11 @@
 # CategoryNetting, scoped to that account. What an account takes in beyond what
 # it spends flows on to Surplus; an account that spends more than it takes in
 # (a credit card paid off by transfer, savings being drawn down) is fed from
-# Deficit. Transfers between accounts are neither income nor spending, so they
-# never appear as flows between accounts.
+# Deficit. Transfers between accounts are neither income nor spending, but where
+# an account in surplus paid one in deficit, that transfer is drawn between the
+# two accounts (see #transfer_funding), so a card paid off from a current
+# account shows where its money came from instead of a Surplus on one side and
+# an equal Deficit on the other.
 #
 # Same schema as IncomeStatement::Sankey, with basis "net_by_account" and an
 # "account" node kind in place of the single Cash Flow node.
@@ -23,7 +26,9 @@ class IncomeStatement::AccountSankey
     capacity = [ income, spending ].max
     unless capacity.zero?
       subcategory_flows = Hash.new(0.to_d)
-      flows.each { |flow| add_account(flow, income, spending, capacity, subcategory_flows) }
+      funding = transfer_funding(flows)
+      flows.each { |flow| add_account(flow, income, spending, capacity, subcategory_flows, funding) }
+      add_transfers(funding, capacity)
       add_subcategories(subcategory_flows)
     end
     { basis: "net_by_account", income: decimal(income), spending: decimal(spending),
@@ -45,7 +50,7 @@ class IncomeStatement::AccountSankey
       end
     end
 
-    def add_account(flow, income, spending, capacity, subcategory_flows)
+    def add_account(flow, income, spending, capacity, subcategory_flows, funding)
       account = flow[:account]
       size = [ flow[:income], flow[:spending] ].max
       center = node("account_#{account.id}", account.name, :account, color: ACCOUNT_COLOR)
@@ -69,7 +74,10 @@ class IncomeStatement::AccountSankey
         end
       end
 
-      net = flow[:income] - flow[:spending]
+      id = account.id
+      net = flow[:income] - flow[:spending] +
+        funding.sum { |(_, to), value| to == id ? value : 0 } -
+        funding.sum { |(from, _), value| from == id ? value : 0 }
       return if net.zero?
 
       kind = net.positive? ? :surplus : :deficit
@@ -77,6 +85,64 @@ class IncomeStatement::AccountSankey
       balance[:value] += net.abs
       balance[:percentage] = percentage(balance[:value], capacity)
       link(*(net.positive? ? [ center, balance ] : [ balance, center ]), net.abs, percentage(net.abs, capacity))
+    end
+
+    # How much of each deficit account's shortfall was paid by a surplus
+    # account, as { [from_id, to_id] => amount }. Uses the period's confirmed
+    # transfers (funds movements and card payments) between the accounts in
+    # the graph, netted per pair, largest first. Each amount is capped by what
+    # the payer has left over and what the payee still needs, so every pound
+    # drawn takes the same off Surplus and Deficit (the net is unchanged) and
+    # links only run from surplus to deficit accounts, which keeps the graph
+    # acyclic.
+    def transfer_funding(flows)
+      balance = flows.to_h { |flow| [ flow[:account].id, flow[:income] - flow[:spending] ] }
+      surplus = balance.select { |_, net| net.positive? }
+      deficit = balance.select { |_, net| net.negative? }.transform_values(&:abs)
+      return {} if surplus.empty? || deficit.empty?
+
+      moved = Hash.new(0.to_d)
+      transfers_between(balance.keys).each do |from, to, amount|
+        moved[[ from, to ]] += amount
+        moved[[ to, from ]] -= amount
+      end
+
+      moved.select { |(from, to), amount| amount.positive? && surplus.key?(from) && deficit.key?(to) }
+        .sort_by { |_, amount| -amount }
+        .each_with_object({}) do |((from, to), amount), funding|
+          value = [ amount, surplus[from], deficit[to] ].min
+          next unless value.positive?
+
+          funding[[ from, to ]] = value
+          surplus[from] -= value
+          deficit[to] -= value
+        end
+    end
+
+    # [from_account_id, to_account_id, amount in the family currency] for each
+    # confirmed transfer in the period between two of the given accounts.
+    def transfers_between(account_ids)
+      currency = @statement.family.currency
+      outflows = Transaction.joins(:entry).where(kind: %w[funds_movement cc_payment],
+        entries: { account_id: account_ids, date: @period.start_date..@period.end_date, excluded: false })
+      inflows = Transaction.joins(:entry).where(entries: { account_id: account_ids })
+
+      Transfer.confirmed
+        .where(outflow_transaction_id: outflows.select(:id), inflow_transaction_id: inflows.select(:id))
+        .includes(outflow_transaction: :entry, inflow_transaction: :entry)
+        .filter_map do |transfer|
+          outflow = transfer.outflow_transaction.entry
+          amount = outflow.amount_money.abs.exchange_to(currency, date: outflow.date).amount.to_d
+          [ outflow.account_id, transfer.inflow_transaction.entry.account_id, amount ]
+        rescue Money::ConversionError
+          nil
+        end
+    end
+
+    def add_transfers(funding, capacity)
+      funding.each do |(from, to), value|
+        link(@node_index.fetch("account_#{from}"), @node_index.fetch("account_#{to}"), value, percentage(value, capacity))
+      end
     end
 
     # Subcategories are summed across accounts, then hang off their parent.

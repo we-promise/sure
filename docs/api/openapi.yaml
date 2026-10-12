@@ -3349,7 +3349,9 @@ components:
           - net_by_category
           - net_by_account
           description: net_by_account (group_by=account) replaces the Cash Flow node
-            with one account node per account, each balanced by Surplus or Deficit
+            with one account node per account, each balanced by Surplus or Deficit.
+            Where an account in surplus paid one in deficit by confirmed transfer
+            in the period, that amount is a link between the two account nodes instead
         income:
           type: string
         spending:
