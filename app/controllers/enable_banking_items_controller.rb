@@ -498,10 +498,11 @@ class EnableBankingItemsController < ApplicationController
         # Optimistic removal of the specific account row if it exists in the DOM
         turbo_stream.remove(ActionView::RecordIdentifier.dom_id(@account)),
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "enable_banking_items/enable_banking_item",
-          locals: { enable_banking_item: item }
+          locals: { enable_banking_item: item, visible_accounts: item.accounts }
         ),
         turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
       ] + Array(flash_notification_stream_items)
