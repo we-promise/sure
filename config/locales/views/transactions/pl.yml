@@ -300,6 +300,8 @@ pl:
       selected: zaznaczone
     show:
       account_label: Konto
+      counterparty_account_label: "Konto kontrahenta"
+      counterparty_iban_label: "IBAN kontrahenta"
       activity_type: Typ aktywności
       activity_type_description: Typ aktywności inwestycyjnej (kupno, sprzedaż, dywidenda
         itp.). Wykrywany automatycznie lub ustawiany ręcznie.

@@ -44,6 +44,8 @@ pt-BR:
         dashboard_subtitle: Personalize como o painel é exibido
         dashboard_two_column_title: Layout de duas colunas
         dashboard_two_column_description: Exibe os widgets do painel em duas colunas em telas grandes. Quando desativado, os widgets ficam empilhados em uma única coluna.
+        show_counterparty_account_description: "Mostra os últimos 4 caracteres do IBAN ou do número da conta da contraparte nos detalhes de uma transação, quando sua conexão bancária os fornece. Só aparece quando esses dados estão disponíveis."
+        show_counterparty_account_title: "Mostrar dados da conta da contraparte"
         split_grouped_title: Agrupar transações divididas
         split_grouped_description: Mostra as transações divididas agrupadas sob o registro principal na lista de transações. Quando desativado, as subdivisões aparecem como linhas individuais.
     preferences:

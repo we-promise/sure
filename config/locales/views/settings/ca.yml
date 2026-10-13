@@ -27,6 +27,8 @@ ca:
           en pantalles grans. Si està desactivat, els ginys s'apilen en una sola columna.
         dashboard_two_column_title: Disseny a dues columnes
         page_title: Aparença
+        show_counterparty_account_description: "Mostra els últims 4 caràcters de l'IBAN o del número de compte de la contrapart als detalls d'una transacció, si la teva connexió bancària els proporciona. Només apareix quan aquestes dades estan disponibles."
+        show_counterparty_account_title: "Mostra les dades del compte de la contrapart"
         split_grouped_description: Mostra les transaccions dividides agrupades sota
           la seva matriu a la llista de transaccions. Si està desactivat, els fills
           apareixen com a files individuals.

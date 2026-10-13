@@ -61,6 +61,8 @@ pl:
         modals_subtitle: Dostosuj zachowanie okien modalnych
         modals_title: Okna modalne
         page_title: Wygląd
+        show_counterparty_account_description: "Pokazuje ostatnie 4 znaki numeru IBAN lub numeru konta kontrahenta w szczegółach transakcji, jeśli Twoje połączenie bankowe je udostępnia. Wyświetla się tylko wtedy, gdy te dane są dostępne."
+        show_counterparty_account_title: "Pokazuj dane konta kontrahenta"
         split_grouped_description: Pokazuj podzielone transakcje zgrupowane pod transakcją
           nadrzędną na liście transakcji. Gdy opcja jest wyłączona, pozycje podrzędne
           pojawiają się jako osobne wiersze.

@@ -81,6 +81,8 @@ hu:
         dashboard_subtitle: Szabd testre az irányítópult megjelenítését
         dashboard_two_column_title: Kétoszlopos elrendezés
         dashboard_two_column_description: Az irányítópult-widgetek megjelenítése két oszlopban nagy képernyőkön. Ha ki van kapcsolva, a widgetek egyetlen oszlopban egymás alatt jelennek meg.
+        show_counterparty_account_description: "A partner IBAN-jának vagy számlaszámának utolsó 4 karakterét mutatja a tranzakció részleteinél, ha a banki kapcsolatod megadja. Csak akkor jelenik meg, ha ezek az adatok elérhetők."
+        show_counterparty_account_title: "Partner számlaadatainak megjelenítése"
         split_grouped_title: Felosztott tranzakciók csoportosítása
         split_grouped_description: A felosztott tranzakciók megjelenítése szülőjük alatt csoportosítva a tranzakciólistában. Ha ki van kapcsolva, a felosztott tételek egyedi sorként jelennek meg.
     preferences:

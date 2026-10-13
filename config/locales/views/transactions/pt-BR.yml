@@ -24,6 +24,8 @@ pt-BR:
       new_transaction: Nova transação
     show:
       account_label: Conta
+      counterparty_account_label: "Conta da contraparte"
+      counterparty_iban_label: "IBAN da contraparte"
       amount: Valor
       category_label: Categoria
       date_label: Data

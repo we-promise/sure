@@ -24,6 +24,8 @@ ro:
       new_transaction: Tranzacție nouă
     show:
       account_label: Cont
+      counterparty_account_label: "Contul contrapărții"
+      counterparty_iban_label: "IBAN-ul contrapărții"
       amount: Sumă
       category_label: Categorie
       date_label: Dată

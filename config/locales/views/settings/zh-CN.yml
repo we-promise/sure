@@ -117,6 +117,8 @@ zh-CN:
         dashboard_subtitle: 自定义仪表盘的显示方式
         dashboard_two_column_title: 双栏布局
         dashboard_two_column_description: 在大屏幕上以两列显示仪表盘组件；关闭后，组件将以单列堆叠显示。
+        show_counterparty_account_description: "当银行连接提供时，在交易详情中显示交易对方 IBAN 或账号的后 4 位。仅在有此数据时显示。"
+        show_counterparty_account_title: "显示交易对方账户信息"
         split_grouped_title: 将拆分交易分组显示
         split_grouped_description: 在交易列表中按父级分组显示拆分交易；关闭后，拆分子项将作为独立行显示。
     preferences:

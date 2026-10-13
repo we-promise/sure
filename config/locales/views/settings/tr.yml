@@ -32,6 +32,8 @@ tr:
         modals_subtitle: Modal davranışını özelleştir
         modals_title: Modaller
         page_title: Görünüm
+        show_counterparty_account_description: "Banka bağlantınız sağlıyorsa, karşı tarafın IBAN'ının veya hesap numarasının son 4 karakterini işlem ayrıntılarında gösterir. Yalnızca bu veriler mevcut olduğunda görünür."
+        show_counterparty_account_title: "Karşı tarafın hesap bilgilerini göster"
         split_grouped_description: Bölünmüş işlemleri işlem listesinde üst işlemin
           altında gruplandırılmış olarak gösterin. Kapalıyken bölünen alt işlemler
           ayrı satırlar olarak görünür.

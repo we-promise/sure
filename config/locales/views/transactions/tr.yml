@@ -284,6 +284,8 @@ tr:
       selected: seçildi
     show:
       account_label: Hesap
+      counterparty_account_label: "Karşı taraf hesabı"
+      counterparty_iban_label: "Karşı taraf IBAN"
       activity_type: Aktivite Türü
       activity_type_description: Yatırım aktivitesinin türü (Alış, Satış, Temettü
         vb.). Otomatik algılanır veya manuel olarak ayarlanır.

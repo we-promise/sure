@@ -23,6 +23,8 @@ fr:
         dashboard_two_column_description: Affiche les widgets du tableau de bord sur deux colonnes sur les grands écrans. Lorsque cette option est désactivée, les widgets sont empilés dans une seule colonne.
         dashboard_two_column_title: Mise en page à deux colonnes
         page_title: Apparence
+        show_counterparty_account_description: "Affiche les 4 derniers caractères de l'IBAN ou du numéro de compte de la contrepartie dans les détails d'une transaction, lorsque votre connexion bancaire les fournit. N'apparaît que si ces données sont disponibles."
+        show_counterparty_account_title: "Afficher les coordonnées bancaires de la contrepartie"
         split_grouped_description: Affiche les transactions fractionnées groupées sous leur parent dans la liste des transactions. Lorsque cette option est désactivée, les enfants fractionnés apparaissent comme des lignes individuelles.
         split_grouped_title: Grouper les transactions fractionnées
         theme_dark: Sombre

@@ -160,6 +160,8 @@ zh-TW:
         dashboard_subtitle: 自訂儀表板的顯示方式
         dashboard_two_column_title: 雙欄版面
         dashboard_two_column_description: 在大螢幕上以兩欄顯示儀表板小工具，每個小工具的標題列都有各自的寬度與高度控制項。關閉時，小工具會排成單欄。
+        show_counterparty_account_description: "當銀行連線提供時，在交易詳情中顯示交易對方 IBAN 或帳號的末 4 碼。僅在有此資料時顯示。"
+        show_counterparty_account_title: "顯示交易對方帳戶資訊"
         split_grouped_title: 將拆分交易分組
         split_grouped_description: 在交易清單中，將拆分交易歸在其母交易之下顯示。關閉時，拆分出來的子項會各自成為一列。
     preferences:

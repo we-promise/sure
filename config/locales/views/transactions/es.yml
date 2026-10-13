@@ -63,6 +63,8 @@ es:
       potential_duplicate_title: Posible duplicado detectado
       transfer: Transferencia
       account_label: Cuenta
+      counterparty_account_label: "Cuenta de la contraparte"
+      counterparty_iban_label: "IBAN de la contraparte"
       amount: Importe
       category_label: Categoría
       date_label: Fecha
