@@ -207,7 +207,7 @@ module ApplicationHelper
   end
 
   def assistant_icon
-    type = ENV["ASSISTANT_TYPE"].presence || Current.family&.assistant_type.presence || "builtin"
+    type = Current.family&.effective_assistant_type || "builtin"
     type == "external" ? "claw" : "ai"
   end
 
