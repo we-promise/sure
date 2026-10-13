@@ -37,6 +37,19 @@ class Portfolio::Performance
   # Annualising anything shorter produces a number nobody should be shown.
   MIN_DAYS_FOR_ANNUALISATION = 365
 
+  # Significant digits a chained level keeps. A daily return is a quotient with
+  # dozens of digits, and a BigDecimal product keeps every digit of both sides,
+  # so an unrounded level grows by that much each day: two years of daily
+  # returns reached about 28,000 digits, a cached entry of 10 MB for one
+  # account, and drawdown dividing those numbers took most of a second.
+  #
+  # Twenty is more than a Float carries (about 16), so the figures stay at
+  # least as exact as Float arithmetic would make them. Rounding to it costs at
+  # most half a unit in the 20th digit per day: under 1e-16 relative over ten
+  # years of daily returns, twelve orders of magnitude below the 0.01% a
+  # return is shown to.
+  CHAIN_PRECISION = 20
+
   attr_reader :family, :account_ids, :period, :user, :active_until_dates
 
   def initialize(family:, account_ids:, period:, user: nil, active_until_dates: {})
@@ -211,10 +224,18 @@ class Portfolio::Performance
       }
     end
 
+    # One day's growth applied to a level, rounded to CHAIN_PRECISION
+    # significant digits. Every chained figure goes through here -- the
+    # time-weighted return, drawdown and the index series -- so they agree on
+    # the level they read, and none of them grows without bound.
+    def compound(level, r)
+      level.mult(1 + r, CHAIN_PRECISION)
+    end
+
     def chain(returns)
       return nil if returns.empty?
 
-      returns.reduce(BigDecimal(1)) { |acc, (_date, r)| acc * (1 + r) } - 1
+      returns.reduce(BigDecimal(1)) { |acc, (_date, r)| compound(acc, r) } - 1
     end
 
     def annualize(chained)
@@ -345,7 +366,7 @@ class Portfolio::Performance
       worst = BigDecimal(0)
 
       returns.each do |(_date, r)|
-        level *= (1 + r)
+        level = compound(level, r)
         peak = level if level > peak
         next unless peak.positive?
 
@@ -360,7 +381,7 @@ class Portfolio::Performance
       level = BigDecimal(100)
 
       returns.map do |(date, r)|
-        level *= (1 + r)
+        level = compound(level, r)
         [ date, level ]
       end
     end

@@ -660,6 +660,43 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_in_delta 50 / 1_500.0, result.twr.to_f, 0.000001, "the journal earns nothing; the price move does"
   end
 
+  # Chaining multiplies one daily factor into the level each day, and a daily
+  # return is a quotient (close / denominator) carrying dozens of digits. A
+  # BigDecimal product keeps every digit of both sides, so an unrounded level
+  # grows by that many digits a day: two years of daily returns left the
+  # time-weighted return and each index point near 28,000 significant digits,
+  # drawdown dividing those numbers took most of a second, and the cached
+  # metrics for one account reached 10 MB.
+  #
+  # With no flows the chain telescopes to last close / first open - 1, which
+  # gives an oracle that does not use the chain at all.
+  test "two years of daily returns keep a bounded precision and a small cached payload" do
+    start_date = Date.new(2024, 3, 1)
+    end_date = start_date + 729
+    opening = BigDecimal("1000")
+    first_open = opening
+
+    (start_date..end_date).each_with_index do |date, i|
+      market = BigDecimal((((i * 7) % 11) - 5).to_s) * BigDecimal("1.37")
+      lay_balance account: @account, date: date, opening: opening, closing: opening + market, market_flow: market
+      opening += market
+    end
+
+    result = performance(start_date: start_date, end_date: end_date)
+    expected_twr = (opening / first_open) - 1
+
+    assert_in_delta expected_twr.to_f, result.twr.to_f, 1e-12,
+                    "rounding each level must not move the figure"
+    assert_operator result.twr.precision, :<=, 30,
+                    "a return needs no more significant digits than a fraction can show"
+    assert result.index_series.all? { |(_date, level)| level.precision <= 30 },
+           "every index point is bounded too, not only the last"
+    assert_operator result.max_drawdown.precision, :<=, 60
+
+    payload = Marshal.dump(result.send(:compute)).bytesize
+    assert_operator payload, :<, 250_000, "730 days of metrics must not cache megabytes"
+  end
+
   private
     # Day one holds 1,000; day two withdraws 800; day three deposits 500 and
     # gains 10. See "an ambiguous money-weighted series is flagged".
