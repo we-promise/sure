@@ -59,6 +59,7 @@ class Provider::Anthropic::AutoCategorizerTest < ActiveSupport::TestCase
     ])
     client = stub_client(fake_response, expect_request: ->(params) {
       assert_equal({ type: "auto", disable_parallel_tool_use: true }, params[:tool_choice])
+      assert_includes params[:system_], "calling the report_categorizations tool"
     })
 
     result = Provider::Anthropic::AutoCategorizer.new(

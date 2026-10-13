@@ -25,7 +25,7 @@ class Provider::Anthropic::BillSetupSuggester
     response = client.messages.create(
       model: model,
       max_tokens: max_tokens,
-      system_: instructions,
+      system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
       messages: [ { role: "user", content: user_message } ],
       tools: [ output_tool ],
       tool_choice: Provider::Anthropic.structured_output_tool_choice(model, TOOL_NAME)

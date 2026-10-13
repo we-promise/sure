@@ -37,7 +37,7 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
 
   test "structured_output_tool_choice sends auto to the Claude 5 families" do
     %w[
-      claude-opus-5-5 claude-sonnet-5-5 claude-fable-5-1 claude-opus-5 claude-opus-5-6
+      claude-opus-5-5 claude-sonnet-5-5 claude-fable-5-1 claude-mythos-5-1 claude-opus-5 claude-opus-5-6
       us.anthropic.claude-sonnet-5-5-v1:0
     ].each do |model|
       assert_equal(
@@ -46,6 +46,14 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
         model
       )
     end
+  end
+
+  test "structured_output_system adds a tool instruction only where tool_choice is auto" do
+    assert_equal "Custom prompt", Provider::Anthropic.structured_output_system("Custom prompt", "claude-sonnet-4-6", "report")
+
+    system = Provider::Anthropic.structured_output_system("Custom prompt", "claude-sonnet-5-5", "report")
+    assert system.start_with?("Custom prompt\n\n")
+    assert_includes system, "calling the report tool"
   end
 
   test "supports_model? returns true for claude prefix" do
