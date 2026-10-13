@@ -1,9 +1,18 @@
 class McpController < ApplicationController
   include OauthBase
 
+  LEGACY_PROTOCOL_VERSION = "2025-03-26"
   PROTOCOL_VERSION = "2025-06-18"
-  SUPPORTED_PROTOCOL_VERSIONS = [ "2025-03-26", PROTOCOL_VERSION ].freeze
+  # MCP's stateless dialect (see modelcontextprotocol.io/specification/2026-07-28/changelog):
+  # no initialize/notifications/initialized handshake and no Mcp-Session-Id —
+  # every request carries its own protocol version, and every result carries
+  # resultType plus the server's identity in _meta. server/discover is this
+  # dialect's session-less capability probe. Any 2026-07-28 client works the
+  # same way, ChatGPT's tunnel included; nothing here is tunnel-specific.
+  MODERN_PROTOCOL_VERSION = "2026-07-28"
+  SUPPORTED_PROTOCOL_VERSIONS = [ LEGACY_PROTOCOL_VERSION, PROTOCOL_VERSION, MODERN_PROTOCOL_VERSION ].freeze
   MCP_SESSION_TTL = 1.day
+  SERVER_INFO = { name: "sure", version: "1.0" }.freeze
   # See authenticate_via_env_token below.
   MCP_API_TOKEN_SCOPES = OauthBase.mcp_scopes
 
@@ -36,6 +45,7 @@ class McpController < ApplicationController
     # not a usable id either, so it is rejected before dispatch rather than
     # executed and answered with an "id": null response.
     unless body.key?("id")
+      @mcp_protocol_version = notification_protocol_version(body["params"])
       return head(:accepted)
     end
 
@@ -76,6 +86,8 @@ class McpController < ApplicationController
       case method
       when "initialize"
         handle_initialize(params)
+      when "server/discover"
+        handle_server_discover
       when "tools/list"
         handle_tools_list
       when "tools/call"
@@ -95,11 +107,31 @@ class McpController < ApplicationController
         expires_in: MCP_SESSION_TTL
       )
 
+      # A client that negotiates 2026-07-28 here still gets a sessionId back —
+      # the dialect's own handshake is removed, so nothing calls initialize
+      # under it in practice, but nothing forbids one either. That id is a
+      # promise this server does not keep: modern_mcp_request? (below) skips
+      # all session handling entirely for that dialect, so the id is never
+      # read back. Not a bug to "fix" by wiring the session path back in for
+      # a case the dialect itself does not use.
       {
         protocolVersion: @mcp_protocol_version,
         capabilities: { tools: {} },
-        serverInfo: { name: "sure", version: "1.0" },
+        serverInfo: SERVER_INFO,
         sessionId: @mcp_session_id
+      }
+    end
+
+    # Authenticated, session-less capability probe for the 2026-07-28 dialect.
+    # Deliberately does not touch session state: no Mcp-Session-Id is minted or
+    # read, so a client can call this before (or instead of) initialize — or,
+    # per that dialect's spec, instead of ever calling initialize at all.
+    def handle_server_discover
+      {
+        resultType: "complete",
+        supportedVersions: SUPPORTED_PROTOCOL_VERSIONS.reverse,
+        capabilities: { tools: {} },
+        _meta: { "io.modelcontextprotocol/serverInfo" => SERVER_INFO }
       }
     end
 
@@ -113,7 +145,7 @@ class McpController < ApplicationController
         }
       end
 
-      { tools: tools }
+      modern_cacheable_result({ tools: tools })
     end
 
     def handle_tools_call(request_id, params)
@@ -136,7 +168,7 @@ class McpController < ApplicationController
       fn = fn_class.new(mcp_user)
       result = fn.call(arguments)
 
-      { content: [ { type: "text", text: result.to_json } ] }
+      modern_complete_result({ content: [ { type: "text", text: result.to_json } ] })
     rescue => e
       Rails.logger.error "MCP tools/call error: #{e.class}: #{e.message}"
 
@@ -144,7 +176,7 @@ class McpController < ApplicationController
       # external client: a RecordNotFound carries the access-control SQL, and a
       # PG range error carries the column definition. The full text stays in the
       # log above, where an operator can read it.
-      { content: [ { type: "text", text: { error: "The tool failed to run", tool: name }.to_json } ], isError: true }
+      modern_complete_result({ content: [ { type: "text", text: { error: "The tool failed to run", tool: name }.to_json } ], isError: true })
     end
 
     def authenticate_mcp_token!
@@ -260,7 +292,29 @@ class McpController < ApplicationController
     def prepare_mcp_request_context(request_id, method, params)
       return true if method == "initialize"
 
-      @mcp_protocol_version = mcp_request_header("Mcp-Protocol-Version").presence || PROTOCOL_VERSION
+      header_version = mcp_request_header("Mcp-Protocol-Version").presence
+      meta_version = params&.dig("_meta", "io.modelcontextprotocol/protocolVersion").presence
+
+      if header_version && meta_version && header_version != meta_version
+        render_jsonrpc_error(
+          request_id,
+          -32600,
+          t("mcp.errors.protocol_version_mismatch", header: header_version, meta: meta_version),
+          status: :bad_request
+        )
+        return false
+      end
+
+      # A legacy dialect never sends Mcp-Method (2026-07-28 only) — its
+      # presence with no explicit version anywhere is still an unambiguous
+      # signal, not a case to leave defaulting to legacy. Without this, a
+      # modern client that forgets MCP-Protocol-Version got a legacy-shaped
+      # response body (no resultType, no _meta.serverInfo) it can't parse,
+      # instead of the loud, correct rejection modern_routing_headers_valid?
+      # gives once @mcp_protocol_version actually reflects that dialect.
+      implied_modern_version = MODERN_PROTOCOL_VERSION if mcp_request_header("Mcp-Method").present?
+
+      @mcp_protocol_version = header_version || meta_version || implied_modern_version || PROTOCOL_VERSION
 
       unless SUPPORTED_PROTOCOL_VERSIONS.include?(@mcp_protocol_version)
         render_jsonrpc_error(
@@ -270,6 +324,14 @@ class McpController < ApplicationController
           status: :bad_request
         )
         return false
+      end
+
+      if modern_mcp_request?
+        # 2026-07-28 has no session concept at all (see the dialect note
+        # above) — never validate or echo back Mcp-Session-Id for it, so a
+        # modern request never carries session state its own protocol
+        # version says doesn't exist.
+        return modern_routing_headers_valid?(request_id, method, params)
       end
 
       session_id = mcp_request_header("Mcp-Session-Id").presence
@@ -310,11 +372,63 @@ class McpController < ApplicationController
       true
     end
 
+    # HeaderMismatchError, -32020 in the 2026-07-28 error-code allocation.
+    HEADER_MISMATCH_ERROR_CODE = -32020
+
+    # 2026-07-28 requires Mcp-Method (and, for tools/call, Mcp-Name) on every
+    # request as a header-level echo of what the JSON-RPC body already says —
+    # a proxy or client that rewrites one without the other is caught here
+    # rather than silently routing on whichever one is wrong.
+    def modern_routing_headers_valid?(request_id, method, params)
+      header_method = mcp_request_header("Mcp-Method")
+      unless header_method == method
+        render_jsonrpc_error(
+          request_id,
+          HEADER_MISMATCH_ERROR_CODE,
+          t("mcp.errors.header_mismatch", header: "Mcp-Method", expected: method),
+          status: :bad_request
+        )
+        return false
+      end
+
+      return true unless method == "tools/call"
+
+      tool_name = params["name"]
+      header_name = mcp_request_header("Mcp-Name")
+      unless header_name.present? && header_name == tool_name
+        render_jsonrpc_error(
+          request_id,
+          HEADER_MISMATCH_ERROR_CODE,
+          t("mcp.errors.header_mismatch", header: "Mcp-Name", expected: tool_name.to_s),
+          status: :bad_request
+        )
+        return false
+      end
+
+      true
+    end
+
     def negotiated_protocol_version(params)
       requested_version = params&.dig("protocolVersion").presence || PROTOCOL_VERSION
       return requested_version if SUPPORTED_PROTOCOL_VERSIONS.include?(requested_version)
 
       PROTOCOL_VERSION
+    end
+
+    # A notification never reaches prepare_mcp_request_context — there is no
+    # request id to attach a rejection to, and the response body is empty
+    # either way — so without this, its Mcp-Protocol-Version response header
+    # always fell back to the legacy default even when the notification
+    # itself was 2026-07-28, which a protocol-aware gateway could route on.
+    # Ambiguous input degrades to the legacy default rather than erroring,
+    # since there is no channel to report an error through.
+    def notification_protocol_version(params)
+      params = {} unless params.is_a?(Hash)
+      header_version = mcp_request_header("Mcp-Protocol-Version").presence
+      meta_version = params.dig("_meta", "io.modelcontextprotocol/protocolVersion").presence
+      version = header_version || meta_version || PROTOCOL_VERSION
+
+      SUPPORTED_PROTOCOL_VERSIONS.include?(version) ? version : PROTOCOL_VERSION
     end
 
     def mcp_session_cache_key(session_id)
@@ -323,6 +437,35 @@ class McpController < ApplicationController
 
     def mcp_request_header(name)
       request.headers[name] || request.get_header("HTTP_#{name.upcase.tr('-', '_')}")
+    end
+
+    # 2026-07-28 clients expect a resultType and the server's identity
+    # alongside otherwise-unchanged result payloads; 2025-dialect clients keep
+    # the exact historical shape.
+    def modern_mcp_request?
+      @mcp_protocol_version == MODERN_PROTOCOL_VERSION
+    end
+
+    def modern_complete_result(payload)
+      return payload unless modern_mcp_request?
+
+      payload.merge(
+        resultType: "complete",
+        _meta: { "io.modelcontextprotocol/serverInfo" => SERVER_INFO }
+      )
+    end
+
+    # CacheableResult (2026-07-28): required on list-shaped results only —
+    # tools/list here, never tools/call. ttlMs: 0 is an honest "don't cache
+    # this": the tool surface depends on the caller's own scope and the
+    # preview-features/MCP_READ_ONLY toggles, and Sure has no listChanged
+    # notification to invalidate a client's cache if either changes mid-session.
+    # cacheScope: "private" keeps a shared intermediary from serving one
+    # caller's tool list to another.
+    def modern_cacheable_result(payload)
+      return payload unless modern_mcp_request?
+
+      modern_complete_result(payload).merge(ttlMs: 0, cacheScope: "private")
     end
 
     # scope="read" tells a client what to request first: the minimum needed to

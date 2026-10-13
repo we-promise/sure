@@ -176,8 +176,10 @@ external assistant. Every other excluded tool (`create_goal`, `create_tag`, `upd
 
 ### Sessions and read-only mode
 
-A session is created by `initialize` and keeps the access mode of the
-credential that opened it, so it can never escalate beyond it.
+This only matters for the `2025-03-26`/`2025-06-18` dialects, which have a
+session; `2026-07-28` has none (see [Protocol dialects](#protocol-dialects))
+and is authenticated fresh on every request, so there is nothing for it to
+preserve or escalate.
 
 An MCP session (`Mcp-Session-Id`) remembers the access mode of the credential
 that created it and never grants more than that for the life of the session,
@@ -259,6 +261,7 @@ Sure implements the following JSON-RPC 2.0 methods:
 | Method | Description |
 |--------|-------------|
 | `initialize` | Protocol handshake, returns server info and capabilities |
+| `server/discover` | Authenticated capability probe for the 2026-07-28 dialect (see below). Does not require `initialize` first and does not create a session. |
 | `tools/list` | Lists available financial tools with schemas |
 | `tools/call` | Executes a tool with provided arguments |
 
@@ -266,14 +269,30 @@ A JSON-RPC request without an `id` (a notification, e.g.
 `notifications/initialized`) gets `202 Accepted` with an empty body — Sure
 never replies with data to a request that declared it wants no reply.
 
-### Protocol versions
+### Protocol dialects
 
-Sure accepts the `2025-03-26` and `2025-06-18` MCP protocol versions,
-resolved per request from the `MCP-Protocol-Version` header and falling back
-to `2025-06-18`. Any other value is rejected with `400 Bad Request`.
-`initialize` negotiates its own `protocolVersion` from the request
-`params`, and returns an `Mcp-Session-Id` that later requests may (but need
-not) send back.
+Sure accepts three MCP protocol versions, resolved per request from (in
+order) the `MCP-Protocol-Version` header, then `params._meta["io.modelcontextprotocol/protocolVersion"]`,
+then the default (`2025-06-18`). If a request sends both the header and the
+`_meta` field and they disagree, Sure rejects it with `400 Bad Request`
+rather than silently picking one — as does any unrecognized version.
+
+| Version | Notes |
+|---------|-------|
+| `2025-03-26` | Original MCP HTTP transport. |
+| `2025-06-18` | Current default; `initialize` returns an `Mcp-Session-Id`, which subsequent requests may (but need not) send back. |
+| `2026-07-28` | [Stateless dialect](https://modelcontextprotocol.io/specification/2026-07-28/changelog): no `initialize` handshake and no session — every request stands on its own, carrying its own protocol version. `tools/list` and `tools/call` results gain `resultType: "complete"` and identify the server via `_meta["io.modelcontextprotocol/serverInfo"]`. `server/discover` is this dialect's capability probe. |
+
+Any client speaking `2026-07-28` works the same way — this is a protocol
+dialect, not a feature built for one product. The OpenAI Secure MCP Tunnel
+(used by ChatGPT) happens to be one such client; nothing in Sure's MCP code
+knows it exists.
+
+`initialize` itself still negotiates its own `protocolVersion` the same way
+it always has (request `params.protocolVersion`, falling back to the
+default), independent of this per-request header/`_meta` resolution. A
+`2026-07-28` client has no reason to call it — that dialect's spec removes
+the handshake — but nothing stops Sure from answering it if one does.
 
 ### Available Tools
 
@@ -414,18 +433,13 @@ The authorization-server metadata includes:
 - `registration_endpoint`: `https://your-sure-instance/register`
 - `scopes_supported`: `["read", "read_write"]`
 
-The protected-resource metadata is served at two paths, and `resource` differs
-between them on purpose (RFC 9728 §3.3: it must match the identifier the
-client built the metadata URL from):
-
-- `/.well-known/oauth-protected-resource` → `resource` is the bare origin
-  (`https://your-sure-instance`)
-- `/.well-known/oauth-protected-resource/mcp` → `resource` is the MCP endpoint
-  (`https://your-sure-instance/mcp`)
-
-An unauthenticated `/mcp` request gets a `401` whose `WWW-Authenticate` header
-points at the resource-scoped document and carries `scope="read"`, the minimum
-a client needs to request first.
+The protected-resource metadata's `resource` field identifies `/mcp` itself
+(`https://your-sure-instance/mcp`), not the whole origin — it is the one
+endpoint actually behind Bearer auth. The same metadata is also served at the
+resource-scoped path, `/.well-known/oauth-protected-resource/mcp`, for
+clients that construct that URL from the resource identifier themselves
+instead of following the `resource_metadata` value in a 401's
+`WWW-Authenticate` header.
 
 ### Call a Tool
 
