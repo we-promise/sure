@@ -459,16 +459,21 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal confirmed_outflow.entryable_id, transfer.outflow_transaction_id
   end
 
-  test "an iban-confirmed match stays pending for review" do
+  test "prefers the iban-confirmed destination when one outflow fits two inflows" do
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
     outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
-    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    # Same-day inflow on another account: by date alone it would win.
+    closest_inflow = create_transaction(date: 1.day.ago.to_date, account: @loan, amount: -500)
+    iban_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
     @family.auto_match_transfers!
 
-    transfer = Transfer.find_by!(inflow_transaction_id: inflow.entryable_id)
-    assert_equal "pending", transfer.status
+    transfer = Transfer.find_by!(outflow_transaction_id: outflow.entryable_id)
+    assert_equal iban_inflow.entryable_id, transfer.inflow_transaction_id
+    assert_nil Transfer.find_by(inflow_transaction_id: closest_inflow.entryable_id)
   end
 
   test "a confirmed iban does not widen the date window" do
