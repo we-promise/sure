@@ -250,7 +250,7 @@ class Rule < ApplicationRecord
     # caller such as Rule::Runner sees it as this rule failing.
     return scope unless conditions.any?(&:uses_regex?)
 
-    registry.resource_scope.where(id: Rule::SafeRegex.with_timeout { scope.pluck(:id) })
+    scope_for_transaction_ids(Rule::SafeRegex.with_timeout { scope.pluck(:id) })
   end
 
   private

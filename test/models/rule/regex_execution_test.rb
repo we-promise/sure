@@ -212,7 +212,25 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     assert action.persisted?
   end
 
+  # Resolved ids go back into the query as one array parameter, as Rule::Runner
+  # passes them (Rule#scope_for_transaction_ids). One bind per id would break past
+  # PostgreSQL's 65,535-parameter limit on a broad pattern.
+  test "a regex rule's matches are bound as one parameter however many there are" do
+    rule = regex_rule("amzn|shop")
+    one = bind_count { regex_rule("amzn").affected_resource_count }
+    two = bind_count { assert_equal 2, rule.affected_resource_count }
+
+    assert_equal one, two
+  end
+
   private
+    def bind_count
+      binds = []
+      callback = ->(*, payload) { binds << Array(payload[:binds]).size if payload[:sql].include?("COUNT") }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { yield }
+      binds.last
+    end
+
     def regex_rule(pattern, name: nil)
       Rule.create!(
         family: @family, resource_type: "transaction", name: name,
