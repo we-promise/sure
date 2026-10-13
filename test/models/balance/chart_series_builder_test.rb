@@ -646,7 +646,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
   end
 
   # A flow the returns engine cannot value
-  # counts as nothing, so the line is understated from that day. The builder
+  # counts as nothing, so the line is incomplete from that day. The builder
   # says so rather than hiding it.
   test "net contributions say when a flow could not be valued" do
     account = create_portfolio_account(family: families(:empty))
@@ -654,33 +654,54 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     deposit account: account, date: @day_one + 1, amount: 500
     builder = contributions_builder(account)
 
-    refute builder.net_contributions_understated?, "every flow valued"
+    refute builder.net_contributions_incomplete?, "every flow valued"
 
     deposit account: account, date: @day_one + 2, amount: 1_000, currency: "EUR" # no EUR rate at all
     unconverted = contributions_builder(account)
 
-    assert unconverted.net_contributions_understated?, "a flow with no rate"
+    assert unconverted.net_contributions_incomplete?, "a flow with no rate"
     assert_equal 1_500, unconverted.net_contributions_series.values.last.value.amount, "and it counts as nothing"
   end
 
   # #382: the anchor day's flows are counted, so one that could not be
-  # valued on that day makes the line understated. One before the anchor
+  # valued on that day makes the line incomplete. One before the anchor
   # is outside the line and does not.
-  test "an unvalued flow on the anchor day makes net contributions understated" do
+  test "an unvalued flow on the anchor day makes net contributions incomplete" do
     account = create_portfolio_account(family: families(:empty))
     lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
     deposit account: account, date: @day_one + 2, amount: 1_000, currency: "EUR" # no EUR rate at all
 
-    assert contributions_builder(account).net_contributions_understated?(anchor_date: @day_one + 2), "on the anchor day"
-    refute contributions_builder(account).net_contributions_understated?(anchor_date: @day_one + 3), "before the anchor"
+    assert contributions_builder(account).net_contributions_incomplete?(anchor_date: @day_one + 2), "on the anchor day"
+    refute contributions_builder(account).net_contributions_incomplete?(anchor_date: @day_one + 3), "before the anchor"
   end
 
-  test "an unpriced journal makes net contributions understated" do
+  test "an unpriced journal makes net contributions incomplete" do
     account = create_portfolio_account(family: families(:empty))
     lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
     security_journal account: account, date: @day_one + 1, qty: 10 # no price that day
 
-    assert contributions_builder(account).net_contributions_understated?
+    assert contributions_builder(account).net_contributions_incomplete?
+  end
+
+  # #383: an unvalued withdrawal is left out like an unvalued deposit, but it
+  # leaves the line too high, not too low. The check reports both, so it is
+  # named for what it knows (a flow is missing), not for a direction.
+  test "an unvalued withdrawal makes net contributions incomplete and leaves the line higher" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 5_000, closing: 5_000
+    deposit account: account, date: @day_one + 2, amount: -1_000, currency: "EUR"
+
+    unvalued = contributions_builder(account)
+    unvalued_last = unvalued.net_contributions_series.values.last.value.amount
+
+    set_rate from: "EUR", to: "USD", date: @day_one + 1, rate: 1.1
+    valued = contributions_builder(account)
+    valued_last = valued.net_contributions_series.values.last.value.amount
+
+    assert unvalued.net_contributions_incomplete?, "a withdrawal with no rate"
+    refute valued.net_contributions_incomplete?, "the same withdrawal, valued"
+    assert_equal 3_900, valued_last, "valued, the withdrawal comes off"
+    assert_equal 1_100, unvalued_last - valued_last, "unvalued, the line stays higher by the withdrawal"
   end
 
   test "fees, interest, buys and sells leave net contributions unchanged" do
@@ -762,7 +783,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     builder = contributions_builder(account)
 
     assert_equal [ 1_000, 2_100, 2_100, 2_100 ], builder.net_contributions_series.values.map { |v| v.value.amount }
-    refute builder.net_contributions_understated?
+    refute builder.net_contributions_incomplete?
   end
 
   # Opening values convert the same way: an account in another currency
@@ -781,7 +802,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     )
 
     assert_equal 1_500, builder.net_contributions_series.values.first.value.amount
-    refute builder.net_contributions_understated?
+    refute builder.net_contributions_incomplete?
   end
 
   # A position moved out is taken out the same way one moved in is put in:
@@ -808,16 +829,16 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
 
     builder = contributions_builder(account)
 
-    refute builder.net_contributions_understated?
+    refute builder.net_contributions_incomplete?
     assert_equal [ 1_000, 1_500, 2_600, 2_600 ], builder.net_contributions_series.values.map { |v| v.value.amount }
   end
 
-  test "a flow after the sampled dates does not make the line understated" do
+  test "a flow after the sampled dates does not make the line incomplete" do
     account = create_portfolio_account(family: families(:empty))
     lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
     deposit account: account, date: @day_one + 5, amount: 1_000, currency: "EUR" # no EUR rate at all
 
-    refute contributions_builder(account).net_contributions_understated?
+    refute contributions_builder(account).net_contributions_incomplete?
   end
 
   # An account whose history starts after the others' brings its opening
@@ -842,8 +863,8 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
 
   # A day with nothing invested is suppressed by the returns engine for its
   # zero denominator, not because a flow went unvalued, so it must not make
-  # the line read as understated.
-  test "an empty opening day does not make net contributions understated" do
+  # the line read as incomplete.
+  test "an empty opening day does not make net contributions incomplete" do
     account = create_portfolio_account(family: families(:empty))
     lay_balance account: account, date: @day_one, opening: 0, closing: 0
     lay_balance account: account, date: @day_one + 1, opening: 0, closing: 500, cash_flow: 500
@@ -851,20 +872,20 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
 
     builder = contributions_builder(account)
 
-    refute builder.net_contributions_understated?
+    refute builder.net_contributions_incomplete?
     assert_equal [ 0, 500, 500, 500 ], builder.net_contributions_series.values.map { |v| v.value.amount }
   end
 
   # An explicit anchor opens before the day's activity and counts the day's
   # flows (#382), so one of them going unvalued is part of the line and makes
-  # it understated, with the anchor as without it.
-  test "an unvalued flow on an explicit anchor day makes the line understated" do
+  # it incomplete, with the anchor as without it.
+  test "an unvalued flow on an explicit anchor day makes the line incomplete" do
     account = create_portfolio_account(family: families(:empty))
     lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
     deposit account: account, date: @day_one + 1, amount: 100, currency: "EUR" # no EUR rate at all
 
-    assert contributions_builder(account).net_contributions_understated?, "counted from inception"
-    assert contributions_builder(account).net_contributions_understated?(anchor_date: @day_one + 1),
+    assert contributions_builder(account).net_contributions_incomplete?, "counted from inception"
+    assert contributions_builder(account).net_contributions_incomplete?(anchor_date: @day_one + 1),
            "the anchor day's flows are counted, so an unvalued one is reported"
   end
 

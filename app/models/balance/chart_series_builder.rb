@@ -128,14 +128,16 @@ class Balance::ChartSeriesBuilder
     raise
   end
 
-  # True when a flow the line counts could not be valued, so the line is
-  # understated by it from that day on. The returns engine reads the same
+  # True when a flow the line counts could not be valued, so the line leaves
+  # it out from that day on: too low for a deposit, too high for a
+  # withdrawal. No direction is computed, since several unvalued flows of
+  # either sign have no known net. The returns engine reads the same
   # two conditions: a flow in a currency with no rate (`rate_missing`)
   # and a journal with no price for its date. The second is read off
   # `suppressed`, which DailyReturns also sets for a non-positive
   # denominator, so a suppressed day with a positive denominator is the
   # unpriced journal.
-  def net_contributions_understated?(anchor_date: nil, dates: nil)
+  def net_contributions_incomplete?(anchor_date: nil, dates: nil)
     dates = (dates || query_data.map(&:date))
     # Every row the line adds is read, the anchor day's included (#382).
     net_contribution_rows(anchor_date: anchor_date, through: dates.max).any? do |row|
@@ -166,7 +168,7 @@ class Balance::ChartSeriesBuilder
 
     # The DailyReturns rows whose flows the line adds: from the anchor (or
     # the first balance row, when the anchor is not later than it) to
-    # `through`. Memoized, so the series and the understated check share one
+    # `through`. Memoized, so the series and the incomplete check share one
     # query and read the same days.
     def net_contribution_rows(anchor_date:, through:)
       @net_contribution_rows ||= {}
