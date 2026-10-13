@@ -148,6 +148,32 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal("6000"), BigDecimal("5000") ], [ default_start, linked_start ]
   end
 
+  # Deleting a linked account cascades its link away, so the plan falls back
+  # to the default set. A linked account that leaves the user's finances
+  # without being deleted keeps its link, and must fall back the same way
+  # rather than fund the plan with nothing.
+  test "linked accounts that have all left the user's finances fall back to the default set" do
+    own_account(amount: 1_000)
+    picked = own_account(amount: 5_000)
+    shared = Account.create!(family: @family, owner: @admin, accountable: Depository.new, name: "Joint", currency: "USD", balance: 7_000)
+    Balance.create!(account: shared, date: AS_OF, balance: 7_000, currency: "USD")
+    share = AccountShare.create!(account: shared, user: @member, permission: "read_write", include_in_finances: true)
+    @plan.funding_links.create!(account: picked)
+    @plan.funding_links.create!(account: shared)
+
+    start = -> { RetirementPlan.find(@plan.id).simulation(as_of: AS_OF, retirement_year: 2050).rows.first.start_value }
+    assert_equal BigDecimal("12000"), start.call, "both links in scope"
+
+    picked.update_columns(status: "disabled")
+    assert_equal BigDecimal("7000"), start.call, "one link left in scope: only it counts"
+
+    share.update!(include_in_finances: false)
+    assert_equal BigDecimal("1000"), start.call, "hidden and unshared: the default set"
+
+    picked.update_columns(status: "active", exclude_from_reports: true)
+    assert_equal BigDecimal("1000"), start.call, "excluded from reports and unshared: the default set"
+  end
+
   test "an account the user does not count in their finances cannot be linked" do
     admins = Account.create!(family: @family, owner: @admin, accountable: Depository.new, name: "Admin's", currency: "USD", balance: 1)
 

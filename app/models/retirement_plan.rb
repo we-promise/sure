@@ -177,11 +177,15 @@ class RetirementPlan < ApplicationRecord
       }
     end
 
-    # Linked accounts when the user has picked any, otherwise the default set.
+    # Linked accounts when any the user picked can still fund the plan,
+    # otherwise the default set. A deleted account takes its link with it; one
+    # hidden, excluded from reports or no longer shared keeps its link but
+    # leaves the eligible set, and falls back the same way rather than
+    # funding the plan with nothing.
     def funding_total(as_of)
-      return assets_as_of(as_of).total if funding_links.empty?
+      linked = eligible_funding_accounts.where(id: funding_links.select(:account_id))
+      return assets_as_of(as_of).total unless linked.exists?
 
-      linked = finance_accounts.where(id: funding_links.select(:account_id))
       asset_total(as_of, linked).total
     end
 
