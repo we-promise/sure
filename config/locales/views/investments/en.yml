@@ -15,6 +15,9 @@ en:
       brokerage:
         short: Brokerage
         long: Brokerage
+      cash_management:
+        short: CMA
+        long: Cash Management Account
       401k:
         short: 401(k)
         long: 401(k)

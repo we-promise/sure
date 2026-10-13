@@ -2,6 +2,47 @@
 pt-PT:
   admin:
     system_health:
+      push_notifications:
+        send_test: "Enviar notificação de teste"
+        queueing: "A colocar em fila…"
+        title: "Notificações push"
+        requested_at: "Último teste pedido em %{time}"
+        result_help: "A aceitação pelo APNs não confirma a entrega no dispositivo. Atualize para ver os resultados do worker. Os resultados são guardados durante 24 horas."
+        device: "Dispositivo %{number}"
+        pending: "Pendente"
+        refresh: "Atualizar resultados"
+        columns:
+          device: "Dispositivo"
+          environment: "Ambiente APNs"
+          status: "Resultado"
+          checked_at: "Última atualização"
+        environments:
+          sandbox: "Sandbox"
+          production: "Produção"
+        messages:
+          enqueue_failed: "Não foi possível colocar o teste em fila. Verifique o Sidekiq e atualize os resultados abaixo."
+          ready: "Envie uma notificação de teste para os dispositivos iOS ativados e registados na sua conta."
+          queued: "Notificação de teste em fila. Atualize os resultados abaixo para consultar o estado."
+          hosted_only: "As notificações push estão disponíveis apenas no modo alojado."
+          ineligible: "Apenas um superadministrador ativo pode enviar uma notificação de teste."
+          no_devices: "Ative as notificações push na aplicação iOS Sure para esta conta para enviar um teste."
+          disabled: "O operador desativou o envio de notificações push."
+          not_configured: "As credenciais APNs não estão configuradas."
+          cooldown: "Aguarde 30 segundos antes de enviar outro teste."
+          storage_unavailable: "Não foi possível guardar o pedido de teste. Verifique a configuração da cache partilhada."
+        statuses:
+          queued: "Em fila"
+          accepted: "Aceite pelo APNs"
+          skipped: "Ignorado: já não é elegível"
+          rejected: "Rejeitado pelo APNs; consulte os registos push"
+          unregistered: "O registo do dispositivo já não é válido"
+          retrying: "A repetir após um erro temporário"
+          failed: "Falhou; consulte os registos push"
+          enqueue_failed: "Não foi possível colocar em fila; verifique o Sidekiq"
+          expired: "Expirou sem resultado final"
+      push_notification:
+        title: "Notificação de teste Sure"
+        body: "Esta é uma notificação push de teste para a sua conta Sure."
       show:
         title: Estado do sistema
         tabs:

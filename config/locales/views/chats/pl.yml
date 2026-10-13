@@ -1,6 +1,58 @@
 ---
 pl:
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Rozumowanie asystenta
+    tool_calls:
+      arguments: 'Argumenty:'
+      function: 'Funkcja:'
+      tool_calls: Wywołania narzędzi
   chats:
-    demo_banner_title: "Aktywny tryb demo"
-    demo_banner_message: "Używasz modelu LLM z kredytami udostępnionymi przez Cloudflare Workers AI. Wyniki mogą się różnić, ponieważ kod aplikacji był głównie testowany na `gpt-4.1`, ale Twoje tokeny nie są nigdzie dalej wykorzystywane do trenowania! 🤖"
-    thinking: "Przetwarzanie ..."
+    ai_consent:
+      available_description: Czat AI może odpowiadać na pytania finansowe i dostarczać
+        spostrzeżeń na podstawie Twoich danych. Aby z niego korzystać, musisz wyraźnie
+        go włączyć.
+      disable_note: Możesz wyłączyć w każdej chwili. Wszystkie dane wysyłane do naszych
+        dostawców LLM są anonimizowane.
+      enable_button: Włącz czaty AI
+      title: Włącz czaty AI
+      unavailable_description_html: Aby korzystać z asystenta AI, musisz ustawić zmienną
+        środowiskową <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code>
+        albo skonfigurować ją w ustawieniach Self-Hosting swojej instancji.
+    ai_greeting:
+      commands_hint_html: Możesz użyć <span class="bg-container border border-secondary
+        px-1.5 py-0.5 rounded font-mono text-xs">/</span>, aby uzyskać dostęp do poleceń
+      evaluate_portfolio: Oceń portfel inwestycyjny
+      greeting: Cześć, %{name}! Jestem modelem AI, który może pomóc Ci w finansach.
+        Mam dostęp do internetu i danych Twojego konta.
+      questions_intro: 'Oto kilka pytań, które możesz zadać:'
+      spending_insights: Pokaż analizę wydatków
+      there: Nieznajomy
+      unusual_patterns: Znajdź nietypowe wzorce
+    chat:
+      delete_chat: Usuń czat
+      edit_chat_title: Edytuj tytuł czatu
+    chat_nav:
+      all_chats: Wszystkie czaty
+      delete_chat: Usuń czat
+      edit_chat_title: Edytuj tytuł czatu
+      start_new_chat: Rozpocznij nowy czat
+    demo_banner_message: "Używasz modelu LLM z kredytami udostępnionymi przez Cloudflare
+      Workers AI. Wyniki mogą się różnić, ponieważ kod aplikacji był głównie testowany
+      na `gpt-4.1`, ale Twoje tokeny nie są nigdzie dalej wykorzystywane do trenowania!
+      🤖"
+    demo_banner_title: Aktywny tryb demo
+    destroy:
+      notice: Czat został usunięty
+    error:
+      retry: Spróbuj ponownie
+    index:
+      chats: Czaty
+      new_chat: Nowy czat
+    new:
+      default_title: Nowy czat %{timestamp}
+    thinking: Przetwarzanie ...
+    update:
+      success: Czat zaktualizowany
+    worker_unhealthy_warning: 'Odpowiedzi AI mogą teraz nie docierać: worker w tle
+      wygląda na wyłączony albo zapchany. Sprawdź, czy Twój worker Sidekiq działa.'

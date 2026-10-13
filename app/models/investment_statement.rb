@@ -75,34 +75,52 @@ class InvestmentStatement
       .includes(:security, :account)
   end
 
-  # Top holdings by family-currency value
+  # Top investments rolled up by security across accounts, ranked by
+  # family-currency value. Weight is % of total portfolio (including cash).
+  # Presence is gated on holdings totals — not Account#balance — so a stale
+  # zero portfolio_value still surfaces real positions.
   def top_holdings(limit: 5)
-    current_holdings
-      .to_a
-      .sort_by { |h| -convert_to_family_currency(h.amount, h.currency) }
+    rolled_up = holdings_rolled_up_by_security
+    return [] if rolled_up.empty?
+
+    holdings_total = rolled_up.sum { |_, value, _| value }
+    return [] if holdings_total.zero?
+
+    total = weight_denominator(holdings_total)
+
+    # Rank/limit on value first; only then compute cost-basis trends for the
+    # rows that will be rendered (avoids avg_cost/trade lookups for the rest).
+    rolled_up
       .first(limit)
-  end
-
-  # Portfolio allocation by security. Weights and amounts are computed in the
-  # family's currency so cross-currency holdings compare correctly.
-  def allocation
-    converted = current_holdings.to_a.map do |holding|
-      [ holding, convert_to_family_currency(holding.amount, holding.currency) ]
-    end
-
-    total = converted.sum { |_, value| value }
-    return [] if total.zero?
-
-    converted
-      .sort_by { |_, value| -value }
-      .map do |holding, value|
+      .map do |security, value, holdings|
         HoldingAllocation.new(
-          security: holding.security,
+          security: security,
           amount: Money.new(value, family.currency),
           weight: (value / total * 100).round(2),
-          trend: holding.trend
+          trend: combined_holding_trend(holdings)
         )
       end
+  end
+
+  # Portfolio allocation by security (rolled up across accounts). Shares the
+  # weight denominator with top_holdings so the same security never reports two
+  # different percentages. Weights therefore sum to the invested share of the
+  # portfolio, not to 100 — cash is the residual.
+  def allocation
+    rolled_up = holdings_rolled_up_by_security
+    holdings_total = rolled_up.sum { |_, value, _| value }
+    return [] if holdings_total.zero?
+
+    total = weight_denominator(holdings_total)
+
+    rolled_up.map do |security, value, holdings|
+      HoldingAllocation.new(
+        security: security,
+        amount: Money.new(value, family.currency),
+        weight: (value / total * 100).round(2),
+        trend: combined_holding_trend(holdings)
+      )
+    end
   end
 
   # Unrealized gains across all holdings, summed in family currency
@@ -292,7 +310,70 @@ class InvestmentStatement
       end
     end
 
-    HoldingAllocation = Data.define(:security, :amount, :weight, :trend)
+    HoldingAllocation = Data.define(:security, :amount, :weight, :trend) do
+      def ticker = security.ticker
+      def name = security.name.presence || ticker
+      def amount_money = amount
+    end
+
+    # Groups current holdings by security and sums family-currency value.
+    # Returns [[security, value, holdings], ...] sorted by value descending.
+    # Callers that need return trends should call combined_holding_trend only
+    # for rows they will render (e.g. after top_holdings applies its limit).
+    # Shared by top_holdings and allocation so one security cannot report two
+    # different percentages.
+    #
+    # max(portfolio_value, holdings_total) rather than portfolio_value alone:
+    # portfolio_value includes cash, which goes negative on margin or an
+    # unsettled buy and would push a weight past 100%. The holdings total acts
+    # as a floor. It also covers a stale-zero portfolio_value, where the cached
+    # Account#balance lags behind the Holding rows.
+    def weight_denominator(holdings_total)
+      [ portfolio_value, holdings_total ].max
+    end
+
+    def holdings_rolled_up_by_security
+      current_holdings
+        .to_a
+        .group_by(&:security_id)
+        .filter_map do |_security_id, holdings|
+          # Filter row by row rather than on the netted total. current_holdings
+          # is DISTINCT ON (account_id, security_id), so one security held in two
+          # accounts yields two rows; a negative row in one would otherwise net
+          # against the good row in the other and understate the position.
+          positive_holdings = holdings.select do |holding|
+            convert_to_family_currency(holding.amount, holding.currency).positive?
+          end
+          next if positive_holdings.empty?
+
+          security = positive_holdings.first.security
+          value = positive_holdings.sum { |h| convert_to_family_currency(h.amount, h.currency) }
+
+          # positive_holdings, not holdings, so the trend excludes the bad row too.
+          [ security, value, positive_holdings ]
+        end
+        .sort_by { |_, value, _| -value }
+    end
+
+    def combined_holding_trend(holdings)
+      currents = []
+      previouses = []
+
+      holdings.each do |holding|
+        trend = holding.trend
+        next unless trend
+
+        currents << convert_to_family_currency(trend.current, holding.currency)
+        previouses << convert_to_family_currency(trend.previous, holding.currency)
+      end
+
+      return nil if currents.empty?
+
+      Trend.new(
+        current: Money.new(currents.sum, family.currency),
+        previous: Money.new(previouses.sum, family.currency)
+      )
+    end
 
     def investment_account_ids
       @investment_account_ids ||= investment_accounts.pluck(:id)

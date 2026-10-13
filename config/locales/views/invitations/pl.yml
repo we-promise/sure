@@ -9,6 +9,8 @@ pl:
       title: Dołącz do %{family}
     create:
       existing_user_added: Użytkownik został dodany do Twojego gospodarstwa domowego.
+      existing_user_has_family_data: Ten użytkownik ma już własne gospodarstwo domowe
+        z kontami. Musi usunąć te konta albo je przenieść, zanim dołączy do Twojego.
       failure: Nie udało się wysłać zaproszenia
       success: Zaproszenie zostało wysłane
     destroy:

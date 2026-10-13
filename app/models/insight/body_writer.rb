@@ -26,6 +26,14 @@ class Insight::BodyWriter
   private
     attr_reader :family
 
+    # The system prompt is written in English, so without an explicit instruction the
+    # model narrates in English even when the family uses another locale. The template
+    # fallback already follows I18n, so this keeps both paths in the same language.
+    def language_instruction
+      locale = family.locale.presence || I18n.default_locale.to_s
+      "- Write in the user's language (BCP 47 locale: #{locale}).\n"
+    end
+
     def template_body(generated_insight)
       I18n.t(
         "insights.templates.#{generated_insight.template_key}",
@@ -44,7 +52,7 @@ class Insight::BodyWriter
       response = provider.chat_response(
         prompt,
         model: provider.class.effective_model,
-        instructions: SYSTEM_PROMPT,
+        instructions: SYSTEM_PROMPT + language_instruction,
         family: family
       )
       return nil unless response.success?

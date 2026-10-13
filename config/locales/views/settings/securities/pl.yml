@@ -4,7 +4,41 @@ pl:
     securities:
       show:
         disable_mfa: Wyłącz 2FA
-        disable_mfa_confirm: Czy na pewno chcesz wyłączyć uwierzytelnianie dwuskładnikowe? To obniży poziom bezpieczeństwa konta.
+        disable_mfa_confirm: Czy na pewno chcesz wyłączyć uwierzytelnianie dwuskładnikowe?
+          To obniży poziom bezpieczeństwa konta.
         enable_mfa: Włącz 2FA
-        mfa_description: Dodaj dodatkową warstwę bezpieczeństwa, wymagając kodu z aplikacji uwierzytelniającej podczas logowania
+        mfa_description: Dodaj dodatkową warstwę bezpieczeństwa, wymagając kodu z
+          aplikacji uwierzytelniającej podczas logowania
+        mfa_disabled_description: Włącz uwierzytelnianie dwuskładnikowe, aby dodać
+          dodatkową warstwę zabezpieczeń konta.
+        mfa_disabled_status_html: Uwierzytelnianie dwuskładnikowe jest <span class="font-medium
+          text-red-600">wyłączone</span>
+        mfa_enabled_description: Twoje konto jest chronione dodatkową warstwą zabezpieczeń.
+        mfa_enabled_status_html: Uwierzytelnianie dwuskładnikowe jest <span class="font-medium
+          text-green-600">włączone</span>
         mfa_title: Uwierzytelnianie dwuskładnikowe
+        webauthn_add: Dodaj klucz dostępu lub klucz bezpieczeństwa
+        webauthn_added: Dodano %{date}
+        webauthn_description: Użyj klucza dostępu, Touch ID, Windows Hello albo sprzętowego
+          klucza bezpieczeństwa jako drugiego składnika logowania.
+        webauthn_empty: Nie zarejestrowano jeszcze żadnych kluczy dostępu ani kluczy
+          bezpieczeństwa.
+        webauthn_last_used: Ostatnio użyto %{time_ago} temu
+        webauthn_name_label: Nazwa klucza
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey itp.
+        webauthn_remove: Usuń
+        webauthn_remove_confirm: Czy na pewno chcesz usunąć ten klucz dostępu lub
+          klucz bezpieczeństwa?
+        webauthn_remove_confirm_body: Będziesz musiał zarejestrować ten klucz dostępu
+          lub klucz bezpieczeństwa ponownie, zanim będzie można go użyć do weryfikacji
+          logowania.
+        webauthn_title: Klucze dostępu i klucze bezpieczeństwa
+        webauthn_unsupported: Ta przeglądarka nie obsługuje kluczy dostępu ani kluczy
+          bezpieczeństwa.
+  webauthn_credentials:
+    default_name: Klucz bezpieczeństwa
+    failure: Nie udało się zapisać klucza dostępu ani klucza bezpieczeństwa. Spróbuj
+      ponownie.
+    mfa_required: Włącz uwierzytelnianie dwuskładnikowe, zanim dodasz klucz dostępu
+      lub klucz bezpieczeństwa.
+    success: Usunięto klucz dostępu lub klucz bezpieczeństwa.

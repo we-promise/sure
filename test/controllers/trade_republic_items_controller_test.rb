@@ -19,6 +19,19 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("trade_republic_items.initiate_login.pin_required"), flash[:alert]
   end
 
+  test "Trade Republic PIN is filtered from logs" do
+    parameter_filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+    filtered_params = parameter_filter.filter(
+      trade_republic_item: {
+        pin: "1234",
+        shipping: "express"
+      }
+    )
+
+    assert_equal "[FILTERED]", filtered_params.dig(:trade_republic_item, :pin)
+    assert_equal "express", filtered_params.dig(:trade_republic_item, :shipping)
+  end
+
   test "update rejects a changed phone number without a PIN" do
     item = trade_republic_items(:configured_item)
     original_phone_number = item.phone_number

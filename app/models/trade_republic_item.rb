@@ -1,5 +1,5 @@
 class TradeRepublicItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   # The PIN is accepted only for the authentication request. It is never
   # persisted; session restoration uses the encrypted session blob instead.
@@ -25,11 +25,6 @@ class TradeRepublicItem < ApplicationRecord
   scope :syncable, -> { active.where(status: :good, pending_login_state: nil).where.not(session_blob: [ nil, "" ]) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   # Reloading represents a new persisted state; never carry an authentication
   # PIN across that boundary in the in-memory model instance.

@@ -10,15 +10,7 @@
         <div class="flex items-center gap-2">
           <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-          <div class="flex items-center justify-center h-8 w-8 bg-orange-600/10 rounded-full">
-            <% if sophtron_item.logo.attached? %>
-              <%= image_tag sophtron_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
-            <% else %>
-              <div class="flex items-center justify-center">
-                <%= tag.p provider_display_name.first.upcase, class: "text-orange-600 text-xs font-medium" %>
-              </div>
-            <% end %>
-          </div>
+          <%= render ProviderLogo.new(provider_key: :sophtron) %>
 
           <div class="pl-1 text-sm">
             <div class="flex items-center gap-2">

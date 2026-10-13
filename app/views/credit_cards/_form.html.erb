@@ -47,5 +47,21 @@
         <% end %>
       </div>
     <% end %>
+
+    <% simplefin_account = account.provider_account_for("SimplefinAccount") if account.persisted? %>
+    <% if simplefin_account %>
+      <div class="space-y-1">
+        <%= form.fields_for :simplefin, simplefin_account do |simplefin_form| %>
+          <%= simplefin_form.select :balance_sign_override,
+                                    options_for_select([
+                                      [t("credit_cards.form.simplefin_balance_sign_auto"), ""],
+                                      [t("credit_cards.form.simplefin_balance_sign_debt"), "debt"],
+                                      [t("credit_cards.form.simplefin_balance_sign_credit"), "credit"]
+                                    ], simplefin_account.balance_sign_override),
+                                    { label: t("credit_cards.form.simplefin_balance_sign_label") } %>
+        <% end %>
+        <p class="text-secondary text-xs"><%= t("credit_cards.form.simplefin_balance_sign_description") %></p>
+      </div>
+    <% end %>
   </div>
 <% end %>

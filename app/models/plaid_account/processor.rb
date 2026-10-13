@@ -41,7 +41,12 @@ class PlaidAccount::Processor
 
         # Initialize new account if not found
         if account.nil?
-          account = family.accounts.new
+          # Accounts are created here, inside the sync job, where Current.user
+          # is nil -- so Account#assign_default_owner would fall back to the
+          # family's first admin and silently hand a member's own connection to
+          # someone else. Seed the owner from the item that produced it, before
+          # the enrich_attributes calls below run validations.
+          account = family.accounts.new(owner: plaid_account.plaid_item&.owner)
           account.accountable = map_accountable(plaid_account.plaid_type)
         end
 
@@ -111,12 +116,19 @@ class PlaidAccount::Processor
     end
 
     def process_liabilities
-      case [ plaid_account.plaid_type, plaid_account.plaid_subtype ]
-      when [ "credit", "credit card" ]
+      type = plaid_account.plaid_type
+      subtype = plaid_account.plaid_subtype
+
+      # The `credit` branch is deliberately subtype-agnostic, mirroring
+      # AccountsSnapshot#can_fetch_liabilities?. Matching only "credit card"
+      # here meant a credit/paypal account fetched and stored the raw
+      # liabilities response but never updated minimum_payment or apr, leaving
+      # the user-visible figures blank.
+      if type == "credit"
         PlaidAccount::Liabilities::CreditProcessor.new(plaid_account).process
-      when [ "loan", "mortgage" ]
+      elsif type == "loan" && subtype == "mortgage"
         PlaidAccount::Liabilities::MortgageProcessor.new(plaid_account).process
-      when [ "loan", "student" ]
+      elsif type == "loan" && subtype == "student"
         PlaidAccount::Liabilities::StudentLoanProcessor.new(plaid_account).process
       end
     rescue => e

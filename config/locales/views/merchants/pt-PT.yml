@@ -13,6 +13,10 @@ pt-PT:
       name_placeholder: Nome do comerciante
       website_placeholder: "Site (ex.: starbucks.com)"
       website_hint: Introduza o site do comerciante para apresentar automaticamente o seu logótipo
+      iban_placeholder: "IBAN (opcional)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN guardado, introduza um novo valor para o substituir"
+      iban_hint: "As transações importadas deste número de conta são atribuídas a este comerciante quando o nome não corresponde a nenhum outro comerciante"
+      iban_remove_label: "Remover IBAN"
     index:
       empty: Ainda não há comerciantes
       new: Novo comerciante

@@ -4,6 +4,7 @@ class ApplicationController < ActionController::Base
           FeatureGuardable, Notifiable, SafePagination, AccountAuthorizable,
           PreviewGateable
   include Pundit::Authorization
+  include CodespacesForgeryProtection
 
   include Pagy::Backend
 

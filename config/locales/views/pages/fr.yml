@@ -18,6 +18,11 @@ fr:
         title: Bilan
         value: Valeur
         weight: Poids
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Flux de trésorerie"
+          surplus: "Excédent"
+          deficit: "Déficit"
       cashflow_sankey:
         add_transaction: Ajouter une transaction
         no_data_description: Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendez la période

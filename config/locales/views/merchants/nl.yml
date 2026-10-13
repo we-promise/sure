@@ -13,6 +13,10 @@ nl:
       name_placeholder: Handelaar naam
       website_placeholder: Website (bijv. starbucks.com)
       website_hint: Voer de website van de handelaar in om automatisch hun logo weer te geven
+      iban_placeholder: "IBAN (optioneel)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN opgeslagen, voer een nieuwe waarde in om deze te vervangen"
+      iban_hint: "Geïmporteerde transacties van dit rekeningnummer worden aan deze handelaar toegewezen als hun naam bij geen andere handelaar past"
+      iban_remove_label: "IBAN verwijderen"
     index:
       empty: Nog geen handelaren
       new: Nieuwe handelaar

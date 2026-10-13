@@ -80,15 +80,15 @@ vi:
           title: Ngắt kết nối trợ lý bên ngoài?
           body: Thao tác này sẽ xóa URL, token và ID tác nhân đã lưu, và chuyển về trợ lý tích hợp sẵn. Bạn có thể kết nối lại sau bằng cách nhập thông tin xác thực mới.
       brand_fetch_settings:
-        description: Nhập Client ID do Brand Fetch cung cấp
-        env_configured_message: Bạn đã cấu hình thành công Client ID Brand Fetch qua biến môi trường BRAND_FETCH_CLIENT_ID.
+        description: Nhập Client ID do Brandfetch cung cấp
+        env_configured_message: Bạn đã cấu hình thành công Client ID Brandfetch qua biến môi trường BRAND_FETCH_CLIENT_ID.
         show_details: "(hiển thị chi tiết)"
-        setup_step_1_html: 'Truy cập <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> và tạo tài khoản nhà phát triển Brand Fetch miễn phí.'
+        setup_step_1_html: 'Truy cập <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> và tạo tài khoản nhà phát triển Brandfetch miễn phí.'
         setup_step_2_html: 'Đi đến trang <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
         setup_step_3: 'Nhấn biểu tượng mắt dưới phần "Your Client ID" để hiển thị Client ID và dán vào bên dưới.'
         label: Client ID
         placeholder: Nhập Client ID của bạn vào đây
-        title: Cài đặt Brand Fetch
+        title: Cài đặt Brandfetch
         high_res_label: Bật logo độ phân giải cao
         high_res_description: Khi bật, logo sẽ được lấy ở độ phân giải 120x120 thay vì 40x40. Điều này cung cấp hình ảnh sắc nét hơn trên màn hình độ phân giải cao.
       openai_settings:

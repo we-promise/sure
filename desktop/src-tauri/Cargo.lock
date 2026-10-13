@@ -3634,8 +3634,12 @@ name = "sure-desktop"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "block2",
  "getrandom 0.2.17",
  "keyring",
+ "objc2",
+ "objc2-foundation",
+ "objc2-web-kit",
  "open",
  "serde",
  "serde_json",

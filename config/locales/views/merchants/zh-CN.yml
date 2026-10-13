@@ -13,6 +13,10 @@ zh-CN:
       name_placeholder: 商户名称
       website_placeholder: 网站（例如 starbucks.com）
       website_hint: 输入商户网站以自动显示其徽标
+      iban_placeholder: "IBAN（可选）"
+      iban_set_placeholder: "•••• •••• •••• •••• — 已保存 IBAN，输入新值以替换"
+      iban_hint: "当导入的交易名称与其他商户都不匹配时，来自此账号的交易将归入此商户"
+      iban_remove_label: "移除 IBAN"
     index:
       empty: 还没有商户
       new: 新商户
