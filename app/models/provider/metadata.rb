@@ -27,7 +27,11 @@ class Provider
       plaid_eu:       { region: "EU",      kinds: %w[Bank],            maturity: :stable, logo_text: "PL", logo_color: "#4f46e5", domain: "plaid.com", tier: "Paid", name: "Plaid EU" },
       questrade:      { region: "CA",      kinds: %w[Investment],      maturity: :beta,   logo_text: "QT", logo_color: "#0d9488", domain: "questrade.com" },
       redbark:        { region: "AU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "RB", logo_color: "#b91c1c", domain: "redbark.com" },
-      onchain_wallet: { region: "Global",  kinds: %w[Crypto],          maturity: :alpha,  logo_text: "OC", logo_color: "#d97706", domain: nil, logo_icon: "wallet", name: "On-chain wallets" }
+      onchain_wallet: { region: "Global",  kinds: %w[Crypto],          maturity: :alpha,  logo_text: "OC", logo_color: "#d97706", domain: nil, logo_icon: "wallet", name: "On-chain wallets" },
+      # Property valuation (AVM) providers
+      rentcast:       { region: "US",      kinds: %w[Property],        maturity: :beta,   logo_text: "RC", logo_color: "#2563eb", domain: "rentcast.io", name: "RentCast" },
+      realie:         { region: "US",      kinds: %w[Property],        maturity: :beta,   logo_text: "RE", logo_color: "#0d9488", domain: "realie.ai" },
+      chimnie:        { region: "UK",      kinds: %w[Property],        maturity: :beta,   logo_text: "CH", logo_color: "#db2777", domain: "chimnie.com" }
     }.freeze
 
     def self.for(provider_key)
