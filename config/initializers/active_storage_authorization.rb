@@ -37,11 +37,13 @@ Rails.application.config.to_prepare do
         end
       end
 
+      # Mirrors TransactionAttachmentsController#set_transaction: the account must be shared with the user.
       def transaction_attachment_authorized?(attachment)
         transaction = attachment.record
         return false if transaction.nil?
 
-        Current.family == transaction.entry.account.family
+        account = transaction.entry.account
+        account.family_id == Current.family&.id && account.shared_with?(Current.user)
       rescue ActiveRecord::RecordNotFound, NoMethodError
         false
       end
@@ -58,7 +60,7 @@ Rails.application.config.to_prepare do
       def authorized_attachments
         return nil unless authorized_blob
 
-        @authorized_attachments ||= ActiveStorage::Attachment.where(blob: authorized_blob).to_a
+        @authorized_attachments ||= attachments_with_sources(authorized_blob)
       end
 
       def authorized_blob
@@ -74,6 +76,33 @@ Rails.application.config.to_prepare do
         blob_key = key.to_s[%r{\Avariants/([^/]+)/}, 1] || key
         ActiveStorage::Blob.find_by(key: blob_key)
       rescue ActiveStorage::InvalidKeyError
+        nil
+      end
+
+      # Tracked variants and previews are blobs of their own, attached to an
+      # ActiveStorage::VariantRecord or to their source blob. They are authorized
+      # through the attachments of the blob they were made from; a variant of a
+      # preview is two steps away from its source.
+      def attachments_with_sources(blob, depth = 0)
+        ActiveStorage::Attachment.where(blob: blob).to_a.flat_map do |attachment|
+          next [ attachment ] unless derived_attachment?(attachment)
+
+          source = derived_source_blob(attachment)
+          raise ActiveRecord::RecordNotFound if source.nil? || depth >= 2
+
+          attachments_with_sources(source, depth + 1)
+        end
+      end
+
+      def derived_attachment?(attachment)
+        attachment.record_type == "ActiveStorage::VariantRecord" ||
+          (attachment.record_type == "ActiveStorage::Blob" && attachment.name == "preview_image")
+      end
+
+      def derived_source_blob(attachment)
+        record = attachment.record
+        record.is_a?(ActiveStorage::VariantRecord) ? record.blob : record
+      rescue ActiveRecord::RecordNotFound
         nil
       end
 
