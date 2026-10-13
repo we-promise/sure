@@ -9,11 +9,15 @@ class Import::MappingsController < ApplicationController
 
     if mapping.is_a?(Import::SecurityMapping)
       # Security selections arrive as a combobox id in :value with no
-      # pre-existing mappable_id. Persist the raw value without validating
-      # (mappable is still blank), then resolve it so the confirm screen
+      # pre-existing mappable_id. A blank submission is an explicit clear;
+      # otherwise persist the raw value and resolve it so the confirm screen
       # reflects a matched state immediately.
-      mapping.update_column(:value, mapping_params[:value])
-      mapping.create_mappable!
+      if mapping_params[:value].blank?
+        mapping.clear_selection!
+      else
+        mapping.update_column(:value, mapping_params[:value])
+        mapping.create_mappable!
+      end
     else
       mapping.update! \
         create_when_empty: create_when_empty,

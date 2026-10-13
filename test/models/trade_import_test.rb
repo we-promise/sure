@@ -173,9 +173,10 @@ class TradeImportTest < ActiveSupport::TestCase
     security_mapping = @import.mappings.securities.find_by(key: "AAPL")
     assert_equal aapl, security_mapping.mappable, "clean ticker should be auto-matched with no user action"
 
-    aapl_resolver = mock
-    aapl_resolver.stubs(:resolve).returns(aapl)
-    Security::Resolver.stubs(:new).returns(aapl_resolver)
+    # An auto-matched mapping must survive publication without re-resolving:
+    # import! runs create_mappable! over every mapping, which must be a no-op
+    # for an untouched (blank-value) auto-match.
+    Security::Resolver.expects(:new).never
 
     assert_difference -> { Trade.count } => 1 do
       @import.publish
