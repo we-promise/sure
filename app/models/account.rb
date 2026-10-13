@@ -212,6 +212,15 @@ class Account < ApplicationRecord
       transaction do
         account.save!
 
+        # A loan's original principal was its balance on the day it was drawn
+        # down, so that is where its opening anchor belongs. The form always
+        # sends an opening balance date (defaulting to two years ago), so the
+        # server cannot tell a deliberate one from the default: the loan's
+        # start date wins. Loan validates start_date as on or before today, so
+        # the anchor never lands after the reconciliation below.
+        loan_start_date = account.accountable.start_date if initial_balance && account.loan?
+        opening_balance_date = loan_start_date if loan_start_date
+
         manager = Account::OpeningBalanceManager.new(account)
         result = manager.set_opening_balance(
           balance: initial_balance || account.balance,
