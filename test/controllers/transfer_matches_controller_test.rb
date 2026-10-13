@@ -107,4 +107,29 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     category = @user.family.investment_contributions_category
     assert_equal category, outflow_txn.category
   end
+
+  test "destroy dismisses the transfer hint by rejecting its pairs" do
+    outflow = create_transaction(amount: 500, account: accounts(:depository))
+    inflow = create_transaction(amount: -500, account: accounts(:credit_card))
+
+    assert_difference -> { RejectedTransfer.count } => 1 do
+      delete transaction_transfer_match_path(outflow), as: :turbo_stream
+    end
+
+    assert_response :success
+    assert_match %(<turbo-stream action="remove" target="#{ActionView::RecordIdentifier.dom_id(outflow.transaction, :transfer_hint)}">), response.body
+    assert RejectedTransfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "destroy is refused on an account the user may only read" do
+    loan = accounts(:loan)
+    loan.update!(owner: users(:family_member))
+    loan.account_shares.create!(user: @user, permission: "read_only")
+    outflow = create_transaction(amount: 500, account: loan)
+    create_transaction(amount: -500, account: accounts(:credit_card))
+
+    assert_no_difference -> { RejectedTransfer.count } do
+      delete transaction_transfer_match_path(outflow)
+    end
+  end
 end

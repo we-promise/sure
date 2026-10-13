@@ -23,6 +23,18 @@ class TransferMatchesController < ApplicationController
     redirect_back_or_to transactions_path, notice: t(".success")
   end
 
+  # "Not a transfer" on the list's transfer hint.
+  def destroy
+    return unless require_account_permission!(@entry.account, redirect_path: transactions_path)
+
+    Current.family.dismiss_transfer_hint!(@entry.transaction, user: Current.user)
+
+    respond_to do |format|
+      format.turbo_stream { render turbo_stream: turbo_stream.remove(helpers.dom_id(@entry.transaction, :transfer_hint)) }
+      format.html { redirect_back_or_to transactions_path }
+    end
+  end
+
   private
     def set_entry
       @entry = Current.accessible_entries.find(params[:transaction_id])

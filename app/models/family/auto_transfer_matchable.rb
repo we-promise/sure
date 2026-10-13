@@ -73,35 +73,28 @@ module Family::AutoTransferMatchable
 
   # Which of `transactions` have a likely transfer counterpart, so the
   # transaction list can point the user to the "match as transfer" dialog.
-  # Uses the narrower hint window and tolerance, skips rejected pairs, and keeps
-  # only pairs where `user` can write to both accounts
-  # (TransferMatchesController#create requires that).
   #
   # @return [Set<String>] ids of the given transactions that have a candidate
   def transaction_ids_with_transfer_candidates(transactions, user:)
-    unmatched_ids = transactions.reject { |transaction| transaction.transfer? || transaction.transfer.present? }.map(&:id)
-    return Set.new if unmatched_ids.empty?
+    page_ids = transactions.map(&:id).to_set
 
-    candidates = transfer_match_candidates(
-      date_window: TRANSFER_HINT_DATE_WINDOW,
-      exchange_rate_tolerance: TRANSFER_HINT_EXCHANGE_RATE_TOLERANCE,
-      transaction_ids: unmatched_ids,
-      include_rejected: false
-    )
-    return Set.new if candidates.empty?
-
-    writable_account_ids = accounts.writable_by(user).pluck(:id).to_set
-    account_ids = Entry.where(
-      entryable_type: "Transaction",
-      entryable_id: candidates.flat_map { |candidate| [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ] }
-    ).pluck(:entryable_id, :account_id).to_h
-
-    page_ids = unmatched_ids.to_set
-    candidates.each_with_object(Set.new) do |candidate, ids|
-      next unless writable_account_ids.include?(account_ids[candidate.inflow_transaction_id]) &&
-                  writable_account_ids.include?(account_ids[candidate.outflow_transaction_id])
-
+    transfer_hint_candidates(transactions, user:).each_with_object(Set.new) do |candidate, ids|
       [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ].each { |id| ids << id if page_ids.include?(id) }
+    end
+  end
+
+  # "Not a transfer" on a hint: rejects every pair the hint offered for this
+  # transaction, the same record a rejected auto-match leaves behind, so neither
+  # the hint nor the automatic matcher suggests them again. The manual dialog
+  # still lists them.
+  def dismiss_transfer_hint!(transaction, user:)
+    RejectedTransfer.transaction do
+      transfer_hint_candidates([ transaction ], user:).each do |candidate|
+        RejectedTransfer.find_or_create_by!(
+          inflow_transaction_id: candidate.inflow_transaction_id,
+          outflow_transaction_id: candidate.outflow_transaction_id
+        )
+      end
     end
   end
 
@@ -144,6 +137,38 @@ module Family::AutoTransferMatchable
   end
 
   private
+    # The hint's candidate pairs for `transactions`: the narrower hint window and
+    # tolerance, no rejected pairs, both legs in the same category (or both
+    # uncategorized, since a categorized purchase against an income is not a
+    # transfer), and `user` able to write to both accounts
+    # (TransferMatchesController#create requires that).
+    def transfer_hint_candidates(transactions, user:)
+      unmatched_ids = transactions.reject { |transaction| transaction.transfer? || transaction.transfer.present? }.map(&:id)
+      return [] if unmatched_ids.empty?
+
+      candidates = transfer_match_candidates(
+        date_window: TRANSFER_HINT_DATE_WINDOW,
+        exchange_rate_tolerance: TRANSFER_HINT_EXCHANGE_RATE_TOLERANCE,
+        transaction_ids: unmatched_ids,
+        include_rejected: false
+      ).to_a
+      return [] if candidates.empty?
+
+      leg_ids = candidates.flat_map { |candidate| [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ] }
+      account_ids = Entry.where(entryable_type: "Transaction", entryable_id: leg_ids).pluck(:entryable_id, :account_id).to_h
+      category_ids = Transaction.where(id: leg_ids).pluck(:id, :category_id).to_h
+      writable_account_ids = accounts.writable_by(user).pluck(:id).to_set
+
+      candidates.select do |candidate|
+        inflow_id = candidate.inflow_transaction_id
+        outflow_id = candidate.outflow_transaction_id
+
+        category_ids[inflow_id] == category_ids[outflow_id] &&
+          writable_account_ids.include?(account_ids[inflow_id]) &&
+          writable_account_ids.include?(account_ids[outflow_id])
+      end
+    end
+
     # Create the transfer for a matched candidate, tolerating a concurrent sync
     # that already inserted the same pair.
     #

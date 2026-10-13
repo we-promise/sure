@@ -85,6 +85,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
                     text: I18n.t("transactions.transaction.transfer_hint")
     end
     assert_select "a[href='#{new_transaction_transfer_match_path(lone)}']", count: 0
+    assert_select "##{dom_id(outflow.transaction, :transfer_hint)} form[action='#{transaction_transfer_match_path(outflow)}'] input[name=_method][value=delete]"
   end
 
   test "index groups subcategories immediately after their parent in the category filter" do

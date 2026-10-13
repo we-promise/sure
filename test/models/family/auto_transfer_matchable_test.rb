@@ -694,6 +694,17 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_empty noise_pairs
   end
 
+  test "manual transfer candidates list same-category counterparts first" do
+    category = categories(:food_and_drink)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500, category: category)
+    closer = create_transaction(date: Date.current, account: @depository, amount: 500, category: categories(:income))
+    same_category = create_transaction(date: 3.days.ago.to_date, account: @other_asset, amount: 500, category: category)
+
+    candidates = inflow.transaction.transfer_match_candidates
+
+    assert_equal [ same_category.entryable_id, closer.entryable_id ], candidates.map(&:outflow_transaction_id)
+  end
+
   test "single transaction transfer candidates filter optimized relation aliases" do
     outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
@@ -762,6 +773,45 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     ids = @family.transaction_ids_with_transfer_candidates([ inflow.transaction ], user: users(:family_admin))
 
     assert_equal Set[inflow.entryable_id], ids
+  end
+
+  test "transaction_ids_with_transfer_candidates skips pairs whose legs carry different categories" do
+    groceries = categories(:food_and_drink)
+    other = categories(:income)
+    purchase = create_transaction(date: Date.current, account: @depository, amount: 500, category: groceries)
+    income = create_transaction(date: Date.current, account: @credit_card, amount: -500, category: other)
+    half_out = create_transaction(date: Date.current, account: @depository, amount: 300, category: groceries)
+    half_in = create_transaction(date: Date.current, account: @credit_card, amount: -300)
+
+    transactions = [ purchase, income, half_out, half_in ].map(&:transaction)
+
+    assert_empty @family.transaction_ids_with_transfer_candidates(transactions, user: users(:family_admin))
+  end
+
+  test "transaction_ids_with_transfer_candidates keeps pairs that share a category" do
+    category = categories(:food_and_drink)
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 500, category: category)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500, category: category)
+
+    ids = @family.transaction_ids_with_transfer_candidates([ outflow.transaction, inflow.transaction ], user: users(:family_admin))
+
+    assert_equal Set[outflow.entryable_id, inflow.entryable_id], ids
+  end
+
+  test "dismiss_transfer_hint! rejects the hinted pairs of one transaction" do
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_difference -> { RejectedTransfer.count } => 1 do
+      @family.dismiss_transfer_hint!(inflow.transaction, user: users(:family_admin))
+    end
+
+    assert_empty @family.transaction_ids_with_transfer_candidates([ outflow.transaction, inflow.transaction ], user: users(:family_admin))
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+    # The manual dialog still offers the pair.
+    assert_equal [ outflow.entryable_id ], inflow.transaction.transfer_match_candidates.map(&:outflow_transaction_id)
   end
 
   test "transaction_ids_with_transfer_candidates stays narrower than the manual dialog" do
