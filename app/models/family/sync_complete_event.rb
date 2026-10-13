@@ -15,11 +15,13 @@ class Family::SyncCompleteEvent
     # This avoids wiping in-progress form state when a background sync fires.
     # The partial contains no user-scoped data (Current.user is nil here), so
     # each browser re-fetches the page on its own authenticated request.
-    family.broadcast_replace_to(
-      family,
-      target: "sync-toast",
-      partial: "shared/notifications/sync_toast"
-    )
+    #
+    # Syncing several connections (or "Sync all") finishes one sync after
+    # another, and every one of them lands here. Each schedules the toast job;
+    # only the newest one sends it, once no other sync is visibly running, so
+    # the page refreshes once instead of once per sync. Account rows are
+    # already replaced in place as each sync completes.
+    schedule_sync_toast
 
     # The accounts page's own sync toolbar (refresh icon + "Cancel sync") is
     # plain server-rendered HTML from whatever request last loaded the page,
@@ -43,4 +45,15 @@ class Family::SyncCompleteEvent
       Rails.logger.error("Family::SyncCompleteEvent recurring transaction identification failed: #{e.message}\n#{e.backtrace&.join("\n")}")
     end
   end
+
+  private
+    # Scheduled after commit: this runs inside the finalizing sync's locked
+    # transaction, and a rolled-back sync must not leave a toast job behind.
+    def schedule_sync_toast
+      ActiveRecord.after_all_transactions_commit do
+        FamilySyncToastJob.schedule_for(family)
+      rescue => e
+        Rails.logger.error("Family::SyncCompleteEvent sync toast scheduling failed: #{e.message}")
+      end
+    end
 end

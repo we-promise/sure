@@ -3,6 +3,7 @@ require "turbo/broadcastable/test_helper"
 
 class Account::SyncCompleteEventTest < ActiveSupport::TestCase
   include Turbo::Broadcastable::TestHelper
+  include ActiveJob::TestHelper
 
   setup do
     @account = accounts(:depository)
@@ -15,7 +16,7 @@ class Account::SyncCompleteEventTest < ActiveSupport::TestCase
   # shared with.
   test "an account sync does not broadcast the rendered row to the family" do
     streams = capture_turbo_stream_broadcasts(@account.family) do
-      Account::SyncCompleteEvent.new(@account).broadcast
+      perform_enqueued_jobs(only: FamilySyncToastJob) { Account::SyncCompleteEvent.new(@account).broadcast }
     end
 
     assert_not_includes streams.map { |stream| stream["target"] }, "account_#{@account.id}"
@@ -28,7 +29,7 @@ class Account::SyncCompleteEventTest < ActiveSupport::TestCase
     @account.stubs(:linked?).returns(true)
 
     targets = capture_turbo_stream_broadcasts(@account.family) do
-      Account::SyncCompleteEvent.new(@account).broadcast
+      perform_enqueued_jobs(only: FamilySyncToastJob) { Account::SyncCompleteEvent.new(@account).broadcast }
     end.map { |stream| stream["target"] }
 
     assert_includes targets, "sync-toast"
@@ -38,7 +39,7 @@ class Account::SyncCompleteEventTest < ActiveSupport::TestCase
     @account.stubs(:linked?).returns(false)
 
     targets = capture_turbo_stream_broadcasts(@account.family) do
-      Account::SyncCompleteEvent.new(@account).broadcast
+      perform_enqueued_jobs(only: FamilySyncToastJob) { Account::SyncCompleteEvent.new(@account).broadcast }
     end.map { |stream| stream["target"] }
 
     assert_includes targets, "sync-toast"
@@ -46,7 +47,7 @@ class Account::SyncCompleteEventTest < ActiveSupport::TestCase
 
   test "the account page still refreshes on its own stream" do
     actions = capture_turbo_stream_broadcasts(@account) do
-      Account::SyncCompleteEvent.new(@account).broadcast
+      perform_enqueued_jobs(only: FamilySyncToastJob) { Account::SyncCompleteEvent.new(@account).broadcast }
     end.map { |stream| stream["action"] }
 
     assert_includes actions, "refresh"
