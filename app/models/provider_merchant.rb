@@ -23,7 +23,9 @@ class ProviderMerchant < Merchant
         # attributes[:x].presence alone would treat both the same and make
         # an intentional clear silently come back.
         website_url: attributes.key?(:website_url) ? attributes[:website_url].presence : website_url,
-        iban: attributes.key?(:iban) ? attributes[:iban].presence : inheritable_iban_for(family)
+        # Never inherit this record's own iban: a ProviderMerchant is shared
+        # by every family, so an iban on it may stem from another family.
+        iban: attributes[:iban].presence
       )
 
       scope = family.transactions.where(merchant_id: id)
@@ -68,15 +70,6 @@ class ProviderMerchant < Merchant
   end
 
   private
-    # The family's IBAN-unique index would reject an inherited IBAN that one of
-    # its merchants already holds, failing a name- or website-only edit on a
-    # field the user never touched; leave it off the converted merchant then.
-    def inheritable_iban_for(family)
-      return nil if iban.blank?
-
-      family.merchants.exists?(iban: iban) ? nil : iban
-    end
-
     def extract_domain(url)
       normalized_url = url.start_with?("http://", "https://") ? url : "https://#{url}"
       URI.parse(normalized_url).host&.sub(/\Awww\./, "")

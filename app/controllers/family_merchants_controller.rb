@@ -73,10 +73,10 @@ class FamilyMerchantsController < ApplicationController
       # A ProviderMerchant is shared by every family whose transactions use it,
       # so changing its name or website converts it to a FamilyMerchant for
       # this family only; editing the shared row would change it for all of
-      # them. An IBAN edit takes the same path: iban drives cross-family
-      # merchant-identity matching (Account::ProviderImportAdapter looks
-      # merchants up globally by source+iban), so one family setting it would
-      # silently redirect another family's future transactions to this merchant.
+      # them. An IBAN edit takes the same path: the IBAN is a per-family
+      # identity (Account::ProviderImportAdapter matches it only against the
+      # importing family's own merchants), and on the shared row it would be
+      # visible to every other family using this merchant.
       website_changed = effective_merchant_params.key?(:website_url) &&
         effective_merchant_params[:website_url].to_s.strip != @merchant.website_url.to_s
       iban_changed = effective_merchant_params.key?(:iban) && normalize_iban(effective_merchant_params[:iban]) != @merchant.iban

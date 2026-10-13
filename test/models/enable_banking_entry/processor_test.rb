@@ -794,7 +794,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal merchant, processor.send(:merchant)
   end
 
-  test "groups transactions with the same iban under one merchant even with different remittance text" do
+  test "groups transactions with the family merchant's iban under it even with different names" do
+    family_merchant = @family.merchants.create!(name: "My Insurance", iban: "DE89370400440532013000") # pipelock:ignore IBAN
     tx1 = {
       entry_reference: "ref_merchant_iban_1",
       transaction_id: nil,
@@ -824,8 +825,32 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     entry1 = @account.entries.find_by!(external_id: "enable_banking_ref_merchant_iban_1")
     entry2 = @account.entries.find_by!(external_id: "enable_banking_ref_merchant_iban_2")
 
-    assert_equal entry1.transaction.merchant_id, entry2.transaction.merchant_id
-    assert_equal "DE89370400440532013000", entry1.transaction.merchant.iban # pipelock:ignore IBAN
+    assert_equal family_merchant.id, entry1.transaction.merchant_id
+    assert_equal family_merchant.id, entry2.transaction.merchant_id
+  end
+
+  test "keeps payers sharing one account apart when the family has no merchant with that iban" do
+    base = {
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      debtor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+      status: "BOOK"
+    }
+    tx1 = base.merge(entry_reference: "ref_joint_1", debtor: { name: "Alice Example" })
+    tx2 = base.merge(entry_reference: "ref_joint_2", debtor: { name: "Bob Example" })
+
+    EnableBankingEntry::Processor.new(tx1, enable_banking_account: @enable_banking_account).process
+    EnableBankingEntry::Processor.new(tx2, enable_banking_account: @enable_banking_account).process
+
+    merchant1 = @account.entries.find_by!(external_id: "enable_banking_ref_joint_1").transaction.merchant
+    merchant2 = @account.entries.find_by!(external_id: "enable_banking_ref_joint_2").transaction.merchant
+
+    assert_equal "Alice Example", merchant1.name
+    assert_equal "Bob Example", merchant2.name
+    assert_nil merchant1.iban
+    assert_nil merchant2.iban
   end
 
   test "falls back to name-based merchant matching when no iban is present" do
