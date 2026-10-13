@@ -212,11 +212,12 @@ class TradeImportTest < ActiveSupport::TestCase
     mapping = @import.mappings.securities.find_by(key: "VANGUARD TOTAL BOND ETF MARKET")
     assert_nil mapping.mappable, "descriptive label should not auto-match"
 
-    # Simulate the user mapping the label to BND via the combobox.
+    # Simulate the user mapping the label to BND via the combobox (mirrors the
+    # controller: persist the raw value, then resolve).
     resolver = mock
     resolver.stubs(:resolve).returns(bnd)
     Security::Resolver.stubs(:new).returns(resolver)
-    mapping.update!(value: "BND|XNAS|")
+    mapping.update_column(:value, "BND|XNAS|")
     mapping.create_mappable!
 
     assert_difference -> { Trade.count } => 1 do
@@ -226,5 +227,27 @@ class TradeImportTest < ActiveSupport::TestCase
     trade = Trade.joins(:entry).find_by(entries: { import_id: @import.id })
     assert_equal bnd, trade.security
     assert_not trade.security.offline?, "mapped security should not be marked offline for a descriptive label"
+  end
+
+  test "import is not publishable while a descriptive label is unresolved" do
+    @import.update!(
+      account: accounts(:depository),
+      raw_file_str: "date,ticker,qty,price,currency,name\n01/01/2024,VANGUARD TOTAL BOND ETF MARKET,10,80.00,USD,Bond Buy\n",
+      date_col_label: "date",
+      ticker_col_label: "ticker",
+      qty_col_label: "qty",
+      price_col_label: "price",
+      date_format: "%m/%d/%Y",
+      signage_convention: "inflows_positive"
+    )
+
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+    @import.reload
+
+    mapping = @import.mappings.securities.find_by(key: "VANGUARD TOTAL BOND ETF MARKET")
+    assert_nil mapping.mappable
+    assert_not mapping.valid?
+    assert_not @import.publishable?, "an unresolved security label must block publishing"
   end
 end
