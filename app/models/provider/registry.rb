@@ -200,6 +200,14 @@ class Provider::Registry
 
         Provider::Chimnie.new(api_key)
       end
+
+      def terrascoutx
+        api_key = ENV["TERRASCOUTX_API_KEY"].presence || Setting.terrascoutx_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Terrascoutx.new(api_key)
+      end
   end
 
   def initialize(concept)
@@ -242,7 +250,7 @@ class Provider::Registry
         # builds them by name when benchmarking against Jev.
         %i[jev]
       when :property_valuations
-        %i[rentcast realie chimnie]
+        %i[rentcast realie chimnie terrascoutx]
       else
         %i[plaid_us plaid_eu github openai anthropic]
       end
