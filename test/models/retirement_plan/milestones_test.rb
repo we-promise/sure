@@ -103,8 +103,9 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
   end
 
   test "nothing in the milestones engine reads the clock, the database or the current request" do
-    source = Rails.root.join("app/models/retirement_plan/milestones.rb").read
+    # Comments are left out, so a note about the contract cannot trip it.
+    code = Rails.root.join("app/models/retirement_plan/milestones.rb").readlines.map { |line| line.sub(/#.*/, "") }.join
 
-    assert_no_match(/Date\.(current|today)|Time\.(current|now|zone)|Current\.|ActiveRecord|\.where\(|\.find/, source)
+    assert_no_match(/Date\.(current|today)|Time\.(current|now|zone)|DateTime\.(current|now)|Current\.|ActiveRecord|\.where\(|\.find/, code)
   end
 end
