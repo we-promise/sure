@@ -131,7 +131,7 @@ class HoldingTest < ActiveSupport::TestCase
     [ "n/a", "1e999999", "0x1" ].each do |rate|
       entry.entryable.update_column(:extra, { "exchange_rate" => rate })
 
-      assert_nil @amzn.avg_cost, rate
+      assert_nil @amzn.reload.avg_cost, rate
     end
   end
 
@@ -149,6 +149,14 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
     assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
     assert_equal 2, queries.size
+  end
+
+  # A page asks a holding for its average cost several times. The query cache
+  # answers the queries again; the replay of the whole history would run again.
+  test "a holding replays its history once, however often it is asked" do
+    Holding::CostBasisFallback.expects(:new).once.returns(stub(average_cost: nil))
+
+    3.times { assert_nil @amzn.avg_cost }
   end
 
   test "calculates total return trend" do

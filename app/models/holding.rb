@@ -41,6 +41,11 @@ class Holding < ApplicationRecord
     account.balance.zero? ? 1 : amount_in_account_currency / account.balance * 100
   end
 
+  def reload(*)
+    remove_instance_variable(:@fallback_avg_cost) if defined?(@fallback_avg_cost)
+    super
+  end
+
   # Returns average cost per share, or nil if unknown.
   #
   # Uses pre-computed cost_basis if available (set during materialization),
@@ -277,7 +282,12 @@ class Holding < ApplicationRecord
 
     # Replays the trades through the calculators' rules; see
     # Holding::CostBasisFallback. Nil when the cost basis is unknown.
+    #
+    # Once per instance, nil included: a page asks a holding for its average
+    # cost several times, and each answer would replay its whole history.
     def calculate_avg_cost
-      Holding::CostBasisFallback.new(self).average_cost
+      return @fallback_avg_cost if defined?(@fallback_avg_cost)
+
+      @fallback_avg_cost = Holding::CostBasisFallback.new(self).average_cost
     end
 end
