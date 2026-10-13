@@ -31,18 +31,24 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
   # Renders a generated view the way Rails would, from a real view path, so relative
   # translation keys and strict locals behave as they do in the app. Redbark has the
-  # model, routes and fixtures the generated views call, so it stands in for a new
-  # provider here.
+  # model, routes, fixtures and translations the generated views call, so it stands
+  # in for a new provider here. The view sits at the app's own path, prepended so it
+  # renders instead of Redbark's: under any other prefix its relative keys would
+  # resolve in a scope the app does not have.
   def render_generated_view(generated, partial: nil, template: nil, **options)
     Dir.mktmpdir do |dir|
       virtual_path = partial ? partial.sub(%r{([^/]+)\z}, '_\\1') : template
-      file = File.join(dir, "generated", "#{virtual_path}.html.erb")
+      file = File.join(dir, "#{virtual_path}.html.erb")
       FileUtils.mkdir_p(File.dirname(file))
       File.write(file, generated)
 
       controller = Class.new(ApplicationController) { prepend_view_path dir }
-      target = partial ? { partial: "generated/#{partial}" } : { template: "generated/#{template}", layout: false }
-      controller.renderer.render(**target, **options)
+      target = partial ? { partial: partial } : { template: template, layout: false }
+      html = controller.renderer.render(**target, **options)
+      # Missing keys render a placeholder rather than raising in test, so a key
+      # the app does not define would otherwise pass unnoticed.
+      assert_not_includes html, "translation_missing"
+      html
     end
   end
 
