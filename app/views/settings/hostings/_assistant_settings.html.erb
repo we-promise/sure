@@ -8,7 +8,7 @@
     <% end %>
   </div>
 
-  <% effective_type = ENV["ASSISTANT_TYPE"].presence || Current.family.assistant_type %>
+  <% effective_type = Current.family.effective_assistant_type %>
 
   <%= styled_form_with model: Current.family,
                        url: settings_hosting_path,
@@ -22,13 +22,17 @@
                     options_for_select(
                       [
                         [t(".type_builtin"), "builtin"],
-                        [t(".type_external"), "external"]
+                        [t(".type_external"), "external"],
+                        [t(".type_mcp_only"), "mcp_only"]
                       ],
                       effective_type
                     ),
                     { label: t(".type_label") },
                     { disabled: ENV["ASSISTANT_TYPE"].present?,
                       data: { "auto-submit-form-target": "auto" } } %>
+  <% end %>
+  <% if effective_type == "mcp_only" %>
+    <p class="text-sm text-secondary"><%= t(".mcp_only_help") %></p>
   <% end %>
   <% if effective_type == "external" %>
 
