@@ -42,6 +42,23 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
     assert_includes option.text, Money.new(220, "USD").format
   end
 
+  # Without a rate the quote is still worth showing, under its own currency,
+  # but it cannot feed a check against a price in another one.
+  test "the security picker keeps an unconvertible quote out of the price check" do
+    Security.stubs(:providers).returns([])
+    ExchangeRate.stubs(:provider).returns(nil)
+    Security.any_instance.stubs(:current_price).returns(Money.new(200, "EUR"))
+    entry = create_transaction(account: accounts(:investment), currency: "USD")
+
+    get convert_to_trade_transaction_url(entry.transaction),
+      params: { activity_label: "Buy" }, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    option = css_select("option[data-ticker]").first
+    assert_nil option["data-price-cents"]
+    assert_includes option.text, Money.new(200, "EUR").format
+  end
+
   test "conversion action follows the account's trade capability" do
     [ @account, accounts(:investment), accounts(:depository) ].each do |account|
       entry = create_transaction(account: account)

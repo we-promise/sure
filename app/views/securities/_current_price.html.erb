@@ -4,9 +4,11 @@
     purchase price and value next to it. Without a rate only the quote shows. %>
 <% quote = security.current_price %>
 <% converted = security.current_price_in(currency) %>
-<% if converted && converted.currency != quote.currency %>
-  <%= format_money converted %>
-  <span class="text-secondary">(<%= format_money quote %>)</span>
-<% else %>
-  <%= format_money quote %>
+<% if quote %>
+  <% if converted && converted.currency != quote.currency %>
+    <%= format_money converted %>
+    <span class="text-secondary">(<%= format_money quote %>)</span>
+  <% else %>
+    <%= format_money quote %>
+  <% end %>
 <% end %>

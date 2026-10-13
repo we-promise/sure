@@ -256,17 +256,19 @@ class Security < ApplicationRecord
   end
 
   # The current price in `currency`. A quote comes in the listing's currency,
-  # which need not be the one a trade or position is carried in. nil when there
-  # is no price or no rate to convert it at, rather than the unconverted figure
-  # read as if it were in `currency`. Memoised per currency, a miss included,
-  # because a page asks for the same figure more than once and a missing rate
-  # is a provider call each time.
+  # which need not be the one a trade or position is carried in. Converted at
+  # the quote's own date, as the holdings are. nil when there is no price or no
+  # rate to convert it at, rather than the unconverted figure read as if it
+  # were in `currency`. Memoised per currency, a miss included, because a page
+  # asks for the same figure more than once and a missing rate is a provider
+  # call each time.
   def current_price_in(currency)
     @current_price_in ||= {}
     return @current_price_in[currency] if @current_price_in.key?(currency)
 
     @current_price_in[currency] = begin
-      current_price&.exchange_to(currency)
+      price = current_price
+      price&.exchange_to(currency, date: @current_price&.date || Date.current)
     rescue Money::ConversionError
       nil
     end

@@ -56,8 +56,12 @@
 
               # Build options with price data for validation
               security_options_with_prices = account_securities.map do |s|
+                # Compared against the price this transaction implies, so only
+                # a quote converted to its currency can feed the check. Without
+                # a rate the quote is still shown, under its own currency.
                 price = s.current_price_in(@entry.currency)
-                price_display = price ? " (#{format_money(price)})" : ""
+                shown_price = price || s.current_price
+                price_display = shown_price ? " (#{format_money(shown_price)})" : ""
                 label = "#{s.ticker}#{price_display}"
                 label += " - #{s.name.truncate(25)}" if s.name.present?
                 price_cents = price ? (price.amount * 100).to_i : nil
