@@ -11,6 +11,11 @@ class McpController < ApplicationController
   # same way, ChatGPT's tunnel included; nothing here is tunnel-specific.
   MODERN_PROTOCOL_VERSION = "2026-07-28"
   SUPPORTED_PROTOCOL_VERSIONS = [ LEGACY_PROTOCOL_VERSION, PROTOCOL_VERSION, MODERN_PROTOCOL_VERSION ].freeze
+  # The 2026-07-28 error-code allocation (basic/index#error-codes), plus the
+  # standard JSON-RPC "Invalid params" code the dialect reuses.
+  HEADER_MISMATCH_ERROR_CODE = -32020
+  UNSUPPORTED_PROTOCOL_VERSION_ERROR_CODE = -32022
+  INVALID_PARAMS_ERROR_CODE = -32602
   MCP_SESSION_TTL = 1.day
   SERVER_INFO = { name: "sure", version: "1.0" }.freeze
   # See authenticate_via_env_token below.
@@ -171,7 +176,7 @@ class McpController < ApplicationController
       fn_class = mcp_function_classes.find { |fc| fc.name == name }
 
       unless fn_class
-        render_jsonrpc_error(request_id, -32602, "Unknown tool: #{name}")
+        render_jsonrpc_error(request_id, INVALID_PARAMS_ERROR_CODE, "Unknown tool: #{name}")
         return nil
       end
 
@@ -387,11 +392,6 @@ class McpController < ApplicationController
       @mcp_access_mode = :read_only if session_access_mode == :read_only
       true
     end
-
-    # The 2026-07-28 error-code allocation (basic/index#error-codes).
-    HEADER_MISMATCH_ERROR_CODE = -32020
-    UNSUPPORTED_PROTOCOL_VERSION_ERROR_CODE = -32022
-    INVALID_PARAMS_ERROR_CODE = -32602
 
     # What a 2026-07-28 request must carry on top of the legacy envelope: the
     # mirrored headers (-32020 when absent or wrong) and, in the body, the
