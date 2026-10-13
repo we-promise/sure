@@ -24,9 +24,10 @@ class Rule::Action < ApplicationRecord
   # naming the same method would leave only the last one registered.
   after_commit :seed_notification_baseline, on: %i[create update], if: :saved_change_to_action_type?
 
-  # Set by the importers on an email action that replaces one the rule already
-  # had. The rule's baseline is still recorded under its id, so taking it again
-  # would mark a match still waiting for the next run as delivered.
+  # Set by the importers and the assistant's update_rule on an email action that
+  # replaces one the rule already had. The rule's baseline is still recorded
+  # under its id, so taking it again would mark a match still waiting for the
+  # next run as delivered.
   attr_accessor :keep_notification_baseline
 
   # Accepts an Array (e.g. from a multi-select tag input) and stores it as a

@@ -92,4 +92,17 @@ class Assistant::Function::CreateRuleTest < ActiveSupport::TestCase
     assert_equal "invalid_rule", member_fn.call(params)[:error]
     assert @fn.call(params)[:success]
   end
+
+  test "a new email rule records its current matches as the baseline" do
+    old = create_transaction(name: "ZXQ Coffee Old").transaction
+
+    result = @fn.call(
+      "name" => "Coffee alerts",
+      "conditions" => [ { "condition_type" => "transaction_name", "operator" => "like", "value" => "zxq coffee" } ],
+      "actions" => [ { "action_type" => "send_email_notification" } ]
+    )
+
+    assert result[:success], result.inspect
+    assert_equal [ old.id ], NotificationDelivery.where(rule_id: result[:rule][:id]).pluck(:transaction_id)
+  end
 end

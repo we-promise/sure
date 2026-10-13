@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @user = users(:family_admin)
@@ -96,4 +96,40 @@ class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
     assert result[:success], result.inspect
     assert result.dig(:preview, :preview_token).present?
   end
+
+  test "resending an unchanged email action keeps the baseline, so a pending match is still emailed" do
+    old = create_transaction(name: "ZXQ Coffee Old").transaction
+    rule = email_rule
+    assert_equal [ old.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+    pending = create_transaction(name: "ZXQ Coffee New").transaction
+
+    result = @fn.call("rule_id" => rule.id, "actions" => [ { "action_type" => "send_email_notification" } ])
+
+    assert result[:success], result.inspect
+    assert_equal [ old.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+    assert_enqueued_with(job: RuleEmailNotificationJob, args: [ rule.id, [ pending.id ] ]) do
+      Rule.find(rule.id).apply
+    end
+  end
+
+  test "replacing a rule's actions with an email action records the baseline" do
+    old = create_transaction(name: "ZXQ Coffee Old").transaction
+
+    result = @fn.call("rule_id" => @rule.id, "actions" => [ { "action_type" => "send_email_notification" } ])
+
+    assert result[:success], result.inspect
+    assert_equal [ old.id ], NotificationDelivery.where(rule: @rule).pluck(:transaction_id)
+    assert_no_enqueued_jobs(only: RuleEmailNotificationJob) { Rule.find(@rule.id).apply }
+  end
+
+  private
+    def email_rule
+      @family.rules.create!(
+        name: "Coffee alerts",
+        resource_type: "transaction",
+        active: true,
+        conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "zxq coffee" } ],
+        actions_attributes: [ { action_type: "send_email_notification" } ]
+      )
+    end
 end
