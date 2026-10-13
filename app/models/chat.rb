@@ -129,6 +129,13 @@ class Chat < ApplicationRecord
   end
 
   def ask_assistant(message, assistant_message: nil)
+    # The assistant can be turned off while a response is still queued. Drop
+    # the pending "Thinking…" bubble rather than calling a provider.
+    unless user.family.assistant_enabled?
+      assistant_message&.destroy
+      return
+    end
+
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 

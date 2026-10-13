@@ -942,8 +942,7 @@ class SimplefinItem::Importer
           unless @reconciled_account_ids.include?(acct.id)
             @reconciled_account_ids << acct.id
             reconcile_and_track_pending_duplicates(acct)
-            exclude_and_track_stale_pending(acct)
-            track_stale_unmatched_pending(acct)
+            review_and_exclude_stale_pending(acct)
           end
 
           # Refresh credit attributes when available-balance present
@@ -1308,6 +1307,19 @@ class SimplefinItem::Importer
       record_reconciliation_error("pending_reconciliation", account, e)
     end
 
+    # Stale pending entries are reported for review first, then excluded.
+    #
+    # The order matters and is the reason these two steps have one caller:
+    # both steps decide "pending" with Transaction.pending_sql, and the
+    # tracker counts only entries that are still `excluded: false`. Exclude
+    # first and the tracker can never see anything -- the exclusion has just
+    # marked every row it would have counted. Sync stats reported 0 under
+    # "needs manual review" for that reason, whatever the account held.
+    def review_and_exclude_stale_pending(account)
+      track_stale_unmatched_pending(account)
+      exclude_and_track_stale_pending(account)
+    end
+
     # Auto-exclude stale pending transactions (>8 days old with no matching posted version)
     # Prevents orphaned pending transactions from affecting budgets indefinitely
     def exclude_and_track_stale_pending(account)
@@ -1328,16 +1340,16 @@ class SimplefinItem::Importer
     end
 
     # Track stale pending transactions that couldn't be matched (for user awareness)
-    # These are >8 days old, still pending, and have no duplicate suggestion
+    # These are >8 days old, still pending, and have no duplicate suggestion.
+    # Pending under any provider, as exclude_and_track_stale_pending decides it,
+    # which is why it must run before that exclusion (see
+    # review_and_exclude_stale_pending).
     def track_stale_unmatched_pending(account)
       stale_unmatched = account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(excluded: false)
         .where("entries.date < ?", 8.days.ago.to_date)
-        .where(<<~SQL.squish)
-          (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-          OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        SQL
+        .where(Transaction.pending_sql)
         .where(<<~SQL.squish)
           transactions.extra -> 'potential_posted_match' IS NULL
         SQL
