@@ -6,18 +6,21 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
 
   # FI number 300,000; 100,000 today; 10,000 a year saved at 5%; retiring in
   # 2046. Every figure below is hand-computed.
-  def milestones(inflation_rate: 0, fi_number: 300_000, retirement_year: 2046, **overrides)
+  # `path_retirement_year` retires the simulation's path in a different year
+  # from the plan's, as a FIRE path drawn to its solved year does.
+  def milestones(inflation_rate: 0, fi_number: 300_000, retirement_year: 2046, path_retirement_year: nil, **overrides)
     inputs = {
       as_of: AS_OF, current_assets: 100_000, annual_contribution: 10_000,
       expected_annual_return: BigDecimal("0.05"), inflation_rate: BigDecimal(inflation_rate.to_s),
       streams: [], birth_year: 1980, end_age: 90
     }.merge(overrides)
-    simulation = RetirementPlan::Simulation.new(**inputs, retirement_year: retirement_year || 2046)
+    simulation = RetirementPlan::Simulation.new(**inputs, retirement_year: path_retirement_year || retirement_year || 2046)
 
     RetirementPlan::Milestones.new(
       rows: simulation.rows, current_assets: inputs[:current_assets], fi_number: fi_number,
       expected_annual_return: inputs[:expected_annual_return], inflation_rate: inputs[:inflation_rate],
-      retirement_year: retirement_year, first_year: AS_OF.year, birth_year: inputs[:birth_year]
+      retirement_year: retirement_year, path_retirement_year: simulation.retirement_year,
+      first_year: AS_OF.year, birth_year: inputs[:birth_year]
     )
   end
 
@@ -68,6 +71,24 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
     m = find(milestones(retirement_year: 2030).all, "coast")
 
     assert_equal [ nil, false ], [ m.year, m.reached_already ]
+  end
+
+  # The path retires in 2027, the plan in 2046. 2026 is the only saving year
+  # and ends at 115,000, short of 300,000 / 1.05^19 = 118,720.19. Retired, a
+  # 20,000 pension with no spending is reinvested, so 2027 ends at 140,750,
+  # past 300,000 / 1.05^18 = 124,656.20, but nobody coasts in a year they are
+  # already retired in. The target still runs to the plan's 2046.
+  test "Coast FI stops at the path's retirement when the path retires before the plan does" do
+    m = find(milestones(path_retirement_year: 2027, streams: [ RetirementPlan::Simulation::Stream.new(kind: "income", annual_amount: 20_000) ]).all, "coast")
+
+    assert_equal [ nil, false ], [ m.year, m.reached_already ]
+  end
+
+  # The other side: a path retiring after the plan's date still stops the
+  # saving years at the plan's, as before.
+  test "Coast FI stops at the plan's retirement when the path retires later" do
+    assert_nil find(milestones(retirement_year: 2030, path_retirement_year: 2046).all, "coast").year
+    assert_equal 2027, find(milestones(retirement_year: 2046, path_retirement_year: 2050).all, "coast").year
   end
 
   # A traditional plan can keep a retirement date that has passed. There is no

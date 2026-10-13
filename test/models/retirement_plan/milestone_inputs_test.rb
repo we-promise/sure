@@ -51,7 +51,7 @@ class RetirementPlan::MilestoneInputsTest < ActiveSupport::TestCase
 
   test "Coast FI keeps measuring to the plan's retirement date when a drawn path retires earlier" do
     drawn = @plan.simulation(as_of: AS_OF, retirement_year: 2030)
-    RetirementPlan::Milestones.expects(:new).with(has_entries(rows: drawn.rows, retirement_year: 2046)).returns(stub(all: []))
+    RetirementPlan::Milestones.expects(:new).with(has_entries(rows: drawn.rows, retirement_year: 2046, path_retirement_year: 2030)).returns(stub(all: []))
 
     @plan.milestones(as_of: AS_OF, simulation: drawn)
   end

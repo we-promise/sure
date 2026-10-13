@@ -127,7 +127,8 @@ class RetirementPlan < ApplicationRecord
       rows: simulation.rows, current_assets: funding_total(as_of),
       fi_number: projection(as_of: as_of).fi_number,
       expected_annual_return: expected_annual_return, inflation_rate: inflation_rate,
-      retirement_year: retirement_date&.year, first_year: as_of.year, birth_year: birth_year
+      retirement_year: retirement_date&.year, path_retirement_year: simulation.retirement_year,
+      first_year: as_of.year, birth_year: birth_year
     ).all
   end
 

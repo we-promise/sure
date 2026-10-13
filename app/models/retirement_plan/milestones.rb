@@ -24,12 +24,15 @@ class RetirementPlan::Milestones
   # within the plan; `reached_already` tells the two apart.
   Milestone = Data.define(:key, :year, :age, :reached_already)
 
-  def initialize(rows:, current_assets:, fi_number:, expected_annual_return:, inflation_rate:, retirement_year:, first_year:, birth_year:)
+  def initialize(rows:, current_assets:, fi_number:, expected_annual_return:, inflation_rate:, retirement_year:, first_year:, birth_year:, path_retirement_year: nil)
     @rows = rows
     @current_assets = current_assets.to_d
     @fi_number = fi_number&.to_d
     @real_growth = (1 + expected_annual_return.to_d) / (1 + inflation_rate.to_d)
     @retirement_year = retirement_year
+    # The rows stop saving when their own path retires, which in FIRE mode can
+    # be before the plan's date. The Coast target still runs to the plan's.
+    @saving_until = [ retirement_year, path_retirement_year ].compact.min
     @first_year = first_year
     @birth_year = birth_year
   end
@@ -48,13 +51,14 @@ class RetirementPlan::Milestones
       milestone(key, row&.year, reached_already: false)
     end
 
-    # Only the saving years count: from the retirement year there is nothing
-    # left to coast on. A retirement year already past leaves none at all.
+    # Only the saving years count: from the retirement year, the plan's or the
+    # path's if earlier, there is nothing left to coast on. A retirement year
+    # already past leaves none at all.
     def coast
       return nil if @retirement_year.nil? || @retirement_year < @first_year
       return milestone("coast", nil, reached_already: true) if @current_assets >= coast_target(@first_year - 1)
 
-      row = @rows.detect { |r| r.year < @retirement_year && r.end_value_real >= coast_target(r.year) }
+      row = @rows.detect { |r| r.year < @saving_until && r.end_value_real >= coast_target(r.year) }
       milestone("coast", row&.year, reached_already: false)
     end
 
