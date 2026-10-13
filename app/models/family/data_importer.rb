@@ -1383,6 +1383,10 @@ class Family::DataImporter
           stop_processing: data["stop_processing"] || false
         )
 
+        # An email action replacing the rule's own keeps the baseline it recorded
+        # (see Rule::Action#keep_notification_baseline).
+        had_email_action = !created && rule.actions.exists?(action_type: "send_email_notification")
+
         rule.conditions.destroy_all unless created
         rule.actions.destroy_all unless created
 
@@ -1393,7 +1397,7 @@ class Family::DataImporter
 
         # Build actions
         (data["actions"] || []).each do |action_data|
-          build_rule_action(rule, action_data)
+          build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
 
         rule.save!

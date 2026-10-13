@@ -9,17 +9,25 @@ class Rule::Action < ApplicationRecord
   # transactions as already-delivered WITHOUT sending, so the rule only ever
   # emails about transactions that appear AFTER the action exists.
   #
-  # Uses after_create_commit (not after_create): nested children persist before
-  # the parent rule commits, and the pre-seed reads the rule's conditions, which
+  # Uses after_commit (not after_save): nested children persist before the
+  # parent rule commits, and the pre-seed reads the rule's conditions, which
   # must be committed first.
   #
-  # after_update_commit covers the edit flow: the action_type select is editable
+  # The update event covers the edit flow: the action_type select is editable
   # for persisted actions (see rules_controller#rule_params), so an existing
   # action can be CHANGED to send_email_notification. Without re-seeding, the
   # next apply/sync would email every historical match. Guard on the type change
-  # so we only watermark when an action actually becomes email-notify.
-  after_create_commit :seed_notification_baseline
-  after_update_commit :seed_notification_baseline, if: :saved_change_to_action_type?
+  # so we only watermark when an action actually becomes email-notify; on create
+  # the type changes from nil, so the same guard admits every new action.
+  #
+  # One callback for both events: after_create_commit and after_update_commit
+  # naming the same method would leave only the last one registered.
+  after_commit :seed_notification_baseline, on: %i[create update], if: :saved_change_to_action_type?
+
+  # Set by the importers on an email action that replaces one the rule already
+  # had. The rule's baseline is still recorded under its id, so taking it again
+  # would mark a match still waiting for the next run as delivered.
+  attr_accessor :keep_notification_baseline
 
   # Accepts an Array (e.g. from a multi-select tag input) and stores it as a
   # comma-separated string in the existing `value` column, so multi-value
@@ -88,6 +96,7 @@ class Rule::Action < ApplicationRecord
 
     def seed_notification_baseline
       return unless action_type == "send_email_notification"
+      return if keep_notification_baseline
 
       NotificationDelivery.record_for(
         rule_id: rule_id,
