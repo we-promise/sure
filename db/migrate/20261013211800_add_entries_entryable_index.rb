@@ -29,8 +29,7 @@ class AddEntriesEntryableIndex < ActiveRecord::Migration[8.1]
     def valid_index_exists?
       select_value(<<~SQL.squish) == true
         SELECT indisvalid FROM pg_index
-        JOIN pg_class ON pg_class.oid = pg_index.indexrelid
-        WHERE pg_class.relname = '#{INDEX_NAME}'
+        WHERE indexrelid = to_regclass(#{connection.quote(INDEX_NAME)})
       SQL
     end
 end
