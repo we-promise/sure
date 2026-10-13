@@ -113,7 +113,8 @@ class Transfer < ApplicationRecord
 
   # A transfer into an investment or crypto account counts as an investment
   # contribution (a budgeted expense) by default. A user can make it a plain
-  # transfer instead, e.g. money moved to a broker only to convert currency.
+  # transfer instead, e.g. when a brokerage or crypto account only converts
+  # money into another currency.
   def investment_contribution_switchable?
     confirmed? && contribution_by_default?
   end

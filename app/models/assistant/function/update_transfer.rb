@@ -4,7 +4,7 @@
 # drawer does. Today that is one switch: whether a transfer from a cash account
 # into an investment or crypto account is an investment contribution (counted
 # as spending in budgets and reports, the default) or a plain transfer (e.g.
-# money moved to a broker only to convert currency). See
+# a brokerage or crypto account used only to convert currency). See
 # Transfer#update_investment_contribution!, which locks the choice against
 # provider syncs.
 class Assistant::Function::UpdateTransfer < Assistant::Function
@@ -23,8 +23,9 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
         investment_contribution: a transfer from a cash account into an
         investment or crypto account counts as spending by default (an
         investment contribution). Pass false to make it a plain transfer that
-        budgets and reports ignore, e.g. money sent to a broker only to convert
-        currency; pass true to count it as spending again. The choice survives
+        budgets and reports ignore, e.g. when the brokerage or crypto account is
+        only used to convert money into another currency; pass true to count it
+        as spending again. The choice survives
         account syncs. Other transfers have no such switch.
 
         Pass the id of either transaction in the transfer (get_transactions
