@@ -8,10 +8,9 @@ class FamilyMerchant < Merchant
 
   validates :color, presence: true, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
   validates :name, uniqueness: { scope: :family }
-  # Mirrors the DB-level partial unique index (family_id, iban). Without
-  # this, Account::ProviderImportAdapter#find_or_create_merchant's
-  # family-merchant lookup by IBAN could match an unspecified one of two
-  # duplicates, silently assigning a transaction to the wrong merchant.
+  # Mirrors the DB-level partial unique index (family_id, iban), so a
+  # duplicate IBAN is a validation error on the form instead of a
+  # RecordNotUnique.
   validates :iban, uniqueness: { scope: :family }, allow_nil: true
 
   # Reuses a family's existing merchant of this name instead of raising on the

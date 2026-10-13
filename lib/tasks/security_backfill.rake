@@ -120,9 +120,9 @@ namespace :security do
           plaintext_values.each do |field, value|
             # EnableBankingAccount#iban is the one legacy-plaintext IBAN column
             # here; Account/Merchant#iban are new columns with no legacy rows.
-            # Normalizing on write, bypassing validations/callbacks as above,
-            # matches the normalize_iban callback so find_by(iban:) with a
-            # canonical value still matches a formatted/lowercase legacy row.
+            # Writing bypasses validations/callbacks as above, so normalize
+            # here the way the normalize_iban callback would; a formatted or
+            # lowercase legacy value then compares equal to new rows.
             value = IbanNormalizable.normalize(value) if field == :iban
             encryptor.send("#{field}=", value)
           end

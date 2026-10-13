@@ -72,9 +72,7 @@ class FamilyMerchantsController < ApplicationController
     if @merchant.is_a?(ProviderMerchant)
       # A ProviderMerchant is shared by every family whose transactions use it,
       # so changing its name, website or IBAN converts it to a FamilyMerchant for this
-      # family only; editing the shared row would change it for all of them. The IBAN
-      # also drives cross-family merchant matching on import, so editing it on
-      # the shared row would redirect other families' future transactions.
+      # family only; editing the shared row would change it for all of them.
       if provider_merchant_customized?
         @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, effective_merchant_params)
         respond_to do |format|

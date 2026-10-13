@@ -11,12 +11,10 @@ class Merchant < ApplicationRecord
   # merchant can never collide with it, regardless of name or locale.
   NO_MERCHANT_FILTER_VALUE = "__no_merchant__"
 
-  # deterministic: true preserves equality lookups (find_by(source:, iban:))
-  # and the source+iban uniqueness index. Only meaningful for ProviderMerchant
-  # rows in practice, but lives on the shared base class like other
-  # provider-specific columns (provider_merchant_id, source).
-  # See Account#iban for the deliberate tradeoff this makes (accepted here
-  # for the same reason: DB-level uniqueness/lookup can't work otherwise).
+  # Deterministic so the (family_id, iban) and (source, iban) unique indexes
+  # and the matching uniqueness validations in FamilyMerchant and
+  # ProviderMerchant still compare equal values once encrypted. See
+  # Account#iban for the tradeoff.
   if encryption_ready?
     encrypts :iban, deterministic: true
   end

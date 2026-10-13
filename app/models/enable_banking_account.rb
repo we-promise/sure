@@ -187,9 +187,8 @@ class EnableBankingAccount < ApplicationRecord
       # different blank-iban accounts in the family can both pass that
       # validation concurrently and then lose at the raw DB unique index on
       # commit, which surfaces as RecordNotUnique -- save doesn't rescue
-      # that. Isolated in its own savepoint (same pattern as
-      # Account::ProviderImportAdapter#backfill_merchant_iban!): a failed
-      # statement would otherwise abort the whole surrounding transaction.
+      # that. Isolated in its own savepoint: a failed statement would
+      # otherwise abort the whole surrounding transaction.
       begin
         ActiveRecord::Base.transaction(requires_new: true) do
           target.enrich_attribute(:iban, iban, source: "enable_banking")
