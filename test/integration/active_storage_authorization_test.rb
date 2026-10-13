@@ -385,6 +385,29 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "member can access pdf import file linked to a statement on an account shared with them" do
+    statement = AccountStatement.create_from_upload!(
+      family: @user_a.family,
+      account: accounts(:credit_card),
+      file: uploaded_file(
+        filename: "shared_import_statement.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 Shared Import Statement"
+      )
+    )
+    import = imports(:pdf)
+    import.update!(account_statement: statement)
+    import.pdf_file.attach(io: StringIO.new("%PDF-1.4 Shared Import"), filename: "import.pdf", content_type: "application/pdf")
+
+    sign_in users(:family_member)
+
+    get rails_blob_path(import.pdf_file)
+
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+  end
+
   test "user cannot access sure import file from a different family" do
     import = SureImport.create!(family: @user_a.family)
     import.ndjson_file.attach(io: StringIO.new("{}\n"), filename: "import.ndjson", content_type: "application/x-ndjson")
@@ -421,8 +444,9 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
   end
 
   test "every attachment is either access-checked or intentionally public" do
-    # Logos and avatars are not sensitive; archived exports are fetched by download token.
-    public_attachments = %w[User#profile_image ArchivedExport#export_file]
+    # Logos and avatars are not sensitive. Archived exports have no owning family;
+    # ArchivedExportsController releases them by download token.
+    public_attachments = %w[User#profile_image ArchivedExport#export_file Account#logo]
 
     Rails.application.eager_load!
     unchecked = ActiveRecord::Base.descendants.reject(&:abstract_class?).flat_map do |model|
@@ -432,7 +456,7 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
       model.reflect_on_all_attachments.filter_map do |reflection|
         record_type = model.base_class.name
         next if record_type.in?(ActiveStorageAttachmentAuthorization::PROTECTED_RECORD_TYPES)
-        next if reflection.name == :logo
+        next if reflection.name == :logo && record_type.end_with?("Item")
 
         attachment = "#{record_type}##{reflection.name}"
         attachment unless attachment.in?(public_attachments)

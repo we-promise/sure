@@ -67,7 +67,7 @@ Rails.application.config.to_prepare do
         export = attachment.record
         return false if export.nil?
 
-        Current.family == export.family && Current.user.admin?
+        export.family_id == Current.family&.id && Current.user.admin?
       rescue ActiveRecord::RecordNotFound
         false
       end
@@ -75,7 +75,7 @@ Rails.application.config.to_prepare do
       # Mirrors ImportsController#set_import: imports linked to a statement follow its visibility.
       def import_attachment_authorized?(attachment)
         import = attachment.record
-        return false if import.nil? || Current.family != import.family
+        return false if import.nil? || import.family_id != Current.family&.id
 
         import.account_statement.nil? || import.account_statement.viewable_by?(Current.user)
       rescue ActiveRecord::RecordNotFound
@@ -86,7 +86,7 @@ Rails.application.config.to_prepare do
         record = attachment.record
         return false if record.nil?
 
-        Current.family == record.family
+        record.family_id == Current.family&.id
       rescue ActiveRecord::RecordNotFound
         false
       end
