@@ -106,13 +106,11 @@ class Import::SecurityMapping < Import::Mapping
   end
 
   def create_mappable!
-    # A cleared selection must drop the stale security. Clear without
-    # validating this intermediate draft — presence is enforced at the publish
-    # gate — so the request doesn't error on a now-unresolved mapping.
-    if value.blank?
-      update_columns(mappable_id: nil, mappable_type: nil) if mappable_id.present?
-      return
-    end
+    # No-op on a blank value so an auto-matched mapping (mappable set, value
+    # never touched) keeps its security when TradeImport#import! runs this over
+    # every mapping. An explicit user clear is handled by the controller, which
+    # alone knows a blank was deliberately submitted.
+    return if value.blank?
 
     parsed = Security.parse_combobox_id(value)
     return if parsed[:ticker].blank?
@@ -124,5 +122,12 @@ class Import::SecurityMapping < Import::Mapping
     ).resolve
 
     update!(mappable: security)
+  end
+
+  # Explicitly drop the current selection (used when the user clears the
+  # combobox). Skips validation so clearing a now-unresolved mapping doesn't
+  # error — presence is enforced at the publish gate.
+  def clear_selection!
+    update_columns(value: nil, mappable_id: nil, mappable_type: nil)
   end
 end

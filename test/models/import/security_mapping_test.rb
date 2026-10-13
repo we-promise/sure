@@ -144,25 +144,26 @@ class Import::SecurityMappingTest < ActiveSupport::TestCase
     assert_equal msft, mapping.reload.mappable
   end
 
-  test "create_mappable! clears a descriptive-label selection without erroring on the draft" do
-    mapping = build_mapping(key: "VANGUARD TOTAL BOND ETF MARKET", mappable: securities(:aapl))
-    mapping.update_column(:value, "")
-
-    Security::Resolver.expects(:new).never
-
-    assert_nothing_raised { mapping.create_mappable! }
-    assert_nil mapping.reload.mappable
-  end
-
-  test "create_mappable! clears a stale mappable when the value is cleared" do
-    mapping = build_mapping(key: "AAPL|XNAS", mappable: securities(:aapl))
-    mapping.update_column(:value, "")
+  test "create_mappable! preserves an auto-matched mapping whose value is untouched" do
+    aapl = securities(:aapl)
+    mapping = build_mapping(key: "AAPL|XNAS", mappable: aapl) # value nil, as auto-match leaves it
 
     Security::Resolver.expects(:new).never
 
     mapping.create_mappable!
 
-    assert_nil mapping.reload.mappable
+    assert_equal aapl, mapping.reload.mappable, "import! must not clear an untouched auto-match"
+  end
+
+  test "clear_selection! drops the mappable and value without erroring" do
+    mapping = build_mapping(key: "VANGUARD TOTAL BOND ETF MARKET", mappable: securities(:aapl))
+
+    Security::Resolver.expects(:new).never
+
+    assert_nothing_raised { mapping.clear_selection! }
+    mapping.reload
+    assert_nil mapping.mappable
+    assert_nil mapping.value
   end
 
   test "sync_mappings does not delete another import's security mappings" do
