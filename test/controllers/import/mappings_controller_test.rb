@@ -51,4 +51,23 @@ class Import::MappingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal msft, mapping.mappable
     assert_redirected_to import_confirm_path(trade_import)
   end
+
+  test "clearing a descriptive-label security selection succeeds and drops the mappable" do
+    trade_import = imports(:trade)
+    mapping = trade_import.mappings.build(
+      key: "MICROSOFT CORP",
+      type: "Import::SecurityMapping",
+      mappable: securities(:msft)
+    )
+    mapping.save!(validate: false)
+
+    patch import_mapping_path(trade_import, mapping), params: {
+      import_mapping: { type: "Import::SecurityMapping", key: "MICROSOFT CORP", value: "" }
+    }
+
+    mapping.reload
+
+    assert_nil mapping.mappable, "clearing must drop the stale security"
+    assert_redirected_to import_confirm_path(trade_import)
+  end
 end

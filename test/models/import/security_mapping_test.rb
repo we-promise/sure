@@ -85,16 +85,47 @@ class Import::SecurityMappingTest < ActiveSupport::TestCase
     assert_includes mapping.errors.attribute_names, :mappable
   end
 
-  test "an unresolved but plausible ticker stays valid so import! can resolve it directly" do
-    mapping = build_mapping(key: "TSLA")
-
-    assert mapping.valid?, "a clean, resolvable ticker must not force manual selection"
+  test "any unresolved mapping is invalid under the hard publish gate" do
+    assert_not build_mapping(key: "TSLA").valid?, "a ticker with no mappable must block publishing"
+    assert_not build_mapping(key: "VANGUARD TOTAL BOND ETF MARKET").valid?
   end
 
   test "a mapping with a resolved security is valid" do
     mapping = build_mapping(key: "VANGUARD TOTAL BOND ETF MARKET", mappable: securities(:aapl))
 
     assert mapping.valid?
+  end
+
+  test "mappables_by_key does not auto-match an offline descriptive-label security" do
+    Security.create!(ticker: "VANGUARD TOTAL BOND ETF MARKET", offline: true, name: "stale")
+
+    create_row(ticker: "VANGUARD TOTAL BOND ETF MARKET")
+
+    result = Import::SecurityMapping.mappables_by_key(@import)
+
+    assert_nil result["VANGUARD TOTAL BOND ETF MARKET"], "an offline leftover must not auto-match"
+  end
+
+  test "mappable_for_sync keeps an existing manual selection over a nil auto-match" do
+    bnd = Security.create!(ticker: "BND", exchange_operating_mic: "XNAS", name: "Vanguard Total Bond ETF")
+    mapping = build_mapping(key: "VANGUARD TOTAL BOND ETF MARKET", mappable: bnd)
+
+    # A resync (e.g. a row edit) derives no auto-match for a descriptive label.
+    assert_equal bnd, mapping.mappable_for_sync(nil), "a manual selection must survive resync"
+  end
+
+  test "sync_mappings preserves a manual selection when an unrelated row is edited" do
+    bnd = Security.create!(ticker: "BND", exchange_operating_mic: "XNAS", name: "Vanguard Total Bond ETF")
+    create_row(ticker: "VANGUARD TOTAL BOND ETF MARKET")
+    @import.sync_mappings
+
+    mapping = @import.mappings.securities.find_by(key: "VANGUARD TOTAL BOND ETF MARKET")
+    mapping.update!(mappable: bnd)
+
+    # Editing another field triggers a resync.
+    @import.sync_mappings
+
+    assert_equal bnd, mapping.reload.mappable, "resync must not wipe the user's mapping"
   end
 
   test "create_mappable! resolves a combobox value to a security" do
@@ -111,6 +142,16 @@ class Import::SecurityMappingTest < ActiveSupport::TestCase
     mapping.create_mappable!
 
     assert_equal msft, mapping.reload.mappable
+  end
+
+  test "create_mappable! clears a descriptive-label selection without erroring on the draft" do
+    mapping = build_mapping(key: "VANGUARD TOTAL BOND ETF MARKET", mappable: securities(:aapl))
+    mapping.update_column(:value, "")
+
+    Security::Resolver.expects(:new).never
+
+    assert_nothing_raised { mapping.create_mappable! }
+    assert_nil mapping.reload.mappable
   end
 
   test "create_mappable! clears a stale mappable when the value is cleared" do

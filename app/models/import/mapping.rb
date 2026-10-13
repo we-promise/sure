@@ -36,6 +36,14 @@ class Import::Mapping < ApplicationRecord
     nil
   end
 
+  # The mappable to persist during Import#sync_mappings, given the value freshly
+  # derived from the CSV. Most mappings re-derive on every sync, so the derived
+  # value wins. Subclasses holding a user-chosen mappable (not re-derivable from
+  # the CSV) override this to preserve the existing selection.
+  def mappable_for_sync(derived_mappable)
+    derived_mappable
+  end
+
   def creatable?
     mappable.nil? && key.present? && create_when_empty
   end
