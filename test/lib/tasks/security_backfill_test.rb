@@ -70,4 +70,21 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     assert_match(/"p":/, account.read_attribute_before_type_cast(:raw_payload).to_s,
       "the stored value must be an encryption envelope, not plaintext {}")
   end
+
+  test "backfill encrypts plaintext transaction counterparty identifiers" do
+    transaction = entries(:transaction).transaction
+
+    # Simulate a row synced before encryption keys were configured
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE transactions SET counterparty_iban = ?, counterparty_account_id = ? WHERE id = ?",
+      "AT611904300234573201", "OTHER-ACCOUNT-1", transaction.id ])) # pipelock:ignore IBAN
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    transaction.reload
+    assert_equal "AT611904300234573201", transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "OTHER-ACCOUNT-1", transaction.counterparty_account_id
+    refute_includes transaction.read_attribute_before_type_cast(:counterparty_iban).to_s, "AT611904300234573201" # pipelock:ignore IBAN
+    refute_includes transaction.read_attribute_before_type_cast(:counterparty_account_id).to_s, "OTHER-ACCOUNT-1"
+  end
 end

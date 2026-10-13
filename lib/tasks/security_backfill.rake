@@ -48,6 +48,10 @@ namespace :security do
     results[:accounts] = backfill_model(Account, %i[iban], batch_size, dry_run)
     results[:merchants] = backfill_model(Merchant, %i[iban], batch_size, dry_run)
 
+    # Counterparty account identifiers captured from bank syncs; stored as
+    # plaintext on instances that synced before encryption keys were set
+    results[:transactions] = backfill_model(Transaction, %i[counterparty_iban counterparty_account_id], batch_size, dry_run)
+
     # Invitation tokens and email
     results[:invitations] = backfill_model(Invitation, %i[token email], batch_size, dry_run)
 
