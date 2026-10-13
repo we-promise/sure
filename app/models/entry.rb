@@ -464,18 +464,21 @@ class Entry < ApplicationRecord
     child_entries.exists?
   end
 
-  # Splits this entry unless it is already a split parent or excluded. Two callers (two split
-  # rules, a rule and an API request, two concurrent POSTs) can both pass a splittable? check
-  # before either inserts children, and split! only validates its own amounts, so without the
-  # lock both sets of children would land and the amount would count twice. Takes FOR UPDATE on
-  # this row (lock! also reloads it) and re-checks under it. Returns true when it split.
+  # Splits this entry unless it stopped being splittable. Two callers (the split dialog, two
+  # split rules, a rule and an API request) can both pass a splittable? check before either
+  # inserts children, and split! only validates its own amounts, so without the lock both sets
+  # of children would land and the amount would count twice. A provider sync can also mark the
+  # transaction pending or a transfer in between. Takes FOR UPDATE on the transaction and this
+  # row (lock! also reloads them) and re-checks under it. Returns true when it split.
   #
   # Explicit transaction + lock!, not with_lock: Entry#transaction is the delegated_type
   # accessor for the Transaction entryable, so with_lock silently never yields.
   def split_once!(splits)
     self.class.transaction do
+      txn = entryable if entryable.is_a?(Transaction)
+      txn&.lock!
       lock!
-      next false if split_parent? || excluded?
+      next false if split_parent? || excluded? || txn&.transfer? || txn&.pending?
 
       split!(splits)
       true

@@ -273,4 +273,22 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert_not stale.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
     assert_not @entry.reload.split_parent?
   end
+
+  test "split_once! skips a transaction that became pending in the meantime" do
+    stale = Entry.find(@entry.id)
+    Transaction.where(id: @entry.entryable_id).update_all(extra: { "plaid" => { "pending" => true } })
+    assert Transaction.find(@entry.entryable_id).pending?, "fixture must read as pending"
+
+    assert_not stale.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "split_once! skips a transaction that became a transfer in the meantime" do
+    stale = Entry.find(@entry.id)
+    Transaction.where(id: @entry.entryable_id).update_all(kind: "funds_movement")
+    assert Transaction.find(@entry.entryable_id).transfer?, "fixture must read as a transfer"
+
+    assert_not stale.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    assert_not @entry.reload.split_parent?
+  end
 end

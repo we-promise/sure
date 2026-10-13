@@ -12,7 +12,12 @@ class SplitsController < ApplicationController
       return
     end
 
-    @entry.split!(build_splits)
+    # A rule run, an API request or a double submit can split it between the check above and
+    # here; split_once! re-checks under a lock.
+    unless @entry.split_once!(build_splits)
+      redirect_back_or_to transactions_path, alert: t("splits.create.not_splittable")
+      return
+    end
     @entry.sync_account_later
 
     redirect_back_or_to transactions_path, notice: t("splits.create.success")
