@@ -620,10 +620,16 @@ class TransactionsController < ApplicationController
     end
 
     def entry_params
+      @entry_params ||= build_entry_params
+    end
+
+    def build_entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
+
+      scope_entryable_associations!(entry_params[:entryable_attributes]) if entry_params[:entryable_attributes]
 
       nature = entry_params.delete(:nature)
 
@@ -636,6 +642,24 @@ class TransactionsController < ApplicationController
       end
 
       entry_params
+    end
+
+    # The ids arrive straight from the form, so resolve them through the family:
+    # an unknown category or merchant is a 404 (as in the categorize flow) and
+    # foreign tag ids are dropped (as in #update_tags). Merchants follow the
+    # form's picker, which also offers provider merchants the user can see.
+    def scope_entryable_associations!(attrs)
+      if attrs[:category_id].present?
+        attrs[:category_id] = Current.family.categories.find(attrs[:category_id]).id
+      end
+
+      if attrs[:merchant_id].present?
+        attrs[:merchant_id] = Current.family.available_merchants_for(Current.user).find(attrs[:merchant_id]).id
+      end
+
+      if attrs.key?(:tag_ids)
+        attrs[:tag_ids] = Current.family.tags.where(id: Array(attrs[:tag_ids]).compact_blank).pluck(:id)
+      end
     end
 
     def entry_params_with_idempotency_key(idempotency_key)
