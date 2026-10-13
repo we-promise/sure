@@ -39,6 +39,42 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=hidden][name='transfer_match[target_account_id]']:not([value=''])"
   end
 
+  test "new preselects an unrejected candidate over a closer rejected one" do
+    outflow_entry = create_transaction(amount: 123.45, account: accounts(:depository), date: Date.current)
+    rejected_inflow = create_transaction(amount: -123.45, account: accounts(:investment), date: Date.current, name: "Rejected inflow")
+    open_inflow = create_transaction(amount: -123.45, account: accounts(:credit_card), date: 1.day.ago.to_date, name: "Open inflow")
+    RejectedTransfer.create!(inflow_transaction_id: rejected_inflow.entryable_id, outflow_transaction_id: outflow_entry.entryable_id)
+
+    get new_transaction_transfer_match_path(outflow_entry)
+
+    assert_response :success
+    assert_select "[role=option][data-value=?]", rejected_inflow.id
+    assert_select "input[type=hidden][name='transfer_match[matched_entry_id]'][value=?]", open_inflow.id
+  end
+
+  test "new preloads account logo dependencies for every select option" do
+    outflow_entry = create_transaction(amount: 123.45, account: accounts(:depository))
+    3.times do |i|
+      account = @user.family.accounts.create!(name: "Logo account #{i}", currency: "USD", balance: 0, accountable: Depository.new, owner: @user)
+      create_transaction(amount: -123.45, account: account)
+    end
+    option_account_ids = @user.family.accounts.where.not(id: outflow_entry.account_id).pluck(:id)
+
+    # Batched IN (...) preloads are fine; a per-account lookup is the N+1.
+    single_lookup_ids = []
+    callback = lambda do |*, payload|
+      next unless payload[:sql].match?(/FROM "(account_providers|active_storage_attachments)" WHERE .*"(account_id|record_id)" = \$1/)
+
+      single_lookup_ids << payload[:binds].first.value
+    end
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get new_transaction_transfer_match_path(outflow_entry)
+    end
+
+    assert_response :success
+    assert_empty single_lookup_ids & option_account_ids
+  end
+
   test "matches existing transaction and creates transfer" do
     inflow_transaction = create_transaction(amount: 100, account: accounts(:depository))
     outflow_transaction = create_transaction(amount: -100, account: accounts(:investment))

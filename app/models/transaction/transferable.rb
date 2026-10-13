@@ -38,19 +38,29 @@ module Transaction::Transferable
       )
     end
 
-    same_category_first(candidates)
+    likeliest_first(candidates)
   end
 
   private
-    # A counterpart in this transaction's category is the likelier transfer, so
-    # it goes first (and is preselected in the dialog); otherwise the query's
-    # order (exact amounts, then nearest date) stays.
-    def same_category_first(candidates)
+    # A pair the user already rejected goes last, and a counterpart in this
+    # transaction's category goes first (and is preselected in the dialog), so
+    # the dialog a list hint opens defaults to the kind of pair the hint found;
+    # otherwise the query's order (exact amounts, then nearest date) stays.
+    def likeliest_first(candidates)
       counterpart_id = ->(candidate) { candidate.inflow_transaction_id == id ? candidate.outflow_transaction_id : candidate.inflow_transaction_id }
       category_ids = Transaction.where(id: candidates.map(&counterpart_id)).pluck(:id, :category_id).to_h
+      rejected_counterpart_ids = RejectedTransfer.where(inflow_transaction_id: id).pluck(:outflow_transaction_id) +
+        RejectedTransfer.where(outflow_transaction_id: id).pluck(:inflow_transaction_id)
 
       candidates.each_with_index
-                .sort_by { |candidate, index| [ category_ids[counterpart_id.call(candidate)] == category_id ? 0 : 1, index ] }
+                .sort_by do |candidate, index|
+                  counterpart = counterpart_id.call(candidate)
+                  [
+                    rejected_counterpart_ids.include?(counterpart) ? 1 : 0,
+                    category_ids[counterpart] == category_id ? 0 : 1,
+                    index
+                  ]
+                end
                 .map(&:first)
     end
 
