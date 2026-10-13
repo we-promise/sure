@@ -339,6 +339,18 @@ class Transaction < ApplicationRecord
           end
         end
 
+        # Counterparty identifiers: some banks send them only on the pending
+        # row. Fill blank posted columns only, even on a protected entry, as
+        # the provider sync does (no UI field a user could have edited).
+        pending_transaction = pending_entry.entryable
+        if pending_transaction.is_a?(Transaction)
+          %i[counterparty_iban counterparty_account_id].each do |attribute|
+            if posted_tx[attribute].blank? && pending_transaction[attribute].present?
+              tx_attrs[attribute] = pending_transaction[attribute]
+            end
+          end
+        end
+
         posted_tx.update!(tx_attrs) if tx_attrs.any?
       end
 
