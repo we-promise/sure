@@ -27,6 +27,20 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert @entry.split_parent?
   end
 
+  test "split! children inherit the parent's counterparty identifiers" do
+    @entry.transaction.update!(counterparty_iban: "AT611904300234573201", counterparty_account_id: "OTHER-ACCOUNT-1") # pipelock:ignore IBAN
+
+    children = @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    children.each do |child|
+      assert_equal "AT611904300234573201", child.transaction.reload.counterparty_iban # pipelock:ignore IBAN
+      assert_equal "OTHER-ACCOUNT-1", child.transaction.counterparty_account_id
+    end
+  end
+
   test "split! rejects when amounts don't sum to parent" do
     splits = [
       { name: "Part 1", amount: 60, category_id: nil },

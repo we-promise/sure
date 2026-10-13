@@ -6,10 +6,11 @@ class Transaction < ApplicationRecord
   # random) encryption is used only because Account#iban/Merchant#iban set
   # that precedent for the same reason (equality lookups), not because one
   # is needed here today; see Account#iban for the full tradeoff writeup.
-  # Populated/cleared only by EnableBankingEntry::Processor#extra via
+  # Populated by EnableBankingEntry::Processor#extra via
   # Account::ProviderImportAdapter#import_transaction, which normalizes the
-  # IBAN (see IbanNormalizable) before assignment -- there is no user-facing
-  # form field for either column, unlike accounts.iban/merchants.iban.
+  # IBAN (see IbanNormalizable) before assignment, and copied on a manual
+  # pending merge and to split children -- there is no user-facing form
+  # field for either column, unlike accounts.iban/merchants.iban.
   if encryption_ready?
     encrypts :counterparty_iban, deterministic: true
     encrypts :counterparty_account_id, deterministic: true
