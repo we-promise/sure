@@ -138,3 +138,5 @@ fr:
       title: Configurer vos comptes Enable Banking
     update:
       success: Configuration d'Enable Banking mise à jour.
+    entry:
+      bank_note: "Banque : %{name}"

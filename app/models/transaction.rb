@@ -1,5 +1,20 @@
 class Transaction < ApplicationRecord
-  include Entryable, Transferable, Ruleable, Splittable
+  include Entryable, Transferable, Ruleable, Splittable, Encryptable
+
+  # A counterparty's own bank account identifiers are a third party's data,
+  # not something the viewing family controls -- deterministic (not
+  # random) encryption is used only because Account#iban/Merchant#iban set
+  # that precedent for the same reason (equality lookups), not because one
+  # is needed here today; see Account#iban for the full tradeoff writeup.
+  # Populated by EnableBankingEntry::Processor#extra via
+  # Account::ProviderImportAdapter#import_transaction, which normalizes the
+  # IBAN (see IbanNormalizable) before assignment, and copied on a manual
+  # pending merge and to split children -- there is no user-facing form
+  # field for either column, unlike accounts.iban/merchants.iban.
+  if encryption_ready?
+    encrypts :counterparty_iban, deterministic: true
+    encrypts :counterparty_account_id, deterministic: true
+  end
 
   belongs_to :category, optional: true
   belongs_to :merchant, optional: true
@@ -112,7 +127,7 @@ class Transaction < ApplicationRecord
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
   # Providers that support pending transaction flags
-  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark].freeze
+  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark financekit].freeze
 
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
@@ -322,6 +337,18 @@ class Transaction < ApplicationRecord
           pending_transaction = pending_entry.entryable
           if pending_transaction.is_a?(Transaction) && pending_transaction.category_id.present?
             tx_attrs[:category_id] = pending_transaction.category_id
+          end
+        end
+
+        # Counterparty identifiers: some banks send them only on the pending
+        # row. Fill blank posted columns only, even on a protected entry, as
+        # the provider sync does (no UI field a user could have edited).
+        pending_transaction = pending_entry.entryable
+        if pending_transaction.is_a?(Transaction)
+          %i[counterparty_iban counterparty_account_id].each do |attribute|
+            if posted_tx[attribute].blank? && pending_transaction[attribute].present?
+              tx_attrs[attribute] = pending_transaction[attribute]
+            end
           end
         end
 

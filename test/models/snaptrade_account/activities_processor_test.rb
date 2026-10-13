@@ -70,6 +70,131 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Sell", trade.investment_activity_label
   end
 
+  test "the trade amount, qty, price, and fee reported by SnapTrade are respected" do
+    process_activities(
+      build_trade_activity(id: "buy_rounded", type: "BUY", symbol: "AAPL", units: 3, price: 33.33, amount: -101.00, fee: 1.00)
+    )
+
+    entry = snaptrade_entry("buy_rounded")
+    assert_equal BigDecimal("101"), entry.amount
+    assert_equal BigDecimal("3"), entry.entryable.qty
+    assert_equal BigDecimal("33.33"), entry.entryable.price
+    assert_equal BigDecimal("1.00"), entry.entryable.fee
+  end
+
+  test "fractional share quantity is stored exactly" do
+    process_activities(
+      build_trade_activity(id: "buy_fractional", type: "BUY", symbol: "VTI", units: 0.12345678, price: 149.94, amount: -18.51)
+    )
+
+    entry = snaptrade_entry("buy_fractional")
+    assert_equal BigDecimal("0.12345678"), entry.entryable.qty
+    assert_equal BigDecimal("18.51"), entry.amount
+  end
+
+  test "trade direction comes from the activity type, not the sign of SnapTrade's amount" do
+    process_activities(
+      build_trade_activity(id: "buy_positive_amount", type: "BUY", symbol: "AAPL", units: 3, price: 33.33, amount: 100.00),
+      build_trade_activity(id: "sell_negative_amount", type: "SELL", symbol: "AAPL", units: 7, price: 14.29, amount: -100.00)
+    )
+
+    assert_equal BigDecimal("100"), snaptrade_entry("buy_positive_amount").amount
+    assert_equal BigDecimal("-100"), snaptrade_entry("sell_negative_amount").amount
+  end
+
+  test "records the trade fee as a cost regardless of the sign SnapTrade gives it" do
+    process_activities(
+      build_trade_activity(id: "buy_negative_fee", type: "BUY", symbol: "AAPL", units: 10, price: 150.00, amount: -1504.95, fee: -4.95)
+    )
+
+    assert_equal BigDecimal("4.95"), snaptrade_entry("buy_negative_fee").entryable.fee
+  end
+
+  test "a zero reported amount falls back to qty times price" do
+    process_activities(
+      build_trade_activity(id: "buy_zero_amount", type: "BUY", symbol: "AAPL", units: 2, price: 50.00, amount: 0)
+    )
+
+    assert_equal BigDecimal("100"), snaptrade_entry("buy_zero_amount").amount
+  end
+
+  test "when amount is not reported, the fallback amount includes the fee like a manually entered trade" do
+    process_activities(
+      build_trade_activity(id: "buy_no_amount", type: "BUY", symbol: "AAPL", units: 10, price: 150.00, fee: 4.95),
+      build_trade_activity(id: "sell_no_amount", type: "SELL", symbol: "AAPL", units: 10, price: 150.00, fee: 4.95)
+    )
+
+    assert_equal BigDecimal("1504.95"), snaptrade_entry("buy_no_amount").amount
+    assert_equal BigDecimal("-1495.05"), snaptrade_entry("sell_no_amount").amount
+  end
+
+  test "imports the trade with a price derived from amount and units, and creates debug log, when price is missing" do
+    process_activities(
+      build_trade_activity(id: "buy_no_price", type: "BUY", symbol: "AAPL", units: 4, price: nil, amount: -100.00)
+    )
+
+    entry = snaptrade_entry("buy_no_price")
+    assert_not_nil entry, "a trade with units and amount but no price must still be imported"
+    assert_equal BigDecimal("25"), entry.entryable.price
+    assert_equal BigDecimal("4"), entry.entryable.qty
+    assert_equal BigDecimal("100"), entry.amount
+
+    log = snaptrade_debug_log("buy_no_price", level: "info")
+    assert_equal "derived_price", log&.metadata&.dig("reason")
+    assert_equal "25.0", log&.metadata&.dig("derived_price")
+  end
+
+  test "imports a fully reported trade without creating debug log" do
+    process_activities(
+      build_trade_activity(id: "buy_complete", type: "BUY", symbol: "AAPL", units: 3, price: 33.33, amount: -101.00, fee: 1.00)
+    )
+
+    assert_not_nil snaptrade_entry("buy_complete")
+    assert DebugLogEntry.where(provider_key: "snaptrade").none? { |log| log.metadata["activity_id"] == "buy_complete" },
+           "routine trades must not flood /settings/debug"
+  end
+
+  test "a price derived from amount and units excludes the fee for buys and sells" do
+    process_activities(
+      build_trade_activity(id: "buy_no_price_fee", type: "BUY", symbol: "AAPL", units: 10, price: nil, amount: -1505.00, fee: 5.00),
+      build_trade_activity(id: "sell_no_price_fee", type: "SELL", symbol: "AAPL", units: 10, price: nil, amount: 1495.00, fee: 5.00)
+    )
+
+    assert_equal BigDecimal("150"), snaptrade_entry("buy_no_price_fee").entryable.price
+    assert_equal BigDecimal("150"), snaptrade_entry("sell_no_price_fee").entryable.price
+  end
+
+  test "resyncing keeps the stored fee when SnapTrade omits it, but applies a reported zero" do
+    process_activities(
+      build_trade_activity(id: "buy_fee_omitted", type: "BUY", symbol: "AAPL", units: 10, price: 150.00, amount: -1504.95, fee: 4.95)
+    )
+
+    process_activities(
+      build_trade_activity(id: "buy_fee_omitted", type: "BUY", symbol: "AAPL", units: 10, price: 150.00, amount: -1504.95)
+    )
+    assert_equal BigDecimal("4.95"), snaptrade_entry("buy_fee_omitted").entryable.reload.fee
+
+    process_activities(
+      build_trade_activity(id: "buy_fee_omitted", type: "BUY", symbol: "AAPL", units: 10, price: 150.00, amount: -1500.00, fee: 0)
+    )
+    assert_equal BigDecimal("0"), snaptrade_entry("buy_fee_omitted").entryable.reload.fee
+  end
+
+  test "resyncing corrects the amount of a previously imported trade" do
+    process_activities(
+      build_trade_activity(id: "buy_resync", type: "BUY", symbol: "AAPL", units: 3, price: 33.33)
+    )
+    assert_equal BigDecimal("99.99"), snaptrade_entry("buy_resync").amount
+
+    assert_no_difference -> { @account.entries.count } do
+      process_activities(
+        build_trade_activity(id: "buy_resync", type: "BUY", symbol: "AAPL", units: 3, price: 33.33, amount: -100.00)
+      )
+    end
+
+    assert_equal BigDecimal("100"), snaptrade_entry("buy_resync").amount
+  end
+
   test "processes dividend cash activity as negative inflow" do
     @snaptrade_account.update!(raw_activities_payload: [
       build_cash_activity(
@@ -218,27 +343,84 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "logs unmapped activity types" do
-    @snaptrade_account.update!(raw_activities_payload: [
-      build_cash_activity(
-        id: "unknown_001",
-        type: "SOME_NEW_TYPE",
-        amount: 100.00,
-        settlement_date: Date.current.to_s
+  test "imports an unmapped activity type as Other and creates debug log" do
+    process_activities(
+      build_cash_activity(id: "unknown_001", type: "SOME_NEW_TYPE", amount: 100.00, settlement_date: Date.current.to_s)
+    )
+
+    entry = snaptrade_entry("unknown_001")
+    assert_not_nil entry, "an unmapped activity type is still imported"
+    assert_equal "Other", entry.entryable.investment_activity_label
+
+    log = DebugLogEntry.where(provider_key: "snaptrade", category: "provider_sync", level: "warn")
+                       .find { |e| e.metadata["activity_type"] == "SOME_NEW_TYPE" }
+    assert_not_nil log, "an unmapped activity type must be recorded in /settings/debug"
+    assert_equal @family, log.family
+    assert_equal @snaptrade_account.account_provider, log.account_provider
+  end
+
+  test "skips the trade and creates debug log when symbol is missing" do
+    assert_no_difference -> { @account.entries.count } do
+      process_activities(
+        build_trade_activity(id: "skip_no_symbol", type: "BUY", symbol: nil, units: 1, price: 10.00, amount: -10.00)
       )
-    ])
+    end
 
-    # Capture log output
-    log_output = StringIO.new
-    old_logger = Rails.logger
-    Rails.logger = Logger.new(log_output)
+    assert_equal "missing_symbol", snaptrade_debug_log("skip_no_symbol")&.metadata&.dig("reason")
+  end
 
-    processor = SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account)
-    processor.process
+  test "skips the trade and creates debug log when quantity is missing" do
+    assert_no_difference -> { @account.entries.count } do
+      process_activities(
+        build_trade_activity(id: "skip_no_quantity", type: "BUY", symbol: "AAPL", units: nil, price: 10.00, amount: -10.00)
+      )
+    end
 
-    Rails.logger = old_logger
+    assert_equal "missing_quantity", snaptrade_debug_log("skip_no_quantity")&.metadata&.dig("reason")
+  end
 
-    assert_includes log_output.string, "Unmapped activity type 'SOME_NEW_TYPE'"
+  test "skips the trade and creates debug log when amount and price are both missing" do
+    assert_no_difference -> { @account.entries.count } do
+      process_activities(
+        build_trade_activity(id: "skip_no_amount", type: "BUY", symbol: "AAPL", units: 5, price: nil)
+      )
+    end
+
+    log = snaptrade_debug_log("skip_no_amount")
+    assert_equal "missing_amount", log&.metadata&.dig("reason")
+    assert_equal @family, log.family
+    assert_equal @snaptrade_account.account_provider, log.account_provider
+  end
+
+  test "skips the trade and creates debug log when security is unresolvable" do
+    SnaptradeAccount::ActivitiesProcessor.any_instance.stubs(:resolve_security).returns(nil)
+
+    assert_no_difference -> { @account.entries.count } do
+      process_activities(
+        build_trade_activity(id: "skip_unresolved", type: "BUY", symbol: "ZZZZ", units: 1, price: 10.00, amount: -10.00)
+      )
+    end
+
+    log = snaptrade_debug_log("skip_unresolved")
+    assert_equal "unresolved_security", log&.metadata&.dig("reason")
+    assert_equal "ZZZZ", log&.metadata&.dig("ticker")
+  end
+
+  test "skips an activity that fails to import, keeps processing, and creates debug log" do
+    Account::ProviderImportAdapter.any_instance.stubs(:import_trade).raises(StandardError, "boom")
+
+    process_activities(
+      build_trade_activity(id: "trade_fails", type: "BUY", symbol: "AAPL", units: 1, price: 10.00, amount: -10.00),
+      build_cash_activity(id: "div_after_failure", type: "DIVIDEND", amount: 5.00, settlement_date: Date.current.to_s)
+    )
+
+    assert_nil snaptrade_entry("trade_fails")
+    assert_not_nil snaptrade_entry("div_after_failure"), "later activities are still processed"
+
+    log = snaptrade_debug_log("trade_fails", category: "provider_sync_error", level: "error")
+    assert_not_nil log, "a failed activity must be recorded in /settings/debug"
+    assert_equal "BUY", log.metadata["activity_type"]
+    assert_includes log.message, "boom"
   end
 
   test "skips activities without external_id" do
@@ -283,8 +465,22 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
 
   private
 
-    def build_trade_activity(id:, type:, symbol:, units:, price:, settlement_date:)
-      {
+    def process_activities(*activities)
+      @snaptrade_account.update!(raw_activities_payload: activities)
+      SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account).process
+    end
+
+    def snaptrade_entry(external_id)
+      @account.entries.find_by(external_id: external_id, source: "snaptrade")
+    end
+
+    def snaptrade_debug_log(activity_id, category: "provider_sync", level: "warn")
+      DebugLogEntry.where(provider_key: "snaptrade", category: category, level: level)
+                   .find { |log| log.metadata["activity_id"] == activity_id }
+    end
+
+    def build_trade_activity(id:, type:, symbol:, units:, price:, settlement_date: Date.current.to_s, amount: nil, fee: nil)
+      activity = {
         "id" => id,
         "type" => type,
         "symbol" => {
@@ -296,6 +492,9 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
         "settlement_date" => settlement_date,
         "currency" => { "code" => "USD" }
       }
+      activity["amount"] = amount unless amount.nil?
+      activity["fee"] = fee unless fee.nil?
+      activity
     end
 
     def build_cash_activity(id:, type:, amount:, settlement_date:, symbol: nil)

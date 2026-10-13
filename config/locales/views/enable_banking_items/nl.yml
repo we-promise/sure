@@ -47,3 +47,5 @@ nl:
       title: Selecteer uw bank
     update:
       success: Enable Banking configuratie bijgewerkt.
+    entry:
+      bank_note: "Bank: %{name}"

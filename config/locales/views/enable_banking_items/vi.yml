@@ -113,3 +113,5 @@ vi:
       title: Chọn ngân hàng của bạn
     update:
       success: Đã cập nhật cấu hình Enable Banking.
+    entry:
+      bank_note: "Ngân hàng: %{name}"

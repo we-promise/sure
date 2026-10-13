@@ -70,4 +70,61 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     assert_match(/"p":/, account.read_attribute_before_type_cast(:raw_payload).to_s,
       "the stored value must be an encryption envelope, not plaintext {}")
   end
+
+  test "backfill encrypts plaintext transaction counterparty identifiers" do
+    transaction = entries(:transaction).transaction
+
+    # Simulate a row synced before encryption keys were configured
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE transactions SET counterparty_iban = ?, counterparty_account_id = ? WHERE id = ?",
+      "AT611904300234573201", "OTHER-ACCOUNT-1", transaction.id ])) # pipelock:ignore IBAN
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    transaction.reload
+    assert_equal "AT611904300234573201", transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "OTHER-ACCOUNT-1", transaction.counterparty_account_id
+    refute_includes transaction.read_attribute_before_type_cast(:counterparty_iban).to_s, "AT611904300234573201" # pipelock:ignore IBAN
+    refute_includes transaction.read_attribute_before_type_cast(:counterparty_account_id).to_s, "OTHER-ACCOUNT-1"
+  end
+
+  test "backfill re-reads fields after acquiring the row lock instead of clobbering a concurrent write" do
+    item = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Backfill Race Test", country_code: "AT",
+      application_id: "test_app_id", client_certificate: "test_cert", session_id: "test_session",
+      session_expires_at: 1.day.from_now)
+    account = item.enable_banking_accounts.create!(
+      name: "Race Test Account", uid: "race-uid", account_id: "race-account", currency: "EUR")
+
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE enable_banking_accounts SET iban = ? WHERE id = ?", "AT611904300234573201", account.id # pipelock:ignore IBAN
+    ]))
+
+    # Simulate a concurrent writer (e.g. the provider sync's
+    # upsert_enable_banking_snapshot!) landing between the backfill's initial
+    # in-batches load and its row lock: patch with_lock, for every instance,
+    # to apply that write right before locking/reloading. If the backfill
+    # only reads fields once up front (before this point) it would encrypt
+    # and persist the stale "AT61..." value; reading again only after the
+    # lock is held, as the fix does, picks up "DE89..." instead.
+    original_with_lock = EnableBankingAccount.instance_method(:with_lock)
+    race_landed = false
+    EnableBankingAccount.define_method(:with_lock) do |*args, &blk|
+      if !race_landed && id == account.id
+        race_landed = true
+        self.class.where(id: id).update_all(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+      end
+      original_with_lock.bind(self).call(*args, &blk)
+    end
+
+    begin
+      capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+    ensure
+      EnableBankingAccount.define_method(:with_lock, original_with_lock)
+    end
+
+    assert race_landed, "the simulated race must actually have run for this test to prove anything"
+    assert_equal "DE89370400440532013000", account.reload.iban, # pipelock:ignore IBAN
+      "the backfill must persist the value present once it holds the row lock, not a stale pre-lock read"
+  end
 end

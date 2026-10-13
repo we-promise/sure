@@ -35,6 +35,11 @@ vi:
       heading: Điều khoản dịch vụ
       placeholder: Nội dung điều khoản dịch vụ sẽ được hiển thị ở đây.
     dashboard:
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Dòng tiền"
+          surplus: "Thặng dư"
+          deficit: "Thâm hụt"
       welcome: "Chào mừng trở lại, %{name}"
       subtitle: "Đây là tình hình tài chính của bạn"
       new: "Mới"

@@ -305,4 +305,23 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     @pending_entry.transaction.update!(extra: {})
     assert_equal [], @pending_entry.transaction.pending_duplicate_candidates.to_a
   end
+
+  test "fills blank posted counterparty identifiers from the pending transaction" do
+    @pending_entry.transaction.update!(counterparty_iban: "AT611904300234573201", counterparty_account_id: "OTHER-ACCOUNT-1") # pipelock:ignore IBAN
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    posted_tx = @posted_entry.transaction.reload
+    assert_equal "AT611904300234573201", posted_tx.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "OTHER-ACCOUNT-1", posted_tx.counterparty_account_id
+  end
+
+  test "keeps the posted transaction's own counterparty iban on merge" do
+    @pending_entry.transaction.update!(counterparty_iban: "AT611904300234573201") # pipelock:ignore IBAN
+    @posted_entry.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal "DE89370400440532013000", @posted_entry.transaction.reload.counterparty_iban # pipelock:ignore IBAN
+  end
 end

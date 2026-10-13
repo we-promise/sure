@@ -458,6 +458,8 @@ class Entry < ApplicationRecord
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],
           merchant_id: entryable.try(:merchant_id),
+          counterparty_iban: entryable.try(:counterparty_iban),
+          counterparty_account_id: entryable.try(:counterparty_account_id),
           kind: entryable.try(:kind)
         )
 

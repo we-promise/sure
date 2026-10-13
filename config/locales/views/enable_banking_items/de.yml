@@ -114,3 +114,5 @@ de:
       sync_start_date_help: Wähl, wie weit zurück die Transaktionshistorie geholt werden soll. Verfügbar sind maximal 2 Jahre.
       sync_start_date_label: 'Transaktionen synchronisieren ab:'
       title: Enable-Banking-Konten einrichten
+    entry:
+      bank_note: "Bank: %{name}"

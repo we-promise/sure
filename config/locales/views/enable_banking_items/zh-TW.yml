@@ -113,3 +113,5 @@ zh-TW:
       title: 選擇您的銀行
     update:
       success: Enable Banking 設定已更新。
+    entry:
+      bank_note: "銀行：%{name}"
