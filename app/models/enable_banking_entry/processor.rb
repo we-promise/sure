@@ -91,6 +91,17 @@ class EnableBankingEntry::Processor
 
   # True when a single remittance line is a technical terminal/POS booking line
   # rather than a merchant or transaction descriptor.
+  #
+  # Terminal booking line, e.g. "POS   45,13 AT  D6   31.07. 10:27": require the
+  # keyword+amount prefix AND the trailing date+time stamp TOGETHER, not either
+  # alone. Either signal in isolation false-positives on legitimate descriptors:
+  # a line like "POS 45,13 BILLA DANKT ..." (merchant appended after the amount,
+  # no separate technical-only element) would wrongly match on the prefix alone,
+  # and a line like "Invoice paid 31.07. 10:27" would wrongly match on the date
+  # suffix alone. Requiring both matches every real technical line observed in
+  # production while leaving both of those legitimate shapes untouched. Day/month
+  # accept 1-2 digits (not just 2) so an un-padded ASPSP date ("1.07." instead of
+  # "01.07.") is still recognized as technical.
   def self.technical_remittance_line?(value)
     line = value.to_s.strip
     line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{1,2}[.\/]\d{1,2}\.?\s+\d{2}:\d{2}\z/i)
@@ -134,14 +145,11 @@ class EnableBankingEntry::Processor
       descriptive_lines = lines.reject { |line| technical_remittance_line?(line) }
 
       if descriptive_lines.any?
-        return descriptive_lines.all? { |line| line.match?(MASKED_CARD_DESCRIPTOR) }
+        return descriptive_lines.all? { |line| masked_card_text?(line) }
       end
     end
 
-    btc = data.dig(:bank_transaction_code, :description)
-    return true if btc.to_s.strip.match?(MASKED_CARD_DESCRIPTOR)
-
-    false
+    masked_card_text?(data.dig(:bank_transaction_code, :description))
   end
 
   # True when the ASPSP has flagged this raw payload as not yet settled, or when
@@ -217,9 +225,15 @@ class EnableBankingEntry::Processor
 
     claim_identifierless_predecessor!
 
-    capture_unidentified_hold_diagnostic if unidentified_hold?
+    # EnableBankingAccount::Transactions::Processor re-processes the whole stored
+    # payload on every sync, so a live hold passes through here once per sync until
+    # it settles. Only the first import is worth a diagnostic. Evaluated before the
+    # import, which is what creates the row. A hold is always identifierless with a
+    # masked descriptor, so safe_id is its real content-hash id, never "unknown".
+    first_hold_import = unidentified_hold? &&
+      !account.entries.exists?(source: "enable_banking", external_id: safe_id)
 
-    begin
+    entry = begin
       import_adapter.import_transaction(
         external_id: external_id,
         amount: amount,
@@ -242,6 +256,10 @@ class EnableBankingEntry::Processor
       Rails.logger.error e.backtrace.join("\n")
       raise StandardError.new("Unexpected error importing transaction: #{e.message}")
     end
+
+    capture_unidentified_hold_diagnostic(entry, external_id: safe_id) if first_hold_import && entry
+
+    entry
   end
 
   private
@@ -619,21 +637,32 @@ class EnableBankingEntry::Processor
       data[:_pending] == true || unidentified_hold?
     end
 
-    def capture_unidentified_hold_diagnostic
+    # Called only after a successful first import of a hold. Every argument was
+    # already evaluated by that import, so nothing here can raise before
+    # DebugLogEntry.capture's own rescue takes over.
+    #
+    # Enable Banking amounts are absolute and the direction is carried by
+    # credit_debit_indicator, so the sign was inverted exactly when the hold
+    # arrived as CRDT. A DBIT hold is still normalized (name, merchant, pending)
+    # but keeps its sign.
+    def capture_unidentified_hold_diagnostic(entry, external_id:)
       DebugLogEntry.capture(
         category: "provider_sync",
         level: "warn",
-        message: "Unidentified card authorization hold detected with inverted sign; normalized to pending expense",
+        message: HOLD_DIAGNOSTIC_MESSAGE,
         source: self.class.name,
         provider_key: "enable_banking",
-        family: account&.family,
+        family: account.family,
         account: account,
-        account_provider: enable_banking_account&.account_provider,
+        account_provider: enable_banking_account.account_provider,
         metadata: {
-          external_id: self.class.compute_external_id(@enable_banking_transaction),
+          external_id: external_id,
+          entry_id: entry.id,
+          raw_amount: (data.dig(:transaction_amount, :amount) || data[:amount]).to_s,
+          credit_debit_indicator: credit_debit_indicator,
+          sign_inverted: credit_debit_indicator == "CRDT",
           amount: amount.to_s,
-          currency: currency,
-          credit_debit_indicator: credit_debit_indicator
+          currency: currency
         }
       )
     end

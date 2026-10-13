@@ -415,8 +415,31 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_not LunchflowEntry::Processor.unidentified_hold?(id: "lf_123", merchant: "474836xxxxxx6879 003015315475")
     assert_not LunchflowEntry::Processor.unidentified_hold?(merchant: "Uber", description: "474836xxxxxx6879")
+    assert_not LunchflowEntry::Processor.unidentified_hold?(merchant: "474836xxxxxx6879", description: "Uber")
     assert_not LunchflowEntry::Processor.unidentified_hold?(merchant: "Amazon", description: "Order 123")
     assert_not LunchflowEntry::Processor.unidentified_hold?(merchant: "Card 123", description: nil)
+  end
+
+  test "does not treat masked merchant with legitimate description as unidentified hold" do
+    data = {
+      id: "",
+      accountId: 456,
+      amount: -25.00,
+      currency: "EUR",
+      date: "2025-01-20",
+      merchant: "474836xxxxxx6879 003015315475",
+      description: "Uber Trip",
+      isPending: false
+    }
+
+    result = LunchflowEntry::Processor.new(data, lunchflow_account: @lunchflow_account).process
+
+    assert_not_nil result
+    assert_equal BigDecimal("25.00"), result.amount
+    assert_equal "Uber Trip", result.name
+    assert_nil result.entryable.merchant, "Must not create a ProviderMerchant for a masked PAN"
+    assert_equal "474836xxxxxx6879 003015315475", result.notes
+    assert_not result.entryable.pending?
   end
 
   test "normalizes inverted positive hold amount to positive expense, suppresses merchant, and sets name" do
@@ -576,7 +599,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal 2, @account.entries.where(source: "lunchflow").count
   end
 
-  test "captures warning DebugLogEntry when processing unidentified card hold" do
+  test "captures warning DebugLogEntry when processing unidentified card hold on first import only" do
     hold_data = {
       id: "",
       accountId: 456,
@@ -600,7 +623,41 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "lunchflow", log_entry.provider_key
     assert_equal @lunchflow_account.current_account, log_entry.account
     assert_equal @lunchflow_account.current_account.family, log_entry.family
-    assert_includes log_entry.message, "Unidentified card authorization hold"
+    assert_equal @lunchflow_account.account_provider, log_entry.account_provider
+    assert_equal CardAuthorizationHold::HOLD_DIAGNOSTIC_MESSAGE, log_entry.message
+    assert_equal true, log_entry.metadata["sign_inverted"]
+    assert_equal "14.97", log_entry.metadata["raw_amount"]
+
+    # Re-processing the same hold on subsequent sync does not write duplicate DebugLogEntry
+    assert_no_difference -> { DebugLogEntry.count } do
+      LunchflowEntry::Processor.new(
+        hold_data,
+        lunchflow_account: @lunchflow_account
+      ).process
+    end
+  end
+
+  test "captures warning DebugLogEntry with sign_inverted false for negative amount hold" do
+    hold_data = {
+      id: "",
+      accountId: 456,
+      amount: -14.97,
+      currency: "EUR",
+      date: "2025-01-20",
+      merchant: "474836xxxxxx6879 003015315475",
+      description: "474836xxxxxx6879 003015315475"
+    }
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      LunchflowEntry::Processor.new(
+        hold_data,
+        lunchflow_account: @lunchflow_account
+      ).process
+    end
+
+    log_entry = DebugLogEntry.last
+    assert_equal false, log_entry.metadata["sign_inverted"]
+    assert_equal "-14.97", log_entry.metadata["raw_amount"]
   end
 
   test "does not capture DebugLogEntry for regular transactions" do

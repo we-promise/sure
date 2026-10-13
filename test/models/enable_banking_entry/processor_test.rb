@@ -835,6 +835,15 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not EnableBankingEntry::Processor.masked_card_descriptor?(
       remittance_information: [ "474836xxxxxx6879 003015315475", "Amazon.com" ]
     )
+    # Technical terminal lines are ignored when finding descriptive remittance lines
+    assert EnableBankingEntry::Processor.masked_card_descriptor?(
+      remittance_information: [ "474836xxxxxx6879 003015315475", "POS   45,13 AT  D6   31.07. 10:27" ]
+    )
+    # Masked bank transaction code does not override legitimate remittance merchant
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(
+      remittance_information: [ "Amazon.com" ],
+      bank_transaction_code: { description: "474836xxxxxx6879" }
+    )
   end
 
   test "does not treat multi-line remittance with legitimate payee and card PAN as unidentified hold" do
@@ -878,7 +887,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not entry_unknown.transaction.pending?
   end
 
-  test "captures warning DebugLogEntry when processing unidentified card hold" do
+  test "captures warning DebugLogEntry when processing unidentified card hold on first import only" do
     tx = {
       entry_reference: nil,
       transaction_id: nil,
@@ -900,7 +909,38 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "enable_banking", log_entry.provider_key
     assert_equal @account, log_entry.account
     assert_equal @account.family, log_entry.family
-    assert_includes log_entry.message, "Unidentified card authorization hold"
+    assert_equal @enable_banking_account.account_provider, log_entry.account_provider
+    assert_equal CardAuthorizationHold::HOLD_DIAGNOSTIC_MESSAGE, log_entry.message
+    assert_equal true, log_entry.metadata["sign_inverted"]
+    assert_equal "14.97", log_entry.metadata["raw_amount"]
+    assert_equal "CRDT", log_entry.metadata["credit_debit_indicator"]
+
+    # Re-processing the same hold on subsequent sync does not write duplicate DebugLogEntry
+    assert_no_difference -> { DebugLogEntry.count } do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+  end
+
+  test "captures warning DebugLogEntry with sign_inverted false for DBIT unidentified hold" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "20.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+
+    log_entry = DebugLogEntry.last
+    assert_equal false, log_entry.metadata["sign_inverted"]
+    assert_equal "DBIT", log_entry.metadata["credit_debit_indicator"]
+    assert_equal "20.00", log_entry.metadata["raw_amount"]
   end
 
   test "does not capture DebugLogEntry for regular transactions" do

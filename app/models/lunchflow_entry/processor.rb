@@ -6,7 +6,7 @@ class LunchflowEntry::Processor
   include CardAuthorizationHold
 
   # True when the transaction lacks a provider ID and its merchant or description
-  # matches a masked card authorization descriptor.
+  # matches a masked card authorization descriptor without identifying a real payee.
   # Certain institutions expose unfinalized card holds with blank IDs, masked card
   # numbers instead of merchant names, and sometimes with inverted signs.
   #
@@ -18,13 +18,10 @@ class LunchflowEntry::Processor
     merchant_name = data[:merchant].to_s.strip
     description = data[:description].to_s.strip
 
-    if merchant_name.match?(MASKED_CARD_DESCRIPTOR)
-      true
-    elsif merchant_name.blank? && description.match?(MASKED_CARD_DESCRIPTOR)
-      true
-    else
-      false
-    end
+    fields = [ merchant_name, description ].reject(&:blank?)
+    return false if fields.empty?
+
+    fields.all? { |field| masked_card_text?(field) }
   end
 
   # lunchflow_transaction is the raw hash fetched from Lunchflow API and converted to JSONB
@@ -52,10 +49,11 @@ class LunchflowEntry::Processor
       end
     end
 
-    capture_unidentified_hold_diagnostic if unidentified_hold?
+    first_hold_import = unidentified_hold? &&
+      !account.entries.exists?(source: "lunchflow", external_id: external_id)
 
     # Wrap import in error handling to catch validation and save errors
-    begin
+    entry = begin
       import_adapter.import_transaction(
         external_id: external_id,
         amount: amount,
@@ -81,6 +79,10 @@ class LunchflowEntry::Processor
       Rails.logger.error e.backtrace.join("\n")
       raise StandardError.new("Unexpected error importing transaction: #{e.message}")
     end
+
+    capture_unidentified_hold_diagnostic(entry) if first_hold_import && entry
+
+    entry
   end
 
   private
@@ -157,17 +159,24 @@ class LunchflowEntry::Processor
     def name
       if unidentified_hold?
         HOLD_TRANSACTION_NAME
+      elsif masked_card_text?(data[:merchant]) && data[:description].present?
+        data[:description].to_s.strip
       else
         data[:merchant].presence || "Unknown transaction"
       end
     end
 
     def notes
-      data[:description].presence || (data[:merchant].presence if unidentified_hold?)
+      if masked_card_text?(data[:merchant]) && data[:description].present?
+        data[:merchant].presence
+      else
+        data[:description].presence || (data[:merchant].presence if unidentified_hold?)
+      end
     end
 
     def merchant
       return nil if unidentified_hold?
+      return nil if masked_card_text?(data[:merchant])
       return nil unless data[:merchant].present?
 
       # Create a stable merchant ID from the merchant name
@@ -301,18 +310,34 @@ class LunchflowEntry::Processor
       query.first
     end
 
-    def capture_unidentified_hold_diagnostic
+    # Called only after a successful first import of a hold.
+    def capture_unidentified_hold_diagnostic(entry)
+      raw_amount = begin
+        BigDecimal(data[:amount].to_s)
+      rescue ArgumentError, TypeError
+        nil
+      end
+
+      # In Lunchflow convention, negative = expense, positive = income.
+      # Unidentified holds on expenses often arrive erroneously as positive credit (inflow),
+      # which LunchflowEntry::Processor normalizes to positive outflow in Sure (via parsed_amount.abs).
+      # If raw amount was positive, the sign was inverted upstream.
+      sign_inverted = raw_amount ? raw_amount > 0 : false
+
       DebugLogEntry.capture(
         category: "provider_sync",
         level: "warn",
-        message: "Unidentified card authorization hold detected with inverted sign; normalized to pending expense",
+        message: HOLD_DIAGNOSTIC_MESSAGE,
         source: self.class.name,
         provider_key: "lunchflow",
-        family: account&.family,
+        family: account.family,
         account: account,
-        account_provider: lunchflow_account&.account_provider,
+        account_provider: lunchflow_account.account_provider,
         metadata: {
           external_id: external_id,
+          entry_id: entry.id,
+          raw_amount: data[:amount].to_s,
+          sign_inverted: sign_inverted,
           amount: amount.to_s,
           currency: currency,
           merchant: data[:merchant],
