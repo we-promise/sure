@@ -1547,6 +1547,31 @@ end
     Rails.cache = original_cache
   end
 
+  test "index uncategorized_count leaves out read-only shared accounts" do
+    sign_in users(:family_member)
+    get transactions_url
+    count_before = rendered_uncategorized_count
+
+    accounts(:credit_card).entries.create!( # shared read_only with family_member
+      name: "Uncategorized on read-only share",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+    accounts(:depository).entries.create!( # shared full_control with family_member
+      name: "Uncategorized on full-control share",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    assert_equal count_before + 1, rendered_uncategorized_count,
+      "the categorize count should only include entries the member can categorize"
+  end
+
   test "index projected_recurring cache is invalidated when account-share access is revoked" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new

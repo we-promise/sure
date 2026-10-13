@@ -76,8 +76,10 @@ class TransactionsController < ApplicationController
       Set.new
     end
 
+    # Counts what the categorize wizard can act on, so read-only shares don't
+    # keep the "Categorize" menu item visible.
     @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
-      Current.accessible_entries.uncategorized_transactions.count
+      Current.annotatable_entries.uncategorized_transactions.count
     end
 
     # Load projected recurring transactions for next 10 days. Only the IDs are
@@ -532,7 +534,7 @@ class TransactionsController < ApplicationController
     # active status (AccountsController#toggle_active) doesn't touch `entries`
     # or `AccountShare`, so it wouldn't otherwise bust this cache.
     def uncategorized_count_cache_key
-      "transactions_uncategorized_count/v4/#{Current.family.id}/#{Current.user.id}/" \
+      "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 

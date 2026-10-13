@@ -33,6 +33,13 @@ class Current < ActiveSupport::CurrentAttributes
     family.entries.joins(:account).merge(Account.accessible_by(user))
   end
 
+  # Entries the user may annotate (notes, category, merchant, tags): owned
+  # accounts and shares with full_control or read_write, not read_only.
+  def annotatable_entries
+    return family&.entries unless user
+    family.entries.joins(:account).merge(Account.annotatable_by(user))
+  end
+
   # Used for invalidating caches whose results depend on the current user's
   # account-share access (e.g. the transactions index's uncategorized count
   # and projected recurring list, which are scoped to accessible accounts).
