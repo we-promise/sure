@@ -251,9 +251,7 @@ class TradeImportTest < ActiveSupport::TestCase
     assert_not @import.publishable?, "an unresolved security label must block publishing"
   end
 
-  test "a clean CSV with a new but resolvable ticker is publishable without manual selection" do
-    tsla = Security.new(ticker: "TSLA", exchange_operating_mic: "XNAS", name: "Tesla")
-
+  test "a new ticker absent from the local DB must be mapped once before publishing" do
     @import.update!(
       account: accounts(:depository),
       raw_file_str: "date,ticker,qty,price,currency,name\n01/01/2024,TSLA,2,700.00,USD,Tesla Buy\n",
@@ -271,13 +269,19 @@ class TradeImportTest < ActiveSupport::TestCase
 
     mapping = @import.mappings.securities.find_by(key: "TSLA")
     assert_nil mapping.mappable, "a ticker absent from the local DB is not auto-matched"
-    assert mapping.valid?, "a resolvable ticker must not block publishing"
-    assert @import.publishable?, "clean CSVs with resolvable tickers stay non-blocking"
+    assert_not @import.publishable?, "an unresolved security must block publishing (hard gate)"
 
-    # import! resolves it directly (DB/provider), as before this feature.
+    # User confirms the ticker via the combobox (resolve-on-update). The
+    # resolver creates/returns the real security at selection time.
+    tsla = Security.create!(ticker: "TSLA", exchange_operating_mic: "XNAS", name: "Tesla")
     resolver = mock
-    resolver.stubs(:resolve).returns(tsla.tap(&:save!))
+    resolver.stubs(:resolve).returns(tsla)
     Security::Resolver.stubs(:new).returns(resolver)
+    mapping.update_column(:value, "TSLA|XNAS|")
+    mapping.create_mappable!
+    @import.reload
+
+    assert @import.publishable?, "once mapped, the import is publishable"
 
     assert_difference -> { Trade.count } => 1 do
       @import.publish

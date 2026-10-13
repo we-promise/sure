@@ -1,9 +1,10 @@
 class Import::SecurityMapping < Import::Mapping
-  # Only an unresolvable label must be mapped by hand. A key whose ticker is a
-  # plausible symbol can still be resolved by TradeImport#import! (DB or
-  # provider), so blocking publication there would force manual selection for
-  # clean CSVs — the opposite of this step's goal.
-  validates :mappable, presence: true, if: :requires_mapping?
+  # Every security must resolve to a real Security before the import can be
+  # published. Auto-matched rows satisfy this immediately; others require an
+  # explicit selection. A brand-new ticker not yet in the local DB is confirmed
+  # once via the combobox — the documented tradeoff — rather than silently
+  # resolving to an offline, unpriced security.
+  validates :mappable, presence: true
 
   class << self
     # Mappings are keyed by ticker AND exchange, so the same ticker listed on
@@ -38,15 +39,18 @@ class Import::SecurityMapping < Import::Mapping
 
     private
       def match_security(candidates, ticker:, exchange_operating_mic:)
-        matching = candidates.select { |security| security.ticker.to_s.upcase == ticker.to_s.strip.upcase }
+        # Never auto-match an offline security: an earlier import may have
+        # created one whose ticker is the full descriptive label, and matching
+        # it would preserve the unpriced holding this step exists to fix.
+        matching = candidates.reject(&:offline?)
+          .select { |security| security.ticker.to_s.upcase == ticker.to_s.strip.upcase }
 
         if exchange_operating_mic.present?
           mics = Security.exchange_operating_mic_lookup_values(exchange_operating_mic).map(&:upcase)
           matching.find { |security| mics.include?(security.exchange_operating_mic.to_s.upcase) }
         elsif matching.size == 1
           # No MIC on the row: auto-match only when there is a single local
-          # listing. Multiple listings are ambiguous, so defer to the user /
-          # the row-specific resolver rather than guessing.
+          # listing. Multiple listings are ambiguous, so defer to the user.
           matching.first
         end
       end
@@ -93,10 +97,20 @@ class Import::SecurityMapping < Import::Mapping
     Security
   end
 
+  # Securities are user-chosen (or auto-matched), not re-derivable from the CSV
+  # text. On a resync (e.g. a row edit), keep an existing selection so editing
+  # an unrelated field doesn't wipe the user's mapping; adopt a fresh auto-match
+  # only when nothing is selected yet.
+  def mappable_for_sync(derived_mappable)
+    mappable || derived_mappable
+  end
+
   def create_mappable!
-    # A cleared selection must drop the stale security, not keep the old one.
+    # A cleared selection must drop the stale security. Clear without
+    # validating this intermediate draft — presence is enforced at the publish
+    # gate — so the request doesn't error on a now-unresolved mapping.
     if value.blank?
-      update!(mappable: nil) if mappable_id.present?
+      update_columns(mappable_id: nil, mappable_type: nil) if mappable_id.present?
       return
     end
 
@@ -111,23 +125,4 @@ class Import::SecurityMapping < Import::Mapping
 
     update!(mappable: security)
   end
-
-  private
-    # Require a hand selection only for a label that cannot be resolved
-    # automatically: no local auto-match AND the ticker component does not look
-    # like a real symbol (so TradeImport#import! cannot resolve it either).
-    # This keeps clean CSVs non-blocking while still forcing descriptive labels
-    # to be mapped.
-    def requires_mapping?
-      return false if mappable.present?
-
-      !resolvable_ticker?
-    end
-
-    # A plausible exchange ticker: letters/digits plus the few punctuation
-    # characters real symbols use (., -, /). Descriptive labels contain spaces
-    # or other characters and will not match.
-    def resolvable_ticker?
-      ticker.match?(/\A[A-Z0-9][A-Z0-9.\-\/]{0,19}\z/i)
-    end
 end

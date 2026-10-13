@@ -412,8 +412,8 @@ class Import < ApplicationRecord
 
         updated_mappings = mappables_by_key.map do |key, mappable|
           mapping = mappings.find_or_initialize_by(key: key, import: self, type: mapping_class.name)
-          mapping.mappable = mappable
-          mapping.create_when_empty = key.present? && mappable.nil?
+          mapping.mappable = mapping.mappable_for_sync(mappable)
+          mapping.create_when_empty = key.present? && mapping.mappable.nil?
           mapping
         end
 
