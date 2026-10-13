@@ -40,6 +40,24 @@ class RetirementPlan::SolverTest < ActiveSupport::TestCase
     assert_equal 60, result.depletion_age
   end
 
+  # Income of 50,000 in 2028 and 2029 only counts once retired, when its
+  # surplus over spending is reinvested; before that the contribution is
+  # fixed. Retiring in 2027 catches it: 10,000 saved, 10,000 spent, then
+  # 80,000 reinvested against seven later years of 10,000. Retiring in 2030
+  # or 2031 misses it (40,000 vs 70,000; 50,000 vs 60,000), and 2032 lasts
+  # again (60,000 vs 50,000). Lasting is not monotonic in the year, so a
+  # bisection over 2026..2036 would land on 2032; the earliest is 2027.
+  test "the earliest lasting year is found when a later year runs out again" do
+    streams = [
+      Stream.new(kind: "expense", annual_amount: 10_000),
+      Stream.new(kind: "income", annual_amount: 50_000, start_year: 2028, end_year: 2029)
+    ]
+
+    assert_equal [ false, true, true, false, false, true ],
+                 [ 2026, 2027, 2029, 2030, 2031, 2032 ].map { |y| simulation(streams:, retirement_year: y).survives? }
+    assert_equal 2027, solve(streams:).retirement_year
+  end
+
   private
     def base
       {

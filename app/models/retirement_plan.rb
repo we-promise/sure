@@ -103,24 +103,27 @@ class RetirementPlan < ApplicationRecord
   # The year-by-year projection for a traditional plan, retiring in the year of
   # the plan's date (or `retirement_year`, when given). Nil until the plan has
   # a birth year and a retirement date: without them there is no end age and
-  # no retirement to plan to.
+  # no retirement to plan to. Nil too when retirement falls after the end age,
+  # since there is then no retirement inside the plan to fund.
   def simulation(as_of:, retirement_year: retirement_date&.year)
-    return nil if birth_year.nil? || retirement_year.nil?
+    return nil if retirement_year.nil? || !plannable?(as_of)
+    return nil if retirement_year > birth_year + end_age
 
     RetirementPlan::Simulation.new(**simulation_inputs(as_of:), retirement_year: retirement_year)
   end
 
   # FIRE mode: the earliest year the money lasts to the end age.
   def solve(as_of:)
-    return nil if birth_year.nil?
+    return nil unless plannable?(as_of)
 
     RetirementPlan::Solver.new(**simulation_inputs(as_of:)).call
   end
 
-  # The accounts a user may fund the plan from: those they count in their own
-  # finances, as the default funding set uses.
+  # The accounts a user may fund the plan from: the ones the default funding
+  # set draws on. Anything else, a property say, has no balance the funding
+  # total counts, so linking it would leave the plan with nothing.
   def eligible_funding_accounts
-    finance_accounts
+    finance_accounts.where(accountable_type: LIQUID_AND_INVESTMENT_TYPES)
   end
 
   # Seeds the plan's streams from the user's spending and loans, once. Called
@@ -153,6 +156,13 @@ class RetirementPlan < ApplicationRecord
     end
 
     AssetTotal = Data.define(:total, :unconverted_count)
+
+    # A plan runs from the reference year to the end-age year. With the owner
+    # born after the reference year, or the end age already past, there are
+    # no years to plan: an empty table would read as a plan that lasts.
+    def plannable?(as_of)
+      birth_year.present? && birth_year <= as_of.year && birth_year + end_age >= as_of.year
+    end
 
     def simulation_inputs(as_of:)
       {

@@ -61,6 +61,20 @@ class RetirementPlan::SimulationTest < ActiveSupport::TestCase
     assert_equal [ 0, 25_000, 0 ], sim.rows.first(3).map(&:withdrawal)
   end
 
+  # Retired from this year, spending covered exactly by a pension, so the
+  # one-off is the only flow: it must come out, not go back in as savings.
+  test "a one-off in a retirement year is withdrawn, not reinvested" do
+    sim = simulation(retirement_year: AS_OF.year, streams: [
+      Stream.new(kind: "expense", annual_amount: 10_000),
+      Stream.new(kind: "income", annual_amount: 10_000),
+      Stream.new(kind: "one_off", annual_amount: 25_000, start_year: AS_OF.year + 1)
+    ])
+
+    assert_equal [ 0, 25_000, 0 ], sim.rows.first(3).map(&:withdrawal)
+    assert_equal [ 0, 0, 0 ], sim.rows.first(3).map(&:contribution)
+    assert_equal BigDecimal("75000"), sim.rows.second.end_value
+  end
+
   test "a stream with an end year stops after that year" do
     sim = simulation(retirement_year: AS_OF.year,
                      streams: [ Stream.new(kind: "expense", annual_amount: 12_000, end_year: AS_OF.year + 1) ])
@@ -114,6 +128,13 @@ class RetirementPlan::SimulationTest < ActiveSupport::TestCase
 
     assert sim.survives?
     assert_nil sim.depletion_age
+  end
+
+  # Born 1935 with an end age of 90: the plan ended in 2025. With no years to
+  # run, no withdrawal is ever tested, so `survives?` would answer true.
+  test "an end-age year before the reference year is refused, and the end-age year itself is not" do
+    assert_raises(ArgumentError) { simulation(birth_year: 1935, end_age: 90) }
+    assert_equal [ AS_OF.year ], simulation(birth_year: 1936, end_age: 90).rows.map(&:year)
   end
 
   test "nothing in the engine reads the clock, the database or the current request" do

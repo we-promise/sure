@@ -25,7 +25,8 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     own_account(amount: 1_000)
 
     assert_no_difference [ "RetirementPlan.count", "RetirementPlan::Stream.count" ] do
-      RetirementPlan.for(@member).simulation(as_of: AS_OF)
+      sim = RetirementPlan.for(@member).simulation(as_of: AS_OF, retirement_year: 2050)
+      assert_not_empty sim.rows
     end
   end
 
@@ -106,6 +107,18 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     assert_equal 0, @plan.streams.count
   end
 
+  # The marker and the streams are written in one transaction: a seed whose
+  # marker cannot be saved leaves no streams behind to be seeded twice.
+  test "a seed whose marker fails to save leaves no streams" do
+    checking = own_account(amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
+    @plan.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(@plan))
+
+    assert_no_difference "RetirementPlan::Stream.count" do
+      assert_raises(ActiveRecord::RecordInvalid) { @plan.seed_streams!(as_of: AS_OF) }
+    end
+  end
+
   # Two requests that each loaded the plan before either seeded: the second
   # must see the first's marker, not its own stale copy.
   test "two copies of a plan loaded before either seeds do not both seed" do
@@ -141,7 +154,37 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     assert_not @plan.funding_links.new(account: admins).valid?
   end
 
+  # The funding total counts only cash, investment and crypto balances, so a
+  # linked property would replace the default set with nothing.
+  test "only cash, investment and crypto accounts can be linked" do
+    house = Account.create!(family: @family, owner: @member, accountable: Property.new, name: "House", currency: "USD", balance: 1)
+    brokerage = Account.create!(family: @family, owner: @member, accountable: Investment.new, name: "Brokerage", currency: "USD", balance: 1)
+
+    assert_not @plan.funding_links.new(account: house).valid?
+    assert @plan.funding_links.new(account: brokerage).valid?
+  end
+
   # --- Simulation and solver ------------------------------------------------
+
+  # Born 1980 with an end age of 90: the plan runs 2026..2070.
+  test "a plan is simulated only when its end age is still ahead and its owner is born" do
+    own_account(amount: 1_000)
+
+    assert_not_nil @plan.simulation(as_of: AS_OF, retirement_year: 2070), "retiring in the end-age year"
+    assert_nil @plan.simulation(as_of: AS_OF, retirement_year: 2071), "retiring after the end age"
+
+    @plan.update!(birth_year: 1936)
+    assert_not_nil @plan.simulation(as_of: AS_OF, retirement_year: 2026), "end-age year is this year"
+    assert_not_nil @plan.solve(as_of: AS_OF)
+
+    @plan.update!(birth_year: 1935)
+    assert_nil @plan.simulation(as_of: AS_OF, retirement_year: 2026), "end-age year already passed"
+    assert_nil @plan.solve(as_of: AS_OF)
+
+    @plan.update!(birth_year: 2027)
+    assert_nil @plan.simulation(as_of: AS_OF, retirement_year: 2050), "born after the reference year"
+    assert_nil @plan.solve(as_of: AS_OF)
+  end
 
   test "the simulation runs on the plan's own settings, streams and contribution" do
     checking = own_account(amount: 100_000)

@@ -51,6 +51,7 @@ class RetirementPlan::Simulation
     @retirement_year = retirement_year
     @birth_year = birth_year
     @end_age = end_age
+    raise ArgumentError, "the end-age year #{last_year} is before the reference year #{first_year}" if last_year < first_year
   end
 
   def first_year
