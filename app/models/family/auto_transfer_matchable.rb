@@ -15,6 +15,13 @@ module Family::AutoTransferMatchable
   # date_window: 30 vs. 4 widening that dialog already applies.
   MANUAL_MATCH_EXCHANGE_RATE_TOLERANCE = 0.1
 
+  # The "Transfer?" hint in the transaction list is unprompted, so it is much
+  # narrower than the dialog it opens: across a real multi-currency history,
+  # the dialog's 30 days / 10% flagged mostly coincidental small purchases,
+  # while 2 days / 3% kept mainly genuine currency conversions.
+  TRANSFER_HINT_DATE_WINDOW = 2
+  TRANSFER_HINT_EXCHANGE_RATE_TOLERANCE = 0.03
+
   # Read at call time rather than frozen into a constant at boot, so a bad value falls back
   # instead of raising inside every sync: Family::Syncer and Account::Syncer both call
   # auto_match_transfers! without a tolerance of their own.
@@ -35,6 +42,7 @@ module Family::AutoTransferMatchable
     inflow_transaction_id: nil,
     outflow_transaction_id: nil,
     account_id: nil,
+    transaction_ids: nil,
     include_rejected: true,
     restrict_cross_currency_to_linked_accounts: false,
     require_common_writer: false
@@ -51,6 +59,9 @@ module Family::AutoTransferMatchable
         inflow_transaction_id:,
         outflow_transaction_id:,
         account_id:,
+        filter_transaction_ids: !transaction_ids.nil?,
+        # IN () is invalid SQL, so an empty list binds a NULL that matches nothing.
+        transaction_ids: transaction_ids.presence || [ nil ],
         include_rejected:,
         restrict_cross_currency_to_linked_accounts:,
         require_common_writer:,
@@ -58,6 +69,40 @@ module Family::AutoTransferMatchable
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
     ])
+  end
+
+  # Which of `transactions` have a likely transfer counterpart, so the
+  # transaction list can point the user to the "match as transfer" dialog.
+  # Uses the narrower hint window and tolerance, skips rejected pairs, and keeps
+  # only pairs where `user` can write to both accounts
+  # (TransferMatchesController#create requires that).
+  #
+  # @return [Set<String>] ids of the given transactions that have a candidate
+  def transaction_ids_with_transfer_candidates(transactions, user:)
+    unmatched_ids = transactions.reject { |transaction| transaction.transfer? || transaction.transfer.present? }.map(&:id)
+    return Set.new if unmatched_ids.empty?
+
+    candidates = transfer_match_candidates(
+      date_window: TRANSFER_HINT_DATE_WINDOW,
+      exchange_rate_tolerance: TRANSFER_HINT_EXCHANGE_RATE_TOLERANCE,
+      transaction_ids: unmatched_ids,
+      include_rejected: false
+    )
+    return Set.new if candidates.empty?
+
+    writable_account_ids = accounts.writable_by(user).pluck(:id).to_set
+    account_ids = Entry.where(
+      entryable_type: "Transaction",
+      entryable_id: candidates.flat_map { |candidate| [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ] }
+    ).pluck(:entryable_id, :account_id).to_h
+
+    page_ids = unmatched_ids.to_set
+    candidates.each_with_object(Set.new) do |candidate, ids|
+      next unless writable_account_ids.include?(account_ids[candidate.inflow_transaction_id]) &&
+                  writable_account_ids.include?(account_ids[candidate.outflow_transaction_id])
+
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ].each { |id| ids << id if page_ids.include?(id) }
+    end
   end
 
   def auto_match_transfers!(account: nil, exchange_rate_tolerance: Family::AutoTransferMatchable.exchange_rate_tolerance)
@@ -270,6 +315,7 @@ module Family::AutoTransferMatchable
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
+            (:filter_transaction_ids = FALSE OR inflow_candidates.entryable_id IN (:transaction_ids) OR outflow_candidates.entryable_id IN (:transaction_ids)) AND
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
             #{common_writer_condition_sql}
           UNION ALL
@@ -353,6 +399,7 @@ module Family::AutoTransferMatchable
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
+            (:filter_transaction_ids = FALSE OR inflow_candidates.entryable_id IN (:transaction_ids) OR outflow_candidates.entryable_id IN (:transaction_ids)) AND
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
             (
               :restrict_cross_currency_to_linked_accounts = FALSE OR

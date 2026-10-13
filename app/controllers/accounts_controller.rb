@@ -150,6 +150,8 @@ class AccountsController < ApplicationController
       ).call
     end
 
+    @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates(transactions, user: Current.user)
+
     entry_ids = @entries.map(&:id)
     @split_parent_entry_ids = if entry_ids.any?
       Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set

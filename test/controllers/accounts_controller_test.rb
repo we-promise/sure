@@ -16,6 +16,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "show points an unmatched transaction with a counterpart to the transfer matcher" do
+    outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
+    create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "a[href='#{new_transaction_transfer_match_path(outflow)}']", text: I18n.t("transactions.transaction.transfer_hint")
+  end
+
   test "show filters account activity to uncategorized transactions" do
     uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
     categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))

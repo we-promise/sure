@@ -20,8 +20,23 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     get new_transaction_transfer_match_path(outflow_entry)
 
     assert_response :success
-    assert_select "option[value=?]", visible_inflow.id
-    assert_select "option[value=?]", hidden_inflow.id, count: 0
+    assert_select "[role=option][data-value=?]", visible_inflow.id
+    assert_select "[role=option][data-value=?]", hidden_inflow.id, count: 0
+  end
+
+  test "new shows account logos and preselects the closest candidate and first account" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client")
+    accounts(:investment).update!(institution_domain: "example-broker.com")
+
+    outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
+    inflow = create_transaction(amount: -100, account: accounts(:investment), name: "Broker inflow")
+
+    get new_transaction_transfer_match_path(outflow_entry)
+
+    assert_response :success
+    assert_select "[role=option][data-value=?] img[src*='example-broker.com']", inflow.id
+    assert_select "input[type=hidden][name='transfer_match[matched_entry_id]'][value=?]", inflow.id
+    assert_select "input[type=hidden][name='transfer_match[target_account_id]']:not([value=''])"
   end
 
   test "matches existing transaction and creates transfer" do

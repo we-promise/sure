@@ -705,6 +705,79 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal [ outflow.entryable_id ], inflow_candidates.map(&:outflow_transaction_id)
   end
 
+  test "transaction_ids_with_transfer_candidates flags both legs of an unmatched pair" do
+    outflow = create_transaction(date: 2.days.ago.to_date, account: @depository, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    lone = create_transaction(date: Date.current, account: @depository, amount: 77)
+
+    ids = @family.transaction_ids_with_transfer_candidates(
+      [ outflow.transaction, inflow.transaction, lone.transaction ], user: users(:family_admin)
+    )
+
+    assert_equal Set[outflow.entryable_id, inflow.entryable_id], ids
+  end
+
+  test "transaction_ids_with_transfer_candidates only looks at the given transactions" do
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    create_transaction(date: Date.current, account: @depository, amount: 600)
+    create_transaction(date: Date.current, account: @credit_card, amount: -600)
+
+    ids = @family.transaction_ids_with_transfer_candidates([ outflow.transaction ], user: users(:family_admin))
+
+    assert_equal Set[outflow.entryable_id], ids
+  end
+
+  test "transaction_ids_with_transfer_candidates skips matched and rejected pairs" do
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    RejectedTransfer.create!(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+
+    matched_out = create_transaction(date: Date.current, account: @depository, amount: 900)
+    matched_in = create_transaction(date: Date.current, account: @credit_card, amount: -900)
+    Transfer.create!(inflow_transaction: matched_in.transaction, outflow_transaction: matched_out.transaction)
+
+    transactions = [ outflow, inflow, matched_out, matched_in ].map(&:transaction)
+
+    assert_empty @family.transaction_ids_with_transfer_candidates(transactions, user: users(:family_admin))
+  end
+
+  test "transaction_ids_with_transfer_candidates ignores counterparts the user cannot write to" do
+    @loan.update!(owner: users(:family_member))
+    outflow = create_transaction(date: Date.current, account: @loan, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    ids = @family.transaction_ids_with_transfer_candidates(
+      [ outflow.transaction, inflow.transaction ], user: users(:family_admin)
+    )
+
+    assert_empty ids
+  end
+
+  test "transaction_ids_with_transfer_candidates finds cross-currency pairs between manual accounts" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "GBP", date: Date.current, rate: 0.8)
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @other_asset, amount: -400, currency: "GBP")
+
+    ids = @family.transaction_ids_with_transfer_candidates([ inflow.transaction ], user: users(:family_admin))
+
+    assert_equal Set[inflow.entryable_id], ids
+  end
+
+  test "transaction_ids_with_transfer_candidates stays narrower than the manual dialog" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "GBP", date: Date.current, rate: 0.8)
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    # 8% off the rate: the dialog offers it, the unprompted hint does not.
+    inflow = create_transaction(date: Date.current, account: @other_asset, amount: -432, currency: "GBP")
+    far_outflow = create_transaction(date: 5.days.ago.to_date, account: @depository, amount: 900)
+    far_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -900)
+
+    assert_equal [ outflow.entryable_id ], inflow.transaction.transfer_match_candidates.map(&:outflow_transaction_id)
+    assert_empty @family.transaction_ids_with_transfer_candidates(
+      [ inflow.transaction, far_outflow.transaction, far_inflow.transaction ], user: users(:family_admin)
+    )
+  end
+
   test "transfer candidate query separates exact and exchange-rate matching paths" do
     sql = @family.send(:transfer_match_candidates_sql)
 

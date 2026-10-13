@@ -184,6 +184,8 @@ en:
       split: Split
       split_tooltip: This transaction has been split into multiple entries
       split_child_tooltip: Part of a split transaction
+      transfer_hint: Transfer?
+      transfer_hint_tooltip: A matching transaction in another account looks like the other side of a transfer — click to match them
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions
