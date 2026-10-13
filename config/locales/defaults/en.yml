@@ -14,6 +14,7 @@ en:
   oauth:
     registration:
       invalid_redirect_uris: "redirect_uris must use https, loopback http, or a native app URI scheme"
+      reserved_client_name: "client_name is reserved for first-party apps"
   activerecord:
     errors:
       messages:

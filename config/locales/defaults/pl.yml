@@ -252,6 +252,7 @@ pl:
     registration:
       invalid_redirect_uris: redirect_uris musi używać https, loopback http lub schematu
         URI aplikacji natywnej
+      reserved_client_name: client_name jest zarezerwowane dla własnych aplikacji
   support:
     array:
       last_word_connector: " oraz "

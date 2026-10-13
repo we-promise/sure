@@ -287,3 +287,4 @@ uk:
   oauth:
     registration:
       invalid_redirect_uris: redirect_uris мають використовувати https, loopback http або URI-схему нативного застосунку
+      reserved_client_name: client_name зарезервовано для власних застосунків

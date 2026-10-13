@@ -7,6 +7,10 @@ de:
       close: Schließen
   global:
     expand: "Aufklappen"
+  oauth:
+    registration:
+      invalid_redirect_uris: "redirect_uris müssen https, loopback-http oder ein URI-Schema einer nativen App verwenden"
+      reserved_client_name: "client_name ist für eigene Apps reserviert"
   activerecord:
     errors:
       messages:

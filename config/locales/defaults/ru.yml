@@ -283,3 +283,4 @@ ru:
   oauth:
     registration:
       invalid_redirect_uris: redirect_uris должны использовать HTTPS, HTTP для loopback-адреса или URI-схему нативного приложения
+      reserved_client_name: client_name зарезервировано для собственных приложений

@@ -237,3 +237,4 @@ ca:
   oauth:
     registration:
       invalid_redirect_uris: redirect_uris ha d'utilitzar https, http de loopback o un esquema d'URI d'aplicació nativa
+      reserved_client_name: client_name està reservat per a les aplicacions pròpies
