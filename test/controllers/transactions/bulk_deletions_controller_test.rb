@@ -22,6 +22,40 @@ class Transactions::BulkDeletionsControllerTest < ActionDispatch::IntegrationTes
     assert_equal "#{delete_count} transactions deleted", flash[:notice]
   end
 
+  test "bulk delete of an outflow also removes its fabricated transfer counterpart" do
+    accounts(:loan).update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = accounts(:depository).entries.create!(
+      name: "Loan payment", amount: 500, currency: "USD", date: Date.current,
+      entryable: Transaction.new(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    )
+    @user.family.auto_create_missing_transfer_counterparts!
+    fabricated_entry = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).inflow_transaction.entry
+
+    post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ outflow_entry.id ] } }
+
+    assert_redirected_to transactions_url
+    assert_not Entry.exists?(fabricated_entry.id)
+  end
+
+  test "bulk delete of an outflow and its fabricated transfer counterpart together" do
+    accounts(:loan).update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = accounts(:depository).entries.create!(
+      name: "Loan payment", amount: 500, currency: "USD", date: Date.current,
+      entryable: Transaction.new(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    )
+    @user.family.auto_create_missing_transfer_counterparts!
+    fabricated_entry = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).inflow_transaction.entry
+
+    assert_difference [ "Transaction.count", "Entry.count" ], -2 do
+      post transactions_bulk_deletion_url, params: {
+        bulk_delete: { entry_ids: [ outflow_entry.id, fabricated_entry.id ] }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_not Transfer.exists?(outflow_transaction_id: outflow_entry.entryable_id)
+  end
+
   test "bulk delete with rejected transfers" do
     entry = entries(:transaction)
     other_entry = entries(:transfer_out)
