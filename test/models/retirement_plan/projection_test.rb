@@ -117,7 +117,7 @@ class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
     offenders = sources.flat_map do |path|
       File.readlines(path).each_with_index.filter_map do |line, index|
         code = line.sub(/#.*/, "")
-        "#{File.basename(path)}:#{index + 1}" if code.match?(/Date\.(current|today)|Time\.(current|now)|DateTime\.now|\bCurrent\./)
+        "#{File.basename(path)}:#{index + 1}" if code.match?(/Date\.(current|today)|Time\.(current|now)|Time\.zone\.(now|today)|DateTime\.(current|now)|\bCurrent\./)
       end
     end
 
