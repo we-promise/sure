@@ -16,6 +16,8 @@ class Transfer < ApplicationRecord
   validate :transfer_within_date_range
   validate :transfer_has_same_family
 
+  after_destroy :destroy_fabricated_counterpart
+
   class << self
     def kind_for_account(account)
       if account.loan?
@@ -98,6 +100,17 @@ class Transfer < ApplicationRecord
   def reject!
     Transfer.transaction do
       RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
+      dismiss_fabricated_counterpart_suggestion!
+      destroy!
+    end
+  end
+
+  # User-initiated unlink. Unlike the plain destroy! (also used when an
+  # account is deleted or merged), this records that the user doesn't want
+  # a fabricated counterpart back.
+  def unlink!
+    Transfer.transaction do
+      dismiss_fabricated_counterpart_suggestion!
       destroy!
     end
   end
@@ -108,6 +121,9 @@ class Transfer < ApplicationRecord
         next if transaction.nil?
         next unless Transaction.exists?(transaction.id)
         begin
+          # A fabricated counterpart is removed by #destroy_fabricated_counterpart.
+          next if transaction.extra&.dig("auto_generated_transfer_counterpart") == true
+
           transaction.update!(kind: "standard")
           # The entry survives this destroy (only the Transfer join row and
           # fee transactions go away), but its idempotency_key must not: a
@@ -125,8 +141,40 @@ class Transfer < ApplicationRecord
     end
   end
 
+  # Removing a fabricated leg alone isn't enough: the next sync would find the
+  # outflow unmatched again and fabricate the same counterpart (see
+  # Family::AutoTransferMatchable#auto_create_missing_transfer_counterparts!).
+  # Rejecting or unlinking it is the user saying "this isn't a transfer", so
+  # record that on the outflow the same way dismissing the suggestion does.
+  def dismiss_fabricated_counterpart_suggestion!
+    return unless inflow_transaction&.extra&.dig("auto_generated_transfer_counterpart") == true
+
+    outflow_transaction&.dismiss_counterparty_transfer_suggestion!
+  end
+
+  # A fabricated counterpart (see
+  # Family::AutoTransferMatchable#auto_create_missing_transfer_counterparts!)
+  # leaves the real outflow untouched while it is pending, so its transfer
+  # kind (and the Investment Contributions category) only applies here. The
+  # inflow always becomes a funds movement, as for any confirmed transfer.
   def confirm!
-    update!(status: "confirmed")
+    Transfer.transaction do
+      update!(status: "confirmed")
+
+      unless outflow_transaction.transfer?
+        outflow_kind = Transfer.kind_for_account(to_account)
+        outflow_attrs = { kind: outflow_kind }
+
+        if outflow_kind == "investment_contribution" && outflow_transaction.category_id.blank?
+          category = to_account.family.investment_contributions_category
+          outflow_attrs[:category] = category if category.present?
+        end
+
+        outflow_transaction.update!(outflow_attrs)
+      end
+
+      inflow_transaction.update!(kind: "funds_movement")
+    end
   end
 
   def date
@@ -148,6 +196,25 @@ class Transfer < ApplicationRecord
   end
 
   private
+    # The inflow leg Family::AutoTransferMatchable fabricated as a stand-in
+    # counterpart (see #auto_create_missing_transfer_counterparts!) has no
+    # bank data behind it, so it must not outlive its transfer: unlinking it
+    # must not leave a phantom "standard" transaction the user never created,
+    # and deleting the real outflow (which destroys this transfer through
+    # Transaction::Transferable's dependent: :destroy, bypassing #destroy!)
+    # must not leave it inflating the target account's balance. When the
+    # fabricated entry itself is being deleted, its row is already gone here.
+    def destroy_fabricated_counterpart
+      return unless inflow_transaction&.extra&.dig("auto_generated_transfer_counterpart") == true
+
+      entry = Entry.find_by(entryable_type: "Transaction", entryable_id: inflow_transaction_id)
+      return if entry.nil?
+
+      account = entry.account
+      entry.destroy!
+      account.sync_later
+    end
+
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
       errors.add(:base, :different_accounts) if to_account == from_account

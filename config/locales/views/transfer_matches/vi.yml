@@ -3,6 +3,8 @@ vi:
   transfer_matches:
     create:
       success: Chuyển khoản đã được tạo
+    dismiss_suggestion:
+      success: "Đã bỏ qua gợi ý"
     new:
       header:
         title: Khớp chuyển khoản hoặc thanh toán
@@ -15,6 +17,8 @@ vi:
       inflow_transaction: Giao dịch thu vào
       create_transfer_match: Tạo khớp chuyển khoản
     matching_fields:
+      dismiss_suggestion: "Không khớp"
+      suggested_account_html: "IBAN của khoản thanh toán này khớp với tài khoản <strong>%{name}</strong> của bạn — chúng tôi đã chọn sẵn tài khoản đó bên dưới."
       select_method: Chọn phương thức khớp giao dịch của bạn.
       match_existing_recommended: Khớp giao dịch hiện có (khuyến nghị)
       create_new_transaction: Tạo giao dịch mới

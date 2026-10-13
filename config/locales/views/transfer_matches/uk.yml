@@ -2,6 +2,8 @@ uk:
   transfer_matches:
     create:
       success: Переказ створено
+    dismiss_suggestion:
+      success: "Пропозицію відхилено"
     new:
       header:
         title: Зіставте переказ або платіж
@@ -14,6 +16,8 @@ uk:
       inflow_transaction: Вхідна транзакція
       create_transfer_match: Створити відповідність переказу
     matching_fields:
+      dismiss_suggestion: "Не збігається"
+      suggested_account_html: "IBAN цього платежу збігається з вашим рахунком <strong>%{name}</strong> — ми вибрали його нижче."
       select_method: Виберіть метод для зіставлення ваших транзакцій.
       match_existing_recommended: Зіставити існуючу транзакцію (рекомендовано)
       create_new_transaction: Створити нову транзакцію

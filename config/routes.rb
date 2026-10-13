@@ -128,6 +128,21 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :coinspot_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   # Self-custody / on-chain wallets
   resources :onchain_wallet_items, only: [ :update, :destroy ] do
     collection do
@@ -316,7 +331,10 @@ Rails.application.routes.draw do
   get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
 
   get "changelog", to: "pages#changelog"
+  get "release_highlight", to: "release_highlights#show"
+  patch "release_highlight/dismiss", to: "release_highlights#dismiss"
   get "feedback", to: "pages#feedback"
+  get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
   patch "dashboard/preferences", to: "pages#update_preferences"
 
   resource :current_session, only: %i[update]
@@ -530,7 +548,9 @@ Rails.application.routes.draw do
 
   resources :transactions, only: %i[index new create show update destroy] do
     resource :split, only: %i[new create edit update destroy]
-    resource :transfer_match, only: %i[new create]
+    resource :transfer_match, only: %i[new create] do
+      post :dismiss_suggestion
+    end
     resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
     resources :attachments, only: %i[show create destroy], controller: :transaction_attachments
@@ -700,6 +720,18 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      namespace :financekit do
+        get "capabilities", to: "connections#capabilities"
+        resources :connections, only: [ :create, :show, :destroy ] do
+          put "account_mappings/:source_id", to: "connections#mapping"
+          post :activate, to: "connections#activate"
+          post :credential, to: "connections#credential"
+          post :repair, to: "connections#repair"
+          resources :conflicts, only: [ :index, :update ]
+        end
+        post "publishers/:publisher_id/batches", to: "batches#create", as: :publisher_batches_upload
+        get "publishers/:publisher_id/batches/:batch_id", to: "batches#show", as: :publisher_batch_status
+      end
       # Authentication endpoints
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
@@ -741,6 +773,7 @@ Rails.application.routes.draw do
         post :publish, on: :member
       end
       resource :usage, only: [ :show ], controller: :usage
+      resource :cash_flow, only: [ :show ], controller: :cash_flows
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resources :insights, only: [ :index ]
       resources :push_subscriptions, only: [ :create, :destroy ]
@@ -891,6 +924,21 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :fio_items, only: %i[create update destroy] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   resources :sophtron_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
@@ -964,6 +1012,7 @@ Rails.application.routes.draw do
     # so name it explicitly.
     resource :system_health, only: :show, controller: "system_health" do
       post :verify_worker_ai
+      post :send_test_push
     end
   end
 

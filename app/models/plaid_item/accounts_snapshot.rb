@@ -93,7 +93,11 @@ class PlaidItem::AccountsSnapshot
     def can_fetch_liabilities?
       plaid_item.supports_product?("liabilities") &&
       accounts.any? do |a|
-        a.type == "credit" && a.subtype == "credit card" ||
+        # Plaid's `credit` type has two subtypes: "credit card" and "paypal".
+        # Liabilities covers both, so match on the type rather than allow-listing
+        # a single subtype -- otherwise a PayPal Credit account leaves
+        # `liabilities` in billed_products (i.e. billed) but never fetched.
+        a.type == "credit" ||
         a.type == "loan" && (a.subtype == "mortgage" || a.subtype == "student")
       end
     end

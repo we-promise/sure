@@ -15,6 +15,14 @@ pl:
         user:
           attributes:
             base:
-              cannot_deactivate_admin_with_other_users: Administrator nie może usunąć konta, gdy obecni są inni użytkownicy. Najpierw usuń wszystkich członków.
+              cannot_deactivate_admin_with_other_users: Administrator nie może usunąć
+                konta, gdy obecni są inni użytkownicy. Najpierw usuń wszystkich członków.
+              cannot_remove_last_super_admin: Nie można usunąć ostatniego aktywnego
+                super administratora. Najpierw nadaj rolę super administratora innemu
+                użytkownikowi.
+              provider_item_has_other_accounts: Użytkownik posiada konta połączone
+                z integracją dostawcy, która obsługuje też konta innego użytkownika.
+                Przenieś albo odłącz te konta przed zmianą przynależności do gospodarstwa
+                domowego lub grupy.
             profile_image:
               invalid_file_size: rozmiar pliku nie może przekraczać %{max_megabytes}MB

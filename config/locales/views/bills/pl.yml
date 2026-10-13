@@ -1,0 +1,380 @@
+---
+pl:
+  bills:
+    add_bill: Dodaj rachunek
+    add_payment: Dodaj płatność
+    ai_prompts:
+      due_before_paycheck: Co mam do zapłaty przed następną wypłatą?
+      monthly_subscriptions: Ile płacę miesięcznie za subskrypcje?
+      safe_to_spend: Ile mogę bezpiecznie wydać w tym okresie?
+      subscriptions_up: Które subskrypcje podrożały w tym roku?
+    all:
+      any_status: Dowolny status
+      any_type: Dowolny typ
+      col_actions: Akcje
+      col_amount: Kwota
+      col_frequency: Częstotliwość
+      col_name: Nazwa
+      col_next: Następny termin
+      col_status: Status
+      col_type: Typ
+      monthly_equivalent: "%{amount}/mies."
+      next_short: następny %{date}
+      no_matches_description: Spróbuj wyczyścić filtr lub wyszukiwanie.
+      no_matches_title: Brak wyników
+      search_placeholder: Szukaj rachunków
+      sort_amount: Według kwoty
+      sort_due: Według terminu
+      sort_name: Według nazwy
+      status_filters:
+        due: Wkrótce termin
+        ended: Zakończone
+        overdue: Zaległe
+        paid: Opłacone
+        partial: Częściowo opłacone
+        paused: Wstrzymane
+      subscription_active: Aktywna
+      subscription_annual: Rocznie
+      subscription_monthly: Miesięcznie
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      subscription_price_changes: Zmiany cen w tym roku
+      types:
+        bill: Rachunek
+        income: Przychód
+        installment: Plan ratalny
+        other: Inne
+        subscription: Subskrypcja
+        transfer: Przelew
+    amount_range: zakres od %{min} do %{max}
+    attention:
+      amount_changed: Kwota się zmieniła
+      needs_review: Dopasowanie wymaga sprawdzenia
+      overdue:
+        few: Zaległe od %{count} dni
+        many: Zaległe od %{count} dni
+        one: Zaległe od 1 dnia
+        other: Zaległe od %{count} dni
+      partial: Częściowo · pozostało %{amount}
+    calendar:
+      empty_month: Brak rachunków z terminem w tym miesiącu.
+      month_totals: "%{expected} oczekiwane · %{paid} opłacone"
+      next_month: Następny miesiąc
+      previous_month: Poprzedni miesiąc
+      reset_feed: Zresetuj link
+      subscribe_ical: Subskrybuj (iCal)
+      today: Dziś
+    cancelled_still_scheduled: Oznaczono to jako anulowane %{date}, ale nadal jest
+      zaplanowane, więc kolejne rachunki będą się pojawiać.
+    debt_payment: "· spłata zadłużenia"
+    detail:
+      annualized: Rocznie
+      around: około %{date}
+      average: Średnio opłacone
+      avg_payment: Średnia płatność
+      cancelled_chip: Anulowano %{date}
+      current: Bieżący
+      history: Historia
+      history_aria: Płatności z ostatnich dwunastu miesięcy
+      history_title: Ostatnie 12 miesięcy
+      key_metrics: Rocznie
+      last_account: Ostatnio użyte konto
+      manual_payment: Płatność ręczna
+      next_payment: Następna płatność
+      notes: Notatki
+      payment_count:
+        few: "%{count} płatności"
+        many: "%{count} płatności"
+        one: 1 płatność
+        other: "%{count} płatności"
+      price_change_line: "%{from} → %{to}"
+      price_changes: Zmiany cen
+      range: od %{min} do %{max}
+      recent_payments: Ostatnie płatności
+      renews_chip: Odnawia się %{date}
+      rule_aliases: Pasuje też do %{names}
+      rule_amount_range: od %{min} do %{max}
+      rule_learned_tolerance: Kwoty w granicach %{percent} zwykłej kwoty pasują do
+        tego rachunku
+      rule_named: "%{name}"
+      rules: Jak dopasowywany jest ten rachunek
+      spent_per_year: Wydano
+      trial_chip: Okres próbny kończy się %{date}
+      upcoming: Nadchodzące
+      year: Rok
+      ytd: Opłacone w tym roku
+    detect:
+      already_running: Wykrywanie już trwa. Sprawdź za chwilę.
+      found:
+        few: Znaleziono %{count} możliwe rachunki. Sprawdź je poniżej.
+        many: Znaleziono %{count} możliwych rachunków. Sprawdź je poniżej.
+        one: Znaleziono 1 możliwy rachunek. Sprawdź go poniżej.
+        other: Znaleziono %{count} możliwych rachunków. Sprawdź je poniżej.
+      none_found: Nie znaleziono nowych powtarzających się wzorców. Możesz dodać rachunki
+        ręcznie.
+    due_label:
+      due_since: Termin %{date}
+      overdue:
+        few: Zaległe od %{count} dni, termin upłynął %{date}
+        many: Zaległe od %{count} dni, termin upłynął %{date}
+        one: Zaległe od 1 dnia, termin upłynął %{date}
+        other: Zaległe od %{count} dni, termin upłynął %{date}
+      settled: Termin upłynął %{date}
+      snoozed: Odłożone do %{date}
+      today: Termin dziś
+      upcoming:
+        few: Termin za %{count} dni, %{date}
+        many: Termin za %{count} dni, %{date}
+        one: Termin jutro, %{date}
+        other: Termin za %{count} dni, %{date}
+    feed:
+      calendar_name: Rachunki Sure
+    find_payment: Znajdź płatność
+    index:
+      accept: Zastosuj
+      add_bill: Dodaj rachunek
+      add_income: Dodaj przychód
+      all_automatic: wszystkie na autopłatności
+      attention_overdue_total: "%{amount} zaległe"
+      confidence: dopasowanie %{percent}%
+      detected_review:
+        few: Znaleźliśmy %{count} cykliczne płatności w Twoich transakcjach. Sprawdź
+          je, aby sumy tutaj zgadzały się z tym, co faktycznie płacisz.
+        many: Znaleźliśmy %{count} cyklicznych płatności w Twoich transakcjach. Sprawdź
+          je, aby sumy tutaj zgadzały się z tym, co faktycznie płacisz.
+        one: Znaleźliśmy 1 cykliczną płatność w Twoich transakcjach. Sprawdź ją, aby
+          sumy tutaj zgadzały się z tym, co faktycznie płacisz.
+        other: Znaleźliśmy %{count} cyklicznych płatności w Twoich transakcjach. Sprawdź
+          je, aby sumy tutaj zgadzały się z tym, co faktycznie płacisz.
+      detected_review_action: Sprawdź je
+      dormant: Uśpione
+      empty:
+        action: Znajdź transakcje cykliczne
+        description: Rachunki to Twoje cykliczne wydatki. Sure wykrywa je automatycznie
+          na podstawie historii transakcji, a do każdego możesz dodać link do płatności,
+          żeby zapłacić bezpośrednio stąd.
+        no_history_description: Brak transakcji. Połącz konto lub zaimportuj historię,
+          a Sure automatycznie znajdzie Twoje rachunki, albo dodaj jeden ręcznie.
+        title: Brak rachunków
+      hero_next_seven: "%{amount} do zapłaty w ciągu 7 dni"
+      hero_past_due: "%{amount} zaległe"
+      kpi_next_seven: Termin w ciągu 7 dni
+      kpi_paid: Opłacone w tym miesiącu
+      kpi_past_due: Zaległe
+      kpi_remaining: Pozostało w tym miesiącu
+      later: Po tym miesiącu
+      left_to_pay: pozostało do zapłaty
+      needs_action_count:
+        few: "%{count} wymagają uwagi"
+        many: "%{count} wymaga uwagi"
+        one: 1 wymaga uwagi
+        other: "%{count} wymaga uwagi"
+      needs_attention: Wymaga uwagi
+      needs_review: Wymaga sprawdzenia
+      notice_price: "%{name}: zmiana ceny %{from} → %{to} (%{percent})"
+      notice_renewal: "%{name} odnawia się %{date}"
+      notice_trial: Okres próbny %{name} kończy się %{date}
+      notices_routine:
+        few: "%{count} mniejsze zmiany"
+        many: "%{count} mniejszych zmian"
+        one: 1 mniejsza zmiana
+        other: "%{count} mniejszych zmian"
+      overdue: Zaległe
+      paid_count:
+        few: "%{count} rachunki opłacone"
+        many: "%{count} rachunków opłaconych"
+        one: 1 rachunek opłacony
+        other: "%{count} rachunków opłaconych"
+      paid_so_far: Opłacone dotychczas
+      paid_this_month: Opłacone w tym miesiącu
+      recurring_annual: "%{amount} rocznie"
+      recurring_label: Zobowiązanie cykliczne
+      recurring_monthly: "%{amount} miesięcznie"
+      reject: To nie ten rachunek
+      review_with_ai: Sprawdź z AI
+      suggestion_line: "%{entry} wygląda jak płatność za %{bill}"
+      suggestion_unknown_entry: Transakcja
+      summary_count:
+        few: "%{count} rachunki do zapłaty"
+        many: "%{count} rachunków do zapłaty"
+        one: 1 rachunek do zapłaty
+        other: "%{count} rachunków do zapłaty"
+      summary_label: Termin w tym miesiącu
+      summary_needs_action:
+        few: "%{count} wymagają uwagi"
+        many: "%{count} wymaga uwagi"
+        one: 1 wymaga uwagi
+        other: "%{count} wymaga uwagi"
+      this_month: Ten miesiąc
+      title: Rachunki
+      unconvertible:
+        few: "%{count} rachunki nie są uwzględnione — brak dostępnego kursu wymiany"
+        many: "%{count} rachunków nie jest uwzględnionych — brak dostępnego kursu
+          wymiany"
+        one: 1 rachunek nie jest uwzględniony — brak dostępnego kursu wymiany
+        other: "%{count} rachunków nie jest uwzględnionych — brak dostępnego kursu
+          wymiany"
+    installment_progress: Płatność %{done_plus_one} z %{total}
+    manage: Zarządzaj
+    manage_payments: Zarządzaj płatnościami
+    match:
+      amount_off: różnica %{amount}
+      days_after:
+        few: "%{count} dni po terminie"
+        many: "%{count} dni po terminie"
+        one: 1 dzień po terminie
+        other: "%{count} dni po terminie"
+      days_before:
+        few: "%{count} dni przed terminem"
+        many: "%{count} dni przed terminem"
+        one: 1 dzień przed terminem
+        other: "%{count} dni przed terminem"
+      due_date: Dopasowanie po terminie płatności
+      exact_amount: Dokładna kwota
+      name_matches: Nazwa pasuje
+      same_merchant: Ten sam sprzedawca
+    month_pulse:
+      bill_count:
+        few: "%{count} rachunki"
+        many: "%{count} rachunków"
+        one: 1 rachunek
+        other: "%{count} rachunków"
+      date_today: Dziś
+      date_tomorrow: Jutro
+      left_to_pay: pozostało do zapłaty
+      next_up: Następne
+      pulse_bar_aria: "%{percent}% rachunków tego miesiąca opłaconych"
+      pulse_next_seven: kolejne 7 dni
+      pulse_overdue: zaległe
+      pulse_paid: opłacone
+      unconvertible:
+        few: "%{count} rachunki nie są uwzględnione — brak dostępnego kursu wymiany"
+        many: "%{count} rachunków nie jest uwzględnionych — brak dostępnego kursu
+          wymiany"
+        one: 1 rachunek nie jest uwzględniony — brak dostępnego kursu wymiany
+        other: "%{count} rachunków nie jest uwzględnionych — brak dostępnego kursu
+          wymiany"
+      view_upcoming: Zobacz nadchodzące
+    paid_from: z %{account}
+    paid_label: Opłacone
+    paid_over: Zapłacono %{paid}, więcej niż oczekiwano
+    paid_over_short: Opłacone, więcej
+    pane:
+      close: Zwiń szczegóły
+    partial_progress: Zapłacono %{paid} z %{expected}
+    pay_period:
+      before_next_paycheck: Przed następną wypłatą
+      due_before_date: "%{amount} do zapłaty przed %{date}"
+      paycheck_on: Wypłata %{date}
+    paycheck:
+      add_income: Dodaj przychód
+      all_clear:
+        description: Żaden rachunek nie ma terminu między teraz a %{date}, więc nic
+          w tym okresie nie jest zarezerwowane.
+        title: Nic do pokrycia
+      allocation_aria: 'Z przychodu %{income}: %{due} do zapłaty teraz, %{reserved}
+        zarezerwowane na później, a %{safe} można bezpiecznie wydać.'
+      allocation_aria_short: "%{income} przychodu idzie na zobowiązania pokazane tutaj,
+        a brakuje jeszcze %{short}."
+      before_next_paycheck: Przed %{date}
+      bills_before_payday:
+        few: Rachunki przed następną wypłatą · %{count}
+        many: Rachunki przed następną wypłatą · %{count}
+        one: Rachunki przed następną wypłatą · 1
+        other: Rachunki przed następną wypłatą · %{count}
+      bills_this_period:
+        few: Rachunki w tym okresie · %{count}
+        many: Rachunki w tym okresie · %{count}
+        one: Rachunki w tym okresie · 1
+        other: Rachunki w tym okresie · %{count}
+      bridge_amount: "· do zapłaty %{amount}"
+      bridge_label: Przed następną wypłatą
+      bridge_split: Termin przed %{date}, pokryte przez %{cash} na Twoich kontach.
+      due_this_period: Termin w tym okresie
+      empty:
+        action: Dodaj przychód
+        description: Dodaj przychód, żeby zobaczyć, co musi pokryć każda wypłata.
+          Wykryte wpływy nigdy same nie ustawiają terminów wypłat — robisz to Ty.
+        title: Określ harmonogram przychodów
+      income_amount: przychód %{amount}
+      income_detected: Wykryto automatycznie, nie ustawia terminów wypłat
+      income_next_payday: następna %{date}
+      income_paused: Wstrzymane, nieplanowane
+      income_section_title: Harmonogram przychodów
+      income_source_count:
+        few: "%{count} źródła dochodu"
+        many: "%{count} źródeł dochodu"
+        one: "%{count} źródło dochodu"
+        other: "%{count} źródeł dochodu"
+      manage: Zarządzaj
+      next_on: Następna %{date}
+      no_income_arriving: Brak wpływających przychodów
+      no_upcoming_income: Od teraz nie zaplanowano żadnych przychodów.
+      of_total: z %{amount}
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} źródeł dochodu"
+      reserved_ahead: Zarezerwowane z wyprzedzeniem
+      reserved_footer:
+        few: Zarezerwowano z wyprzedzeniem na %{count} kolejne rachunki
+        many: Zarezerwowano z wyprzedzeniem na %{count} kolejnych rachunków
+        one: Zarezerwowano z wyprzedzeniem na 1 kolejny rachunek
+        other: Zarezerwowano z wyprzedzeniem na %{count} kolejnych rachunków
+      review_plan: Sprawdź plan
+      safe_after_bills: Bezpieczne po opłaceniu rachunków
+      safe_short: Bezpieczne
+      short_after_bills: Brakuje po opłaceniu rachunków
+      short_short: Brakuje
+      shortfall_amount: "· %{amount}"
+      shortfall_label: Brakuje przed następną wypłatą
+      shortfall_largest: 'Największe nadchodzące zobowiązanie:'
+      shortfall_split: "%{obligations} ma termin przed %{date}, a na kontach masz
+        %{cash}."
+      unconvertible:
+        few: "%{count} zobowiązania nie są uwzględnione — brak dostępnego kursu wymiany"
+        many: "%{count} zobowiązań nie jest uwzględnionych — brak dostępnego kursu
+          wymiany"
+        one: 1 zobowiązanie nie jest uwzględnione — brak dostępnego kursu wymiany
+        other: "%{count} zobowiązań nie jest uwzględnionych — brak dostępnego kursu
+          wymiany"
+    possible_duplicate: Możliwy duplikat
+    remaining_label: pozostało
+    reset_feed_token:
+      confirm: Zresetować link kanału kalendarza? Każdy wcześniej udostępniony link
+        przestanie działać.
+      done: Link kanału zresetowany. Aplikacje kalendarza korzystające ze starego
+        linku przestaną się aktualizować — zasubskrybuj ponownie z nowym linkiem.
+    resolve: Rozwiąż
+    review_match: Sprawdź dopasowanie
+    row_overdue: Zaległe
+    row_today: Dziś
+    show:
+      edit: Edytuj rachunek
+    smart_configurations:
+      show:
+        apply: Zastosuj zaznaczone
+        autopay_off: Wyłączona
+        autopay_on: Włączona
+        failed: Nie udało się teraz przeanalizować tego rachunku. Jego konfiguracja
+          pozostała bez zmian.
+        field_amount: Kwota
+        field_autopay: Autopłatność
+        field_category: Kategoria
+        field_kind: Rodzaj
+        field_name: Nazwa
+        field_schedule: Harmonogram
+        intro: Zaznacz zmiany do zastosowania. Niezaznaczone pozostaną bez zmian.
+        no_changes: Ten rachunek już odpowiada swojej historii płatności. Nie ma nic
+          do zmiany.
+        title: Sugestie AI dla %{name}
+        trigger: Pozwól AI skonfigurować
+        uncategorized: Bez kategorii
+    summary:
+      cost_line: Średnio %{average} za płatność, około %{annualized} rocznie
+      paid_headline: Zapłacono %{amount}
+      remaining: Pozostało %{amount}
+    view_full_bill: Zobacz pełny rachunek
+    views:
+      all: Wszystkie rachunki
+      aria_label: Widoki rachunków
+      calendar: Kalendarz
+      overview: Przegląd
+      paycheck: Plan dochodów

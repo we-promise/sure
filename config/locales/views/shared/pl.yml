@@ -1,21 +1,62 @@
 ---
 pl:
+  concerns:
+    self_hostable:
+      redis_configured: Redis jest teraz poprawnie skonfigurowany! Możesz teraz skonfigurować
+        aplikację Sure.
   shared:
-    dot_separator: "·"
+    cancel: Anuluj
     confirm_modal:
       accept: Potwierdź
       body_html: "<p>Nie będzie można cofnąć tej decyzji</p>"
       cancel: Anuluj
       title: Czy na pewno?
-    money_field:
-      label: Kwota
-    syncing_notice:
-      syncing: Synchronizowanie danych kont...
-    require_admin: "Tę akcję mogą wykonać tylko administratorzy"
+    custom_confirm:
+      default_body: Tej operacji nie można cofnąć.
+      default_btn_text: Potwierdź
+      default_title: Czy na pewno?
+      resource_deletion_body: Czy na pewno chcesz usunąć %{resource}? Tej operacji
+        nie można cofnąć.
+      resource_deletion_btn_text: Usuń %{resource}
+      resource_deletion_title: Usunąć %{resource}?
+    dot_separator: "·"
+    exchange_rate_tabs:
+      calculate_rate_tab: Oblicz kurs wymiany
+      convert_tab: Przelicz po kursie wymiany
+      destination_amount: Kwota docelowa
+      exchange_rate: Kurs wymiany
+      exchange_rate_help: Wybierz, jak wprowadzić kwotę.
     family_moniker:
       group_plural: Grupy
       group_singular: Grupa
       plural: Rodziny
       singular: Rodzina
+    money_field:
+      label: Kwota
+    preview: Podgląd
+    require_admin: Tę akcję mogą wykonać tylko administratorzy
+    sidekiq_health_banner:
+      body: Zadania w tle nie są przetwarzane, więc salda, wartość netto i synchronizacje
+        kont mogą być nieaktualne lub ich brakować.
+      cta: Zobacz stan systemu
+      reasons:
+        no_worker_processes: Żaden proces workera Sidekiq nie jest podłączony. Uruchom
+          kontener workera albo jednostkę systemd.
+        queue_backed_up: Najstarsze zadanie w kolejce czeka dłużej niż zakładany budżet
+          czasu. Worker działa, ale nie nadąża.
+        redis_unreachable: Aplikacja nie może połączyć się z Redis. Sprawdź REDIS_URL
+          i czy Redis działa.
+        stale_heartbeat: Worker Sidekiq nie zgłosił ostatnio sygnału życia. Mógł się
+          zawiesić albo ulec awarii.
+      title: Część danych może być nieaktualna
+    sync_toast:
+      message: Dostępne nowe dane
+      refresh: Odśwież
+    syncing_notice:
+      syncing: Synchronizowanie danych kont...
+    transaction_tabs:
+      expense: Wydatek
+      income: Przychód
+      transfer: Przelew
     trend_change:
-      no_change: "bez zmian"
+      no_change: bez zmian

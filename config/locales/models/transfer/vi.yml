@@ -18,5 +18,7 @@ vi:
           opposite_amounts: "Phải có số tiền đối nghịch nhau"
           within_days: "Phải trong vòng %{count} ngày"
   transfer:
+    counterpart_name: Chuyển khoản từ %{from_account}
+    counterpart_name_generic: Chuyển khoản nhận được
     name: Chuyển khoản đến %{to_account}
     payment_name: Thanh toán đến %{to_account}

@@ -18,5 +18,7 @@ it:
           opposite_amounts: "Deve avere importi opposti"
           within_days: "Deve essere entro %{count} giorni"
   transfer:
+    counterpart_name: Bonifico da %{from_account}
+    counterpart_name_generic: Bonifico in entrata
     name: Bonifico a %{to_account}
     payment_name: Pagamento a %{to_account}

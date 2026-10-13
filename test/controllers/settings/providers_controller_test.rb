@@ -1,7 +1,9 @@
 require "test_helper"
+require_relative "../../support/financekit_test_helper"
 
 class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
+  include FinancekitTestHelper
 
   setup do
     ensure_tailwind_build
@@ -9,6 +11,126 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     # Ensure provider adapters are loaded for all tests
     Provider::Factory.ensure_adapters_loaded
+  end
+
+  test "Apple Wallet is available through a disabled App Store button" do
+    get settings_providers_url
+
+    assert_response :success
+    assert_select "div[data-provider-name='apple wallet'][data-provider-region='us / uk'][data-provider-kind='bank']" do
+      assert_select "button[disabled]", text: "App Store"
+      assert_select "span[title='Coming soon!']"
+      assert_select "a", count: 0
+      assert_select "p", text: "US / UK · Bank"
+    end
+  end
+
+  test "linked Wallet accounts appear with upload and import summaries" do
+    financekit_setup
+    @item.update!(last_accepted_at: 2.hours.ago, last_imported_at: 1.hour.ago)
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_select "[data-provider-name='apple wallet']", count: 0
+    assert_select "turbo-frame#financekit-providers-panel" do
+      assert_select "a[href=?][data-turbo-frame='_top']", account_path(@source.account), text: "Test Wallet"
+      assert_select "span", text: "Sync active"
+      assert_select "dt", text: "Last accepted by Sure"
+      assert_select "dt", text: "Last imported into your family"
+      assert_select "time[datetime=?]", @item.last_accepted_at.iso8601
+      assert_select "time[datetime=?]", @item.last_imported_at.iso8601
+      assert_select "form", count: 0
+    end
+    assert_select "form[action=?]", sync_provider_settings_providers_path(provider_key: "financekit"), count: 0
+    assert_includes @controller.view_assigns["connected"].map { |entry| entry[:provider_key] }, "financekit"
+  end
+
+  test "Wallet repairs retain linked accounts and missing timestamps show Not yet" do
+    financekit_setup
+    @item.mark_repair!("test_repair")
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_select "turbo-frame#financekit-providers-panel" do
+      assert_select "span", text: "Repair required — open the Sure iOS app"
+      assert_select "dd", text: "Not yet", count: 2
+      assert_select "a", text: "Test Wallet"
+    end
+    assert_includes @controller.view_assigns["needs_attention"].map { |entry| entry[:provider_key] }, "financekit"
+  end
+
+  test "revoked Wallet connections return to available providers" do
+    financekit_setup
+    @item.disconnect!
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "[data-provider-name='apple wallet'] button[disabled]", text: "App Store"
+  end
+
+  test "Wallet-only connections never offer Sync all including when repair is needed" do
+    Provider::PlaidAdapter.configuration.stubs(:configured?).returns(false)
+    Provider::PlaidEuAdapter.configuration.stubs(:configured?).returns(false)
+    users(:empty).update!(family: Family.create!(name: "Wallet only", currency: "USD"))
+    financekit_setup(user: users(:empty))
+    sign_in @user
+
+    [ "active", "repair_required" ].each do |status|
+      @item.update!(status: status)
+      get settings_providers_url
+
+      assert_response :success
+      assert_select "turbo-frame#financekit-providers-panel"
+      connections = @controller.view_assigns.values_at("connected", "needs_attention").flatten
+      assert_equal [ "financekit" ], connections.map { |entry| entry[:provider_key] }
+      assert_select "form[action=?]", sync_all_settings_providers_path, count: 0
+    end
+
+    @family.simplefin_items.create!(name: "Test bank", access_url: "https://example.com/access")
+    get settings_providers_url
+    assert_response :success
+    assert_select "form[action=?]", sync_all_settings_providers_path
+  end
+
+  test "Wallet settings retain disabled accounts but exclude pending deletion" do
+    financekit_setup
+    @source.account.update!(status: "disabled")
+    get settings_providers_url
+    assert_response :success
+    assert_select "turbo-frame#financekit-providers-panel a[href=?]", account_path(@source.account)
+
+    @source.account.update!(status: "pending_deletion")
+    get settings_providers_url
+    assert_response :success
+    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "a[href=?]", account_path(@source.account), count: 0
+    assert_select "[data-provider-name='apple wallet']"
+  end
+
+  test "Wallet summary excludes another family's connections" do
+    financekit_setup(user: users(:empty))
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "[data-provider-name='apple wallet']"
+  end
+
+  test "Wallet summary excludes accounts the current admin cannot access" do
+    financekit_setup
+    @source.account.account_shares.destroy_all
+    @source.account.update!(owner: users(:family_member))
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "[data-provider-name='apple wallet']"
   end
 
   test "GET /settings/bank_sync redirects permanently to /settings/providers" do

@@ -1,54 +1,56 @@
 ---
 pl:
   period:
-    last_day:
-      label_short: "1D"
-      label: "Ostatni dzień"
-      comparison_label: "vs. wczoraj"
-    current_week:
-      label_short: "WTD"
-      label: "Bieżący tydzień"
-      comparison_label: "vs. początek tygodnia"
-    last_7_days:
-      label_short: "7D"
-      label: "Ostatnie 7 dni"
-      comparison_label: "vs. poprzedni tydzień"
-    current_month:
-      label_short: "MTD"
-      label: "Bieżący miesiąc"
-      comparison_label: "vs. początek miesiąca"
-    last_month:
-      label_short: "LM"
-      label: "Poprzedni miesiąc"
-      comparison_label: "vs. poprzedni miesiąc"
-    last_30_days:
-      label_short: "30D"
-      label: "Ostatnie 30 dni"
-      comparison_label: "vs. ostatnie 30 dni"
-    last_90_days:
-      label_short: "90D"
-      label: "Ostatnie 90 dni"
-      comparison_label: "vs. poprzedni kwartał"
-    current_year:
-      label_short: "YTD"
-      label: "Bieżący rok"
-      comparison_label: "vs. początek roku"
-    last_365_days:
-      label_short: "365D"
-      label: "Ostatnie 365 dni"
-      comparison_label: "vs. 1 rok temu"
-    last_5_years:
-      label_short: "5Y"
-      label: "Ostatnie 5 lat"
-      comparison_label: "vs. 5 lat temu"
-    last_10_years:
-      label_short: "10Y"
-      label: "Ostatnie 10 lat"
-      comparison_label: "vs. 10 lat temu"
     all_time:
-      label_short: "Cały"
-      label: "Cały czas"
-      comparison_label: "vs. początek"
+      comparison_label: vs. początek
+      label: Cały czas
+      label_short: Cały
+    current_month:
+      comparison_label: vs. początek miesiąca
+      label: Bieżący miesiąc
+      label_short: MTD
+    current_week:
+      comparison_label: vs. początek tygodnia
+      label: Bieżący tydzień
+      label_short: WTD
+    current_year:
+      comparison_label: vs. początek roku
+      label: Bieżący rok
+      label_short: YTD
     custom:
-      label_short: "Niest."
-      label: "Okres niestandardowy"
+      comparison_label: "%{start_date} do %{end_date}"
+      label: Okres niestandardowy
+      label_short: Niest.
+    last_10_years:
+      comparison_label: vs. 10 lat temu
+      label: Ostatnie 10 lat
+      label_short: 10Y
+    last_30_days:
+      comparison_label: vs. ostatnie 30 dni
+      label: Ostatnie 30 dni
+      label_short: 30D
+    last_365_days:
+      comparison_label: vs. 1 rok temu
+      label: Ostatnie 365 dni
+      label_short: 365D
+    last_5_years:
+      comparison_label: vs. 5 lat temu
+      label: Ostatnie 5 lat
+      label_short: 5Y
+    last_7_days:
+      comparison_label: vs. poprzedni tydzień
+      label: Ostatnie 7 dni
+      label_short: 7D
+    last_90_days:
+      comparison_label: vs. poprzedni kwartał
+      label: Ostatnie 90 dni
+      label_short: 90D
+    last_day:
+      comparison_label: vs. wczoraj
+      label: Ostatni dzień
+      label_short: 1D
+    last_month:
+      comparison_label: vs. poprzedni miesiąc
+      label: Poprzedni miesiąc
+      label_short: LM
+    range: "%{start_date} – %{end_date}"

@@ -2,5 +2,9 @@
 pl:
   messages:
     chat_form:
-      placeholder: "Zapytaj o cokolwiek..."
-      disclaimer: "Odpowiedzi AI mają charakter wyłącznie informacyjny. To nie są porady finansowe!"
+      coming_soon: Wkrótce
+      disclaimer: Odpowiedzi AI mają charakter wyłącznie informacyjny. To nie są porady
+        finansowe!
+      placeholder: Zapytaj o cokolwiek...
+    create:
+      chat_not_found: Ten czat nie jest już dostępny.

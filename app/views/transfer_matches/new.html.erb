@@ -52,7 +52,8 @@
                 ) %>
           <% else %>
             <%= render "transfer_matches/matching_fields",
-                        form: f, entry: @entry, candidates: @transfer_match_candidates.map { |pm| pm.inflow_transaction.entry }, accounts: @accounts %>
+                        form: f, entry: @entry, candidates: @transfer_match_candidates.map { |pm| pm.inflow_transaction.entry }, accounts: @accounts,
+                        suggested_account: @suggested_target_account %>
           <% end %>
         </div>
       </section>

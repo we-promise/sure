@@ -3,6 +3,8 @@ pt-PT:
   transfer_matches:
     create:
       success: Transferência criada
+    dismiss_suggestion:
+      success: "Sugestão ignorada"
     new:
       header:
         title: Corresponder transferência ou pagamento
@@ -15,6 +17,8 @@ pt-PT:
       inflow_transaction: Transação de entrada
       create_transfer_match: Criar correspondência de transferência
     matching_fields:
+      dismiss_suggestion: "Não corresponde"
+      suggested_account_html: "O IBAN deste pagamento corresponde à sua conta <strong>%{name}</strong> — pré-selecionámo-la abaixo."
       select_method: Selecione um método para fazer corresponder as suas transações.
       match_existing_recommended: Associar transação existente (recomendado)
       create_new_transaction: Criar nova transação

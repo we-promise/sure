@@ -1,119 +1,187 @@
 ---
 pl:
   transactions:
-    unknown_name: Nieznana transakcja
-    selection_bar:
-      duplicate: Duplikat
-      edit: Edytuj
+    activity_labels:
+      buy: Kupno
+      contribution: Wpłata
+      dividend: Dywidenda
+      exchange: Wymiana
+      fee: Opłata
+      interest: Odsetki
+      other: Inne
+      reinvestment: Reinwestycja
+      sell: Sprzedaż
+      sweep_in: Transfer przychodzący
+      sweep_out: Transfer wychodzący
+      transfer: Przelew
+      withdrawal: Wypłata
+    attachments:
+      attachment_deleted: Załącznik został pomyślnie usunięty
+      browse_to_add: Przeglądaj, aby dodać pliki
+      cannot_exceed: Nie można przekroczyć %{count} załączników na transakcję
+      delete_failed: Nie udało się usunąć załącznika. Spróbuj ponownie lub skontaktuj
+        się ze wsparciem.
+      failed_delete: 'Nie udało się usunąć załącznika: %{error}'
+      failed_upload: 'Nie udało się przesłać załącznika: %{error}'
+      files:
+        few: Pliki (%{count})
+        many: Plików (%{count})
+        one: Plik (1)
+        other: Plików (%{count})
+      max_reached: Osiągnięto maksymalny limit plików (%{count}/%{max}). Usuń istniejący
+        plik, aby przesłać kolejny.
+      no_attachments: Brak załączników
+      no_files_selected: Nie wybrano plików do przesłania
+      select_up_to: Wybierz maksymalnie %{count} plików (obrazy lub PDF, maks. %{size}
+        MB każdy) • wykorzystano %{used} z %{count}
+      upload: Prześlij
+      upload_failed: Nie udało się przesłać załącznika. Spróbuj ponownie lub skontaktuj
+        się ze wsparciem.
+      uploaded_many: Pomyślnie przesłano %{count} załączników
+      uploaded_one: Załącznik został pomyślnie przesłany
+    bulk_updates:
+      new:
+        cancel: Anuluj
+        category_label: Kategoria
+        category_prompt: Wybierz kategorię
+        date_label: Data
+        header_title: Edytuj transakcje
+        merchant_label: Kontrahent
+        merchant_prompt: Wybierz kontrahenta
+        name_label: Nazwa
+        name_placeholder: Wpisz nazwę, która zostanie zastosowana do wybranych transakcji
+        none: "(brak)"
+        notes_label: Notatki
+        notes_placeholder: Wpisz notatkę, która zostanie zastosowana do wybranych
+          transakcji
+        overview: Podsumowanie
+        save: Zapisz
+        tags_label: Tagi
+        transactions_section: Transakcje
+    categorizes:
+      create:
+        categorized:
+          few: Skategoryzowano %{count} transakcje
+          many: Skategoryzowano %{count} transakcji
+          one: Skategoryzowano 1 transakcję
+          other: Skategoryzowano %{count} transakcji
+        rule_creation_failed: Transakcje skategoryzowane, ale nie udało się utworzyć
+          reguły (może już istnieć).
+      entry_row:
+        assign_category_select: Przypisz kategorię dla %{name}
+        include_checkbox: Uwzględnij %{name}
+      show:
+        all_done: Wszystkie transakcje są skategoryzowane
+        assign_category: Przypisz kategorię
+        assign_category_prompt: "→ przypisz"
+        col_amount: Kwota
+        col_category: Kategoria
+        col_date: Data
+        col_transaction: Transakcja
+        create_rule_label: Utwórz regułę kategoryzacji
+        exit: Zamknij
+        filter_placeholder: Szukaj kategorii...
+        no_categories: Brak pasujących kategorii
+        remaining:
+          few: Pozostały %{count} transakcje bez kategorii
+          many: Pozostało %{count} transakcji bez kategorii
+          one: Pozostała 1 transakcja bez kategorii
+          other: Pozostało %{count} transakcji bez kategorii
+        rule_description_prefix: Przyszłe transakcje typu %{type} o nazwie zawierającej
+        rule_description_suffix: również powinny otrzymać tę kategorię.
+        skip: Pomiń
+        transaction_count:
+          few: "%{count} transakcje"
+          many: "%{count} transakcji"
+          one: 1 transakcja
+          other: "%{count} transakcji"
+        transactions_hint: Odznacz, aby wykluczyć transakcję, albo przypisz jej inną
+          kategorię bezpośrednio w wierszu.
+        type_expense: Wydatek
+        type_income: Przychód
+    convert_to_trade:
+      account_label: 'Konto:'
+      amount_label: 'Kwota:'
+      cancel: Anuluj
+      conversion_note: 'Przekształcono z transakcji: %{original_name} (%{original_date})'
+      date_label: 'Data:'
+      description: Zamień tę transakcję na transakcję giełdową z danymi papieru wartościowego
+      errors:
+        already_converted: Ta transakcja została już przekształcona albo wykluczona
+        conversion_failed: 'Nie udało się przekształcić transakcji: %{error}'
+        enter_qty_or_price: Wprowadź ilość albo cenę za akcję. Druga wartość zostanie
+          obliczona z kwoty transakcji.
+        enter_ticker: Wprowadź symbol tickera
+        invalid_qty_or_price: Nieprawidłowa ilość lub cena. Wprowadź poprawne dodatnie
+          wartości.
+        not_investment_account: Tylko transakcje na kontach inwestycyjnych można zamieniać
+          na transakcje giełdowe
+        security_not_found: Wybrany papier wartościowy już nie istnieje. Wybierz inny.
+        select_security: Wybierz albo wpisz papier wartościowy
+        unexpected_error: 'Wystąpił nieoczekiwany błąd podczas przekształcania: %{error}'
+      exchange_hint: Pozostaw puste, aby wykryć automatycznie
+      exchange_label: Giełda (opcjonalna)
+      exchange_placeholder: XNAS
+      price_hint: Cena za akcję (%{currency})
+      price_label: Cena za akcję
+      price_mismatch_message: Twoja cena (%{entered_price}/akcję) znacznie różni się
+        od bieżącej ceny rynkowej %{ticker} (%{market_price}). Jeśli to wygląda nieprawidłowo,
+        mogłeś wybrać zły papier wartościowy — spróbuj użyć opcji „Wprowadź własny
+        ticker”, aby wskazać poprawny.
+      price_mismatch_title: Cena może się nie zgadzać
+      price_placeholder: np. 52.15
+      qty_or_price_hint: Wprowadź przynajmniej ilość albo cenę. Druga wartość zostanie
+        obliczona z kwoty transakcji (%{amount}).
+      quantity_hint: Liczba akcji objętych transakcją
+      quantity_label: Ilość (akcji)
+      quantity_placeholder: np. 20
+      security_custom: "+ Wprowadź własny ticker"
+      security_label: Papier wartościowy
+      security_not_listed_hint: Nie widzisz swojego papieru? Wybierz na dole listy
+        opcję „Wprowadź własny ticker”.
+      security_prompt: Wybierz papier wartościowy...
+      submit: Zamień na transakcję giełdową
+      success: Transakcja została zamieniona na transakcję giełdową
+      ticker_hint: Wprowadź symbol giełdowy akcji lub ETF-u, np. AAPL lub MSFT
+      ticker_placeholder: AAPL
+      ticker_search_hint: Szukaj po symbolu, nazwie spółki lub wpisz własny ticker
+      ticker_search_placeholder: Szukaj tickera...
+      title: Zamień na transakcję papieru wartościowego
+      trade_type_hint: Kupno lub sprzedaż akcji papieru wartościowego
+      trade_type_label: Typ transakcji giełdowej
+    create:
+      created: Transakcja utworzona
+    dismiss_duplicate:
+      failure: Nie udało się odrzucić sugestii duplikatu
+      success: Pozostawiono jako oddzielne transakcje
     form:
       account: Konto
       account_prompt: Wybierz konto
       amount: Kwota
       category: Kategoria
+      category_label: Kategoria
       category_prompt: Wybierz kategorię
+      category_search_placeholder: Szukaj kategorii
+      create_category: Utwórz "%{name}"
+      create_category_error: Nie udało się utworzyć kategorii
+      create_merchant: Utwórz
+      create_merchant_error: Nie udało się utworzyć kontrahenta
+      create_tag: Utwórz
       date: Data
       description: Opis
       description_placeholder: Opisz transakcję
+      details: Szczegóły
       expense: Wydatek
       income: Przychód
       merchant_label: Kontrahent
+      merchant_search_placeholder: Szukaj lub utwórz kontrahenta
       none: "(brak)"
       note_label: Notatki
       note_placeholder: Wprowadź notatkę
-      create_tag: Utwórz
       submit: Dodaj transakcję
       tag_search_placeholder: Wyszukaj lub utwórz tag
       tags_label: Tagi
       transfer: Przelew
-    new:
-      new_transaction: Nowa transakcja
-    show:
-      account_label: Konto
-      amount: Kwota
-      category_label: Kategoria
-      date_label: Data
-      delete: Usuń
-      delete_subtitle: To trwale usuwa transakcję, wpływa na historyczne salda i nie może zostać cofnięte.
-      delete_title: Usuń transakcję
-      details: Szczegóły
-      attachments: Załączniki
-      exclude: Wyklucz
-      exclude_description: Wykluczone transakcje zostaną usunięte z obliczeń budżetowych i raportów.
-      activity_type: Typ aktywności
-      activity_type_description: Typ aktywności inwestycyjnej (kupno, sprzedaż, dywidenda itp.). Wykrywany automatycznie lub ustawiany ręcznie.
-      one_time_title: Jednorazowe %{type}
-      one_time_description: Jednorazowe transakcje będą wykluczone z części obliczeń budżetowych i raportów, aby łatwiej było zobaczyć to, co naprawdę istotne.
-      convert_to_trade_title: Zamień na transakcję papieru wartościowego
-      convert_to_trade_description: Zamień tę transakcję na zlecenie kupna lub sprzedaży z danymi papieru wartościowego do śledzenia portfela.
-      convert_to_trade_button: Zamień na transakcję giełdową
-      pending_duplicate_merger_title: Duplikat zaksięgowanej transakcji?
-      pending_duplicate_merger_description: Ręcznie połącz tę oczekującą transakcję z jej zaksięgowaną wersją.
-      pending_duplicate_merger_button: Otwórz łączenie
-      merchant_label: Kontrahent
-      name_label: Nazwa
-      nature: Typ
-      none: "(brak)"
-      note_label: Notatki
-      note_placeholder: Wprowadź notatkę
-      overview: Przegląd
-      settings: Ustawienia
-      tags_label: Tagi
-      tab_transactions: Transakcje
-      tab_upcoming: Nadchodzące
-      uncategorized: "(bez kategorii)"
-    activity_labels:
-      buy: Kupno
-      sell: Sprzedaż
-      sweep_in: Transfer przychodzący
-      sweep_out: Transfer wychodzący
-      dividend: Dywidenda
-      reinvestment: Reinwestycja
-      interest: Odsetki
-      fee: Opłata
-      transfer: Przelew
-      contribution: Wpłata
-      withdrawal: Wypłata
-      exchange: Wymiana
-      other: Inne
-    mark_recurring: Oznacz jako cykliczną
-    mark_recurring_subtitle: Śledź to jako transakcję cykliczną. Różnica kwoty jest automatycznie obliczana na podstawie ostatnich 6 miesięcy podobnych transakcji.
-    mark_recurring_title: Transakcja cykliczna
-    potential_duplicate_title: Wykryto możliwy duplikat
-    potential_duplicate_description: Ta oczekująca transakcja może być tą samą transakcją co zaksięgowana transakcja poniżej. Jeśli tak, połącz je, aby uniknąć podwójnego liczenia.
-    merge_duplicate:
-      success: Pomyślnie połączono transakcje
-      failure: Nie udało się połączyć transakcji
-    keep_both: Nie, zachowaj obie
-    split_parent_row:
-      split_label: Podział
-    transaction:
-      pending: Oczekująca
-      pending_tooltip: Transakcja oczekująca — może się zmienić po zaksięgowaniu
-      linked_with_provider: Połączono z %{provider}
-      activity_type_tooltip: Typ aktywności inwestycyjnej
-      possible_duplicate: Duplikat?
-      potential_duplicate_tooltip: To może być duplikat innej transakcji
-      review_recommended: Sprawdź
-      review_recommended_tooltip: Duża różnica kwoty — zalecana weryfikacja, aby sprawdzić, czy to duplikat
-      split: Podział
-      split_tooltip: Ta transakcja została podzielona na wiele wpisów
-      split_child_tooltip: Część transakcji dzielonej
-    dismiss_duplicate:
-      success: Pozostawiono jako oddzielne transakcje
-      failure: Nie udało się odrzucić sugestii duplikatu
-    pending_duplicate_merge:
-      possible_duplicate: Duplikat?
-      possible_duplicate_short: Dupl.?
-      review_recommended: Sprawdź
-      review_recommended_short: Weryf.
-      confirm_title: Połącz z zaksięgowaną transakcją (%{posted_amount})
-      reject_title: Zachowaj jako oddzielne transakcje
-    summary:
-      total_transactions: Łącznie transakcji
-      income: Przychody
-      expenses: Wydatki
-      inflow: Wpływy
-      outflow: Wypływy
     header:
       edit_categories: Edytuj kategorie
       edit_imports: Edytuj importy
@@ -121,89 +189,95 @@ pl:
       edit_tags: Edytuj tagi
       import: Importuj
     index:
-      transaction: transakcja
-      transactions: transakcje
+      categorize_button:
+        few: Kategoryzuj (%{count})
+        many: Kategoryzuj (%{count})
+        one: Kategoryzuj (1)
+        other: Kategoryzuj (%{count})
+      edit_categories: Edytuj kategorie
+      edit_imports: Edytuj importy
+      edit_merchants: Edytuj kontrahentów
+      edit_rules: Edytuj reguły
+      edit_tags: Edytuj tagi
       import: Importuj
-    list:
-      drag_drop_title: Upuść plik CSV, aby zaimportować
-      drag_drop_subtitle: Prześlij transakcje bezpośrednio
+      new_rule: Nowa reguła
+      new_transaction: Nowa transakcja
+      title: Transakcje
       transaction: transakcja
       transactions: transakcje
-    toggle_recurring_section: Przełącz nadchodzące transakcje cykliczne
+    keep_both: Nie, zachowaj obie
+    list:
+      drag_drop_subtitle: Prześlij transakcje bezpośrednio
+      drag_drop_title: Upuść plik CSV, aby zaimportować
+      transaction: transakcja
+      transactions: transakcje
+    mark_recurring: Oznacz jako cykliczną
+    mark_recurring_subtitle: Śledź to jako transakcję cykliczną. Różnica kwoty jest
+      automatycznie obliczana na podstawie ostatnich 6 miesięcy podobnych transakcji.
+    mark_recurring_title: Transakcja cykliczna
+    merge_duplicate:
+      failure: Nie udało się połączyć transakcji
+      success: Pomyślnie połączono transakcje
+    new:
+      new_transaction: Nowa transakcja
+    pending_duplicate_merge:
+      confirm_title: Połącz z zaksięgowaną transakcją (%{posted_amount})
+      possible_duplicate: Duplikat?
+      possible_duplicate_short: Dupl.?
+      reject_title: Zachowaj jako oddzielne transakcje
+      review_recommended: Sprawdź
+      review_recommended_short: Weryf.
+    potential_duplicate_description: Ta oczekująca transakcja może być tą samą transakcją
+      co zaksięgowana transakcja poniżej. Jeśli tak, połącz je, aby uniknąć podwójnego
+      liczenia.
+    potential_duplicate_title: Wykryto możliwy duplikat
     search:
       filters:
         account: Konto
-        date: Data
-        type: Typ
-        status: Status
         amount: Kwota
         category: Kategoria
-        tag: Tag
+        date: Data
         merchant: Kontrahent
-    convert_to_trade:
-      title: Zamień na transakcję papieru wartościowego
-      description: Zamień tę transakcję na transakcję giełdową z danymi papieru wartościowego
-      date_label: 'Data:'
-      account_label: 'Konto:'
-      amount_label: 'Kwota:'
-      security_label: Papier wartościowy
-      security_prompt: Wybierz papier wartościowy...
-      security_custom: "+ Wprowadź własny ticker"
-      security_not_listed_hint: Nie widzisz swojego papieru? Wybierz na dole listy opcję „Wprowadź własny ticker”.
-      ticker_placeholder: AAPL
-      ticker_hint: Wprowadź symbol giełdowy akcji lub ETF-u, np. AAPL lub MSFT
-      ticker_search_placeholder: Szukaj tickera...
-      ticker_search_hint: Szukaj po symbolu, nazwie spółki lub wpisz własny ticker
-      price_mismatch_title: Cena może się nie zgadzać
-      price_mismatch_message: Twoja cena (%{entered_price}/akcję) znacznie różni się od bieżącej ceny rynkowej %{ticker} (%{market_price}). Jeśli to wygląda nieprawidłowo, mogłeś wybrać zły papier wartościowy — spróbuj użyć opcji „Wprowadź własny ticker”, aby wskazać poprawny.
-      quantity_label: Ilość (akcji)
-      quantity_placeholder: np. 20
-      quantity_hint: Liczba akcji objętych transakcją
-      price_label: Cena za akcję
-      price_placeholder: np. 52.15
-      price_hint: Cena za akcję (%{currency})
-      qty_or_price_hint: Wprowadź przynajmniej ilość albo cenę. Druga wartość zostanie obliczona z kwoty transakcji (%{amount}).
-      trade_type_label: Typ transakcji giełdowej
-      trade_type_hint: Kupno lub sprzedaż akcji papieru wartościowego
-      exchange_label: Giełda (opcjonalne)
-      exchange_placeholder: XNAS
-      exchange_hint: Pozostaw puste, aby wykryć automatycznie
-      cancel: Anuluj
-      submit: Zamień na transakcję giełdową
-      success: Transakcja została zamieniona na transakcję giełdową
-      conversion_note: 'Przekształcono z transakcji: %{original_name} (%{original_date})'
-      errors:
-        not_investment_account: Tylko transakcje na kontach inwestycyjnych można zamieniać na transakcje giełdowe
-        already_converted: Ta transakcja została już przekształcona albo wykluczona
-        enter_ticker: Wprowadź symbol tickera
-        security_not_found: Wybrany papier wartościowy już nie istnieje. Wybierz inny.
-        select_security: Wybierz albo wpisz papier wartościowy
-        enter_qty_or_price: Wprowadź ilość albo cenę za akcję. Druga wartość zostanie obliczona z kwoty transakcji.
-        invalid_qty_or_price: Nieprawidłowa ilość lub cena. Wprowadź poprawne dodatnie wartości.
-        conversion_failed: 'Nie udało się przekształcić transakcji: %{error}'
-        unexpected_error: 'Wystąpił nieoczekiwany błąd podczas przekształcania: %{error}'
+        status: Status
+        tag: Tag
+        type: Typ
     searches:
       filters:
+        account_filter:
+          filter_accounts: Filtruj konta
         amount_filter:
           equal_to: Równe
           greater_than: Większe niż
           less_than: Mniejsze niż
           placeholder: '0'
         badge:
+          confirmed: Potwierdzone
           expense: Wydatek
           income: Przychód
           on_or_after: od %{date}
           on_or_before: do %{date}
+          pending: Oczekujące
           transfer: Przelew
+        category_filter:
+          filter_category: Filtruj kategorię
+        date_filter:
+          end_date: Data końcowa
+          start_date: Data początkowa
+        merchant_filter:
+          filter_merchants: Filtruj kontrahentów
+        status_filter:
           confirmed: Potwierdzone
           pending: Oczekujące
+        tag_filter:
+          filter_tags: Filtruj tagi
         type_filter:
           expense: Wydatek
           income: Przychód
           transfer: Przelew
-        status_filter:
-          confirmed: Potwierdzone
-          pending: Oczekujące
+      form:
+        filter: Filtr
+        search_placeholder: Szukaj transakcji ...
+        toggle_selection_checkboxes: Przełącz wszystkie pola wyboru
       menu:
         account_filter: Konto
         amount_filter: Kwota
@@ -220,25 +294,105 @@ pl:
         equal_to: równe
         greater_than: większe niż
         less_than: mniejsze niż
-      form:
-        toggle_selection_checkboxes: Przełącz wszystkie pola wyboru
-    attachments:
-      cannot_exceed: Nie można przekroczyć %{count} załączników na transakcję
-      uploaded_one: Załącznik został pomyślnie przesłany
-      uploaded_many: "Pomyślnie przesłano %{count} załączników"
-      failed_upload: 'Nie udało się przesłać załącznika: %{error}'
-      no_files_selected: Nie wybrano plików do przesłania
-      attachment_deleted: Załącznik został pomyślnie usunięty
-      failed_delete: 'Nie udało się usunąć załącznika: %{error}'
-      upload_failed: Nie udało się przesłać załącznika. Spróbuj ponownie lub skontaktuj się ze wsparciem.
-      delete_failed: Nie udało się usunąć załącznika. Spróbuj ponownie lub skontaktuj się ze wsparciem.
-      upload: Prześlij
-      no_attachments: Brak załączników
-      select_up_to: Wybierz maksymalnie %{count} plików (obrazy lub PDF, maks. %{size} MB każdy) • wykorzystano %{used} z %{count}
-      files:
-        one: Plik (1)
-        few: Pliki (%{count})
-        many: Plików (%{count})
-        other: Plików (%{count})
-      browse_to_add: Przeglądaj, aby dodać pliki
-      max_reached: Osiągnięto maksymalny limit plików (%{count}/%{max}). Usuń istniejący plik, aby przesłać kolejny.
+    selection_bar:
+      duplicate: Duplikat
+      edit: Edytuj
+      selected: zaznaczone
+    show:
+      account_label: Konto
+      activity_type: Typ aktywności
+      activity_type_description: Typ aktywności inwestycyjnej (kupno, sprzedaż, dywidenda
+        itp.). Wykrywany automatycznie lub ustawiany ręcznie.
+      additional_details: Dodatkowe szczegóły
+      amount: Kwota
+      applied_to_detail: "%{amount} na poczet rachunku z terminem %{date}"
+      applied_to_title: Rachunki opłacone tą transakcją
+      applied_to_unreviewed: Wymaga weryfikacji
+      attachments: Załączniki
+      category_label: Kategoria
+      convert: Konwertuj
+      convert_to_trade_button: Zamień na transakcję giełdową
+      convert_to_trade_description: Zamień tę transakcję na zlecenie kupna lub sprzedaży
+        z danymi papieru wartościowego do śledzenia portfela.
+      convert_to_trade_title: Zamień na transakcję papieru wartościowego
+      create_bill: Utwórz rachunek
+      date_label: Data
+      delete: Usuń
+      delete_subtitle: To trwale usuwa transakcję, wpływa na historyczne salda i nie
+        może zostać cofnięte.
+      delete_title: Usuń transakcję
+      description: Opis
+      details: Szczegóły
+      exclude: Wyklucz
+      exclude_description: Wykluczone transakcje zostaną usunięte z obliczeń budżetowych
+        i raportów.
+      keep_both: Nie, zachowaj obie
+      loan_payment: Spłata pożyczki
+      mark_recurring: Oznacz jako cykliczną
+      mark_recurring_subtitle: Śledź to jako transakcję cykliczną. Odchylenie kwoty
+        jest obliczane automatycznie na podstawie ostatnich 6 miesięcy podobnych transakcji.
+      mark_recurring_title: Transakcja cykliczna
+      memo: Adnotacja
+      merchant_label: Kontrahent
+      merge_duplicate: Tak, scal je
+      name_label: Nazwa
+      nature: Typ
+      none: "(brak)"
+      note_label: Notatki
+      note_placeholder: Wprowadź notatkę
+      one_time_description: Jednorazowe transakcje będą wykluczone z części obliczeń
+        budżetowych i raportów, aby łatwiej było zobaczyć to, co naprawdę istotne.
+      one_time_title: Jednorazowe %{type}
+      open_matcher: Otwórz dopasowywanie
+      overview: Przegląd
+      payee: Odbiorca
+      pending_duplicate_merger_button: Otwórz łączenie
+      pending_duplicate_merger_description: Ręcznie połącz tę oczekującą transakcję
+        z jej zaksięgowaną wersją.
+      pending_duplicate_merger_title: Duplikat zaksięgowanej transakcji?
+      potential_duplicate_description: Ta oczekująca transakcja może być tą samą co
+        zaksięgowana transakcja poniżej. Jeśli tak, scal je, aby uniknąć podwójnego
+        liczenia.
+      potential_duplicate_title: Wykryto możliwy duplikat
+      provider_extras: Dodatkowe dane dostawcy
+      settings: Ustawienia
+      tab_transactions: Transakcje
+      tab_upcoming: Nadchodzące
+      tags_label: Tagi
+      transfer: Przelew
+      transfer_matcher_description: Połącz tę transakcję z jej odpowiednikiem na innym
+        koncie.
+      transfer_or_debt_payment: Przelew czy spłata zadłużenia?
+      uncategorized: "(bez kategorii)"
+    split_parent_row:
+      split_label: Podział
+    summary:
+      expenses: Wydatki
+      income: Przychody
+      inflow: Wpływy
+      outflow: Wypływy
+      total_transactions: Łącznie transakcji
+    toggle_recurring_section: Przełącz nadchodzące transakcje cykliczne
+    transaction:
+      activity_type_tooltip: Typ aktywności inwestycyjnej
+      linked_with_provider: Połączono z %{provider}
+      pending: Oczekująca
+      pending_tooltip: Transakcja oczekująca — może się zmienić po zaksięgowaniu
+      possible_duplicate: Duplikat?
+      potential_duplicate_tooltip: To może być duplikat innej transakcji
+      review_recommended: Sprawdź
+      review_recommended_tooltip: Duża różnica kwoty — zalecana weryfikacja, aby sprawdzić,
+        czy to duplikat
+      split: Podział
+      split_child_tooltip: Część transakcji dzielonej
+      split_tooltip: Ta transakcja została podzielona na wiele wpisów
+    transfer_match:
+      auto_matched: Dopasowano automatycznie
+      auto_matched_short: A/D
+      confirm_match: Potwierdź dopasowanie
+      payment_confirmed: Płatność potwierdzona
+      reject_match: Odrzuć dopasowanie
+      transfer_confirmed: Przelew potwierdzony
+    unknown_name: Nieznana transakcja
+    update:
+      updated: Transakcja zaktualizowana

@@ -3,6 +3,8 @@ hu:
   transfer_matches:
     create:
       success: Átutalás létrehozva
+    dismiss_suggestion:
+      success: "Javaslat elvetve"
     new:
       header:
         title: Átutalás vagy fizetés párosítása
@@ -15,6 +17,8 @@ hu:
       inflow_transaction: Beáramlási tranzakció
       create_transfer_match: Átutalás-egyezés létrehozása
     matching_fields:
+      dismiss_suggestion: "Nem egyezik"
+      suggested_account_html: "A fizetés IBAN-ja egyezik a(z) <strong>%{name}</strong> számláddal – lent előre kiválasztottuk."
       select_method: Válassz módszert a tranzakciók párosításához.
       match_existing_recommended: Meglévő tranzakció párosítása (ajánlott)
       create_new_transaction: Új tranzakció létrehozása

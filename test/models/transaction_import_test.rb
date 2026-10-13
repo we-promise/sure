@@ -230,6 +230,48 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal @import.id, existing_entry.reload.import_id
   end
 
+  test "takes over a fabricated transfer counterpart instead of duplicating it" do
+    loan = accounts(:loan)
+    loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = accounts(:depository).entries.create!(
+      date: Date.new(2024, 1, 1), amount: 500, currency: "USD", name: "Loan payment",
+      entryable: Transaction.new(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    )
+    loan.family.auto_create_missing_transfer_counterparts!
+    transfer = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id)
+    fabricated_entry = transfer.inflow_transaction.entry
+
+    # The bank's own description differs from the fabricated name.
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Incoming payment,-500
+    CSV
+
+    @import.update!(
+      account: loan,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_no_difference [ "Entry.count", "Transaction.count", "Transfer.count" ] do
+      @import.publish
+    end
+
+    fabricated_entry.reload
+    assert_equal "Incoming payment", fabricated_entry.name
+    assert_equal @import.id, fabricated_entry.import_id
+    assert_nil fabricated_entry.transaction.extra["auto_generated_transfer_counterpart"]
+    assert_equal fabricated_entry.entryable_id, transfer.reload.inflow_transaction_id
+    assert_equal 1, loan.entries.where(date: Date.new(2024, 1, 1), amount: -500).count
+  end
+
   test "creates new transaction when name differs even if date and amount match" do
     account = accounts(:depository)
 

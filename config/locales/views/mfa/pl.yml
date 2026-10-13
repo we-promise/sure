@@ -5,7 +5,8 @@ pl:
       backup_codes_description: Każdy kod można użyć tylko raz. Przechowuj je bezpiecznie.
       backup_codes_title: Twoje kody zapasowe
       continue: Przejdź do ustawień bezpieczeństwa
-      description: Przechowuj te kody zapasowe w bezpiecznym miejscu — będą potrzebne, jeśli utracisz dostęp do aplikacji uwierzytelniającej
+      description: Przechowuj te kody zapasowe w bezpiecznym miejscu — będą potrzebne,
+        jeśli utracisz dostęp do aplikacji uwierzytelniającej
       page_title: Kody zapasowe
       title: Zapisz swoje kody zapasowe
     create:
@@ -17,9 +18,11 @@ pl:
       code_placeholder: Wpisz 6-cyfrowy kod
       description: Zwiększ bezpieczeństwo konta, konfigurując uwierzytelnianie dwuskładnikowe
       page_title: Konfiguracja uwierzytelniania dwuskładnikowego
-      scan_description: Użyj aplikacji uwierzytelniającej, np. Google Authenticator lub 1Password, aby zeskanować ten kod QR
+      scan_description: Użyj aplikacji uwierzytelniającej, np. Google Authenticator
+        lub 1Password, aby zeskanować ten kod QR
       scan_title: 1. Zeskanuj kod QR
-      secret_description: Jeśli nie możesz zeskanować kodu QR, wpisz ręcznie ten klucz tajny w aplikacji uwierzytelniającej
+      secret_description: Jeśli nie możesz zeskanować kodu QR, wpisz ręcznie ten klucz
+        tajny w aplikacji uwierzytelniającej
       secret_title: Kod do ręcznego wpisania
       title: Skonfiguruj uwierzytelnianie dwuskładnikowe
       verify_button: Zweryfikuj i włącz 2FA
@@ -27,8 +30,18 @@ pl:
       verify_title: 2. Wprowadź kod weryfikacyjny
     verify:
       description: Wpisz kod z aplikacji uwierzytelniającej, aby kontynuować
+      or: lub
       page_title: Zweryfikuj uwierzytelnianie dwuskładnikowe
       title: Uwierzytelnianie dwuskładnikowe
       verify_button: Zweryfikuj
+      webauthn_button: Użyj klucza dostępu lub klucza bezpieczeństwa
+      webauthn_unsupported: Ta przeglądarka nie obsługuje kluczy dostępu ani kluczy
+        bezpieczeństwa.
     verify_code:
       invalid_code: Nieprawidłowy kod uwierzytelniający. Spróbuj ponownie.
+    verify_webauthn:
+      invalid_credential: Nie udało się zweryfikować tego klucza dostępu lub klucza
+        bezpieczeństwa. Spróbuj ponownie.
+    webauthn_options:
+      unavailable: Brak dostępnych kluczy dostępu lub kluczy bezpieczeństwa dla tego
+        konta.
