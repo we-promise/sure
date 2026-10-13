@@ -54,7 +54,7 @@ class RetirementPlan::SimulationTest < ActiveSupport::TestCase
     assert_equal [ 0, 15_000 ], sim.rows.first(2).map(&:contribution)
   end
 
-  test "a one-off amount comes out in its year only, before or after retirement" do
+  test "a one-off amount comes out in its year only, before retirement" do
     sim = simulation(retirement_year: AS_OF.year + 5,
                      streams: [ Stream.new(kind: "one_off", annual_amount: 25_000, start_year: AS_OF.year + 1) ])
 
@@ -138,9 +138,11 @@ class RetirementPlan::SimulationTest < ActiveSupport::TestCase
   end
 
   test "nothing in the engine reads the clock, the database or the current request" do
-    source = Rails.root.glob("app/models/retirement_plan/{simulation,solver}.rb").map(&:read).join
+    # Comments are left out, so a note about the contract cannot trip it.
+    code = Rails.root.glob("app/models/retirement_plan/{simulation,solver}.rb")
+                .flat_map { |path| path.readlines.map { |line| line.sub(/#.*/, "") } }.join
 
-    assert_no_match(/Date\.(current|today)|Time\.(current|now|zone)|Current\.|ActiveRecord|\.where\(|\.find/, source)
+    assert_no_match(/Date\.(current|today)|Time\.(current|now|zone)|DateTime\.(current|now)|Current\.|ActiveRecord|\.where\(|\.find/, code)
   end
 
   private
