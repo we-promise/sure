@@ -100,9 +100,11 @@ class HoldingTest < ActiveSupport::TestCase
     assert_nil @amzn.avg_cost
   end
 
+  # `exchange_rates` no longer stores a 0, but a rate written to the trade's
+  # `extra` directly still can, and the cost must not trust it either.
   test "a foreign purchase whose stored rate cannot convert makes the average cost unknown" do
-    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 0)
-    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+    entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+    entry.entryable.update_column(:extra, (entry.entryable.extra || {}).merge("exchange_rate" => 0))
 
     assert_nil @amzn.avg_cost
   end
