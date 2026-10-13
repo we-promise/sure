@@ -8,7 +8,7 @@
 # One insight per account, naming the earliest position that went negative.
 # The dedup key carries no month: missing data does not fix itself over time,
 # so an acknowledged warning stays quiet until its numbers change (another
-# position goes negative, or the lowest quantity moves).
+# position goes negative, its first date or the lowest quantity moves).
 class Insight::Generators::NegativePositionGenerator < Insight::Generator
   produces "negative_position"
 
@@ -37,6 +37,7 @@ class Insight::Generators::NegativePositionGenerator < Insight::Generator
         },
         metadata: {
           account_id: account.id,
+          first_date: first.first_date.iso8601,
           security_ids: positions.map { |position| position.security.id },
           lowest_qty: positions.map { |position| round(position.lowest_qty, 8) }
         },
@@ -51,7 +52,8 @@ class Insight::Generators::NegativePositionGenerator < Insight::Generator
     # so the pick stays stable between nightly runs.
     def affected_accounts
       family.accounts.visible.accessible_by_all_active_members
-        .where(id: Holding.where(account_provider_id: nil).where("qty < 0").select(:account_id))
+        .where(id: Holding.joins(:security).merge(Security.standard)
+          .where(account_provider_id: nil).where("holdings.qty < 0").select(:account_id))
         .order(:name, :id)
     end
 

@@ -1,8 +1,8 @@
 # Stops a sale from taking a position below zero.
 #
 # A sale on day D removes units from D onward, so it is allowed only if the
-# position without it covers the sale on every day from D through today (a
-# split after D scales both sides). That way a back-dated sale cannot push a
+# position without it covers the sale on every day from D through today, or
+# through the last future-dated trade (a split after D scales both sides). That way a back-dated sale cannot push a
 # later day below zero either. The position comes from the calculator the
 # account sync uses, so splits count the way they do on the holdings tab.
 #
@@ -26,13 +26,25 @@ class Trade::SaleLimit
     end
   end
 
+  # Same as save, but raises ActiveRecord::RecordInvalid, for callers that
+  # update several entries in one transaction (bulk edit). Only a sale takes
+  # the lock, so bulk edits of ordinary transactions stay lock-free.
+  def self.save!(entry)
+    entry.account.transaction do
+      limit = new(entry)
+      entry.account.lock! if limit.checks?
+      raise ActiveRecord::RecordInvalid, entry unless limit.validate
+      entry.save!
+    end
+  end
+
   def initialize(entry)
     @entry = entry
   end
 
   # Adds an error to the entry and returns false when the sale is too large.
   def validate
-    return true unless applies?
+    return true unless checks?
     return true if sold_qty <= available_qty
 
     entry.errors.add(:base, error_message)
@@ -42,6 +54,16 @@ class Trade::SaleLimit
   # The most this sale may remove, in units on the sale date. Never below zero.
   def available_qty
     @available_qty ||= [ limiting_day.last, 0 ].max
+  end
+
+  # Whether this entry is a sale (or worsens one) that the limit applies to.
+  def checks?
+    return false unless trade.is_a?(Trade) && security.present? && account.present? && entry.date.present?
+    return false unless trade.qty.to_d.negative?
+    return false if security.cash?
+    return false if account.linked?
+
+    entry.new_record? || worsens_existing_sale?
   end
 
   private
@@ -61,15 +83,6 @@ class Trade::SaleLimit
       trade.qty.to_d.abs
     end
 
-    def applies?
-      return false unless trade.is_a?(Trade) && security.present? && account.present? && entry.date.present?
-      return false unless trade.qty.to_d.negative?
-      return false if security.cash?
-      return false if account.linked?
-
-      entry.new_record? || worsens_existing_sale?
-    end
-
     # An edit that only makes an existing sale smaller cannot take the position
     # lower than it already was, so it is not checked. That keeps old data,
     # which may already be oversold, editable (notes, price, a smaller qty).
@@ -80,19 +93,39 @@ class Trade::SaleLimit
       entry.date_changed? || trade.security_id_changed? || sold_qty > previous_qty.abs
     end
 
-    # [date, units on the sale date] for the day that leaves the least room.
-    # A later day's position is divided by the splits since the sale date, so
-    # it is compared in the same units as the sale. Days before the first
-    # holding count as zero.
+    # [date, units on the sale date] for the day that leaves the least room,
+    # from the sale date on. A later day's position is divided by the splits
+    # since the sale date, so it is compared in the same units as the sale.
+    # Days before the first holding count as zero. Holdings stop at today, so
+    # days after it add the account's other future-dated trades to today's
+    # position: two sales dated tomorrow cannot both count the same units.
     def limiting_day
       @limiting_day ||= begin
-        from = [ entry.date, Date.current ].min
+        today = Date.current
+        last_day = [ entry.date, today, future_changes.keys.max ].compact.max
         factor = Rational(1)
 
-        from.upto(Date.current).map do |date|
-          factor *= split_ratios[date] if date > from && split_ratios.key?(date)
-          [ date, quantities.fetch(date, 0) / factor ]
+        entry.date.upto(last_day).map do |date|
+          factor *= split_ratios[date] if date > entry.date && split_ratios.key?(date)
+          [ date, quantity_on(date) / factor ]
         end.min_by(&:last)
+      end
+    end
+
+    def quantity_on(date)
+      return quantities.fetch(date, 0) if date <= Date.current
+
+      quantities.fetch(Date.current, 0) + future_changes.sum { |day, qty| day <= date ? qty : 0 }
+    end
+
+    # Net units of this security that other trades dated after today add or remove, by day.
+    def future_changes
+      @future_changes ||= begin
+        scope = account.entries.where(entryable_type: "Trade").where(date: Date.current.next_day..)
+        scope = scope.where.not(id: entry.id) if entry.persisted?
+        Trade.where(id: scope.select(:entryable_id), security_id: security.id)
+          .joins(:entry).group("entries.date").sum(:qty)
+          .transform_values(&:to_d)
       end
     end
 

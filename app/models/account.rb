@@ -752,9 +752,12 @@ class Account < ApplicationRecord
   # Securities whose calculated position dropped below zero on some day. A
   # sale entered by hand cannot do that, but an import, a provider sync or
   # deleting a purchase can, and the holdings tab says so instead of hiding it.
-  # Rows a provider reports are left out: a broker's own negative quantity is a
-  # short position, not missing data.
+  # Linked accounts are left out entirely: their provider's holdings are the
+  # truth, so a negative quantity there (reported, or carried back by the
+  # reverse calculator) is a short position, not missing data.
   def negative_positions
+    return [] if linked?
+
     rows = holdings
       .joins(:security)
       .merge(Security.standard)

@@ -120,6 +120,35 @@ class Trade::SaleLimitTest < ActiveSupport::TestCase
     assert_not Trade::SaleLimit.new(build_sale(qty: 3, date: 7.days.ago.to_date)).validate
   end
 
+  test "two future-dated sales cannot count the same units" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    create_trade(@security, account: @account, qty: -10, date: 1.day.from_now.to_date, price: 100)
+
+    assert_not Trade::SaleLimit.new(build_sale(qty: 10, date: 2.days.from_now.to_date)).validate
+    # Today's sale is limited by tomorrow's: only what tomorrow leaves over may go.
+    assert_not Trade::SaleLimit.new(build_sale(qty: 1, date: Date.current)).validate
+  end
+
+  test "a future-dated purchase covers a sale dated after it" do
+    create_trade(@security, account: @account, qty: 4, date: 2.days.from_now.to_date, price: 100)
+
+    assert Trade::SaleLimit.new(build_sale(qty: 4, date: 3.days.from_now.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: 4, date: 1.day.from_now.to_date)).validate
+  end
+
+  test "save! locks the account for a sale and raises when refused" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    @account.expects(:lock!).once
+
+    assert_raises(ActiveRecord::RecordInvalid) { Trade::SaleLimit.save!(build_sale(qty: 11, date: Date.current)) }
+  end
+
+  test "save! takes no lock for an entry the limit does not apply to" do
+    @account.expects(:lock!).never
+
+    Trade::SaleLimit.save!(create_trade(@security, account: @account, qty: 3, date: 2.days.ago.to_date, price: 100).tap { |e| e.notes = "x" })
+  end
+
   test "linked accounts never refuse a sale, because the provider's holdings stay the truth" do
     # A sale recorded on a linked account only raises the days before it, so it
     # cannot take any day below zero, even when the provider already shows 0.

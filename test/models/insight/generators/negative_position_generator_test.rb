@@ -22,6 +22,7 @@ class Insight::Generators::NegativePositionGeneratorTest < ActiveSupport::TestCa
     assert_equal "−3", insight.facts[:qty]
     assert_equal @account.id, insight.metadata[:account_id]
     assert_equal [ securities(:msft).id ], insight.metadata[:security_ids]
+    assert_equal 3.days.ago.to_date.iso8601, insight.metadata[:first_date]
     assert_equal "negative_position:#{@account.id}", insight.dedup_key
   end
 
@@ -46,6 +47,15 @@ class Insight::Generators::NegativePositionGeneratorTest < ActiveSupport::TestCa
     @account.account_shares.destroy_all
 
     assert_not @family.insights.visible.exists?(insight_type: "negative_position")
+  end
+
+  # The provider's holdings are the truth there; the reverse calculator can
+  # carry a broker's short position back into rows without a provider id.
+  test "ignores linked accounts" do
+    oversell_msft
+    Account.any_instance.stubs(:linked?).returns(true)
+
+    assert_empty generate
   end
 
   # A broker's own negative quantity is a short position, not missing data.
