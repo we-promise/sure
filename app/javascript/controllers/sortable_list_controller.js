@@ -1,11 +1,20 @@
 import { Controller } from "@hotwired/stimulus";
 
+// Reorderable list with mouse, touch (hold on the handle) and keyboard
+// (Enter/Space to grab, arrow keys to move, release to save). Each item needs
+// data-sortable-list-target="item" and data-sortable-list-id. On every change
+// the ids are sent as JSON to urlValue, nested under paramValue
+// ("a.b" sends { a: { b: [...] } }).
 export default class extends Controller {
-  static targets = ["section", "handle"];
+  static targets = ["item", "handle"];
 
-  // Hold delay to require deliberate press-and-hold before activating drag mode
+  // Hold delay to require deliberate press-and-hold before activating drag mode.
+  // Lists whose whole item reacts to touch (not just a small grip) should raise
+  // it so a normal scroll does not start a drag.
   static values = {
-    holdDelay: { type: Number, default: 800 },
+    url: String,
+    param: String,
+    holdDelay: { type: Number, default: 150 },
   };
 
   connect() {
@@ -80,9 +89,9 @@ export default class extends Controller {
   // (finger moves before the hold delay elapses) cancels it.
 
   touchStart(event) {
-    // Find the parent section element from the handle
+    // Find the parent item element from the handle
     const section = event.currentTarget.closest(
-      "[data-reports-sortable-target='section']",
+      "[data-sortable-list-target='item']",
     );
     if (!section) return;
 
@@ -218,8 +227,14 @@ export default class extends Controller {
   }
 
   // ===== Keyboard Navigation =====
+  // Bound either on the item itself or on a handle inside it. Focus returns
+  // to the bound element after each move.
   handleKeyDown(event) {
-    const currentSection = event.currentTarget;
+    const currentSection = event.currentTarget.closest(
+      "[data-sortable-list-target='item']",
+    );
+    if (!currentSection) return;
+    this.keyboardFocusElement = event.currentTarget;
 
     switch (event.key) {
       case "ArrowUp":
@@ -288,23 +303,23 @@ export default class extends Controller {
 
   moveUp(section) {
     const previousSibling = section.previousElementSibling;
-    if (previousSibling?.hasAttribute("data-section-key")) {
+    if (previousSibling && this.itemTargets.includes(previousSibling)) {
       this.element.insertBefore(section, previousSibling);
-      section.focus();
+      this.keyboardFocusElement?.focus();
     }
   }
 
   moveDown(section) {
     const nextSibling = section.nextElementSibling;
-    if (nextSibling?.hasAttribute("data-section-key")) {
+    if (nextSibling && this.itemTargets.includes(nextSibling)) {
       this.element.insertBefore(nextSibling, section);
-      section.focus();
+      this.keyboardFocusElement?.focus();
     }
   }
 
   getDragAfterElement(y) {
     const draggableElements = [
-      ...this.sectionTargets.filter((section) => section !== this.draggedElement),
+      ...this.itemTargets.filter((section) => section !== this.draggedElement),
     ];
 
     return draggableElements.reduce(
@@ -332,7 +347,7 @@ export default class extends Controller {
   }
 
   clearPlaceholders() {
-    this.sectionTargets.forEach((section) => {
+    this.itemTargets.forEach((section) => {
       section.classList.remove(
         "border-t-4",
         "border-b-4",
@@ -343,43 +358,66 @@ export default class extends Controller {
     });
   }
 
-  async saveOrder() {
-    const order = this.sectionTargets.map(
-      (section) => section.dataset.sectionKey,
-    );
+  buildBody(order) {
+    return this.paramValue
+      .split(".")
+      .reduceRight((value, key) => ({ [key]: value }), order);
+  }
 
-    // Safely obtain CSRF token
-    const csrfToken = document.querySelector('meta[name="csrf-token"]');
-    if (!csrfToken) {
-      console.error(
-        "[Reports Sortable] CSRF token not found. Cannot save section order.",
-      );
-      return;
+  // Saves run one at a time. A change made while a save is in flight is sent
+  // once it finishes, with the latest order only, so an older request can
+  // never land after a newer one and restore an earlier order.
+  saveOrder() {
+    this.pendingOrder = this.itemTargets.map(
+      (item) => item.dataset.sortableListId,
+    );
+    if (!this.saving) this.flushSaves();
+  }
+
+  async flushSaves() {
+    this.saving = true;
+    while (this.pendingOrder) {
+      const order = this.pendingOrder;
+      this.pendingOrder = null;
+      await this.sendOrder(order);
     }
+    this.saving = false;
+  }
+
+  async sendOrder(order) {
+    // The meta tag is missing when forgery protection is off (e.g. in tests);
+    // the server still rejects requests without a valid token when it is on.
+    const csrfToken = document.querySelector(
+      'meta[name="csrf-token"]',
+    )?.content;
+    const headers = { "Content-Type": "application/json" };
+    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
 
     try {
-      const response = await fetch("/reports/update_preferences", {
+      const response = await fetch(this.urlValue, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken.content,
-        },
-        body: JSON.stringify({ preferences: { reports_section_order: order } }),
+        headers,
+        body: JSON.stringify(this.buildBody(order)),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error(
-          "[Reports Sortable] Failed to save section order:",
+          "[Sortable List] Failed to save order:",
           response.status,
           errorData,
         );
+        // Show the order that is actually saved instead of the unsaved one,
+        // e.g. when the list changed in another tab.
+        this.pendingOrder = null;
+        Turbo.visit(window.location.href, { action: "replace" });
       }
     } catch (error) {
-      console.error(
-        "[Reports Sortable] Network error saving section order:",
-        error,
-      );
+      console.error("[Sortable List] Network error saving order:", error);
+      // A newer order still gets sent; otherwise show what is actually saved.
+      if (!this.pendingOrder) {
+        Turbo.visit(window.location.href, { action: "replace" });
+      }
     }
   }
 }

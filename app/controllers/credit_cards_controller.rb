@@ -21,6 +21,7 @@ class CreditCardsController < ApplicationController
       update_enable_banking_settings
       update_lunchflow_settings
       update_simplefin_settings
+      update_sophtron_settings
     end
   end
 
@@ -74,6 +75,34 @@ class CreditCardsController < ApplicationController
         attribute: :balance_sign_override,
         value: override
       ) { |provider_account| provider_account.simplefin_item.sync_later }
+    end
+
+    def update_sophtron_settings
+      sophtron_params = params.permit(account: { sophtron: [ :balance_sign_override ] })
+        .dig(:account, :sophtron)
+      return if sophtron_params.blank?
+
+      override = sophtron_params[:balance_sign_override]
+      override = nil unless override.in?(%w[credit debt])
+
+      provider_account = @account.provider_account_for("SophtronAccount")
+      return unless provider_account.present?
+
+      provider_account.apply_balance_sign_override!(override)
+    rescue StandardError => e
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to apply Sophtron balance sign override",
+        source: "CreditCardsController#update_sophtron_settings",
+        provider_key: "sophtron",
+        family: Current.family,
+        account: @account,
+        account_provider: provider_account&.account_provider,
+        metadata: { error_class: e.class.name, error_message: e.message, balance_sign_override: override }
+      )
+      flash.delete(:notice)
+      flash[:alert] = t("credit_cards.update.sophtron_balance_sign_error")
     end
 
     def update_provider_setting(provider_type:, attribute:, value:)
