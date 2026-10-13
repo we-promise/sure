@@ -170,8 +170,10 @@ module Family::AutoTransferMatchable
   # Restricted to manual (unsynced) destination accounts only: a linked
   # account's real transaction may simply not have posted yet, and
   # fabricating a stand-in entry for it here would risk a duplicate once the
-  # provider's own import brings in the real one. A manual account has no
-  # such pending import to collide with.
+  # provider's own import brings in the real one. A manual account gets no
+  # provider import; when the user later imports the real row from a CSV
+  # file, TransactionImport recognises the fabricated entry by account, date,
+  # amount and currency and lets the imported row take it over.
   #
   # Currency is intentionally not converted -- only a same-currency
   # destination account is eligible, keeping the fabricated entry's amount

@@ -41,8 +41,23 @@ class TransactionImport < Import
           name: row.name,
           exclude_entry_ids: claimed_entry_ids
         )
+        duplicate_entry ||= find_fabricated_transfer_counterpart(
+          account: mapped_account,
+          date: row.date_iso,
+          amount: row.signed_amount,
+          currency: effective_currency,
+          exclude_entry_ids: claimed_entry_ids
+        )
 
         if duplicate_entry
+          # The real bank row for a fabricated transfer counterpart takes it
+          # over: the entry keeps its transfer link, but carries the imported
+          # data from now on and is no longer treated as fabricated.
+          if fabricated_transfer_counterpart?(duplicate_entry)
+            duplicate_entry.name = row.name if row.name.present?
+            duplicate_entry.transaction.extra = duplicate_entry.transaction.extra.except("auto_generated_transfer_counterpart")
+          end
+
           # Update existing transaction instead of creating a new one
           duplicate_entry.transaction.category = category if category.present?
           duplicate_entry.transaction.tags = tags if tags.any?
@@ -116,4 +131,23 @@ class TransactionImport < Import
     csv.delete("account") if account.present?
     csv
   end
+
+  private
+    # The stand-in inflow Family::AutoTransferMatchable fabricates for a
+    # transfer into a manual account is named after the transfer, not after
+    # the bank's own description, so the name-based duplicate check never
+    # finds it. Match it on account, date, amount and currency alone, so the
+    # imported row doesn't count the same money twice.
+    def find_fabricated_transfer_counterpart(account:, date:, amount:, currency:, exclude_entry_ids:)
+      query = account.entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(date: date, amount: amount, currency: currency)
+        .where("transactions.extra @> ?", { "auto_generated_transfer_counterpart" => true }.to_json)
+      query = query.where.not(id: exclude_entry_ids) if exclude_entry_ids.present?
+      query.order(:created_at).first
+    end
+
+    def fabricated_transfer_counterpart?(entry)
+      entry.transaction.extra&.dig("auto_generated_transfer_counterpart") == true
+    end
 end
