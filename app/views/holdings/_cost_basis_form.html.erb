@@ -2,7 +2,8 @@
 
 <%
   # cost_basis stores the per-share cost; the form submits the total and the
-  # controller divides it by the quantity.
+  # controller divides it by the quantity. Both fields keep two decimals even
+  # for zero-decimal currencies (JPY), so saving unchanged keeps the basis.
   current_per_share = holding.cost_basis.present? && holding.cost_basis.positive? ? holding.cost_basis : nil
   current_total = current_per_share && holding.qty.positive? ? (current_per_share * holding.qty).round(2) : nil
 
@@ -29,23 +30,25 @@
         hide_currency: true,
         currency_value_override: holding.currency,
         value: current_per_share,
+        precision: 2,
         placeholder: "0.00",
         step: "any",
         min: 0,
         amount_data: { action: "input->cost-basis-form#updateTotal", cost_basis_form_target: "perShare" } %>
 
   <p class="flex items-center gap-2 px-3 text-sm">
-    <span class="text-secondary" aria-hidden="true">&times;</span>
+    <span class="text-secondary">&times;</span>
     <span class="text-primary"><%= t("holdings.holding.shares", qty: format_quantity(holding.qty, exact: true)) %></span>
   </p>
 
   <%# The holding stores the per-share cost, so neither field is bound to it. %>
   <%= f.money_field :total_cost_basis,
-        label: safe_join([ tag.span("=", class: "text-secondary", aria: { hidden: true }), t("holdings.cost_basis_cell.total_cost_basis_label") ], " "),
+        label: safe_join([ tag.span("=", class: "text-secondary"), t("holdings.cost_basis_cell.total_cost_basis_label") ], " "),
         name: f.field_name(:cost_basis),
         hide_currency: true,
         currency_value_override: holding.currency,
         value: current_total,
+        precision: 2,
         placeholder: "0.00",
         step: "any",
         min: 0,
