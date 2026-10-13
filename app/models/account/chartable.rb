@@ -19,12 +19,12 @@ module Account::Chartable
   end
 
   # True when a flow the net contributions line counts could not be valued,
-  # so the chart can say the line is understated.
-  def net_contributions_understated?(period: Period.last_30_days, interval: nil)
+  # so the chart can say the line is incomplete.
+  def net_contributions_incomplete?(period: Period.last_30_days, interval: nil)
     value_dates = balance_series(period: period, view: :balance, interval: interval).values.map(&:date)
 
     chart_series_builder(period: period, interval: interval)
-      .net_contributions_understated?(anchor_date: net_contributions_anchor_date, dates: value_dates)
+      .net_contributions_incomplete?(anchor_date: net_contributions_anchor_date, dates: value_dates)
   end
 
   def sparkline_series

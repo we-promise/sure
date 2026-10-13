@@ -649,19 +649,19 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_equal 1_000, contributions.values[1].trend.previous.amount, "the trend follows the line's own opening"
   end
 
-  # The understated check reads the same flows as the line: a deposit in a
+  # The incomplete check reads the same flows as the line: a deposit in a
   # currency with no rate at all makes it true.
-  test "net_contributions_understated? reports a flow with no rate" do
+  test "net_contributions_incomplete? reports a flow with no rate" do
     day_one = Date.new(2026, 3, 2)
     account = create_portfolio_account(family: families(:empty))
     lay_balance account: account, date: day_one, opening: 1_000, closing: 1_000
     period = Period.custom(start_date: day_one, end_date: day_one + 1)
 
-    refute account.net_contributions_understated?(period: period, interval: "1 day"), "every flow valued"
+    refute account.net_contributions_incomplete?(period: period, interval: "1 day"), "every flow valued"
 
     deposit account: account, date: day_one + 1, amount: 100, currency: "EUR"
 
-    assert Account.find(account.id).net_contributions_understated?(period: period, interval: "1 day"),
+    assert Account.find(account.id).net_contributions_incomplete?(period: period, interval: "1 day"),
            "a flow with no rate, read by a fresh instance since the builder is memoized"
   end
 
@@ -685,10 +685,10 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_equal [ 0, 100, 100 ], gaps(value, contributions)
   end
 
-  # #382: the understated note reads the same rows as the line, so a flow on
+  # #382: the incomplete note reads the same rows as the line, so a flow on
   # the anchor day that could not be valued is reported now that the line
   # counts that day's flows.
-  test "a linked account's unvalued flow on its anchor day makes net contributions understated" do
+  test "a linked account's unvalued flow on its anchor day makes net contributions incomplete" do
     day_one = Date.new(2026, 3, 2)
     account = create_portfolio_account(family: families(:empty))
     account.stubs(:linked?).returns(true)
@@ -697,7 +697,7 @@ class Account::ChartableTest < ActiveSupport::TestCase
     provider_deposit account: account, date: day_one + 2, amount: 500, currency: "EUR" # no EUR rate at all
     period = Period.custom(start_date: day_one, end_date: day_one + 2)
 
-    assert account.net_contributions_understated?(period: period, interval: "1 day")
+    assert account.net_contributions_incomplete?(period: period, interval: "1 day")
   end
 
   # value_point_before_activity? decides how the line is measured on the
