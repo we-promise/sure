@@ -71,20 +71,7 @@ class SimplefinItemsController < ApplicationController
         item_name: "SimpleFIN Connection"
       )
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @simplefin_items = Current.family.simplefin_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "simplefin-providers-panel",
-            partial: "settings/providers/simplefin_panel",
-            locals: { simplefin_items: @simplefin_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token)
     rescue Provider::Simplefin::SimplefinError => e
@@ -348,10 +335,11 @@ class SimplefinItemsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@simplefin_item),
           partial: "simplefin_items/simplefin_item",
-          locals: { simplefin_item: @simplefin_item }
+          locals: { simplefin_item: @simplefin_item, visible_accounts: @simplefin_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else
@@ -497,10 +485,11 @@ class SimplefinItemsController < ApplicationController
         # Optimistic removal of the specific account row if it exists in the DOM
         turbo_stream.remove(ActionView::RecordIdentifier.dom_id(@account)),
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "simplefin_items/simplefin_item",
-          locals: { simplefin_item: item }
+          locals: { simplefin_item: item, visible_accounts: item.accounts }
         ),
         turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
       ] + Array(flash_notification_stream_items)
@@ -547,14 +536,11 @@ class SimplefinItemsController < ApplicationController
       end
       @error_message = message
 
-      if turbo_frame_request?
-        # Re-render the SimpleFIN providers panel in place to avoid "Content missing"
-        @simplefin_items = Current.family.simplefin_items.ordered
-        render turbo_stream: turbo_stream.replace(
-          "simplefin-providers-panel",
-          partial: "settings/providers/simplefin_panel",
-          locals: { simplefin_items: @simplefin_items }
-        ), status: :unprocessable_entity
+      # The Bank sync panel and the new-connection modal send the same Turbo
+      # request, so the panel marks its form. The modals render their template,
+      # which the edit modal's frame picks out of the response.
+      if provider_panel_form?
+        render_provider_panel("simplefin", alert: message)
       else
         render context, status: :unprocessable_entity
       end

@@ -30,9 +30,9 @@ jobs:
           helm dependency build charts/sure
 
       - name: Pipelock Scan
-        uses: luckyPipewrench/pipelock@4c748ab986d611138ce202ab800b16eca6fb589f # v3.4.0
+        uses: luckyPipewrench/pipelock@3e868ac5d5b62d3a2790958542171143af8a0e38 # v3.6.0
         with:
-          version: '3.4.0'
+          version: '3.6.0'
           scan-diff: 'true'
           fail-on-findings: 'true'
           test-vectors: 'false'

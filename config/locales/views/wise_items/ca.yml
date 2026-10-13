@@ -6,7 +6,6 @@ ca:
         sign_in_html: Visita %{link} i inicia sessió al teu compte
         create_token: Crea un nou token API personal amb accés només de lectura
         copy_token_html: Copia el token i enganxa'l a continuació. Sure només l'utilitza per sincronitzar els teus saldos i transaccions.
-      setup_title: 'Instruccions de configuració:'
       add_connection: Afegeix connexió Wise
       token_label: Token API
       token_placeholder: Enganxa el teu token API personal de Wise
@@ -24,9 +23,6 @@ ca:
       disconnect: Desconnecta
       disconnect_label: Desconnecta %{name}
       disconnect_confirm: Vols desconnectar %{name}? S'eliminaran totes les dades dels comptes sincronitzats.
-      accounts_link: Comptes
-      configured_html: Connectat i sincronitzant. Visita la pestanya %{accounts_link} per gestionar els teus comptes.
-      not_configured: No configurat
       sandbox_note_html: Utilitza l'URL base de <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>) per fer proves. Defineix <code>WISE_BASE_URL</code> al teu entorn.
       encryption_warning:
         title: El xifratge de la base de dades no està configurat

@@ -166,6 +166,7 @@ pl:
               na jednostronicowym syntetycznym PDF bez danych klienta. Wartości poświadczeń
               nigdy nie są wyświetlane.
             title: Przetwarzanie LLM i PDF
+          loading: "Trwają testy na żywo…"
           local_setup:
             description: Uruchom LLM przez lokalny endpoint kompatybilny z OpenAI,
               przechowuj wektory dokumentów w pgvector i skieruj ustawienia embeddingów

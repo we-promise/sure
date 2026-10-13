@@ -92,11 +92,9 @@ nl:
       total: Totaal
       unlinked: Niet gekoppeld
     provider_panel:
-      accounts_link: Accounts
       add_connection: Brex-verbinding toevoegen
       base_url_label: Basis-URL (optioneel)
       base_url_placeholder: https://api.brex.com
-      configured_html: "Geconfigureerd en klaar voor gebruik. Ga naar het tabblad %{accounts_link} om accounts te beheren en in te stellen."
       connection_name_label: Verbindingsnaam
       connection_name_placeholder: Zakelijke betaalrekening
       default_connection_name: Brex-verbinding
@@ -111,10 +109,8 @@ nl:
         open_tokens: Ga naar de Brex-instellingen voor ontwikkelaars-/API-tokens voor het bedrijf dat u wilt verbinden
         sign_in_html: "Ga naar %{link} en log in op het account dat u wilt verbinden"
       keep_token_placeholder: Laat leeg om het huidige token te behouden
-      not_configured: Niet geconfigureerd
       sandbox_note_html: "Gebruik een aparte benoemde verbinding voor elk Brex-bedrijf/API-token dat u wilt synchroniseren. Laat de Basis-URL leeg voor productie. Staging is beperkt tot door Brex goedgekeurde tests en werkt niet met klanttokens."
       setup_accounts: Accounts instellen
-      setup_title: "Installatie-instructies:"
       sync: Synchroniseren
       token_label: Token
       token_placeholder: Plak het token hier

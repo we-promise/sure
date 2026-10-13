@@ -65,6 +65,19 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal expected_owner, owners.last
   end
 
+  test "set_current_balance schedules an account sync by default" do
+    @account.expects(:sync_later).once
+
+    assert @account.set_current_balance(1234).success?
+  end
+
+  test "set_current_balance skips the account sync when the caller schedules it" do
+    @account.expects(:sync_later).never
+
+    assert @account.set_current_balance(1234, schedule_sync: false).success?
+    assert_equal 1234, @account.reload.current_anchor_balance
+  end
+
   test "create_and_sync calls sync_later by default" do
     Account.any_instance.expects(:sync_later).once
 

@@ -29,22 +29,16 @@ ru:
         needs_setup: 'Счетов, требующих настройки: %{count}...'
       success: Синхронизация начата
     panel:
-      setup_instructions: 'Инструкции по настройке:'
       step_1: Создайте API-ключ на app.redbark.com в разделе Settings
       step_2: Введите API-ключ ниже и нажмите «Сохранить»
       step_3: После успешного подключения перейдите на вкладку «Счета», чтобы настроить новые счета
-      field_descriptions: 'Описание полей:'
       optional: (Необязательно)
-      required: (Обязательно)
       optional_with_default: (необязательно, по умолчанию %{default_value})
       save_button: Сохранить конфигурацию
       update_button: Обновить конфигурацию
-      status_configured_html: Настроено и готово к использованию. Перейдите на вкладку <a href="%{accounts_path}" class="link">Счета</a>, чтобы управлять счетами и настроить их.
-      status_not_configured: Не настроено
       fields:
         api_key:
           label: API-ключ
-          description: Ваш API-ключ Redbark (начинается с rbk_live_)
           placeholder_new: rbk_live_...
           placeholder_update: Введите новый API-ключ для обновления
     create:

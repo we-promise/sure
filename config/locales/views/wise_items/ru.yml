@@ -6,7 +6,6 @@ ru:
         sign_in_html: Перейдите на %{link} и войдите в свой аккаунт
         create_token: Создайте новый личный API-токен с доступом только для чтения
         copy_token_html: Скопируйте токен и вставьте его ниже. Sure использует его только для синхронизации ваших балансов и операций.
-      setup_title: 'Инструкции по настройке:'
       add_connection: Добавить подключение Wise
       token_label: API-токен
       token_placeholder: Вставьте ваш личный API-токен Wise
@@ -24,9 +23,6 @@ ru:
       disconnect: Отключить
       disconnect_label: Отключить %{name}
       disconnect_confirm: Вы уверены, что хотите отключить %{name}? Все синхронизированные данные счетов будут удалены.
-      accounts_link: Счета
-      configured_html: Подключено и синхронизируется. Перейдите на вкладку %{accounts_link}, чтобы управлять счетами.
-      not_configured: Не настроено
       sandbox_note_html: Для тестирования используйте базовый URL <strong>песочницы</strong> (<code>https://api.sandbox.transferwise.tech</code>). Задайте <code>WISE_BASE_URL</code> в окружении.
       encryption_warning:
         title: Шифрование базы данных не настроено

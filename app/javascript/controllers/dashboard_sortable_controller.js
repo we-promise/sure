@@ -204,6 +204,9 @@ export default class extends Controller {
   // ===== Keyboard Navigation =====
   handleKeyDown(event) {
     const currentSection = event.currentTarget;
+    // Keys pressed on a control inside the card (a header button, a widget's
+    // own inputs) belong to that control, not to the reorder grab.
+    if (event.target !== currentSection) return;
 
     switch (event.key) {
       case "ArrowUp":

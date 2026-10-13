@@ -47,32 +47,17 @@
     <p class="text-sm text-secondary"><%= t(".variable_rate_notice") %></p>
   <% end %>
 
-  <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 overflow-hidden">
-    <div class="max-h-[32rem] overflow-y-auto overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="sticky top-0 bg-container border-b border-alpha-black-25">
-          <tr class="text-secondary text-left">
-            <th scope="col" class="font-medium px-4 py-3"><%= t(".number") %></th>
-            <th scope="col" class="font-medium px-4 py-3"><%= t(".date") %></th>
-            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t(".payment") %></th>
-            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t(".principal") %></th>
-            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t(".interest") %></th>
-            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t(".remaining_balance") %></th>
-          </tr>
-        </thead>
-        <tbody>
-          <% payments.each do |payment| %>
-            <tr class="border-b border-alpha-black-25 last:border-0 <%= "bg-container-inset" if payment.date <= today %>">
-              <td class="px-4 py-3 text-secondary tabular-nums"><%= payment.number %></td>
-              <td class="px-4 py-3 text-primary"><%= l payment.date, format: :long %></td>
-              <td class="px-4 py-3 text-right text-primary tabular-nums privacy-sensitive"><%= format_money payment.payment %></td>
-              <td class="px-4 py-3 text-right text-primary tabular-nums privacy-sensitive"><%= format_money payment.principal %></td>
-              <td class="px-4 py-3 text-right text-secondary tabular-nums privacy-sensitive"><%= format_money payment.interest %></td>
-              <td class="px-4 py-3 text-right text-primary tabular-nums privacy-sensitive"><%= format_money payment.ending_balance %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <%= render DS::Table.new(
+        rows: payments,
+        sticky_header: true,
+        label: t("accounts.show.tabs.schedule"),
+        row_class: ->(payment) { "bg-container-inset" if payment.date <= today }
+      ) do |table| %>
+    <% table.with_column(t(".number"), class: "text-secondary tabular-nums") { |payment| payment.number.to_s } %>
+    <% table.with_column(t(".date")) { |payment| l(payment.date, format: :long) } %>
+    <% table.with_column(t(".payment"), numeric: true, class: "privacy-sensitive") { |payment| format_money(payment.payment) } %>
+    <% table.with_column(t(".principal"), numeric: true, class: "privacy-sensitive") { |payment| format_money(payment.principal) } %>
+    <% table.with_column(t(".interest"), numeric: true, class: "text-secondary privacy-sensitive") { |payment| format_money(payment.interest) } %>
+    <% table.with_column(t(".remaining_balance"), numeric: true, class: "privacy-sensitive") { |payment| format_money(payment.ending_balance) } %>
+  <% end %>
 </div>

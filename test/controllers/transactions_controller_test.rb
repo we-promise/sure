@@ -87,6 +87,17 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal parent_index + 1, child_index
   end
 
+  # The form passes its own change action on the currency select; the money
+  # field must keep its handleCurrencyChange alongside it, or switching the
+  # currency never refreshes the amount's step and precision.
+  test "new form wires the currency select to both the money field and the transaction form" do
+    get new_transaction_path
+
+    assert_response :success
+    assert_select "select[data-money-field-target=currency][data-action=?]",
+                  "change->money-field#handleCurrencyChange change->transaction-form#onCurrencyChange"
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {
@@ -278,6 +289,21 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
+  end
+
+  # Regression: the sync window must start at the old date, or the incremental
+  # balance calculation counts the moved transaction twice.
+  test "moving a transaction later syncs from its original date" do
+    original_date = 5.days.ago.to_date
+    @entry.update!(date: original_date)
+
+    Account.any_instance.expects(:sync_later).with(window_start_date: original_date)
+
+    patch transaction_url(@entry), params: {
+      entry: { date: 2.days.ago.to_date, entryable_type: @entry.entryable_type }
+    }
+
+    assert_equal 2.days.ago.to_date, @entry.reload.date
   end
 
   test "updates with transaction details" do
@@ -1363,6 +1389,9 @@ end
     # Transfer#categorizable? / #payment? walk to_account via
     # transfer.inflow_transaction.entry.account. Without nested includes those
     # become one lookup triad per transfer row during list render.
+    # categorizable? also walks from_account via the outflow leg, which is only
+    # loaded through the inverse_of on Transaction::Transferable; dropping it
+    # makes the transactions.id assertion below fail.
     normalized_queries = queries.map { |sql| normalize_sql_query(sql) }
     assert_empty single_record_lookups(normalized_queries, table: "transactions", column: "id"),
                  "Expected transfer counterparty transactions to be preloaded"
@@ -1394,6 +1423,44 @@ end
     # the cached block itself would run instead of the whole table name.
     assert_empty queries.grep(/next_expected_date/i),
       "second request with unchanged data should reuse the cached projected recurring lookup"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index renders when the projected_recurring cache holds records from an older schema" do
+    # Regression: the cache used to hold whole RecurringTransaction objects. After
+    # an upgrade that added columns (e.g. payment_url in 0.7.5), the entry written
+    # by the previous version was still served and rendering raised
+    # ActiveModel::MissingAttributeError until the key rolled over the next day.
+    original_cache = Rails.cache
+    written_keys = []
+    Rails.cache = Class.new(ActiveSupport::Cache::MemoryStore) {
+      define_method(:write_entry) do |key, entry, **options|
+        written_keys << key
+        super(key, entry, **options)
+      end
+    }.new
+
+    recurring = recurring_transactions(:netflix_subscription)
+
+    get transactions_url
+    assert_response :success
+
+    cache_keys = written_keys.grep(/transactions_projected_recurring/).uniq
+    assert_not_empty cache_keys, "the first request should populate the projected-recurring cache"
+
+    # Write the Marshal payload the previous version produced: the record's
+    # attributes without the columns that version did not have yet.
+    stale_payload = [ recurring.attributes_for_database.except("payment_url", "autopay", "notes"), false, [ [ :merchant, recurring.merchant ] ] ]
+    stale_record = RecurringTransaction.allocate
+    stale_record.define_singleton_method(:marshal_dump) { stale_payload }
+    cache_keys.each { |key| Rails.cache.write(key, [ stale_record ]) }
+    assert_raises(ActiveModel::MissingAttributeError) { Rails.cache.read(cache_keys.first).first.payment_url }
+
+    get transactions_url
+    assert_response :success
+    assert_match(/#{Regexp.escape(recurring.merchant.name)}/, response.body,
+      "the projected recurring transaction should still render from fresh records")
   ensure
     Rails.cache = original_cache
   end
@@ -1630,6 +1697,200 @@ end
       "a member without access to the admin-only account must not reuse the admin's cached uncategorized count"
   ensure
     Rails.cache = original_cache
+  end
+
+  test "category-only update does not sync the account" do
+    assert_no_enqueued_jobs only: SyncJob do
+      patch transaction_url(@entry), params: {
+        entry: { entryable_attributes: { id: @entry.entryable_id, category_id: categories(:food_and_drink).id } }
+      }
+    end
+
+    assert_equal categories(:food_and_drink).id, @entry.reload.entryable.category_id
+  end
+
+  test "amount update syncs the account" do
+    assert_enqueued_with(job: SyncJob) do
+      patch transaction_url(@entry), params: { entry: { amount: @entry.amount + 10 } }
+    end
+  end
+
+  test "category and date updated together still sync the account" do
+    assert_enqueued_with(job: SyncJob) do
+      patch transaction_url(@entry), params: {
+        entry: {
+          date: @entry.date - 1.day,
+          entryable_attributes: { id: @entry.entryable_id, category_id: categories(:food_and_drink).id }
+        }
+      }
+    end
+  end
+
+  test "toggling a tag does not sync the account" do
+    assert_no_enqueued_jobs only: SyncJob do
+      patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
+    end
+  end
+
+  test "index with ai_status=current renders the AI filter badge" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    get transactions_url(q: { ai_status: [ "current" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with ai_status=history renders the AI history filter badge" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+
+    get transactions_url(q: { ai_status: [ "history" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI history", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with ai_status=current excludes history-only transactions" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+
+    get transactions_url(q: { ai_status: [ "current" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI", count: 1
+    assert_select "#entry_#{@entry.id}", count: 0
+  end
+
+  test "index ignores unsupported ai_status values without rendering a badge" do
+    get transactions_url(q: { ai_status: [ "bogus" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li", count: 0
+    assert_no_match(/translation missing/, response.body)
+
+    # The bogus value must be dropped entirely, not applied as a filter
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "clear_filter removes an ai_status value and redirects" do
+    delete clear_filter_transactions_url(
+      param_key: "ai_status",
+      param_value: "current",
+      q: { ai_status: [ "current" ] }
+    )
+
+    assert_response :redirect
+    assert_includes response.location, "filter_cleared=1"
+    assert_no_match(/ai_status/, response.location)
+  end
+
+  test "index with attachment_status=with lists only transactions that have a file" do
+    @entry.entryable.attachments.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
+
+    get transactions_url(q: { attachment_status: [ "with" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "With attachment", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with attachment_status=without hides transactions that have a file" do
+    @entry.entryable.attachments.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
+
+    get transactions_url(q: { attachment_status: [ "without" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "Without attachment", count: 1
+    assert_select "#entry_#{@entry.id}", count: 0
+  end
+
+  test "index offers the attachment filter in the filter menu" do
+    get transactions_url
+
+    assert_response :success
+    assert_select "#transaction-filters-menu input[type=checkbox][name='q[attachment_status][]']", count: 2
+  end
+
+  test "index ignores unsupported attachment_status values without rendering a badge" do
+    get transactions_url(q: { attachment_status: [ "bogus" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li", count: 0
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "clear_filter removes an attachment_status value and redirects" do
+    delete clear_filter_transactions_url(
+      param_key: "attachment_status",
+      param_value: "without",
+      q: { attachment_status: [ "without" ] }
+    )
+
+    assert_response :redirect
+    assert_includes response.location, "filter_cleared=1"
+    assert_no_match(/attachment_status/, response.location)
+  end
+
+  test "an unconfirmed auto-matched transfer keeps its category menu in the list" do
+    outflow = create_transaction(account: accounts(:depository), amount: 500, name: "PENDING_MATCH_OUT").transaction
+    inflow = create_transaction(account: accounts(:credit_card), amount: -500).transaction
+    Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(outflow, "category_menu_desktop")} turbo-frame#category_dropdown"
+  end
+
+  test "update drops a category sent for a matched transfer's inflow leg" do
+    outflow = Transaction.create!(kind: "investment_contribution")
+    Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
+    inflow = Transaction.create!(kind: "funds_movement")
+    inflow_entry = Entry.create!(account: accounts(:investment), entryable: inflow, name: "Contribution", amount: -500, currency: "USD", date: Date.current)
+    Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    patch transaction_url(inflow_entry), params: {
+      entry: {
+        notes: "Monthly savings",
+        entryable_type: "Transaction",
+        entryable_attributes: { id: inflow.id, category_id: categories(:income).id }
+      }
+    }
+
+    assert_nil inflow.reload.category_id
+    assert_equal "Monthly savings", inflow_entry.reload.notes
+  end
+
+  test "update drops a category for a matched inflow leg whose kind was edited to standard" do
+    outflow = Transaction.create!(kind: "investment_contribution")
+    Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
+    inflow = Transaction.create!(kind: "standard")
+    inflow_entry = Entry.create!(account: accounts(:investment), entryable: inflow, name: "Contribution", amount: -500, currency: "USD", date: Date.current)
+    Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    patch transaction_url(inflow_entry), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: inflow.id, category_id: categories(:income).id } }
+    }
+
+    assert_nil inflow.reload.category_id
+  end
+
+  test "drawer shows a matched transfer's inflow leg with the outflow's category, disabled" do
+    outflow = Transaction.create!(kind: "investment_contribution", category: categories(:income))
+    Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
+    inflow = Transaction.create!(kind: "funds_movement")
+    inflow_entry = Entry.create!(account: accounts(:investment), entryable: inflow, name: "Contribution", amount: -500, currency: "USD", date: Date.current)
+    Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    get transaction_url(inflow_entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "button#category_id_trigger[disabled]", text: /#{categories(:income).name}/
+    assert_select "input[type=hidden][name='entry[entryable_attributes][category_id]'][disabled]"
+    assert_match I18n.t("transactions.show.category_set_on_outflow"), response.body
   end
 
   private

@@ -48,15 +48,12 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 100, vacances.progress_percent.to_i
   end
 
-  # The confirm dialog assigns `body` to innerHTML, so an unescaped goal name
-  # would execute when a family member opens the delete confirmation.
-  test "deletion_confirm escapes the goal name in the dialog body" do
-    @goal.name = "<img src=x onerror=alert(1)>"
+  # The confirm dialog renders `body` as text, so the goal name goes in as it
+  # is; escaping it would show "&amp;" in the dialog.
+  test "deletion_confirm names the goal as it is written" do
+    @goal.name = "Rock & Roll <3"
 
-    body = @goal.deletion_confirm.to_data_attribute[:body]
-
-    assert_includes body, "&lt;img src=x onerror=alert(1)&gt;"
-    assert_no_match(/<img/, body)
+    assert_includes @goal.deletion_confirm.to_data_attribute[:body], "Rock & Roll <3"
   end
 
   # Derived, not a hardcoded list: a locale added later ships a goals YAML
@@ -1264,7 +1261,48 @@ class GoalTest < ActiveSupport::TestCase
     assert_not goal.any_consumption?
   end
 
+  # The ring's saved segment goes through d3.color, which cannot parse a CSS
+  # variable; a goal with no colour must still hand it a real colour (#4030).
+  test "a goal without a colour gives its ring a real colour" do
+    goal = ring_goal(color: "#6471eb")
+    goal.update_columns(color: nil)
+
+    saved = Goal.find(goal.id).to_donut_segments_json.find { |segment| segment[:id] == "saved" }
+
+    assert_equal Goal::COLORS.first, saved[:color]
+    assert_match(/\A#\h{6}\z/, saved[:color])
+  end
+
+  test "a goal with a colour keeps it in its ring, and the remaining track is unchanged" do
+    goal = ring_goal(color: "#6471eb")
+
+    segments = Goal.find(goal.id).to_donut_segments_json.index_by { |segment| segment[:id] }
+
+    assert_equal "#6471eb", segments["saved"][:color]
+    assert_equal "var(--budget-unused-fill)", segments["unused"][:color]
+  end
+
+  # One fallback for both: a colourless goal's ring and avatar show the same
+  # colour, so changing either fallback alone fails here.
+  test "a colourless goal's ring and avatar fall back to the same colour" do
+    goal = ring_goal(color: "#6471eb")
+    goal.update_columns(color: nil)
+    goal = Goal.find(goal.id)
+
+    saved = goal.to_donut_segments_json.find { |segment| segment[:id] == "saved" }
+
+    assert_equal Goals::AvatarComponent.new(goal: goal).color, saved[:color]
+  end
+
   private
+    # A goal with something saved and something left, so both segments exist.
+    def ring_goal(color:)
+      account = Account.create!(family: @family, accountable: Depository.new, name: "Ring savings", currency: "USD", balance: 2_000)
+      @family.goals.create!(name: "Ring goal", target_amount: 5_000, currency: "USD", color: color) do |g|
+        g.goal_accounts.build(account: account)
+      end
+    end
+
 
     # 5,000 saved, 2,000 of it since spent on the thing itself.
     def spent_goal

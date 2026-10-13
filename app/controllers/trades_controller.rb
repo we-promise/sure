@@ -19,6 +19,13 @@ class TradesController < ApplicationController
 
     return unless require_account_permission!(@account)
 
+    # A deposit or withdrawal also books an entry on the other account, so that
+    # account needs the same write permission, as in TransfersController#create.
+    if create_params[:transfer_account_id].present?
+      transfer_account = accessible_accounts.find(create_params[:transfer_account_id])
+      return unless require_account_permission!(transfer_account)
+    end
+
     @model = Trade::CreateForm.new(create_params.merge(account: @account)).create
 
     if @model.persisted?

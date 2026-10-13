@@ -10,6 +10,7 @@ class CategoriesTest < ApplicationSystemTestCase
     click_link I18n.t("categories.new.new_category")
     fill_in "Name", with: "My Shiny New Category"
     click_button "Create Category"
+    assert_text I18n.t("categories.create.success")
 
     visit categories_url
     assert_text "My Shiny New Category"
