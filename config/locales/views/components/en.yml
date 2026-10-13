@@ -81,9 +81,9 @@ en:
           since_start: since the loan started
         net_contributions:
           difference: Difference
+          incomplete: "Net contributions may be incomplete: a deposit or withdrawal could not be valued."
           label: Net contributions
           legend: Chart series
-          understated: Some money moved in or out could not be valued, so net contributions are understated from that date.
         no_data_available: "No data available"
         title:
           balance: Balance
