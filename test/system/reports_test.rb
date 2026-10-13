@@ -24,7 +24,7 @@ class ReportsTest < ApplicationSystemTestCase
   end
 
   test "the arrow keys leave section moves and dialogs alone" do
-    find("section[data-section-key]", match: :first).send_keys(:enter)
+    find("section[data-sortable-list-id]", match: :first).send_keys(:enter)
     page.send_keys(:arrow_left)
     assert_empty clicked_hotkeys
     page.send_keys(:escape)
