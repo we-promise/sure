@@ -120,6 +120,8 @@ Render expects each button target branch to have a `render.yaml` at the reposito
 
 [![Deploy on Hostim](https://hostim.dev/img/deploy-button.svg)](https://console.hostim.dev/dashboard?preview=1&modal=1&template=sure)
 
+[![Deploy to ZopDay](https://zop.dev/deploytozopday-inkhard.svg)](https://zop.dev/zopday/app/deploy?image=ghcr.io/we-promise/sure:stable&port=3000&name=sure&env=SELF_HOSTED=true&utm_source=github&utm_medium=one_click&utm_content=sure)
+
 ## License and Trademarks
 
 Maybe and Sure are both distributed under
