@@ -3,7 +3,11 @@ fr:
   transfer_matches:
     create:
       success: Transfert créé
+    dismiss_suggestion:
+      success: "Suggestion ignorée"
     matching_fields:
+      dismiss_suggestion: "Pas de correspondance"
+      suggested_account_html: "L'IBAN de ce paiement correspond à votre compte <strong>%{name}</strong> ; nous l'avons présélectionné ci-dessous."
       create_new_transaction: Créer une nouvelle transaction
       match_existing_recommended: Faire correspondre la transaction existante (recommandé)
       matching_method: Méthode de correspondance

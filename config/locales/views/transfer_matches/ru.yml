@@ -3,7 +3,11 @@ ru:
   transfer_matches:
     create:
       success: Перевод создан
+    dismiss_suggestion:
+      success: "Предложение отклонено"
     matching_fields:
+      dismiss_suggestion: "Не совпадает"
+      suggested_account_html: "IBAN этого платежа совпадает с вашим счётом <strong>%{name}</strong> — мы выбрали его ниже."
       create_new_transaction: Создать новую операцию
       match_existing_recommended: Соответствие существующей операции (рекомендуется)
       matching_method: Метод сопоставления

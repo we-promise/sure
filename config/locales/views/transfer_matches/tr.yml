@@ -3,7 +3,11 @@ tr:
   transfer_matches:
     create:
       success: Transfer oluşturuldu
+    dismiss_suggestion:
+      success: "Öneri kapatıldı"
     matching_fields:
+      dismiss_suggestion: "Eşleşmiyor"
+      suggested_account_html: "Bu ödemenin IBAN'ı <strong>%{name}</strong> hesabınızla eşleşiyor — aşağıda önceden seçtik."
       create_new_transaction: Yeni işlem oluştur
       match_existing_recommended: Mevcut işlemle eşleştir (önerilen)
       matching_method: Eşleştirme yöntemi
