@@ -238,6 +238,15 @@ docker compose -f compose.ai.yml up -d
 docker compose -f compose.ai.yml --profile local-ai up -d
 ```
 
+### Upgrading an existing `local-ai` setup
+
+Older versions of `compose.example.ai.yml` ran Open WebUI without a login and published Ollama, Open WebUI and OpenClaw on all host interfaces. The current file changes that for installs that pull it again:
+
+- **Open WebUI login.** `WEBUI_AUTH` is now `True`. If your instance ran with `WEBUI_AUTH=False`, Open WebUI already created the admin account `admin@localhost` with the password `admin`. Sign in with those credentials at `http://localhost:8080`, then change the password under Settings > Account. Accounts signed up afterwards are not admins.
+- **Loopback only.** Ollama (`11434`), Open WebUI (`8080`) and OpenClaw (`18789`) are published on `127.0.0.1` only. To reach Open WebUI from another machine, change its port line back to `"8080:8080"` or put it behind a reverse proxy, after changing the admin password. Docker Engine releases before 28.0.0 can still let other hosts on the same local network (L2 segment) reach ports published on `127.0.0.1` ([Docker docs](https://docs.docker.com/engine/network/port-publishing/)). On older engines, upgrade Docker. If that is not possible, block ports `11434`, `8080` and `18789` with Docker-specific rules (the `DOCKER-USER` chain on the iptables backend, see [Docker and iptables](https://docs.docker.com/engine/network/firewall-iptables/)); ordinary host firewall rules such as UFW do not apply to published ports. In either case set `EXTERNAL_ASSISTANT_TOKEN` and change the Open WebUI admin password right after the upgrade.
+- **Open WebUI secret key.** The fixed `WEBUI_SECRET_KEY` from the old file is gone. Unless you set `WEBUI_SECRET_KEY` yourself, Open WebUI generates a random key on first start and keeps it in its data volume. Existing Open WebUI sign-ins end, and anything Open WebUI encrypted with the old key (for example OAuth sign-in sessions or OAuth connections to tool servers) has to be set up again.
+- **Ollama URL.** Open WebUI now reaches Ollama at `http://ollama:11434`. Existing installs keep the URL saved in Open WebUI's database; if models stop loading, set the connection to `http://ollama:11434` under Admin Settings > Connections.
+
 ### Setting up the external AI assistant
 
 The external assistant delegates chat to a remote AI agent instead of calling LLMs directly. The agent calls back to Sure's `/mcp` endpoint for financial data (accounts, transactions, balance sheet).

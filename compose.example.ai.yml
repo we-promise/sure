@@ -207,7 +207,11 @@ services:
     restart: unless-stopped
     image: docker.io/ollama/ollama:latest
     ports:
-      - "11434:11434"
+      # Ollama has no authentication, so publish it on the host's loopback
+      # only. Containers on sure_net reach it as http://ollama:11434.
+      # Docker Engine before 28.0.0 can still expose loopback-published ports to
+      # hosts on the same local network; see docs/hosting/docker.md.
+      - "127.0.0.1:11434:11434"
     environment:
       - OLLAMA_KEEP_ALIVE=1h
     healthcheck:
@@ -237,14 +241,30 @@ services:
     depends_on:
       - ollama
     ports:
-      - "8080:8080"
+      # Published on the host's loopback only. To reach Open WebUI from another
+      # machine, change this to "8080:8080" or put it behind a reverse proxy,
+      # after the admin account has a strong password. Needs Docker Engine
+      # 28.0.0 or newer to be truly loopback-only (see docs/hosting/docker.md).
+      - "127.0.0.1:8080:8080"
     environment: # https://docs.openwebui.com/getting-started/env-configuration#default_models
-      - OLLAMA_BASE_URLS=http://host.docker.internal:11434 #comma separated ollama hosts
+      # Existing installs keep the Ollama URL saved in Open WebUI's database.
+      # If models stop loading after upgrading, set the connection to
+      # http://ollama:11434 under Admin Settings > Connections.
+      - OLLAMA_BASE_URLS=http://ollama:11434 #comma separated ollama hosts
       - ENV=dev
-      - WEBUI_AUTH=False
+      # New installs: Open WebUI asks you to create an admin account on first visit.
+      # Upgrading from WEBUI_AUTH=False: that mode already created the admin
+      # account admin@localhost with the password "admin", and accounts signed
+      # up later are not admins. Sign in with those credentials and change the
+      # password right away under Settings > Account.
+      - WEBUI_AUTH=True
       - WEBUI_NAME=AI
       - WEBUI_URL=http://localhost:8080
-      - WEBUI_SECRET_KEY=t0p-s3cr3t # pipelock:ignore
+      # Leave empty to let Open WebUI generate a random key. It is stored in
+      # the data volume so it survives container recreation. Upgrading from the
+      # old fixed key ends existing Open WebUI sign-ins; see docs/hosting/docker.md.
+      - WEBUI_SECRET_KEY_FILE=/app/backend/data/.webui_secret_key
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-}
       - NO_PROXY=host.docker.internal
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -266,6 +286,8 @@ services:
       HOME: /home/node
       TERM: xterm-256color
       TZ: ${OPENCLAW_TZ:-UTC}
+      # Set EXTERNAL_ASSISTANT_TOKEN to a long random value (e.g. `openssl rand -hex 32`);
+      # the placeholder below is only safe because the port is loopback-only.
       OPENCLAW_GATEWAY_TOKEN: ${EXTERNAL_ASSISTANT_TOKEN:-changeme}
       OPENCLAW_ALLOW_INSECURE_PRIVATE_WS: ${OPENCLAW_ALLOW_INSECURE_PRIVATE_WS:-}
     command:
@@ -295,8 +317,9 @@ services:
       retries: 5
       start_period: 20s
     ports:
-      # Expose for local onboarding/debugging. Sure uses the internal service name.
-      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+      # Expose on the host's loopback for local onboarding/debugging. Sure uses
+      # the internal service name. Loopback-only needs Docker Engine 28.0.0+.
+      - "127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}:18789"
     volumes:
       - openclaw-config:/home/node/.openclaw
       - openclaw-workspace:/home/node/.openclaw/workspace
