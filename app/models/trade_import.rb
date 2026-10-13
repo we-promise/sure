@@ -10,10 +10,10 @@ class TradeImport < Import
           mappings.accounts.mappable_for(row.account)
         end
 
-        # Prefer a user-mapped/auto-matched security from the security mapping
-        # step; fall back to direct resolution so auto-matched or edge rows
-        # (and the API flow, which adds no mapping step) still resolve.
-        security = mappings.securities.mappable_for(row.ticker) ||
+        # Prefer the security from this row's (ticker, MIC) mapping; fall back
+        # to direct resolution so auto-matched/edge rows (and the API flow,
+        # which adds no mapping step) still resolve.
+        security = Import::SecurityMapping.mappable_for_row(self, row) ||
           find_or_create_security(
             ticker: row.ticker,
             exchange_operating_mic: row.exchange_operating_mic

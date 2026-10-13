@@ -6,6 +6,11 @@ class Import::SecurityMappingTest < ActiveSupport::TestCase
     @import.update!(date_format: "%Y-%m-%d")
   end
 
+  test "key_for composes ticker and canonical MIC" do
+    assert_equal "AAPL", Import::SecurityMapping.key_for(ticker: " aapl ", exchange_operating_mic: nil)
+    assert_equal "AAPL|XNAS", Import::SecurityMapping.key_for(ticker: "aapl", exchange_operating_mic: "xnas")
+  end
+
   test "mappables_by_key auto-matches a seeded security by ticker and leaves unknown labels unmatched" do
     aapl = securities(:aapl)
 
@@ -18,15 +23,6 @@ class Import::SecurityMappingTest < ActiveSupport::TestCase
     assert_nil result["VANGUARD TOTAL BOND ETF MARKET"]
   end
 
-  test "mappables_by_key keys off distinct, stripped tickers" do
-    create_row(ticker: " AAPL ")
-    create_row(ticker: "AAPL")
-
-    result = Import::SecurityMapping.mappables_by_key(@import)
-
-    assert_equal [ "AAPL" ], result.keys
-  end
-
   test "mappables_by_key matches the row exchange when a MIC is given" do
     aapl_nasdaq = securities(:aapl) # XNAS
     aapl_other = Security.create!(ticker: "AAPL", exchange_operating_mic: "XLON", name: "Apple LSE")
@@ -35,41 +31,68 @@ class Import::SecurityMappingTest < ActiveSupport::TestCase
 
     result = Import::SecurityMapping.mappables_by_key(@import)
 
-    assert_equal aapl_other, result["AAPL"]
-    assert_not_equal aapl_nasdaq, result["AAPL"]
+    assert_equal aapl_other, result["AAPL|XLON"]
+    assert_not_equal aapl_nasdaq, result["AAPL|XLON"]
   end
 
-  test "mappables_by_key leaves a ticker unmatched when its rows disagree on exchange" do
-    securities(:aapl)
+  test "mappables_by_key keeps same-ticker-different-MIC rows as distinct mappings" do
+    securities(:aapl) # XNAS
+    aapl_lse = Security.create!(ticker: "AAPL", exchange_operating_mic: "XLON", name: "Apple LSE")
 
     create_row(ticker: "AAPL", exchange_operating_mic: "XNAS")
     create_row(ticker: "AAPL", exchange_operating_mic: "XLON")
 
     result = Import::SecurityMapping.mappables_by_key(@import)
 
-    assert_nil result["AAPL"], "ambiguous exchange should defer to the row-specific resolver"
+    assert_equal %w[AAPL|XNAS AAPL|XLON].sort, result.keys.sort
+    assert_equal securities(:aapl), result["AAPL|XNAS"]
+    assert_equal aapl_lse, result["AAPL|XLON"]
   end
 
-  test "values_count counts rows by ticker" do
-    create_row(ticker: "AAPL")
-    create_row(ticker: "AAPL")
-    create_row(ticker: "MSFT")
+  test "mappables_by_key does not auto-pick when MIC is absent and multiple local listings exist" do
+    securities(:aapl) # XNAS
+    Security.create!(ticker: "AAPL", exchange_operating_mic: "XLON", name: "Apple LSE")
 
-    mapping = build_mapping(key: "AAPL")
+    create_row(ticker: "AAPL") # no MIC
+
+    result = Import::SecurityMapping.mappables_by_key(@import)
+
+    assert_nil result["AAPL"], "ambiguous ticker with no MIC must not auto-pick a listing"
+  end
+
+  test "mappable_for_row resolves through the row's own composite key" do
+    aapl = securities(:aapl)
+    row = create_row(ticker: "AAPL", exchange_operating_mic: "XNAS")
+    build_mapping(key: "AAPL|XNAS", mappable: aapl)
+
+    assert_equal aapl, Import::SecurityMapping.mappable_for_row(@import, row)
+  end
+
+  test "values_count counts rows matching the composite key" do
+    create_row(ticker: "AAPL", exchange_operating_mic: "XNAS")
+    create_row(ticker: "AAPL", exchange_operating_mic: "XNAS")
+    create_row(ticker: "AAPL", exchange_operating_mic: "XLON")
+
+    mapping = build_mapping(key: "AAPL|XNAS")
 
     assert_equal 2, mapping.values_count
   end
 
-  test "an unresolved mapping is invalid so the import cannot be published" do
+  test "an unresolved descriptive label is invalid so the import cannot be published" do
     mapping = build_mapping(key: "VANGUARD TOTAL BOND ETF MARKET")
 
     assert_not mapping.valid?
     assert_includes mapping.errors.attribute_names, :mappable
   end
 
+  test "an unresolved but plausible ticker stays valid so import! can resolve it directly" do
+    mapping = build_mapping(key: "TSLA")
+
+    assert mapping.valid?, "a clean, resolvable ticker must not force manual selection"
+  end
+
   test "a mapping with a resolved security is valid" do
-    mapping = build_mapping(key: "AAPL")
-    mapping.mappable = securities(:aapl)
+    mapping = build_mapping(key: "VANGUARD TOTAL BOND ETF MARKET", mappable: securities(:aapl))
 
     assert mapping.valid?
   end
@@ -90,8 +113,9 @@ class Import::SecurityMappingTest < ActiveSupport::TestCase
     assert_equal msft, mapping.reload.mappable
   end
 
-  test "create_mappable! is a no-op when value is blank" do
-    mapping = build_mapping(key: "AAPL")
+  test "create_mappable! clears a stale mappable when the value is cleared" do
+    mapping = build_mapping(key: "AAPL|XNAS", mappable: securities(:aapl))
+    mapping.update_column(:value, "")
 
     Security::Resolver.expects(:new).never
 
@@ -127,8 +151,8 @@ class Import::SecurityMappingTest < ActiveSupport::TestCase
 
     # Mirrors Import#sync_mappings, which persists mappings without validation
     # so unresolved rows can be collected before the user maps them.
-    def build_mapping(key:, value: nil)
-      mapping = @import.mappings.build(key: key, type: "Import::SecurityMapping", value: value)
+    def build_mapping(key:, value: nil, mappable: nil)
+      mapping = @import.mappings.build(key: key, type: "Import::SecurityMapping", value: value, mappable: mappable)
       mapping.save!(validate: false)
       mapping
     end

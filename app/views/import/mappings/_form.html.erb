@@ -6,7 +6,11 @@
                      class: "grid grid-cols-3 gap-2 items-center",
                      data: { controller: "auto-submit-form" },
                      html: { id: dom_id(mapping, :form) } do |form| %>
-  <span><%= mapping.key.blank? ? "(unassigned)" : mapping.key %></span>
+  <% if mapping.is_a?(Import::SecurityMapping) %>
+    <span><%= mapping.display_key %></span>
+  <% else %>
+    <span><%= mapping.key.blank? ? "(unassigned)" : mapping.key %></span>
+  <% end %>
 
   <% if mapping.is_a?(Import::SecurityMapping) %>
     <% if Security.providers.any? %>
