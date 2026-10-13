@@ -88,21 +88,18 @@ module Account::Chartable
       )
     end
 
-    # True when the value line's point on `date` is not the close the
-    # balance query gave for that date: the normalizer prepended it or reset
-    # it to the balance before the day's activity. False when there is no
-    # such point.
-    #
-    # Known limit: once upstream #4009 resets the first point to the balance
-    # before the day's activity, a reset point whose value equals the day's
-    # close (a flow offset by the market) is read as the close. Fixed in the
-    # sync that brings in #4009.
+    # True when the value line's point on `date` was supplied by the
+    # normalizer as the balance before the day's activity: prepended on a
+    # date the balance query never sampled (a coarse interval), or a sampled
+    # point reset on the first provider activity date (upstream #4009). The
+    # normalizer's rule decides, not the point's value, since a reset point
+    # can equal the day's close (a flow offset by the market). False when
+    # there is no such point.
     def value_point_before_activity?(value_series, builder:, date:)
-      point = date && value_series.values.find { |value| value.date == date }
-      return false unless point
+      return false unless date && value_series.values.any? { |value| value.date == date }
 
-      close = builder.balance_series.values.find { |value| value.date == date }
-      close.nil? || close.value != point.value
+      builder.balance_series.values.none? { |value| value.date == date } ||
+        Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil).resets_point_on?(date)
     end
 
     def net_contributions_anchor_date
