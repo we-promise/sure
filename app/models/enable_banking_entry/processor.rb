@@ -2,6 +2,7 @@ require "digest/md5"
 
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
+  include CardAuthorizationHold
 
   # Small-merchant card terminal providers that prefix the payee with "KEYWORD *"
   PAYMENT_PROCESSOR_PREFIX = /\A(SUMUP|SQ|IZETTLE|ZETTLE|PAYPAL)\s*\*\s*/i
@@ -82,14 +83,17 @@ class EnableBankingEntry::Processor
     data[:transaction_id].blank? && data[:entry_reference].blank?
   end
 
-  # Pattern matching masked card authorization descriptors (e.g. "474836xxxxxx6879 003015315475")
-  # commonly returned by certain ASPSPs for unfinalized card holds.
-  MASKED_CARD_DESCRIPTOR = /\A\d{4,6}[xX*]{4,8}\d{4}(?:\s+\d+)?\z/
-
   def self.party_name(data, key)
     value = data[key]
     nested = value.is_a?(Hash) ? value[:name] : (value if value.is_a?(String))
     nested.presence || data[:"#{key}_name"].presence
+  end
+
+  # True when a single remittance line is a technical terminal/POS booking line
+  # rather than a merchant or transaction descriptor.
+  def self.technical_remittance_line?(value)
+    line = value.to_s.strip
+    line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{1,2}[.\/]\d{1,2}\.?\s+\d{2}:\d{2}\z/i)
   end
 
   # True when the transaction represents an unfinalized card authorization hold
@@ -113,11 +117,26 @@ class EnableBankingEntry::Processor
   # True when the transaction's remittance information or bank transaction code
   # consists of a masked card descriptor.
   #
+  # When remittance information is present, requires any descriptive (non-technical)
+  # lines to match MASKED_CARD_DESCRIPTOR and prevents firing if a legitimate
+  # payee or merchant descriptor is present alongside a masked card PAN.
+  #
   # @return [Boolean]
   def self.masked_card_descriptor?(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
     remittance = data[:remittance_information]
-    return true if Array.wrap(remittance).any? { |line| line.to_s.strip.match?(MASKED_CARD_DESCRIPTOR) }
+
+    if remittance.present?
+      lines = Array.wrap(remittance)
+        .map { |line| line.to_s.strip.sub(WALLET_PREFIX, "").strip }
+        .reject(&:blank?)
+
+      descriptive_lines = lines.reject { |line| technical_remittance_line?(line) }
+
+      if descriptive_lines.any?
+        return descriptive_lines.all? { |line| line.match?(MASKED_CARD_DESCRIPTOR) }
+      end
+    end
 
     btc = data.dig(:bank_transaction_code, :description)
     return true if btc.to_s.strip.match?(MASKED_CARD_DESCRIPTOR)
@@ -198,6 +217,8 @@ class EnableBankingEntry::Processor
 
     claim_identifierless_predecessor!
 
+    capture_unidentified_hold_diagnostic if unidentified_hold?
+
     begin
       import_adapter.import_transaction(
         external_id: external_id,
@@ -246,7 +267,7 @@ class EnableBankingEntry::Processor
     end
 
     def name
-      return "Card Authorization Hold" if self.class.unidentified_hold?(data)
+      return HOLD_TRANSACTION_NAME if unidentified_hold?
 
       # Build name from available Enable Banking transaction fields
       # Priority: counterparty name > bank_transaction_code description > remittance_information
@@ -274,7 +295,7 @@ class EnableBankingEntry::Processor
     end
 
     def merchant
-      return nil if self.class.unidentified_hold?(data)
+      return nil if unidentified_hold?
 
       # Use the counterparty when it is human readable; otherwise fall back to remittance
       # for CARD-* transactions where the remittance often contains the actual merchant
@@ -320,7 +341,7 @@ class EnableBankingEntry::Processor
       end
 
       eb[:merchant_category_code] = data[:merchant_category_code] if data[:merchant_category_code].present?
-      eb[:pending] = true if self.class.pending_payload?(data)
+      eb[:pending] = true if pending_payload?
 
       eb.compact!
       eb.empty? ? nil : { enable_banking: eb }
@@ -348,7 +369,7 @@ class EnableBankingEntry::Processor
         # erroneously returns credit_debit_indicator: "CRDT" for an authorization hold on an outflow.
         # Force these holds to positive (outflow/expense in Sure) so they appear as pending expenses
         # and match the settled expense when it arrives.
-        if self.class.unidentified_hold?(data)
+        if unidentified_hold?
           absolute_amount
         elsif credit_debit_indicator == "CRDT"
           -absolute_amount
@@ -407,18 +428,7 @@ class EnableBankingEntry::Processor
     end
 
     def technical_remittance_line?(value)
-      line = value.to_s.strip
-      # Terminal booking line, e.g. "POS   45,13 AT  D6   31.07. 10:27": require the
-      # keyword+amount prefix AND the trailing date+time stamp TOGETHER, not either
-      # alone. Either signal in isolation false-positives on legitimate descriptors:
-      # a line like "POS 45,13 BILLA DANKT ..." (merchant appended after the amount,
-      # no separate technical-only element) would wrongly match on the prefix alone,
-      # and a line like "Invoice paid 31.07. 10:27" would wrongly match on the date
-      # suffix alone. Requiring both matches every real technical line observed in
-      # production while leaving both of those legitimate shapes untouched. Day/month
-      # accept 1-2 digits (not just 2) so an un-padded ASPSP date ("1.07." instead of
-      # "01.07.") is still recognized as technical.
-      line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{1,2}[.\/]\d{1,2}\.?\s+\d{2}:\d{2}\z/i)
+      self.class.technical_remittance_line?(value)
     end
 
     def strip_payment_processor_prefix(value)
@@ -481,7 +491,7 @@ class EnableBankingEntry::Processor
       # Account::ProviderImportAdapter already matches and protects that
       # transition more conservatively. Keeping this claim scoped to BOOK on both
       # sides avoids the two mechanisms fighting over the same row.
-      return if self.class.pending_payload?(data)
+      return if pending_payload?
 
       incoming = self.class.compute_external_id(data)
       return if incoming.blank?
@@ -603,5 +613,28 @@ class EnableBankingEntry::Processor
     rescue ArgumentError, TypeError => e
       Rails.logger.error("Failed to parse Enable Banking transaction date '#{date_value}': #{e.message}")
       raise ArgumentError, "Unable to parse transaction date: #{date_value.inspect}"
+    end
+
+    def pending_payload?
+      data[:_pending] == true || unidentified_hold?
+    end
+
+    def capture_unidentified_hold_diagnostic
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Unidentified card authorization hold detected with inverted sign; normalized to pending expense",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: account&.family,
+        account: account,
+        account_provider: enable_banking_account&.account_provider,
+        metadata: {
+          external_id: self.class.compute_external_id(@enable_banking_transaction),
+          amount: amount.to_s,
+          currency: currency,
+          credit_debit_indicator: credit_debit_indicator
+        }
+      )
     end
 end

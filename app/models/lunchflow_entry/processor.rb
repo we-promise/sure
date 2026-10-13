@@ -3,10 +3,7 @@ require "digest/md5"
 class LunchflowEntry::Processor
   include CurrencyNormalizable
   include LunchflowTransactionHash
-
-  # Pattern matching masked card authorization descriptors (e.g. "474836xxxxxx6879 003015315475")
-  # commonly returned by certain ASPSPs for unfinalized card holds.
-  MASKED_CARD_DESCRIPTOR = /\A\d{4,6}[xX*]{4,8}\d{4}(?:\s+\d+)?\z/
+  include CardAuthorizationHold
 
   # True when the transaction lacks a provider ID and its merchant or description
   # matches a masked card authorization descriptor.
@@ -54,6 +51,8 @@ class LunchflowEntry::Processor
         return existing_posted
       end
     end
+
+    capture_unidentified_hold_diagnostic if unidentified_hold?
 
     # Wrap import in error handling to catch validation and save errors
     begin
@@ -156,19 +155,19 @@ class LunchflowEntry::Processor
     end
 
     def name
-      if self.class.unidentified_hold?(data)
-        "Card Authorization Hold"
+      if unidentified_hold?
+        HOLD_TRANSACTION_NAME
       else
         data[:merchant].presence || "Unknown transaction"
       end
     end
 
     def notes
-      data[:description].presence || (data[:merchant].presence if self.class.unidentified_hold?(data))
+      data[:description].presence || (data[:merchant].presence if unidentified_hold?)
     end
 
     def merchant
-      return nil if self.class.unidentified_hold?(data)
+      return nil if unidentified_hold?
       return nil unless data[:merchant].present?
 
       # Create a stable merchant ID from the merchant name
@@ -208,7 +207,7 @@ class LunchflowEntry::Processor
       # erroneously reports the authorization hold as positive credit (inflow).
       # Force these holds to positive (outflow/expense in Sure) so they appear as pending expenses
       # and match the settled expense when it arrives.
-      if self.class.unidentified_hold?(data)
+      if unidentified_hold?
         parsed_amount.abs
       else
         -parsed_amount
@@ -255,7 +254,7 @@ class LunchflowEntry::Processor
       metadata = {}
 
       # Store pending status from Lunchflow API when present or when an unidentified hold
-      if data.key?(:isPending) || self.class.unidentified_hold?(data)
+      if data.key?(:isPending) || unidentified_hold?
         metadata[:lunchflow] = { pending: is_pending? }
       end
 
@@ -264,7 +263,7 @@ class LunchflowEntry::Processor
 
     # Check if this transaction is marked as pending
     def is_pending?
-      self.class.unidentified_hold?(data) || ActiveModel::Type::Boolean.new.cast(data[:isPending])
+      unidentified_hold? || ActiveModel::Type::Boolean.new.cast(data[:isPending])
     end
 
     # Find an existing posted version of this pending transaction
@@ -285,7 +284,7 @@ class LunchflowEntry::Processor
         .where(Transaction.not_pending_sql("transactions", providers: "lunchflow"))
         .order("entries.date ASC") # Closest date first (prefer same-day posted, then next day, etc.)
 
-      if self.class.unidentified_hold?(data)
+      if unidentified_hold?
         # An unidentified hold has a masked-card descriptor instead of the real merchant name.
         # Only match a posted entry if it explicitly claimed this hold's external_id during
         # pending→posted reconciliation, preventing unrelated same-amount purchases from
@@ -300,5 +299,25 @@ class LunchflowEntry::Processor
       end
 
       query.first
+    end
+
+    def capture_unidentified_hold_diagnostic
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Unidentified card authorization hold detected with inverted sign; normalized to pending expense",
+        source: self.class.name,
+        provider_key: "lunchflow",
+        family: account&.family,
+        account: account,
+        account_provider: lunchflow_account&.account_provider,
+        metadata: {
+          external_id: external_id,
+          amount: amount.to_s,
+          currency: currency,
+          merchant: data[:merchant],
+          description: data[:description]
+        }
+      )
     end
 end

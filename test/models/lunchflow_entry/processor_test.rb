@@ -575,4 +575,50 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not_equal first_entry.id, second_entry.id, "Pending entry with real ID must not be treated as a posted version"
     assert_equal 2, @account.entries.where(source: "lunchflow").count
   end
+
+  test "captures warning DebugLogEntry when processing unidentified card hold" do
+    hold_data = {
+      id: "",
+      accountId: 456,
+      amount: 14.97,
+      currency: "EUR",
+      date: "2025-01-20",
+      merchant: "474836xxxxxx6879 003015315475",
+      description: "474836xxxxxx6879 003015315475"
+    }
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      LunchflowEntry::Processor.new(
+        hold_data,
+        lunchflow_account: @lunchflow_account
+      ).process
+    end
+
+    log_entry = DebugLogEntry.last
+    assert_equal "provider_sync", log_entry.category
+    assert_equal "warn", log_entry.level
+    assert_equal "lunchflow", log_entry.provider_key
+    assert_equal @lunchflow_account.current_account, log_entry.account
+    assert_equal @lunchflow_account.current_account.family, log_entry.family
+    assert_includes log_entry.message, "Unidentified card authorization hold"
+  end
+
+  test "does not capture DebugLogEntry for regular transactions" do
+    data = {
+      id: "tx_regular",
+      accountId: 456,
+      amount: -14.97,
+      currency: "EUR",
+      date: "2025-01-20",
+      merchant: "Uber",
+      description: "Uber ride"
+    }
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      LunchflowEntry::Processor.new(
+        data,
+        lunchflow_account: @lunchflow_account
+      ).process
+    end
+  end
 end

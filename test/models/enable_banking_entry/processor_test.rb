@@ -829,6 +829,94 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "Supermarket" ])
     assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "Salary" ])
     assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: nil)
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(
+      remittance_information: [ "Amazon.com", "474836xxxxxx6879 003015315475" ]
+    )
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(
+      remittance_information: [ "474836xxxxxx6879 003015315475", "Amazon.com" ]
+    )
+  end
+
+  test "does not treat multi-line remittance with legitimate payee and card PAN as unidentified hold" do
+    # When payee matches a known merchant, preserves payee name and associates known merchant
+    tx_known = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "29.99", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "Amazon.com", "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    entry_known = EnableBankingEntry::Processor.new(tx_known, enable_banking_account: @enable_banking_account).process
+
+    assert_not_nil entry_known
+    assert_equal BigDecimal("29.99"), entry_known.amount
+    assert_equal "Amazon", entry_known.name
+    assert_equal "Amazon", entry_known.transaction.merchant&.name
+    assert_not entry_known.transaction.pending?
+
+    # When payee is not an existing known merchant, preserves remittance text as entry name
+    tx_unknown = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "15.50", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "Acme Store", "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    entry_unknown = EnableBankingEntry::Processor.new(tx_unknown, enable_banking_account: @enable_banking_account).process
+
+    assert_not_nil entry_unknown
+    assert_equal BigDecimal("15.50"), entry_unknown.amount
+    assert_equal "Acme Store", entry_unknown.name
+    assert_not entry_unknown.transaction.pending?
+  end
+
+  test "captures warning DebugLogEntry when processing unidentified card hold" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+
+    log_entry = DebugLogEntry.last
+    assert_equal "provider_sync", log_entry.category
+    assert_equal "warn", log_entry.level
+    assert_equal "enable_banking", log_entry.provider_key
+    assert_equal @account, log_entry.account
+    assert_equal @account.family, log_entry.family
+    assert_includes log_entry.message, "Unidentified card authorization hold"
+  end
+
+  test "does not capture DebugLogEntry for regular transactions" do
+    tx = {
+      entry_reference: "ref_regular",
+      transaction_id: "tx_regular",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Regular Store" },
+      status: "BOOK"
+    }
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
   end
 
   test "reconciles and claims unfinalized card hold when settled booked transaction arrives" do
