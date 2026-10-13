@@ -49,6 +49,22 @@ Recommend `read` for ChatGPT, analytics assistants, and any integration that
 only needs to see the data. Reserve `read_write` for a client you actually
 want making changes (creating tags, updating transactions, and so on).
 
+#### Upgrading from a version without scopes
+
+Before scopes, every MCP connection was effectively `read_write`. After
+upgrading:
+
+- **Connections you already have keep working unchanged.** Their tokens and
+  client registrations are untouched, so they keep `read_write`.
+- **A connector you remove and add again registers as `read`**, unless the
+  client sends `"scope": "read_write"`. Its write tools then disappear from
+  `tools/list` (`tools/call` answers "Unknown tool"). See [OAuth token
+  authenticates but write tools are missing](#oauth-token-authenticates-but-write-tools-are-missing).
+- **An existing token that only has the `read` scope can now use MCP**, with
+  the read-only tool surface. MCP used to reject it with `401`. It gains no
+  more than it already had on the REST API.
+- **`MCP_API_TOKEN` keeps full access** unless you set `MCP_API_TOKEN_SCOPE`.
+
 ### 2. Static bearer token via environment variables
 
 This is the fallback for custom agents, scripts, and deployments where OAuth
