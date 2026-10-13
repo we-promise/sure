@@ -910,6 +910,34 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "deleting the real outflow also removes its fabricated counterpart" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @family.auto_create_missing_transfer_counterparts!
+    fabricated_entry_id = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).inflow_transaction.entry.id
+
+    assert_difference -> { Transfer.count } => -1, -> { Entry.count } => -2 do
+      outflow_entry.destroy!
+    end
+
+    assert_not Entry.exists?(fabricated_entry_id)
+  end
+
+  test "deleting a fabricated counterpart itself removes only that entry and its transfer" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @family.auto_create_missing_transfer_counterparts!
+    fabricated_entry = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).inflow_transaction.entry
+
+    assert_difference [ "Transfer.count", "Entry.count" ], -1 do
+      fabricated_entry.destroy!
+    end
+
+    assert Entry.exists?(outflow_entry.id)
+  end
+
   test "a system-side destroy of a fabricated transfer does not dismiss the suggestion" do
     @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)

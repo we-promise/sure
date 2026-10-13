@@ -16,6 +16,8 @@ class Transfer < ApplicationRecord
   validate :transfer_within_date_range
   validate :transfer_has_same_family
 
+  after_destroy :destroy_fabricated_counterpart
+
   class << self
     def kind_for_account(account)
       if account.loan?
@@ -119,19 +121,8 @@ class Transfer < ApplicationRecord
         next if transaction.nil?
         next unless Transaction.exists?(transaction.id)
         begin
-          # This leg didn't exist before Family::AutoTransferMatchable
-          # fabricated it as a stand-in counterpart (see
-          # #auto_create_missing_transfer_counterparts!) -- unlike a real,
-          # bank-synced transaction, there's no underlying data for it to
-          # revert to, so unlinking it must remove it entirely rather than
-          # downgrade it to a phantom "standard" transaction the user never
-          # created.
-          if transaction.extra&.dig("auto_generated_transfer_counterpart") == true
-            account = transaction.entry.account
-            transaction.entry.destroy!
-            account.sync_later
-            next
-          end
+          # A fabricated counterpart is removed by #destroy_fabricated_counterpart.
+          next if transaction.extra&.dig("auto_generated_transfer_counterpart") == true
 
           transaction.update!(kind: "standard")
           # The entry survives this destroy (only the Transfer join row and
@@ -202,6 +193,25 @@ class Transfer < ApplicationRecord
   end
 
   private
+    # The inflow leg Family::AutoTransferMatchable fabricated as a stand-in
+    # counterpart (see #auto_create_missing_transfer_counterparts!) has no
+    # bank data behind it, so it must not outlive its transfer: unlinking it
+    # must not leave a phantom "standard" transaction the user never created,
+    # and deleting the real outflow (which destroys this transfer through
+    # Transaction::Transferable's dependent: :destroy, bypassing #destroy!)
+    # must not leave it inflating the target account's balance. When the
+    # fabricated entry itself is being deleted, its row is already gone here.
+    def destroy_fabricated_counterpart
+      return unless inflow_transaction&.extra&.dig("auto_generated_transfer_counterpart") == true
+
+      entry = Entry.find_by(entryable_type: "Transaction", entryable_id: inflow_transaction_id)
+      return if entry.nil?
+
+      account = entry.account
+      entry.destroy!
+      account.sync_later
+    end
+
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
       errors.add(:base, :different_accounts) if to_account == from_account
