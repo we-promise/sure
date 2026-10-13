@@ -132,6 +132,34 @@ class SettingTest < ActiveSupport::TestCase
     assert_equal "test-model", Setting.openai_model
   end
 
+  test "brand_fetch_icon_url builds a logo URL with the requested fallback" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
+
+    assert_equal(
+      "https://cdn.brandfetch.io/example.com/icon/fallback/404/w/40/h/40?c=test-client-id",
+      Setting.brand_fetch_icon_url("example.com", fallback: "404")
+    )
+  end
+
+  test "brand_fetch_icon_url supports namespaced routes and explicit dimensions" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
+
+    assert_equal(
+      "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/80/h/80?c=test-client-id",
+      Setting.brand_fetch_icon_url("BTC", namespace: "crypto", width: 80, height: 80)
+    )
+  end
+
+  test "brand_fetch_icon_url returns nil without an identifier or client id" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    assert_nil Setting.brand_fetch_icon_url(nil)
+
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    assert_nil Setting.brand_fetch_icon_url("example.com")
+  end
+
   test "enabled_securities_providers falls back to twelve_data when nothing is configured" do
     with_env_overrides("SECURITIES_PROVIDERS" => nil, "SECURITIES_PROVIDER" => nil) do
       assert_equal [ "twelve_data" ], Setting.enabled_securities_providers

@@ -1,4 +1,27 @@
 module TransactionsHelper
+  # A counterparty's own bank account identifier is arguably more sensitive
+  # than the user's own account IBAN (it's a third party's number, not
+  # something the viewing family controls), so it's masked to the last 4
+  # characters by default -- matching the existing convention for the
+  # user's own linked-account IBAN in
+  # enable_banking_items/setup_accounts.html.erb -- rather than relying
+  # solely on the opt-in Privacy Mode blur.
+  def mask_counterparty_account_value(value)
+    return value if value.blank? || value.length <= 4
+    "•#{value.last(4)}"
+  end
+
+  # Returns [label, masked value] for the counterparty row, or nil when the
+  # transaction carries no counterparty data. Only an actual IBAN is labelled
+  # as one; the provider's generic account id gets a neutral label.
+  def counterparty_account_display(transaction)
+    if (iban = transaction.counterparty_iban.presence)
+      [ t("transactions.show.counterparty_iban_label"), mask_counterparty_account_value(iban) ]
+    elsif (account_id = transaction.counterparty_account_id.presence)
+      [ t("transactions.show.counterparty_account_label"), mask_counterparty_account_value(account_id) ]
+    end
+  end
+
   def transaction_search_filters
     [
       { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },
@@ -67,10 +90,23 @@ module TransactionsHelper
         raw: nil
       }
     else
+      display_extra = extra
+      # Defensive, not load-bearing anymore: counterparty_iban/
+      # counterparty_account_id now live in their own encrypted transaction
+      # columns (see Transaction), not in this jsonb hash, so a freshly
+      # synced transaction's `extra` never carries them. Kept in case any
+      # already-synced row from before that change still has them here --
+      # unconditionally, unlike the preference check elsewhere on this page,
+      # since the dedicated counterparty-account row above is the ONLY
+      # sanctioned place this value is ever shown, and only in masked form.
+      if display_extra.is_a?(Hash)
+        display_extra = display_extra.except("counterparty_iban", "counterparty_account_id")
+      end
+
       pretty = begin
-        JSON.pretty_generate(extra)
+        JSON.pretty_generate(display_extra)
       rescue StandardError
-        extra.to_s
+        display_extra.to_s
       end
       {
         kind: :raw,

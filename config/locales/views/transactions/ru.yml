@@ -295,6 +295,8 @@ ru:
       selected: выбрано
     show:
       account_label: Счёт
+      counterparty_account_label: "Счёт контрагента"
+      counterparty_iban_label: "IBAN контрагента"
       activity_type: Тип активности
       activity_type_description: Тип инвестиционной активности (Покупка, Продажа,
         Дивиденды и т.д.). Автоматически определяется или устанавливается вручную.

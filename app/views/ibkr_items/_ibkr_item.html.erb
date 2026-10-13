@@ -9,9 +9,7 @@
         <div class="flex items-center gap-2">
           <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-          <div class="flex items-center justify-center h-8 w-8 rounded-full bg-[#D32F2F]/10">
-            <span class="text-[#D32F2F] text-xs font-medium">IB</span>
-          </div>
+          <%= render ProviderLogo.new(provider_key: :ibkr) %>
 
           <div class="pl-1 text-sm">
             <div class="flex items-center gap-2">

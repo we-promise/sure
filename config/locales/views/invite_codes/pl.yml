@@ -1,6 +1,11 @@
 ---
 pl:
   invite_codes:
+    create:
+      success: Kod wygenerowany
+    destroy:
+      success: Kod usunięty
     index:
-      invite_code_description: Wygeneruj nowy kod, aby zobaczyć go tutaj. Wykorzystane kody nie są już wyświetlane.
+      invite_code_description: Wygeneruj nowy kod, aby zobaczyć go tutaj. Wykorzystane
+        kody nie są już wyświetlane.
       no_invite_codes: Brak kodów do wyświetlenia

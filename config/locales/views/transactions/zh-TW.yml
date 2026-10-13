@@ -63,6 +63,8 @@ zh-TW:
       potential_duplicate_title: 偵測到可能重複的交易
       transfer: 轉帳
       account_label: 帳戶
+      counterparty_account_label: "交易對方帳戶"
+      counterparty_iban_label: "交易對方 IBAN"
       amount: 金額
       category_label: 分類
       date_label: 日期

@@ -6,11 +6,14 @@ pl:
       error: 'Błąd podczas tworzenia tagu: %{error}'
     destroy:
       deleted: Tag został usunięty
+    destroy_all:
+      all_deleted: Wszystkie tagi usunięte
     edit:
       edit: Edytuj tag
     form:
       placeholder: Nazwa tagu
     index:
+      delete_all: Usuń wszystkie
       empty: Brak tagów
       new: Nowy tag
       tags: Tagi

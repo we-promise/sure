@@ -63,6 +63,8 @@ zh-CN:
       potential_duplicate_title: 检测到可能的重复项
       transfer: 转账
       account_label: 账户
+      counterparty_account_label: "交易对方账户"
+      counterparty_iban_label: "交易对方 IBAN"
       amount: 金额
       category_label: 分类
       date_label: 日期

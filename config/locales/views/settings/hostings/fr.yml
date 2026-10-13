@@ -51,17 +51,17 @@ fr:
         url_label: URL du endpoint
         url_placeholder: https://your-agent-host/v1/chat
       brand_fetch_settings:
-        description: Saisissez l'ID client fourni par Brand Fetch
-        env_configured_message: Vous avez configuré avec succès votre ID client Brand Fetch via la variable d'environnement BRAND_FETCH_CLIENT_ID.
+        description: Saisissez l'ID client fourni par Brandfetch
+        env_configured_message: Vous avez configuré avec succès votre ID client Brandfetch via la variable d'environnement BRAND_FETCH_CLIENT_ID.
         high_res_description: Lorsque cette option est activée, les logos seront récupérés en résolution 120x120 au lieu de 40x40. Cela offre des images plus nettes sur les écrans à haute densité de pixels.
         high_res_label: Activer les logos haute résolution
         label: ID client
         placeholder: Entrez votre ID client ici
-        setup_step_1_html: Visitez <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> et créez un compte de développeur Brand Fetch gratuit.
+        setup_step_1_html: Visitez <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> et créez un compte de développeur Brandfetch gratuit.
         setup_step_2_html: Accédez à la page <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">API du logo</a>.
         setup_step_3: Appuyez sur l'icône en forme d'œil sous la section « Votre ID client » pour révéler votre ID client et collez-le ci-dessous.
         show_details: "(afficher les détails)"
-        title: Paramètres Brand Fetch
+        title: Paramètres Brandfetch
       clear_cache:
         cache_cleared: Le cache de données a été effacé. Cela peut prendre quelques instants.
       disconnect_external_assistant:

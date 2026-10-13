@@ -117,6 +117,8 @@ vi:
         dashboard_subtitle: Tùy chỉnh cách hiển thị bảng điều khiển
         dashboard_two_column_title: Bố cục hai cột
         dashboard_two_column_description: Hiển thị các widget bảng điều khiển thành hai cột trên màn hình lớn. Khi tắt, các widget xếp chồng thành một cột.
+        show_counterparty_account_description: "Hiển thị 4 ký tự cuối của IBAN hoặc số tài khoản của đối tác trong chi tiết giao dịch, khi kết nối ngân hàng của bạn cung cấp. Chỉ xuất hiện khi có dữ liệu này."
+        show_counterparty_account_title: "Hiển thị thông tin tài khoản đối tác"
         split_grouped_title: Nhóm giao dịch phân chia
         split_grouped_description: Hiển thị giao dịch phân chia được nhóm dưới giao dịch cha trong danh sách. Khi tắt, các mục con phân chia xuất hiện như các hàng riêng biệt.
     preferences:

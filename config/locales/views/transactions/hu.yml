@@ -63,6 +63,8 @@ hu:
       potential_duplicate_title: Lehetséges duplikátum észlelve
       transfer: Átutalás
       account_label: Számla
+      counterparty_account_label: "Partner számlája"
+      counterparty_iban_label: "Partner IBAN"
       amount: Összeg
       category_label: Kategória
       date_label: Dátum

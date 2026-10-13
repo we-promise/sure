@@ -3,7 +3,7 @@ uk:
   providers:
     monobank:
       name: Monobank
-      description: Підключення карток і банок monobank за персональним токеном API
+      description: Підключення карток і банок Monobank за персональним токеном API
   family:
     monobank:
       create_monobank_item:
@@ -28,7 +28,7 @@ uk:
       sync_failed: Не вдалося синхронізувати підключення Monobank
     sync:
       status:
-        importing: Імпортуємо рахунки з monobank...
+        importing: Імпортуємо рахунки з Monobank...
         checking_setup: Перевіряємо налаштування рахунків...
         needs_setup:
           one: 1 рахунок потребує налаштування...

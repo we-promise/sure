@@ -21,7 +21,8 @@ module Family::PlaidConnectable
       name: item_name,
       plaid_id: public_token_response.item_id,
       access_token: public_token_response.access_token,
-      plaid_region: region
+      plaid_region: region,
+      owner: Current.user
     )
 
     plaid_item.sync_later

@@ -272,6 +272,8 @@ fr:
       selected: sélectionné
     show:
       account_label: Compte
+      counterparty_account_label: "Compte de la contrepartie"
+      counterparty_iban_label: "IBAN de la contrepartie"
       activity_type: Type d'activité
       activity_type_description: Type d'activité d'investissement (Achat, Vente, Dividende, etc.). Détecté automatiquement ou défini manuellement.
       additional_details: Détails supplémentaires

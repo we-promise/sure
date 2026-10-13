@@ -25,6 +25,8 @@ nl:
       new_transaction: Nieuwe transactie
     show:
       account_label: Account
+      counterparty_account_label: "Rekening tegenpartij"
+      counterparty_iban_label: "IBAN tegenpartij"
       amount: Bedrag
       category_label: Categorie
       date_label: Datum
