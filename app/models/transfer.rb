@@ -102,11 +102,51 @@ class Transfer < ApplicationRecord
   end
 
   # The kind a leg carries while this transfer exists: the outflow by the
-  # destination account, the inflow always funds_movement.
+  # destination account (unless the user chose whether it is an investment
+  # contribution), the inflow always funds_movement.
   def kind_for_leg(transaction)
     return "funds_movement" if transaction.id == inflow_transaction_id
+    return transaction.kind if investment_contribution_chosen?(transaction)
 
     Transfer.kind_for_account(to_account, from_account: from_account)
+  end
+
+  # A transfer into an investment or crypto account counts as an investment
+  # contribution (a budgeted expense) by default. A user can make it a plain
+  # transfer instead, e.g. money moved to a broker only to convert currency.
+  def investment_contribution_switchable?
+    confirmed? && contribution_by_default?
+  end
+
+  def investment_contribution?
+    kind_for_leg(outflow_transaction) == "investment_contribution"
+  end
+  alias_method :investment_contribution, :investment_contribution?
+
+  # Switches the outflow between investment_contribution and funds_movement
+  # and locks the kind, so provider syncs and Transfer::InvestmentKindReconciler
+  # keep the choice. The Investment Contributions category follows the switch;
+  # a category the user picked stays.
+  #
+  # @return [Boolean] false when this transfer cannot be switched
+  def update_investment_contribution!(enabled)
+    return false unless investment_contribution_switchable?
+
+    outflow_attrs = { kind: enabled ? "investment_contribution" : "funds_movement" }
+    category = outflow_transaction.category
+
+    if enabled && category.nil?
+      outflow_attrs[:category] = to_account.family.investment_contributions_category
+    elsif !enabled && category && Category.all_investment_contributions_names.include?(category.name)
+      outflow_attrs[:category] = nil
+    end
+
+    Transfer.transaction do
+      outflow_transaction.update!(outflow_attrs)
+      outflow_transaction.lock_attr!(:kind)
+    end
+
+    true
   end
 
   # Based on the destination account rather than outflow_transaction.kind,
@@ -116,7 +156,7 @@ class Transfer < ApplicationRecord
   def categorizable?
     return false unless to_account
 
-    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(Transfer.kind_for_account(to_account, from_account: from_account))
+    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(kind_for_leg(outflow_transaction))
   end
 
   def reject!
@@ -134,7 +174,11 @@ class Transfer < ApplicationRecord
         begin
           # A pending auto-match never changed the kind (see #confirm!), so a
           # transfer kind on its transactions predates the match and stays.
-          transaction.update!(kind: "standard") if transaction.transfer? && !pending?
+          if transaction.transfer? && !pending?
+            transaction.update!(kind: "standard")
+            # A kind locked by update_investment_contribution! belonged to this transfer.
+            transaction.unlock_attr!(:kind) if transaction.locked?(:kind)
+          end
           # The entry survives this destroy (only the Transfer join row and
           # fee transactions go away), but its idempotency_key must not: a
           # later retry of the original create request looks up that key,
@@ -192,6 +236,17 @@ class Transfer < ApplicationRecord
   end
 
   private
+    def contribution_by_default?
+      to_account.present? && Transfer.kind_for_account(to_account, from_account: from_account) == "investment_contribution"
+    end
+
+    # The outflow kind update_investment_contribution! set and locked.
+    def investment_contribution_chosen?(transaction)
+      transaction.locked?(:kind) &&
+        %w[investment_contribution funds_movement].include?(transaction.kind) &&
+        contribution_by_default?
+    end
+
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
       errors.add(:base, :different_accounts) if to_account == from_account

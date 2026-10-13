@@ -33,6 +33,9 @@ en:
         transactions.
       delete_title: Remove transfer?
       details: Details
+      investment_contribution_subtitle: Count this transfer as spending in budgets and
+        reports. Turn it off for money moved to a broker only to convert currency.
+      investment_contribution_title: Investment contribution
       mark_recurring: Mark as recurring
       mark_recurring_subtitle: Track this transfer as a recurring pattern in the upcoming
         feed and recurring page.
