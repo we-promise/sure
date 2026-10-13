@@ -20,6 +20,10 @@ tr:
       name_placeholder: Satıcı adı
       website_hint: Logosunun otomatik olarak görüntülenmesi için satıcının web sitesini
         girin
+      iban_placeholder: "IBAN (isteğe bağlı)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN kayıtlı, değiştirmek için yeni bir değer girin"
+      iban_hint: "Biliniyorsa satıcının banka hesap numarası"
+      iban_remove_label: "IBAN'ı kaldır"
       website_placeholder: Web sitesi (örn. starbucks.com)
     index:
       empty: Henüz satıcı yok

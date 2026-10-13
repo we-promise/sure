@@ -13,6 +13,10 @@ de:
       name_placeholder: Händlername
       website_placeholder: Website (z. B. starbucks.com)
       website_hint: Gib die Website des Händlers ein, um dessen Logo automatisch anzuzeigen
+      iban_placeholder: "IBAN (optional)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN hinterlegt, neuen Wert eingeben, um sie zu ersetzen"
+      iban_hint: "Die eigene Kontonummer des Händlers, falls bekannt"
+      iban_remove_label: "IBAN entfernen"
     index:
       empty: Noch keine Händler vorhanden
       new: Neuer Händler

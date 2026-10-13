@@ -43,6 +43,10 @@ de:
       institution_name_placeholder: "z. B. Chase Bank"
       institution_domain_label: Domain der Institution
       institution_domain_placeholder: "z. B. chase.com"
+      iban_label: "IBAN"
+      iban_placeholder: "z. B. DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN hinterlegt, neuen Wert eingeben, um sie zu ersetzen"
+      iban_remove_label: "IBAN entfernen"
       notes_label: Notizen
       notes_placeholder: Zusätzliche Informationen wie Kontonummern, Sort codes, IBAN, Routing-Nummern usw.
       enable_category_matcher_hint: Ist die Option an, wird die vom Anbieter vorgeschlagene Kategorie auf importierte Transaktionen angewendet. Schalte sie aus, damit neue Transaktionen ohne Kategorie bleiben.

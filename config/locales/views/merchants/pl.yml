@@ -20,6 +20,10 @@ pl:
       name_placeholder: Nazwa kontrahenta
       website_hint: Wprowadź stronę internetową kontrahenta, aby automatycznie wyświetlać
         jego logo
+      iban_placeholder: "IBAN (opcjonalnie)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN zapisany, wprowadź nową wartość, aby go zastąpić"
+      iban_hint: "Numer rachunku bankowego kontrahenta, jeśli jest znany"
+      iban_remove_label: "Usuń IBAN"
       website_placeholder: Strona internetowa (np. starbucks.com)
     index:
       empty: Brak kontrahentów

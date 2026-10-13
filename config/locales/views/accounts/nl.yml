@@ -26,6 +26,10 @@ nl:
       institution_name_placeholder: bijv. Chase Bank
       institution_domain_label: Domein instelling
       institution_domain_placeholder: bijv. chase.com
+      iban_label: "IBAN"
+      iban_placeholder: "bijv. DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN opgeslagen, voer een nieuwe waarde in om deze te vervangen"
+      iban_remove_label: "IBAN verwijderen"
       notes_label: Notities
       notes_placeholder: Sla aanvullende informatie op zoals rekeningnummers, sorteer codes, IBAN, routenummers, enz.
     index:
