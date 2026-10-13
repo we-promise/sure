@@ -27,6 +27,18 @@ module Account::Anchorable
     opening_balance_manager.has_opening_anchor?
   end
 
+  def history_start_date
+    if linked? && balance_type == :investment
+      Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(self)
+    else
+      [
+        (opening_anchor_date if has_opening_anchor?),
+        entries.excluding_pending.minimum(:date),
+        balances.minimum(:date)
+      ].compact.min
+    end
+  end
+
   def set_current_balance(balance)
     result = current_balance_manager.set_current_balance(balance)
     sync_later if result.success?

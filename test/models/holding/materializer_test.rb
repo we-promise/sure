@@ -42,6 +42,19 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_nil latest_holding.avg_cost
   end
 
+  test "a sweep in clears a cost basis this app had worked out" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+    assert_equal 200, latest_holding.cost_basis.to_d
+
+    @account.trades.each { |trade| trade.update!(investment_activity_label: "Sweep In") }
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_nil latest_holding.cost_basis
+    assert_nil latest_holding.cost_basis_source
+    assert_nil latest_holding.avg_cost
+  end
+
   # A row carrying a figure with no `cost_basis_source` was invisible to
   # `load_existing_holdings_map`, so the clearing above saw no existing holding
   # and left the stale basis standing — the rows least able to justify the

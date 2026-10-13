@@ -1,0 +1,12 @@
+<%# "What's new" release highlight mount. Rendered only when the deployed
+    release tag is unseen for this account. The Stimulus controller fetches
+    the notes, opens the popover on the first pointer/keyboard interaction,
+    and marks the tag seen once the user dismisses it. %>
+<div
+  data-controller="release-highlight"
+  data-release-highlight-content-url-value="<%= release_highlight_path %>"
+  data-release-highlight-dismiss-url-value="<%= release_highlight_dismiss_path %>"
+  data-release-highlight-tag-value="<%= tag %>"
+  data-release-highlight-title-value="<%= t("layouts.application.release_highlight.title") %>"
+  data-release-highlight-done-label-value="<%= t("layouts.application.release_highlight.done") %>"
+  hidden></div>

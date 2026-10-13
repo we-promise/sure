@@ -39,9 +39,7 @@
       <% items.each do |item| %>
         <div class="flex items-center justify-between p-3 bg-container-inset rounded-lg border border-primary">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background-color: rgba(240, 185, 11, 0.15);">
-              <%= icon "coins", size: "md", class: "text-[#F0B90B]" %>
-            </div>
+            <%= render ProviderLogo.new(provider_key: :binance, class_name: "w-10 h-10 rounded-full") %>
             <div>
               <p class="font-medium text-primary"><%= item.name %></p>
               <p class="text-xs text-secondary">

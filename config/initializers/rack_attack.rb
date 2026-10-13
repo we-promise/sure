@@ -143,6 +143,30 @@ class Rack::Attack
     credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/api/v1/auth/sso_link")
   end
 
+  # FinanceKit publisher endpoints belong to this section: both the upload and
+  # the receipt read authenticate a bearer token against a stored SHA-256
+  # digest (FinancekitItem#authenticate_credential?), the same
+  # credential-against-stored-value shape as the throttles above. They sit
+  # outside Api::V1::BaseController, so its per-key rate limiting never runs.
+  # Guessing the token itself is infeasible — 256 bits of SecureRandom — but
+  # an accepted upload takes the item row lock and validates up to
+  # Financekit::MAX_RECORDS events, so the limit is really about bounding that
+  # work per publisher. Discriminate by publisher_id as well as IP, matching
+  # the section's throttle-by-both rule.
+  financekit_publisher_id = ->(request) do
+    request.path.match(
+      %r{\A/api/v1/financekit/publishers/([^/]+)/batches(?:/[^/]+)?(?:\.[^./?]+)?\z}
+    )&.captures&.first
+  end
+
+  throttle("financekit_publisher/ip", limit: 60, period: 1.minute) do |request|
+    request.ip if financekit_publisher_id.call(request)
+  end
+
+  throttle("financekit_publisher/publisher", limit: 60, period: 1.minute) do |request|
+    financekit_publisher_id.call(request)
+  end
+
   # The background jobs console lives under /settings (so its polling GET
   # isn't throttled), but its mutation is destructive and super-admin only —
   # rate limit it independently.
