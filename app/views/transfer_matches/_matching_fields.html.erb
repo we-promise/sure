@@ -33,9 +33,15 @@
     <%= render DS::Alert.new(variant: :info) do %>
       <div class="flex items-start justify-between gap-2">
         <p><%= t(".suggested_account_html", name: suggested_account.name) %></p>
-        <%= link_to t(".dismiss_suggestion"), dismiss_suggestion_transaction_transfer_match_path(entry),
-              data: { turbo_method: :post, turbo_frame: "_top" },
-              class: "text-secondary hover:text-primary underline whitespace-nowrap" %>
+        <%# A link, not DS::Button: button_to would nest a form inside the match form. %>
+        <%= render DS::Link.new(
+              text: t(".dismiss_suggestion"),
+              href: dismiss_suggestion_transaction_transfer_match_path(entry),
+              variant: :default,
+              method: :post,
+              frame: "_top",
+              class: "whitespace-nowrap"
+            ) %>
       </div>
     <% end %>
   <% else %>

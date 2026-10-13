@@ -997,9 +997,21 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
     transfer = Transfer.create!(inflow_transaction: inflow_entry.entryable, outflow_transaction: outflow_entry.entryable)
 
+    transfer.unlink!
+
+    assert_nil outflow_entry.reload.entryable.extra&.dig("counterparty_transfer_suggestion_dismissed")
+    assert Entry.exists?(inflow_entry.id)
+  end
+
+  test "rejecting a real transfer does not dismiss the counterpart suggestion" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.entryable, outflow_transaction: outflow_entry.entryable)
+
     transfer.reject!
 
     assert_nil outflow_entry.reload.entryable.extra&.dig("counterparty_transfer_suggestion_dismissed")
+    assert Entry.exists?(inflow_entry.id)
   end
 
   test "auto_create_missing_transfer_counterparts! does not fabricate into an account the outflow's owner cannot write to" do

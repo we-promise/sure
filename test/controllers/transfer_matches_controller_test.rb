@@ -88,6 +88,7 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "option[selected][value=?]", target_account.id
     assert_match target_account.name, response.body
+    assert_select "a[data-turbo-method=post][href=?]", dismiss_suggestion_transaction_transfer_match_path(outflow_entry)
   end
 
   test "new does not suggest an account when no iban matches" do
