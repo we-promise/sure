@@ -18,12 +18,12 @@ ca:
       edit: Edita
     form:
       name_placeholder: Nom del comerç
+      website_hint: Introdueix el lloc web del comerç per mostrar-ne automàticament
+        el logotip
       iban_placeholder: "IBAN (opcional)"
       iban_set_placeholder: "•••• •••• •••• •••• — IBAN desat, introdueix un valor nou per substituir-lo"
       iban_hint: "Les transaccions importades d'aquest número de compte s'assignen a aquest comerç quan el seu nom no coincideix amb cap altre comerç"
       iban_remove_label: "Elimina l'IBAN"
-      website_hint: Introdueix el lloc web del comerç per mostrar-ne automàticament
-        el logotip
       website_placeholder: Lloc web (p. ex., starbucks.com)
     index:
       empty: Encara no hi ha comerços
