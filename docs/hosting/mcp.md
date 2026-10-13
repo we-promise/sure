@@ -136,7 +136,9 @@ response does not confirm the tool exists but is forbidden.
 
 Allowed in read-only mode: `get_transactions`, `get_recurring_transactions`,
 `get_accounts`, `get_holdings`, `get_balance_sheet`, `get_income_statement`,
-`get_tags`, `get_categories`, `get_merchants`, and, for users
+`get_tags`, `get_categories`, `get_merchants`, `get_rules`,
+`get_rule_options`, `preview_rule` (it only reads and signs a token; the
+`apply_rule` it feeds is not reachable), and, for users
 with preview features enabled, `list_account_statements`,
 `get_account_statement`, `get_statement_coverage`, `get_valuations`,
 `get_insights`, `get_bills`, `get_bill_details`, `get_paycheck_plan`,
@@ -151,7 +153,8 @@ read tools expose, a larger data surface than this mode is meant to grant an
 external assistant. Every other excluded tool (`create_goal`, `create_tag`, `update_tag`, `create_category`,
 `update_category`, `create_transaction`, `update_transaction`, `delete_transaction`, `update_budget`,
 `import_bank_statement`, `upload_account_statement`, `record_valuation`,
-`create_bill`, `update_bill`, `record_bill_payment`) performs a real mutation.
+`create_bill`, `update_bill`, `record_bill_payment`, `create_rule`, `update_rule`,
+`apply_rule`, `unmatch_transfer`, `set_opening_balance`) performs a real mutation.
 
 ### Sessions and read-only mode
 
