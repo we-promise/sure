@@ -442,13 +442,18 @@ The authorization-server metadata includes:
 - `registration_endpoint`: `https://your-sure-instance/register`
 - `scopes_supported`: `["read", "read_write"]`
 
-The protected-resource metadata's `resource` field identifies `/mcp` itself
-(`https://your-sure-instance/mcp`), not the whole origin — it is the one
-endpoint actually behind Bearer auth. The same metadata is also served at the
-resource-scoped path, `/.well-known/oauth-protected-resource/mcp`, for
-clients that construct that URL from the resource identifier themselves
-instead of following the `resource_metadata` value in a 401's
-`WWW-Authenticate` header.
+The protected-resource metadata is served at two paths, and `resource` differs
+between them on purpose (RFC 9728 §3.3: it must match the identifier the
+client built the metadata URL from):
+
+- `/.well-known/oauth-protected-resource` → `resource` is the bare origin
+  (`https://your-sure-instance`)
+- `/.well-known/oauth-protected-resource/mcp` → `resource` is the MCP endpoint
+  (`https://your-sure-instance/mcp`)
+
+An unauthenticated `/mcp` request gets a `401` whose `WWW-Authenticate` header
+points at the resource-scoped document and carries `scope="read"`, the minimum
+a client needs to request first.
 
 ### Call a Tool
 
