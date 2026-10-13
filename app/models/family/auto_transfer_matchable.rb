@@ -265,7 +265,7 @@ module Family::AutoTransferMatchable
             amount: -entry.amount,
             currency: target_account.currency,
             date: entry.date,
-            name: I18n.with_locale(locale) { I18n.t("transfer.counterpart_name", from_account: entry.account.name) }
+            name: I18n.with_locale(locale) { missing_transfer_counterpart_name(entry.account, target_account) }
           )
         )
         inflow_transaction.save!
@@ -286,6 +286,24 @@ module Family::AutoTransferMatchable
       target_account.sync_later if created
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
       nil
+    end
+
+    # The fabricated entry lives on the target account, so everyone who can
+    # see that account reads its name. Name the source account only when all
+    # of them can see the source account too; otherwise a private account's
+    # name would leak to members it isn't shared with.
+    def missing_transfer_counterpart_name(source_account, target_account)
+      if account_viewer_ids(target_account).subset?(account_viewer_ids(source_account))
+        I18n.t("transfer.counterpart_name", from_account: source_account.name)
+      else
+        I18n.t("transfer.counterpart_name_generic")
+      end
+    end
+
+    # The members who can see an account (Account.accessible_by): its owner
+    # and everyone it is shared with.
+    def account_viewer_ids(account)
+      Set.new([ account.owner_id, *account.account_shares.pluck(:user_id) ].compact)
     end
 
     # Orders the candidates so that IBAN-confirmed ones are tried first. A

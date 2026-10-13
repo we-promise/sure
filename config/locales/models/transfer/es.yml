@@ -19,5 +19,6 @@ es:
           within_days: Debe estar dentro de un plazo de %{count} días
   transfer:
     counterpart_name: Transferencia desde %{from_account}
+    counterpart_name_generic: Transferencia entrante
     name: Transferencia a %{to_account}
     payment_name: Pago a %{to_account}

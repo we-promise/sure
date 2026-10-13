@@ -15,5 +15,6 @@ nb:
               outflow_cannot_be_in_multiple_transfers: Utgående transaksjon kan ikke være del av flere overføringer
   transfer:
     counterpart_name: Overføring fra %{from_account}
+    counterpart_name_generic: Innkommende overføring
     name: Overføring til %{to_account}
     payment_name: Betaling til %{to_account}

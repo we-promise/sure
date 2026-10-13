@@ -19,5 +19,6 @@ de:
           within_days: muss innerhalb von %{count} Tagen liegen
   transfer:
     counterpart_name: Überweisung von %{from_account}
+    counterpart_name_generic: Eingehende Überweisung
     name: Überweisung an %{to_account}
     payment_name: Zahlung an %{to_account}

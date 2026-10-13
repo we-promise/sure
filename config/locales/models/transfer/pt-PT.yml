@@ -23,5 +23,6 @@ pt-PT:
           within_days: "Tem de ser dentro de %{count} dias"
   transfer:
     counterpart_name: Transferência de %{from_account}
+    counterpart_name_generic: Transferência recebida
     name: Transferência para %{to_account}
     payment_name: Pagamento para %{to_account}

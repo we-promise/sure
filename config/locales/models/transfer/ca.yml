@@ -24,5 +24,6 @@ ca:
           within_days: Han d'estar dins de %{count} dies
   transfer:
     counterpart_name: Transferència de %{from_account}
+    counterpart_name_generic: Transferència entrant
     name: Transferència a %{to_account}
     payment_name: Pagament a %{to_account}

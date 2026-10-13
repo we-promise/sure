@@ -1038,6 +1038,31 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "Überweisung von #{@depository.name}", transfer.inflow_transaction.entry.name
   end
 
+  test "auto_create_missing_transfer_counterparts! names the source account only for members who can see it" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    account_shares(:depository_shared_with_member).destroy!
+    @loan.account_shares.create!(user: users(:family_member), permission: "read_only")
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    @family.auto_create_missing_transfer_counterparts!
+
+    transfer = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id)
+    assert_equal "Incoming transfer", transfer.inflow_transaction.entry.name
+  end
+
+  test "auto_create_missing_transfer_counterparts! names the source account when every viewer of the target can see it" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @loan.account_shares.create!(user: users(:family_member), permission: "read_only")
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    @family.auto_create_missing_transfer_counterparts!
+
+    transfer = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id)
+    assert_equal "Transfer from #{@depository.name}", transfer.inflow_transaction.entry.name
+  end
+
   private
     # Simulates a live provider connection so `Account#manual?` (and the SQL
     # query's equivalent check) treats the account as linked. `AccountProvider`

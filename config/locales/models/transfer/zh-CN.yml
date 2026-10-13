@@ -19,5 +19,6 @@ zh-CN:
           within_days: 必须在 %{count} 天内
   transfer:
     counterpart_name: 来自 %{from_account} 的转账
+    counterpart_name_generic: 收到的转账
     name: 转账至 %{to_account}
     payment_name: 付款至 %{to_account}

@@ -15,5 +15,6 @@ nl:
               outflow_cannot_be_in_multiple_transfers: Outflow-transactie kan geen deel uitmaken van meerdere transfers
   transfer:
     counterpart_name: Transfer van %{from_account}
+    counterpart_name_generic: Inkomende transfer
     name: Transfer naar %{to_account}
     payment_name: Betaling naar %{to_account}

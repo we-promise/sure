@@ -22,5 +22,6 @@ ru:
           within_days: Должен быть в пределах %{count} дней
   transfer:
     counterpart_name: Перевод с %{from_account}
+    counterpart_name_generic: Входящий перевод
     name: Перевод на %{to_account}
     payment_name: Платеж на %{to_account}

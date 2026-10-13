@@ -24,5 +24,6 @@ fr:
           within_days: Doit être dans les %{count} jours
   transfer:
     counterpart_name: Transfert depuis %{from_account}
+    counterpart_name_generic: Transfert entrant
     name: Transfert vers %{to_account}
     payment_name: Paiement vers %{to_account}
