@@ -246,8 +246,8 @@ class EnableBankingEntry::Processor
       # opposite, hardcoded-provider-list anti-pattern this avoids.
       # Always assigned, even to nil. A nil value does not clear what an earlier sync
       # captured: some ASPSPs drop the account data on the booked re-delivery of a
-      # transaction whose pending version had it, so Account::ProviderImportAdapter only
-      # replaces the stored values when this payload actually carries counterparty data.
+      # transaction whose pending version had it, so Account::ProviderImportAdapter
+      # replaces a stored value only when this payload carries one.
       #
       # Passed through this same `extra` hash for
       # Account::ProviderImportAdapter#import_transaction to pick up, but NOT

@@ -529,12 +529,11 @@ class EnableBankingItem::Importer
         # IDs present in this fetch, whether or not we already had a stored row
         # for them. A stored row is *replaced* (not just skipped) when the ASPSP
         # redelivers the same transaction_id/entry_reference in the current
-        # window: EnableBankingEntry::Processor's counterparty fields are
-        # deliberately assigned even when blank (see its own comment) so a
-        # corrected or removed counterparty IBAN clears the old value -- but
-        # only if the fresh row this fetch just returned actually reaches
-        # storage instead of being discarded as "not new" because the ID
-        # already existed.
+        # window, so the stored snapshot carries the bank's latest version of
+        # the row (e.g. a corrected counterparty IBAN) instead of discarding it
+        # as "not new" because the ID already existed. A blank counterparty on
+        # the redelivery does not clear the IBAN already captured on the
+        # transaction; Account::ProviderImportAdapter keeps it.
         refetched_ids = all_transactions.map { |tx|
           EnableBankingEntry::Processor.compute_external_id(tx)
         }.compact.to_set
@@ -544,7 +543,13 @@ class EnableBankingItem::Importer
           ext_id.present? && refetched_ids.include?(ext_id)
         end
 
-        enable_banking_account.upsert_enable_banking_transactions_snapshot!(retained_existing_transactions + all_transactions)
+        snapshot = retained_existing_transactions + all_transactions
+        # Most syncs refetch rows that are already stored unchanged; skip the
+        # write then. removed_pending is checked first because reject! above
+        # removed those rows from the loaded payload array in place.
+        if removed_pending || snapshot.as_json != enable_banking_account.raw_transactions_payload.to_a.as_json
+          enable_banking_account.upsert_enable_banking_transactions_snapshot!(snapshot)
+        end
       elsif removed_pending
         enable_banking_account.upsert_enable_banking_transactions_snapshot!(
           existing_transactions
