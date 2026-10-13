@@ -200,6 +200,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "BUG_1059_REPRO_INFLOW"
     )
     @family.auto_match_transfers!
+    Transfer.pending.find_each(&:confirm!)
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success
@@ -244,6 +245,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "MORTGAGE_REPRO_INFLOW"
     )
     @family.auto_match_transfers!
+    Transfer.pending.find_each(&:confirm!)
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success
