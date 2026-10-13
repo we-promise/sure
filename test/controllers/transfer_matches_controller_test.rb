@@ -108,6 +108,18 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal category, outflow_txn.category
   end
 
+  test "new shows the transaction being matched with its account logo" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client")
+    accounts(:credit_card).update!(institution_domain: "example-card.com")
+    inflow = create_transaction(amount: -100, account: accounts(:credit_card))
+
+    get new_transaction_transfer_match_path(inflow)
+
+    assert_response :success
+    assert_select "button[disabled][data-select-target=button] img[src*='example-card.com']"
+    assert_select "select[name='transfer_match[entry_id]']", count: 0
+  end
+
   test "destroy dismisses the transfer hint by rejecting its pairs" do
     outflow = create_transaction(amount: 500, account: accounts(:depository))
     inflow = create_transaction(amount: -500, account: accounts(:credit_card))

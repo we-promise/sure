@@ -14,14 +14,14 @@
           </h2>
 
           <% if @entry.amount.positive? %>
-            <%= f.select(
-                  :entry_id,
-                  [[entry_name_detailed(@entry), @entry.id]],
-                  {
-                    label: t(".outflow_transaction"),
-                    selected: @entry.id,
-                  },
-                  disabled: true
+            <%= render DS::Select.new(
+                  form: f,
+                  method: :entry_id,
+                  items: [ { value: @entry.id, label: entry_name_detailed(@entry), object: @entry.account } ],
+                  selected: @entry.id,
+                  variant: :logo,
+                  disabled: true,
+                  label: t(".outflow_transaction")
                 ) %>
           <% else %>
             <%= render "transfer_matches/matching_fields",
@@ -41,14 +41,14 @@
           </h2>
 
           <% if @entry.amount.negative? %>
-            <%= f.select(
-                  :entry_id,
-                  [[entry_name_detailed(@entry), @entry.id]],
-                  {
-                    label: t(".inflow_transaction"),
-                    selected: @entry.id,
-                  },
-                  disabled: true
+            <%= render DS::Select.new(
+                  form: f,
+                  method: :entry_id,
+                  items: [ { value: @entry.id, label: entry_name_detailed(@entry), object: @entry.account } ],
+                  selected: @entry.id,
+                  variant: :logo,
+                  disabled: true,
+                  label: t(".inflow_transaction")
                 ) %>
           <% else %>
             <%= render "transfer_matches/matching_fields",

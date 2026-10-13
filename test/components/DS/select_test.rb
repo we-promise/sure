@@ -76,6 +76,15 @@ class DS::SelectTest < ViewComponent::TestCase
     assert_selector "button[data-select-target=button]", text: account.name
   end
 
+  test "a disabled select shows its value without a submitted field" do
+    account = accounts(:depository)
+
+    render_select(variant: :logo, items: [ account ], selected: account.id, disabled: true)
+
+    assert_selector "button[data-select-target=button][disabled] [data-select-logo]"
+    assert_no_selector "input[type=hidden][name='transfer_match[account_id]']", visible: :all
+  end
+
   private
     def render_select(**options)
       with_request_url "/" do

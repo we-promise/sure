@@ -76,6 +76,12 @@ module DS
       tag.span(content, class: "shrink-0", data: { select_logo: true })
     end
 
+    # A disabled select shows its value like a disabled native <select>: the
+    # trigger does not open and no field is submitted.
+    def disabled?
+      options[:disabled].present?
+    end
+
     def trigger_logo?
       variant == :logo && selected_item.present? && !selected_item[:value].nil?
     end
