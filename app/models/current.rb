@@ -19,11 +19,11 @@ class Current < ActiveSupport::CurrentAttributes
   end
 
   def accessible_accounts
-    @accessible_accounts ||= user ? user.accessible_accounts : family&.accounts
+    @accessible_accounts ||= (user ? user.accessible_accounts : family&.accounts)&.load
   end
 
   def finance_accounts
-    @finance_accounts ||= user ? user.finance_accounts : family&.accounts
+    @finance_accounts ||= (user ? user.finance_accounts : family&.accounts)&.load
   end
 
   def accessible_entries
