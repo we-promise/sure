@@ -1,19 +1,4 @@
 module Family::AutoTransferMatchable
-  # A confirmed IBAN match (the destination account's own IBAN equals the
-  # outflow's recorded counterparty IBAN) is the most precise signal
-  # available -- more precise than amount+date alone, which can be ambiguous
-  # with several similar transactions in flight. It therefore gets a wider
-  # date-tolerance window to absorb bank clearing delays; transactions
-  # without a confirmed IBAN keep the existing, narrower window unchanged.
-  #
-  # Matches Transfer#transfer_within_date_range's own 30-day cap for
-  # status: "confirmed" (the status this match gets once it needs the wider
-  # window at all) -- a narrower value here would make the SQL candidate
-  # lookup itself exclude confirmed-eligible matches between that value and
-  # 30 days, before the model validation ever got a chance to allow them.
-  IBAN_CONFIRMED_DATE_WINDOW = 30
-  DEFAULT_DATE_WINDOW = 4
-
   # The automatic path's cross-currency tolerance when TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE
   # is unset or unusable. 10% is the long-standing default. Real-world FX slippage between
   # a transaction's timestamp and the cached daily rate is typically 1-3%, so an operator
@@ -73,20 +58,16 @@ module Family::AutoTransferMatchable
   end
 
   def auto_match_transfers!(account: nil, exchange_rate_tolerance: Family::AutoTransferMatchable.exchange_rate_tolerance)
-    # Exclude already matched transfers. Loads the wider IBAN-confirmed window
-    # up front; candidates that turn out not to be IBAN-confirmed are pruned
-    # back down to the normal window just below, so unconfirmed behavior is
-    # unchanged. Cross-currency FX-tolerance matching is restricted to
-    # provider-linked accounts ONLY on this automatic path -- a coincidental
-    # amount/FX-rate match applied here has no human reviewing it first. The
-    # manual "match as transfer" dialog goes through
+    # Exclude already matched transfers. Cross-currency FX-tolerance matching is
+    # restricted to provider-linked accounts ONLY on this automatic path -- a
+    # coincidental amount/FX-rate match applied here has no human reviewing it
+    # first. The manual "match as transfer" dialog goes through
     # Transaction#transfer_match_candidates, which calls transfer_match_candidates
     # directly without this restriction, so a user can still find and confirm a
     # real cross-currency transfer that happens to involve a manual account.
     candidates_scope = transfer_match_candidates(
       account_id: account&.id,
       include_rejected: false,
-      date_window: IBAN_CONFIRMED_DATE_WINDOW,
       exchange_rate_tolerance:,
       restrict_cross_currency_to_linked_accounts: true
     )
@@ -95,46 +76,22 @@ module Family::AutoTransferMatchable
     end.uniq
     transactions_by_id = Transaction.includes(entry: :account).where(id: transaction_ids).index_by(&:id)
 
-    # IBAN-confirmed candidates may use the wider window and are tried first;
-    # everything else is restricted back to the original narrow window so
-    # transactions with no IBAN data see no behavior change. Confirmation is
-    # computed once per match and carried alongside it -- Transfer's own
-    # transfer_within_date_range validation caps unconfirmed transfers at 4
-    # days, so an IBAN-confirmed match also needs status: "confirmed" (its
-    # 30-day cap) to actually persist beyond that.
-    candidates_with_confirmation = candidates_scope
-      .map { |match| [ match, iban_confirmed?(match, transactions_by_id) ] }
-      .select { |match, confirmed| confirmed || match.date_diff <= DEFAULT_DATE_WINDOW }
-      # Stable: inside each group keep the SQL order of the candidate
-      # query, so any ranking it applies before date_diff still holds.
-      .each_with_index
-      .sort_by { |(_match, confirmed), index| [ confirmed ? 0 : 1, index ] }
-      .map(&:first)
-
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
     investment_category = nil
     investment_category_loaded = false
 
     Transfer.transaction do
-      candidates_with_confirmation.each do |match, confirmed|
+      # Among otherwise equally plausible candidates, a confirmed IBAN match is
+      # tried first (see #iban_confirmed_first).
+      iban_confirmed_first(candidates_scope).each do |match|
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
-
-        # status: "confirmed" is only for the IBAN-confirmed candidates that
-        # actually NEED it to persist -- those beyond the default window,
-        # where transfer_within_date_range would otherwise reject an
-        # unconfirmed transfer. An IBAN-confirmed match that also falls
-        # inside the default window would have matched without the IBAN
-        # signal at all, so it must stay pending like every other automatic
-        # match, not skip user review just because it happens to be
-        # IBAN-confirmed too.
-        needs_confirmed_status = confirmed && match.date_diff > DEFAULT_DATE_WINDOW
 
         # Skip this candidate when the transfer for this exact pair was not created
         # (a concurrent sync claimed one of the transactions for a different pairing);
         # marking it matched here would leave a transaction matched with no Transfer.
-        next unless find_or_create_transfer!(match, confirmed: needs_confirmed_status)
+        next unless find_or_create_transfer!(match)
 
         inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
         outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
@@ -164,6 +121,26 @@ module Family::AutoTransferMatchable
   end
 
   private
+    # Orders the candidates so that IBAN-confirmed ones are tried first. A
+    # confirmed IBAN (the destination account's own IBAN equals the outflow's
+    # recorded counterparty IBAN) is a more precise signal than amount and date
+    # alone, which can be ambiguous with several similar transactions in flight.
+    # It only breaks ties: the date window and every other matching rule stay
+    # the same, and the resulting transfer is created like any other automatic
+    # match. The sort is stable, so inside each group the candidate query's own
+    # order (closest date first) still holds.
+    def iban_confirmed_first(candidates)
+      transaction_ids = candidates.flat_map do |match|
+        [ match.inflow_transaction_id, match.outflow_transaction_id ]
+      end.uniq
+      transactions = Transaction.includes(entry: :account).where(id: transaction_ids).index_by(&:id)
+
+      candidates
+        .each_with_index
+        .sort_by { |match, index| [ iban_confirmed?(match, transactions) ? 0 : 1, index ] }
+        .map(&:first)
+    end
+
     # True when the inflow's destination account has its own IBAN set and it
     # matches the outflow transaction's recorded counterparty IBAN. Blank on
     # either side (no accounts.iban set, or the provider never supplied a
@@ -208,19 +185,12 @@ module Family::AutoTransferMatchable
     # next write would fail with PG::InFailedSqlTransaction and the remaining
     # candidates would be silently dropped. Isolating the insert in a savepoint
     # rolls back only the failed statement, leaving the outer transaction healthy.
-    def find_or_create_transfer!(match, confirmed: false)
+    def find_or_create_transfer!(match)
       Transfer.transaction(requires_new: true) do
         Transfer.find_or_create_by!(
           inflow_transaction_id: match.inflow_transaction_id,
           outflow_transaction_id: match.outflow_transaction_id,
-        ) do |transfer|
-          # Only takes effect when a new record is being built -- an
-          # already-existing transfer's status is left untouched. Needed so
-          # an IBAN-confirmed match beyond the default 4-day window doesn't
-          # immediately fail transfer_within_date_range, which only allows
-          # up to 30 days for status: "confirmed".
-          transfer.status = "confirmed" if confirmed
-        end
+        )
       end
     rescue ActiveRecord::RecordNotUnique
       # The composite unique index rejected the insert because this exact
