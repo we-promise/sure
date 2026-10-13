@@ -175,7 +175,8 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
-    assert_select "input[type=checkbox][name='account[remove_iban]']", 1
+    assert_select "input[type=checkbox][name='account[remove_iban]'][aria-labelledby='account_remove_iban_label']", 1
+    assert_select "#account_remove_iban_label", text: I18n.t("accounts.form.iban_remove_label")
   end
 
   test "iban field masks keystrokes like a password field and signals a stored value" do

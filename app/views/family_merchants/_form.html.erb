@@ -45,7 +45,7 @@
       <p class="text-xs text-subdued"><%= t(".iban_hint") %></p>
       <% if family_merchant.iban.present? %>
         <div class="flex items-center justify-between gap-2">
-          <span class="text-sm"><%= t(".iban_remove_label") %></span>
+          <span id="<%= f.object_name %>_remove_iban_label" class="text-sm"><%= t(".iban_remove_label") %></span>
           <%# Not a real model attribute (the field is write-only, so there's
               no stored value to reflect back) -- rendered directly rather
               than via form.toggle, which would call family_merchant.remove_iban.
@@ -53,7 +53,7 @@
               same form also edits ProviderMerchant records, which submit
               under a "provider_merchant" param scope instead -- see
               FamilyMerchantsController#merchant_params. %>
-          <%= render DS::Toggle.new(id: "#{f.object_name}_remove_iban", name: "#{f.object_name}[remove_iban]", checked: false) %>
+          <%= render DS::Toggle.new(id: "#{f.object_name}_remove_iban", name: "#{f.object_name}[remove_iban]", checked: false, "aria-labelledby": "#{f.object_name}_remove_iban_label") %>
         </div>
       <% end %>
     </section>
