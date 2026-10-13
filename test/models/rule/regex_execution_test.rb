@@ -4,7 +4,7 @@ require "test_helper"
 # inside that bound and the actions then run on those ids, so the unbounded part
 # of the rule (the pattern) is the only part that is limited.
 class Rule::RegexExecutionTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:empty)
@@ -223,19 +223,96 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     assert_equal one, two
   end
 
+  # The ordered run (Rule::Runner) reads each rule's matches at its turn. A pattern
+  # that times out fails that turn only: it claims and stops nothing, the rules
+  # below it still run in order, and the timed-out rule sends no email.
+  test "a pattern that times out in the ordered run fails its own turn only" do
+    other = @family.categories.create!(name: "Other")
+    timed_out = regex_rule("amzn", name: "timed out", active: true, stop_processing: true, email: true)
+    stopper = ordered_rule("stopper", condition: name_condition("like", "amzn"), stop_processing: true,
+                          action: Rule::Action.new(action_type: "set_transaction_category", value: other.id))
+    below = ordered_rule("below", condition: name_condition("is_not_null", nil),
+                         action: Rule::Action.new(action_type: "exclude_transaction"))
+    assert_equal [ timed_out, stopper, below ].map(&:id), @family.rules.ordered.pluck(:id)
+    Rule::SafeRegex.stubs(:with_timeout).raises(Rule::SafeRegex::TimeoutError)
+
+    assert_no_difference -> { NotificationDelivery.where(rule: timed_out).count } do
+      assert_no_enqueued_jobs(only: RuleEmailNotificationJob) do
+        assert_nothing_raised { ApplyRulesJob.perform_now(@family) }
+      end
+    end
+
+    assert_equal [ "failed" ], timed_out.rule_runs.pluck(:status)
+    assert_match "TimeoutError", timed_out.rule_runs.first.error_message
+    assert_equal [ "success" ], stopper.rule_runs.pluck(:status)
+    assert_equal [ "success" ], below.rule_runs.pluck(:status)
+    assert_equal other, @hit.reload.transaction.category, "the rule below the timed-out one decided"
+    assert_not @hit.reload.excluded?, "stop processing still held for the rule below"
+    assert @miss.reload.excluded?
+  end
+
+  test "applying a rule below a pattern that times out records that failure and runs the rule" do
+    timed_out = regex_rule("amzn", name: "timed out", active: true, stop_processing: true)
+    below = ordered_rule("below", condition: name_condition("is_not_null", nil),
+                         action: Rule::Action.new(action_type: "exclude_transaction"))
+    Rule::SafeRegex.stubs(:with_timeout).raises(Rule::SafeRegex::TimeoutError)
+
+    assert_nothing_raised { RuleJob.perform_now(below) }
+
+    assert_equal [ "failed" ], timed_out.rule_runs.pluck(:status)
+    assert_equal [ "success" ], below.rule_runs.pluck(:status)
+    assert @hit.reload.excluded?, "the timed-out rule above stopped nothing"
+  end
+
+  # The other half of the timeout contract: an email rule whose baseline timed out
+  # when it was switched on is left off, so the sync's ordered run skips it even
+  # once the pattern runs in time again, and its history is never emailed.
+  test "an email rule left off by a timed-out baseline is skipped by the sync run" do
+    rule = regex_rule("amzn", email: true)
+    Rule::SafeRegex.stubs(:with_timeout).raises(Rule::SafeRegex::TimeoutError)
+    rule.update!(active: true)
+    assert_not rule.reload.active?
+    Rule::SafeRegex.unstub(:with_timeout)
+
+    assert_no_enqueued_jobs(only: RuleEmailNotificationJob) do
+      assert_no_difference -> { RuleRun.where(rule: rule).count } do
+        ApplyRulesJob.perform_now(@family)
+      end
+    end
+    assert_equal 0, NotificationDelivery.where(rule: rule).count
+  end
+
   private
+    def regex_rule(pattern, name: nil, active: false, stop_processing: false, email: false)
+      actions = [ Rule::Action.new(action_type: "set_transaction_category", value: @category.id) ]
+      actions << Rule::Action.new(action_type: "send_email_notification") if email
+
+      rule = Rule.create!(
+        family: @family, resource_type: "transaction", name: name, active: active, stop_processing: stop_processing,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "matches_regex", value: pattern) ],
+        actions: actions
+      )
+      # A create-time baseline (if the action records one) is cleared, so each
+      # test states the baseline it relies on.
+      NotificationDelivery.where(rule: rule).delete_all
+      rule
+    end
+
+    def ordered_rule(name, condition:, action:, stop_processing: false)
+      Rule.create!(
+        family: @family, resource_type: "transaction", name: name, active: true, stop_processing: stop_processing,
+        conditions: [ condition ], actions: [ action ]
+      )
+    end
+
+    def name_condition(operator, value)
+      Rule::Condition.new(condition_type: "transaction_name", operator: operator, value: value)
+    end
+
     def bind_count
       binds = []
       callback = ->(*, payload) { binds << Array(payload[:binds]).size if payload[:sql].include?("COUNT") }
       ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { yield }
       binds.last
-    end
-
-    def regex_rule(pattern, name: nil)
-      Rule.create!(
-        family: @family, resource_type: "transaction", name: name,
-        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "matches_regex", value: pattern) ],
-        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @category.id) ]
-      )
     end
 end

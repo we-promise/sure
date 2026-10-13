@@ -6,8 +6,9 @@ require "test_helper"
 # but that does not cover a rule that was switched off and on again: the matches
 # from before (or while it was off) would all be emailed on its next run.
 #
-# after_create_commit does not fire under transactional tests, so every rule built
-# here starts without a baseline, which is the state this guards against.
+# Every rule built here starts without a baseline, which is the state this guards
+# against: email_rule deletes any baseline the action recorded when it was created,
+# so these tests hold whether or not creating the action seeds one.
 class Rule::NotificationBaselineOnEnableTest < ActiveSupport::TestCase
   include EntriesTestHelper, ActiveJob::TestHelper
 
@@ -110,11 +111,13 @@ class Rule::NotificationBaselineOnEnableTest < ActiveSupport::TestCase
 
   private
     def email_rule(condition: name_condition("amzn"))
-      Rule.create!(
+      rule = Rule.create!(
         family: @family, resource_type: "transaction", active: false,
         conditions: [ condition ],
         actions: [ Rule::Action.new(action_type: "send_email_notification") ]
       )
+      NotificationDelivery.where(rule: rule).delete_all
+      rule
     end
 
     def name_condition(value)
