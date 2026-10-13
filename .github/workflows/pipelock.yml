@@ -54,8 +54,10 @@ jobs:
             config/locales/views/reports/vi.yml
             config/locales/views/reports/zh-CN.yml
             config/locales/views/reports/zh-TW.yml
+            test/controllers/api/v1/transactions_controller_test.rb
             test/controllers/depositories_controller_test.rb
             test/controllers/family_merchants_controller_test.rb
+            test/controllers/transactions/bulk_deletions_controller_test.rb
             test/controllers/transactions_controller_test.rb
             test/controllers/transfer_matches_controller_test.rb
             test/models/account/provider_import_adapter_test.rb
@@ -68,6 +70,7 @@ jobs:
             test/models/merchant_test.rb
             test/models/rule/condition_filter/transaction_counterparty_iban_test.rb
             test/models/transaction/search_test.rb
+            test/models/transaction_import_test.rb
 
       - name: Validate Pipelock deployment contracts
         shell: bash
