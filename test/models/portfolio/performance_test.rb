@@ -672,7 +672,9 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
   # gives an oracle that does not use the chain at all.
   test "two years of daily returns keep a bounded precision and a small cached payload" do
     start_date = Date.new(2024, 3, 1)
-    end_date = start_date + 729
+    # 734 days: off the eleven-day cycle of the moves below, so the period
+    # ends away from where it started and the return is not zero.
+    end_date = start_date + 733
     opening = BigDecimal("1000")
     first_open = opening
 
@@ -684,6 +686,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
 
     result = performance(start_date: start_date, end_date: end_date)
     expected_twr = (opening / first_open) - 1
+    assert_not expected_twr.zero?, "precondition: the period must have a return to check"
 
     assert_in_delta expected_twr.to_f, result.twr.to_f, 1e-12,
                     "rounding each level must not move the figure"
