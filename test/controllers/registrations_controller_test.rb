@@ -99,11 +99,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "sign-up names each broken password rule in the user's language" do
-    I18n.with_locale(:de) do
-      assert_equal "muss mindestens eine Ziffer enthalten", User.new.errors.generate_message(:password, :missing_number)
-    end
-
+  test "sign-up names each broken password rule" do
     assert_no_difference "User.count" do
       post registration_url, params: { user: { email: "weakpassword@example.com", password: "abc" } }
     end
@@ -113,6 +109,18 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", text: /uppercase and lowercase/
     assert_select "p", text: /at least one number/
     assert_select "p", text: /at least one special character/
+  end
+
+  test "sign-up names the broken password rules in the user's language" do
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: { email: "weakpassword@example.com", password: "abc" } },
+        headers: { "Accept-Language" => "de" }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "p", text: /Groß- und Kleinbuchstaben/
+    assert_select "p", text: /mindestens eine Ziffer/
+    assert_select "p", text: /mindestens ein Sonderzeichen/
   end
 
   test "sign-up rejects a password longer than 72 bytes" do
