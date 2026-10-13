@@ -280,6 +280,24 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal category, transfer.outflow_transaction.category
   end
 
+  test "set_as_transfer_or_payment skips a transaction already in a pending transfer" do
+    inflow = create_transaction(date: Date.current, account: accounts(:depository), amount: -100).transaction
+    pending_transfer = Transfer.create!(inflow_transaction: inflow, outflow_transaction: @txn1, status: "pending")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_as_transfer_or_payment",
+      value: accounts(:investment).id
+    )
+
+    assert_no_difference -> { Transfer.count } do
+      action.apply(Transaction.where(id: @txn1.id))
+    end
+
+    assert_equal pending_transfer, @txn1.reload.transfer
+    assert_predicate pending_transfer.reload, :pending?
+  end
+
   test "set_investment_activity_label ignores invalid values" do
     action = Rule::Action.new(
       rule: @transaction_rule,
