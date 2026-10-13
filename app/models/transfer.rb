@@ -161,8 +161,26 @@ class Transfer < ApplicationRecord
     outflow_transaction&.dismiss_counterparty_transfer_suggestion!
   end
 
+  # A fabricated counterpart (see
+  # Family::AutoTransferMatchable#auto_create_missing_transfer_counterparts!)
+  # leaves the real outflow untouched while it is pending, so its transfer
+  # kind (and the Investment Contributions category) only applies here.
   def confirm!
-    update!(status: "confirmed")
+    Transfer.transaction do
+      update!(status: "confirmed")
+
+      unless outflow_transaction.transfer?
+        outflow_kind = Transfer.kind_for_account(to_account)
+        outflow_attrs = { kind: outflow_kind }
+
+        if outflow_kind == "investment_contribution" && outflow_transaction.category_id.blank?
+          category = to_account.family.investment_contributions_category
+          outflow_attrs[:category] = category if category.present?
+        end
+
+        outflow_transaction.update!(outflow_attrs)
+      end
+    end
   end
 
   def date
