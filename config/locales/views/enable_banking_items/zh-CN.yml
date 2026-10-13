@@ -114,3 +114,5 @@ zh-CN:
       title: 选择您的银行
     update:
       success: Enable Banking 配置已更新。
+    entry:
+      bank_note: "银行：%{name}"

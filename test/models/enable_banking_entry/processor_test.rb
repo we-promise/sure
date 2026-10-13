@@ -490,6 +490,27 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_includes entry.notes, "Bank: Deutsche Bank"
   end
 
+  test "writes the counterparty bank note in the family's locale" do
+    @account.family.update!(locale: "fr")
+    tx = {
+      entry_reference: "ref_bank_note_locale",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Landlord GmbH" },
+      creditor_agent: { name: "Deutsche Bank", bic_fi: "DEUTDEFFXXX" },
+      status: "BOOK"
+    }
+
+    I18n.with_locale(:en) do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_bank_note_locale")
+    assert_includes entry.notes, "Banque : Deutsche Bank"
+  end
+
   test "normalizes a counterparty iban with spaces before storing it" do
     tx = {
       entry_reference: "ref_iban_spaces",

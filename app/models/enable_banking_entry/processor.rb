@@ -211,7 +211,12 @@ class EnableBankingEntry::Processor
       parts << data[:note] if data[:note].present?
 
       bank_name = counterparty_account_info[:bank_name]
-      parts << I18n.t("enable_banking_items.entry.bank_note", name: bank_name) if bank_name.present?
+      if bank_name.present?
+        # Stored in the entry's notes, so use the family's locale rather than
+        # whatever locale the sync job happens to run under.
+        note_locale = account&.family&.locale.presence || I18n.default_locale
+        parts << I18n.with_locale(note_locale) { I18n.t("enable_banking_items.entry.bank_note", name: bank_name) }
+      end
 
       parts.join("\n\n").presence
     end
