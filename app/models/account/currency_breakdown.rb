@@ -10,22 +10,26 @@ module Account::CurrencyBreakdown
   # True when the account currency plus its transaction currencies span more
   # than one currency, so a per-currency breakdown is meaningful.
   def multi_currency_breakdown?
-    breakdown_currencies.size > 1
+    native_currency_balances.size > 1
   end
 
   # Returns Money balances, one per currency with the account currency first.
   # Empty when the account is not multi-currency.
   def native_currency_balances
-    currencies = breakdown_currencies
-    return [] if currencies.size <= 1
+    @native_currency_balances ||= begin
+      sums = breakdown_transactions.group(:currency).sum(:amount)
+      currencies = ([ currency ] + sums.keys).uniq
 
-    sums = breakdown_transactions.group(:currency).sum(:amount)
-
-    currencies.map do |code|
-      flow = sums.fetch(code, 0)
-      balance = asset? ? -flow : flow
-      balance += opening_anchor_balance if code == currency
-      Money.new(balance, code)
+      if currencies.size > 1
+        currencies.map do |code|
+          flow = sums.fetch(code, 0)
+          balance = asset? ? -flow : flow
+          balance += opening_anchor_balance if code == currency
+          Money.new(balance, code)
+        end
+      else
+        []
+      end
     end
   end
 
@@ -34,10 +38,5 @@ module Account::CurrencyBreakdown
     # toward each currency's native balance.
     def breakdown_transactions
       entries.excluding_pending.excluding_split_parents.where(entryable_type: "Transaction")
-    end
-
-    # The account currency followed by any other currency used by its transactions.
-    def breakdown_currencies
-      ([ currency ] + breakdown_transactions.distinct.pluck(:currency)).uniq
     end
 end
