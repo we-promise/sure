@@ -3,6 +3,7 @@ fr:
   activerecord:
     attributes:
       recurring_transaction:
+        frequency_interval: Intervalle de répétition
         payment_url: Lien de paiement
     errors:
       models:

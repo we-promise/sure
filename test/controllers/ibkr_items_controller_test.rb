@@ -6,6 +6,23 @@ class IbkrItemsControllerTest < ActionDispatch::IntegrationTest
     @ibkr_item = ibkr_items(:configured_item)
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_ibkr_item_url(@ibkr_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "ibkr-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @ibkr_item.reload.syncing?
+  end
+
+  # The Accounts page's Sync button posts here too, without the panel's source.
+  test "sync from the Accounts page goes back to it" do
+    post sync_ibkr_item_url(@ibkr_item),
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml", "Referer" => accounts_url }
+
+    assert_redirected_to accounts_url
+  end
+
   test "select_existing_account renders available ibkr accounts" do
     get select_existing_account_ibkr_items_url, params: { account_id: accounts(:investment).id }
 
@@ -35,6 +52,24 @@ class IbkrItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to accounts_path
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post ibkr_items_url,
+         params: { ibkr_item: { query_id: "", token: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "ibkr-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("can't be blank")
+  end
+
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch ibkr_item_url(@ibkr_item),
+          params: { ibkr_item: { query_id: "", token: "" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "ibkr-providers-panel"
+    assert_includes response.body, %(id="ibkr-providers-panel")
   end
 
   test "complete_account_setup creates investment account and provider link" do

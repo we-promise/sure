@@ -86,6 +86,16 @@ class ApplicationHelperTest < ActionView::TestCase
     @account3 = Account.new(currency: "EUR", balance: -7)
   end
 
+  test "#styled_form_with keeps a field's help_text when the field has no label" do
+    html = styled_form_with(url: "/", scope: :account) do |form|
+      form.text_field :name, label: false, help_text: "Shown to everyone in the family"
+    end
+
+    fragment = Nokogiri::HTML.fragment(html)
+    assert_equal "Shown to everyone in the family", fragment.at("p#account_name_help_text")&.text
+    assert_equal "account_name_help_text", fragment.at("input[name='account[name]']")["aria-describedby"]
+  end
+
   test "#totals_by_currency(collection: collection, money_method: money_method)" do
     assert_equal "$3.00", totals_by_currency(collection: [ @account1, @account2 ], money_method: :balance_money)
     assert_equal "$3.00 | -€7.00", totals_by_currency(collection: [ @account1, @account2, @account3 ], money_method: :balance_money)

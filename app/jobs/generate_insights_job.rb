@@ -69,15 +69,24 @@ class GenerateInsightsJob < ApplicationJob
         partial: "insights/refresh_button",
         locals: { pending: false }
       )
+      # The lightbulb lives in the layout, so it goes on the family stream every
+      # page subscribes to, not just the /insights one.
+      Turbo::StreamsChannel.broadcast_replace_to(
+        family,
+        targets: "[data-insights-badge]",
+        partial: "layouts/shared/insights_badge",
+        locals: { count: unread_ids.size }
+      )
     end
 
     # A visible insight whose generator ran successfully but did not re-emit
     # its dedup_key has had its condition clear — hide it. Types whose
     # generator crashed are left untouched so a transient failure can't wipe
-    # out healthy insights.
+    # out healthy insights. By status rather than `visible`, so a row hidden
+    # because its account is no longer shared with everyone expires too.
     def expire_stale_insights(family, result)
       family.insights
-        .visible
+        .where(status: %w[active read])
         .where(insight_type: result.succeeded_types)
         .where.not(dedup_key: result.insights.map(&:dedup_key))
         .update_all(status: "expired", updated_at: Time.current)

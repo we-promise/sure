@@ -182,6 +182,39 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("simplefin_items.update.errors.blank_token", default: "Please enter a SimpleFIN setup token")
   end
 
+  # The edit modal sits in turbo-frame#modal, so Turbo swaps in that frame from
+  # the response. A stream aimed at the Bank sync panel left the modal as it was.
+  test "invalid update from the edit modal shows the error in the modal" do
+    @simplefin_item.update!(status: :requires_update)
+
+    patch simplefin_item_url(@simplefin_item),
+          params: { simplefin_item: { setup_token: "" } },
+          headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :unprocessable_entity
+    assert_select "turbo-frame#modal form[action=?]", simplefin_item_path(@simplefin_item)
+    assert_select "turbo-frame#modal", text: /#{I18n.t("simplefin_items.update.errors.blank_token")}/
+  end
+
+  test "invalid create from the Bank sync panel shows the error in the panel" do
+    post simplefin_items_url, params: { source: "panel", simplefin_item: { setup_token: "" } }, as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "simplefin-providers-panel"
+    assert_includes response.body, I18n.t("simplefin_items.create.errors.blank_token")
+  end
+
+  # The new-connection modal posts to the top of the page, with the same Accept
+  # header as the panel, and shows its error in its own template.
+  test "invalid create from the new connection modal renders the modal with the error" do
+    post simplefin_items_url,
+         params: { simplefin_item: { setup_token: "" } },
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :unprocessable_entity
+    assert_select "turbo-frame#modal form[action=?]", simplefin_items_path
+    assert_includes response.body, I18n.t("simplefin_items.create.errors.blank_token")
+  end
+
   test "should update simplefin item access_url in place preserving account linkages" do
     @simplefin_item.update!(status: :requires_update)
     original_item_id = @simplefin_item.id

@@ -1,0 +1,144 @@
+---
+ru:
+  providers:
+    monobank:
+      name: Monobank
+      description: Подключите украинские карты и «банки» Monobank с помощью личного API-токена
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Подключение Monobank
+  monobank_account:
+    jar_fallback: Банка Monobank
+    card_types:
+      black: Чёрная карта
+      white: Белая карта
+      platinum: Карта Platinum
+      iron: Карта Iron
+      yellow: Жёлтая карта
+      eaid: Карта еПоддержка
+      fop: Счёт ФЛП
+      jar: Банка
+      unknown: Карта Monobank
+  monobank_item:
+    errors:
+      account_processing_failed: Не удалось синхронизировать счёт Monobank
+      account_sync_schedule_failed: Не удалось запланировать синхронизацию счёта Monobank
+      transactions_failed: Не удалось получить выписку Monobank
+      sync_failed: Не удалось синхронизировать подключение Monobank
+    sync:
+      status:
+        importing: Импорт счетов из Monobank...
+        checking_setup: Проверка настроек счетов...
+        needs_setup:
+          one: '%{count} счёт требует настройки...'
+          few: '%{count} счёта требуют настройки...'
+          many: '%{count} счетов требуют настройки...'
+          other: '%{count} счёта требуют настройки...'
+        processing: Обработка операций...
+        calculating: Расчёт балансов...
+    sync_status:
+      no_accounts: Счета не найдены
+      all_synced:
+        one: Синхронизирован %{count} счёт
+        few: Синхронизированы %{count} счёта
+        many: Синхронизировано %{count} счетов
+        other: Синхронизированы %{count} счёта
+      partial: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+    institution_summary:
+      none: Нет подключённых учреждений
+      one: 1 учреждение
+      count:
+        one: '%{count} учреждение'
+        few: '%{count} учреждения'
+        many: '%{count} учреждений'
+        other: '%{count} учреждения'
+  monobank_items:
+    provider_panel:
+      default_connection_name: Подключение Monobank
+      add_connection: Добавить подключение Monobank
+      update_connection: Обновить подключение
+      connection_name_label: Название подключения
+      connection_name_placeholder: Мой Monobank
+      access_token_label: Личный API-токен
+      access_token_placeholder: Вставьте личный токен Monobank
+      keep_access_token_placeholder: Оставьте пустым, чтобы сохранить текущий токен
+      setup_accounts: Настроить счета
+      syncing: Синхронизация...
+      sync: Синхронизировать
+      disconnect: Отключить
+      disconnect_confirm: Вы уверены, что хотите отключить %{name}?
+      rate_limit_notice: Monobank разрешает один запрос в минуту, поэтому за одну синхронизацию загружается несколько счетов, а более старая история подгружается за несколько синхронизаций.
+    create:
+      success: Подключение Monobank сохранено.
+    update:
+      success: Подключение Monobank обновлено.
+    destroy:
+      success: Подключение Monobank запланировано на удаление.
+      unlink_failed: Не удалось отключить подключение Monobank
+    select_accounts:
+      title: Связать счета Monobank
+      description: Выберите карты или «банки» Monobank для добавления.
+      no_accounts_found: Несвязанные счета Monobank не найдены.
+      no_credentials_configured: Сначала настройте Monobank в настройках провайдеров.
+      cancel: Отмена
+      link_accounts: Связать счета
+    link_accounts:
+      success:
+        one: Связан %{count} счёт Monobank.
+        few: Связаны %{count} счёта Monobank.
+        many: Связано %{count} счетов Monobank.
+        other: Связаны %{count} счёта Monobank.
+      no_accounts_selected: Выберите хотя бы один счёт.
+      no_credentials_configured: Сначала настройте Monobank в настройках провайдеров.
+      unsupported_account_type: Monobank не поддерживает этот тип счёта.
+      link_failed: Ни один счёт не был связан.
+    select_existing_account:
+      title: Связать счёт Monobank с %{account_name}
+      description: Выберите несвязанный счёт Monobank, чтобы связать его с этим счётом.
+      no_accounts_found: Несвязанные счета Monobank не найдены.
+      no_credentials_configured: Сначала настройте Monobank в настройках провайдеров.
+      account_already_linked: Этот счёт уже связан с провайдером.
+      cancel: Отмена
+      link_account: Связать счёт
+    link_existing_account:
+      success: Счёт Monobank связан с %{account_name}.
+      account_already_linked: Этот счёт уже связан с провайдером.
+      monobank_account_already_linked: Этот счёт Monobank уже связан.
+      no_account_selected: Выберите счёт Monobank для связывания.
+    setup_accounts:
+      title: Связать счета Monobank
+      subtitle: Выберите, как каждая карта или «банка» Monobank будет отображаться в Sure.
+      no_credentials: Сначала настройте учётные данные Monobank.
+      api_error: Не удалось обновить счета из Monobank, поэтому показаны счета, сохранённые при последней синхронизации.
+      no_accounts_to_setup: Нет счетов для настройки
+      all_accounts_linked: Все счета Monobank уже связаны.
+      choose_account_type: Выберите тип счёта
+      choose_account_type_description: Пропустите счета, которые не хотите отслеживать.
+      account_type_label: Тип счёта
+      account_types:
+        skip: Пропустить
+        depository: Денежный счёт
+      create_accounts: Создать счета
+      cancel: Отмена
+    complete_account_setup:
+      success:
+        one: Создан %{count} счёт Monobank.
+        few: Создано %{count} счёта Monobank.
+        many: Создано %{count} счетов Monobank.
+        other: Создано %{count} счёта Monobank.
+      all_skipped: Ни один счёт Monobank не был создан.
+      no_accounts: Счета Monobank не выбраны.
+      creation_failed: Не удалось создать счета Monobank.
+    monobank_item:
+      deletion_in_progress: Удаление...
+      syncing: Синхронизация
+      error: Ошибка
+      status_with_summary: Синхронизировано %{timestamp} назад · %{summary}
+      status_never: Ещё не синхронизировалось
+      delete: Удалить
+      setup_needed: Требуется настройка счетов
+      setup_description: 'Связано счетов: %{linked} из %{total}.'
+      setup_action: Настроить счета
+      no_accounts_title: Счета ещё не импортированы
+      no_accounts_description: Загрузите счета Monobank и выберите, какие из них связать.

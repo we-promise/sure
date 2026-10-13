@@ -141,6 +141,13 @@ class DS::Dialog < DesignSystemComponent
     data[:DS__dialog_disable_click_outside_value] = disable_click_outside
     data[:action] = [ "click->DS--dialog#clickOutside", data[:action] ].compact.join(" ")
     data[:hotkey] = "esc:DS--dialog#close"
+    # Fetched into a frame over the page, the dialog is left out of Turbo's
+    # cached copy of that page, or Back brings it back: stray if it was still
+    # open, opened again if it was closed. Visited directly, it is the page and
+    # stays. Turbo also caches the live page right after any frame visit with
+    # data-turbo-action renders, and that removes these dialogs, so don't open
+    # one that way or make such a visit while one is open.
+    data[:turbo_temporary] = true if helpers.turbo_frame_request_id == frame.to_s
     merged_opts[:data] = data
 
     merged_opts

@@ -189,6 +189,8 @@ class LunchflowItem::Importer
           rescue => update_error
             Rails.logger.error "LunchflowItem::Importer - Failed to update item status: #{update_error.message}"
           end
+          # Fail the sync instead of completing it with nothing imported
+          raise
         end
         Rails.logger.error "LunchflowItem::Importer - Lunch flow API error: #{e.message}"
         return nil

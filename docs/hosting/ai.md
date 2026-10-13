@@ -17,10 +17,11 @@ Sure has **two separate AI systems** that operate independently. Understanding t
 
 ### 1. Chat Assistant (conversational)
 
-The interactive chat where users ask questions about their finances. Routes through one of two backends:
+The interactive chat where users ask questions about their finances. Routes through one of two backends, or is turned off:
 
 - **Builtin** (default): Uses the OpenAI-compatible provider configured via `OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`. Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
 - **External**: Delegates the entire conversation to a remote AI agent. The agent calls back to Sure via MCP to access financial data. Set `ASSISTANT_TYPE=external` as a global override, or configure each family's assistant type in Settings.
+- **None in app** (`mcp_only`): Removes the in-app chat for the household: the right-hand chat sidebar and its toggle, the mobile Assistant tab, and the buttons that start a chat. Bring your own agent and connect it through [MCP](mcp.md), which keeps working. Set `ASSISTANT_TYPE=mcp_only` to remove the chat for every family.
 
 ### 2. Auto-Categorization and Merchant Detection (background)
 
@@ -32,8 +33,11 @@ Background jobs that classify transactions and detect merchants. These **always*
 |---------|---------------|---------------------|
 | `ASSISTANT_TYPE=builtin` (default) | Uses OpenAI provider | Uses OpenAI provider |
 | `ASSISTANT_TYPE=external` | Uses external agent | Still uses OpenAI provider |
+| `ASSISTANT_TYPE=mcp_only` | None in app; connect your own agent via MCP | Unchanged; uses the configured categorization provider |
 
 If you use an external agent for chat, you still need `OPENAI_ACCESS_TOKEN` set for auto-categorization and merchant detection to work. The two systems are fully independent.
+
+With `mcp_only`, Sure also skips the features that need a user's AI consent: the LLM-written insight text and the bills AI shortcuts (review, smart fill, smart configuration).
 
 ## Quickstart: OpenAI Token
 
@@ -124,20 +128,57 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 ```
 
 **Recommended models:**
+- `gpt-6.1-sol` - Latest Sol model for complex financial analysis; assistant tools require the native Responses API
+- `gpt-6-sol` - Strong reasoning for multi-step financial analysis; use the native OpenAI provider and Responses API for reasoning with function tools
 - `gpt-4.1` - Default, best balance of speed and quality
-- `gpt-5` - Latest model, highest quality (more expensive)
+- `gpt-5` - Earlier-generation reasoning model
 - `gpt-4o-mini` - Cheaper, good quality
 
 **Pricing:** See [OpenAI Pricing](https://openai.com/api/pricing/)
 
-### Google Gemini (via OpenRouter)
+GPT-6.1 Sol and GPT-6 Sol use the native Responses API for assistant tools.
+Leave the custom Base URL setting empty when connecting directly to OpenAI.
+GPT-6.1 Sol does not support tool calling in Chat Completions, or the `none`
+and `minimal` reasoning efforts. See the [model documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+Native GPT-6.1 Sol, GPT-6 Sol,
+`o1`, and `o3` PDF vision requests use `max_completion_tokens`, which includes
+reasoning and visible output, when an output limit is explicitly configured.
+Set `LLM_MAX_RESPONSE_TOKENS` to a positive value to bound each such request;
+the default 512-token context reserve is not sent as a provider limit.
+Text extraction keeps its existing request behavior. Custom endpoints retain
+their existing token parameters. Increase the LLM context budget for cloud
+reasoning models; the default 2048-token context is intended for small local models.
+
+### Google Gemini
+
+You can connect to Google Gemini either directly via Google AI Studio's OpenAI-compatible endpoint or via OpenRouter.
+
+**Recommended Gemini models:**
+
+- `gemini-3.8-flash` - Best all-around choice; fast, strong reasoning, and reliable tool calling for chat and finance tools
+- `gemini-3.5-flash-lite` - Ultra-low cost and fast; ideal for background categorization and merchant detection
+- `gemini-3.1-pro-preview` - Best for complex financial analysis, portfolio queries, and multi-year trends
+- `gemini-2.5-flash` - Previous-generation budget model; fast and dependable fallback
+- `gemini-2.5-pro` - Previous-generation model for complex financial analysis
+
+#### Direct via Google AI Studio
+
+[Google AI Studio](https://aistudio.google.com/) provides direct API access to Gemini models with a free tier and an OpenAI-compatible endpoint:
+
+```bash
+OPENAI_ACCESS_TOKEN=your-google-ai-studio-api-key # pipelock:ignore
+OPENAI_URI_BASE=https://generativelanguage.googleapis.com/v1beta/openai
+OPENAI_MODEL=gemini-3.8-flash
+```
+
+#### Via OpenRouter
 
 [OpenRouter](https://openrouter.ai/) provides access to many models including Gemini:
 
 ```bash
 OPENAI_ACCESS_TOKEN=your-openrouter-api-key
 OPENAI_URI_BASE=https://openrouter.ai/api/v1
-OPENAI_MODEL=google/gemini-2.0-flash-exp
+OPENAI_MODEL=google/gemini-3.8-flash
 ```
 
 **Why OpenRouter?**
@@ -145,10 +186,6 @@ OPENAI_MODEL=google/gemini-2.0-flash-exp
 - Competitive pricing
 - Automatic fallbacks
 - Usage tracking
-
-**Recommended Gemini models via OpenRouter:**
-- `google/gemini-2.5-flash` - Fast and capable
-- `google/gemini-2.5-pro` - High quality, good for complex queries
 
 ### Anthropic Claude (via OpenRouter)
 
@@ -1034,16 +1071,70 @@ Good test queries that exercise different capabilities:
 
 ### Cloud Costs
 
-Typical costs for OpenAI (as of early 2025):
+**Pricing table last updated and verified: October 4, 2026.** Every model
+listed in [`LlmUsage::PRICING`](../../app/models/llm_usage.rb) was checked against
+official sources. `PRICING_VERIFIED_ON` supplies the verification date shown on
+the LLM usage screen. This is a manual review date, not a claim that providers
+changed every price that day.
 
-- **gpt-4.1:** ~$5-15 per 1M input tokens, ~$15-60 per 1M output tokens
-- **gpt-5:** ~2-3x more expensive than gpt-4.1
-- **gpt-4o-mini:** ~$0.15 per 1M input tokens (very cheap)
+Rates are USD per million tokens at the Standard tier. The source coverage is:
+
+| Models in the code | Official pricing source |
+| --- | --- |
+| GPT-6 Sol/6.1 Sol, GPT-5.6, GPT-5.5, GPT-5.4, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1, o3, o4-mini (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
+| GPT-5.2/5.1 Chat aliases | [GPT-5.2 Chat](https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest), [GPT-5.1 Chat](https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest) |
+| o1-mini | [o1-mini](https://developers.openai.com/api/docs/models/o1-mini) |
+| Gemini 3.8/3.7/3.6/3.5 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro, 3 Flash, 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
+| Claude Opus 4.6/4.7, Sonnet 4.5/4.6, Haiku 4.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
+
+#### Dated pricing changes
+
+| Model | Input / output | Latest relevant published date found |
+| --- | --- | --- |
+| GPT-6.1 Sol | $2 / $10 | September 29, 2026: launch pricing |
+| GPT-6 Sol | $2 / $10 | September 22, 2026: launch pricing |
+| GPT-5.6 Sol | $4 / $20 | August 21, 2026: price reduction; promotion available at least through November 21, 2026 |
+| GPT-5.6 Terra | $2 / $12 | July 30, 2026: price reduction |
+| GPT-5.6 Luna | $0.20 / $1.20 | July 30, 2026: price reduction |
+| Claude Opus 4.7 | $5 / $25 | April 16, 2026: published launch rate; corrects Sure's erroneous $15 / $75 |
+| Claude Opus 4.6 | $5 / $25 | February 5, 2026: published base launch rate; corrects Sure's erroneous $15 / $75 |
+
+Dates above come from the [OpenAI changelog](https://developers.openai.com/api/docs/changelog)
+and the [Opus 4.7](https://www.anthropic.com/news/claude-opus-4-7) and
+[Opus 4.6](https://www.anthropic.com/news/claude-opus-4-6) announcements.
+For other listed rates, the latest price-change date was **not established**;
+their current prices were verified on October 4. Google's pricing page lists
+launch promotional pricing for Gemini 3.8, 3.7, and 3.6 Flash through December 31, 2026.
+
+#### Context tiers and estimate limits
+
+OpenAI's listed GPT-6 Sol, GPT-6.1 Sol, GPT-5.6, GPT-5.5/Pro and GPT-5.4/Pro
+rates increase above 272,000 input tokens: input doubles and output increases
+by 50% for the entire request. GPT-5.4 mini/nano retain their flat rates.
+Gemini 2.5 Pro changes from $1.25 / $10 to $2.50 / $15 above 200,000 input
+tokens. Gemini 3.1 Pro (and 3.1 Pro Preview) changes from $2.00 / $12.00 to
+$4.00 / $18.00 above 200,000 input tokens. Gemini 3.8 Flash, 3.7 Flash, and
+3.6 Flash are $0.75 / $3.75 through 2026 ($1.50 / $7.50 starting 2027).
+Gemini 3.5 Flash is $1.50 / $9.00, Gemini 3.5 Flash-Lite is $0.30 / $2.50,
+Gemini 3.1 Flash-Lite is $0.25 / $1.50, Gemini 3 Flash is $0.50 / $3.00,
+and Gemini 2.5 Flash remains $0.30 / $2.50.
+Claude 4.6/4.7 use standard rates throughout their context window.
+
+Sure estimates individual requests using these tiers. Aggregate categorization
+previews assume short requests. Saved usage costs are historical estimates and
+are not recalculated by this update. Estimates exclude regional premiums,
+alternative service tiers, tool charges and audio-specific rates. Anthropic
+five-minute cache writes and reads are included when reported; OpenAI and Gemini
+cache discounts and cache-write/storage charges are not currently modeled.
+Custom endpoints may charge different rates.
+
+For comparison, GPT-4.1 is $2 input / $8 output, GPT-5 is $1.25 / $10,
+and GPT-4o mini is $0.15 / $0.60.
 
 **Typical usage:**
 - Chat message: 500-2000 tokens (input) + 100-500 tokens (output)
 - Auto-categorization: 1000-3000 tokens per 25 transactions
-- Cost per chat message: $0.01-0.05 for gpt-4.1
+- Cost per chat message: about $0.0018-0.008 for GPT-4.1 at the token counts above
 
 **Optimization tips:**
 1. Use `gpt-4o-mini` for categorization
@@ -1372,6 +1463,7 @@ Read and analysis:
 
 Write:
 - `update_transaction`, `update_budget`, `create_goal`
+- `unmatch_transfer` - Unlink a wrongly matched transfer
 - `create_tag` / `update_tag`, `create_category` / `update_category`
 
 Documents:
@@ -1684,6 +1776,29 @@ throttle('chats/create', limit: 10, period: 1.minute) do |req|
 end
 ```
 
+## External chat assistant
+
+The External assistant delegates chat to a remote OpenAI-compatible agent gateway. It is separate from the Builtin LLM provider described above.
+
+Configure it in **Settings → Self-Hosting → AI Assistant**, or with:
+
+```bash
+ASSISTANT_TYPE=external
+EXTERNAL_ASSISTANT_URL=https://your-agent-host/v1/chat/completions
+EXTERNAL_ASSISTANT_TOKEN=your-gateway-token # pipelock:ignore
+EXTERNAL_ASSISTANT_MODEL=openclaw/main
+```
+
+Configuration behavior:
+
+- `EXTERNAL_ASSISTANT_URL` is the full chat-completions endpoint. Sure sends requests to this URL verbatim; it does not append `/v1/chat/completions`.
+- The Settings form requires an agent selection. After the URL and token are saved, Sure requests the sibling `/v1/models` endpoint and shows the returned entries as agent choices. If you change the endpoint or token and the previously selected agent is not offered there, Sure saves the new connection and asks you to pick an agent again.
+- The selected value is sent as the OpenAI-compatible `model` routing value, such as `openclaw/main`. This selects an external agent. It does not select or change the LLM configured behind that agent.
+- The gateway must return standard streaming chat-completion events (`choices[0].delta.content`) followed by `data: [DONE]`.
+- An authentication, endpoint, or agent-selection failure comes from the external gateway. Check the gateway's response and logs when Sure reports an HTTP error.
+
+Upgrading: deployments that set only the URL and token keep working. When no agent is selected, Sure uses `openclaw/main`, which matches the previous implicit `main` agent. `EXTERNAL_ASSISTANT_AGENT_ID` is still read for existing deployments and maps to `openclaw/<id>` until an agent is selected. Once a model is selected in Settings or with `EXTERNAL_ASSISTANT_MODEL`, the agent routing header always follows that model. New configurations should use `EXTERNAL_ASSISTANT_MODEL`.
+
 ## Resources
 
 - [OpenAI Documentation](https://platform.openai.com/docs)
@@ -1705,4 +1820,4 @@ For issues with AI features:
 
 ---
 
-**Last Updated:** August 2026
+**Last Updated:** September 2026

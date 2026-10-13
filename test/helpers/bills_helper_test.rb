@@ -5,6 +5,15 @@ class BillsHelperTest < ActionView::TestCase
   # bills_match_reasons formats one money value, and format_money lives in
   # ApplicationHelper rather than this module.
   include ApplicationHelper
+  # A bill row's subline names its schedule through frequency_label.
+  include RecurringTransactionsHelper
+
+  test "an upcoming date gains the year only when it falls in another one" do
+    travel_to Date.new(2026, 9, 25) do
+      assert_equal I18n.l(Date.new(2026, 10, 5), format: :short), bills_upcoming_date(Date.new(2026, 10, 5))
+      assert_equal I18n.l(Date.new(2028, 9, 1), format: :short_with_year), bills_upcoming_date(Date.new(2028, 9, 1))
+    end
+  end
 
   # The matcher has always stored WHY it matched something, in match_signals.
   # Nothing rendered it, so the app showed a bare percentage instead of the
@@ -24,6 +33,12 @@ class BillsHelperTest < ActionView::TestCase
       I18n.t("bills.match.exact_amount"),
       I18n.t("bills.match.due_date")
     ], reasons
+  end
+
+  test "a recurring transfer's match reads as a transfer to the same account" do
+    reasons = bills_match_reasons({ transfer: 0.40, account: 0.10 }, currency: "USD")
+
+    assert_equal [ I18n.t("bills.match.same_transfer") ], reasons
   end
 
   # signals[:account] is a constant 0.10 on every candidate, because
@@ -195,6 +210,19 @@ class BillsHelperTest < ActionView::TestCase
     assert_match(/due/i, label)
   end
 
+  # An every-2-years bill's current cycle can be a year or more out, and
+  # "Due in 707 days, Sep 1" did not say which September.
+  test "a cycle due in another year names the year" do
+    travel_to Date.new(2026, 9, 25) do
+      later = build_occurrence(due_on: Date.new(2028, 9, 1), status: "scheduled")
+      soon = build_occurrence(due_on: Date.new(2026, 10, 5), status: "scheduled")
+
+      assert_includes occurrence_due_label(later), I18n.l(Date.new(2028, 9, 1), format: :short_with_year)
+      assert_includes occurrence_due_label(soon), I18n.l(Date.new(2026, 10, 5), format: :short)
+      assert_not_includes occurrence_due_label(soon), "2026"
+    end
+  end
+
   test "a cycle past its grace is still labelled overdue" do
     occurrence = build_occurrence(due_on: Date.current - 30, status: "scheduled")
     assert_equal :overdue, occurrence.derived_state, "precondition: grace exhausted"
@@ -202,19 +230,160 @@ class BillsHelperTest < ActionView::TestCase
     assert_match(/overdue/i, occurrence_due_label(occurrence))
   end
 
+  # --- What a bill row says ---
+
+  # First true wins. A paused bill's leftover used to read "Overdue by 6 days"
+  # with nothing saying the bill was paused, and lateness now outranks a price
+  # change.
+  test "a row gives the first reason that applies, paused first" do
+    occurrence = build_occurrence(due_on: Date.current - 30, status: "scheduled")
+    series = occurrence.recurring_transaction
+    price_change!(series, from: 10, to: 12)
+    occurrence.cached_confirmed_allocated = 5
+
+    series.status = "inactive"
+    assert_equal I18n.t("bills.attention.paused"), bills_attention_reason(occurrence, suggestion: :pending)
+
+    series.status = "active"
+    assert_equal I18n.t("bills.attention.needs_review"), bills_attention_reason(occurrence, suggestion: :pending)
+    assert_equal I18n.t("bills.attention.partial"), bills_attention_reason(occurrence)
+
+    occurrence.cached_confirmed_allocated = 0
+    assert_equal %(<span class="text-destructive">#{I18n.t("bills.attention.overdue", count: 30)}</span>),
+      bills_attention_reason(occurrence)
+  end
+
+  # The notices file anything under a tenth as a smaller change, so the row
+  # holds the same line: +4% on Spotify used to push Autopay off the row.
+  test "amount changed needs a shift of a tenth or more" do
+    occurrence = build_occurrence(due_on: Date.current + 5, status: "scheduled")
+    series = occurrence.recurring_transaction
+
+    price_change!(series, from: 100, to: 109.99)
+    assert_nil bills_attention_reason(occurrence), "just under a tenth"
+
+    series.recurring_price_changes.destroy_all
+    price_change!(series, from: 100, to: 110)
+    assert_equal I18n.t("bills.attention.amount_changed"), bills_attention_reason(occurrence), "a tenth"
+  end
+
+  # One order in every section, and the line truncates from the end, so the
+  # facts you can do without come last.
+  test "a row's subline reads autopay, reason, progress, debt payment, schedule, account" do
+    stubs(:bills_span_multiple_accounts?).returns(true)
+    occurrence = build_occurrence(due_on: Date.current + 5, status: "scheduled")
+    series = occurrence.recurring_transaction
+    series.assign_attributes(autopay: true, bill_type: "installment", end_mode: "after_count",
+                             end_after_count: 12, destination_account_id: accounts(:credit_card).id)
+    price_change!(series, from: 10, to: 12)
+    facts = [
+      I18n.t("bills.attention.amount_changed"), I18n.t("bills.installment_progress", done_plus_one: 1, total: 12),
+      I18n.t("bills.debt_payment"), frequency_label(series), I18n.t("bills.paid_from", account: series.account.name)
+    ]
+
+    assert_equal [ I18n.t("recurring_transactions.pay_action.autopay"), *facts ].join(" · "),
+      bills_row_subline(occurrence)
+
+    # A paused bill isn't charging, so it drops Autopay.
+    series.status = "inactive"
+    assert_equal [ I18n.t("bills.attention.paused"), *facts.drop(1) ].join(" · "), bills_row_subline(occurrence)
+  end
+
+  # A plan settled in full still lists its last row this month, which read
+  # "Payment 13 of 12".
+  test "installment progress stops at the plan's last payment" do
+    assert_equal I18n.t("bills.installment_progress", done_plus_one: 5, total: 12),
+      bills_installment_progress(OpenStruct.new(installment_progress: [ 4, 12 ]))
+    assert_equal I18n.t("bills.installment_progress", done_plus_one: 12, total: 12),
+      bills_installment_progress(OpenStruct.new(installment_progress: [ 12, 12 ]))
+    assert_nil bills_installment_progress(OpenStruct.new(installment_progress: nil))
+  end
+
+  # The red sits on the overdue reason, not the whole line. On a late bill a
+  # match to review or a partial payment outranks it, and in red they read as
+  # the problem themselves. Never on a paused bill's leftover: nobody is
+  # paying it, so it isn't late.
+  test "only the overdue reason is red" do
+    stubs(:bills_span_multiple_accounts?).returns(false)
+    occurrence = build_occurrence(due_on: Date.current - 30, status: "scheduled")
+    reason = I18n.t("bills.attention.overdue", count: 30)
+
+    assert_includes bills_row_subline(occurrence), %(<span class="text-destructive">#{reason}</span>)
+
+    assert_includes bills_row_subline(occurrence, suggestion: :pending), I18n.t("bills.attention.needs_review")
+    assert_not_includes bills_row_subline(occurrence, suggestion: :pending), "text-destructive"
+
+    occurrence.cached_confirmed_allocated = 5
+    assert_includes bills_row_subline(occurrence), I18n.t("bills.attention.partial")
+    assert_not_includes bills_row_subline(occurrence), "text-destructive"
+    occurrence.cached_confirmed_allocated = 0
+
+    occurrence.recurring_transaction.status = "inactive"
+    assert_not_includes bills_row_subline(occurrence), "text-destructive"
+  end
+
+  # The drawer, the bill's page and the payment drawer print this label, and
+  # said "Overdue by 30 days" in red beside a row that reads Paused. A
+  # dismissed bill's page reads Dismissed, so its label does too.
+  test "a leftover of a bill that isn't active leads with the bill's status, not overdue" do
+    occurrence = build_occurrence(due_on: Date.current - 30, status: "scheduled")
+
+    %w[inactive ended].each do |status|
+      occurrence.recurring_transaction.status = status
+      label = occurrence_due_label(occurrence)
+
+      assert label.start_with?(I18n.t("recurring_transactions.status.#{status}")), label
+      assert_includes label, bills_upcoming_date(Date.current - 30)
+      assert_no_match(/overdue/i, label)
+    end
+  end
+
+  # The rail is 56px wide, so "Jan 03, 2027" wrapped mid-date there.
+  test "the rail puts another year's date on two lines" do
+    travel_to Date.new(2026, 10, 16) do
+      next_year = build_occurrence(due_on: Date.new(2027, 1, 3), status: "scheduled")
+      this_year = build_occurrence(due_on: Date.new(2026, 11, 3), status: "scheduled")
+
+      rail = Nokogiri::HTML.fragment(bills_rail_date(next_year))
+      assert_equal I18n.l(Date.new(2027, 1, 3), format: :short), rail.children.first.text.strip
+      assert_equal "2027", rail.at_css("span.block.text-subdued")&.text
+      assert_equal I18n.l(Date.new(2026, 11, 3), format: :short), bills_rail_date(this_year)
+    end
+  end
+
+  # derived_state, the overdue count and Next up all judge a snoozed bill by
+  # the date it was snoozed to. The rail read due_on, so it kept the old day.
+  test "a snoozed row shows the date it was snoozed to" do
+    travel_to Date.new(2026, 12, 28) do
+      occurrence = build_occurrence(due_on: Date.current, status: "scheduled")
+      occurrence.snoozed_until = Date.new(2027, 1, 4)
+
+      assert_equal I18n.l(Date.new(2027, 1, 4), format: :short_with_year), bills_row_date(occurrence)
+      rail = Nokogiri::HTML.fragment(bills_rail_date(occurrence))
+      assert_equal I18n.l(Date.new(2027, 1, 4), format: :short), rail.children.first.text.strip
+      assert_equal "2027", rail.at_css("span.block.text-subdued")&.text
+    end
+  end
+
+  # Missing keys fall back to English silently, and the helper no longer passes
+  # an amount, so a stale "%{amount}" in one locale would raise on the page.
+  test "every locale with row reasons has Paused, a bare Partial and a bare Debt payment" do
+    locales = Rails.root.glob("config/locales/views/bills/*.yml").map { |file| file.basename(".yml").to_s }
+                         .select { |locale| I18n.t("bills.attention", locale: locale, fallback: false, default: nil) }
+    assert_includes locales, "en"
+
+    locales.each do |locale|
+      lookup = ->(key) { I18n.t(key, locale: locale, fallback: false, default: nil).to_s }
+      %w[bills.attention.paused bills.attention.partial bills.debt_payment].each do |key|
+        assert lookup.(key).present?, "#{locale} is missing #{key}"
+      end
+      assert_no_match(/%\{/, lookup.("bills.attention.partial"), "#{locale}'s Partial still interpolates")
+      assert_no_match(/\A[[:space:]·]/, lookup.("bills.debt_payment"), "#{locale}'s Debt payment still leads with a separator")
+    end
+  end
+
   # --- Prepared-data helpers extracted from the templates, so the section,
   # pulse, detail and paycheck views render precomputed values. ---
-
-  test "ambiguous row keys mark only genuine collisions" do
-    twin_a = stub_occurrence("Twitch", 5.99, id: "a1")
-    twin_b = stub_occurrence("Twitch", 5.99, id: "a2")
-    other_tier = stub_occurrence("Twitch", 11.99, id: "b")
-
-    keys = bills_ambiguous_row_keys([ twin_a, twin_b, other_tier ])
-
-    assert_includes keys, [ "Twitch", 5.99 ]
-    assert_not_includes keys, [ "Twitch", 11.99 ]
-  end
 
   test "pay period markers land on the first row of each period with its summed total" do
     period = OpenStruct.new(starts_on: Date.new(2026, 9, 1), ends_on: Date.new(2026, 9, 14))
@@ -227,6 +396,22 @@ class BillsHelperTest < ActionView::TestCase
     assert_equal [ "one" ], markers.keys
     assert_equal 2230, markers["one"][:due_total]
     assert_equal period, markers["one"][:period]
+  end
+
+  # The list is in rail order, so a bill snoozed into the next pay period sits
+  # under that period's marker and counts toward its total.
+  test "a snoozed row's pay period is the one it was snoozed into" do
+    this_week = OpenStruct.new(starts_on: Date.new(2026, 9, 15), ends_on: Date.new(2026, 9, 21))
+    next_week = OpenStruct.new(starts_on: Date.new(2026, 9, 22), ends_on: Date.new(2026, 9, 28))
+    rent = stub_occurrence("Rent", 900, id: "rent", due_on: Date.new(2026, 9, 16))
+    snoozed = stub_occurrence("Gym", 40, id: "gym", due_on: Date.new(2026, 9, 17), effective_due_on: Date.new(2026, 9, 24))
+    power = stub_occurrence("Power", 80, id: "power", due_on: Date.new(2026, 9, 25))
+
+    markers = bills_pay_period_markers([ rent, snoozed, power ], [ this_week, next_week ])
+
+    assert_equal %w[rent gym], markers.keys
+    assert_equal 900, markers["rent"][:due_total]
+    assert_equal 120, markers["gym"][:due_total]
   end
 
   test "no pay periods means no markers" do
@@ -288,37 +473,164 @@ class BillsHelperTest < ActionView::TestCase
     assert_equal covered, sections[:bridge_note]
   end
 
+  test "a bridge with unknown cash renders neither cash-dependent state" do
+    unknown = build_period(income: 0, due: 50, reserved: 0, leading: true,
+                           cash_on_hand: nil, items: [ :a_bill ])
+
+    sections = paycheck_plan_sections([ unknown ])
+
+    assert_nil sections[:shortfall]
+    assert_nil sections[:bridge_note]
+  end
+
   test "no plan yields empty sections" do
     assert_empty paycheck_plan_sections(nil)
   end
 
+  # --- The row's one verb: present only when the bill needs you now. ---
+
+  test "a paused bill's leftover row offers no verb, even overdue" do
+    leftover = build_occurrence(due_on: Date.current - 10, status: "scheduled", series: { status: "inactive" })
+    assert_equal :overdue, leftover.derived_state, "precondition: past its grace"
+
+    assert_nil bills_row_verb(leftover)
+    assert_nil bills_row_verb(leftover, suggestion: RecurringAllocation.new)
+  end
+
+  test "a settled row offers no verb, even with a pending match" do
+    %w[paid skipped missed].each do |status|
+      assert_nil bills_row_verb(build_occurrence(due_on: Date.current - 10, status: status)),
+        "a #{status} row has nothing left to chase"
+    end
+    # Needs review still asks about the match; the row doesn't.
+    assert_nil bills_row_verb(build_occurrence(due_on: Date.current - 10, status: "paid"),
+                              suggestion: RecurringAllocation.new)
+  end
+
+  test "a pending match is reviewed whatever the date" do
+    upcoming = build_occurrence(due_on: Date.current + 20, status: "scheduled")
+    assert_equal :upcoming, upcoming.derived_state, "precondition: outside its window"
+
+    assert_equal :review_match, bills_row_verb(upcoming, suggestion: RecurringAllocation.new)
+  end
+
+  test "a partial row inside its window offers Add payment" do
+    [ Date.current, Date.current - 10 ].each do |due_on|
+      assert_equal :add_payment, bills_row_verb(build_partial(due_on: due_on)), "due #{due_on}"
+    end
+  end
+
+  test "a partial row outside its window offers no verb" do
+    assert_nil bills_row_verb(build_partial(due_on: Date.current + 20))
+  end
+
+  test "an autopay bill on schedule offers no verb, portal or not" do
+    [ Date.current, Date.current + 20 ].each do |due_on|
+      [ nil, "https://pay.example.com" ].each do |payment_url|
+        occurrence = build_occurrence(due_on: due_on, status: "scheduled",
+                                      series: { autopay: true, payment_url: payment_url })
+        assert_nil bills_row_verb(occurrence), "due #{due_on}, portal #{payment_url.inspect}"
+      end
+    end
+  end
+
+  test "a pending match or a partial payment outranks autopay" do
+    autopay = { autopay: true, payment_url: "https://pay.example.com" }
+
+    assert_equal :review_match, bills_row_verb(build_occurrence(due_on: Date.current, status: "scheduled", series: autopay),
+                                               suggestion: RecurringAllocation.new)
+    assert_equal :add_payment, bills_row_verb(build_partial(due_on: Date.current, series: autopay))
+  end
+
+  # Overdue means the charge autopay promised never showed up.
+  test "an autopay bill past its grace is chased like any other" do
+    with_portal = build_occurrence(due_on: Date.current - 10, status: "scheduled",
+                                   series: { autopay: true, payment_url: "https://pay.example.com" })
+    without = build_occurrence(due_on: Date.current - 10, status: "scheduled", series: { autopay: true })
+
+    assert_equal :pay, bills_row_verb(with_portal)
+    assert_equal :find_payment, bills_row_verb(without)
+  end
+
+  test "a bill inside its window offers Pay with a portal and Find payment without one" do
+    [ Date.current, Date.current - 10 ].each do |due_on|
+      with_portal = build_occurrence(due_on: due_on, status: "scheduled",
+                                     series: { payment_url: "https://pay.example.com" })
+      without = build_occurrence(due_on: due_on, status: "scheduled")
+
+      assert_equal :pay, bills_row_verb(with_portal), "due #{due_on}"
+      assert_equal :find_payment, bills_row_verb(without), "due #{due_on}"
+    end
+  end
+
+  test "an upcoming bill offers no verb, Pay included" do
+    with_portal = build_occurrence(due_on: Date.current + 20, status: "scheduled",
+                                   series: { payment_url: "https://pay.example.com" })
+    without = build_occurrence(due_on: Date.current + 20, status: "scheduled")
+
+    assert_nil bills_row_verb(with_portal)
+    assert_nil bills_row_verb(without)
+  end
+
+  # The drawer is the only way into unlinking a payment, reopening a cycle or
+  # paying by hand, so it always offers a verb. Pay has its own button there.
+  test "the drawer always offers a verb" do
+    upcoming = build_occurrence(due_on: Date.current + 20, status: "scheduled")
+    autopay = build_occurrence(due_on: Date.current, status: "scheduled",
+                               series: { autopay: true, payment_url: "https://pay.example.com" })
+    portal = build_occurrence(due_on: Date.current, status: "scheduled",
+                              series: { payment_url: "https://pay.example.com" })
+    leftover = build_occurrence(due_on: Date.current - 10, status: "scheduled", series: { status: "inactive" })
+
+    assert_equal :manage_payments, bills_drawer_verb(build_occurrence(due_on: Date.current - 10, status: "paid"))
+    assert_equal :review_match, bills_drawer_verb(upcoming, suggestion: RecurringAllocation.new)
+    assert_equal :add_payment, bills_drawer_verb(build_partial(due_on: Date.current + 20))
+    { "upcoming" => upcoming, "autopay" => autopay, "portal" => portal, "paused" => leftover }.each do |label, occurrence|
+      assert_equal :find_payment, bills_drawer_verb(occurrence), label
+    end
+  end
+
   private
 
-    def stub_occurrence(name, amount, id:, due_on: Date.current)
+    def stub_occurrence(name, amount, id:, due_on: Date.current, effective_due_on: due_on)
       OpenStruct.new(
         id: id,
         due_on: due_on,
+        effective_due_on: effective_due_on,
         resolved_expected_amount: amount,
         recurring_transaction: OpenStruct.new(display_name: name)
       )
     end
 
-    def build_occurrence(due_on:, status:)
+    def build_occurrence(due_on:, status:, series: {})
       family = users(:family_admin).family
-      series = family.recurring_transactions.create!(
+      bill = family.recurring_transactions.create!({
         name: "Twitch #{status} #{due_on}", account: accounts(:depository),
         amount: 11.99, currency: "USD", expected_day_of_month: due_on.day,
         status: "active", bill_type: "subscription", manual: true,
-        dedup_scope: "twitch-#{status}-#{due_on}",
+        dedup_scope: "twitch-#{status}-#{due_on}-#{SecureRandom.hex(4)}",
         last_occurrence_date: due_on, next_expected_date: due_on
-      )
-      series.recurring_occurrences.destroy_all
-      series.recurring_occurrences.create!(
+      }.merge(series))
+      bill.recurring_occurrences.destroy_all
+      bill.recurring_occurrences.create!(
         family: family, original_due_on: due_on, due_on: due_on,
         currency: "USD", expected_amount: 11.99, status: status,
         closed_at: (status == "scheduled" ? nil : Time.current)
       )
     end
+
+    def price_change!(series, from:, to:)
+      series.recurring_price_changes.create!(effective_on: Date.current - 5, previous_amount: from,
+                                             new_amount: to, currency: "USD", source: "detected")
+    end
+
+    def build_partial(due_on:, series: {})
+      occurrence = build_occurrence(due_on: due_on, status: "scheduled", series: series)
+      occurrence.allocations.create!(allocated_amount: 5, currency: "USD", source: "user_created")
+      assert occurrence.partially_paid?, "precondition: partly paid"
+      occurrence
+    end
+
     def build_period(income:, due:, reserved:, sources: [ "Payroll" ], leading: false, cash_on_hand: nil, items: [])
       obligations = BigDecimal(due.to_s) + BigDecimal(reserved.to_s)
 

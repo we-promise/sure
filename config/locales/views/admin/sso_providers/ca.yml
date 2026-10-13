@@ -11,6 +11,7 @@ ca:
       edit:
         description: Actualitza la configuració per a %{label}
         title: Edita el proveïdor SSO
+        provider_configuration: Configuració del proveïdor
       form:
         admin_groups: Grups d'administradors
         advanced_title: Configuració OIDC avançada
@@ -149,6 +150,7 @@ ca:
       new:
         description: Configura un nou proveïdor d'autenticació d'inici de sessió únic
         title: Afegeix proveïdor SSO
+        provider_configuration: Configuració del proveïdor
       toggle:
         confirm_disable: Segur que vols desactivar aquest proveïdor?
         confirm_enable: Segur que vols activar aquest proveïdor?

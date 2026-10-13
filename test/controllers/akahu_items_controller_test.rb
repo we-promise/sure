@@ -21,6 +21,23 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_akahu_item_url(@akahu_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "akahu-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @akahu_item.reload.syncing?
+  end
+
+  # The Accounts page's Sync button posts here too, without the panel's source.
+  test "sync from the Accounts page goes back to it" do
+    post sync_akahu_item_url(@akahu_item),
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml", "Referer" => accounts_url }
+
+    assert_redirected_to accounts_url
+  end
+
   test "setup_accounts preselects mapped account type for each account" do
     AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
 
@@ -257,6 +274,47 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Secondary Checking"
     refute_includes response.body, "Akahu Checking"
+  end
+
+  # The row and drawer panels post from the page, not a frame. Turbo only
+  # follows a 3xx, so a 422 redirect left the form with no feedback.
+  test "invalid create outside a frame redirects to the providers page with a 303" do
+    assert_no_difference "AkahuItem.count" do
+      post akahu_items_url, params: { akahu_item: { app_token: "", user_token: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch akahu_item_url(@akahu_item),
+          params: { akahu_item: { name: "Renamed Akahu" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "akahu-providers-panel"
+    assert_includes response.body, %(id="akahu-providers-panel")
+    assert_equal "Renamed Akahu", @akahu_item.reload.name
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post akahu_items_url,
+         params: { akahu_item: { app_token: "", user_token: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "akahu-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("can't be blank")
+  end
+
+  # The new connection belongs in Your connections, so the page reloads.
+  test "create from the page still reloads Bank sync" do
+    post akahu_items_url,
+         params: { akahu_item: { app_token: "new-app-credential", user_token: "new-user-credential" } },
+         as: :turbo_stream
+
+    assert_redirected_to settings_providers_path
   end
 
   test "complete account setup hides raw creation errors from users" do

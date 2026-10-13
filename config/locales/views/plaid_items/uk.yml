@@ -24,6 +24,8 @@ uk:
       status_never: Потребує синхронізації даних
       syncing: Синхронізація...
       update: Оновити
+      add_accounts: Додати рахунки
+      provider_name: Plaid
     select_existing_account:
       no_available_accounts: Немає доступних рахунків Plaid для пов'язування. Будь ласка, спочатку підключіть новий рахунок Plaid.
       title: "Пов'язати %{account_name} з Plaid"

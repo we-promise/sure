@@ -6,6 +6,7 @@ ro:
       connection_description: "Conectează un cont de investiții Trade Republic prin autentificare web securizată"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Acest cont Trade Republic este deja conectat. Noua conexiune a fost eliminată."
     portfolio_categories:
       brokerage: "Cont de brokeraj"
       private_markets: "Piețe private"
@@ -25,6 +26,10 @@ ro:
       data_quality:
         title: "Calitatea datelor și detalii de sincronizare"
         repair: "Repară datele importate"
+        pending_trade_details:
+          one: "%{count} activitate de investiții așteaptă detalii"
+          few: "%{count} activități de investiții așteaptă detalii"
+          other: "%{count} de activități de investiții așteaptă detalii"
     setup_accounts:
       page_title: "Configurează contul Trade Republic"
       subtitle: "Asociază contul tău de investiții Trade Republic."
@@ -78,5 +83,4 @@ ro:
         card_fee: Comision card
         card_refund: Rambursare pe card
         tax_refund: Rambursare fiscală
-        buy: Cumpărare
-        sell: Vânzare
+        round_up: Round up

@@ -13,6 +13,33 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
     end
   end
 
+  test "database enforces one active connection per family per brokerage account" do
+    family = trade_republic_items(:configured_item).family
+    family.trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :good, session_blob: "a", brokerage_account_id: "DE1234"
+    )
+
+    assert_raises ActiveRecord::RecordNotUnique do
+      family.trade_republic_items.create!(
+        name: "Trade Republic", currency: "EUR", status: :good, session_blob: "b", brokerage_account_id: "DE1234"
+      )
+    end
+  end
+
+  test "a connection scheduled for deletion does not block reconnecting the same brokerage account" do
+    family = trade_republic_items(:configured_item).family
+    deleted = family.trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :good, session_blob: "a", brokerage_account_id: "DE1234",
+      scheduled_for_deletion: true
+    )
+
+    reconnected = family.trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :good, session_blob: "b", brokerage_account_id: "DE1234"
+    )
+
+    assert_not_equal deleted.id, reconnected.id
+  end
+
   test "syncable scope requires a stored session" do
     items = TradeRepublicItem.syncable
 
@@ -88,5 +115,110 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
     linked.reload
 
     assert_match(/1 linked, 1 need setup/i, item.reload.sync_status_summary)
+  end
+
+  test "data_quality_summary dedupes portfolio and cash timeline events" do
+    item = trade_republic_items(:configured_item)
+    item.trade_republic_accounts.destroy_all
+
+    shared = {
+      "id" => "evt_shared",
+      "eventType" => "CARD_TRANSACTION",
+      "category" => "POC_CREATED",
+      "status" => "EXECUTED"
+    }
+    cash_only = {
+      "id" => "evt_cash_only",
+      "eventType" => "PAYMENT_INBOUND",
+      "category" => "PAYMENT_RECEIVED"
+    }
+    admin = {
+      "id" => "evt_admin",
+      "eventType" => "CARD_VERIFICATION",
+      "title" => "Card verification"
+    }
+    legal_docs = {
+      "id" => "evt_legal",
+      "title" => "Legal documents",
+      "subtitle" => "Accepted"
+    }
+    order_created = {
+      "id" => "evt_order_created",
+      "eventType" => "TRADING_ORDER_CREATED",
+      "title" => "SanDisk",
+      "subtitle" => "Limit buy created"
+    }
+    mapping_gap = {
+      "id" => "evt_gap",
+      "eventType" => "BRAND_NEW_MAPPING_GAP",
+      "title" => "Mystery"
+    }
+
+    item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-DQ-P",
+      currency: "EUR",
+      raw_timeline_payload: [ shared, admin, legal_docs, order_created, mapping_gap ]
+    )
+    item.trade_republic_accounts.create!(
+      kind: "cash",
+      name: "Cash",
+      trade_republic_account_id: "DE-DQ-C",
+      currency: "EUR",
+      raw_timeline_payload: [ shared, cash_only, admin ]
+    )
+
+    summary = item.data_quality_summary
+
+    assert_equal 6, summary[:events]
+    assert_equal 1, summary[:unknown_events]
+  end
+
+  test "process_accounts processes portfolio before cash even when cash was created first" do
+    item = trade_republic_items(:configured_item)
+    item.trade_republic_accounts.destroy_all
+
+    cash = item.trade_republic_accounts.create!(
+      kind: "cash",
+      name: "Cash First",
+      trade_republic_account_id: "DE-ORD-C",
+      currency: "EUR"
+    )
+    portfolio = item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio Second",
+      trade_republic_account_id: "DE-ORD-P",
+      currency: "EUR"
+    )
+
+    cash_sure = item.family.accounts.create!(
+      name: "TR Cash Order",
+      balance: 0,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+    portfolio_sure = item.family.accounts.create!(
+      name: "TR Portfolio Order",
+      balance: 0,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    cash.ensure_account_provider!(cash_sure)
+    portfolio.ensure_account_provider!(portfolio_sure)
+
+    processed_kinds = []
+    fake_processor = Object.new
+    fake_processor.define_singleton_method(:process) { true }
+    TradeRepublicAccount::Processor.stubs(:new).with { |tr_account|
+      processed_kinds << tr_account.kind
+      true
+    }.returns(fake_processor)
+
+    item.process_accounts
+
+    assert_equal %w[portfolio cash], processed_kinds
   end
 end

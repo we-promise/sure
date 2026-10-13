@@ -67,6 +67,21 @@ class EntryTest < ActiveSupport::TestCase
     assert_equal 0, family.entries.search(params).size
   end
 
+  test "uncategorized filter keeps only uncategorized, non-transfer transactions" do
+    account = accounts(:depository)
+    uncategorized = create_transaction(account: account, name: "Needs a category", category: nil)
+    categorized = create_transaction(account: account, name: "Has a category", category: categories(:food_and_drink))
+    transfer_leg = create_transaction(account: account, name: "Transfer leg", category: nil, kind: "funds_movement")
+
+    ids = account.entries.search(uncategorized: true).pluck(:id)
+
+    assert_includes ids, uncategorized.id
+    assert_not_includes ids, categorized.id
+    assert_not_includes ids, transfer_leg.id
+
+    assert_includes account.entries.search(uncategorized: false).pluck(:id), categorized.id
+  end
+
   test "status filter matches pending transactions for every supported provider via EntrySearch" do
     family = families(:empty)
     account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
@@ -89,6 +104,29 @@ class EntryTest < ActiveSupport::TestCase
 
     assert_includes confirmed_ids, confirmed.id
     assert_not_includes pending_ids, confirmed.id
+  end
+
+  # reconcile_pending_duplicates excludes a pending entry once it finds exactly
+  # one posted twin. "Posted" has to mean what Transaction#pending? means: a twin
+  # flagged "no" is itself pending, so there is nothing to reconcile against.
+  test "reconcile_pending_duplicates matches only twins pending? calls posted" do
+    family = families(:empty)
+    account = family.accounts.create! name: "Said no", balance: 0, currency: "USD", accountable: Depository.new
+    control_account = family.accounts.create! name: "Control", balance: 0, currency: "USD", accountable: Depository.new
+
+    pending_entry = create_transaction(account: account, amount: 42, name: "Coffee")
+    pending_entry.entryable.update!(extra: { "simplefin" => { "pending" => true } })
+    create_transaction(account: account, amount: 42, name: "Coffee").entryable.update!(extra: { "simplefin" => { "pending" => "no" } })
+
+    control_pending = create_transaction(account: control_account, amount: 42, name: "Coffee")
+    control_pending.entryable.update!(extra: { "simplefin" => { "pending" => true } })
+    create_transaction(account: control_account, amount: 42, name: "Coffee").entryable.update!(extra: { "simplefin" => { "pending" => false } })
+
+    assert_equal 0, Entry.reconcile_pending_duplicates(account: account)[:reconciled]
+    assert_not pending_entry.reload.excluded?
+
+    assert_equal 1, Entry.reconcile_pending_duplicates(account: control_account)[:reconciled]
+    assert control_pending.reload.excluded?
   end
 
   test "visible scope only returns entries from visible accounts" do

@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  has_many :financekit_items, dependent: :destroy
+
   include Encryptable
 
   # Allow nil password for SSO-only users (JIT provisioning).
@@ -194,9 +196,9 @@ class User < ApplicationRecord
   end
 
   def ai_available?
+    effective_type = family&.effective_assistant_type || "builtin"
+    return false if effective_type == "mcp_only"
     return true unless Rails.application.config.app_mode.self_hosted?
-
-    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
 
     case effective_type
     when "external"
@@ -368,9 +370,12 @@ class User < ApplicationRecord
     transaction do
       lock!
 
-      accounts_to_move = owned_accounts.to_a
+      accounts_to_move = owned_accounts.order(:id).to_a
       provider_items_to_move = provider_items_for_transfer(accounts_to_move)
       moving_default_account = accounts_to_move.any? { |account| account.id == default_account_id }
+
+      provider_items_to_move.sort_by(&:id).each(&:lock!)
+      accounts_to_move.each(&:lock!)
 
       account_shares.delete_all
 
@@ -383,6 +388,11 @@ class User < ApplicationRecord
       AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
 
       provider_items_to_move.each do |provider_item|
+        if provider_item.is_a?(FinancekitItem)
+          lineage_ids = provider_item.financekit_account_lineages.select(:id)
+          FinancekitAccountLineage.where(id: lineage_ids).update_all(family_id: new_family.id, updated_at: Time.current)
+          provider_item.financekit_conflicts.update_all(family_id: new_family.id, updated_at: Time.current)
+        end
         attrs = { family: new_family }
 
         # provider_items_for_transfer only returns items whose accounts all
@@ -403,11 +413,18 @@ class User < ApplicationRecord
     account_ids_to_move = accounts_to_move.map(&:id)
     provider_items = accounts_to_move.flat_map do |account|
       account.account_providers.includes(:provider).filter_map do |account_provider|
-        provider_item_for(account_provider.provider)
+        provider_items_for(account_provider.provider)
       end
-    end.uniq
+    end.flatten.uniq
+    provider_items.concat(financekit_items)
+    provider_items.uniq!
 
     provider_items.each do |provider_item|
+      if provider_item.is_a?(FinancekitItem) && provider_item.user_id != id
+        errors.add(:base, :provider_item_has_other_accounts)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
       linked_account_ids = provider_item.accounts.map(&:id)
       next if linked_account_ids.all? { |account_id| account_ids_to_move.include?(account_id) }
 
@@ -418,12 +435,16 @@ class User < ApplicationRecord
     provider_items
   end
 
-  def provider_item_for(provider)
+  def provider_items_for(provider)
+    if provider.is_a?(FinancekitAccountLineage)
+      return provider.financekit_accounts.includes(:financekit_item).map(&:financekit_item).uniq
+    end
+
     item_association = provider.class.reflect_on_all_associations(:belongs_to).find do |association|
       association.name.to_s.end_with?("_item") && provider.respond_to?(association.name)
     end
 
-    provider.public_send(item_association.name) if item_association
+    Array(provider.public_send(item_association.name)) if item_association
   end
 
   # Revokes mobile/third-party API access alongside the web-session
@@ -463,7 +484,8 @@ class User < ApplicationRecord
     update!(
       otp_secret: ROTP::Base32.random(32),
       otp_required: false,
-      otp_backup_codes: []
+      otp_backup_codes: [],
+      otp_last_used_at: nil
     )
   end
 
@@ -486,21 +508,38 @@ class User < ApplicationRecord
       update!(
         otp_secret: nil,
         otp_required: false,
-        otp_backup_codes: []
+        otp_backup_codes: [],
+        otp_last_used_at: nil
       )
       webauthn_credentials.destroy_all
     end
   end
 
   def verify_otp?(code)
-    return false if otp_secret.blank?
+    verify_otp(code) == :accepted
+  end
+
+  # Enrollment needs to tell a replayed (correct but already-used) code apart
+  # from a wrong one so a duplicate submit does not tear down MFA; login
+  # callers use verify_otp?, where a replay stays a plain failure.
+  def verify_otp(code)
+    return :invalid if otp_secret.blank?
 
     normalized_code = normalize_mfa_code(code)
-    return false if normalized_code.blank?
-    return true if totp.verify(normalized_code, drift_behind: 15)
-    return false unless backup_code_input?(normalized_code)
+    return :invalid if normalized_code.blank?
 
-    consume_backup_code!(normalized_code)
+    # after: rejects the time step already used, so a code seen once (over a
+    # shoulder, in a proxy log) cannot sign in again while it is still valid.
+    if (time_step = totp.verify(normalized_code, drift_behind: 15, after: otp_last_used_at))
+      return claim_otp_time_step!(time_step) ? :accepted : :replayed
+    end
+
+    if backup_code_input?(normalized_code)
+      return consume_backup_code!(normalized_code) ? :accepted : :invalid
+    end
+
+    # Still valid for the secret? Then only its time step was already used.
+    totp.verify(normalized_code, drift_behind: 15) ? :replayed : :invalid
   end
 
   def provisioning_uri
@@ -549,22 +588,26 @@ class User < ApplicationRecord
     preferences&.[]("last_seen_release_tag")
   end
 
+  def release_seen?(tag)
+    tag == last_seen_release_tag || Array(preferences&.[]("seen_release_tags")).include?(tag)
+  end
+
   def mark_release_seen!(tag)
-    tag_version = parsed_release_tag_version!(tag)
+    parsed_release_tag_version!(tag)
 
     with_lock do
-      current = last_seen_release_tag
+      # Acknowledgement is about identity, not version precedence: hotfix tags
+      # sort before their base release, and users can switch release channels.
+      # Merge after reloading under the lock so stale tabs cannot lose tags.
+      seen_tags = Array(preferences&.[]("seen_release_tags"))
+      legacy_tag = last_seen_release_tag
+      seen_tags += [ legacy_tag ] if parsed_release_tag_version(legacy_tag)
+      seen_tags = (seen_tags + [ tag ]).uniq
 
-      # Never regress the marker: a stale tab (or an old app version during a
-      # rolling deploy) must not make an already-acknowledged release look
-      # unseen again. A previously stored malformed tag is overwritten by the
-      # next valid dismissal so the account can recover.
-      if current
-        current_version = parsed_release_tag_version(current)
-        next if current_version && tag_version < current_version
-      end
-
-      update!(preferences: (preferences || {}).merge("last_seen_release_tag" => tag))
+      update!(preferences: (preferences || {}).merge(
+        "seen_release_tags" => seen_tags,
+        "last_seen_release_tag" => tag
+      ))
     end
   end
 
@@ -589,9 +632,33 @@ class User < ApplicationRecord
     preferences&.[]("section_order") || default_dashboard_section_order
   end
 
+  def dashboard_hidden_sections
+    preferences&.[]("hidden_sections") || []
+  end
+
+  # Adds or removes one key rather than taking the whole list, so a stale tab
+  # hiding one widget can't bring back another hidden elsewhere.
+  def update_dashboard_section_hidden(section_key, hidden)
+    transaction do
+      lock!
+
+      keys = dashboard_hidden_sections - [ section_key ]
+      keys << section_key if hidden
+      update!(preferences: (preferences || {}).merge("hidden_sections" => keys))
+    end
+  end
+
   # Per-widget height preset override ("compact" | "auto" | "tall"); nil = use default.
   def dashboard_section_height(section_key)
     preferences&.dig("dashboard_section_layout", section_key, "height")
+  end
+
+  CASHFLOW_SANKEY_GROUPINGS = IncomeStatement::CashFlowGraph::GROUPINGS.keys.freeze
+
+  # Preview cash-flow Sankey: flows by category (default) or through each account.
+  def cashflow_sankey_group_by
+    group_by = preferences&.dig("cashflow_sankey_group_by")
+    CASHFLOW_SANKEY_GROUPINGS.include?(group_by) ? group_by : "category"
   end
 
   # Per-widget column-span override ("single" | "full"); nil = use default.
@@ -599,13 +666,18 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_section_layout", section_key, "col_span")
   end
 
-  def update_dashboard_preferences(prefs)
+  # laid_out_order is the order the dashboard laid its widgets out in, which
+  # also places widgets the saved order doesn't list yet.
+  def update_dashboard_preferences(prefs, laid_out_order: nil)
     # Use pessimistic locking to ensure atomic read-modify-write
     # This prevents race conditions when multiple sections are collapsed quickly
     transaction do
       lock! # Acquire row-level lock (SELECT FOR UPDATE)
 
       updated_prefs = (preferences || {}).deep_dup
+      if prefs["section_order"]
+        prefs = prefs.merge("section_order" => keep_hidden_sections_in_order(prefs["section_order"], laid_out_order || dashboard_section_order))
+      end
       prefs.each do |key, value|
         if value.is_a?(Hash)
           updated_prefs[key] ||= {}
@@ -723,6 +795,16 @@ class User < ApplicationRecord
       skip_password_validation == true
     end
 
+    # The dashboard only sends the order of the widgets it rendered, so put
+    # each hidden widget back after the one it followed before.
+    def keep_hidden_sections_in_order(new_order, old_order)
+      hidden = dashboard_hidden_sections
+      (old_order & hidden).reduce(new_order - hidden) do |order, key|
+        predecessor = old_order[0...old_order.index(key)].reverse.find { |k| order.include?(k) }
+        order.insert(predecessor ? order.index(predecessor) + 1 : 0, key)
+      end
+    end
+
     def default_dashboard_section_order
       %w[insights_feed cashflow_sankey outflows_donut net_worth_chart balance_sheet]
     end
@@ -771,6 +853,26 @@ class User < ApplicationRecord
 
     def totp
       ROTP::TOTP.new(otp_secret, issuer: "Sure Finances")
+    end
+
+    # Two requests carrying the same code can both pass verify before either
+    # records it; the conditional update lets only one of them through. The
+    # otp_secret match drops a claim verified against a secret that was
+    # replaced (disable + re-setup) in the meantime, so it cannot mark a time
+    # step as used on the newly enrolled factor.
+    def claim_otp_time_step!(time_step)
+      used_at = Time.zone.at(time_step)
+      claimed = self.class.where(id: id, otp_secret: otp_secret)
+        .where("otp_last_used_at IS NULL OR otp_last_used_at < ?", used_at)
+        .update_all(otp_last_used_at: used_at) == 1
+
+      if claimed
+        # Already written by update_all; keep the record clean so a later
+        # with_lock or update! sees it as persisted.
+        self.otp_last_used_at = used_at
+        clear_attribute_changes([ :otp_last_used_at ])
+      end
+      claimed
     end
 
     def consume_backup_code!(normalized_code)

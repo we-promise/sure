@@ -54,8 +54,7 @@
     <p class="text-xs text-warning"><%= t(".not_configured_hint", provider: t(".provider_#{active}")) %></p>
   <% end %>
 
-  <div class="rounded-md border border-secondary p-3 bg-container-inset text-xs text-secondary space-y-1">
-    <p class="font-medium text-primary"><%= t(".data_retention_heading") %></p>
+  <%= render DS::Note.new(title: t(".data_retention_heading")) do %>
     <p><%= t(".data_retention") %></p>
-  </div>
+  <% end %>
 </div>

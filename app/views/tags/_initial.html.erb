@@ -1,0 +1,7 @@
+<%# locals: (tag:) %>
+<%# Opaque soft tint (same hue treatment as the tag pill) so overlapping
+    badges stay legible and the letter reads on light and dark surfaces. %>
+<span class="inline-flex items-center justify-center size-5 shrink-0 rounded-full text-xs font-semibold leading-none uppercase"
+      style="background-color: color-mix(in oklab, <%= tag.color %> 20%, var(--color-container)); color: <%= tag.color %>;"
+      data-tag-initial
+      aria-hidden="true"><%= tag.name.first %></span>

@@ -15,12 +15,3 @@ zh-CN:
       minimum_payment_placeholder: '100'
     new:
       title: 请输入信用卡详细信息
-    overview:
-      amount_owed: 欠款总额
-      annual_fee: 年费
-      apr: 年利率
-      available_credit: 可用额度
-      expiration_date: 到期日期
-      minimum_payment: 最低还款额
-      unknown: 未知
-      edit_account_details: 编辑账户详情

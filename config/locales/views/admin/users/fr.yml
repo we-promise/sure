@@ -82,8 +82,6 @@ fr:
           member: Membre
           super_admin: Super Administrateur
         section_title: Familles / Groupes
-        summary:
-          trials_expiring_7_days: Essais expirant dans les 7 prochains jours
         table:
           actions: Actions
           create_new_family_option: "+ Créer une famille / un groupe"

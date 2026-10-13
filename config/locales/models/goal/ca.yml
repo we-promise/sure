@@ -1,0 +1,36 @@
+---
+ca:
+  activerecord:
+    attributes:
+      goal:
+        name: Nom
+        target_amount: Import objectiu
+        currency: Moneda
+        target_date: Data objectiu
+        color: Color
+        notes: Notes
+        state: Estat
+        linked_accounts: Comptes enllaçats
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Tria com a mínim un compte per finançar aquest objectiu.
+              whole_account_conflict_on_restore: 'No es pot restaurar aquest objectiu: «%{account_name}» ara està totalment reservat per a «%{goal_name}». Primer introdueix un import en un dels dos.'
+            target_mode:
+              months_requires_maintained: Només una reserva que mantens pot tenir un objectiu definit en mesos de despeses.
+            target_months:
+              blank: Indica quants mesos de despeses ha de cobrir aquesta reserva.
+              only_with_months_mode: Els mesos de despeses només s'apliquen quan l'objectiu es defineix d'aquesta manera.
+            linked_accounts:
+              must_be_fundable: Tots els comptes enllaçats han de ser comptes d'efectiu o d'inversió.
+              currency_mismatch: Tots els comptes enllaçats han de tenir la mateixa moneda.
+              must_belong_to_family: Els comptes enllaçats han de pertànyer a la mateixa família que l'objectiu.
+            kind:
+              locked_while_released: Torna a obrir aquest objectiu abans de convertir-lo en una reserva.
+              locked_once_consumed: Aquest objectiu ja ha registrat diners com a gastats, així que no es pot convertir en una reserva.
+            target_amount:
+              below_consumed: No pots definir un objectiu inferior al que aquest objectiu ja ha registrat com a gastat.
+            currency:
+              locked_after_linked: No pots canviar la moneda un cop l'objectiu està enllaçat a comptes.
