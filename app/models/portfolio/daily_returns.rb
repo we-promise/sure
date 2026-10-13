@@ -431,9 +431,15 @@ class Portfolio::DailyReturns
             -- other external flow. It needs no holdings row, and a trade with
             -- qty 0 writes none, so keying on the type suppressed a day whose
             -- figures were complete.
+            --
+            -- A NULL quantity counts as unpriced too. `trades.qty` is nullable
+            -- and only Trade's presence validation fills it; without it the
+            -- COALESCE above values the journal at nothing, which is the
+            -- phantom gain this suppression exists to stop.
             COALESCE(BOOL_OR(#{journal_predicate}
                              AND #{flow_class_sql} IN ('external_inflow', 'external_outflow')
-                             AND (journal_holdings.price IS NULL
+                             AND (trades.qty IS NULL
+                                  OR journal_holdings.price IS NULL
                                   OR journal_holdings.price <= 0
                                   OR journal_fx.rate IS NULL)), false) AS journal_unpriced
           FROM entries
