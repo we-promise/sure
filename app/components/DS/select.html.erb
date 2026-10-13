@@ -28,7 +28,14 @@
                 aria-expanded="false"
                 tabindex="0"
                 <%= "aria-labelledby=\"#{method}_label #{method}_trigger\"".html_safe if options[:label].present? %>>
-          <%= selected_item&.dig(:label) || @placeholder %>
+          <% if trigger_logo? %>
+            <span class="flex items-center gap-2 min-w-0">
+              <%= logo_markup(selected_item) %>
+              <span class="truncate"><%= selected_item[:label] %></span>
+            </span>
+          <% else %>
+            <%= selected_item&.dig(:label) || @placeholder %>
+          <% end %>
         </button>
     </div>
   </div>
@@ -76,20 +83,7 @@
             <%= item[:label] %>
 
           <% when :logo %>
-            <% unless item[:value].nil? %>
-              <% if logo_for(item) %>
-                <%= image_tag logo_for(item),
-                      class: "w-6 h-6 rounded-full border border-secondary",
-                      loading: "lazy" %>
-              <% else %>
-                <%= render DS::FilledIcon.new(
-                      variant: :text,
-                      text: item[:label],
-                      size: "sm",
-                      rounded: true
-                    ) %>
-              <% end %>
-            <% end %>
+            <%= logo_markup(item) unless item[:value].nil? %>
             <%= item[:label] %>
 
           <% when :badge %>
