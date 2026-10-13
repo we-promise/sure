@@ -76,6 +76,29 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "DE89370400440532013000", @family.accounts.first.iban # pipelock:ignore IBAN
   end
 
+  test "drops an account iban the family already holds in that currency and keeps importing" do
+    account_data = {
+      balance: "100.00",
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable: { subtype: "checking" },
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    }
+
+    result = Family::DataImporter.new(@family, build_ndjson([
+      { type: "Account", data: account_data.merge(id: "old-account-1", name: "First") },
+      { type: "Account", data: account_data.merge(id: "old-account-2", name: "Second") },
+      { type: "Account", data: account_data.merge(id: "old-account-3", name: "Euro", currency: "EUR") }
+    ])).import!
+
+    accounts = result[:accounts].index_by(&:name)
+    assert_equal 3, accounts.size
+    assert_equal "DE89370400440532013000", accounts["First"].reload.iban # pipelock:ignore IBAN
+    assert_nil accounts["Second"].reload.iban
+    assert_equal "DE89370400440532013000", accounts["Euro"].reload.iban # pipelock:ignore IBAN
+    assert_equal 1, result[:summary].dig("account_ibans", "skipped")
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
@@ -570,6 +593,21 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     Family::DataImporter.new(@family, ndjson).import!
 
     assert_equal "AT611904300234573201", merchant.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "drops a merchant iban another family merchant holds and keeps importing" do
+    landlord = @family.merchants.create!(name: "Landlord", color: "#e99537", iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    ndjson = build_ndjson([
+      { type: "Merchant", data: { id: "merchant-1", name: "Tenant", color: "#4da568", iban: "at61 1904 3002 3457 3201" } } # pipelock:ignore IBAN
+    ])
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    tenant = @family.merchants.find_by(name: "Tenant")
+    assert_not_nil tenant
+    assert_nil tenant.iban
+    assert_equal "AT611904300234573201", landlord.reload.iban # pipelock:ignore IBAN
+    assert_equal 1, result[:summary].dig("merchant_ibans", "skipped")
   end
 
   test "clears a merchant iban when the imported file sets it to null" do
