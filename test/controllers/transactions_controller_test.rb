@@ -63,6 +63,8 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     # (elsewhere shown the same way), so the dedicated row doesn't show it in
     # full just because Privacy Mode happens to be off.
     assert_match "•3000", response.body
+    assert_select "dl dt", text: I18n.t("transactions.show.counterparty_iban_label")
+    assert_select "dl dd.privacy-sensitive", text: "•3000"
     # The full IBAN must never appear anywhere in the response, including
     # the raw "Additional Details" debug dump further down the page -- that
     # surface strips these keys unconditionally, regardless of this setting.
