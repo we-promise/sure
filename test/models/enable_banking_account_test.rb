@@ -150,6 +150,30 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_equal [], @account.reload.identification_hashes
   end
 
+  # Runs only with explicit encryption keys (see test/encryption_verification_test.rb).
+  test "reads and syncs a legacy plaintext iban once encryption is on" do
+    skip "Encryption not configured" unless EnableBankingAccount.encryption_ready?
+
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+    # A row written before the column was encrypted
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE enable_banking_accounts SET iban = ? WHERE id = ?", "NL91ABNA0417164300", @account.id ])) # pipelock:ignore IBAN
+
+    @account.reload
+    assert_equal "NL91ABNA0417164300", @account.iban # pipelock:ignore IBAN
+
+    @account.upsert_enable_banking_snapshot!({
+      uid: "uid_uuid_123",
+      identification_hash: "hash_abc123",
+      currency: "EUR",
+      cash_account_type: "CACC",
+      iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+    })
+
+    assert_equal "NL91ABNA0417164300", linked_account.reload.iban # pipelock:ignore IBAN
+  end
+
   test "propagates iban to a blank linked account on sync" do
     linked_account = accounts(:depository)
     AccountProvider.create!(provider: @account, account: linked_account)
