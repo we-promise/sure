@@ -12,6 +12,10 @@ es:
     form:
       name_placeholder: Nombre del comercio
       website_placeholder: Sitio web (ej. starbucks.com)
+      iban_placeholder: "IBAN (opcional)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN guardado, introduce un valor nuevo para sustituirlo"
+      iban_hint: "Las transacciones importadas de este número de cuenta se asignan a este comercio cuando su nombre no coincide con ningún otro comercio"
+      iban_remove_label: "Eliminar IBAN"
       website_hint: Introduce el sitio web del comercio para mostrar automáticamente su logotipo
     index:
       empty: Aún no hay comercios

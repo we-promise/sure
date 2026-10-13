@@ -12,6 +12,10 @@ hu:
     form:
       name_placeholder: Kereskedő neve
       website_placeholder: Weboldal (pl. starbucks.com)
+      iban_placeholder: "IBAN (nem kötelező)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN elmentve, add meg az új értéket a cseréhez"
+      iban_hint: "Az erről a számlaszámról importált tranzakciók ehhez a kereskedőhöz kerülnek, ha a nevük egyetlen más kereskedővel sem egyezik"
+      iban_remove_label: "IBAN eltávolítása"
       website_hint: Add meg a kereskedő weboldalát, hogy automatikusan megjelenjen a logójuk
     index:
       empty: Még nincsenek kereskedők

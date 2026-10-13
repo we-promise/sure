@@ -18,6 +18,10 @@ pl:
       edit: Edytuj
     form:
       name_placeholder: Nazwa kontrahenta
+      iban_placeholder: "IBAN (opcjonalnie)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN zapisany, wpisz nową wartość, aby go zastąpić"
+      iban_hint: "Zaimportowane transakcje z tego numeru konta są przypisywane do tego kontrahenta, gdy ich nazwa nie pasuje do żadnego innego kontrahenta"
+      iban_remove_label: "Usuń IBAN"
       website_hint: Wprowadź stronę internetową kontrahenta, aby automatycznie wyświetlać
         jego logo
       website_placeholder: Strona internetowa (np. starbucks.com)

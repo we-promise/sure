@@ -12,6 +12,10 @@ it:
     form:
       name_placeholder: Nome commerciante
       website_placeholder: Sito web (es. starbucks.com)
+      iban_placeholder: "IBAN (facoltativo)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN salvato, inserisci un nuovo valore per sostituirlo"
+      iban_hint: "Le transazioni importate da questo numero di conto vengono assegnate a questo commerciante quando il loro nome non corrisponde a nessun altro commerciante"
+      iban_remove_label: "Rimuovi IBAN"
       website_hint: Inserisci il sito web del commerciante per visualizzarne automaticamente il logo
     index:
       empty: Nessun commerciante ancora
