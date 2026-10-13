@@ -1,12 +1,38 @@
 class Import::SecurityMapping < Import::Mapping
+  validates :mappable, presence: true, if: :requires_selection?
+
   class << self
     def mappables_by_key(import)
-      tickers = import.rows.map(&:ticker).compact.map { |t| t.to_s.strip }.reject(&:blank?).uniq
+      rows_by_ticker = import.rows.filter_map { |row| row.ticker.to_s.strip.presence && row }
+        .group_by { |row| row.ticker.to_s.strip }
 
-      tickers.index_with do |ticker|
-        Security.find_by_ticker_and_exchange(ticker: ticker)
+      # One query for every candidate ticker, then match in memory, rather than
+      # a DB round trip per distinct label (imports can carry thousands of rows).
+      candidates = Security.where("UPPER(ticker) IN (?)", rows_by_ticker.keys.map(&:upcase))
+
+      rows_by_ticker.transform_values do |rows|
+        mics = rows.map { |row| row.exchange_operating_mic.presence }.uniq
+
+        # Only auto-match when every row for this ticker agrees on a single
+        # exchange (or none). An ambiguous ticker is left unmatched so
+        # TradeImport#import! falls back to the row-specific resolver.
+        next unless mics.size == 1
+
+        match_security(candidates, ticker: rows.first.ticker.to_s.strip, exchange_operating_mic: mics.first)
       end
     end
+
+    private
+      def match_security(candidates, ticker:, exchange_operating_mic:)
+        matching = candidates.select { |security| security.ticker.to_s.upcase == ticker.upcase }
+
+        if exchange_operating_mic.present?
+          mics = Security.exchange_operating_mic_lookup_values(exchange_operating_mic).map(&:upcase)
+          matching.find { |security| mics.include?(security.exchange_operating_mic.to_s.upcase) }
+        else
+          matching.first
+        end
+      end
   end
 
   # Rendered through a provider-backed searchable combobox rather than a static

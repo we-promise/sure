@@ -29,7 +29,8 @@ class Import::MappingsControllerTest < ActionDispatch::IntegrationTest
 
   test "updating a security mapping with a combobox value resolves and assigns the mappable" do
     trade_import = imports(:trade)
-    mapping = trade_import.mappings.create!(key: "MICROSOFT CORP", type: "Import::SecurityMapping")
+    mapping = trade_import.mappings.build(key: "MICROSOFT CORP", type: "Import::SecurityMapping")
+    mapping.save!(validate: false) # unresolved mappings persist without a mappable, as sync_mappings does
     msft = securities(:msft)
 
     resolver = mock

@@ -6,9 +6,10 @@ class Import::MappingsController < ApplicationController
 
     if mapping.is_a?(Import::SecurityMapping)
       # Security selections arrive as a combobox id in :value with no
-      # pre-existing mappable_id; resolve it now so the confirm screen reflects
-      # a matched state immediately.
-      mapping.update!(value: mapping_params[:value])
+      # pre-existing mappable_id. Persist the raw value without validating
+      # (mappable is still blank), then resolve it so the confirm screen
+      # reflects a matched state immediately.
+      mapping.update_column(:value, mapping_params[:value])
       mapping.create_mappable!
     else
       mapping.update! \
