@@ -25,6 +25,29 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     assert_equal "Custom Anthropic-compatible (https://bedrock.example.com/anthropic)", custom.provider_name
   end
 
+  test "structured_output_tool_choice forces the tool on models that accept it" do
+    %w[claude-sonnet-4-6 claude-haiku-4-5 claude-haiku-5-5 claude-opus-4-8].each do |model|
+      assert_equal(
+        { type: "tool", name: "report", disable_parallel_tool_use: true },
+        Provider::Anthropic.structured_output_tool_choice(model, "report"),
+        model
+      )
+    end
+  end
+
+  test "structured_output_tool_choice sends auto to the Claude 5 families" do
+    %w[
+      claude-opus-5-5 claude-sonnet-5-5 claude-fable-5-1 claude-opus-5 claude-opus-5-6
+      us.anthropic.claude-sonnet-5-5-v1:0
+    ].each do |model|
+      assert_equal(
+        { type: "auto", disable_parallel_tool_use: true },
+        Provider::Anthropic.structured_output_tool_choice(model, "report"),
+        model
+      )
+    end
+  end
+
   test "supports_model? returns true for claude prefix" do
     assert @subject.supports_model?("claude-sonnet-4-6")
     assert @subject.supports_model?("claude-opus-4-7")

@@ -28,7 +28,7 @@ class Provider::Anthropic::BillSetupSuggester
       system_: instructions,
       messages: [ { role: "user", content: user_message } ],
       tools: [ output_tool ],
-      tool_choice: { type: "tool", name: TOOL_NAME, disable_parallel_tool_use: true }
+      tool_choice: Provider::Anthropic.structured_output_tool_choice(model, TOOL_NAME)
     )
 
     result = build_suggestion(extract_input(response))
