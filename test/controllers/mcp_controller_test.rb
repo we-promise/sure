@@ -762,9 +762,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   test "server/discover returns the 2026-07-28 result shape without minting a session" do
     with_mcp_env do
-      post "/mcp", params: jsonrpc_request("server/discover", {
-        _meta: { "io.modelcontextprotocol/protocolVersion" => MODERN_PROTOCOL_VERSION }
-      }).to_json,
+      post "/mcp", params: jsonrpc_request("server/discover", modern_params).to_json,
         headers: mcp_headers(@token).merge(
           "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
           "Mcp-Method" => "server/discover"
@@ -779,6 +777,9 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert result["capabilities"].key?("tools")
       assert_equal "sure", result.dig("_meta", "io.modelcontextprotocol/serverInfo", "name")
       assert_nil result["serverInfo"], "serverInfo must live under result._meta, not directly under result"
+      # DiscoverResult is cacheable (server/discover spec): same hints as tools/list.
+      assert_equal 0, result["ttlMs"]
+      assert_equal "private", result["cacheScope"]
       assert_nil response.headers["Mcp-Session-Id"], "server/discover must not create a session"
     end
   end
@@ -792,7 +793,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   test "tools/list adds resultType complete and cache hints for the 2026-07-28 dialect" do
     with_mcp_env do
-      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+      post "/mcp", params: jsonrpc_request("tools/list", modern_params).to_json,
            headers: mcp_headers(@token).merge(
              "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
              "Mcp-Method" => "tools/list"
@@ -812,7 +813,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   test "tools/call adds resultType complete for the 2026-07-28 dialect, with no cache hints" do
     with_mcp_env do
-      post "/mcp", params: jsonrpc_request("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
+      post "/mcp", params: jsonrpc_request("tools/call", modern_params(name: "get_balance_sheet", arguments: {})).to_json,
            headers: mcp_headers(@token).merge(
              "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
              "Mcp-Method" => "tools/call",
@@ -875,19 +876,87 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "Mcp-Method alone (no MCP-Protocol-Version) is treated as an implicit 2026-07-28 signal" do
+  test "Mcp-Method without MCP-Protocol-Version is a modern request missing its header" do
     with_mcp_env do
-      # A conformant modern client always sends both, but if it only sends
-      # Mcp-Method, defaulting to the legacy envelope would hand it a shape
-      # it can't parse (no resultType, no _meta.serverInfo). Mcp-Method never
-      # appears on a legacy request, so its bare presence is unambiguous.
-      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+      # Mcp-Method never appears on a legacy request, so its presence marks the
+      # request as 2026-07-28 — which then has to carry the version header too.
+      post "/mcp", params: jsonrpc_request("tools/list", modern_params, id: 65).to_json,
            headers: mcp_headers(@token).merge("Mcp-Method" => "tools/list")
 
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal 65, body["id"]
+      assert_equal(-32020, body["error"]["code"])
+      assert_includes body["error"]["message"], "MCP-Protocol-Version"
+    end
+  end
+
+  test "a 2026-07-28 request without _meta is rejected with invalid params" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list", {}, id: 66).to_json,
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "tools/list"
+           )
+
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal 66, body["id"]
+      assert_equal(-32602, body["error"]["code"])
+      assert_includes body["error"]["message"], "io.modelcontextprotocol/protocolVersion"
+      assert_includes body["error"]["message"], "io.modelcontextprotocol/clientCapabilities"
+    end
+  end
+
+  test "a 2026-07-28 request with _meta but no clientCapabilities is rejected" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list", {
+        _meta: { "io.modelcontextprotocol/protocolVersion" => MODERN_PROTOCOL_VERSION }
+      }, id: 67).to_json,
+        headers: mcp_headers(@token).merge(
+          "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+          "Mcp-Method" => "tools/list"
+        )
+
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal(-32602, body["error"]["code"])
+      assert_includes body["error"]["message"], "clientCapabilities"
+      assert_not_includes body["error"]["message"], "protocolVersion"
+    end
+  end
+
+  test "an unknown method is a 404 in the 2026-07-28 dialect and stays 200 in the legacy one" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("resources/list", modern_params, id: 68).to_json,
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "resources/list"
+           )
+
+      assert_response :not_found
+      assert_equal(-32601, JSON.parse(response.body).dig("error", "code"))
+
+      post "/mcp", params: jsonrpc_request("resources/list", {}, id: 69).to_json,
+           headers: mcp_headers(@token)
+
       assert_response :ok
-      assert_equal MODERN_PROTOCOL_VERSION, response.headers["Mcp-Protocol-Version"]
-      result = JSON.parse(response.body)["result"]
-      assert_equal "complete", result["resultType"]
+      assert_equal(-32601, JSON.parse(response.body).dig("error", "code"))
+    end
+  end
+
+  test "an unsupported version in _meta only is rejected with the supported list" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list", {
+        _meta: { "io.modelcontextprotocol/protocolVersion" => "1900-01-01" }
+      }, id: 71).to_json,
+        headers: mcp_headers(@token)
+
+      assert_response :bad_request
+      error = JSON.parse(response.body)["error"]
+      assert_equal(-32022, error["code"])
+      assert_equal "1900-01-01", error.dig("data", "requested")
+      assert_equal MCP_PROTOCOL_VERSION, response.headers["Mcp-Protocol-Version"]
     end
   end
 
@@ -915,7 +984,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_response :bad_request
       body = JSON.parse(response.body)
       assert_equal 61, body["id"]
-      assert_equal(-32600, body["error"]["code"])
+      assert_equal(-32020, body["error"]["code"])
     end
   end
 
@@ -943,7 +1012,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         legacy_session_id = response.headers["Mcp-Session-Id"]
         assert legacy_session_id.present?
 
-        post "/mcp", params: jsonrpc_request("tools/list").to_json,
+        post "/mcp", params: jsonrpc_request("tools/list", modern_params).to_json,
              headers: mcp_headers(@token).merge(
                "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
                "Mcp-Method" => "tools/list",
@@ -1088,8 +1157,11 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_response :bad_request
       body = JSON.parse(response.body)
       assert_equal 26, body["id"]
-      assert_equal(-32600, body["error"]["code"])
+      assert_equal(-32022, body["error"]["code"])
       assert_includes body["error"]["message"], "2099-01-01"
+      assert_equal "2099-01-01", body.dig("error", "data", "requested")
+      assert_includes body.dig("error", "data", "supported"), MODERN_PROTOCOL_VERSION
+      assert_equal MCP_PROTOCOL_VERSION, response.headers["Mcp-Protocol-Version"]
     end
   end
 
@@ -1381,6 +1453,16 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     def jsonrpc_request(method, params = {}, id: 1)
       { jsonrpc: "2.0", id: id, method: method, params: params }
+    end
+
+    # The per-request metadata every 2026-07-28 request must carry in its body.
+    def modern_params(params = {})
+      params.merge(
+        _meta: {
+          "io.modelcontextprotocol/protocolVersion" => MODERN_PROTOCOL_VERSION,
+          "io.modelcontextprotocol/clientCapabilities" => {}
+        }
+      )
     end
 
     def jsonrpc_notification(method, params = {})

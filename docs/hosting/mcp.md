@@ -273,15 +273,24 @@ never replies with data to a request that declared it wants no reply.
 
 Sure accepts three MCP protocol versions, resolved per request from (in
 order) the `MCP-Protocol-Version` header, then `params._meta["io.modelcontextprotocol/protocolVersion"]`,
-then the default (`2025-06-18`). If a request sends both the header and the
-`_meta` field and they disagree, Sure rejects it with `400 Bad Request`
-rather than silently picking one — as does any unrecognized version.
+then the default (`2025-06-18`).
+
+Errors, all `400 Bad Request` with a JSON-RPC error body:
+
+| Situation | Code |
+|-----------|------|
+| Header and `_meta` versions disagree, a required header (`MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name`) is missing, or a header differs from the body | `-32020` (`HeaderMismatch`) |
+| A `2026-07-28` request lacks `_meta["io.modelcontextprotocol/protocolVersion"]` or `_meta["io.modelcontextprotocol/clientCapabilities"]` | `-32602` (Invalid params) |
+| Unrecognized version | `-32022` (`UnsupportedProtocolVersion`), with `data.supported` and `data.requested` |
+
+An unknown method in a `2026-07-28` request is answered with `404 Not Found`
+and a `-32601` body; the legacy dialects keep returning `200` with `-32601`.
 
 | Version | Notes |
 |---------|-------|
 | `2025-03-26` | Original MCP HTTP transport. |
 | `2025-06-18` | Current default; `initialize` returns an `Mcp-Session-Id`, which subsequent requests may (but need not) send back. |
-| `2026-07-28` | [Stateless dialect](https://modelcontextprotocol.io/specification/2026-07-28/changelog): no `initialize` handshake and no session — every request stands on its own, carrying its own protocol version. `tools/list` and `tools/call` results gain `resultType: "complete"` and identify the server via `_meta["io.modelcontextprotocol/serverInfo"]`. `server/discover` is this dialect's capability probe. |
+| `2026-07-28` | [Stateless dialect](https://modelcontextprotocol.io/specification/2026-07-28/changelog): no `initialize` handshake and no session — every request stands on its own, carrying its own protocol version. `tools/list` and `tools/call` results gain `resultType: "complete"` and identify the server via `_meta["io.modelcontextprotocol/serverInfo"]`. `server/discover` is this dialect's capability probe; it and `tools/list` carry `ttlMs: 0` and `cacheScope: "private"`. |
 
 Any client speaking `2026-07-28` works the same way — this is a protocol
 dialect, not a feature built for one product. The OpenAI Secure MCP Tunnel

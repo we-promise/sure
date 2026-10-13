@@ -93,7 +93,13 @@ class McpController < ApplicationController
       when "tools/call"
         handle_tools_call(request_id, params)
       else
-        render_jsonrpc_error(request_id, -32601, "Method not found: #{method}")
+        # 2026-07-28 (Streamable HTTP, "Protocol Version Header"): an unknown RPC
+        # method is a 404 carrying the -32601 body, which is how a client tells
+        # a modern server apart from a legacy HTTP+SSE one that 404s the URL.
+        render_jsonrpc_error(
+          request_id, -32601, "Method not found: #{method}",
+          status: modern_mcp_request? ? :not_found : :ok
+        )
         nil
       end
     end
@@ -131,7 +137,11 @@ class McpController < ApplicationController
         resultType: "complete",
         supportedVersions: SUPPORTED_PROTOCOL_VERSIONS.reverse,
         capabilities: { tools: {} },
-        _meta: { "io.modelcontextprotocol/serverInfo" => SERVER_INFO }
+        _meta: { "io.modelcontextprotocol/serverInfo" => SERVER_INFO },
+        # Same cache hints as tools/list: what a caller may do depends on its
+        # own scope and the MCP_READ_ONLY toggle, so nothing here is shared.
+        ttlMs: 0,
+        cacheScope: "private"
       }
     end
 
@@ -298,7 +308,7 @@ class McpController < ApplicationController
       if header_version && meta_version && header_version != meta_version
         render_jsonrpc_error(
           request_id,
-          -32600,
+          HEADER_MISMATCH_ERROR_CODE,
           t("mcp.errors.protocol_version_mismatch", header: header_version, meta: meta_version),
           status: :bad_request
         )
@@ -317,11 +327,17 @@ class McpController < ApplicationController
       @mcp_protocol_version = header_version || meta_version || implied_modern_version || PROTOCOL_VERSION
 
       unless SUPPORTED_PROTOCOL_VERSIONS.include?(@mcp_protocol_version)
+        requested = @mcp_protocol_version
+        # Reply with the version this server would have used, not the one it
+        # just refused, so the Mcp-Protocol-Version response header never
+        # advertises an unsupported value.
+        @mcp_protocol_version = PROTOCOL_VERSION
         render_jsonrpc_error(
           request_id,
-          -32600,
-          t("mcp.errors.unsupported_protocol_version", version: @mcp_protocol_version),
-          status: :bad_request
+          UNSUPPORTED_PROTOCOL_VERSION_ERROR_CODE,
+          t("mcp.errors.unsupported_protocol_version", version: requested),
+          status: :bad_request,
+          data: { supported: SUPPORTED_PROTOCOL_VERSIONS.reverse, requested: requested }
         )
         return false
       end
@@ -331,7 +347,7 @@ class McpController < ApplicationController
         # above) — never validate or echo back Mcp-Session-Id for it, so a
         # modern request never carries session state its own protocol
         # version says doesn't exist.
-        return modern_routing_headers_valid?(request_id, method, params)
+        return modern_request_valid?(request_id, method, params, header_version)
       end
 
       session_id = mcp_request_header("Mcp-Session-Id").presence
@@ -372,8 +388,43 @@ class McpController < ApplicationController
       true
     end
 
-    # HeaderMismatchError, -32020 in the 2026-07-28 error-code allocation.
+    # The 2026-07-28 error-code allocation (basic/index#error-codes).
     HEADER_MISMATCH_ERROR_CODE = -32020
+    UNSUPPORTED_PROTOCOL_VERSION_ERROR_CODE = -32022
+    INVALID_PARAMS_ERROR_CODE = -32602
+
+    # What a 2026-07-28 request must carry on top of the legacy envelope: the
+    # mirrored headers (-32020 when absent or wrong) and, in the body, the
+    # protocol version and client capabilities every request declares for
+    # itself (-32602 when absent — the body is the source of truth).
+    def modern_request_valid?(request_id, method, params, header_version)
+      unless header_version.present?
+        render_jsonrpc_error(
+          request_id,
+          HEADER_MISMATCH_ERROR_CODE,
+          t("mcp.errors.header_mismatch", header: "MCP-Protocol-Version", expected: MODERN_PROTOCOL_VERSION),
+          status: :bad_request
+        )
+        return false
+      end
+
+      return false unless modern_routing_headers_valid?(request_id, method, params)
+
+      meta = params["_meta"]
+      meta = {} unless meta.is_a?(Hash)
+      missing = []
+      missing << "io.modelcontextprotocol/protocolVersion" if meta["io.modelcontextprotocol/protocolVersion"].blank?
+      missing << "io.modelcontextprotocol/clientCapabilities" unless meta["io.modelcontextprotocol/clientCapabilities"].is_a?(Hash)
+      return true if missing.empty?
+
+      render_jsonrpc_error(
+        request_id,
+        INVALID_PARAMS_ERROR_CODE,
+        t("mcp.errors.missing_request_metadata", fields: missing.join(", ")),
+        status: :bad_request
+      )
+      false
+    end
 
     # 2026-07-28 requires Mcp-Method (and, for tools/call, Mcp-Name) on every
     # request as a header-level echo of what the JSON-RPC body already says —
