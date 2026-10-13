@@ -124,6 +124,37 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
     assert_empty @akahu_account.raw_transactions_payload.select { |tx| tx["_pending"] }
   end
 
+  # Pruning decides "pending" as Transaction#pending? does. A ::boolean cast
+  # raised on "maybe", failing the step on every sync, and read "no" as posted.
+  [ "maybe", "no" ].each do |flag|
+    test "prunes a disappeared pending transaction whose stored flag is #{flag.inspect}" do
+      import_with(pending_transactions: [ pending_transaction(description: "Pending card auth", amount: -8.00) ], posted_transactions: [])
+      process_transactions
+      entry = pending_entries.sole
+      reflag(entry, flag)
+      assert entry.reload.entryable.pending?
+
+      import_with(pending_transactions: [], posted_transactions: [])
+      result = process_transactions
+
+      assert_equal 1, result[:pruned_pending]
+      assert_not Entry.exists?(entry.id), "a #{flag.inspect}-flagged pending entry missing from the fetch should be pruned"
+    end
+  end
+
+  test "keeps a disappeared transaction whose stored flag is the string \"false\"" do
+    import_with(pending_transactions: [ pending_transaction(description: "Pending card auth", amount: -8.00) ], posted_transactions: [])
+    process_transactions
+    entry = pending_entries.sole
+    reflag(entry, "false")
+
+    import_with(pending_transactions: [], posted_transactions: [])
+    result = process_transactions
+
+    assert_equal 0, result[:pruned_pending]
+    assert Entry.exists?(entry.id)
+  end
+
   test "keeps unchanged pending transactions without creating duplicates" do
     pending = [ pending_transaction(description: "Pending card auth", amount: -8.00) ]
     import_with(pending_transactions: pending, posted_transactions: [])
@@ -213,7 +244,12 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
       @account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(source: "akahu")
-        .where("(transactions.extra -> 'akahu' ->> 'pending')::boolean = true")
+        .where(Transaction.pending_sql("transactions", providers: %w[akahu]))
+    end
+
+    def reflag(entry, flag)
+      transaction = entry.entryable
+      transaction.update!(extra: transaction.extra.merge("akahu" => transaction.extra["akahu"].merge("pending" => flag)))
     end
 
     def pending_transaction(description:, amount:, date: "2026-01-15")

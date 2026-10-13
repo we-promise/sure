@@ -12,9 +12,13 @@ class Rule::Condition < ApplicationRecord
 
   before_validation :normalize_legacy_condition_type
 
-  validates :condition_type, presence: true, inclusion: { in: SUPPORTED_CONDITION_TYPES, allow_blank: true }
-  validates :operator, presence: true
-  validates :value, presence: true, unless: -> { compound? || Rule::ConditionFilter::VALUELESS_OPERATORS.include?(operator) }
+  validates :condition_type, presence: true, inclusion: { in: SUPPORTED_CONDITION_TYPES, allow_blank: true },
+    if: -> { condition_type.to_s.valid_encoding? }
+  validates :operator, presence: true, if: -> { operator.to_s.valid_encoding? }
+  validates :value, presence: true,
+    unless: -> { compound? || Rule::ConditionFilter::VALUELESS_OPERATORS.include?(operator) },
+    if: -> { value.to_s.valid_encoding? }
+  validates_with DatabaseTextValidator, attributes: %i[condition_type operator value]
 
   validate :regex_value_is_safe, if: :regex_value_changed?
 
@@ -87,8 +91,11 @@ class Rule::Condition < ApplicationRecord
   end
 
   private
-    # A blank value is already reported by the presence validation.
+    # A blank value is already reported by the presence validation, and one the
+    # database will not store (a null byte, malformed UTF-8) by
+    # DatabaseTextValidator. Neither can be probed: the driver refuses to send it.
     def regex_value_is_safe
+      return unless DatabaseTextValidator.acceptable?(value)
       return if value.blank?
 
       error = Rule::SafeRegex.error_for(value)
@@ -98,6 +105,7 @@ class Rule::Condition < ApplicationRecord
     end
 
     def normalize_legacy_condition_type
+      return unless condition_type.is_a?(String) && condition_type.valid_encoding?
       return if condition_type.blank?
 
       normalized = LEGACY_CONDITION_TYPE_ALIASES[condition_type]

@@ -43,8 +43,8 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     assert_equal 1, rule.apply
   end
 
-  # Each action reads the matches again, so without a cache a broad pattern is scanned
-  # (and materialised) once per action, each time paying the timeout in the worst case.
+  # Rule#apply resolves its scope once and hands it to every action, so a broad
+  # pattern is scanned (and materialised) once, not once per action.
   test "a regex is resolved once per apply however many actions the rule has" do
     rule = Rule.create!(
       family: @family, resource_type: "transaction",
@@ -64,7 +64,7 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     assert @hit.reload.excluded?, "the second action ran on the resolved match"
   end
 
-  test "the cache lasts for one apply: a later apply resolves the pattern again" do
+  test "a later apply resolves the pattern again" do
     rule = regex_rule("amzn")
     calls = 0
     Rule::SafeRegex.stubs(:with_timeout).with { |*| calls += 1; true }.yields.returns([ @hit.transaction.id ])
@@ -75,7 +75,7 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     assert_equal 2, calls
   end
 
-  test "the cache does not outlive the apply: a later read resolves the pattern again" do
+  test "a read after an apply resolves the pattern again" do
     rule = regex_rule("amzn")
     calls = 0
     Rule::SafeRegex.stubs(:with_timeout).with { |*| calls += 1; true }.yields.returns([ @hit.transaction.id ])
@@ -125,8 +125,10 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     assert_nil @hit.reload.transaction.category
   end
 
-  # Raising out of the job is what makes Sidekiq retry it, and a retry would time
-  # out again; the failed run is the record of it.
+  # Rule::Runner records the failed run and RuleJob re-raises the requested rule's
+  # error so the job is marked failed. For a timeout that would make Sidekiq retry
+  # it, and the retry would time out again (and re-run every active rule above),
+  # so the job is discarded instead; the failed run is the record of it.
   test "RuleJob records a failed run when the pattern times out, and does not raise for a retry" do
     rule = regex_rule("amzn")
     Rule::SafeRegex.stubs(:with_timeout).raises(Rule::SafeRegex::TimeoutError)
@@ -168,17 +170,6 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     regex_query = regex_queries.first
     assert_match(/"transactions"\."id" = (\$\d+|'#{target.id}')/, regex_query[:sql], "the regex query is filtered to one id")
     assert_includes Array(regex_query[:type_casted_binds]) + [ regex_query[:sql] ], target.id
-  end
-
-  # During an apply the matches are kept for the actions; a prompt check reached
-  # from inside one must neither read nor fill that cache with one row's answer.
-  test "a prompt check inside an apply judges each transaction alone" do
-    rule = regex_rule('^amzn\s')
-    rule.instance_variable_set(:@regex_matches, {})
-
-    assert rule.matches_transaction?(@hit.transaction)
-    assert_not rule.matches_transaction?(@miss.transaction)
-    assert_empty rule.instance_variable_get(:@regex_matches)
   end
 
   test "the confirmation counts are 0 rather than an error when the pattern times out" do

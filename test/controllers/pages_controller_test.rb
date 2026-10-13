@@ -21,6 +21,20 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#netWorthChart[data-time-series-chart-selectable-value='true'][draggable='false']"
   end
 
+  test "dashboard has no chat sidebar or toggle when the assistant type is mcp_only" do
+    get root_path
+    assert_select "#chat-container", count: 1
+    assert_select "[data-action='app-layout#toggleRightSidebar']", count: 1
+
+    @family.update!(assistant_type: "mcp_only")
+    get root_path
+
+    assert_response :ok
+    assert_select "#chat-container", count: 0
+    assert_select "[data-action='app-layout#toggleRightSidebar']", count: 0
+    assert_select "a[href='#{chats_path}']", count: 0
+  end
+
   test "inactive user's existing session is revoked" do
     session_record = @user.sessions.order(:created_at).last
     @user.update_column(:active, false)
@@ -38,6 +52,15 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_equal "compact", @user.reload.dashboard_section_height("net_worth_chart")
+  end
+
+  test "update_preferences saves the preview Sankey grouping and ignores unknown ones" do
+    patch "/dashboard/preferences", params: { preferences: { cashflow_sankey_group_by: "account" } }, as: :json
+    assert_response :success
+    assert_equal "account", @user.reload.cashflow_sankey_group_by
+
+    patch "/dashboard/preferences", params: { preferences: { cashflow_sankey_group_by: "merchant" } }, as: :json
+    assert_equal "account", @user.reload.cashflow_sankey_group_by
   end
 
   test "update_preferences persists dashboard section width" do

@@ -20,6 +20,6 @@
             as: :span,
             html_class: "size-full items-center justify-center"
         ) %>
-    <%= render "layouts/shared/insights_badge", count: Current.family.insights.active.count %>
+    <%= render "layouts/shared/insights_badge", count: Current.family.insights.visible.active.count %>
     <% end %>
 <% end %>
