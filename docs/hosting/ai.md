@@ -17,10 +17,11 @@ Sure has **two separate AI systems** that operate independently. Understanding t
 
 ### 1. Chat Assistant (conversational)
 
-The interactive chat where users ask questions about their finances. Routes through one of two backends:
+The interactive chat where users ask questions about their finances. Routes through one of two backends, or is turned off:
 
 - **Builtin** (default): Uses the OpenAI-compatible provider configured via `OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`. Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
 - **External**: Delegates the entire conversation to a remote AI agent. The agent calls back to Sure via MCP to access financial data. Set `ASSISTANT_TYPE=external` as a global override, or configure each family's assistant type in Settings.
+- **None in app** (`mcp_only`): Removes the in-app chat for the household: the right-hand chat sidebar and its toggle, the mobile Assistant tab, and the buttons that start a chat. Bring your own agent and connect it through [MCP](mcp.md), which keeps working. Set `ASSISTANT_TYPE=mcp_only` to remove the chat for every family.
 
 ### 2. Auto-Categorization and Merchant Detection (background)
 
@@ -32,8 +33,11 @@ Background jobs that classify transactions and detect merchants. These **always*
 |---------|---------------|---------------------|
 | `ASSISTANT_TYPE=builtin` (default) | Uses OpenAI provider | Uses OpenAI provider |
 | `ASSISTANT_TYPE=external` | Uses external agent | Still uses OpenAI provider |
+| `ASSISTANT_TYPE=mcp_only` | None in app; connect your own agent via MCP | Unchanged; uses the configured categorization provider |
 
 If you use an external agent for chat, you still need `OPENAI_ACCESS_TOKEN` set for auto-categorization and merchant detection to work. The two systems are fully independent.
+
+With `mcp_only`, Sure also skips the features that need a user's AI consent: the LLM-written insight text and the bills AI shortcuts (review, smart fill, smart configuration).
 
 ## Quickstart: OpenAI Token
 
@@ -400,7 +404,7 @@ For self-hosted deployments, you can configure AI settings through the web inter
    - **API Base URL** - Custom endpoint (leave blank for OpenAI)
    - **Model** - Model name (required for custom endpoints)
    - **JSON Mode** - Structured-output format; `Auto` suits most models
-   - **Reasoning effort** - Sent as `reasoning_effort` on every OpenAI-compatible request (`reasoning: { effort }` for Responses-API calls). Lowers latency and output-budget use for reasoning models (e.g. Qwen3, gpt-oss, GPT-5). Leave on the default unless your model supports it — the official OpenAI API rejects it for non-reasoning models. Can also be set via `OPENAI_REASONING_EFFORT` (`none` | `minimal` | `low` | `medium` | `high`; unset means the parameter is not sent).
+   - **Reasoning effort** - Sent as `reasoning_effort` on OpenAI-compatible generation requests (`reasoning: { effort }` for Responses-API calls). Health probes omit it, and compatibility retries remove it when the provider rejects the structured-output request. Lowers latency and output-budget use for reasoning models (e.g. Qwen3, gpt-oss, GPT-5). Leave on the default unless your model supports it — the official OpenAI API rejects it for non-reasoning models. Can also be set via `OPENAI_REASONING_EFFORT` (`none` | `minimal` | `low` | `medium` | `high`; unset means the parameter is not sent).
 4. Optionally tune **Token Budget** — Context Window, Max Response Tokens and Max Items Per Batch. The defaults are conservative so small-context local models work out of the box; raise them for cloud or large-context models.
 5. Optionally set **Chat Response Timeout** — how long the chat waits for a whole turn before showing a "no response" error (default 90s). Raise it for slow local models; see [Chat Errors While the Model Is Still Generating](#chat-errors-while-the-model-is-still-generating).
 
@@ -1460,6 +1464,7 @@ Read and analysis:
 
 Write:
 - `update_transaction`, `update_budget`, `create_goal`
+- `unmatch_transfer` - Unlink a wrongly matched transfer
 - `create_tag` / `update_tag`, `create_category` / `update_category`
 
 Documents:

@@ -1046,7 +1046,8 @@ class Family::DataImporter
           transfer.status = transfer_status_for(data["status"])
           transfer.notes = data["notes"]
         end
-        apply_transfer_transaction_kinds!(transfer)
+        # Transfer kinds only apply once a transfer is confirmed (see Transfer#confirm!)
+        apply_transfer_transaction_kinds!(transfer) if transfer.confirmed?
         increment_summary("Transfer", transfer.previously_new_record? ? :created : :updated)
       end
     end
@@ -1356,7 +1357,14 @@ class Family::DataImporter
       end
     end
 
+    # New rules are appended after the family's existing ones, in the exported
+    # run order; rules that already exist keep their place.
     def import_rules(records)
+      records = records.each_with_index.sort_by do |record, index|
+        position = Integer(record.dig("data", "position"), exception: false)
+        [ position || Float::INFINITY, index ]
+      end.map(&:first)
+
       records.each do |record|
         data = record["data"]
         old_id = data["id"]
@@ -1371,7 +1379,8 @@ class Family::DataImporter
           name: data["name"],
           resource_type: data["resource_type"] || "transaction",
           active: data["active"] || false,
-          effective_date: data["effective_date"].present? ? Date.parse(data["effective_date"].to_s) : nil
+          effective_date: data["effective_date"].present? ? Date.parse(data["effective_date"].to_s) : nil,
+          stop_processing: data["stop_processing"] || false
         )
 
         rule.conditions.destroy_all unless created

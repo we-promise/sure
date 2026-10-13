@@ -1,4 +1,4 @@
-<%# locals: (fio_item:) %>
+<%# locals: (fio_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(fio_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -65,8 +65,8 @@
 
     <% unless fio_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if fio_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: fio_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# The accounts index preloads one stats row per item; a standalone render (the %>
@@ -76,7 +76,7 @@
            else
              fio_item.latest_sync_record&.sync_stats || {}
            end %>
-        <%= render ProviderSyncSummary.new(stats: stats, provider_item: fio_item) %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: fio_item, show_account_details: visible_accounts.size == fio_item.accounts.size) %>
 
         <% if fio_item.requires_update? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">

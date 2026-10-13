@@ -1638,6 +1638,23 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Candidate outflow", rejected_transfer.outflow_transaction.entry.name
   end
 
+  test "imports a pending transfer without applying transfer kinds" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" } },
+      { type: "Account", data: { id: "savings", name: "Savings", balance: "2500", currency: "USD", accountable_type: "Depository" } },
+      { type: "Transaction", data: { id: "pending-outflow", account_id: "checking", date: "2024-01-15", amount: "100.00", name: "Pending outflow", currency: "USD", kind: "standard" } },
+      { type: "Transaction", data: { id: "pending-inflow", account_id: "savings", date: "2024-01-15", amount: "-100.00", name: "Pending inflow", currency: "USD", kind: "standard" } },
+      { type: "Transfer", data: { id: "transfer-1", inflow_transaction_id: "pending-inflow", outflow_transaction_id: "pending-outflow", status: "pending" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    transfer = Transfer.joins(inflow_transaction: :entry).find_by!(entries: { name: "Pending inflow" })
+    assert transfer.pending?
+    assert_equal "standard", transfer.inflow_transaction.kind
+    assert_equal "standard", transfer.outflow_transaction.kind
+  end
+
   test "skips rejected transfers with missing transactions under strict import" do
     session = @family.import_sessions.create!(expected_chunks: 1)
 
@@ -1831,6 +1848,34 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not_nil budget_category
     assert_equal "Groceries", budget_category.category.name
     assert_equal 500.0, budget_category.budgeted_spending.to_f
+  end
+
+  test "imports rules in their exported run order after existing rules" do
+    existing = @family.rules.create!(resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    rule_record = ->(name, position, stop_processing) do
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: name,
+          resource_type: "transaction",
+          active: true,
+          position: position,
+          stop_processing: stop_processing,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+          actions: [ { action_type: "exclude_transaction" } ]
+        }
+      }
+    end
+    ndjson = build_ndjson([ rule_record.call("Second", 2, false), rule_record.call("First", 1, true) ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal [ existing.id ] + @family.rules.where(name: %w[First Second]).in_order_of(:name, %w[First Second]).pluck(:id),
+      @family.rules.ordered.pluck(:id).last(3)
+    assert @family.rules.find_by(name: "First").stop_processing
+    assert_not @family.rules.find_by(name: "Second").stop_processing
   end
 
   test "imports rules with conditions and actions" do

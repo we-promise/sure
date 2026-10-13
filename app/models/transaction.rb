@@ -226,8 +226,8 @@ class Transaction < ApplicationRecord
   # Bulk category reassignment that still busts entry-keyed report caches.
   # update_all skips callbacks, so the `has_one :entry, touch: true` bump that
   # every normal save relies on (Family#entries_cache_version) never happens.
-  # Expects a plain relation — `to_sql` on a scope carrying `select` or
-  # `includes` would emit the wrong subquery for the IN clause.
+  # Expects a relation without eager loading so reselect(:id) produces
+  # a single-column subquery for the IN clause.
   def self.reassign_category!(scope, category_id)
     transaction do
       # Lock inside the scope so a concurrent category edit is rechecked before
@@ -239,8 +239,8 @@ class Transaction < ApplicationRecord
         RETURNING id
       SQL
 
-      # exec_query is the uncached primitive (QueryCache only wraps select_all)
-      # and isn't in dirties_query_cache's list, so clear the cache explicitly.
+      # Execute the write without read-query memoization and clear cached
+      # reads before selecting the affected entries.
       updated_ids = connection.exec_query(sql, "Transaction Reassign Category").rows.flatten
       connection.clear_query_cache
 
