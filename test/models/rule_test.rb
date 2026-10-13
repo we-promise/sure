@@ -479,7 +479,7 @@ class RuleTest < ActiveSupport::TestCase
     assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), new_entry.transaction.id
   end
 
-  test "a condition edit that rolls back does not re-seed on the next save" do
+  test "a condition edit that rolls back does not re-seed on a later commit" do
     rule = create_email_rule(value: "coffee")
     create_transaction(date: Date.current, account: @account, name: "Coffee shop")
 
@@ -488,7 +488,8 @@ class RuleTest < ActiveSupport::TestCase
       raise ActiveRecord::Rollback
     end
     rule.reload
-    rule.update!(name: "Coffee alerts")
+    # A touch commits without running before_update, so only the rollback can clear the flag.
+    rule.touch
 
     assert_enqueued_with(job: RuleEmailNotificationJob) do
       rule.apply
@@ -504,12 +505,14 @@ class RuleTest < ActiveSupport::TestCase
       actions_attributes: [ { action_type: "set_transaction_name", value: "Coffee" } ]
     )
 
-    NotificationDelivery.expects(:record_for).once.with(rule_id: rule.id, transaction_ids: [ tea_house.transaction.id ])
+    assert_queries_match(/INSERT INTO "notification_deliveries"/, count: 1) do
+      rule.update!(
+        conditions_attributes: [ { id: rule.conditions.first.id, value: "house" } ],
+        actions_attributes: [ { id: rule.actions.first.id, action_type: "send_email_notification" } ]
+      )
+    end
 
-    rule.update!(
-      conditions_attributes: [ { id: rule.conditions.first.id, value: "house" } ],
-      actions_attributes: [ { id: rule.actions.first.id, action_type: "send_email_notification" } ]
-    )
+    assert_equal [ tea_house.transaction.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
   end
 
   private

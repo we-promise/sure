@@ -17,6 +17,7 @@ class Rule < ApplicationRecord
   # the next run would email every older transaction the edited rule now matches.
   before_update :detect_matching_scope_change
   after_update_commit :reseed_notification_baseline, if: -> { @reseed_notification_baseline }
+  after_rollback { @reseed_notification_baseline = false }
 
   validates :resource_type, presence: true, if: -> { resource_type.to_s.valid_encoding? }
   validates :name, length: { minimum: 1 }, allow_nil: true, if: -> { name.to_s.valid_encoding? }
