@@ -10,7 +10,7 @@
 class Api::V1::SplitsController < Api::V1::BaseController
   include Api::V1::TransactionLookup
 
-  AlreadySplit = Class.new(StandardError)
+  NotSplittable = Class.new(StandardError)
   NotSplit = Class.new(StandardError)
 
   # entries.amount is decimal(19,4). Children are rounded independently on
@@ -42,24 +42,17 @@ class Api::V1::SplitsController < Api::V1::BaseController
     splits = build_splits
     return if performed?
 
-    # Explicit transaction + lock!, NOT Entry#with_lock: on Rails 8.1 the
-    # with_lock form silently discards the whole split -- no children, no
-    # exception. Verified against real data before relying on this.
-    Entry.transaction do
-      @entry.lock!
-      # Re-check inside the lock: two concurrent POSTs can both clear the
-      # check above, and split! validates only its own amounts, so both sets
-      # of children would be inserted and the transaction counted twice.
-      raise AlreadySplit if @entry.split_parent?
-
-      @entry.split!(splits)
-    end
+    # Two concurrent POSTs can both clear the check above; split_once! locks
+    # the parent and re-checks, so only one set of children is inserted.
+    raise NotSplittable unless @entry.split_once!(splits)
     @entry.sync_account_later
     @entry.reload
 
     render_split status: :created
-  rescue AlreadySplit
-    render_unprocessable("Transaction cannot be split", [ "Transaction is already split" ])
+  rescue NotSplittable
+    # split_once! reloaded the entry under the lock, so the reason reflects what the other
+    # caller did (split it, or excluded it).
+    render_unprocessable("Transaction cannot be split", [ not_splittable_reason ])
   rescue ActiveRecord::RecordInvalid => e
     render_unprocessable(e.message)
   end

@@ -69,21 +69,9 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
 
       begin
         # Two split rules (or a manual apply and a queued run) can reach the
-        # same transaction at once, and both would pass the splittable? check
-        # above before either creates children, splitting it twice. lock!
-        # takes FOR UPDATE on the parent entry and reloads it, so the second
-        # run waits, then sees the first run's children and skips. (Not
-        # entry.with_lock: Entry#transaction is the delegated_type accessor
-        # for the Transaction entryable, so with_lock would never yield.)
-        split_done = false
-        Entry.transaction do
-          entry.lock!
-          unless entry.split_parent? || entry.excluded?
-            entry.split!(splits)
-            split_done = true
-          end
-        end
-        next false unless split_done
+        # same transaction at once; split_once! locks the parent and skips it
+        # if the other run already split it (or it was excluded meanwhile).
+        next false unless entry.split_once!(splits)
 
         entry.sync_account_later
         true

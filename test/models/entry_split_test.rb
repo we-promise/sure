@@ -252,4 +252,25 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert_includes visible_entries.pluck(:id), non_excluded_child.id
     refute_includes visible_entries.pluck(:id), excluded_child.id
   end
+
+  test "split_once! splits an entry that is not yet split" do
+    assert @entry.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    assert_equal 2, @entry.reload.child_entries.count
+  end
+
+  test "split_once! skips an entry another caller split in the meantime" do
+    stale = Entry.find(@entry.id)
+    @entry.split!([ { name: "First", amount: 50 }, { name: "Run", amount: 50 } ])
+
+    assert_not stale.split_once!([ { name: "Second", amount: 100 } ])
+    assert_equal %w[First Run], @entry.reload.child_entries.order(:name).pluck(:name)
+  end
+
+  test "split_once! skips an entry excluded in the meantime" do
+    stale = Entry.find(@entry.id)
+    Entry.where(id: @entry.id).update_all(excluded: true)
+
+    assert_not stale.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    assert_not @entry.reload.split_parent?
+  end
 end
