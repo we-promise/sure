@@ -50,6 +50,9 @@ it:
       holdings: Portafoglio
       name: Nome
       new_holding: Nuova attività
+      negative_position: "%{name} (%{ticker}): sotto zero dal %{date}, minimo %{qty}."
+      negative_positions_hint: "Probabilmente manca un acquisto o un trasferimento. Aggiungilo o correggi le operazioni che hanno portato la posizione sotto zero."
+      negative_positions_title: "Alcune posizioni sono scese sotto zero"
       no_holdings: Nessuna posizione da mostrare.
       return: Rendimento totale
       weight: Peso

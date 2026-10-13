@@ -37,6 +37,9 @@ nl:
       holdings: Bezittingen
       name: Naam
       new_holding: Nieuwe transactie
+      negative_position: "%{name} (%{ticker}): onder nul sinds %{date}, laagste %{qty}."
+      negative_positions_hint: "Waarschijnlijk ontbreekt een aankoop of overboeking. Voeg die toe of corrigeer de transacties die de positie onder nul brachten."
+      negative_positions_title: "Sommige posities zijn onder nul gekomen"
       no_holdings: Geen bezittingen om weer te geven.
       return: Totaal rendement
       weight: Gewicht

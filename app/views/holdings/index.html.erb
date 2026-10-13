@@ -13,6 +13,21 @@
       <% end %>
     </div>
 
+    <% if @negative_positions.any? %>
+      <%= render DS::Alert.new(title: t(".negative_positions_title"), variant: :warning) do %>
+        <% @negative_positions.each do |position| %>
+          <p>
+            <%= t(".negative_position",
+                  name: position.security.name.presence || position.security.ticker,
+                  ticker: position.security.ticker,
+                  date: l(position.first_date),
+                  qty: number_with_precision(position.lowest_qty, precision: 8, strip_insignificant_zeros: true)) %>
+          </p>
+        <% end %>
+        <p class="text-secondary"><%= t(".negative_positions_hint") %></p>
+      <% end %>
+    <% end %>
+
     <% if @trade_republic_categories.present? %>
       <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <% @trade_republic_categories.each do |category, summary| %>

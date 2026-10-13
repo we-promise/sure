@@ -727,6 +727,48 @@ class Account < ApplicationRecord
             .order(:ticker)
   end
 
+  # Standard securities the account holds at the end of +date+, with their
+  # quantity, for the sale picker. Reads the synced holdings: the latest row on
+  # or before the date per security (today's rows may not be synced yet), and
+  # where a provider row and a calculated row share that day, the provider row.
+  def held_securities_on(date)
+    latest_ids = holdings
+      .where(date: ..[ date, Date.current ].min)
+      .select("DISTINCT ON (holdings.security_id) holdings.id")
+      .order("holdings.security_id, holdings.date DESC, holdings.account_provider_id NULLS LAST, holdings.id")
+
+    holdings
+      .where(id: latest_ids)
+      .where("holdings.qty > 0")
+      .joins(:security)
+      .merge(Security.standard)
+      .includes(:security)
+      .map { |holding| [ holding.security, holding.qty ] }
+      .sort_by { |security, _| [ (security.name.presence || security.ticker).downcase, security.id ] }
+  end
+
+  NegativePosition = Data.define(:security, :first_date, :lowest_qty)
+
+  # Securities whose calculated position dropped below zero on some day. A
+  # sale entered by hand cannot do that, but an import, a provider sync or
+  # deleting a purchase can, and the holdings tab says so instead of hiding it.
+  # Rows a provider reports are left out: a broker's own negative quantity is a
+  # short position, not missing data.
+  def negative_positions
+    rows = holdings
+      .joins(:security)
+      .merge(Security.standard)
+      .where(account_provider_id: nil)
+      .where("holdings.qty < 0")
+      .group(:security_id)
+      .pluck(:security_id, Arel.sql("MIN(holdings.date)"), Arel.sql("MIN(holdings.qty)"))
+    return [] if rows.empty?
+
+    securities = Security.where(id: rows.map(&:first)).index_by(&:id)
+    rows.map { |security_id, first_date, lowest_qty| NegativePosition.new(securities[security_id], first_date, lowest_qty) }
+        .sort_by { |position| [ position.first_date, position.security.ticker, position.security.id ] }
+  end
+
   # The balance type determines which "component" of balance is being tracked.
   # This is primarily used for balance related calculations and updates.
   #

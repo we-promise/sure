@@ -1,6 +1,9 @@
 ---
 pt-PT:
   trades:
+    sale_limit:
+      exceeds_holding: "Não pode vender %{qty} %{ticker}: a conta só detém %{available} em %{date}."
+      exceeds_later_holding: "Não pode vender %{qty} %{ticker}: nesta data pode vender no máximo %{available}, caso contrário a posição fica abaixo de zero em %{date}."
     form:
       account: Conta de transferência (opcional)
       account_prompt: Pesquisar conta
@@ -21,6 +24,9 @@ pt-PT:
       type_interest: Juros
       dividend_requires_security: O título é obrigatório para dividendos
       trade_requires_security: É necessário um título (ticker) para negociações de compra e venda
+      held_security: "%{name} (%{ticker}), %{qty} em carteira"
+      held_security_prompt: "Escolha uma posição"
+      held_security_hint: "Não aparece? Adicione primeiro a compra."
     header:
       buy: Compra
       sell: Venda

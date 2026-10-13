@@ -7,6 +7,7 @@ fr:
     actions:
       budget: Voir le budget
       cash_flow_warning: Vérifier les transactions récurrentes
+      negative_position: "Vérifier les positions"
       idle_cash: Aller au compte
       maintained_goal_depleted: Voir la réserve
       net_worth_milestone: Voir le rapport de patrimoine net
@@ -72,6 +73,7 @@ fr:
         negative: D'après vos prochaines transactions récurrentes et vos dépenses
           habituelles, votre solde de trésorerie pourrait chuter à %{projected_low}
           vers le %{projected_low_date}.
+      negative_position: "Dans %{account}, %{security} (%{ticker}) est passé sous zéro le %{date}, jusqu'à %{qty}. Un achat ou un transfert manque probablement ; positions concernées : %{count}."
       idle_cash: "%{account} détient %{balance} sans aucune activité depuis %{idle_days}
         jours."
       net_worth_milestone: Votre patrimoine net a franchi %{milestone} et s'élève
@@ -104,6 +106,7 @@ fr:
         low: Votre solde de trésorerie pourrait devenir faible
         negative: Votre solde de trésorerie pourrait devenir négatif
       maintained_goal_depleted: "%{goal} est passée sous son niveau"
+      negative_position: "Des positions de %{account} sont passées sous zéro"
       idle_cash: Liquidités inactives sur %{account}
       net_worth_milestone: "Étape de patrimoine net : %{milestone}"
       savings_rate_change:
@@ -117,6 +120,7 @@ fr:
       budget_at_risk: Budget
       budget_on_track: Budget
       cash_flow_warning: Trésorerie
+      negative_position: "Positions"
       idle_cash: Liquidités inactives
       maintained_goal_depleted: Réserve
       net_worth_milestone: Patrimoine net

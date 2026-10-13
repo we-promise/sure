@@ -8,6 +8,7 @@ class TradesController < ApplicationController
     @account = accessible_accounts.find_by(id: params[:account_id])
     @model = Current.family.entries.new(
       account: @account,
+      date: requested_date,
       currency: @account ? @account.currency : Current.family.currency,
       entryable: Trade.new
     )
@@ -49,7 +50,9 @@ class TradesController < ApplicationController
   def update
     return unless require_account_permission!(@entry.account)
 
-    if @entry.update(update_entry_params)
+    @entry.assign_attributes(update_entry_params)
+
+    if Trade::SaleLimit.save(@entry)
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.sync_account_later
@@ -90,6 +93,14 @@ class TradesController < ApplicationController
   end
 
   private
+    # The sale picker lists what the account holds on the chosen date, so the
+    # form reloads with ?date= when the date changes.
+    def requested_date
+      Date.iso8601(params[:date].to_s)
+    rescue Date::Error
+      nil
+    end
+
     def set_entry_for_unlock
       trade = Current.family.trades
                 .joins(entry: :account)
@@ -107,7 +118,7 @@ class TradesController < ApplicationController
 
     def create_params
       params.require(:model).permit(
-        :date, :amount, :currency, :qty, :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id
+        :date, :amount, :currency, :qty, :price, :fee, :ticker, :manual_ticker, :security_id, :type, :transfer_account_id
       )
     end
 
