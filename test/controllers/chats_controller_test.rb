@@ -56,6 +56,16 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to chats_path
   end
 
+  test "does not create a chat for a consenting user when the assistant type is mcp_only" do
+    @family.update!(assistant_type: "mcp_only")
+
+    assert_no_difference("Chat.count") do
+      post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
+    end
+
+    assert_redirected_to chats_path
+  end
+
   test "index shows the AI consent screen instead of the compose form when AI is disabled" do
     @user.update!(ai_enabled: false)
     @user.chats.destroy_all

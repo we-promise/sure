@@ -34,7 +34,11 @@ class Family < ApplicationRecord
 
 
   MONIKERS = [ "Family", "Group" ].freeze
-  ASSISTANT_TYPES = %w[builtin external].freeze
+  # `mcp_only` removes the in-app assistant (chat, sidebar, chat-seeding
+  # buttons) without touching MCP: /mcp serves the same tool registry to
+  # external agents whatever this says. "Off" stays free for a future
+  # no-LLM-at-all switch; categorization still runs under `mcp_only`.
+  ASSISTANT_TYPES = %w[builtin external mcp_only].freeze
 
   # Which provider categorizes this family's transactions. Family-level rather
   # than a global Setting because it decides whose transaction descriptions get
@@ -169,6 +173,16 @@ class Family < ApplicationRecord
   # settings UI can never disagree about which provider is actually in force.
   def effective_categorization_provider
     ENV["CATEGORIZATION_PROVIDER"].presence || categorization_provider
+  end
+
+  # ENV-over-column precedence for the assistant, same shape as the provider
+  # above. Unknown ENV values pass through; callers treat them as builtin.
+  def effective_assistant_type
+    ENV["ASSISTANT_TYPE"].presence || assistant_type.presence || "builtin"
+  end
+
+  def assistant_enabled?
+    effective_assistant_type != "mcp_only"
   end
 
   # The provider that will actually categorize this family's transactions,
@@ -640,16 +654,20 @@ class Family < ApplicationRecord
 
   # Used for invalidating entry related aggregation queries
   def entries_cache_version
-    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}"
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}-#{categories_version}"
   end
 
-  # Used for invalidating caches keyed on entries (e.g. the transactions
-  # index's uncategorized count). Unlike #entries_cache_version, includes
-  # .count so a hard-deleted entry busts the cache even when it didn't hold
-  # the current max updated_at, and uses full-precision timestamps so two
-  # updates within the same second still produce distinct versions.
+  # Used for caches keyed on entries (e.g. the transactions index's
+  # uncategorized count). Counts capture deletions, and full-precision
+  # timestamps distinguish updates within the same second.
   def entries_version
-    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}"
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}-#{categories_version}"
+  end
+
+  # Category deletion can nullify a late assignment without touching its
+  # entry; category metadata also affects cached entry results.
+  def categories_version
+    "#{categories.count}-#{categories.maximum(:updated_at)&.to_f || 0}"
   end
 
   # Used for invalidating caches keyed on recurring transactions (e.g. the

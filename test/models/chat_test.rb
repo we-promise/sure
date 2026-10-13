@@ -40,6 +40,19 @@ class ChatTest < ActiveSupport::TestCase
     end
   end
 
+  test "a response queued before the assistant was turned off never reaches a provider" do
+    chat = @user.chats.start!("Test prompt", model: "gpt-4.1")
+    user_message = chat.messages.find_by!(type: "UserMessage")
+    pending = chat.messages.find_by!(type: "AssistantMessage", status: "pending")
+
+    @user.family.update!(assistant_type: "mcp_only")
+    Assistant.expects(:for_chat).never
+
+    AssistantResponseJob.perform_now(user_message, pending)
+
+    assert_not Message.exists?(pending.id)
+  end
+
   test "creates with default model when model is nil" do
     prompt = "Test prompt"
 
