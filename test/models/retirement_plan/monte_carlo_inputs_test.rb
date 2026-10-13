@@ -39,6 +39,36 @@ class RetirementPlan::MonteCarloInputsTest < ActiveSupport::TestCase
     assert_equal @plan.solve(as_of: AS_OF).retirement_year, @plan.monte_carlo(as_of: AS_OF).retirement_year
   end
 
+  # The seed is the plan's id, so an unsaved plan has no run, and nothing
+  # should be computed to find that out: in FIRE mode the year comes from
+  # the solver, which reads the user's accounts.
+  test "an unsaved plan has no run, and the solver never runs for it" do
+    plan = RetirementPlan.new(user: users(:family_admin), birth_year: 1980, mode: "fire")
+    RetirementPlan::Solver.expects(:new).never
+
+    assert_nil plan.monte_carlo(as_of: AS_OF)
+    assert_nil plan.monte_carlo_result(as_of: AS_OF)
+  end
+
+  # On the same terms as #simulation. Born 1940 with an end age of 85 the
+  # plan ended in 2025; born 2027 it has not begun; retiring in 2066 is
+  # after the end-age year 2065.
+  test "a plan with no years to plan, or retiring after its end age, has no run in either mode" do
+    %w[traditional fire].each do |mode|
+      [ 1940, 2027 ].each do |birth_year|
+        @plan.update!(mode: mode, birth_year: birth_year)
+        assert_nil @plan.monte_carlo(as_of: AS_OF), "#{mode}, born #{birth_year}"
+        assert_nil @plan.monte_carlo_result(as_of: AS_OF), "#{mode}, born #{birth_year}"
+      end
+    end
+
+    @plan.update!(mode: "traditional", birth_year: 1980, retirement_date: Date.new(2066, 1, 1))
+    assert_nil @plan.monte_carlo(as_of: AS_OF), "retiring after the end age"
+
+    @plan.update!(retirement_date: Date.new(2065, 1, 1))
+    assert_equal 2065, @plan.monte_carlo(as_of: AS_OF).retirement_year, "retiring in the end-age year"
+  end
+
   test "the result carries the run's figures as plain values" do
     result = @plan.monte_carlo_result(as_of: AS_OF)
 

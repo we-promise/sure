@@ -134,16 +134,18 @@ class RetirementPlan::MonteCarlo
 
     def run(sim, keep_values: false, worst_first: false)
       flows = sim.yearly_flows.map { |c, w| [ c.to_f, w.to_f ] }
-      base = 1 + sim.return_rate.to_f
-      retired_from = sim.retirement_year - first_year
+      # A return of -100% or worse leaves nothing: the heatmap's lower steps
+      # can take a valid return past it, and a negative factor would flip
+      # the portfolio's sign rather than empty it.
+      base = [ 1 + sim.return_rate.to_f, 0.0 ].max
+      # Retired before the reference year, every modelled year is retired.
+      split = (sim.retirement_year - first_year).clamp(0, year_count)
       survived = 0
       values = [] if keep_values
 
       draws.each do |z|
         growth = z.map { |zt| base * Math.exp(@sigma * zt) }
-        if worst_first && retired_from.between?(0, year_count - 1)
-          growth = growth[0...retired_from] + growth[retired_from..].sort
-        end
+        growth = growth[0...split] + growth[split..].sort if worst_first
 
         value = sim.current_assets.to_f
         lasted = true

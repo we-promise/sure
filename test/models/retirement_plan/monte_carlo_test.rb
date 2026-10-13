@@ -134,9 +134,29 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
     assert_operator grid[0][2][:success_rate], :<, grid[4][2][:success_rate], "a higher return must help this tight plan"
   end
 
-  test "nothing in the Monte Carlo engine reads the clock, the database or the current request" do
-    source = Rails.root.join("app/models/retirement_plan/monte_carlo.rb").read
+  # Retired two years before the reference year: every modelled year is a
+  # retirement year, so the stress run must reorder all of them. Skipping the
+  # reorder left the stress rate equal to the ordinary one (0.614 both).
+  test "the stress run reorders every year when retirement is already past" do
+    mc = monte_carlo(retirement_year: AS_OF.year - 2, current_assets: 600_000)
 
-    assert_no_match(/Date\.(current|today)|Time\.(current|now|zone)|Current\.|ActiveRecord|\.where\(|\.find/, source)
+    assert_in_delta 0.614, mc.success_rate, 0.0001
+    assert_operator mc.stress_success_rate, :<, 0.1
+  end
+
+  # Nothing ever comes out, so a path can only fail if its value goes below
+  # zero. The heatmap's two lower return rows take -99.5% to -101.5% and
+  # -100.5%: past -100% the portfolio is emptied, not turned negative.
+  test "a heatmap return below -100% empties the portfolio rather than flipping its sign" do
+    mc = monte_carlo(expected_annual_return: BigDecimal("-0.995"), streams: [])
+
+    assert_equal [ [ 1.0 ] * 5 ] * 2, mc.heatmap.first(2).map { |row| row.map { |cell| cell[:success_rate] } }
+  end
+
+  test "nothing in the Monte Carlo engine reads the clock, the database or the current request" do
+    # Comments are left out, so a note about the contract cannot trip it.
+    code = Rails.root.join("app/models/retirement_plan/monte_carlo.rb").readlines.map { |line| line.sub(/#.*/, "") }.join
+
+    assert_no_match(/Date\.(current|today)|Time\.(current|now|zone)|DateTime\.(current|now)|Current\.|ActiveRecord|\.where\(|\.find/, code)
   end
 end

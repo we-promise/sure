@@ -134,10 +134,14 @@ class RetirementPlan < ApplicationRecord
   end
 
   # The run for this plan: retiring on its date, or in FIRE mode in the
-  # expected-returns year. Nil while the plan cannot be simulated.
+  # expected-returns year. Nil while the plan cannot be simulated, on the
+  # same terms as #simulation: unsaved (the seed is the plan's id), no years
+  # to plan, no retirement date, or retirement after the end age.
   def monte_carlo(as_of:)
+    return nil if new_record? || !plannable?(as_of)
+
     year = monte_carlo_retirement_year(as_of)
-    return nil if year.nil? || new_record?
+    return nil if year.nil? || year > birth_year + end_age
 
     projection = projection(as_of: as_of)
     RetirementPlan::MonteCarlo.new(
@@ -215,8 +219,15 @@ class RetirementPlan < ApplicationRecord
     AssetTotal = Data.define(:total, :unconverted_count)
     SimulationStreams = Data.define(:streams, :unconverted_count)
 
+    # A plan runs from the reference year to the end-age year. With the owner
+    # born after the reference year, or the end age already past, there are
+    # no years to plan: an empty table would read as a plan that lasts.
+    def plannable?(as_of)
+      birth_year.present? && birth_year <= as_of.year && birth_year + end_age >= as_of.year
+    end
+
+    # Called only for a plannable plan, so `solve` always answers.
     def monte_carlo_retirement_year(as_of)
-      return nil if birth_year.nil?
       return retirement_date&.year unless mode == "fire"
 
       solve(as_of: as_of).retirement_year || (birth_year + end_age)
