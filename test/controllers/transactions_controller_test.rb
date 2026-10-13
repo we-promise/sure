@@ -1752,6 +1752,38 @@ end
     assert_equal [ tags(:one).id ], @entry.entryable.reload.tag_ids
   end
 
+  test "an annotate-only member cannot set a category or merchant from another family" do
+    accounts(:depository).account_shares.find_or_initialize_by(user: users(:family_member)).update!(permission: "read_write")
+    sign_in users(:family_member)
+    foreign_category = families(:empty).categories.create!(name: "Foreign", color: "#000000", lucide_icon: "folder")
+    foreign_merchant = families(:empty).merchants.create!(name: "Foreign Merchant")
+    original_category_id = @entry.entryable.category_id
+    original_merchant_id = @entry.entryable.merchant_id
+
+    [ { category_id: foreign_category.id }, { merchant_id: foreign_merchant.id } ].each do |attrs|
+      patch transaction_url(@entry), params: {
+        entry: { entryable_type: "Transaction", entryable_attributes: { id: @entry.entryable_id, **attrs } }
+      }
+
+      assert_response :not_found
+    end
+
+    @entry.entryable.reload
+    assert_equal original_category_id, @entry.entryable.category_id
+    assert_equal original_merchant_id, @entry.entryable.merchant_id
+  end
+
+  test "update accepts a provider merchant the picker offers" do
+    provider_merchant = ProviderMerchant.create!(name: "Provider Coffee", source: "enable_banking")
+    create_transaction(account: accounts(:depository), merchant: provider_merchant)
+
+    patch transaction_url(@entry), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: @entry.entryable_id, merchant_id: provider_merchant.id } }
+    }
+
+    assert_equal provider_merchant.id, @entry.entryable.reload.merchant_id
+  end
+
   test "category-only update does not sync the account" do
     assert_no_enqueued_jobs only: SyncJob do
       patch transaction_url(@entry), params: {
