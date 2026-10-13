@@ -43,4 +43,18 @@ class Entry::SplitReferencesTest < ActiveSupport::TestCase
     assert_nil family_only.scope(category_id: nil, merchant_id: provider_merchant.id, tag_ids: nil)[:merchant_id]
     assert_equal provider_merchant.id, with_provider.scope(category_id: nil, merchant_id: provider_merchant.id, tag_ids: nil)[:merchant_id]
   end
+
+  test "names the ids scope would drop" do
+    foreign_category = @other_family.categories.create!(name: "Foreign", color: "#000000")
+    foreign_merchant = @other_family.merchants.create!(name: "Foreign Shop")
+    missing_tag_id = SecureRandom.uuid
+    references = Entry::SplitReferences.new(@family)
+
+    assert_equal [ [ :category, foreign_category.id ], [ :merchant, foreign_merchant.id ], [ :tag, missing_tag_id ] ],
+                 references.unknown(category_id: foreign_category.id, merchant_id: foreign_merchant.id,
+                                    tag_ids: [ tags(:one).id, missing_tag_id, "", missing_tag_id ])
+    assert_empty references.unknown(category_id: categories(:food_and_drink).id, merchant_id: merchants(:netflix).id,
+                                    tag_ids: [ tags(:one).id ])
+    assert_empty references.unknown(category_id: "", merchant_id: nil, tag_ids: nil)
+  end
 end

@@ -347,6 +347,133 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert body["amount_cents"].is_a?(Integer)
   end
 
+  # Merchants and tags per child
+
+  test "assigns merchants and tags to children" do
+    merchant = merchants(:amazon)
+    tag = tags(:one)
+    params = { split: { splits: [
+      { name: "Tagged", amount: (@entry.amount / 2).to_s, merchant_id: merchant.id, tag_ids: [ tag.id ] },
+      { name: "Plain",  amount: (@entry.amount / 2).to_s }
+    ] } }
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :created
+
+    tagged = JSON.parse(response.body)["children"].find { |c| c["name"] == "Tagged" }
+    assert_equal merchant.id, tagged.dig("merchant", "id")
+    assert_equal [ tag.id ], tagged["tags"].map { |t| t["id"] }
+
+    plain = @entry.reload.child_entries.find_by(name: "Plain").entryable
+    assert_empty plain.tags
+  end
+
+  test "omitting merchant_id keeps the parent's merchant on the child" do
+    @transaction.update!(merchant: merchants(:netflix))
+
+    post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+    assert_response :created
+    assert_equal [ merchants(:netflix).id ] * 2, @entry.reload.child_entries.map { |c| c.entryable.merchant_id }
+  end
+
+  test "a split read back and re-sent keeps each child's merchant and tags" do
+    # Splits made in the web dialog or by a split rule can carry their own merchant and tags.
+    @entry.split!([
+      { name: "Books", amount: @entry.amount / 2, merchant_id: merchants(:amazon).id, tag_ids: [ tags(:one).id, tags(:two).id ] },
+      { name: "Rest",  amount: @entry.amount / 2 }
+    ])
+
+    get api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key)
+    assert_response :success
+    children = JSON.parse(response.body)["children"]
+
+    resent = children.map do |c|
+      { name: c["name"], amount: c["amount_decimal"], excluded: c["excluded"],
+        merchant_id: c.dig("merchant", "id"), tag_ids: c["tags"].map { |t| t["id"] } }
+    end
+    patch api_v1_transaction_split_url(@transaction), params: { split: { splits: resent } },
+          headers: api_headers(@api_key), as: :json
+    assert_response :success
+
+    books = @entry.reload.child_entries.find_by(name: "Books").entryable
+    assert_equal merchants(:amazon).id, books.merchant_id
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, books.tag_ids.sort
+  end
+
+  test "rejects a merchant from another family" do
+    other_family = Family.create!(name: "Other", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
+    foreign = FamilyMerchant.create!(family: other_family, name: "Foreign shop", color: "#000000")
+    params = { split: { splits: [
+      { name: "A", amount: (@entry.amount / 2).to_s, merchant_id: foreign.id },
+      { name: "B", amount: (@entry.amount / 2).to_s }
+    ] } }
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "rejects a tag belonging to another family" do
+    other_family = Family.create!(name: "Other", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
+    foreign = other_family.tags.create!(name: "Foreign")
+    params = { split: { splits: [
+      { name: "A", amount: (@entry.amount / 2).to_s, tag_ids: [ tags(:one).id, foreign.id ] },
+      { name: "B", amount: (@entry.amount / 2).to_s }
+    ] } }
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "rejects a foreign merchant when replacing a split" do
+    post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+    before = @entry.reload.child_entries.order(:id).pluck(:id)
+
+    other_family = Family.create!(name: "Other", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
+    foreign = FamilyMerchant.create!(family: other_family, name: "Foreign shop", color: "#000000")
+    params = halves
+    params[:split][:splits][0][:merchant_id] = foreign.id
+
+    patch api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+    assert_equal before, @entry.reload.child_entries.order(:id).pluck(:id)
+  end
+
+  test "rejects a provider merchant the user has no transaction with" do
+    stranger = ProviderMerchant.create!(name: "Unseen Shop", source: "plaid", provider_merchant_id: "api-split-unseen")
+    params = halves
+    params[:split][:splits][0][:merchant_id] = stranger.id
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "returns 422 when a category or merchant id is not a string" do
+    [ { category_id: [ @family.categories.first.id ] }, { merchant_id: { id: merchants(:amazon).id } }, { merchant_id: 1 } ].each do |bad|
+      params = halves
+      params[:split][:splits][0].merge!(bad)
+
+      post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+      assert_response :unprocessable_entity, bad.inspect
+    end
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "returns 422 when tag_ids is not an array of ids" do
+    [ tags(:one).id, [ { id: tags(:one).id } ], { id: tags(:one).id } ].each do |tag_ids|
+      params = { split: { splits: [
+        { name: "A", amount: (@entry.amount / 2).to_s, tag_ids: tag_ids },
+        { name: "B", amount: (@entry.amount / 2).to_s }
+      ] } }
+
+      post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+      assert_response :unprocessable_entity, "tag_ids: #{tag_ids.inspect}"
+    end
+    assert_not @entry.reload.split_parent?
+  end
+
   test "returns 401 without an API key" do
     get api_v1_transaction_split_url(@transaction)
     assert_response :unauthorized

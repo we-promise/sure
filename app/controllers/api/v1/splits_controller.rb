@@ -192,10 +192,25 @@ class Api::V1::SplitsController < Api::V1::BaseController
           return nil
         end
 
-        s = s.permit(:name, :amount, :category_id, :excluded)
-        category_id = s[:category_id].presence
-        if category_id && !family_category_ids.include?(category_id)
-          render_unprocessable("Unknown category: #{category_id}")
+        unless s[:tag_ids].nil? || (s[:tag_ids].is_a?(Array) && s[:tag_ids].all?(String))
+          render_unprocessable("tag_ids must be an array of tag ids")
+          return nil
+        end
+        # permit would silently drop a non-scalar id, storing the child without it.
+        %i[category_id merchant_id].each do |key|
+          next if s[key].nil? || s[key].is_a?(String)
+
+          render_unprocessable("#{key} must be an id")
+          return nil
+        end
+
+        s = s.permit(:name, :amount, :category_id, :merchant_id, :excluded, tag_ids: [])
+        references = { category_id: s[:category_id], merchant_id: s[:merchant_id], tag_ids: s[:tag_ids] }
+
+        unknown = split_references.unknown(**references)
+        if unknown.any?
+          kind, id = unknown.first
+          render_unprocessable("Unknown #{kind}: #{id}")
           return nil
         end
 
@@ -213,8 +228,10 @@ class Api::V1::SplitsController < Api::V1::BaseController
           # validates presence, so apply the default rather than 422 on it.
           name: s[:name].presence || @entry.name,
           amount: amount,
-          category_id: category_id,
-          excluded: s[:excluded]
+          excluded: s[:excluded],
+          # Nothing is dropped here (unknown ids were rejected above); scope only normalizes.
+          # Without a merchant_id the child keeps the parent's merchant (Entry#split!).
+          **split_references.scope(**references)
         }
       end
     rescue ArgumentError, TypeError
@@ -222,10 +239,11 @@ class Api::V1::SplitsController < Api::V1::BaseController
       nil
     end
 
-    # belongs_to :category is unscoped, so a known UUID from another family
-    # would be accepted and then serialized back to the caller.
-    def family_category_ids
-      @family_category_ids ||= current_resource_owner.family.categories.pluck(:id).to_set
+    # Transaction's belongs_to :category and :merchant are unscoped, so a known UUID from another
+    # family would be accepted and then serialized back to the caller. The same rules as the web
+    # split editor apply: family categories and tags, and any merchant the user can see.
+    def split_references
+      @split_references ||= Entry::SplitReferences.for_user(current_resource_owner.family, current_resource_owner)
     end
 
     def not_splittable_reason

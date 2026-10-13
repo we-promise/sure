@@ -96,7 +96,7 @@ class SplitsController < ApplicationController
     # re-scoped to the current family (Entry::SplitReferences, shared with rule-driven splits)
     # rather than trusted, so a crafted request can't attach another family's records.
     def build_splits
-      references = Entry::SplitReferences.new(Current.family, merchants: Current.family.available_merchants_for(Current.user))
+      references = Entry::SplitReferences.for_user(Current.family, Current.user)
 
       raw_splits = split_params[:splits] || []
       raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
