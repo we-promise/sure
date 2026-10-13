@@ -108,16 +108,8 @@ class Holding::CostBasisFallback
         .to_a
     end
 
-    # Splits and trades in the order they took effect: a split before the
-    # trades of its ex-date, which are already in post-split units.
     def events
-      @events ||= begin
-        by_date = trades.group_by(&:entry_date)
-        dates = (by_date.keys + splits.map(&:ex_date)).uniq.sort
-        splits_by_date = splits.index_by(&:ex_date)
-
-        dates.flat_map { |date| [ splits_by_date[date], *by_date[date] ].compact }
-      end
+      @events ||= replay_events(trades, splits, &:entry_date)
     end
 
     # The trade's own rate, else the table's for its day -- never a lookup, so
