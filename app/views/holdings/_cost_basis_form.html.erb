@@ -1,0 +1,58 @@
+<%# locals: (holding:, context:, cancel_action:) %>
+
+<%
+  # cost_basis stores the per-share cost; the form submits the total and the
+  # controller divides it by the quantity.
+  current_per_share = holding.cost_basis.present? && holding.cost_basis.positive? ? holding.cost_basis : nil
+  current_total = current_per_share && holding.qty.positive? ? (current_per_share * holding.qty).round(2) : nil
+
+  form_data = { turbo: false }
+  if holding.avg_cost
+    form_data[:turbo_confirm] = {
+      title: t("holdings.cost_basis_cell.overwrite_confirm_title"),
+      body: t("holdings.cost_basis_cell.overwrite_confirm_body", current: format_money(holding.avg_cost))
+    }
+  end
+%>
+
+<%= styled_form_with model: holding,
+      url: holding_path(holding),
+      method: :patch,
+      namespace: dom_id(holding, "#{context}_cost_basis"),
+      class: "space-y-3",
+      data: form_data.merge(controller: "cost-basis-form", cost_basis_form_qty_value: holding.qty) do |f| %>
+  <%# Laid out like an invoice line: per share x quantity = total. Only the
+      total is submitted; the per-share field just helps to fill it in. %>
+  <%= f.money_field :per_share_cost_basis,
+        label: t("holdings.cost_basis_cell.per_share_label"),
+        name: nil,
+        hide_currency: true,
+        currency_value_override: holding.currency,
+        value: current_per_share,
+        placeholder: "0.00",
+        step: "any",
+        min: 0,
+        amount_data: { action: "input->cost-basis-form#updateTotal", cost_basis_form_target: "perShare" } %>
+
+  <p class="flex items-center gap-2 px-3 text-sm">
+    <span class="text-secondary" aria-hidden="true">&times;</span>
+    <span class="text-primary"><%= t("holdings.holding.shares", qty: format_quantity(holding.qty, exact: true)) %></span>
+  </p>
+
+  <%# The holding stores the per-share cost, so neither field is bound to it. %>
+  <%= f.money_field :total_cost_basis,
+        label: safe_join([ tag.span("=", class: "text-secondary", aria: { hidden: true }), t("holdings.cost_basis_cell.total_cost_basis_label") ], " "),
+        name: f.field_name(:cost_basis),
+        hide_currency: true,
+        currency_value_override: holding.currency,
+        value: current_total,
+        placeholder: "0.00",
+        step: "any",
+        min: 0,
+        amount_data: { action: "input->cost-basis-form#updatePerShare", cost_basis_form_target: "total" } %>
+
+  <div class="flex justify-end gap-2 pt-2">
+    <%= render DS::Button.new(text: t("holdings.cost_basis_cell.cancel"), variant: :secondary, size: :sm, data: { action: cancel_action }) %>
+    <%= render DS::Button.new(text: t("holdings.cost_basis_cell.save"), type: "submit", size: :sm) %>
+  </div>
+<% end %>
