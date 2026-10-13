@@ -31,6 +31,27 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_equal 1, @rule.rule_runs.count
   end
 
+  # Activating a rule with an email action records its current matches as
+  # delivered. If that times out the rule stays off (Rule#seed_notification_baseline),
+  # and queuing the run anyway would email every past match.
+  test "an email rule whose baseline times out on activation stays off and is not queued" do
+    create_transaction(name: "ZXQ Coffee Shop")
+    @rule.actions.create!(action_type: "send_email_notification")
+    NotificationDelivery.where(rule: @rule).delete_all
+    token = preview_token
+    Rule.any_instance.stubs(:matching_transaction_ids).raises(Rule::SafeRegex::TimeoutError)
+
+    result = nil
+    assert_no_enqueued_jobs only: RuleJob do
+      result = @fn.call("rule_id" => @rule.id, "preview_token" => token)
+    end
+
+    assert_not result[:success]
+    assert_equal "baseline_timed_out", result[:error]
+    assert_not @rule.reload.active
+    assert_equal 0, NotificationDelivery.where(rule: @rule).count
+  end
+
   test "the match count from get_rules alone cannot apply a rule" do
     create_transaction(name: "ZXQ Coffee Shop")
     match_count = Assistant::Function::GetRules.new(@user).call("rule_id" => @rule.id)[:rule][:match_count]
