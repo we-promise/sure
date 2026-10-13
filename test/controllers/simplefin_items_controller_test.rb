@@ -215,6 +215,17 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("simplefin_items.create.errors.blank_token")
   end
 
+  test "create with a token that is not an http url shows the invalid token message" do
+    token = Base64.strict_encode64("file:///etc/passwd")
+
+    assert_no_difference "SimplefinItem.count" do
+      post simplefin_items_url, params: { simplefin_item: { setup_token: token } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("simplefin_items.create.errors.invalid_token"))
+  end
+
   test "should update simplefin item access_url in place preserving account linkages" do
     @simplefin_item.update!(status: :requires_update)
     original_item_id = @simplefin_item.id

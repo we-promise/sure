@@ -46,6 +46,8 @@ class SimplefinItemsController < ApplicationController
       error_message = case e.error_type
       when :token_compromised
         t(".errors.token_compromised")
+      when :invalid_url
+        t(".errors.invalid_token")
       else
         t(".errors.update_failed", message: e.message)
       end
@@ -78,6 +80,8 @@ class SimplefinItemsController < ApplicationController
       error_message = case e.error_type
       when :token_compromised
         t(".errors.token_compromised")
+      when :invalid_url
+        t(".errors.invalid_token")
       else
         t(".errors.create_failed", message: e.message)
       end

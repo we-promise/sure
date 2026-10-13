@@ -707,6 +707,20 @@ class SimplefinItem::Importer
         if e.error_type == :access_forbidden
           simplefin_item.update!(status: :requires_update)
           raise e
+        elsif e.error_type == :invalid_url
+          # The stored access URL fails the address check; only a new setup
+          # token can fix it, so ask the user to reconnect.
+          simplefin_item.update!(status: :requires_update)
+          DebugLogEntry.capture(
+            category: "provider_sync",
+            level: "warn",
+            message: "SimpleFIN access URL rejected: #{e.message}",
+            source: self.class.name,
+            family: simplefin_item.family,
+            provider_key: "simplefin",
+            metadata: { simplefin_item_id: simplefin_item.id, error_type: e.error_type }
+          )
+          raise e
         else
           raise e
         end
