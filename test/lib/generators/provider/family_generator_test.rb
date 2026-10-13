@@ -23,9 +23,9 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   end
 
   # A generated view must be plain ERB once Thor has rendered it: no Ruby string
-  # building its tags, and source that Action View can compile.
+  # building its tags, at either end, and source that Action View can compile.
   def assert_plain_erb(generated)
-    assert_not_includes generated, %("<" +)
+    assert_no_match(/"<" \+|"%" \+ ">"/, generated)
     assert_parses ActionView::Template::Handlers::ERB::Erubi.new(generated).src
   end
 
@@ -237,6 +237,20 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_not_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "family"
     assert_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "family_id"
     assert_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "institution_id"
+  end
+
+  # The old templates built opening tags with "<" + and closing ones with "%" + ">".
+  # A string-built closer that ends a multi-line tag breaks the compiled Ruby, so
+  # the parse check catches it, but one standing alone still parses and renders a
+  # stray %> as text. The check refuses string building at either end.
+  test "the plain ERB check refuses a tag built from strings at either end" do
+    [
+      %(<div>\n<%= "<" + "%= t(\".title\") %" + ">" %>\n</div>\n),
+      %(<%= render DS::Link.new(\n  text: "x"\n) <%= "%" + ">" %>\n),
+      %(<p>x</p>\n<%= "%" + ">" %>\n)
+    ].each do |generated|
+      assert_raises(Minitest::Assertion) { assert_plain_erb generated }
+    end
   end
 
   test "the generated item card is plain ERB" do
