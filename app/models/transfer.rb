@@ -155,7 +155,8 @@ class Transfer < ApplicationRecord
   # A fabricated counterpart (see
   # Family::AutoTransferMatchable#auto_create_missing_transfer_counterparts!)
   # leaves the real outflow untouched while it is pending, so its transfer
-  # kind (and the Investment Contributions category) only applies here.
+  # kind (and the Investment Contributions category) only applies here. The
+  # inflow always becomes a funds movement, as for any confirmed transfer.
   def confirm!
     Transfer.transaction do
       update!(status: "confirmed")
@@ -171,6 +172,8 @@ class Transfer < ApplicationRecord
 
         outflow_transaction.update!(outflow_attrs)
       end
+
+      inflow_transaction.update!(kind: "funds_movement")
     end
   end
 

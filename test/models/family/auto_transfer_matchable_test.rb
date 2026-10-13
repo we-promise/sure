@@ -810,6 +810,17 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "funds_movement", transfer.inflow_transaction.reload.kind
   end
 
+  test "confirming a pending transfer makes the inflow a funds movement" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.entryable, outflow_transaction: outflow_entry.entryable, status: "pending")
+
+    transfer.confirm!
+
+    assert_equal "funds_movement", inflow_entry.reload.entryable.kind
+    assert_equal "loan_payment", outflow_entry.reload.entryable.kind
+  end
+
   test "auto_create_missing_transfer_counterparts! skips an outflow already in a pending transfer" do
     @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
