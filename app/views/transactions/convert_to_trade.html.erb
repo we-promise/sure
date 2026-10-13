@@ -56,7 +56,7 @@
 
               # Build options with price data for validation
               security_options_with_prices = account_securities.map do |s|
-                price = s.current_price
+                price = s.current_price_in(@entry.currency)
                 price_display = price ? " (#{format_money(price)})" : ""
                 label = "#{s.ticker}#{price_display}"
                 label += " - #{s.name.truncate(25)}" if s.name.present?

@@ -1,0 +1,12 @@
+<%# locals: (security:, currency:) %>
+<%# The quote is in the listing's currency. Shown in the currency the trade or
+    position is carried in, with the quote beside it, so it compares with the
+    purchase price and value next to it. Without a rate only the quote shows. %>
+<% quote = security.current_price %>
+<% converted = security.current_price_in(currency) %>
+<% if converted && converted.currency != quote.currency %>
+  <%= format_money converted %>
+  <span class="text-secondary">(<%= format_money quote %>)</span>
+<% else %>
+  <%= format_money quote %>
+<% end %>

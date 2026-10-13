@@ -255,6 +255,23 @@ class Security < ApplicationRecord
     Money.new(@current_price.price, @current_price.currency)
   end
 
+  # The current price in `currency`. A quote comes in the listing's currency,
+  # which need not be the one a trade or position is carried in. nil when there
+  # is no price or no rate to convert it at, rather than the unconverted figure
+  # read as if it were in `currency`. Memoised per currency, a miss included,
+  # because a page asks for the same figure more than once and a missing rate
+  # is a provider call each time.
+  def current_price_in(currency)
+    @current_price_in ||= {}
+    return @current_price_in[currency] if @current_price_in.key?(currency)
+
+    @current_price_in[currency] = begin
+      current_price&.exchange_to(currency)
+    rescue Money::ConversionError
+      nil
+    end
+  end
+
   # How many shares one share held at the close of `from` has become by the
   # close of `to`: the product of the ratios of splits whose ex-date falls
   # after `from` and on or before `to`. 1 when there are none.

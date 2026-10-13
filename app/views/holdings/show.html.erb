@@ -84,7 +84,7 @@
             <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
             <dd id="<%= dom_id(@holding, :current_market_price) %>" class="text-primary">
               <% begin %>
-                <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t(".unknown") %>
+                <%= @holding.security.current_price ? render("securities/current_price", security: @holding.security, currency: @holding.currency) : t(".unknown") %>
                 <% rescue ActiveRecord::RecordInvalid %>
                 <%= t(".unknown") %>
                 <% rescue StandardError => e %>
