@@ -88,7 +88,22 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[read read_write], app.scopes.to_a.sort
   end
 
-  test "rejects an unknown requested scope" do
+  test "ignores unsupported scopes and registers the supported remainder" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "https://claude.ai/callback" ],
+        scope: "openid profile read_write"
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    json = JSON.parse(response.body)
+    assert_equal "read_write", json["scope"]
+    assert_equal "read_write", Doorkeeper::Application.find_by!(uid: json["client_id"]).scopes.to_s
+  end
+
+  test "a request with only unsupported scopes falls back to the read default" do
     post "/register",
       params: {
         client_name: "Claude",
@@ -97,11 +112,10 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
       }.to_json,
       headers: { "Content-Type" => "application/json" }
 
-    assert_response :bad_request
+    assert_response :created
     json = JSON.parse(response.body)
-    assert_equal "invalid_client_metadata", json["error"]
-    assert_includes json["error_description"], "admin"
-    assert_nil Doorkeeper::Application.find_by(name: "Claude"), "no application should be persisted"
+    assert_equal "read", json["scope"], "an unknown scope must never widen what is granted"
+    assert_equal "read", Doorkeeper::Application.find_by!(uid: json["client_id"]).scopes.to_s
   end
 
   test "returns error for invalid JSON body" do

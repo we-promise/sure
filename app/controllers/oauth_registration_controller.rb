@@ -98,10 +98,15 @@ class OauthRegistrationController < ApplicationController
 
     # RFC 7591 §2's "scope" is a space-delimited string ("read read_write"),
     # but tolerate an array too rather than reject it outright. Blank/absent
-    # falls back to DEFAULT_SCOPE. Any token outside VALID_SCOPES is rejected
-    # rather than dropped, so a typo cannot silently register a narrower (or
-    # wider) client than the caller asked for. Renders and returns nil on
-    # rejection; the caller checks `performed?`.
+    # falls back to DEFAULT_SCOPE.
+    #
+    # Scopes outside VALID_SCOPES are dropped, not rejected (RFC 7591 §3.2.1
+    # lets the server substitute what it registers): real clients send generic
+    # scopes such as "openid", "profile" or "mcp", and rejecting them would
+    # leave the user no way to connect at all. Dropping can only narrow what is
+    # granted — never widen it — and a client that wanted more than it got can
+    # see the scope actually registered in the response body. If nothing valid
+    # is left, the client gets DEFAULT_SCOPE.
     #
     # Preserves exactly what was requested (deduped) rather than collapsing
     # to "read_write" whenever it's present: Doorkeeper's ScopeChecker
@@ -114,17 +119,10 @@ class OauthRegistrationController < ApplicationController
       return DEFAULT_SCOPE if raw.blank?
 
       requested = Array(raw).join(" ").split.uniq
-      unknown = requested - VALID_SCOPES
+      ignored = requested - VALID_SCOPES
+      Rails.logger.info "[MCP] Ignored unsupported scope(s) at client registration: #{ignored.join(', ')}" if ignored.any?
 
-      if unknown.any?
-        render json: {
-          error: "invalid_client_metadata",
-          error_description: t("oauth.registration.invalid_scope", scopes: unknown.join(", "))
-        }, status: :bad_request
-        return nil
-      end
-
-      requested.join(" ")
+      (requested & VALID_SCOPES).join(" ").presence || DEFAULT_SCOPE
     end
 
     # Returns true for https, loopback http, and RFC 8252 private-use schemes

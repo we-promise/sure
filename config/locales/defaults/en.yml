@@ -14,7 +14,6 @@ en:
   oauth:
     registration:
       invalid_redirect_uris: "redirect_uris must use https, loopback http, or a native app URI scheme"
-      invalid_scope: "Unknown scope(s): %{scopes}. Supported scopes: read, read_write"
   activerecord:
     errors:
       messages:

@@ -42,8 +42,10 @@ client registered with are the ceiling for everything it requests later:
 `/oauth/authorize` only grants scopes within that set, so a client registered
 as `read` cannot ask for `read_write` at authorization time and must
 re-register. Sure never upgrades a client to `read_write` on its own.
-Requesting any scope other than `read` or `read_write` fails registration
-with `invalid_client_metadata`.
+Any other scope in the request (`openid`, `profile`, `mcp`, …) is ignored
+rather than rejected; if nothing valid is left the client is registered as
+`read`. The response's `scope` field always reports what was actually
+registered.
 
 Recommend `read` for ChatGPT, analytics assistants, and any integration that
 only needs to see the data. Reserve `read_write` for a client you actually
