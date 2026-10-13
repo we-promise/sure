@@ -479,6 +479,39 @@ class RuleTest < ActiveSupport::TestCase
     assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), new_entry.transaction.id
   end
 
+  test "a condition edit that rolls back does not re-seed on the next save" do
+    rule = create_email_rule(value: "coffee")
+    create_transaction(date: Date.current, account: @account, name: "Coffee shop")
+
+    Rule.transaction do
+      rule.update!(conditions_attributes: [ { id: rule.conditions.first.id, value: "house" } ])
+      raise ActiveRecord::Rollback
+    end
+    rule.reload
+    rule.update!(name: "Coffee alerts")
+
+    assert_enqueued_with(job: RuleEmailNotificationJob) do
+      rule.apply
+    end
+  end
+
+  test "editing a condition while switching an action to email seeds the baseline once" do
+    create_transaction(date: 90.days.ago.to_date, account: @account, name: "Coffee shop")
+    tea_house = create_transaction(date: 60.days.ago.to_date, account: @account, name: "Tea house")
+    rule = @family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Coffee" } ]
+    )
+
+    NotificationDelivery.expects(:record_for).once.with(rule_id: rule.id, transaction_ids: [ tea_house.transaction.id ])
+
+    rule.update!(
+      conditions_attributes: [ { id: rule.conditions.first.id, value: "house" } ],
+      actions_attributes: [ { id: rule.actions.first.id, action_type: "send_email_notification" } ]
+    )
+  end
+
   private
     def create_email_rule(value:, effective_date: nil)
       @family.rules.create!(

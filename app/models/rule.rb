@@ -16,7 +16,7 @@ class Rule < ApplicationRecord
   # the baseline when an action becomes send_email_notification, so without this
   # the next run would email every older transaction the edited rule now matches.
   before_update :detect_matching_scope_change
-  after_update_commit :reseed_notification_baseline, if: -> { @matching_scope_changed }
+  after_update_commit :reseed_notification_baseline, if: -> { @reseed_notification_baseline }
 
   validates :resource_type, presence: true, if: -> { resource_type.to_s.valid_encoding? }
   validates :name, length: { minimum: 1 }, allow_nil: true, if: -> { name.to_s.valid_encoding? }
@@ -54,6 +54,13 @@ class Rule < ApplicationRecord
   # which also reaches matching_resources_scope.
   def matching_transaction_ids
     matching_resources_scope.pluck(:id)
+  end
+
+  # Records every transaction the rule matches now as already delivered, without
+  # sending, so a send_email_notification action only emails about transactions
+  # that start matching afterwards.
+  def seed_notification_baseline
+    NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)
   end
 
   # Whether this rule's conditions currently match the given transaction.
@@ -158,7 +165,16 @@ class Rule < ApplicationRecord
     end
 
     def detect_matching_scope_change
-      @matching_scope_changed ||= will_save_change_to_effective_date? || conditions_changed?(conditions)
+      @reseed_notification_baseline = (will_save_change_to_effective_date? || conditions_changed?(conditions)) &&
+        actions.any? { |action| kept_email_action?(action) }
+    end
+
+    # An action created or switched to send_email_notification in the same save
+    # seeds the baseline from its own commit callback, so only an email action
+    # that stays as it was needs the rule to re-seed.
+    def kept_email_action?(action)
+      action.action_type == "send_email_notification" && action.persisted? &&
+        !action.marked_for_destruction? && !action.will_save_change_to_action_type?
     end
 
     def conditions_changed?(association)
@@ -171,11 +187,9 @@ class Rule < ApplicationRecord
     end
 
     def reseed_notification_baseline
-      @matching_scope_changed = false
-      return unless actions.where(action_type: "send_email_notification").exists?
-
+      @reseed_notification_baseline = false
       conditions.reset
-      NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)
+      seed_notification_baseline
     end
 
     def min_actions

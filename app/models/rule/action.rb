@@ -81,9 +81,6 @@ class Rule::Action < ApplicationRecord
     def seed_notification_baseline
       return unless action_type == "send_email_notification"
 
-      NotificationDelivery.record_for(
-        rule_id: rule_id,
-        transaction_ids: rule.matching_transaction_ids
-      )
+      rule.seed_notification_baseline
     end
 end
