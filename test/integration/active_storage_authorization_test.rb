@@ -420,6 +420,28 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "every attachment is either access-checked or intentionally public" do
+    # Logos and avatars are not sensitive; archived exports are fetched by download token.
+    public_attachments = %w[User#profile_image ArchivedExport#export_file]
+
+    Rails.application.eager_load!
+    unchecked = ActiveRecord::Base.descendants.reject(&:abstract_class?).flat_map do |model|
+      # Only the app's own models; framework records (Active Storage, Action Text, ...) are not served here.
+      next [] unless Object.const_source_location(model.name)&.first.to_s.start_with?(Rails.root.join("app").to_s)
+
+      model.reflect_on_all_attachments.filter_map do |reflection|
+        record_type = model.base_class.name
+        next if record_type.in?(ActiveStorageAttachmentAuthorization::PROTECTED_RECORD_TYPES)
+        next if reflection.name == :logo
+
+        attachment = "#{record_type}##{reflection.name}"
+        attachment unless attachment.in?(public_attachments)
+      end
+    end
+
+    assert_empty unchecked.uniq, "Add new attachment owners to PROTECTED_RECORD_TYPES or mark them public here"
+  end
+
   private
 
     def attach_family_export(family)
