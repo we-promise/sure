@@ -1781,4 +1781,54 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "AT611904300234573201", booked_entry.transaction.counterparty_iban # pipelock:ignore IBAN
     assert_equal "OTHER-ACCOUNT-1", booked_entry.transaction.counterparty_account_id
   end
+
+  test "never stores counterparty keys in the plaintext extra column" do
+    counterparty = { counterparty_iban: "AT611904300234573201", counterparty_account_id: "OTHER-ACCOUNT-1" } # pipelock:ignore IBAN
+
+    entry = @adapter.import_transaction(
+      external_id: "eb_counterparty_not_in_extra",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }.merge(counterparty)
+    )
+    assert_counterparty_absent_from_extra entry
+
+    # Unprotected update (deep-merges extra) ...
+    entry = @adapter.import_transaction(
+      external_id: "eb_counterparty_not_in_extra",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "fx_rate" => "1.05" }.merge(counterparty.stringify_keys)
+    )
+    assert_equal "1.05", entry.reload.transaction.extra["fx_rate"]
+    assert_counterparty_absent_from_extra entry
+
+    # ... and the protected path, which rewrites extra to clear the pending flag.
+    entry.mark_user_modified!
+    entry = @adapter.import_transaction(
+      external_id: "eb_counterparty_not_in_extra",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: counterparty
+    )
+    assert_counterparty_absent_from_extra entry
+    assert_equal "AT611904300234573201", entry.reload.transaction.counterparty_iban # pipelock:ignore IBAN
+  end
+
+  private
+    def assert_counterparty_absent_from_extra(entry)
+      extra_json = entry.reload.transaction.extra.to_json
+      assert_not_includes extra_json, "counterparty_iban"
+      assert_not_includes extra_json, "counterparty_account_id"
+      assert_not_includes extra_json, "AT611904300234573201" # pipelock:ignore IBAN
+    end
 end
