@@ -786,6 +786,51 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
                "an unpriced journal is a valuation gap, not a missing exchange rate"
   end
 
+  # `trades.qty` is nullable in the schema; only Trade's presence validation
+  # keeps it filled, and an import or a console edit can bypass that. With no
+  # quantity the journal has no value, exactly as with no price: valued at
+  # nothing, the arriving position would read as a gain again. It suppresses
+  # the day, the same rule as an unpriced journal.
+  test "a journal with no quantity suppresses the day rather than valuing it at nothing" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    journal = security_journal(account: @account, date: @day_two, qty: 5, price: 100)
+
+    assert_not daily_returns.rows.last.suppressed, "priced and quantified, the day is computable"
+
+    journal.trade.update_columns(qty: nil)
+
+    assert daily_returns.rows.last.suppressed,
+           "a journal with no quantity is a journal that could not be valued"
+  end
+
+  # One journal that cannot be valued suppresses the whole day, even beside
+  # others that can. The return is the scope's, not a security's: the unvalued
+  # position's value is in the close and missing from the denominator, so no
+  # figure computed for that day is the portfolio's return.
+  test "one unpriced journal suppresses a day that also carries a priced one" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 2_000, market_flow: 1_000
+    security_journal account: @account, date: @day_two, qty: 5, price: 100
+
+    other = Security.create!(ticker: "OTH#{SecureRandom.hex(4)}", name: "Other Security")
+    @account.entries.create!(
+      name: "Journal", date: @day_two, amount: 0, currency: @account.currency,
+      entryable: Trade.new(security: other, qty: 5, price: 0, currency: @account.currency,
+                           investment_activity_label: "Transfer")
+    )
+
+    other_holding = @account.holdings.create!(security: other, date: @day_two, qty: 5, price: 100,
+                                              amount: 500, currency: @account.currency)
+
+    assert_not daily_returns.rows.last.suppressed, "both journals priced, the day is computable"
+
+    other_holding.update_columns(price: 0, amount: 0)
+
+    assert daily_returns.rows.last.suppressed,
+           "one journal valued at zero suppresses the day, whatever the others are worth"
+  end
+
   # `holdings` is unique on (account_id, security_id, date, CURRENCY), so one
   # security can carry several rows for one day and Balance::SyncCache sums them
   # all. A journal join without the currency matched every row and valued the
