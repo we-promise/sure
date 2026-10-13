@@ -119,8 +119,8 @@
               </li>
             <% end %>
           </ul>
-          <% if net_contributions_understated? %>
-            <p class="text-xs text-secondary" data-net-contributions-understated><%= t("UI.account.chart.net_contributions.understated") %></p>
+          <% if net_contributions_incomplete? %>
+            <p class="text-xs text-secondary" data-net-contributions-incomplete><%= t("UI.account.chart.net_contributions.incomplete") %></p>
           <% end %>
         </div>
       <% end %>

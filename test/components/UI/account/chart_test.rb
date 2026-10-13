@@ -331,7 +331,7 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal 2.7, last["difference"]["percent"], "as a percentage of net contributions"
     assert_selector "[data-net-contributions-legend]", text: "Net contributions"
     assert_selector "[data-net-contributions-legend]", text: "Total value"
-    refute_selector "[data-net-contributions-understated]"
+    refute_selector "[data-net-contributions-incomplete]"
   end
 
   test "net contributions are not drawn on the holdings, cash or gains views" do
@@ -359,14 +359,19 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     refute_selector "[data-net-contributions-legend]"
   end
 
-  test "the chart says when net contributions are understated" do
-    @account.stubs(:net_contributions_understated?).returns(true)
+  test "the chart says when net contributions are incomplete" do
+    @account.stubs(:net_contributions_incomplete?).returns(true)
     render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
-    assert_selector "[data-net-contributions-understated]", text: I18n.t("UI.account.chart.net_contributions.understated")
+    assert_selector "[data-net-contributions-incomplete]", text: I18n.t("UI.account.chart.net_contributions.incomplete")
+    # #383: an unvalued withdrawal leaves the line too high, so the note
+    # names no direction.
+    note = page.find("[data-net-contributions-incomplete]").text
+    assert_includes note, "incomplete"
+    refute_match(/understated|overstated/i, note)
 
-    @account.stubs(:net_contributions_understated?).returns(false)
+    @account.stubs(:net_contributions_incomplete?).returns(false)
     render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
-    refute_selector "[data-net-contributions-understated]"
+    refute_selector "[data-net-contributions-incomplete]"
   end
 
   private
