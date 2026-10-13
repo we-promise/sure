@@ -533,19 +533,6 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal [ 3000.0, 1000.0 ], [ counted, not_counted ]
   end
 
-  # The category median comes from category_stats, which has no kind filter,
-  # so a request to leave kinds out must fail rather than be ignored.
-  test "a category median refuses to leave kinds out, and still works without them" do
-    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
-    create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
-    income_statement = IncomeStatement.new(@family)
-
-    assert_raises(ArgumentError) do
-      income_statement.median_expense(category: @groceries_category, excluding_kinds: %w[investment_contribution])
-    end
-    assert_equal 1000.0, income_statement.median_expense(category: @groceries_category)
-  end
-
   test "a period bounds the months the median expense is taken over, and the default still takes them all" do
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
     create_transaction(account: @checking_account, amount: 1000, date: Date.new(2026, 2, 10))
@@ -573,6 +560,22 @@ class IncomeStatementTest < ActiveSupport::TestCase
     default = IncomeStatement.new(@family).median_expense(interval: "month")
 
     assert_equal [ 1000.0, 9000.0 ], [ bounded, default ]
+  end
+
+  # The category median comes from category_stats, which has no kind or
+  # period filter, so a request for either must fail rather than be ignored.
+  test "a category median refuses to leave kinds out or bound the period, and still works without them" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
+    income_statement = IncomeStatement.new(@family)
+
+    assert_raises(ArgumentError) do
+      income_statement.median_expense(category: @groceries_category, excluding_kinds: %w[investment_contribution])
+    end
+    assert_raises(ArgumentError) do
+      income_statement.median_expense(category: @groceries_category, period: Period.custom(start_date: Date.new(2025, 3, 1), end_date: Date.new(2026, 2, 28)))
+    end
+    assert_equal 1000.0, income_statement.median_expense(category: @groceries_category)
   end
 
   test "calculates median income correctly with known dataset" do
