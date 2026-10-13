@@ -1752,4 +1752,33 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_nil entry.transaction.counterparty_account_id
     assert_equal "1.05", entry.transaction.extra["fx_rate"]
   end
+
+  test "keeps a pending row's counterparty iban when the booked redelivery carries only an account id" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_pdng_iban_book_account_id",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true }, "counterparty_iban" => "AT611904300234573201", "counterparty_account_id" => nil } # pipelock:ignore IBAN
+    )
+    assert entry.transaction.pending?
+
+    booked_entry = @adapter.import_transaction(
+      external_id: "eb_pdng_iban_book_account_id",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => nil, "counterparty_account_id" => "OTHER-ACCOUNT-1" }
+    )
+
+    assert_equal entry.id, booked_entry.id
+    booked_entry.reload
+    assert_not booked_entry.transaction.pending?
+    assert_equal "AT611904300234573201", booked_entry.transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "OTHER-ACCOUNT-1", booked_entry.transaction.counterparty_account_id
+  end
 end
