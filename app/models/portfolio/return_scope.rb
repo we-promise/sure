@@ -29,11 +29,11 @@ class Portfolio::ReturnScope
   # are dropped there, so they are not counted here either -- an account with
   # two rows in the period and the second past its cut-off has one usable day,
   # and one day supports no return. The same bound ends the history every
-  # tracking check reads: a trade, valuation or transfer after the cut-off
-  # records a flow the series never sees. nil means no cut-off.
+  # tracking check reads: a trade or transfer after the cut-off records a flow
+  # the series never sees. nil means no cut-off.
   #
-  # `resolved` carries the four inputs when a caller has already fetched them
-  # for a set of accounts. Everything below still derives `kind` from those four
+  # `resolved` carries the three inputs when a caller has already fetched them
+  # for a set of accounts. Everything below still derives `kind` from those three
   # by the same rules, so the batch path cannot mean something different from
   # the lazy one -- it only skips the fetching. Built directly, the instance
   # queries for each input as before.
@@ -46,12 +46,11 @@ class Portfolio::ReturnScope
 
     @balance_days = resolved.fetch(:balance_days)
     @trades = resolved.fetch(:trades)
-    @valuations = resolved.fetch(:valuations)
     @external_transactions = resolved.fetch(:external_transactions)
   end
 
   # Eligibility for a set of accounts, keyed by account id, in a fixed number of
-  # round trips rather than up to four per account.
+  # round trips rather than up to three per account.
   #
   # Four, not three: loading the accounts, then the three resolution queries.
   # The load is part of the work, because the resolver hands back ReturnScope
@@ -85,7 +84,7 @@ class Portfolio::ReturnScope
       .transform_values(&:to_date)
 
     days = balance_days_by_account(records, period, cutoffs)
-    kinds = live_entry_kinds_by_account(records, period, cutoffs)
+    traded = trade_account_ids(records, period, cutoffs)
     external = external_transaction_account_ids(records, period, cutoffs)
 
     records.to_h do |account|
@@ -95,8 +94,7 @@ class Portfolio::ReturnScope
         # load-bearing case at both Performance call sites, where it means
         # "holds nothing here, so it neither contributes nor withholds".
         balance_days: days.fetch(account.id, 0),
-        trades: kinds.include?([ account.id, "Trade" ]),
-        valuations: kinds.include?([ account.id, "Valuation" ]),
+        trades: traded.include?(account.id),
         external_transactions: external.include?(account.id)
       }
 
@@ -125,11 +123,11 @@ class Portfolio::ReturnScope
   end
   private_class_method :balance_days_by_account
 
-  # trades? and valuations? read the same rows, so one query answers both.
-  # The cut-offs bind as the balance query binds them.
-  def self.live_entry_kinds_by_account(records, period, cutoffs)
+  # The accounts with a live trade, read as `trades?` reads them. The cut-offs
+  # bind as the balance query binds them.
+  def self.trade_account_ids(records, period, cutoffs)
     Entry
-      .where(account_id: records.map(&:id), entryable_type: %w[Trade Valuation])
+      .where(account_id: records.map(&:id), entryable_type: "Trade")
       .where("COALESCE(entries.excluded, false) = false")
       .where("entries.date <= ?", period.end_date)
       .where(
@@ -138,10 +136,10 @@ class Portfolio::ReturnScope
         cutoffs: cutoffs.transform_values(&:iso8601).to_json
       )
       .distinct
-      .pluck(:account_id, :entryable_type)
+      .pluck(:account_id)
       .to_set
   end
-  private_class_method :live_entry_kinds_by_account
+  private_class_method :trade_account_ids
 
   # One round trip, but one fragment per account: each account has to be its
   # OWN classifier scope, exactly as the instance builds it. Classifying the
@@ -189,10 +187,9 @@ class Portfolio::ReturnScope
         INSUFFICIENT
       elsif trades? || external_transactions?
         TRADE_TRACKED
-      elsif valuations?
-        VALUATION_TRACKED
       else
-        # Balances exist but nothing explains them. Treated as valuation-tracked:
+        # Balances exist but no trade or transfer explains them: valuation
+        # entries, or nothing at all. Treated as valuation-tracked either way:
         # the value change is real and reportable, the flows are not known.
         VALUATION_TRACKED
       end
@@ -279,10 +276,5 @@ class Portfolio::ReturnScope
         .joins(classifier.sql_joins)
         .where(Arel.sql("#{classifier.sql_case} IN ('external_inflow', 'external_outflow')"))
         .exists?
-    end
-
-    def valuations?
-      return @valuations if defined?(@valuations)
-      @valuations = live_entries_through_history_end.where(entryable_type: "Valuation").exists?
     end
 end
