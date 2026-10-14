@@ -1,6 +1,9 @@
 ---
 en:
   trades:
+    trade:
+      pending: Pending
+      quantity_change: "%{qty} %{ticker}"
     api_errors:
       activity_label_must_match_type: "investment_activity_label must be %{label} when type is %{type}"
       invalid_activity_label: Invalid investment activity label
