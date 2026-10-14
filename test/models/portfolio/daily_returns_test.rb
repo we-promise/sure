@@ -1025,6 +1025,24 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
   end
 
+  # The control: a journal priced on its own day is booked there, and the
+  # next day's price move is a real return. Carrying it as well would book the
+  # position a second time and erase that day's gain.
+  test "a journal priced on its own day is not carried to a later one" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_050, market_flow: 50
+    lay_balance account: @account, date: day_three, opening: 1_050, closing: 1_055, market_flow: 5
+    security_journal account: @account, date: @day_two, qty: 5, price: 10
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 11,
+                              amount: 55, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_equal BigDecimal("0"), third.external_flow
+    assert_equal BigDecimal("5"), third.market, "the next day's price move is a return"
+  end
+
   # The internal case. A position moved between two selected accounts on a day
   # with no price leaves the source at its value and lands in the destination
   # at zero, so the day read as a 2.5% loss; and on the destination's first
