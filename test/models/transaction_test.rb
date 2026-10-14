@@ -611,6 +611,17 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tags(:two).id ], transaction.reload.tag_ids
   end
 
+  # A blank and a malformed id both cast to nil, so deduping on the cast alone
+  # would keep the blank, drop the malformed id, and clear the tags.
+  test "a malformed tag id after a blank one still raises" do
+    transaction = transactions(:transfer_out)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+
+    assert_raises(ActiveRecord::RecordNotFound) { transaction.tag_ids = [ "", "not-a-uuid" ] }
+
+    assert_equal [ tags(:one).id ], transaction.reload.tag_ids
+  end
+
   test "a blank tag id is still ignored" do
     transaction = transactions(:transfer_out)
 
