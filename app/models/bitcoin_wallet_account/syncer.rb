@@ -4,6 +4,7 @@ class BitcoinWalletAccount::Syncer
   RETRYABLE_ERRORS = [ BitcoinWalletAccount::Snapshot::ChangedTip, BitcoinWalletAccount::Snapshot::IncompleteMempool,
     Provider::MempoolSpace::Error ].freeze
   MAX_READ_RETRIES = 2
+  MAX_LOCK_WAIT = 5.minutes
 
   # Use the injected explorer for tests or the configured history budget for
   # production. Source keys are never passed to the provider.
@@ -34,12 +35,15 @@ class BitcoinWalletAccount::Syncer
       key = Digest::SHA256.digest("bitcoin-wallet-sync:#{wallet.id}").unpack1("q>")
       held = connection.select_value("SELECT pg_try_advisory_lock(#{key})")
       unless held
-        queue_continuation(wait: 5.seconds) if @sync
+        if @sync
+          waits = @sync.sync_stats.to_h.fetch("lock_waits", 0).to_i
+          queue_continuation(lock_waits: waits + 1, wait: [ 5.seconds * 2**waits, MAX_LOCK_WAIT ].min)
+        end
         return
       end
 
       begin
-        perform_read
+        perform_read unless read_since_requested?
       ensure
         connection.select_value("SELECT pg_advisory_unlock(#{key})")
       end
@@ -110,6 +114,16 @@ class BitcoinWalletAccount::Syncer
       end
     end
 
+    # A reader that held the lock while this sync waited may already have
+    # published a complete read after this wait began; reading again only
+    # repeats it. Source edits set :discovering, so they always read.
+    def read_since_requested?
+      return false unless @sync && @sync.sync_stats.to_h.fetch("lock_waits", 0).to_i.positive?
+
+      wallet.reload
+      !wallet.status_discovering? && wallet.last_synced_at.present? && wallet.last_synced_at >= @sync.created_at
+    end
+
     # Transient reads are retried only inside a sync tree.
     def retry_pending?
       @sync.present? && read_attempt < MAX_READ_RETRIES
@@ -120,11 +134,11 @@ class BitcoinWalletAccount::Syncer
     end
 
     # Checkpoints and retries remain children so their parent cannot finish early.
-    def queue_continuation(read_attempt: 0, wait: 0.seconds)
+    def queue_continuation(read_attempt: 0, lock_waits: 0, wait: 0.seconds)
       return if @sync&.cancel_requested?
 
       if @sync
-        child = wallet.syncs.create!(parent: @sync, sync_stats: { read_attempt: read_attempt },
+        child = wallet.syncs.create!(parent: @sync, sync_stats: { read_attempt: read_attempt, lock_waits: lock_waits },
           window_start_date: @sync.window_start_date, window_end_date: @sync.window_end_date)
         SyncJob.set(wait: wait).perform_later(child)
       else

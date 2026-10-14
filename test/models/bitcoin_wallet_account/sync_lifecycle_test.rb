@@ -136,6 +136,30 @@ class BitcoinWalletAccount::SyncLifecycleTest < ActiveSupport::TestCase
     other&.close
   end
 
+  test "a sync waiting on another read backs off and reuses its result" do
+    config = ActiveRecord::Base.connection_pool.db_config.configuration_hash
+    key = Digest::SHA256.digest("bitcoin-wallet-sync:#{@wallet.id}").unpack1("q>")
+    other = PG.connect(dbname: config[:database], host: config[:host], port: config[:port],
+      user: config[:username] || config[:user], password: config[:password])
+    other.exec("SELECT pg_advisory_lock(#{key})")
+    parent = @wallet.syncs.create!
+    parent.perform
+    waiting = parent.children.find_by!(syncable: @wallet)
+    assert_equal 1, waiting.sync_stats.fetch("lock_waits")
+    waiting.perform
+    waiting = waiting.children.find_by!(syncable: @wallet)
+    assert_equal 2, waiting.sync_stats.fetch("lock_waits")
+    other.close
+    other = nil
+
+    @wallet.update!(last_synced_at: Time.current)
+    waiting.perform
+    assert_empty @provider.reads
+    assert parent.reload.completed?
+  ensure
+    other&.close
+  end
+
   test "cancellation stops a queued wallet read" do
     parent = @wallet.syncs.create!
     parent.request_cancel!
