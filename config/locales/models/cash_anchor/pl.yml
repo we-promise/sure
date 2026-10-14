@@ -1,0 +1,26 @@
+---
+pl:
+  valuations:
+    cash_anchor: Uzgodnienie salda gotówki
+  entries:
+    errors:
+      position_managed: Ta pozycja jest zarządzana przez dostawcę. Odłącz go przed zmianą jej ilości.
+  holdings:
+    quantity_reconciliation: Uzgodnienie ilości w pozycji
+    remap_security:
+      managed_position: Odłącz dostawcę przed zmianą śledzonego papieru wartościowego Bitcoin.
+  activerecord:
+    errors:
+      models:
+        trade:
+          attributes:
+            security:
+              managed_position: jest zarządzany przez dostawcę. Odłącz go przed zmianą tej pozycji.
+        bitcoin_wallet_account:
+          attributes:
+            security:
+              provider_managed: ma już dostawcę
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: wymaga skonfigurowanego szyfrowania Active Record

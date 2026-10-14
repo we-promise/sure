@@ -1,0 +1,26 @@
+---
+ca:
+  valuations:
+    cash_anchor: Conciliació del saldo d'efectiu
+  entries:
+    errors:
+      position_managed: Un proveïdor gestiona aquesta posició. Desconnecta'l abans de canviar-ne la quantitat.
+  holdings:
+    quantity_reconciliation: Conciliació de la quantitat de la posició
+    remap_security:
+      managed_position: Desconnecta el proveïdor abans de canviar el valor de Bitcoin seguit.
+  activerecord:
+    errors:
+      models:
+        trade:
+          attributes:
+            security:
+              managed_position: està gestionat per un proveïdor. Desconnecta'l abans de canviar aquesta posició.
+        bitcoin_wallet_account:
+          attributes:
+            security:
+              provider_managed: ja té un proveïdor
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: requereix tenir configurat el xifratge d'Active Record

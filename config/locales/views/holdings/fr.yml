@@ -98,6 +98,8 @@ fr:
       ticker_label: Ticker
       total_return_label: Rendement total
       trade_history_entry: "%{qty} actions de %{security} à %{price}"
+      trade_history_transfer: "%{name} : %{qty}"
+      managed_position_note: Cette position est mise à jour automatiquement par un fournisseur connecté.
       truncated_history_warning: L'historique des cours n'est disponible qu'à partir
         du %{date}. Les dates antérieures ne disposent d'aucune donnée du fournisseur
         sélectionné — cela peut se produire lorsque l'actif a été coté après la date

@@ -1,0 +1,26 @@
+---
+ru:
+  valuations:
+    cash_anchor: Сверка остатка денежных средств
+  entries:
+    errors:
+      position_managed: Эта позиция управляется поставщиком. Отключите его, прежде чем изменять её количество.
+  holdings:
+    quantity_reconciliation: Сверка количества в позиции
+    remap_security:
+      managed_position: Отключите поставщика, прежде чем менять отслеживаемую ценную бумагу Bitcoin.
+  activerecord:
+    errors:
+      models:
+        trade:
+          attributes:
+            security:
+              managed_position: управляется поставщиком. Отключите его, прежде чем изменять эту позицию.
+        bitcoin_wallet_account:
+          attributes:
+            security:
+              provider_managed: уже имеет поставщика
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: требует настроенного шифрования Active Record

@@ -1,0 +1,26 @@
+---
+tr:
+  valuations:
+    cash_anchor: Nakit bakiye mutabakatı
+  entries:
+    errors:
+      position_managed: Bu pozisyon bir sağlayıcı tarafından yönetiliyor. Miktarını değiştirmeden önce sağlayıcının bağlantısını kesin.
+  holdings:
+    quantity_reconciliation: Pozisyon miktarı mutabakatı
+    remap_security:
+      managed_position: Takip edilen Bitcoin menkul kıymetini değiştirmeden önce sağlayıcının bağlantısını kesin.
+  activerecord:
+    errors:
+      models:
+        trade:
+          attributes:
+            security:
+              managed_position: bir sağlayıcı tarafından yönetiliyor. Bu pozisyonu değiştirmeden önce sağlayıcının bağlantısını kesin.
+        bitcoin_wallet_account:
+          attributes:
+            security:
+              provider_managed: zaten bir sağlayıcıya bağlı
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: yapılandırılmış Active Record şifrelemesi gerektirir

@@ -1,0 +1,56 @@
+---
+ca:
+  bitcoin_wallets:
+    title: Cartera de Bitcoin
+    preview: Experimental
+    security: Posició de Bitcoin existent
+    source_kind: Font
+    manual_address: Adreça pública
+    bip84: Compte Native SegWit (xpub / zpub)
+    receive_address: Adreça de recepció coneguda
+    public_key: Clau pública estesa (només per a Native SegWit)
+    gap_limit: Límit d'adreces consecutives sense ús
+    source_hint: "Fes servir una xpub o zpub Native SegWit de nivell de compte i una adreça de recepció del mateix compte. Cada clau cobreix un sol compte de Bitcoin; afegeix els altres comptes per separat. Les adreces es deriven localment; l'explorador veu les adreces sol·licitades."
+    read_only: "Només lectura: Sure llegeix els saldos i no pot gastar bitcoins. No introdueixis mai una frase de recuperació ni una clau privada. Es conserven l'historial existent i els altres actius."
+    discover: Descobreix les adreces
+    discovering: "S'estan llegint totes les fonts. El compte conserva l'últim saldo complet fins que acabi el descobriment."
+    failed: "No s'ha pogut llegir completament la cartera. Es conserva l'últim saldo complet; torna a sincronitzar o comprova la clau i el límit d'adreces sense ús."
+    address_mismatch: "L'adreça de recepció no correspon a la clau d'aquest compte dins del límit seleccionat. Comprova la clau del compte, l'adreça i el límit d'adreces sense ús."
+    address_conflict: "Un altre compte connectat d'aquesta llar ja segueix una de les adreces. Desconnecta primer la connexió que se superposa."
+    missing_price: "La quantitat de Bitcoin està actualitzada, però no se n'ha pogut establir el valor de mercat. El compte conserva la valoració anterior. Comprova els proveïdors de preus i de tipus de canvi."
+    pricing_warning: "No hi ha cap proveïdor de dades de mercat de criptomonedes activat. Encara es poden fer servir els preus manuals coneguts; si no, el compte conserva la valoració anterior fins que hi hagi una cotització disponible."
+    exchange_rate_warning: "No hi ha cap proveïdor de tipus de canvi configurat per a %{currency}. Quan la conversió no està disponible, el compte conserva la valoració anterior. Configura un proveïdor de tipus de canvi a la configuració d'autoallotjament."
+    stale: "Aquesta lectura de la cartera té més de dues hores. Sincronitza la cartera per tornar-la a llegir."
+    quantity: "%{quantity} BTC"
+    confirmation: "Confirmat: %{confirmed} BTC · Sense confirmar: %{pending} BTC"
+    discovery_progress:
+      one: "S'ha comprovat %{count} adreça derivada"
+      other: "S'han comprovat %{count} adreces derivades"
+    showing_addresses: "Es mostren %{shown} de %{total} adreces seguides."
+    address_count:
+      one: "Se segueix %{count} adreça única"
+      other: "Se segueixen %{count} adreces úniques"
+    last_synced: "Última lectura completa: %{time}"
+    reconcile: "BTC existents: %{previous}. BTC de la cartera: %{current}. En connectar, se substitueix la quantitat de BTC; aquest saldo no s'afegeix de nou ni es reescriuen les transaccions anteriors."
+    connect: Connecta la posició de Bitcoin
+    connected: S'ha connectat la cartera de Bitcoin.
+    reconciliation: Conciliació de la quantitat de Bitcoin
+    not_ready: Completa el descobriment de la cartera abans de connectar-la.
+    history_truncated: No s'ha retornat part de l'historial de transferències. Això no canvia el saldo actual observat.
+    addresses: Adreces seguides
+    add_source: Afegeix una altra font
+    remove_source: Elimina la font
+    remove_source_confirm: Vols deixar de seguir aquesta font? Les fonts restants es tornaran a conciliar sense eliminar l'historial del compte.
+    sync: Sincronitza la cartera
+    disconnect: Desconnecta Bitcoin
+    disconnect_confirm: Vols deixar d'actualitzar Bitcoin automàticament? El compte, les posicions actuals i l'historial es mantindran.
+    disconnected: S'ha desconnectat la cartera de Bitcoin; el compte i l'historial es mantenen.
+    cancel_setup: Cancel·la la configuració
+    cancel_setup_confirm: Vols deixar de configurar aquesta cartera? El compte no canvia.
+    setup_cancelled: S'ha cancel·lat la configuració de la cartera de Bitcoin.
+    source_removed: S'ha eliminat la font. Les fonts restants s'estan tornant a llegir.
+    manage: Gestiona la cartera de Bitcoin
+    connect_action: Connecta una cartera de Bitcoin
+    movements:
+      received: "Recepció de %{quantity} BTC"
+      sent: "Enviament de %{quantity} BTC"

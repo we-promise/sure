@@ -96,6 +96,8 @@ ca:
       ticker_label: Símbol
       total_return_label: Rendiment total
       trade_history_entry: "%{qty} accions de %{security} a %{price}"
+      trade_history_transfer: "%{name}: %{qty}"
+      managed_position_note: Un proveïdor connectat actualitza automàticament aquesta posició.
       truncated_history_warning: L'historial de preus només està disponible a partir
         del %{date}. Les dates anteriors no tenen dades del proveïdor seleccionat
         — això pot passar quan l'actiu es va llistar després de la data de l'operació,

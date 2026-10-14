@@ -1,0 +1,56 @@
+---
+tr:
+  bitcoin_wallets:
+    title: Bitcoin cüzdanı
+    preview: Önizleme
+    security: Mevcut Bitcoin pozisyonu
+    source_kind: Kaynak
+    manual_address: Herkese açık adres
+    bip84: Native SegWit hesabı (xpub / zpub)
+    receive_address: Bilinen alma adresi
+    public_key: Genişletilmiş açık anahtar (yalnızca Native SegWit için)
+    gap_limit: Kullanılmayan adres boşluk limiti
+    source_hint: "Hesap düzeyinde bir Native SegWit xpub veya zpub anahtarı ve aynı hesaba ait bir alma adresi kullanın. Her anahtar tek bir Bitcoin hesabını kapsar; diğer hesapları ayrıca ekleyin. Adresler yerel olarak türetilir; blok gezgini sorgulanan adresleri görür."
+    read_only: "Yalnızca izleme: Sure bakiyeleri okur ve Bitcoin harcayamaz. Asla kurtarma ifadesi (seed phrase) veya özel anahtar girmeyin. Mevcut geçmiş ve diğer varlıklar korunur."
+    discover: Adresleri bul
+    discovering: "Tüm kaynaklar okunuyor. Keşif tamamlanana kadar hesabınız son eksiksiz bakiyesini korur."
+    failed: "Cüzdan tam olarak okunamadı. Son eksiksiz bakiye korunuyor; senkronizasyonu yeniden deneyin ya da anahtarı ve boşluk limitini kontrol edin."
+    address_mismatch: "Alma adresi, seçilen boşluk limiti içinde bu hesap anahtarıyla eşleşmiyor. Hesap anahtarını, adresi ve boşluk limitini kontrol edin."
+    address_conflict: "Adreslerden biri bu hanedeki başka bir bağlı hesap tarafından zaten takip ediliyor. Önce çakışan bağlantıyı kesin."
+    missing_price: "Bitcoin miktarı güncel, ancak piyasa değeri belirlenemedi. Hesap önceki değerlemesini koruyor. Fiyat ve döviz kuru sağlayıcılarını kontrol edin."
+    pricing_warning: "Etkin bir kripto piyasa verisi sağlayıcısı yok. Bilinen manuel fiyatlar yine de kullanılabilir; aksi takdirde hesap, bir fiyat bilgisi gelene kadar önceki değerlemesini korur."
+    exchange_rate_warning: "%{currency} için yapılandırılmış bir döviz kuru sağlayıcısı yok. Dönüştürme yapılamadığında hesap önceki değerlemesini korur. Kendi barındırma ayarlarından bir döviz kuru sağlayıcısı yapılandırın."
+    stale: "Bu cüzdan verisi iki saatten daha eski. Yeniden okumak için cüzdanı senkronize edin."
+    quantity: "%{quantity} BTC"
+    confirmation: "Onaylanan: %{confirmed} BTC · Onaylanmayan: %{pending} BTC"
+    discovery_progress:
+      one: "%{count} türetilmiş adres kontrol edildi"
+      other: "%{count} türetilmiş adres kontrol edildi"
+    showing_addresses: "Takip edilen %{total} adresten %{shown} tanesi gösteriliyor."
+    address_count:
+      one: "%{count} benzersiz adres takip ediliyor"
+      other: "%{count} benzersiz adres takip ediliyor"
+    last_synced: "Son eksiksiz okuma: %{time}"
+    reconcile: "Mevcut BTC: %{previous}. Cüzdandaki BTC: %{current}. Bağlandığında BTC miktarı cüzdandakiyle değiştirilir; bu bakiye tekrar eklenmez ve geçmiş işlemler yeniden yazılmaz."
+    connect: Bitcoin pozisyonunu bağla
+    connected: Bitcoin cüzdanı bağlandı.
+    reconciliation: Bitcoin miktarı mutabakatı
+    not_ready: Bağlamadan önce cüzdan keşfini tamamlayın.
+    history_truncated: Transfer geçmişinin bir kısmı alınamadı. Bu, gözlemlenen güncel bakiyeyi değiştirmez.
+    addresses: Takip edilen adresler
+    add_source: Başka bir kaynak ekle
+    remove_source: Kaynağı kaldır
+    remove_source_confirm: Bu kaynağın takibi durdurulsun mu? Kalan kaynaklar, hesap geçmişi silinmeden yeniden mutabakata alınır.
+    sync: Cüzdanı senkronize et
+    disconnect: Bitcoin bağlantısını kes
+    disconnect_confirm: Bitcoin'in otomatik güncellenmesi durdurulsun mu? Hesap, mevcut pozisyonlar ve geçmiş korunur.
+    disconnected: Bitcoin cüzdanının bağlantısı kesildi; hesap ve geçmiş korunuyor.
+    cancel_setup: Kurulumu iptal et
+    cancel_setup_confirm: Bu cüzdanın kurulumu durdurulsun mu? Hesap değiştirilmez.
+    setup_cancelled: Bitcoin cüzdanı kurulumu iptal edildi.
+    source_removed: Kaynak kaldırıldı. Kalan kaynaklar yeniden okunuyor.
+    manage: Bitcoin cüzdanını yönet
+    connect_action: Bitcoin cüzdanı bağla
+    movements:
+      received: "%{quantity} BTC alındı"
+      sent: "%{quantity} BTC gönderildi"

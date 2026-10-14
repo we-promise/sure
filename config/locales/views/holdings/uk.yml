@@ -89,6 +89,8 @@ uk:
       reset_confirm_body: "Це змінить цінний папір з %{current} назад на %{original} і перемістить усі пов'язані угоди."
       ticker_label: "Тикер"
       trade_history_entry: "%{qty} акцій %{security} за %{price}"
+      trade_history_transfer: "%{name}: %{qty}"
+      managed_position_note: Ця позиція автоматично оновлюється під'єднаним постачальником.
       total_return_label: "Загальна дохідність"
       unknown: "Невідомо"
       cost_basis_locked_label: "Базова вартість заблокована"

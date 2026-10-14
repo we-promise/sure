@@ -1,6 +1,9 @@
 ---
 fr:
   trades:
+    trade:
+      pending: En attente
+      quantity_change: "%{qty} %{ticker}"
     form:
       account: Compte de transfert (facultatif)
       account_prompt: Rechercher un compte

@@ -1,0 +1,26 @@
+---
+uk:
+  valuations:
+    cash_anchor: Звірка залишку коштів
+  entries:
+    errors:
+      position_managed: Цією позицією керує постачальник. Від'єднайте його, перш ніж змінювати її кількість.
+  holdings:
+    quantity_reconciliation: Звірка кількості в позиції
+    remap_security:
+      managed_position: Від'єднайте постачальника, перш ніж змінювати відстежуваний цінний папір Bitcoin.
+  activerecord:
+    errors:
+      models:
+        trade:
+          attributes:
+            security:
+              managed_position: керується постачальником. Від'єднайте його, перш ніж змінювати цю позицію.
+        bitcoin_wallet_account:
+          attributes:
+            security:
+              provider_managed: вже має постачальника
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: потребує налаштованого шифрування Active Record

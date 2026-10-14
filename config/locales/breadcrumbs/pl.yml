@@ -11,6 +11,7 @@ pl:
     appearances: Wygląd
     bank_sync: Synchronizacja z bankiem
     binance_items: Binance
+    bitcoin_wallets: Portfel Bitcoin
     brex_items: Brex
     budget_categories: Kategorie budżetu
     budgets: Budżety

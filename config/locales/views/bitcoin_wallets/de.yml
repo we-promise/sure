@@ -1,0 +1,56 @@
+---
+de:
+  bitcoin_wallets:
+    title: Bitcoin-Wallet
+    preview: Vorschau
+    security: Bestehende Bitcoin-Position
+    source_kind: Quelle
+    manual_address: Öffentliche Adresse
+    bip84: Native-SegWit-Konto (xpub / zpub)
+    receive_address: Bekannte Empfangsadresse
+    public_key: Erweiterter öffentlicher Schlüssel (nur für Native SegWit)
+    gap_limit: Gap-Limit für ungenutzte Adressen
+    source_hint: "Verwende einen Native-SegWit-xpub oder -zpub auf Kontoebene und eine Empfangsadresse aus demselben Konto. Jeder Schlüssel deckt ein Bitcoin-Konto ab; weitere Konten fügst du separat hinzu. Die Adressen werden lokal abgeleitet; der Explorer sieht die abgefragten Adressen."
+    read_only: "Nur Lesezugriff: Sure liest Guthaben und kann keine Bitcoin ausgeben. Gib niemals eine Seed-Phrase oder einen Private Key ein. Bestehender Verlauf und andere Vermögenswerte bleiben erhalten."
+    discover: Adressen ermitteln
+    discovering: "Alle Quellen werden vollständig gelesen. Bis die Ermittlung abgeschlossen ist, behält dein Konto das letzte vollständige Guthaben."
+    failed: "Die Wallet konnte nicht vollständig gelesen werden. Das letzte vollständige Guthaben bleibt erhalten; synchronisiere erneut oder prüfe Schlüssel und Gap-Limit."
+    address_mismatch: "Die Empfangsadresse passt innerhalb des gewählten Gap-Limits nicht zu diesem Kontoschlüssel. Prüfe Kontoschlüssel, Adresse und Gap-Limit."
+    address_conflict: "Eine Adresse wird bereits von einem anderen verbundenen Konto in diesem Haushalt verfolgt. Trenne zuerst die überschneidende Verbindung."
+    missing_price: "Die Bitcoin-Menge ist aktuell, aber ihr Marktwert konnte nicht ermittelt werden. Das Konto behält seine vorherige Bewertung. Prüfe die Preis- und Wechselkursanbieter."
+    pricing_warning: "Es ist kein Marktdatenanbieter für Krypto aktiviert. Bekannte manuelle Preise können weiterhin verwendet werden; andernfalls behält das Konto seine vorherige Bewertung, bis ein Kurs verfügbar ist."
+    exchange_rate_warning: "Für %{currency} ist kein Wechselkursanbieter eingerichtet. Ist keine Umrechnung möglich, behält das Konto seine vorherige Bewertung. Richte in den Self-Hosting-Einstellungen einen Wechselkursanbieter ein."
+    stale: "Diese Wallet wurde vor mehr als zwei Stunden gelesen. Synchronisiere die Wallet, um sie erneut zu lesen."
+    quantity: "%{quantity} BTC"
+    confirmation: "Bestätigt: %{confirmed} BTC · Unbestätigt: %{pending} BTC"
+    discovery_progress:
+      one: 1 abgeleitete Adresse geprüft
+      other: "%{count} abgeleitete Adressen geprüft"
+    showing_addresses: "%{shown} von %{total} verfolgten Adressen werden angezeigt."
+    address_count:
+      one: 1 eindeutige Adresse wird verfolgt
+      other: "%{count} eindeutige Adressen werden verfolgt"
+    last_synced: "Letzter vollständiger Abruf: %{time}"
+    reconcile: "Bisheriger BTC-Bestand: %{previous}. BTC in der Wallet: %{current}. Beim Verbinden wird die BTC-Menge ersetzt; dieses Guthaben wird nicht erneut hinzugefügt, und frühere Transaktionen bleiben unverändert."
+    connect: Bitcoin-Position verbinden
+    connected: Bitcoin-Wallet verbunden.
+    reconciliation: Abgleich der Bitcoin-Menge
+    not_ready: Schließ die Adressermittlung der Wallet ab, bevor du sie verbindest.
+    history_truncated: Ein Teil des Übertragungsverlaufs wurde nicht geliefert. Das beobachtete aktuelle Guthaben ändert sich dadurch nicht.
+    addresses: Verfolgte Adressen
+    add_source: Weitere Quelle hinzufügen
+    remove_source: Quelle entfernen
+    remove_source_confirm: Diese Quelle nicht mehr verfolgen? Die übrigen Quellen werden neu abgeglichen, ohne den Kontoverlauf zu löschen.
+    sync: Wallet synchronisieren
+    disconnect: Bitcoin trennen
+    disconnect_confirm: Bitcoin nicht mehr automatisch aktualisieren? Konto, aktuelle Positionen und Verlauf bleiben erhalten.
+    disconnected: Bitcoin-Wallet getrennt; Konto und Verlauf bleiben erhalten.
+    cancel_setup: Einrichtung abbrechen
+    cancel_setup_confirm: Einrichtung dieser Wallet abbrechen? Das Konto wird nicht geändert.
+    setup_cancelled: Einrichtung der Bitcoin-Wallet abgebrochen.
+    source_removed: Quelle entfernt. Die übrigen Quellen werden erneut gelesen.
+    manage: Bitcoin-Wallet verwalten
+    connect_action: Bitcoin-Wallet verbinden
+    movements:
+      received: "%{quantity} BTC empfangen"
+      sent: "%{quantity} BTC gesendet"

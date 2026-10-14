@@ -1,6 +1,9 @@
 ---
 de:
   trades:
+    trade:
+      pending: Ausstehend
+      quantity_change: "%{qty} %{ticker}"
     form:
       account: Überweisungskonto (optional)
       account_prompt: Konto suchen
