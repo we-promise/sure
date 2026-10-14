@@ -136,6 +136,27 @@ class Trade::SaleLimitTest < ActiveSupport::TestCase
     assert_not Trade::SaleLimit.new(build_sale(qty: 4, date: 1.day.from_now.to_date)).validate
   end
 
+  # A trade dated after an announced split is written in post-split units.
+  test "a future-dated reverse split converts the trades after it" do
+    create_trade(@security, account: @account, qty: 100, date: 5.days.ago.to_date, price: 10)
+    Security::Split.create!(security: @security, ex_date: 3.days.from_now.to_date, numerator: 1, denominator: 10, source: "manual")
+    create_trade(@security, account: @account, qty: -5, date: 4.days.from_now.to_date, price: 100)
+
+    # 5 after the split is 50 before it, so 50 of the 100 are left to sell.
+    assert Trade::SaleLimit.new(build_sale(qty: 50, date: 1.day.from_now.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: 51, date: 1.day.from_now.to_date)).validate
+  end
+
+  test "a future-dated forward split converts the trades after it" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    Security::Split.create!(security: @security, ex_date: 3.days.from_now.to_date, numerator: 2, denominator: 1, source: "manual")
+    create_trade(@security, account: @account, qty: -10, date: 4.days.from_now.to_date, price: 50)
+
+    # 20 after the split minus 10 leaves 10, which is 5 before it.
+    assert Trade::SaleLimit.new(build_sale(qty: 5, date: 1.day.from_now.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: 6, date: 1.day.from_now.to_date)).validate
+  end
+
   test "save! locks the account for a sale and raises when refused" do
     create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
     @account.expects(:lock!).once

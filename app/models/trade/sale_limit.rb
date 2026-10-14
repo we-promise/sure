@@ -2,9 +2,11 @@
 #
 # A sale on day D removes units from D onward, so it is allowed only if the
 # position without it covers the sale on every day from D through today, or
-# through the last future-dated trade (a split after D scales both sides). That way a back-dated sale cannot push a
-# later day below zero either. The position comes from the calculator the
-# account sync uses, so splits count the way they do on the holdings tab.
+# through the last future-dated trade (a split after D scales both sides,
+# including one announced for a future date). That way a back-dated sale
+# cannot push a later day below zero either. The position comes from the
+# calculator the account sync uses, so splits count the way they do on the
+# holdings tab.
 #
 # Linked accounts follow the same rule, but there the provider's holdings are
 # the truth from today backwards: a sale recorded by hand only raises the days
@@ -94,28 +96,34 @@ class Trade::SaleLimit
     end
 
     # [date, units on the sale date] for the day that leaves the least room,
-    # from the sale date on. A later day's position is divided by the splits
-    # since the sale date, so it is compared in the same units as the sale.
+    # from the sale date on. Every quantity is converted into units of the
+    # sale date, so a split in between scales it the way the holdings do.
     # Days before the first holding count as zero. Holdings stop at today, so
     # days after it add the account's other future-dated trades to today's
     # position: two sales dated tomorrow cannot both count the same units.
     def limiting_day
       @limiting_day ||= begin
-        today = Date.current
-        last_day = [ entry.date, today, future_changes.keys.max ].compact.max
-        factor = Rational(1)
-
-        entry.date.upto(last_day).map do |date|
-          factor *= split_ratios[date] if date > entry.date && split_ratios.key?(date)
-          [ date, quantity_on(date) / factor ]
-        end.min_by(&:last)
+        last_day = [ entry.date, Date.current, future_changes.keys.max ].compact.max
+        entry.date.upto(last_day).map { |date| [ date, quantity_on(date) ] }.min_by(&:last)
       end
     end
 
+    # The position on a day, in units of the sale date. After today, each
+    # future-dated trade is converted on its own date, since a split announced
+    # for a later day changes the units that trade is written in.
     def quantity_on(date)
-      return quantities.fetch(date, 0) if date <= Date.current
+      today = Date.current
+      return in_sale_units(quantities.fetch(date, 0), date) if date <= today
 
-      quantities.fetch(Date.current, 0) + future_changes.sum { |day, qty| day <= date ? qty : 0 }
+      in_sale_units(quantities.fetch(today, 0), today) +
+        future_changes.sum { |day, qty| day <= date ? in_sale_units(qty, day) : 0 }
+    end
+
+    # A quantity written in units of `date`, expressed in units of the sale date.
+    def in_sale_units(qty, date)
+      from, to = [ entry.date, date ].minmax
+      factor = split_ratios.select { |day, _| day > from && day <= to }.values.reduce(Rational(1), :*)
+      date >= entry.date ? qty / factor : qty * factor
     end
 
     # Net units of this security that other trades dated after today add or remove, by day.
@@ -130,7 +138,7 @@ class Trade::SaleLimit
     end
 
     def split_ratios
-      @split_ratios ||= security.splits.where(ex_date: ..Date.current).to_h { |split| [ split.ex_date, split.ratio ] }
+      @split_ratios ||= security.splits.to_h { |split| [ split.ex_date, split.ratio ] }
     end
 
     def quantities
