@@ -178,6 +178,9 @@ en:
         basis:
           balance: Counts what the accounts are worth today
           contributions: Counts only what you have put in
+        basis_at_completion:
+          balance: Counted what the accounts were worth when the goal was completed
+          contributions: Counted only what you had put in when the goal was completed
         aria_label: "Goal %{percent}% complete. %{amount} of %{target} saved."
         aria_label_with_used: "Goal %{percent}% complete. %{amount} of %{target}, including %{used} already used."
       projection:

@@ -371,6 +371,36 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, I18n.t("goals.show.ring.basis.balance")
   end
 
+  # A completed goal shows its frozen snapshot, so its caption must not say
+  # the figure is what the accounts are worth today.
+  test "a completed goal's basis caption describes the completion snapshot" do
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis.balance")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis_at_completion.balance")
+
+    @goal.complete!
+    assert @goal.reload.completed_amount.present?
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis_at_completion.balance")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis.balance")
+
+    @goal.update_columns(progress_basis: "contributions")
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis_at_completion.contributions")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis.contributions")
+  end
+
+  # `archive` accepts an active goal, which then has no snapshot and keeps the
+  # live figure, so it keeps the live wording too.
+  test "an archived goal that never completed keeps the live basis caption" do
+    @goal.archive!
+    assert_nil @goal.reload.completed_amount
+
+    get goal_url(@goal)
+    assert_includes response.body, I18n.t("goals.show.ring.basis.balance")
+    assert_not_includes response.body, I18n.t("goals.show.ring.basis_at_completion.balance")
+  end
+
   test "update with empty account_ids re-renders with error" do
     patch goal_url(@goal), params: { goal: { account_ids: [ "" ] } }
     assert_response :unprocessable_entity
