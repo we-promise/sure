@@ -188,4 +188,85 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
     assert result[:success]
     assert_nil @enable_banking_account.raw_transactions_payload
   end
+
+  test "fetch_and_store_transactions tags unidentified hold with BOOK status as pending when include_pending is true" do
+    @importer.stubs(:include_pending?).returns(true)
+
+    hold_tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: "2026-08-01",
+      transaction_amount: { amount: "26.57", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "5168XXXXXXXX1234" ],
+      status: "BOOK"
+    }
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ hold_tx ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG")).returns([])
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+    stored = @enable_banking_account.raw_transactions_payload
+    assert_equal 1, stored.size
+    assert_equal true, stored.first.with_indifferent_access[:_pending]
+  end
+
+  test "fetch_and_store_transactions filters out unidentified hold with BOOK status when include_pending is false" do
+    @importer.stubs(:include_pending?).returns(false)
+
+    hold_tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: "2026-08-01",
+      transaction_amount: { amount: "26.57", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "5168XXXXXXXX1234" ],
+      status: "BOOK"
+    }
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ hold_tx ])
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+    assert_nil @enable_banking_account.raw_transactions_payload
+  end
+
+  test "fetch_and_store_transactions prunes cached unidentified holds from existing transactions when include_pending is false" do
+    @importer.stubs(:include_pending?).returns(false)
+
+    cached_hold = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: "2026-08-01",
+      transaction_amount: { amount: "26.57", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "5168XXXXXXXX1234" ],
+      status: "BOOK"
+    }
+    cached_settled = {
+      entry_reference: "settled_ref",
+      transaction_id: "tx_123",
+      booking_date: "2026-08-01",
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      status: "BOOK"
+    }
+
+    @enable_banking_account.upsert_enable_banking_transactions_snapshot!([ cached_hold, cached_settled ])
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+    stored = @enable_banking_account.raw_transactions_payload
+    assert_equal 1, stored.size
+    assert_equal "settled_ref", stored.first.with_indifferent_access[:entry_reference]
+  end
 end
