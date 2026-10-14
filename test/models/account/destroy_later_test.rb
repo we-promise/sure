@@ -123,4 +123,29 @@ class Account::DestroyLaterTest < ActiveSupport::TestCase
 
     assert_equal "disabled", @account.reload.status
   end
+
+  # The row lock covers only the mark; the push runs after commit. A request
+  # blocked on that lock (toggle_active calling disable! on a copy loaded as
+  # active) writes its status once the mark commits. A failed enqueue must not
+  # then put back the status captured before the mark over that newer write.
+  test "a failed enqueue does not overwrite a status another request set after the mark" do
+    [
+      [ RedisClient::CannotConnectError, ->(account) { assert_raises(RedisClient::CannotConnectError) { account.destroy_later } } ],
+      [ ActiveJob::EnqueueError, ->(account) { assert_equal false, account.destroy_later } ]
+    ].each_with_object({}) do |(error, call), statuses|
+      @account.update_column(:status, "active")
+      account = Account.find(@account.id)
+      DestroyJob.queue_adapter.unstub(:enqueue)
+      DestroyJob.queue_adapter.stubs(:enqueue).with do |*|
+        Account.where(id: account.id).update_all(status: "disabled")
+        true
+      end.raises(error, "enqueue failed")
+
+      call.call(account)
+
+      statuses[error.name] = @account.reload.status
+    end.then do |statuses|
+      assert_equal({ "RedisClient::CannotConnectError" => "disabled", "ActiveJob::EnqueueError" => "disabled" }, statuses)
+    end
+  end
 end
