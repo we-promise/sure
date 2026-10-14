@@ -234,6 +234,47 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
     assert_empty returns.income_by_security
   end
 
+  # Transfer validates each leg as unique, but only the pair is a unique index,
+  # so insert_all or two racing matchers can make one transaction a leg of two
+  # transfers. Attribution sums over the classifier's joins as the daily rows
+  # do, so it must count the dividend once too.
+  test "income attributed to a security counts once when its transaction is a leg of two transfers" do
+    dividend = income_transaction(account: @account, date: @mar, amount: 30, extra: { "security_id" => @aapl.id })
+    lay_flat_balances cash_by_date: { @mar => 30 }
+    2.times do |i|
+      source = create_portfolio_account(family: @family)
+      outflow = source.entries.create!(name: "Out", date: @mar, amount: 30, currency: "USD",
+                                       entryable: Transaction.new(kind: "standard"))
+      Transfer.insert_all([ {
+        inflow_transaction_id: dividend.entryable_id, outflow_transaction_id: outflow.entryable_id,
+        amount: 30, status: "confirmed", created_at: Time.current + i.minutes, updated_at: Time.current + i.minutes
+      } ])
+    end
+
+    assert_equal 2, Transfer.where(inflow_transaction_id: dividend.entryable_id).count
+    assert_equal BigDecimal(30), income_by_security.amount_for(@aapl.id), "one dividend, however many transfer rows"
+    assert_equal BigDecimal(30), income_by_security.total
+  end
+
+  # Attribution reads the entries the daily rows read, converted the way they
+  # convert them. The rows now take an excluded entry (the balance still
+  # applied it) and convert a foreign entry into the account's currency on its
+  # own date at its own rate first, so attribution must too, or the table
+  # stops adding up to the total above it.
+  test "an excluded dividend and one carrying its own rate partition the daily rows' total" do
+    excluded = income_trade(account: @account, date: @mar, amount: 30, security: @aapl)
+    excluded.update!(excluded: true)
+    foreign = income_trade(account: @account, date: @mar + 1, amount: 10, security: @msft, currency: "EUR")
+    foreign.entryable.update!(exchange_rate: 1.25)
+    lay_flat_balances cash_by_date: { @mar => 30, @mar + 1 => 12.5 }
+
+    returns = daily_returns_over_period
+    rows_total = returns.rows.sum(BigDecimal(0), &:income)
+
+    assert_equal BigDecimal("42.5"), rows_total, "the fixture's own arithmetic"
+    assert_equal({ @aapl.id.to_s => BigDecimal(30), @msft.id.to_s => BigDecimal("12.5") }, returns.income_by_security)
+  end
+
   # Adding `by_security` changed the shape of the cached income hash. An entry
   # written under the version before it has no `by_security` key, and served
   # under the same key it would read as a period with nothing attributed. The

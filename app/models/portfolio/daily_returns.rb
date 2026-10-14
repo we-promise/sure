@@ -181,10 +181,10 @@ class Portfolio::DailyReturns
   # That only holds if this reads the SAME entries the rows' `income` does, so
   # it shares their fragments and not copies of them: the flow classifier for
   # "is this income?", #rate_lookup for the previous day's rate, and the
-  # same date, active-until and `excluded` predicates as `flows_by_date`. An
-  # entry whose rate is missing is dropped here exactly as the rows drop it (the
-  # product is NULL and falls out of their SUM); #rate_missing? reports it
-  # either way.
+  # same date, active-until and split-parent predicates as `flows_by_date`,
+  # and #entry_fx_joins for the conversion. An entry whose rate is missing is
+  # dropped here exactly as the rows drop it (the product is NULL and falls out
+  # of their SUM); #rate_missing? reports it either way.
   def income_by_security
     return {} if account_ids.empty?
 
@@ -510,28 +510,7 @@ class Portfolio::DailyReturns
           -- denominator of a day that account is no longer part of.
           LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
           #{fragment(:flow_class_joins)}
-          -- Two steps, the same two the balance takes. First into the
-          -- ACCOUNT's currency on the entry's own date, preferring a rate the
-          -- entry carries itself, exactly as Balance::SyncCache converts it
-          -- before the calculators apply it -- so the flow is the amount the
-          -- balance actually moved by.
-          LEFT JOIN LATERAL (
-            SELECT CASE
-              WHEN COALESCE(entries.currency, entry_accounts.currency) = entry_accounts.currency THEN 1::numeric
-              WHEN #{fragment(:entry_custom_rate)} IS NOT NULL
-                THEN CASE WHEN #{fragment(:entry_custom_rate)} > 0 THEN #{fragment(:entry_custom_rate)} END
-              ELSE #{rate_lookup('entries.currency', 'entries.date', to: 'entry_accounts.currency')}
-            END AS rate
-          ) entry_fx ON TRUE
-          -- Then into the family's currency at the PREVIOUS day's rate,
-          -- because a start-of-day flow joins the opening capital, which is
-          -- itself valued at that rate. Mixing rates here is what would leave
-          -- a residual in `unexplained`. NULL at either step when the pair has
-          -- no rate: the amount then drops out of every sum and
-          -- flow_rate_missing says so.
-          LEFT JOIN LATERAL (
-            SELECT #{rate_lookup('entry_accounts.currency', 'entries.date - 1')} AS rate
-          ) fx ON TRUE
+          #{entry_fx_joins}
           -- The position this entry moved, on the day it moved, for valuing a
           -- journal. Absent for every non-trade entry and for a trade whose
           -- security the account holds no row for that date.
@@ -571,7 +550,7 @@ class Portfolio::DailyReturns
             -- belongs in the denominator (the classifier is built with
             -- include_excluded). A split parent is the exception: SyncCache
             -- skips it and its children carry the amount.
-            AND NOT EXISTS (SELECT 1 FROM entries split_children WHERE split_children.parent_entry_id = entries.id)
+            AND #{not_split_parent_sql}
           GROUP BY entries.date
         ),
         -- An inbound journal that could not be valued on its own date, carried
@@ -657,6 +636,42 @@ class Portfolio::DailyReturns
         LEFT JOIN departures_by_date dep ON dep.date = b.date
         ORDER BY b.date
       SQL
+    end
+
+    # How a flow reaches the family currency, shared by every query that sums
+    # entries so they convert them identically (`entry_fx.rate * fx.rate`).
+    def entry_fx_joins
+      <<~SQL
+        -- Two steps, the same two the balance takes. First into the
+        -- ACCOUNT's currency on the entry's own date, preferring a rate the
+        -- entry carries itself, exactly as Balance::SyncCache converts it
+        -- before the calculators apply it -- so the flow is the amount the
+        -- balance actually moved by.
+        LEFT JOIN LATERAL (
+          SELECT CASE
+            WHEN COALESCE(entries.currency, entry_accounts.currency) = entry_accounts.currency THEN 1::numeric
+            WHEN #{fragment(:entry_custom_rate)} IS NOT NULL
+              THEN CASE WHEN #{fragment(:entry_custom_rate)} > 0 THEN #{fragment(:entry_custom_rate)} END
+            ELSE #{rate_lookup('entries.currency', 'entries.date', to: 'entry_accounts.currency')}
+          END AS rate
+        ) entry_fx ON TRUE
+        -- Then into the family's currency at the PREVIOUS day's rate,
+        -- because a start-of-day flow joins the opening capital, which is
+        -- itself valued at that rate. Mixing rates here is what would leave
+        -- a residual in `unexplained`. NULL at either step when the pair has
+        -- no rate: the amount then drops out of every sum and
+        -- flow_rate_missing says so.
+        LEFT JOIN LATERAL (
+          SELECT #{rate_lookup('entry_accounts.currency', 'entries.date - 1')} AS rate
+        ) fx ON TRUE
+      SQL
+    end
+
+    # Excluded entries count as flows (the balance still applied them); a
+    # split parent does not, because Balance::SyncCache skips it and its
+    # children carry the amount.
+    def not_split_parent_sql
+      "NOT EXISTS (SELECT 1 FROM entries split_children WHERE split_children.parent_entry_id = entries.id)"
     end
 
     # Carry the last known rate forward, then fall back to the earliest one
@@ -760,18 +775,17 @@ class Portfolio::DailyReturns
             LOWER(NULLIF(transactions.extra->>'security_id', '')),
             LOWER(NULLIF(transactions.extra->'security'->>'id', ''))
           ) AS security_id,
-          SUM(-entries.amount * fx.rate) AS income
+          SUM(-entries.amount * entry_fx.rate * fx.rate) AS income
         FROM entries
         JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
         LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
         #{fragment(:flow_class_joins)}
-        LEFT JOIN LATERAL (
-          SELECT #{rate_lookup('COALESCE(entries.currency, entry_accounts.currency)', 'entries.date - 1')} AS rate
-        ) fx ON TRUE
+        #{entry_fx_joins}
         WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
           AND entries.date BETWEEN :start_date AND :end_date
           AND (flow_windows.active_until_date IS NULL OR entries.date <= flow_windows.active_until_date)
-          AND COALESCE(entries.excluded, false) = false
+          AND #{not_split_parent_sql}
+          AND entry_fx.rate IS NOT NULL
           AND fx.rate IS NOT NULL
           AND #{fragment(:flow_class_sql)} = 'income'
         GROUP BY 1
