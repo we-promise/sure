@@ -76,7 +76,7 @@ class RecurringTransaction < ApplicationRecord
   after_commit :generate_occurrences, on: :create
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
-after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
+  after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
 
   # Form state for the frequency picker and the create-bill dialog;
   # FrequencyPreset and the controller translate these on save. Not persisted.
