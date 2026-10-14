@@ -124,7 +124,7 @@ RSpec.describe "Api::V1::FamilyExports", type: :request do
       security [ apiKeyAuth: [] ]
       produces "application/json"
 
-      response "302", "family export download redirected" do
+      response "200", "family export zip file" do
         before do
           family_export.export_file.attach(
             io: StringIO.new("test zip content"),

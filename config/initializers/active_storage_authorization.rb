@@ -18,6 +18,8 @@ Rails.application.config.to_prepare do
 
         attachments = authorized_attachments
         raise ActiveRecord::RecordNotFound if attachments.empty?
+        # Archived exports belong to no family; ArchivedExportsController releases them by download token only.
+        raise ActiveRecord::RecordNotFound if attachments.any? { |attachment| attachment.record_type == "ArchivedExport" }
 
         protected_attachments = attachments.select { |attachment| attachment.record_type.in?(PROTECTED_RECORD_TYPES) }
         return if protected_attachments.empty?
