@@ -225,4 +225,12 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
   test "gives each connection its own device ID" do
     assert_not_equal trade_republic_items(:configured_item).device_id, trade_republic_items(:requires_update_item).device_id
   end
+
+  test "a new connection logs in with its device ID right away" do
+    item = TradeRepublicItem.create!(family: families(:dylan_family), phone_number: "+491700000000")
+
+    assert item.device_id.present?
+    Provider::TradeRepublicClient.expects(:new).with(has_entry(device_id: item.device_id))
+    item.trade_republic_provider(pin: "1234")
+  end
 end
