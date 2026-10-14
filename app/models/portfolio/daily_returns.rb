@@ -56,6 +56,11 @@ class Portfolio::DailyReturns
     end
   end
 
+  # Where a fragment built elsewhere goes in the query; see #bind_and_splice.
+  # A comment with no colon, so sanitize_sql_array passes over it. The bound
+  # values (ids, dates, a currency code) cannot spell one.
+  FRAGMENT_MARKER = %r{/\* fragment (\w+) \*/}
+
   attr_reader :account_ids, :currency, :period, :active_until_dates
 
   # The flow classifier's "inside" is `account_ids` itself: a scope is
@@ -195,9 +200,31 @@ class Portfolio::DailyReturns
     end
 
     def raw_rows
-      ActiveRecord::Base.connection.select_all(
-        ActiveRecord::Base.sanitize_sql_array([ query, query_binds ])
-      ).to_a
+      ActiveRecord::Base.connection.select_all(bind_and_splice(query)).to_a
+    end
+
+    # Only this class's own template goes through sanitize_sql_array. Rails
+    # reads every `:word` in the string it is handed as a bind variable, so the
+    # classifier's SQL -- already sanitized, and full of quoted labels -- would
+    # raise there if a label or literal ever carried one (see
+    # Portfolio::FlowClassifier#classify_ids). The template holds a marker
+    # where each fragment belongs, and the fragment replaces it after the binds
+    # are filled, so it is never scanned.
+    def bind_and_splice(template)
+      ActiveRecord::Base.sanitize_sql_array([ template, query_binds ])
+        .gsub(FRAGMENT_MARKER) { fragments.fetch(Regexp.last_match(1)) }
+    end
+
+    def fragment(name)
+      "/* fragment #{name} */"
+    end
+
+    def fragments
+      @fragments ||= {
+        "flow_class_sql" => flow_classifier.sql_case,
+        "flow_class_joins" => flow_classifier.sql_joins,
+        "journal_predicate" => journal_predicate
+      }
     end
 
     def query_binds
@@ -398,8 +425,8 @@ class Portfolio::DailyReturns
             -- Balance::BaseCalculator#market_value_change_on_date reads, so the
             -- numerator and the denominator move by one number rather than two
             -- independently derived ones.
-            COALESCE(SUM(CASE WHEN #{flow_class_sql} IN ('external_inflow', 'external_outflow')
-                              THEN CASE WHEN #{journal_predicate}
+            COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
+                              THEN CASE WHEN #{fragment(:journal_predicate)}
                                         THEN COALESCE(trades.qty * journal_holdings.price * journal_fx.rate, 0)
                                         ELSE -entries.amount * fx.rate
                                    END
@@ -411,13 +438,13 @@ class Portfolio::DailyReturns
             -- identity short by exactly the journal, and `unexplained` would
             -- carry minus its value on every journal day. Reported separately
             -- here so the final SELECT can take it back out of `market`.
-            COALESCE(SUM(CASE WHEN #{journal_predicate}
-                              AND #{flow_class_sql} IN ('external_inflow', 'external_outflow')
+            COALESCE(SUM(CASE WHEN #{fragment(:journal_predicate)}
+                              AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
                               THEN COALESCE(trades.qty * journal_holdings.price * journal_fx.rate, 0)
                               ELSE 0 END), 0) AS journal_flow,
-            COALESCE(SUM(CASE WHEN #{flow_class_sql} = 'income'
+            COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'income'
                               THEN -entries.amount * fx.rate ELSE 0 END), 0) AS income,
-            COALESCE(SUM(CASE WHEN #{flow_class_sql} = 'fee'
+            COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'fee'
                               THEN  entries.amount * fx.rate ELSE 0 END), 0) AS fees,
             -- A missing rate applies to flows as it does to balances: a flow in a
             -- currency with no rate is flagged, never converted at parity. Only the
@@ -435,12 +462,12 @@ class Portfolio::DailyReturns
             -- with no label makes it NULL; NOT NULL is NULL, which would
             -- drop the row from this check rather than keep it.
             COALESCE(BOOL_OR((fx.rate IS NULL
-                              AND NOT COALESCE((#{journal_predicate}), false)
-                              AND #{flow_class_sql} IN ('external_inflow', 'external_outflow', 'income', 'fee'))
+                              AND NOT COALESCE((#{fragment(:journal_predicate)}), false)
+                              AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow', 'income', 'fee'))
                              OR (journal_fx.rate IS NULL
                                  AND journal_holdings.currency IS NOT NULL
-                                 AND #{journal_predicate}
-                                 AND #{flow_class_sql} IN ('external_inflow', 'external_outflow'))), false) AS flow_rate_missing,
+                                 AND #{fragment(:journal_predicate)}
+                                 AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))), false) AS flow_rate_missing,
             -- The journal suppression condition, and it keys on the PRICE rather
             -- than on the row. Holding::PortfolioCache deliberately keeps zero-price
             -- journal trades (Holding::PortfolioCache#load_prices) and matches the exact
@@ -461,8 +488,8 @@ class Portfolio::DailyReturns
             -- and only Trade's presence validation fills it; without it the
             -- COALESCE above values the journal at nothing, which is the
             -- phantom gain this suppression exists to stop.
-            COALESCE(BOOL_OR(#{journal_predicate}
-                             AND #{flow_class_sql} IN ('external_inflow', 'external_outflow')
+            COALESCE(BOOL_OR(#{fragment(:journal_predicate)}
+                             AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
                              AND (trades.qty IS NULL
                                   OR journal_holdings.price IS NULL
                                   OR journal_holdings.price <= 0
@@ -473,7 +500,7 @@ class Portfolio::DailyReturns
           -- an account stopped contributing value must not enter the
           -- denominator of a day that account is no longer part of.
           LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
-          #{flow_class_joins}
+          #{fragment(:flow_class_joins)}
           -- Converted at the PREVIOUS day's rate, because a start-of-day flow
           -- joins the opening capital, which is itself valued at that rate.
           -- Mixing rates here is what would leave a residual in `unexplained`.
