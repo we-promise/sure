@@ -127,6 +127,26 @@ class Rule::NotificationBaselineOnCreateTest < ActiveSupport::TestCase
     assert_equal [ pending.id ], emailed_ids(rule) { RuleJob.perform_now(Rule.find(rule.id)) }
   end
 
+  test "a rule reports a stored email action, even once it is marked for replacement" do
+    rule = Rule.find(create_rule(actions: [ { action_type: "send_email_notification" } ]).id)
+
+    rule.actions.each(&:mark_for_destruction)
+
+    assert rule.stored_email_notification_action?
+  end
+
+  test "an email action that is only built, not stored, does not count as the rule's" do
+    rule = create_rule(actions: [ { action_type: "exclude_transaction" } ])
+    assert_not rule.stored_email_notification_action?
+
+    rule.actions.build(action_type: "send_email_notification")
+    assert_not rule.stored_email_notification_action?
+
+    new_rule = @family.rules.build(resource_type: "transaction")
+    new_rule.actions.build(action_type: "send_email_notification")
+    assert_not new_rule.stored_email_notification_action?
+  end
+
   private
     def create_rule(actions:)
       @family.rules.create!(

@@ -137,7 +137,7 @@ module Assistant::Function::RuleSupport
         if actions.is_a?(Array)
           # An email action replacing the rule's own keeps the baseline it recorded
           # (see Rule::Action#keep_notification_baseline).
-          had_email_action = rule.actions.any? { |a| a.action_type == "send_email_notification" }
+          had_email_action = rule.stored_email_notification_action?
           rule.actions.each(&:mark_for_destruction)
           actions.each_with_index do |action, index|
             problems.concat(build_action(rule, action, "actions[#{index}]"))

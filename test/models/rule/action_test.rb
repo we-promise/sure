@@ -292,4 +292,19 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal 0, result
     assert_nil @txn1.reload.investment_activity_label
   end
+
+  # The executor's key is derived from its class name, so a rename would leave
+  # the constant pointing at an action type nothing executes.
+  test "the email action type is the email executor's key" do
+    assert_equal Rule::ActionExecutor::SendEmailNotification.new(@transaction_rule).key, Rule::Action::EMAIL_NOTIFICATION
+  end
+
+  test "email_notifications selects only the email actions" do
+    assert_empty @transaction_rule.actions.email_notifications
+
+    email = @transaction_rule.actions.create!(action_type: Rule::Action::EMAIL_NOTIFICATION)
+
+    assert_equal [ email.id ], @transaction_rule.actions.email_notifications.pluck(:id)
+    assert_operator @transaction_rule.actions.count, :>, 1, "the rule's other action should be left out"
+  end
 end

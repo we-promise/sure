@@ -1,5 +1,12 @@
 class Rule::Action < ApplicationRecord
+  # The action_type of the "Send email notification" action: the key of
+  # Rule::ActionExecutor::SendEmailNotification, which is derived from its class
+  # name. Rule::ActionTest checks the two agree.
+  EMAIL_NOTIFICATION = "send_email_notification"
+
   belongs_to :rule, touch: true
+
+  scope :email_notifications, -> { where(action_type: EMAIL_NOTIFICATION) }
 
   validates :action_type, presence: true, if: -> { action_type.to_s.valid_encoding? }
   validates_with DatabaseTextValidator, attributes: %i[action_type value]
@@ -90,13 +97,17 @@ class Rule::Action < ApplicationRecord
     rule.registry.get_executor!(action_type)
   end
 
+  def email_notification?
+    action_type == EMAIL_NOTIFICATION
+  end
+
   private
     def execution_value
       executor.type == "multi_select" ? value.to_s.split(",") : value
     end
 
     def seed_notification_baseline
-      return unless action_type == "send_email_notification"
+      return unless email_notification?
       return if keep_notification_baseline
 
       NotificationDelivery.record_for(

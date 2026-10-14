@@ -49,6 +49,15 @@ class Rule < ApplicationRecord
     matching_scope.count
   end
 
+  # Whether the rule, as stored, has an email action. Read from the database,
+  # so actions built or marked for destruction in memory do not change it. The
+  # importers and the assistant read it before replacing a rule's actions, so a
+  # replacement email action keeps the baseline the old one recorded (see
+  # Rule::Action#keep_notification_baseline).
+  def stored_email_notification_action?
+    persisted? && actions.email_notifications.exists?
+  end
+
   # Reads the currently-matching transaction ids WITHOUT running executors
   # (e.g. the notification baseline pre-seed).
   def matching_transaction_ids

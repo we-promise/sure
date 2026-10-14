@@ -167,7 +167,7 @@ class RuleImport < Import
 
       # An email action replacing the rule's own keeps the baseline it recorded
       # (see Rule::Action#keep_notification_baseline).
-      had_email_action = rule.persisted? && rule.actions.exists?(action_type: "send_email_notification")
+      had_email_action = rule.stored_email_notification_action?
 
       # Clear existing conditions and actions
       rule.conditions.destroy_all

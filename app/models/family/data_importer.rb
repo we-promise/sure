@@ -1385,7 +1385,7 @@ class Family::DataImporter
 
         # An email action replacing the rule's own keeps the baseline it recorded
         # (see Rule::Action#keep_notification_baseline).
-        had_email_action = !created && rule.actions.exists?(action_type: "send_email_notification")
+        had_email_action = rule.stored_email_notification_action?
 
         rule.conditions.destroy_all unless created
         rule.actions.destroy_all unless created
