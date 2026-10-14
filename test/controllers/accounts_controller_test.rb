@@ -861,6 +861,22 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "active", @account.reload.status
   end
 
+  # The second request of a double submit finds the account already pending
+  # deletion. It reports failure rather than erroring, enqueues nothing more,
+  # and leaves the first request's mark in place.
+  test "a second destroy of an account pending deletion reports failure" do
+    delete account_url(@account)
+    assert_equal "pending_deletion", @account.reload.status
+
+    assert_no_enqueued_jobs(only: DestroyJob) do
+      delete account_url(@account)
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.destroy.failed"), flash[:alert]
+    assert_equal "pending_deletion", @account.reload.status
+  end
+
   test "syncing linked account triggers sync for all provider items" do
     plaid_account = plaid_accounts(:one)
     AccountProvider.create!(account: @account, provider: plaid_account)

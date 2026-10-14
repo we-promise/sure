@@ -637,7 +637,8 @@ class Account < ApplicationRecord
 
   # Marks the account pending_deletion and enqueues DestroyJob. If the enqueue
   # fails, the account goes back to the status it had, so it is not left hidden
-  # from every list with no job coming to delete it. Mirrors DestroyableLater.
+  # from every list with no job coming to delete it. Mirrors DestroyableLater,
+  # except that the claim is made under a row lock (see below).
   #
   # ApplicationJob defers enqueues until commit, so perform_later inside a
   # transaction returns before the push is tried. The enqueue therefore runs
@@ -646,11 +647,19 @@ class Account < ApplicationRecord
   # holds one (the relink cleanup), when the push really happens. A rolled-back
   # outer transaction undoes the mark and never enqueues.
   #
+  # The prior status is read and the mark made under a row lock, which reloads
+  # the account first. A second request for the same account (a double submit)
+  # waits for the first to commit, sees pending_deletion and raises
+  # AASM::InvalidTransition before it captures a status or schedules an
+  # enqueue, so a restore only ever undoes the mark its own call made. Callers
+  # pass a freshly loaded record: lock! refuses one with unsaved changes.
+  #
   # Returns the job, or false when the enqueue was rejected. Inside an outer
   # transaction the enqueue has not run yet, so it returns nil.
   def destroy_later
-    previous_status = status
-    mark_for_deletion!
+    previous_status = with_lock do
+      status.tap { mark_for_deletion! }
+    end
 
     enqueued = nil
     ActiveRecord.after_all_transactions_commit do
@@ -812,7 +821,7 @@ class Account < ApplicationRecord
 
     # perform_later raises (the Sidekiq adapter re-raises RedisClient errors) or
     # returns false (ActiveJob::EnqueueError). Either way the status goes back.
-    # update_column, because AASM has no event out of pending_deletion and the
+    # update_column, because AASM has no event back to the prior status and the
     # restore must not fail on an unrelated validation and mask the enqueue error.
     def enqueue_destroy_job(restoring:)
       enqueued = begin

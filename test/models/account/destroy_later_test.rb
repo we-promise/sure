@@ -97,4 +97,18 @@ class Account::DestroyLaterTest < ActiveSupport::TestCase
 
     assert_equal "pending_deletion", @account.reload.status
   end
+
+  # A double submit loads the account twice before either request commits. The
+  # second copy still holds the old status, so without a reload it would pass
+  # the guard, and its failed enqueue would put back "active" while the first
+  # request's DestroyJob is queued.
+  test "a stale copy cannot put back a status another request already marked" do
+    stale = Account.find(@account.id)
+    assert @account.destroy_later
+    DestroyJob.queue_adapter.stubs(:enqueue).raises(RedisClient::CannotConnectError, "Connection refused")
+
+    assert_raises(AASM::InvalidTransition) { stale.destroy_later }
+
+    assert_equal "pending_deletion", @account.reload.status
+  end
 end
