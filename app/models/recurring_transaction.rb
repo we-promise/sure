@@ -139,6 +139,12 @@ class RecurringTransaction < ApplicationRecord
     name.presence || merchant&.name
   end
 
+  # The name the detector matched on, kept apart from the user-facing name
+  # so renaming a bill does not orphan it from its bank transactions.
+  def matcher_name
+    matcher_hints.to_h["detected_name"].presence || name
+  end
+
   def merchant_or_name_present
     if merchant_id.blank? && name.blank?
       errors.add(:base, :merchant_or_name_required)
@@ -540,7 +546,8 @@ class RecurringTransaction < ApplicationRecord
       manual: true,
       expected_amount_min: expected_min,
       expected_amount_max: expected_max,
-      expected_amount_avg: expected_avg
+      expected_amount_avg: expected_avg,
+      matcher_hints: transaction.merchant_id.present? ? {} : { "detected_name" => entry.name }
     }
 
     create!(attributes)
