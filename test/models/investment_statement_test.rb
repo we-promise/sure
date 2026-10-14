@@ -989,6 +989,42 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     end
   end
 
+  # Every series is built in family.currency. A profile currency change
+  # neither syncs nor writes an account, so nothing else in the key moves.
+  test "every series cache key changes when the family currency changes" do
+    create_investment_account(balance: 1000)
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    before = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    @family.update!(currency: "EUR")
+    after = kinds.index_with { |kind| InvestmentStatement.new(@family.reload).send(:series_cache_key, kind, period) }
+
+    kinds.each do |kind|
+      assert_not_equal before[kind], after[kind], "the #{kind} series must not keep serving amounts in the old currency"
+    end
+  end
+
+  # An account with no holdings that is not the most recently updated one
+  # leaves the holdings version, the sync time and accounts.maximum(:updated_at)
+  # where they were before it existed in the cache, so only the account count
+  # can tell the post-deletion key from the one that still includes it.
+  test "every series cache key changes when an account without holdings is deleted" do
+    create_investment_account(balance: 1000)
+    cash_only = create_investment_account(balance: 500)
+    cash_only.update_column(:updated_at, 1.year.ago)
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    before = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    cash_only.destroy!
+    after = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+
+    kinds.each do |kind|
+      assert_not_equal before[kind], after[kind], "the #{kind} series must not keep counting the deleted account"
+    end
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(

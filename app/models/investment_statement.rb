@@ -335,10 +335,18 @@ class InvestmentStatement
     #   history start, which provider holdings' dates and securities
     #   decide, so deleting or remapping a holding can move the value and
     #   holdings-value charts' first date without a sync.
+    # - the family currency (every kind): every series is converted to it,
+    #   and a profile currency change neither syncs nor writes an account.
+    # - the accounts version (every kind): deleting an account with no
+    #   holdings that was not the most recently updated one leaves
+    #   maximum(:updated_at), the sync time and the holdings version where
+    #   they were before its deletion was scheduled; only the count moves.
     def series_cache_key(kind, period)
       key = [
         "investment_statement_#{kind}_series",
         user&.id,
+        family.currency,
+        accounts_version,
         shares_version,
         holdings_version,
         period.start_date,
@@ -350,6 +358,10 @@ class InvestmentStatement
 
     # Memoized: one instance builds a key per series kind it is asked for,
     # and the versions need not be re-queried between them.
+    def accounts_version
+      @accounts_version ||= family.accounts_status_version
+    end
+
     def shares_version
       return nil unless user
 
