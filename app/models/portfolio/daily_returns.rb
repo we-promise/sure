@@ -56,6 +56,11 @@ class Portfolio::DailyReturns
     end
   end
 
+  # Where a fragment built elsewhere goes in the query; see #bind_and_splice.
+  # A comment with no colon, so sanitize_sql_array passes over it. The bound
+  # values (ids, dates, a currency code) cannot spell one.
+  FRAGMENT_MARKER = %r{/\* fragment (\w+) \*/}
+
   attr_reader :account_ids, :currency, :period, :active_until_dates
 
   # The flow classifier's "inside" is `account_ids` itself: a scope is
@@ -166,9 +171,30 @@ class Portfolio::DailyReturns
     end
 
     def raw_rows
-      ActiveRecord::Base.connection.select_all(
-        ActiveRecord::Base.sanitize_sql_array([ query, query_binds ])
-      ).to_a
+      ActiveRecord::Base.connection.select_all(bind_and_splice(query)).to_a
+    end
+
+    # Only this class's own template goes through sanitize_sql_array. Rails
+    # reads every `:word` in the string it is handed as a bind variable, so the
+    # classifier's SQL -- already sanitized, and full of quoted labels -- would
+    # raise there if a label or literal ever carried one (see
+    # Portfolio::FlowClassifier#classify_ids). The template holds a marker
+    # where each fragment belongs, and the fragment replaces it after the binds
+    # are filled, so it is never scanned.
+    def bind_and_splice(template)
+      ActiveRecord::Base.sanitize_sql_array([ template, query_binds ])
+        .gsub(FRAGMENT_MARKER) { fragments.fetch(Regexp.last_match(1)) }
+    end
+
+    def fragment(name)
+      "/* fragment #{name} */"
+    end
+
+    def fragments
+      @fragments ||= {
+        "flow_class_sql" => flow_classifier.sql_case,
+        "flow_class_joins" => flow_classifier.sql_joins
+      }
     end
 
     def query_binds
@@ -351,25 +377,25 @@ class Portfolio::DailyReturns
         flows_by_date AS (
           SELECT
             entries.date AS date,
-            COALESCE(SUM(CASE WHEN #{flow_class_sql} IN ('external_inflow', 'external_outflow')
+            COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
                               THEN -entries.amount * fx.rate ELSE 0 END), 0) AS external_flow,
-            COALESCE(SUM(CASE WHEN #{flow_class_sql} = 'income'
+            COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'income'
                               THEN -entries.amount * fx.rate ELSE 0 END), 0) AS income,
-            COALESCE(SUM(CASE WHEN #{flow_class_sql} = 'fee'
+            COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'fee'
                               THEN  entries.amount * fx.rate ELSE 0 END), 0) AS fees,
             -- A missing rate applies to flows as it does to balances: a flow in a
             -- currency with no rate is flagged, never converted at parity. Only the
             -- classes that feed a figure count; an internal trade in an
             -- unconvertible currency moves nothing we sum.
             COALESCE(BOOL_OR(fx.rate IS NULL
-                             AND #{flow_class_sql} IN ('external_inflow', 'external_outflow', 'income', 'fee')), false) AS flow_rate_missing
+                             AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow', 'income', 'fee')), false) AS flow_rate_missing
           FROM entries
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
           -- The same active-until window the balances use: a flow dated after
           -- an account stopped contributing value must not enter the
           -- denominator of a day that account is no longer part of.
           LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
-          #{flow_class_joins}
+          #{fragment(:flow_class_joins)}
           -- Converted at the PREVIOUS day's rate, because a start-of-day flow
           -- joins the opening capital, which is itself valued at that rate.
           -- Mixing rates here is what would leave a residual in `unexplained`.
@@ -440,13 +466,5 @@ class Portfolio::DailyReturns
     # nothing to collide with.
     def flow_classifier
       @flow_classifier ||= Portfolio::FlowClassifier.new(scope_account_ids: account_ids)
-    end
-
-    def flow_class_sql
-      @flow_class_sql ||= flow_classifier.sql_case
-    end
-
-    def flow_class_joins
-      @flow_class_joins ||= flow_classifier.sql_joins
     end
 end
