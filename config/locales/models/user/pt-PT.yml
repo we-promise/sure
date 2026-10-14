@@ -10,6 +10,7 @@ pt-PT:
         last_name: Apelido
         password: Palavra-passe
         password_confirmation: Confirmação da Palavra-passe
+        password_challenge: Palavra-passe Atual
     errors:
       models:
         user:

@@ -10,6 +10,7 @@ pl:
         last_name: Nazwisko
         password: Hasło
         password_confirmation: Potwierdzenie hasła
+        password_challenge: Obecne hasło
     errors:
       models:
         user:

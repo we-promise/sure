@@ -10,6 +10,7 @@ ru:
         last_name: Фамилия
         password: Пароль
         password_confirmation: Подтверждение пароля
+        password_challenge: Текущий пароль
     errors:
       models:
         user:

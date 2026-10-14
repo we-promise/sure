@@ -10,6 +10,7 @@ es:
         last_name: Apellidos
         password: Contraseña
         password_confirmation: Confirmación de contraseña
+        password_challenge: Contraseña actual
     errors:
       models:
         user:

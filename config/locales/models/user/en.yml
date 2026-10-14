@@ -10,6 +10,7 @@ en:
         last_name: Last Name
         password: Password
         password_confirmation: Password Confirmation
+        password_challenge: Current Password
     errors:
       models:
         user:

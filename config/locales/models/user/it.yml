@@ -10,6 +10,7 @@ it:
         last_name: Cognome
         password: Password
         password_confirmation: Conferma password
+        password_challenge: Password attuale
     errors:
       models:
         user:

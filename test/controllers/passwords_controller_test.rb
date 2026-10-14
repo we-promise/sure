@@ -17,6 +17,39 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     assert @user.reload.authenticate("NewSecure1!")
   end
 
+  test "update rejects a wrong current password" do
+    patch password_path, params: { user: {
+      password_challenge: "WrongPassword1!",
+      password: "NewSecure1!",
+      password_confirmation: "NewSecure1!"
+    } }
+
+    assert_response :unprocessable_entity
+    assert @user.reload.authenticate(user_password_test)
+    assert_select "p.text-destructive", text: /Current Password is invalid/
+  end
+
+  test "update rejects a blank or missing current password" do
+    [ { password_challenge: "" }, {} ].each do |challenge|
+      patch password_path, params: { user: challenge.merge(password: "NewSecure1!", password_confirmation: "NewSecure1!") }
+
+      assert_response :unprocessable_entity
+      assert @user.reload.authenticate(user_password_test)
+    end
+  end
+
+  test "update rejects a mismatched confirmation" do
+    patch password_path, params: { user: {
+      password_challenge: user_password_test,
+      password: "NewSecure1!",
+      password_confirmation: "Different1!"
+    } }
+
+    assert_response :unprocessable_entity
+    assert @user.reload.authenticate(user_password_test)
+    assert_select "p.text-destructive", text: /doesn't match Password/
+  end
+
   test "update rejects a password that only meets the minimum length" do
     patch password_path, params: { user: {
       password_challenge: user_password_test,

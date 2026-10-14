@@ -10,6 +10,7 @@ nl:
         last_name: Achternaam
         password: Wachtwoord
         password_confirmation: Bevestiging wachtwoord
+        password_challenge: Huidig wachtwoord
     errors:
       models:
         user:

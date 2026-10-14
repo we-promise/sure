@@ -10,6 +10,7 @@ nb:
         last_name: Etternavn
         password: Passord
         password_confirmation: Passordbekreftelse
+        password_challenge: Gjeldende passord
     errors:
       models:
         user:

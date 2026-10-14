@@ -9,6 +9,7 @@ ro:
         last_name: Nume de familie
         password: Parolă
         password_confirmation: Confirmare parolă
+        password_challenge: Parola curentă
     errors:
       models:
         user:

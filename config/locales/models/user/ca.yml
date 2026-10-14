@@ -10,6 +10,7 @@ ca:
         last_name: Cognom
         password: Contrasenya
         password_confirmation: Confirmació de contrasenya
+        password_challenge: Contrasenya actual
     errors:
       models:
         user:

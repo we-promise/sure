@@ -10,6 +10,7 @@ vi:
         last_name: Họ
         password: Mật khẩu
         password_confirmation: Xác nhận mật khẩu
+        password_challenge: Mật khẩu hiện tại
     errors:
       models:
         user:

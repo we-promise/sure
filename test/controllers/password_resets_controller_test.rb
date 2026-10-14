@@ -51,6 +51,15 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.text-destructive", text: /maximum is 72 bytes/
   end
 
+  test "update rejects a mismatched confirmation" do
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewSecure1!", password_confirmation: "Different1!" } }
+
+    assert_response :unprocessable_entity
+    assert @user.reload.authenticate(user_password_test)
+    assert_select "p.text-destructive", text: /doesn't match Password/
+  end
+
   test "update rejects a blank password and keeps the reset link valid" do
     token = @user.generate_token_for(:password_reset)
 

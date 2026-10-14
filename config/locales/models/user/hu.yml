@@ -10,6 +10,7 @@ hu:
         last_name: Vezetéknév
         password: Jelszó
         password_confirmation: Jelszó megerősítése
+        password_challenge: Jelenlegi jelszó
     errors:
       models:
         user:

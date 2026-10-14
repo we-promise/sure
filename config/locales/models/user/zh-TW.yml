@@ -10,6 +10,7 @@ zh-TW:
         last_name: 姓氏
         password: 密碼
         password_confirmation: 確認密碼
+        password_challenge: 目前密碼
     errors:
       models:
         user:

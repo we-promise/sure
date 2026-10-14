@@ -10,6 +10,7 @@ uk:
         last_name: "Прізвище"
         password: "Пароль"
         password_confirmation: "Підтвердження пароля"
+        password_challenge: Поточний пароль
     errors:
       models:
         user:

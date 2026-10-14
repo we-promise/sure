@@ -10,6 +10,7 @@ pt-BR:
         last_name: Sobrenome
         password: Senha
         password_confirmation: Confirmação da Senha
+        password_challenge: Senha Atual
     errors:
       models:
         user:
