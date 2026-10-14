@@ -53,7 +53,7 @@ class Family::SyncCompleteEvent
       ActiveRecord.after_all_transactions_commit do
         FamilySyncToastJob.schedule_for(family)
       rescue => e
-        Rails.logger.error("Family::SyncCompleteEvent sync toast scheduling failed: #{e.message}")
+        Rails.logger.error("Family::SyncCompleteEvent sync toast scheduling failed: #{e.message}\n#{e.backtrace&.join("\n")}")
       end
     end
 end

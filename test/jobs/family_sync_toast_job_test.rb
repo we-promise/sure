@@ -13,16 +13,16 @@ class FamilySyncToastJobTest < ActiveJob::TestCase
       @family, target: "sync-toast", partial: "shared/notifications/sync_toast"
     ).once
 
-    FamilySyncToastJob.perform_now(@family.id, Time.current.to_f)
+    FamilySyncToastJob.perform_now(@family.id, SecureRandom.uuid)
   end
 
   test "reschedules itself while another sync of the family is still running" do
     plaid_items(:one).syncs.create!(status: "syncing")
     Family.any_instance.expects(:broadcast_replace_to).never
-    scheduled_at = Time.current.to_f
+    token = SecureRandom.uuid
 
-    assert_enqueued_with(job: FamilySyncToastJob, args: [ @family.id, scheduled_at, 1 ]) do
-      FamilySyncToastJob.perform_now(@family.id, scheduled_at)
+    assert_enqueued_with(job: FamilySyncToastJob, args: [ @family.id, token, 1 ]) do
+      FamilySyncToastJob.perform_now(@family.id, token)
     end
   end
 
@@ -31,17 +31,17 @@ class FamilySyncToastJobTest < ActiveJob::TestCase
     Family.any_instance.expects(:broadcast_replace_to).once
 
     assert_no_enqueued_jobs do
-      FamilySyncToastJob.perform_now(@family.id, Time.current.to_f, FamilySyncToastJob::MAX_RECHECKS)
+      FamilySyncToastJob.perform_now(@family.id, SecureRandom.uuid, FamilySyncToastJob::MAX_RECHECKS)
     end
   end
 
   test "is superseded by a newer scheduled run" do
-    scheduled_at = Time.current.to_f
-    Rails.cache.stubs(:read).with(FamilySyncToastJob.cache_key(@family.id)).returns(scheduled_at + 5)
+    token = SecureRandom.uuid
+    Rails.cache.stubs(:read).with(FamilySyncToastJob.debounce_key(@family.id)).returns(SecureRandom.uuid)
     Family.any_instance.expects(:broadcast_replace_to).never
 
     assert_no_enqueued_jobs do
-      FamilySyncToastJob.perform_now(@family.id, scheduled_at)
+      FamilySyncToastJob.perform_now(@family.id, token)
     end
   end
 
@@ -58,20 +58,20 @@ class FamilySyncToastJobTest < ActiveJob::TestCase
       @family, target: "sync-toast", partial: "shared/notifications/sync_toast"
     ).once
 
-    FamilySyncToastJob.perform_now(@family.id, Time.current.to_f)
+    FamilySyncToastJob.perform_now(@family.id, SecureRandom.uuid)
   end
 
   test "a crashed sync delays the toast at most until it leaves the visibility window" do
     crashed = plaid_items(:one).syncs.create!(status: "syncing")
 
     Family.any_instance.expects(:broadcast_replace_to).never
-    FamilySyncToastJob.perform_now(@family.id, Time.current.to_f)
+    FamilySyncToastJob.perform_now(@family.id, SecureRandom.uuid)
 
     travel_to (Sync::VISIBLE_FOR + 1.minute).from_now do
       Family.any_instance.expects(:broadcast_replace_to).with(
         @family, target: "sync-toast", partial: "shared/notifications/sync_toast"
       ).once
-      FamilySyncToastJob.perform_now(@family.id, Time.current.to_f)
+      FamilySyncToastJob.perform_now(@family.id, SecureRandom.uuid)
     end
     assert crashed.reload.syncing?
   end
@@ -79,7 +79,7 @@ class FamilySyncToastJobTest < ActiveJob::TestCase
   test "does nothing when the family no longer exists" do
     Family.any_instance.expects(:broadcast_replace_to).never
 
-    assert_nothing_raised { FamilySyncToastJob.perform_now(SecureRandom.uuid, Time.current.to_f) }
+    assert_nothing_raised { FamilySyncToastJob.perform_now(SecureRandom.uuid, SecureRandom.uuid) }
   end
 
   test "schedule_for enqueues a delayed run" do
