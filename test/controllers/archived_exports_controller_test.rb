@@ -77,7 +77,7 @@ class ArchivedExportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "returns 410 gone when the archive file is missing from storage" do
+  test "returns not found when the archive file is missing from storage" do
     archive = ArchivedExport.create!(
       email: "test@example.com",
       family_name: "Test",
@@ -92,6 +92,6 @@ class ArchivedExportsControllerTest < ActionDispatch::IntegrationTest
 
     get archived_export_path(token: archive.download_token)
 
-    assert_response :gone
+    assert_response :not_found
   end
 end

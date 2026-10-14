@@ -125,6 +125,11 @@ RSpec.describe "Api::V1::FamilyExports", type: :request do
       produces "application/json"
 
       response "200", "family export zip file" do
+        # The file is streamed as application/zip; only the error responses are JSON.
+        metadata[:response][:content] = {
+          "application/zip" => { schema: { type: :string, format: :binary } }
+        }
+
         before do
           family_export.export_file.attach(
             io: StringIO.new("test zip content"),
