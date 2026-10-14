@@ -111,4 +111,16 @@ class Account::DestroyLaterTest < ActiveSupport::TestCase
 
     assert_equal "pending_deletion", @account.reload.status
   end
+
+  # The status to restore is read after the reload, so a stale copy puts back
+  # what the row held when it was marked, not what the copy was loaded with.
+  test "a stale copy restores the status the row held when it was marked" do
+    stale = Account.find(@account.id)
+    @account.disable!
+    DestroyJob.queue_adapter.stubs(:enqueue).raises(RedisClient::CannotConnectError, "Connection refused")
+
+    assert_raises(RedisClient::CannotConnectError) { stale.destroy_later }
+
+    assert_equal "disabled", @account.reload.status
+  end
 end
