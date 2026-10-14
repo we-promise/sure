@@ -296,7 +296,7 @@ class Portfolio::Performance
     # Both #money_weighted_supported? and #time_weighted_supported? read it, and
     # both run inside the uncached compute behind Rails.cache.fetch, so a
     # cache miss costs the account load plus three resolution queries, once,
-    # rather than that load plus up to four queries per account, twice.
+    # rather than that load plus up to three queries per account, twice.
     #
     # Resolved over the same cut-offs DailyReturns applies, as it resolved
     # them: a row after an account's cut-off is not in the series, so it cannot
