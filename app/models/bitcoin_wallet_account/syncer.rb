@@ -101,8 +101,7 @@ class BitcoinWalletAccount::Syncer
         if wallet.account_provider
           if wallet.needs_reconciliation?
             wallet.bitcoin_wallet_transactions.update_all(baseline: true)
-            wallet.update!(baseline_at: Time.current, baseline_sats: snapshot.balance_sats,
-              baseline_cash_balance: wallet.account.cash_balance, needs_reconciliation: false)
+            wallet.update!(baseline_at: Time.current, needs_reconciliation: false)
           end
           window = processor.process(prepare_prices: false, materialize: @sync.nil?)
         end
@@ -192,7 +191,7 @@ class BitcoinWalletAccount::Syncer
         occurred_at = Time.current if wallet.baseline_at && !old && occurred_at < wallet.baseline_at
         row.assign_attributes(amount_sats: amount, confirmed: status.fetch("confirmed"),
           present: true, removed_at: nil, block_height: status["block_height"],
-          occurred_at: occurred_at, raw_payload: transaction)
+          occurred_at: occurred_at)
         row.baseline = true if old || wallet.baseline_at.nil?
         row.save! if row.changed?
       end

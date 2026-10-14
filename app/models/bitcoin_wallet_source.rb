@@ -25,11 +25,6 @@ class BitcoinWalletSource < ApplicationRecord
     kind == "address" || [ 0, 1 ].all? { |branch| discovery.dig(branch.to_s, "complete") == true }
   end
 
-  # Clear branch checkpoints so a changed source set can be fully rediscovered.
-  def reset_discovery!
-    update!(discovery: {})
-  end
-
   private
     # Canonicalize address/key whitespace and derive a duplicate-source identity
     # shared by equivalent xpub/zpub encodings. Validation reports invalid keys.

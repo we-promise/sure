@@ -9,8 +9,6 @@ class CreateBitcoinWalletAccounts < ActiveRecord::Migration[8.1]
       t.references :security, null: false, type: :uuid, foreign_key: true
       t.string :status, null: false, default: "discovering"
       t.bigint :balance_sats, null: false, default: 0
-      t.bigint :baseline_sats
-      t.decimal :baseline_cash_balance, precision: 19, scale: 4
       t.boolean :needs_reconciliation, null: false, default: false
       t.integer :baseline_block_height
       t.datetime :baseline_at
@@ -58,7 +56,6 @@ class CreateBitcoinWalletAccounts < ActiveRecord::Migration[8.1]
       t.integer :block_height
       t.datetime :occurred_at, null: false
       t.datetime :removed_at
-      t.jsonb :raw_payload, null: false, default: {}
       t.timestamps
       t.index [ :bitcoin_wallet_account_id, :txid ], unique: true, name: "index_bitcoin_transactions_on_wallet_and_txid"
     end

@@ -78,7 +78,6 @@ class BitcoinWalletsController < ApplicationController
         # Addresses are rediscovered from the retained source set; stale rows
         # must not keep a removed source's funds in the aggregate.
         @wallet.bitcoin_wallet_addresses.destroy_all
-        @wallet.bitcoin_wallet_sources.each(&:reset_discovery!)
         @wallet.sources_changed!
       end
     end

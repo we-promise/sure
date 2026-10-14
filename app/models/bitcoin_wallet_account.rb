@@ -54,8 +54,7 @@ class BitcoinWalletAccount < ApplicationRecord
       account.create_cash_anchor!
       account.reconcile_position_journals!
       bitcoin_wallet_transactions.update_all(baseline: true)
-      update!(baseline_at: Time.current, baseline_sats: balance_sats,
-        baseline_cash_balance: account.cash_balance, status: :active)
+      update!(baseline_at: Time.current, status: :active)
       record_reconciliation!
       processor.process(prepare_prices: false)
     end
@@ -132,11 +131,6 @@ class BitcoinWalletAccount < ApplicationRecord
   # Present unconfirmed net movements explain the pending share of the quantity.
   def pending_quantity
     bitcoin_wallet_transactions.where(present: true, confirmed: false).sum(:amount_sats).to_d / 100_000_000
-  end
-
-  # Remove pending net change from the latest complete quantity for presentation.
-  def confirmed_quantity
-    quantity - pending_quantity
   end
 
   # Publish completion after all account materialization children have finished.

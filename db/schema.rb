@@ -322,8 +322,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_120000) do
     t.bigint "balance_sats", default: 0, null: false
     t.datetime "baseline_at"
     t.integer "baseline_block_height"
-    t.decimal "baseline_cash_balance", precision: 19, scale: 4
-    t.bigint "baseline_sats"
     t.datetime "created_at", null: false
     t.boolean "history_truncated", default: false, null: false
     t.string "last_error"
@@ -381,7 +379,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_120000) do
     t.datetime "created_at", null: false
     t.datetime "occurred_at", null: false
     t.boolean "present", default: true, null: false
-    t.jsonb "raw_payload", default: {}, null: false
     t.datetime "removed_at"
     t.string "txid", null: false
     t.datetime "updated_at", null: false
