@@ -293,6 +293,29 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert response_data["mfa_required"]
   end
 
+  test "should not issue a token when the password changes during login" do
+    user = users(:family_admin)
+    user.mobile_devices.destroy_all
+    device = user.mobile_devices.create!(@device_info)
+
+    # The password changes after the login checked it but before the token is minted.
+    MobileDevice.stubs(:upsert_device!).with do |*|
+      User.find(user.id).update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+      true
+    end.returns(device)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: user_password_test,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    assert_equal "Invalid email or password", JSON.parse(response.body)["error"]
+  end
+
   test "should login with valid MFA code" do
     user = users(:family_admin)
     password = user_password_test

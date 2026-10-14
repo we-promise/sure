@@ -340,18 +340,27 @@ class User < ApplicationRecord
   # can never be confused with an unrelated persistence failure.
   class InactiveError < StandardError; end
 
+  # Raised by #with_active_lock! when the password changed between the
+  # caller's password check and the locked issuance step. The new password's
+  # revocation sweep has already run by then, so issuing would hand out a
+  # session or token for the old password that nothing revokes.
+  class StaleCredentialsError < StandardError; end
+
   # The one locked primitive for the actual authorization boundary: asserts
   # this user is eligible for new session/token issuance *right now*, under
   # a row lock, immediately before minting. Callers may additionally check
   # #active? earlier for a fast, friendly rejection (skip an MFA/device
   # round trip) — that's a UX optimization only, never a substitute for
   # this check, however "obviously" already-checked the user seems.
-  def with_active_lock!
+  # Pass the #password_fingerprint taken when the password was checked to
+  # also reject issuance after a concurrent password change.
+  def with_active_lock!(password_fingerprint: nil)
     lock_acquired = false
 
     with_lock do
       lock_acquired = true
       raise InactiveError unless active?
+      raise StaleCredentialsError if password_fingerprint && password_fingerprint != self.password_fingerprint
       yield self
     end
   rescue ActiveRecord::RecordNotFound
@@ -491,6 +500,10 @@ class User < ApplicationRecord
         "after password change for user_id=#{id}"
       )
     end
+  end
+
+  def password_fingerprint
+    Digest::SHA256.hexdigest(password_digest.to_s)
   end
 
   def revoke_doorkeeper_tokens_and_grants

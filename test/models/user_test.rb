@@ -1433,4 +1433,17 @@ class UserTest < ActiveSupport::TestCase
 
     assert late_token.reload.revoked_at.present?
   end
+
+  test "with_active_lock! rejects a password fingerprint taken before a password change" do
+    user = users(:family_member)
+    fingerprint = user.password_fingerprint
+
+    assert_equal :ok, user.with_active_lock!(password_fingerprint: fingerprint) { :ok }
+
+    User.find(user.id).update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+
+    assert_raises(User::StaleCredentialsError) do
+      user.with_active_lock!(password_fingerprint: fingerprint) { flunk "must not run" }
+    end
+  end
 end
