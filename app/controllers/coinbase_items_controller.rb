@@ -27,63 +27,18 @@ class CoinbaseItemsController < ApplicationController
       # Trigger initial sync to fetch accounts
       @coinbase_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @coinbase_items = Current.family.coinbase_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "coinbase-providers-panel",
-            partial: "settings/providers/coinbase_panel",
-            locals: { coinbase_items: @coinbase_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @coinbase_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "coinbase-providers-panel",
-          partial: "settings/providers/coinbase_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
+      render_provider_panel("coinbase", alert: @coinbase_item.errors.full_messages.join(", "))
     end
   end
 
+  # The panel has no edit form, so an update never re-renders it.
   def update
     if @coinbase_item.update(coinbase_item_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @coinbase_items = Current.family.coinbase_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "coinbase-providers-panel",
-            partial: "settings/providers/coinbase_panel",
-            locals: { coinbase_items: @coinbase_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @coinbase_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "coinbase-providers-panel",
-          partial: "settings/providers/coinbase_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
+      redirect_to settings_providers_path, alert: @coinbase_item.errors.full_messages.join(", "), status: :see_other
     end
   end
 
@@ -96,6 +51,7 @@ class CoinbaseItemsController < ApplicationController
     unless @coinbase_item.syncing?
       @coinbase_item.sync_later
     end
+    return render_provider_panel("coinbase", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -214,10 +170,11 @@ class CoinbaseItemsController < ApplicationController
       end
 
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "coinbase_items/coinbase_item",
-          locals: { coinbase_item: item }
+          locals: { coinbase_item: item, visible_accounts: item.accounts }
         ),
         manual_accounts_stream,
         *Array(flash_notification_stream_items)
@@ -297,10 +254,11 @@ class CoinbaseItemsController < ApplicationController
       @coinbase_items = Current.family.coinbase_items.ordered.includes(:syncs)
 
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@coinbase_item),
           partial: "coinbase_items/coinbase_item",
-          locals: { coinbase_item: @coinbase_item }
+          locals: { coinbase_item: @coinbase_item, visible_accounts: @coinbase_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else

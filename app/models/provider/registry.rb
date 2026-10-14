@@ -3,7 +3,7 @@ class Provider::Registry
 
   Error = Class.new(StandardError)
 
-  CONCEPTS = %i[exchange_rates securities llm property_valuations]
+  CONCEPTS = %i[exchange_rates securities llm property_valuations classification]
 
   validates :concept, inclusion: { in: CONCEPTS }
 
@@ -105,6 +105,18 @@ class Provider::Registry
         Provider::Anthropic.new(access_token, base_url: base_url, model: model)
       end
 
+      def jev
+        api_key = Provider::Jev.api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Jev.new(
+          api_key,
+          endpoint: Provider::Jev.effective_endpoint,
+          model: Provider::Jev.effective_model
+        )
+      end
+
       def yahoo_finance
         Provider::YahooFinance.new
       end
@@ -180,6 +192,14 @@ class Provider::Registry
 
         Provider::Realie.new(api_key)
       end
+
+      def chimnie
+        api_key = ENV["CHIMNIE_API_KEY"].presence || Setting.chimnie_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Chimnie.new(api_key)
+      end
   end
 
   def initialize(concept)
@@ -215,8 +235,14 @@ class Provider::Registry
         %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest mansa]
       when :llm
         %i[openai anthropic]
+      when :classification
+        # Only providers implementing Provider::ClassificationConcept#decide
+        # belong here. OpenAI and Anthropic can auto-categorize but cannot
+        # answer typed questions, so they stay under :llm — the eval runner
+        # builds them by name when benchmarking against Jev.
+        %i[jev]
       when :property_valuations
-        %i[rentcast realie]
+        %i[rentcast realie chimnie]
       else
         %i[plaid_us plaid_eu github openai anthropic]
       end

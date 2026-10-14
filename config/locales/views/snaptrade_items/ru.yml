@@ -22,7 +22,7 @@ ru:
         Vanguard, Schwab, Robinhood и др.) и предоставляет полную историю торгов с
         метками активности и стоимостью.
       free_tier_warning: Бесплатный тариф SnapTrade покрывает 5 подключений брокеров.
-        Обновите на SnapTrade для большего количества.
+        Чтобы подключить больше, перейдите на платный тариф SnapTrade.
       loading_connections: Загрузка подключений...
       manage_connections: Управление подключениями
       name: SnapTrade
@@ -46,6 +46,12 @@ ru:
         one: "%{count} счёт из SnapTrade"
         other: "%{count} счёта из SnapTrade"
       status_ready: Готово к подключению брокеров
+      oauth_setup_step_1_html: Зарегистрируйте OAuth-приложение на <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Только для входа через браузер: добавьте URL обратного вызова этого приложения (<code>%{callback_url}</code>) как зарегистрированный redirect URI'
+      oauth_setup_step_3: Задайте SNAPTRADE_OAUTH_CLIENT_ID в окружении и перезапустите приложение. Этого достаточно для входа по коду устройства; для входа через браузер добавьте также SNAPTRADE_OAUTH_CLIENT_SECRET
+      oauth_status_ready_device: Авторизуйте Sure с помощью кода устройства, чтобы получать данные ваших счетов SnapTrade.
+      oauth_device_button: Использовать код устройства
+      manage_at_snaptrade: Управлять подключениями в SnapTrade
   snaptrade_item:
     brokerage_summary:
       count:
@@ -165,6 +171,14 @@ ru:
       syncing: Получение ваших счетов...
       title: Настройка счетов SnapTrade
       try_again: Подключить брокера
+      account_type_label: Тип счёта
+      account_types:
+        depository: Текущий или сберегательный счёт
+        credit_card: Кредитная карта
+        investment: Инвестиционный счёт
+        crypto: Криптовалютный счёт
+        loan: Кредит или кредитная линия
+        other_asset: Другой актив
     snaptrade_item:
       accounts_need_setup:
         few: "%{count} счёта требуют настройки"
@@ -194,3 +208,29 @@ ru:
       status: Последняя синхронизация %{timestamp} назад - %{summary}
       status_never: Никогда не синхронизировалось
       syncing: Синхронизация...
+    oauth_authorize:
+      not_configured: Для авторизации SnapTrade через браузер нужен SNAPTRADE_OAUTH_CLIENT_SECRET вместе с SNAPTRADE_OAUTH_CLIENT_ID. Задайте его и перезапустите приложение или авторизуйтесь с помощью кода устройства.
+    oauth_callback:
+      success: Авторизация SnapTrade завершена.
+      access_denied: Авторизация SnapTrade отменена.
+      state_mismatch: Авторизация SnapTrade не прошла проверку безопасности. Попробуйте снова.
+      failed: Не удалось завершить авторизацию SnapTrade. Попробуйте снова.
+    oauth_device_flow:
+      title: Подключить SnapTrade
+      subtitle: Авторизуйте Sure в SnapTrade с помощью кода устройства.
+      instructions: Откройте SnapTrade, подтвердите этот код устройства, затем вернитесь сюда, чтобы завершить подключение.
+      code_label: Код устройства
+      open_snaptrade: Открыть SnapTrade
+      start_button: Начать авторизацию
+      complete_button: Я авторизовал(а) SnapTrade
+      cancel_button: Отмена
+      missing_client_id: SnapTrade OAuth не настроен. Добавьте SNAPTRADE_OAUTH_CLIENT_ID в .env.local, перезапустите приложение и повторите попытку.
+    start_oauth_device_flow:
+      failed: Не удалось начать авторизацию SnapTrade по коду устройства. Попробуйте снова.
+    complete_oauth_device_flow:
+      success: Авторизация SnapTrade завершена.
+      device_code_required: Для этого подключения нет активной авторизации SnapTrade по коду устройства. Начните её заново, чтобы получить новый код.
+      authorization_pending: SnapTrade ещё не получил ваше подтверждение. Подтвердите код в SnapTrade и повторите попытку.
+      expired: Срок действия кода устройства истёк. Начните авторизацию заново.
+      access_denied: Авторизация SnapTrade отклонена.
+      failed: Не удалось завершить авторизацию SnapTrade по коду устройства. Попробуйте снова.

@@ -147,6 +147,20 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("budgets.available_cash.heading"), response.body
     assert_match I18n.t("budgets.available_cash.free"), response.body
   end
+
+  test "the free figure is the cash panel's one hero figure" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    start_date = Date.current.beginning_of_month
+    budget = Budget.find_or_bootstrap(@user.family, start_date: start_date, user: @user)
+
+    get budget_url(Budget.date_to_param(start_date))
+
+    assert_response :success
+    free_row = css_select("dt").find { |dt| dt.text.strip == I18n.t("budgets.available_cash.free") }.parent
+    assert_select free_row, "dd.privacy-sensitive", text: /#{Regexp.escape(budget.free_cash_money.format)}/
+    assert_select free_row.parent, "dd.text-2xl", count: 1
+    assert_select free_row, "dd.text-2xl", count: 1
+  end
 end
 
 class BudgetsControllerSharingTest < ActionDispatch::IntegrationTest

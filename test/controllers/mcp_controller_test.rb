@@ -314,6 +314,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_includes tool_names, "get_transactions"
       assert_includes tool_names, "get_accounts"
       assert_includes tool_names, "get_holdings"
+      assert_includes tool_names, "set_opening_balance"
       assert_includes tool_names, "get_balance_sheet"
       assert_includes tool_names, "get_income_statement"
       assert_includes tool_names, "update_transaction"
@@ -326,6 +327,27 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         assert tool["inputSchema"].present?, "Tool #{tool['name']} missing inputSchema"
         assert_equal "object", tool["inputSchema"]["type"]
       end
+    end
+  end
+
+  test "tools stay available to external agents when the in-app assistant is off" do
+    @user.family.update!(assistant_type: "mcp_only")
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      assert_equal Assistant.function_classes(@user).size,
+                   JSON.parse(response.body)["result"]["tools"].size
+
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "get_accounts", arguments: {} }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_not result["isError"]
+      assert JSON.parse(result["content"][0]["text"]).key?("accounts")
     end
   end
 

@@ -4,3 +4,6 @@ ca:
     chat_form:
       disclaimer: Les respostes de la IA són només informatives. No són consells financers!
       placeholder: Pregunta el que vulguis ...
+      coming_soon: Properament
+    create:
+      chat_not_found: Aquest xat ja no està disponible.

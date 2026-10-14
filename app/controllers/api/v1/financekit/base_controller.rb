@@ -9,14 +9,14 @@ class Api::V1::Financekit::BaseController < Api::V1::BaseController
 
   private
 
+    # Publishing is admin-only, as connecting any provider is: it writes into
+    # accounts the whole family reads. Nothing else gates it -- there is no
+    # server-side feature flag, and no per-user preview opt-in. Whether a build
+    # offers Wallet sync at all is the iOS client's decision, made through
+    # StoreKit, which the server has no way to check and does not try to.
     def require_financekit_access
       return unless authorize_scope!(request.get? || request.head? ? :read : :write)
-      unless current_resource_owner.admin? && current_resource_owner.preview_features_enabled?
-        raise Financekit::Error.new("publisher_forbidden", 403)
-      end
-      unless action_name == "capabilities" || Financekit.enabled?(current_resource_owner.family) || action_name == "destroy"
-        raise Financekit::Error.new("unavailable", 503)
-      end
+      raise Financekit::Error.new("publisher_forbidden", 403) unless current_resource_owner.admin?
     end
 
     def connection

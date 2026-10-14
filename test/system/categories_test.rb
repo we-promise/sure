@@ -10,6 +10,7 @@ class CategoriesTest < ApplicationSystemTestCase
     click_link I18n.t("categories.new.new_category")
     fill_in "Name", with: "My Shiny New Category"
     click_button "Create Category"
+    assert_text I18n.t("categories.create.success")
 
     visit categories_url
     assert_text "My Shiny New Category"
@@ -86,6 +87,11 @@ class CategoriesTest < ApplicationSystemTestCase
     end
 
     picker.click
+    # Wait for the close handler before reopening; browsers can coalesce
+    # back-to-back details toggles and skip the intermediate closed state.
+    within "[data-controller='list-filter']", visible: :all do
+      assert_field I18n.t("ds.icon_picker.search_placeholder"), with: "", visible: :all
+    end
     picker.click
 
     within "[data-controller='list-filter']" do

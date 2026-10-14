@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 # Reads every tracked address, then reprocesses only the rows whose on-chain
-# state actually changed. An idle wallet costs reads and nothing else: no
-# holdings, entries or balances are rewritten, and no account syncs are queued.
+# state actually changed. An idle wallet is revalued after the sync, and only
+# written when its value changed.
 class OnchainWalletItem::Syncer
   include SyncStats::Collector
 
@@ -53,13 +53,29 @@ class OnchainWalletItem::Syncer
   # changed here is the price history, which no chain read can tell us about.
   def perform_post_sync
     linked_accounts.each do |onchain_account|
-      OnchainWalletAccount::Processor.new(onchain_account).repair_display_only_movements
-    rescue StandardError => e
-      Rails.logger.warn("OnchainWalletItem::Syncer - movement repair failed for #{onchain_account.id}: #{e.class}")
+      processor = OnchainWalletAccount::Processor.new(onchain_account)
+      post_sync_step(onchain_account, "movement repair") { processor.repair_display_only_movements }
+      post_sync_step(onchain_account, "revaluation") { processor.revalue }
     end
   end
 
   private
+    # One asset's failing step must not stop the other step or the other assets.
+    def post_sync_step(onchain_account, label)
+      yield
+    rescue StandardError => e
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "On-chain wallet #{label} failed: #{e.class}",
+        source: self.class.name,
+        provider_key: "onchain_wallet",
+        family: onchain_wallet_item.family,
+        account: onchain_account.current_account,
+        metadata: { onchain_wallet_account_id: onchain_account.id, error: e.message }
+      )
+    end
+
     def linked_accounts
       onchain_wallet_item.onchain_wallet_accounts.linked.joins(:account).merge(Account.visible)
     end

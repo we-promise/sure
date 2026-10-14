@@ -52,3 +52,6 @@ ca:
     thinking: Pensant...
     update:
       success: Xat actualitzat
+    worker_unhealthy_warning: 'Ara mateix pot ser que les respostes de la IA no arribin: el procés en segon pla sembla aturat o saturat. Comprova que el teu worker de Sidekiq s''estigui executant.'
+    new:
+      default_title: Xat nou %{timestamp}

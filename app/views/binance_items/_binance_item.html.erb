@@ -1,4 +1,4 @@
-<%# locals: (binance_item:, unlinked_count: binance_item.unlinked_accounts_count) %>
+<%# locals: (binance_item:, unlinked_count: binance_item.unlinked_accounts_count, visible_accounts:) %>
 
 <%= tag.div id: dom_id(binance_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -86,9 +86,9 @@
 
     <% unless binance_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if binance_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: binance_item.accounts %>
-          <% binance_item.stale_rate_accounts.each do |ba| %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+          <% binance_item.stale_rate_accounts.where(accounts: { id: visible_accounts.map(&:id) }).each do |ba| %>
             <div class="flex items-center gap-2 text-xs text-warning px-1">
               <span class="font-mono">~</span>
               <%= icon "triangle-alert", size: "sm" %>
@@ -103,7 +103,7 @@
         <% stats = binance_item.syncs.ordered.first&.sync_stats || {} %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: binance_item
+          provider_item: binance_item, show_account_details: visible_accounts.size == binance_item.accounts.size
         ) %>
 
         <% if binance_item.unlinked_accounts_count > 0 %>

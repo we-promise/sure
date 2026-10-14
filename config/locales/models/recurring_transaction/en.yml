@@ -10,6 +10,7 @@ en:
     attributes:
       recurring_transaction:
         payment_url: "Payment link"
+        frequency_interval: "Repeat interval"
     errors:
       models:
         recurring_transaction:

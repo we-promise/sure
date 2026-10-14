@@ -6,7 +6,7 @@
   <span class="min-w-0">
     <span class="block text-sm text-primary truncate"><%= entry.name %></span>
     <span class="block text-xs text-secondary truncate">
-      <%= l(entry.date, format: :short) %><% if entry.account %> &middot; <%= entry.account.name %><% end %><% if claimed_by %> &middot; <%= t(".claimed", name: claimed_by) %><% end %>
+      <%= l(entry.date, format: :short_with_year) %><% if entry.account %> &middot; <%= entry.account.name %><% end %><% if claimed_by %> &middot; <%= t(".claimed", name: claimed_by) %><% end %>
     </span>
   </span>
   <span class="text-sm text-primary privacy-sensitive shrink-0">

@@ -8,6 +8,133 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:loan)
   end
 
+  # The overview only shows what the loan actually records: a leverage figure
+  # needs a down payment, and an insurance card needs a premium. A loan with
+  # neither must not grow cards reading zero, which would say the borrower has
+  # insurance costing nothing rather than none.
+  test "the overview shows leverage and insurance once they are recorded" do
+    get account_path(@account)
+    assert_response :success
+    assert_no_match(/Leverage/, response.body, "nothing to compute a ratio from yet")
+    # The summary card's own title, not the word: the repayment breakdown below
+    # the cards has an "Insurance" row of its own, which would satisfy a match
+    # on the page body with the card deleted.
+    assert_select "h4", text: "Insurance", count: 0, message: "and no premium recorded"
+
+    @account.loan.update!(
+      down_payment: 100_000, interest_rate: 5, term_months: 120, rate_type: "fixed",
+      start_date: 2.years.ago.to_date, insurance_rate: 0.36, insurance_rate_type: "level_term"
+    )
+
+    get account_path(@account)
+    assert_response :success
+
+    assert_match(/Leverage/, response.body)
+    assert_match(/5\.0x/, response.body, "500,000 borrowed against 100,000 put in")
+    assert_match(/Moderate/, response.body, "and the band that ratio sits in")
+    assert_select "h4", text: "Insurance", count: 1, message: "the insurance summary card"
+    assert_match(/Total Cost/, response.body)
+    assert_select "[data-controller='donut-chart']", count: 1, message: "the repayment ring"
+    # The amount borrowed is money like the ratio beside it, so Privacy Mode
+    # must blur it too.
+    assert_select "[data-controller='donut-chart'] p.privacy-sensitive", text: /of \$500,000/, count: 1
+  end
+
+  # The Schedule tab's "Total Cost" is what the borrower repays: principal plus
+  # interest. Both tabs render in one request, so the Overview's card must
+  # either show that same figure or say what it adds -- a premium folded in
+  # under the same title put two different "Total Cost" amounts on one page.
+  test "the overview's total cost agrees with the schedule's and names the premium it adds" do
+    loan = @account.loan
+    loan.update!(interest_rate: 5, term_months: 120, rate_type: "fixed", start_date: 2.years.ago.to_date)
+
+    get account_path(@account)
+    uninsured = card_values("Total Cost")
+    assert_equal 2, uninsured.size, "precondition: the Overview and Schedule tabs each render the card"
+    assert_equal 1, uninsured.uniq.size, "with no premium the two figures are the same figure"
+
+    loan.update!(insurance_rate: 0.36, insurance_rate_type: "level_term")
+    loan = Loan.find(loan.id)
+
+    get account_path(@account)
+    assert_equal uninsured.first(1), card_values("Total Cost"),
+                 "one card still calls itself Total Cost, and it has not moved"
+    assert_equal [ format_money(loan.amortization_schedule.total_paid + loan.total_insurance) ],
+                 card_values("Total Cost incl. Insurance"),
+                 "the Overview names the premium it adds, and adds it to the Schedule's figure"
+  end
+
+  # A rate saved on a loan with no term has no schedule to project a premium
+  # against. The card must still say a policy is recorded rather than vanish,
+  # which read as though the save had been lost.
+  test "a recorded insurance rate shows even when no premium can be projected" do
+    @account.loan.update!(term_months: nil, insurance_rate: 0.36, insurance_rate_type: "level_term")
+    assert_nil Loan.find(@account.loan.id).insurance, "precondition: nothing to project against"
+
+    get account_path(@account)
+    assert_response :success
+    assert_equal [ "0.36% a year" ], card_values("Insurance")
+  end
+
+  # A negative opening valuation (imports produce them) has no leverage band,
+  # and the card built its label from the band -- a key that does not exist.
+  test "a negative opening balance shows no leverage card rather than a missing translation" do
+    @account.loan.update!(down_payment: 100_000)
+    @account.entries.create!(
+      date: Date.current - 2.years, name: "Opening balance", amount: -500_000, currency: @account.currency,
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+    assert @account.loan.original_balance.negative?, "precondition: the opening balance is negative"
+
+    get account_path(@account)
+    assert_response :success
+    assert_no_match(/translation missing: en\.loans/, response.body)
+    assert_select "h4", text: "Leverage", count: 0
+  end
+
+  # The form renders these fields, so a save must keep them. Measured against
+  # the loan's own state before the request: all three start blank.
+  test "updates the down payment and insurance terms from the form" do
+    loan = @account.loan
+    assert_nil loan.down_payment
+    assert_nil loan.insurance_rate
+    assert_nil loan.insurance_rate_type
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_type: "Loan",
+        accountable_attributes: {
+          id: @account.accountable_id,
+          down_payment: "100000", insurance_rate: "0.36", insurance_rate_type: "level_term"
+        }
+      }
+    }
+
+    assert_redirected_to @account
+    loan.reload
+    assert_equal BigDecimal("100000"), loan.down_payment
+    assert_equal BigDecimal("0.36"), loan.insurance_rate
+    assert_equal "level_term", loan.insurance_rate_type
+  end
+
+  # The type select's blank option is the form's "None": no type recorded, read
+  # as decreasing. It submits an empty string, which must clear the type rather
+  # than fail validation (and the column's check constraint, which admits NULL
+  # but not '').
+  test "the insurance type's blank option clears a recorded type" do
+    @account.loan.update!(insurance_rate: 0.36, insurance_rate_type: "level_term")
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_type: "Loan",
+        accountable_attributes: { id: @account.accountable_id, insurance_rate_type: "" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil @account.loan.reload.insurance_rate_type
+  end
+
   test "creates with loan details" do
     assert_difference -> { Account.count } => 1,
       -> { Loan.count } => 1,
@@ -140,7 +267,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     @account.loan.update!(rate_type: "variable", interest_rate: 6, term_months: 24)
 
     get account_path(@account, tab: "schedule")
-    flat_body = response.body
+    flat_payments = schedule_table_cells
 
     # A year into the 24-month term, whatever today is. The fixture loan has no
     # start_date, so its origination moves with the clock; a fixed date would
@@ -151,8 +278,11 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     get account_path(@account, tab: "schedule")
 
     assert_response :success
-    assert_not_equal flat_body, response.body,
-      "recording a rate change must change what the schedule tab renders"
+    # The schedule's own cells, not the whole body: the chart card above the
+    # tabs moves for the same change.
+    assert_equal flat_payments.length, schedule_table_cells.length
+    assert_not_equal flat_payments, schedule_table_cells,
+      "recording a rate change must change the payments the schedule tab renders"
     # A substring free of characters ERB escapes -- the full string contains an
     # apostrophe and renders as &#39;.
     assert_match "re-amortises at each recorded change", response.body
@@ -227,6 +357,70 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_empty @account.loan.reload.variable_rate_schedule
   end
 
+  # Reads the payload off the mounted controller's own data attribute rather
+  # than parsing rendered SVG paths, which would be a brittle way to assert on
+  # data that already has model-level coverage. This test's job is to prove the
+  # right payload reaches the browser and mounts the controller.
+  def chart_payload
+    node = css_select("[data-controller='loan-payoff-chart']").first
+    node && JSON.parse(node["data-loan-payoff-chart-data-value"])
+  end
+
+  # The chart lives at the top of the account page, inside the chart
+  # card's Turbo frame, on whichever tab is open. The Schedule tab keeps its
+  # table and cards and no longer carries a chart of its own.
+  test "the account page mounts the loan balance chart with its three series" do
+    # All three lines need somewhere to be: a period that reaches past today
+    # for the forecasts, and a recorded history for the actual line. The
+    # earlier intersection assertion here passed with `visible` empty.
+    origination = Date.current.prev_year
+    @account.loan.update!(start_date: origination)
+    @account.balances.create!(date: origination, balance: 500_000, currency: "USD",
+                              start_cash_balance: 500_000, flows_factor: -1)
+    @account.balances.create!(date: Date.current, balance: 490_000, currency: "USD",
+                              start_cash_balance: 490_000, flows_factor: -1)
+
+    get account_path(@account, period: "all_time")
+
+    assert_response :success
+    payload = chart_payload
+    assert payload["scheduled"].length > 1
+    assert payload["projected"].length > 1
+    assert_equal %w[actual projected scheduled], payload.fetch("visible").sort
+    assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(@account, :chart_details)} [data-controller='loan-payoff-chart']", count: 1
+    # Owner review of #3474: the chart card carries no data table; the Schedule
+    # tab has the figures.
+    assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(@account, :chart_details)} table", count: 0
+  end
+
+  test "the schedule tab renders its table without a chart of its own" do
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    assert_select "[data-controller='loan-payoff-chart']", { count: 1 }, "one chart on the page, in the chart card"
+    assert_select "table", { count: 1 }, "the Schedule tab's table is the only one: the chart has no data table"
+  end
+
+  # A stray what-if parameter from an old link must change nothing: the
+  # feature is not in this tranche (#100 decision 10).
+  test "an extra-payment parameter is ignored" do
+    get account_path(@account)
+    baseline = chart_payload
+    get account_path(@account, extra_payment: { amount: "2000", frequency: "monthly" })
+
+    assert_response :success
+    assert_equal baseline, chart_payload
+  end
+
+  test "a loan with no schedule renders the page without a loan chart" do
+    @account.loan.update!(rate_type: "")
+
+    get account_path(@account)
+
+    assert_response :success
+    assert_nil chart_payload
+    assert_select "[data-controller='time-series-chart']", count: 1
+  end
   # The validation lives on Loan and is reached through nested attributes, which
   # validate the nested record only when it has changes. Resubmitting the stored
   # rows plus a typo'd one leaves the column equal to its stored value, so
@@ -300,6 +494,21 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-loan-rate-changes-target=section][hidden]", count: 0
     assert_select "[data-loan-rate-changes-target=rows] input[disabled]", count: 0
     assert_select "[data-loan-rate-changes-target=section] input[name='account[accountable_attributes][rate_changes][]']:not([disabled])", count: 1
+  end
+
+  # The payload runs the schedule, the projection and a balance query on every
+  # loan page view, from provider-written and user-written inputs. A raise in
+  # any of them must cost the chart, not the page: before this guard the whole
+  # account page was a 500 for a loan that rendered fine without the chart.
+  test "a chart payload that raises degrades to the time-series chart instead of a 500" do
+    Loan::PayoffChart.any_instance.stubs(:payload).raises(ArgumentError, "boom")
+
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    assert_select "[data-controller='time-series-chart']", count: 1
+    assert_select "[data-controller='loan-payoff-chart']", count: 0
+    assert_match "Total Interest", response.body, "the Schedule tab still renders"
   end
 
   # Owner review of #3474: the rate changes open from a collapsed disclosure,
@@ -393,6 +602,37 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_match "2,997.75", response.body
   end
 
+  # The period picker re-renders the chart card's frame, and
+  # the cards and the mount must both live inside it.
+  test "a chart_details frame request carries the mount and both cards inside the frame" do
+    frame_id = ActionView::RecordIdentifier.dom_id(@account, :chart_details)
+
+    get account_path(@account, period: "all_time"), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id} [data-controller='loan-payoff-chart']", count: 1
+    assert_select "turbo-frame##{frame_id} h4", text: I18n.t("UI.account.chart.loan.projected_payoff"), count: 1
+    assert_select "turbo-frame##{frame_id} h4", text: I18n.t("UI.account.chart.loan.interest_saved"), count: 1
+  end
+
+  # The activity feed paginates through its own `entries` frame. That request
+  # renders the whole page and keeps one frame, so building the chart payload
+  # for it ran a full simulation per page turn for nothing.
+  test "a frame request outside the chart card does not build the chart payload" do
+    Loan::PayoffChart.any_instance.expects(:payload).never
+
+    get account_path(@account, page: 2), headers: { "Turbo-Frame" => ActionView::RecordIdentifier.dom_id(@account, "entries") }
+
+    assert_response :success
+  end
+
+  test "the account's container frame request still builds the chart payload" do
+    get account_path(@account, period: "all_time"), headers: { "Turbo-Frame" => ActionView::RecordIdentifier.dom_id(@account, :container) }
+
+    assert_response :success
+    assert_select "[data-controller='loan-payoff-chart']", count: 1
+  end
+
   # Owner review of #3474: the Overview cards name the amounts as the loan
   # amount rather than "principal".
   test "the overview tab names the original and remaining loan amounts" do
@@ -421,6 +661,45 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert card.parent.css("h4").any? { |title| title.text.strip == "Original Loan Amount" },
       "the card sits among the Overview cards"
     assert_select "h4", text: "Payoff Date", count: 0
+  end
+
+  # Beside the contract's figures, the Schedule tab says
+  # when the loan will actually be paid off -- the projection from today's
+  # balance that the chart above it draws.
+  test "the schedule tab forecasts the payoff date from today's balance" do
+    draw_down_loan_two_years_ago
+    schedule = @account.loan.amortization_schedule
+    scheduled_today = schedule.payments.select { |payment| payment.date <= Date.current }.last
+    assert scheduled_today, "the fixture loan must be part-way through its schedule"
+    @account.update!(balance: scheduled_today.ending_balance.amount / 2)
+
+    forecast = @account.loan.reload.payoff_projection(as_of: Date.current).payoff_date
+    assert forecast, "a loan ahead of schedule has a forecast payoff date"
+    assert_operator forecast, :<, schedule.payoff_date,
+      "the fixture must be ahead, or this cannot tell the forecast from the original date"
+
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    card = css_select("h4").find { |title| title.text.strip == "Forecasted Payoff Date" }&.parent
+    assert card, "the schedule tab has a forecasted payoff date card"
+    assert_equal I18n.l(forecast, format: :long), card.at_css("p").text.strip
+    assert card.parent.css("h4").any? { |title| title.text.strip == "Total Interest" },
+      "the card sits among the Schedule cards"
+  end
+
+  test "the forecasted payoff date card says when the repayment no longer clears the loan" do
+    draw_down_loan_two_years_ago
+    @account.update!(balance: @account.loan.original_balance.amount * 10)
+    assert_not @account.loan.reload.payoff_projection(as_of: Date.current).converged?,
+      "the fixture must be too far behind to clear, or this cannot reach the notice"
+
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    card = css_select("h4").find { |title| title.text.strip == "Forecasted Payoff Date" }&.parent
+    assert card, "the schedule tab has a forecasted payoff date card"
+    assert_equal "Not paid off on the current repayment", card.at_css("p").text.strip
   end
 
   # Codex on we-promise/sure#3473: `update` persisted the balance change (a
@@ -572,5 +851,59 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_select "form[action='#{loans_path}']", count: 1
+    # Rebuilt from the submission, not a blank account: what was typed comes
+    # back for correction.
+    assert_select "input[name='account[name]'][value='Loan With Bad Anchor']", count: 1
+    assert_select "input[name='account[accountable_attributes][interest_rate]'][value='6']", count: 1
   end
+
+  # The submission that trips this rescue need not carry nested attributes at
+  # all. `accountable_type=` writes only the type column, so rebuilding from
+  # such a submission left `accountable` nil and the 422 form came back
+  # without a single one of the loan's own fields -- nothing for the borrower
+  # to correct, on a form whose whole purpose here is correction.
+  test "a late create failure renders the loan's fields even when the form sent none" do
+    invalid_entry = Entry.new.tap(&:validate)
+    Account::OpeningBalanceManager.any_instance.stubs(:set_opening_balance)
+      .raises(ActiveRecord::RecordInvalid.new(invalid_entry))
+
+    assert_no_difference "Account.count" do
+      post loans_path, params: { account: {
+        name: "Loan Without Nested Attributes", balance: 50_000, currency: "USD", accountable_type: "Loan"
+      } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "form[action='#{loans_path}']", count: 1
+    assert_select "input[name='account[name]'][value='Loan Without Nested Attributes']", count: 1
+    assert_select "input[name='account[accountable_attributes][interest_rate]']", minimum: 1
+  end
+
+  private
+    # The payment cells of the Schedule tab's table, the only table on the page.
+    def schedule_table_cells
+      css_select("table tbody td").map { |cell| cell.text.strip }
+    end
+
+    # The fixture loan starts today with no opening valuation. Drawn down two
+    # years ago, it has payments behind it; with the valuation the account form
+    # records, its principal stays the amount borrowed when a test then moves
+    # the balance -- without one the schedule would amortise the new balance.
+    def draw_down_loan_two_years_ago
+      start_date = Date.current - 2.years
+      @account.loan.update!(start_date: start_date)
+      @account.entries.create!(
+        date: start_date, name: "Opening balance", amount: @account.balance, currency: @account.currency,
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+    end
+
+    # The figure under every summary card titled exactly `title`, in page order.
+    def card_values(title)
+      css_select("h4").select { |h4| h4.text.strip == title }.map { |h4| h4.next_element.text.strip }
+    end
+
+    def format_money(money)
+      ApplicationController.helpers.format_money(money)
+    end
 end

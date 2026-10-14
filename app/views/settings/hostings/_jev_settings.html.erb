@@ -1,0 +1,51 @@
+<%# Credential fields only. The heading, Preview pill and data-sharing notice
+    belong to _categorization_provider_selector, which renders this once Jev is
+    the selected provider. %>
+<div class="space-y-4">
+  <% if ENV["JEV_API_KEY"].present? %>
+    <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+  <% end %>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-4",
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.password_field :jev_api_key,
+                            label: t(".api_key_label"),
+                            placeholder: t(".api_key_placeholder"),
+                            value: (Setting.jev_api_key.present? ? "********" : nil),
+                            autocomplete: "off",
+                            autocapitalize: "none",
+                            spellcheck: "false",
+                            inputmode: "text",
+                            disabled: ENV["JEV_API_KEY"].present?,
+                            data: { "auto-submit-form-target": "auto" } %>
+
+    <%= form.text_field :jev_endpoint,
+                        label: t(".endpoint_label"),
+                        placeholder: t(".endpoint_placeholder"),
+                        value: @jev_endpoint_input || Provider::Jev.effective_endpoint,
+                        autocomplete: "off",
+                        autocapitalize: "none",
+                        spellcheck: "false",
+                        inputmode: "url",
+                        disabled: ENV["JEV_ENDPOINT"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+
+    <%= form.text_field :jev_model,
+                        label: t(".model_label"),
+                        placeholder: t(".model_placeholder"),
+                        value: @jev_model_input || Provider::Jev.effective_model,
+                        autocomplete: "off",
+                        autocapitalize: "none",
+                        spellcheck: "false",
+                        inputmode: "text",
+                        disabled: ENV["JEV_MODEL"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1"><%= t(".model_help") %></p>
+  <% end %>
+</div>

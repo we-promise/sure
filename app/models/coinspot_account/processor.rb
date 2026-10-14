@@ -47,6 +47,10 @@ class CoinspotAccount::Processor
     failures.concat(process_fiat_deposits)
     failures.concat(process_fiat_withdrawals)
 
+    # The account was created, and anchored, before any of this history
+    # existed. Now that it does, the anchor has to precede it.
+    account.ensure_opening_anchor_precedes_entries
+
     { success: failures.empty?, failures: failures }
   end
 

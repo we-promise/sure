@@ -6,6 +6,7 @@ it:
       connection_description: "Collega un conto d’investimento Trade Republic tramite accesso web sicuro"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Questo conto Trade Republic è già collegato. La nuova connessione è stata rimossa."
     portfolio_categories:
       brokerage: "Conto di intermediazione"
       private_markets: "Mercati privati"
@@ -25,6 +26,9 @@ it:
       data_quality:
         title: "Qualità dei dati e dettagli della sincronizzazione"
         repair: "Ripara i dati importati"
+        pending_trade_details:
+          one: "%{count} operazione di investimento in attesa di dettagli"
+          other: "%{count} operazioni di investimento in attesa di dettagli"
     setup_accounts:
       page_title: "Configura il conto Trade Republic"
       subtitle: "Collega il tuo conto d’investimento Trade Republic."
@@ -76,5 +80,4 @@ it:
         card_fee: Commissione carta
         card_refund: Rimborso carta
         tax_refund: Rimborso fiscale
-        buy: Acquisto
-        sell: Vendita
+        round_up: Round up

@@ -6,6 +6,7 @@ vi:
       connection_description: "Kết nối tài khoản đầu tư Trade Republic bằng đăng nhập web an toàn"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Tài khoản Trade Republic này đã được kết nối. Kết nối mới đã bị xóa."
     portfolio_categories:
       brokerage: "Tài khoản môi giới"
       private_markets: "Thị trường tư nhân"
@@ -37,6 +38,9 @@ vi:
         unknown:
           one: "%{count} hoạt động không xác định"
           other: "%{count} hoạt động không xác định"
+        pending_trade_details:
+          one: "%{count} giao dịch đầu tư đang chờ chi tiết"
+          other: "%{count} giao dịch đầu tư đang chờ chi tiết"
         expenses:
           one: "%{count} khoản chi trong 30 ngày qua (%{amount})"
           other: "%{count} khoản chi trong 30 ngày qua (%{amount})"
@@ -102,5 +106,4 @@ vi:
         card_fee: Phí thẻ
         card_refund: Hoàn tiền thẻ
         tax_refund: Hoàn thuế
-        buy: Mua
-        sell: Bán
+        round_up: Round up

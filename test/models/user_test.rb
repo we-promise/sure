@@ -1,9 +1,11 @@
 require "test_helper"
+require "concurrent"
 
 class UserTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
-  uses_transaction :test_first_user_role_lock_makes_concurrent_family_creators_deterministic
+  uses_transaction :test_first_user_role_lock_makes_concurrent_family_creators_deterministic,
+    :"test_verify_otp?_claim_otp_time_step!_lets_only_one_of_two_racing_connections_claim_a_step"
 
   def setup
     @user = users(:family_admin)
@@ -224,6 +226,120 @@ class UserTest < ActiveSupport::TestCase
     assert_not user.verify_otp?("123456")
   end
 
+  # A code stays valid for its whole time step (and the 15s drift window), so
+  # without this anyone who saw it could sign in with it a second time.
+  test "verify_otp? accepts a TOTP code only once" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+    assert user.verify_otp?(code)
+    assert_not user.verify_otp?(code)
+    assert_not User.find(user.id).verify_otp?(code), "a freshly loaded user must reject it too"
+  end
+
+  test "verify_otp? accepts the next time step's code after one was used" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+
+    travel_to Time.zone.at(1_800_000_000) do
+      assert user.verify_otp?(totp.now)
+    end
+
+    travel_to Time.zone.at(1_800_000_000 + totp.interval) do
+      assert user.verify_otp?(totp.now)
+      assert_not user.verify_otp?(totp.at(1_800_000_000)), "an earlier step stays rejected"
+    end
+  end
+
+  # Two sign-in requests with the same code, both loaded before either records it.
+  test "verify_otp? lets only one of two concurrent uses of a code through" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+    first = User.find(user.id)
+    second = User.find(user.id)
+
+    assert first.verify_otp?(code)
+    assert_not second.verify_otp?(code)
+  end
+
+  # The test above checks two stale instances one after another. The gap
+  # between "verify" and "claim" is too small for real threads to land inside
+  # reliably, so it would not catch a regression that drops the conditional
+  # UPDATE in claim_otp_time_step! for an unconditional one: two connections
+  # racing the same claim on real, separately loaded (stale) instances must
+  # still let only one through, because Postgres serializes the two UPDATEs
+  # on the same row and the loser's WHERE no longer matches.
+  test "verify_otp? claim_otp_time_step! lets only one of two racing connections claim a step" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+    now = Time.current
+    time_step = totp.verify(totp.at(now), at: now)
+
+    first = User.find(user.id)
+    second = User.find(user.id)
+    latch = Concurrent::CountDownLatch.new(2)
+
+    results = [ first, second ].map do |instance|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          latch.count_down
+          latch.wait(5)
+          instance.send(:claim_otp_time_step!, time_step)
+        end
+      end
+    end.map(&:value)
+
+    assert_equal 1, results.count(true), "exactly one racing connection should claim the step"
+    assert_not_nil user.reload.otp_last_used_at
+  end
+
+  test "verify_otp tells a replayed code apart from an invalid one" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+    assert_equal :accepted, user.verify_otp(code)
+    assert_equal :replayed, user.verify_otp(code)
+    assert_equal :replayed, User.find(user.id).verify_otp(code), "a freshly loaded user must see the replay too"
+    assert_equal :invalid, user.verify_otp("invalid")
+    assert_equal :invalid, user.verify_otp("123456")
+  end
+
+  # A claim carried by a stale instance must not mark a time step as used on
+  # a factor enrolled after the secret changed underneath it.
+  test "verify_otp? claim_otp_time_step! does not claim across a replaced secret" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+    now = Time.current
+    time_step = totp.verify(totp.at(now), at: now)
+    stale = User.find(user.id)
+
+    user.disable_mfa!
+    user.setup_mfa!
+
+    assert_not stale.send(:claim_otp_time_step!, time_step)
+    assert_nil user.reload.otp_last_used_at, "the new factor must not inherit the old claim"
+  end
+
+  test "setting up or disabling MFA forgets the last used time step" do
+    user = users(:family_member)
+    user.setup_mfa!
+    assert user.verify_otp?(ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now)
+    assert_not_nil user.reload.otp_last_used_at
+
+    user.setup_mfa!
+    assert_nil user.reload.otp_last_used_at
+
+    assert user.verify_otp?(ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now)
+    user.disable_mfa!
+    assert_nil user.reload.otp_last_used_at
+  end
+
   test "verify_otp? does not check backup code digests for normal TOTP input" do
     user = users(:family_member)
     user.setup_mfa!
@@ -321,7 +437,7 @@ class UserTest < ActiveSupport::TestCase
   test "ai_available? returns true when openai access token set in settings" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
 
@@ -336,7 +452,7 @@ class UserTest < ActiveSupport::TestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
     @user.family.update!(assistant_type: "external")
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
       Setting.openai_access_token = nil
       assert @user.ai_available?
     end
@@ -348,7 +464,7 @@ class UserTest < ActiveSupport::TestCase
   test "ai_available? returns false when external assistant is configured but family type is builtin" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
     end
@@ -360,13 +476,39 @@ class UserTest < ActiveSupport::TestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
     @user.family.update!(assistant_type: "external")
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
     end
   ensure
     Setting.openai_access_token = previous
     @user.family.update!(assistant_type: "builtin")
+  end
+
+  test "ai_available? is false when the assistant type is mcp_only, even with a provider configured" do
+    previous = Setting.openai_access_token
+    @user.family.update!(assistant_type: "mcp_only")
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil do
+      Setting.openai_access_token = "token"
+
+      Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+      assert_not @user.ai_available?
+      assert_not @user.ai_enabled?
+
+      Rails.application.config.app_mode.stubs(:self_hosted?).returns(false)
+      assert_not @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+  end
+
+  test "ASSISTANT_TYPE=mcp_only overrides the family assistant type" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    @user.family.update!(assistant_type: "external")
+    with_env_overrides ASSISTANT_TYPE: "mcp_only", EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
+      assert_not @user.ai_available?
+      assert_not @user.family.assistant_enabled?
+    end
   end
 
   test "intro layout collapses sidebars and enables ai" do
@@ -413,7 +555,7 @@ class UserTest < ActiveSupport::TestCase
   test "new member defaults show_ai_sidebar to false when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       user = User.new(
         family: families(:empty),
@@ -432,7 +574,7 @@ class UserTest < ActiveSupport::TestCase
   test "new admin defaults show_ai_sidebar to true even when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       user = User.new(
         family: families(:empty),
@@ -464,7 +606,7 @@ class UserTest < ActiveSupport::TestCase
   test "new guest defaults show_ai_sidebar to false when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       user = User.new(
         family: families(:empty),
@@ -564,6 +706,31 @@ class UserTest < ActiveSupport::TestCase
     @user.reload
 
     assert_equal new_order, @user.dashboard_section_order
+  end
+
+  test "update_dashboard_section_hidden hides and re-adds a section without touching other preferences" do
+    @user.update!(preferences: { "section_order" => %w[balance_sheet net_worth_chart] })
+    assert_equal [], @user.dashboard_hidden_sections
+
+    @user.update_dashboard_section_hidden("net_worth_chart", true)
+    @user.update_dashboard_section_hidden("net_worth_chart", true)
+    @user.update_dashboard_section_hidden("balance_sheet", true)
+    assert_equal %w[net_worth_chart balance_sheet], @user.reload.dashboard_hidden_sections
+
+    @user.update_dashboard_section_hidden("net_worth_chart", false)
+    assert_equal %w[balance_sheet], @user.reload.dashboard_hidden_sections
+    assert_equal %w[balance_sheet net_worth_chart], @user.dashboard_section_order
+  end
+
+  test "update_dashboard_preferences keeps a hidden section's place when the rest are reordered" do
+    @user.update!(preferences: {
+      "section_order" => %w[cashflow_sankey net_worth_chart balance_sheet outflows_donut],
+      "hidden_sections" => %w[net_worth_chart]
+    })
+
+    @user.update_dashboard_preferences({ "section_order" => %w[outflows_donut cashflow_sankey balance_sheet] })
+
+    assert_equal %w[outflows_donut cashflow_sankey net_worth_chart balance_sheet], @user.reload.dashboard_section_order
   end
 
   test "dashboard_section_height returns stored preset or nil" do

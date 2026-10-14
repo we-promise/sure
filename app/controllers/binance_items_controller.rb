@@ -26,63 +26,18 @@ class BinanceItemsController < ApplicationController
       @binance_item.set_binance_institution_defaults!
       @binance_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @binance_items = Current.family.binance_items.ordered
-        render turbo_stream: [
-          turbo_stream.update(
-            "binance-providers-panel",
-            partial: "settings/providers/binance_panel",
-            locals: { binance_items: @binance_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @binance_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "binance-providers-panel",
-          partial: "settings/providers/binance_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("binance", alert: @binance_item.errors.full_messages.join(", "))
     end
   end
 
+  # The panel has no edit form, so an update never re-renders it.
   def update
     if @binance_item.update(binance_item_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @binance_items = Current.family.binance_items.ordered
-        render turbo_stream: [
-          turbo_stream.update(
-            "binance-providers-panel",
-            partial: "settings/providers/binance_panel",
-            locals: { binance_items: @binance_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @binance_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "binance-providers-panel",
-          partial: "settings/providers/binance_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      redirect_to settings_providers_path, alert: @binance_item.errors.full_messages.join(", "), status: :see_other
     end
   end
 
@@ -95,6 +50,7 @@ class BinanceItemsController < ApplicationController
     unless @binance_item.syncing?
       @binance_item.sync_later
     end
+    return render_provider_panel("binance", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -190,10 +146,11 @@ class BinanceItemsController < ApplicationController
       end
 
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "binance_items/binance_item",
-          locals: { binance_item: item }
+          locals: { binance_item: item, visible_accounts: item.accounts }
         ),
         manual_accounts_stream,
         *Array(flash_notification_stream_items)
@@ -280,10 +237,11 @@ class BinanceItemsController < ApplicationController
     if turbo_frame_request?
       @binance_items = Current.family.binance_items.ordered.includes(:syncs)
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@binance_item),
           partial: "binance_items/binance_item",
-          locals: { binance_item: @binance_item }
+          locals: { binance_item: @binance_item, visible_accounts: @binance_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else

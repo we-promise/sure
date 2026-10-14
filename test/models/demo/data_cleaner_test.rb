@@ -13,7 +13,7 @@ class Demo::DataCleanerTest < ActiveSupport::TestCase
   # demo family it had created itself.
   test "clears a family with a Stripe subscription without calling Stripe" do
     family = Family.create!(name: "Demo Family")
-    family.start_subscription!("sub_demo_123")
+    family.start_subscription!(Subscription::DEMO_STRIPE_ID)
     Provider::Registry.expects(:get_provider).with(:stripe).never
 
     clear!

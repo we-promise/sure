@@ -5,6 +5,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     @client = Assistant::External::Client.new(
       url: "http://localhost:18789/v1/chat",
       token: "test-token",
+      model: "openclaw/test-agent",
       agent_id: "test-agent"
     )
   end
@@ -98,7 +99,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     ) { |_| }
 
     body = JSON.parse(capture[0].body)
-    assert_equal "test-agent", body["model"]
+    assert_equal "openclaw/test-agent", body["model"]
     assert_equal true, body["stream"]
     assert_equal 3, body["messages"].size
     assert_equal "sure-family-42", body["user"]

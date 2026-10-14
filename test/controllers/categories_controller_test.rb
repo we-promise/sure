@@ -119,6 +119,33 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert response_json.fetch("errors").any?
   end
 
+  test "create as json with a parent makes a subcategory" do
+    parent = categories(:food_and_drink)
+
+    assert_difference "Category.count", +1 do
+      post categories_url(format: :json), params: {
+        category: { name: "JSON Subcategory", color: Category::COLORS.first, parent_id: parent.id } }
+    end
+
+    assert_response :created
+    new_category = Category.find(JSON.parse(response.body).fetch("id"))
+    assert_equal parent, new_category.parent
+    assert_includes JSON.parse(response.body).fetch("html"), "category-select-subcategory-indicator"
+  end
+
+  test "create as json rejects a parent from another family" do
+    foreign_parent = families(:empty).categories.create!(name: "Foreign Parent", color: "#123456")
+
+    assert_no_difference "Category.count" do
+      post categories_url(format: :json), params: {
+        category: { name: "Sneaky Child", color: Category::COLORS.first, parent_id: foreign_parent.id } }
+    end
+
+    assert_response :unprocessable_entity
+    # The inline create reads `errors` first (then `error`, then `message`).
+    assert_includes JSON.parse(response.body).fetch("errors"), "Parent is invalid"
+  end
+
   test "create and assign to transaction" do
     color = Category::COLORS.sample
 
@@ -153,6 +180,42 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
             name: "New Name",
             color: new_color } }
       end
+    end
+
+    assert_redirected_to categories_url
+  end
+
+  test "guest cannot create category" do
+    sign_in family_guest
+
+    assert_no_difference "Category.count" do
+      post categories_url, params: {
+        category: {
+          name: "Guest Category",
+          color: Category::COLORS.sample } }
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "guest cannot destroy category" do
+    sign_in family_guest
+
+    assert_no_difference "Category.count" do
+      delete category_url(categories(:food_and_drink))
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "member can create category" do
+    sign_in users(:family_member)
+
+    assert_difference "Category.count", 1 do
+      post categories_url, params: {
+        category: {
+          name: "Member Category",
+          color: Category::COLORS.sample } }
     end
 
     assert_redirected_to categories_url

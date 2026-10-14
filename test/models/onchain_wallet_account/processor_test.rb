@@ -98,7 +98,9 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Trade", entry.entryable_type
     assert_equal BigDecimal("1.5"), entry.entryable.qty
     assert_equal 50, entry.entryable.price
-    assert_equal(-75, entry.amount)
+    # Cash-neutral: a transfer moves no cash, so booking one here would
+    # fabricate a balance the wallet never held (see write_trade).
+    assert_equal 0, entry.amount
     # A trade is the shape this ledger needs to carry quantity and cost basis,
     # but coins arriving at an address were not bought here — and the name is
     # the one the movement already had before a price existed for it, so it does
@@ -117,7 +119,7 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by(external_id: "onchain_#{@onchain_account.id}_tx2")
     assert_equal(-1, entry.entryable.qty)
-    assert_equal 50, entry.amount
+    assert_equal 0, entry.amount
     assert_equal "Transfer", entry.entryable.investment_activity_label
     assert_equal "Sent 1.0 FAKE", entry.name
   end
@@ -257,7 +259,7 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     entry = onchain_entry("tx1")
     assert_equal "Trade", entry.entryable_type
     assert_equal BigDecimal("1.5"), entry.entryable.qty
-    assert_equal(-60, entry.amount)
+    assert_equal 0, entry.amount
     assert_equal 1, @account.entries.where(external_id: entry.external_id).count
   end
 
@@ -295,8 +297,38 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal entry.external_id, upgraded.external_id
     assert_equal BigDecimal("1.5"), upgraded.entryable.qty
     assert_equal 40, upgraded.entryable.price
-    assert_equal(-60, upgraded.amount)
+    assert_equal 0, upgraded.amount
     assert_not upgraded.excluded
+  end
+
+  test "the repair zeroes the legacy cash amount on a priced transfer" do
+    date = 3.days.ago.to_date
+    price_asset_at(date, 50)
+    store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    entry = onchain_entry("tx1")
+    assert_equal "Trade", entry.entryable_type
+    # A transfer written before transfers became cash-neutral.
+    entry.update!(amount: -75)
+
+    # The corrected amount only reaches the chart once an account sync
+    # recalculates the balances, so the repair has to ask for one.
+    assert_difference -> { @account.syncs.count }, 1 do
+      assert_equal 1, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    end
+    assert_equal 0, entry.reload.amount
+  end
+
+  test "the repair leaves an already normalized transfer alone" do
+    date = 3.days.ago.to_date
+    price_asset_at(date, 50)
+    store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    assert_no_difference -> { @account.syncs.count } do
+      assert_equal 0, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    end
   end
 
   test "the repair leaves a movement alone while its price is still unknown" do
@@ -425,12 +457,70 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "does nothing when the asset is not linked to an account" do
+  test "revalue brings an idle wallet up to the latest price and asks for an account sync" do
+    price_asset_at(1.day.ago.to_date, 100)
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+    assert_equal 200, @account.reload.balance
+
+    price_asset_at(Date.current, 150)
+
+    assert_difference -> { @account.syncs.count }, 1 do
+      assert OnchainWalletAccount::Processor.new(@onchain_account).revalue
+    end
+    assert_equal 300, @account.reload.balance
+    assert_equal 0, @account.cash_balance
+    assert_equal 300, @onchain_account.reload.current_balance
+    assert_equal 300, @account.holdings.find_by!(date: Date.current).amount
+  end
+
+  test "revalue writes nothing when the account sync cannot be queued" do
+    price_asset_at(1.day.ago.to_date, 100)
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+    price_asset_at(Date.current, 150)
+    Account.any_instance.stubs(:sync_later).raises(ActiveRecord::LockWaitTimeout)
+
+    assert_raises(ActiveRecord::LockWaitTimeout) do
+      OnchainWalletAccount::Processor.new(@onchain_account).revalue
+    end
+    assert_equal 200, @account.reload.balance
+    assert_equal 200, @account.holdings.find_by!(date: Date.current).amount
+  end
+
+  test "revalue fixes the account currency even when the amount matches" do
+    price_asset_at(Date.current, 100)
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+    @account.update_columns(currency: "EUR")
+
+    assert OnchainWalletAccount::Processor.new(@onchain_account.reload).revalue
+    assert_equal @onchain_account.currency, @account.reload.currency
+  end
+
+  test "revalue changes nothing when the price has not moved" do
+    price_asset_at(Date.current, 100)
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    assert_no_difference -> { @account.syncs.count } do
+      assert_not OnchainWalletAccount::Processor.new(@onchain_account).revalue
+    end
+    assert_equal 200, @account.reload.balance
+  end
+
+  test "revalue leaves the value alone when no price is known" do
+    price_asset_at(Date.current, 100)
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+    security.prices.delete_all
+
+    assert_not OnchainWalletAccount::Processor.new(@onchain_account).revalue
+    assert_equal 200, @account.reload.balance
+  end
+
+  test "process and revalue do nothing when the asset is not linked to an account" do
     unlinked = create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa"))
 
     assert_nothing_raised do
       OnchainWalletAccount::Processor.new(unlinked).process
     end
+    assert_not OnchainWalletAccount::Processor.new(unlinked).revalue
   end
 
   private

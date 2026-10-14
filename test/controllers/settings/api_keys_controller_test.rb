@@ -32,6 +32,15 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new shows the name hint under the field and points the input at it" do
+    get new_settings_api_key_path
+    assert_response :success
+
+    assert_select "p#api_key_name_help_text", text: "Choose a descriptive name to help you identify this key later."
+    assert_select "input[name='api_key[name]'][aria-describedby=?]", "api_key_name_help_text"
+    assert_select "input[help_text]", count: 0
+  end
+
   test "create makes a new key without revoking existing keys" do
     existing = ApiKey.create!(
       user: @user,

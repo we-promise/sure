@@ -52,10 +52,7 @@ pl:
       description: Połącz przez %{name}
       name: Wise — %{name}
     provider_panel:
-      accounts_link: Konta
       add_connection: Dodaj połączenie Wise
-      configured_html: Połączone i synchronizujące. Przejdź do zakładki %{accounts_link},
-        aby zarządzać kontami.
       connect: Połącz Wise
       connection_name_label: Nazwa połączenia
       connection_name_placeholder: Wise Osobiste
@@ -79,7 +76,6 @@ pl:
           → API tokens
         sign_in_html: Odwiedź %{link} i zaloguj się na swoje konto
       keep_token_placeholder: Pozostaw puste, aby zachować bieżący token
-      not_configured: Nieskonfigurowane
       sandbox_note_html: Użyj <strong>sandbox</strong> base URL (<code>https://api.sandbox.transferwise.tech</code>)
         do testowania. Ustaw <code>WISE_BASE_URL</code> w swoim środowisku.
       sca:
@@ -100,7 +96,6 @@ pl:
           manage apps → Developer tools → Public keys → Add public key.'
         title: Silne uwierzytelnianie klienta (SCA)
       setup_accounts: Konfiguruj konta
-      setup_title: 'Instrukcje konfiguracji:'
       sync: Synchronizuj
       sync_start_date_help: Wyciągi Wise są importowane od tej daty. Pozostaw wartość
         domyślną, aby zaimportować do roku historii.

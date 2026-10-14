@@ -8,11 +8,16 @@ class CashFlowsController < ApplicationController
       return render json: { error: "invalid_period" }, status: :unprocessable_entity
     end
 
+    group_by = params[:group_by].presence || "category"
+    unless IncomeStatement::CashFlowGraph::GROUPINGS.key?(group_by)
+      return render json: { error: "invalid_group_by" }, status: :unprocessable_entity
+    end
+
     statement = IncomeStatement.new(Current.family, user: Current.user)
     period = Period.custom(start_date: start_date, end_date: end_date)
     # Resolve reporting dates after ordinary session authentication has set Current.
     Time.use_zone(resolved_timezone) do
-      render json: IncomeStatement::CashFlowGraph.new(statement, period: period)
+      render json: IncomeStatement::CashFlowGraph.new(statement, period: period, group_by: group_by)
     end
   end
 
