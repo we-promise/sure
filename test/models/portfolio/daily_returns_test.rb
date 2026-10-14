@@ -136,13 +136,33 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), row.external_flow
   end
 
-  test "an excluded entry contributes no flow" do
+  # Excluding an entry hides it from budgets and reports, but
+  # Balance::SyncCache still applies it, so the balance moves by it. Left out of
+  # the denominator, an excluded 500 deposit read as a 50% day. This reverses
+  # the earlier "an excluded entry contributes no flow", which pinned that gap.
+  test "an excluded entry still counts as a flow because it moved the balance" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
-    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, cash_flow: 500
     entry = deposit(account: @account, date: @day_two, amount: 500)
     entry.update!(excluded: true)
 
-    assert_equal BigDecimal("0"), daily_returns.rows.last.external_flow
+    assert_equal BigDecimal("500"), daily_returns.rows.last.external_flow
+    assert_in_delta 0.0, daily_returns.returns.last.last.to_f, 0.000001,
+                    "the deposit explains the whole move, so the day returned nothing"
+  end
+
+  # The one excluded entry the balance does NOT apply: a split parent.
+  # Entry#split! marks the parent excluded and its children carry the amount,
+  # and Balance::SyncCache skips the parent. Counting excluded entries must not
+  # count the parent as well, or the deposit enters the denominator twice.
+  test "a split deposit counts once, through its children" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, cash_flow: 500
+    parent = deposit(account: @account, date: @day_two, amount: 500)
+    parent.split!([ { name: "Part one", amount: -300 }, { name: "Part two", amount: -200 } ])
+
+    assert parent.reload.excluded, "split! marks the parent excluded"
+    assert_equal BigDecimal("500"), daily_returns.rows.last.external_flow
   end
 
   test "a disabled account stops contributing after its cut off date" do
@@ -473,6 +493,20 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
            "an opening balance of 50 GBP has to be converted"
   end
 
+  # The carried-forward half of the same check. A row from before the period
+  # opens the period at its END balance, so its historical start_balance is
+  # never converted. An account that withdrew everything before the period
+  # holds nothing in it and needs no rate.
+  test "a carried forward row that closed to zero does not flag a missing rate" do
+    gbp = create_portfolio_account(family: @family, currency: "GBP")
+    lay_balance account: gbp, date: @day_one - 1.day, opening: 50, closing: 0, cash_flow: -50
+
+    returns = daily_returns(account_ids: [ gbp.id ])
+
+    refute returns.rate_missing?, "a closing balance of zero needs no rate"
+    assert_equal BigDecimal("0"), returns.rows.first.value_open
+  end
+
   # Regression: components used to be read from the carried-forward balance row,
   # so a day with no row of its own re-reported the previous day's market flow.
   # Over a gap that multiplied the market driver by the gap's length.
@@ -519,21 +553,85 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
                  "the flow must not be converted at parity"
   end
 
-  # A start-of-day flow joins the opening capital, which is valued at the
-  # previous day's rate, so the flow converts at that rate too. Converted at
-  # its own day's rate, the 500 EUR deposit below would read as 600 and leave
-  # a residual the drivers could not explain.
-  test "a foreign currency flow converts at the previous day's rate" do
+  # A foreign entry moves the balance by what Balance::SyncCache converted it
+  # to: the ACCOUNT's currency, on the entry's own date. The flow has to be that
+  # same amount, or the gap shows up as a return. Here a 500 EUR deposit lands
+  # in a USD account as 600 (the day's 1.2), and that 600 is the flow. Taken
+  # straight to the family currency at the previous day's 1.1 it read 550,
+  # and the other 50 became a phantom gain.
+  test "a foreign currency flow converts into the account's currency on its own date" do
     set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
     set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.2
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
-    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_550, cash_flow: 550
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_600, cash_flow: 600
     deposit account: @account, date: @day_two, amount: 500, currency: "EUR"
 
     second = daily_returns.rows.last
 
-    assert_equal BigDecimal("550"), second.external_flow
+    assert_equal BigDecimal("600"), second.external_flow
     assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, daily_returns.returns.last.last.to_f, 0.000001
+  end
+
+  # The second leg: once in the account's currency, the flow joins the opening
+  # capital, which is valued at the previous day's rate, so it converts to the
+  # family currency at that rate. A GBP account takes a 500 EUR deposit as 400
+  # GBP (EUR->GBP 0.8 that day), and 400 GBP at the previous day's 1.25 is 500.
+  test "a converted flow then reaches the family currency at the previous day's rate" do
+    gbp = create_portfolio_account(family: @family, currency: "GBP")
+    set_rate from: "EUR", to: "GBP", date: @day_two, rate: 0.8
+    set_rate from: "GBP", to: "USD", date: @day_one, rate: 1.25
+    set_rate from: "GBP", to: "USD", date: @day_two, rate: 1.25
+    lay_balance account: gbp, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: gbp, date: @day_two, opening: 1_000, closing: 1_400, cash_flow: 400
+    deposit account: gbp, date: @day_two, amount: 500, currency: "EUR"
+
+    second = daily_returns(account_ids: [ gbp.id ]).rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # An entry can carry its own rate (extra["exchange_rate"]), which
+  # Balance::SyncCache prefers to the table's. The flow must use it too.
+  test "a flow carrying its own exchange rate converts at that rate" do
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.2
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_625, cash_flow: 625
+    entry = deposit(account: @account, date: @day_two, amount: 500, currency: "EUR")
+    entry.entryable.update!(exchange_rate: 1.25)
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("625"), second.external_flow
+    assert_equal BigDecimal("0"), second.unexplained
+  end
+
+  # With a rate of its own, the entry converted in the balance even though the
+  # table has no pair for it, so there is nothing missing to flag.
+  test "a flow carrying its own rate with no stored pair does not flag a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_625, cash_flow: 625
+    entry = deposit(account: @account, date: @day_two, amount: 500, currency: "EUR")
+    entry.entryable.update!(exchange_rate: 1.25)
+
+    returns = daily_returns
+
+    refute returns.rate_missing?, "the entry's own rate is a rate"
+    assert_equal BigDecimal("625"), returns.rows.last.external_flow
+  end
+
+  # A zero amount converts to zero at any rate, so it cannot be short of one.
+  test "a zero amount flow in a currency with no rate does not flag a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, market_flow: 100
+    deposit account: @account, date: @day_two, amount: 0, currency: "EUR"
+
+    returns = daily_returns
+
+    refute returns.rate_missing?, "nothing needed converting"
+    assert_in_delta 0.10, returns.returns.last.last.to_f, 0.000001
   end
 
   # An account whose history predates the family's first stored rate converts
@@ -564,6 +662,37 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     )
 
     assert_equal BigDecimal("0"), returns.rows.last.external_flow
+  end
+
+  # Transfer validates each leg as unique, but the only unique index is on the
+  # pair, so a writer that skips validations (insert_all) or two matchers
+  # racing can link one outflow to two transfers. The flow must still count
+  # once: summed per transfer row, the 400 left twice and the day read -40%
+  # on a portfolio that only moved money out.
+  test "an outflow linked to two transfers counts once" do
+    other = create_portfolio_account(family: @family)
+    stray = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 600, cash_flow: -400
+    transfer = Transfer::Creator.new(
+      family: @family, source_account_id: @account.id, destination_account_id: other.id,
+      date: @day_two, amount: 400
+    ).create
+
+    single = daily_returns.rows.last.external_flow
+
+    stray_inflow = deposit(account: stray, date: @day_two, amount: 400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: stray_inflow.entryable_id,
+      outflow_transaction_id: transfer.outflow_transaction_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at + 1.minute, updated_at: transfer.created_at + 1.minute
+    } ])
+
+    assert_equal 2, Transfer.where(outflow_transaction_id: transfer.outflow_transaction_id).count
+    assert_equal BigDecimal("-400"), single
+    assert_equal single, daily_returns.rows.last.external_flow, "a second transfer row must not count the outflow again"
+    assert_in_delta 0.0, daily_returns.returns.last.last.to_f, 0.000001
   end
 
   # The flow scope is the accounts the series values, and only those. Money
@@ -597,6 +726,27 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
         scope_account_ids: [ @account.id, create_portfolio_account(family: @family).id ]
       )
     end
+  end
+
+  # The classifier's CASE arrives already sanitized and full of quoted labels.
+  # Handed back through sanitize_sql_array with the rest of the query, any
+  # `:word` inside one of those literals is read as a bind variable, and the
+  # query raises before it runs. No label contains one today; this makes one
+  # that does, and the rows must come back unchanged.
+  test "a colon word inside the classifier's sql is not read as a bind" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 2_000, cash_flow: 1_000
+    deposit account: @account, date: @day_two, amount: 1_000
+
+    expected = daily_returns.rows
+    original = Portfolio::FlowClassifier.new(scope_account_ids: [ @account.id ]).sql_case
+    Portfolio::FlowClassifier.any_instance.stubs(:sql_case)
+      .returns("CASE WHEN false THEN ':probe' ELSE (#{original}) END")
+
+    probed = daily_returns.rows
+
+    assert_equal BigDecimal("1000"), probed.last.external_flow, "the classifier still decides the flow"
+    assert_equal expected, probed
   end
 
   # The fixture builder guards these tests' own arithmetic, so it has to check
@@ -659,6 +809,25 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     # carried it, this would be -500.
     assert_equal BigDecimal("0"), second.unexplained,
                  "the journal is a flow OR a market move, never both"
+  end
+
+  # The journal predicate is a fragment with a quoted label in it, like the
+  # classifier's CASE, so it is spliced in after the binds rather than scanned
+  # with them. A `:word` inside it would otherwise be read as a bind and raise.
+  test "a colon word inside the journal predicate is not read as a bind" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 100
+
+    expected = daily_returns.rows
+    original = daily_returns.send(:journal_predicate)
+    Portfolio::DailyReturns.any_instance.stubs(:journal_predicate)
+      .returns("(#{original}) AND ':probe' = ':probe'")
+
+    probed = daily_returns.rows
+
+    assert_equal BigDecimal("500"), probed.last.external_flow, "the journal is still valued from the position"
+    assert_equal expected, probed
   end
 
   # The mirror case, and it fails differently: a journal OUT understates,
@@ -829,6 +998,74 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
 
     assert daily_returns.rows.last.suppressed,
            "one journal valued at zero suppresses the day, whatever the others are worth"
+  end
+
+  # Suppressing the journal day is only half of it. Holding.gapfill carries the
+  # unpriced journal's zero price forward, so the position sits in the balance
+  # at nothing until a price arrives, and on that first priced day it jumps
+  # from 0 to qty x price with no entry dated there. Read as market, the
+  # arrival was a 5% gain the portfolio never made. The journal is carried to
+  # that day and booked there as the flow it is.
+  test "an inbound journal on an unpriced day does not show the position as return on the first priced day" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    returns = daily_returns(end_date: day_three)
+    third = returns.rows.last
+
+    assert returns.rows.second.suppressed, "the journal day itself still could not be valued"
+    assert_equal BigDecimal("50"), third.external_flow, "the arrival is booked on the day it was first priced"
+    assert_equal BigDecimal("0"), third.market, "and taken out of the market move it was read as"
+    assert_equal BigDecimal("0"), third.unexplained
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
+  end
+
+  # The control: a journal priced on its own day is booked there, and the
+  # next day's price move is a real return. Carrying it as well would book the
+  # position a second time and erase that day's gain.
+  test "a journal priced on its own day is not carried to a later one" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_050, market_flow: 50
+    lay_balance account: @account, date: day_three, opening: 1_050, closing: 1_055, market_flow: 5
+    security_journal account: @account, date: @day_two, qty: 5, price: 10
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 11,
+                              amount: 55, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_equal BigDecimal("0"), third.external_flow
+    assert_equal BigDecimal("5"), third.market, "the next day's price move is a return"
+  end
+
+  # The internal case. A position moved between two selected accounts on a day
+  # with no price leaves the source at its value and lands in the destination
+  # at zero, so the day read as a 2.5% loss; and on the destination's first
+  # priced day it came back as a gain. Neither is the portfolio's return.
+  test "a security moved between two selected accounts on an unpriced day is suppressed rather than read as a loss" do
+    other = create_portfolio_account(family: @family)
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 950, market_flow: -50
+    lay_balance account: @account, date: day_three, opening: 950, closing: 950
+    lay_balance account: other, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: other, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: other, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: -5, price: 10
+    security_journal account: other, date: @day_two, qty: 5, price: 0
+    other.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                           amount: 50, currency: other.currency)
+
+    returns = daily_returns(account_ids: [ @account.id, other.id ], end_date: day_three)
+
+    assert returns.rows.second.suppressed, "an internal move that could not be valued is not a loss"
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001,
+                    "nor is the destination's first priced day a gain"
   end
 
   # `holdings` is unique on (account_id, security_id, date, CURRENCY), so one
