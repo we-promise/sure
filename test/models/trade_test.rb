@@ -222,6 +222,25 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(100), gain.value.amount
   end
 
+  # A reverse-synced account with two shares from before its first imported
+  # trade: 10 bought, 5 moved in, 15 sold, 8 bought at 150, then 3 sold. The
+  # -15 sale left two shares, so the transferred units were never cleared out
+  # and the cost of what the later sale disposes of is unknown -- pricing it
+  # at the rebuy's 150 would book a gain the history cannot support.
+  test "a sale after opening shares kept transferred units held realises no gain" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    transfer_in = create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 3), price: 120)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    create_trade(security, account: account, qty: -15, date: Date.new(2026, 3, 4), price: 130)
+    create_trade(security, account: account, qty: 8, date: Date.new(2026, 3, 5), price: 150)
+    sell = create_trade(security, account: account, qty: -3, date: Date.new(2026, 3, 6), price: 170).entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 6), qty: 7, price: 170,
+                             amount: BigDecimal(1190), currency: "USD", cost_basis: nil)
+
+    assert_nil sell.realized_gain_loss
+  end
+
   test "build_name generates buy trade name" do
     name = Trade.build_name("buy", 10, "AAPL")
     assert_equal "Buy 10.0 shares of AAPL", name

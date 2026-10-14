@@ -300,11 +300,22 @@ class Holding < ApplicationRecord
     # `through` is the last day replayed, the holding's own date by default.
     # `before`, an entry on that day, stops the replay just short of it
     # (avg_cost_before).
+    #
+    # The replay starts from the position the trades do not explain, as
+    # Holding::ReverseCalculator#precompute_cost_basis seeds it from the
+    # provider's snapshot: a reverse-synced account can hold shares from
+    # before its first imported trade, and a sale that empties the imported
+    # trades then leaves those still held, so a transfer among them stays
+    # unknown. This holding's quantity, walked back through the trades and
+    # splits up to its date, is that opening position; for a forward-synced
+    # or manual account it is zero.
     def calculate_avg_cost(through: date, before: nil)
       tracker = Holding::CostBasisTracker.new
-      position = BigDecimal("0")
       transferred = false
-      splits = Security::Split.where(security_id: security_id, ex_date: ..through).order(:ex_date).to_a
+      all_splits = Security::Split.where(security_id: security_id, ex_date: ..[ through, date ].max).order(:ex_date).to_a
+      rows = avg_cost_trade_rows(through: through, before: before)
+      position = opening_position(rows, all_splits)
+      splits = all_splits.select { |split| split.ex_date <= through }
 
       apply_splits = lambda do |through|
         while splits.any? && splits.first.ex_date <= through
@@ -314,7 +325,9 @@ class Holding < ApplicationRecord
         end
       end
 
-      avg_cost_trade_rows(through: through, before: before).each do |trade_date, qty, unit_cost, internal_movement|
+      rows.each do |trade_date, qty, unit_cost, internal_movement, replayed|
+        break unless replayed
+
         apply_splits.call(trade_date)
         previous_position = position
 
@@ -344,9 +357,31 @@ class Holding < ApplicationRecord
       Money.new(average.round(self.class.columns_hash["cost_basis"].scale), currency) if average
     end
 
-    # This security's trades up to `through`, or strictly before the entry
-    # `before` in the same order, oldest first in Entry.chronological order,
-    # as [date, qty, unit cost, internal movement?].
+    # The position held before the first of `rows`: this holding's quantity
+    # with every trade and split up to its date undone, latest first. A split
+    # applies at the open of its ex-date, so it is undone after that day's
+    # trades.
+    def opening_position(rows, splits)
+      position = qty.to_d
+      pending = splits.select { |split| split.ex_date <= date }
+
+      rows.reverse_each do |trade_date, trade_qty|
+        next if trade_date > date
+
+        position = Security::Split.unscale(position, pending.pop.ratio) while pending.any? && pending.last.ex_date > trade_date
+        position -= trade_qty
+      end
+      pending.reverse_each { |split| position = Security::Split.unscale(position, split.ratio) }
+
+      position
+    end
+
+    # This security's trades up to this holding's date and up to the replay's
+    # cutoff -- `through`, or strictly before the entry `before` in the same
+    # order -- oldest first in Entry.chronological order, as
+    # [date, qty, unit cost, internal movement?, replayed?]. Both sets are a
+    # prefix of that order, so the replayed rows lead and one query serves the
+    # walk back to the opening position and the replay.
     # Unit cost is in the account's currency and includes the fee on a
     # purchase (Holding::TradeCalculatorHelpers#effective_trade_price); it is
     # nil when a foreign trade has no usable rate for its day, which the
@@ -379,12 +414,14 @@ class Holding < ApplicationRecord
         "COALESCE(trades.investment_activity_label IN (?), FALSE)", Trade::INTERNAL_MOVEMENT_LABELS
       ])
 
-      cutoff = if before
-        # A row comparison, so it sorts exactly as the reorder below does.
-        [ "(entries.date, entries.created_at, entries.id) < (?, ?, ?)", before.date, before.created_at, before.id ]
-      else
-        [ "entries.date <= ?", through ]
-      end
+      cutoff = ActiveRecord::Base.sanitize_sql_array(
+        if before
+          # A row comparison, so it sorts exactly as the reorder below does.
+          [ "(entries.date, entries.created_at, entries.id) < (?, ?, ?)", before.date, before.created_at, before.id ]
+        else
+          [ "entries.date <= ?", through ]
+        end
+      )
 
       account.trades
         .with_entry
@@ -396,8 +433,8 @@ class Holding < ApplicationRecord
           )", account.currency
         ]))
         .where(security_id: security_id)
-        .where(*cutoff)
+        .where("(#{cutoff}) OR entries.date <= ?", date)
         .reorder("entries.date ASC, entries.created_at ASC, entries.id ASC")
-        .pluck(Arel.sql("entries.date"), Arel.sql("trades.qty"), Arel.sql(unit_cost), Arel.sql(internal_movement))
+        .pluck(Arel.sql("entries.date"), Arel.sql("trades.qty"), Arel.sql(unit_cost), Arel.sql(internal_movement), Arel.sql("COALESCE(#{cutoff}, FALSE)"))
     end
 end

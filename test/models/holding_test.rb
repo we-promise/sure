@@ -175,6 +175,9 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@amzn.security, account: @account, qty: -10, price: 150, date: 5.days.ago.to_date)
 
     create_trade(@amzn.security, account: @account, qty: 10, price: 200, date: 1.day.ago.to_date)
+    # The 10 these trades hold, so no opening shares keep the transferred
+    # units in the position (see the opening-shares tests below)
+    @amzn.update!(qty: 10, amount: 2160)
 
     assert_equal Money.new(BigDecimal("200")), @amzn.avg_cost
   end
@@ -186,6 +189,45 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@amzn.security, account: @account, qty: 10, price: 200, date: 1.day.ago.to_date)
 
     assert_nil @amzn.avg_cost
+  end
+
+  # A reverse-synced account can hold shares from before its first imported
+  # trade. Holding 10 where the trades net to 8 leaves two opening shares, so
+  # the -15 sale never empties the position and the transferred units may
+  # still be among those held: Holding::ReverseCalculator stores no basis for
+  # this history, and the fallback must not invent the rebuy's 150.
+  test "avg_cost stays unknown while opening shares keep transferred units in the position" do
+    holding = opening_shares_holding(qty: 10)
+
+    assert_nil holding.avg_cost
+  end
+
+  # The same trades with a holding of 8: the history explains the whole
+  # position, so the sale does empty it, the transfer is released and the
+  # rebuy is the cost.
+  test "avg_cost is known again after a real close when the history explains the whole position" do
+    holding = opening_shares_holding(qty: 8)
+
+    assert_equal Money.new(BigDecimal("150")), holding.avg_cost
+  end
+
+  # The walk back to the opening position has to undo the split as well as the
+  # trades: 10 bought and 5 moved in become 30 on a 2-for-1 split, and selling
+  # all 30 closes the position. Subtracting the trades from the 8 held without
+  # halving the 30 would leave 15 phantom opening shares that never sell, and
+  # the transfer would keep the rebuy's cost unknown.
+  test "avg_cost walks the opening position back through a split" do
+    security = create_security("SPLT", prices: [ { date: Date.current, price: 160 } ])
+    create_trade(security, account: @account, qty: 10, price: 100, date: 12.days.ago.to_date)
+    transfer_in = create_trade(security, account: @account, qty: 5, price: 120, date: 9.days.ago.to_date)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    security.splits.create!(ex_date: 7.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+    create_trade(security, account: @account, qty: -30, price: 65, date: 6.days.ago.to_date)
+    create_trade(security, account: @account, qty: 8, price: 150, date: 3.days.ago.to_date)
+    holding = @account.holdings.create!(security: security, date: Date.current, qty: 8, price: 160,
+                                        amount: 1280, currency: "USD", cost_basis: nil)
+
+    assert_equal Money.new(BigDecimal("150")), holding.avg_cost
   end
 
   test "an outbound transfer is relieved like a sell in the fallback" do
@@ -654,6 +696,20 @@ class HoldingTest < ActiveSupport::TestCase
       nvda = create_holding(security2, Date.current, 30)
 
       [ amzn, nvda ]
+    end
+
+    # Holding::ReverseCalculatorTest's opening-shares history: buy 10, move 5
+    # in, sell 15, rebuy 8 at 150. A holding of `qty` today, with no basis.
+    def opening_shares_holding(qty:)
+      security = create_security("OPEN", prices: [ { date: Date.current, price: 160 } ])
+      create_trade(security, account: @account, qty: 10, price: 100, date: 12.days.ago.to_date)
+      transfer_in = create_trade(security, account: @account, qty: 5, price: 120, date: 9.days.ago.to_date)
+      transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+      create_trade(security, account: @account, qty: -15, price: 130, date: 6.days.ago.to_date)
+      create_trade(security, account: @account, qty: 8, price: 150, date: 3.days.ago.to_date)
+
+      @account.holdings.create!(security: security, date: Date.current, qty: qty, price: 160,
+                                amount: qty * 160, currency: "USD", cost_basis: nil)
     end
 
     def create_holding(security, date, qty)
