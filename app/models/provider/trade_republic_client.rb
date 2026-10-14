@@ -380,7 +380,9 @@ class Provider::TradeRepublicClient
   def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, timeline_cursors: {}, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {}, interrupted_backfills: {})
     session = new_session(session_blob: session_txt)
     account_response = session.get("/api/v2/auth/account")
-    return Result.new(data: { "status" => "session_expired" }) if [ 401, 403 ].include?(account_response.code.to_i)
+    if [ 401, 403 ].include?(account_response.code.to_i) && !waf_error?(account_response)
+      return Result.new(data: { "status" => "session_expired" })
+    end
     raise_http_error(account_response)
     account = parse_json(account_response)
     raise MalformedResponse, "Trade Republic account response did not contain a securities account number" if account["securitiesAccountNumber"].blank?
@@ -681,6 +683,10 @@ class Provider::TradeRepublicClient
       Provider::TradeRepublicSession.new(phone_number: phone_number, pin: pin, session_blob: session_blob)
     end
 
+    def waf_error?(response)
+      response_error_code(response).to_s.match?(/WAF|MISSING_REQUIRED_HEADER/)
+    end
+
     def require_pin!
       raise ConfigurationError, "Trade Republic PIN is required for authentication" if pin.blank?
     end
@@ -757,7 +763,7 @@ class Provider::TradeRepublicClient
     def raise_http_error(response, login: false)
       return if response.is_a?(Net::HTTPSuccess)
       error_code = response_error_code(response)
-      if error_code.to_s.match?(/WAF|MISSING_REQUIRED_HEADER/)
+      if waf_error?(response)
         raise WafRequired, "Trade Republic requires an AWS WAF browser token"
       end
       raise_login_error(response) if login

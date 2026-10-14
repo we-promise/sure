@@ -2795,6 +2795,16 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       events.map { |event| event.dig("detail", "instrument_name") }
   end
 
+  test "a WAF rejection of the account request is not an expired session" do
+    session = mock
+    session.expects(:get).with("/api/v2/auth/account").returns(waf_rejection)
+    @client.define_singleton_method(:new_session) { |**| session }
+
+    assert_raises(Provider::TradeRepublicClient::WafRequired) do
+      @client.sync(session_txt: '{"tr_session":"s"}')
+    end
+  end
+
   private
 
     # Same shape as bond_purchase_detail, in English, as Sure receives it.
@@ -2947,5 +2957,16 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
           { "items" => [], "cursors" => {} }
         end
       end
+    end
+
+    def waf_rejection
+      response_class = Struct.new(:code, :body) do
+        def is_a?(klass)
+          klass == Net::HTTPSuccess ? false : super
+        end
+
+        def [](_header) = nil
+      end
+      response_class.new("403", { "errorCode" => "WAF_TOKEN_REQUIRED" }.to_json)
     end
 end
