@@ -8,7 +8,7 @@ with automatic HTTPS, persistent volumes, and nightly backups.
 Sure is available as a one-click template. It starts the Rails web server, the Sidekiq
 worker, PostgreSQL, and Redis, and generates `SECRET_KEY_BASE` and the database password.
 
-1. Open the [Sure template](https://console.pethost.dev/?template=sure).
+1. Open the [Sure template](https://pethost.dev/templates/sure/) and click **Deploy on Pethost**.
 2. Click **Create project**.
 3. Open the project's address, `https://sure.<your-domain>`, and create your first account.
    To restrict future signups, see
