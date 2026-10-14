@@ -182,11 +182,16 @@ class KrakenItem::Importer
 
       all_ledgers
     rescue Provider::Kraken::PermissionError => e
-      # Key may not have Query Ledger Entries permission; degrade gracefully.
+      # Key may not have Query Ledger Entries permission. Degrade gracefully so
+      # balances, holdings and trades still import, but the consequence is not
+      # benign: the ledger carries deposits and withdrawals, so without it the
+      # account's entries cannot reconcile with its balance and the balance
+      # history is reconstructed as an impossible negative line.
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "warn",
-        message: "Ledgers permission denied; skipping ledger import: #{e.message}",
+        message: "Ledgers permission denied; skipping deposit/withdrawal import. " \
+                 "Grant 'Query Ledger Entries' on the Kraken API key so the balance history reconciles: #{e.message}",
         source: self.class.name,
         provider_key: "kraken",
         family: kraken_item.family,

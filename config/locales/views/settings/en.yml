@@ -532,10 +532,10 @@ en:
         disconnect_confirm: "Are you sure you want to disconnect Binance?"
       kraken_panel:
         step1_html: 'Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>'
-        step2: "Create an API key with Query Funds and Query Closed Orders & Trades only."
+        step2: "Create an API key with Query Funds, Query Closed Orders & Trades, and Query Ledger Entries."
         step3: "Paste the API key and private key below."
         read_only_title: "Read-only exchange sync only"
-        read_only_body: "Do not grant trading, cancellation, withdrawal, export, ledger, Earn, staking, or transfer permissions. Sure only imports balances, holdings, and spot trade fills."
+        read_only_body: "Do not grant trading, cancellation, withdrawal, export, Earn, staking, or transfer permissions. Sure reads balances, holdings, spot trade fills and ledger cash movements (deposits, withdrawals, staking/Earn rewards and fees); all read-only. Without Query Ledger Entries the ledger cannot be read, so deposits and withdrawals are missed and the account's balance history may not reconcile."
         default_connection_name: Kraken
         add_connection: Add Kraken connection
         update_connection: Update connection
