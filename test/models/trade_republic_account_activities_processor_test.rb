@@ -815,6 +815,49 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 1, cash_sure.entries.where(entryable_type: "Transaction", source: "trade_republic").count
   end
 
+  test "a settlement transfer lost to a concurrent sync does not abort the import" do
+    cash_account, cash_sure = create_linked_cash_account!
+    @tr_account.update!(raw_timeline_payload: [ round_up_event ])
+    cash_account.update!(raw_timeline_payload: [ round_up_event ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    cash_entry = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_round_up")
+    assert_not_nil cash_entry.transaction.transfer
+
+    # Replay with the pre-insert checks passing, as for a sync that lost the race:
+    # the insert then hits the database uniqueness constraint.
+    Transaction.any_instance.stubs(:transfer).returns(nil)
+    Transfer.any_instance.stubs(:valid?).returns(true)
+    cash_account.update!(raw_timeline_payload: [ round_up_event, saveback_event ])
+
+    assert_no_difference -> { Transfer.count } do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    assert_not DebugLogEntry.where(source: "trade_republic", level: "error").exists?
+    assert_equal 1, cash_sure.entries.where(external_id: "trade_republic_event_evt_round_up").count
+  end
+
+  test "a settlement transfer committed by a concurrent sync before validation does not fail the event" do
+    cash_account, cash_sure = create_linked_cash_account!
+    @tr_account.update!(raw_timeline_payload: [ round_up_event ])
+    cash_account.update!(raw_timeline_payload: [ round_up_event ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    # Replay with only the transfer pre-check passing, as for a sync whose
+    # competitor committed after that check: the uniqueness validation rejects it.
+    Transaction.any_instance.stubs(:transfer).returns(nil)
+    cash_account.update!(raw_timeline_payload: [ round_up_event, saveback_event ])
+
+    assert_no_difference -> { Transfer.count } do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    assert_not DebugLogEntry.where(source: "trade_republic", level: "error").exists?
+    assert_equal 1, cash_sure.entries.where(external_id: "trade_republic_event_evt_round_up").count
+  end
+
   test "incomplete saveback details are skipped on portfolio and never become cash" do
     cash_account, cash_sure = create_linked_cash_account!
     incomplete = saveback_event.deep_merge(detail: { isin: nil, quantity: nil })

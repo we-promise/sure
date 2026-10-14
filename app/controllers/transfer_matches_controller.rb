@@ -21,6 +21,12 @@ class TransferMatchesController < ApplicationController
     @transfer.sync_account_later
 
     redirect_back_or_to transactions_path, notice: t(".success")
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back_or_to transactions_path, alert: e.record.errors.full_messages.to_sentence
+  rescue ActiveRecord::RecordNotUnique
+    # A concurrent sync matched one of the two transactions first; the unique
+    # transfer indexes rejected this insert.
+    redirect_back_or_to transactions_path, alert: t(".already_matched")
   end
 
   private

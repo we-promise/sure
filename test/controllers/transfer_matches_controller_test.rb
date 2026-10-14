@@ -92,4 +92,35 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     category = @user.family.investment_contributions_category
     assert_equal category, outflow_txn.category
   end
+
+  test "matching a transaction that is already in a transfer redirects with an error" do
+    outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
+    inflow_entry = create_transaction(amount: -100, account: accounts(:investment))
+    other_inflow = create_transaction(amount: -100, account: accounts(:credit_card))
+    Transfer.create!(inflow_transaction: other_inflow.transaction, outflow_transaction: outflow_entry.transaction)
+
+    assert_no_difference "Transfer.count" do
+      post transaction_transfer_match_path(inflow_entry), params: {
+        transfer_match: { method: "existing", matched_entry_id: outflow_entry.id }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_includes flash[:alert], I18n.t("errors.messages.taken")
+  end
+
+  test "a transfer a concurrent sync inserted first redirects with an error" do
+    inflow_transaction = create_transaction(amount: 100, account: accounts(:depository))
+    outflow_transaction = create_transaction(amount: -100, account: accounts(:investment))
+    Transfer.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique)
+
+    assert_no_difference "Transfer.count" do
+      post transaction_transfer_match_path(inflow_transaction), params: {
+        transfer_match: { method: "existing", matched_entry_id: outflow_transaction.id }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transfer_matches.create.already_matched"), flash[:alert]
+  end
 end

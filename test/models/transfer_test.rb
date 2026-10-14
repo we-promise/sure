@@ -58,6 +58,32 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
+  test "a transaction cannot be the outflow of two transfers" do
+    other_inflow = create_transaction(date: Date.current, account: accounts(:investment), amount: -100)
+
+    duplicate = Transfer.new(inflow_transaction: other_inflow.transaction, outflow_transaction: @outflow)
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:outflow_transaction_id, :taken)
+
+    # The validation is check-then-insert, so two concurrent syncs can both pass
+    # it. The database must reject the second row on its own.
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      Transfer.insert!({ inflow_transaction_id: other_inflow.entryable_id, outflow_transaction_id: @outflow.id })
+    end
+  end
+
+  test "a transaction cannot be the inflow of two transfers" do
+    other_outflow = create_transaction(date: Date.current, account: accounts(:investment), amount: 100)
+
+    duplicate = Transfer.new(inflow_transaction: @inflow, outflow_transaction: other_outflow.transaction)
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:inflow_transaction_id, :taken)
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      Transfer.insert!({ inflow_transaction_id: @inflow.id, outflow_transaction_id: other_outflow.entryable_id })
+    end
+  end
+
   test "transfer cannot have 2 transactions from the same account" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
     inflow_entry = create_transaction(date: 1.day.ago.to_date, account: accounts(:depository), amount: -500)
