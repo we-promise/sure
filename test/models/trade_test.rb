@@ -261,6 +261,32 @@ class TradeTest < ActiveSupport::TestCase
     assert_nil sell.realized_gain_loss
   end
 
+  # The latest snapshot on or before the sale can predate trades the replay
+  # still needs. Its quantity explains the trades up to its own date only:
+  # the 8 held on 3/5 is the whole history (10 in, 5 moved in, 15 sold, 8
+  # bought), so the position did close and the transfer is released. The 3
+  # sold on 3/6 came after the snapshot, and undoing it too would invent 3
+  # opening shares that keep the transfer held. 2 sold at 170 against 150 is
+  # a 40 gain.
+  test "a sale after the snapshot's date walks back only the snapshot's trades" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    transfer_in = create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 3), price: 120)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    create_trade(security, account: account, qty: -15, date: Date.new(2026, 3, 4), price: 130)
+    create_trade(security, account: account, qty: 8, date: Date.new(2026, 3, 5), price: 150)
+    create_trade(security, account: account, qty: -3, date: Date.new(2026, 3, 6), price: 160)
+    sell = create_trade(security, account: account, qty: -2, date: Date.new(2026, 3, 7), price: 170).entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 5), qty: 8, price: 150,
+                             amount: BigDecimal(1200), currency: "USD", cost_basis: nil)
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain, "the history explains the whole position, so the rebuy is the cost"
+    assert_equal BigDecimal(300), gain.previous.amount
+    assert_equal BigDecimal(40), gain.value.amount
+  end
+
   test "build_name generates buy trade name" do
     name = Trade.build_name("buy", 10, "AAPL")
     assert_equal "Buy 10.0 shares of AAPL", name
