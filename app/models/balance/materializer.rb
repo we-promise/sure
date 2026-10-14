@@ -64,10 +64,12 @@ class Balance::Materializer
       account.reset_current_anchor_cache!
     end
 
-    # Pass the same security filter and history window to the shared holding materializer.
+    # Pass the security filter to the holding materializer. Only cash-anchored
+    # accounts keep history before the window; every other account rebuilds
+    # all holdings, so late rates and backfilled prices still reach old days.
     def materialize_holdings
       @holdings = Holding::Materializer.new(account, strategy: strategy, security_ids: security_ids,
-        window_start_date: @window_start_date).materialize_holdings
+        window_start_date: (@window_start_date if account.accounting_start_date)).materialize_holdings
     end
 
     def update_account_info
