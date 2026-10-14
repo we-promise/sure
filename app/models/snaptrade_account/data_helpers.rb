@@ -1,6 +1,14 @@
 module SnaptradeAccount::DataHelpers
   extend ActiveSupport::Concern
 
+  HELD_ROW_SECURITY_ID_SQL = "holdings.security_id".freeze
+  PROVIDER_ROW_SECURITY_ID_SQL = <<~SQL.squish.freeze
+    CASE WHEN holdings.security_locked
+      THEN COALESCE(holdings.provider_security_id, holdings.security_id)
+      ELSE holdings.security_id
+    END
+  SQL
+
   private
 
     # Convert SnapTrade SDK objects to hashes
@@ -60,11 +68,13 @@ module SnaptradeAccount::DataHelpers
     # lookup must be deterministic or a holding flips between rows from one
     # sync to the next (#3988). Order: the row the account already holds, the
     # row on SnapTrade's reported exchange, then a fixed preference order.
-    def resolve_security(symbol, symbol_data, account: nil, account_provider_id: nil)
+    #
+    # provider_row: true is for holdings; see held_security_for.
+    def resolve_security(symbol, symbol_data, account: nil, account_provider_id: nil, provider_row: false)
       ticker = symbol.to_s.upcase.strip
       return nil if ticker.blank?
 
-      security = existing_security_for(ticker, symbol_data, account, account_provider_id)
+      security = existing_security_for(ticker, symbol_data, account, account_provider_id, provider_row)
 
       # If security exists but has a bad name (looks like a hash), update it
       if security && security.name&.start_with?("{")
@@ -89,11 +99,11 @@ module SnaptradeAccount::DataHelpers
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
       # Handle race condition - another process may have created it
       Rails.logger.error "Failed to create security #{ticker}: #{e.message}"
-      existing_security_for(ticker, symbol_data, account, account_provider_id) # Retry find in case of race condition
+      existing_security_for(ticker, symbol_data, account, account_provider_id, provider_row) # Retry find in case of race condition
     end
 
-    def existing_security_for(ticker, symbol_data, account, account_provider_id)
-      held_security_for(account, ticker, account_provider_id) ||
+    def existing_security_for(ticker, symbol_data, account, account_provider_id, provider_row = false)
+      held_security_for(account, ticker, account_provider_id, provider_row: provider_row) ||
         reported_exchange_security_for(ticker, symbol_data) ||
         preferred_security_for(ticker, symbol_data, account, account_provider_id)
     end
@@ -107,16 +117,25 @@ module SnaptradeAccount::DataHelpers
     # from the account's trades). Without an external_id the adapter matches
     # on security, date and currency alone, so following another provider's
     # holding onto its row would overwrite that provider's quantity.
-    def held_security_for(account, ticker, account_provider_id)
+    #
+    # With provider_row: true, a holding the user remapped (security_locked)
+    # answers with the row SnapTrade sent (provider_security_id), matched on
+    # that row's ticker. Holdings need it: the import adapter carries a remap
+    # and a locked cost basis to a new day's row by finding the earlier row
+    # whose provider_security_id is the security it is given. Trades must not
+    # use it, because a remap moves the position's trades to the chosen row.
+    def held_security_for(account, ticker, account_provider_id, provider_row: false)
       return nil unless account
+
+      security_id_sql = provider_row ? PROVIDER_ROW_SECURITY_ID_SQL : HELD_ROW_SECURITY_ID_SQL
 
       security_id = account.holdings
         .where(account_provider_id: [ account_provider_id, nil ].uniq)
-        .joins(:security)
+        .joins(Arel.sql("INNER JOIN securities ON securities.id = #{security_id_sql}"))
         .where("UPPER(securities.ticker) = ?", ticker)
         .order(date: :desc)
         .order(Arel.sql("holdings.account_provider_id IS NULL"), :id)
-        .pick(:security_id)
+        .pick(Arel.sql(security_id_sql))
 
       security_id && Security.find_by(id: security_id)
     end

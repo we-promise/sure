@@ -1067,6 +1067,21 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal held, snaptrade_entry("dup_trade").entryable.security
   end
 
+  # A remap moves the position's trades to the row the user chose, so a new
+  # trade must land there too, not on the provider's original row.
+  test "a trade for a remapped position lands on the row the user chose" do
+    original = Security.create!(ticker: "DUPT2", name: "SnapTrade row")
+    listed = Security.create!(ticker: "DUPT2", name: "Listed row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    @account.holdings.create!(
+      security: original, date: 1.day.ago.to_date, qty: 10, price: 100, amount: 1000, currency: "USD",
+      account_provider_id: @snaptrade_account.account_provider&.id
+    ).remap_security!(listed)
+
+    process_activities(build_trade_activity(id: "remapped_trade", type: "BUY", symbol: "DUPT2", units: 1, price: 100))
+
+    assert_equal listed, snaptrade_entry("remapped_trade").entryable.security
+  end
+
   # Modeled on real Fidelity option buy activity (TQQQ call) where symbol is nil
   test "processes option buy trade when symbol is nil and option_symbol is present" do
     process_activities(
