@@ -757,7 +757,7 @@ pl:
         qr_back_to_credentials: Wróć do numeru telefonu i PIN-u lub hasła
         qr_cancel: Anuluj logowanie kodem QR
         qr_error: Nie udało się rozpocząć logowania kodem QR. Spróbuj ponownie.
-        qr_instruction: Zeskanuj kod QR aplikacją Trade Republic i zatwierdź logowanie.
+        qr_instruction: Zeskanuj kod QR aparatem telefonu, a następnie zatwierdź logowanie w aplikacji Trade Republic.
         qr_loading: Przygotowywanie kodu QR…
         qr_login: Zaloguj się kodem QR
         qr_success: Logowanie zatwierdzone. Sure odświeża stronę dostawcy.

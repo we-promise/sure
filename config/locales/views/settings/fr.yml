@@ -604,7 +604,7 @@ fr:
         qr_back_to_credentials: Revenir au numéro de téléphone et au code PIN ou mot de passe
         qr_cancel: Annuler la connexion par QR code
         qr_error: La connexion par QR code n'a pas pu être lancée. Veuillez réessayer.
-        qr_instruction: Scannez le QR code avec votre application Trade Republic et approuvez la connexion.
+        qr_instruction: Scannez le QR code avec l'appareil photo de votre téléphone, puis approuvez la connexion dans l'application Trade Republic.
         qr_loading: Préparation du QR code …
         qr_login: Se connecter avec un QR code
         qr_success: Connexion approuvée. Sure actualise la page du fournisseur.

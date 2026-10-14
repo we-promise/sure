@@ -713,7 +713,7 @@ tr:
         qr_cancel: QR girişini iptal et
         qr_back_to_credentials: Telefon numarası ve PIN'e veya şifreye dön
         qr_loading: QR kod hazırlanıyor …
-        qr_instruction: QR kodu Trade Republic uygulamanızla tarayın ve girişi onaylayın.
+        qr_instruction: QR kodu telefonunuzun kamerasıyla tarayın, ardından girişi Trade Republic uygulamasında onaylayın.
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
         qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
         add_account: "Başka bir bağlantı ekle"

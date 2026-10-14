@@ -667,7 +667,7 @@ ca:
         qr_cancel: Cancel·la l'inici de sessió amb QR
         qr_back_to_credentials: Torna al número de telèfon i PIN
         qr_loading: Preparant el codi QR…
-        qr_instruction: Escaneja el codi QR amb l'aplicació de Trade Republic i aprova l'inici de sessió.
+        qr_instruction: Escaneja el codi QR amb la càmera del telèfon i després aprova l'inici de sessió a l'aplicació de Trade Republic.
         qr_success: Inici de sessió aprovat. Sure està actualitzant la pàgina del proveïdor.
         qr_error: No s'ha pogut iniciar la sessió amb QR. Torna-ho a provar.
         add_account: "Afegeix una altra connexió"

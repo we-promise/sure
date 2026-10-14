@@ -548,7 +548,7 @@ de:
         qr_cancel: QR-Login abbrechen
         qr_back_to_credentials: Zurück zu Telefonnummer und PIN oder Passwort
         qr_loading: QR-Code wird vorbereitet …
-        qr_instruction: Scanne den QR-Code mit deiner Trade-Republic-App und bestätige die Anmeldung.
+        qr_instruction: Scanne den QR-Code mit der Kamera deines Smartphones und bestätige die Anmeldung anschließend in der Trade-Republic-App.
         qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
         qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
         add_account: Weitere Verbindung hinzufügen
