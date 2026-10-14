@@ -123,6 +123,19 @@ class EntryTest < ActiveSupport::TestCase
     assert_nil second.reload.transaction.extra["potential_posted_match"]
   end
 
+  test "reconcile_pending_duplicates suggests no fuzzy match when two bookings match exactly" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 3.days.ago.to_date, amount: 5)
+    pending.update!(name: "Starbucks Store")
+    create_transaction(account: account, date: 2.days.ago.to_date, amount: 5, name: "Starbucks Store")
+    create_transaction(account: account, date: 1.day.ago.to_date, amount: 5, name: "Card payment")
+
+    Entry.reconcile_pending_duplicates(account: account)
+
+    assert_not pending.reload.excluded?
+    assert_nil pending.transaction.extra["potential_posted_match"]
+  end
+
   test "reconcile_pending_duplicates ignores a booked entry from another provider" do
     account = accounts(:depository)
     pending = create_pending(account, date: 3.days.ago.to_date, amount: 30)

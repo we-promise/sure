@@ -264,6 +264,8 @@ class Entry < ApplicationRecord
         end
         next
       end
+      # Two exact bookings: a name match would just pick one of them at random.
+      next if exact_candidates.size > 1
 
       # PRIORITY 2: If no exact match, try fuzzy amount match for tip adjustments
       # Store as SUGGESTION instead of auto-excluding (medium confidence)
