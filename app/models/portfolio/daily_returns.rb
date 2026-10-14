@@ -189,7 +189,7 @@ class Portfolio::DailyReturns
     return {} if account_ids.empty?
 
     @income_by_security ||= ActiveRecord::Base.connection.select_all(
-      ActiveRecord::Base.sanitize_sql_array([ income_by_security_query, query_binds ])
+      bind_and_splice(income_by_security_query)
     ).to_a.reject { |raw| raw["security_id"].nil? }.to_h { |raw| [ raw["security_id"], decimal(raw["income"]) ] }
   end
 
@@ -649,7 +649,7 @@ class Portfolio::DailyReturns
         FROM entries
         JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
         LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
-        #{flow_class_joins}
+        #{fragment(:flow_class_joins)}
         LEFT JOIN LATERAL (
           SELECT #{rate_lookup('COALESCE(entries.currency, entry_accounts.currency)', 'entries.date - 1')} AS rate
         ) fx ON TRUE
@@ -658,16 +658,8 @@ class Portfolio::DailyReturns
           AND (flow_windows.active_until_date IS NULL OR entries.date <= flow_windows.active_until_date)
           AND COALESCE(entries.excluded, false) = false
           AND fx.rate IS NOT NULL
-          AND #{flow_class_sql} = 'income'
+          AND #{fragment(:flow_class_sql)} = 'income'
         GROUP BY 1
       SQL
-    end
-
-    def flow_class_sql
-      @flow_class_sql ||= flow_classifier.sql_case
-    end
-
-    def flow_class_joins
-      @flow_class_joins ||= flow_classifier.sql_joins
     end
 end

@@ -168,6 +168,26 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
     assert_equal BigDecimal(30), Portfolio::Income.new(returns).total
   end
 
+  # The attribution query embeds the classifier's CASE, already sanitized and
+  # full of quoted labels. Passed back through sanitize_sql_array with the rest
+  # of the query, a `:word` inside one of those literals is read as a bind
+  # variable and the query raises. No label contains one today; this makes one
+  # that does, and the attribution must come back unchanged.
+  test "a colon word inside the classifier's sql is not read as a bind" do
+    income_trade account: @account, date: @mar, amount: 30, security: @aapl
+    lay_flat_balances cash_by_date: { @mar => 30 }
+
+    expected = daily_returns_over_period.income_by_security
+    original = Portfolio::FlowClassifier.new(scope_account_ids: [ @account.id ]).sql_case
+    Portfolio::FlowClassifier.any_instance.stubs(:sql_case)
+      .returns("CASE WHEN false THEN ':probe' ELSE (#{original}) END")
+
+    probed = daily_returns_over_period.income_by_security
+
+    assert_equal({ @aapl.id.to_s => BigDecimal(30) }, probed, "the classifier still picks out the dividend")
+    assert_equal expected, probed
+  end
+
   # Income that names no security still has to be shown: a table that only
   # appeared when something was attributed would hide the period's income.
   test "a period whose income is all unattributed still has something to show" do
@@ -287,6 +307,10 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
   private
     def period
       Period.custom(start_date: @mar - 1, end_date: @last_day)
+    end
+
+    def daily_returns_over_period
+      Portfolio::DailyReturns.new(account_ids: [ @account.id ], currency: @family.currency, period: period)
     end
 
     def income_by_security
