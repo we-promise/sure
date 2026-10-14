@@ -33,7 +33,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
 
     assert_difference -> { @user.webauthn_credentials.count }, 1 do
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "MacBook Touch ID", code: backup_code },
+        webauthn_credential: { nickname: "MacBook Touch ID", code: @code },
         credential: credential
       }, as: :json
     end
@@ -95,28 +95,56 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
   test "a backup code confirms only one registration" do
     code = backup_code
 
-    options = registration_options
+    options = registration_options(code: code)
     register(@client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com"), code: code)
     assert_response :success
 
-    options = registration_options
-    assert_no_difference -> { @user.webauthn_credentials.count } do
-      register(@client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com"), code: code)
-    end
+    post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: code } }, as: :json
     assert_response :unprocessable_entity
+    assert_equal I18n.t("webauthn_credentials.invalid_code"), JSON.parse(response.body).fetch("error")
+  end
+
+  test "options refuse a missing or wrong code before the browser creates a passkey" do
+    [ nil, "", "000000" ].each do |code|
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: code } }, as: :json
+
+      assert_response :unprocessable_entity
+      assert_equal I18n.t("webauthn_credentials.invalid_code"), JSON.parse(response.body).fetch("error")
+      assert_nil session[:webauthn_registration_challenge]
+    end
+  end
+
+  test "options report an authenticator code that was already used" do
+    travel_to Time.zone.parse("2026-10-07 12:00:10") do
+      code = totp_code
+      assert @user.verify_otp?(code)
+
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: code } }, as: :json
+
+      assert_response :unprocessable_entity
+      assert_equal I18n.t("webauthn_credentials.code_already_used"), JSON.parse(response.body).fetch("error")
+    end
+  end
+
+  test "options check the code without spending it" do
+    code = backup_code
+
+    registration_options(code: code)
+
+    assert @user.reload.verify_otp?(code), "backup code should still be unused after options"
   end
 
   test "a registration that fails does not spend the backup code" do
     code = backup_code
 
-    stale_options = registration_options
-    registration_options
+    stale_options = registration_options(code: code)
+    registration_options(code: code)
     stale_credential = @client.create(challenge: stale_options.fetch("challenge"), rp_id: "www.example.com")
     register(stale_credential, code: code)
     assert_response :unprocessable_entity
     assert_equal I18n.t("webauthn_credentials.failure"), JSON.parse(response.body).fetch("error")
 
-    options = registration_options
+    options = registration_options(code: code)
     assert_difference -> { @user.webauthn_credentials.count }, 1 do
       register(@client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com"), code: code)
     end
@@ -125,7 +153,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
 
   test "a duplicate credential does not spend the backup code" do
     code = backup_code
-    registration_options
+    registration_options(code: code)
     @user.webauthn_credentials.create!(nickname: "Existing", credential_id: "duplicate-credential-id", public_key: "public-key")
 
     verified_credential = Struct.new(:id, :public_key, :sign_count).new("duplicate-credential-id", "new-public-key", 0)
@@ -140,8 +168,8 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
   end
 
   test "code attempts are rate limited per user" do
-    Settings::WebauthnCredentialsController.cache_store.stubs(:increment).returns(11)
     registration_options
+    Settings::WebauthnCredentialsController.cache_store.stubs(:increment).returns(21)
 
     register({ id: "x", response: {} }, code: "000000")
 
@@ -171,7 +199,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
 
       assert_difference -> { @user.webauthn_credentials.count }, 1 do
         post settings_webauthn_credentials_path, params: {
-          webauthn_credential: { nickname: "Configured origin key", code: backup_code },
+          webauthn_credential: { nickname: "Configured origin key", code: @code },
           credential: credential
         }, as: :json
       end
@@ -185,7 +213,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     credential = @client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com")
 
     post settings_webauthn_credentials_path, params: {
-      webauthn_credential: { nickname: "MacBook Touch ID", code: backup_code },
+      webauthn_credential: { nickname: "MacBook Touch ID", code: @code },
       credential: credential
     }, as: :json
     assert_response :success
@@ -205,7 +233,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
 
     assert_no_difference -> { @user.webauthn_credentials.count } do
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "Malformed", code: backup_code },
+        webauthn_credential: { nickname: "Malformed", code: @code },
         credential: []
       }, as: :json
     end
@@ -229,7 +257,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
 
     assert_no_difference -> { @user.webauthn_credentials.count } do
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "Duplicate security key", code: backup_code },
+        webauthn_credential: { nickname: "Duplicate security key", code: @code },
         credential: { id: "duplicate-credential-id", response: {} }
       }, as: :json
     end
@@ -243,7 +271,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     credential = @client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com")
 
     post settings_webauthn_credentials_path, params: {
-      webauthn_credential: { nickname: "", code: backup_code },
+      webauthn_credential: { nickname: "", code: @code },
       credential: credential
     }, as: :json
 
@@ -266,8 +294,11 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
   end
 
   private
-    def registration_options
-      post options_settings_webauthn_credentials_path, as: :json
+    # Options now check the code too; keep one valid code per test so the
+    # create call that follows can spend the same one.
+    def registration_options(code: nil)
+      @code = code || @code || backup_code
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: @code } }, as: :json
       assert_response :success
       JSON.parse(response.body)
     end

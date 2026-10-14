@@ -6,11 +6,17 @@ class Settings::WebauthnCredentialsController < ApplicationController
   before_action :ensure_mfa_enabled
 
   # Adding a passkey is confirmed with an MFA code; keep a stolen session from
-  # guessing that code.
-  rate_limit to: 10, within: 1.minute, by: -> { Current.user.id }, only: :create,
+  # guessing that code. Both steps check the code and share one counter, so
+  # this allows about 10 attempts a minute.
+  rate_limit to: 20, within: 1.minute, by: -> { Current.user.id }, only: %i[options create],
     with: -> { render json: { error: t("webauthn_credentials.rate_limited") }, status: :too_many_requests }
 
   def options
+    # Refuse a bad code before the browser runs its ceremony; otherwise the
+    # authenticator keeps a discoverable passkey the server never saves.
+    code_status = Current.user.otp_code_status(webauthn_credential_params[:code])
+    return render_code_error(code_status) unless code_status == :accepted
+
     Current.user.ensure_webauthn_id!
 
     registration_options = webauthn_relying_party.options_for_registration(
@@ -66,13 +72,10 @@ class Settings::WebauthnCredentialsController < ApplicationController
       )
     end
 
-    case code_result
-    when :accepted
+    if code_result == :accepted
       render json: { redirect_url: settings_security_path }
-    when :replayed
-      render json: { error: t("webauthn_credentials.code_already_used") }, status: :unprocessable_entity
     else
-      render json: { error: t("webauthn_credentials.invalid_code") }, status: :unprocessable_entity
+      render_code_error(code_result)
     end
   rescue WebAuthn::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique, ActionController::BadRequest, ActionController::ParameterMissing
     render json: { error: t("webauthn_credentials.failure") }, status: :unprocessable_entity
@@ -99,6 +102,11 @@ class Settings::WebauthnCredentialsController < ApplicationController
 
     def webauthn_credential_transports
       Array(credential_response_params.dig(:response, :transports)).compact_blank
+    end
+
+    def render_code_error(code_status)
+      key = code_status == :replayed ? "webauthn_credentials.code_already_used" : "webauthn_credentials.invalid_code"
+      render json: { error: t(key) }, status: :unprocessable_entity
     end
 
     def webauthn_credential_params

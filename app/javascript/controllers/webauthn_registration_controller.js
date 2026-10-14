@@ -39,11 +39,18 @@ export default class extends WebauthnController {
       method: "POST",
       headers: this.headers,
       credentials: "same-origin",
+      body: JSON.stringify({
+        webauthn_credential: { code: this.enteredCode },
+      }),
     });
 
     if (!response.ok) throw new Error(await this.errorMessage(response));
 
     return response.json();
+  }
+
+  get enteredCode() {
+    return this.hasCodeTarget ? this.codeTarget.value : "";
   }
 
   async createCredential(credential) {
@@ -55,7 +62,7 @@ export default class extends WebauthnController {
         credential,
         webauthn_credential: {
           nickname: this.hasNicknameTarget ? this.nicknameTarget.value : "",
-          code: this.hasCodeTarget ? this.codeTarget.value : "",
+          code: this.enteredCode,
         },
       }),
     });
