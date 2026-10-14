@@ -350,6 +350,24 @@ class BitcoinWalletAccount::IntegrationTest < ActiveSupport::TestCase
     assert_equal 2095, @account.balance
   end
 
+  test "a missing FX rate after connecting keeps the last valuation instead of failing the sync" do
+    @account.entries.destroy_all
+    @account.holdings.destroy_all
+    @account.update!(currency: "EUR", balance: 100, cash_balance: 100)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    @wallet.connect!
+
+    valued = @account.reload.balance
+    ExchangeRate.where(from_currency: "USD", to_currency: "EUR").delete_all
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    assert_nothing_raised do
+      Account::Syncer.new(@account.reload).perform_sync(@account.syncs.create!)
+    end
+    assert_operator valued, :>, 100
+    assert_equal valued, @account.reload.balance
+  end
+
   private
     def cash_entry(amount:, currency: "USD", date: Date.current)
       @account.entries.create!(date: date, amount: amount, currency: currency, name: "Cash movement", entryable: Transaction.new)

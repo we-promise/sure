@@ -61,7 +61,9 @@ class Holding::PortfolioCache
         converted_amount = price_money.exchange_to(currency, date: date).amount
       end
     rescue Money::ConversionError
-      raise if @carry_forward_prices
+      # Anchored accounts keep the last valued holding (gapfill) instead of
+      # booking an unconverted quote or failing the whole sync.
+      return nil if @carry_forward_prices
 
       converted_amount = price.price
     end
