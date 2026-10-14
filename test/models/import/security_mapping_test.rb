@@ -60,12 +60,29 @@ class Import::SecurityMappingTest < ActiveSupport::TestCase
     assert_nil result["AAPL"], "ambiguous ticker with no MIC must not auto-pick a listing"
   end
 
-  test "mappable_for_row resolves through the row's own composite key" do
+  test "index_for returns mappings keyed by composite key with mappables preloaded" do
     aapl = securities(:aapl)
-    row = create_row(ticker: "AAPL", exchange_operating_mic: "XNAS")
     build_mapping(key: "AAPL|XNAS", mappable: aapl)
 
-    assert_equal aapl, Import::SecurityMapping.mappable_for_row(@import, row)
+    index = Import::SecurityMapping.index_for(@import)
+
+    assert_equal aapl, index["AAPL|XNAS"].mappable
+    assert index["AAPL|XNAS"].association(:mappable).loaded?, "mappable should be preloaded"
+  end
+
+  test "index_for lets many rows resolve their security with no extra queries" do
+    aapl = securities(:aapl)
+    msft = securities(:msft)
+    build_mapping(key: "AAPL|XNAS", mappable: aapl)
+    build_mapping(key: "MSFT|XNAS", mappable: msft)
+
+    index = Import::SecurityMapping.index_for(@import)
+
+    # One eager load above; resolving each key (and its mappable) is in memory.
+    assert_queries_count(0) do
+      assert_equal aapl, index["AAPL|XNAS"].mappable
+      assert_equal msft, index["MSFT|XNAS"].mappable
+    end
   end
 
   test "values_count counts rows matching the composite key" do
@@ -153,6 +170,18 @@ class Import::SecurityMappingTest < ActiveSupport::TestCase
     mapping.create_mappable!
 
     assert_equal aapl, mapping.reload.mappable, "import! must not clear an untouched auto-match"
+  end
+
+  test "create_mappable! does not re-resolve an already-mapped selection" do
+    bnd = Security.create!(ticker: "BND", exchange_operating_mic: "XNAS", name: "Vanguard Total Bond ETF")
+    mapping = build_mapping(key: "VANGUARD TOTAL BOND ETF MARKET", value: "BND|XNAS|", mappable: bnd)
+
+    # Already resolved — republishing must not hit the resolver again.
+    Security::Resolver.expects(:new).never
+
+    mapping.create_mappable!
+
+    assert_equal bnd, mapping.reload.mappable
   end
 
   test "clear_selection! drops the mappable and value without erroring" do
