@@ -489,7 +489,15 @@ class Account::ProviderImportAdapter
           account_provider_id: account_provider_id
         )
       else
-        holding = account.holdings.find_or_initialize_by(
+        # A remapped row sits on the user's chosen security, so a lookup by the
+        # incoming security alone misses it and the save hits the unique index.
+        # Match it by provider_security first, as fallback 1a does, scoped by
+        # account_provider_id so another provider's row is not claimed.
+        remapped_attrs = { provider_security: security, date: date, currency: currency }
+        remapped_attrs[:account_provider_id] = account_provider_id if account_provider_id.present?
+        holding = account.holdings.find_by(remapped_attrs)
+
+        holding ||= account.holdings.find_or_initialize_by(
           security: security,
           date: date,
           currency: currency
@@ -1065,14 +1073,17 @@ class Account::ProviderImportAdapter
 
     # The latest earlier holding of the security the provider reports. A
     # remapped row records that security in provider_security_id; an
-    # unremapped one has it as its own security. Only the latest row counts, so
-    # a correction the user has since undone is not revived from an older day.
+    # unremapped one has it as its own security. A provider that reports the
+    # user's chosen security instead still finds the row the user locked to
+    # it. Only the latest row counts, so a correction the user has since
+    # undone is not revived from an older day.
     def previous_holding_for(security:, currency:, date:, account_provider_id:)
       scope = account.holdings
         .where(currency: currency)
         .where("holdings.date < ?", date)
         .where(
-          "holdings.provider_security_id = :id OR (holdings.provider_security_id IS NULL AND holdings.security_id = :id)",
+          "holdings.provider_security_id = :id OR (holdings.provider_security_id IS NULL AND holdings.security_id = :id) " \
+          "OR (holdings.security_locked AND holdings.security_id = :id)",
           id: security.id
         )
       scope = scope.where(account_provider_id: account_provider_id) if account_provider_id.present?
