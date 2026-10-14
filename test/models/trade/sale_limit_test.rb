@@ -164,10 +164,21 @@ class Trade::SaleLimitTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordInvalid) { Trade::SaleLimit.save!(build_sale(qty: 11, date: Date.current)) }
   end
 
-  test "save! takes no lock for an entry the limit does not apply to" do
+  # Moving a purchase later can take a concurrently checked sale below zero.
+  test "save! locks the account when a purchase moves" do
+    purchase = create_trade(@security, account: @account, qty: 3, date: 2.days.ago.to_date, price: 100)
+    purchase.date = 1.day.ago.to_date
+    @account.expects(:lock!).once
+
+    Trade::SaleLimit.save!(purchase)
+  end
+
+  test "save! takes no lock for an ordinary transaction" do
+    entry = create_transaction(account: @account, amount: 10, date: 2.days.ago.to_date)
+    entry.notes = "x"
     @account.expects(:lock!).never
 
-    Trade::SaleLimit.save!(create_trade(@security, account: @account, qty: 3, date: 2.days.ago.to_date, price: 100).tap { |e| e.notes = "x" })
+    Trade::SaleLimit.save!(entry)
   end
 
   test "linked accounts never refuse a sale, because the provider's holdings stay the truth" do

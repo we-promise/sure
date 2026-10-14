@@ -29,12 +29,14 @@ class Trade::SaleLimit
   end
 
   # Same as save, but raises ActiveRecord::RecordInvalid, for callers that
-  # update several entries in one transaction (bulk edit). Only a sale takes
-  # the lock, so bulk edits of ordinary transactions stay lock-free.
+  # update several entries in one transaction (bulk edit). Any trade takes the
+  # lock, a purchase too: moving a purchase later while a sale is checked
+  # would let the sale count units that are no longer there on its date.
+  # Bulk edits of ordinary transactions stay lock-free.
   def self.save!(entry)
     entry.account.transaction do
       limit = new(entry)
-      entry.account.lock! if limit.checks?
+      entry.account.lock! if limit.guards_account?
       raise ActiveRecord::RecordInvalid, entry unless limit.validate
       entry.save!
     end
@@ -56,6 +58,12 @@ class Trade::SaleLimit
   # The most this sale may remove, in units on the sale date. Never below zero.
   def available_qty
     @available_qty ||= [ limiting_day.last, 0 ].max
+  end
+
+  # Whether saving this entry can change what a sale on the same account may
+  # remove, so it has to be serialized with sales being checked.
+  def guards_account?
+    trade.is_a?(Trade) && account.present? && !account.linked?
   end
 
   # Whether this entry is a sale (or worsens one) that the limit applies to.
