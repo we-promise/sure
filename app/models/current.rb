@@ -6,6 +6,8 @@ class Current < ActiveSupport::CurrentAttributes
 
   delegate :family, to: :user, allow_nil: true
 
+  resets { @accessible_accounts = @finance_accounts = nil }
+
   def user
     impersonated_user || session&.user
   end
