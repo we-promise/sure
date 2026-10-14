@@ -29,7 +29,7 @@ class ApplyAllRulesJobTest < ActiveJob::TestCase
   end
 
   test "does not email for an inactive rule" do
-    rule = create_rule(active: false, actions: [ email_action ])
+    rule = create_email_rule(active: false)
 
     assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
       assert_no_enqueued_jobs only: RuleEmailNotificationJob do
@@ -39,8 +39,8 @@ class ApplyAllRulesJobTest < ActiveJob::TestCase
   end
 
   test "applies an inactive rule's category action but does not email" do
-    rule = create_rule(active: false, actions: [ category_action, email_action ])
-    assert_nil @transaction.reload.category
+    rule = create_email_rule(active: false, actions: [ category_action, email_action ])
+    assert_nil @new_match.reload.category
 
     assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
       assert_no_enqueued_jobs only: RuleEmailNotificationJob do
@@ -48,14 +48,14 @@ class ApplyAllRulesJobTest < ActiveJob::TestCase
       end
     end
 
-    assert_equal @groceries_category, @transaction.reload.category
+    assert_equal @groceries_category, @new_match.reload.category
   end
 
   test "emails new matches for an active rule" do
-    rule = create_rule(active: true, actions: [ email_action ])
+    rule = create_email_rule(active: true)
 
     assert_difference -> { NotificationDelivery.where(rule: rule).count }, 1 do
-      assert_enqueued_with(job: RuleEmailNotificationJob, args: [ rule.id, [ @transaction.id ] ]) do
+      assert_enqueued_with(job: RuleEmailNotificationJob, args: [ rule.id, [ @new_match.id ] ]) do
         ApplyAllRulesJob.perform_now(@family)
       end
     end
@@ -64,8 +64,8 @@ class ApplyAllRulesJobTest < ActiveJob::TestCase
   end
 
   test "does not re-send an active rule's already recorded matches" do
-    rule = create_rule(active: true, actions: [ email_action ])
-    NotificationDelivery.record_for(rule_id: rule.id, transaction_ids: [ @transaction.id ])
+    rule = create_email_rule(active: true)
+    NotificationDelivery.record_for(rule_id: rule.id, transaction_ids: [ @new_match.id ])
 
     assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
       assert_no_enqueued_jobs only: RuleEmailNotificationJob do
@@ -81,6 +81,15 @@ class ApplyAllRulesJobTest < ActiveJob::TestCase
 
     def email_action
       Rule::Action.new(action_type: "send_email_notification")
+    end
+
+    # An email rule whose existing match is already recorded, as its baseline
+    # leaves it, followed by one new match (@new_match) it has not seen.
+    def create_email_rule(active:, actions: [ email_action ])
+      rule = create_rule(active: active, actions: actions)
+      NotificationDelivery.record_for(rule_id: rule.id, transaction_ids: [ @transaction.id ])
+      @new_match = create_transaction(account: @account, name: "Whole Foods").transaction
+      rule
     end
 
     def create_rule(active:, actions: [ category_action ])
