@@ -14,10 +14,25 @@ export default class extends Controller {
     this.resizeObserver = new ResizeObserver(() => this.reposition());
     this.resizeObserver.observe(this.mainTarget);
     this.reposition();
+
+    this._deferredStreams = [];
+    this._onBeforeStreamRender = this.#deferWhileDialogOpen.bind(this);
+    this._onDialogClose = this.#flushDeferredStreams.bind(this);
+    document.addEventListener(
+      "turbo:before-stream-render",
+      this._onBeforeStreamRender,
+    );
+    // `close` doesn't bubble; a capturing listener still sees every dialog's.
+    document.addEventListener("close", this._onDialogClose, true);
   }
 
   disconnect() {
     this.resizeObserver?.disconnect();
+    document.removeEventListener(
+      "turbo:before-stream-render",
+      this._onBeforeStreamRender,
+    );
+    document.removeEventListener("close", this._onDialogClose, true);
   }
 
   reposition() {
@@ -36,5 +51,66 @@ export default class extends Controller {
   // only `style` on this one element — no node-identity system involved.
   preserveStyle(event) {
     if (event.detail.attributeName === "style") event.preventDefault();
+  }
+
+  // A native <dialog> shown via showModal() (the transaction drawer, any
+  // modal) renders in the browser's top layer, which sits above this tray
+  // regardless of z-index. A "create a rule?" CTA streaming in while one is
+  // open is invisible and unclickable until the dialog closes, and by then
+  // its one-time flash has already been consumed server-side, so it never
+  // gets a second chance to render. Hold the stream's render until no dialog
+  // is open any more.
+  //
+  // Separately, some background jobs (e.g. Account::SyncCompleteEvent)
+  // broadcast a raw <turbo-stream action="refresh"> with no target: a
+  // full-page morph that bypasses the sync-toast controller's own
+  // dialog/CTA-aware deferral entirely, since Turbo handles "refresh"
+  // itself rather than routing it through that Stimulus controller. Left
+  // alone, one of these can silently wipe an unread CTA a moment after it
+  // was revealed. Hold those the same way, and skip them while a CTA is
+  // waiting for the user.
+  #deferWhileDialogOpen(event) {
+    const stream = event.target;
+    const isCta = stream.target === "cta";
+    const isRefresh = stream.action === "refresh";
+    if (!isCta && !isRefresh) return;
+
+    if (!this.#dialogOpen()) {
+      if (isRefresh && this.#ctaPending()) event.detail.render = () => {};
+      return;
+    }
+
+    const render = event.detail.render;
+    event.detail.render = (streamElement) => {
+      this._deferredStreams.push({ isRefresh, render, streamElement });
+    };
+  }
+
+  // Captured on the document rather than bound to the dialog that was open
+  // when the stream arrived: that dialog can leave the DOM without a close
+  // event (one drawer replaced by the next in the same frame), and stacked
+  // dialogs close one at a time. Flush only once none is open.
+  #flushDeferredStreams(event) {
+    if (!(event.target instanceof HTMLDialogElement)) return;
+    if (this._deferredStreams.length === 0 || this.#dialogOpen()) return;
+
+    const streams = this._deferredStreams;
+    this._deferredStreams = [];
+
+    // CTAs first: a refresh morphs the page to the server's HTML, where the
+    // already-consumed CTA no longer exists.
+    for (const { isRefresh, render, streamElement } of streams) {
+      if (!isRefresh) render(streamElement);
+    }
+    const refresh = streams.find(({ isRefresh }) => isRefresh);
+    if (refresh && !this.#ctaPending()) refresh.render(refresh.streamElement);
+  }
+
+  #dialogOpen() {
+    return !!document.querySelector("dialog[open]");
+  }
+
+  #ctaPending() {
+    return !!document.getElementById("cta")?.firstElementChild;
   }
 }
