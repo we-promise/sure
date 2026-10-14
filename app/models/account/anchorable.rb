@@ -90,8 +90,11 @@ module Account::Anchorable
   end
 
   # The first cash-only anchor opts this account into shared forward accounting.
+  # Read fresh on every call: a wallet connected through another instance of
+  # this account must take effect. Joins only this account's valuations, so it
+  # stays an indexed lookup rather than a scan of every cash anchor.
   def accounting_start_date
-    entries.valuations.where(entryable_id: Valuation.cash_anchor.select(:id)).minimum(:date)
+    valuations.cash_anchor.minimum("entries.date")
   end
 
   # Retain earlier imported history, while explicit edits may rebuild it.

@@ -64,7 +64,8 @@ module Account::Linkable
   # Convenience method to get the provider name
   def provider_name
     # Try new system first
-    return provider&.provider_name if provider.present?
+    adapter = provider
+    return adapter.provider_name if adapter
 
     # Fall back to legacy system
     return "plaid" if plaid_account.present?
