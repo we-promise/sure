@@ -9,8 +9,8 @@ gem "rails", "~> 8.1.0"
 gem "pg", "~> 1.5"
 gem "redis", "~> 5.4"
 
-# Public BIP32 derivation for watch-only Bitcoin accounts; never handles seeds.
-gem "bitcoinrb", "1.14.0", require: "bitcoin"
+# Bech32/Bech32m encoding for watch-only Bitcoin addresses.
+gem "bech32", "1.5.1"
 
 # Deployment
 gem "puma", ">= 7.2.1"
