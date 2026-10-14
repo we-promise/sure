@@ -246,6 +246,17 @@ class SnaptradeDataHelpersTest < ActiveSupport::TestCase
     assert_equal provider_row, @helper.test_resolve_security("DUPK", {}, account: account, provider_row: true)
   end
 
+  # Only a lock says the user chose the row. An unlocked holding that still
+  # names another provider row is followed where it sits.
+  test "resolve_security follows an unlocked holding even when asked for the provider's row" do
+    account = accounts(:investment)
+    provider_row = Security.create!(ticker: "DUPU", name: "Provider row")
+    held = Security.create!(ticker: "DUPU", name: "Held row", exchange_operating_mic: "XNYS")
+    hold(account, held, date: 1.day.ago.to_date, provider_security: provider_row)
+
+    assert_equal held, @helper.test_resolve_security("DUPU", {}, account: account, provider_row: true)
+  end
+
   test "resolve_security race retry still answers a locked remap with the provider's row" do
     account = accounts(:investment)
     provider_row = nil
