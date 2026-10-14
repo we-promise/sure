@@ -64,6 +64,26 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
     assert scope.supports_money_weighted_return?
   end
 
+  # The classifier's CASE arrives already sanitized and full of quoted labels.
+  # Passed back through sanitize_sql_array with the query around it, a `:word`
+  # inside one of those literals is read as a bind variable and the check
+  # raises. No label contains one today; this makes one that does.
+  test "a colon word inside the classifier's sql is not read as a bind" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, cash_flow: 500
+    deposit account: @account, date: @day_two, amount: 500
+
+    original = Portfolio::FlowClassifier.new(scope_account_ids: [ @account.id ]).sql_case
+    Portfolio::FlowClassifier.any_instance.stubs(:sql_case)
+      .returns("CASE WHEN false THEN ':probe' ELSE (#{original}) END")
+
+    scope = Portfolio::ReturnScope.new(account: @account, period: @period)
+    resolved = Portfolio::ReturnScope.resolve_all(accounts: [ @account ], period: @period)
+
+    assert scope.trade_tracked?, "the deposit is still read as a known flow"
+    assert resolved.fetch(@account.id).trade_tracked?, "resolve_all reads it the same way"
+  end
+
   test "balances with no explanation at all are treated as valuation tracked" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, market_flow: 100
