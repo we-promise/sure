@@ -24,11 +24,13 @@ class Loan::CollateralPosition
     end
 
     # The position of a loan's asset, or nil when it has none, the viewer cannot
-    # see it, or no loan in use is secured on it (this loan may be switched off:
-    # it is not debt, so its own page would show the whole value as equity).
+    # see it, or this loan is not in use. A switched-off or pending-deletion loan
+    # is not debt, so it has no position of its own even while another loan on
+    # the same asset still gives the asset one.
     def for_loan(loan, viewer:)
       collateral = loan.collateral_account
       return nil unless collateral && viewer && Account.accessible_by(viewer).exists?(id: collateral.id)
+      return nil unless Account.visible.exists?(accountable_type: "Loan", accountable_id: loan.id)
 
       for_collateral(collateral, viewer: viewer)
     end

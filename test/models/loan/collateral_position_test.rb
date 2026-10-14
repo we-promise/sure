@@ -91,6 +91,34 @@ class Loan::CollateralPositionTest < ActiveSupport::TestCase
     assert_nil Loan::CollateralPosition.for_collateral(@property, viewer: @admin)
   end
 
+  # The asset keeps a position while another loan on it is in use, so the
+  # switched-off loan has to be refused on its own account, not by the asset
+  # having no position.
+  test "a switched-off loan shows no position even when another loan on the asset is in use" do
+    secure_another_loan(balance: 100_000)
+    @loan_account.update_columns(status: "disabled")
+
+    assert_not_nil Loan::CollateralPosition.for_collateral(@property, viewer: @admin)
+    assert_nil Loan::CollateralPosition.for_loan(@loan_account.loan, viewer: @admin)
+  end
+
+  test "a loan pending deletion shows no position even when another loan on the asset is in use" do
+    secure_another_loan(balance: 100_000)
+    @loan_account.update_columns(status: "pending_deletion")
+
+    assert_not_nil Loan::CollateralPosition.for_collateral(@property, viewer: @admin)
+    assert_nil Loan::CollateralPosition.for_loan(@loan_account.loan, viewer: @admin)
+  end
+
+  test "a draft loan is in use and shows the asset's position" do
+    secure_another_loan(balance: 100_000)
+    @loan_account.update_columns(status: "draft")
+
+    position = Loan::CollateralPosition.for_loan(@loan_account.loan, viewer: @admin)
+
+    assert_equal Money.new(-50_000, "USD"), position.equity
+  end
+
   test "an asset with no valuation yet has no position" do
     @property.update_columns(balance: nil)
 
