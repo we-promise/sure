@@ -88,20 +88,18 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     create_balance(account: foreign, date: Date.current, balance: 0)
     create_balance(account: native, date: Date.current, balance: 50)
 
-    [ nil, 0, -1 ].each do |rate|
-      ExchangeRate.where(from_currency: "USD", to_currency: "EUR").delete_all
-      ExchangeRate.create!(date: Date.current, from_currency: "USD", to_currency: "EUR", rate: rate) if rate
-      builder = Balance::ChartSeriesBuilder.new(
-        account_ids: [ foreign.id, native.id ], currency: "EUR",
-        period: Period.custom(start_date: Date.current, end_date: Date.current),
-        strict_currency_conversion: true
-      )
+    # Zero and negative rates are rejected at write time, so absent is the only unusable rate.
+    ExchangeRate.where(from_currency: "USD", to_currency: "EUR").delete_all
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ foreign.id, native.id ], currency: "EUR",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      strict_currency_conversion: true
+    )
 
-      series = builder.balance_series
-      assert_equal 1, series.size
-      assert_equal(-50, series.first.value.amount)
-      assert_equal(-50, series.first.trend.previous.amount)
-    end
+    series = builder.balance_series
+    assert_equal 1, series.size
+    assert_equal(-50, series.first.value.amount)
+    assert_equal(-50, series.first.trend.previous.amount)
   end
 
   test "strict currency conversion uses historical rates without changing native balances" do
