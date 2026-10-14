@@ -168,58 +168,27 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal({ "JPY" => 30.days.ago.to_date }, ExchangeRate.stale_rate_dates(%w[JPY CHF], to: "USD"))
   end
 
-  # A stored 0 or negative is no rate: multiplying by it books an amount as
-  # nothing or flips its sign. The usable rate behind it is used instead.
-  test "rates_for and rate_sql skip a stored rate of zero or below" do
-    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 3.days.ago.to_date, rate: 0.0067)
-    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 1.day.ago.to_date, rate: -1)
-    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0)
-    ExchangeRate.create!(from_currency: "KRW", to_currency: "USD", date: Date.current, rate: 0)
-    @provider.stubs(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no rate")))
-
-    assert_equal({ "JPY" => 0.0067 }, ExchangeRate.rates_for(%w[JPY KRW], to: "USD").transform_values(&:to_f))
-
-    sql = ExchangeRate.rate_sql(from: ":from", to: "'USD'", on: "CURRENT_DATE")
-    rate = ->(from) { ActiveRecord::Base.connection.select_value(ActiveRecord::Base.sanitize_sql_array([ "SELECT #{sql}", { from: from } ]))&.to_d }
-    assert_equal BigDecimal("0.0067"), rate.call("JPY")
-    assert_nil rate.call("KRW")
-    assert_equal %w[KRW], ExchangeRate.currencies_without_rate(%w[JPY KRW], to: "USD")
-  end
-
-  # A stored 0 on the day, or within the lookback, used to be returned as
-  # found, so the provider was never asked and the currency fell out of totals
-  # though a usable rate was one call away. The provider's answer also replaces
-  # the unusable row.
-  test "find_or_fetch_rate asks the provider past a stored rate of zero or below, and repairs it" do
-    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0)
-    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 2.days.ago.to_date, rate: -1)
-    @provider.expects(:fetch_exchange_rate).once.returns(
-      provider_success_response(OpenStruct.new(from: "JPY", to: "USD", date: Date.current, rate: 0.0067))
-    )
-
-    assert_equal 0.0067, ExchangeRate.rates_for(%w[JPY], to: "USD")["JPY"].to_f
-    assert_equal BigDecimal("0.0067"), ExchangeRate.find_by(from_currency: "JPY", to_currency: "USD", date: Date.current).rate
-  end
-
-  # Another process can save a 0 for the same pair and date between the lookup
-  # and the insert. Read back, that row is no answer; the provider's is.
+  # The read-back after a lost insert race only answers with a usable row;
+  # otherwise the provider's rate stands. The table rejects a 0 since #3790,
+  # so the unusable row is built in memory rather than stored.
   test "find_or_fetch_rate returns the provider's rate when a racing writer saved an unusable one" do
-    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0)
     @provider.expects(:fetch_exchange_rate).returns(
       provider_success_response(OpenStruct.new(from: "JPY", to: "USD", date: Date.current, rate: 0.0067))
     )
     ExchangeRate.stubs(:find_or_create_by!).raises(ActiveRecord::RecordNotUnique)
+    ExchangeRate.stubs(:find_by!).returns(ExchangeRate.new(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0))
 
     assert_equal 0.0067, ExchangeRate.find_or_fetch_rate(from: "JPY", to: "USD").rate.to_f
   end
 
-  # Replacing the unusable row is best-effort: a failed write leaves the
-  # provider's rate as the answer, not the row it could not replace.
+  # Replacing an unusable row is best-effort: a failed write leaves the
+  # provider's rate as the answer, not the row it could not replace. Built in
+  # memory, as above.
   test "find_or_fetch_rate returns the provider's rate when replacing an unusable row fails" do
-    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0)
     @provider.expects(:fetch_exchange_rate).returns(
       provider_success_response(OpenStruct.new(from: "JPY", to: "USD", date: Date.current, rate: 0.0067))
     )
+    ExchangeRate.stubs(:find_or_create_by!).returns(ExchangeRate.new(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0))
     ExchangeRate.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(ExchangeRate.new))
 
     assert_equal 0.0067, ExchangeRate.find_or_fetch_rate(from: "JPY", to: "USD").rate.to_f
