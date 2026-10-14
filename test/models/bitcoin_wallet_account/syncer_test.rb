@@ -20,6 +20,18 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     refute @wallet.account.linked?
   end
 
+  test "a draft sync finds a deposit to the next unused address" do
+    @wallet.bitcoin_wallet_sources.destroy_all
+    @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    @provider.fund(RECEIVE, 100_000)
+    BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+    assert_equal 100_000, @wallet.reload.balance_sats
+
+    @provider.fund(SECOND, 50_000)
+    BitcoinWalletAccount::Syncer.new(@wallet.reload, provider: @provider).perform
+    assert_equal 150_000, @wallet.reload.balance_sats
+  end
+
   test "a failed read preserves the last complete amount" do
     @wallet.update!(balance_sats: 123)
     @provider.stubs(:get_address).raises(Provider::MempoolSpace::ApiError)

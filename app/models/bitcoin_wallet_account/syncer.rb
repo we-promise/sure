@@ -104,8 +104,10 @@ class BitcoinWalletAccount::Syncer
               baseline_cash_balance: wallet.account.cash_balance, needs_reconciliation: false)
           end
           window = processor.process(prepare_prices: false, materialize: @sync.nil?)
-          wallet.restart_discovery!
         end
+        # Drafts reopen the lookahead too, so a deposit to a fresh address is in
+        # the quantity shown before connecting.
+        wallet.restart_discovery!
       end
       if @sync && window && !@sync.cancel_requested?
         wallet.account.sync_later(parent_sync: @sync,

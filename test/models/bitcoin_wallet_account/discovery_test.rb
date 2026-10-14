@@ -59,7 +59,7 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
       @provider.reads.size
     end
 
-    assert_equal 100, rescan.call
+    assert_equal 2 * BitcoinWalletAccount::ROUTINE_LOOKAHEAD, rescan.call
     assert_equal 2 * BitcoinWalletAccount::ROUTINE_LOOKAHEAD, rescan.call
     travel 25.hours do
       assert_equal 100, rescan.call

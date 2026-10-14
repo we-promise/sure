@@ -35,6 +35,8 @@ class BitcoinWalletAccount::Discovery
     def scan(source)
       original = source.discovery
       state = original.deep_dup
+      # A scan from nothing covers the full gap, so the daily rescan counts from it.
+      state["full_scan_at"] ||= Time.current.iso8601 if state.values_at("0", "1").none?
       found = []
       [ 0, 1 ].each do |branch|
         cursor = state.fetch(branch.to_s, { "index" => 0, "gap" => 0 })
