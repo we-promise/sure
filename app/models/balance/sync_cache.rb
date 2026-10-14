@@ -40,7 +40,8 @@ class Balance::SyncCache
 
   # Reuse the standard pending, split and FX rules for an anchor's ledger baseline.
   def cash_entry_total(date)
-    converted_entries.select { |entry| entry.date <= date && !entry.valuation? }.sum(&:amount)
+    index = cash_entry_totals.bsearch_index { |(day, _)| day > date } || cash_entry_totals.size
+    index.zero? ? 0 : cash_entry_totals[index - 1].last
   end
 
   def get_holdings_value(date)
@@ -53,6 +54,14 @@ class Balance::SyncCache
 
   private
     attr_reader :account
+
+    # Running ledger totals by date, built once instead of once per anchor.
+    def cash_entry_totals
+      @cash_entry_totals ||= begin
+        running = 0
+        converted_entries.reject(&:valuation?).group_by(&:date).sort.map { |day, entries| [ day, running += entries.sum(&:amount) ] }
+      end
+    end
 
     def accounting_start_date
       return @accounting_start_date if defined?(@accounting_start_date)
