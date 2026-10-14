@@ -36,15 +36,18 @@
                 <% else %>
                   <%= accountable_label(account) %> · <%= row[:native_backing_money].format(precision: 0) %>
                 <% end %>
+                <% if row[:converted] && !row[:rate_missing] %>
+                  · <%= t("goals.show.funding_accounts.converted", amount: row[:backing_money].format(precision: 0)) %>
+                <% end %>
               </p>
-              <% if row[:converted] %>
-                <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= t("goals.show.funding_accounts.converted", amount: row[:backing_money].format(precision: 0)) %></p>
+              <% if row[:rate_missing] %>
+                <p class="text-xs text-secondary"><%= t("goals.show.funding_accounts.rate_unavailable") %></p>
               <% end %>
             </div>
 
             <% if rows.size > 1 %>
               <p class="hidden sm:block text-sm text-secondary tabular-nums text-right privacy-sensitive">
-                <%= percent_for(row[:backing]) %>%
+                <%= row[:rate_missing] ? "—" : "#{percent_for(row[:backing])}%" %>
               </p>
             <% else %>
               <span class="hidden sm:block"></span>

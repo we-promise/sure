@@ -116,14 +116,18 @@ Shared-pool allocation and pro-rata scaling happen before conversion, so goals
 with different currencies cannot double-count the same account.
 
 `Goal::CurrencyConverter` uses `ExchangeRate.find_or_fetch_rate` through `Money`,
-with a request-scoped rate cache shared by prepared goals. Current backing uses
-today's rate; pace, funding inflows and pledge matches use the entry date. Budget
+with a request-scoped rate cache shared by prepared goals. Current backing, pace
+and funding inflows use today's rate (pace is an estimate, and a rate per entry
+date would reach the provider on every render); consumption and pledge matches
+use the entry date. Budget
 cash reservations convert native earmarks directly to budget currency rather
 than going through an intermediate goal currency. Consumption converts the
 entered goal-currency amount back into native units before releasing an earmark.
 
 Unavailable rates never become 1:1 conversions. Read surfaces show the known
-subtotal and a missing-rate warning; writes that require conversion are refused,
+subtotal and a missing-rate warning (`Goal#currency_conversion_incomplete?`
+runs the backing, pace and market-value conversions first, so the warning can
+render above them); writes that require conversion are refused,
 and pledge matches wait for a rate. Goal history charts opt into strict currency
 conversion and omit the saved line when it cannot be converted. Existing stored
 balances and transactions are unchanged; no migration is required.

@@ -259,13 +259,13 @@ class Goal < ApplicationRecord
 
   attr_writer :market_flows
 
-  # Family-wide map of each linked account's trailing 90-day flows, grouped
-  # by entry currency and date so #pace can apply the historical exchange rate.
-  # This is the same aggregate #pace
-  # computes per goal. Injected alongside pooled_allocations/market_flows so
-  # sorting/rendering N goals (active_display_sort calls goal.status, which
-  # reaches #pace for any goal with a target_date) fires one grouped query
-  # instead of one Entry.sum per goal.
+  # Family-wide map of each linked account's net inflow over the trailing
+  # 90 days, per entry currency (account_id => { currency => net Entry#amount
+  # sum }) — the same aggregate #pace computes per goal. Injected alongside
+  # pooled_allocations/market_flows so sorting/rendering N goals
+  # (active_display_sort calls goal.status, which reaches #pace for any goal
+  # with a target_date) fires one grouped query instead of one Entry.sum per
+  # goal.
   def self.pace_for(family)
     account_ids = GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
     return {} if account_ids.empty?
@@ -275,10 +275,10 @@ class Goal < ApplicationRecord
       .where(account_id: account_ids, date: 90.days.ago.to_date..Date.current)
       .where(excluded: false)
       .merge(Transaction.excluding_pending)
-      .group(:account_id, :currency, :date)
+      .group(:account_id, :currency)
       .sum(:amount)
-      .each_with_object({}) do |((account_id, currency, date), amount), totals|
-        (totals[account_id] ||= []) << { currency: currency, date: date, amount: amount }
+      .each_with_object({}) do |((account_id, currency), amount), totals|
+        (totals[account_id] ||= {})[currency] = amount
       end
   end
 
@@ -455,7 +455,10 @@ class Goal < ApplicationRecord
   def convert_money(money, to: currency, date: Date.current)
     convert_money!(money, to: to, date: date)
   rescue Money::ConversionError => e
-    if missing_exchange_rate_currencies.add?(e.from_currency)
+    # Logged once a day per family and pair: reads run on every page view, and
+    # a family without a rate provider would otherwise log on each one.
+    if missing_exchange_rate_currencies.add?(e.from_currency) &&
+       Rails.cache.write([ "goal_fx_missing", family_id, e.from_currency, e.to_currency ], true, expires_in: 1.day, unless_exist: true)
       DebugLogEntry.capture(
         category: "goal_currency_conversion", level: "warn", source: "Goal",
         message: "Goal amount could not be converted", family: family,
@@ -471,10 +474,12 @@ class Goal < ApplicationRecord
     @missing_exchange_rate_currencies ||= Set.new
   end
 
-  # Evaluate current backing and report omissions from missing exchange rates.
-  # @return [Boolean] whether a known subtotal or projection needs a warning
+  # Runs the backing, pace and market-value conversions up front, so the
+  # warning can render above those figures instead of after them.
   def currency_conversion_incomplete?
     current_balance
+    pace
+    market_value_money
     missing_exchange_rate_currencies.any?
   end
 
@@ -772,17 +777,20 @@ class Goal < ApplicationRecord
     @pace = if linked_accounts.empty?
       0
     else
+      # Today's rate, not each entry's: pace is an estimate, and a rate per
+      # entry date could reach the provider up to 90 times per currency on
+      # every render.
       net = linked_accounts.sum do |account|
-        pooled_pace.fetch(account.id, []).sum do |entry|
-          convert_money(Money.new(entry[:amount], entry[:currency].presence || account.currency), date: entry[:date]).amount
+        pooled_pace.fetch(account.id, {}).sum do |entry_currency, amount|
+          convert_money(Money.new(amount, entry_currency.presence || account.currency)).amount
         end
       end
       (-net.to_d / 3).round(2)
     end
   end
 
-  # Wrap the historical monthly net-inflow estimate in goal currency.
-  # @return [Money] dated 90-day net inflow divided by three
+  # Wrap the monthly net-inflow estimate in goal currency.
+  # @return [Money] 90-day net inflow divided by three
   def pace_money
     @pace_money ||= Money.new(pace, currency)
   end
@@ -1184,8 +1192,8 @@ class Goal < ApplicationRecord
       @market_flows ||= self.class.market_flows_for(family)
     end
 
-    # Load shared dated ledger aggregates used to compute converted goal pace.
-    # @return [Hash] account IDs mapped to currency, date and amount entries
+    # Load shared ledger aggregates used to compute converted goal pace.
+    # @return [Hash] account IDs mapped to net amounts per entry currency
     def pooled_pace
       @pooled_pace ||= self.class.pace_for(family)
     end

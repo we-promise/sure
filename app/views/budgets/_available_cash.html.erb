@@ -42,9 +42,8 @@
       </dd>
     </div>
   </dl>
-  <% if budget.cash_conversion_incomplete? %>
-    <%= render DS::Alert.new(variant: "warning", title: t("goals.currency_warning.title")) do %>
-      <p class="text-secondary"><%= t(".currency_warning") %></p>
-    <% end %>
+  <% if budget.missing_cash_currencies.any? %>
+    <%= render DS::Alert.new(variant: "warning", title: t("goals.currency_warning.title"),
+          message: t(".currency_warning", currencies: budget.missing_cash_currencies.to_a.to_sentence, currency: budget.currency)) %>
   <% end %>
 </div>

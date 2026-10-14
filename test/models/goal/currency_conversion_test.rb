@@ -54,6 +54,18 @@ class Goal::CurrencyConversionTest < ActiveSupport::TestCase
     assert_equal 1, DebugLogEntry.where(category: "goal_currency_conversion").count
   end
 
+  test "a missing rate is logged once a day, not on every page view" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    eur = cash("EUR", 900)
+    goal_on("USD", [ [ eur, 400 ] ])
+    goal_on("USD", [ [ eur, 400 ] ])
+
+    2.times { Goal.prepared_for(@family).each(&:currency_conversion_incomplete?) }
+
+    assert_equal 1, DebugLogEntry.where(category: "goal_currency_conversion").count
+    assert Goal.prepared_for(@family).all?(&:currency_conversion_incomplete?), "the warning must not depend on the log"
+  end
+
   test "zero foreign balances do not need a rate" do
     goal = goal_on("USD", [ [ cash("EUR", 0), nil ] ])
     ExchangeRate.expects(:find_or_fetch_rate).never
@@ -62,7 +74,7 @@ class Goal::CurrencyConversionTest < ActiveSupport::TestCase
     assert_not goal.currency_conversion_incomplete?
   end
 
-  test "pace uses the currency and rate of each transaction date" do
+  test "pace converts the 90-day net at today's rate" do
     eur = cash("EUR", 1_000)
     goal = goal_on("USD", [ [ eur, nil ] ])
     past = 20.days.ago.to_date
@@ -72,8 +84,16 @@ class Goal::CurrencyConversionTest < ActiveSupport::TestCase
     eur.entries.create!(name: "Pending", date: past, amount: -900, currency: "EUR",
                         entryable: Transaction.new(extra: { plaid: { pending: true } }))
 
-    assert_equal 110, goal.pace
+    assert_equal 150, goal.pace
     assert_equal 1_500, goal.current_balance
+  end
+
+  test "the incomplete-conversion check covers pace before it is rendered" do
+    eur = cash("EUR", 0)
+    goal = goal_on("USD", [ [ eur, nil ] ])
+    eur.entries.create!(name: "Deposit", date: 5.days.ago.to_date, amount: -300, currency: "EUR", entryable: Transaction.new)
+
+    assert Goal.find(goal.id).currency_conversion_incomplete?
   end
 
   test "investment contributions are converted after excluding market gains" do
@@ -168,7 +188,7 @@ class Goal::CurrencyConversionTest < ActiveSupport::TestCase
     assert_in_delta 980, goal.projection_payload[:saved_series].last[:value], 0.01
   end
 
-  test "funding rows preserve native values while converting dated inflows" do
+  test "funding rows preserve native values while converting inflows at today's rate" do
     eur = cash("EUR", 1_000)
     goal = goal_on("USD", [ [ eur, 400 ] ])
     past = 20.days.ago.to_date
@@ -181,7 +201,18 @@ class Goal::CurrencyConversionTest < ActiveSupport::TestCase
     assert_equal "USD", row[:backing_money].currency.iso_code
     assert_equal 400, row[:native_backing_money].amount
     assert_equal "EUR", row[:balance_money].currency.iso_code
-    assert_equal 110, row[:last_30_money].amount
+    assert_equal 120, row[:last_30_money].amount
+    assert_not row[:rate_missing]
+  end
+
+  test "funding rows flag a nonzero share that could not be converted" do
+    funded = cash("EUR", 1_000)
+    empty = cash("EUR", 0)
+    goal = goal_on("USD", [ [ funded, 400 ], [ empty, nil ] ])
+    flags = Goals::FundingAccountsBreakdownComponent.new(goal: goal).rows.to_h { |row| [ row[:account], row[:rate_missing] ] }
+
+    assert flags[funded]
+    assert_not flags[empty]
   end
 
   test "completion freezes the converted balance" do

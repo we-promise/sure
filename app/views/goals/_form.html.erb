@@ -113,14 +113,17 @@
         <span class="block text-sm font-medium text-primary"><%= t("goals.form.fields.funding_accounts") %></span>
         <p class="text-xs text-secondary mt-0.5"><%= t("goals.form.fields.funding_accounts_hint") %></p>
         <p class="text-xs text-subdued mt-0.5"><%= t("goals.form.fields.earmark_hint") %></p>
-        <p class="text-xs text-secondary mt-0.5"><%= t("goals.form.fields.currency_conversion_hint", currency: goal.currency.presence || Current.family.primary_currency_code) %></p>
+        <% goal_currency = goal.currency.presence || Current.family.primary_currency_code %>
+        <% if (linkable_accounts.map(&:currency) | [ goal_currency ]).size > 1 %>
+          <p class="text-xs text-secondary mt-0.5"><%= t("goals.form.fields.currency_conversion_hint", currency: goal_currency) %></p>
+        <% end %>
       </div>
       <%# Its own controller, not goal-form: that one is already at 10 targets
           against the 7 the project guidelines suggest, and this needs none of
           its state. Three targets here. %>
       <div class="bg-container-inset rounded-lg p-1"
            data-controller="goal-earmark"
-           data-goal-earmark-currency-value="<%= goal.currency.presence || Current.family.primary_currency_code %>"
+           data-goal-earmark-currency-value="<%= goal_currency %>"
            <%# The APPLICATION locale, not the browser's. `Intl.NumberFormat`
                with `undefined` lets the browser pick, so a French user on an
                English-locale browser read separators and symbol placement that
@@ -131,7 +134,8 @@
            data-goal-earmark-whole-balance-value="<%= t("goals.form.earmark.whole_balance") %>"
            data-goal-earmark-whole-balance-alone-value="<%= t("goals.form.earmark.whole_balance_alone") %>"
            data-goal-earmark-prorata-value="<%= t("goals.form.earmark.prorata") %>"
-           data-goal-earmark-headroom-value="<%= t("goals.form.earmark.headroom") %>">
+           data-goal-earmark-headroom-value="<%= t("goals.form.earmark.headroom") %>"
+           data-goal-earmark-converted-value="<%= t("goals.form.earmark.converted") %>">
         <% linked_allocation_by_account = goal.goal_accounts.index_by(&:account_id) %>
         <% grouped = linkable_accounts.group_by { |a| a.subtype.to_s.presence || "other" } %>
         <% grouped.each_with_index do |(subtype, accts), group_idx| %>
@@ -142,6 +146,7 @@
               <div class="px-3 py-2.5 hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>"
                    data-balance="<%= account.balance.to_d %>"
                    data-currency="<%= account.currency %>"
+                   data-rate="<%= earmark_conversion_rate(goal, account, goal_currency) %>"
                    data-earmarked-by-others="<%= earmarked_by_other_goals(account, pooled: pooled_allocations, current_goal: goal) %>"
                    data-whole-account-claimed="<%= whole_account_claimed_by_other_goals?(account, pooled: pooled_allocations, current_goal: goal) %>">
               <div class="flex items-center gap-3">

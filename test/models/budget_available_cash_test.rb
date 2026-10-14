@@ -129,7 +129,7 @@ class BudgetAvailableCashTest < ActiveSupport::TestCase
     assert_equal 0, @budget.available_cash
     assert_equal 0, @budget.earmarked_for_goals
     assert_equal 0, @budget.free_cash
-    assert @budget.cash_conversion_incomplete?
+    assert_equal [ "EUR" ], @budget.missing_cash_currencies.to_a
   end
 
   private

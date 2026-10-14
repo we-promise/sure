@@ -242,11 +242,11 @@ class Budget < ApplicationRecord
     end
   end
 
-  # Evaluate cash and report whether unavailable FX excluded any balance.
-  # @return [Boolean] true when the cash totals are known subtotals
-  def cash_conversion_incomplete?
+  # Currencies whose balances available_cash left out for want of a rate.
+  # @return [Set<String>] ISO codes, empty when every balance converted
+  def missing_cash_currencies
     available_cash
-    @missing_cash_currencies&.any? || false
+    @missing_cash_currencies ||= Set.new
   end
 
   # Subtract goal reservations from known cash without altering budget allocations.

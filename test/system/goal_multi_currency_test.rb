@@ -19,6 +19,10 @@ class GoalMultiCurrencyTest < ApplicationSystemTestCase
       fill_in I18n.t("goals.form.fields.target_amount"), with: "2000"
       check "goal_account_ids_#{@usd.id}"
       check "goal_account_ids_#{@eur.id}"
+      earmark = I18n.t("goals.form.fields.earmark_for", account: @eur.name)
+      fill_in earmark, with: "500"
+      assert_text I18n.t("goals.form.earmark.converted").sub("{amount}", Money.new(600, "USD").format(precision: 0))
+      fill_in earmark, with: ""
       click_button I18n.t("goals.form.create")
     end
 
@@ -30,10 +34,5 @@ class GoalMultiCurrencyTest < ApplicationSystemTestCase
     assert_text Money.new(1_700, "USD").format(precision: 0)
     assert_text Money.new(1_000, "EUR").format(precision: 0)
     assert_text I18n.t("goals.show.funding_accounts.converted", amount: Money.new(1_200, "USD").format(precision: 0))
-
-    if ENV["GOAL_CURRENCY_SCREENSHOT"] == "true"
-      page.current_window.resize_to(2_000, 1_400)
-      find("div.space-y-4.pb-6").native.save_screenshot(Rails.root.join("tmp/screenshots/goal-multi-currency.png").to_s)
-    end
   end
 end

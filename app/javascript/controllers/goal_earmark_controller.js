@@ -20,6 +20,7 @@ export default class extends Controller {
     prorata: String,
     headroom: String,
     wholeBalanceAlone: String,
+    converted: String,
   };
 
   // A complete number, optionally with one decimal separator and digits after
@@ -85,13 +86,20 @@ export default class extends Controller {
     if (Number.isNaN(entered)) return this.#hide(warning);
 
     const total = others + entered;
+    // Only foreign-currency rows with a known rate carry one.
+    const rate = Number.parseFloat(row.dataset.rate);
+    const converted =
+      rate > 0
+        ? ` ${this.convertedValue.replace("{amount}", this.#money(entered * rate))}`
+        : "";
 
     if (total > balance) {
       this.#show(
         warning,
         this.prorataValue
           .replace("{total}", this.#money(total, row.dataset.currency))
-          .replace("{balance}", this.#money(balance, row.dataset.currency)),
+          .replace("{balance}", this.#money(balance, row.dataset.currency)) +
+          converted,
       );
     } else {
       this.#show(
@@ -99,7 +107,7 @@ export default class extends Controller {
         this.headroomValue.replace(
           "{left}",
           this.#money(balance - total, row.dataset.currency),
-        ),
+        ) + converted,
       );
     }
   }

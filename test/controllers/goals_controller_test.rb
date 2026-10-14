@@ -283,36 +283,25 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ eur.id, usd.id ].sort, goal.linked_accounts.pluck(:id).sort
   end
 
-  test "show and plan disclose an unavailable account conversion" do
+  test "show and index disclose an unavailable account conversion" do
     eur = Account.create!(family: @user.family, accountable: Depository.new,
                           name: "EUR reserve", currency: "EUR", balance: 100)
     @goal.goal_accounts.build(account: eur)
     @goal.save!
     ExchangeRate.stubs(:provider).returns(nil)
 
-    get goal_url(@goal)
-    assert_response :success
-    assert_select "p", text: I18n.t("goals.currency_warning.body", currency: @goal.currency)
-    get plan_url
-    assert_response :success
-    assert_match I18n.t("goals.currency_warning.title"), response.body
-  end
-
-  test "show warns when current backing converts but a historical funding entry cannot" do
-    eur = Account.create!(family: @user.family, accountable: Depository.new,
-                          name: "EUR reserve", currency: "EUR", balance: 100)
-    @goal.goal_accounts.build(account: eur)
-    @goal.save!
-    ExchangeRate.stubs(:provider).returns(nil)
-    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
-    eur.entries.create!(name: "Reserve deposit", date: 20.days.ago.to_date, amount: -100,
-                        currency: "EUR", entryable: Transaction.new)
-    assert_not @goal.currency_conversion_incomplete?, "current backing has a usable rate"
+    warning = I18n.t("goals.currency_warning.body", from: "EUR", to: @goal.currency)
 
     get goal_url(@goal)
-
     assert_response :success
-    assert_select "p", text: I18n.t("goals.currency_warning.body", currency: @goal.currency)
+    assert_select "p", text: I18n.t("goals.show.funding_accounts.rate_unavailable")
+    assert_includes response.body, warning
+    # Above the headline figures, not below the funding breakdown.
+    assert_operator response.body.index(warning), :<, response.body.index(I18n.t("goals.show.funding_accounts_heading"))
+
+    get goals_url
+    assert_response :success
+    assert_select "p", text: I18n.t("goals.goal_card.partial_total")
   end
 
   test "detected foreign spending is converted on its date and releases native units" do

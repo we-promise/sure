@@ -9,19 +9,22 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
   attr_reader :goal
 
   # Build funding rows with native account amounts and goal-currency shares.
-  # @return [Array<Hash>] backing, display amounts and dated inflow totals
+  # @return [Array<Hash>] backing, display amounts and inflow totals
   def rows
     @rows ||= goal.linked_accounts.sort_by { |a| -goal.account_backing(a).amount.to_d }.map do |account|
       totals = inflow_totals_for(account)
       backing = goal.account_backing(account).amount.to_d
+      native = goal.account_native_backing(account)
       goal_account = goal_account_by_id[account.id]
       {
         account: account,
         backing: backing,
         backing_money: Money.new(backing, goal.currency),
         balance_money: Money.new(account.balance.to_d, account.currency),
-        native_backing_money: goal.account_native_backing(account),
+        native_backing_money: native,
         converted: account.currency != goal.currency,
+        # Zero converts without a rate, so only a nonzero share can be left out.
+        rate_missing: !native.zero? && goal.missing_exchange_rate_currencies.include?(account.currency),
         earmarked: goal_account&.allocated_amount.present?,
         last_30_money: Money.new(totals[:last_30], goal.currency),
         last_90_money: Money.new(totals[:last_90], goal.currency)
@@ -69,17 +72,13 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
       @goal_account_by_id ||= goal.goal_accounts.index_by(&:account_id)
     end
 
-    # Per-account net inflow for both windows in one pass over the 90-day
-    # entries set. Entry amount sign in Sure: inflow is negative; flip and
-    # clamp ≥ 0.
-    # Read one account's dated inflow aggregates without another ledger query.
-    # @return [Hash] goal-currency totals for the 30- and 90-day windows
     def inflow_totals_for(account)
       inflow_totals_map[account.id] || { last_30: 0.to_d, last_90: 0.to_d }
     end
 
-    # Aggregate positive inflows in goal currency using each entry date.
-    # @return [Hash<String, Hash>] account IDs mapped to 30- and 90-day totals
+    # Per-account net inflow for both windows in one pass over the 90-day
+    # entries set. Entry amount sign in Sure: inflow is negative; flip and
+    # clamp ≥ 0. Converted at today's rate, like Goal#pace.
     def inflow_totals_map
       @inflow_totals_map ||= begin
         account_ids = goal.linked_accounts.map(&:id)
@@ -97,7 +96,7 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
         result = Hash.new { |h, k| h[k] = { last_30: 0.to_d, last_90: 0.to_d } }
         accounts_by_id = goal.linked_accounts.index_by(&:id)
         rows.each do |aid, date, amount, currency|
-          inflow = goal.convert_money(Money.new((-amount.to_d).clamp(0..), currency.presence || accounts_by_id.fetch(aid).currency), date: date).amount
+          inflow = goal.convert_money(Money.new((-amount.to_d).clamp(0..), currency.presence || accounts_by_id.fetch(aid).currency)).amount
           result[aid][:last_90] += inflow
           result[aid][:last_30] += inflow if date >= cutoff_30
         end
