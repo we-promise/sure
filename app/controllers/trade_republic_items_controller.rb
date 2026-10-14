@@ -276,6 +276,8 @@ class TradeRepublicItemsController < ApplicationController
 
   def update
     attrs = trade_republic_item_params.to_h
+    # The form leaves the phone number blank to keep the current one.
+    attrs.delete("phone_number") if attrs["phone_number"].blank?
     login_pin = attrs["pin"]
     reauthentication_required = reauthentication_needed?(attrs)
 

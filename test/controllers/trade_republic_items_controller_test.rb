@@ -112,6 +112,19 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_session_blob, item.session_blob
   end
 
+  test "update keeps the phone number when it is left blank" do
+    item = trade_republic_items(:requires_update_item)
+    provider = mock
+    provider.expects(:initiate_login).returns(
+      Provider::TradeRepublicClient::Result.new(data: { "status" => "verification_required", "pending_login_b64" => "pending" })
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    patch trade_republic_item_url(item), params: { trade_republic_item: { phone_number: "", pin: "1234" } }
+
+    assert_equal "+491709876543", item.reload.phone_number
+  end
+
   test "initiate login does not destroy a working session when the PIN is missing" do
     item = trade_republic_items(:configured_item)
     original_session_blob = item.session_blob
