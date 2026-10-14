@@ -55,6 +55,13 @@ module Syncable
       with_lock do
         sync = self.syncs.joinable.ordered.first
 
+        # A sync waiting for the lock past the visible window stays a child of
+        # the parent that requested it. Another parent would not wait for it
+        # before finalizing, so that parent gets its own sync, which runs after.
+        if sync && parent_sync && !sync.visible? && sync.parent_id.present? && sync.parent_id != parent_sync.id
+          sync = nil
+        end
+
         if sync
           Rails.logger.info("There is an existing recent sync, expanding window if needed (#{sync.id})")
           sync.expand_window_if_needed(window_start_date, window_end_date)

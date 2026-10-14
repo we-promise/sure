@@ -31,11 +31,15 @@ class Sync < ApplicationRecord
   # this every later trigger would queue yet another full sync behind it.
   # SyncJob stamps last_attempted_at on every attempt, so a pending sync whose
   # job was lost stops attracting requests and the next trigger enqueues anew.
+  # A waiter is no longer joined once the hourly SyncCleanerJob could mark it
+  # stale before it runs: a request folded into it would be dropped with it.
   JOINABLE_ATTEMPT_WINDOW = 5.minutes
+  JOINABLE_MAX_AGE = STALE_AFTER - 1.hour
   scope :joinable, -> {
     visible.or(
       where(status: "pending", cancel_requested_at: nil)
         .where("syncs.last_attempted_at > ?", JOINABLE_ATTEMPT_WINDOW.ago)
+        .where("syncs.created_at > ?", JOINABLE_MAX_AGE.ago)
     )
   }
 

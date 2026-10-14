@@ -484,6 +484,31 @@ class SyncTest < ActiveSupport::TestCase
     end
   end
 
+  test "sync_later does not piggyback on a waiting sync the stale cleaner may sweep before it runs" do
+    syncable = accounts(:depository)
+    old_sync = Sync.create!(syncable: syncable, created_at: Sync::JOINABLE_MAX_AGE.ago - 1.minute,
+                            last_attempted_at: 30.seconds.ago)
+
+    assert_enqueued_with(job: SyncJob) do
+      refute_equal old_sync, syncable.sync_later
+    end
+  end
+
+  test "sync_later keeps a waiting child with its own parent and queues one for another parent" do
+    syncable = accounts(:depository)
+    first_parent = Sync.create!(syncable: syncable.family, status: :syncing)
+    second_parent = Sync.create!(syncable: syncable.family)
+    waiting_sync = Sync.create!(syncable: syncable, parent: first_parent,
+                                created_at: Sync::VISIBLE_FOR.ago - 10.minutes, last_attempted_at: 30.seconds.ago)
+
+    assert_equal waiting_sync, syncable.sync_later(parent_sync: first_parent)
+
+    assert_enqueued_with(job: SyncJob) { syncable.sync_later(parent_sync: second_parent) }
+    refute_equal waiting_sync, syncable.syncs.ordered.first
+    assert_equal second_parent, syncable.syncs.ordered.first.parent
+    assert_equal first_parent, waiting_sync.reload.parent
+  end
+
   test "runs once the other worker has released the syncable" do
     syncable = accounts(:depository)
     sync = Sync.create!(syncable: syncable)

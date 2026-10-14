@@ -24,7 +24,9 @@ class SyncJob < ApplicationJob
     end
 
     # Heartbeat for Sync.joinable: shows this pending sync still has a live job.
-    sync.update_column(:last_attempted_at, Time.current) if sync.pending?
+    # Balances-only runs skip it: the flag lives only in this job's arguments,
+    # so a full sync request joining such a waiter would never run in full.
+    sync.update_column(:last_attempted_at, Time.current) if sync.pending? && !balances_only
 
     begin
       sync.perform
