@@ -110,10 +110,18 @@ module ExchangeRate::Provided
 
       still_missing = missing - nearest_rates.keys
 
-      # Only hit the provider for currencies with no cached rate at all
+      # Only hit the provider for currencies with no cached rate at all. A
+      # provider rate counts only once it is stored as usable: #rate_sql and
+      # #currencies_without_rate read the table, and a rate they cannot see
+      # would put an amount in these totals that theirs leave out. Looked up
+      # on the rate's own date, since a provider can answer with the nearest
+      # trading day.
       fetched_rates = still_missing.each_with_object({}) do |currency, map|
         rate = find_or_fetch_rate(from: currency, to: to, date: date)
-        map[currency] = rate if rate&.rate.to_d.positive?
+        next unless rate&.rate.to_d.positive?
+        next unless usable_rates.exists?(from_currency: currency, to_currency: to, date: rate.date)
+
+        map[currency] = rate
       end
 
       # A rate from any distance is closer to the truth than 1.

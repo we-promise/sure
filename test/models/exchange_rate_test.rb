@@ -194,6 +194,27 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal 0.0067, ExchangeRate.find_or_fetch_rate(from: "JPY", to: "USD").rate.to_f
   end
 
+  # rate_sql and currencies_without_rate read only stored rows, so a provider
+  # rate that never reached the table must not count in rates_for either, or a
+  # Ruby total includes an amount the SQL totals and the notice leave out.
+  # Once it is stored, it counts.
+  test "rates_for leaves out a provider rate it could not store" do
+    @provider.stubs(:fetch_exchange_rate).returns(
+      provider_success_response(OpenStruct.new(from: "JPY", to: "USD", date: Date.current, rate: 0.0067))
+    )
+    ExchangeRate.stubs(:find_or_create_by!).returns(ExchangeRate.new(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0))
+    ExchangeRate.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(ExchangeRate.new))
+
+    assert_equal({}, ExchangeRate.rates_for(%w[JPY], to: "USD"))
+    assert_equal %w[JPY], ExchangeRate.currencies_without_rate(%w[JPY], to: "USD")
+
+    ExchangeRate.unstub(:find_or_create_by!)
+    ExchangeRate.any_instance.unstub(:update!)
+
+    assert_equal({ "JPY" => 0.0067 }, ExchangeRate.rates_for(%w[JPY], to: "USD").transform_values(&:to_f))
+    assert_empty ExchangeRate.currencies_without_rate(%w[JPY], to: "USD")
+  end
+
   test "rates_for converts the target currency itself at 1" do
     @provider.expects(:fetch_exchange_rate).never
 
