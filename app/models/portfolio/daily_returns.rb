@@ -197,7 +197,8 @@ class Portfolio::DailyReturns
     def fragments
       @fragments ||= {
         "flow_class_sql" => flow_classifier.sql_case,
-        "flow_class_joins" => flow_classifier.sql_joins
+        "flow_class_joins" => flow_classifier.sql_joins,
+        "journal_predicate" => journal_predicate
       }
     end
 
@@ -400,7 +401,7 @@ class Portfolio::DailyReturns
             -- numerator and the denominator move by one number rather than two
             -- independently derived ones.
             COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
-                              THEN CASE WHEN #{journal_predicate}
+                              THEN CASE WHEN #{fragment(:journal_predicate)}
                                         THEN COALESCE(trades.qty * journal_holdings.price * journal_fx.rate, 0)
                                         ELSE -entries.amount * fx.rate
                                    END
@@ -412,7 +413,7 @@ class Portfolio::DailyReturns
             -- identity short by exactly the journal, and `unexplained` would
             -- carry minus its value on every journal day. Reported separately
             -- here so the final SELECT can take it back out of `market`.
-            COALESCE(SUM(CASE WHEN #{journal_predicate}
+            COALESCE(SUM(CASE WHEN #{fragment(:journal_predicate)}
                               AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
                               THEN COALESCE(trades.qty * journal_holdings.price * journal_fx.rate, 0)
                               ELSE 0 END), 0) AS journal_flow,
@@ -436,11 +437,11 @@ class Portfolio::DailyReturns
             -- with no label makes it NULL; NOT NULL is NULL, which would
             -- drop the row from this check rather than keep it.
             COALESCE(BOOL_OR((fx.rate IS NULL
-                              AND NOT COALESCE((#{journal_predicate}), false)
+                              AND NOT COALESCE((#{fragment(:journal_predicate)}), false)
                               AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow', 'income', 'fee'))
                              OR (journal_fx.rate IS NULL
                                  AND journal_holdings.currency IS NOT NULL
-                                 AND #{journal_predicate}
+                                 AND #{fragment(:journal_predicate)}
                                  AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))), false) AS flow_rate_missing,
             -- The journal suppression condition, and it keys on the PRICE rather
             -- than on the row. Holding::PortfolioCache deliberately keeps zero-price
@@ -462,7 +463,7 @@ class Portfolio::DailyReturns
             -- and only Trade's presence validation fills it; without it the
             -- COALESCE above values the journal at nothing, which is the
             -- phantom gain this suppression exists to stop.
-            COALESCE(BOOL_OR(#{journal_predicate}
+            COALESCE(BOOL_OR(#{fragment(:journal_predicate)}
                              AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
                              AND (trades.qty IS NULL
                                   OR journal_holdings.price IS NULL

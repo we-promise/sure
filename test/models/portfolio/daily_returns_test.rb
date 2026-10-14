@@ -682,6 +682,25 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
                  "the journal is a flow OR a market move, never both"
   end
 
+  # The journal predicate is a fragment with a quoted label in it, like the
+  # classifier's CASE, so it is spliced in after the binds rather than scanned
+  # with them. A `:word` inside it would otherwise be read as a bind and raise.
+  test "a colon word inside the journal predicate is not read as a bind" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 100
+
+    expected = daily_returns.rows
+    original = daily_returns.send(:journal_predicate)
+    Portfolio::DailyReturns.any_instance.stubs(:journal_predicate)
+      .returns("(#{original}) AND ':probe' = ':probe'")
+
+    probed = daily_returns.rows
+
+    assert_equal BigDecimal("500"), probed.last.external_flow, "the journal is still valued from the position"
+    assert_equal expected, probed
+  end
+
   # The mirror case, and it fails differently: a journal OUT understates,
   # because the departing value leaves the close while nothing leaves the
   # denominator.
