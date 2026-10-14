@@ -341,7 +341,7 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     [
       "Sure Mobile", "sure mobile", "SURE-Mobile", "Sure", "Official Sure App", "SureMobile", "SureMobileApp",
       "Su\u200Bre Mobile", "Su\u034Fre Mobile", "Su\uFE0Fre Mobile", "Su\u3164re Mobile", "S\u0332ure Mobile", "\uFF33\uFF55\uFF52\uFF45 Mobile",
-      "\u0405ur\u0435 Mobile", "S\u057Dre", "\u0405URE \u041C\u041EBILE", "Su\u0433e Mobile"
+      "\u0405ur\u0435 Mobile", "S\u057Dre", "\u0405URE \u041C\u041EBILE", "Su\u0433e Mobile", "S\u0443re Mobile", "S u r e Mobile", "S.u.r.e", "S-u-r-e Mobile", "SureMo bile App"
     ].each do |client_name|
       assert_no_difference "Doorkeeper::Application.count", client_name do
         post "/register",
@@ -357,7 +357,7 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "allows client names that only contain sure inside another word" do
-    [ "Measure MCP", "Measure Mobile", "Surefire Agent", "S\u00FCre Notes", "\u041C\u043E\u0439 \u043A\u043B\u0438\u0435\u043D\u0442" ].each do |client_name|
+    [ "Measure MCP", "Measure Mobile", "Surefire Agent", "Su Pre Agent", "Sur Ely", "S\u00FCre Notes", "\u041C\u043E\u0439 \u043A\u043B\u0438\u0435\u043D\u0442" ].each do |client_name|
       post "/register",
         params: { client_name: client_name, redirect_uris: [ "https://claude.ai/callback" ] }.to_json,
         headers: { "Content-Type" => "application/json" }

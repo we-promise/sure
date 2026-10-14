@@ -12,8 +12,8 @@ class OauthRegistrationController < ApplicationController
   # letters of "sure mobile" (NFKC keeps them apart), e.g. "Ѕurе" with a
   # Cyrillic Ѕ and е. Uppercase look-alikes such as М and В arrive here
   # already downcased.
-  CONFUSABLE_LETTERS = "ѕսυеοоіιӏмвг"
-  CONFUSABLE_LATIN = "suueooiilmbr"
+  CONFUSABLE_LETTERS = "ѕսυуеοоіιӏмвг"
+  CONFUSABLE_LATIN = "suuueooiilmbr"
 
   skip_authentication
   skip_before_action :verify_authenticity_token
@@ -117,12 +117,25 @@ class OauthRegistrationController < ApplicationController
     # such as the combining grapheme joiner, variation selectors and Hangul
     # fillers), combining marks NFKC cannot compose (e.g. U+0332 after "S"), full-width
     # letters and common look-alike letters, plus words starting with
-    # "SureMobile". "Surefire" or "Measure Mobile" stay allowed.
+    # "SureMobile". Consecutive words are joined too, so separators inside the
+    # word ("S u r e", "S.u.r.e", "S-u-r-e") do not get around the check.
+    # "Surefire" or "Measure Mobile" stay allowed.
     def reserved_client_name?(name)
       normalized = name.to_s.unicode_normalize(:nfkc).downcase.gsub(/[\p{Cf}\p{Mn}\p{Me}\p{Default_Ignorable_Code_Point}]/, "")
         .tr(CONFUSABLE_LETTERS, CONFUSABLE_LATIN)
       words = normalized.scan(/[[:alnum:]]+/)
-      words.any? { |word| word == RESERVED_CLIENT_NAME_WORD || word.start_with?("#{RESERVED_CLIENT_NAME_WORD}mobile") }
+      reserved_prefix = "#{RESERVED_CLIENT_NAME_WORD}mobile"
+
+      words.each_index do |start|
+        joined = +""
+        words.drop(start).each do |word|
+          joined << word
+          return true if joined == RESERVED_CLIENT_NAME_WORD || joined.start_with?(reserved_prefix)
+          break unless reserved_prefix.start_with?(joined)
+        end
+      end
+
+      false
     end
 
     # Returns true for https, loopback http, and RFC 8252 private-use schemes
