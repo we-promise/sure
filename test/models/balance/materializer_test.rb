@@ -209,6 +209,22 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_balance_fields_persisted(expected_balances)
   end
 
+  test "a sweep with a cash leg counts as a cash outflow, not an adjustment" do
+    security = Security.create!(ticker: "MMFX", name: "Money market")
+    (4.days.ago.to_date..Date.current).each { |date| security.prices.create!(date: date, price: 1, currency: "USD") }
+    @account.entries.create!(date: 4.days.ago.to_date, name: "Opening", amount: 1000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    @account.entries.create!(date: 2.days.ago.to_date, name: "Sweep", amount: 100, currency: "USD",
+      entryable: Trade.new(security: security, qty: 100, price: 1, currency: "USD", investment_activity_label: "Sweep In"))
+
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+    balance = @account.balances.find_by!(date: 2.days.ago.to_date)
+
+    assert_equal 900, balance.cash_balance
+    assert_equal 100, balance.cash_outflows
+    assert_equal 0, balance.cash_adjustments
+  end
+
   test "reverse materialization persists opening boundary adjustment" do
     account = families(:empty).accounts.create!(
       name: "Linked Depository",

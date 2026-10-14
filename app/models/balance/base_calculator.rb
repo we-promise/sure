@@ -106,6 +106,11 @@ class Balance::BaseCalculator
       0
     end
 
+    # Wallet transfers move units in or out with a zero cash amount.
+    def cash_neutral_transfer?(entry)
+      entry.trade? && entry.entryable.internal_movement? && entry.amount.zero?
+    end
+
     # Separate cash, quantity trades, income and cash-neutral asset transfers.
     def flows_for_date(date)
       entries = sync_cache.get_entries(date)
@@ -121,8 +126,10 @@ class Balance::BaseCalculator
       # Separate regular trades (buy/sell, affecting holdings) from income-only
       # trades (interest/dividend with qty=0, which are cash-only events and
       # must not produce spurious non_cash_outflows in the flow breakdown).
-      regular_trades = entries.select { |e| e.trade? && e.entryable.qty != 0 && !e.entryable.internal_movement? }
-      asset_transfers = entries.select { |e| e.trade? && e.entryable.internal_movement? && !e.entryable.balance_adjustment? }
+      # Only cash-neutral transfers move units without a cash flow; a sweep
+      # with a cash leg stays a regular trade so its cash is still counted.
+      regular_trades = entries.select { |e| e.trade? && e.entryable.qty != 0 && !cash_neutral_transfer?(e) }
+      asset_transfers = entries.select { |e| cash_neutral_transfer?(e) && !e.entryable.balance_adjustment? }
       income_trades   = entries.select { |e| e.trade? && e.entryable.qty == 0 }
 
       trade_cash_inflow_sum = regular_trades.select { |e| e.amount < 0 }.sum(&:amount)
