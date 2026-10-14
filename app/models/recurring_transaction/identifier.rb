@@ -459,7 +459,7 @@ class RecurringTransaction
         if recurring.merchant_id.present?
           entry.read_attribute("transaction_merchant_id") == recurring.merchant_id
         else
-          entry.name == recurring.name
+          entry.name == recurring.matcher_name
         end
       end
 
