@@ -268,27 +268,17 @@ class Portfolio::ReturnScope
       # *this* account's boundary, so a transfer to a sibling account is
       # external from where this question is asked.
       classifier = Portfolio::FlowClassifier.new(scope_account_ids: [ account.id ])
-      connection = ActiveRecord::Base.connection
 
-      # Values are quoted rather than bound, as in
-      # .external_transaction_account_ids: sanitize_sql_array would scan the
-      # classifier's finished CASE for `:name` placeholders, and the CASE
-      # carries every label literal. The classifier sanitizes its own scope.
-      sql = <<~SQL
-        SELECT EXISTS (
-          SELECT 1
-          FROM entries
-          #{classifier.sql_joins}
-          WHERE entries.account_id = #{connection.quote(account.id)}
-            AND entries.entryable_type = 'Transaction'
-            AND entries.date <= #{connection.quote(history_end_date)}
-            AND COALESCE(entries.excluded, false) = false
-            AND #{classifier.sql_case} IN ('external_inflow', 'external_outflow')
-        )
-      SQL
-
-      value = connection.select_value(sql)
-      @external_transactions = ActiveModel::Type::Boolean.new.cast(value) == true
+      # Built as a relation, as FlowClassifier#classify_ids does, so the
+      # classifier's finished CASE is never handed to sanitize_sql_array:
+      # that would scan its label literals for `:name` placeholders and raise
+      # on one. Arel.sql marks it as already sanitized; the classifier binds
+      # its own scope.
+      @external_transactions = live_entries_through_history_end
+        .where(entryable_type: "Transaction")
+        .joins(classifier.sql_joins)
+        .where(Arel.sql("#{classifier.sql_case} IN ('external_inflow', 'external_outflow')"))
+        .exists?
     end
 
     def valuations?
