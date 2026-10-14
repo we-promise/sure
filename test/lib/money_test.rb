@@ -99,6 +99,16 @@ class MoneyTest < ActiveSupport::TestCase
     Money.reset_reported_mismatches!
   end
 
+  test "mismatch reports keep coming once the per-process memory is full" do
+    Money.reset_reported_mismatches!
+    Money::REPORTED_MISMATCHES_LIMIT.times { |i| assert Money.first_mismatch_report?([ :-, "USD", "EUR", "site #{i}" ]) }
+
+    assert Money.first_mismatch_report?([ :-, "USD", "EUR", "a new call site" ]), "a new call site must still be reported"
+    assert_not Money.first_mismatch_report?([ :-, "USD", "EUR", "a new call site" ])
+  ensure
+    Money.reset_reported_mismatches!
+  end
+
   test "operator order does not matter" do
     assert_equal Money.new(1000) + 1000, 1000 + Money.new(1000)
     assert_equal Money.new(1000) - 1000, 1000 - Money.new(1000)

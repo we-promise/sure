@@ -55,9 +55,12 @@ class Money
       @strict_currency == true
     end
 
+    # Once the memory is full it starts over instead of going quiet, so a
+    # long-running process still reports new call sites (known ones may be
+    # reported once more).
     def first_mismatch_report?(key)
       @reported_mismatches ||= Concurrent::Set.new
-      return false if @reported_mismatches.size >= REPORTED_MISMATCHES_LIMIT
+      @reported_mismatches.clear if @reported_mismatches.size >= REPORTED_MISMATCHES_LIMIT
 
       !@reported_mismatches.add?(key).nil?
     end
