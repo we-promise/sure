@@ -355,7 +355,7 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
     Provider::Simplefin.expects(:get).never
 
     with_self_hosting do
-      [ "::ffff:169.254.169.254", "64:ff9b::a9fe:a9fe", "2002:a9fe:a9fe::1", "::a9fe:a9fe" ].each do |address|
+      [ "::ffff:169.254.169.254", "64:ff9b::a9fe:a9fe", "::ffff:0:a9fe:a9fe", "2002:a9fe:a9fe::1", "::a9fe:a9fe" ].each do |address|
         @provider.stubs(:resolve_addresses).with("wrapped.example.test").returns([ address ])
 
         error = assert_raises(Provider::Simplefin::SimplefinError, "#{address} should be rejected") do
