@@ -716,9 +716,9 @@ class TransactionsController < ApplicationController
         entry_params
       when :read_write
         # Annotate only: category, tags, merchant, notes
-        ep = entry_params.slice(:notes)
+        ep = entry_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES)
         if entry_params[:entryable_attributes].present?
-          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :merchant_id, :tag_ids)
+          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES)
         end
         ep
       else

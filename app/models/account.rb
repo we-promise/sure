@@ -94,11 +94,19 @@ class Account < ApplicationRecord
   }
 
   # Accounts a user can write to (owned or shared with full_control)
+  WRITABLE_BY_CONDITION = "accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')".freeze
+
   scope :writable_by, ->(user) {
     left_joins(:account_shares)
-      .where("accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')", uid: user.id)
+      .where(WRITABLE_BY_CONDITION, uid: user.id)
       .distinct
   }
+
+  # SQL boolean for "user may write to this account", for selecting next to
+  # rows already joined with account_shares (e.g. through annotatable_by).
+  def self.writable_by_sql(user)
+    Arel.sql("(#{sanitize_sql([ WRITABLE_BY_CONDITION, uid: user.id ])})")
+  end
 
   # Accounts a user can annotate (category, tags, notes, merchant): owned,
   # or shared with full_control or read_write

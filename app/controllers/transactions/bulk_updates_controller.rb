@@ -1,6 +1,4 @@
 class Transactions::BulkUpdatesController < ApplicationController
-  ANNOTATE_ATTRIBUTES = %i[notes category_id merchant_id tag_ids].freeze
-
   def new
   end
 
@@ -14,12 +12,13 @@ class Transactions::BulkUpdatesController < ApplicationController
     # Owners and full_control shares may change every field; read_write shares
     # may only annotate (notes, category, merchant, tags), as on a single entry.
     # Read-only and unshared accounts are left out entirely.
-    full_ids = selected.merge(Account.writable_by(Current.user)).pluck(:id)
-    annotate_ids = selected.pluck(:id) - full_ids
+    rows = selected.pluck(:id, Account.writable_by_sql(Current.user))
+    full_ids = rows.select(&:last).map(&:first).uniq
+    annotate_ids = rows.map(&:first).uniq - full_ids
 
     updated = Entry.transaction do
       bulk_update_entries(full_ids, scoped_params) +
-        bulk_update_entries(annotate_ids, scoped_params.slice(*ANNOTATE_ATTRIBUTES))
+        bulk_update_entries(annotate_ids, scoped_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES))
     end
 
     redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
