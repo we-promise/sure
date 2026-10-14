@@ -316,6 +316,29 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid email or password", JSON.parse(response.body)["error"]
   end
 
+  test "should not issue a token when the password changes before the login reloads the user" do
+    user = users(:family_admin)
+    user.mobile_devices.destroy_all
+
+    # The password changes right after the login checked it; the reload then sees the new digest.
+    Api::V1::AuthController.any_instance.stubs(:user_reloadable_and_active?).with do |reloaded_user|
+      User.find(reloaded_user.id).update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+      reloaded_user.reload
+      true
+    end.returns(true)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: user_password_test,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    assert_equal "Invalid email or password", JSON.parse(response.body)["error"]
+  end
+
   test "should login with valid MFA code" do
     user = users(:family_admin)
     password = user_password_test

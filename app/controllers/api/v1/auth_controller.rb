@@ -76,6 +76,9 @@ module Api
         user = User.find_by(email: params[:email])
 
         if user&.authenticate(params[:password])
+          # Taken before the reload below, so a password change after this check is noticed.
+          password_fingerprint = user.password_fingerprint
+
           unless user.active?
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return
@@ -117,7 +120,7 @@ module Api
           end
 
           begin
-            token_response = device.issue_token!(password_fingerprint: user.password_fingerprint)
+            token_response = device.issue_token!(password_fingerprint: password_fingerprint)
           rescue User::InactiveError
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return
