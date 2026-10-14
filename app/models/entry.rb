@@ -656,11 +656,17 @@ class Entry < ApplicationRecord
   end
 
   private
+    # Works on the stored row: the loaded transaction may predate the sync
+    # that wrote the mark.
     def clear_auto_excluded_pending_mark
-      return unless entryable.is_a?(Transaction) && entryable.persisted?
-      return unless entryable.extra&.key?(AUTO_EXCLUDED_PENDING_KEY)
+      return unless entryable_type == "Transaction" && entryable_id
 
-      entryable.update!(extra: entryable.extra.except(AUTO_EXCLUDED_PENDING_KEY))
+      Transaction.where(id: entryable_id).where("transactions.extra ->> ? IS NOT NULL", AUTO_EXCLUDED_PENDING_KEY)
+        .update_all([ "extra = extra - ?::text", AUTO_EXCLUDED_PENDING_KEY ])
+
+      if association(:entryable).loaded? && entryable.extra&.key?(AUTO_EXCLUDED_PENDING_KEY)
+        entryable.extra = entryable.extra.except(AUTO_EXCLUDED_PENDING_KEY)
+      end
     end
 
     # Remembers the earliest date this entry had before any save that changed

@@ -283,6 +283,19 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     assert stale.reload.excluded?
   end
 
+  test "excluding by hand clears the mark even when the transaction was loaded before the sync" do
+    stale = create_pending_entry(external_id: "eb_preloaded", date: 10.days.ago.to_date, amount: 86)
+    loaded = Entry.includes(:entryable).find(stale.id)
+    loaded.entryable.extra # loaded before the sync writes the mark
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+    assert stale.reload.auto_excluded_pending?
+
+    loaded.update!(excluded: true)
+
+    assert_not stale.reload.auto_excluded_pending?
+  end
+
   test "a pending the user excluded stays excluded when it books" do
     stale = create_pending_entry(external_id: "eb_user_excluded", date: 10.days.ago.to_date, amount: 81)
     stale.update!(excluded: true)
