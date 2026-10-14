@@ -19,8 +19,10 @@ class AccountableSparklinesController < ApplicationController
       @family ||= Current.family
     end
 
+    # Scope to the accounts the current user can access (owned or shared),
+    # matching the account list and group total rendered in the sidebar.
     def account_scope
-      @account_scope ||= family.accounts.visible.where(accountable_type: @accountable.name)
+      @account_scope ||= Current.accessible_accounts.visible.where(accountable_type: @accountable.name)
     end
 
     def account_ids
@@ -67,7 +69,12 @@ class AccountableSparklinesController < ApplicationController
       )
     end
 
+    # The series depends on which accounts the user can access, so the key is
+    # per user and changes whenever that user's account shares change.
     def cache_key
-      family.build_cache_key("#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
+      family.build_cache_key(
+        "#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}_#{Current.user&.id}_#{Current.account_share_version}",
+        invalidate_on_data_updates: true
+      )
     end
 end
