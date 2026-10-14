@@ -262,16 +262,16 @@ class Security < ApplicationRecord
   # were in `currency`. Memoised per currency, a miss included, because a page
   # asks for the same figure more than once and a missing rate is a provider
   # call each time.
-  def current_price_in(currency)
+  #
+  # A page listing several securities passes one `rates` hash to all of them,
+  # so quotes in the same currency on the same day share one rate lookup
+  # instead of each making its own.
+  def current_price_in(currency, rates: {})
     @current_price_in ||= {}
     return @current_price_in[currency] if @current_price_in.key?(currency)
 
-    @current_price_in[currency] = begin
-      price = current_price
-      price&.exchange_to(currency, date: @current_price&.date || Date.current)
-    rescue Money::ConversionError
-      nil
-    end
+    price = current_price
+    @current_price_in[currency] = price && convert_quote(price, currency, rates)
   end
 
   # How many shares one share held at the close of `from` has become by the
@@ -301,6 +301,20 @@ class Security < ApplicationRecord
   end
 
   private
+    def convert_quote(price, currency, rates)
+      to = Money::Currency.new(currency).iso_code
+      return price if price.currency.iso_code == to
+
+      date = @current_price&.date || Date.current
+      key = [ price.currency.iso_code, to, date ]
+      rate = rates.fetch(key) do
+        rates[key] = ExchangeRate.find_or_fetch_rate(from: key.first, to: to, date: date)&.rate
+      end
+      return nil unless rate&.positive?
+
+      price.exchange_to(to, date: date, custom_rate: rate)
+    end
+
 
     def extract_domain(url)
       uri = URI.parse(url)

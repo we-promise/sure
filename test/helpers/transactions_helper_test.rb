@@ -2,6 +2,8 @@ require "test_helper"
 require "ostruct"
 
 class TransactionsHelperTest < ActionView::TestCase
+  include ApplicationHelper
+
   # build_transaction_extra_details reads `extra` off a Transaction (or anything
   # that responds to :transaction), so a struct is enough to drive it.
   def transaction_with(extra)
@@ -140,5 +142,17 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_equal :raw, details[:kind]
     assert_empty details[:provider_extras]
     assert_equal({ "someprovider" => { "a" => 1 } }, JSON.parse(details[:raw]))
+  end
+
+  test "the convert-to-trade picker looks a shared rate up once for all its securities" do
+    securities = [ securities(:aapl), securities(:msft) ]
+    securities.each do |security|
+      security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: Date.current))
+    end
+    ExchangeRate.expects(:find_or_fetch_rate).once.returns(ExchangeRate.new(rate: 0.9))
+
+    options = convert_to_trade_security_options(securities, "EUR")
+
+    assert_equal [ "18000", "18000" ], options.map { |option| option.last["data-price-cents"].to_s }
   end
 end
