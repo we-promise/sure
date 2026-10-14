@@ -4,7 +4,9 @@
   # cost_basis stores the per-share cost; the form submits the total and the
   # controller divides it by the quantity. Both fields keep two decimals even
   # for zero-decimal currencies (JPY), so saving unchanged keeps the basis.
-  current_per_share = holding.cost_basis.present? && holding.cost_basis.positive? ? holding.cost_basis : nil
+  # A stored basis of 0 (e.g. shares received for free) is a real value and is
+  # shown as 0.00; only a missing basis leaves the fields empty.
+  current_per_share = holding.cost_basis.present? && !holding.cost_basis.negative? ? holding.cost_basis : nil
   current_total = current_per_share && holding.qty.positive? ? (current_per_share * holding.qty).round(2) : nil
 
   form_data = { turbo: false }
