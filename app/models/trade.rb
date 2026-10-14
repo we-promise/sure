@@ -219,8 +219,11 @@ class Trade < ApplicationRecord
       # A sale that closes the position leaves a snapshot with nothing held and
       # no basis, so the cost has to come from the trades before the sale.
       # Average cost does not move on a sale, so where the snapshot has a
-      # figure it is the same one.
-      avg_cost = holding.avg_cost || holding.avg_cost_before(entry)
+      # figure it is the same one. Where it has none, the replay up to the
+      # sale is the figure, and also the right one when trades fall between
+      # the snapshot's date and the sale, so the history is replayed once
+      # rather than through the snapshot's date first.
+      avg_cost = holding.stored_avg_cost || holding.avg_cost_before(entry)
       return nil unless avg_cost
 
       cost_basis = avg_cost * qty.abs

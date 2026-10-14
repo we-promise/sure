@@ -47,17 +47,20 @@ class Holding < ApplicationRecord
   # otherwise falls back to calculating from trades. Returns nil when cost
   # basis cannot be determined (no trades and no provider cost_basis).
   def avg_cost
-    # Use stored cost_basis if available (eliminates N+1 queries)
-    # - If locked (user-set), trust the value even if 0 (valid for airdrops)
-    # - Otherwise require positive since providers sometimes return 0 when unknown
-    if cost_basis.present?
-      if cost_basis_locked? || cost_basis.positive?
-        return Money.new(cost_basis, currency)
-      end
-    end
-
     # Fallback to calculation for holdings without pre-computed cost_basis
-    calculate_avg_cost
+    stored_avg_cost || calculate_avg_cost
+  end
+
+  # The stored cost_basis as average cost per share, or nil when there is none
+  # to trust. Never queries, so a caller with a better fallback than replaying
+  # through this holding's date (Trade#realized_gain_loss) can skip that replay.
+  #
+  # - If locked (user-set), trust the value even if 0 (valid for airdrops)
+  # - Otherwise require positive since providers sometimes return 0 when unknown
+  def stored_avg_cost
+    return nil if cost_basis.nil?
+
+    Money.new(cost_basis, currency) if cost_basis_locked? || cost_basis.positive?
   end
 
   # The weighted-average cost of the position immediately before `entry`,

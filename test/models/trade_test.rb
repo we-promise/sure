@@ -222,6 +222,26 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(100), gain.value.amount
   end
 
+  # With no stored basis, the snapshot's own figure is unknown, and the cost
+  # before the sale is all the gain needs. Replaying the history for the
+  # snapshot first, only to find a closed position, then replaying it again up
+  # to the sale, reads every trade and split twice on each sale Reports prices.
+  test "realized gain on a closing sale with no stored basis replays the history once" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    sell = create_trade(security, account: account, qty: -20, date: Date.new(2026, 3, 4), price: 180).entryable
+    closed_snapshot(account, security, Date.new(2026, 3, 4))
+    sell.entry.account
+
+    gain = nil
+    queries = capture_sql_queries { gain = sell.realized_gain_loss }
+
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
+    assert_equal BigDecimal(600), gain.value.amount
+  end
+
   # A reverse-synced account with two shares from before its first imported
   # trade: 10 bought, 5 moved in, 15 sold, 8 bought at 150, then 3 sold. The
   # -15 sale left two shares, so the transferred units were never cleared out
