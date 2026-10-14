@@ -67,10 +67,25 @@ class BitcoinWalletAccount::SyncLifecycleTest < ActiveSupport::TestCase
     assert parent.reload.syncing?
     retry_sync = parent.children.find_by!(syncable: @wallet)
     assert_equal 1, retry_sync.sync_stats.fetch("read_attempt")
+    assert @wallet.reload.status_preview?
+    assert_nil @wallet.last_error
     retry_sync.perform
     assert retry_sync.reload.completed?
     assert parent.reload.completed?
     assert @wallet.reload.status_preview?
+  end
+
+  test "a transient error that outlasts its retries fails the wallet" do
+    @provider.stubs(:tip_hash).returns(*%w[a b c d e f])
+    sync = @wallet.syncs.create!
+    sync.perform
+    2.times do
+      sync = sync.children.find_by!(syncable: @wallet)
+      sync.perform
+    end
+    assert sync.reload.failed?
+    assert @wallet.reload.status_failed?
+    assert_equal "BitcoinWalletAccount::Snapshot::ChangedTip", @wallet.last_error
   end
 
   test "independent wallet parents cannot borrow each other's pending read" do

@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class BitcoinWalletAccount::Syncer
+  RETRYABLE_ERRORS = [ BitcoinWalletAccount::Snapshot::ChangedTip, BitcoinWalletAccount::Snapshot::IncompleteMempool,
+    Provider::MempoolSpace::Error ].freeze
+  MAX_READ_RETRIES = 2
+
   # Use the injected explorer for tests or the configured history budget for
   # production. Source keys are never passed to the provider.
   def initialize(wallet, provider: nil)
@@ -14,11 +18,10 @@ class BitcoinWalletAccount::Syncer
     return if wallet.account.pending_deletion? || wallet.onchain_wallet_item.scheduled_for_deletion? || sync.cancel_requested?
 
     Time.use_zone(Time.find_zone(wallet.family.timezone) || Time.zone) { perform }
-  rescue BitcoinWalletAccount::Snapshot::ChangedTip, BitcoinWalletAccount::Snapshot::IncompleteMempool, Provider::MempoolSpace::Error
-    attempts = sync.sync_stats.to_h.fetch("read_attempt", 0).to_i
-    raise if attempts >= 2
+  rescue *RETRYABLE_ERRORS
+    raise unless retry_pending?
 
-    queue_continuation(read_attempt: attempts + 1, wait: (attempts + 1).seconds)
+    queue_continuation(read_attempt: read_attempt + 1, wait: (read_attempt + 1).seconds)
   end
 
   # Coalesce concurrent readers with a session advisory lock. Provider requests
@@ -43,6 +46,10 @@ class BitcoinWalletAccount::Syncer
     end
   rescue ActiveRecord::RecordNotFound
     raise if wallet.class.exists?(wallet.id) && source_signature == @source_signature
+  rescue *RETRYABLE_ERRORS => error
+    # A new block or a busy explorer is retried; only the last attempt fails the wallet.
+    record_failure(error) unless retry_pending?
+    raise
   rescue StandardError => error
     record_failure(error)
     raise
@@ -101,6 +108,15 @@ class BitcoinWalletAccount::Syncer
           window_start_date: [ window, @sync.window_start_date ].compact.min,
           window_end_date: @sync.window_end_date)
       end
+    end
+
+    # Transient reads are retried only inside a sync tree.
+    def retry_pending?
+      @sync.present? && read_attempt < MAX_READ_RETRIES
+    end
+
+    def read_attempt
+      @sync.sync_stats.to_h.fetch("read_attempt", 0).to_i
     end
 
     # Checkpoints and retries remain children so their parent cannot finish early.
