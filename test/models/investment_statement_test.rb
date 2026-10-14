@@ -622,6 +622,36 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(110, "USD"), totals.dividends
   end
 
+  # Income follows the same rule as contributions (#3640): no rate at all
+  # leaves the amount out rather than counting it at 1.
+  test "a dividend in a currency with no rate is left out of investment income, not counted at 1" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    usd_account = create_investment_account(balance: 500)
+    krw_account = create_investment_account(balance: 500_000, currency: "KRW")
+
+    create_income_trade(account: usd_account, label: "Dividend", amount: 50, date: period.start_date)
+    create_income_trade(account: usd_account, label: "Interest", amount: 5, date: period.start_date)
+    create_income_trade(account: krw_account, label: "Dividend", amount: 100_000, date: period.start_date)
+    create_income_transaction(account: krw_account, label: "Interest", amount: 20_000, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(50, "USD"), totals.dividends
+    assert_equal Money.new(5, "USD"), totals.interest
+  end
+
+  test "a dividend with no rate on its day uses the nearest stored rate" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: period.start_date - 60.days, rate: 1.2)
+
+    create_income_trade(account: account, label: "Dividend", amount: 100, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(120, "USD"), totals.dividends
+  end
+
   test "total_dividends and total_interest expose all-time income" do
     account = create_investment_account(balance: 500)
 
