@@ -223,6 +223,20 @@ class BitcoinWalletAccount::IntegrationTest < ActiveSupport::TestCase
     assert_equal 2700, @account.reload.balance
   end
 
+  test "a provider total that cannot be converted keeps the previous cash" do
+    link = @account.account_providers.create!(provider: kraken_accounts(:one))
+    @account.holdings.create!(security: @other, date: Date.current, qty: 2, price: 100, amount: 200,
+      currency: "EUR", account_provider: link)
+    @wallet.connect!
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    assert @account.set_current_balance(300, provider_balance: true).success?
+
+    assert_difference -> { DebugLogEntry.where(source: "Balance::Materializer").count }, 1 do
+      materialize
+    end
+    assert_equal 100, @account.reload.cash_balance
+  end
+
   test "a complete provider snapshot omitting an asset does not resurrect it" do
     link = @account.account_providers.create!(provider: kraken_accounts(:one))
     @account.holdings.create!(security: @other, date: Date.current.prev_day, qty: 2, price: 100, amount: 200,

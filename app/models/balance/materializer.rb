@@ -43,9 +43,16 @@ class Balance::Materializer
       cache = Balance::SyncCache.new(account)
       reported = account.entries.valuations.where(source: "provider_balance", date: start_date..Date.current).includes(:entryable)
       reported.each do |entry|
-        amount = entry.amount_money.exchange_to(account.currency, date: entry.date).amount
-        holdings_value = account.holdings.where(account_provider_id: full_ids, date: entry.date).sum do |holding|
-          holding.amount_money.exchange_to(account.currency, date: entry.date).amount
+        begin
+          amount = entry.amount_money.exchange_to(account.currency, date: entry.date).amount
+          holdings_value = account.holdings.where(account_provider_id: full_ids, date: entry.date).sum do |holding|
+            holding.amount_money.exchange_to(account.currency, date: entry.date).amount
+          end
+        rescue Money::ConversionError => error
+          # Keep the previous cash anchor and retry on the next sync. SyncCache
+          # leaves the unconverted total out of the balances meanwhile.
+          report_unconverted_provider_balance(entry, error)
+          next
         end
         existing = account.entries.valuations.find_by(date: entry.date, entryable_id: Valuation.cash_anchor.select(:id))
         if existing
@@ -62,6 +69,13 @@ class Balance::Materializer
         anchor.update!(cash_entry_total: cache.cash_entry_total(anchor.entry.date))
       end
       account.reset_current_anchor_cache!
+    end
+
+    def report_unconverted_provider_balance(entry, error)
+      DebugLogEntry.capture(category: "sync", level: "warn", source: self.class.name,
+        message: "Provider balance kept unconverted: no exchange rate available",
+        account: account, family: account.family,
+        metadata: { date: entry.date.to_s, missing_rate_pair: "#{error.from_currency}->#{error.to_currency}" })
     end
 
     # Pass the security filter to the holding materializer. Only cash-anchored

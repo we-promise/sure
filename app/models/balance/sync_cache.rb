@@ -22,10 +22,13 @@ class Balance::SyncCache
   end
 
   # Return an authoritative total valuation, excluding cash-only and superseded anchors.
+  # On a cash-anchored account a full provider's total only becomes cash once the
+  # materializer can convert it; until then it must not reset the whole account.
   def get_valuation(date)
     valuation = entries_by_date[date]&.find { |e| e.valuation? && !e.entryable.cash_anchor? }
     cash_anchor = get_cash_anchor(date)
     return if valuation && cash_anchor && valuation.entryable.superseded_at?
+    return if valuation&.source == "provider_balance" && accounting_start_date && date >= accounting_start_date
 
     valuation
   end
@@ -50,6 +53,12 @@ class Balance::SyncCache
 
   private
     attr_reader :account
+
+    def accounting_start_date
+      return @accounting_start_date if defined?(@accounting_start_date)
+
+      @accounting_start_date = account.accounting_start_date
+    end
 
     def entries_by_date
       @entries_by_date ||= converted_entries.group_by(&:date)
