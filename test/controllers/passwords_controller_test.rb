@@ -30,4 +30,21 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
     assert token.reload.revoked_at.present?
   end
+
+  test "update signs the user out of their other web sessions and keeps the current one" do
+    current_session = @user.sessions.order(:created_at).last
+    other_session = @user.sessions.create!
+
+    patch password_path, params: {
+      user: {
+        password_challenge: user_password_test,
+        password: "NewSecure1!pass",
+        password_confirmation: "NewSecure1!pass"
+      }
+    }
+
+    assert_redirected_to root_path
+    assert Session.exists?(current_session.id)
+    assert_not Session.exists?(other_session.id)
+  end
 end
