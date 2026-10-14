@@ -97,6 +97,29 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal BalanceSheet.new(@family).net_worth, values_by_date.fetch(period.end_date).value.amount
   end
 
+  # A failed delete restores the account to disabled. Its history must still
+  # stop where it was disabled, not run on to the failure.
+  test "a failed destroy of a disabled account keeps its net worth cutoff" do
+    period = Period.custom(start_date: Date.current - 3.days, end_date: Date.current)
+    active_account = create_account(balance: 1_000, accountable: Depository.new)
+    disabled_account = create_account(balance: 0, accountable: Depository.new)
+    create_balance(account: active_account, date: period.start_date, balance: 1_000)
+    create_balance(account: active_account, date: period.end_date, balance: 1_000)
+    create_balance(account: disabled_account, date: period.start_date, balance: 20_000)
+    disabled_account.update_columns(status: "disabled", disabled_at: 10.days.ago)
+
+    start_value = -> { BalanceSheet.new(@family).net_worth_series(period: period).values.index_by(&:date).fetch(period.start_date).value.amount }
+    assert_equal 1_000, start_value.call
+
+    disabled_account.mark_for_deletion!
+    disabled_account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+    assert_raises(StandardError) { disabled_account.destroy }
+    assert disabled_account.reload.disabled?
+    Rails.cache.clear
+
+    assert_equal 1_000, start_value.call
+  end
+
   test "historical account scope respects shared-account finance settings" do
     member = users(:new_email)
     included_account = create_account(balance: 0, accountable: Depository.new)

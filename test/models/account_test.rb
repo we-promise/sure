@@ -75,6 +75,52 @@ class AccountTest < ActiveSupport::TestCase
     assert_not @account.aasm.may_fire_event?(:restore_after_failed_deletion)
   end
 
+  # disabled_at is the net-worth cutoff for a disabled account
+  # (NetWorthSeriesBuilder, NetWorthBreakdownSeriesBuilder). A failed delete
+  # must not move it to the failure, which would count the account's balances
+  # for the whole time it was already disabled.
+  test "a failed destroy of a disabled account keeps its original disabled_at" do
+    disabled_at = 40.days.ago.change(usec: 0)
+    @account.update_columns(status: "disabled", disabled_at: disabled_at)
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    assert_raises(StandardError) { @account.destroy }
+
+    @account.reload
+    assert_equal "disabled", @account.status
+    assert_equal disabled_at, @account.disabled_at
+  end
+
+  # The other side: an account deleted from active has no cutoff yet, so the
+  # failure is when it stopped counting. One disabled and enabled again earlier
+  # must not inherit that old cutoff.
+  test "a failed destroy of an account that was active stamps disabled_at at the failure" do
+    @account.disable!
+    @account.enable!
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    failed_at = 3.days.from_now.change(usec: 0)
+    travel_to(failed_at) { assert_raises(StandardError) { @account.destroy } }
+
+    @account.reload
+    assert_equal "disabled", @account.status
+    assert_equal failed_at, @account.disabled_at
+  end
+
+  test "enabling an account clears disabled_at" do
+    @account.disable!
+    assert_not_nil @account.reload.disabled_at
+
+    @account.enable!
+    assert_nil @account.reload.disabled_at
+
+    @account.disable!
+    @account.activate!
+    assert_nil @account.reload.disabled_at
+  end
+
   test "default owner prefers a family admin before a super admin" do
     family = families(:empty)
     admin = users(:empty)

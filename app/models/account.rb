@@ -175,8 +175,11 @@ class Account < ApplicationRecord
     state :disabled
     state :pending_deletion
 
+    # `timestamps: true` stamps disabled_at on entering disabled but never
+    # clears it, so leaving disabled clears it here. A present disabled_at then
+    # means the account was disabled, which the failed-deletion restore relies on.
     event :activate do
-      transitions from: [ :draft, :disabled ], to: :active
+      transitions from: [ :draft, :disabled ], to: :active, after: :clear_disabled_at
     end
 
     event :disable do
@@ -184,7 +187,7 @@ class Account < ApplicationRecord
     end
 
     event :enable do
-      transitions from: :disabled, to: :active
+      transitions from: :disabled, to: :active, after: :clear_disabled_at
     end
 
     event :mark_for_deletion do
@@ -196,8 +199,12 @@ class Account < ApplicationRecord
     # destroy raises, so the account is visible again and can be re-deleted.
     # A separate event rather than widening `disable`, which would let every
     # `disable!`/`may_disable?` caller act on an account being deleted.
+    #
+    # disabled_at is the net-worth cutoff, so an account that was already
+    # disabled keeps the date it was disabled; only one deleted from active or
+    # draft is stamped at the failure.
     event :restore_after_failed_deletion do
-      transitions from: :pending_deletion, to: :disabled
+      transitions from: :pending_deletion, to: :disabled, after: :keep_original_disabled_at
     end
   end
 
@@ -806,6 +813,16 @@ class Account < ApplicationRecord
   end
 
   private
+
+    # AASM transition callbacks run after the timestamp is set and before the
+    # state is saved, so both land in the event's own save.
+    def clear_disabled_at
+      self.disabled_at = nil
+    end
+
+    def keep_original_disabled_at
+      self.disabled_at = disabled_at_in_database if disabled_at_in_database.present?
+    end
 
     def assign_default_owner
       return if owner.present?
