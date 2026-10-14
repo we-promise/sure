@@ -599,6 +599,27 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     end
   end
 
+  # The classifier's CASE arrives already sanitized and full of quoted labels.
+  # Handed back through sanitize_sql_array with the rest of the query, any
+  # `:word` inside one of those literals is read as a bind variable, and the
+  # query raises before it runs. No label contains one today; this makes one
+  # that does, and the rows must come back unchanged.
+  test "a colon word inside the classifier's sql is not read as a bind" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 2_000, cash_flow: 1_000
+    deposit account: @account, date: @day_two, amount: 1_000
+
+    expected = daily_returns.rows
+    original = Portfolio::FlowClassifier.new(scope_account_ids: [ @account.id ]).sql_case
+    Portfolio::FlowClassifier.any_instance.stubs(:sql_case)
+      .returns("CASE WHEN false THEN ':probe' ELSE (#{original}) END")
+
+    probed = daily_returns.rows
+
+    assert_equal BigDecimal("1000"), probed.last.external_flow, "the classifier still decides the flow"
+    assert_equal expected, probed
+  end
+
   # The fixture builder guards these tests' own arithmetic, so it has to check
   # it at the precision the rows are stored at. These components add up as
   # given, but `balances` keeps four decimal places: stored, each 0.00005
