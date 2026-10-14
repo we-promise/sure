@@ -34,6 +34,13 @@ class BitcoinWalletAccount::SyncLifecycleTest < ActiveSupport::TestCase
     assert_equal 3100, @account.reload.balance
   end
 
+  test "an unconnected draft stays out of the shared connection sync" do
+    parent = @wallet.onchain_wallet_item.syncs.create!
+    parent.perform
+    assert_nil parent.children.find_by(syncable: @wallet)
+    assert parent.reload.completed?
+  end
+
   test "a failed wallet read fails its parent and retains the published account" do
     @wallet.connect!
     before = @account.reload.balance

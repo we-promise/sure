@@ -12,9 +12,11 @@ class OnchainWalletItem::Syncer
     @onchain_wallet_item = onchain_wallet_item
   end
 
-  # Schedule grouped wallet children and retain legacy imports in the same completion tree.
+  # Schedule connected wallet children and retain legacy imports in the same completion tree.
+  # Drafts are read when created or synced from their dialog, so one left
+  # unfinished cannot fail every family sync.
   def perform_sync(sync)
-    onchain_wallet_item.bitcoin_wallet_accounts.each do |wallet|
+    onchain_wallet_item.bitcoin_wallet_accounts.linked.each do |wallet|
       break if sync.cancel_requested?
 
       wallet.sync_later(parent_sync: sync, window_start_date: sync.window_start_date, window_end_date: sync.window_end_date)
