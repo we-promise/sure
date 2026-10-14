@@ -23,4 +23,15 @@ class TradeRepublicSessionTest < ActiveSupport::TestCase
 
     assert_equal first_device.fetch("stableDeviceId"), second_device.fetch("stableDeviceId")
   end
+
+  test "derives the device identity from the connection's device ID" do
+    first = Provider::TradeRepublicSession.new(phone_number: "+491701234567", pin: "1234", device_id: "device-a")
+    second = Provider::TradeRepublicSession.new(phone_number: "+491701234567", pin: "1234", device_id: "device-b")
+
+    first_device = JSON.parse(Base64.strict_decode64(first.login_headers.fetch("X-TR-Device-Info")))
+    second_device = JSON.parse(Base64.strict_decode64(second.login_headers.fetch("X-TR-Device-Info")))
+
+    assert_equal Digest::SHA512.hexdigest("device-a"), first_device.fetch("stableDeviceId")
+    assert_not_equal first_device.fetch("stableDeviceId"), second_device.fetch("stableDeviceId")
+  end
 end

@@ -178,9 +178,10 @@ class Provider::TradeRepublicClient
 
   attr_reader :phone_number, :pin
 
-  def initialize(phone_number:, pin: nil)
+  def initialize(phone_number:, pin: nil, device_id: nil)
     @phone_number = phone_number.to_s.strip
     @pin = pin.to_s
+    @device_id = device_id
   end
 
   def initiate_login
@@ -680,7 +681,7 @@ class Provider::TradeRepublicClient
     end
 
     def new_session(session_blob: nil)
-      Provider::TradeRepublicSession.new(phone_number: phone_number, pin: pin, session_blob: session_blob)
+      Provider::TradeRepublicSession.new(phone_number: phone_number, pin: pin, session_blob: session_blob, device_id: @device_id)
     end
 
     def waf_error?(response)

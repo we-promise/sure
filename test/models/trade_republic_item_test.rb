@@ -221,4 +221,8 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
 
     assert_equal %w[portfolio cash], processed_kinds
   end
+
+  test "gives each connection its own device ID" do
+    assert_not_equal trade_republic_items(:configured_item).device_id, trade_republic_items(:requires_update_item).device_id
+  end
 end

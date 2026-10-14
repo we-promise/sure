@@ -20,10 +20,11 @@ class Provider::TradeRepublicSession
 
   attr_reader :phone_number, :pin
 
-  def initialize(phone_number:, pin:, session_blob: nil)
+  def initialize(phone_number:, pin:, session_blob: nil, device_id: nil)
     @phone_number = phone_number.to_s
     @pin = pin.to_s
     @cookies = decode_cookies(session_blob)
+    @device_id = device_id.presence
     @device_info = nil
     @session_expires_at = Time.at(0)
   end
@@ -166,8 +167,10 @@ class Provider::TradeRepublicSession
       ))
     end
 
+    # A connection keeps its device identity when the container hostname
+    # changes.
     def stable_device_id
-      configured = ENV["TRADE_REPUBLIC_DEVICE_ID"].presence
+      configured = ENV["TRADE_REPUBLIC_DEVICE_ID"].presence || @device_id
       return Digest::SHA512.hexdigest(configured) if configured
 
       Digest::SHA512.hexdigest([ Socket.gethostname, RUBY_PLATFORM, Etc.uname[:machine], Etc.uname[:sysname] ].join("|"))
