@@ -103,6 +103,16 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{form_id}_per_share_cost_basis[value='12.20']"
   end
 
+  test "cost basis editor shows a stored zero basis instead of placeholders" do
+    @holding.update!(qty: 10, cost_basis: 0)
+
+    get holding_path(@holding)
+
+    form_id = "#{dom_id(@holding, :drawer_cost_basis)}_holding"
+    assert_select "##{form_id}_per_share_cost_basis[value='0.00']"
+    assert_select "##{form_id}_total_cost_basis[value='0.00']"
+  end
+
   test "cost basis editor keeps the equation operators readable" do
     get holding_path(@holding)
 
