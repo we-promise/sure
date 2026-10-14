@@ -7,6 +7,14 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     family.accounts.alphabetically.pluck(:name, :id)
   end
 
+  def claimed_attributes
+    [ :transfer ]
+  end
+
+  def actionable?(value)
+    family.accounts.exists?(id: value)
+  end
+
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     target_account = family.accounts.find_by_id(value)
     return 0 unless target_account
@@ -18,20 +26,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
         transfer = build_transfer(target_account, entry)
         Transfer.transaction do
           transfer.save!
-
-          # Use DESTINATION (inflow) account for kind, matching Transfer::Creator logic
-          destination_account = transfer.inflow_transaction.entry.account
-          source_account = transfer.outflow_transaction.entry.account
-          outflow_kind = Transfer.kind_for_account(destination_account, from_account: source_account)
-          outflow_attrs = { kind: outflow_kind }
-
-          if outflow_kind == "investment_contribution"
-            category = destination_account.family.investment_contributions_category
-            outflow_attrs[:category] = category if category.present? && transfer.outflow_transaction.category_id.blank?
-          end
-
-          transfer.outflow_transaction.update!(outflow_attrs)
-          transfer.inflow_transaction.update!(kind: "funds_movement")
+          transfer.confirm!
         end
 
         transfer.sync_account_later

@@ -1699,6 +1699,39 @@ end
     Rails.cache = original_cache
   end
 
+  test "category-only update does not sync the account" do
+    assert_no_enqueued_jobs only: SyncJob do
+      patch transaction_url(@entry), params: {
+        entry: { entryable_attributes: { id: @entry.entryable_id, category_id: categories(:food_and_drink).id } }
+      }
+    end
+
+    assert_equal categories(:food_and_drink).id, @entry.reload.entryable.category_id
+  end
+
+  test "amount update syncs the account" do
+    assert_enqueued_with(job: SyncJob) do
+      patch transaction_url(@entry), params: { entry: { amount: @entry.amount + 10 } }
+    end
+  end
+
+  test "category and date updated together still sync the account" do
+    assert_enqueued_with(job: SyncJob) do
+      patch transaction_url(@entry), params: {
+        entry: {
+          date: @entry.date - 1.day,
+          entryable_attributes: { id: @entry.entryable_id, category_id: categories(:food_and_drink).id }
+        }
+      }
+    end
+  end
+
+  test "toggling a tag does not sync the account" do
+    assert_no_enqueued_jobs only: SyncJob do
+      patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
+    end
+  end
+
   test "index with ai_status=current renders the AI filter badge" do
     @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
 
@@ -1752,6 +1785,64 @@ end
     assert_response :redirect
     assert_includes response.location, "filter_cleared=1"
     assert_no_match(/ai_status/, response.location)
+  end
+
+  test "index with attachment_status=with lists only transactions that have a file" do
+    @entry.entryable.attachments.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
+
+    get transactions_url(q: { attachment_status: [ "with" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "With attachment", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with attachment_status=without hides transactions that have a file" do
+    @entry.entryable.attachments.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
+
+    get transactions_url(q: { attachment_status: [ "without" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "Without attachment", count: 1
+    assert_select "#entry_#{@entry.id}", count: 0
+  end
+
+  test "index offers the attachment filter in the filter menu" do
+    get transactions_url
+
+    assert_response :success
+    assert_select "#transaction-filters-menu input[type=checkbox][name='q[attachment_status][]']", count: 2
+  end
+
+  test "index ignores unsupported attachment_status values without rendering a badge" do
+    get transactions_url(q: { attachment_status: [ "bogus" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li", count: 0
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "clear_filter removes an attachment_status value and redirects" do
+    delete clear_filter_transactions_url(
+      param_key: "attachment_status",
+      param_value: "without",
+      q: { attachment_status: [ "without" ] }
+    )
+
+    assert_response :redirect
+    assert_includes response.location, "filter_cleared=1"
+    assert_no_match(/attachment_status/, response.location)
+  end
+
+  test "an unconfirmed auto-matched transfer keeps its category menu in the list" do
+    outflow = create_transaction(account: accounts(:depository), amount: 500, name: "PENDING_MATCH_OUT").transaction
+    inflow = create_transaction(account: accounts(:credit_card), amount: -500).transaction
+    Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(outflow, "category_menu_desktop")} turbo-frame#category_dropdown"
   end
 
   test "update drops a category sent for a matched transfer's inflow leg" do
