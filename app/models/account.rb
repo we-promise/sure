@@ -814,16 +814,6 @@ class Account < ApplicationRecord
 
   private
 
-    # AASM transition callbacks run after the timestamp is set and before the
-    # state is saved, so both land in the event's own save.
-    def clear_disabled_at
-      self.disabled_at = nil
-    end
-
-    def keep_original_disabled_at
-      self.disabled_at = disabled_at_in_database if disabled_at_in_database.present?
-    end
-
     def assign_default_owner
       return if owner.present?
 
@@ -847,6 +837,16 @@ class Account < ApplicationRecord
       return if owner_user&.family_id == family_id
 
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    # AASM transition callbacks run after the timestamp is set and before the
+    # state is saved, so both land in the event's own save.
+    def clear_disabled_at
+      self.disabled_at = nil
+    end
+
+    def keep_original_disabled_at
+      self.disabled_at = disabled_at_in_database if disabled_at_in_database.present?
     end
 
     def capture_account_statement_ids_to_move
