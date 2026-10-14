@@ -70,8 +70,9 @@ class Balance::ChartSeriesBuilder
   # by Portfolio::FlowClassifier with these accounts as the scope, read
   # through Portfolio::DailyReturns so a flow is valued exactly as the returns
   # engine values it: a deposit at its cash amount, a security journalled in
-  # at the position's value, a foreign-currency flow at the previous day's
-  # rate. Dividends, interest, fees, buys and sells are not external, so
+  # at the position's value, a foreign-currency flow as the balance took it
+  # (into the account's currency on its own date, then at the previous day's
+  # rate), an excluded entry like any other. Dividends, interest, fees, buys and sells are not external, so
   # they never move this line.
   #
   # `anchor_date` is for a series whose value line starts later than its
