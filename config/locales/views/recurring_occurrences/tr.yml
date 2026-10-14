@@ -39,7 +39,7 @@ tr:
       skip: Atla
       snooze_week: Bir hafta ertele
       reopen: Yeniden aç
-      view_bill: Faturanın tamamını görüntüle
+      view_bill: Faturayı görüntüle
     mark_paid:
       success: Fatura ödendi olarak işaretlendi
     skip:

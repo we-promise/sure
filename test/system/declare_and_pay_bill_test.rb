@@ -71,11 +71,18 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
 
     # Linking lands back on the worklist, and the row must say the bill is
     # partly paid rather than settled: $537.50 against $2,150 is not rent.
-    assert_text I18n.t("bills.attention.partial", amount: "$1,612.50")
+    within(find("[class~='@container'] a[data-turbo-frame=drawer]", text: I18n.t("bills.attention.partial"))) do
+      assert_text "Watson Property"
+      assert_text "$1,612.50"
+      assert_text I18n.t("bills.remaining_label")
+    end
 
-    # Journey C picks up exactly where that leaves off: the row's verb has
-    # become Add payment, and the rest is settled from the drawer.
-    click_on I18n.t("bills.add_payment"), match: :first
+    # Journey C picks up exactly where that leaves off. The bill is still ten
+    # days out, so its row stays quiet; the drawer's verb has become Add
+    # payment, and the rest is settled from there.
+    find("a[data-turbo-frame='drawer']", text: "Watson Property", match: :first).click
+    within("dialog[open]") { click_on I18n.t("bills.add_payment") }
+    within("dialog[open]") { assert_link I18n.t("recurring_occurrences.show.mark_paid") }
     assert_text I18n.t("recurring_occurrences.show.remaining", amount: "$1,612.50")
 
     click_on I18n.t("recurring_occurrences.show.mark_paid")
@@ -117,7 +124,7 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
     click_on "WATSON PROPERTY LLC"
 
     assert_field I18n.t("recurring_transactions.form.name_label"), with: "WATSON PROPERTY LLC"
-    assert_field I18n.t("recurring_transactions.form.amount_label"), with: "537.5"
+    assert_field I18n.t("recurring_transactions.form.amount_label"), with: "537.50"
     click_button I18n.t("recurring_transactions.form.submit")
 
     assert_text "WATSON PROPERTY LLC"

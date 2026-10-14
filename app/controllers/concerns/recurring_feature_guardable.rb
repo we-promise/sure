@@ -33,4 +33,10 @@ module RecurringFeatureGuardable
     rescue URI::InvalidURIError
       fallback
     end
+
+    # Whether the request was made from `path` on this host. Compared by path,
+    # so /bills/1 matches whatever query string the referer carried.
+    def came_from?(path)
+      (back = url_from(request.referer)) && URI(back).path == path
+    end
 end
