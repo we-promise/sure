@@ -58,7 +58,8 @@ class TransactionCategoriesController < ApplicationController
 
       category_id = permitted.dig(:entryable_attributes, :category_id)
       if category_id.present?
-        permitted[:entryable_attributes][:category_id] = Current.family.categories.find(category_id).id
+        permitted[:entryable_attributes][:category_id] = Current.family.transaction_category_id_for(category_id) ||
+          raise(ActiveRecord::RecordNotFound)
       end
 
       permitted

@@ -1784,6 +1784,40 @@ end
     assert_equal provider_merchant.id, @entry.entryable.reload.merchant_id
   end
 
+  test "create without an account re-renders the form even with a foreign category" do
+    foreign_category = families(:empty).categories.create!(name: "Foreign", color: "#000000", lucide_icon: "folder")
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: "",
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: { category_id: foreign_category.id }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_not_includes response.body, "Foreign"
+  end
+
+  test "update skips the merchant lookup when the merchant is unchanged" do
+    @entry.entryable.update!(merchant: merchants(:netflix))
+    Family.any_instance.expects(:available_merchants_for).never
+
+    patch transaction_url(@entry), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: @entry.entryable_id, merchant_id: merchants(:netflix).id, tag_ids: [ tags(:one).id ] } }
+    }
+
+    assert_equal [ tags(:one).id ], @entry.entryable.reload.tag_ids
+    assert_equal merchants(:netflix).id, @entry.entryable.merchant_id
+  end
+
   test "category-only update does not sync the account" do
     assert_no_enqueued_jobs only: SyncJob do
       patch transaction_url(@entry), params: {
