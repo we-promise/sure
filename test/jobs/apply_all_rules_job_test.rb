@@ -28,15 +28,69 @@ class ApplyAllRulesJobTest < ActiveJob::TestCase
     assert_equal "scheduled", rule.rule_runs.last.execution_type
   end
 
+  test "does not email for an inactive rule" do
+    rule = create_rule(active: false, actions: [ email_action ])
+
+    assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
+      assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+        ApplyAllRulesJob.perform_now(@family)
+      end
+    end
+  end
+
+  test "applies an inactive rule's category action but does not email" do
+    rule = create_rule(active: false, actions: [ category_action, email_action ])
+    assert_nil @transaction.reload.category
+
+    assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
+      assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+        ApplyAllRulesJob.perform_now(@family)
+      end
+    end
+
+    assert_equal @groceries_category, @transaction.reload.category
+  end
+
+  test "emails new matches for an active rule" do
+    rule = create_rule(active: true, actions: [ email_action ])
+
+    assert_difference -> { NotificationDelivery.where(rule: rule).count }, 1 do
+      assert_enqueued_with(job: RuleEmailNotificationJob, args: [ rule.id, [ @transaction.id ] ]) do
+        ApplyAllRulesJob.perform_now(@family)
+      end
+    end
+
+    assert_enqueued_jobs 1, only: RuleEmailNotificationJob
+  end
+
+  test "does not re-send an active rule's already recorded matches" do
+    rule = create_rule(active: true, actions: [ email_action ])
+    NotificationDelivery.record_for(rule_id: rule.id, transaction_ids: [ @transaction.id ])
+
+    assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
+      assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+        ApplyAllRulesJob.perform_now(@family)
+      end
+    end
+  end
+
   private
-    def create_rule(active:)
+    def category_action
+      Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id)
+    end
+
+    def email_action
+      Rule::Action.new(action_type: "send_email_notification")
+    end
+
+    def create_rule(active:, actions: [ category_action ])
       Rule.create!(
         family: @family,
         resource_type: "transaction",
         active: active,
         effective_date: 1.day.ago.to_date,
         conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
-        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+        actions: actions
       )
     end
 end
