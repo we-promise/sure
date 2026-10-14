@@ -196,7 +196,7 @@ class RecurringTransaction
       # series can legitimately share this key (subscription tiers), which is
       # exactly why claiming goes through amount-nearness rather than lookup.
       def identity_key(recurring)
-        identifier = recurring.merchant_id.present? ? [ :merchant, recurring.merchant_id ] : [ :name, recurring.name ]
+        identifier = recurring.merchant_id.present? ? [ :merchant, recurring.merchant_id ] : [ :name, recurring.matcher_name ]
         [ identifier, recurring.currency, recurring.account_id, recurring.destination_account_id ]
       end
 
@@ -320,7 +320,7 @@ class RecurringTransaction
           if identifier_type == :merchant
             recurring.merchant_id == identifier_value
           else
-            recurring.merchant_id.nil? && recurring.name == identifier_value
+            recurring.merchant_id.nil? && recurring.matcher_name == identifier_value
           end
         end
       end
@@ -396,7 +396,8 @@ class RecurringTransaction
             bill_type: income ? "income" : classification.bill_type,
             category_id: income ? nil : classification.category_id,
             autopay: income ? false : classification.autopay,
-            manual: false
+            manual: false,
+        matcher_hints: pattern[:name] ? { "detected_name" => pattern[:name] } : {}
           )
         )
       end
