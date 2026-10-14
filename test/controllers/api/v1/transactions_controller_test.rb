@@ -813,6 +813,18 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tag.id ], @transaction.reload.taggings.pluck(:tag_id)
   end
 
+  test "update with a malformed tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ "not-a-uuid" ] } },
+        headers: api_headers(@api_key)
+
+    assert_not_equal 200, response.status
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
   test "should clear tags when empty tag_ids explicitly provided in update" do
     # Set up transaction with existing tags
     @transaction.tags = [ Tag.first, Tag.second ]

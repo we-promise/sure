@@ -589,6 +589,36 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
   end
 
+  # Rails' ids writer drops blanks before it casts, so the dedupe must not cast a
+  # malformed id to a blank: the writer would then discard it and clear the tags
+  # instead of refusing the unknown id.
+  test "a malformed tag id still raises and leaves the tags in place" do
+    transaction = transactions(:transfer_out)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+    before_ids = transaction.reload.tag_ids.sort
+
+    assert_raises(ActiveRecord::RecordNotFound) { transaction.tag_ids = [ "not-a-uuid" ] }
+
+    assert_equal before_ids, transaction.reload.tag_ids.sort
+  end
+
+  test "a malformed tag id beside a valid one still raises" do
+    transaction = transactions(:transfer_out)
+    transaction.update!(tag_ids: [ tags(:two).id ])
+
+    assert_raises(ActiveRecord::RecordNotFound) { transaction.tag_ids = [ tags(:one).id, "not-a-uuid" ] }
+
+    assert_equal [ tags(:two).id ], transaction.reload.tag_ids
+  end
+
+  test "a blank tag id is still ignored" do
+    transaction = transactions(:transfer_out)
+
+    transaction.update!(tag_ids: [ "", tags(:one).id, "" ])
+
+    assert_equal [ tags(:one).id ], transaction.reload.tag_ids
+  end
+
   test "assigning a repeated tag stores it once" do
     transaction = transactions(:transfer_out)
     tag = tags(:one)
