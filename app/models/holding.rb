@@ -280,6 +280,13 @@ class Holding < ApplicationRecord
     def calculate_avg_cost
       trades = account.trades
         .with_entry
+        .joins(ActiveRecord::Base.sanitize_sql_array([
+          "LEFT JOIN exchange_rates ON (
+            exchange_rates.date = entries.date AND
+            exchange_rates.from_currency = trades.currency AND
+            exchange_rates.to_currency = ?
+          )", account.currency
+        ]))
         .where(security_id: security.id)
         .where("trades.qty > 0 AND entries.date <= ?", date)
 
@@ -301,24 +308,42 @@ class Holding < ApplicationRecord
         Trade::INTERNAL_MOVEMENT_LABELS
       )
 
-      rate = ExchangeRate.rate_sql(from: "trades.currency", to: ":account_currency", on: "entries.date")
-      bind = ->(sql) { Arel.sql(ActiveRecord::Base.sanitize_sql_array([ sql, { account_currency: account.currency } ])) }
-      total_cost, total_qty, unconverted = trades.pick(
-        bind.call("SUM(trades.price * trades.qty * #{rate})"),
+      # The rate a trade carries itself (extra["exchange_rate"], e.g. IBKR's
+      # fx_rate_to_base) comes before the table's, as in the calculators and
+      # Balance::SyncCache; a trade in the account's own currency converts at 1.
+      # Trade#exchange_rate= stores a number, but a row written to `extra`
+      # directly can hold the same rate as a string, which Trade's validation
+      # and Money#exchange_to both accept -- so a plain decimal string counts
+      # too. Anything else, an exponent or an absurd length included, is not
+      # cast, so it cannot overflow numeric and fail the query.
+      rate = <<~SQL.squish
+        COALESCE(
+          CASE jsonb_typeof(trades.extra->'exchange_rate')
+            WHEN 'number' THEN (trades.extra->>'exchange_rate')::numeric
+            WHEN 'string' THEN CASE WHEN trades.extra->>'exchange_rate' ~ '^[[:space:]]*[+-]?([0-9]{1,20}([.][0-9]{0,20})?|[.][0-9]{1,20})[[:space:]]*$'
+                                    THEN (trades.extra->>'exchange_rate')::numeric END
+          END,
+          exchange_rates.rate
+        )
+      SQL
+      foreign = ActiveRecord::Base.sanitize_sql_array([ "trades.currency <> ?", account.currency ])
+
+      # A foreign purchase with no usable rate for its day has a cost nothing
+      # here knows, so the position's is unknown too, as with an internal
+      # movement -- counting it at 1:1 would state a figure that looks measured
+      # and is not. A rate of zero or less converts nothing, so it counts as
+      # missing, as it does in Money#exchange_to. Checked in the same query as
+      # the totals rather than in another round trip.
+      total_cost, total_qty, rate_missing = trades.pick(
+        Arel.sql("SUM((trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END)"),
         Arel.sql("SUM(trades.qty)"),
-        bind.call("COUNT(*) FILTER (WHERE trades.price <> 0 AND #{rate} IS NULL)")
+        Arel.sql("BOOL_OR(#{foreign} AND (#{rate} IS NULL OR #{rate} <= 0))")
       )
+      return nil if rate_missing
 
       # Return nil when no trades exist - cost basis is genuinely unknown
       # Previously this fell back to current market price, which was misleading
       return nil unless total_qty && total_qty > 0
-
-      # A purchase in a currency with no rate at all has no known cost here.
-      # Counting it at 1 priced it wrongly (#3640), and leaving it out would
-      # spread the other purchases' cost over units they did not buy. A free
-      # one (a grant, a bonus share) costs 0 in any currency, so it does not
-      # count.
-      return nil if unconverted.positive?
 
       Money.new(total_cost / total_qty, currency)
     end

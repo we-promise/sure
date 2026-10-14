@@ -417,6 +417,7 @@ zh-CN:
         application_id_placeholder_new: 输入 application ID
         application_id_placeholder_update: 输入新 ID 以更新
         client_certificate_label: Client Certificate（包含 Private Key）
+        keep_client_certificate_hint: "留空以保留当前证书"
         save_and_connect: 保存并连接
         update_connection: 更新连接
         connected_bank: 已连接的银行

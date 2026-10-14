@@ -146,10 +146,11 @@ class BinanceItemsController < ApplicationController
       end
 
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "binance_items/binance_item",
-          locals: { binance_item: item }
+          locals: { binance_item: item, visible_accounts: item.accounts }
         ),
         manual_accounts_stream,
         *Array(flash_notification_stream_items)
@@ -236,10 +237,11 @@ class BinanceItemsController < ApplicationController
     if turbo_frame_request?
       @binance_items = Current.family.binance_items.ordered.includes(:syncs)
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@binance_item),
           partial: "binance_items/binance_item",
-          locals: { binance_item: @binance_item }
+          locals: { binance_item: @binance_item, visible_accounts: @binance_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else

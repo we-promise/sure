@@ -153,14 +153,6 @@ module ExchangeRate::Provided
       SQL
     end
 
-    # The stored rate #rate_sql would use for one pair, without the provider:
-    # the latest on or before `date`, else the earliest after it, else nil.
-    def nearest_stored_rate(from:, to:, date:)
-      return 1 if from == to
-
-      any_stored_rates([ from ], to: to, date: date)[from]&.rate
-    end
-
     # Of `currencies`, those with no stored rate into `to` on any date. #rate_sql
     # leaves these amounts out; #rates_for does too unless the provider
     # supplies a rate.

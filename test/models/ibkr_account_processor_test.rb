@@ -92,7 +92,7 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     )
   end
 
-  test "processor imports holdings, trades, cash transactions, and commissions" do
+  test "processor imports holdings, trades with their commissions, and cash transactions" do
     IbkrAccount::Processor.new(@ibkr_account).process
 
     @account.reload
@@ -115,8 +115,12 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "Sell", sell_trade.entryable.investment_activity_label
     assert_equal BigDecimal("2"), buy_trade.entryable.qty
     assert_equal BigDecimal("-1"), sell_trade.entryable.qty
-    assert_equal BigDecimal("280.0"), buy_trade.amount
-    assert_equal BigDecimal("-155.0"), sell_trade.amount
+    # The commission is part of the trade: in its fee, and in the cash it
+    # moved -- on top of a buy, off a sell's proceeds.
+    assert_equal BigDecimal("1.25"), buy_trade.entryable.fee
+    assert_equal BigDecimal("1.1"), sell_trade.entryable.fee
+    assert_equal BigDecimal("281.25"), buy_trade.amount
+    assert_equal BigDecimal("-153.9"), sell_trade.amount
     assert_equal "USD", buy_trade.currency
     assert_equal "USD", sell_trade.currency
     assert_equal 0.9, buy_trade.entryable.exchange_rate
@@ -128,16 +132,8 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-2.5"), dividend.amount
     assert_equal securities(:aapl).id, dividend.entryable.extra["security_id"]
 
-    commission_one = @account.entries.find_by(external_id: "ibkr_trade_fee_1001")
-    commission_two = @account.entries.find_by(external_id: "ibkr_trade_fee_1002")
-    assert_not_nil commission_one
-    assert_not_nil commission_two
-    assert_equal BigDecimal("1.25"), commission_one.amount
-    assert_equal BigDecimal("1.1"), commission_two.amount
-    assert_equal "USD", commission_one.currency
-    assert_equal "USD", commission_two.currency
-    assert_equal securities(:aapl).id, commission_one.entryable.extra["security_id"]
-    assert_equal securities(:aapl).id, commission_two.entryable.extra["security_id"]
+    assert_nil @account.entries.find_by(external_id: "ibkr_trade_fee_1001")
+    assert_nil @account.entries.find_by(external_id: "ibkr_trade_fee_1002")
 
     deposit = @account.entries.find_by(external_id: "ibkr_cash_4001")
 
@@ -147,6 +143,111 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "CHF", deposit.currency
 
     assert_equal "USD", dividend.currency
+  end
+
+  # `trades.fee` is in the trade's currency, so a commission IBKR charged in
+  # another one stays a transaction of its own.
+  test "a commission in another currency stays a separate transaction" do
+    set_commission_currency("1001", "CHF")
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    buy_trade = @account.entries.find_by(external_id: "ibkr_trade_1001")
+    assert_equal 0, buy_trade.entryable.fee
+    assert_equal BigDecimal("280.0"), buy_trade.amount
+
+    commission = @account.entries.find_by(external_id: "ibkr_trade_fee_1001")
+    assert_equal BigDecimal("1.25"), commission.amount
+    assert_equal "CHF", commission.currency
+    assert_equal securities(:aapl).id, commission.entryable.extra["security_id"]
+  end
+
+  # With no currency stated, the separate entry has always taken the account's,
+  # so the commission is not assumed to be in the trade's.
+  test "a commission with no currency stays a separate transaction" do
+    set_commission_currency("1001", nil)
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    assert_equal 0, @account.entries.find_by(external_id: "ibkr_trade_1001").entryable.fee
+    assert_equal "CHF", @account.entries.find_by(external_id: "ibkr_trade_fee_1001").currency
+  end
+
+  # Imported before the commission moved onto the trade, the separate entry
+  # would now count it twice.
+  test "a commission imported as its own transaction moves onto the trade" do
+    import_legacy_commission("1001", "1.25")
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    assert_nil @account.entries.find_by(external_id: "ibkr_trade_fee_1001")
+    buy_trade = @account.entries.find_by(external_id: "ibkr_trade_1001")
+    assert_equal BigDecimal("1.25"), buy_trade.entryable.fee
+    assert_equal BigDecimal("281.25"), buy_trade.amount
+  end
+
+  test "a separate commission the user edited is left alone, and not counted twice" do
+    legacy = import_legacy_commission("1001", "1.25")
+    legacy.update!(user_modified: true)
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    assert legacy.reload.persisted?
+    buy_trade = @account.entries.find_by(external_id: "ibkr_trade_1001")
+    assert_equal 0, buy_trade.entryable.fee
+    assert_equal BigDecimal("280.0"), buy_trade.amount
+  end
+
+  # A receipt does not mark the entry modified, and deleting the entry would
+  # delete the receipt with it.
+  test "a separate commission with a receipt attached is left alone" do
+    legacy = import_legacy_commission("1001", "1.25")
+    legacy.entryable.attachments.attach(io: StringIO.new("receipt"), filename: "receipt.pdf", content_type: "application/pdf")
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    assert legacy.reload.entryable.attachments.attached?
+    assert_equal 0, @account.entries.find_by(external_id: "ibkr_trade_1001").entryable.fee
+  end
+
+  # An API edit without the user-modified flag still locks what it changed.
+  test "a separate commission edited through the API is left alone" do
+    legacy = import_legacy_commission("1001", "1.25")
+    legacy.update!(notes: "billed twice, disputed")
+    legacy.lock_saved_attributes!
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    assert_equal "billed twice, disputed", legacy.reload.notes
+    assert_equal 0, @account.entries.find_by(external_id: "ibkr_trade_1001").entryable.fee
+  end
+
+  # Auto-categorization locks the category too, so that lock alone is not the
+  # user's, or no commission would ever move onto its trade.
+  test "a separate commission only auto-categorized still moves onto the trade" do
+    legacy = import_legacy_commission("1001", "1.25")
+    legacy.entryable.lock_attr!(:category_id)
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    assert_nil @account.entries.find_by(external_id: "ibkr_trade_fee_1001")
+    assert_equal BigDecimal("1.25"), @account.entries.find_by(external_id: "ibkr_trade_1001").entryable.fee
+  end
+
+  # The import rewrites an edited trade, but it never wrote a fee before, so it
+  # must not start overwriting one the user set. The cash follows that fee.
+  test "a trade whose fee the user edited keeps it" do
+    IbkrAccount::Processor.new(@ibkr_account).process
+    buy_trade = @account.entries.find_by(external_id: "ibkr_trade_1001")
+    buy_trade.entryable.update!(fee: 3)
+    buy_trade.update!(user_modified: true)
+
+    IbkrAccount::Processor.new(@ibkr_account.reload).process
+
+    buy_trade.reload
+    assert_equal 3, buy_trade.entryable.fee
+    assert_equal BigDecimal("283.0"), buy_trade.amount
+    assert_nil @account.entries.find_by(external_id: "ibkr_trade_fee_1001"), "the commission is not counted again beside it"
   end
 
   test "processor computes weighted provider cost basis for grouped lots" do
@@ -278,4 +379,24 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_not_nil trade
     assert_equal Date.current, trade.date
   end
+
+  private
+
+    def set_commission_currency(trade_id, currency)
+      payload = @ibkr_account.reload.raw_activities_payload.deep_dup
+      payload["trades"].find { |trade| trade["trade_id"] == trade_id }["ib_commission_currency"] = currency
+      @ibkr_account.update!(raw_activities_payload: payload)
+    end
+
+    def import_legacy_commission(trade_id, amount)
+      Account::ProviderImportAdapter.new(@account).import_transaction(
+        external_id: "ibkr_trade_fee_#{trade_id}",
+        amount: BigDecimal(amount),
+        currency: "USD",
+        date: Date.current,
+        name: "Trade Commission for AAPL",
+        source: "ibkr",
+        investment_activity_label: "Fee"
+      )
+    end
 end

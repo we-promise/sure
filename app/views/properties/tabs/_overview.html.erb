@@ -28,6 +28,24 @@
   <% end %>
 </div>
 
+<% if account.property.avm_provider.present? %>
+  <div class="flex flex-col items-center gap-2 pt-8">
+    <% if account.property.avm_last_synced_on.present? %>
+      <p class="text-sm text-secondary">
+        <%= t(".valuation_source",
+              provider: t("properties.avm_providers.#{account.property.avm_provider}"),
+              date: l(account.property.avm_last_synced_on, format: :long)) %>
+      </p>
+    <% end %>
+    <%= render DS::Button.new(
+      text: t(".refresh_valuation"),
+      href: refresh_valuation_property_path(account),
+      variant: "outline",
+      icon: "refresh-cw"
+    ) %>
+  </div>
+<% end %>
+
 <div class="flex justify-center py-8">
   <%= render DS::Link.new(
     text: t(".edit_account_details"),
