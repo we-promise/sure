@@ -14,8 +14,8 @@ class SnaptradeDataHelpersTest < ActiveSupport::TestCase
       parse_date(value)
     end
 
-    def test_resolve_security(symbol, symbol_data, account: nil, account_provider_id: nil)
-      resolve_security(symbol, symbol_data, account: account, account_provider_id: account_provider_id)
+    def test_resolve_security(symbol, symbol_data, account: nil, account_provider_id: nil, provider_row: false)
+      resolve_security(symbol, symbol_data, account: account, account_provider_id: account_provider_id, provider_row: provider_row)
     end
 
     def test_extract_currency(data, symbol_data = {}, fallback = nil)
@@ -231,6 +231,39 @@ class SnaptradeDataHelpersTest < ActiveSupport::TestCase
     hold(account, remapped_to, date: 1.day.ago.to_date, provider_security: provider_row)
 
     assert_equal remapped_to, @helper.test_resolve_security("DUPR", {}, account: account)
+  end
+
+  # Holdings ask for the provider's row of a locked remap, so the import
+  # adapter can carry the lock to the next day's row; trades keep the row
+  # the user chose, where the remap moved the position's trades.
+  test "resolve_security answers a locked remap with the provider's row only when asked" do
+    account = accounts(:investment)
+    provider_row = Security.create!(ticker: "DUPK", name: "Provider row")
+    remapped_to = Security.create!(ticker: "DUPK", name: "Remapped row", exchange_operating_mic: "XNYS")
+    hold(account, remapped_to, date: 1.day.ago.to_date, provider_security: provider_row).update!(security_locked: true)
+
+    assert_equal remapped_to, @helper.test_resolve_security("DUPK", {}, account: account)
+    assert_equal provider_row, @helper.test_resolve_security("DUPK", {}, account: account, provider_row: true)
+  end
+
+  test "resolve_security race retry still answers a locked remap with the provider's row" do
+    account = accounts(:investment)
+    provider_row = nil
+    Security.define_singleton_method(:create!) do |*|
+      # Another sync creates the rows and the user's remap between the lookup and the create.
+      provider_row = Security.new(ticker: "RACEK", name: "Provider row").tap(&:save!)
+      remapped_to = Security.new(ticker: "RACEK", name: "Remapped row", exchange_operating_mic: "XNYS").tap(&:save!)
+      account.holdings.create!(security: remapped_to, provider_security: provider_row, security_locked: true,
+                               date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD")
+      raise ActiveRecord::RecordNotUnique
+    end
+
+    result = @helper.test_resolve_security("RACEK", {}, account: account, provider_row: true)
+
+    assert_not_nil provider_row
+    assert_equal provider_row, result
+  ensure
+    Security.singleton_class.send(:remove_method, :create!)
   end
 
   # Another provider linked to the same account can hold the same ticker on
