@@ -41,6 +41,11 @@ class Provider::Openai < Provider
     [ configured, MIN_REQUEST_TIMEOUT ].max
   end
 
+  # Items per LLM call for AI rule jobs and evals: ENV > Setting > 25.
+  def self.max_items_per_call
+    [ ENV["LLM_MAX_ITEMS_PER_CALL"], Setting.llm_max_items_per_call, 25 ].map(&:to_i).find(&:positive?)
+  end
+
   # Extra HTTP headers for OpenAI-compatible requests, parsed from the
   # OPENAI_EXTRA_HEADERS env var (a JSON object). ENV-only: no Setting
   # fallback. Keys and values are stringified for Faraday; blank values are
@@ -181,10 +186,6 @@ class Provider::Openai < Provider
   # instructions + JSON schema that aren't counted in `fixed_tokens`.
   def max_input_tokens
     [ context_window - max_response_tokens - system_prompt_reserve, 256 ].max
-  end
-
-  def max_items_per_call
-    positive_budget(ENV["LLM_MAX_ITEMS_PER_CALL"], Setting.llm_max_items_per_call, 25)
   end
 
   def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
@@ -468,7 +469,6 @@ class Provider::Openai < Provider
     def slice_for_context(items, fixed: nil)
       BatchSlicer.call(
         Array(items),
-        max_items: max_items_per_call,
         max_tokens: max_input_tokens,
         fixed_tokens: fixed ? Assistant::TokenEstimator.estimate(fixed) : 0
       )

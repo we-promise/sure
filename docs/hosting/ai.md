@@ -39,6 +39,22 @@ If you use an external agent for chat, you still need `OPENAI_ACCESS_TOKEN` set 
 
 With `mcp_only`, Sure also skips the features that need a user's AI consent: the LLM-written insight text and the bills AI shortcuts (review, smart fill, smart configuration).
 
+### Where AI jobs run (Sidekiq lanes)
+
+AI work runs in the Sidekiq `worker`, in its own capsule ("lane"), so a slow model can't hold up syncs, balance recalculation and scheduled jobs. Both lanes are defined in `config/sidekiq.yml`:
+
+| Lane | Queues | Threads | Jobs |
+|------|--------|---------|------|
+| default | `scheduled`, `high_priority`, `medium_priority`, `low_priority`, `default` | `RAILS_MAX_THREADS - RAILS_AI_MAX_THREADS` (3 - 1 = 2) | syncs, balances, rules, imports, scheduled jobs |
+| ai | `ai_high_priority`, then `ai_low_priority` (strict order) | `RAILS_AI_MAX_THREADS` (default `1`) | chat (`ai_high_priority`); auto-categorization, merchant detection and enhancement, PDF processing, insights (`ai_low_priority`) |
+
+- `RAILS_MAX_THREADS` is the worker's total thread count, as before, and also sizes its database pool. It must be greater than `RAILS_AI_MAX_THREADS` (so at least `2` by default): a lane with 0 threads stops the worker from starting ("Concurrency of 0 is not supported").
+- **Strict order:** a waiting chat always runs next. Every AI job makes one LLM call: auto-categorization, merchant-detection and merchant-enhancement jobs each hold `LLM_MAX_ITEMS_PER_CALL` items (default `25`), so a chat waits for at most one call. With one AI thread, a PDF import or other `ai_low_priority` job waits behind earlier ones, and continuous chat use pauses background AI work.
+- **One AI thread suits a model that serves one request at a time,** such as a local model on CPU: a chat turn's calls then run back to back, keeping the model's prompt cache warm. If your provider serves requests in parallel (hosted APIs, or a local server with several slots), raise `RAILS_AI_MAX_THREADS`, and `RAILS_MAX_THREADS` by the same amount so the default lane keeps its threads.
+- **The worker must load `config/sidekiq.yml`,** as `bundle exec sidekiq` does by default. A worker started with its own queue list (`sidekiq -q …`, a custom Helm `worker.command`) doesn't get the AI lane unless it also polls `ai_high_priority` and `ai_low_priority`; **System health** (`/admin/system_health`) and the site-wide banner then report "No worker is processing the AI queues".
+- **System health:** AI backlog doesn't count towards "queue backed up" (a large merchant-detection run can queue for hours), but "Oldest job age" still includes it. Check the queue table or `/sidekiq` to see which queue is waiting.
+- **Large batches:** Sure doesn't limit `LLM_MAX_ITEMS_PER_CALL`. A batch too big for the model fails at the provider; with the native Anthropic provider, the reply is also capped by `ANTHROPIC_MAX_TOKENS` (default `4096`).
+
 ## Quickstart: OpenAI Token
 
 The easiest way to get started with AI features in Sure is to use OpenAI:
@@ -1282,7 +1298,7 @@ Then restart both `web` and `worker` so the new env var is loaded. If you are us
 
 - `OPENAI_REQUEST_TIMEOUT` (default `60`) — applies to **each HTTP call** to the model, on its own.
 - `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` (default `8`) — how many chained tool-call rounds one turn may make. A turn costs up to `1 + this` model calls. On the final permitted round the model is offered no tools, so it answers in text instead of erroring.
-- `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it.
+- `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it. With one AI thread, that includes waiting for the AI job already running (see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes)).
 
 Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. Worse, the assistant only shows text once a response actually contains some — a tool-call-only response produces nothing to display — so a turn that chains several tool calls sits on "Thinking…" through all of them. At the defaults the worst case is nine sequential model calls plus eight tool-round executions.
 

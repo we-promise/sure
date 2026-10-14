@@ -104,6 +104,18 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "max_items_per_call prefers ENV, then the setting, then 25" do
+    Setting.stubs(:llm_max_items_per_call).returns(40)
+    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "7") do
+      assert_equal 7, Provider::Openai.max_items_per_call
+    end
+    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => nil) do
+      assert_equal 40, Provider::Openai.max_items_per_call
+      Setting.stubs(:llm_max_items_per_call).returns(nil)
+      assert_equal 25, Provider::Openai.max_items_per_call
+    end
+  end
+
   test "effective_model uses Setting when ENV is unset" do
     Setting.stubs(:openai_model).returns("llama3")
     with_env_overrides("OPENAI_MODEL" => nil) do
@@ -666,7 +678,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 256, subject.system_prompt_reserve
       assert_equal 2048 - 512 - 256, subject.max_history_tokens
       assert_equal 2048 - 512 - 256, subject.max_input_tokens
-      assert_equal 25, subject.max_items_per_call
     end
   end
 
@@ -684,7 +695,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 512, subject.system_prompt_reserve
       assert_equal 4096, subject.max_history_tokens  # explicit overrides derived
       assert_equal 8192 - 1024 - 512, subject.max_input_tokens
-      assert_equal 50, subject.max_items_per_call
     end
   end
 
@@ -742,7 +752,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       subject = Provider::Openai.new("test-token")
       assert_equal 8192, subject.context_window
       assert_equal 1024, subject.max_response_tokens
-      assert_equal 40, subject.max_items_per_call
     end
   ensure
     Setting.llm_context_window = nil
@@ -774,8 +783,8 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     Setting.llm_context_window = nil
   end
 
-  test "auto_categorize fans out oversized batches into sequential sub-calls" do
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10") do
+  test "auto_categorize sends a batch that fits the context window as one call" do
+    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10", "LLM_CONTEXT_WINDOW" => "100000") do
       subject = Provider::Openai.new("test-token")
       transactions = Array.new(25) { |i| { id: i.to_s, name: "txn#{i}", amount: 10, classification: "expense" } }
       user_categories = [ { id: "cat1", name: "Groceries", is_subcategory: false, parent_id: nil, classification: "expense" } ]
@@ -793,7 +802,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       response = subject.auto_categorize(transactions: transactions, user_categories: user_categories)
 
       assert response.success?
-      assert_equal [ 10, 10, 5 ], seen_sizes
+      assert_equal [ 25 ], seen_sizes
     end
   end
 

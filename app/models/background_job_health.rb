@@ -8,8 +8,7 @@ require "sidekiq/api"
 # Fails open: if Sidekiq/Redis is unreachable we assume healthy rather than block
 # or alarm the UI on an unrelated infrastructure blip.
 class BackgroundJobHealth
-  # The queue chat (AssistantResponseJob), syncs and imports run on. If nothing
-  # is polling it, user-facing background work silently never runs.
+  # Syncs and imports run here; chat runs on ai_high_priority.
   CRITICAL_QUEUE = "high_priority".freeze
   LATENCY_WARN_SECONDS = 60
   CACHE_KEY = "background_job_health".freeze

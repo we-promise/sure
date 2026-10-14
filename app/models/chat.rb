@@ -231,7 +231,7 @@ class Chat < ApplicationRecord
       DebugLogEntry.capture(
         category: "assistant",
         level: "error",
-        message: "Assistant response not delivered — background worker likely down or not polling the high_priority queue",
+        message: "Assistant response not delivered — background worker likely down or not polling the AI queues",
         source: "chat.delivery_timeout",
         metadata: {
           chat_id: id,
