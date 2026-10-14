@@ -25,7 +25,9 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   # A generated view must be plain ERB once Thor has rendered it: no Ruby string
   # building its tags, at either end, and source that Action View can compile.
   def assert_plain_erb(generated)
-    assert_no_match(/"<" \+|"%" \+ ">"/, generated)
+    # A tag built from strings renders as text: refuse a string that opens one
+    # ("<" + ..., "<%..."), or a concatenation that closes one (..." + ">").
+    assert_no_match(/["']<["'] \+|["']<%|%["'] \+ ["']>/, generated)
     assert_parses ActionView::Template::Handlers::ERB::Erubi.new(generated).src
   end
 
@@ -253,7 +255,11 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     [
       %(<div>\n<%= "<" + "%= t(\".title\") %" + ">" %>\n</div>\n),
       %(<%= render DS::Link.new(\n  text: "x"\n) <%= "%" + ">" %>\n),
-      %(<p>x</p>\n<%= "%" + ">" %>\n)
+      %(<p>x</p>\n<%= "%" + ">" %>\n),
+      %(<div>\n<%= "<%" + "= t(\\".title\\") %" + ">" %>\n</div>\n),
+      %(<p>x</p>\n<%= '%' + '>' %>\n),
+      %(<div>\n<%= "<%" + "= t(\\".title\\") %" + "" + ">" %>\n</div>\n),
+      %(<div>\n<%= "<" + "%= t(\\".title\\") %" + "" + ">" %>\n</div>\n)
     ].each do |generated|
       assert_raises(Minitest::Assertion) { assert_plain_erb generated }
     end
