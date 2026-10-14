@@ -268,26 +268,26 @@ class Portfolio::ReturnScope
       # *this* account's boundary, so a transfer to a sibling account is
       # external from where this question is asked.
       classifier = Portfolio::FlowClassifier.new(scope_account_ids: [ account.id ])
+      connection = ActiveRecord::Base.connection
+
+      # Values are quoted rather than bound, as in
+      # .external_transaction_account_ids: sanitize_sql_array would scan the
+      # classifier's finished CASE for `:name` placeholders, and the CASE
+      # carries every label literal. The classifier sanitizes its own scope.
       sql = <<~SQL
         SELECT EXISTS (
           SELECT 1
           FROM entries
           #{classifier.sql_joins}
-          WHERE entries.account_id = :account_id
+          WHERE entries.account_id = #{connection.quote(account.id)}
             AND entries.entryable_type = 'Transaction'
-            AND entries.date <= :end_date
+            AND entries.date <= #{connection.quote(history_end_date)}
             AND COALESCE(entries.excluded, false) = false
             AND #{classifier.sql_case} IN ('external_inflow', 'external_outflow')
         )
       SQL
 
-      # No :scope_account_ids bind: the classifier sanitizes the scope into its
-      # own fragment rather than leaving a placeholder for the caller to fill.
-      value = ActiveRecord::Base.connection.select_value(
-        ActiveRecord::Base.sanitize_sql_array([
-          sql, { account_id: account.id, end_date: history_end_date }
-        ])
-      )
+      value = connection.select_value(sql)
       @external_transactions = ActiveModel::Type::Boolean.new.cast(value) == true
     end
 
