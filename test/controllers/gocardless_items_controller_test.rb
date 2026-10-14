@@ -77,4 +77,19 @@ class GocardlessItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, shared.name
     assert_not_includes response.body, private_account.name
   end
+
+  test "bank sync settings include configured GoCardless in your connections" do
+    get settings_providers_url
+    assert_response :success
+    assert_select "details#gocardless-connection summary h3", text: "GoCardless"
+    assert_select "div#gocardless-providers-panel", count: 1
+  end
+
+  test "bank sync settings offer GoCardless when unconfigured" do
+    @item.destroy!
+    get settings_providers_url
+    assert_response :success
+    assert_select "details#gocardless-connection", count: 0
+    assert_select "a[href=?]", connect_form_settings_providers_path(provider_key: "gocardless")
+  end
 end

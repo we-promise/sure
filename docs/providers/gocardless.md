@@ -12,8 +12,9 @@ not import the Actual Budget ledger, categories or account-linking state.
 
 ## Configure and connect
 
-1. In Settings > Providers > GoCardless, enter your Bank Account Data Secret ID and
-   Secret Key. A GoCardless merchant account is a separate product.
+1. In Settings > Bank Sync, select GoCardless under Available and enter your Bank
+   Account Data Secret ID and Secret Key. Configured connections appear under Your
+   connections. A GoCardless merchant account is a separate product.
 2. Add a bank account, select GoCardless, choose a country and institution, and
    authorise read-only access on the bank's consent page.
 3. Return to Sure, wait for the background import, then select account types in
