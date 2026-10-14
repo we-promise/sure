@@ -53,6 +53,33 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
     assert_equal "time_weighted_return", scope.return_label_key
   end
 
+  # Trade::CreateForm records a dividend, interest or a fee as a Trade with no
+  # quantity. That is income or a cost booked against a manually valued
+  # account, not a record of what was bought or paid in, so it must not make
+  # the account trade tracked and earn it a money-weighted return. Only a trade
+  # that moved a quantity does, the same split Balance::BaseCalculator makes.
+  test "an account whose only trades are dividends, interest or fees is valuation tracked" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, revaluation: 100
+    income_trade account: @account, date: @day_two, amount: 10, label: "Dividend"
+    income_trade account: @account, date: @day_two, amount: 5, label: "Interest"
+    fee = income_trade(account: @account, date: @day_two, amount: 2, label: "Fee")
+    fee.update!(amount: 2)
+
+    direct = Portfolio::ReturnScope.new(account: @account, period: @period)
+    batch = Portfolio::ReturnScope.resolve_all(accounts: [ @account ], period: @period).fetch(@account.id)
+
+    assert direct.valuation_tracked?, "a zero-quantity trade records no position"
+    assert batch.valuation_tracked?, "and the batch path reads it the same way"
+    refute direct.supports_money_weighted_return?
+
+    buy_trade account: @account, date: @day_two, qty: 1, price: 10
+
+    assert Portfolio::ReturnScope.new(account: @account, period: @period).trade_tracked?,
+           "a trade that moved a quantity still counts"
+    assert Portfolio::ReturnScope.resolve_all(accounts: [ @account ], period: @period).fetch(@account.id).trade_tracked?
+  end
+
   test "an account whose only records are external transfers is trade tracked" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, cash_flow: 500
