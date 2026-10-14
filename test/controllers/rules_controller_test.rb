@@ -273,6 +273,53 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to rules_url
   end
 
+  test "saves stop processing" do
+    rule = rules(:one)
+
+    patch rule_url(rule), params: { rule: { stop_processing: "1" } }
+
+    assert rule.reload.stop_processing
+  end
+
+  test "index lists rules in run order" do
+    family = @user.family
+    newest = family.rules.create!(resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    ordered_ids = [ newest.id ] + (family.rules.ordered.pluck(:id) - [ newest.id ])
+    Rule.update_positions!(family, ordered_ids)
+
+    get rules_url
+
+    assert_response :success
+    assert_equal ordered_ids, css_select("[data-sortable-list-target='item']").map { |item| item["data-sortable-list-id"] }
+  end
+
+  test "reorder saves the new order" do
+    family = @user.family
+    second = family.rules.create!(resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    ordered_ids = family.rules.ordered.pluck(:id).reverse
+
+    patch reorder_rules_url, params: { rule_ids: ordered_ids }, as: :json
+
+    assert_response :no_content
+    assert_equal ordered_ids, family.rules.ordered.pluck(:id)
+    assert_equal second.id, ordered_ids.first
+  end
+
+  test "reorder rejects rules of another family" do
+    family = @user.family
+    other_rule = families(:empty).rules.create!(resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    before = family.rules.ordered.pluck(:id, :position)
+
+    patch reorder_rules_url, params: { rule_ids: family.rules.pluck(:id) + [ other_rule.id ] }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal before, family.rules.ordered.pluck(:id, :position)
+    assert_equal 1, other_rule.reload.position
+  end
+
   test "can destroy conditions and actions while editing" do
     rule = rules(:one)
 
@@ -384,6 +431,27 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "~typesafe/jev-latest", response.body
+  end
+
+  test "confirm says the active rules above run first" do
+    family = @user.family
+    family.rules.destroy_all
+    build = ->(name, active) do
+      family.rules.create!(name: name, resource_type: "transaction", active: active,
+        actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+    build.call("Active above", true)
+    build.call("Inactive above", false)
+    rule = build.call("Applied", true)
+    build.call("Below", true)
+
+    get confirm_rule_url(rule)
+    assert_response :success
+    assert_match I18n.t("rules.confirm.rules_above_notice", count: 1), response.body
+
+    get confirm_rule_url(family.rules.find_by!(name: "Active above"))
+    assert_response :success
+    assert_no_match "run first", response.body
   end
 
   test "confirm does not name Jev when the family has not selected it" do
