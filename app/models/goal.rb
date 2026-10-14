@@ -76,15 +76,16 @@ class Goal < ApplicationRecord
   # cannot see.
   before_validation :clear_target_date_for_maintained
 
+  # Warm conversion rates before taking account-claim locks. Completing a goal
+  # freezes its balance, so an unavailable rate must refuse the write rather
+  # than permanently snapshot a partial subtotal.
+  before_validation :prepare_completion_conversion, if: -> { state_changed? && completed? }
+
   # Autosave validates each link separately, so each would otherwise take its
   # own account lock in association order. Two goals saving links on the same
   # two accounts in opposite orders would then hold one lock each and wait on
   # the other. Taking the whole set here, sorted, before any child validates,
   # is what makes the order the same for everyone.
-  # Warm conversion rates before taking account-claim locks. Completing a goal
-  # freezes its balance, so an unavailable rate must refuse the write rather
-  # than permanently snapshot a partial subtotal.
-  before_validation :prepare_completion_conversion, if: -> { state_changed? && completed? }
   before_validation :lock_whole_account_claims_in_order
 
   # AASM's event `after` hooks run on the non-bang form too, which does not
@@ -399,8 +400,6 @@ class Goal < ApplicationRecord
     @current_balance ||= linked_accounts.sum { |account| account_backing(account).amount }
   end
 
-  # Wrap the allocated backing or frozen completion snapshot in goal currency.
-  # @return [Money] this goal's current backing subtotal
   def current_balance_money
     @current_balance_money ||= Money.new(current_balance, currency)
   end
@@ -430,14 +429,11 @@ class Goal < ApplicationRecord
     one_off? && active? && backing_within(account_ids).to_d.positive?
   end
 
-  # Convert this goal's allocated account share into goal currency.
-  # @return [Money] known backing; missing rates produce zero and a warning flag
+  # A missing rate counts as zero and is recorded for the warning.
   def account_backing(account)
     convert_money(account_native_backing(account))
   end
 
-  # Apply shared-pool allocation and the progress basis in account currency.
-  # @return [Money] this goal's native share, before currency conversion
   def account_native_backing(account)
     Money.new(account_amount_for(account), account.currency)
   end
@@ -468,8 +464,6 @@ class Goal < ApplicationRecord
     Money.new(0, to)
   end
 
-  # Collect source currencies omitted from this instance's evaluated calculations.
-  # @return [Set<String>] ISO codes requiring an available exchange rate
   def missing_exchange_rate_currencies
     @missing_exchange_rate_currencies ||= Set.new
   end
@@ -789,8 +783,6 @@ class Goal < ApplicationRecord
     end
   end
 
-  # Wrap the monthly net-inflow estimate in goal currency.
-  # @return [Money] 90-day net inflow divided by three
   def pace_money
     @pace_money ||= Money.new(pace, currency)
   end
@@ -1177,41 +1169,31 @@ class Goal < ApplicationRecord
       goal_accounts.find { |ga| ga.account_id == account.id }&.allocated_amount
     end
 
-    # Reuse dated FX results for this instance, or the shared prepared-goal page.
-    # @return [Goal::CurrencyConverter] converter caching rates and missing-rate lookups
     def currency_converter
       @currency_converter ||= CurrencyConverter.new
     end
 
-    # Load active-family account earmarks, retaining native allocation units.
-    # @return [Hash] account IDs mapped to competing goals and their native earmarks
+    # Family-wide map of non-archived goal earmarks. Injected once per request
+    # by the controller on index (one query for the whole page); falls back to
+    # a single query for the standalone (show) case.
     def pooled_allocations
       @pooled_allocations ||= self.class.pooled_allocations_for(family)
     end
 
-    # Load cumulative native market gain/loss for linked investment accounts.
-    # @return [Hash] account IDs mapped to net market flows
     def market_flows
       @market_flows ||= self.class.market_flows_for(family)
     end
 
-    # Load shared ledger aggregates used to compute converted goal pace.
-    # @return [Hash] account IDs mapped to net amounts per entry currency
     def pooled_pace
       @pooled_pace ||= self.class.pace_for(family)
     end
 
-    # Warm required FX before account-claim locks and validate a complete snapshot.
-    # @return [void] adds a validation error when completion would omit backing
     def prepare_completion_conversion
       linked_accounts.each { |account| convert_money!(account_native_backing(account)) }
     rescue Money::ConversionError
       errors.add(:base, :missing_exchange_rate)
     end
 
-    # Persist a converted completion snapshot or thaw one on restoration.
-    # Runs only after the goal's state change has been saved.
-    # @return [void] updates frozen progress metadata and state-dependent caches
     def apply_state_change_side_effects
       previous_state, next_state = saved_change_to_state
 
@@ -1357,8 +1339,6 @@ class Goal < ApplicationRecord
       end
     end
 
-    # Read strictly converted history for the goal's projection chart.
-    # @return [Array<Series::Value>] dated balances, or no saved line on conversion failure
     def balance_series_values
       return [] if linked_accounts.empty?
 

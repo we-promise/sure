@@ -8,8 +8,6 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
 
   attr_reader :goal
 
-  # Build funding rows with native account amounts and goal-currency shares.
-  # @return [Array<Hash>] backing, display amounts and inflow totals
   def rows
     @rows ||= goal.linked_accounts.sort_by { |a| -goal.account_backing(a).amount.to_d }.map do |account|
       totals = inflow_totals_for(account)
@@ -32,15 +30,10 @@ class Goals::FundingAccountsBreakdownComponent < ApplicationComponent
     end
   end
 
-  # Sum the known converted account shares for the distribution bar.
-  # @return [BigDecimal, Numeric] backing subtotal in goal currency
   def total
     @total ||= rows.sum { |r| r[:backing].to_d }
   end
 
-  # Compute a funding account's rounded share of the known subtotal.
-  # @param backing [Numeric] backing already expressed in goal currency
-  # @return [Integer] percentage, or zero when the subtotal is zero
   def percent_for(backing)
     return 0 if total.zero?
     ((backing.to_d / total) * 100).round
