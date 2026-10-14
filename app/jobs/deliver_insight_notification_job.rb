@@ -26,6 +26,9 @@ class DeliverInsightNotificationJob < ApplicationJob
     return unless subscription.user.family_id == insight.family_id
     return unless subscription.eligible? && subscription.user.preview_features_enabled?
     return unless insight.priority_high? && insight.active?
+    # The account it names may have stopped being shared with everyone
+    # since the insight was generated; the feed hides it, so no push either.
+    return unless Insight.about_shared_accounts.exists?(insight.id)
 
     PushSubscription::Delivery.new(subscription).call do |client|
       I18n.with_locale(insight.family.locale) do

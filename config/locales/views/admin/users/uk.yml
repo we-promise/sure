@@ -21,8 +21,6 @@ uk:
           trial_expiring_soon: "Закінчується через 7 днів"
           trial_trialing: "На пробному періоді"
           submit: "Фільтрувати"
-        summary:
-          trials_expiring_7_days: "Пробні періоди, що закінчуються в найближчі 7 днів"
         table:
           user: "Користувач"
           trial_ends_at: "Пробний період закінчується"

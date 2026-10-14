@@ -666,6 +666,33 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Transaction Name", response_data["name"]
   end
 
+  test "should not sync the account when only notes change" do
+    assert_no_enqueued_jobs only: SyncJob do
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { notes: "Just a note" } },
+          headers: api_headers(@api_key)
+    end
+    assert_response :success
+  end
+
+  test "should sync the account when the amount changes" do
+    assert_enqueued_with(job: SyncJob) do
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { amount: 42.00 } },
+          headers: api_headers(@api_key)
+    end
+    assert_response :success
+  end
+
+  test "should sync the account when notes and amount change together" do
+    assert_enqueued_with(job: SyncJob) do
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { notes: "Just a note", amount: 42.00 } },
+          headers: api_headers(@api_key)
+    end
+    assert_response :success
+  end
+
   test "should protect transaction from provider sync when updated with user_modified true" do
     update_params = {
       transaction: {
@@ -686,6 +713,34 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     entry = @transaction.entry.reload
     assert entry.user_modified?
     assert entry.protected_from_sync?
+  end
+
+  test "date changed via API survives the next provider sync without user_modified" do
+    entry = Account::ProviderImportAdapter.new(@account).import_transaction(
+      external_id: "plaid_api_date_edit",
+      amount: 42.00,
+      currency: "USD",
+      date: Date.current - 5.days,
+      name: "Card payment",
+      source: "plaid"
+    )
+
+    put api_v1_transaction_url(entry.transaction),
+        params: { transaction: { date: (Date.current - 2.days).to_s } },
+        headers: api_headers(@api_key)
+    assert_response :success
+    assert_not entry.reload.user_modified?
+
+    Account::ProviderImportAdapter.new(@account).import_transaction(
+      external_id: "plaid_api_date_edit",
+      amount: 42.00,
+      currency: "USD",
+      date: Date.current - 5.days,
+      name: "Card payment",
+      source: "plaid"
+    )
+
+    assert_equal Date.current - 2.days, entry.reload.date
   end
 
   test "should not change user_modified on update by default" do

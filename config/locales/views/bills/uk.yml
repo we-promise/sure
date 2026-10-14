@@ -39,6 +39,7 @@ uk:
       current: Поточний
       next_payment: Наступна оплата
       around: приблизно %{date}
+      overview: Огляд
       rules: Як розпізнається цей платіж
       rule_named: '%{name}'
       rule_amount_range: від %{min} до %{max}
@@ -56,7 +57,6 @@ uk:
       ytd: Сплачено з початку року
       last_account: Останній використаний рахунок
       upcoming: Найближчі
-      recent_payments: Останні оплати
       manual_payment: Оплата вручну
       history: Історія
       payment_count:
@@ -93,15 +93,13 @@ uk:
     summary:
       remaining: Залишилося %{amount}
       paid_headline: Сплачено %{amount}
-      cost_line: У середньому %{average} за оплату, приблизно %{annualized} на рік
     add_bill: Додати платіж
-    manage: Керувати
+    manage: Переглянути
     find_payment: Знайти оплату
     add_payment: Додати оплату
     review_match: Перевірити зіставлення
     resolve: Вирішити
     manage_payments: Керувати оплатами
-    view_full_bill: Переглянути платіж повністю
     match:
       same_merchant: Той самий продавець
       name_matches: Назва збігається
@@ -119,8 +117,9 @@ uk:
         many: Через %{count} днів після строку
         other: Через %{count} дня після строку
     attention:
+      paused: Призупинено
       needs_review: Зіставлення потребує перевірки
-      partial: Частково · залишилося %{amount}
+      partial: Частково
       amount_changed: Сума змінилася
       overdue:
         one: Прострочено на %{count} день
@@ -134,7 +133,7 @@ uk:
     cancelled_still_scheduled: Ви позначили це як скасоване %{date}, але розклад досі активний, тому нові платежі й далі з'являтимуться.
     paid_over: Сплачено %{paid}, більше за очікуване
     remaining_label: залишилося
-    debt_payment: · погашення боргу
+    debt_payment: Погашення боргу
     paid_from: з рахунку %{account}
     amount_range: від %{min} до %{max}
     possible_duplicate: Можливий дублікат
@@ -281,8 +280,8 @@ uk:
       paid_so_far: Уже сплачено
       hero_past_due: '%{amount} прострочено'
       hero_next_seven: '%{amount} до сплати в наступні 7 днів'
-      add_bill: Додати платіж
-      add_income: Додати дохід
+      add_bill: Новий платіж
+      add_income: Новий дохід
       review_with_ai: Переглянути з ШІ
       detected_review:
         one: Ми знайшли у ваших транзакціях %{count} регулярний платіж. Перевірте його, щоб підсумки тут відповідали тому, що ви фактично платите.
@@ -290,6 +289,7 @@ uk:
         many: Ми знайшли у ваших транзакціях %{count} регулярних платежів. Перевірте їх, щоб підсумки тут відповідали тому, що ви фактично платите.
         other: Ми знайшли у ваших транзакціях %{count} регулярного платежу. Перевірте їх, щоб підсумки тут відповідали тому, що ви фактично платите.
       detected_review_action: Переглянути
+      notices_heading: Зміни
       needs_review: Потребує перевірки
       notice_trial: Пробний період %{name} закінчується %{date}
       notice_renewal: '%{name} поновлюється %{date}'
@@ -331,7 +331,7 @@ uk:
       this_month: Цього місяця
       later: Після цього місяця
       paid_this_month: Сплачено цього місяця
-      dormant: Неактивні
+      dormant: Призупинені
       kpi_remaining: Залишилося цього місяця
       kpi_paid: Сплачено цього місяця
       kpi_next_seven: До сплати за 7 днів

@@ -270,4 +270,25 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
       BinanceAccount::Processor.new(@ba).process
     end
   end
+
+  # Binance opens at zero through the same shared path as Kraken, so it needs
+  # the same repair: history older than the anchor leaves the account starting
+  # after entries it is supposed to precede.
+  test "moves the opening anchor before the first entry" do
+    Account::OpeningBalanceManager.new(@account).set_opening_balance(balance: 0, date: 2.years.ago.to_date)
+    @account.entries.create!(
+      date: 3.years.ago.to_date,
+      name: "Old trade",
+      amount: 10,
+      currency: "EUR",
+      entryable: Transaction.new
+    )
+
+    BinanceAccount::Processor.new(@ba).process
+
+    # A fresh instance: the manager memoises the anchor it last read.
+    account = Account.find(@account.id)
+    assert_equal 3.years.ago.to_date.prev_day, account.opening_anchor_date
+    assert_equal 0, account.opening_anchor_balance
+  end
 end
