@@ -2805,6 +2805,16 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "a rejected account request without an error object is an expired session" do
+    [ "null", "[]" ].each do |body|
+      session = mock
+      session.expects(:get).with("/api/v2/auth/account").returns(rejection("403", body))
+      @client.define_singleton_method(:new_session) { |**| session }
+
+      assert_equal "session_expired", @client.sync(session_txt: '{"tr_session":"s"}').data["status"]
+    end
+  end
+
   private
 
     # Same shape as bond_purchase_detail, in English, as Sure receives it.
@@ -2960,6 +2970,10 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
 
     def waf_rejection
+      rejection("403", { "errorCode" => "WAF_TOKEN_REQUIRED" }.to_json)
+    end
+
+    def rejection(code, body)
       response_class = Struct.new(:code, :body) do
         def is_a?(klass)
           klass == Net::HTTPSuccess ? false : super
@@ -2967,6 +2981,6 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
         def [](_header) = nil
       end
-      response_class.new("403", { "errorCode" => "WAF_TOKEN_REQUIRED" }.to_json)
+      response_class.new(code, body)
     end
 end

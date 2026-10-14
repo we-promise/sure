@@ -806,6 +806,8 @@ class Provider::TradeRepublicClient
 
     def response_error_code(response)
       body = parse_json(response)
+      return unless body.is_a?(Hash)
+
       body["errorCode"].presence || body.dig("errors", 0, "errorCode").presence
     rescue MalformedResponse
       nil
