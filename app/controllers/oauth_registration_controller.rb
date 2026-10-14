@@ -12,8 +12,8 @@ class OauthRegistrationController < ApplicationController
   # letters of "sure mobile" (NFKC keeps them apart), e.g. "Ѕurе" with a
   # Cyrillic Ѕ and е. Uppercase look-alikes such as М and В arrive here
   # already downcased.
-  CONFUSABLE_LETTERS = "ѕսυеοоіιӏмв"
-  CONFUSABLE_LATIN = "suueooiilmb"
+  CONFUSABLE_LETTERS = "ѕսυеοоіιӏмвг"
+  CONFUSABLE_LATIN = "suueooiilmbr"
 
   skip_authentication
   skip_before_action :verify_authenticity_token
@@ -59,6 +59,17 @@ class OauthRegistrationController < ApplicationController
     end
 
     client_name = body["client_name"].presence || "MCP Client"
+
+    # Bidi controls can make the consent screen show a name that differs from
+    # the stored text (e.g. U+202E "eruS" renders as "Sure"), so reject them
+    # instead of stripping them.
+    if client_name.to_s.match?(/\p{Bidi_Control}/)
+      render json: {
+        error: "invalid_client_metadata",
+        error_description: t("oauth.registration.invalid_client_name")
+      }, status: :bad_request
+      return
+    end
 
     if reserved_client_name?(client_name)
       render json: {

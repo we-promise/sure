@@ -234,4 +234,5 @@ tr:
   oauth:
     registration:
       invalid_redirect_uris: redirect_uris yalnızca https, loopback http veya yerel uygulama URI şeması kullanabilir
+      invalid_client_name: client_name çift yönlü kontrol karakterleri içeremez
       reserved_client_name: client_name kendi uygulamalarımız için ayrılmıştır

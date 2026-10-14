@@ -341,7 +341,7 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     [
       "Sure Mobile", "sure mobile", "SURE-Mobile", "Sure", "Official Sure App", "SureMobile", "SureMobileApp",
       "Su\u200Bre Mobile", "Su\u034Fre Mobile", "Su\uFE0Fre Mobile", "Su\u3164re Mobile", "S\u0332ure Mobile", "\uFF33\uFF55\uFF52\uFF45 Mobile",
-      "\u0405ur\u0435 Mobile", "S\u057Dre", "\u0405URE \u041C\u041EBILE"
+      "\u0405ur\u0435 Mobile", "S\u057Dre", "\u0405URE \u041C\u041EBILE", "Su\u0433e Mobile"
     ].each do |client_name|
       assert_no_difference "Doorkeeper::Application.count", client_name do
         post "/register",
@@ -364,6 +364,21 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :created, client_name
       assert_equal client_name, JSON.parse(response.body)["client_name"]
+    end
+  end
+
+  test "rejects client names with bidirectional control characters" do
+    [ "\u202Eelibom erus", "Claude\u2066 Agent\u2069", "Agent\u200F" ].each do |client_name|
+      assert_no_difference "Doorkeeper::Application.count", client_name do
+        post "/register",
+          params: { client_name: client_name, redirect_uris: [ "https://evil.example/callback" ] }.to_json,
+          headers: { "Content-Type" => "application/json" }
+      end
+
+      assert_response :bad_request, client_name
+      json = JSON.parse(response.body)
+      assert_equal "invalid_client_metadata", json["error"]
+      assert_equal I18n.t("oauth.registration.invalid_client_name"), json["error_description"]
     end
   end
 end
