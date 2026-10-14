@@ -107,6 +107,10 @@ class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
 
     assert result[:success], result.inspect
     assert_equal [ old.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+    # update_rule leaves a changed rule inactive, and apply_rule switches it back
+    # on before running it. Do the same here without callbacks, so only the
+    # baseline update_rule left is under test.
+    rule.update_columns(active: true)
     assert_enqueued_with(job: RuleEmailNotificationJob, args: [ rule.id, [ pending.id ] ]) do
       Rule.find(rule.id).apply
     end
