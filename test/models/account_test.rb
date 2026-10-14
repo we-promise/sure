@@ -64,7 +64,7 @@ class AccountTest < ActiveSupport::TestCase
     assert_not @account.may_disable?
     assert_not @account.may_mark_for_deletion?
     permitted = @account.aasm.events(permitted: true).map(&:name)
-    assert_empty permitted - [ :restore_after_failed_deletion ]
+    assert_equal [ :restore_after_failed_deletion ], permitted
   end
 
   test "the failed-deletion recovery only fires from pending_deletion" do

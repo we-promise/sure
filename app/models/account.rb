@@ -191,7 +191,8 @@ class Account < ApplicationRecord
       transitions from: [ :draft, :active, :disabled ], to: :pending_deletion
     end
 
-    # The only way out of pending_deletion: Account#destroy fires it when the
+    # The AASM way out of pending_deletion (destroy_later's enqueue failure
+    # restores by update_column instead): Account#destroy fires it when the
     # destroy raises, so the account is visible again and can be re-deleted.
     # A separate event rather than widening `disable`, which would let every
     # `disable!`/`may_disable?` caller act on an account being deleted.
