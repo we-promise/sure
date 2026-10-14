@@ -169,9 +169,27 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
 
   test "code attempts are rate limited per user" do
     registration_options
-    Settings::WebauthnCredentialsController.cache_store.stubs(:increment).returns(21)
+    Settings::WebauthnCredentialsController.cache_store.stubs(:increment).returns(11)
 
     register({ id: "x", response: {} }, code: "000000")
+
+    assert_response :too_many_requests
+    assert_equal I18n.t("webauthn_credentials.rate_limited"), JSON.parse(response.body).fetch("error")
+  end
+
+  test "guessing codes through options alone is limited to 10 a minute" do
+    # The test cache is a null store, so hand out the counts a real store
+    # would return for the options counter, which create does not share.
+    Settings::WebauthnCredentialsController.cache_store.stubs(:increment)
+      .with { |key, *| key.include?("code-check") && key.exclude?("code-spend") }
+      .returns(*1..11)
+
+    10.times do
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: "000000" } }, as: :json
+      assert_response :unprocessable_entity
+    end
+
+    post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: "000000" } }, as: :json
 
     assert_response :too_many_requests
     assert_equal I18n.t("webauthn_credentials.rate_limited"), JSON.parse(response.body).fetch("error")

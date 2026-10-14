@@ -6,9 +6,11 @@ class Settings::WebauthnCredentialsController < ApplicationController
   before_action :ensure_mfa_enabled
 
   # Adding a passkey is confirmed with an MFA code; keep a stolen session from
-  # guessing that code. Both steps check the code and share one counter, so
-  # this allows about 10 attempts a minute.
-  rate_limit to: 20, within: 1.minute, by: -> { Current.user.id }, only: %i[options create],
+  # guessing that code. Both steps check it, so each gets its own counter:
+  # guessing through either one alone stays at 10 a minute.
+  rate_limit to: 10, within: 1.minute, by: -> { Current.user.id }, only: :options, name: "code-check",
+    with: -> { render json: { error: t("webauthn_credentials.rate_limited") }, status: :too_many_requests }
+  rate_limit to: 10, within: 1.minute, by: -> { Current.user.id }, only: :create, name: "code-spend",
     with: -> { render json: { error: t("webauthn_credentials.rate_limited") }, status: :too_many_requests }
 
   def options
