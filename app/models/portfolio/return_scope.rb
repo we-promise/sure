@@ -22,6 +22,13 @@ class Portfolio::ReturnScope
 
   KINDS = [ TRADE_TRACKED, VALUATION_TRACKED, INSUFFICIENT ].freeze
 
+  # Only a trade that moved a quantity is a record of the flows.
+  # Trade::CreateForm writes a dividend, interest or a fee as a zero-quantity
+  # trade, which is income or a cost on a manually valued account and says
+  # nothing about what was paid in; Balance::BaseCalculator#flows_for_date
+  # makes the same split. Shared by both paths so they cannot drift.
+  QUANTITY_TRADES_JOIN = "JOIN trades ON trades.id = entries.entryable_id AND trades.qty <> 0".freeze
+
   attr_reader :account, :period, :active_until_date
 
   # `active_until_date` is the account's cut-off, as Portfolio::DailyReturns
@@ -128,6 +135,7 @@ class Portfolio::ReturnScope
   def self.trade_account_ids(records, period, cutoffs)
     Entry
       .where(account_id: records.map(&:id), entryable_type: "Trade")
+      .joins(QUANTITY_TRADES_JOIN)
       .where("COALESCE(entries.excluded, false) = false")
       .where("entries.date <= ?", period.end_date)
       .where(
@@ -249,7 +257,10 @@ class Portfolio::ReturnScope
 
     def trades?
       return @trades if defined?(@trades)
-      @trades = live_entries_through_history_end.where(entryable_type: "Trade").exists?
+      @trades = live_entries_through_history_end
+        .where(entryable_type: "Trade")
+        .joins(QUANTITY_TRADES_JOIN)
+        .exists?
     end
 
     # A transfer in or out is as good as a trade for knowing the flows.
