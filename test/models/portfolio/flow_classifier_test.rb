@@ -143,6 +143,28 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
   # transfer itself, so money moved between two accounts inside the scope read
   # as money leaving the portfolio and arriving from outside it -- twice over,
   # once on each leg.
+  # Transfer validates each leg as unique, but only the pair is a unique index,
+  # so insert_all or two racing matchers can link one leg to two transfers.
+  # sql_joins promises one row per entry, which every SUM embedding it relies
+  # on, so it reads one transfer: the earliest, by created_at then id.
+  test "sql_joins gives one row per entry when a leg belongs to two transfers" do
+    transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400)
+    outflow = transfer.outflow_transaction.entry
+    stray_inflow = create_labelled_transaction(account: @checking, label: nil, amount: -400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: stray_inflow.entryable_id,
+      outflow_transaction_id: transfer.outflow_transaction_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at + 1.minute, updated_at: transfer.created_at + 1.minute
+    } ])
+
+    assert_equal 2, Transfer.where(outflow_transaction_id: transfer.outflow_transaction_id).count
+    assert_equal 1, Entry.where(id: outflow.id).joins(@family_scope.sql_joins).count,
+                 "one row per entry, whatever the transfers table holds"
+    assert_equal({ outflow.id => :internal }, @family_scope.classify_ids([ outflow.id ]),
+                 "the earliest transfer, to the IRA, is the one read")
+  end
+
   test "a Contribution or Withdrawal label does not outrank a linked transfer in scope" do
     transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 100)
     transfer.outflow_transaction.update!(investment_activity_label: "Withdrawal")
@@ -265,6 +287,19 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_nil @family_scope.classify(excluded)
     assert_nil @family_scope.classify(pending)
     assert_nil @family_scope.classify(valuation)
+  end
+
+  # The balance calculators still apply an excluded entry, so a reader that
+  # reconciles against balances asks for it to be classified as live. Both
+  # forms must honour the option the same way.
+  test "include_excluded classifies an excluded entry as if it were live" do
+    excluded = create_labelled_transaction(account: @brokerage, label: nil, amount: -500, excluded: true)
+    including = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], include_excluded: true)
+
+    assert_nil @family_scope.classify(excluded)
+    assert_nil @family_scope.classify_ids([ excluded.id ])[excluded.id]
+    assert_equal :external_inflow, including.classify(excluded)
+    assert_equal :external_inflow, including.classify_ids([ excluded.id ])[excluded.id]
   end
 
   test "direction follows the trade quantity sign or the transaction amount sign" do
