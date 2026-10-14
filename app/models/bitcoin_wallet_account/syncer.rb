@@ -5,6 +5,7 @@ class BitcoinWalletAccount::Syncer
     Provider::MempoolSpace::Error ].freeze
   MAX_READ_RETRIES = 2
   MAX_LOCK_WAIT = 5.minutes
+  RATE_LIMIT_WAIT = 1.minute
 
   # Use the injected explorer for tests or the configured history budget for
   # production. Source keys are never passed to the provider.
@@ -19,10 +20,10 @@ class BitcoinWalletAccount::Syncer
     return if wallet.account.pending_deletion? || wallet.onchain_wallet_item.scheduled_for_deletion? || sync.cancel_requested?
 
     Time.use_zone(Time.find_zone(wallet.family.timezone) || Time.zone) { perform }
-  rescue *RETRYABLE_ERRORS
+  rescue *RETRYABLE_ERRORS => error
     raise unless retry_pending?
 
-    queue_continuation(read_attempt: read_attempt + 1, wait: (read_attempt + 1).seconds)
+    queue_continuation(read_attempt: read_attempt + 1, wait: retry_wait(error))
   end
 
   # Coalesce concurrent readers with a session advisory lock. Provider requests
@@ -129,6 +130,13 @@ class BitcoinWalletAccount::Syncer
     # Transient reads are retried only inside a sync tree.
     def retry_pending?
       @sync.present? && read_attempt < MAX_READ_RETRIES
+    end
+
+    # A new block settles within seconds; an explorer rate limit needs minutes.
+    def retry_wait(error)
+      return RATE_LIMIT_WAIT * 2**read_attempt if error.is_a?(Provider::MempoolSpace::RateLimitError)
+
+      (read_attempt + 1).seconds
     end
 
     def read_attempt

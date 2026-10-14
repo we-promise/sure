@@ -82,6 +82,15 @@ class BitcoinWalletAccount::SyncLifecycleTest < ActiveSupport::TestCase
     assert @wallet.reload.status_preview?
   end
 
+  test "an explorer rate limit is retried after a minute" do
+    @provider.stubs(:get_address).raises(Provider::MempoolSpace::RateLimitError)
+    SyncJob.expects(:set).with(wait: 1.minute).returns(stub(perform_later: true))
+    parent = @wallet.syncs.create!
+    parent.perform
+    assert parent.reload.syncing?
+    refute @wallet.reload.status_failed?
+  end
+
   test "a transient error that outlasts its retries fails the wallet" do
     @provider.stubs(:tip_hash).returns(*%w[a b c d e f])
     sync = @wallet.syncs.create!
