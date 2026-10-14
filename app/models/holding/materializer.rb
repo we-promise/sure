@@ -332,6 +332,9 @@ class Holding::Materializer
 
     # Preserve imported mixed-account history while retaining legacy cleanup elsewhere.
     def purge_stale_holdings
+      # Syncs run in the family's time zone. A calculated row dated after its
+      # today was written by an earlier sync in a zone ahead of it.
+      account.holdings.where(account_provider_id: nil).where("date > ?", Date.current).delete_all
       return if account.accounting_start_date
 
       portfolio_security_ids = account.trades.distinct.pluck(:security_id)
