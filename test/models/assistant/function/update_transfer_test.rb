@@ -25,7 +25,7 @@ class Assistant::Function::UpdateTransferTest < ActiveSupport::TestCase
   end
 
   test "turns a plain transfer back into an investment contribution" do
-    @transfer.update_investment_contribution!(false)
+    assert @transfer.reload.update_investment_contribution!(false)
 
     result = @function.call("transfer_id" => @transfer.id, "investment_contribution" => true)
 
@@ -61,6 +61,23 @@ class Assistant::Function::UpdateTransferTest < ActiveSupport::TestCase
     assert_not result[:success]
     assert_equal "not_found", result[:error]
     assert_equal "investment_contribution", @transfer.outflow_transaction.reload.kind
+  end
+
+  test "reads a string false from a loose client as false" do
+    result = @function.call("transfer_id" => @transfer.id, "investment_contribution" => "false")
+
+    assert result[:success]
+    assert_equal "funds_movement", @transfer.outflow_transaction.reload.kind
+  end
+
+  test "rejects a value that is not a boolean" do
+    assert @transfer.reload.update_investment_contribution!(false)
+
+    result = @function.call("transfer_id" => @transfer.id, "investment_contribution" => "no")
+
+    assert_not result[:success]
+    assert_equal "invalid_arguments", result[:error]
+    assert_equal "funds_movement", @transfer.outflow_transaction.reload.kind
   end
 
   test "requires a change to make" do

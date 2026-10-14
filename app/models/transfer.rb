@@ -124,10 +124,17 @@ class Transfer < ApplicationRecord
   end
   alias_method :investment_contribution, :investment_contribution?
 
+  # The user's explicit choice from update_investment_contribution!, or nil
+  # while the transfer follows the default for its destination account.
+  def investment_contribution_choice
+    investment_contribution? if investment_contribution_chosen?(outflow_transaction)
+  end
+
   # Switches the outflow between investment_contribution and funds_movement
   # and locks the kind, so provider syncs and Transfer::InvestmentKindReconciler
-  # keep the choice. The Investment Contributions category follows the switch;
-  # a category the user picked stays.
+  # keep the choice. The Investment Contributions category follows the switch,
+  # since a plain transfer is uncategorized (see
+  # Transaction::UNCATEGORIZED_EXCLUDED_KINDS); any other category stays.
   #
   # @return [Boolean] false when this transfer cannot be switched
   def update_investment_contribution!(enabled)

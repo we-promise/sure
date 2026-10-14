@@ -63,9 +63,8 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
   end
 
   def call(params = {})
-    if params["investment_contribution"].nil?
-      return error("invalid_arguments", "Pass investment_contribution: true or false.")
-    end
+    enabled = parse_boolean(params["investment_contribution"])
+    return error("invalid_arguments", "Pass investment_contribution: true or false.") if enabled.nil?
 
     transfer = lookup_transfer(params)
     return transfer if transfer.is_a?(Hash)
@@ -73,8 +72,6 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
     unless transfer.investment_contribution_switchable?
       return error("not_switchable", "Only a confirmed transfer from a cash account into an investment or crypto account can be switched between an investment contribution and a plain transfer.")
     end
-
-    enabled = ActiveModel::Type::Boolean.new.cast(params["investment_contribution"])
 
     if ActiveModel::Type::Boolean.new.cast(params["dry_run"])
       return {
@@ -101,6 +98,18 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
   end
 
   private
+    # The tool caller does not enforce params_schema, and
+    # ActiveModel::Type::Boolean reads every unrecognized string (e.g. "no")
+    # as true, which would turn on the contribution the caller meant to turn off.
+    TRUTHY_INPUTS = [ true, "true", "t", "1", 1 ].freeze
+    FALSY_INPUTS = [ false, "false", "f", "0", 0 ].freeze
+
+    def parse_boolean(value)
+      normalized = value.is_a?(String) ? value.strip.downcase : value
+      return true if TRUTHY_INPUTS.include?(normalized)
+      false if FALSY_INPUTS.include?(normalized)
+    end
+
     def describe(enabled)
       enabled ? "an investment contribution (counted as spending)" : "a plain transfer (not counted as spending)"
     end
