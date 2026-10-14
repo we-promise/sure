@@ -53,7 +53,7 @@ class BitcoinWalletSource < ApplicationRecord
       return if kind != "bip84"
 
       errors.add(:extended_public_key, :blank) if extended_public_key.blank?
-      errors.add(:extended_public_key, "requires configured Active Record encryption") unless ActiveRecordEncryptionConfig.ready?
+      errors.add(:extended_public_key, :encryption_unavailable) unless ActiveRecordEncryptionConfig.ready?
       public_key if extended_public_key.present?
     rescue Onchain::BitcoinPublicKey::InvalidKey
       errors.add(:extended_public_key, :invalid)

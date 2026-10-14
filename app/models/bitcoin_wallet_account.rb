@@ -167,6 +167,6 @@ class BitcoinWalletAccount < ApplicationRecord
       errors.add(:security, :invalid) unless security.ticker.to_s.upcase.match?(/\A(?:CRYPTO:)?(?:BTC|XBT)(?:-?USD)?\z/)
       competing = account.holdings.where(security: security).where.not(account_provider_id: nil)
       competing = competing.where.not(account_provider_id: account_provider.id) if account_provider
-      errors.add(:security, "already has a provider") if competing.exists?
+      errors.add(:security, :provider_managed) if competing.exists?
     end
 end

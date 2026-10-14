@@ -15,3 +15,11 @@ en:
           attributes:
             security:
               managed_position: is managed by a provider. Disconnect it before changing this position.
+        bitcoin_wallet_account:
+          attributes:
+            security:
+              provider_managed: already has a provider
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: requires configured Active Record encryption

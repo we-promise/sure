@@ -1,0 +1,4 @@
+<%# locals: (source:, attribute:) %>
+<% source.errors.full_messages_for(attribute).each do |message| %>
+  <p class="text-xs text-destructive px-1"><%= message %></p>
+<% end %>

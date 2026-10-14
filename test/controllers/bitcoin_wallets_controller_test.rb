@@ -14,7 +14,7 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
   test "renders the source form behind the preview gate" do
     get new_account_bitcoin_wallet_path(@account)
     assert_response :success
-    assert_select "input[name='source[extended_public_key]'][type='password']"
+    assert_select "input[name='source[extended_public_key]'][type='text']"
     assert_select "input[name='source[receive_address]']"
   end
 
@@ -49,6 +49,27 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
       post account_bitcoin_wallet_path(@account), params: { source: { kind: "bip84", receive_address: RECEIVE, extended_public_key: "not-a-public-key" } }
     end
     assert_response :unprocessable_entity
+  end
+
+  test "an invalid key keeps the submitted source and shows the error on the field" do
+    post account_bitcoin_wallet_path(@account), params: { source: { kind: "bip84", receive_address: RECEIVE,
+      extended_public_key: "not-a-public-key", gap_limit: 50 } }
+    assert_response :unprocessable_entity
+    assert_select "select[name='source[kind]'] option[selected][value='bip84']"
+    assert_select "input[name='source[receive_address]'][value='#{RECEIVE}']"
+    assert_select "input[name='source[gap_limit]'][value='50']"
+    assert_select "p.text-destructive", text: /Extended public key/
+  end
+
+  test "a draft offers to cancel setup instead of disconnecting" do
+    wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
+    manual_bitcoin_source(wallet)
+    get account_bitcoin_wallet_path(@account)
+    assert_select "button", text: I18n.t("bitcoin_wallets.cancel_setup")
+    assert_select "button", text: I18n.t("bitcoin_wallets.disconnect"), count: 0
+    delete account_bitcoin_wallet_path(@account)
+    assert_redirected_to account_path(@account)
+    assert_equal I18n.t("bitcoin_wallets.setup_cancelled"), flash[:notice]
   end
 
   test "shows discovery results without rendering the public key" do
@@ -94,7 +115,7 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     get account_bitcoin_wallet_path(@account)
     assert_select "button", text: I18n.t("bitcoin_wallets.connect"), count: 0
     post connect_account_bitcoin_wallet_path(@account)
-    assert_redirected_to account_bitcoin_wallet_path(@account)
+    assert_redirected_to account_path(@account)
     assert_nil wallet.reload.account_provider
   end
 

@@ -48,6 +48,17 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
     page.current_window.resize_to(1400, 900)
   end
 
+  test "status polling keeps text typed into the source form" do
+    wallet = build_bitcoin_wallet(status: :discovering)
+    manual_bitcoin_source(wallet)
+    visit account_bitcoin_wallet_path(@account)
+    find("summary", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.add_source"))}/i).click
+    fill_in I18n.t("bitcoin_wallets.receive_address"), with: CHANGE
+    wallet.update!(status: :preview, balance_sats: 20_000_000, last_synced_at: Time.current)
+    assert_text I18n.t("bitcoin_wallets.connect")
+    assert_field I18n.t("bitcoin_wallets.receive_address"), with: CHANGE
+  end
+
   test "a connected wallet retains manual activity and can disconnect" do
     wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current, balance_sats: 20_000_000)
     manual_bitcoin_source(wallet)

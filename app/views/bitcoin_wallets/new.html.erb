@@ -7,7 +7,7 @@
       <%= render "onchain_wallet_items/price_provider_warning", currency: @account.currency, retains_valuation: true %>
       <%= render DS::Alert.new(message: t("bitcoin_wallets.read_only"), variant: :info) %>
       <%= render DS::Alert.new(message: @error_message, variant: :error) if @error_message.present? %>
-      <%= render "source_form", url: account_bitcoin_wallet_path(@account), securities: @securities %>
+      <%= render "source_form", url: account_bitcoin_wallet_path(@account), source: @source, securities: @securities %>
     </div>
   <% end %>
 <% end %>

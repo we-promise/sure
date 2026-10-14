@@ -9,7 +9,7 @@ en:
     receive_address: Known receive address
     public_key: Extended public key (only for Native SegWit)
     gap_limit: Unused address gap limit
-    source_hint: "Use an account-level Native SegWit xpub or zpub and a receive address verified on your wallet. Each key covers one Bitcoin account. Add other accounts separately. Addresses are derived locally; the explorer sees the requested addresses."
+    source_hint: "Use an account-level Native SegWit xpub or zpub and a receive address from the same account. Each key covers one Bitcoin account; add other accounts separately. Addresses are derived locally; the explorer sees the requested addresses."
     read_only: "Watch-only: Sure reads balances and cannot spend Bitcoin. Never enter a seed phrase or private key. Existing history and other assets are preserved."
     discover: Discover addresses
     discovering: "Reading the complete source set. Your account keeps its last complete balance until discovery finishes."
@@ -19,9 +19,9 @@ en:
     missing_price: "The Bitcoin quantity is current, but its market value could not be established. The account keeps its previous valuation. Check the price and exchange-rate providers."
     pricing_warning: "No crypto market data provider is enabled. Known manual prices can still be used; otherwise the account keeps its previous valuation until a quote is available."
     exchange_rate_warning: "No exchange rate provider is configured for %{currency}. The account keeps its previous valuation when conversion is unavailable. Configure an exchange rate provider in self-hosting settings."
-    stale: "This wallet read is more than two hours old. Sync again before connecting."
-    confirmation: "Confirmed: %{confirmed} BTC · Pending change: %{pending} BTC"
-    pending: Pending
+    stale: "This wallet read is more than two hours old. Sync the wallet to read it again."
+    quantity: "%{quantity} BTC"
+    confirmation: "Confirmed: %{confirmed} BTC · Unconfirmed: %{pending} BTC"
     discovery_progress:
       one: Checked 1 derived address
       other: "Checked %{count} derived addresses"
@@ -40,11 +40,14 @@ en:
     add_source: Add another source
     remove_source: Remove source
     remove_source_confirm: Stop tracking this source? Remaining sources will be reconciled without deleting account history.
-    refresh: Refresh status
     sync: Sync wallet
     disconnect: Disconnect Bitcoin
     disconnect_confirm: Stop updating Bitcoin automatically? The account, current positions and history will remain.
     disconnected: Bitcoin wallet disconnected; the account and history remain.
+    cancel_setup: Cancel setup
+    cancel_setup_confirm: Stop setting up this wallet? The account is not changed.
+    setup_cancelled: Bitcoin wallet setup cancelled.
+    source_removed: Source removed. The remaining sources are being read again.
     manage: Manage Bitcoin wallet
     connect_action: Connect Bitcoin wallet
     movements:

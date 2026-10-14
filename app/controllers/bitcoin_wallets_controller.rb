@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class BitcoinWalletsController < ApplicationController
+  SOURCE_FIELDS = %i[extended_public_key gap_limit receive_address].freeze
+
   before_action :require_admin!
   before_action :require_preview_features!
   before_action :set_account
@@ -8,6 +10,9 @@ class BitcoinWalletsController < ApplicationController
 
   # Render source setup and the account's existing BTC security choices.
   def new
+    return redirect_to account_bitcoin_wallet_path(@account) if @account.bitcoin_wallet_account
+
+    @source = BitcoinWalletSource.new
     @securities = bitcoin_securities
   end
 
@@ -24,7 +29,7 @@ class BitcoinWalletsController < ApplicationController
     @wallet.sync_later
     redirect_to account_bitcoin_wallet_path(@account), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
-    @error_message = error.record.errors.full_messages.to_sentence
+    keep_failed_source(error)
     @securities = bitcoin_securities
     render :new, status: :unprocessable_entity
   end
@@ -41,9 +46,9 @@ class BitcoinWalletsController < ApplicationController
     @wallet.connect!
     redirect_to account_path(@account), notice: t("bitcoin_wallets.connected"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
-    redirect_to account_bitcoin_wallet_path(@account), alert: error.record.errors.full_messages.to_sentence, status: :see_other
+    redirect_to account_path(@account), alert: error.record.errors.full_messages.to_sentence, status: :see_other
   rescue ArgumentError
-    redirect_to account_bitcoin_wallet_path(@account), alert: t("bitcoin_wallets.not_ready"), status: :see_other
+    redirect_to account_path(@account), alert: t("bitcoin_wallets.not_ready"), status: :see_other
   end
 
   # Add a validated source under the wallet lock and queue quantity reconciliation
@@ -55,7 +60,7 @@ class BitcoinWalletsController < ApplicationController
     end
     redirect_to account_bitcoin_wallet_path(@account), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
-    @error_message = error.record.errors.full_messages.to_sentence
+    keep_failed_source(error)
     prepare_show
     render :show, status: :unprocessable_entity
   end
@@ -63,10 +68,12 @@ class BitcoinWalletsController < ApplicationController
   # Remove one source and rediscover retained ownership, or disconnect when the
   # last source is removed. Previously imported account history is retained.
   def remove_source
+    notice = t("bitcoin_wallets.source_removed")
     @wallet.with_lock do
       @wallet.bitcoin_wallet_sources.find(params[:source_id]).destroy!
       if @wallet.bitcoin_wallet_sources.empty?
         @wallet.disconnect!
+        notice = t("bitcoin_wallets.disconnected")
       else
         # Addresses are rediscovered from the retained source set; stale rows
         # must not keep a removed source's funds in the aggregate.
@@ -75,7 +82,7 @@ class BitcoinWalletsController < ApplicationController
         @wallet.sources_changed!
       end
     end
-    redirect_to account_path(@account), status: :see_other
+    redirect_to account_path(@account), notice: notice, status: :see_other
   end
 
   # Request a background wallet refresh through the same authorized account route.
@@ -86,19 +93,23 @@ class BitcoinWalletsController < ApplicationController
 
   # Stop wallet tracking while leaving the Crypto account available manually.
   def destroy
+    connected = @wallet.account_provider.present?
     @wallet.disconnect!
-    redirect_to account_path(@account), notice: t("bitcoin_wallets.disconnected"), status: :see_other
+    redirect_to account_path(@account), notice: t(connected ? "bitcoin_wallets.disconnected" : "bitcoin_wallets.setup_cancelled"), status: :see_other
   end
 
   private
     # Bound address rendering and prepare quantities, progress and safe error copy.
     def prepare_show
+      @source ||= BitcoinWalletSource.new
       @address_count = @wallet.bitcoin_wallet_addresses.count
       @addresses = @wallet.bitcoin_wallet_addresses.order(:branch, :address_index, :address).limit(100)
       @sources = @wallet.bitcoin_wallet_sources.order(:created_at)
       @previous_quantity = @account.current_holdings.find_by(security: @wallet.security)&.qty || 0
       @pending_quantity = @wallet.pending_quantity
       @confirmed_quantity = @wallet.quantity - @pending_quantity
+      price = BitcoinWalletAccount::Processor.new(@wallet).price_on(Date.current) if @wallet.last_synced_at
+      @value = Money.new(@wallet.quantity * price, @account.currency) if price
       @discovery_checked = @sources.sum { |source| source.discovery.values_at("0", "1").compact.sum { |branch| branch.fetch("index", 0).to_i } }
       @wallet_error_key = case @wallet.last_error
       when "BitcoinWalletAccount::Discovery::AddressMismatch" then "address_mismatch"
@@ -119,6 +130,15 @@ class BitcoinWalletsController < ApplicationController
     def set_wallet
       @wallet = @account.bitcoin_wallet_account
       raise ActiveRecord::RecordNotFound unless @wallet && @wallet.onchain_wallet_item.family_id == Current.family.id
+    end
+
+    # Keep the submitted source for the re-rendered form. Its field errors show
+    # beside the inputs; any other error stays in the alert.
+    def keep_failed_source(error)
+      @source = error.record.is_a?(BitcoinWalletSource) ? error.record : BitcoinWalletSource.new(source_params)
+      @error_message = error.record.errors
+        .reject { |item| error.record == @source && item.attribute.in?(SOURCE_FIELDS) }
+        .map(&:full_message).to_sentence.presence
     end
 
     # Allow only public source inputs; key fields are filtered from request logs.
