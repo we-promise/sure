@@ -717,9 +717,10 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal [ 10_000, 10_000, 10_000, 10_000 ], amounts
   end
 
-  # Excluded and pending entries carry no flow for the classifier, so they
-  # are not money put in.
-  test "excluded and pending deposits do not count" do
+  # A pending entry has not moved the balance, so it is not money put in. An
+  # excluded one has: excluding hides it from budgets, but the balance still
+  # applies it, and Portfolio::DailyReturns counts it as the flow it was.
+  test "an excluded deposit counts and a pending one does not" do
     account = create_portfolio_account(family: families(:empty))
     lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
     deposit(account: account, date: @day_one + 1, amount: 300).update!(excluded: true)
@@ -728,7 +729,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
 
     amounts = contributions_builder(account).net_contributions_series.values.map { |v| v.value.amount }
 
-    assert_equal [ 1_000, 1_000, 1_000, 1_000 ], amounts
+    assert_equal [ 1_000, 1_300, 1_300, 1_300 ], amounts
   end
 
   # Both legs inside the scope: the money went nowhere, so a two-account
@@ -771,9 +772,11 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal [ 5_000, 5_000, 5_000, 5_000 ], amounts
   end
 
-  # The previous day's rate, not the entry date's: the two differ here, so
+  # Valued as the balance took it: into the account's currency on the
+  # deposit's own date (1.2 here), then into the family's currency at the
+  # previous day's rate (1 for a USD account). The two dates' rates differ, so
   # reading the wrong one moves the figure.
-  test "a foreign-currency deposit converts at the previous day's rate" do
+  test "a foreign-currency deposit converts into the account's currency on its own date" do
     account = create_portfolio_account(family: families(:empty))
     lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
     set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
@@ -782,7 +785,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
 
     builder = contributions_builder(account)
 
-    assert_equal [ 1_000, 2_100, 2_100, 2_100 ], builder.net_contributions_series.values.map { |v| v.value.amount }
+    assert_equal [ 1_000, 2_200, 2_200, 2_200 ], builder.net_contributions_series.values.map { |v| v.value.amount }
     refute builder.net_contributions_incomplete?
   end
 
