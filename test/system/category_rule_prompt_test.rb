@@ -91,6 +91,18 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     assert_selector "#cta", text: "Updated to #{@categories.first.name}"
   end
 
+  test "a held prompt shows when the open dialog is removed without closing" do
+    visit transactions_url
+    open_drawer @entry
+    assign_category_in_drawer @categories.first
+    assert_no_selector "#cta *", visible: :all
+
+    # Like a stream replacing the modal frame with an empty one: no close event fires.
+    page.execute_script(%(document.querySelector("turbo-frame#drawer").replaceChildren()))
+
+    assert_selector "#cta", text: "Updated to #{@categories.first.name}"
+  end
+
   private
     def open_drawer(entry)
       page.execute_script <<~JS

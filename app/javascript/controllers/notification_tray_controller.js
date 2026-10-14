@@ -17,7 +17,7 @@ export default class extends Controller {
 
     this._deferredStreams = [];
     this._onBeforeStreamRender = this.#deferWhileDialogOpen.bind(this);
-    this._onDialogClose = this.#flushDeferredStreams.bind(this);
+    this._onDialogClose = this.#onDialogClose.bind(this);
     document.addEventListener(
       "turbo:before-stream-render",
       this._onBeforeStreamRender,
@@ -33,6 +33,7 @@ export default class extends Controller {
       this._onBeforeStreamRender,
     );
     document.removeEventListener("close", this._onDialogClose, true);
+    this._dialogRemovalObserver?.disconnect();
   }
 
   reposition() {
@@ -83,17 +84,36 @@ export default class extends Controller {
     const render = event.detail.render;
     event.detail.render = (streamElement) => {
       this._deferredStreams.push({ isRefresh, render, streamElement });
+      // Turbo calls this after waiting for the next paint; the dialog may
+      // have closed in between, with no close event left to release it.
+      this.#flushIfNoDialogOpen();
+      if (this._deferredStreams.length > 0) this.#watchForDialogRemoval();
     };
   }
 
   // Captured on the document rather than bound to the dialog that was open
-  // when the stream arrived: that dialog can leave the DOM without a close
-  // event (one drawer replaced by the next in the same frame), and stacked
-  // dialogs close one at a time. Flush only once none is open.
-  #flushDeferredStreams(event) {
-    if (!(event.target instanceof HTMLDialogElement)) return;
+  // when the stream arrived, so stacked dialogs and a drawer replaced by the
+  // next one are both covered. A dialog can also leave the DOM without any
+  // close event (a frame replaced by a stream, one drawer swapped for the
+  // next), which the mutation observer catches while streams are waiting.
+  #onDialogClose(event) {
+    if (event.target instanceof HTMLDialogElement) this.#flushIfNoDialogOpen();
+  }
+
+  #watchForDialogRemoval() {
+    this._dialogRemovalObserver ??= new MutationObserver(() =>
+      this.#flushIfNoDialogOpen(),
+    );
+    this._dialogRemovalObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  #flushIfNoDialogOpen() {
     if (this._deferredStreams.length === 0 || this.#dialogOpen()) return;
 
+    this._dialogRemovalObserver?.disconnect();
     const streams = this._deferredStreams;
     this._deferredStreams = [];
 
