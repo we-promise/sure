@@ -99,7 +99,7 @@ class BitcoinWalletsController < ApplicationController
       @previous_quantity = @account.current_holdings.find_by(security: @wallet.security)&.qty || 0
       @pending_quantity = @wallet.pending_quantity
       @confirmed_quantity = @wallet.quantity - @pending_quantity
-      @discovery_checked = @sources.sum { |source| source.discovery.values.sum { |branch| branch.fetch("index", 0).to_i } }
+      @discovery_checked = @sources.sum { |source| source.discovery.values_at("0", "1").compact.sum { |branch| branch.fetch("index", 0).to_i } }
       @wallet_error_key = case @wallet.last_error
       when "BitcoinWalletAccount::Discovery::AddressMismatch" then "address_mismatch"
       when "BitcoinWalletAccount::Discovery::Conflict" then "address_conflict"

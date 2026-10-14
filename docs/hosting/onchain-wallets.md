@@ -267,7 +267,11 @@ Discovery scans receive `/0/index` and change `/1/index`, including used address
 whose balance is now zero. The default gap is 20 consecutive unused addresses per
 branch. Increase it, up to 1000, if the wallet generated a larger unused gap.
 Discovery checks at most 200 addresses per job, saves its cursor and continues in
-another job. A wallet using addresses beyond the selected gap needs a larger gap
+another job. After a wallet is connected, hourly syncs re-check 20 addresses past
+the last used address on each branch; the full configured gap is re-checked once
+a day. A large gap therefore costs about two address reads per gap step per day.
+Point `MEMPOOL_SPACE_URL` at a self-hosted explorer to keep these reads private
+and off the public rate limits. A wallet using addresses beyond the selected gap needs a larger gap
 or explicit manual addresses; the UI does not claim to discover other accounts.
 
 Current balance is the sum of confirmed address balances plus the net effect of

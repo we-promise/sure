@@ -46,6 +46,26 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
     assert_equal 400, source.reload.discovery.dig("0", "index")
   end
 
+  test "routine rescans probe a standard window and the full gap once a day" do
+    @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB,
+      receive_address: RECEIVE, gap_limit: 50)
+    @provider.fund(RECEIVE, 1)
+    assert BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+
+    rescan = lambda do
+      @wallet.reload.restart_discovery!
+      @provider.reads.clear
+      assert BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+      @provider.reads.size
+    end
+
+    assert_equal 100, rescan.call
+    assert_equal 2 * BitcoinWalletAccount::ROUTINE_LOOKAHEAD, rescan.call
+    travel 25.hours do
+      assert_equal 100, rescan.call
+    end
+  end
+
   test "an address tracked by another account in this family is rejected" do
     other_account = accounts(:crypto).dup
     other_account.name = "Other wallet"

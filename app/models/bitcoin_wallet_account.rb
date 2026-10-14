@@ -2,6 +2,10 @@
 
 class BitcoinWalletAccount < ApplicationRecord
   include Syncable
+
+  ROUTINE_LOOKAHEAD = 20
+  FULL_RESCAN_INTERVAL = 1.day
+
   belongs_to :onchain_wallet_item
   belongs_to :account
   belongs_to :security
@@ -79,14 +83,19 @@ class BitcoinWalletAccount < ApplicationRecord
     last_synced_at.nil? || last_synced_at < 2.hours.ago
   end
 
-  # Reopen each HD branch's unused gap after its highest used address, preserving
-  # cached addresses and allowing subsequent receives and change to be found.
-  def restart_discovery!
+  # Reopen each HD branch after its highest used address, preserving cached
+  # addresses so later receives and change are found. Routine syncs probe a
+  # standard-size window; the full configured gap is rescanned once a day.
+  def restart_discovery!(full: false)
     bitcoin_wallet_sources.where(kind: "bip84").each do |source|
+      last_full = source.discovery["full_scan_at"]&.then { |value| Time.zone.parse(value) }
+      full_scan = full || last_full.nil? || last_full < FULL_RESCAN_INTERVAL.ago
+      skipped = full_scan ? 0 : [ source.gap_limit - ROUTINE_LOOKAHEAD, 0 ].max
       state = [ 0, 1 ].to_h do |branch|
         highest = bitcoin_wallet_addresses.where(bitcoin_wallet_source: source, branch: branch, used: true).maximum(:address_index)
-        [ branch.to_s, { "index" => highest ? highest + 1 : 0, "gap" => 0 } ]
+        [ branch.to_s, { "index" => highest ? highest + 1 : 0, "gap" => skipped } ]
       end
+      state["full_scan_at"] = full_scan ? Time.current.iso8601 : source.discovery["full_scan_at"]
       source.update!(discovery: state)
     end
   end
@@ -95,7 +104,7 @@ class BitcoinWalletAccount < ApplicationRecord
   # the resulting quantity rather than report previously held funds as income.
   def sources_changed!
     update!(status: :discovering, needs_reconciliation: account_provider.present?)
-    restart_discovery!
+    restart_discovery!(full: true)
     sync_later
   end
 
