@@ -48,6 +48,9 @@ uk:
       category_search_placeholder: Пошук категорій
       create_category: Створити «%{name}»
       create_category_error: Не вдалося створити категорію
+      create_as_subcategory: Додати як підкатегорію…
+      choose_parent: 'Створити «%{name}» у:'
+      back_to_categories: Назад
       create_merchant: Створити
       create_merchant_error: Не вдалося створити продавця
       merchant_search_placeholder: Знайдіть або створіть продавця

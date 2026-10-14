@@ -7,6 +7,14 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:sure_support_staff)
   end
 
+  test "index leaves the expiring trial summary to hosted system health" do
+    get admin_users_url
+
+    assert_response :success
+    assert_no_match I18n.t("admin.system_health.hosted_usage.summary.trials_expiring_soon_count", raise: true), response.body
+    assert_select "select[name='trial_status'] option[value='expiring_soon']"
+  end
+
   test "index groups users by family sorted by transaction count" do
     family_with_more = users(:family_admin).family
     family_with_fewer = users(:empty).family

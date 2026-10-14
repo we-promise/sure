@@ -322,7 +322,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match(/The configured AI model is not available/, response.body)
-    assert_match(/gemini-2\.5-flash/, response.body)
+    assert_match(/gemini-3\.8-flash/, response.body)
     assert_no_match(/gemini-secret/, response.body)
   end
 

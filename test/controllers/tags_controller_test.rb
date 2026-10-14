@@ -33,6 +33,37 @@ class TagsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Tag created", flash[:notice]
   end
 
+  test "guest cannot create tag" do
+    sign_in family_guest
+
+    assert_no_difference("Tag.count") do
+      post tags_url, params: { tag: { name: "Guest Tag" } }
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "guest cannot destroy tag" do
+    sign_in family_guest
+    tag = tags(:one)
+
+    assert_no_difference("Tag.count") do
+      delete tag_url(tag)
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "member can create tag" do
+    sign_in users(:family_member)
+
+    assert_difference("Tag.count") do
+      post tags_url, params: { tag: { name: "Member Tag" } }
+    end
+
+    assert_redirected_to tags_url
+  end
+
   test "should create tag as json" do
     assert_difference("Tag.count") do
       post tags_url(format: :json), params: { tag: { name: "Quick Tag", color: "#e99537" } }
