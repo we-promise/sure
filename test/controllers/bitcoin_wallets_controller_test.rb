@@ -119,6 +119,64 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     assert_nil wallet.reload.account_provider
   end
 
+  test "a family member who is not an admin cannot manage wallets" do
+    member = users(:family_member)
+    member.update!(preferences: member.preferences.merge("preview_features_enabled" => true))
+    sign_in member
+    get new_account_bitcoin_wallet_path(@account)
+    assert_redirected_to accounts_path
+  end
+
+  test "adds a source and reads the wallet again" do
+    wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
+    manual_bitcoin_source(wallet)
+    assert_difference "wallet.bitcoin_wallet_sources.count", 1 do
+      assert_enqueued_with(job: SyncJob) do
+        post add_source_account_bitcoin_wallet_path(@account), params: { source: { kind: "address", receive_address: CHANGE } }
+      end
+    end
+    assert_redirected_to account_bitcoin_wallet_path(@account)
+    assert wallet.reload.status_discovering?
+  end
+
+  test "an invalid added source keeps the dialog open with its input" do
+    wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
+    manual_bitcoin_source(wallet)
+    assert_no_difference "BitcoinWalletSource.count" do
+      post add_source_account_bitcoin_wallet_path(@account), params: { source: { kind: "address", receive_address: "not-an-address" } }
+    end
+    assert_response :unprocessable_entity
+    assert_select "details[open] input[name='source[receive_address]'][value='not-an-address']"
+  end
+
+  test "removing one of several sources rediscovers the rest" do
+    wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
+    manual_bitcoin_source(wallet)
+    removed = manual_bitcoin_source(wallet, CHANGE)
+    delete remove_source_account_bitcoin_wallet_path(@account), params: { source_id: removed.id }
+    assert_redirected_to account_path(@account)
+    assert_equal I18n.t("bitcoin_wallets.source_removed"), flash[:notice]
+    assert_equal [ RECEIVE ], wallet.reload.bitcoin_wallet_sources.pluck(:receive_address)
+    assert wallet.status_discovering?
+  end
+
+  test "removing the last source disconnects the wallet" do
+    wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
+    source = manual_bitcoin_source(wallet)
+    wallet.connect!
+    delete remove_source_account_bitcoin_wallet_path(@account), params: { source_id: source.id }
+    assert_redirected_to account_path(@account)
+    assert_equal I18n.t("bitcoin_wallets.disconnected"), flash[:notice]
+    assert_nil @account.reload.bitcoin_wallet_account
+  end
+
+  test "sync queues a wallet read" do
+    wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
+    manual_bitcoin_source(wallet)
+    assert_enqueued_with(job: SyncJob) { post sync_account_bitcoin_wallet_path(@account) }
+    assert_redirected_to account_bitcoin_wallet_path(@account)
+  end
+
   test "a source from another wallet cannot be removed" do
     wallet = build_bitcoin_wallet
     manual_bitcoin_source(wallet)
