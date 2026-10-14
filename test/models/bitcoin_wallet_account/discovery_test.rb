@@ -66,6 +66,28 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
     end
   end
 
+  test "a scan does not restore a source removed during its reads" do
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    removed = BitcoinWalletSource.find(source.id)
+    @provider.define_singleton_method(:get_address) do |address|
+      removed.destroy! if reads.empty?
+      super(address)
+    end
+    BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+    assert_empty @wallet.bitcoin_wallet_addresses.reload
+  end
+
+  test "a scan does not overwrite a checkpoint reset during its reads" do
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    reset = { "0" => { "index" => 0, "gap" => 0 }, "1" => { "index" => 0, "gap" => 0 } }
+    @provider.define_singleton_method(:get_address) do |address|
+      BitcoinWalletSource.where(id: source.id).update_all(discovery: reset) if reads.empty?
+      super(address)
+    end
+    refute BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+    assert_equal reset, source.reload.discovery
+  end
+
   test "an address tracked by another account in this family is rejected" do
     other_account = accounts(:crypto).dup
     other_account.name = "Other wallet"

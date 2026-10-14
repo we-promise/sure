@@ -18,7 +18,7 @@ class BitcoinWalletAccount::Discovery
   def perform
     wallet.bitcoin_wallet_sources.each do |source|
       if source.kind == "address"
-        remember(source.receive_address)
+        publish(source, nil, [ [ source.receive_address, {} ] ])
       else
         scan(source)
       end
@@ -33,7 +33,9 @@ class BitcoinWalletAccount::Discovery
     # historical or mempool activity as usage even when an address is empty.
     # A completed scan must contain this source's independently supplied address.
     def scan(source)
-      state = source.discovery.deep_dup
+      original = source.discovery
+      state = original.deep_dup
+      found = []
       [ 0, 1 ].each do |branch|
         cursor = state.fetch(branch.to_s, { "index" => 0, "gap" => 0 })
         next if cursor["complete"]
@@ -44,7 +46,7 @@ class BitcoinWalletAccount::Discovery
           address = cached&.address || source.public_key.address(branch, index)
           summary = provider.get_address(address)
           used = %w[chain_stats mempool_stats].sum { |key| summary.fetch(key).fetch("tx_count") }.positive?
-          remember(address, source: source, branch: branch, index: index, used: used)
+          found << [ address, { source: source, branch: branch, index: index, used: used } ]
           cursor["gap"] = used ? 0 : cursor["gap"] + 1
           cursor["index"] += 1
           @remaining -= 1
@@ -52,11 +54,24 @@ class BitcoinWalletAccount::Discovery
         cursor["complete"] = cursor["gap"] >= source.gap_limit
         state[branch.to_s] = cursor
       end
-      source.update!(discovery: state)
+      return unless publish(source, original, found) { source.update!(discovery: state) }
       return unless source.discovery_complete?
       return if wallet.bitcoin_wallet_addresses.exists?(address: source.receive_address, bitcoin_wallet_source_id: source.id)
 
       raise AddressMismatch, "The receive address does not match this BIP84 account within the selected gap limit"
+    end
+
+    # Write a scan's addresses and checkpoint only while its source still exists
+    # unchanged, so a source removed or reset during provider reads stays so.
+    def publish(source, original, found)
+      wallet.with_lock do
+        current = BitcoinWalletSource.where(id: source.id).pick(:discovery)
+        return false if current.nil? || (original && current != original)
+
+        found.each { |address, attributes| remember(address, **attributes) }
+        yield if block_given?
+      end
+      true
     end
 
     # Cache an address once within the aggregate, retain any prior used marker,
