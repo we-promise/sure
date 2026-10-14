@@ -193,7 +193,8 @@ class Portfolio::DailyReturns
     def fragments
       @fragments ||= {
         "flow_class_sql" => flow_classifier.sql_case,
-        "flow_class_joins" => flow_classifier.sql_joins
+        "flow_class_joins" => flow_classifier.sql_joins,
+        "entry_custom_rate" => entry_custom_rate_sql
       }
     end
 
@@ -341,9 +342,10 @@ class Portfolio::DailyReturns
             -- Only a balance that is not zero needs converting: an account
             -- whose rows are all zero (an unfunded account with a zero opening
             -- anchor) contributes zero at any rate, so it cannot be short of
-            -- one. start_balance is checked too because it is what value_open
-            -- reads on the period's first day.
-            BOOL_OR((lb.end_balance <> 0 OR lb.start_balance <> 0)
+            -- one. start_balance is checked too, but only on a row dated this
+            -- day, because that is the only start_balance value_open reads; a
+            -- row carried forward opens at its end_balance (above).
+            BOOL_OR((lb.end_balance <> 0 OR (lb.date = d.date AND lb.start_balance <> 0))
                     AND sa.currency <> :target_currency
                     AND er.rate IS NULL) AS rate_missing
           FROM dates d
@@ -378,16 +380,18 @@ class Portfolio::DailyReturns
           SELECT
             entries.date AS date,
             COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
-                              THEN -entries.amount * fx.rate ELSE 0 END), 0) AS external_flow,
+                              THEN -entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS external_flow,
             COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'income'
-                              THEN -entries.amount * fx.rate ELSE 0 END), 0) AS income,
+                              THEN -entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS income,
             COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'fee'
-                              THEN  entries.amount * fx.rate ELSE 0 END), 0) AS fees,
+                              THEN  entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS fees,
             -- A missing rate applies to flows as it does to balances: a flow in a
             -- currency with no rate is flagged, never converted at parity. Only the
             -- classes that feed a figure count; an internal trade in an
-            -- unconvertible currency moves nothing we sum.
-            COALESCE(BOOL_OR(fx.rate IS NULL
+            -- unconvertible currency moves nothing we sum. A zero amount
+            -- converts to zero at any rate, so it cannot be short of one.
+            COALESCE(BOOL_OR((entry_fx.rate IS NULL OR fx.rate IS NULL)
+                             AND entries.amount <> 0
                              AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow', 'income', 'fee')), false) AS flow_rate_missing
           FROM entries
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
@@ -396,22 +400,37 @@ class Portfolio::DailyReturns
           -- denominator of a day that account is no longer part of.
           LEFT JOIN account_windows flow_windows ON flow_windows.account_id = entries.account_id
           #{fragment(:flow_class_joins)}
-          -- Converted at the PREVIOUS day's rate, because a start-of-day flow
-          -- joins the opening capital, which is itself valued at that rate.
-          -- Mixing rates here is what would leave a residual in `unexplained`.
-          -- NULL when the pair has no rate: the amount then drops out of every
-          -- sum and flow_rate_missing says so.
+          -- Two steps, the same two the balance takes. First into the
+          -- ACCOUNT's currency on the entry's own date, preferring a rate the
+          -- entry carries itself, exactly as Balance::SyncCache converts it
+          -- before the calculators apply it -- so the flow is the amount the
+          -- balance actually moved by.
           LEFT JOIN LATERAL (
-            SELECT #{rate_lookup('COALESCE(entries.currency, entry_accounts.currency)', 'entries.date - 1')} AS rate
+            SELECT CASE
+              WHEN COALESCE(entries.currency, entry_accounts.currency) = entry_accounts.currency THEN 1::numeric
+              WHEN #{fragment(:entry_custom_rate)} IS NOT NULL
+                THEN CASE WHEN #{fragment(:entry_custom_rate)} > 0 THEN #{fragment(:entry_custom_rate)} END
+              ELSE #{rate_lookup('entries.currency', 'entries.date', to: 'entry_accounts.currency')}
+            END AS rate
+          ) entry_fx ON TRUE
+          -- Then into the family's currency at the PREVIOUS day's rate,
+          -- because a start-of-day flow joins the opening capital, which is
+          -- itself valued at that rate. Mixing rates here is what would leave
+          -- a residual in `unexplained`. NULL at either step when the pair has
+          -- no rate: the amount then drops out of every sum and
+          -- flow_rate_missing says so.
+          LEFT JOIN LATERAL (
+            SELECT #{rate_lookup('entry_accounts.currency', 'entries.date - 1')} AS rate
           ) fx ON TRUE
           WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
             AND entries.date BETWEEN :start_date AND :end_date
             AND (flow_windows.active_until_date IS NULL OR entries.date <= flow_windows.active_until_date)
-            -- COALESCE because entries.excluded is nullable: a bare
-            -- `excluded = false` evaluates to NULL for such a row and drops it
-            -- from the aggregation, while Portfolio::FlowClassifier treats the
-            -- same row as a live flow. The two must agree.
-            AND COALESCE(entries.excluded, false) = false
+            -- Excluded entries count: excluding one hides it from budgets, but
+            -- Balance::SyncCache still applies it, so it moved the balance and
+            -- belongs in the denominator (the classifier is built with
+            -- include_excluded). A split parent is the exception: SyncCache
+            -- skips it and its children carry the amount.
+            AND NOT EXISTS (SELECT 1 FROM entries split_children WHERE split_children.parent_entry_id = entries.id)
           GROUP BY entries.date
         )
         SELECT
@@ -440,19 +459,21 @@ class Portfolio::DailyReturns
     # and without the second an account that predates the family's rate history
     # does. Returns NULL when the pair has no rate at all, which is what
     # #rate_missing? surfaces.
-    def rate_lookup(currency_expression, date_expression)
+    #
+    # `to` defaults to the family's currency; the flows pass an account's.
+    def rate_lookup(currency_expression, date_expression, to: ":target_currency")
       <<~SQL.squish
         CASE
-          WHEN #{currency_expression} = :target_currency THEN 1::numeric
+          WHEN #{currency_expression} = #{to} THEN 1::numeric
           ELSE COALESCE(
             (SELECT r.rate FROM exchange_rates r
               WHERE r.from_currency = #{currency_expression}
-                AND r.to_currency = :target_currency
+                AND r.to_currency = #{to}
                 AND r.date <= #{date_expression}
               ORDER BY r.date DESC LIMIT 1),
             (SELECT r.rate FROM exchange_rates r
               WHERE r.from_currency = #{currency_expression}
-                AND r.to_currency = :target_currency
+                AND r.to_currency = #{to}
                 AND r.date > #{date_expression}
               ORDER BY r.date ASC LIMIT 1)
           )
@@ -460,11 +481,40 @@ class Portfolio::DailyReturns
       SQL
     end
 
+    # The rate an entry carries itself (extra["exchange_rate"] on its Trade or
+    # Transaction), which Balance::SyncCache prefers to the table's. Stored as
+    # a number by Trade#exchange_rate= and Transaction#exchange_rate=, but a
+    # row written to `extra` directly can hold a decimal string, which
+    # Money#exchange_to accepts too; anything else is not cast, so it cannot
+    # fail the query. Spliced as a fragment because the POSIX class in the
+    # pattern would read as a bind to sanitize_sql_array. Same expression as
+    # Holding's average-cost rate.
+    def entry_custom_rate_sql
+      <<~SQL.squish
+        (CASE jsonb_typeof(COALESCE(trades.extra, transactions.extra)->'exchange_rate')
+          WHEN 'number' THEN (COALESCE(trades.extra, transactions.extra)->>'exchange_rate')::numeric
+          WHEN 'string' THEN CASE WHEN COALESCE(trades.extra, transactions.extra)->>'exchange_rate' ~ '^[[:space:]]*[+-]?([0-9]{1,20}([.][0-9]{0,20})?|[.][0-9]{1,20})[[:space:]]*$'
+                                  THEN (COALESCE(trades.extra, transactions.extra)->>'exchange_rate')::numeric END
+        END)
+      SQL
+    end
+
     # One classifier for both fragments, built on the accounts this instance
     # values. Its table aliases are fixed rather than passed in; nothing in
     # the queries above joins `trades` or `transactions` itself, so there is
     # nothing to collide with.
+    #
+    # include_excluded, because an excluded entry still moved the balance
+    # (see the flows' WHERE).
+    #
+    # A known limit: the classifier's scope is a static set of account ids and
+    # knows nothing of active_until_dates. A transfer between a live account
+    # and one past its cut-off still classifies as internal, while the
+    # cut-off account's leg is dropped from the flows, so the live account's
+    # leg leaves the denominator unchanged and its move reads as a return. No
+    # caller passes active_until_dates yet; the change that first does must
+    # make the classifier window-aware, with a test for that transfer.
     def flow_classifier
-      @flow_classifier ||= Portfolio::FlowClassifier.new(scope_account_ids: account_ids)
+      @flow_classifier ||= Portfolio::FlowClassifier.new(scope_account_ids: account_ids, include_excluded: true)
     end
 end
