@@ -217,9 +217,11 @@ class Account < ApplicationRecord
         # sends an opening balance date (defaulting to two years ago), so the
         # server cannot tell a deliberate one from the default: the loan's
         # start date wins. Loan validates start_date as on or before today, so
-        # the anchor never lands after the reconciliation below.
+        # the anchor never lands after the reconciliation below. Entry rejects
+        # a date on or before Entry.min_supported_date, so a loan started that
+        # long ago keeps the form's date; its schedule still uses start_date.
         loan_start_date = account.accountable.start_date if initial_balance && account.loan?
-        opening_balance_date = loan_start_date if loan_start_date
+        opening_balance_date = loan_start_date if loan_start_date && loan_start_date > Entry.min_supported_date
 
         manager = Account::OpeningBalanceManager.new(account)
         result = manager.set_opening_balance(
