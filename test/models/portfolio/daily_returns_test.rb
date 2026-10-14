@@ -1000,6 +1000,56 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
            "one journal valued at zero suppresses the day, whatever the others are worth"
   end
 
+  # Suppressing the journal day is only half of it. Holding.gapfill carries the
+  # unpriced journal's zero price forward, so the position sits in the balance
+  # at nothing until a price arrives, and on that first priced day it jumps
+  # from 0 to qty x price with no entry dated there. Read as market, the
+  # arrival was a 5% gain the portfolio never made. The journal is carried to
+  # that day and booked there as the flow it is.
+  test "an inbound journal on an unpriced day does not show the position as return on the first priced day" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    returns = daily_returns(end_date: day_three)
+    third = returns.rows.last
+
+    assert returns.rows.second.suppressed, "the journal day itself still could not be valued"
+    assert_equal BigDecimal("50"), third.external_flow, "the arrival is booked on the day it was first priced"
+    assert_equal BigDecimal("0"), third.market, "and taken out of the market move it was read as"
+    assert_equal BigDecimal("0"), third.unexplained
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
+  end
+
+  # The internal case. A position moved between two selected accounts on a day
+  # with no price leaves the source at its value and lands in the destination
+  # at zero, so the day read as a 2.5% loss; and on the destination's first
+  # priced day it came back as a gain. Neither is the portfolio's return.
+  test "a security moved between two selected accounts on an unpriced day is suppressed rather than read as a loss" do
+    other = create_portfolio_account(family: @family)
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 950, market_flow: -50
+    lay_balance account: @account, date: day_three, opening: 950, closing: 950
+    lay_balance account: other, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: other, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: other, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: -5, price: 10
+    security_journal account: other, date: @day_two, qty: 5, price: 0
+    other.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                           amount: 50, currency: other.currency)
+
+    returns = daily_returns(account_ids: [ @account.id, other.id ], end_date: day_three)
+
+    assert returns.rows.second.suppressed, "an internal move that could not be valued is not a loss"
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001,
+                    "nor is the destination's first priced day a gain"
+  end
+
   # `holdings` is unique on (account_id, security_id, date, CURRENCY), so one
   # security can carry several rows for one day and Balance::SyncCache sums them
   # all. A journal join without the currency matched every row and valued the

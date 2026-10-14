@@ -468,8 +468,12 @@ class Portfolio::DailyReturns
             -- and only Trade's presence validation fills it; without it the
             -- COALESCE above values the journal at nothing, which is the
             -- phantom gain this suppression exists to stop.
+            --
+            -- Every journal leg, internal ones included. A position moved
+            -- between two selected accounts on an unpriced day leaves the
+            -- source at its value and lands in the destination at zero, so
+            -- the day reads as a loss of the whole position.
             COALESCE(BOOL_OR(#{fragment(:journal_predicate)}
-                             AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
                              AND (trades.qty IS NULL
                                   OR journal_holdings.price IS NULL
                                   OR journal_holdings.price <= 0
@@ -544,6 +548,65 @@ class Portfolio::DailyReturns
             -- skips it and its children carry the amount.
             AND NOT EXISTS (SELECT 1 FROM entries split_children WHERE split_children.parent_entry_id = entries.id)
           GROUP BY entries.date
+        ),
+        -- An inbound journal that could not be valued on its own date, carried
+        -- to the first later day in the period on which the account's holding
+        -- of that security has a price, and booked THERE.
+        --
+        -- Suppressing the journal day alone is not enough. Holding.gapfill
+        -- carries the journal's zero price forward, so the position sits in
+        -- the balance at nothing until a price arrives; on that first priced
+        -- day it jumps from 0 to qty x price, and Balance::BaseCalculator books
+        -- the jump as net_market_flows. That is the position arriving, not a
+        -- return, so it joins that day's start-of-day capital and leaves
+        -- `market`, exactly as a priced journal does on its own day.
+        --
+        -- Internal legs too: the matching outbound leg's loss sat on the
+        -- suppressed journal day, so the destination's re-pricing is not a
+        -- gain either. An outbound leg needs no carry; its position left.
+        --
+        -- Valued from the same holdings row the calculator read that day, in
+        -- its currency, at the previous day's rate like every start-of-day
+        -- flow.
+        carried_journals_by_date AS (
+          SELECT
+            first_priced.date AS date,
+            COALESCE(SUM(trades.qty * first_priced.price * carry_fx.rate), 0) AS carried_flow,
+            BOOL_OR(carry_fx.rate IS NULL) AS carry_rate_missing
+          FROM entries
+          JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
+          JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
+          LEFT JOIN account_windows carry_windows ON carry_windows.account_id = entries.account_id
+          LEFT JOIN LATERAL (
+            SELECT h.price
+            FROM holdings h
+            WHERE h.account_id = entries.account_id
+              AND h.security_id = trades.security_id
+              AND h.date = entries.date
+            ORDER BY (h.currency = COALESCE(entries.currency, entry_accounts.currency)) DESC, h.currency
+            LIMIT 1
+          ) journal_day ON TRUE
+          JOIN LATERAL (
+            SELECT h.date, h.price, h.currency
+            FROM holdings h
+            WHERE h.account_id = entries.account_id
+              AND h.security_id = trades.security_id
+              AND h.date > entries.date
+              AND h.date <= DATE :end_date
+              AND h.price > 0
+            ORDER BY h.date, (h.currency = COALESCE(entries.currency, entry_accounts.currency)) DESC, h.currency
+            LIMIT 1
+          ) first_priced ON TRUE
+          LEFT JOIN LATERAL (
+            SELECT #{rate_lookup('first_priced.currency', 'first_priced.date - 1')} AS rate
+          ) carry_fx ON TRUE
+          WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
+            AND entries.date BETWEEN :start_date AND :end_date
+            AND #{fragment(:journal_predicate)}
+            AND trades.qty > 0
+            AND (journal_day.price IS NULL OR journal_day.price <= 0)
+            AND (carry_windows.active_until_date IS NULL OR first_priced.date <= carry_windows.active_until_date)
+          GROUP BY first_priced.date
         )
         SELECT
           b.date,
@@ -552,18 +615,19 @@ class Portfolio::DailyReturns
           -- The journal is now an external flow, so it must stop being a
           -- market move. Same value, same row, taken out of the driver that
           -- double-counted it.
-          b.market - COALESCE(f.journal_flow, 0) AS market,
+          b.market - COALESCE(f.journal_flow, 0) - COALESCE(cj.carried_flow, 0) AS market,
           b.revaluations,
           b.fx_effect,
-          (b.rate_missing OR COALESCE(f.flow_rate_missing, false)) AS rate_missing,
+          (b.rate_missing OR COALESCE(f.flow_rate_missing, false) OR COALESCE(cj.carry_rate_missing, false)) AS rate_missing,
           COALESCE(arr.arrived_value, 0) AS arrived_value,
           COALESCE(dep.departed_value, 0) AS departed_value,
           COALESCE(f.journal_unpriced, false) AS journal_unpriced,
-          COALESCE(f.external_flow, 0) AS external_flow,
+          COALESCE(f.external_flow, 0) + COALESCE(cj.carried_flow, 0) AS external_flow,
           COALESCE(f.income, 0) AS income,
           COALESCE(f.fees, 0) AS fees
         FROM balances_by_date b
         LEFT JOIN flows_by_date f ON f.date = b.date
+        LEFT JOIN carried_journals_by_date cj ON cj.date = b.date
         LEFT JOIN arrivals_by_date arr ON arr.date = b.date
         LEFT JOIN departures_by_date dep ON dep.date = b.date
         ORDER BY b.date
