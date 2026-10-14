@@ -19,11 +19,16 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "gets new" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
     get new_import_url
 
     assert_response :success
 
     assert_select "turbo-frame#modal"
+    assert_select "form[data-turbo-frame=_top] input[type=file][onchange='this.form.requestSubmit()']", count: 2
   end
 
   test "cancel marks a lost import as failed" do
@@ -86,6 +91,26 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to import_upload_url(Import.all.ordered.first)
+  end
+
+  test "create with an empty request body redirects back with an alert" do
+    assert_no_difference "Import.count" do
+      post imports_url
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.missing_upload"), flash[:alert]
+  end
+
+  test "create with DocumentImport or SureImport type but no file redirects back with an alert" do
+    %w[DocumentImport SureImport].each do |type|
+      assert_no_difference "Import.count" do
+        post imports_url, params: { import: { type: type } }
+      end
+
+      assert_redirected_to new_import_url
+      assert_equal I18n.t("imports.create.missing_upload"), flash[:alert]
+    end
   end
 
   test "uploads supported non-pdf document for vector store without creating import" do
@@ -401,6 +426,78 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to import_path(import)
   end
 
+  test "member cannot publish import targeting a read only shared account" do
+    import = imports(:transaction)
+    import.update!(account: accounts(:credit_card))
+    TransactionImport.any_instance.expects(:publish_later).never
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member cannot publish import with account mapping to an unshared account" do
+    import = imports(:transaction)
+    import.mappings.create!(type: "Import::AccountMapping", key: "Brokerage", mappable: accounts(:investment))
+    TransactionImport.any_instance.expects(:publish_later).never
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member can publish import targeting a full control shared account" do
+    import = imports(:transaction)
+    import.update!(account: accounts(:depository))
+    import.mappings.create!(type: "Import::AccountMapping", key: "Checking", mappable: accounts(:depository))
+    TransactionImport.any_instance.expects(:publish_later).once
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.started"), flash[:notice]
+  end
+
+  test "member cannot revert import whose entries are in a read only shared account" do
+    import = imports(:transaction)
+    import.update!(status: :complete)
+    entries(:transaction).update!(import: import, account: accounts(:credit_card))
+    TransactionImport.any_instance.expects(:revert_later).never
+
+    sign_in users(:family_member)
+    put revert_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member cannot publish QIF import whose embedded account matches a read only shared account" do
+    import = qif_import_with_embedded_account(accounts(:credit_card).name)
+    QifImport.any_instance.expects(:publish_later).never
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member can publish QIF import whose embedded account is new" do
+    import = qif_import_with_embedded_account("Brand New QIF Account")
+    QifImport.any_instance.expects(:publish_later).once
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.started"), flash[:notice]
+  end
+
   test "destroys import" do
     import = imports(:transaction)
 
@@ -591,4 +688,23 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select 'select[name="import[account_id]"] option', text: "IOU (personal debt to friend)", count: 0
     assert_select 'select[name="import[account_id]"] option', text: "Plaid Depository Account", count: 0
   end
+
+  private
+    def qif_import_with_embedded_account(name)
+      import = QifImport.create!(family: families(:dylan_family))
+      import.update!(raw_file_str: <<~QIF)
+        !Account
+        N#{name}
+        TBank
+        ^
+        !Type:Bank
+        D1/ 1'24
+        U-25.00
+        T-25.00
+        PCoffee Shop
+        ^
+      QIF
+      import.generate_rows_from_csv
+      import.reload
+    end
 end

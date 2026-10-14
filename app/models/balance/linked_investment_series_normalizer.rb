@@ -89,8 +89,10 @@ class Balance::LinkedInvestmentSeriesNormalizer
     @view = view
   end
 
-  # Trims points before supported provider history and prepends an anchor point at inception
-  # if coarse sampling missed the opening date within the requested period.
+  # Trims points before supported provider history and aligns the series
+  # inception with the balance before the first provider activity, so a
+  # deposit on the opening day reads as a change in value rather than as
+  # the starting value.
   def normalize
     return series unless account.linked? && account.balance_type == :investment
 
@@ -100,38 +102,30 @@ class Balance::LinkedInvestmentSeriesNormalizer
     active_points = series.values.select { |value| value.date >= first_supported_history_date }
     return series if active_points.blank?
 
-    # If periodic sampling missed the exact opening date (e.g. coarse 1-month or 1-week intervals),
-    # prepend an anchor point on the exact opening date with the initial balance (e.g. $0)
-    # only when the inception date falls within the requested series date range.
+    opening_money = Money.new(opening_amount(first_supported_history_date), active_points.first.value.currency)
+
     if first_supported_history_date >= series.start_date && active_points.first.date > first_supported_history_date
-      currency = active_points.first.value.currency
-      initial_amount = case view.to_sym
-      when :gains, :holdings_balance
-        0
-      when :cash_balance, :balance
-        if account.has_opening_anchor? && first_supported_history_date == account.opening_anchor_date
-          account.opening_anchor_balance || 0
-        else
-          0
-        end
-      else
-        0
-      end
-      opening_money = Money.new(initial_amount, currency)
-      anchor_value = Series::Value.new(
-        date: first_supported_history_date,
-        date_formatted: I18n.l(first_supported_history_date, format: :long),
-        value: opening_money,
-        trend: Trend.new(
-          current: opening_money,
-          previous: nil,
-          favorable_direction: series.favorable_direction
-        )
-      )
-      active_points = [ anchor_value, *active_points ]
+      # Periodic sampling missed the exact opening date (e.g. coarse 1-month or
+      # 1-week intervals): prepend an anchor point on the exact opening date with
+      # the initial balance (e.g. $0), only when the inception date falls within
+      # the requested series date range.
+      active_points = [ opening_point(date: first_supported_history_date, date_formatted: nil, value: opening_money), *active_points ]
+    elsif active_points.first.date == first_supported_history_date &&
+          first_provider_activity_date == first_supported_history_date
+      # Sampling landed exactly on the opening date (e.g. a daily "All" chart)
+      # and that date is the first provider activity date: the first point
+      # carries the day's closing balance, which already includes the first
+      # activity. Reset it to the balance before that activity (#3959).
+      # When the inception date comes from provider holdings rather than
+      # activity, the first point is genuine supported history and is kept.
+      first_point = active_points.first
+      active_points = [
+        opening_point(date: first_point.date, date_formatted: first_point.date_formatted, value: opening_money),
+        *active_points.drop(1)
+      ]
     end
 
-    return series if active_points.first&.date == series.values.first&.date && active_points.length == series.values.length
+    return series if unchanged?(active_points)
 
     Series.new(
       start_date: active_points.first.date,
@@ -147,6 +141,45 @@ class Balance::LinkedInvestmentSeriesNormalizer
   end
 
   private
+
+    # The balance just before the first provider activity: 0 for views that
+    # measure change (gains, holdings), the opening anchor balance for balance
+    # views when the anchor marks the inception date, 0 otherwise.
+    def opening_amount(first_supported_history_date)
+      case view.to_sym
+      when :gains, :holdings_balance
+        0
+      when :cash_balance, :balance
+        if account.has_opening_anchor? && first_supported_history_date == account.opening_anchor_date
+          account.opening_anchor_balance || 0
+        else
+          0
+        end
+      else
+        0
+      end
+    end
+
+    def opening_point(date:, date_formatted:, value:)
+      Series::Value.new(
+        date: date,
+        date_formatted: date_formatted || I18n.l(date, format: :long),
+        value: value,
+        trend: Trend.new(
+          current: value,
+          previous: nil,
+          favorable_direction: series.favorable_direction
+        )
+      )
+    end
+
+    # The series is untouched when trimming and inception alignment changed
+    # neither the dates nor the values of the points.
+    def unchanged?(active_points)
+      active_points.first&.date == series.values.first&.date &&
+        active_points.length == series.values.length &&
+        active_points.first&.value == series.values.first&.value
+    end
 
     def first_provider_activity_date
       @first_provider_activity_date ||= account.entries
