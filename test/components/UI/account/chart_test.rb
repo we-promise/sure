@@ -334,6 +334,33 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     refute_selector "[data-net-contributions-incomplete]"
   end
 
+  # Zero net contributions under a non-zero value make the difference's
+  # percentage infinite. ActiveSupport writes a non-finite Float as null,
+  # so the attribute stays valid JSON and the controller leaves the
+  # percentage off. Strict JSON.parse refuses a bare Infinity, as the
+  # browser's does.
+  test "zero net contributions serialize a null percent the browser can parse" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 400)
+    create_balance(account: account, date: day_one, balance: 0)
+    create_balance(account: account, date: day_one + 1, balance: 5_400, start_cash_balance: 0, cash_adjustments: 5_400)
+    create_balance(account: account, date: day_one + 2, balance: 400, start_cash_balance: 5_400, cash_adjustments: -5_000)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+    create_labelled_transaction account: account, label: nil, amount: 5_000, date: day_one + 2
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 2), view: "balance"))
+
+    raw = page.find("#lineChart")["data-time-series-chart-comparison-value"]
+    comparison = JSON.parse(raw)
+    last = comparison["values"].last
+
+    assert_equal (day_one + 2).iso8601, last["date"]
+    assert_equal "0.0", last["value"]["amount"], "net contributions must be zero, or this asserts nothing"
+    assert_equal "400.0", last["difference"]["value"]["amount"], "the value must be non-zero, so the percentage is not the 0.0 of 0 over 0"
+    assert_nil last["difference"]["percent"]
+    assert_equal "＋∞", last["difference"]["percent_formatted"]
+  end
+
   test "net contributions are not drawn on the holdings, cash or gains views" do
     %w[holdings_balance cash_balance gains].each do |view|
       component = UI::Account::Chart.new(account: @account, view: view)
