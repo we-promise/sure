@@ -1028,6 +1028,83 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get budgetsTitle => 'Budgets';
+
+  @override
+  String get budgetsSubtitle => 'Spending and category progress';
+
+  @override
+  String get budgetsReadOnly =>
+      'View your budgets here. Create and edit budgets in the web app.';
+
+  @override
+  String get budgetsEmpty =>
+      'No budgets yet. Create a budget in the web app to see it here.';
+
+  @override
+  String get budgetsNotInitialized =>
+      'This budget is not set up yet. Finish setting it up in the web app.';
+
+  @override
+  String get budgetsCategories => 'Categories';
+
+  @override
+  String get budgetsCategoryHint =>
+      'Tap a category to load its spending and remaining budget.';
+
+  @override
+  String get budgetsNoCategories => 'No categories in this budget.';
+
+  @override
+  String get budgetsPlanned => 'Budgeted';
+
+  @override
+  String get budgetsSpent => 'Spent';
+
+  @override
+  String get budgetsRemaining => 'Remaining';
+
+  @override
+  String get budgetsRollover => 'Carried over';
+
+  @override
+  String get budgetsOverBudget => 'Over budget';
+
+  @override
+  String get budgetsProgress => 'Budget used';
+
+  @override
+  String get budgetsSharedLimit =>
+      'Shares its parent\'s budget. Remaining is the shared amount available, not an individual limit.';
+
+  @override
+  String get budgetsPrevious => 'Previous';
+
+  @override
+  String get budgetsNext => 'Next';
+
+  @override
+  String budgetsPage(int page, int total) {
+    return 'Page $page of $total';
+  }
+
+  @override
+  String get budgetsSessionExpired =>
+      'Your session has expired. Sign in again to view budgets.';
+
+  @override
+  String get budgetsForbidden =>
+      'You do not have permission to view these budgets.';
+
+  @override
+  String get budgetsNotFound =>
+      'This budget is unavailable, or your server does not support budget viewing yet.';
+
+  @override
+  String get budgetsUnavailable =>
+      'Unable to load budgets. Check your connection and try again.';
+
+  @override
   String get chatConversationStartFailed =>
       'Failed to start conversation. Please try again.';
 }
