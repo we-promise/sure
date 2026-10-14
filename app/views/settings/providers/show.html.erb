@@ -94,4 +94,10 @@
       <p class="text-sm text-secondary px-1 py-2"><%= t("settings.providers.groups.empty_available") %></p>
     <% end %>
   <% end %>
+
+  <%= settings_section title: "GoCardless", collapsible: true, open: false do %>
+    <turbo-frame id="gocardless-providers-panel">
+      <%= render "settings/providers/gocardless_panel" %>
+    </turbo-frame>
+  <% end %>
 </div>

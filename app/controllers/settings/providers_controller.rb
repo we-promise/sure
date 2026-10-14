@@ -305,7 +305,8 @@ class Settings::ProvidersController < ApplicationController
       # Load all provider configurations (exclude family-scoped panels, which have their own UI below)
       Provider::Factory.ensure_adapters_loaded
       @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
-        FAMILY_PANEL_KEYS.any? { |key| config.provider_key.to_s.casecmp(key).zero? }
+        FAMILY_PANEL_KEYS.any? { |key| config.provider_key.to_s.casecmp(key).zero? } || \
+        config.provider_key.to_s.casecmp("gocardless").zero?
       end
 
       @akahu_items = Current.family.akahu_items.active.ordered
@@ -343,6 +344,7 @@ class Settings::ProvidersController < ApplicationController
           accounts = item.accounts.select { |account| accessible_account_ids.include?(account.id) && !account.pending_deletion? }
           { item: item, accounts: accounts } if accounts.any?
         end
+      @gocardless_items = Current.family.gocardless_items.ordered.select(:id)
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
