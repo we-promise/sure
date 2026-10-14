@@ -94,26 +94,44 @@ class AddUniqueTransactionIndexesToTransfersCleanupTest < ActiveSupport::TestCas
     assert_nil fee.reload.transfer_id
   end
 
-  test "a confirmed duplicate's freed leg is reset to standard unless another transfer still uses it" do
-    outflow = create_transaction(account: accounts(:depository), amount: 100).entryable
+  test "a confirmed duplicate's legs are reset to standard unless a kept confirmed transfer owns them" do
+    outflow = create_transaction(account: accounts(:depository), amount: 100, kind: "funds_movement").entryable
     kept_inflow = create_transaction(account: accounts(:investment), amount: -100).entryable
     freed_inflow = create_transaction(account: accounts(:credit_card), amount: -100, kind: "funds_movement").entryable
-    still_linked = create_transaction(account: accounts(:loan), amount: -100, kind: "funds_movement").entryable
+    pending_owned_entry = create_transaction(account: accounts(:loan), amount: -100, kind: "funds_movement", idempotency_key: SecureRandom.uuid)
+    pending_owned = pending_owned_entry.entryable
 
     kept = insert_transfer(kept_inflow, outflow, "confirmed", 3.days.ago)
     loser = insert_transfer(freed_inflow, outflow, "confirmed", 2.days.ago)
-    second_loser = insert_transfer(still_linked, outflow, "confirmed", 1.day.ago)
-    # still_linked is also the outflow of a transfer outside the conflict.
-    outside = insert_transfer(create_transaction(account: accounts(:investment), amount: -100).entryable, still_linked, "pending", 4.days.ago)
+    second_loser = insert_transfer(pending_owned, outflow, "confirmed", 1.day.ago)
+    # The second loser's inflow is also in a pending transfer, which survives
+    # but never set that transaction's kind.
+    pending_survivor = insert_transfer(pending_owned, create_transaction(account: accounts(:depository), amount: 100).entryable, "pending", 4.days.ago)
 
     @migration.send(:resolve_duplicate_transfers)
 
     assert Transfer.exists?(kept)
-    assert Transfer.exists?(outside)
+    assert Transfer.exists?(pending_survivor)
     assert_not Transfer.exists?(loser)
     assert_not Transfer.exists?(second_loser)
     assert_equal "standard", freed_inflow.reload.kind
-    assert_equal "funds_movement", still_linked.reload.kind
+    assert_equal "standard", pending_owned.reload.kind
+    assert_not_nil pending_owned_entry.reload.idempotency_key, "still in a transfer, so its key stays"
+    # Shared with the confirmed losers, so re-derived for the kept transfer (into an investment account).
+    assert_equal "investment_contribution", outflow.reload.kind
+  end
+
+  test "a transaction in two transfers in different roles keeps only one of them" do
+    shared = create_transaction(account: accounts(:investment), amount: -100, kind: "funds_movement").entryable
+    kept = insert_transfer(shared, create_transaction(account: accounts(:depository), amount: 100).entryable, "confirmed", 2.days.ago)
+    loser_inflow = create_transaction(account: accounts(:credit_card), amount: -100).entryable
+    loser = insert_transfer(loser_inflow, shared, "pending", 1.day.ago)
+
+    @migration.send(:resolve_duplicate_transfers)
+
+    assert Transfer.exists?(kept)
+    assert_not Transfer.exists?(loser)
+    assert_equal "funds_movement", shared.reload.kind
   end
 
   test "a kept confirmed transfer gets its kinds back from a deleted confirmed duplicate" do

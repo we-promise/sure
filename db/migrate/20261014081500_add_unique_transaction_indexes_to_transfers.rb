@@ -13,14 +13,15 @@ class AddUniqueTransactionIndexesToTransfers < ActiveRecord::Migration[8.1]
   # built. Per conflicting group the kept transfer is chosen deterministically:
   # confirmed before pending, then one with fee transactions, then the oldest
   # (created_at, then id). Every other transfer that shares a transaction with
-  # an already kept one is deleted. For each deleted transfer, as
-  # Transfer#destroy! would do:
+  # an already kept one, in either role, is deleted. For each deleted transfer,
+  # as Transfer#destroy! would do:
   #   - its fee transactions (normally none on auto-matched transfers) are kept
   #     as standalone transactions: transactions.transfer_id is set to NULL;
   #   - each of its inflow/outflow transactions that is no longer part of any
-  #     remaining transfer (on either side) gets its entry's idempotency_key
-  #     cleared and, if the deleted transfer was confirmed, a transfer kind
-  #     reset to "standard" (a pending transfer never set the kind);
+  #     remaining transfer gets its entry's idempotency_key cleared;
+  #   - if it was confirmed, a transfer kind on its transactions is reset to
+  #     "standard" unless a remaining confirmed transfer owns them (a pending
+  #     transfer never sets the kind);
   #   - if it was confirmed and shares a transaction with a kept confirmed
   #     transfer, the kept transfer's legs get the kinds confirm! gives them,
   #     since the deleted transfer's confirm! may have overwritten them.
@@ -68,97 +69,105 @@ class AddUniqueTransactionIndexesToTransfers < ActiveRecord::Migration[8.1]
     end
 
     def resolve_duplicate_transfers
-      rows = select_rows(<<~SQL.squish)
-        SELECT t.id, t.inflow_transaction_id, t.outflow_transaction_id, t.status
-        FROM transfers t
-        WHERE t.inflow_transaction_id IN (
-            SELECT inflow_transaction_id FROM transfers GROUP BY inflow_transaction_id HAVING COUNT(*) > 1
-          )
-          OR t.outflow_transaction_id IN (
-            SELECT outflow_transaction_id FROM transfers GROUP BY outflow_transaction_id HAVING COUNT(*) > 1
-          )
-        ORDER BY
-          (t.status = 'confirmed') DESC,
-          EXISTS (SELECT 1 FROM transactions f WHERE f.transfer_id = t.id) DESC,
-          t.created_at ASC,
-          t.id ASC
-      SQL
-      return if rows.empty?
+      # Classify and clean up in one transaction, with the conflicting rows
+      # locked, so a transfer confirmed or rejected while the migration runs
+      # is not judged by a stale status.
+      transaction do
+        rows = select_rows(<<~SQL.squish)
+          SELECT t.id, t.inflow_transaction_id, t.outflow_transaction_id, t.status
+          FROM transfers t
+          WHERE t.inflow_transaction_id IN (
+              SELECT inflow_transaction_id FROM transfers GROUP BY inflow_transaction_id HAVING COUNT(*) > 1
+            )
+            OR t.outflow_transaction_id IN (
+              SELECT outflow_transaction_id FROM transfers GROUP BY outflow_transaction_id HAVING COUNT(*) > 1
+            )
+            OR t.inflow_transaction_id IN (SELECT outflow_transaction_id FROM transfers)
+            OR t.outflow_transaction_id IN (SELECT inflow_transaction_id FROM transfers)
+          ORDER BY
+            (t.status = 'confirmed') DESC,
+            EXISTS (SELECT 1 FROM transactions f WHERE f.transfer_id = t.id) DESC,
+            t.created_at ASC,
+            t.id ASC
+          FOR UPDATE OF t
+        SQL
+        next if rows.empty?
 
-      kept_by_transaction = {}
-      losers = []
-      rows.each do |id, inflow_id, outflow_id, status|
-        if kept_by_transaction.key?(inflow_id) || kept_by_transaction.key?(outflow_id)
-          losers << { id: id, transaction_ids: [ inflow_id, outflow_id ], confirmed: status == "confirmed" }
-        else
-          kept = { id: id, confirmed: status == "confirmed" }
-          kept_by_transaction[inflow_id] = kept
-          kept_by_transaction[outflow_id] = kept
+        kept_by_transaction = {}
+        losers = []
+        rows.each do |id, inflow_id, outflow_id, status|
+          if kept_by_transaction.key?(inflow_id) || kept_by_transaction.key?(outflow_id)
+            losers << { id: id, transaction_ids: [ inflow_id, outflow_id ], confirmed: status == "confirmed" }
+          else
+            kept = { id: id, confirmed: status == "confirmed" }
+            kept_by_transaction[inflow_id] = kept
+            kept_by_transaction[outflow_id] = kept
+          end
         end
-      end
 
+        remove_duplicate_transfers(losers, kept_by_transaction)
+      end
+    end
+
+    def remove_duplicate_transfers(losers, kept_by_transaction)
       loser_ids = losers.map { |loser| loser[:id] }
       touched_ids = losers.flat_map { |loser| loser[:transaction_ids] }.uniq
       freed_ids = touched_ids.reject { |id| kept_by_transaction.key?(id) }
+      confirmed_loser_legs = losers.select { |loser| loser[:confirmed] }.flat_map { |loser| loser[:transaction_ids] }.uniq
       # Only a confirmed transfer set transfer kinds (Transfer#confirm!); a
       # pending one left them as they were, so they predate the match and stay.
-      kind_reset_ids = losers.select { |loser| loser[:confirmed] }.flat_map { |loser| loser[:transaction_ids] }.uniq & freed_ids
+      # A confirmed loser's leg is reset unless a kept confirmed transfer owns
+      # it; a kept pending one never set its kind either.
+      kind_reset_ids = confirmed_loser_legs.reject { |id| kept_by_transaction[id]&.dig(:confirmed) }
       # A confirmed loser's confirm! may have run after the kept transfer's and
       # rewritten the shared transaction's kind for its own destination.
-      rederive_ids = losers.select { |loser| loser[:confirmed] }.flat_map do |loser|
-        loser[:transaction_ids].filter_map { |id| kept_by_transaction[id] }.select { |kept| kept[:confirmed] }.map { |kept| kept[:id] }
-      end.uniq
+      rederive_ids = confirmed_loser_legs.filter_map { |id| kept_by_transaction[id] }.select { |kept| kept[:confirmed] }.map { |kept| kept[:id] }.uniq
 
       say "Removing #{loser_ids.size} duplicate transfer(s); unlinking #{freed_ids.size} transaction(s)"
 
-      # A freed id can still be the other-side endpoint of a surviving transfer
-      # outside the conflicting groups (inflow here, outflow there); only reset
-      # transactions no remaining transfer references.
-      unreferenced = <<~SQL.squish
-        NOT EXISTS (
-          SELECT 1 FROM transfers r
-          WHERE r.inflow_transaction_id = transactions.id OR r.outflow_transaction_id = transactions.id
-        )
+      execute(<<~SQL.squish)
+        UPDATE transactions SET transfer_id = NULL, updated_at = NOW()
+        WHERE transfer_id IN (#{quoted_list(loser_ids)})
       SQL
 
-      transaction do
+      execute("DELETE FROM transfers WHERE id IN (#{quoted_list(loser_ids)})")
+
+      if kind_reset_ids.any?
         execute(<<~SQL.squish)
-          UPDATE transactions SET transfer_id = NULL, updated_at = NOW()
-          WHERE transfer_id IN (#{quoted_list(loser_ids)})
-        SQL
-
-        execute("DELETE FROM transfers WHERE id IN (#{quoted_list(loser_ids)})")
-
-        if kind_reset_ids.any?
-          execute(<<~SQL.squish)
-            UPDATE transactions SET kind = 'standard', updated_at = NOW()
-            WHERE id IN (#{quoted_list(kind_reset_ids)})
-              AND kind IN (#{quoted_list(TRANSFER_KINDS)})
-              AND #{unreferenced}
-          SQL
-        end
-
-        if freed_ids.any?
-          execute(<<~SQL.squish)
-            UPDATE entries SET idempotency_key = NULL
-            FROM transactions
-            WHERE entries.entryable_type = 'Transaction'
-              AND entries.entryable_id = transactions.id
-              AND transactions.id IN (#{quoted_list(freed_ids)})
-              AND entries.idempotency_key IS NOT NULL
-              AND #{unreferenced}
-          SQL
-        end
-
-        rederive_kept_transfer_kinds(rederive_ids) if rederive_ids.any?
-
-        # Family#entries_cache_version reads entries.updated_at, so cached
-        # reports pick up the changed kinds and transfers.
-        execute(<<~SQL.squish)
-          UPDATE entries SET updated_at = NOW()
-          WHERE entryable_type = 'Transaction' AND entryable_id IN (#{quoted_list(touched_ids)})
+          UPDATE transactions SET kind = 'standard', updated_at = NOW()
+          WHERE id IN (#{quoted_list(kind_reset_ids)})
+            AND kind IN (#{quoted_list(TRANSFER_KINDS)})
+            AND NOT EXISTS (
+              SELECT 1 FROM transfers r
+              WHERE r.status = 'confirmed'
+                AND (r.inflow_transaction_id = transactions.id OR r.outflow_transaction_id = transactions.id)
+            )
         SQL
       end
+
+      if freed_ids.any?
+        execute(<<~SQL.squish)
+          UPDATE entries SET idempotency_key = NULL
+          FROM transactions
+          WHERE entries.entryable_type = 'Transaction'
+            AND entries.entryable_id = transactions.id
+            AND transactions.id IN (#{quoted_list(freed_ids)})
+            AND entries.idempotency_key IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM transfers r
+              WHERE r.inflow_transaction_id = transactions.id OR r.outflow_transaction_id = transactions.id
+            )
+        SQL
+      end
+
+      rederive_kept_transfer_kinds(rederive_ids) if rederive_ids.any?
+
+      # Family#entries_cache_version reads entries.updated_at, so cached
+      # reports pick up the changed kinds and transfers.
+      execute(<<~SQL.squish)
+        UPDATE entries SET updated_at = NOW()
+        WHERE entryable_type = 'Transaction' AND entryable_id IN (#{quoted_list(touched_ids)})
+      SQL
     end
 
     # Sets both legs of the kept transfers to the kinds Transfer#confirm!

@@ -107,6 +107,21 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     refute_equal "funds_movement", inflow_entry.reload.entryable.kind
   end
 
+  test "a transaction already in a transfer as inflow is not matched again as an outflow" do
+    flipped = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: -500)
+    other_outflow = create_transaction(date: 1.day.ago.to_date, account: @credit_card, amount: 500)
+    Transfer.create!(inflow_transaction: flipped.entryable, outflow_transaction: other_outflow.entryable)
+    # A provider later corrects the sign: the linked inflow now looks like an outflow.
+    flipped.update_columns(amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+    assert_nil Transfer.find_by(outflow_transaction_id: flipped.entryable_id)
+    assert_nil Transfer.find_by(inflow_transaction_id: inflow_entry.entryable_id)
+  end
+
   test "a :taken on one column from a different pairing is skipped, not marked" do
     outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
