@@ -477,10 +477,12 @@ class Loan < ApplicationRecord
     Money.new(account.first_valuation_amount, account.currency)
   end
 
-  # Everyone who can see the loan's account, or will once it is saved: the rule
-  # behind the collateral link.
+  # Every active member who can see the loan's account, or will once it is
+  # saved: the rule behind the collateral link. A deactivated member cannot sign
+  # in or be given a share, so they are not a viewer even while their old shares
+  # wait for the purge.
   def self.viewers_of(loan_account)
-    users = loan_account.family.users
+    users = loan_account.family.users.where(active: true)
     # A new account in a family that shares by default is visible to everyone in
     # it the moment it exists, but its shares are written after validation.
     return users.to_a if loan_account.new_record? && loan_account.family.share_all_by_default?

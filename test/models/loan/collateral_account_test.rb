@@ -189,6 +189,34 @@ class Loan::CollateralAccountTest < ActiveSupport::TestCase
     assert @loan.valid?
   end
 
+  # A deactivated member keeps their shares until the purge runs, but can neither
+  # sign in nor be given access to the asset, so they cannot block the link.
+  test "an inactive family member does not block a collateral link" do
+    member = users(:family_member)
+    @loan.account.share_with!(member, permission: "read_only")
+    assert_not @property.shared_with?(member), "precondition"
+    @loan.collateral_account = @property
+    assert_not @loan.valid?, "precondition: an active member blocks the link"
+
+    member.update_columns(active: false)
+    @loan.collateral_account = @property
+
+    assert @loan.valid?, @loan.errors.full_messages.to_sentence
+  end
+
+  test "the candidate list does not wait on an inactive family member" do
+    member = users(:family_member)
+    @loan.account.share_with!(member, permission: "read_only")
+    @property.account_shares.where(user: member).destroy_all
+    viewer = @loan.account.owner
+
+    assert_not_includes Loan.collateral_candidates_for(@loan, viewer: viewer).map(&:id), @property.id
+
+    member.update_columns(active: false)
+
+    assert_includes Loan.collateral_candidates_for(@loan, viewer: viewer).map(&:id), @property.id
+  end
+
   test "clearing the link is always valid" do
     @loan.update!(collateral_account: @property)
 
