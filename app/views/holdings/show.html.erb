@@ -37,7 +37,20 @@
             ) %>
           </div>
         <% end %>
-        <% if managed_position %>
+        <% if managed_position && @holding.account.bitcoin_wallet_account %>
+          <div class="px-3 pt-2">
+            <div class="flex items-center justify-between gap-3 rounded-lg bg-surface-inset px-3 py-2 text-sm">
+              <span class="flex items-center gap-2 text-secondary">
+                <%= icon "bitcoin", size: "sm" %>
+                <%= t("bitcoin_wallets.holding_managed") %>
+              </span>
+              <% if preview_features_enabled? && Current.user&.admin? %>
+                <%= link_to t("bitcoin_wallets.manage_short"), account_bitcoin_wallet_path(@holding.account),
+                            class: "text-primary underline", data: { turbo_frame: :modal } %>
+              <% end %>
+            </div>
+          </div>
+        <% elsif managed_position %>
           <p class="px-3 pt-2 text-sm text-secondary"><%= t(".managed_position_note") %></p>
         <% end %>
         <dl class="space-y-3 px-3 py-2">

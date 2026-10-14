@@ -12,8 +12,8 @@ class BitcoinWalletsController < ApplicationController
   def new
     return redirect_to account_bitcoin_wallet_path(@account) if @account.bitcoin_wallet_account
 
-    @source = BitcoinWalletSource.new
     @securities = bitcoin_securities
+    @form_values = {}
   end
 
   # Create draft tracking and its prerequisites atomically, then queue discovery
@@ -92,28 +92,31 @@ class BitcoinWalletsController < ApplicationController
 
   # Stop wallet tracking while leaving the Crypto account available manually.
   def destroy
-    connected = @wallet.account_provider.present?
+    notice = t(@wallet.account_provider ? "bitcoin_wallets.disconnected" : "bitcoin_wallets.setup_cancelled")
     @wallet.disconnect!
-    redirect_to account_path(@account), notice: t(connected ? "bitcoin_wallets.disconnected" : "bitcoin_wallets.setup_cancelled"), status: :see_other
+    redirect_to account_path(@account), notice: notice, status: :see_other
   end
 
   private
     # Bound address rendering and prepare quantities, progress and safe error copy.
     def prepare_show
-      @source ||= BitcoinWalletSource.new
       @address_count = @wallet.bitcoin_wallet_addresses.count
       @addresses = @wallet.bitcoin_wallet_addresses.order(:branch, :address_index, :address).limit(100)
       @sources = @wallet.bitcoin_wallet_sources.order(:created_at)
       @previous_quantity = @account.current_holdings.find_by(security: @wallet.security)&.qty || 0
       @pending_quantity = @wallet.pending_quantity
-      @confirmed_quantity = @wallet.quantity - @pending_quantity
       price = BitcoinWalletAccount::Processor.new(@wallet).price_on(Date.current) if @wallet.last_synced_at
       @value = Money.new(@wallet.quantity * price, @account.currency) if price
+      @quantity_difference = @wallet.quantity - @previous_quantity.to_d
       @discovery_checked = @sources.sum { |source| source.discovery.values_at("0", "1").compact.sum { |branch| branch.fetch("index", 0).to_i } }
+      @hd_wallet = @sources.any? { |source| source.kind == "bip84" }
+      @form_values ||= {}
       @wallet_error_key = case @wallet.last_error
       when "BitcoinWalletAccount::Discovery::AddressMismatch" then "address_mismatch"
       when "BitcoinWalletAccount::Discovery::Conflict" then "address_conflict"
       when "MissingPrice" then "missing_price"
+      when "BitcoinWalletAccount::Snapshot::ChangedTip", "BitcoinWalletAccount::Snapshot::IncompleteMempool",
+           /\AProvider::MempoolSpace::/ then "temporary_failure"
       else "failed"
       end
     end
@@ -131,18 +134,28 @@ class BitcoinWalletsController < ApplicationController
       raise ActiveRecord::RecordNotFound unless @wallet && @wallet.onchain_wallet_item.family_id == Current.family.id
     end
 
-    # Keep the submitted source for the re-rendered form. Its field errors show
-    # beside the inputs; any other error stays in the alert.
+    # Keep what the user typed so a validation error never forces them to start
+    # over. Source field errors show beside the inputs; any other error stays in the alert.
     def keep_failed_source(error)
-      @source = error.record.is_a?(BitcoinWalletSource) ? error.record : BitcoinWalletSource.new(source_params)
+      @form_values = params.fetch(:source, {}).permit(:address_or_key, :receive_address, :gap_limit).to_h.symbolize_keys
+      @field_errors = error.record.errors if error.record.is_a?(BitcoinWalletSource)
       @error_message = error.record.errors
-        .reject { |item| error.record == @source && item.attribute.in?(SOURCE_FIELDS) }
+        .reject { |item| @field_errors && item.attribute.in?(SOURCE_FIELDS) }
         .map(&:full_message).to_sentence.presence
     end
 
-    # Allow only public source inputs; key fields are filtered from request logs.
+    # Accept one pasted value and infer its kind: an account-level xpub/zpub is
+    # an HD source verified by a receive address; anything else is an address.
+    # The field name ends in _key so request logs filter it.
     def source_params
-      params.require(:source).permit(:kind, :receive_address, :extended_public_key, :gap_limit)
+      input = params.require(:source).permit(:address_or_key, :receive_address, :gap_limit)
+      key = input[:address_or_key].to_s.strip
+      if key.match?(/\A[xz]pub/)
+        { kind: "bip84", extended_public_key: key, receive_address: input[:receive_address],
+          gap_limit: input[:gap_limit].presence || 20 }
+      else
+        { kind: "address", receive_address: key }
+      end
     end
 
     # Find existing BTC-like positions in this account, avoiding a separate

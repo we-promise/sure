@@ -18,30 +18,32 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
 
   test "a public address is previewed and connected to the existing account" do
     visit new_account_bitcoin_wallet_path(@account)
-    assert_text I18n.t("bitcoin_wallets.title")
-    fill_in I18n.t("bitcoin_wallets.receive_address"), with: RECEIVE
+    assert_text I18n.t("bitcoin_wallets.new_title")
+    fill_in I18n.t("bitcoin_wallets.key_label"), with: RECEIVE
     click_on I18n.t("bitcoin_wallets.discover")
-    assert_text I18n.t("bitcoin_wallets.discovering")
+    assert_text I18n.t("bitcoin_wallets.discovering_title")
     wallet = @account.reload.bitcoin_wallet_account
     SyncJob.perform_now(wallet.syncs.ordered.first)
     assert_text "0.2 BTC"
-    assert_text I18n.t("bitcoin_wallets.connect")
+    assert_text I18n.t("bitcoin_wallets.start_tracking")
     page.save_screenshot(Rails.root.join("tmp", "bitcoin-wallet-preview.png"))
-    click_on I18n.t("bitcoin_wallets.connect")
+    click_on I18n.t("bitcoin_wallets.start_tracking")
     assert_current_path account_path(@account)
+    assert_text I18n.t("bitcoin_wallets.header_badge")
     assert @account.reload.bitcoin_wallet_account.account_provider
     assert_equal BigDecimal("0.2"), @account.reload.current_holdings.find_by!(security: @security).qty
     visit account_bitcoin_wallet_path(@account)
-    assert_selector "summary", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.add_source"))}/i
+    assert_selector "summary", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.details"))}/i
     page.save_screenshot(Rails.root.join("tmp", "bitcoin-wallet-connected.png"))
   end
 
   test "HD fields are conditional and the connection dialog fits a narrow screen" do
     page.current_window.resize_to(360, 800)
     visit new_account_bitcoin_wallet_path(@account)
-    assert_no_selector "input[name='source[extended_public_key]']"
-    select I18n.t("bitcoin_wallets.bip84"), from: I18n.t("bitcoin_wallets.source_kind")
-    assert_selector "input[name='source[extended_public_key]']"
+    assert_no_selector "input[name='source[receive_address]']"
+    fill_in I18n.t("bitcoin_wallets.key_label"), with: ZPUB
+    assert_selector "input[name='source[receive_address]']"
+    find("summary", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.advanced"))}/i).click
     assert_selector "input[name='source[gap_limit]']"
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
   ensure
@@ -52,11 +54,11 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
     wallet = build_bitcoin_wallet(status: :discovering)
     manual_bitcoin_source(wallet)
     visit account_bitcoin_wallet_path(@account)
-    find("summary", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.add_source"))}/i).click
-    fill_in I18n.t("bitcoin_wallets.receive_address"), with: CHANGE
+    find("summary", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.details"))}/i).click
+    fill_in I18n.t("bitcoin_wallets.key_label"), with: CHANGE
     wallet.update!(status: :preview, balance_sats: 20_000_000, last_synced_at: Time.current)
-    assert_text I18n.t("bitcoin_wallets.connect")
-    assert_field I18n.t("bitcoin_wallets.receive_address"), with: CHANGE
+    assert_text I18n.t("bitcoin_wallets.start_tracking")
+    assert_field I18n.t("bitcoin_wallets.key_label"), with: CHANGE
   end
 
   test "a connected wallet retains manual activity and can disconnect" do
@@ -66,7 +68,7 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
     visit account_path(@account)
     assert_selector "[data-testid='activity-menu'] button"
     visit account_bitcoin_wallet_path(@account)
-    click_on I18n.t("bitcoin_wallets.disconnect")
+    click_on I18n.t("bitcoin_wallets.stop_tracking")
     within "dialog[open]", text: I18n.t("bitcoin_wallets.disconnect_confirm") do
       click_button "Confirm"
     end

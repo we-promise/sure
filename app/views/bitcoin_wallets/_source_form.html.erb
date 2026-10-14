@@ -1,21 +1,55 @@
-<%# locals: (url:, source:, securities: []) %>
-<%= styled_form_with model: source, url: url, scope: :source, method: :post,
+<%# locals: (url:, securities: [], values: {}, errors: nil, submit_label: t("bitcoin_wallets.discover")) %>
+<% hd = values[:address_or_key].to_s.strip.match?(/\A[xz]pub/) %>
+<% key_attribute = hd ? :extended_public_key : :receive_address %>
+<% key_error = errors&.include?(key_attribute) %>
+<% address_error = hd && errors&.include?(:receive_address) %>
+<% gap_error = hd && errors&.include?(:gap_limit) %>
+<%= styled_form_with url: url, scope: :source, method: :post,
                      data: { turbo_frame: "modal", controller: "bitcoin-wallet-source" }, class: "space-y-4" do |form| %>
-  <% if securities.present? %>
+  <% if securities.many? %>
     <%= form.collection_select :security_id, securities, :id, :ticker,
                                { label: t("bitcoin_wallets.security"), selected: params.dig(:source, :security_id) || securities.first.id } %>
+  <% elsif securities.any? %>
+    <%= form.hidden_field :security_id, value: securities.first.id %>
   <% end %>
-  <%= form.select :kind, [[t("bitcoin_wallets.manual_address"), "address"], [t("bitcoin_wallets.bip84"), "bip84"]],
-                  { label: t("bitcoin_wallets.source_kind") },
-                  { data: { bitcoin_wallet_source_target: "kind", action: "change->bitcoin-wallet-source#toggle" } } %>
-  <div data-bitcoin-wallet-source-target="hdFields" class="space-y-4">
-    <%= form.text_field :extended_public_key, label: t("bitcoin_wallets.public_key"), autocomplete: "off", spellcheck: false,
-                        help_text: t("bitcoin_wallets.source_hint") %>
-    <%= render "field_errors", source: source, attribute: :extended_public_key %>
-    <%= form.number_field :gap_limit, label: t("bitcoin_wallets.gap_limit"), min: 20, max: 1000 %>
-    <%= render "field_errors", source: source, attribute: :gap_limit %>
+
+  <div class="space-y-1">
+    <%= form.text_field :address_or_key, label: t("bitcoin_wallets.key_label"), value: values[:address_or_key], required: true,
+                        placeholder: t("bitcoin_wallets.key_placeholder"), autocomplete: "off", spellcheck: false,
+                        class: "font-mono", "aria-invalid": key_error.present?,
+                        data: { bitcoin_wallet_source_target: "key", action: "input->bitcoin-wallet-source#toggle" } %>
+    <% if key_error %>
+      <%= render "bitcoin_wallets/field_errors", errors: errors, attribute: key_attribute,
+                 invalid_message: t(hd ? "bitcoin_wallets.errors.invalid_key" : "bitcoin_wallets.errors.invalid_address") %>
+    <% else %>
+      <p class="text-xs text-secondary"><%= t("bitcoin_wallets.key_hint") %></p>
+    <% end %>
   </div>
-  <%= form.text_field :receive_address, label: t("bitcoin_wallets.receive_address"), required: true %>
-  <%= render "field_errors", source: source, attribute: :receive_address %>
-  <%= form.submit t("bitcoin_wallets.discover") %>
+
+  <div data-bitcoin-wallet-source-target="hdFields" class="space-y-4" <%= "hidden" unless hd %>>
+    <div class="space-y-1">
+      <%= form.text_field :receive_address, label: t("bitcoin_wallets.verification_address"), value: values[:receive_address],
+                          autocomplete: "off", spellcheck: false, class: "font-mono", "aria-invalid": address_error.present?,
+                          disabled: !hd %>
+      <% if address_error %>
+        <%= render "bitcoin_wallets/field_errors", errors: errors, attribute: :receive_address,
+                   invalid_message: t("bitcoin_wallets.errors.invalid_verification_address") %>
+      <% else %>
+        <p class="text-xs text-secondary"><%= t("bitcoin_wallets.verification_hint") %></p>
+      <% end %>
+    </div>
+    <%= render DS::Disclosure.new(title: t("bitcoin_wallets.advanced"), open: gap_error.present?) do %>
+      <div class="space-y-2 pt-2">
+        <%= form.number_field :gap_limit, label: t("bitcoin_wallets.gap_limit"), value: values[:gap_limit].presence || 20,
+                              min: 20, max: 1000, disabled: !hd %>
+        <% if gap_error %>
+          <%= render "bitcoin_wallets/field_errors", errors: errors, attribute: :gap_limit %>
+        <% else %>
+          <p class="text-xs text-secondary"><%= t("bitcoin_wallets.gap_limit_hint") %></p>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%= form.submit submit_label %>
 <% end %>

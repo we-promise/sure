@@ -14,7 +14,7 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
   test "renders the source form behind the preview gate" do
     get new_account_bitcoin_wallet_path(@account)
     assert_response :success
-    assert_select "input[name='source[extended_public_key]'][type='text']"
+    assert_select "input[name='source[address_or_key]'][type='text']"
     assert_select "input[name='source[receive_address]']"
   end
 
@@ -27,7 +27,7 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
   test "creates a draft and queues discovery without changing account balances" do
     before = @account.balance
     assert_enqueued_with(job: SyncJob) do
-      post account_bitcoin_wallet_path(@account), params: { source: { kind: "address", receive_address: RECEIVE } }
+      post account_bitcoin_wallet_path(@account), params: { source: { address_or_key: RECEIVE } }
     end
     assert_redirected_to account_bitcoin_wallet_path(@account)
     assert_equal before, @account.reload.balance
@@ -46,27 +46,35 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
 
   test "invalid source input does not leave a wallet behind" do
     assert_no_difference [ "BitcoinWalletAccount.count", "OnchainWalletItem.count", "Security.count" ] do
-      post account_bitcoin_wallet_path(@account), params: { source: { kind: "bip84", receive_address: RECEIVE, extended_public_key: "not-a-public-key" } }
+      post account_bitcoin_wallet_path(@account), params: { source: { address_or_key: "zpub-not-a-public-key", receive_address: RECEIVE } }
     end
     assert_response :unprocessable_entity
   end
 
   test "an invalid key keeps the submitted source and shows the error on the field" do
-    post account_bitcoin_wallet_path(@account), params: { source: { kind: "bip84", receive_address: RECEIVE,
-      extended_public_key: "not-a-public-key", gap_limit: 50 } }
+    post account_bitcoin_wallet_path(@account), params: { source: { address_or_key: "zpub-not-a-public-key",
+      receive_address: RECEIVE, gap_limit: 50 } }
     assert_response :unprocessable_entity
-    assert_select "select[name='source[kind]'] option[selected][value='bip84']"
+    assert_select "input[name='source[address_or_key]'][value='zpub-not-a-public-key'][aria-invalid='true']"
+    assert_select "[data-bitcoin-wallet-source-target='hdFields']:not([hidden])"
     assert_select "input[name='source[receive_address]'][value='#{RECEIVE}']"
     assert_select "input[name='source[gap_limit]'][value='50']"
-    assert_select "p.text-destructive", text: /Extended public key/
+    assert_select "p.text-destructive", text: I18n.t("bitcoin_wallets.errors.invalid_key")
+  end
+
+  test "a validation other than a malformed key keeps its own message" do
+    post account_bitcoin_wallet_path(@account), params: { source: { address_or_key: ZPUB, receive_address: RECEIVE, gap_limit: 5 } }
+    assert_response :unprocessable_entity
+    assert_select "details[open] p.text-destructive", text: /20/
+    assert_select "p.text-destructive", text: I18n.t("bitcoin_wallets.errors.invalid_key"), count: 0
   end
 
   test "a draft offers to cancel setup instead of disconnecting" do
     wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
     manual_bitcoin_source(wallet)
     get account_bitcoin_wallet_path(@account)
-    assert_select "button", text: I18n.t("bitcoin_wallets.cancel_setup")
-    assert_select "button", text: I18n.t("bitcoin_wallets.disconnect"), count: 0
+    assert_select "button", text: I18n.t("bitcoin_wallets.cancel")
+    assert_select "button", text: I18n.t("bitcoin_wallets.stop_tracking"), count: 0
     delete account_bitcoin_wallet_path(@account)
     assert_redirected_to account_path(@account)
     assert_equal I18n.t("bitcoin_wallets.setup_cancelled"), flash[:notice]
@@ -78,7 +86,7 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     get account_bitcoin_wallet_path(@account)
     assert_response :success
     refute_includes response.body, ZPUB
-    assert_select "button", text: I18n.t("bitcoin_wallets.connect")
+    assert_select "button", text: I18n.t("bitcoin_wallets.start_tracking")
   end
 
   test "management actions require owner or full control within the family" do
@@ -90,7 +98,7 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
       assert_response :forbidden
       post connect_account_bitcoin_wallet_path(@account)
       assert_response :forbidden
-      post add_source_account_bitcoin_wallet_path(@account), params: { source: { kind: "address", receive_address: CHANGE } }
+      post add_source_account_bitcoin_wallet_path(@account), params: { source: { address_or_key: CHANGE } }
       assert_response :forbidden
       delete remove_source_account_bitcoin_wallet_path(@account), params: { source_id: source.id }
       assert_response :forbidden
@@ -113,7 +121,7 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     wallet = build_bitcoin_wallet(status: :preview, last_synced_at: 3.hours.ago)
     manual_bitcoin_source(wallet)
     get account_bitcoin_wallet_path(@account)
-    assert_select "button", text: I18n.t("bitcoin_wallets.connect"), count: 0
+    assert_select "button", text: I18n.t("bitcoin_wallets.start_tracking"), count: 0
     post connect_account_bitcoin_wallet_path(@account)
     assert_redirected_to account_path(@account)
     assert_nil wallet.reload.account_provider
@@ -132,7 +140,7 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     manual_bitcoin_source(wallet)
     assert_difference "wallet.bitcoin_wallet_sources.count", 1 do
       assert_enqueued_with(job: SyncJob) do
-        post add_source_account_bitcoin_wallet_path(@account), params: { source: { kind: "address", receive_address: CHANGE } }
+        post add_source_account_bitcoin_wallet_path(@account), params: { source: { address_or_key: CHANGE } }
       end
     end
     assert_redirected_to account_bitcoin_wallet_path(@account)
@@ -143,10 +151,11 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
     manual_bitcoin_source(wallet)
     assert_no_difference "BitcoinWalletSource.count" do
-      post add_source_account_bitcoin_wallet_path(@account), params: { source: { kind: "address", receive_address: "not-an-address" } }
+      post add_source_account_bitcoin_wallet_path(@account), params: { source: { address_or_key: "not-an-address" } }
     end
     assert_response :unprocessable_entity
-    assert_select "details[open] input[name='source[receive_address]'][value='not-an-address']"
+    assert_select "details[open] input[name='source[address_or_key]'][value='not-an-address']"
+    assert_select "details[open] p.text-destructive", text: I18n.t("bitcoin_wallets.errors.invalid_address")
   end
 
   test "removing one of several sources rediscovers the rest" do
@@ -200,6 +209,6 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     get account_bitcoin_wallet_path(@account)
     assert_response :success
     assert_select "li", text: /^public-fixture-/, count: 100
-    assert_includes response.body, "100 of 150"
+    assert_select "p", text: I18n.t("bitcoin_wallets.address_count", count: 150)
   end
 end

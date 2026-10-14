@@ -1,17 +1,19 @@
 import { Controller } from "@hotwired/stimulus";
 
+// Shows the verification address and advanced settings only once an
+// account-level xpub/zpub has been pasted; a plain address needs neither.
 export default class extends Controller {
-  static targets = ["kind", "hdFields"];
+  static targets = ["key", "hdFields"];
 
   connect() {
     this.toggle();
   }
 
   toggle() {
-    const visible = this.kindTarget.value === "bip84";
-    this.hdFieldsTarget.hidden = !visible;
+    const hd = /^[xz]pub/.test(this.keyTarget.value.trim());
+    this.hdFieldsTarget.hidden = !hd;
     for (const input of this.hdFieldsTarget.querySelectorAll("input")) {
-      input.disabled = !visible;
+      input.disabled = !hd;
     }
   }
 }

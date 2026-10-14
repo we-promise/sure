@@ -2,18 +2,11 @@
 fr:
   bitcoin_wallets:
     title: Portefeuille Bitcoin
-    preview: Aperçu
     security: Position Bitcoin existante
-    source_kind: Source
     manual_address: Adresse publique
     bip84: Compte Native SegWit (xpub / zpub)
-    receive_address: Adresse de réception connue
-    public_key: Clé publique étendue (Native SegWit uniquement)
     gap_limit: Limite d'écart des adresses inutilisées
-    source_hint: "Utilisez une xpub ou une zpub Native SegWit de niveau compte et une adresse de réception du même compte. Chaque clé couvre un seul compte Bitcoin ; ajoutez les autres comptes séparément. Les adresses sont dérivées localement ; l'explorateur voit les adresses demandées."
-    read_only: "Lecture seule : Sure consulte les soldes et ne peut pas dépenser de bitcoins. Ne saisissez jamais de phrase de récupération ni de clé privée. L'historique existant et les autres actifs sont conservés."
     discover: Découvrir les adresses
-    discovering: "Lecture de l'ensemble des sources en cours. Votre compte conserve son dernier solde complet jusqu'à la fin de la découverte."
     failed: "Le portefeuille n'a pas pu être lu entièrement. Le dernier solde complet est conservé ; relancez la synchronisation ou vérifiez la clé et la limite d'écart."
     address_mismatch: "L'adresse de réception ne correspond pas à cette clé de compte dans la limite d'écart choisie. Vérifiez la clé de compte, l'adresse et la limite d'écart."
     address_conflict: "Une adresse est déjà suivie par un autre compte connecté de ce foyer. Déconnectez d'abord la connexion qui fait doublon."
@@ -22,31 +15,16 @@ fr:
     exchange_rate_warning: "Aucun fournisseur de taux de change n'est configuré pour %{currency}. Le compte conserve sa valorisation précédente lorsque la conversion est impossible. Configurez un fournisseur de taux de change dans les paramètres d'auto-hébergement."
     stale: "Cette lecture du portefeuille date de plus de deux heures. Synchronisez le portefeuille pour le relire."
     quantity: "%{quantity} BTC"
-    confirmation: "Confirmé : %{confirmed} BTC · Non confirmé : %{pending} BTC"
-    discovery_progress:
-      one: "%{count} adresse dérivée vérifiée"
-      other: "%{count} adresses dérivées vérifiées"
-    showing_addresses: "Affichage de %{shown} adresses suivies sur %{total}."
     address_count:
       one: "%{count} adresse unique suivie"
       other: "%{count} adresses uniques suivies"
-    last_synced: "Dernière lecture complète : %{time}"
-    reconcile: "BTC existants : %{previous}. BTC du portefeuille : %{current}. La connexion remplace la quantité de BTC ; elle n'ajoute pas ce solde une seconde fois et ne réécrit pas les transactions passées."
-    connect: Connecter la position Bitcoin
     connected: Portefeuille Bitcoin connecté.
-    reconciliation: Rapprochement de la quantité de bitcoins
     not_ready: Terminez la découverte des adresses du portefeuille avant de le connecter.
     history_truncated: Une partie de l'historique des transferts n'a pas été renvoyée. Cela ne modifie pas le solde actuel observé.
-    addresses: Adresses suivies
     add_source: Ajouter une autre source
     remove_source: Retirer la source
     remove_source_confirm: Arrêter le suivi de cette source ? Les sources restantes seront rapprochées sans supprimer l'historique du compte.
-    sync: Synchroniser le portefeuille
-    disconnect: Déconnecter Bitcoin
-    disconnect_confirm: Arrêter la mise à jour automatique de Bitcoin ? Le compte, les positions actuelles et l'historique sont conservés.
     disconnected: Portefeuille Bitcoin déconnecté ; le compte et l'historique sont conservés.
-    cancel_setup: Annuler la configuration
-    cancel_setup_confirm: Arrêter la configuration de ce portefeuille ? Le compte n'est pas modifié.
     setup_cancelled: Configuration du portefeuille Bitcoin annulée.
     source_removed: Source retirée. Les sources restantes sont relues.
     manage: Gérer le portefeuille Bitcoin
@@ -54,3 +32,45 @@ fr:
     movements:
       received: "Réception de %{quantity} BTC"
       sent: "Envoi de %{quantity} BTC"
+    discovery_progress:
+      one: "%{count} adresse vérifiée pour l'instant"
+      other: "%{count} adresses vérifiées pour l'instant"
+    reconciliation: "Ajustement du portefeuille"
+    disconnect_confirm: "Arrêter le suivi de ce portefeuille ? Votre position BTC et l'historique restent dans le compte et redeviennent manuels."
+    new_title: "Suivre un portefeuille Bitcoin"
+    read_only_short: "Lecture seule : Sure lit les soldes publics et ne peut jamais dépenser. Ne collez jamais de phrase de récupération ni de clé privée."
+    key_label: "Adresse Bitcoin ou xpub / zpub"
+    key_placeholder: "bc1q… ou zpub6r…"
+    key_hint: "Collez une adresse, ou la xpub/zpub de compte de votre portefeuille pour suivre toutes les adresses qu'il utilise."
+    verification_address: "Une adresse de réception de ce portefeuille"
+    verification_hint: "Copiez-la depuis votre application de portefeuille. Sure vérifie qu'elle appartient à la clé avant toute lecture."
+    advanced: "Avancé"
+    gap_limit_hint: "Nombre d'adresses inutilisées à examiner à l'avance. Augmentez-le seulement si un solde manque."
+    status:
+      tracking: "Suivi actif"
+      reading: "Lecture en cours"
+      ready: "Prêt à suivre"
+      needs_attention: "Action requise"
+      retrying: "Nouvel essai"
+    read_ago: "Lu il y a %{time}"
+    temporary_failure: "La blockchain a avancé pendant la lecture de votre portefeuille. Nous réessaierons automatiquement ; votre solde ne change pas."
+    discovering_title: "Lecture de votre portefeuille…"
+    discovering_address: "Récupération du solde de cette adresse."
+    wallet_value: "Valeur du portefeuille"
+    pending_amount: "%{amount} BTC non confirmés"
+    connect_explainer_new: "Le suivi ajoute cette position BTC au compte et la met à jour toutes les heures."
+    connect_explainer_replace: "Ce compte enregistre actuellement %{previous} BTC. Le suivi le remplace par le solde du portefeuille (%{difference} BTC) ; l'historique est conservé."
+    start_tracking: "Commencer le suivi"
+    sync_now: "Lire maintenant"
+    read_again: "Relire"
+    stop_tracking: "Arrêter le suivi"
+    cancel: "Annuler"
+    details: "Adresses et sources"
+    add_source_submit: "Ajouter"
+    header_badge: "Portefeuille Bitcoin"
+    holding_managed: "Mis à jour automatiquement depuis votre portefeuille Bitcoin"
+    manage_short: "Gérer"
+    errors:
+      invalid_address: "Cette adresse Bitcoin ne semble pas valide. Vérifiez qu'il ne manque pas de caractère et qu'il n'y en a pas en trop."
+      invalid_key: "Ce n'est pas une xpub ou zpub de compte valide. Exportez-la depuis les paramètres de compte de votre portefeuille."
+      invalid_verification_address: "Cette adresse n'est pas une adresse Bitcoin valide."

@@ -1,4 +1,6 @@
-<%# locals: (source:, attribute:) %>
-<% source.errors.full_messages_for(attribute).each do |message| %>
-  <p class="text-xs text-destructive px-1"><%= message %></p>
+<%# locals: (errors:, attribute:, invalid_message: nil) %>
+<%# A format error gets friendlier copy; any other validation keeps its own message. %>
+<% messages = invalid_message && errors.added?(attribute, :invalid) ? [ invalid_message ] : errors.full_messages_for(attribute) %>
+<% messages.each do |message| %>
+  <p class="text-xs text-destructive"><%= message %></p>
 <% end %>
