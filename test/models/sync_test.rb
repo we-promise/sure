@@ -494,6 +494,31 @@ class SyncTest < ActiveSupport::TestCase
     end
   end
 
+  test "sync_later never folds a full request into a balances-only sync" do
+    syncable = accounts(:depository)
+    recent = Sync.create!(syncable: syncable, data: { "balances_only" => true })
+    waiting = Sync.create!(syncable: syncable, data: { "balances_only" => true },
+                           created_at: Sync::VISIBLE_FOR.ago - 10.minutes, last_attempted_at: 30.seconds.ago)
+
+    assert_enqueued_with(job: SyncJob) do
+      new_sync = syncable.sync_later
+      refute_includes [ recent, waiting ], new_sync
+    end
+  end
+
+  test "a standalone sync_later does not join a waiting child of another parent" do
+    syncable = accounts(:depository)
+    parent = Sync.create!(syncable: syncable.family, status: :syncing)
+    standalone_waiter = Sync.create!(syncable: syncable, created_at: Sync::VISIBLE_FOR.ago - 20.minutes,
+                                     last_attempted_at: 30.seconds.ago)
+    Sync.create!(syncable: syncable, parent: parent, created_at: Sync::VISIBLE_FOR.ago - 10.minutes,
+                 last_attempted_at: 30.seconds.ago)
+
+    assert_no_enqueued_jobs(only: SyncJob) do
+      assert_equal standalone_waiter, syncable.sync_later
+    end
+  end
+
   test "sync_later keeps a waiting child with its own parent and queues one for another parent" do
     syncable = accounts(:depository)
     first_parent = Sync.create!(syncable: syncable.family, status: :syncing)

@@ -35,12 +35,14 @@ class Sync < ApplicationRecord
   # stale before it runs: a request folded into it would be dropped with it.
   JOINABLE_ATTEMPT_WINDOW = 5.minutes
   JOINABLE_MAX_AGE = STALE_AFTER - 1.hour
+  # Balances-only syncs (SimplefinItemsController#balances) are never joined:
+  # sync_later requests a full sync, which such a sync would not run.
   scope :joinable, -> {
     visible.or(
       where(status: "pending", cancel_requested_at: nil)
         .where("syncs.last_attempted_at > ?", JOINABLE_ATTEMPT_WINDOW.ago)
         .where("syncs.created_at > ?", JOINABLE_MAX_AGE.ago)
-    )
+    ).where("COALESCE((syncs.data ->> 'balances_only')::boolean, false) = false")
   }
 
   after_commit :update_family_sync_timestamp, on: [ :create, :update ]

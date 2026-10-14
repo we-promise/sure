@@ -31,15 +31,6 @@ class SyncJobTest < ActiveJob::TestCase
     end
   end
 
-  test "does not stamp balances-only attempts, so full requests do not join them" do
-    sync = accounts(:depository).syncs.create!
-    sync.expects(:perform).raises(Sync::ConcurrentSyncError)
-
-    SyncJob.perform_now(sync, balances_only: true)
-
-    assert_nil sync.reload.last_attempted_at
-  end
-
   test "reports a sync that has waited on another sync for over an hour" do
     sync = accounts(:depository).syncs.create!(created_at: 2.hours.ago)
     sync.stubs(:perform).raises(Sync::ConcurrentSyncError)
