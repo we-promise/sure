@@ -265,7 +265,7 @@ services:
       # old fixed key ends existing Open WebUI sign-ins; see docs/hosting/docker.md.
       - WEBUI_SECRET_KEY_FILE=/app/backend/data/.webui_secret_key
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-}
-      - NO_PROXY=host.docker.internal
+      - NO_PROXY=host.docker.internal,ollama
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
@@ -287,7 +287,9 @@ services:
       TERM: xterm-256color
       TZ: ${OPENCLAW_TZ:-UTC}
       # Set EXTERNAL_ASSISTANT_TOKEN to a long random value (e.g. `openssl rand -hex 32`);
-      # the placeholder below is only safe because the port is loopback-only.
+      # until then, every container on sure_net (and the host, via loopback) can
+      # use the gateway with the placeholder. Not required here, because Compose
+      # would then refuse to start the stack even without this profile.
       OPENCLAW_GATEWAY_TOKEN: ${EXTERNAL_ASSISTANT_TOKEN:-changeme}
       OPENCLAW_ALLOW_INSECURE_PRIVATE_WS: ${OPENCLAW_ALLOW_INSECURE_PRIVATE_WS:-}
     command:
