@@ -47,9 +47,12 @@ class Entry < ApplicationRecord
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
 
-  # Any other change of `excluded` (a user toggling it, a reconciliation) ends the
-  # "excluded automatically" state, so a later booking cannot override it.
-  before_save :clear_auto_excluded_pending_mark, if: :will_save_change_to_excluded?
+  # Any other write of `excluded` (a user toggling it, a reconciliation) ends the
+  # "excluded automatically" state, so a later booking cannot override it. This
+  # also covers a write of the same value, e.g. a user excluding the entry from a
+  # page loaded before the sync excluded it.
+  before_save :clear_auto_excluded_pending_mark, if: -> { @excluded_assigned }
+  after_save -> { @excluded_assigned = false }
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -168,7 +171,10 @@ class Entry < ApplicationRecord
         transaction do
           # Re-check under a row lock: an entry the user excluded, or the import
           # claimed, since the query above keeps its state and gets no mark.
-          ids = stale_entries.lock("FOR UPDATE OF entries").pluck(:id)
+          # Transactions first, then entries: the same order as a Transaction
+          # save, which touches its entry, so the two cannot deadlock.
+          transaction_ids = Transaction.where(id: stale_entries.select(:entryable_id)).order(:id).lock.pluck(:id)
+          ids = stale_entries.where(entryable_id: transaction_ids).order(:id).lock("FOR UPDATE OF entries").pluck(:id)
 
           Transaction.where(id: Entry.where(id: ids).select(:entryable_id))
             .update_all([ "extra = COALESCE(extra, '{}'::jsonb) || jsonb_build_object(?::text, true)", AUTO_EXCLUDED_PENDING_KEY ])
@@ -181,6 +187,11 @@ class Entry < ApplicationRecord
     end
 
     count
+  end
+
+  def excluded=(value)
+    @excluded_assigned = true
+    super
   end
 
   # True for a pending entry that auto_exclude_stale_pending(mark: true) excluded.
