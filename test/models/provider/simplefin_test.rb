@@ -405,4 +405,74 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
     assert_equal "93.184.216.34", http.ipaddr
     assert_equal "example.com", http.address
   end
+
+  test "rejects the Alibaba Cloud metadata address when self-hosted" do
+    @provider.stubs(:resolve_addresses).with("meta.example.test").returns([ "100.100.100.200" ])
+    Provider::Simplefin.expects(:get).never
+
+    with_self_hosting do
+      error = assert_raises(Provider::Simplefin::SimplefinError) do
+        @provider.get_accounts("https://meta.example.test/simplefin")
+      end
+
+      assert_equal :invalid_url, error.error_type
+    end
+  end
+
+  test "connects to an IPv4-mapped address as plain IPv4" do
+    @provider.stubs(:resolve_addresses).with("example.com").returns([ "::ffff:93.184.216.34" ])
+    Provider::Simplefin.expects(:get).with(
+      "#{@access_url}/accounts", has_entry(connection_adapter_options: { ipaddr: "93.184.216.34" })
+    ).returns(OpenStruct.new(code: 200, body: '{"accounts": []}'))
+
+    @provider.get_accounts(@access_url)
+  end
+
+  test "a retry connects to the next checked address" do
+    @provider.stubs(:sleep)
+    @provider.stubs(:resolve_addresses).with("example.com").returns([ "93.184.216.34", "93.184.216.35" ])
+    sequence = sequence("addresses")
+    Provider::Simplefin.expects(:get).with(anything, has_entry(connection_adapter_options: { ipaddr: "93.184.216.34" }))
+      .in_sequence(sequence).raises(Errno::ECONNREFUSED)
+    Provider::Simplefin.expects(:get).with(anything, has_entry(connection_adapter_options: { ipaddr: "93.184.216.35" }))
+      .in_sequence(sequence).returns(OpenStruct.new(code: 200, body: '{"accounts": []}'))
+
+    assert_equal({ accounts: [] }, @provider.get_accounts(@access_url))
+  end
+
+  test "plain http requests bypass a proxy so the pinned address is used" do
+    @provider.stubs(:resolve_addresses).with("bridge.lan").returns([ "192.168.1.20" ])
+    Provider::Simplefin.expects(:get).with(anything, has_entry(http_proxyaddr: nil))
+      .returns(OpenStruct.new(code: 200, body: '{"accounts": []}'))
+
+    with_self_hosting { @provider.get_accounts("http://user:pass@bridge.lan/simplefin") }
+  end
+
+  test "https requests keep the configured proxy" do
+    Provider::Simplefin.expects(:get).with(anything, Not(has_key(:http_proxyaddr)))
+      .returns(OpenStruct.new(code: 200, body: '{"accounts": []}'))
+
+    @provider.get_accounts(@access_url)
+  end
+
+  test "validate_setup_token! rejects disallowed claim URLs without claiming" do
+    @provider.stubs(:resolve_addresses).with("169.254.169.254").returns([ "169.254.169.254" ])
+    Provider::Simplefin.expects(:post).never
+
+    error = assert_raises(Provider::Simplefin::SimplefinError) do
+      @provider.validate_setup_token!(Base64.strict_encode64("http://169.254.169.254/claim"))
+    end
+
+    assert_equal :invalid_url, error.error_type
+  end
+
+  test "validate_setup_token! reports an unresolvable host as a network error" do
+    @provider.stubs(:resolve_addresses).with("flaky.example.test").raises(SocketError, "getaddrinfo failed")
+
+    error = assert_raises(Provider::Simplefin::SimplefinError) do
+      @provider.validate_setup_token!(Base64.strict_encode64("https://flaky.example.test/claim"))
+    end
+
+    assert_equal :network_error, error.error_type
+  end
 end

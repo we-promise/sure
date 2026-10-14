@@ -29,10 +29,11 @@ class Provider::Simplefin
 
   # Address ranges for the SimpleFIN URL check (see ensure_allowed_url!).
   # Always blocked besides link-local: unspecified, multicast and reserved
-  # addresses, and AWS's IPv6 metadata endpoint, which sits in fc00::/7
-  # rather than the link-local range.
+  # addresses, and cloud metadata endpoints outside the link-local range
+  # (AWS IPv6 in fc00::/7, Alibaba Cloud in the CGNAT range).
   ALWAYS_BLOCKED_NETWORKS = %w[
-    0.0.0.0/8 224.0.0.0/4 240.0.0.0/4 ::/128 ff00::/8 fd00:ec2::254/128
+    0.0.0.0/8 224.0.0.0/4 240.0.0.0/4 ::/128 ff00::/8
+    fd00:ec2::254/128 100.100.100.200/32
   ].map { |range| IPAddr.new(range) }.freeze
   # Blocked on managed instances besides loopback and private ranges:
   # carrier-grade NAT, IETF protocol assignments and benchmarking ranges.
@@ -45,7 +46,9 @@ class Provider::Simplefin
   # Connects to the address that ensure_allowed_url! checked instead of
   # resolving the host a second time, so DNS rebinding cannot swap in an
   # internal address. TLS (SNI, certificate) and the Host header still use
-  # the hostname. Through an HTTP proxy, the proxy resolves the host.
+  # the hostname. Through an HTTP proxy, https requests are pinned too
+  # (Net::HTTP sends CONNECT to the pinned address); plain http requests
+  # skip the proxy (see guarded_request_options).
   class PinnedConnectionAdapter < HTTParty::ConnectionAdapter
     def connection
       http = super
@@ -58,6 +61,15 @@ class Provider::Simplefin
   def initialize
   end
 
+  # Checks a setup token's claim URL without claiming it, so callers that
+  # claim later (in a job) can reject a bad token right away.
+  def validate_setup_token!(setup_token)
+    ensure_allowed_url!(Base64.decode64(setup_token))
+    nil
+  rescue SocketError
+    raise SimplefinError.new("SimpleFIN host could not be resolved", :network_error)
+  end
+
   def claim_access_url(setup_token)
     # Decode the base64 setup token to get the claim URL
     claim_url = Base64.decode64(setup_token)
@@ -67,8 +79,8 @@ class Provider::Simplefin
     # Use self.class.post to inherit class-level SSL and timeout defaults.
     # The setup token is user input, so it must not point the server at
     # internal services (cloud metadata, localhost, private networks).
-    response = with_retries("POST /claim", max_retries: 1, backoff: false) do
-      self.class.post(claim_url, timeout: 15, **guarded_request_options(claim_url))
+    response = with_retries("POST /claim", max_retries: 1, backoff: false) do |attempt|
+      self.class.post(claim_url, timeout: 15, **guarded_request_options(claim_url, attempt: attempt))
     end
 
     case response.code
@@ -115,8 +127,8 @@ class Provider::Simplefin
     # Use retry logic with exponential backoff for transient network failures
     # Use self.class.get to inherit class-level SSL and timeout defaults
     # The stored access URL came from the bridge; re-check it on every request.
-    response = with_retries("GET /accounts") do
-      self.class.get(accounts_url, **guarded_request_options(access_url))
+    response = with_retries("GET /accounts") do |attempt|
+      self.class.get(accounts_url, **guarded_request_options(access_url, attempt: attempt))
     end
 
     case response.code
@@ -163,14 +175,20 @@ class Provider::Simplefin
   end
 
   private
-    # Checks the URL, then pins the connection to the checked address. No
-    # redirects: a redirect target would bypass the check.
-    def guarded_request_options(url)
-      {
+    # Checks the URL, then pins the connection to one of the checked
+    # addresses; each retry moves on to the next one, like the resolver
+    # fallback of an unpinned connection. No redirects: a redirect target
+    # would bypass the check. A proxy would resolve a plain http host itself,
+    # so plain http (self-hosted only) connects directly.
+    def guarded_request_options(url, attempt: 0)
+      addresses = ensure_allowed_url!(url)
+      options = {
         follow_redirects: false,
         connection_adapter: PinnedConnectionAdapter,
-        connection_adapter_options: { ipaddr: ensure_allowed_url!(url) }
+        connection_adapter_options: { ipaddr: addresses[attempt % addresses.size] }
       }
+      options[:http_proxyaddr] = nil if URI.parse(url.to_s).scheme == "http"
+      options
     end
 
     # Link-local covers cloud metadata endpoints (169.254.169.254) and is
@@ -178,8 +196,8 @@ class Provider::Simplefin
     # loopback and private networks; self-hosters may run a bridge on their
     # own network, so those stay allowed there.
     #
-    # Returns the address to connect to. With resolve: false only an IP
-    # literal host is checked. A failed lookup raises SocketError, so
+    # Returns the checked addresses, IPv4 first. With resolve: false only an
+    # IP literal host is checked. A failed lookup raises SocketError, so
     # with_retries retries it and reports :network_error, not :invalid_url.
     def ensure_allowed_url!(url, resolve: true)
       uri = URI.parse(url.to_s)
@@ -193,8 +211,10 @@ class Provider::Simplefin
         raise SimplefinError.new("SimpleFIN URL points to a disallowed network address", :invalid_url)
       end
 
-      # Prefer IPv4: many self-hosted Docker setups have no IPv6 route.
-      addresses.min_by { |address| IPAddr.new(address).ipv4? ? 0 : 1 }
+      # IPv4-mapped IPv6 addresses connect as plain IPv4. Prefer IPv4: many
+      # self-hosted Docker setups have no IPv6 route.
+      addresses.map { |address| normalize_address(address) }.uniq
+        .sort_by.with_index { |address, index| [ IPAddr.new(address).ipv4? ? 0 : 1, index ] }
     rescue URI::InvalidURIError
       raise SimplefinError.new("SimpleFIN URL is invalid", :invalid_url)
     end
@@ -202,6 +222,11 @@ class Provider::Simplefin
     # Uses the system resolver, like the HTTP request itself (mDNS, hosts file).
     def resolve_addresses(host)
       Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
+    end
+
+    def normalize_address(address)
+      ip = IPAddr.new(address)
+      ip.ipv4_mapped? ? ip.native.to_s : address
     end
 
     def ip_literal_addresses(host)
@@ -247,7 +272,7 @@ class Provider::Simplefin
       retries = 0
 
       begin
-        yield
+        yield retries
       rescue *RETRYABLE_ERRORS => e
         retries += 1
 
