@@ -989,6 +989,19 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     end
   end
 
+  # The negative case for the key tests below: a key that moved on every
+  # request would pass all of them and never hit the cache.
+  test "every series cache key is reused while nothing it reads changes" do
+    create_investment_account(balance: 1000)
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    first = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    second = kinds.index_with { |kind| InvestmentStatement.new(@family.reload).send(:series_cache_key, kind, period) }
+
+    assert_equal first, second
+  end
+
   # Every series is built in family.currency. A profile currency change
   # neither syncs nor writes an account, so nothing else in the key moves.
   test "every series cache key changes when the family currency changes" do
