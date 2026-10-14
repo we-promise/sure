@@ -85,12 +85,14 @@ Rails.application.config.to_prepare do
       # ActiveStorage::VariantRecord or to their source blob. They are authorized
       # through the attachments of the blob they were made from; a variant of a
       # preview is two steps away from its source.
+      MAX_DERIVED_BLOB_DEPTH = 2
+
       def attachments_with_sources(blob, depth = 0)
         ActiveStorage::Attachment.where(blob: blob).to_a.flat_map do |attachment|
           next [ attachment ] unless derived_attachment?(attachment)
 
           source = derived_source_blob(attachment)
-          raise ActiveRecord::RecordNotFound if source.nil? || depth >= 2
+          raise ActiveRecord::RecordNotFound if source.nil? || depth >= MAX_DERIVED_BLOB_DEPTH
 
           attachments_with_sources(source, depth + 1)
         end

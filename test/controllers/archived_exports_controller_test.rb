@@ -76,4 +76,22 @@ class ArchivedExportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  test "returns 410 gone when the archive file is missing from storage" do
+    archive = ArchivedExport.create!(
+      email: "test@example.com",
+      family_name: "Test",
+      expires_at: 30.days.from_now
+    )
+    archive.export_file.attach(
+      io: StringIO.new("test zip content"),
+      filename: "test.zip",
+      content_type: "application/zip"
+    )
+    ActiveStorage::Blob.any_instance.stubs(:download).raises(ActiveStorage::FileNotFoundError)
+
+    get archived_export_path(token: archive.download_token)
+
+    assert_response :gone
+  end
 end

@@ -51,8 +51,34 @@ class ActiveStorageDerivedBlobAuthorizationTest < ActionDispatch::IntegrationTes
 
     sign_in @outsider
     get rails_blob_path(variant_blob)
-
     assert_response :not_found
+
+    sign_out @outsider
+    sign_in @owner
+    get rails_blob_path(variant_blob)
+    assert_response :redirect
+  end
+
+  test "member cannot access previews of a receipt on an account that is not shared with them" do
+    entry = create_transaction(account: accounts(:other_asset))
+    preview = attach_preview(attach_pdf(entry.transaction).blob)
+    variant_blob = preview.variant(resize_to_limit: [ 20, 20 ]).processed.image.blob
+
+    sign_in @member
+    get rails_blob_path(preview)
+    assert_response :not_found
+
+    get rails_blob_path(variant_blob)
+    assert_response :not_found
+  end
+
+  test "member can access previews of a receipt on an account shared with them" do
+    preview = attach_preview(attach_pdf(@receipt_transaction).blob)
+
+    sign_in @member
+    get rails_blob_path(preview)
+
+    assert_response :redirect
   end
 
   test "preview images follow the source receipt" do

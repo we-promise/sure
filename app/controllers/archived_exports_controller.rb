@@ -14,5 +14,7 @@ class ArchivedExportsController < ApplicationController
     else
       head :gone
     end
+  rescue ActiveStorage::FileNotFoundError
+    head :gone
   end
 end
