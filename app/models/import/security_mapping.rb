@@ -31,10 +31,10 @@ class Import::SecurityMapping < Import::Mapping
       end
     end
 
-    # The security a published trade should use for this row, resolved through
-    # its own (ticker, MIC) mapping.
-    def mappable_for_row(import, row)
-      import.mappings.securities.find_by(key: key_for(ticker: row.ticker, exchange_operating_mic: row.exchange_operating_mic))&.mappable
+    # Composite-key index of this import's security mappings with their
+    # mappables preloaded, so a per-row lookup in import! needs no extra query.
+    def index_for(import)
+      import.mappings.securities.includes(:mappable).index_by(&:key)
     end
 
     private
@@ -62,7 +62,16 @@ class Import::SecurityMapping < Import::Mapping
   def selectable_values
     return [] unless mappable.present?
 
-    [ [ mappable.name.presence || mappable.ticker, mappable.id ] ]
+    [ [ display_name, mappable.id ] ]
+  end
+
+  # The security's user-facing label: its name, falling back to the ticker.
+  # Shared by the view's "matched" label and selectable_values so the fallback
+  # lives in one place.
+  def display_name
+    return nil unless mappable.present?
+
+    mappable.name.presence || mappable.ticker
   end
 
   def requires_selection?
@@ -106,10 +115,13 @@ class Import::SecurityMapping < Import::Mapping
   end
 
   def create_mappable!
-    # No-op on a blank value so an auto-matched mapping (mappable set, value
-    # never touched) keeps its security when TradeImport#import! runs this over
-    # every mapping. An explicit user clear is handled by the controller, which
-    # alone knows a blank was deliberately submitted.
+    # Already resolved (auto-matched or user-mapped): nothing to do. Avoids
+    # re-running Security::Resolver — and a possible provider call — inside the
+    # publish transaction when TradeImport#import! runs this over every mapping.
+    return if mappable.present?
+
+    # No-op on a blank value too. An explicit user clear is handled by the
+    # controller, which alone knows a blank was deliberately submitted.
     return if value.blank?
 
     parsed = Security.parse_combobox_id(value)

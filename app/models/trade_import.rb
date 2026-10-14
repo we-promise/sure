@@ -3,6 +3,11 @@ class TradeImport < Import
     transaction do
       mappings.each(&:create_mappable!)
 
+      # Preloaded once: a per-row find_by + lazy mappable load would be two
+      # queries per trade row inside this transaction (imports can carry
+      # thousands of rows).
+      security_mappings = Import::SecurityMapping.index_for(self)
+
       trades = rows.map do |row|
         mapped_account = if account
           account
@@ -13,7 +18,11 @@ class TradeImport < Import
         # Prefer the security from this row's (ticker, MIC) mapping; fall back
         # to direct resolution so auto-matched/edge rows (and the API flow,
         # which adds no mapping step) still resolve.
-        security = Import::SecurityMapping.mappable_for_row(self, row) ||
+        mapping_key = Import::SecurityMapping.key_for(
+          ticker: row.ticker,
+          exchange_operating_mic: row.exchange_operating_mic
+        )
+        security = security_mappings[mapping_key]&.mappable ||
           find_or_create_security(
             ticker: row.ticker,
             exchange_operating_mic: row.exchange_operating_mic
