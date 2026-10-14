@@ -98,16 +98,23 @@ class Portfolio::FlowClassifier
   EXTERNAL_LABELS = labels_for(:external)
   TRANSFER_LABEL = "Transfer".freeze
 
-  attr_reader :scope_account_ids
+  attr_reader :scope_account_ids, :include_excluded
 
-  def initialize(scope_account_ids:)
+  # include_excluded: classify an excluded entry as if it were not excluded.
+  # Excluding hides an entry from budgets and reports, but the balance
+  # calculators still apply it (Balance::SyncCache), so a reader reconciling
+  # against balances -- Portfolio::DailyReturns -- has to see it as the flow it
+  # was. Split parents are excluded too and are NOT applied; that reader skips
+  # them itself.
+  def initialize(scope_account_ids:, include_excluded: false)
     @scope_account_ids = Array(scope_account_ids).map(&:to_s).uniq.freeze
+    @include_excluded = include_excluded
   end
 
-  # One of CLASSES, or nil when the entry carries no flow: excluded entries,
-  # pending transactions, valuations.
+  # One of CLASSES, or nil when the entry carries no flow: excluded entries
+  # (unless include_excluded), pending transactions, valuations.
   def classify(entry)
-    return nil if entry.excluded?
+    return nil if entry.excluded? && !include_excluded
 
     case entry.entryable
     when Trade then classify_trade(entry, entry.entryable)
@@ -138,19 +145,27 @@ class Portfolio::FlowClassifier
   # The joins #sql_case relies on. The caller's query must select FROM
   # `entries` and place this fragment before its WHERE clause.
   #
-  # One row per entry, which an aggregate embedding this relies on: the
-  # transfers join cannot fan out because Transfer validates
-  # inflow_transaction_id and outflow_transaction_id as unique and requires
-  # opposite amounts, so a transaction is a leg of at most one transfer. A
-  # writer that bypasses validations (insert_all) could break that, and a SUM
-  # over this join would then count the entry twice.
+  # One row per entry, which an aggregate embedding this relies on, by
+  # construction rather than by trust. Transfer validates each leg as unique,
+  # but the only unique index is on the pair, so a writer that bypasses
+  # validations (insert_all), or two matchers racing past the validation, can
+  # make one transaction a leg of two transfers. A plain join would then give
+  # the entry two rows and a SUM over it would count the entry twice. The
+  # lateral reads one transfer per transaction: the earliest, by created_at
+  # then id. #classify reads whichever row `has_one` returns, so in that
+  # corrupt case alone the two forms may disagree.
   def sql_joins
     <<~SQL.squish
       LEFT JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
       LEFT JOIN transactions ON entries.entryable_type = 'Transaction' AND transactions.id = entries.entryable_id
-      LEFT JOIN transfers flow_transfers
-        ON entries.entryable_type = 'Transaction'
-        AND (flow_transfers.inflow_transaction_id = transactions.id OR flow_transfers.outflow_transaction_id = transactions.id)
+      LEFT JOIN LATERAL (
+        SELECT t.inflow_transaction_id, t.outflow_transaction_id
+        FROM transfers t
+        WHERE entries.entryable_type = 'Transaction'
+          AND (t.inflow_transaction_id = transactions.id OR t.outflow_transaction_id = transactions.id)
+        ORDER BY t.created_at, t.id
+        LIMIT 1
+      ) flow_transfers ON TRUE
       LEFT JOIN entries flow_counterpart_entries
         ON flow_counterpart_entries.entryable_type = 'Transaction'
         AND flow_counterpart_entries.entryable_id = CASE
@@ -167,7 +182,7 @@ class Portfolio::FlowClassifier
   def sql_case
     <<~SQL.squish
       CASE
-        WHEN entries.excluded THEN NULL
+        #{"WHEN entries.excluded THEN NULL" unless include_excluded}
         WHEN entries.entryable_type NOT IN ('Trade', 'Transaction') THEN NULL
         WHEN entries.entryable_type = 'Transaction' AND (#{pending_sql}) THEN NULL
         WHEN transactions.transfer_id IS NOT NULL AND transactions.kind = 'standard' THEN 'fee'
