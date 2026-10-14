@@ -10,6 +10,11 @@ class Sync < ApplicationRecord
 
   Error = Class.new(StandardError)
 
+  # Raised when another process is already executing a sync for the same
+  # syncable. SyncJob retries on it, so the sync stays pending and runs once
+  # the other one has finished instead of interleaving with it.
+  ConcurrentSyncError = Class.new(Error)
+
   belongs_to :syncable, polymorphic: true
 
   belongs_to :parent, class_name: "Sync", optional: true
@@ -20,6 +25,19 @@ class Sync < ApplicationRecord
   # Cancel-requested syncs are excluded so spinners clear immediately and
   # sync_later stops piggybacking new requests onto a dying sync.
   scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago).where(cancel_requested_at: nil) }
+  # Syncs a new sync_later request can piggyback on: the visible ones, plus
+  # older pending syncs whose SyncJob is still retrying. Such a sync is waiting
+  # for a long-running sync of the same syncable to release its lock; without
+  # this every later trigger would queue yet another full sync behind it.
+  # SyncJob stamps last_attempted_at on every attempt, so a pending sync whose
+  # job was lost stops attracting requests and the next trigger enqueues anew.
+  JOINABLE_ATTEMPT_WINDOW = 5.minutes
+  scope :joinable, -> {
+    visible.or(
+      where(status: "pending", cancel_requested_at: nil)
+        .where("syncs.last_attempted_at > ?", JOINABLE_ATTEMPT_WINDOW.ago)
+    )
+  }
 
   after_commit :update_family_sync_timestamp, on: [ :create, :update ]
 
@@ -202,20 +220,22 @@ class Sync < ApplicationRecord
         return
       end
 
-      start!
+      with_syncable_execution_lock do
+        start!
 
-      begin
-        syncable.perform_sync(self)
-      rescue => e
-        # Re-check state under a row lock (with_lock reloads): the sync may
-        # have been terminalized externally (marked stale by SyncCleanerJob)
-        # while this job was still running. An unguarded fail! on the in-memory
-        # record would silently overwrite that terminal status.
-        with_lock { fail! if may_fail? }
-        update(error: e.message)
-        report_error(e)
-      ensure
-        finalize_if_all_children_finalized
+        begin
+          syncable.perform_sync(self)
+        rescue => e
+          # Re-check state under a row lock (with_lock reloads): the sync may
+          # have been terminalized externally (marked stale by SyncCleanerJob)
+          # while this job was still running. An unguarded fail! on the in-memory
+          # record would silently overwrite that terminal status.
+          with_lock { fail! if may_fail? }
+          update(error: e.message)
+          report_error(e)
+        ensure
+          finalize_if_all_children_finalized
+        end
       end
     end
   end
@@ -327,6 +347,45 @@ class Sync < ApplicationRecord
     end
 
   private
+    # Serializes sync execution per syncable. sync_later only dedupes against
+    # syncs younger than VISIBLE_FOR, so a sync running longer than that lets a
+    # second one be created and picked up by another worker; without this lock
+    # both would run the materializers for the same records concurrently.
+    #
+    # Session-level (not xact) because perform does not run inside a
+    # transaction. The lock is non-blocking, so nested syncs (a parent
+    # finalizing from a child's job) can never deadlock, and it is re-entrant
+    # on the same connection. It is released when the connection closes, so a
+    # crashed worker cannot leave it held.
+    def with_syncable_execution_lock
+      connection = self.class.connection
+      # uncached: jobs run with the query cache on, and a cached "false" from an
+      # earlier attempt would keep the sync from ever acquiring the lock.
+      acquired = self.class.uncached do
+        connection.select_value(
+          self.class.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", syncable_execution_lock_key ])
+        )
+      end
+
+      unless acquired
+        Rails.logger.info("Sync #{id} - another sync for #{syncable_type}##{syncable_id} is running. Deferring.")
+        raise ConcurrentSyncError, "Another sync for #{syncable_type}##{syncable_id} is running"
+      end
+
+      begin
+        yield
+      ensure
+        connection.execute(
+          self.class.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", syncable_execution_lock_key ])
+        )
+      end
+    end
+
+    def syncable_execution_lock_key
+      # Same keying scheme as the other advisory-locked code paths in this app.
+      Digest::MD5.hexdigest("sync:#{syncable_type}:#{syncable_id}").to_i(16) % (2**62)
+    end
+
     def log_status_change
       Rails.logger.info("changing from #{aasm.from_state} to #{aasm.to_state} (event: #{aasm.current_event})")
     end

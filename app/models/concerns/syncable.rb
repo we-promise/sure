@@ -53,7 +53,7 @@ module Syncable
   def sync_later(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     Sync.transaction do
       with_lock do
-        sync = self.syncs.visible.first
+        sync = self.syncs.joinable.ordered.first
 
         if sync
           Rails.logger.info("There is an existing recent sync, expanding window if needed (#{sync.id})")

@@ -436,4 +436,131 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal new_start, sync.window_start_date
     assert_equal new_end,   sync.window_end_date
   end
+
+  test "does not run while another worker is syncing the same syncable" do
+    syncable = accounts(:depository)
+    running_sync = Sync.create!(syncable: syncable, status: :syncing, created_at: 10.minutes.ago)
+    # A syncing sync past VISIBLE_FOR no longer dedupes, so a second sync is created
+    duplicate_sync = syncable.sync_later
+    refute_equal running_sync, duplicate_sync
+
+    syncable.expects(:perform_sync).never
+
+    with_advisory_lock_held_by_other_session(sync_lock_key(running_sync)) do
+      assert_raises(Sync::ConcurrentSyncError) { duplicate_sync.perform }
+    end
+
+    assert_equal "pending", duplicate_sync.reload.status
+  end
+
+  test "sync_later piggybacks on a pending sync older than VISIBLE_FOR" do
+    syncable = accounts(:depository)
+    waiting_sync = Sync.create!(syncable: syncable, created_at: Sync::VISIBLE_FOR.ago - 10.minutes,
+                                last_attempted_at: 30.seconds.ago,
+                                window_start_date: 2.days.ago.to_date, window_end_date: 2.days.ago.to_date)
+
+    assert_no_difference "Sync.count" do
+      assert_no_enqueued_jobs(only: SyncJob) do
+        assert_equal waiting_sync, syncable.sync_later(window_start_date: 5.days.ago.to_date, window_end_date: Date.current)
+      end
+    end
+
+    assert_equal 5.days.ago.to_date, waiting_sync.reload.window_start_date
+    assert_equal Date.current, waiting_sync.window_end_date
+    refute_includes Sync.visible, waiting_sync, "the UI window is unchanged"
+  end
+
+  test "sync_later does not piggyback on an old pending sync whose job is no longer retrying" do
+    syncable = accounts(:depository)
+    [ nil, Sync::JOINABLE_ATTEMPT_WINDOW.ago - 1.minute ].each do |last_attempted_at|
+      lost_sync = Sync.create!(syncable: syncable, created_at: Sync::VISIBLE_FOR.ago - 10.minutes,
+                               last_attempted_at: last_attempted_at)
+
+      assert_enqueued_with(job: SyncJob) do
+        refute_equal lost_sync, syncable.sync_later
+      end
+
+      Sync.where(syncable: syncable).where.not(id: lost_sync.id).delete_all
+    end
+  end
+
+  test "runs once the other worker has released the syncable" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable)
+    key = sync_lock_key(sync)
+
+    with_advisory_lock_held_by_other_session(key) do
+      assert_raises(Sync::ConcurrentSyncError) { sync.perform }
+    end
+
+    syncable.expects(:perform_sync).with(sync).once
+    sync.perform
+
+    assert_equal "completed", sync.reload.status
+    assert advisory_lock_free?(key), "lock must be released after the sync"
+  end
+
+  test "releases the syncable lock when the sync fails" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable)
+
+    syncable.expects(:perform_sync).raises(StandardError.new("boom"))
+    sync.perform
+
+    assert_equal "failed", sync.reload.status
+    assert advisory_lock_free?(sync_lock_key(sync))
+  end
+
+  test "syncs of different syncables do not block each other" do
+    sync = Sync.create!(syncable: accounts(:depository))
+    other_sync = Sync.create!(syncable: accounts(:credit_card))
+
+    accounts(:depository).expects(:perform_sync).with(sync).once
+
+    with_advisory_lock_held_by_other_session(sync_lock_key(other_sync)) do
+      sync.perform
+    end
+
+    assert_equal "completed", sync.reload.status
+  end
+
+  private
+    # Mirrors Sync#syncable_execution_lock_key so the test pins the key contract.
+    def sync_lock_key(sync)
+      Digest::MD5.hexdigest("sync:#{sync.syncable_type}:#{sync.syncable_id}").to_i(16) % (2**62)
+    end
+
+    # Test transactions pin a single connection for every thread, and advisory
+    # locks are re-entrant per session, so a second worker has to be simulated
+    # with a separate raw Postgres session.
+    def with_other_pg_session
+      config = ActiveRecord::Base.connection_db_config.configuration_hash
+      conn = PG.connect(**{
+        host: config[:host], port: config[:port], dbname: config[:database],
+        user: config[:username], password: config[:password]
+      }.compact)
+      yield conn
+    ensure
+      conn&.close
+    end
+
+    def with_advisory_lock_held_by_other_session(key)
+      with_other_pg_session do |conn|
+        conn.exec_params("SELECT pg_advisory_lock($1)", [ key ])
+        begin
+          yield
+        ensure
+          # Explicit: closing the session releases its locks only asynchronously
+          conn.exec_params("SELECT pg_advisory_unlock($1)", [ key ])
+        end
+      end
+    end
+
+    def advisory_lock_free?(key)
+      with_other_pg_session do |conn|
+        acquired = conn.exec_params("SELECT pg_try_advisory_lock($1)", [ key ]).getvalue(0, 0) == "t"
+        conn.exec_params("SELECT pg_advisory_unlock($1)", [ key ]) if acquired
+        acquired
+      end
+    end
 end
