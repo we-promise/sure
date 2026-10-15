@@ -125,7 +125,9 @@ class AkahuEntry::Processor
       parts << "#{t('akahu_entry.notes.reference')}: #{meta[:reference]}" if meta[:reference].present?
       parts << "#{t('akahu_entry.notes.particulars')}: #{meta[:particulars]}" if meta[:particulars].present?
       parts << "#{t('akahu_entry.notes.code')}: #{meta[:code]}" if meta[:code].present?
-      parts << "#{t('akahu_entry.notes.other_account')}: #{meta[:other_account]}" if meta[:other_account].present?
+      # Notes are shown, exported and passed to the assistant, so the
+      # counterparty's account number keeps only its last 4 characters.
+      parts << "#{t('akahu_entry.notes.other_account')}: #{IdentifierMask.last4(meta[:other_account])}" if meta[:other_account].present?
       parts.presence&.join(" | ")
     end
 

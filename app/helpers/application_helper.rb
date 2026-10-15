@@ -14,12 +14,12 @@ module ApplicationHelper
     form_with(**options, &block)
   end
 
-  # Masks a sensitive identifier (IBAN, account number, ...) down to its last
-  # 4 characters for display, e.g. "•••1234". Returns nil for blank input.
+  # Masks an identifier (IBAN, account number, ...) down to its last 4
+  # characters for display, e.g. "•••1234". Returns nil for blank input.
+  # Values of 4 characters or fewer are shown in full, so this is for
+  # identifiers only, never for secrets. See IdentifierMask.
   def mask_last4(value)
-    return nil if value.blank?
-
-    "•••#{value.to_s.last(4)}"
+    IdentifierMask.last4(value)
   end
 
   # Locale-aware ordinal label for integers.

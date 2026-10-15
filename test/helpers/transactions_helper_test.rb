@@ -142,6 +142,34 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_equal({ "someprovider" => { "a" => 1 } }, JSON.parse(details[:raw]))
   end
 
+  test "masks counterparty account identifiers in the raw dump" do
+    details = build_transaction_extra_details(transaction_with({
+      "monobank" => { "counter_name" => "Shop", "counter_iban" => "UA213223130000026007233566001", "counter_edrpou" => "3123456789" },
+      "fio" => { "counter_account" => "2400222222/2010", "counter_account_name" => "Landlord" }
+    }))
+
+    raw = JSON.parse(details[:raw])
+    assert_equal "•••6001", raw.dig("monobank", "counter_iban")
+    assert_equal "•••6789", raw.dig("monobank", "counter_edrpou")
+    assert_equal "Shop", raw.dig("monobank", "counter_name")
+    assert_equal "•••2010", raw.dig("fio", "counter_account")
+    assert_equal "Landlord", raw.dig("fio", "counter_account_name")
+    assert_no_match(/2400222222|UA2132231300/, details[:raw])
+  end
+
+  test "masks identifiers in structured provider rows too" do
+    details = build_transaction_extra_details(transaction_with({
+      "simplefin" => { "payee" => "Shop", "extra" => { "account_number" => "123456789", "routingNumber" => "021000021", "account_number_last_4" => "6789", "note" => "kept" } }
+    }))
+
+    values = details[:provider_extras].map { |row| row[:value] }
+    assert_includes values, "•••6789"
+    assert_includes values, "kept"
+    assert_includes values, "•••0021"
+    assert_includes values, "6789"
+    assert_not values.any? { |value| value.to_s.include?("123456789") || value.to_s.include?("021000021") }
+  end
+
   test "investment_activity_label_name translates the stored label" do
     I18n.with_locale(:ru) do
       assert_equal "Перевод", investment_activity_label_name("Transfer")

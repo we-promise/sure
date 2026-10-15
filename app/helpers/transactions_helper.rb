@@ -71,7 +71,7 @@ module TransactionsHelper
     tx = obj.respond_to?(:transaction) ? obj.transaction : obj
     return nil unless tx.respond_to?(:extra) && tx.extra.present?
 
-    extra = tx.extra
+    extra = mask_extra_identifiers(tx.extra)
 
     if extra.is_a?(Hash) && extra["simplefin"].present?
       sf = extra["simplefin"]
@@ -144,6 +144,38 @@ module TransactionsHelper
         provider_extras: [],
         raw: pretty_json(extra)
       }
+    end
+  end
+
+  # Keys under which providers store a full account identifier in
+  # Transaction#extra: counterparty IBANs and account numbers (Monobank, Fio,
+  # Akahu), and whatever an institution puts into SimpleFIN's free-form extra.
+  # Matched by name so unknown spellings ("acct_number", "routingNumber") are
+  # caught too; their values are cut down to the last 4 characters before
+  # anything is displayed. Names, BICs and existing last-4 fields are left as
+  # they are.
+  EXTRA_IDENTIFIER_KEY = /iban|bban|edrpou|acc(oun)?t_?(number|no|num)|routing_?(number|no)|sort_?code|card_?number|\Apan\z|counter_?account|other_?account/i
+  EXTRA_IDENTIFIER_EXCLUDED_KEY = /name|last_?4|mask/i
+
+  def extra_identifier_key?(key)
+    key = key.to_s
+    key.match?(EXTRA_IDENTIFIER_KEY) && !key.match?(EXTRA_IDENTIFIER_EXCLUDED_KEY)
+  end
+
+  def mask_extra_identifiers(value)
+    case value
+    when Hash
+      value.to_h do |key, child|
+        if extra_identifier_key?(key) && (child.is_a?(String) || child.is_a?(Numeric))
+          [ key, IdentifierMask.last4(child) ]
+        else
+          [ key, mask_extra_identifiers(child) ]
+        end
+      end
+    when Array
+      value.map { |item| mask_extra_identifiers(item) }
+    else
+      value
     end
   end
 

@@ -67,7 +67,7 @@ class IbkrItem::ReportParser
 
       {
         ibkr_account_id: account_id,
-        name: account_id,
+        name: "Interactive Brokers (#{IdentifierMask.last4(account_id)})",
         currency: currency,
         cash_balance: extract_cash_balance(cash_report, currency),
         current_balance: extract_total_balance(position_values, cash_report, currency),

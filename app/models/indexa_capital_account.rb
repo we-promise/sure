@@ -52,7 +52,6 @@ class IndexaCapitalAccount < ApplicationRecord
     # currency → always EUR for Indexa Capital
     attrs = {
       indexa_capital_account_id: data[:account_number]&.to_s,
-      account_number: data[:account_number]&.to_s,
       name: data[:name] || "Indexa Capital Account",
       currency: data[:currency] || "EUR",
       account_status: data[:status],

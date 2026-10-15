@@ -8,7 +8,7 @@ class AccountIbkrCreationTest < ActiveSupport::TestCase
 
     account = Account.create_from_ibkr_account(ibkr_account)
 
-    assert_equal "Interactive Brokers (U1234567)", account.name
+    assert_equal "Interactive Brokers (•••4567)", account.name
     assert_equal "Investment", account.accountable_type
     assert_equal "CHF", account.currency
   end

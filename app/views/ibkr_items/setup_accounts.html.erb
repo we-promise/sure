@@ -87,7 +87,7 @@
                         ) %>
                       </p>
                       <% if ibkr_account.ibkr_account_id.present? %>
-                        <p class="text-xs text-secondary"><%= t(".available_accounts.account_id", account_id: ibkr_account.ibkr_account_id) %></p>
+                        <p class="text-xs text-secondary"><%= t(".available_accounts.account_id", account_id: mask_last4(ibkr_account.ibkr_account_id)) %></p>
                       <% end %>
                     </label>
                   </div>

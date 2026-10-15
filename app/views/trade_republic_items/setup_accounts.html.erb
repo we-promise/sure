@@ -83,7 +83,7 @@
                         ) %>
                       </p>
                       <% if tr_account.trade_republic_account_id.present? %>
-                        <p class="text-xs text-secondary"><%= t(".available_accounts.account_id", account_id: tr_account.trade_republic_account_id) %></p>
+                        <p class="text-xs text-secondary"><%= t(".available_accounts.account_id", account_id: mask_last4(tr_account.trade_republic_account_id)) %></p>
                       <% end %>
                     </label>
                   </div>
