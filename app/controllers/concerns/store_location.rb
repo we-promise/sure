@@ -1,6 +1,11 @@
 module StoreLocation
   extend ActiveSupport::Concern
 
+  # The session lives in a 4 KB cookie, so a long filtered URL (e.g. the
+  # transactions list filtered by dozens of accounts) would raise
+  # CookieOverflow. Past this size only the path is kept, without the query.
+  MAX_STORED_RETURN_TO_BYTES = 1024
+
   included do
     helper_method :previous_path
     before_action :store_return_to
@@ -25,7 +30,10 @@ private
 
   def store_return_to
     safe = safe_return_to(params[:return_to])
-    session[:return_to] = safe if safe
+    return unless safe
+
+    safe = safe.split("?", 2).first if safe.bytesize > MAX_STORED_RETURN_TO_BYTES
+    session[:return_to] = safe if safe.bytesize <= MAX_STORED_RETURN_TO_BYTES
   end
 
   # Only allow internal absolute paths (a single leading "/"). Blocks absolute
