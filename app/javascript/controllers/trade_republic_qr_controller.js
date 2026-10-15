@@ -186,7 +186,9 @@ export default class extends Controller {
     this.polling = false;
     this.panelTarget.hidden = true;
     this.codeTarget.replaceChildren();
-    this.buttonTarget.disabled = false;
+    // A login started before the server confirms the cancellation would be
+    // cleared by it, so the button stays disabled until then.
+    this.buttonTarget.disabled = true;
     this.setButtonLabel(this.loginTextValue);
 
     try {
@@ -206,6 +208,8 @@ export default class extends Controller {
     } catch (error) {
       this.stopped = false;
       console.warn("[Trade Republic] QR login cancellation failed", error);
+    } finally {
+      this.buttonTarget.disabled = false;
     }
   }
 

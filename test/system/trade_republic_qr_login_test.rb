@@ -26,6 +26,7 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
       assert_button qr_cancel
 
       click_on qr_cancel
+      # The button is enabled again only once the server confirmed the cancel.
       assert_button qr_login
       assert_no_selector ".qrcode svg"
     end
