@@ -1025,19 +1025,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { llm_context_window: "0" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Context Window (Optional) must be a whole number ≥ 256.", flash[:alert]
       assert_nil Setting.llm_context_window
 
       patch settings_hosting_url, params: { setting: { llm_max_response_tokens: "-5" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Max Response Tokens (Optional) must be a whole number ≥ 64.", flash[:alert]
       assert_nil Setting.llm_max_response_tokens
 
       patch settings_hosting_url, params: { setting: { llm_max_items_per_call: "not-a-number" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Max Items Per Batch (Optional) must be a whole number ≥ 1.", flash[:alert]
       assert_nil Setting.llm_max_items_per_call
 
       patch settings_hosting_url, params: { setting: { openai_request_timeout: "0" } }
