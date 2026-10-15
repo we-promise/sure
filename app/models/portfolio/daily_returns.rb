@@ -569,8 +569,9 @@ class Portfolio::DailyReturns
           GROUP BY entries.date
         ),
         -- An inbound journal that could not be valued on its own date, carried
-        -- to the first later day in the period on which the account's holding
-        -- of that security has a price, and booked THERE.
+        -- to the first later day on which the account's holding of that
+        -- security has a price, and booked THERE when that day is in the
+        -- period, whether or not the journal itself is.
         --
         -- Suppressing the journal day alone is not enough. Holding.gapfill
         -- carries the journal's zero price forward, so the position sits in
@@ -619,8 +620,14 @@ class Portfolio::DailyReturns
           LEFT JOIN LATERAL (
             SELECT #{rate_lookup('first_priced.currency', 'first_priced.date - 1')} AS rate
           ) carry_fx ON TRUE
+          -- Selected by the day the carry lands on, not by the journal's own
+          -- date: a journal dated before the period whose first priced day
+          -- falls inside it moved that day's balance as much as one dated in
+          -- the period. A journal inside the period still qualifies, since its
+          -- first priced day is after its own date.
           WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
-            AND entries.date BETWEEN :start_date AND :end_date
+            AND entries.date < DATE :end_date
+            AND first_priced.date >= DATE :start_date
             AND #{fragment(:journal_predicate)}
             AND trades.qty > 0
             AND (journal_day.price IS NULL OR journal_day.price <= 0)

@@ -1052,6 +1052,60 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
   end
 
+  # What decides the carry is the first priced day, not the journal's own
+  # date. A journal dated the day before the period, first priced inside it,
+  # put the position's whole value into that day's market, and `unexplained`
+  # stayed 0, so nothing flagged it. The first priced day can be the period's
+  # first day too, where value_open reads that row's own start_balance.
+  test "an unpriced journal dated before the period is carried to its first priced day in the period" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_one - 1.day, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: @day_two, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    returns = daily_returns
+    second = returns.rows.last
+
+    assert_equal BigDecimal("50"), second.external_flow, "the arrival is booked on its first priced day"
+    assert_equal BigDecimal("0"), second.market, "and taken out of the market move it was read as"
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
+  end
+
+  test "an unpriced journal dated before the period is carried to the period's first day when priced there" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_050, market_flow: 50
+    lay_balance account: @account, date: @day_two, opening: 1_050, closing: 1_050
+    security_journal account: @account, date: @day_one - 1.day, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: @day_one, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    returns = daily_returns
+    first = returns.rows.first
+
+    assert_equal BigDecimal("50"), first.external_flow, "the arrival is booked on the period's first day"
+    assert_equal BigDecimal("0"), first.market
+    assert_equal BigDecimal("0"), first.unexplained
+    assert_in_delta 0.0, returns.returns.first.last.to_f, 0.000001
+  end
+
+  # The other side of that boundary: a journal first priced before the period
+  # arrived before it, so the period's own price moves are returns.
+  test "an unpriced journal first priced before the period is not carried into it" do
+    lay_balance account: @account, date: @day_one, opening: 1_050, closing: 1_050
+    lay_balance account: @account, date: @day_two, opening: 1_050, closing: 1_055, market_flow: 5
+    security_journal account: @account, date: @day_one - 2.days, qty: 5, price: 0
+    [ [ @day_one - 1.day, 10 ], [ @day_one, 10 ], [ @day_two, 11 ] ].each do |date, price|
+      @account.holdings.create!(security: security_under_test, date: date, qty: 5, price: price,
+                                amount: 5 * price, currency: @account.currency)
+    end
+
+    rows = daily_returns.rows
+
+    assert_equal [ BigDecimal("0"), BigDecimal("0") ], rows.map(&:external_flow)
+    assert_equal BigDecimal("5"), rows.last.market, "the period's price move is a return"
+  end
+
   # The control: a journal priced on its own day is booked there, and the
   # next day's price move is a real return. Carrying it as well would book the
   # position a second time and erase that day's gain.
