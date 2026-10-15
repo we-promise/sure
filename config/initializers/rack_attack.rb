@@ -154,7 +154,12 @@ class Rack::Attack
     request.env.fetch("sure.password_change_user") do
       request.env["sure.password_change_user"] = begin
         session_id = ActionDispatch::Request.new(request.env).cookie_jar.signed[:session_token]
-        user_id, impersonation_id = Session.where(id: session_id).pick(:user_id, :active_impersonator_session_id) if session_id.present?
+        # Same check as Authentication#find_session_by_cookie: a session whose
+        # owner was deactivated is rejected there, so it isn't counted here.
+        if session_id.present?
+          user_id, impersonation_id = Session.joins(:user).where(id: session_id, users: { active: true })
+            .pick(:user_id, :active_impersonator_session_id)
+        end
         if impersonation_id
           user_id = ImpersonationSession.in_progress.where(id: impersonation_id).pick(:impersonated_id) || user_id
         end

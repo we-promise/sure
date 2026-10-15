@@ -169,6 +169,18 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     assert_nil ip_block.call(unknown_session_request), "a session that no longer exists must not spend the ip budget"
   end
 
+  test "password change throttles ignore a session whose user was deactivated" do
+    ip_block = Rack::Attack.throttles["password_change/ip"].block
+    user_block = Rack::Attack.throttles["password_change/user"].block
+    user = users(:family_member)
+    session = user.sessions.create!
+    user.update_column(:active, false)
+
+    request = throttle_request("/password", method: "PATCH", session_cookie: session.id)
+    assert_nil user_block.call(request), "authentication rejects this session, so it must not produce a user key"
+    assert_nil ip_block.call(request), "authentication rejects this session, so it must not spend the ip budget"
+  end
+
   test "password change throttle keys an impersonation by the impersonated user" do
     user_block = Rack::Attack.throttles["password_change/user"].block
     impersonation = impersonation_sessions(:in_progress)
