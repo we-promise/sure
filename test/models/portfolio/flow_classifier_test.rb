@@ -146,7 +146,7 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
   # Transfer validates each leg as unique, but only the pair is a unique index,
   # so insert_all or two racing matchers can link one leg to two transfers.
   # sql_joins promises one row per entry, which every SUM embedding it relies
-  # on, so it reads one transfer: the earliest, by created_at then id.
+  # on, so it reads one transfer: of two it is the outflow of, the earliest.
   test "sql_joins gives one row per entry when a leg belongs to two transfers" do
     transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400)
     outflow = transfer.outflow_transaction.entry
@@ -163,6 +163,28 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
                  "one row per entry, whatever the transfers table holds"
     assert_equal({ outflow.id => :internal }, @family_scope.classify_ids([ outflow.id ]),
                  "the earliest transfer, to the IRA, is the one read")
+  end
+
+  # The same corruption can make one transaction the outflow of one transfer
+  # and the inflow of another. #classify reads transfer_as_inflow first, so
+  # the lateral prefers the transfer the transaction is the inflow of, and
+  # only then the earliest; otherwise the two forms read different transfers.
+  test "sql_joins reads the transfer a leg is the inflow of, as classify does" do
+    transfer = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 400)
+    inflow = transfer.inflow_transaction.entry
+    stray = create_labelled_transaction(account: @checking, label: nil, amount: -400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: stray.entryable_id,
+      outflow_transaction_id: transfer.inflow_transaction_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at - 1.minute, updated_at: transfer.created_at - 1.minute
+    } ])
+
+    assert_equal 1, Transfer.where(outflow_transaction_id: transfer.inflow_transaction_id).count,
+                 "precondition: the inflow leg is also the outflow of an earlier transfer, out of scope"
+    assert_equal :internal, @family_scope.classify(inflow)
+    assert_equal({ inflow.id => :internal }, @family_scope.classify_ids([ inflow.id ]),
+                 "the transfer the leg is the inflow of, from the IRA, is the one read")
   end
 
   test "a Contribution or Withdrawal label does not outrank a linked transfer in scope" do
