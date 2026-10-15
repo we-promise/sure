@@ -2,6 +2,7 @@ require "test_helper"
 
 class FamilyTest < ActiveSupport::TestCase
   include SyncableInterfaceTest
+  include SqlQueryCapture
 
   def setup
     @syncable = families(:dylan_family)
@@ -266,6 +267,18 @@ class FamilyTest < ActiveSupport::TestCase
     assert_not_equal k0, k1
     assert_not_equal k1, k2
     assert_not_equal k0, k2
+  end
+
+  test "accounts_status_version fetches count and max updated_at in a single query" do
+    family = families(:dylan_family)
+    queries = capture_sql_queries do
+      family.accounts_status_version
+    end
+
+    account_queries = queries.grep(/FROM "accounts"/i)
+    assert_equal 1, account_queries.size, "accounts_status_version should execute only one query"
+    assert_match(/count\(\*\)/i, account_queries.first)
+    assert_match(/max\(updated_at\)/i, account_queries.first)
   end
 
   test "default currency comes from country ISO data" do
