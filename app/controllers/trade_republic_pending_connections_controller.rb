@@ -21,8 +21,10 @@ class TradeRepublicPendingConnectionsController < ApplicationController
     result = qr_login ? provider.initiate_qr_login : provider.initiate_login
 
     # One login at a time: a new attempt replaces one left unfinished. The
-    # family lock keeps two attempts at once from both getting through.
-    Current.family.with_lock do
+    # family lock keeps two attempts at once from both getting through. It
+    # is a NO KEY UPDATE lock so a login being approved meanwhile can still
+    # create its connection, whose family foreign key needs a KEY SHARE lock.
+    Current.family.with_lock("FOR NO KEY UPDATE") do
       Current.family.trade_republic_pending_connections.destroy_all
       @pending_connection.update!(pending_login_state: result.data.fetch("pending_login_b64"))
     end
@@ -39,7 +41,7 @@ class TradeRepublicPendingConnectionsController < ApplicationController
     DebugLogEntry.capture(
       category: "sync",
       level: "warn",
-      message: "Trade Republic login initiation failed for a new connection: #{e.message}",
+      message: "Trade Republic login initiation failed for a new connection: #{login_error_detail(e)}",
       source: "trade_republic",
       family: Current.family,
       provider_key: "trade_republic"

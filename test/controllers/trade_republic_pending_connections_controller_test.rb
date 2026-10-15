@@ -46,6 +46,25 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     assert_equal 1, @family.trade_republic_pending_connections.count
   end
 
+  test "starting a login takes a family lock that lets an approval create its connection meanwhile" do
+    stub_provider(initiate_qr_login: result("status" => "qr_pending", "pending_login_b64" => "qr-pending"), login_stage: "qr_pending")
+
+    assert_queries_match(/FOR NO KEY UPDATE/) do
+      post trade_republic_pending_connections_url, params: { login_method: "qr" }, headers: TURBO_STREAM
+    end
+  end
+
+  test "a failed start logs no part of a malformed Trade Republic response" do
+    provider = stub_provider
+    provider.expects(:initiate_qr_login).raises(Provider::TradeRepublicClient::MalformedResponse, "unexpected token at 'secret-body'")
+
+    post trade_republic_pending_connections_url, params: { login_method: "qr" }, headers: TURBO_STREAM
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_includes entry.message, "Provider::TradeRepublicClient::MalformedResponse"
+    assert_not_includes entry.message, "secret-body"
+  end
+
   test "a login without a PIN is rejected before Trade Republic is asked" do
     assert_no_difference "TradeRepublicPendingConnection.count" do
       post trade_republic_pending_connections_url, params: {

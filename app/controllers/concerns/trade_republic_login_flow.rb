@@ -263,9 +263,14 @@ module TradeRepublicLoginFlow
       request.xhr? ? head(poller_status) : yield
     end
 
+    # Malformed-response messages can quote the provider response body, so
+    # only their class is logged.
+    def login_error_detail(error)
+      error.is_a?(Provider::TradeRepublicClient::MalformedResponse) ? error.class.name : "#{error.class} - #{error.message}"
+    end
+
     def capture_login_poll_error(error, login:, retryable:)
-      # Malformed-response messages can quote the provider response body.
-      detail = error.is_a?(Provider::TradeRepublicClient::MalformedResponse) ? error.class.name : "#{error.class} - #{error.message}"
+      detail = login_error_detail(error)
       DebugLogEntry.capture(
         category: "sync",
         level: retryable ? "info" : "warn",
