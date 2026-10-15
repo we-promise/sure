@@ -764,6 +764,17 @@ class User < ApplicationRecord
     end
   end
 
+  # Weight unit for commodity displays: "g" (default) or "ozt".
+  def commodity_weight_unit
+    preferences&.dig("commodity_weight_unit").presence_in(Commodity::Weight::UNITS) || "g"
+  end
+
+  def update_commodity_weight_unit!(unit)
+    return unless Commodity::Weight::UNITS.include?(unit)
+
+    update_reports_preferences("commodity_weight_unit" => unit)
+  end
+
   # Transactions preferences management
   def show_split_grouped?
     preferences&.dig("show_split_grouped") != false

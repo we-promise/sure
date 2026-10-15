@@ -7,6 +7,7 @@
       <%= render "account_type", accountable: Depository.new %>
       <%= render "account_type", accountable: Investment.new %>
       <%= render "account_type", accountable: Crypto.new %>
+      <%= render "account_type", accountable: Commodity.new, href: new_commodity_path(return_to: params[:return_to]) %>
       <%= render "account_type", accountable: Property.new %>
       <%= render "account_type", accountable: Vehicle.new %>
     <% end %>

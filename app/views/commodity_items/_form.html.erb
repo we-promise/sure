@@ -1,0 +1,108 @@
+<%# locals: (item:, url:, method: :post) %>
+<% metal = item.metal %>
+<% locations = Current.family.commodity_locations.alphabetically %>
+
+<% if item.errors.any? %>
+  <%= render DS::Alert.new(message: item.errors.full_messages.to_sentence, variant: :error) %>
+<% end %>
+
+<%= styled_form_with model: item, scope: :commodity_item, url: url, method: method, multipart: true,
+      data: {
+        turbo: false,
+        controller: "commodity-item-form",
+        commodity_item_form_lookup_url_value: commodity_price_lookup_path,
+        commodity_item_form_code_value: item.code,
+        commodity_item_form_fineness_defaults_value: metal.default_fineness.transform_values(&:to_s).to_json,
+        commodity_item_form_grams_per_ozt_value: Commodity::Weight::GRAMS_PER_TROY_OUNCE.to_s
+      },
+      class: "flex flex-col gap-4 text-primary" do |form| %>
+  <%= form.hidden_field :code %>
+
+  <% if item.new_record? && writable_accounts.many? %>
+    <%= form.select :account_id,
+          writable_accounts.map { |a| [ a.name, a.id ] } + [ [ t(".new_account"), "new" ] ],
+          { label: t(".account"), selected: item.account_id } %>
+    <%= text_field_tag :new_account_name, params[:new_account_name], placeholder: t(".new_account_name_placeholder"),
+          class: "form-field__input text-sm", "aria-label": t(".new_account_name_placeholder") %>
+  <% end %>
+
+  <%= form.text_field :name, label: t(".name"), placeholder: t(".name_placeholder"), required: true %>
+
+  <div class="grid grid-cols-2 gap-2">
+    <%= form.select :form, commodity_form_options, { label: t(".form") },
+          data: { commodity_item_form_target: "form", action: "commodity-item-form#formChanged" } %>
+    <%= form.number_field :quantity, label: t(".quantity"), min: 1, step: 1, required: true,
+          data: { commodity_item_form_target: "quantity", action: "commodity-item-form#refreshPrice" } %>
+  </div>
+
+  <div class="grid grid-cols-3 gap-2">
+    <%= form.number_field :weight_value, label: t(".weight"), min: 0, step: "any", required: true,
+          data: { commodity_item_form_target: "weight", action: "commodity-item-form#refreshPrice" } %>
+    <%= form.select :weight_unit, Commodity::Weight::UNITS.map { |u| [ t("commodities.units.#{u}"), u ] }, { label: t(".unit") },
+          data: { commodity_item_form_target: "unit", action: "commodity-item-form#refreshPrice" } %>
+    <%= form.number_field :fineness, label: t(".fineness"), min: 0, max: 1, step: "any", required: true,
+          data: { commodity_item_form_target: "fineness", action: "input->commodity-item-form#finenessEdited change->commodity-item-form#refreshPrice" } %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-2">
+    <%= form.select :location_id, locations.map { |l| [ l.name, l.id ] }, { label: t(".location"), include_blank: t(".no_location") } %>
+    <%= form.text_field :new_location_name, label: t(".new_location"), placeholder: t(".new_location_placeholder"), value: params.dig(:commodity_item, :new_location_name) %>
+  </div>
+
+  <%= render "shared/ruler", classes: "my-2" %>
+  <p class="text-sm font-medium"><%= t(".purchase") %></p>
+
+  <div class="grid grid-cols-2 gap-2">
+    <%= form.date_field :purchase_date, label: t(".purchase_date"), required: true, max: Date.current,
+          data: { commodity_item_form_target: "date", action: "commodity-item-form#lookupPrice" } %>
+    <%= form.select :purchase_currency, commodity_currency_options, { label: t(".currency") },
+          data: { commodity_item_form_target: "currency", action: "commodity-item-form#lookupPrice" } %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-2">
+    <%= form.number_field :metal_price_value, label: t(".metal_price"), min: 0, step: "any",
+          value: item.metal_price_value || (item.metal_cost if item.persisted?),
+          data: { commodity_item_form_target: "price", action: "input->commodity-item-form#priceEdited" } %>
+    <%= form.select :metal_price_basis, Commodity::Item::PRICE_BASES.map { |b| [ t(".price_bases.#{b}"), b ] }, { label: t(".price_basis") },
+          data: { commodity_item_form_target: "priceBasis", action: "commodity-item-form#refreshPrice" } %>
+  </div>
+  <p class="text-xs text-secondary" data-commodity-item-form-target="spotHint" data-futures-label="<%= t(".futures_label") %>" data-spot-label="<%= t(".spot_label") %>"></p>
+
+  <div class="grid grid-cols-2 gap-2">
+    <%= form.number_field :premium, label: t(".premium"), min: 0, step: "any" %>
+    <%= form.select :premium_basis, Commodity::Item::PREMIUM_BASES.map { |b| [ t(".premium_bases.#{b}"), b ] }, { label: t(".premium_basis") } %>
+  </div>
+
+  <div class="grid grid-cols-3 gap-2">
+    <%= form.number_field :vat, label: t(".vat"), min: 0, step: "any" %>
+    <%= form.number_field :shipping, label: t(".shipping"), min: 0, step: "any" %>
+    <%= form.number_field :insurance, label: t(".insurance"), min: 0, step: "any" %>
+  </div>
+
+  <details class="group">
+    <summary class="cursor-pointer text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">
+      <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
+      <%= t(".additional_details") %>
+    </summary>
+
+    <div class="space-y-2 mt-2 pl-4 border-l border-primary">
+      <div class="grid grid-cols-2 gap-2">
+        <%= form.select :sell_back_mode, Commodity::Item::SELL_BACK_MODES.map { |m| [ t(".sell_back_modes.#{m}"), m ] },
+              { label: t(".sell_back_mode"), include_blank: t(".sell_back_none") } %>
+        <%= form.number_field :sell_back_value, label: t(".sell_back_value"), min: 0, step: "any", placeholder: t(".sell_back_placeholder") %>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <%= form.text_field :manufacturer, label: t(".manufacturer") %>
+        <%= form.number_field :year, label: t(".year"), min: 1000, max: Date.current.year %>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <%= form.text_field :serial_number, label: t(".serial_number") %>
+        <%= form.text_field :dealer, label: t(".dealer") %>
+      </div>
+      <%= form.text_area :notes, label: t(".notes"), rows: 3 %>
+      <%= form.file_field :photo, label: t(".photo"), accept: "image/jpeg,image/png,image/webp,image/heic" %>
+    </div>
+  </details>
+
+  <%= form.submit item.new_record? ? t(".create", metal: metal.name) : t(".update") %>
+<% end %>

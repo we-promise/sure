@@ -1,0 +1,64 @@
+<%# locals: (account:, items:, filters:, can_write:) %>
+<% locations = Current.family.commodity_locations.alphabetically %>
+
+<%= form_with url: account_path(account), method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" },
+      class: "flex flex-wrap items-end gap-2", aria: { label: t("commodities.items.filters") } do |f| %>
+  <%= f.hidden_field :tab, value: "inventory" %>
+  <%= f.select :metal, options_for_select([ [ t("commodities.items.all_metals"), "" ] ] + Commodity.metals.map { |m| [ m.name, m.code ] }, filters[:metal]),
+        {}, class: "form-field__input text-sm w-auto", "aria-label": t("commodities.items.metal"), data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
+  <%= f.select :location, options_for_select([ [ t("commodities.items.all_locations"), "" ], [ t("commodity_items.form.no_location"), "none" ] ] + locations.map { |l| [ l.name, l.id ] }, filters[:location]),
+        {}, class: "form-field__input text-sm w-auto", "aria-label": t("commodities.items.location"), data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
+  <%= f.select :form, options_for_select([ [ t("commodities.items.all_forms"), "" ] ] + commodity_form_options, filters[:form]),
+        {}, class: "form-field__input text-sm w-auto", "aria-label": t("commodities.items.form"), data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
+  <%= f.select :status, options_for_select(Commodity::Item::STATUSES.map { |s| [ t("commodities.items.statuses.#{s}"), s ] }, filters[:status] || "held"),
+        {}, class: "form-field__input text-sm w-auto", "aria-label": t("commodities.items.status"), data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
+  <%= f.select :sort, options_for_select(Commodity::Item::SORTS.keys.map { |s| [ t("commodities.items.sorts.#{s}"), s ] }, filters[:sort]),
+        {}, class: "form-field__input text-sm w-auto", "aria-label": t("commodities.items.sort"), data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
+<% end %>
+
+<% if items.empty? %>
+  <%= render DS::EmptyState.new(icon: Commodity.icon, title: t("commodities.items.empty_title"), description: t("commodities.items.empty_description")) do |es| %>
+    <% if can_write %>
+      <% es.with_action do %>
+        <%= render DS::Link.new(text: t("commodities.tabs.inventory.add_item"), icon: "plus", href: new_commodity_path(account_id: account.id), frame: :modal) %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% else %>
+  <%= render DS::Table.new(rows: items, label: t("commodities.items.title"), data: { testid: "commodity-items" }) do |table| %>
+    <% table.with_column(t("commodities.items.item")) do |item| %>
+      <p class="text-primary font-medium"><%= item.name %></p>
+      <p class="text-xs text-secondary">
+        <%= item.metal.name %> · <%= t("commodities.forms.#{item.form}") %> ·
+        <%= t("commodities.items.pieces", held: item.remaining_quantity, total: item.quantity) %> ·
+        <%= number_with_precision(item.fineness, precision: 4, strip_insignificant_zeros: true) %>
+      </p>
+    <% end %>
+    <% table.with_column(t("commodities.items.location")) { |item| item.location&.name || t("commodity_items.form.no_location") } %>
+    <% table.with_column(t("commodities.summary.fine_weight"), numeric: true) { |item| commodity_weight(item.fine_grams(item.held? ? item.remaining_quantity : item.quantity)) } %>
+    <% table.with_column(t("commodities.summary.cost_basis"), numeric: true, class: "privacy-sensitive") { |item| commodity_money(item.cost_basis&.total) } %>
+    <% table.with_column(t("commodities.summary.melt_value"), numeric: true, class: "privacy-sensitive") { |item| item.held? ? commodity_money(item.melt_value) : "—" } %>
+    <% table.with_column(t("commodities.summary.unrealized"), numeric: true, class: "privacy-sensitive") { |item| item.held? ? commodity_trend(item.unrealized_trend) : "—" } %>
+    <% table.with_column(t("commodities.summary.metal_gain"), numeric: true, class: "privacy-sensitive") { |item| item.held? ? commodity_signed_money(item.metal_gain) : "—" } %>
+    <% table.with_column(t("commodities.summary.premium_and_costs"), numeric: true, class: "privacy-sensitive") { |item| commodity_signed_money(item.cost_basis && -item.cost_basis.premium_and_costs) } %>
+    <% table.with_column(t("commodities.items.realized"), numeric: true, class: "privacy-sensitive") { |item| item.sales.any? ? commodity_signed_money(item.realized_gain) : "—" } %>
+    <% if can_write %>
+      <% table.with_column("", numeric: true) do |item| %>
+        <%= render DS::Menu.new(testid: "commodity-item-menu-#{item.id}") do |menu| %>
+          <% menu.with_item(variant: "link", text: t("commodities.items.edit"), href: edit_commodity_item_path(item), icon: "pencil-line", data: { turbo_frame: :modal }) %>
+          <% menu.with_item(variant: "link", text: t("commodities.items.move"), href: move_commodity_item_path(item), icon: "move-right", data: { turbo_frame: :modal }) %>
+          <% if item.held? %>
+            <% menu.with_item(variant: "link", text: t("commodities.items.sell"), href: new_commodity_item_sale_path(item), icon: "hand-coins", data: { turbo_frame: :modal }) %>
+          <% end %>
+          <% item.sales.each do |sale| %>
+            <% menu.with_item(variant: "button", text: t("commodities.items.delete_sale", date: l(sale.date, format: :short), quantity: sale.quantity),
+                 href: commodity_item_sale_path(item, sale), method: :delete, icon: "undo-2", data: { turbo_frame: :_top }) %>
+          <% end %>
+          <% menu.with_item(variant: "divider") %>
+          <% menu.with_item(variant: "button", text: t("commodities.items.delete"), href: commodity_item_path(item), method: :delete, icon: "trash-2",
+               destructive: true, confirm: CustomConfirm.for_resource_deletion(item.name), data: { turbo_frame: :_top }) %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

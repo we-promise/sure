@@ -1,6 +1,7 @@
 ---
 en:
   commodities:
+    unknown: "—"
     subclasses:
       precious_metal: Precious metals
     metals:
@@ -11,3 +12,192 @@ en:
     units:
       g: g
       ozt: oz t
+    forms:
+      bar: Bar
+      coin: Coin
+      round: Round
+      granules: Granules
+      other: Other
+    price_sources:
+      metal_price_api: spot (metalpriceapi.com)
+      yahoo_futures: futures, approximate spot (Yahoo Finance)
+    weight_unit_toggle:
+      label: Weight unit
+      g: Grams
+      ozt: Troy ounces
+    new:
+      title: Which commodity would you like to add?
+    edit:
+      title: Edit %{account}
+      name: Account name
+      currency: Currency
+      institution: Institution or vault
+      notes: Notes
+      exclude_from_reports: Exclude from reports
+      submit: Save
+    update:
+      success: Commodities account updated
+    tabs:
+      inventory:
+        add_item: Add item
+        locations: Locations
+    summary:
+      melt_value: Melt value
+      cost_basis: Cost basis
+      cost_breakdown: "Metal %{metal} · Premium %{premium} · Other %{other}"
+      unrealized: Unrealized P&L
+      metal_gain: Metal price gain/loss
+      premium_and_costs: Premiums & costs paid
+      fine_weight: Fine weight
+      gross_weight: "Gross %{weight}"
+      realisable_value: Realisable value (sell-back)
+      realisable_pnl: "P&L at sell-back price: %{amount}"
+      per_metal: Totals per metal
+      per_location: Totals per location
+      metal: Metal
+      location: Location
+      price_source: "Prices: %{source}"
+    charts:
+      fine_weight_by_metal: Fine weight per metal
+      allocation_by_location: Allocation by location
+      value_over_time: Value over time
+      no_prices: No prices available yet.
+      locations:
+        one: 1 location
+        other: "%{count} locations"
+    items:
+      title: Items
+      filters: Filter items
+      metal: Metal
+      all_metals: All metals
+      location: Location
+      all_locations: All locations
+      form: Form
+      all_forms: All forms
+      status: Status
+      statuses:
+        held: Held
+        sold: Sold
+        all: Held and sold
+      sort: Sort
+      sorts:
+        purchase_date: Newest first
+        name: Name
+        fine_weight: Heaviest first
+      item: Item
+      pieces: "%{held} of %{total} pcs"
+      realized: Realized P&L
+      empty_title: No items here yet
+      empty_description: Add bars or coins to track their weight, value and profit.
+      edit: Edit
+      move: Move to location
+      sell: Record sale
+      delete_sale: "Undo sale of %{date} (%{quantity} pcs)"
+      delete: Delete item
+  commodity_items:
+    form:
+      account: Add to account
+      new_account: New commodities account…
+      new_account_name_placeholder: New account name (optional)
+      name: Description
+      name_placeholder: e.g. 1 oz Maple Leaf, 100 g Heraeus bar
+      form: Form
+      quantity: Quantity
+      weight: Weight per piece
+      unit: Unit
+      fineness: Fineness
+      location: Location
+      no_location: No location
+      new_location: Or a new location
+      new_location_placeholder: e.g. Home safe
+      purchase: Purchase
+      purchase_date: Purchase date
+      currency: Currency
+      metal_price: Metal (spot) price
+      price_basis: Price is
+      price_bases:
+        total: Total for all pieces
+        per_ozt: Per fine troy ounce
+        per_g: Per fine gram
+      spot_label: Spot price that day
+      futures_label: Futures price that day (approximate spot)
+      premium: Premium paid
+      premium_basis: Premium is
+      premium_bases:
+        total: Total
+        per_piece: Per piece
+      vat: VAT / taxes
+      shipping: Shipping
+      insurance: Insurance
+      additional_details: Additional details
+      sell_back_mode: Expected sell-back price
+      sell_back_none: Not set
+      sell_back_modes:
+        spot_percent: Percentage of spot
+        per_piece: Fixed price per piece
+      sell_back_value: Sell-back value
+      sell_back_placeholder: e.g. 99 (%) or 2100
+      manufacturer: Manufacturer / mint
+      year: Year
+      serial_number: Serial number
+      dealer: Dealer / seller
+      notes: Notes
+      photo: Photo
+      create: Add %{metal}
+      update: Save
+    new:
+      title: Add %{metal}
+    edit:
+      title: Edit %{name}
+    edit_location:
+      title: Move %{name}
+      location: New location
+      moved_on: Moved on
+      history: Location history
+      submit: Move item
+    create:
+      success: Item added
+    update:
+      success: Item updated
+    destroy:
+      success: Item deleted
+    update_location:
+      success: Item moved
+      invalid_date: Invalid date
+  commodity_sales:
+    new:
+      title: Record sale of %{name}
+      held:
+        one: 1 piece held
+        other: "%{count} pieces held"
+      date: Sale date
+      quantity: Pieces sold
+      proceeds: Sale price
+      proceeds_basis: Price is
+      proceeds_bases:
+        total: Total
+        per_piece: Per piece
+      currency: Currency
+      costs: Sale costs / fees
+      submit: Record sale
+    create:
+      success: Sale recorded
+    destroy:
+      success: Sale removed
+  commodity_locations:
+    index:
+      title: Storage locations
+      description: Where your commodity items are kept. Items can be filtered, grouped and moved between locations.
+      new_location: New location
+      placeholder: e.g. Bank deposit box
+      add: Add
+      name: Name
+      items: Items
+      delete: Delete %{name}
+      empty: No locations yet
+    create:
+      success: Location added
+    update:
+      success: Location renamed
+    destroy:
+      success: Location deleted

@@ -88,6 +88,7 @@ en:
           estimated_vehicle_value: Estimated vehicle value
           holdings_value: Holdings value
           loan_remaining_balance: Remaining balance
+          melt_value: Melt value
           remaining_principal_balance: Remaining principal balance
           total_account_value: Total account value
           total_gains: Total gains

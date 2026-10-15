@@ -725,6 +725,17 @@ Rails.application.routes.draw do
   resources :credit_cards, only: %i[new create edit update]
   resources :loans, only: %i[new create edit update]
   resources :cryptos, only: %i[new create edit update]
+  resources :commodities, only: %i[new edit update]
+  resources :commodity_items, only: %i[new create edit update destroy] do
+    member do
+      get :move, action: :edit_location
+      patch :move, action: :update_location
+    end
+    resources :sales, only: %i[new create destroy], controller: "commodity_sales"
+  end
+  resources :commodity_locations, only: %i[index create update destroy]
+  resource :commodity_weight_unit, only: :update
+  get "commodity_prices/lookup", to: "commodity_prices#lookup", as: :commodity_price_lookup
   resources :other_assets, only: %i[new create edit update]
   resources :other_liabilities, only: %i[new create edit update]
 

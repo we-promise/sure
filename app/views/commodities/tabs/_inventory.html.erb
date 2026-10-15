@@ -1,0 +1,24 @@
+<%# locals: (account:) %>
+<% statement = CommodityStatement.new(account.family, user: Current.user, accounts: Account.where(id: account.id), currency: account.currency) %>
+<% filters = params.permit(:metal, :location, :form, :status, :sort).to_h.symbolize_keys %>
+<% items = account.commodity_items.filter_by(filters).includes(:location, :sales, photo_attachment: :blob) %>
+<% can_write = account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
+
+<div class="space-y-4" data-testid="commodity-inventory">
+  <div class="flex flex-wrap items-center gap-2">
+    <% if can_write %>
+      <%= render DS::Link.new(text: t(".add_item"), icon: "plus", href: new_commodity_path(account_id: account.id), frame: :modal, size: :sm) %>
+    <% end %>
+    <%= render DS::Link.new(text: t(".locations"), icon: "map-pin", variant: :outline, href: commodity_locations_path, size: :sm) %>
+    <div class="ml-auto">
+      <%= render "commodities/weight_unit_toggle" %>
+    </div>
+  </div>
+
+  <% if statement.any? %>
+    <%= render "commodities/summary", statement: statement %>
+    <%= render "commodities/charts", statement: statement %>
+  <% end %>
+
+  <%= render "commodities/items", account: account, items: items, filters: filters, can_write: can_write %>
+</div>

@@ -71,14 +71,21 @@ class CommodityStatement
       end
   end
 
-  def initialize(family, user: nil, accounts: nil)
+  def initialize(family, user: nil, accounts: nil, currency: nil)
     @family = family
     @user = user
     @accounts = accounts
+    @currency = currency
   end
 
   def currency
-    family.currency
+    @currency || family.currency
+  end
+
+  # Where the current prices come from, for labelling ("spot" vs "futures").
+  def price_sources
+    codes = held_items.map(&:code).uniq
+    codes.filter_map { |code| Commodity::Price.latest_on(code, Date.current)&.source }.uniq
   end
 
   def accounts
@@ -118,6 +125,28 @@ class CommodityStatement
               .map { |location, group| [ location, Totals.new(group, currency: currency) ] }
   end
 
+  LOCATION_COLORS = %w[#1570EF #CA8A04 #06AED4 #F23E94 #12B76A #7A5AF8 #737373].freeze
+
+  # Melt value per location for the allocation donut.
+  def location_allocation
+    rows = by_location.filter_map do |location, totals|
+      [ location, totals.melt_value ] if totals.melt_value&.positive?
+    end
+    sum = rows.sum { |_, value| value.amount }
+    return [] if sum.zero?
+
+    rows.each_with_index.map do |(location, value), index|
+      {
+        id: location&.id || "unassigned",
+        name: location&.name,
+        amount: value.amount.round(2).to_f,
+        money: value,
+        color: LOCATION_COLORS[index % LOCATION_COLORS.size],
+        percentage: (value.amount / sum * 100).round(1).to_f
+      }
+    end
+  end
+
   def sales(period: nil)
     all = items.flat_map(&:sales)
     period ? all.select { |s| period.date_range.cover?(s.date) } : all
@@ -134,31 +163,46 @@ class CommodityStatement
     nil
   end
 
-  # Value over time per metal for charting:
-  # [{ date:, value:, groups: [{ name:, color:, value: }] }, ...]
+  # Value over time with a per-metal breakdown, in the payload shape of the
+  # net-worth breakdown chart (net_worth_chart_controller).
   def value_series(period:)
-    return [] unless any?
+    return nil unless any?
 
     start_date = [ period.start_date, items.map(&:purchase_date).min ].max
-    series = Commodity::PriceSeries.new(codes: items.map(&:code), currency: currency, start_date: start_date, end_date: period.end_date)
+    end_date = period.end_date
+    prices = Commodity::PriceSeries.new(codes: items.map(&:code), currency: currency, start_date: start_date, end_date: end_date)
     step = { "1 month" => 1.month, "1 week" => 1.week }.fetch(period.interval, 1.day)
 
     dates = []
     date = start_date
-    while date <= period.end_date
+    while date <= end_date
       dates << date
       date += step
     end
-    dates << period.end_date unless dates.last == period.end_date
+    dates << end_date unless dates.last == end_date
 
-    dates.map do |d|
+    previous = nil
+    values = dates.map do |d|
       groups = by_code_held_on(d).map do |code, ozt|
         metal = Commodity.metal(code)
-        price = series.price_on(code, d)
-        { name: metal.name, color: metal.color, value: price ? (price * ozt).round(2).to_f : 0 }
+        price = prices.price_on(code, d)
+        { name: metal.name, color: metal.color, classification: "asset", value: Money.new(price ? (price * ozt).round(2) : 0, currency) }
       end
-      { date: d, value: groups.sum { |g| g[:value] }, groups: groups }
+      total = Money.new(groups.sum { |g| g[:value].amount }, currency)
+      point = {
+        date: d,
+        date_formatted: I18n.l(d, format: :long),
+        value: total,
+        trend: Trend.new(current: total, previous: previous || total),
+        assets: total,
+        liabilities: Money.new(0, currency),
+        groups: groups
+      }
+      previous = total
+      point
     end
+
+    { start_date: start_date, end_date: end_date, interval: period.interval, trend: Trend.new(current: values.last[:value], previous: values.first[:value]), values: values }
   end
 
   private

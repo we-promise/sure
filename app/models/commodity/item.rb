@@ -27,8 +27,16 @@ class Commodity::Item < ApplicationRecord
 
   has_one_attached :photo
 
+  PRICE_BASES = %w[total per_ozt per_g].freeze
+  PREMIUM_BASES = %w[total per_piece].freeze
+
   # Weight as entered (in `weight_unit`); converted to grams on save.
   attribute :weight_value, :decimal
+  # Form inputs: metal price as a total or per fine ozt / gram, premium as a
+  # total or per piece. Stored as totals for all pieces.
+  attribute :metal_price_value, :decimal
+  attribute :metal_price_basis, :string, default: "total"
+  attribute :premium_basis, :string, default: "total"
 
   validates :name, :purchase_date, :purchase_currency, presence: true
   validates :code, inclusion: { in: ->(_) { Commodity::CATALOG.map(&:code) } }
@@ -43,7 +51,11 @@ class Commodity::Item < ApplicationRecord
   validate :account_is_commodity
   validate :quantity_covers_sales
 
+  normalizes :sell_back_mode, with: ->(mode) { mode.presence }
+  normalizes :serial_number, :manufacturer, :dealer, with: ->(value) { value.strip.presence }
+
   before_validation :apply_weight_value
+  before_validation :apply_price_inputs
   before_validation :sync_remaining_quantity
 
   scope :held, -> { where("commodity_items.remaining_quantity > 0") }
@@ -51,7 +63,29 @@ class Commodity::Item < ApplicationRecord
 
   delegate :currency, to: :account
 
+  STATUSES = %w[held sold all].freeze
+  SORTS = {
+    "purchase_date" => { purchase_date: :desc, created_at: :desc },
+    "name" => { name: :asc },
+    "fine_weight" => Arel.sql("gross_weight_grams * fineness * remaining_quantity DESC")
+  }.freeze
+
   class << self
+    # Inventory list filters: metal, location ("none" = unassigned), form,
+    # status (held by default) and sort.
+    def filter_by(filters)
+      scope = all
+      scope = scope.where(code: filters[:metal]) if filters[:metal].present?
+      scope = scope.where(location_id: filters[:location] == "none" ? nil : filters[:location]) if filters[:location].present?
+      scope = scope.where(form: filters[:form]) if filters[:form].present?
+      scope = case filters[:status]
+      when "sold" then scope.sold
+      when "all" then scope
+      else scope.held
+      end
+      scope.order(SORTS.fetch(filters[:sort].to_s, SORTS["purchase_date"]))
+    end
+
     # Exchange-rate pairs (with the earliest date needed) to value the items in
     # this scope: price currency, purchase currency and sale currency, each
     # into the account currency. Returns { [from, to] => date }.
@@ -169,6 +203,14 @@ class Commodity::Item < ApplicationRecord
     Trend.new(current: value, previous: basis.total)
   end
 
+  # Realized P&L of all sales of this item, nil if any is unknown.
+  def realized_gain
+    trends = sales.map(&:realized_gain_loss)
+    return nil if trends.empty? || trends.any?(&:nil?)
+
+    trends.sum(Money.new(0, currency), &:value)
+  end
+
   def move_to!(new_location, on: Date.current)
     return if new_location&.id == location_id
 
@@ -200,6 +242,21 @@ class Commodity::Item < ApplicationRecord
     def apply_weight_value
       raw = read_attribute(:weight_value)
       self.gross_weight_grams = Commodity::Weight.to_grams(raw, weight_unit) if raw.present?
+    end
+
+    def apply_price_inputs
+      return unless gross_weight_grams && fineness && quantity
+
+      if metal_price_value.present?
+        self.metal_cost = case metal_price_basis
+        when "per_ozt" then metal_price_value * fine_troy_ounces(quantity)
+        when "per_g" then metal_price_value * fine_grams(quantity)
+        else metal_price_value
+        end.round(4)
+      end
+
+      self.premium = premium * quantity if premium_basis == "per_piece" && premium
+      self.premium_basis = "total"
     end
 
     def sync_remaining_quantity

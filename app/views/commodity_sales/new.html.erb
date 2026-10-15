@@ -1,0 +1,24 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", name: @item.name)) %>
+  <% dialog.with_body do %>
+    <% if @sale.errors.any? %>
+      <%= render DS::Alert.new(message: @sale.errors.full_messages.to_sentence, variant: :error) %>
+    <% end %>
+
+    <p class="text-sm text-secondary mb-4"><%= t(".held", count: @item.remaining_quantity) %></p>
+
+    <%= styled_form_with model: @sale, scope: :commodity_sale, url: commodity_item_sales_path(@item), data: { turbo: false }, class: "flex flex-col gap-4 text-primary" do |form| %>
+      <div class="grid grid-cols-2 gap-2">
+        <%= form.date_field :date, label: t(".date"), required: true, min: @item.purchase_date, max: Date.current %>
+        <%= form.number_field :quantity, label: t(".quantity"), min: 1, max: @item.remaining_quantity, step: 1, required: true %>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <%= form.number_field :proceeds, label: t(".proceeds"), min: 0, step: "any", required: true %>
+        <%= form.select :proceeds_basis, [ [ t(".proceeds_bases.total"), "total" ], [ t(".proceeds_bases.per_piece"), "per_piece" ] ], { label: t(".proceeds_basis") } %>
+        <%= form.select :currency, commodity_currency_options, { label: t(".currency") } %>
+      </div>
+      <%= form.number_field :costs, label: t(".costs"), min: 0, step: "any" %>
+      <%= form.submit t(".submit") %>
+    <% end %>
+  <% end %>
+<% end %>

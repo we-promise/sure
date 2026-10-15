@@ -86,6 +86,7 @@ en:
       tabs:
         activity: Activity
         holdings: Holdings
+        inventory: Inventory
         overview: Overview
         schedule: Schedule
         statements: Statements

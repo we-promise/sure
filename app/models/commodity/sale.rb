@@ -3,6 +3,11 @@
 class Commodity::Sale < ApplicationRecord
   belongs_to :item, class_name: "Commodity::Item", inverse_of: :sales
 
+  # Form input: proceeds entered per piece or as a total (stored as a total).
+  attribute :proceeds_basis, :string, default: "total"
+
+  before_validation :apply_proceeds_basis
+
   validates :date, :currency, presence: true
   validates :quantity, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
   validates :proceeds, :costs, numericality: { greater_than_or_equal_to: 0 }
@@ -25,6 +30,11 @@ class Commodity::Sale < ApplicationRecord
   end
 
   private
+    def apply_proceeds_basis
+      self.proceeds = proceeds * quantity if proceeds_basis == "per_piece" && proceeds && quantity
+      self.proceeds_basis = "total"
+    end
+
     def quantity_available
       return unless item && quantity
 

@@ -1,0 +1,12 @@
+<%# Second step of the "add" modal: choose which commodity to add. %>
+<%= render layout: "accounts/new/container", locals: { title: t(".title"), back_path: params[:account_id].present? ? nil : new_account_path(return_to: params[:return_to]) } do %>
+  <div class="text-sm">
+    <% @metals.each do |metal| %>
+      <%= render "accounts/account_type",
+                 href: new_commodity_item_path(code: metal.code, account_id: params[:account_id]),
+                 icon_name: Commodity.icon,
+                 color: metal.color,
+                 label: metal.name %>
+    <% end %>
+  </div>
+<% end %>

@@ -1,0 +1,7 @@
+<% unit = Current.user.commodity_weight_unit %>
+<%= render DS::SegmentedControl.new(aria_label: t("commodities.weight_unit_toggle.label"), data: { testid: "commodity-weight-unit" }) do |control| %>
+  <% Commodity::Weight::UNITS.each do |option| %>
+    <% control.with_segment(t("commodities.weight_unit_toggle.#{option}"), active: unit == option,
+         href: commodity_weight_unit_path(unit: option), data: { turbo_method: :patch, turbo_frame: "_top" }) %>
+  <% end %>
+<% end %>

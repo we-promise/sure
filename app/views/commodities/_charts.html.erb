@@ -1,0 +1,62 @@
+<%# locals: (statement:) %>
+<% by_metal = statement.by_metal %>
+<% max_grams = by_metal.map { |_, totals| totals.fine_grams }.max %>
+<% allocation = statement.location_allocation %>
+<% series = statement.value_series(period: Period.custom(start_date: statement.items.map(&:purchase_date).min, end_date: Date.current)) %>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-3" data-testid="commodity-weight-chart">
+    <h3 class="text-sm font-medium text-primary"><%= t("commodities.charts.fine_weight_by_metal") %></h3>
+    <% by_metal.each do |metal, totals| %>
+      <div class="space-y-1">
+        <div class="flex justify-between text-sm">
+          <span class="text-secondary"><%= metal.name %></span>
+          <span class="text-primary tabular-nums"><%= commodity_weight(totals.fine_grams) %></span>
+        </div>
+        <div class="h-2 rounded-full bg-container-inset overflow-hidden">
+          <div class="h-full rounded-full" style="width: <%= max_grams.positive? ? (totals.fine_grams / max_grams * 100).round(1) : 0 %>%; background-color: <%= metal.color %>;"></div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4" data-testid="commodity-location-chart">
+    <h3 class="text-sm font-medium text-primary mb-2"><%= t("commodities.charts.allocation_by_location") %></h3>
+    <% if allocation.any? %>
+      <div class="flex items-center gap-4">
+        <div class="h-40 w-40 relative shrink-0" data-controller="donut-chart" data-donut-chart-segments-value="<%= allocation.map { |s| s.slice(:id, :amount, :color) }.to_json %>">
+          <div data-donut-chart-target="chartContainer" class="absolute inset-0 pointer-events-none"></div>
+          <div data-donut-chart-target="contentContainer" class="flex justify-center items-center h-full">
+            <div data-donut-chart-target="defaultContent" class="text-xs text-secondary"><%= t("commodities.charts.locations", count: allocation.size) %></div>
+            <% allocation.each do |segment| %>
+              <div id="segment_<%= segment[:id] %>" class="hidden">
+                <p class="text-sm text-primary privacy-sensitive" data-donut-chart-target="amount"><%= segment[:percentage] %>%</p>
+              </div>
+            <% end %>
+          </div>
+        </div>
+        <ul class="space-y-1 text-sm min-w-0">
+          <% allocation.each do |segment| %>
+            <li class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full shrink-0" style="background-color: <%= segment[:color] %>;"></span>
+              <span class="truncate text-secondary"><%= segment[:name] || t("commodity_items.form.no_location") %></span>
+              <span class="ml-auto text-primary tabular-nums privacy-sensitive"><%= format_money(segment[:money]) %></span>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t("commodities.charts.no_prices") %></p>
+    <% end %>
+  </div>
+</div>
+
+<% if series && series[:values].size >= 2 %>
+  <div class="bg-container rounded-xl shadow-border-xs p-4" data-testid="commodity-value-chart">
+    <h3 class="text-sm font-medium text-primary mb-2"><%= t("commodities.charts.value_over_time") %></h3>
+    <div class="w-full h-64 privacy-sensitive"
+         data-controller="net-worth-chart"
+         data-net-worth-chart-data-value="<%= series.to_json %>"
+         data-net-worth-chart-assets-label-value="<%= Commodity.display_name %>"></div>
+  </div>
+<% end %>

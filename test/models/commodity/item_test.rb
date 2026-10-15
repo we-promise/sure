@@ -108,4 +108,16 @@ class Commodity::ItemTest < ActiveSupport::TestCase
     move = item.moves.sole
     assert_equal [ safe, vault, Date.current ], [ move.from_location, move.to_location, move.moved_on ]
   end
+
+  test "metal price per fine troy ounce and premium per piece are stored as totals" do
+    item = create_commodity_item(
+      account: @account, code: "XAG", name: "1 oz Maple Leaf", quantity: 10, weight_value: 1, weight_unit: "ozt",
+      fineness: BigDecimal("0.9999"), metal_cost: nil, metal_price_value: 30, metal_price_basis: "per_ozt",
+      premium: 4, premium_basis: "per_piece"
+    )
+
+    assert_equal BigDecimal("299.97"), item.metal_cost # 30 x 0.9999 ozt x 10
+    assert_equal BigDecimal("40"), item.premium
+  end
 end
+

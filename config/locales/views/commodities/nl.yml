@@ -1,6 +1,7 @@
 ---
 nl:
   commodities:
+    unknown: "—"
     subclasses:
       precious_metal: Edelmetalen
     metals:
@@ -11,3 +12,192 @@ nl:
     units:
       g: g
       ozt: troy oz
+    forms:
+      bar: Baar
+      coin: Munt
+      round: Round
+      granules: Granulaat
+      other: Overig
+    price_sources:
+      metal_price_api: spot (metalpriceapi.com)
+      yahoo_futures: futures, benadering van spot (Yahoo Finance)
+    weight_unit_toggle:
+      label: Gewichtseenheid
+      g: Gram
+      ozt: Troy ounce
+    new:
+      title: Welke grondstof wil je toevoegen?
+    edit:
+      title: "%{account} bewerken"
+      name: Rekeningnaam
+      currency: Valuta
+      institution: Instelling of kluis
+      notes: Notities
+      exclude_from_reports: Uitsluiten van rapporten
+      submit: Opslaan
+    update:
+      success: Grondstoffenrekening bijgewerkt
+    tabs:
+      inventory:
+        add_item: Item toevoegen
+        locations: Locaties
+    summary:
+      melt_value: Smeltwaarde
+      cost_basis: Kostprijs
+      cost_breakdown: "Metaal %{metal} · Premie %{premium} · Overig %{other}"
+      unrealized: Ongerealiseerde winst/verlies
+      metal_gain: Winst/verlies door metaalprijs
+      premium_and_costs: Betaalde premies en kosten
+      fine_weight: Fijngewicht
+      gross_weight: "Bruto %{weight}"
+      realisable_value: Realiseerbare waarde (terugkoop)
+      realisable_pnl: "Winst/verlies bij terugkoopprijs: %{amount}"
+      per_metal: Totalen per metaal
+      per_location: Totalen per locatie
+      metal: Metaal
+      location: Locatie
+      price_source: "Prijzen: %{source}"
+    charts:
+      fine_weight_by_metal: Fijngewicht per metaal
+      allocation_by_location: Verdeling per locatie
+      value_over_time: Waarde in de tijd
+      no_prices: Nog geen prijzen beschikbaar.
+      locations:
+        one: 1 locatie
+        other: "%{count} locaties"
+    items:
+      title: Items
+      filters: Items filteren
+      metal: Metaal
+      all_metals: Alle metalen
+      location: Locatie
+      all_locations: Alle locaties
+      form: Vorm
+      all_forms: Alle vormen
+      status: Status
+      statuses:
+        held: In bezit
+        sold: Verkocht
+        all: In bezit en verkocht
+      sort: Sorteren
+      sorts:
+        purchase_date: Nieuwste eerst
+        name: Naam
+        fine_weight: Zwaarste eerst
+      item: Item
+      pieces: "%{held} van %{total} st."
+      realized: Gerealiseerde winst/verlies
+      empty_title: Hier zijn nog geen items
+      empty_description: Voeg baren of munten toe om gewicht, waarde en rendement te volgen.
+      edit: Bewerken
+      move: Verplaatsen naar locatie
+      sell: Verkoop vastleggen
+      delete_sale: "Verkoop van %{date} ongedaan maken (%{quantity} st.)"
+      delete: Item verwijderen
+  commodity_items:
+    form:
+      account: Toevoegen aan rekening
+      new_account: Nieuwe grondstoffenrekening…
+      new_account_name_placeholder: Naam nieuwe rekening (optioneel)
+      name: Omschrijving
+      name_placeholder: bijv. 1 oz Maple Leaf, 100 g Heraeus-baar
+      form: Vorm
+      quantity: Aantal
+      weight: Gewicht per stuk
+      unit: Eenheid
+      fineness: Zuiverheid
+      location: Locatie
+      no_location: Geen locatie
+      new_location: Of een nieuwe locatie
+      new_location_placeholder: bijv. Kluis thuis
+      purchase: Aankoop
+      purchase_date: Aankoopdatum
+      currency: Valuta
+      metal_price: Metaalprijs (spot)
+      price_basis: Prijs is
+      price_bases:
+        total: Totaal voor alle stuks
+        per_ozt: Per fijne troy ounce
+        per_g: Per fijne gram
+      spot_label: Spotprijs op die dag
+      futures_label: Futuresprijs op die dag (benadering van spot)
+      premium: Betaalde premie
+      premium_basis: Premie is
+      premium_bases:
+        total: Totaal
+        per_piece: Per stuk
+      vat: Btw / belastingen
+      shipping: Verzending
+      insurance: Verzekering
+      additional_details: Aanvullende gegevens
+      sell_back_mode: Verwachte terugkoopprijs
+      sell_back_none: Niet ingesteld
+      sell_back_modes:
+        spot_percent: Percentage van spot
+        per_piece: Vaste prijs per stuk
+      sell_back_value: Terugkoopwaarde
+      sell_back_placeholder: bijv. 99 (%) of 2100
+      manufacturer: Fabrikant / munthuis
+      year: Jaar
+      serial_number: Serienummer
+      dealer: Handelaar / verkoper
+      notes: Notities
+      photo: Foto
+      create: "%{metal} toevoegen"
+      update: Opslaan
+    new:
+      title: "%{metal} toevoegen"
+    edit:
+      title: "%{name} bewerken"
+    edit_location:
+      title: "%{name} verplaatsen"
+      location: Nieuwe locatie
+      moved_on: Verplaatst op
+      history: Locatiegeschiedenis
+      submit: Item verplaatsen
+    create:
+      success: Item toegevoegd
+    update:
+      success: Item bijgewerkt
+    destroy:
+      success: Item verwijderd
+    update_location:
+      success: Item verplaatst
+      invalid_date: Ongeldige datum
+  commodity_sales:
+    new:
+      title: Verkoop van %{name} vastleggen
+      held:
+        one: 1 stuk in bezit
+        other: "%{count} stuks in bezit"
+      date: Verkoopdatum
+      quantity: Verkochte stuks
+      proceeds: Verkoopprijs
+      proceeds_basis: Prijs is
+      proceeds_bases:
+        total: Totaal
+        per_piece: Per stuk
+      currency: Valuta
+      costs: Verkoopkosten
+      submit: Verkoop vastleggen
+    create:
+      success: Verkoop vastgelegd
+    destroy:
+      success: Verkoop verwijderd
+  commodity_locations:
+    index:
+      title: Opslaglocaties
+      description: Waar je grondstofitems liggen. Items kun je filteren, groeperen en tussen locaties verplaatsen.
+      new_location: Nieuwe locatie
+      placeholder: bijv. Bankkluis
+      add: Toevoegen
+      name: Naam
+      items: Items
+      delete: "%{name} verwijderen"
+      empty: Nog geen locaties
+    create:
+      success: Locatie toegevoegd
+    update:
+      success: Locatie hernoemd
+    destroy:
+      success: Locatie verwijderd

@@ -1,0 +1,71 @@
+<%# locals: (statement:) %>
+<% total = statement.total %>
+<% basis = total.cost_basis %>
+<% sources = statement.price_sources %>
+
+<div class="grid grid-cols-2 md:grid-cols-3 gap-2" data-testid="commodity-summary">
+  <%= summary_card title: t("commodities.summary.melt_value") do %>
+    <%= commodity_money(total.melt_value) %>
+  <% end %>
+
+  <%= summary_card title: t("commodities.summary.cost_basis") do %>
+    <%= commodity_money(basis&.total) %>
+    <span class="block text-xs font-normal text-secondary">
+      <%= t("commodities.summary.cost_breakdown",
+            metal: commodity_money(basis&.metal), premium: commodity_money(basis&.premium), other: commodity_money(basis&.other)) %>
+    </span>
+  <% end %>
+
+  <%= summary_card title: t("commodities.summary.unrealized") do %>
+    <%= commodity_trend(total.unrealized_trend) %>
+  <% end %>
+
+  <%= summary_card title: t("commodities.summary.metal_gain") do %>
+    <%= commodity_signed_money(total.metal_gain) %>
+  <% end %>
+
+  <%= summary_card title: t("commodities.summary.premium_and_costs") do %>
+    <%= commodity_signed_money(basis && -basis.premium_and_costs) %>
+  <% end %>
+
+  <%= summary_card title: t("commodities.summary.fine_weight") do %>
+    <%= commodity_weight(total.fine_grams) %>
+    <span class="block text-xs font-normal text-secondary"><%= t("commodities.summary.gross_weight", weight: commodity_weight(total.gross_grams)) %></span>
+  <% end %>
+
+  <% if (realisable = total.realisable_value) %>
+    <%= summary_card title: t("commodities.summary.realisable_value") do %>
+      <%= commodity_money(realisable) %>
+      <% if basis %>
+        <span class="block text-xs font-normal text-secondary">
+          <%= t("commodities.summary.realisable_pnl", amount: format_money(realisable - basis.total)) %>
+        </span>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>
+
+<%= render DS::Table.new(rows: statement.by_metal, label: t("commodities.summary.per_metal"), data: { testid: "commodity-per-metal" }) do |table| %>
+  <% table.with_column(t("commodities.summary.metal")) { |(metal, _totals)| metal.name } %>
+  <% table.with_column(t("commodities.summary.fine_weight"), numeric: true) { |(_key, totals)| commodity_weight(totals.fine_grams) } %>
+  <% table.with_column(t("commodities.summary.melt_value"), numeric: true, class: "privacy-sensitive") { |(_key, totals)| commodity_money(totals.melt_value) } %>
+  <% table.with_column(t("commodities.summary.cost_basis"), numeric: true, class: "privacy-sensitive") { |(_key, totals)| commodity_money(totals.cost_basis&.total) } %>
+  <% table.with_column(t("commodities.summary.unrealized"), numeric: true, class: "privacy-sensitive") { |(_key, totals)| commodity_trend(totals.unrealized_trend) } %>
+  <% table.with_column(t("commodities.summary.metal_gain"), numeric: true, class: "privacy-sensitive") { |(_key, totals)| commodity_signed_money(totals.metal_gain) } %>
+  <% table.with_column(t("commodities.summary.premium_and_costs"), numeric: true, class: "privacy-sensitive") { |(_key, totals)| commodity_signed_money(totals.cost_basis && -totals.cost_basis.premium_and_costs) } %>
+<% end %>
+
+<%= render DS::Table.new(rows: statement.by_location, label: t("commodities.summary.per_location"), data: { testid: "commodity-per-location" }) do |table| %>
+  <% table.with_column(t("commodities.summary.location")) { |(location, _totals)| location&.name || t("commodity_items.form.no_location") } %>
+  <% table.with_column(t("commodities.summary.fine_weight")) do |(_key, totals)| %>
+    <%= safe_join(totals.items.group_by(&:metal).map { |metal, items| "#{metal.name}: #{commodity_weight(items.sum(&:fine_grams))}" }, tag.br) %>
+  <% end %>
+  <% table.with_column(t("commodities.summary.melt_value"), numeric: true, class: "privacy-sensitive") { |(_key, totals)| commodity_money(totals.melt_value) } %>
+  <% table.with_column(t("commodities.summary.unrealized"), numeric: true, class: "privacy-sensitive") { |(_key, totals)| commodity_trend(totals.unrealized_trend) } %>
+<% end %>
+
+<% if sources.any? %>
+  <p class="text-xs text-secondary">
+    <%= t("commodities.summary.price_source", source: sources.map { |s| t("commodities.price_sources.#{s}") }.to_sentence) %>
+  </p>
+<% end %>

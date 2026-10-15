@@ -129,9 +129,13 @@ class Investment < ApplicationRecord
 
     # Returns subtypes grouped by region for use with grouped_options_for_select
     # Optionally accepts currency to prioritize user's region first
-    def subtypes_grouped_for_select(currency: nil)
+    # Physical metal belongs in Commodity accounts, so the legacy "gold"
+    # subtype is only offered to accounts that already use it.
+    LEGACY_SUBTYPES = %w[gold].freeze
+
+    def subtypes_grouped_for_select(currency: nil, current: nil)
       user_region = CURRENCY_REGION_MAP[currency]
-      grouped = SUBTYPES.group_by { |_, v| v[:region] }
+      grouped = SUBTYPES.reject { |key, _| LEGACY_SUBTYPES.include?(key) && key != current }.group_by { |_, v| v[:region] }
 
       # Build region order: user's region first (if known), then Generic, then others
       other_regions = %w[us uk ca au eu in] - [ user_region ].compact

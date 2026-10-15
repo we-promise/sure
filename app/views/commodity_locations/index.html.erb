@@ -1,0 +1,33 @@
+<% content_for :page_title, t(".title") %>
+
+<div class="space-y-4 max-w-2xl">
+  <header class="space-y-1">
+    <h1 class="text-xl font-medium text-primary"><%= t(".title") %></h1>
+    <p class="text-sm text-secondary"><%= t(".description") %></p>
+  </header>
+
+  <%= render DS::Card.new do %>
+    <%= styled_form_with model: Commodity::Location.new, scope: :commodity_location, url: commodity_locations_path, class: "flex items-end gap-2" do |form| %>
+      <%= form.text_field :name, label: t(".new_location"), placeholder: t(".placeholder"), required: true, container_class: "grow" %>
+      <%= render DS::Button.new(text: t(".add"), type: "submit") %>
+    <% end %>
+  <% end %>
+
+  <% if @locations.any? %>
+    <%= render DS::Table.new(rows: @locations, label: t(".title")) do |table| %>
+      <% table.with_column(t(".name")) do |location| %>
+        <%= styled_form_with model: location, scope: :commodity_location, url: commodity_location_path(location), method: :patch,
+              data: { controller: "auto-submit-form", "auto-submit-form-trigger-event-value": "blur" } do |form| %>
+          <%= form.text_field :name, "aria-label": t(".name"), data: { auto_submit_form_target: "auto" } %>
+        <% end %>
+      <% end %>
+      <% table.with_column(t(".items"), numeric: true) { |location| @item_counts.fetch(location.id, 0).to_s } %>
+      <% table.with_column("", numeric: true) do |location| %>
+        <%= render DS::Button.new(variant: :icon, icon: "trash-2", href: commodity_location_path(location), method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(location.name), "aria-label": t(".delete", name: location.name)) %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <%= render DS::EmptyState.new(icon: "map-pin", title: t(".empty")) %>
+  <% end %>
+</div>

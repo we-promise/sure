@@ -1,0 +1,26 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", name: @item.name)) %>
+  <% dialog.with_body do %>
+    <%= styled_form_with model: @item, scope: :commodity_item, url: move_commodity_item_path(@item), method: :patch,
+          data: { turbo_frame: "_top" }, class: "flex flex-col gap-4 text-primary" do |form| %>
+      <%= form.select :location_id, Current.family.commodity_locations.alphabetically.map { |l| [ l.name, l.id ] },
+            { label: t(".location"), include_blank: t("commodity_items.form.no_location") } %>
+      <%= form.text_field :new_location_name, label: t("commodity_items.form.new_location"), placeholder: t("commodity_items.form.new_location_placeholder") %>
+      <%= form.date_field :moved_on, label: t(".moved_on"), value: Date.current, max: Date.current, required: true %>
+
+      <% if @item.moves.any? %>
+        <div class="text-sm space-y-1">
+          <p class="font-medium"><%= t(".history") %></p>
+          <% @item.moves.reverse.each do |move| %>
+            <p class="text-secondary">
+              <%= l(move.moved_on, format: :long) %>:
+              <%= move.from_location&.name || t("commodity_items.form.no_location") %> → <%= move.to_location&.name || t("commodity_items.form.no_location") %>
+            </p>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%= form.submit t(".submit") %>
+    <% end %>
+  <% end %>
+<% end %>

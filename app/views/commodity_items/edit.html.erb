@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", name: @item.name)) %>
+  <% dialog.with_body do %>
+    <%= render "form", item: @item, url: commodity_item_path(@item), method: :patch %>
+  <% end %>
+<% end %>

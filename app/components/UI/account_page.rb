@@ -59,6 +59,9 @@ class UI::AccountPage < ApplicationComponent
       account.loan.amortizable? ? [ :activity, :overview, :schedule ] : [ :activity, :overview ]
     when "Property", "Vehicle"
       [ :activity, :overview ]
+    when "Commodity"
+      # Commodity balances come from the inventory, not from entries.
+      [ :inventory ]
     else
       [ :activity ]
     end
@@ -100,6 +103,8 @@ class UI::AccountPage < ApplicationComponent
       locals = { account: account }
       locals[:as_of] = as_of if account.accountable_type == "Loan"
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", **locals
+    when :inventory
+      render "commodities/tabs/inventory", account: account
     when :holdings
       # Accountable is responsible for implementing the partial in the correct folder
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account

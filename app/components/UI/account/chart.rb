@@ -131,6 +131,8 @@ class UI::Account::Chart < ApplicationComponent
       I18n.t("UI.account.chart.title.estimated_property_value")
     when "Vehicle"
       I18n.t("UI.account.chart.title.estimated_vehicle_value")
+    when "Commodity"
+      I18n.t("UI.account.chart.title.melt_value")
     when "CreditCard", "OtherLiability"
       I18n.t("UI.account.chart.title.debt_balance")
     when "Loan"

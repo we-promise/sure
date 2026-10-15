@@ -49,9 +49,9 @@ class CommodityStatementTest < ActiveSupport::TestCase
   end
 
   test "value series per metal" do
-    point = @statement.value_series(period: Period.custom(start_date: Date.current, end_date: Date.current)).sole
+    point = @statement.value_series(period: Period.custom(start_date: Date.current, end_date: Date.current))[:values].sole
 
     assert_equal %w[Gold Silver], point[:groups].map { |g| g[:name] }
-    assert_in_delta 2499.75 + 96.36, point[:value], 0.01
+    assert_in_delta 2499.75 + 96.36, point[:value].amount, 0.01
   end
 end

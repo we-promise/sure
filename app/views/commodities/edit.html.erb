@@ -1,0 +1,20 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", account: @account.name)) %>
+  <% dialog.with_body do %>
+    <% if @error_message.present? %>
+      <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+    <% end %>
+
+    <%= styled_form_with model: @account, url: commodity_path(@account), scope: :account, method: :patch, class: "flex flex-col gap-4 text-primary" do |form| %>
+      <%= form.text_field :name, label: t(".name"), required: true %>
+      <%= form.select :currency, commodity_currency_options, { label: t(".currency") } %>
+      <%= form.text_field :institution_name, label: t(".institution") %>
+      <%= form.text_area :notes, label: t(".notes"), rows: 3 %>
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-sm"><%= t(".exclude_from_reports") %></span>
+        <%= form.toggle :exclude_from_reports %>
+      </div>
+      <%= form.submit t(".submit") %>
+    <% end %>
+  <% end %>
+<% end %>
