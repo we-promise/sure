@@ -2,7 +2,7 @@
 Rails.application.config.to_prepare do
   module ActiveStorageAttachmentAuthorization
     extend ActiveSupport::Concern
-    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement].freeze
+    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement FamilyExport].freeze
 
     included do
       include Authentication
@@ -34,6 +34,8 @@ Rails.application.config.to_prepare do
           transaction_attachment_authorized?(attachment)
         when "AccountStatement"
           account_statement_attachment_authorized?(attachment)
+        when "FamilyExport"
+          family_export_attachment_authorized?(attachment)
         else
           false
         end
@@ -55,6 +57,16 @@ Rails.application.config.to_prepare do
         return false if statement.nil?
 
         statement.viewable_by?(Current.user)
+      rescue ActiveRecord::RecordNotFound
+        false
+      end
+
+      # Mirrors FamilyExportsController, which limits exports to family admins.
+      def family_export_attachment_authorized?(attachment)
+        export = attachment.record
+        return false if export.nil?
+
+        export.family_id == Current.family&.id && Current.user.admin?
       rescue ActiveRecord::RecordNotFound
         false
       end
