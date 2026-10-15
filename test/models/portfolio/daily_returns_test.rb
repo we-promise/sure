@@ -747,6 +747,16 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     end
   end
 
+  # income_by_security reads the entries with a query of its own rather than
+  # through #rows, so the refusal has to hold there as well.
+  test "income by security refuses a liability account too" do
+    loan = @family.accounts.create!(name: "Mortgage", balance: 5_000, currency: "USD", accountable: Loan.new)
+
+    error = assert_raises(ArgumentError) { daily_returns(account_ids: [ @account.id, loan.id ]).income_by_security }
+    assert_match(/liabilit/, error.message)
+    assert_equal({}, daily_returns.income_by_security, "an asset-only series still answers")
+  end
+
   test "investment and crypto accounts are accepted" do
     crypto = @family.accounts.create!(name: "Wallet", balance: 500, currency: "USD", accountable: Crypto.new)
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
