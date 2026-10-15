@@ -1,0 +1,51 @@
+<%# locals: (statement:, period:) %>
+<% total = statement.total %>
+<% basis = total.cost_basis %>
+<% realized = statement.realized_gain(period: period) %>
+<% period_sales = statement.sales(period: period) %>
+
+<div class="space-y-6" data-testid="commodities-report">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <% [
+         [ "coins", t("reports.commodities.value"), commodity_money(total.melt_value) ],
+         [ "receipt", t("reports.commodities.cost_basis"), commodity_money(basis&.total) ],
+         [ "trending-up", t("reports.commodities.unrealized"), commodity_trend(total.unrealized_trend) ],
+         [ "hand-coins", t("reports.commodities.realized"), commodity_signed_money(realized) ],
+         [ "scale", t("reports.commodities.fine_weight"), commodity_weight(total.fine_grams) ]
+       ].each do |icon_name, label, value| %>
+      <div class="bg-container-inset rounded-lg p-4">
+        <div class="flex items-center gap-2 mb-3">
+          <%= icon(icon_name, size: "sm") %>
+          <span class="text-sm text-secondary"><%= label %></span>
+        </div>
+        <p class="text-xl font-semibold text-primary privacy-sensitive"><%= value %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="space-y-3">
+    <h4 class="text-lg font-medium"><%= t("reports.commodities.per_metal") %></h4>
+    <%= render DS::Table.new(rows: statement.by_metal, inset: true, label: t("reports.commodities.per_metal")) do |table| %>
+      <% table.with_column(t("reports.commodities.metal")) { |(metal, _totals)| metal.name } %>
+      <% table.with_column(t("reports.commodities.fine_weight"), numeric: true) { |(_metal, totals)| commodity_weight(totals.fine_grams) } %>
+      <% table.with_column(t("reports.commodities.value"), numeric: true, class: "privacy-sensitive") { |(_metal, totals)| commodity_money(totals.melt_value) } %>
+      <% table.with_column(t("reports.commodities.cost_basis"), numeric: true, class: "privacy-sensitive") { |(_metal, totals)| commodity_money(totals.cost_basis&.total) } %>
+      <% table.with_column(t("reports.commodities.unrealized"), numeric: true, class: "privacy-sensitive") { |(_metal, totals)| commodity_trend(totals.unrealized_trend) } %>
+      <% table.with_column(t("reports.commodities.metal_gain"), numeric: true, class: "privacy-sensitive") { |(_metal, totals)| commodity_signed_money(totals.metal_gain) } %>
+      <% table.with_column(t("reports.commodities.premium_and_costs"), numeric: true, class: "privacy-sensitive") { |(_metal, totals)| commodity_signed_money(totals.cost_basis && -totals.cost_basis.premium_and_costs) } %>
+      <% table.with_column(t("reports.commodities.realized"), numeric: true, class: "privacy-sensitive") { |(metal, _totals)| commodity_signed_money(statement.realized_gain(period: period, code: metal.code)) } %>
+    <% end %>
+  </div>
+
+  <% if period_sales.any? %>
+    <div class="space-y-3">
+      <h4 class="text-lg font-medium"><%= t("reports.commodities.sales") %></h4>
+      <%= render DS::Table.new(rows: period_sales.sort_by(&:date).reverse, inset: true, label: t("reports.commodities.sales")) do |table| %>
+        <% table.with_column(t("reports.commodities.date")) { |sale| l(sale.date, format: :long) } %>
+        <% table.with_column(t("reports.commodities.item")) { |sale| "#{sale.item.name} · #{sale.quantity}×" } %>
+        <% table.with_column(t("reports.commodities.proceeds"), numeric: true, class: "privacy-sensitive") { |sale| format_money(Money.new(sale.proceeds - sale.costs, sale.currency)) } %>
+        <% table.with_column(t("reports.commodities.realized"), numeric: true, class: "privacy-sensitive") { |sale| commodity_trend(sale.realized_gain_loss) } %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

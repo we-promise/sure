@@ -151,6 +151,11 @@ class ReportsController < ApplicationController
       end
     end
 
+    # Commodities are reported separately from investments.
+    def commodity_statement
+      @commodity_statement ||= Current.family.commodity_statement(user: Current.user)
+    end
+
     def build_reports_sections
       all_sections = [
         {
@@ -183,6 +188,14 @@ class ReportsController < ApplicationController
           partial: "reports/investment_flows",
           locals: { investment_flows: @investment_flows },
           visible: @investment_metrics[:has_investments] && (@investment_flows.contributions.amount > 0 || @investment_flows.withdrawals.amount > 0),
+          collapsible: true
+        },
+        {
+          key: "commodities",
+          title: "reports.commodities.title",
+          partial: "reports/commodities",
+          locals: { statement: commodity_statement, period: @period },
+          visible: commodity_statement.any?,
           collapsible: true
         },
         {

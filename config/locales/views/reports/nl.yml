@@ -122,6 +122,21 @@ nl:
       total_liabilities: Passiva
       no_assets: Geen activa
       no_liabilities: Geen passiva
+    commodities:
+      title: Grondstoffen
+      value: Smeltwaarde
+      cost_basis: Kostprijs
+      unrealized: Ongerealiseerde winst/verlies
+      realized: Gerealiseerde winst/verlies (periode)
+      fine_weight: Fijngewicht
+      per_metal: Per metaal
+      metal: Metaal
+      metal_gain: Winst/verlies door metaalprijs
+      premium_and_costs: Premies en kosten
+      sales: Verkopen in deze periode
+      date: Datum
+      item: Item
+      proceeds: Netto-opbrengst
     investment_performance:
       title: Investeringsprestatie
       portfolio_value: Portfolio waarde

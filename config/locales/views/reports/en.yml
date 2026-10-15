@@ -140,6 +140,21 @@ en:
       total_liabilities: Liabilities
       no_assets: No assets
       no_liabilities: No liabilities
+    commodities:
+      title: Commodities
+      value: Melt value
+      cost_basis: Cost basis
+      unrealized: Unrealized P&L
+      realized: Realized P&L (period)
+      fine_weight: Fine weight
+      per_metal: Per metal
+      metal: Metal
+      metal_gain: Metal price gain/loss
+      premium_and_costs: Premiums & costs
+      sales: Sales in this period
+      date: Date
+      item: Item
+      proceeds: Net proceeds
     investment_performance:
       title: Investment Performance
       portfolio_value: Portfolio Value
