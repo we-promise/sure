@@ -716,16 +716,43 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
                     "moving money out of the series is not a loss"
   end
 
-  # There is no second, wider "inside" to pass. A caller asking for one is
-  # told so rather than silently getting the accounts' own scope.
+  # There is no second, wider "inside" to pass, and no guard of the class's
+  # own: Ruby refuses the unknown keyword, which is the point. The message is
+  # pinned so that any other ArgumentError -- a new required keyword, say --
+  # fails this rather than passing it without checking the scope at all.
   test "the flow scope cannot be widened beyond the accounts in the series" do
-    assert_raises(ArgumentError) do
+    error = assert_raises(ArgumentError) do
       Portfolio::DailyReturns.new(
         account_ids: [ @account.id ], currency: @family.currency,
         period: Period.custom(start_date: @day_one, end_date: @day_two),
         scope_account_ids: [ @account.id, create_portfolio_account(family: @family).id ]
       )
     end
+    assert_match(/unknown keyword: :scope_account_ids/, error.message)
+  end
+
+  # The levels are multiplied by flows_factor and the flows are not, so on a
+  # liability the flows would carry the wrong sign against its balance and
+  # nothing would flag it. Refused outright until a caller needs liabilities.
+  test "a liability account in the series is refused" do
+    loan = @family.accounts.create!(name: "Mortgage", balance: 5_000, currency: "USD", accountable: Loan.new)
+    lay_balance account: loan, date: @day_one, opening: 5_000, closing: 5_000
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+
+    assert_equal "liability", loan.reload.classification, "precondition: the Loan is a liability"
+
+    [ [ loan.id ], [ @account.id, loan.id ] ].each do |account_ids|
+      error = assert_raises(ArgumentError) { daily_returns(account_ids: account_ids).rows }
+      assert_match(/liabilit/, error.message)
+    end
+  end
+
+  test "investment and crypto accounts are accepted" do
+    crypto = @family.accounts.create!(name: "Wallet", balance: 500, currency: "USD", accountable: Crypto.new)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: crypto, date: @day_one, opening: 500, closing: 500
+
+    assert_equal 1, daily_returns(account_ids: [ @account.id, crypto.id ], end_date: @day_one).rows.size
   end
 
   # The classifier's CASE arrives already sanitized and full of quoted labels.
