@@ -198,6 +198,7 @@ class TransactionsController < ApplicationController
 
   def update
     if @entry.update(permitted_entry_params)
+      sync_needed = @entry.saved_changes_affect_balances?
       transaction = @entry.transaction
       transaction.record_category_usage!
 
@@ -212,7 +213,7 @@ class TransactionsController < ApplicationController
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.sync_account_later
+      @entry.sync_account_later if sync_needed
 
       notes_changed = @entry.saved_change_to_notes?
 
@@ -299,7 +300,6 @@ class TransactionsController < ApplicationController
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
-    @entry.sync_account_later
 
     respond_to do |format|
       # JSON stays first so Accept: */* callers keep the original response.
@@ -769,13 +769,16 @@ class TransactionsController < ApplicationController
       permitted
     end
 
+    # Permitted search filters from the q param, with blank values and
+    # unsupported ai_status / attachment_status values dropped.
     def search_params
       cleaned_params = params.fetch(:q, {})
               .permit(
                 :start_date, :end_date, :search, :amount,
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
-                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: []
+                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: [],
+                attachment_status: []
               )
               .to_h
               .compact_blank
@@ -785,6 +788,11 @@ class TransactionsController < ApplicationController
       if cleaned_params[:ai_status]
         cleaned_params[:ai_status] &= Transaction::Search::AI_STATUSES
         cleaned_params.delete(:ai_status) if cleaned_params[:ai_status].empty?
+      end
+
+      if cleaned_params[:attachment_status]
+        cleaned_params[:attachment_status] &= Transaction::Search::ATTACHMENT_STATUSES
+        cleaned_params.delete(:attachment_status) if cleaned_params[:attachment_status].empty?
       end
 
       cleaned_params
