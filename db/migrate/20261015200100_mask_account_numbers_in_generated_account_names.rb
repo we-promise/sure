@@ -4,7 +4,7 @@
 # names keep only the last 4 characters; this rewrites the existing ones.
 #
 # Only the exact full number is replaced, and only where a name still ends
-# with it ("(<number>)", for Fio "Fio banka <number>", for an Interactive
+# with it ("(<number>)", for Fio "... Fio banka <number>", for an Interactive
 # Brokers provider record the bare number), so any wording a
 # user added is kept and renamed accounts that no longer carry the number are
 # left alone.
@@ -84,7 +84,8 @@ class MaskAccountNumbersInGeneratedAccountNames < ActiveRecord::Migration[8.1]
           "#{name.delete_suffix("(#{identifier})")}(#{masked})"
         end
       when :fio
-        name == "#{FIO_INSTITUTION_NAME} #{identifier}" ? "#{FIO_INSTITUTION_NAME} #{masked}" : nil
+        suffix = "#{FIO_INSTITUTION_NAME} #{identifier}"
+        name.end_with?(suffix) ? "#{name.delete_suffix(suffix)}#{FIO_INSTITUTION_NAME} #{masked}" : nil
       end
     end
 end

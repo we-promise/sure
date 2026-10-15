@@ -44,6 +44,18 @@ class MaskAccountNumbersInGeneratedAccountNamesMigrationTest < ActiveSupport::Te
     assert_equal "Fio banka •••2222", fio_account.reload.name
   end
 
+  test "keeps a user's own wording before a Fio default name" do
+    fio_account = fio_accounts(:checking)
+    account = accounts(:depository)
+    AccountProvider.where(account: account).delete_all
+    AccountProvider.create!(account: account, provider: fio_account)
+    account.update_column(:name, "My savings Fio banka #{fio_account.fio_account_id}")
+
+    run_migration
+
+    assert_equal "My savings Fio banka •••#{fio_account.fio_account_id.last(4)}", account.reload.name
+  end
+
   test "renames an Interactive Brokers record named after the bare id" do
     ibkr_account = ibkr_accounts(:main_account)
     ibkr_account.update_columns(name: ibkr_account.ibkr_account_id)
