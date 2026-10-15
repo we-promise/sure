@@ -80,10 +80,10 @@ pl:
       no_pending_login: Żadne logowanie kodem QR nie jest oczekujące.
       success: Trade Republic połączono pomyślnie.
     portfolio_categories:
-      brokerage: Rachunek maklerski
-      crypto_wallet: Portfel kryptowalut
+      brokerage: "Brokerage"
+      crypto_wallet: "Crypto Wallet"
       interest_products: Produkty oprocentowane
-      private_markets: Rynki prywatne
+      private_markets: "Private Markets"
     repair:
       scheduled: Zaplanowano naprawę danych Trade Republic.
     select_accounts:

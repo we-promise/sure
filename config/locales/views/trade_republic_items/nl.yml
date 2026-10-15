@@ -7,10 +7,10 @@ nl:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Brokeragerekening"
-      private_markets: "Privémarkten"
-      interest_products: "Renteproducten"
-      crypto_wallet: "Cryptowallet"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
+      interest_products: "Vaste Rente"
+      crypto_wallet: "Crypto Wallet"
     duplicate_connection: "Deze Trade Republic-rekening is al gekoppeld. De nieuwe koppeling is verwijderd."
     defaults:
       name: Trade Republic

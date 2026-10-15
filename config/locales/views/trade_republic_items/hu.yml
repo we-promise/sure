@@ -7,10 +7,10 @@ hu:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Brókerszámla"
-      private_markets: "Privát piacok"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: "Kamatozó termékek"
-      crypto_wallet: "Kriptotárca"
+      crypto_wallet: "Crypto Wallet"
     duplicate_connection: "Ez a Trade Republic-fiók már csatlakoztatva van. Az új kapcsolat törölve lett."
     defaults:
       name: Trade Republic

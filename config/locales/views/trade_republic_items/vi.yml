@@ -7,10 +7,10 @@ vi:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Tài khoản môi giới"
-      private_markets: "Thị trường tư nhân"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: "Sản phẩm lãi suất"
-      crypto_wallet: "Ví tiền mã hóa"
+      crypto_wallet: "Crypto Wallet"
     duplicate_connection: "Tài khoản Trade Republic này đã được kết nối. Kết nối mới đã bị xóa."
     defaults:
       name: Trade Republic

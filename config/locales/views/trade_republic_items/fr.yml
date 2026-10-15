@@ -23,10 +23,10 @@ fr:
       no_pending_login: Aucune connexion par QR code n'est en attente.
       success: Trade Republic connecté avec succès.
     portfolio_categories:
-      brokerage: "Courtage"
-      private_markets: "Marchés privés"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: "Produits rémunérés"
-      crypto_wallet: "Portefeuille crypto"
+      crypto_wallet: "Crypto Wallet"
     select_accounts:
       not_configured: Trade Republic n'est pas configuré.
     sync_status:
