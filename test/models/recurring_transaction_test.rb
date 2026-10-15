@@ -1513,32 +1513,6 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal 0, series.cycles_overdue, "one day late is not one cycle missed"
   end
 
-  private
-
-    def stale_hint_series
-      stale = 45.days.ago.to_date
-      series = @family.recurring_transactions.create!(
-        name: "Gym #{stale}", account: accounts(:depository), amount: 60,
-        currency: "USD", status: "active", bill_type: "subscription", manual: true,
-        dedup_scope: "gym-#{stale}", expected_day_of_month: stale.day,
-        last_occurrence_date: stale << 1, next_expected_date: stale
-      )
-      series.reload
-    end
-
-    def build_recurring(**overrides)
-      @family.recurring_transactions.build({
-        account: @account,
-        merchant: @merchant,
-        amount: 29.99,
-        currency: "USD",
-        expected_day_of_month: 15,
-        last_occurrence_date: Date.current,
-        next_expected_date: 1.month.from_now.to_date,
-        status: "active"
-      }.merge(overrides))
-    end
-
   test "identify_patterns_for does not re-suggest a renamed name-matched bill" do
     [ 0, 1, 2 ].each do |months_ago|
       @account.entries.create!(
@@ -1584,4 +1558,30 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     assert_equal "LEGACY CO", bill.reload.matcher_name
   end
+
+  private
+
+    def stale_hint_series
+      stale = 45.days.ago.to_date
+      series = @family.recurring_transactions.create!(
+        name: "Gym #{stale}", account: accounts(:depository), amount: 60,
+        currency: "USD", status: "active", bill_type: "subscription", manual: true,
+        dedup_scope: "gym-#{stale}", expected_day_of_month: stale.day,
+        last_occurrence_date: stale << 1, next_expected_date: stale
+      )
+      series.reload
+    end
+
+    def build_recurring(**overrides)
+      @family.recurring_transactions.build({
+        account: @account,
+        merchant: @merchant,
+        amount: 29.99,
+        currency: "USD",
+        expected_day_of_month: 15,
+        last_occurrence_date: Date.current,
+        next_expected_date: 1.month.from_now.to_date,
+        status: "active"
+      }.merge(overrides))
+    end
 end
