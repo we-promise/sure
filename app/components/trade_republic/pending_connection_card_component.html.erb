@@ -6,9 +6,8 @@
         record: pending_connection,
         return_url: helpers.settings_providers_path(anchor: "trade-republic"),
         active: login_stage == "qr_pending",
-        code_svg: qr_code_svg,
-        hide_button_while_polling: true
-      ) do |qr| %>
+        code_svg: qr_code_svg
+      ) do %>
     <%= render TradeRepublic::ConnectionRowHeaderComponent.new(
           title: translation("new_connection"),
           dot_class: expired? ? "bg-destructive" : "bg-warning",

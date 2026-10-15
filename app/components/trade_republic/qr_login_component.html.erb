@@ -4,7 +4,6 @@
      data-trade-republic-qr-poll-url-value="<%= login_path(:poll_qr_login) %>"
      data-trade-republic-qr-cancel-url-value="<%= login_path(:cancel_qr_login) %>"
      data-trade-republic-qr-return-url-value="<%= return_url %>"
-     data-trade-republic-qr-hide-button-while-polling-value="<%= hide_button_while_polling %>"
      data-trade-republic-qr-loading-text-value="<%= translation("qr_loading") %>"
      data-trade-republic-qr-instruction-text-value="<%= translation("qr_instruction") %>"
      data-trade-republic-qr-success-text-value="<%= translation("qr_success") %>"
@@ -13,8 +12,8 @@
      data-trade-republic-qr-cancel-text-value="<%= translation("qr_cancel") %>">
   <%= content? ? content : button %>
 
-  <div data-trade-republic-qr-target="panel" <%= "hidden" unless active %> class="rounded-lg border border-secondary bg-container-inset p-4 space-y-3">
+  <%= render DS::Card.new(variant: :inset, tag: :div, class: "space-y-3", hidden: !active, data: { trade_republic_qr_target: "panel" }) do %>
     <p data-trade-republic-qr-target="status" class="text-sm text-secondary"></p>
     <div data-trade-republic-qr-target="code" class="qrcode flex justify-center min-h-48"><%= code_svg %></div>
-  </div>
+  <% end %>
 </div>

@@ -91,7 +91,7 @@
   <%= render TradeRepublic::LoginChallengeComponent.new(record: item, login_stage: login_stage) %>
 
   <% unless push_login_in_progress? %>
-    <div id="<%= pin_login_form_id %>" hidden data-trade-republic-pin-login-target="form" class="rounded-lg border border-secondary bg-container-inset p-4">
+    <%= render DS::Card.new(variant: :inset, tag: :div, id: pin_login_form_id, hidden: true, data: { trade_republic_pin_login_target: "form" }) do %>
       <%= helpers.styled_form_with model: item,
                            url: helpers.trade_republic_item_path(item),
                            scope: :trade_republic_item,
@@ -116,6 +116,6 @@
           <%= form.submit(translation("connect")) %>
         </div>
       <% end %>
-    </div>
+    <% end %>
   <% end %>
 <% end %>

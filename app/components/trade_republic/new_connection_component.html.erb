@@ -45,7 +45,7 @@
         <% end %>
       <% end %>
 
-      <div class="rounded-lg border border-secondary bg-container-inset p-4">
+      <%= render DS::Card.new(variant: :inset, tag: :div) do %>
         <%= helpers.styled_form_with model: pending_connection,
                              url: helpers.trade_republic_pending_connections_path,
                              scope: :trade_republic_pending_connection,
@@ -70,7 +70,7 @@
             <%= form.submit(translation("connect")) %>
           </div>
         <% end %>
-      </div>
+      <% end %>
     <% end %>
   <% end %>
 </div>
