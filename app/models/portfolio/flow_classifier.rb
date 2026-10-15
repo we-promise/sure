@@ -151,9 +151,11 @@ class Portfolio::FlowClassifier
   # validations (insert_all), or two matchers racing past the validation, can
   # make one transaction a leg of two transfers. A plain join would then give
   # the entry two rows and a SUM over it would count the entry twice. The
-  # lateral reads one transfer per transaction: the earliest, by created_at
-  # then id. #classify reads whichever row `has_one` returns, so in that
-  # corrupt case alone the two forms may disagree.
+  # lateral reads one transfer per transaction, preferring one the
+  # transaction is the inflow of, as #transfer_counterpart_account_id does,
+  # then the earliest by created_at and id. #classify reads whichever row
+  # `has_one` returns, so only a transaction that is the inflow (or, with no
+  # inflow, the outflow) of two transfers may still read differently.
   def sql_joins
     <<~SQL.squish
       LEFT JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
@@ -163,7 +165,7 @@ class Portfolio::FlowClassifier
         FROM transfers t
         WHERE entries.entryable_type = 'Transaction'
           AND (t.inflow_transaction_id = transactions.id OR t.outflow_transaction_id = transactions.id)
-        ORDER BY t.created_at, t.id
+        ORDER BY (t.inflow_transaction_id = transactions.id) DESC, t.created_at, t.id
         LIMIT 1
       ) flow_transfers ON TRUE
       LEFT JOIN entries flow_counterpart_entries
