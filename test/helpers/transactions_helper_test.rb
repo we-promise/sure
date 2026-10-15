@@ -144,7 +144,7 @@ class TransactionsHelperTest < ActionView::TestCase
 
   test "masks counterparty account identifiers in the raw dump" do
     details = build_transaction_extra_details(transaction_with({
-      "monobank" => { "counter_name" => "Shop", "counter_iban" => "UA213223130000026007233566001", "counter_edrpou" => "3123456789" },
+      "monobank" => { "counter_name" => "Shop", "counter_iban" => "UA213223130000026007233566001", "counter_edrpou" => "3123456789" }, # pipelock:ignore IBAN
       "fio" => { "counter_account" => "2400222222/2010", "counter_account_name" => "Landlord" }
     }))
 
@@ -160,7 +160,7 @@ class TransactionsHelperTest < ActionView::TestCase
   test "masks every value nested under an identifier key and leaves look-alikes alone" do
     details = build_transaction_extra_details(transaction_with({
       "someprovider" => {
-        "ibans" => [ "DE89370400440532013000" ],
+        "ibans" => [ "DE89370400440532013000" ], # pipelock:ignore IBAN
         "counter_account" => { "number" => "2400222222", "bank" => "2010" },
         "counter_account_type" => "CHECKING",
         "account_notes" => "John Smith"
