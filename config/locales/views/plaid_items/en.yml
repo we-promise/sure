@@ -23,7 +23,6 @@ en:
         add it again.
       linked_on: Linked %{date}
       manage_connection: Go to accounts
-      mask: "****%{mask}"
       no_accounts: No accounts have synced from this connection yet.
       overlap:
         all_connected:

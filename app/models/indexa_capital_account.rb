@@ -4,6 +4,10 @@ class IndexaCapitalAccount < ApplicationRecord
   include CurrencyNormalizable
   include IndexaCapitalAccount::DataHelpers
 
+  # Dropped in RemoveAccountNumberFromIndexaCapitalAccounts; keeps processes
+  # that still cache the old schema from writing it during a deploy.
+  self.ignored_columns += [ "account_number" ]
+
   belongs_to :indexa_capital_item
 
   # Association through account_providers

@@ -152,9 +152,26 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_equal "•••6001", raw.dig("monobank", "counter_iban")
     assert_equal "•••6789", raw.dig("monobank", "counter_edrpou")
     assert_equal "Shop", raw.dig("monobank", "counter_name")
-    assert_equal "•••2010", raw.dig("fio", "counter_account")
+    assert_equal "•••2222/2010", raw.dig("fio", "counter_account")
     assert_equal "Landlord", raw.dig("fio", "counter_account_name")
     assert_no_match(/2400222222|UA2132231300/, details[:raw])
+  end
+
+  test "masks every value nested under an identifier key and leaves look-alikes alone" do
+    details = build_transaction_extra_details(transaction_with({
+      "someprovider" => {
+        "ibans" => [ "DE89370400440532013000" ],
+        "counter_account" => { "number" => "2400222222", "bank" => "2010" },
+        "counter_account_type" => "CHECKING",
+        "account_notes" => "John Smith"
+      }
+    }))
+
+    raw = JSON.parse(details[:raw])["someprovider"]
+    assert_equal [ "•••3000" ], raw["ibans"]
+    assert_equal "•••2222", raw.dig("counter_account", "number")
+    assert_equal "CHECKING", raw["counter_account_type"]
+    assert_equal "John Smith", raw["account_notes"]
   end
 
   test "masks identifiers in structured provider rows too" do

@@ -39,7 +39,7 @@
               <div class="mb-3">
                 <h3 class="font-medium text-primary"><%= akahu_account.name %></h3>
                 <p class="text-xs text-secondary">
-                  <%= [mask_last4(akahu_account.formatted_account), akahu_account.currency, akahu_account.account_type].compact.join(" · ") %>
+                  <%= [mask_last4(akahu_account.formatted_account&.delete("-")), akahu_account.currency, akahu_account.account_type].compact.join(" · ") %>
                 </p>
               </div>
 

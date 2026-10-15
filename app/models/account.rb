@@ -383,11 +383,7 @@ class Account < ApplicationRecord
 
     def create_from_ibkr_account(ibkr_account)
       family = ibkr_account.ibkr_item.family
-      default_name = if ibkr_account.ibkr_account_id.present?
-        "Interactive Brokers (#{IdentifierMask.last4(ibkr_account.ibkr_account_id)})"
-      else
-        "Interactive Brokers"
-      end
+      default_name = IbkrAccount.default_name(ibkr_account.ibkr_account_id)
 
       attributes = {
         family: family,
