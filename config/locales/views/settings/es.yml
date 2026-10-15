@@ -342,6 +342,7 @@ es:
         no_recent_sync: Sincronización pendiente
         registration_needed: Registro necesario
         reconsent_required: Se requiere renovar el consentimiento
+        login_required: "Inicio de sesión requerido"
         reconsent_needed:
           one: Renovar consentimiento en 1 día
           other: Renovar consentimiento en %{count} días

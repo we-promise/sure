@@ -120,7 +120,7 @@ module SettingsHelper
       sync_based_summary(key)
     when "trade_republic"
       return { status: :off } unless @trade_republic_items&.any?
-      sync_based_summary(key)
+      trade_republic_summary
     when "indexa_capital"
       return { status: :off } unless @indexa_capital_items&.any?
       sync_based_summary(key)
@@ -276,6 +276,15 @@ module SettingsHelper
       else
         { status: :ok, last_synced_at: nil }
       end
+    end
+
+    # A Trade Republic login lasts 24 hours, so the row warns once any
+    # connection has to log in again.
+    def trade_republic_summary
+      summary = sync_based_summary("trade_republic")
+      return summary if summary[:status] == :err || @trade_republic_items.none?(&:needs_login?)
+
+      summary.merge(status: :warn, meta: t("settings.providers.meta.login_required"))
     end
 
     def not_self_hosted?

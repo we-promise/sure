@@ -537,6 +537,7 @@ tr:
           one: "%{count} gün içinde yeniden onay gerekiyor"
           other: "%{count} gün içinde yeniden onay gerekiyor"
         reconsent_required: Yeniden onay gerekiyor
+        login_required: "Giriş gerekli"
         registration_needed: Kayıt gerekiyor
         sync_error: Senkronizasyon hatası
       not_authorized: Yetkiniz yok
@@ -716,6 +717,8 @@ tr:
         qr_instruction: QR kodu telefonunuzun kamerasıyla tarayın, ardından girişi Trade Republic uygulamasında onaylayın.
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
         qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
+        requires_update: "Senkronizasyona devam etmek için yeniden giriş yapın."
+        session_expires_in: "Girişin süresi %{time} içinde doluyor."
         add_account: "Başka bir bağlantı ekle"
         save_configuration: Kaydet ve Girişi Başlat
         update_configuration: Yapılandırmayı Güncelle

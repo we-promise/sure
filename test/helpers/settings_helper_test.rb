@@ -62,4 +62,21 @@ class SettingsHelperTest < ActionView::TestCase
 
     assert_empty off
   end
+
+  test "provider_summary for trade_republic asks for a new login once a session has expired" do
+    @trade_republic_items = [ TradeRepublicItem.new(session_blob: "session", session_expires_at: 1.minute.ago) ]
+    @provider_sync_health = {}
+
+    summary = provider_summary("trade_republic")
+
+    assert_equal :warn, summary[:status]
+    assert_equal I18n.t("settings.providers.meta.login_required"), summary[:meta]
+  end
+
+  test "provider_summary for trade_republic reports sync-based status while the login is valid" do
+    @trade_republic_items = [ TradeRepublicItem.new(session_blob: "session", session_expires_at: 1.hour.from_now) ]
+    @provider_sync_health = {}
+
+    assert_equal({ status: :ok, last_synced_at: nil }, provider_summary("trade_republic"))
+  end
 end

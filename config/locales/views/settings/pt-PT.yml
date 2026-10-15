@@ -404,6 +404,7 @@ pt-PT:
         sync_error: Erro de sincronização
         no_recent_sync: Sincronização em atraso
         reconsent_required: Necessário novo consentimento
+        login_required: "Início de sessão necessário"
         reconsent_needed:
           one: Necessário novo consentimento em 1 dia
           other: Necessário novo consentimento em %{count} dias

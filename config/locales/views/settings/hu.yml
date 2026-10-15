@@ -263,6 +263,7 @@ hu:
         sync_error: Szinkronizálási hiba
         no_recent_sync: Szinkronizálás lejárt
         reconsent_required: Újrahozzájárulás szükséges
+        login_required: "Bejelentkezés szükséges"
         reconsent_needed:
           one: Újrahozzájárulás szükséges 1 napon belül
           other: Újrahozzájárulás szükséges %{count} napon belül
