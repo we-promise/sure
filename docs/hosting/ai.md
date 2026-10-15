@@ -19,23 +19,23 @@ Sure has **two separate AI systems** that operate independently. Understanding t
 
 The interactive chat where users ask questions about their finances. Routes through one of two backends, or is turned off:
 
-- **Builtin** (default): Uses the OpenAI-compatible provider configured via `OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`. Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
+- **Builtin** (default): Uses the LLM provider selected by `LLM_PROVIDER`: the OpenAI-compatible provider (`OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`, the default) or the [native Anthropic provider](#anthropic-native). Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
 - **External**: Delegates the entire conversation to a remote AI agent. The agent calls back to Sure via MCP to access financial data. Set `ASSISTANT_TYPE=external` as a global override, or configure each family's assistant type in Settings.
 - **None in app** (`mcp_only`): Removes the in-app chat for the household: the right-hand chat sidebar and its toggle, the mobile Assistant tab, and the buttons that start a chat. Bring your own agent and connect it through [MCP](mcp.md), which keeps working. Set `ASSISTANT_TYPE=mcp_only` to remove the chat for every family.
 
 ### 2. Auto-Categorization and Merchant Detection (background)
 
-Background jobs that classify transactions and detect merchants. These **always** use the OpenAI-compatible provider (`OPENAI_ACCESS_TOKEN`), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
+Background jobs that classify transactions and detect merchants. These use the LLM provider selected by `LLM_PROVIDER` (OpenAI-compatible or native Anthropic), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
 
 ### What this means in practice
 
 | Setting | Chat assistant | Auto-categorization |
 |---------|---------------|---------------------|
-| `ASSISTANT_TYPE=builtin` (default) | Uses OpenAI provider | Uses OpenAI provider |
-| `ASSISTANT_TYPE=external` | Uses external agent | Still uses OpenAI provider |
+| `ASSISTANT_TYPE=builtin` (default) | Uses the LLM provider | Uses the LLM provider |
+| `ASSISTANT_TYPE=external` | Uses external agent | Still uses the LLM provider |
 | `ASSISTANT_TYPE=mcp_only` | None in app; connect your own agent via MCP | Unchanged; uses the configured categorization provider |
 
-If you use an external agent for chat, you still need `OPENAI_ACCESS_TOKEN` set for auto-categorization and merchant detection to work. The two systems are fully independent.
+If you use an external agent for chat, you still need an LLM provider configured (`OPENAI_ACCESS_TOKEN` or `ANTHROPIC_API_KEY`) for auto-categorization and merchant detection to work. The two systems are fully independent.
 
 With `mcp_only`, Sure also skips the features that need a user's AI consent: the LLM-written insight text and the bills AI shortcuts (review, smart fill, smart configuration).
 
@@ -167,6 +167,44 @@ Text extraction keeps its existing request behavior. Custom endpoints retain
 their existing token parameters. Increase the LLM context budget for cloud
 reasoning models; the default 2048-token context is intended for small local models.
 
+### Anthropic (native)
+
+Sure talks to Anthropic's Messages API directly. It serves chat (streamed), auto-categorization, merchant detection and enhancement, bill setup suggestions, and PDF imports (Claude reads the PDF itself; no vision setting needed).
+
+```bash
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your-anthropic-api-key
+
+# Optional
+# ANTHROPIC_MODEL=claude-sonnet-4-6
+# ANTHROPIC_MAX_TOKENS=4096
+# ANTHROPIC_REQUEST_TIMEOUT=600
+# ANTHROPIC_BASE_URL=
+```
+
+Or in the UI: **Settings** → **Self-Hosting** → **AI Provider** → **Anthropic (Claude)**, then API Key, Base URL and Default Model. An env var disables its field; `LLM_PROVIDER` locks the provider choice.
+
+| Variable | Default | What it does |
+|----------|---------|--------------|
+| `LLM_PROVIDER` | `openai` | `anthropic` selects this provider. If the selected provider has no key, Sure uses the other one. |
+| `ANTHROPIC_API_KEY` | — | API key. `ANTHROPIC_ACCESS_TOKEN` also works and wins if both are set. |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for chat and all background jobs. Must start with `claude` unless a base URL is set. |
+| `ANTHROPIC_MAX_TOKENS` | `4096` | Reply limit, sent with every request (the Messages API requires one). |
+| `ANTHROPIC_REQUEST_TIMEOUT` | `600` | HTTP timeout per call, in seconds. |
+| `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Anthropic-compatible endpoint. Requires `ANTHROPIC_MODEL`. |
+
+How it differs from the OpenAI-compatible provider:
+
+- **No token budget.** `LLM_CONTEXT_WINDOW` (default `2048`) does less here:
+  - **Every provider:** below `4096`, the chat's system prompt lists accounts and categories only as counts, and the model fetches them with tools.
+  - **OpenAI-compatible:** it is also the budget, with `LLM_MAX_RESPONSE_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE`, for splitting auto-categorization and merchant batches, and for trimming chat history on Chat Completions endpoints (`LLM_MAX_HISTORY_TOKENS`). The native OpenAI Responses API keeps history on OpenAI's side, so nothing is trimmed there.
+  - **Native Anthropic:** only the system-prompt check applies. History is sent whole, batches aren't split, and the other `LLM_*` budget variables are ignored. Set `LLM_CONTEXT_WINDOW` by env (e.g. `200000`) so the prompt lists accounts and categories; its UI field is in the OpenAI panel.
+- **The reply limit is always sent.** A reply that needs more than `ANTHROPIC_MAX_TOKENS` is cut off. Only bank statement extraction detects this (it logs a warning). Raise the limit if long answers or batch results come back incomplete.
+- **Fixed batch sizes.** Rule jobs send 20 transactions per call and merchant enhancement 25; the provider rejects more than 25. `LLM_MAX_ITEMS_PER_CALL` doesn't apply.
+- **Its own timeout.** `ANTHROPIC_REQUEST_TIMEOUT` replaces `OPENAI_REQUEST_TIMEOUT`. `AI_RESPONSE_TIMEOUT` still covers the whole chat turn. `OPENAI_EXTRA_HEADERS`, `LLM_JSON_MODE` and `OPENAI_SUPPORTS_*` don't apply.
+
+**Bedrock, Vertex and proxies:** `ANTHROPIC_BASE_URL` can point at any endpoint that speaks the Anthropic Messages API, such as a gateway in front of AWS Bedrock or Google Vertex AI. Set `ANTHROPIC_MODEL` to that endpoint's model ID (for Bedrock, e.g. `anthropic.claude-sonnet-4-5-20250929-v1:0`); the `claude` prefix check is skipped. Sure sends the key as an Anthropic API key (`x-api-key`) and doesn't sign AWS or Google requests itself.
+
 ### Google Gemini
 
 You can connect to Google Gemini either directly via Google AI Studio's OpenAI-compatible endpoint or via OpenRouter.
@@ -205,7 +243,9 @@ OPENAI_MODEL=google/gemini-3.8-flash
 - Automatic fallbacks
 - Usage tracking
 
-### Anthropic Claude (via OpenRouter)
+### Anthropic Claude via OpenRouter (OpenAI-compatible)
+
+This route uses the OpenAI-compatible provider and its token budget. To call Anthropic directly, use the [native Anthropic provider](#anthropic-native).
 
 ```bash
 OPENAI_ACCESS_TOKEN=your-openrouter-api-key
@@ -417,8 +457,8 @@ Similar requirements to categorization:
 For self-hosted deployments, you can configure AI settings through the web interface:
 
 1. Go to **Settings** → **Self-Hosting**
-2. Scroll to the **AI Provider** section
-3. Configure the provider:
+2. Scroll to the **AI Provider** section and choose **OpenAI** or **Anthropic (Claude)**
+3. Configure the provider (OpenAI fields shown; for Anthropic see [Anthropic (native)](#anthropic-native)):
    - **Access Token** - Your API key
    - **API Base URL** - Custom endpoint (leave blank for OpenAI)
    - **Model** - Model name (required for custom endpoints)
