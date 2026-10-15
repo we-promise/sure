@@ -22,7 +22,8 @@ class TransferMatchesController < ApplicationController
 
     redirect_back_or_to transactions_path, notice: t(".success")
   rescue ActiveRecord::RecordInvalid => e
-    redirect_back_or_to transactions_path, alert: e.record.errors.full_messages.to_sentence
+    alert = already_matched?(e.record) ? t(".already_matched") : e.record.errors.full_messages.to_sentence
+    redirect_back_or_to transactions_path, alert: alert
   rescue ActiveRecord::RecordNotUnique
     # A concurrent sync matched one of the two transactions first; the unique
     # transfer indexes rejected this insert.
@@ -46,6 +47,12 @@ class TransferMatchesController < ApplicationController
         .to_set
 
       candidates.select { |candidate| writable_counterpart_ids.include?(counterpart_id.call(candidate)) }
+    end
+
+    # One of the two transactions already belongs to another transfer, in either role.
+    def already_matched?(record)
+      record.is_a?(Transfer) &&
+        (record.errors.of_kind?(:inflow_transaction_id, :taken) || record.errors.of_kind?(:outflow_transaction_id, :taken))
     end
 
     def transfer_match_params

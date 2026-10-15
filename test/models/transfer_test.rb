@@ -151,6 +151,30 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "Must be from same family", transfer.errors.full_messages.first
   end
 
+  test "a transaction cannot be the inflow of one transfer and the outflow of another" do
+    # Opposite amounts would normally rule this out, but the user can flip a
+    # matched transaction's sign afterwards.
+    @inflow.entry.update_column(:amount, 100)
+    other_inflow = create_transaction(date: Date.current, account: accounts(:investment), amount: -100)
+
+    duplicate = Transfer.new(inflow_transaction: other_inflow.transaction, outflow_transaction: @inflow)
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:outflow_transaction_id, :taken)
+  end
+
+  test "a transaction cannot be the outflow of one transfer and the inflow of another" do
+    @outflow.entry.update_column(:amount, -100)
+    other_outflow = create_transaction(date: Date.current, account: accounts(:investment), amount: 100)
+
+    duplicate = Transfer.new(inflow_transaction: @outflow, outflow_transaction: other_outflow.transaction)
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:inflow_transaction_id, :taken)
+  end
+
+  test "an existing transfer stays valid" do
+    assert transfers(:one).valid?
+  end
+
   test "transaction can only belong to one transfer" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
     inflow_entry1 = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)

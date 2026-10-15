@@ -10,6 +10,7 @@ class Transfer < ApplicationRecord
 
   validates :inflow_transaction_id, uniqueness: true
   validates :outflow_transaction_id, uniqueness: true
+  validate :transactions_not_in_another_transfer_role
 
   validate :transfer_has_different_accounts
   validate :transfer_has_opposite_amounts
@@ -192,6 +193,21 @@ class Transfer < ApplicationRecord
   end
 
   private
+    # The unique indexes only cover one column each, so a transaction that is the
+    # inflow of one transfer could still become the outflow of another (e.g. after
+    # its amount sign was edited). Reported as :taken like the uniqueness checks.
+    def transactions_not_in_another_transfer_role
+      other_transfers = Transfer.where.not(id: id)
+
+      if inflow_transaction_id && other_transfers.exists?(outflow_transaction_id: inflow_transaction_id)
+        errors.add(:inflow_transaction_id, :taken)
+      end
+
+      if outflow_transaction_id && other_transfers.exists?(inflow_transaction_id: outflow_transaction_id)
+        errors.add(:outflow_transaction_id, :taken)
+      end
+    end
+
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
       errors.add(:base, :different_accounts) if to_account == from_account
