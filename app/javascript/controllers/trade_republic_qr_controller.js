@@ -53,22 +53,31 @@ export default class extends Controller {
     this.codeTarget.replaceChildren();
     this.statusTarget.textContent = this.loadingTextValue;
 
+    let initiation = null;
     try {
-      const response = await fetch(this.initiateUrlValue, {
+      // A cancel waits for this request: sent earlier, it would be overtaken
+      // by the login this request stores.
+      initiation = fetch(this.initiateUrlValue, {
         method: "POST",
         headers: { ...this.headers(), Accept: "text/vnd.turbo-stream.html" },
         credentials: "same-origin",
         body: this.body(),
       });
+      this.initiation = initiation;
+      const response = await initiation;
+      if (this.stopped) return;
       if (!response.ok)
         throw new Error(`QR login initiation failed: ${response.status}`);
 
       const result = await response.json();
+      if (this.stopped) return;
       this.renderQr(result);
 
       await this.poll();
     } catch (error) {
       this.showError(error);
+    } finally {
+      if (this.initiation === initiation) this.initiation = null;
     }
   }
 
@@ -192,6 +201,7 @@ export default class extends Controller {
     this.setButtonLabel(this.loginTextValue);
 
     try {
+      await this.initiation?.catch(() => {});
       const response = await fetch(this.cancelUrlValue, {
         method: "POST",
         headers: { ...this.headers(), Accept: "text/vnd.turbo-stream.html" },

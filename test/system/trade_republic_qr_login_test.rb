@@ -39,6 +39,23 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     end
   end
 
+  test "cancelling a QR login while it is still starting leaves no login behind" do
+    pending = Provider::TradeRepublicClient::Result.new(data: { "status" => "pending", "pending_login_b64" => "pending" })
+    # Trade Republic answers slowly, so the cancel is sent while the login starts.
+    Provider::TradeRepublicClient.any_instance.stubs(:initiate_qr_login).with { sleep 1.5 }.returns(pending)
+
+    visit accounts_path
+
+    within card do
+      click_on qr_login
+      click_on qr_cancel
+      assert_button qr_login, disabled: false, wait: 10
+    end
+    # Give a start that was not waited for the time to store its login.
+    sleep 2
+    assert_nil @item.reload.pending_login_state
+  end
+
   test "cancelling a QR login that was already running when the page loaded" do
     @item.update!(pending_login_state: "pending", status: :requires_update)
     Provider::TradeRepublicClient.any_instance.stubs(:login_stage).returns("qr_pending")

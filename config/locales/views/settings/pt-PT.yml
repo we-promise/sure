@@ -405,7 +405,7 @@ pt-PT:
         no_recent_sync: Sincronização em atraso
         reconsent_required: Necessário novo consentimento
         login_required: "Início de sessão necessário"
-        login_expires_soon: "A sessão expira dentro de %{time}"
+        login_expires_soon: "A sessão expira dentro de %{time} (%{at})"
         reconsent_needed:
           one: Necessário novo consentimento em 1 dia
           other: Necessário novo consentimento em %{count} dias
