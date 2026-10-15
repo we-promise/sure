@@ -4,12 +4,11 @@ class ProviderMerchant::Enhancer
     @merchant_ids = merchant_ids
   end
 
-  def enhance_later
-    return unless llm_provider
+  # The unenhanced merchant ids, one batch per LLM call.
+  def batches
+    return [] unless llm_provider
 
-    unenhanced_merchants.map(&:id).each_slice(Provider::Openai.max_items_per_call) do |ids|
-      EnhanceProviderMerchantsJob.perform_later(@family, merchant_ids: ids)
-    end
+    unenhanced_merchants.map(&:id).each_slice(Provider::Openai.max_items_per_call).to_a
   end
 
   def enhance

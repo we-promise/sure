@@ -12,18 +12,19 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     Setting.stubs(:brand_fetch_logo_size).returns(40)
   end
 
-  test "enhance_later queues one job per LLM call's worth of merchants" do
+  test "batches holds one LLM call's worth of merchants each" do
     3.times do |i|
       merchant = ProviderMerchant.create!(source: "lunchflow", name: "Shop #{i}", provider_merchant_id: "lf_shop_#{i}")
       create_transaction(account: @account, name: "Shop #{i}", merchant: merchant)
     end
-    unenhanced = @family.assigned_merchants.where(type: "ProviderMerchant", website_url: [ nil, "" ]).count
-    expected_jobs = (unenhanced / 2.0).ceil
+    unenhanced = @family.assigned_merchants.where(type: "ProviderMerchant", website_url: [ nil, "" ]).pluck(:id)
 
     with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "2") do
-      assert_enqueued_jobs expected_jobs, only: EnhanceProviderMerchantsJob do
-        ProviderMerchant::Enhancer.new(@family).enhance_later
-      end
+      batches = ProviderMerchant::Enhancer.new(@family).batches
+
+      assert_equal (unenhanced.size / 2.0).ceil, batches.size
+      assert batches.all? { |ids| ids.size <= 2 }
+      assert_equal unenhanced.sort, batches.flatten.sort
     end
   end
 
