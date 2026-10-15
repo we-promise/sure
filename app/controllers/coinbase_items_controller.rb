@@ -76,6 +76,7 @@ class CoinbaseItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
 
     # List all available Coinbase accounts for the family that can be linked
     @available_coinbase_accounts = Current.family.coinbase_items
@@ -84,7 +85,8 @@ class CoinbaseItemsController < ApplicationController
       # Show accounts that are still linkable:
       # - Already linked via AccountProvider (can be relinked to different account)
       # - Or fully unlinked (no account_provider)
-      .select { |ca| ca.account.present? || ca.account_provider.nil? }
+      # Never offer (or name) a link held by an account the user cannot write.
+      .select { |ca| (ca.account.present? || ca.account_provider.nil?) && relinkable_by_current_user?(ca) }
       .sort_by { |ca| ca.updated_at || ca.created_at }
       .reverse
 
@@ -93,6 +95,7 @@ class CoinbaseItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
 
     # Scope lookup to family's coinbase accounts for security
     coinbase_account = Current.family.coinbase_items
@@ -110,6 +113,10 @@ class CoinbaseItemsController < ApplicationController
       return
     end
 
+    # Relinking below moves the link off its current account and may queue
+    # that account for deletion.
+    return unless require_relinkable_provider_account!(coinbase_account, @account)
+
     # Guard: only manual accounts can be linked (no existing provider links)
     if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
       flash[:alert] = t(".errors.only_manual")
@@ -121,9 +128,7 @@ class CoinbaseItemsController < ApplicationController
     end
 
     # Relink behavior: detach any existing link and point provider link at the chosen account
-    Account.transaction do
-      coinbase_account.lock!
-
+    relinked = relinking(coinbase_account, @account) do
       # Upsert the AccountProvider mapping
       ap = AccountProvider.find_or_initialize_by(provider: coinbase_account)
       previous_account = ap.account
@@ -143,6 +148,7 @@ class CoinbaseItemsController < ApplicationController
         end
       end
     end
+    return unless relinked
 
     if turbo_frame_request?
       coinbase_account.reload
