@@ -189,7 +189,10 @@ module TradeRepublicLoginFlow
 
     def render_login_panel(alert: nil, notice: nil, success: false, whole_panel: false)
       if success
+        # The login's card goes too: its push poller would otherwise keep
+        # polling a login that has finished.
         return render turbo_stream: [
+          replace_login_record_stream,
           turbo_stream.replace("drawer", view_context.turbo_frame_tag("drawer")),
           turbo_stream.replace(
             "modal",

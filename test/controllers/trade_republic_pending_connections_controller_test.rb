@@ -114,6 +114,7 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     assert_equal "+491701234567", item.phone_number
     assert_not TradeRepublicPendingConnection.exists?(pending_connection.id)
     assert_turbo_stream action: "replace", target: "modal"
+    assert_turbo_stream action: "replace", target: "trade-republic-providers-panel"
   end
 
   test "a login for an account that is already connected creates nothing" do

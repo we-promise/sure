@@ -199,7 +199,8 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
 
     render_inline(TradeRepublic::AccountEditorComponent.new(items: [ item ], family: families(:dylan_family)))
 
-    assert_text I18n.t("settings.providers.trade_republic_panel.session_expires_in", time: "about 5 hours", at: I18n.l(item.session_expires_at, format: :short))
+    assert_text I18n.t("settings.providers.trade_republic_panel.session_expires_in",
+                       time: "about 5 hours", at: I18n.l(item.session_expires_at, format: :short))
   end
 
   test "a card whose session expired asks to log in again" do

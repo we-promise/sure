@@ -442,7 +442,7 @@ en:
         no_recent_sync: Sync overdue
         reconsent_required: Re-consent required
         login_required: Login required
-        login_expires_soon: Login expires in %{time}
+        login_expires_soon: Login expires in %{time} (%{at})
         reconsent_needed:
           one: Re-consent needed in 1 day
           other: Re-consent needed in %{count} days
@@ -750,7 +750,7 @@ en:
           message: Your Trade Republic connection is ready.
           description: Sure is now syncing your Trade Republic data in the background.
           close: Done
-        qr_login: Log in with QR code
+        qr_login: QR login
         qr_cancel: Cancel QR login
         qr_back_to_credentials: Back to phone number and PIN or password
         qr_loading: Preparing QR code …
@@ -758,8 +758,8 @@ en:
         qr_success: Login approved. Sure is refreshing the provider page.
         qr_error: QR login could not be started. Please try again.
         requires_update: Log in again to resume syncing.
-        session_expires_in: Login expires in %{time}.
-        pin_login: Log in with PIN
+        session_expires_in: Login expires in %{time} (%{at}).
+        pin_login: PIN login
         remove: Remove
         new_connection: New connection
         cancel_login: Cancel

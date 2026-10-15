@@ -43,7 +43,7 @@
             <% end %>
           </p>
           <% if item.ready_for_sync? && item.session_expires_at.present? %>
-            <p class="text-xs text-secondary"><%= translation("session_expires_in", time: helpers.distance_of_time_in_words_to_now(item.session_expires_at)) %></p>
+            <p class="text-xs text-secondary"><%= helpers.trade_republic_session_expiry("settings.providers.trade_republic_panel.session_expires_in", item.session_expires_at) %></p>
           <% end %>
         </div>
       </div>
