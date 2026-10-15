@@ -27,7 +27,7 @@
 
         <span data-category-select-target="selectionContainer"
               class="text-secondary">
-          <% selected = categories.find { |c| c.id.to_s == selected_id } %>
+          <% selected = selected_category %>
 
           <% if selected %>
             <%= render partial: "categories/badge",
@@ -136,7 +136,7 @@
                 text: helpers.t("transactions.form.back_to_categories"),
                 icon: "arrow-left",
                 tone: :secondary,
-                data: { category_select_target: "parentBack", action: "click->category-select#hideParentPicker" }
+                data: { action: "click->category-select#hideParentPicker" }
               ) %>
           <p id="<%= parent_label_id %>"
              class="px-3 py-1 text-xs text-secondary"

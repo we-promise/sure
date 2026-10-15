@@ -13,6 +13,12 @@
       <%= t(".apply_notice_html", count: @rule.affected_resource_count, resource: @rule.resource_type.pluralize) %>
     </p>
 
+    <% if @active_rules_above_count.positive? %>
+      <p class="text-secondary text-sm mb-4">
+        <%= t(".rules_above_notice", count: @active_rules_above_count) %>
+      </p>
+    <% end %>
+
     <% if @rule.actions.any? { |a| a.action_type == "auto_categorize" } %>
       <% affected_count = @rule.affected_resource_count %>
       <div class="mb-4">
