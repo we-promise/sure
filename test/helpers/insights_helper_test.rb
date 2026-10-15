@@ -207,6 +207,13 @@ class InsightsHelperTest < ActionView::TestCase
     assert_includes prompt, "- Previous rate: 45.2"
   end
 
+  test "dig in prompt uses the family's override and leaves unknown placeholders" do
+    insight = build_insight("idle_cash", facts: { "balance" => "$5,000" })
+    insight.family.update!(ai_prompt_insight_dig_in: "Look at %{title}: %{facts} %{titel}")
+
+    assert_equal "Look at t: - Balance: $5,000 %{titel}", insight_dig_in_prompt(insight)
+  end
+
   test "dig in is unavailable when the family's assistant is MCP-only" do
     insight = build_insight("idle_cash")
     Provider::Registry.stubs(:preferred_llm_provider).returns(mock)

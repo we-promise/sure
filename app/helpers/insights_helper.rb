@@ -127,11 +127,17 @@ module InsightsHelper
     insight.family.assistant_enabled? && Provider::Registry.preferred_llm_provider.present?
   end
 
+  # Fills only these placeholders, so a mistyped one in an override stays as typed.
   def insight_dig_in_prompt(insight)
-    period = insight.period_start && insight.period_end ? "#{l(insight.period_start)} – #{l(insight.period_end)}" : "–"
-    facts = (insight.facts || {}).map { |key, value| "- #{key.to_s.humanize}: #{value}" }.join("\n")
+    values = {
+      "title" => insight.title,
+      "body" => insight.body,
+      "period" => insight.period_start && insight.period_end ? "#{l(insight.period_start)} – #{l(insight.period_end)}" : "–",
+      "facts" => (insight.facts || {}).map { |key, value| "- #{key.to_s.humanize}: #{value}" }.join("\n")
+    }
+    template = insight.family.ai_prompt(:insight_dig_in) || t("insights.dig_in.prompt")
 
-    t("insights.dig_in.prompt", title: insight.title, body: insight.body, period: period, facts: facts)
+    template.gsub(/%\{(#{values.keys.join("|")})\}/) { values[$1] }
   end
 
   # Sentiment picks the color; priority only orders the feed. The two are
