@@ -1,5 +1,7 @@
 <div id="<%= DOM_ID %>" class="space-y-3" data-controller="trade-republic-pin-login">
-  <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+  <%# Like a QR login, which replaces this row with the new connection's,
+      the PIN login's row takes its place until it is cancelled. %>
+  <%= tag.div class: "flex flex-wrap items-center justify-between gap-2 pt-2", hidden: show_pin_form?, data: { trade_republic_pin_login_target: "alternative" } do %>
     <p class="text-sm font-medium text-primary"><%= translation("add_connection") %></p>
 
     <div class="flex flex-wrap items-center gap-2">
@@ -24,7 +26,7 @@
             data: { action: "trade-republic-pin-login#toggle", trade_republic_pin_login_target: "button" }
           ) %>
     </div>
-  </div>
+  <% end %>
 
   <%= tag.div id: pin_form_id, hidden: !show_pin_form?, data: { trade_republic_pin_login_target: "form" } do %>
     <%= render TradeRepublic::ConnectionRowComponent.new(id: "#{DOM_ID}-row") do %>

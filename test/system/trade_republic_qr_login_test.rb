@@ -91,7 +91,7 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     assert_nil @item.reload.pending_login_state
   end
 
-  test "the PIN login opens below its connection and below Add a connection" do
+  test "a connection runs either its QR login or its PIN login, not both" do
     visit settings_providers_path
     find("summary", text: "Trade Republic").click
 
@@ -99,18 +99,37 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
       assert_no_field "trade_republic_item[pin]"
       click_on panel_t("pin_login")
       assert_field "trade_republic_item[pin]"
+      assert_no_button qr_login
       click_on panel_t("pin_login")
       assert_no_field "trade_republic_item[pin]"
+
+      click_on qr_login
+      assert_selector ".qrcode svg"
+      assert_no_button panel_t("pin_login")
+      click_on qr_cancel
+      assert_button panel_t("pin_login")
+      assert_button qr_login
     end
+  end
+
+  test "a new connection's PIN login takes the place of Add a connection, like its QR login" do
+    visit settings_providers_path
+    find("summary", text: "Trade Republic").click
 
     within "##{TradeRepublic::NewConnectionComponent::DOM_ID}" do
-      assert_no_field "trade_republic_pending_connection[phone_number]"
+      assert_text panel_t("add_connection")
       click_on panel_t("pin_login")
       assert_field "trade_republic_pending_connection[phone_number]"
+      assert_no_text panel_t("add_connection")
+      assert_no_button qr_login
+      assert_no_button panel_t("pin_login")
+
       click_on panel_t("cancel_login")
       assert_no_field "trade_republic_pending_connection[phone_number]"
+      assert_text panel_t("add_connection")
+      assert_button qr_login
     end
-    assert_no_selector "#drawer [role='dialog'], #drawer dialog"
+    assert_no_selector "#drawer dialog"
   end
 
   private

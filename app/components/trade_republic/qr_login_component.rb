@@ -23,7 +23,8 @@ class TradeRepublic::QrLoginComponent < ApplicationComponent
     helpers.polymorphic_path([ action, record ])
   end
 
-  def button
+  # `data` lets the row's own controllers find the button too.
+  def button(data: {})
     render DS::Button.new(
       text: active ? translation("qr_cancel") : translation("qr_login"),
       variant: :outline,
@@ -33,7 +34,7 @@ class TradeRepublic::QrLoginComponent < ApplicationComponent
       data: {
         action: "trade-republic-qr#toggle",
         trade_republic_qr_target: "button"
-      }
+      }.merge(data)
     )
   end
 end

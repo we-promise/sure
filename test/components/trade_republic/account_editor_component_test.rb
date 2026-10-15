@@ -121,6 +121,15 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
     assert_selector "#{form} input[name='trade_republic_item[pin]'][required]", visible: :all
   end
 
+  test "a QR login already running hides the PIN login" do
+    item = trade_republic_items(:configured_item)
+
+    render_inline(TradeRepublic::ConnectionCardComponent.new(item: item, qr_active: true))
+
+    assert_button I18n.t("settings.providers.trade_republic_panel.qr_cancel")
+    assert_no_button I18n.t("settings.providers.trade_republic_panel.pin_login")
+  end
+
   test "a push login in progress hides the other ways to log in" do
     item = trade_republic_items(:configured_item)
     item.update!(pending_login_state: "pending")
@@ -211,6 +220,7 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
     render_inline(TradeRepublic::AccountEditorComponent.new(items: [], family: family, new_connection: failed_connection))
 
     assert_selector "#{add_connection}-pin:not([hidden]) input[name='trade_republic_pending_connection[phone_number]'][value='+491701234567']"
+    assert_selector "#{add_connection} > [hidden]", text: I18n.t("settings.providers.trade_republic_panel.add_connection"), visible: :all
   end
 
   test "a connected card shows when its login expires" do

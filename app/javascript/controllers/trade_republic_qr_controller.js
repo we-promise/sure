@@ -31,6 +31,7 @@ export default class extends Controller {
       this.panelTarget.hidden = false;
       this.setButtonLabel(this.cancelTextValue);
       this.statusTarget.textContent = this.instructionTextValue;
+      this.dispatch("started");
       this.poll();
     }
   }
@@ -52,6 +53,7 @@ export default class extends Controller {
     this.panelTarget.hidden = false;
     this.setButtonLabel(this.cancelTextValue);
     this.setButtonHidden(this.hideButtonWhilePollingValue);
+    this.dispatch("started");
     this.codeTarget.replaceChildren();
     this.statusTarget.textContent = this.loadingTextValue;
 
@@ -180,6 +182,7 @@ export default class extends Controller {
     this.setButtonDisabled(false);
     this.setButtonHidden(false);
     this.statusTarget.textContent = this.errorTextValue;
+    this.dispatch("stopped");
   }
 
   toggle(event) {
@@ -198,6 +201,7 @@ export default class extends Controller {
     this.polling = false;
     this.panelTarget.hidden = true;
     this.codeTarget.replaceChildren();
+    this.dispatch("stopped");
     // A login started before the server confirms the cancellation would be
     // cleared by it, so the button stays disabled until then.
     this.setButtonDisabled(true);
