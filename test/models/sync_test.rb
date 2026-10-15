@@ -574,7 +574,82 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "completed", sync.reload.status
   end
 
+  test "skips a sync that was finished elsewhere while it waited for the lock" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable)
+    # Cancelled (or run by a duplicate job) after this job loaded the record
+    Sync.where(id: sync.id).update_all(status: "stale")
+
+    syncable.expects(:perform_sync).never
+    assert_nothing_raised { sync.perform }
+
+    assert_equal "stale", sync.reload.status
+    assert advisory_lock_free?(sync_lock_key(sync))
+  end
+
+  test "runs with the window stored when it takes the lock, not the one it was loaded with" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable, window_start_date: 2.days.ago.to_date, window_end_date: Date.current)
+    Sync.where(id: sync.id).update_all(window_start_date: 10.days.ago.to_date)
+
+    syncable.expects(:perform_sync).with { |s| s.window_start_date == 10.days.ago.to_date }.once
+    sync.perform
+
+    assert_equal "completed", sync.reload.status
+  end
+
+  test "clean ends a hung session still holding the lock of a sync it marks stale" do
+    syncable = accounts(:depository)
+    hung_sync = Sync.create!(syncable: syncable, status: :syncing, created_at: Sync::STALE_AFTER.ago - 1.hour)
+    waiting_sync = Sync.create!(syncable: syncable, created_at: 1.hour.ago)
+    key = sync_lock_key(hung_sync)
+
+    with_other_pg_session do |hung_conn|
+      hung_conn.exec_params("SELECT pg_advisory_lock($1)", [ key ])
+      assert_raises(Sync::ConcurrentSyncError) { waiting_sync.perform }
+
+      # The hung session has not run a query since it took the lock
+      travel Sync::HUNG_LOCK_IDLE_AFTER + 1.minute do
+        assert_difference -> { DebugLogEntry.where(category: "sync", level: "warn").count }, 1 do
+          Sync.clean
+        end
+      end
+
+      assert_equal "stale", hung_sync.reload.status
+      assert wait_until { advisory_lock_free?(key) }, "the hung session's lock must be released"
+      assert_raises(PG::Error) { hung_conn.exec("SELECT 1") }
+    end
+
+    syncable.expects(:perform_sync).with(waiting_sync).once
+    waiting_sync.perform
+    assert_equal "completed", waiting_sync.reload.status
+  end
+
+  test "clean leaves a lock holder alone while it is still running queries" do
+    syncable = accounts(:depository)
+    old_sync = Sync.create!(syncable: syncable, status: :syncing, created_at: Sync::STALE_AFTER.ago - 1.hour)
+    key = sync_lock_key(old_sync)
+
+    with_advisory_lock_held_by_other_session(key) do
+      assert_no_difference -> { DebugLogEntry.where(category: "sync").count } do
+        Sync.clean
+      end
+
+      assert_equal "stale", old_sync.reload.status
+      refute advisory_lock_free?(key), "a recently active holder keeps its lock"
+    end
+  end
+
   private
+    def wait_until(timeout: 5)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+      until (result = yield)
+        break if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+        sleep 0.05
+      end
+      result
+    end
+
     # Mirrors Sync#syncable_execution_lock_key so the test pins the key contract.
     def sync_lock_key(sync)
       Digest::MD5.hexdigest("sync:#{sync.syncable_type}:#{sync.syncable_id}").to_i(16) % (2**62)

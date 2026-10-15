@@ -8,9 +8,10 @@ class SyncJob < ApplicationJob
   CONCURRENT_RETRY_WAIT = 30.seconds
   retry_on Sync::ConcurrentSyncError, wait: CONCURRENT_RETRY_WAIT, attempts: :unlimited
 
-  # A holder that hangs (not crashed, so its lock is never released) keeps the
-  # waiter retrying until SyncCleanerJob marks it stale. Surface that roughly
-  # once an hour instead of on every attempt.
+  # A holder that hangs (not crashed, so its lock is not released) keeps the
+  # waiter retrying until SyncCleanerJob marks it stale and ends its session
+  # (Sync#release_hung_execution_lock). Surface the wait roughly once an hour
+  # instead of on every attempt.
   LONG_WAIT_THRESHOLD = 1.hour
   LONG_WAIT_REPORT_EVERY = (LONG_WAIT_THRESHOLD / CONCURRENT_RETRY_WAIT).to_i
 

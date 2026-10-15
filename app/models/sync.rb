@@ -81,7 +81,11 @@ class Sync < ApplicationRecord
 
   class << self
     def clean
-      incomplete.where("syncs.created_at < ?", STALE_AFTER.ago).find_each(&:mark_stale!)
+      incomplete.where("syncs.created_at < ?", STALE_AFTER.ago).find_each do |sync|
+        was_syncing = sync.syncing?
+        sync.mark_stale!
+        sync.release_hung_execution_lock if was_syncing
+      end
     end
 
     def for_family(family, resource_owner: nil)
@@ -208,25 +212,34 @@ class Sync < ApplicationRecord
         return
       end
 
-      # Guard: syncable may have been deleted while job was queued
-      unless syncable.present?
-        Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} no longer exists. Marking as failed.")
-        start! if may_start?
-        fail! if may_fail?
-        update(error: "Syncable record was deleted")
-        return
-      end
-
-      # Guard: syncable may be scheduled for deletion
-      if syncable.respond_to?(:scheduled_for_deletion?) && syncable.scheduled_for_deletion?
-        Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} is scheduled for deletion. Skipping sync.")
-        start! if may_start?
-        fail! if may_fail?
-        update(error: "Syncable record is scheduled for deletion")
-        return
-      end
-
       with_syncable_execution_lock do
+        # Re-read under the lock: while this job waited, the sync may have been
+        # run by a duplicate job, cancelled or marked stale, its window widened
+        # by a joined request, and the syncable deleted.
+        refresh_after_lock
+        unless may_start?
+          Rails.logger.warn("Sync #{id} is no longer startable (#{aasm.current_state}) after acquiring the lock. Skipping sync.")
+          return
+        end
+
+        # Guard: syncable may have been deleted while job was queued
+        unless syncable.present?
+          Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} no longer exists. Marking as failed.")
+          start! if may_start?
+          fail! if may_fail?
+          update(error: "Syncable record was deleted")
+          return
+        end
+
+        # Guard: syncable may be scheduled for deletion
+        if syncable.respond_to?(:scheduled_for_deletion?) && syncable.scheduled_for_deletion?
+          Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} is scheduled for deletion. Skipping sync.")
+          start! if may_start?
+          fail! if may_fail?
+          update(error: "Syncable record is scheduled for deletion")
+          return
+        end
+
         start!
 
         begin
@@ -344,6 +357,38 @@ class Sync < ApplicationRecord
     )
   end
 
+  # The execution lock is session-level, so a job that hangs (rather than
+  # crashes) keeps it after clean has written its sync off, and every later
+  # sync of the syncable would wait forever. Ends the Postgres session holding
+  # it once that session has been idle for HUNG_LOCK_IDLE_AFTER: a hung job is
+  # not running queries. A sync that is actually working never sits idle that
+  # long, so it is left alone. Should the hung job wake up, its next query
+  # fails, which aborts its perform_sync; the stale status stays and post-sync
+  # is skipped (see finalize_if_all_children_finalized).
+  HUNG_LOCK_IDLE_AFTER = 1.hour
+
+  def release_hung_execution_lock
+    key = syncable_execution_lock_key
+    pids = self.class.connection.select_values(self.class.sanitize_sql_array([ <<~SQL.squish, key >> 32, key & 0xFFFFFFFF, HUNG_LOCK_IDLE_AFTER.ago ]))
+      SELECT l.pid FROM pg_locks l
+      JOIN pg_stat_activity a ON a.pid = l.pid
+      WHERE l.locktype = 'advisory' AND l.granted
+        AND l.database = (SELECT oid FROM pg_database WHERE datname = current_database())
+        AND l.classid = ? AND l.objid = ? AND l.objsubid = 1
+        AND l.pid <> pg_backend_pid()
+        AND a.state IN ('idle', 'idle in transaction', 'idle in transaction (aborted)')
+        AND a.state_change < ?
+    SQL
+
+    pids.each do |pid|
+      terminated = self.class.connection.select_value(self.class.sanitize_sql_array([ "SELECT pg_terminate_backend(?)", pid ]))
+      report_hung_lock_release(pid, terminated)
+    end
+  rescue ActiveRecord::StatementInvalid => e
+    # e.g. the database role may not signal the worker's session
+    report_hung_lock_release(nil, false, e)
+  end
+
   protected
     def cancel_pending_descendants!
       children.incomplete.find_each do |child|
@@ -362,7 +407,8 @@ class Sync < ApplicationRecord
     # transaction. The lock is non-blocking, so nested syncs (a parent
     # finalizing from a child's job) can never deadlock, and it is re-entrant
     # on the same connection. It is released when the connection closes, so a
-    # crashed worker cannot leave it held.
+    # crashed worker cannot leave it held; a hung one is cut off by clean via
+    # release_hung_execution_lock.
     def with_syncable_execution_lock
       connection = self.class.connection
       # uncached: jobs run with the query cache on, and a cached "false" from an
@@ -385,6 +431,39 @@ class Sync < ApplicationRecord
           self.class.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", syncable_execution_lock_key ])
         )
       end
+    end
+
+    # reload drops the cached syncable; re-read it in place instead so the
+    # instance the caller loaded stays the one that is synced. If it was
+    # deleted, the association loads afresh and the guard sees nil.
+    def refresh_after_lock
+      loaded_syncable = association(:syncable).target
+      reload
+      return unless loaded_syncable
+
+      begin
+        association(:syncable).target = loaded_syncable.reload
+      rescue ActiveRecord::RecordNotFound
+        nil
+      end
+    end
+
+    def report_hung_lock_release(pid, terminated, error = nil)
+      message = if terminated
+        "Ended hung session #{pid} holding the sync lock of #{syncable_type}##{syncable_id} for stale sync #{id}"
+      else
+        "Could not end the hung session holding the sync lock of #{syncable_type}##{syncable_id} for stale sync #{id}: " \
+          "#{error&.message || "pg_terminate_backend returned false"}"
+      end
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: terminated ? "warn" : "error",
+        message: message,
+        source: self.class.name,
+        family: syncable.is_a?(Family) ? syncable : syncable.try(:family),
+        metadata: { sync_id: id, syncable_type: syncable_type, syncable_id: syncable_id, pid: pid }
+      )
     end
 
     def syncable_execution_lock_key
