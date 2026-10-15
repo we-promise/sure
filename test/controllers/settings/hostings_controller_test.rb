@@ -14,6 +14,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(@provider)
     Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:chimnie).returns(nil)
     @provider.stubs(:usage).returns(provider_success_response(
       OpenStruct.new(
         used: 10,
@@ -27,7 +28,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key demo_family_refresh_enabled demo_family_refresh_family_id].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -169,6 +170,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { realie_api_key: "realie-token" } }
 
       assert_equal "realie-token", Setting.realie_api_key
+    end
+  end
+
+  test "can update chimnie api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { chimnie_api_key: "chimnie-token" } }
+
+      assert_equal "chimnie-token", Setting.chimnie_api_key
     end
   end
 
@@ -699,6 +708,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         # DB value should NOT change when env override is active
         assert_equal "builtin", users(:family_admin).family.reload.assistant_type
       end
+    end
+  end
+
+  test "can turn the in-app assistant off" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { family: { assistant_type: "mcp_only" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "mcp_only", users(:family_admin).family.reload.assistant_type
+
+      get settings_hosting_url
+      assert_response :success
+      assert_select "select[name='family[assistant_type]'] option[value='mcp_only'][selected]"
     end
   end
 

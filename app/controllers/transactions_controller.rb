@@ -34,8 +34,9 @@ class TransactionsController < ApplicationController
                          # - outflow rows need inflow_transaction (to_account) for both
                          #   counterpart display and Transfer#categorizable?/#payment?
                          # - inflow rows need outflow_transaction (from_account) for
-                         #   counterpart display, and inflow_transaction (to_account)
-                         #   for the category menu on the same row
+                         #   counterpart display, inflow_transaction (to_account)
+                         #   for the category menu on the same row, and the
+                         #   outflow's category, which the inflow row shows
                          {
                            transfer_as_outflow: {
                              inflow_transaction: { entry: :account }
@@ -44,7 +45,7 @@ class TransactionsController < ApplicationController
                          {
                            transfer_as_inflow: {
                              inflow_transaction: { entry: :account },
-                             outflow_transaction: { entry: :account }
+                             outflow_transaction: [ :category, { entry: :account } ]
                            }
                          }
                        )
@@ -184,6 +185,7 @@ class TransactionsController < ApplicationController
 
   def update
     if @entry.update(permitted_entry_params)
+      sync_needed = @entry.saved_changes_affect_balances?
       transaction = @entry.transaction
       transaction.record_category_usage!
 
@@ -198,7 +200,7 @@ class TransactionsController < ApplicationController
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.sync_account_later
+      @entry.sync_account_later if sync_needed
 
       notes_changed = @entry.saved_change_to_notes?
 
@@ -269,7 +271,6 @@ class TransactionsController < ApplicationController
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
-    @entry.sync_account_later
 
     respond_to do |format|
       # JSON stays first so Accept: */* callers keep the original response.
@@ -729,7 +730,7 @@ class TransactionsController < ApplicationController
     # read_write users can only annotate (category, tags, notes, merchant).
     # read_only users cannot update anything.
     def permitted_entry_params
-      case entry_permission
+      permitted = case entry_permission
       when :owner, :full_control
         entry_params
       when :read_write
@@ -742,15 +743,26 @@ class TransactionsController < ApplicationController
       else
         {} # read_only — no edits allowed
       end
+
+      # A matched transfer's category lives on its outflow leg; a category
+      # sent for the inflow leg would look saved but never reach a budget.
+      if permitted[:entryable_attributes]&.key?(:category_id) && @entry.transaction.category_set_on_transfer_outflow?
+        permitted[:entryable_attributes] = permitted[:entryable_attributes].except(:category_id)
+      end
+
+      permitted
     end
 
+    # Permitted search filters from the q param, with blank values and
+    # unsupported ai_status / attachment_status values dropped.
     def search_params
       cleaned_params = params.fetch(:q, {})
               .permit(
                 :start_date, :end_date, :search, :amount,
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
-                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: []
+                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: [],
+                attachment_status: []
               )
               .to_h
               .compact_blank
@@ -760,6 +772,11 @@ class TransactionsController < ApplicationController
       if cleaned_params[:ai_status]
         cleaned_params[:ai_status] &= Transaction::Search::AI_STATUSES
         cleaned_params.delete(:ai_status) if cleaned_params[:ai_status].empty?
+      end
+
+      if cleaned_params[:attachment_status]
+        cleaned_params[:attachment_status] &= Transaction::Search::ATTACHMENT_STATUSES
+        cleaned_params.delete(:attachment_status) if cleaned_params[:attachment_status].empty?
       end
 
       cleaned_params

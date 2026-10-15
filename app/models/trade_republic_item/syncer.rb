@@ -99,7 +99,8 @@ class TradeRepublicItem::Syncer
         "tr_events" => stats[:events],
         "tr_unknown_events" => stats[:unknown_events],
         "tr_pending_trade_details" => stats[:pending_trade_details],
-        "tr_detail_backfills" => import_result.is_a?(Hash) ? import_result[:detail_backfill_count].to_i : 0
+        "tr_detail_backfills" => import_result.is_a?(Hash) ? import_result[:detail_backfill_count].to_i : 0,
+        "tr_timeline_backfills" => import_result.is_a?(Hash) ? import_result[:timeline_backfill_count].to_i : 0
       })
     end
 

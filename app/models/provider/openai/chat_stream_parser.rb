@@ -26,8 +26,13 @@ class Provider::Openai::ChatStreamParser
         type: "error",
         data: StreamErrorData.new(
           event: "error",
-          message: object.dig("message").presence || "OpenAI stream returned an error event",
-          code: object.dig("code"),
+          # The Responses API nests the payload under "error" (e.g. rate-limit
+          # and quota errors: `{"type"=>"error","error"=>{"message"=>...,
+          # "code"=>...}}`). Some OpenAI-compatible endpoints have been seen
+          # sending it flat instead, so fall back to the top level before the
+          # generic placeholder.
+          message: dig_error(object, "message").presence || object.dig("message").presence || "OpenAI stream returned an error event",
+          code: dig_error(object, "code") || object.dig("code"),
           details: object
         ),
         usage: nil
@@ -44,14 +49,22 @@ class Provider::Openai::ChatStreamParser
       Provider::Openai::ChatParser.new(response).parsed
     end
 
+    # `Hash#dig` raises if an intermediate value is present but not itself
+    # diggable (e.g. "error" sent as a plain string instead of a nested
+    # object), so guard against that shape before digging into it.
+    def dig_error(hash, key)
+      error = hash["error"]
+      error.is_a?(Hash) ? error[key] : nil
+    end
+
     def build_response_error(event)
       raw_response = object.dig("response") || {}
       error_message =
-        raw_response.dig("error", "message").presence ||
+        dig_error(raw_response, "message").presence ||
         raw_response.dig("incomplete_details", "reason").presence ||
         "OpenAI stream ended with #{event}"
       code =
-        raw_response.dig("error", "code") ||
+        dig_error(raw_response, "code") ||
         raw_response.dig("incomplete_details", "reason")
 
       StreamErrorData.new(
