@@ -151,9 +151,11 @@ class Portfolio::FlowClassifier
   # validations (insert_all), or two matchers racing past the validation, can
   # make one transaction a leg of two transfers. A plain join would then give
   # the entry two rows and a SUM over it would count the entry twice. The
-  # lateral reads one transfer per transaction: the earliest, by created_at
-  # then id. #classify reads whichever row `has_one` returns, so in that
-  # corrupt case alone the two forms may disagree.
+  # lateral reads one transfer per transaction, preferring one the
+  # transaction is the inflow of, as #transfer_counterpart_account_id does,
+  # then the earliest by created_at and id. #classify reads whichever row
+  # `has_one` returns, so only a transaction that is the inflow (or, with no
+  # inflow, the outflow) of two transfers may still read differently.
   def sql_joins
     <<~SQL.squish
       LEFT JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
@@ -163,7 +165,7 @@ class Portfolio::FlowClassifier
         FROM transfers t
         WHERE entries.entryable_type = 'Transaction'
           AND (t.inflow_transaction_id = transactions.id OR t.outflow_transaction_id = transactions.id)
-        ORDER BY t.created_at, t.id
+        ORDER BY (t.inflow_transaction_id = transactions.id) DESC, t.created_at, t.id
         LIMIT 1
       ) flow_transfers ON TRUE
       LEFT JOIN entries flow_counterpart_entries
@@ -265,17 +267,18 @@ class Portfolio::FlowClassifier
 
     # A security moved between accounts has no Transfer row; its other leg is
     # the opposite-quantity Transfer trade on the same security and date in
-    # another account. entries.excluded is nullable, and a NULL leg is live
-    # here as it is to #classify, hence IS NOT TRUE rather than = false.
+    # another account. An excluded leg does not count unless include_excluded
+    # says to read it as live. entries.excluded is nullable, and a NULL leg is
+    # live here as it is to #classify, hence IS NOT TRUE rather than = false.
     def security_transfer_counterpart_in_scope?(entry, trade)
-      Entry
+      counterparts = Entry
         .joins("JOIN trades counterpart_trades ON counterpart_trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
         .where(account_id: scope_account_ids)
         .where.not(account_id: entry.account_id)
         .where(date: entry.date)
-        .where("entries.excluded IS NOT TRUE")
         .where(counterpart_trades: { security_id: trade.security_id, qty: -trade.qty, investment_activity_label: TRANSFER_LABEL })
-        .exists?
+      counterparts = counterparts.where("entries.excluded IS NOT TRUE") unless include_excluded
+      counterparts.exists?
     end
 
     def label_sql
@@ -307,7 +310,7 @@ class Portfolio::FlowClassifier
           WHERE counterpart_entries.account_id = ANY(#{scope_ids_sql})
             AND counterpart_entries.account_id <> entries.account_id
             AND counterpart_entries.date = entries.date
-            AND counterpart_entries.excluded IS NOT TRUE
+            #{"AND counterpart_entries.excluded IS NOT TRUE" unless include_excluded}
             AND counterpart_trades.security_id = trades.security_id
             AND counterpart_trades.qty = -trades.qty
             AND counterpart_trades.investment_activity_label = '#{TRANSFER_LABEL}'
