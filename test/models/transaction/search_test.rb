@@ -453,6 +453,29 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.income_money
   end
 
+  test "totals cache invalidates when family currency changes" do
+    create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink),
+      kind: "standard"
+    )
+
+    search_usd = Transaction::Search.new(@family, filters: {})
+    before_key = search_usd.cache_key_base
+    totals_usd = search_usd.totals
+
+    assert_equal Money.new(100, "USD"), totals_usd.expense_money
+
+    @family.update!(currency: "EUR")
+    search_eur = Transaction::Search.new(@family.reload, filters: {})
+    after_key = search_eur.cache_key_base
+    totals_eur = search_eur.totals
+
+    assert_not_equal before_key, after_key
+    assert_equal "EUR", totals_eur.expense_money.currency.iso_code
+  end
+
   test "category filter includes subcategories" do
     # Create a transaction with the parent category
     parent_entry = create_transaction(

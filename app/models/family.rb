@@ -646,9 +646,10 @@ class Family < ApplicationRecord
 
     [
       id,
+      currency,
       key,
       data_invalidation_key,
-      accounts.maximum(:updated_at)
+      accounts_status_version
     ].compact.join("_")
   end
 

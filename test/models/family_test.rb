@@ -240,6 +240,34 @@ class FamilyTest < ActiveSupport::TestCase
     assert_not_equal before_destroy, family.reload.entries_cache_version
   end
 
+  test "build_cache_key changes when family currency changes" do
+    family = families(:empty)
+    before = family.build_cache_key("test_key")
+    family.update!(currency: "EUR")
+    after = family.reload.build_cache_key("test_key")
+
+    assert_not_equal before, after
+  end
+
+  test "build_cache_key changes through the account deletion lifecycle and does not revert" do
+    family = families(:dylan_family)
+    newer_account = accounts(:credit_card)
+    older_account = accounts(:depository)
+
+    newer_account.touch
+    k0 = family.build_cache_key("test_key")
+
+    older_account.mark_for_deletion!
+    k1 = family.reload.build_cache_key("test_key")
+
+    older_account.destroy!
+    k2 = family.reload.build_cache_key("test_key")
+
+    assert_not_equal k0, k1
+    assert_not_equal k1, k2
+    assert_not_equal k0, k2
+  end
+
   test "default currency comes from country ISO data" do
     assert_equal "CAD", Family.default_currency_for_country("CA")
     assert_equal "EUR", Family.default_currency_for_country("DE")

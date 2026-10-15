@@ -32,6 +32,28 @@ class IncomeStatementTest < ActiveSupport::TestCase
     IncomeStatement.new(@family).daily_expense_series(period: period)
   end
 
+  test "a new statement invalidates family_stats when the family currency changes" do
+    statement = IncomeStatement.new(@family)
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::FamilyStats.expects(:new).twice.returns(stub(call: []))
+
+    statement.send(:family_stats)
+    @family.update!(currency: "EUR")
+    IncomeStatement.new(@family).send(:family_stats)
+  end
+
+  test "a new statement invalidates category_stats when the family currency changes" do
+    statement = IncomeStatement.new(@family)
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::CategoryStats.expects(:new).twice.returns(stub(call: []))
+
+    statement.send(:category_stats)
+    @family.update!(currency: "EUR")
+    IncomeStatement.new(@family).send(:category_stats)
+  end
+
   test "a new statement invalidates daily series when exchange rates change" do
     statement = IncomeStatement.new(@family)
     period = Period.last_30_days
