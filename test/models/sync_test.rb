@@ -561,6 +561,25 @@ class SyncTest < ActiveSupport::TestCase
     assert advisory_lock_free?(sync_lock_key(sync))
   end
 
+  test "closes the session instead of pooling it when the lock cannot be released" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable)
+    connection = Sync.connection
+    syncable.expects(:perform_sync).with(sync).once
+
+    unlock_error = ActiveRecord::StatementInvalid.new("unlock failed")
+    connection.expects(:execute).with(regexp_matches(/pg_advisory_unlock/)).raises(unlock_error)
+    # Test transactions pin this connection, so only check the call here
+    connection.expects(:throw_away!).once
+
+    begin
+      assert_raises(ActiveRecord::StatementInvalid) { sync.perform }
+    ensure
+      connection.unstub(:execute)
+      connection.execute(Sync.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", sync_lock_key(sync) ]))
+    end
+  end
+
   test "syncs of different syncables do not block each other" do
     sync = Sync.create!(syncable: accounts(:depository))
     other_sync = Sync.create!(syncable: accounts(:credit_card))

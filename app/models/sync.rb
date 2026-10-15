@@ -427,9 +427,17 @@ class Sync < ApplicationRecord
       begin
         yield
       ensure
-        connection.execute(
-          self.class.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", syncable_execution_lock_key ])
-        )
+        begin
+          connection.execute(
+            self.class.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", syncable_execution_lock_key ])
+          )
+        rescue
+          # The session may still hold the lock. Returned to the pool, the next
+          # sync on it would re-enter the lock while every other worker waits,
+          # so close the session (which releases the lock) instead.
+          connection.throw_away!
+          raise
+        end
       end
     end
 
