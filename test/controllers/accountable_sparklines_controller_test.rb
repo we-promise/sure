@@ -86,6 +86,57 @@ class AccountableSparklinesControllerTest < ActionDispatch::IntegrationTest
     assert_includes requested_account_ids, accounts(:connected).id
   end
 
+  test "group sparkline cache is invalidated when account ownership moves without a share change" do
+    member = users(:family_member)
+    sign_in member
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    get accountable_sparkline_url("depository")
+    assert_response :success
+
+    # Same write as User#reassign_owned_accounts!: no share row and no account
+    # timestamp changes, but the member now owns (and can see) the account.
+    Account.where(id: accounts(:connected).id).update_all(owner_id: member.id)
+
+    requested_account_ids = nil
+    Balance::ChartSeriesBuilder.expects(:new).with do |args|
+      requested_account_ids = args[:account_ids]
+    end.returns(stub(balance_series: empty_series))
+
+    get accountable_sparkline_url("depository")
+
+    assert_response :success
+    assert_includes requested_account_ids, accounts(:connected).id
+  end
+
+  test "group sparkline cache is invalidated when a share is replaced without a newer timestamp" do
+    member = users(:family_member)
+    sign_in member
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    shared_at = 1.hour.ago
+    AccountShare.where(user: member).update_all(updated_at: shared_at)
+
+    get accountable_sparkline_url("depository")
+    assert_response :success
+
+    # Share count and newest updated_at stay the same, the accessible set does not.
+    AccountShare.where(user: member, account: accounts(:credit_card)).delete_all
+    AccountShare.insert_all([
+      { account_id: accounts(:connected).id, user_id: member.id, permission: "read_only",
+        include_in_finances: true, created_at: shared_at, updated_at: shared_at }
+    ])
+
+    requested_account_ids = nil
+    Balance::ChartSeriesBuilder.expects(:new).with do |args|
+      requested_account_ids = args[:account_ids]
+    end.returns(stub(balance_series: empty_series))
+
+    get accountable_sparkline_url("depository")
+
+    assert_response :success
+    assert_includes requested_account_ids, accounts(:connected).id
+  end
+
   test "linked investment sparkline does not load full account records" do
     AccountProvider.create!(
       account: accounts(:investment),

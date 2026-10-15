@@ -69,12 +69,19 @@ class AccountableSparklinesController < ApplicationController
       )
     end
 
-    # The series depends on which accounts the user can access, so the key is
-    # per user and changes whenever that user's account shares change.
+    # The series is built from exactly these account rows, so the key carries a
+    # digest of them. A share count/timestamp version can stay the same while
+    # access changes (ownership moved by update_all, shares replaced with older
+    # timestamps); the row digest changes whenever the accessible set does and
+    # never repeats for a different set.
     def cache_key
       family.build_cache_key(
-        "#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}_#{Current.user&.id}_#{Current.account_share_version}",
+        "#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}_#{account_rows_digest}",
         invalidate_on_data_updates: true
       )
+    end
+
+    def account_rows_digest
+      Digest::SHA256.hexdigest(account_identity_rows.map { |row| row.join(":") }.sort.join(","))
     end
 end
