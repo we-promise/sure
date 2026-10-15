@@ -303,6 +303,18 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal account_names.sort, account_names
   end
 
+  test "lists commodity accounts with their own account type" do
+    commodity_account = families(:dylan_family).accounts.create!(
+      name: "Commodities", currency: "USD", balance: 2500, owner: @user, accountable: Commodity.new
+    )
+
+    get "/api/v1/accounts", params: { per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+
+    account_json = JSON.parse(response.body)["accounts"].find { |a| a["id"] == commodity_account.id }
+    assert_equal [ "commodity", "asset" ], account_json.values_at("account_type", "classification")
+  end
+
   private
 
     def api_headers(api_key)
