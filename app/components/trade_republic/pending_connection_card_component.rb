@@ -21,14 +21,14 @@ class TradeRepublic::PendingConnectionCardComponent < ApplicationComponent
     @login_stage = pending_connection.login_stage
   end
 
-  # An approval request that lapsed leaves the row so the login can start
-  # again with a QR code, which needs no PIN.
   def expired?
-    pending_connection.pending_login_state.blank? || login_stage == "expired"
+    return @expired if defined?(@expired)
+
+    @expired = pending_connection.lapsed?
   end
 
-  def qr_login?
-    login_stage == "qr_pending" || pending_connection.login_method == "qr"
+  def identifier_text
+    "#{translation("identifier_phone")} \u2022\u2022\u2022\u2022 #{phone_last4}" if phone_last4
   end
 
   def phone_last4

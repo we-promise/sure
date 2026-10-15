@@ -55,6 +55,16 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
     assert_text I18n.t("settings.providers.trade_republic_panel.new_connection")
   end
 
+  test "a new connection showing its QR code offers to cancel it" do
+    pending_connection = families(:dylan_family).trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
+    pending_connection.stubs(:login_stage).returns("qr_pending")
+
+    render_inline(TradeRepublic::PendingConnectionCardComponent.new(pending_connection: pending_connection))
+
+    assert_button I18n.t("settings.providers.trade_republic_panel.cancel_login")
+    assert_no_button I18n.t("settings.providers.trade_republic_panel.qr_cancel")
+  end
+
   test "no other connection can be added while one is still logging in" do
     family = families(:dylan_family)
     family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
@@ -63,6 +73,15 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
 
     assert_no_link I18n.t("settings.providers.trade_republic_panel.add_account")
     assert_no_selector "form[action='#{Rails.application.routes.url_helpers.trade_republic_pending_connections_path}']", visible: :all
+  end
+
+  test "another connection can be added once a new connection's login lapsed" do
+    family = families(:dylan_family)
+    family.trade_republic_pending_connections.create!(qr_login: true)
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [ trade_republic_items(:configured_item) ], family: family))
+
+    assert_link I18n.t("settings.providers.trade_republic_panel.add_account")
   end
 
   test "a new connection whose login lapsed can start a QR login again or be cancelled" do

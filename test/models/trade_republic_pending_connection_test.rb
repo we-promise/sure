@@ -43,4 +43,12 @@ class TradeRepublicPendingConnectionTest < ActiveSupport::TestCase
     Provider::TradeRepublicClient.expects(:new).with(has_entry(device_id: pending_connection.device_id))
     pending_connection.trade_republic_provider
   end
+
+  test "a family has one pending connection at a time" do
+    @family.trade_republic_pending_connections.create!(qr_login: true)
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      @family.trade_republic_pending_connections.create!(qr_login: true)
+    end
+  end
 end

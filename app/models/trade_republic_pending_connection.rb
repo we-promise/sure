@@ -26,6 +26,12 @@ class TradeRepublicPendingConnection < ApplicationRecord
     super.tap { @pin = nil }
   end
 
+  # The approval request lapsed (or never started). The row stays so a QR
+  # login can start again, and another connection may be added meanwhile.
+  def lapsed?
+    pending_login_state.blank? || login_stage == "expired"
+  end
+
   def trade_republic_provider(pin: self.pin)
     Provider::TradeRepublicClient.new(phone_number: phone_number, pin: pin, device_id: device_id)
   end

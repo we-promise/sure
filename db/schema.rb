@@ -2709,7 +2709,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_170000) do
     t.text "pending_login_state"
     t.string "phone_number"
     t.datetime "updated_at", null: false
-    t.index ["family_id"], name: "index_trade_republic_pending_connections_on_family_id"
+    t.index ["family_id"], name: "index_trade_republic_pending_connections_on_family_id", unique: true
   end
 
   create_table "trades", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

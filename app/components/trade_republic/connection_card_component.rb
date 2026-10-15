@@ -28,6 +28,10 @@ class TradeRepublic::ConnectionCardComponent < ApplicationComponent
     translation("identifier_#{identifier.first}") if identifier
   end
 
+  def identifier_text
+    "#{identifier_label} \u2022\u2022\u2022\u2022 #{identifier_last4}" if identifier
+  end
+
   # TradeRepublicItem#login_stage decodes the pending login payload on every
   # call, and the template checks the stage several times per card, so cache
   # it for the duration of the render.

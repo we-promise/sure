@@ -7,14 +7,17 @@ class TradeRepublic::QrLoginComponent < ApplicationComponent
 
   # `record` is the connection logging in again or the pending connection
   # of a new one; both answer the same login routes.
-  def initialize(record:, return_url:, active: false, code_svg: nil)
+  # `hide_button_while_polling` is for a row with its own Cancel, so a
+  # running QR login doesn't show a second one.
+  def initialize(record:, return_url:, active: false, code_svg: nil, hide_button_while_polling: false)
     @record = record
     @return_url = return_url
     @active = active
     @code_svg = code_svg
+    @hide_button_while_polling = hide_button_while_polling
   end
 
-  attr_reader :record, :return_url, :active, :code_svg
+  attr_reader :record, :return_url, :active, :code_svg, :hide_button_while_polling
 
   def login_path(action)
     helpers.polymorphic_path([ action, record ])

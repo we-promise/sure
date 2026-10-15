@@ -1,0 +1,19 @@
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <div class="flex items-center gap-3 min-w-0">
+    <div class="w-2 h-2 rounded-full shrink-0 <%= dot_class %>"></div>
+    <div class="min-w-0">
+      <p class="text-sm font-medium text-primary truncate">
+        <%= title %>
+        <% if identifier %>
+          <span class="font-normal text-secondary">&middot; <%= identifier %></span>
+        <% end %>
+      </p>
+      <p class="text-xs text-secondary"><%= status %></p>
+      <% if details? %>
+        <p class="text-xs text-secondary"><%= details %></p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2"><%= actions %></div>
+</div>

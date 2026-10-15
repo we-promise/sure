@@ -1,54 +1,47 @@
-<%= tag.div id: dom_id,
-            class: "p-3 rounded-lg bg-container border border-primary space-y-3",
-            data: {
-              controller: [ "trade-republic-pin-login", ("trade-republic-login" if login_stage == "waiting_for_approval") ].compact.join(" "),
-              trade_republic_login_url_value: (helpers.poll_login_trade_republic_item_path(item) if login_stage == "waiting_for_approval")
-            }.compact do %>
+<%= render TradeRepublic::ConnectionRowComponent.new(
+      id: dom_id,
+      data: {
+        controller: [ "trade-republic-pin-login", ("trade-republic-login" if login_stage == "waiting_for_approval") ].compact.join(" "),
+        trade_republic_login_url_value: (helpers.poll_login_trade_republic_item_path(item) if login_stage == "waiting_for_approval")
+      }.compact
+    ) do %>
   <%= render TradeRepublic::QrLoginComponent.new(
         record: item,
         return_url: helpers.settings_providers_path(anchor: "trade-republic"),
         active: qr_active,
         code_svg: qr_code_svg
       ) do |qr| %>
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3 min-w-0">
-        <div class="w-2 h-2 rounded-full shrink-0 <%= status_dot_class %>"></div>
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-primary truncate">
-            <%= item.name %>
-            <% if identifier_last4 %>
-              <span class="font-normal text-secondary">&middot; <%= identifier_label %> &bull;&bull;&bull;&bull; <%= identifier_last4 %></span>
-            <% end %>
-          </p>
-          <p class="text-xs text-secondary">
-            <% if item.syncing? %>
-              <%= translation("syncing") %>
-            <% elsif login_stage == "expired" %>
-              <span class="text-destructive"><%= translation("login_expired") %></span>
-            <% elsif item.pending_login_state.present? %>
-              <%= login_stage == "authenticator_code" ? translation("awaiting_authenticator_code") : translation("awaiting_confirmation") %>
-            <% elsif item.ready_for_sync? %>
-              <% if item.unlinked_accounts_count.positive? %>
-                <%= translation("accounts_discovered", count: item.unlinked_accounts_count) %>
-                <%= helpers.link_to translation("setup_accounts"), helpers.setup_accounts_trade_republic_item_path(item), class: "link", data: { turbo_frame: :modal } %>
-              <% else %>
-                <%= translation("status_configured_prefix", summary: item.sync_status_summary) %>
-                <%= helpers.link_to translation("accounts_tab"), helpers.accounts_path, class: "link" %>
-                <%= translation("status_configured_suffix") %>
-              <% end %>
-            <% elsif item.needs_login? %>
-              <span class="text-destructive"><%= translation("requires_update") %></span>
-            <% else %>
-              <%= translation("not_configured") %>
-            <% end %>
-          </p>
-          <% if item.ready_for_sync? && item.session_expires_at.present? %>
-            <p class="text-xs text-secondary"><%= helpers.trade_republic_session_expiry("settings.providers.trade_republic_panel.session_expires_in", item.session_expires_at) %></p>
+    <%= render TradeRepublic::ConnectionRowHeaderComponent.new(title: item.name, dot_class: status_dot_class, identifier: identifier_text) do |row| %>
+      <% row.with_status do %>
+        <% if item.syncing? %>
+          <%= translation("syncing") %>
+        <% elsif login_stage == "expired" %>
+          <span class="text-destructive"><%= translation("login_expired") %></span>
+        <% elsif item.pending_login_state.present? %>
+          <%= login_stage == "authenticator_code" ? translation("awaiting_authenticator_code") : translation("awaiting_confirmation") %>
+        <% elsif item.ready_for_sync? %>
+          <% if item.unlinked_accounts_count.positive? %>
+            <%= translation("accounts_discovered", count: item.unlinked_accounts_count) %>
+            <%= helpers.link_to translation("setup_accounts"), helpers.setup_accounts_trade_republic_item_path(item), class: "link", data: { turbo_frame: :modal } %>
+          <% else %>
+            <%= translation("status_configured_prefix", summary: item.sync_status_summary) %>
+            <%= helpers.link_to translation("accounts_tab"), helpers.accounts_path, class: "link" %>
+            <%= translation("status_configured_suffix") %>
           <% end %>
-        </div>
-      </div>
+        <% elsif item.needs_login? %>
+          <span class="text-destructive"><%= translation("requires_update") %></span>
+        <% else %>
+          <%= translation("not_configured") %>
+        <% end %>
+      <% end %>
 
-      <div class="flex flex-wrap items-center gap-2">
+      <% if item.ready_for_sync? && item.session_expires_at.present? %>
+        <% row.with_details do %>
+          <%= helpers.trade_republic_session_expiry("settings.providers.trade_republic_panel.session_expires_in", item.session_expires_at) %>
+        <% end %>
+      <% end %>
+
+      <% row.with_actions do %>
         <%# Like Enable Banking, only a logged-in connection can sync. %>
         <% if item.ready_for_sync? %>
           <%= render DS::Button.new(
@@ -85,8 +78,8 @@
               method: :delete,
               confirm: identifier_last4 ? translation("disconnect_confirm_with_identifier", last4: identifier_last4) : translation("disconnect_confirm")
             ) %>
-      </div>
-    </div>
+      <% end %>
+    <% end %>
   <% end %>
 
   <%= render TradeRepublic::LoginChallengeComponent.new(record: item, login_stage: login_stage) %>

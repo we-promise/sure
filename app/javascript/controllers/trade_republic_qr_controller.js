@@ -8,6 +8,7 @@ export default class extends Controller {
     cancelUrl: String,
     returnUrl: String,
     autoPoll: { type: Boolean, default: false },
+    hideButtonWhilePolling: { type: Boolean, default: false },
     loadingText: String,
     instructionText: String,
     successText: String,
@@ -50,6 +51,7 @@ export default class extends Controller {
     this.startedAt = Date.now();
     this.panelTarget.hidden = false;
     this.setButtonLabel(this.cancelTextValue);
+    this.setButtonHidden(this.hideButtonWhilePollingValue);
     this.codeTarget.replaceChildren();
     this.statusTarget.textContent = this.loadingTextValue;
 
@@ -175,7 +177,8 @@ export default class extends Controller {
     console.warn("[Trade Republic] QR login failed", error);
     this.polling = false;
     this.setButtonLabel(this.loginTextValue);
-    this.buttonTarget.disabled = false;
+    this.setButtonDisabled(false);
+    this.setButtonHidden(false);
     this.statusTarget.textContent = this.errorTextValue;
   }
 
@@ -197,7 +200,7 @@ export default class extends Controller {
     this.codeTarget.replaceChildren();
     // A login started before the server confirms the cancellation would be
     // cleared by it, so the button stays disabled until then.
-    this.buttonTarget.disabled = true;
+    this.setButtonDisabled(true);
     this.setButtonLabel(this.loginTextValue);
 
     try {
@@ -220,10 +223,10 @@ export default class extends Controller {
       // new card brings an enabled one. The Accounts page has no such card.
       const replacesCard = this.streamReplacesElement(stream);
       Turbo.renderStreamMessage(stream);
-      if (!replacesCard) this.buttonTarget.disabled = false;
+      if (!replacesCard) this.setButtonDisabled(false);
     } catch (error) {
       this.stopped = false;
-      this.buttonTarget.disabled = false;
+      this.setButtonDisabled(false);
       console.warn("[Trade Republic] QR login cancellation failed", error);
     }
   }
@@ -252,12 +255,23 @@ export default class extends Controller {
     return remaining > 0 && remaining <= 1500 ? 100 : this.intervalValue;
   }
 
+  // A new connection's card shows no QR button while its QR code is up; it
+  // has a separate Cancel instead.
+  setButtonDisabled(disabled) {
+    if (this.hasButtonTarget) this.buttonTarget.disabled = disabled;
+  }
+
+  setButtonHidden(hidden) {
+    if (this.hasButtonTarget) this.buttonTarget.hidden = hidden;
+  }
+
   setButtonLabel(label) {
     // DS::Button renders its text in a span, so without a label target the
     // button's own text is updated.
-    const target = this.hasLabelTarget
-      ? this.labelTarget
-      : this.buttonTarget.querySelector("span");
+    let target = null;
+    if (this.hasLabelTarget) target = this.labelTarget;
+    else if (this.hasButtonTarget)
+      target = this.buttonTarget.querySelector("span");
     if (target) target.textContent = label;
   }
 

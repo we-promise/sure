@@ -1,9 +1,9 @@
 class CreateTradeRepublicPendingConnections < ActiveRecord::Migration[8.1]
   def change
     # A new connection's login until Trade Republic approves it; only then is
-    # a trade_republic_items row created.
+    # a trade_republic_items row created. One login at a time per family.
     create_table :trade_republic_pending_connections, id: :uuid do |t|
-      t.references :family, null: false, foreign_key: true, type: :uuid
+      t.references :family, null: false, foreign_key: true, type: :uuid, index: { unique: true }
       t.string :phone_number
       t.text :pending_login_state
       t.string :currency

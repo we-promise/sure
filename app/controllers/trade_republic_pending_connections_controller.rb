@@ -25,9 +25,12 @@ class TradeRepublicPendingConnectionsController < ApplicationController
     provider = @pending_connection.trade_republic_provider
     result = qr_login ? provider.initiate_qr_login : provider.initiate_login
 
-    # One login at a time: a new attempt replaces one left unfinished.
-    Current.family.trade_republic_pending_connections.destroy_all
-    @pending_connection.update!(pending_login_state: result.data.fetch("pending_login_b64"))
+    # One login at a time: a new attempt replaces one left unfinished. The
+    # family lock keeps two attempts at once from both getting through.
+    Current.family.with_lock do
+      Current.family.trade_republic_pending_connections.destroy_all
+      @pending_connection.update!(pending_login_state: result.data.fetch("pending_login_b64"))
+    end
     qr_code_svg = view_context.generate_mfa_qr_code(result.data["qr_code_payload"]) if qr_login && result.data["qr_code_payload"].present?
 
     return redirect_to(settings_providers_path(anchor: "trade-republic"), status: :see_other) unless turbo_panel_request?
