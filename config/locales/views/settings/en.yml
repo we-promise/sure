@@ -760,6 +760,7 @@ en:
         requires_update: Log in again to resume syncing.
         session_expires_in: Login expires in %{time} (%{at}).
         pin_login: PIN login
+        pin_cancel: "Cancel PIN login"
         remove: Remove
         new_connection: New connection
         cancel_login: Cancel

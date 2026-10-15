@@ -7,6 +7,7 @@ import { Controller } from "@hotwired/stimulus";
 // and the PIN login button hides while a QR login runs.
 export default class extends Controller {
   static targets = ["button", "form", "alternative"];
+  static values = { loginText: String, cancelText: String };
 
   toggle(event) {
     event.preventDefault();
@@ -14,8 +15,14 @@ export default class extends Controller {
     this.formTarget.hidden = !show;
     for (const alternative of this.alternativeTargets)
       alternative.hidden = show;
-    if (this.hasButtonTarget)
+    if (this.hasButtonTarget) {
       this.buttonTarget.setAttribute("aria-expanded", String(show));
+      // Like the QR login button, which reads Cancel QR login while its QR
+      // code shows.
+      const label = show ? this.cancelTextValue : this.loginTextValue;
+      const span = this.buttonTarget.querySelector("span");
+      if (label && span) span.textContent = label;
+    }
     if (show)
       this.formTarget
         .querySelector("input:not([type='hidden']):not([disabled])")

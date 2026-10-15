@@ -192,6 +192,7 @@ nl:
         requires_update: Log opnieuw in om het synchroniseren te hervatten.
         session_expires_in: "Login verloopt over %{time} (%{at})."
         pin_login: PIN-login
+        pin_cancel: "PIN-login annuleren"
         remove: Verwijderen
         new_connection: Nieuwe koppeling
         cancel_login: Annuleren

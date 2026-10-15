@@ -515,6 +515,7 @@ hu:
         requires_update: "Jelentkezz be újra a szinkronizálás folytatásához."
         session_expires_in: "A bejelentkezés %{time} múlva lejár (%{at})."
         pin_login: "PIN-bejelentkezés"
+        pin_cancel: "PIN-bejelentkezés megszakítása"
         remove: "Eltávolítás"
         new_connection: "Új kapcsolat"
         cancel_login: "Mégse"

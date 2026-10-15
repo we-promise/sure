@@ -606,6 +606,7 @@ es:
         requires_update: Vuelve a iniciar sesión para reanudar la sincronización.
         session_expires_in: "El inicio de sesión caduca en %{time} (%{at})."
         pin_login: Acceso con PIN
+        pin_cancel: "Cancelar acceso con PIN"
         remove: Eliminar
         new_connection: Nueva conexión
         cancel_login: Cancelar

@@ -607,6 +607,7 @@ fr:
         requires_update: "Reconnectez-vous pour reprendre la synchronisation."
         session_expires_in: "La connexion expire dans %{time} (%{at})."
         pin_login: "Connexion PIN"
+        pin_cancel: "Annuler la connexion PIN"
         remove: "Supprimer"
         new_connection: "Nouvelle connexion"
         cancel_login: "Annuler"

@@ -554,6 +554,7 @@ de:
         requires_update: "Melde dich erneut an, um die Synchronisierung fortzusetzen."
         session_expires_in: "Anmeldung läuft in %{time} ab (%{at})."
         pin_login: "PIN-Anmeldung"
+        pin_cancel: "PIN-Login abbrechen"
         remove: "Entfernen"
         new_connection: "Neue Verbindung"
         cancel_login: "Abbrechen"

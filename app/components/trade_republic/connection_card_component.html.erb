@@ -3,6 +3,8 @@
       data: {
         controller: [ "trade-republic-pin-login", ("trade-republic-login" if login_stage == "waiting_for_approval") ].compact.join(" "),
         action: "trade-republic-qr:started->trade-republic-pin-login#qrStarted trade-republic-qr:stopped->trade-republic-pin-login#qrStopped",
+        trade_republic_pin_login_login_text_value: translation("pin_login"),
+        trade_republic_pin_login_cancel_text_value: translation("pin_cancel"),
         trade_republic_login_url_value: (helpers.poll_login_trade_republic_item_path(item) if login_stage == "waiting_for_approval")
       }.compact
     ) do %>

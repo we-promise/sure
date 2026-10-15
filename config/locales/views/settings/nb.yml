@@ -154,6 +154,7 @@ nb:
         requires_update: "Logg inn på nytt for å fortsette synkroniseringen."
         session_expires_in: "Påloggingen utløper om %{time} (%{at})."
         pin_login: "PIN-pålogging"
+        pin_cancel: "Avbryt PIN-pålogging"
         remove: "Fjern"
         new_connection: "Ny tilkobling"
         cancel_login: "Avbryt"

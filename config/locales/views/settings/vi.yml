@@ -559,6 +559,7 @@ vi:
         requires_update: "Đăng nhập lại để tiếp tục đồng bộ."
         session_expires_in: "Phiên đăng nhập hết hạn sau %{time} (%{at})."
         pin_login: "Đăng nhập PIN"
+        pin_cancel: "Hủy đăng nhập PIN"
         remove: "Xóa"
         new_connection: "Kết nối mới"
         cancel_login: "Hủy"

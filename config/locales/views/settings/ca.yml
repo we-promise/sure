@@ -673,6 +673,7 @@ ca:
         requires_update: "Torna a iniciar sessió per reprendre la sincronització."
         session_expires_in: "La sessió caduca d'aquí a %{time} (%{at})."
         pin_login: "Accés amb PIN"
+        pin_cancel: "Cancel·la l'accés amb PIN"
         remove: "Elimina"
         new_connection: "Nova connexió"
         cancel_login: "Cancel·la"

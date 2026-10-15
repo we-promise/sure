@@ -760,6 +760,7 @@ pl:
         requires_update: "Zaloguj się ponownie, aby wznowić synchronizację."
         session_expires_in: "Logowanie wygasa za %{time} (%{at})."
         pin_login: "Logowanie PIN"
+        pin_cancel: "Anuluj logowanie PIN"
         remove: "Usuń"
         new_connection: "Nowe połączenie"
         cancel_login: "Anuluj"

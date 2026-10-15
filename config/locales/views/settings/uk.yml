@@ -748,6 +748,7 @@ uk:
         requires_update: "Увійдіть знову, щоб відновити синхронізацію."
         session_expires_in: "Вхід завершиться через %{time} (%{at})."
         pin_login: "Вхід за PIN"
+        pin_cancel: "Скасувати вхід за PIN"
         remove: "Видалити"
         new_connection: "Нове підключення"
         cancel_login: "Скасувати"

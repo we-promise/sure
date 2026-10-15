@@ -719,6 +719,7 @@ tr:
         requires_update: "Senkronizasyona devam etmek için yeniden giriş yapın."
         session_expires_in: "Girişin süresi %{time} içinde doluyor (%{at})."
         pin_login: "PIN ile giriş"
+        pin_cancel: "PIN girişini iptal et"
         remove: "Kaldır"
         new_connection: "Yeni bağlantı"
         cancel_login: "İptal"

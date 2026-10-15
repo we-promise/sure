@@ -600,6 +600,7 @@ it:
         requires_update: "Accedi di nuovo per riprendere la sincronizzazione."
         session_expires_in: "L'accesso scade tra %{time} (%{at})."
         pin_login: "Accesso PIN"
+        pin_cancel: "Annulla accesso PIN"
         remove: "Rimuovi"
         new_connection: "Nuova connessione"
         cancel_login: "Annulla"

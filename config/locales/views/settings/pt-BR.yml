@@ -235,6 +235,7 @@ pt-BR:
         requires_update: "Faça login novamente para retomar a sincronização."
         session_expires_in: "O login expira em %{time} (%{at})."
         pin_login: "Login por PIN"
+        pin_cancel: "Cancelar login por PIN"
         remove: "Remover"
         new_connection: "Nova conexão"
         cancel_login: "Cancelar"

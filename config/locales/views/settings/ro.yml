@@ -176,6 +176,7 @@ ro:
         requires_update: "Autentifică-te din nou pentru a relua sincronizarea."
         session_expires_in: "Autentificarea expiră în %{time} (%{at})."
         pin_login: "Autentificare PIN"
+        pin_cancel: "Anulează autentificarea PIN"
         remove: "Elimină"
         new_connection: "Conexiune nouă"
         cancel_login: "Anulează"

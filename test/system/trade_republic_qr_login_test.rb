@@ -100,8 +100,10 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
       click_on panel_t("pin_login")
       assert_field "trade_republic_item[pin]"
       assert_no_button qr_login
-      click_on panel_t("pin_login")
+      assert_no_button panel_t("pin_login"), exact: true
+      click_on panel_t("pin_cancel")
       assert_no_field "trade_republic_item[pin]"
+      assert_button panel_t("pin_login")
 
       click_on qr_login
       assert_selector ".qrcode svg"

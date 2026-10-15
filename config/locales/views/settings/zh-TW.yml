@@ -652,6 +652,7 @@ zh-TW:
         requires_update: 請重新登入以恢復同步。
         session_expires_in: 登入將在 %{time}後過期（%{at}）。
         pin_login: PIN 登入
+        pin_cancel: "取消 PIN 登入"
         remove: 移除
         new_connection: 新增連線
         cancel_login: 取消

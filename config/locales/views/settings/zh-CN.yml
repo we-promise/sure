@@ -560,6 +560,7 @@ zh-CN:
         requires_update: 请重新登录以恢复同步。
         session_expires_in: 登录将在 %{time}后过期（%{at}）。
         pin_login: PIN 登录
+        pin_cancel: "取消 PIN 登录"
         remove: 移除
         new_connection: 新建连接
         cancel_login: 取消

@@ -707,6 +707,7 @@ ru:
         requires_update: "Войдите снова, чтобы возобновить синхронизацию."
         session_expires_in: "Вход истекает через %{time} (%{at})."
         pin_login: "Вход по PIN"
+        pin_cancel: "Отменить вход по PIN"
         remove: "Удалить"
         new_connection: "Новое подключение"
         cancel_login: "Отменить"
