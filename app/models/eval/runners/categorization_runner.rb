@@ -3,7 +3,7 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
 
     def process_samples
       all_samples = samples.to_a
-      batch_size = Provider::Openai.max_items_per_call
+      batch_size = Provider::LlmConcept.max_items_per_call
       log_progress("Processing #{all_samples.size} samples in batches of #{batch_size}")
 
       all_samples.each_slice(batch_size).with_index do |batch, batch_idx|

@@ -41,11 +41,6 @@ class Provider::Openai < Provider
     [ configured, MIN_REQUEST_TIMEOUT ].max
   end
 
-  # Items per LLM call for AI rule jobs and evals: ENV > Setting > 25.
-  def self.max_items_per_call
-    [ ENV["LLM_MAX_ITEMS_PER_CALL"], Setting.llm_max_items_per_call, 25 ].map(&:to_i).find(&:positive?)
-  end
-
   # Extra HTTP headers for OpenAI-compatible requests, parsed from the
   # OPENAI_EXTRA_HEADERS env var (a JSON object). ENV-only: no Setting
   # fallback. Keys and values are stringified for Faraday; blank values are

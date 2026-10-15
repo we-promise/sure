@@ -541,6 +541,15 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "max items per batch field is shown for every LLM provider" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_select "input[name=?]", "setting[llm_max_items_per_call]", count: 1
+      assert_select "[data-provider=openai] input[name=?]", "setting[llm_max_items_per_call]", count: 0
+    end
+  end
+
   test "falls back to openai when stored llm_provider is invalid" do
     with_self_hosting do
       Setting.llm_provider = "bogus"

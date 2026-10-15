@@ -104,6 +104,8 @@ it:
         not_configured_hint: "Aggiungi una chiave API %{provider} qui sotto per attivarlo."
         data_retention_heading: Gestione dati
         data_retention: Gli input API non vengono usati per addestrare modelli per impostazione predefinita; le API hosted dei provider conservano i dati per ~30 giorni per fiducia e sicurezza. Gli endpoint personalizzati o self-hosted seguono la tua politica.
+        max_items_per_call_label: Elementi massimi per batch (facoltativo)
+        max_items_per_call_help: "Limite superiore per batch di auto-categorizzazione/rilevamento commercianti. Predefinito: 25. Con provider compatibili con OpenAI, i batch più grandi vengono suddivisi automaticamente per adattarsi alla finestra di contesto."
       anthropic_settings:
         title: Anthropic (Claude)
         description: Inserisci la tua chiave API Anthropic. Opzionalmente punta l'URL base ad AWS Bedrock o GCP Vertex.
@@ -136,8 +138,6 @@ it:
         context_window_help: "Token totali che il modello accetterà. Predefinito: 2048 — aumenta a 8192+ per OpenAI cloud o modelli locali a contesto ampio."
         max_response_tokens_label: Token risposta massimi (facoltativo)
         max_response_tokens_help: "Token riservati per la risposta del modello. Predefinito: 512. Diminuisci per liberare spazio per cronologie più lunghe."
-        max_items_per_call_label: Elementi massimi per batch (facoltativo)
-        max_items_per_call_help: "Limite superiore per batch di auto-categorizzazione/rilevamento commercianti. Predefinito: 25. I batch più grandi vengono suddivisi automaticamente per adattarsi alla finestra di contesto."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

@@ -104,18 +104,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
-  test "max_items_per_call prefers ENV, then the setting, then 25" do
-    Setting.stubs(:llm_max_items_per_call).returns(40)
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "7") do
-      assert_equal 7, Provider::Openai.max_items_per_call
-    end
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => nil) do
-      assert_equal 40, Provider::Openai.max_items_per_call
-      Setting.stubs(:llm_max_items_per_call).returns(nil)
-      assert_equal 25, Provider::Openai.max_items_per_call
-    end
-  end
-
   test "effective_model uses Setting when ENV is unset" do
     Setting.stubs(:openai_model).returns("llama3")
     with_env_overrides("OPENAI_MODEL" => nil) do

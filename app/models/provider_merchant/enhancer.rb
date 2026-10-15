@@ -8,7 +8,7 @@ class ProviderMerchant::Enhancer
   def batches
     return [] unless llm_provider
 
-    unenhanced_merchants.map(&:id).each_slice(Provider::Openai.max_items_per_call).to_a
+    unenhanced_merchants.map(&:id).each_slice(Provider::LlmConcept.max_items_per_call).to_a
   end
 
   def enhance
@@ -20,7 +20,7 @@ class ProviderMerchant::Enhancer
     enhanced_count = 0
     deduplicated_count = 0
 
-    unenhanced_merchants.each_slice(Provider::Openai.max_items_per_call) do |batch|
+    unenhanced_merchants.each_slice(Provider::LlmConcept.max_items_per_call) do |batch|
       result = llm_provider.enhance_provider_merchants(
         merchants: batch.map { |m| { id: m.id, name: m.name } },
         family: @family

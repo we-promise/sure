@@ -92,6 +92,9 @@ hu:
         title: Brandfetch beállítások
         high_res_label: Nagy felbontású logók engedélyezése
         high_res_description: Ha engedélyezve van, a logók 120x120 felbontásban kerülnek lekérésre 40x40 helyett. Ez élesebb képeket biztosít nagy felbontású kijelzőkön.
+      llm_provider_selector:
+        max_items_per_call_label: Maximális elemek kötegenként (nem kötelező)
+        max_items_per_call_help: "Felső korlát az automatikus kategorizálási / kereskedő-felismerési kötegeknél. Alapértelmezett: 25. OpenAI-kompatibilis szolgáltatóknál a nagyobb kötegek automatikusan felosztódnak a kontextusablakba féréshez."
       openai_settings:
         description: Add meg a hozzáférési tokent, és opcionálisan konfigurálj egy egyéni OpenAI-kompatibilis szolgáltatót
         env_configured_message: Sikeresen konfigurálva környezeti változókon keresztül.
@@ -113,8 +116,6 @@ hu:
         context_window_help: "Az összes token, amelyet a modell elfogad. Alapértelmezett: 2048 – emeld 8192+-ra felhőalapú OpenAI vagy nagy kontextusú helyi modelleknél."
         max_response_tokens_label: Maximális válasz-tokenek (nem kötelező)
         max_response_tokens_help: "A modell válaszához fenntartott tokenek. Alapértelmezett: 512. Csökkentsd, ha több helyet szeretnél a hosszabb előzményeknek."
-        max_items_per_call_label: Maximális elemek kötegenként (nem kötelező)
-        max_items_per_call_help: "Felső korlát az automatikus kategorizálási / kereskedő-felismerési kötegeknél. Alapértelmezett: 25. A nagyobb kötegek automatikusan felosztódnak a kontextusablakba féréshez."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
