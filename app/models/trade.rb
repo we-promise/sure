@@ -246,10 +246,14 @@ class Trade < ApplicationRecord
     # was traded again later that day. Then it is the day before's, carried
     # through the day's trades up to the sale; see Trade::BasisAtSale.
     #
-    # Only where the day before has a snapshot, or nothing before it does: one
-    # further back would skip the trades and splits in between. And only where
-    # the snapshots are carried in the account's currency, the one the replay
-    # converts trades into. Otherwise the closing snapshot it is, as before.
+    # Only where the opening it starts from is the day's: the day before has a
+    # snapshot, or nothing before it does, and the day's trades take that
+    # position to the day's closing snapshot. A snapshot further back would
+    # skip the trades and splits in between, and a missing one is not always an
+    # empty position -- a provider's units with no price that day leave none.
+    # And only where the snapshots are carried in the account's currency, the
+    # one the replay converts trades into. Otherwise the closing snapshot it
+    # is, as before.
     def avg_cost_at_sale
       holding = basis_holding
       day = same_day_trades
@@ -257,10 +261,21 @@ class Trade < ApplicationRecord
       return holding&.avg_cost if position.nil? || position == day.size - 1
 
       opening = opening_holding
-      return holding&.avg_cost if opening && opening.date != entry.date - 1
-      return holding&.avg_cost if [ holding, opening ].compact.any? { |h| h.currency != entry.account.currency }
+      split = same_day_split
+      return holding&.avg_cost unless replayable_day?(holding, opening, split, day)
 
-      Trade::BasisAtSale.new(self, opening: opening, split: same_day_split, earlier: day.first(position)).average_cost
+      Trade::BasisAtSale.new(self, opening: opening, split: split, earlier: day.first(position)).average_cost
+    end
+
+    def replayable_day?(closing, opening, split, day)
+      return false unless closing&.date == entry.date
+      return false if opening && opening.date != entry.date - 1
+      return false if [ closing, opening ].compact.any? { |h| h.currency != entry.account.currency }
+
+      opening_qty = opening&.qty.to_d
+      opening_qty = Security::Split.scale(opening_qty, split.ratio) if split
+
+      opening_qty + day.sum(&:qty) == closing.qty
     end
 
     def same_day_split

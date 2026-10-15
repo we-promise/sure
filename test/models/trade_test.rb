@@ -213,6 +213,24 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(300), sale.realized_gain_loss.value.amount
   end
 
+  # No snapshot before the day is not always no position: a provider's units
+  # with no price that day leave none. The day's trades take nothing to 5 units
+  # where the closing snapshot holds 15, so the replay would start from the
+  # wrong position; the closing snapshot's 150 is used instead of the 200 the
+  # day's one purchase cost.
+  test "a sale whose day does not reconcile with its snapshots keeps the closing one" do
+    account, security = cross_currency_account
+    day = Date.new(2026, 3, 10)
+    create_trade(security, account: account, qty: 5, date: day, price: 200)
+    sale = create_trade(security, account: account, qty: -3, date: day, price: 180).entryable
+    create_trade(security, account: account, qty: 3, date: day, price: 300)
+    account.holdings.create!(security: security, date: day, qty: 15, price: 300,
+                             amount: BigDecimal(4500), currency: "USD", cost_basis: 150)
+
+    # 3 * 180 - 3 * 150
+    assert_equal BigDecimal(90), sale.realized_gain_loss.value.amount
+  end
+
   test "preloading answers whether each disposal was traded again that day in one query" do
     account, security = cross_currency_account
 
