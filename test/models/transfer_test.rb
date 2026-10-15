@@ -171,6 +171,28 @@ class TransferTest < ActiveSupport::TestCase
     assert duplicate.errors.of_kind?(:inflow_transaction_id, :taken)
   end
 
+  test "validating a transfer locks both legs until the save transaction ends" do
+    other_inflow = create_transaction(date: Date.current, account: accounts(:investment), amount: -100)
+    other_outflow = create_transaction(date: Date.current, account: accounts(:credit_card), amount: 100)
+    transfer = Transfer.new(inflow_transaction: other_inflow.transaction, outflow_transaction: other_outflow.transaction)
+
+    with_separate_connection do |conn|
+      Transfer.transaction do
+        assert transfer.valid?
+
+        # A concurrent save of either leg would wait here instead of reading
+        # the transfers table before this one commits.
+        [ other_inflow.entryable_id, other_outflow.entryable_id ].each do |transaction_id|
+          locked = conn.exec_params(
+            "SELECT pg_try_advisory_xact_lock($1, hashtext($2))",
+            [ Transfer::TRANSACTION_LOCK_NAMESPACE, transaction_id ]
+          ).getvalue(0, 0)
+          assert_equal "f", locked.to_s.first
+        end
+      end
+    end
+  end
+
   test "an existing transfer stays valid" do
     assert transfers(:one).valid?
   end
@@ -370,6 +392,17 @@ class TransferTest < ActiveSupport::TestCase
   end
 
   private
+    def with_separate_connection
+      config = Transfer.connection_db_config.configuration_hash
+      conn = PG.connect(
+        host: config[:host], port: config[:port], user: config[:username],
+        password: config[:password], dbname: config[:database]
+      )
+      yield conn
+    ensure
+      conn&.close
+    end
+
     def create_pending_transfer(from:, to:)
       outflow_entry = create_transaction(date: Date.current, account: from, amount: 500)
       inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)
