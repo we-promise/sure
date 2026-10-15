@@ -1,17 +1,29 @@
-<%# locals: (entry:) %>
+<%# locals: (entry:, compact: false) %>
 <%# Manual reconciliation status — only meaningful for manual (unsynced) accounts.
     Synced accounts already have duplicate-matching + statement-level reconciliation
     (see Entry#reconciled_status for the full rationale). %>
 <% if entry.account.manual? %>
+  <%
+    status = entry.reconciled_status
+    tooltip = t("transactions.reconcile.badge.#{status}_tooltip")
+  %>
   <%= link_to reconcile_transaction_path(entry.transaction),
       data: { turbo_method: :patch, turbo_frame: "_top" },
-      class: "hover:opacity-80 transition-opacity" do %>
-    <%= render DS::Pill.new(
-      label: t("transactions.reconcile.statuses.#{entry.reconciled_status}"),
-      tone: reconcile_status_tone(entry.reconciled_status),
-      marker: false,
-      icon: reconcile_status_icon(entry.reconciled_status),
-      title: t("transactions.reconcile.badge.#{entry.reconciled_status}_tooltip")
-    ) %>
+      title: tooltip,
+      aria: { label: t("transactions.reconcile.statuses.#{status}") },
+      class: "hover:opacity-80 transition-opacity flex items-center" do %>
+    <% if compact %>
+      <span class="<%= reconcile_status_text_class(status) %>">
+        <%= icon reconcile_status_icon(status), size: "sm", color: "current" %>
+      </span>
+    <% else %>
+      <%= render DS::Pill.new(
+        label: t("transactions.reconcile.statuses.#{status}"),
+        tone: reconcile_status_tone(status),
+        marker: false,
+        icon: reconcile_status_icon(status),
+        title: tooltip
+      ) %>
+    <% end %>
   <% end %>
 <% end %>

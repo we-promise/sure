@@ -43,9 +43,9 @@ module TransactionsHelper
   # bulk-reconcile selection-bar menu (_selection_bar.html.erb), so the two
   # can't silently drift out of sync.
   RECONCILE_STATUS_PRESENTATION = {
-    "unreconciled" => { tone: :neutral, icon: "circle" },
-    "cleared" => { tone: :warning, icon: "circle-dot" },
-    "reconciled" => { tone: :success, icon: "check-circle" }
+    "unreconciled" => { tone: :neutral, icon: "circle", text_class: "text-secondary" },
+    "cleared" => { tone: :warning, icon: "circle-dot", text_class: "text-warning" },
+    "reconciled" => { tone: :success, icon: "check-circle", text_class: "text-success" }
   }.freeze
 
   def reconcile_status_tone(status)
@@ -54,6 +54,12 @@ module TransactionsHelper
 
   def reconcile_status_icon(status)
     RECONCILE_STATUS_PRESENTATION.fetch(status, RECONCILE_STATUS_PRESENTATION["unreconciled"])[:icon]
+  end
+
+  # Foreground token for the compact, icon-only indicator rendered in the
+  # transaction list row, where there is no room for a labelled pill.
+  def reconcile_status_text_class(status)
+    RECONCILE_STATUS_PRESENTATION.fetch(status, RECONCILE_STATUS_PRESENTATION["unreconciled"])[:text_class]
   end
 
   # Whether the current user may annotate (e.g. re-tag) entries on this
