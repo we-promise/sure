@@ -154,14 +154,34 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     assert_nil ip_block.call(reset_request)
     assert_nil user_block.call(reset_request)
 
+    # Without a valid session the request is redirected to sign in before any
+    # password check, so it spends neither budget.
     no_session_request = throttle_request("/password", method: "PATCH")
     assert_nil user_block.call(no_session_request), "a missing session cookie must not produce a throttle key"
+    assert_nil ip_block.call(no_session_request), "a missing session cookie must not spend the ip budget"
 
     tampered_request = throttle_request("/password", method: "PATCH", raw_cookie: "session_token=#{first_session.id}")
     assert_nil user_block.call(tampered_request), "an unsigned session cookie must not produce a throttle key"
+    assert_nil ip_block.call(tampered_request), "an unsigned session cookie must not spend the ip budget"
 
     unknown_session_request = throttle_request("/password", method: "PATCH", session_cookie: SecureRandom.uuid)
     assert_nil user_block.call(unknown_session_request), "a session that no longer exists must not produce a throttle key"
+    assert_nil ip_block.call(unknown_session_request), "a session that no longer exists must not spend the ip budget"
+  end
+
+  test "password change throttle keys an impersonation by the impersonated user" do
+    user_block = Rack::Attack.throttles["password_change/user"].block
+    impersonation = impersonation_sessions(:in_progress)
+    support_session = users(:sure_support_staff).sessions.create!(active_impersonator_session: impersonation)
+
+    request = throttle_request("/password", method: "PATCH", session_cookie: support_session.id)
+    assert_equal "user:#{users(:family_member).id}", user_block.call(request),
+      "the password being checked is the impersonated user's, like Current.user"
+
+    impersonation.complete!
+    request = throttle_request("/password", method: "PATCH", session_cookie: support_session.id)
+    assert_equal "user:#{users(:sure_support_staff).id}", user_block.call(request),
+      "once the impersonation ends the session owner is the user again"
   end
 
   test "password change throttle blocks a signed-in session that rotates ips" do

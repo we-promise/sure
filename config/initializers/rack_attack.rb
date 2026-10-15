@@ -145,15 +145,22 @@ class Rack::Attack
 
   # Self-service password change checks the current password
   # (password_challenge) for a signed-in user, so there's no email param. The
-  # signed session cookie leads to the signed-in user instead, so neither
-  # rotating IPs nor holding several of the user's sessions buys more guesses
-  # at the account password. Only PATCH/PUT /password pays for the lookup.
+  # signed session cookie leads to the user whose password is being checked
+  # (the impersonated user while an impersonation is in progress, like
+  # Current.user), so neither rotating IPs nor holding several sessions buys
+  # more guesses. Only PATCH/PUT /password pays for the lookup, and it is
+  # memoized on the request so both throttles share it.
   password_change_user = ->(request) do
-    session_id = ActionDispatch::Request.new(request.env).cookie_jar.signed[:session_token]
-    next nil if session_id.blank?
-
-    user_id = Session.where(id: session_id).pick(:user_id)
-    "user:#{user_id}" if user_id
+    request.env.fetch("sure.password_change_user") do
+      request.env["sure.password_change_user"] = begin
+        session_id = ActionDispatch::Request.new(request.env).cookie_jar.signed[:session_token]
+        user_id, impersonation_id = Session.where(id: session_id).pick(:user_id, :active_impersonator_session_id) if session_id.present?
+        if impersonation_id
+          user_id = ImpersonationSession.in_progress.where(id: impersonation_id).pick(:impersonated_id) || user_id
+        end
+        "user:#{user_id}" if user_id
+      end
+    end
   end
 
   # Rack::MethodOverride runs earlier in the stack, so the form's
@@ -162,8 +169,10 @@ class Rack::Attack
     (request.patch? || request.put?) && credential_guess_path.call(request, "/password")
   end
 
+  # Requests without a valid session never reach the password check (they're
+  # redirected to sign in), so they don't spend the shared per-IP budget.
   throttle("password_change/ip", limit: 10, period: 1.minute) do |request|
-    request.ip if password_change_request.call(request)
+    request.ip if password_change_request.call(request) && password_change_user.call(request)
   end
 
   throttle("password_change/user", limit: 10, period: 1.minute) do |request|
