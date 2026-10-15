@@ -278,13 +278,23 @@ module SettingsHelper
       end
     end
 
-    # A Trade Republic login lasts 24 hours, so the row warns once any
-    # connection has to log in again.
+    # Like Enable Banking, the row warns before a session ends and once a
+    # connection has to log in again. A Trade Republic login lasts only
+    # 24 hours, so the warning starts two hours before the end.
     def trade_republic_summary
       summary = sync_based_summary("trade_republic")
-      return summary if summary[:status] == :err || @trade_republic_items.none?(&:needs_login?)
+      return summary if summary[:status] == :err
 
-      summary.merge(status: :warn, meta: t("settings.providers.meta.login_required"))
+      if @trade_republic_items.any?(&:needs_login?)
+        return summary.merge(status: :warn, meta: t("settings.providers.meta.login_required"))
+      end
+
+      expiring = @trade_republic_items
+        .select { |item| item.ready_for_sync? && item.session_expires_at.present? && item.session_expires_at < 2.hours.from_now }
+        .min_by(&:session_expires_at)
+      return summary unless expiring
+
+      summary.merge(status: :warn, meta: t("settings.providers.meta.login_expires_soon", time: distance_of_time_in_words_to_now(expiring.session_expires_at)))
     end
 
     def not_self_hosted?

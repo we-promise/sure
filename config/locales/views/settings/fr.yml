@@ -479,6 +479,7 @@ fr:
           other: Consentement requis dans %{count} jours
         reconsent_required: Consentement requis
         login_required: "Connexion requise"
+        login_expires_soon: "La connexion expire dans %{time}"
         sync_error: Erreur de synchro
       not_authorized: Non autorisé
       not_found: Fournisseur non trouvé.

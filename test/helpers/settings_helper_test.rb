@@ -73,8 +73,18 @@ class SettingsHelperTest < ActionView::TestCase
     assert_equal I18n.t("settings.providers.meta.login_required"), summary[:meta]
   end
 
+  test "provider_summary for trade_republic warns shortly before a login expires" do
+    @trade_republic_items = [ TradeRepublicItem.new(session_blob: "session", session_expires_at: 90.minutes.from_now) ]
+    @provider_sync_health = {}
+
+    summary = provider_summary("trade_republic")
+
+    assert_equal :warn, summary[:status]
+    assert_equal I18n.t("settings.providers.meta.login_expires_soon", time: "about 2 hours"), summary[:meta]
+  end
+
   test "provider_summary for trade_republic reports sync-based status while the login is valid" do
-    @trade_republic_items = [ TradeRepublicItem.new(session_blob: "session", session_expires_at: 1.hour.from_now) ]
+    @trade_republic_items = [ TradeRepublicItem.new(session_blob: "session", session_expires_at: 5.hours.from_now) ]
     @provider_sync_health = {}
 
     assert_equal({ status: :ok, last_synced_at: nil }, provider_summary("trade_republic"))

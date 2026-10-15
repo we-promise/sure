@@ -538,6 +538,7 @@ tr:
           other: "%{count} gün içinde yeniden onay gerekiyor"
         reconsent_required: Yeniden onay gerekiyor
         login_required: "Giriş gerekli"
+        login_expires_soon: "Girişin süresi %{time} içinde doluyor"
         registration_needed: Kayıt gerekiyor
         sync_error: Senkronizasyon hatası
       not_authorized: Yetkiniz yok

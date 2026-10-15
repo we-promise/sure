@@ -442,6 +442,7 @@ en:
         no_recent_sync: Sync overdue
         reconsent_required: Re-consent required
         login_required: Login required
+        login_expires_soon: Login expires in %{time}
         reconsent_needed:
           one: Re-consent needed in 1 day
           other: Re-consent needed in %{count} days

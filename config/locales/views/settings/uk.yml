@@ -426,6 +426,7 @@ uk:
         registration_needed: Потрібна реєстрація
         reconsent_required: Потрібна повторна згода
         login_required: "Потрібен вхід"
+        login_expires_soon: "Вхід завершиться через %{time}"
         reconsent_needed:
           one: Повторна згода потрібна через %{count} день
           other: Повторна згода потрібна через %{count} днів

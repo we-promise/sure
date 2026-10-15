@@ -533,6 +533,7 @@ ru:
           other: Повторное согласие требуется через %{count} дня
         reconsent_required: Требуется повторное согласие
         login_required: "Требуется вход"
+        login_expires_soon: "Вход истекает через %{time}"
         sync_error: Ошибка синхронизации
       not_authorized: Не авторизован
       not_found: Провайдер не найден.

@@ -597,6 +597,7 @@ pl:
           other: Wymagana ponowna zgoda za %{count} dni
         reconsent_required: Wymagana ponowna zgoda
         login_required: "Wymagane logowanie"
+        login_expires_soon: "Logowanie wygasa za %{time}"
         sync_error: Błąd synchronizacji
       monobank_panel:
         step_1_html: Przejdź do %{link}, zaloguj się aplikacją Monobank i wygeneruj

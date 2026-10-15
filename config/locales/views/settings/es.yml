@@ -343,6 +343,7 @@ es:
         registration_needed: Registro necesario
         reconsent_required: Se requiere renovar el consentimiento
         login_required: "Inicio de sesión requerido"
+        login_expires_soon: "El inicio de sesión caduca en %{time}"
         reconsent_needed:
           one: Renovar consentimiento en 1 día
           other: Renovar consentimiento en %{count} días
