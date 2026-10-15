@@ -192,12 +192,17 @@ export default class extends Controller {
     try {
       const response = await fetch(this.cancelUrlValue, {
         method: "POST",
-        headers: this.headers(),
+        headers: { ...this.headers(), Accept: "text/vnd.turbo-stream.html" },
         credentials: "same-origin",
         body: this.body(),
       });
       if (!response.ok)
         throw new Error(`QR login cancellation failed: ${response.status}`);
+
+      // In Settings this replaces the connection card, which brings back the
+      // credentials form hidden while the login was pending. The Accounts
+      // page has no such card and keeps the reset above.
+      Turbo.renderStreamMessage(await response.text());
     } catch (error) {
       this.stopped = false;
       console.warn("[Trade Republic] QR login cancellation failed", error);
