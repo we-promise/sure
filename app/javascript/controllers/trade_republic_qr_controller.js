@@ -187,6 +187,7 @@ export default class extends Controller {
     this.panelTarget.hidden = true;
     this.codeTarget.replaceChildren();
     this.buttonTarget.disabled = false;
+    this.setButtonLabel(this.loginTextValue);
 
     try {
       const response = await fetch(this.cancelUrlValue, {
@@ -197,8 +198,6 @@ export default class extends Controller {
       });
       if (!response.ok)
         throw new Error(`QR login cancellation failed: ${response.status}`);
-
-      Turbo.renderStreamMessage(await response.text());
     } catch (error) {
       this.stopped = false;
       console.warn("[Trade Republic] QR login cancellation failed", error);
@@ -220,7 +219,12 @@ export default class extends Controller {
   }
 
   setButtonLabel(label) {
-    if (this.hasLabelTarget) this.labelTarget.textContent = label;
+    // DS::Button renders its text in a span, so without a label target the
+    // button's own text is updated.
+    const target = this.hasLabelTarget
+      ? this.labelTarget
+      : this.buttonTarget.querySelector("span");
+    if (target) target.textContent = label;
   }
 
   headers() {
