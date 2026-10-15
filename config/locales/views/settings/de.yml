@@ -518,9 +518,9 @@ de:
           title: Verschlüsselung ist nicht konfiguriert
           message: Trade-Republic-Zugangsdaten und Sitzungsdaten können erst sicher gespeichert werden, wenn Active-Record-Verschlüsselung konfiguriert ist.
         steps:
-          step_1: "Melde dich mit dem QR-Code an oder mit der Telefonnummer und der PIN oder dem Passwort deiner Trade-Republic-App."
-          step_2: Gib den Code deiner Authenticator-App ein, wenn du dazu aufgefordert wirst.
-          step_3: Bestätige den Login in deiner Trade-Republic-App, wenn du dazu aufgefordert wirst.
+          step_1: "Wähle QR-Anmeldung oder PIN-Anmeldung."
+          step_2: "QR-Anmeldung: Scanne den QR-Code mit der Kamera deines Smartphones und bestätige die Anmeldung anschließend in der Trade-Republic-App."
+          step_3: "PIN-Anmeldung: Gib die Telefonnummer und die PIN oder das Passwort deiner Trade-Republic-App ein und bestätige die Anmeldung anschließend in der App oder gib den Code deiner Authenticator-App ein."
         phone_number_label: Telefonnummer
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Leer lassen, um die aktuelle Telefonnummer zu behalten

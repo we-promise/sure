@@ -199,9 +199,9 @@ pt-BR:
           title: "A criptografia não está configurada"
           message: "As credenciais e os dados de sessão da Trade Republic não podem ser armazenados com segurança até que a criptografia do Active Record seja configurada."
         steps:
-          step_1: "Faça login com o código QR ou com o número de telefone e o PIN ou senha que você usa no aplicativo da Trade Republic."
-          step_2: "Insira o código do seu aplicativo autenticador quando solicitado."
-          step_3: "Aprove o login no aplicativo da Trade Republic quando solicitado."
+          step_1: "Escolha Login por QR ou Login por PIN."
+          step_2: "Login por QR: escaneie o código QR com a câmera do celular e aprove o login no aplicativo da Trade Republic."
+          step_3: "Login por PIN: informe o número de telefone e o PIN ou senha que você usa no aplicativo da Trade Republic e aprove o login no aplicativo ou insira o código do seu aplicativo autenticador."
         phone_number_label: "Número de telefone"
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: "Deixe em branco para manter o número de telefone atual"

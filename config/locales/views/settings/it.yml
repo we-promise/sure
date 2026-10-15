@@ -564,9 +564,9 @@ it:
           title: "La crittografia non è configurata"
           message: "Le credenziali e i dati di sessione di Trade Republic non possono essere archiviati in modo sicuro finché non viene configurata la crittografia Active Record."
         steps:
-          step_1: "Accedi con il codice QR, oppure con il numero di telefono e il PIN o la password che usi per l'app Trade Republic."
-          step_2: "Inserisci il codice della tua app di autenticazione quando richiesto."
-          step_3: "Approva l'accesso nell'app Trade Republic quando richiesto."
+          step_1: "Scegli Accesso QR o Accesso PIN."
+          step_2: "Accesso QR: scansiona il codice QR con la fotocamera del telefono, poi approva l'accesso nell'app Trade Republic."
+          step_3: "Accesso PIN: inserisci il numero di telefono e il PIN o la password che usi per l'app Trade Republic, poi approva l'accesso nell'app o inserisci il codice della tua app di autenticazione."
         phone_number_label: "Numero di telefono"
         phone_number_placeholder_new: "+39 312 345 6789"
         phone_number_placeholder_existing: "Lascia vuoto per mantenere il numero di telefono attuale"

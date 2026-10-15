@@ -140,9 +140,9 @@ ro:
           title: "Criptarea nu este configurată"
           message: "Datele de autentificare și de sesiune Trade Republic nu pot fi stocate în siguranță până când nu este configurat Active Record Encryption."
         steps:
-          step_1: "Autentifică-te cu codul QR sau cu numărul de telefon și PIN-ul ori parola pe care le folosești în aplicația Trade Republic."
-          step_2: "Introdu codul din aplicația de autentificare când ți se solicită."
-          step_3: "Aprobă autentificarea în aplicația Trade Republic când ți se solicită."
+          step_1: "Alege Autentificare QR sau Autentificare PIN."
+          step_2: "Autentificare QR: scanează codul QR cu camera telefonului, apoi aprobă autentificarea în aplicația Trade Republic."
+          step_3: "Autentificare PIN: introdu numărul de telefon și PIN-ul ori parola pe care le folosești în aplicația Trade Republic, apoi aprobă autentificarea în aplicație sau introdu codul din aplicația de autentificare."
         phone_number_label: "Număr de telefon"
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: "Lasă gol pentru a păstra numărul de telefon actual"

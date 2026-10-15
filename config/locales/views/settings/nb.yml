@@ -118,9 +118,9 @@ nb:
           title: "Kryptering er ikke konfigurert"
           message: "Trade Republic-legitimasjon og øktdata kan ikke lagres sikkert før Active Record Encryption er konfigurert."
         steps:
-          step_1: "Logg inn med QR-koden, eller med telefonnummeret og PIN-koden eller passordet du bruker i Trade Republic-appen."
-          step_2: "Skriv inn koden fra autentiseringsappen din når du blir bedt om det."
-          step_3: "Godkjenn påloggingen i Trade Republic-appen når du blir bedt om det."
+          step_1: "Velg QR-pålogging eller PIN-pålogging."
+          step_2: "QR-pålogging: skann QR-koden med telefonkameraet, og godkjenn deretter påloggingen i Trade Republic-appen."
+          step_3: "PIN-pålogging: skriv inn telefonnummeret og PIN-koden eller passordet du bruker i Trade Republic-appen, og godkjenn deretter påloggingen i appen eller skriv inn koden fra autentiseringsappen din."
         phone_number_label: "Telefonnummer"
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: "La stå tomt for å beholde gjeldende telefonnummer"

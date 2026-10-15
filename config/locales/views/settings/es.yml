@@ -570,9 +570,9 @@ es:
           title: El cifrado no está configurado
           message: Las credenciales y los datos de sesión de Trade Republic no se pueden guardar de forma segura hasta que se configure el cifrado de Active Record.
         steps:
-          step_1: Inicia sesión con el código QR, o con el número de teléfono y el PIN o la contraseña que usas en la aplicación de Trade Republic.
-          step_2: Introduce el código de tu aplicación de autenticación cuando se te pida.
-          step_3: Aprueba el inicio de sesión en tu aplicación de Trade Republic cuando se te pida.
+          step_1: "Elige Acceso con QR o Acceso con PIN."
+          step_2: "Acceso con QR: escanea el código QR con la cámara de tu teléfono y luego aprueba el inicio de sesión en la aplicación de Trade Republic."
+          step_3: "Acceso con PIN: introduce el número de teléfono y el PIN o la contraseña que usas en la aplicación de Trade Republic y luego aprueba el inicio de sesión en la aplicación o introduce el código de tu aplicación de autenticación."
         phone_number_label: Número de teléfono
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Déjalo en blanco para conservar el número de teléfono actual

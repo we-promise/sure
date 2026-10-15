@@ -479,9 +479,9 @@ hu:
           title: "Nincs beállítva titkosítás"
           message: "A Trade Republic hitelesítő adatai és munkamenetadatai nem tárolhatók biztonságosan, amíg az Active Record Encryption nincs beállítva."
         steps:
-          step_1: "Jelentkezz be a QR-kóddal, vagy a Trade Republic alkalmazáshoz használt telefonszámmal és PIN-kóddal vagy jelszóval."
-          step_2: "Kérésre add meg a hitelesítő alkalmazásod kódját."
-          step_3: "Amikor a rendszer kéri, hagyd jóvá a bejelentkezést a Trade Republic alkalmazásban."
+          step_1: "Válaszd a QR-bejelentkezést vagy a PIN-bejelentkezést."
+          step_2: "QR-bejelentkezés: olvasd be a QR-kódot a telefonod kamerájával, majd hagyd jóvá a bejelentkezést a Trade Republic alkalmazásban."
+          step_3: "PIN-bejelentkezés: add meg a Trade Republic alkalmazáshoz használt telefonszámot és PIN-kódot vagy jelszót, majd hagyd jóvá a bejelentkezést az alkalmazásban, vagy add meg a hitelesítő alkalmazásod kódját."
         phone_number_label: "Telefonszám"
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: "Hagyd üresen a jelenlegi telefonszám megtartásához"

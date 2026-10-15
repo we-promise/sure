@@ -523,9 +523,9 @@ vi:
           title: "Chưa cấu hình mã hóa"
           message: "Không thể lưu trữ an toàn thông tin xác thực và dữ liệu phiên Trade Republic cho đến khi cấu hình mã hóa Active Record."
         steps:
-          step_1: "Đăng nhập bằng mã QR, hoặc bằng số điện thoại và PIN hoặc mật khẩu bạn dùng cho ứng dụng Trade Republic."
-          step_2: "Nhập mã từ ứng dụng xác thực khi được yêu cầu."
-          step_3: "Phê duyệt đăng nhập trong ứng dụng Trade Republic khi được nhắc."
+          step_1: "Chọn Đăng nhập QR hoặc Đăng nhập PIN."
+          step_2: "Đăng nhập QR: quét mã QR bằng camera điện thoại, sau đó phê duyệt đăng nhập trong ứng dụng Trade Republic."
+          step_3: "Đăng nhập PIN: nhập số điện thoại và PIN hoặc mật khẩu bạn dùng cho ứng dụng Trade Republic, sau đó phê duyệt đăng nhập trong ứng dụng hoặc nhập mã từ ứng dụng xác thực."
         phone_number_label: "Số điện thoại"
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: "Để trống để giữ số điện thoại hiện tại"

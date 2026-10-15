@@ -683,9 +683,9 @@ tr:
           title: Şifreleme yapılandırılmamış
           message: Active Record Encryption yapılandırılana kadar Trade Republic kimlik bilgileri ve oturum verileri güvenli şekilde saklanamaz.
         steps:
-          step_1: "QR kodla ya da Trade Republic uygulamasında kullandığınız telefon numarası ve PIN veya şifreyle giriş yapın."
-          step_2: İstendiğinde doğrulama uygulamanızdaki kodu girin.
-          step_3: İstendiğinde girişi Trade Republic uygulamanızda onaylayın.
+          step_1: "QR ile giriş veya PIN ile giriş seçeneğini belirleyin."
+          step_2: "QR ile giriş: QR kodu telefonunuzun kamerasıyla tarayın, ardından girişi Trade Republic uygulamasında onaylayın."
+          step_3: "PIN ile giriş: Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i veya şifreyi girin, ardından girişi uygulamada onaylayın ya da doğrulama uygulamanızdaki kodu girin."
         phone_number_label: Telefon numarası
         phone_number_placeholder_new: +49 170 1234567
         phone_number_placeholder_existing: Mevcut telefon numarasını korumak için boş bırakın

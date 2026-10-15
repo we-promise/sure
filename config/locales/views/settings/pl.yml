@@ -773,10 +773,9 @@ pl:
         status_configured_prefix: Połączono. Przejdź do zakładki
         status_configured_suffix: ", aby zarządzać wykrytymi kontami."
         steps:
-          step_1: "Zaloguj się kodem QR albo numerem telefonu i PIN-em lub hasłem używanym w aplikacji Trade Republic."
-          step_2: Gdy zostaniesz o to poproszony, wpisz kod z aplikacji uwierzytelniającej.
-          step_3: Gdy zostaniesz o to poproszony, zatwierdź logowanie w aplikacji
-            Trade Republic.
+          step_1: "Wybierz Logowanie QR lub Logowanie PIN."
+          step_2: "Logowanie QR: zeskanuj kod QR aparatem telefonu, a następnie zatwierdź logowanie w aplikacji Trade Republic."
+          step_3: "Logowanie PIN: wpisz numer telefonu i PIN lub hasło używane w aplikacji Trade Republic, a następnie zatwierdź logowanie w aplikacji lub wpisz kod z aplikacji uwierzytelniającej."
         sync: Synchronizuj
         syncing: "Synchronizowanie..."
       trading212_panel:

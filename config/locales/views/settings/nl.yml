@@ -156,9 +156,9 @@ nl:
           title: Versleuteling is niet geconfigureerd
           message: Trade Republic-inloggegevens en sessiegegevens kunnen pas veilig worden opgeslagen als Active Record-versleuteling is geconfigureerd.
         steps:
-          step_1: Log in met de QR-code, of met het telefoonnummer en de pincode of het wachtwoord dat je voor de Trade Republic-app gebruikt.
-          step_2: Voer de code uit je authenticator-app in wanneer daarom wordt gevraagd.
-          step_3: Keur de aanmelding goed in je Trade Republic-app wanneer daarom wordt gevraagd.
+          step_1: "Kies QR-login of PIN-login."
+          step_2: "QR-login: scan de QR-code met de camera van je telefoon en keur de aanmelding daarna goed in de Trade Republic-app."
+          step_3: "PIN-login: voer het telefoonnummer en de pincode of het wachtwoord in dat je voor de Trade Republic-app gebruikt, en keur de aanmelding daarna goed in de app of voer de code uit je authenticator-app in."
         phone_number_label: Telefoonnummer
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Laat leeg om het huidige telefoonnummer te behouden
