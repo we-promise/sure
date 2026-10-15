@@ -3,6 +3,9 @@
 require "test_helper"
 
 class SettingsHelperTest < ActionView::TestCase
+  # Views get every helper; the Trade Republic summary uses its expiry helper.
+  include TradeRepublicHelper
+
   test "provider_summary for snaptrade is off when family has no snaptrade items" do
     @snaptrade_items = []
 
@@ -74,13 +77,14 @@ class SettingsHelperTest < ActionView::TestCase
   end
 
   test "provider_summary for trade_republic warns shortly before a login expires" do
-    @trade_republic_items = [ TradeRepublicItem.new(session_blob: "session", session_expires_at: 90.minutes.from_now) ]
+    expires_at = 90.minutes.from_now
+    @trade_republic_items = [ TradeRepublicItem.new(session_blob: "session", session_expires_at: expires_at) ]
     @provider_sync_health = {}
 
     summary = provider_summary("trade_republic")
 
     assert_equal :warn, summary[:status]
-    assert_equal I18n.t("settings.providers.meta.login_expires_soon", time: "about 2 hours"), summary[:meta]
+    assert_equal I18n.t("settings.providers.meta.login_expires_soon", time: "about 2 hours", at: I18n.l(expires_at, format: :short)), summary[:meta]
   end
 
   test "provider_summary for trade_republic reports sync-based status while the login is valid" do

@@ -538,7 +538,7 @@ tr:
           other: "%{count} gün içinde yeniden onay gerekiyor"
         reconsent_required: Yeniden onay gerekiyor
         login_required: "Giriş gerekli"
-        login_expires_soon: "Girişin süresi %{time} içinde doluyor"
+        login_expires_soon: "Girişin süresi %{time} içinde doluyor (%{at})"
         registration_needed: Kayıt gerekiyor
         sync_error: Senkronizasyon hatası
       not_authorized: Yetkiniz yok
@@ -719,7 +719,7 @@ tr:
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
         qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
         requires_update: "Senkronizasyona devam etmek için yeniden giriş yapın."
-        session_expires_in: "Girişin süresi %{time} içinde doluyor."
+        session_expires_in: "Girişin süresi %{time} içinde doluyor (%{at})."
         add_account: "Başka bir bağlantı ekle"
         save_configuration: Kaydet ve Girişi Başlat
         update_configuration: Yapılandırmayı Güncelle

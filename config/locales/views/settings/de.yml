@@ -422,7 +422,7 @@ de:
           other: Erneute Zustimmung in %{count} Tagen nötig
         reconsent_required: Erneute Zustimmung nötig
         login_required: "Anmeldung erforderlich"
-        login_expires_soon: "Anmeldung läuft in %{time} ab"
+        login_expires_soon: "Anmeldung läuft in %{time} ab (%{at})"
         sync_error: Sync-Fehler
       not_authorized: Nicht berechtigt
       not_found: Anbieter nicht gefunden.
@@ -554,7 +554,7 @@ de:
         qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
         qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
         requires_update: "Melde dich erneut an, um die Synchronisierung fortzusetzen."
-        session_expires_in: "Anmeldung läuft in %{time} ab."
+        session_expires_in: "Anmeldung läuft in %{time} ab (%{at})."
         add_account: Weitere Verbindung hinzufügen
         save_configuration: Speichern und Login starten
         update_configuration: Konfiguration aktualisieren

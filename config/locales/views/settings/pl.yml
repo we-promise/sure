@@ -597,7 +597,7 @@ pl:
           other: Wymagana ponowna zgoda za %{count} dni
         reconsent_required: Wymagana ponowna zgoda
         login_required: "Wymagane logowanie"
-        login_expires_soon: "Logowanie wygasa za %{time}"
+        login_expires_soon: "Logowanie wygasa za %{time} (%{at})"
         sync_error: Błąd synchronizacji
       monobank_panel:
         step_1_html: Przejdź do %{link}, zaloguj się aplikacją Monobank i wygeneruj
@@ -760,7 +760,7 @@ pl:
         qr_cancel: Anuluj logowanie kodem QR
         qr_error: Nie udało się rozpocząć logowania kodem QR. Spróbuj ponownie.
         requires_update: "Zaloguj się ponownie, aby wznowić synchronizację."
-        session_expires_in: "Logowanie wygasa za %{time}."
+        session_expires_in: "Logowanie wygasa za %{time} (%{at})."
         qr_instruction: Zeskanuj kod QR aparatem telefonu, a następnie zatwierdź logowanie w aplikacji Trade Republic.
         qr_loading: Przygotowywanie kodu QR…
         qr_login: Zaloguj się kodem QR

@@ -42,7 +42,7 @@
                 <% end %>
               </p>
               <% if trade_republic_item.ready_for_sync? && trade_republic_item.session_expires_at.present? %>
-                <p class="text-secondary"><%= t(".session_expires_in", time: distance_of_time_in_words_to_now(trade_republic_item.session_expires_at)) %></p>
+                <p class="text-secondary"><%= trade_republic_session_expiry("trade_republic_items.trade_republic_item.session_expires_in", trade_republic_item.session_expires_at) %></p>
               <% end %>
             <% end %>
           </div>
@@ -85,7 +85,7 @@
       <div class="space-y-4 mt-4">
         <% if Current.user&.admin? && trade_republic_item.needs_login? %>
           <% login_stage = trade_republic_item.login_stage %>
-          <% if trade_republic_item.pending_login_state.blank? || login_stage == "qr_pending" %>
+          <% if trade_republic_item.pending_login_state.blank? || login_stage.in?(%w[qr_pending expired]) %>
             <%= render TradeRepublic::QrLoginComponent.new(
                   item: trade_republic_item,
                   return_url: accounts_path,

@@ -347,7 +347,11 @@ class Provider::TradeRepublicClient
   end
 
   def login_stage(pending_login_b64:)
-    return "qr_pending" if qr_login?(pending_login_b64: pending_login_b64)
+    if qr_login?(pending_login_b64: pending_login_b64)
+      # Raises LoginExpired once the challenge has lapsed, as for a push login.
+      decode_qr_pending(pending_login_b64)
+      return "qr_pending"
+    end
 
     pending = decode_pending(pending_login_b64)
     if pending["required_action"] == "AUTHENTICATOR_VERIFICATION" && !pending["authenticator_verified"]

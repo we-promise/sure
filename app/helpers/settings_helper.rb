@@ -294,7 +294,7 @@ module SettingsHelper
         .min_by(&:session_expires_at)
       return summary unless expiring
 
-      summary.merge(status: :warn, meta: t("settings.providers.meta.login_expires_soon", time: distance_of_time_in_words_to_now(expiring.session_expires_at)))
+      summary.merge(status: :warn, meta: trade_republic_session_expiry("settings.providers.meta.login_expires_soon", expiring.session_expires_at))
     end
 
     def not_self_hosted?

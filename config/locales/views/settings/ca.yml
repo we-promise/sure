@@ -490,7 +490,7 @@ ca:
           other: Cal renovar el consentiment en %{count} dies
         reconsent_required: Cal renovar el consentiment
         login_required: "Cal iniciar sessió"
-        login_expires_soon: "La sessió caduca d'aquí a %{time}"
+        login_expires_soon: "La sessió caduca d'aquí a %{time} (%{at})"
         sync_error: Error de sincronització
       not_authorized: No autoritzat
       not_found: Proveïdor no trobat.
@@ -673,7 +673,7 @@ ca:
         qr_success: Inici de sessió aprovat. Sure està actualitzant la pàgina del proveïdor.
         qr_error: No s'ha pogut iniciar la sessió amb QR. Torna-ho a provar.
         requires_update: "Torna a iniciar sessió per reprendre la sincronització."
-        session_expires_in: "La sessió caduca d'aquí a %{time}."
+        session_expires_in: "La sessió caduca d'aquí a %{time} (%{at})."
         add_account: "Afegeix una altra connexió"
         save_configuration: Desa i inicia sessió
         update_configuration: Actualitza la configuració

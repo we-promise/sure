@@ -659,6 +659,13 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "qr_pending", @client.login_stage(pending_login_b64: encoded)
   end
 
+  test "an abandoned QR login is expired once its challenge lapsed" do
+    pending = { "challenge_id" => "challenge-1", "session_blob" => "session=1", "expires_at" => 1.minute.ago.iso8601 }
+    encoded = Base64.strict_encode64(JSON.generate(pending))
+
+    assert_raises(Provider::TradeRepublicClient::LoginExpired) { @client.login_stage(pending_login_b64: encoded) }
+  end
+
   test "rotates the QR payload and token expiry while polling" do
     response_class = Struct.new(:code, :body) do
       def is_a?(klass)

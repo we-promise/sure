@@ -396,7 +396,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
 
     assert_response :success
-    assert_includes response.body, I18n.t("trade_republic_items.trade_republic_item.session_expires_in", time: "about 5 hours")
+    assert_includes response.body, I18n.t("trade_republic_items.trade_republic_item.session_expires_in",
+                                          time: "about 5 hours", at: I18n.l(item.reload.session_expires_at, format: :short))
     assert_select "##{dom_id(item)} [data-controller='trade-republic-qr']", count: 0
   end
 

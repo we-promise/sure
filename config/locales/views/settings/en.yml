@@ -442,7 +442,7 @@ en:
         no_recent_sync: Sync overdue
         reconsent_required: Re-consent required
         login_required: Login required
-        login_expires_soon: Login expires in %{time}
+        login_expires_soon: "Login expires in %{time} (%{at})"
         reconsent_needed:
           one: Re-consent needed in 1 day
           other: Re-consent needed in %{count} days
@@ -760,7 +760,7 @@ en:
         qr_success: Login approved. Sure is refreshing the provider page.
         qr_error: QR login could not be started. Please try again.
         requires_update: Log in again to resume syncing.
-        session_expires_in: Login expires in %{time}.
+        session_expires_in: "Login expires in %{time} (%{at})."
         add_account: Add another connection
         save_configuration: Save & Start Login
         update_configuration: Update Configuration
