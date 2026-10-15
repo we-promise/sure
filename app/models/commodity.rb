@@ -12,7 +12,7 @@ class Commodity < ApplicationRecord
   DEFAULT_ACCOUNT_NAME = "Commodities"
 
   # One configured commodity (e.g. gold). Defined in config/commodities.yml.
-  Metal = Data.define(:code, :key, :subclass, :enabled, :color, :yahoo_symbol, :metal_price_api_symbol, :default_fineness) do
+  Metal = Data.define(:code, :key, :subclass, :enabled, :color, :yahoo_symbol, :gold_api_symbol, :default_fineness) do
     def name
       I18n.t("commodities.metals.#{key}", default: key.to_s.titleize)
     end
@@ -31,7 +31,7 @@ class Commodity < ApplicationRecord
         enabled: attrs[:enabled] == true,
         color: attrs[:color].presence || "#CA8A04",
         yahoo_symbol: attrs[:yahoo_symbol],
-        metal_price_api_symbol: attrs[:metal_price_api_symbol],
+        gold_api_symbol: attrs[:gold_api_symbol],
         default_fineness: attrs[:default_fineness].to_h { |form, value| [ form.to_s, BigDecimal(value.to_s) ] }.freeze
       )
     end

@@ -1,15 +1,17 @@
 # Builds a gap-filled daily price series per commodity from the provider data,
 # carrying the last price forward over weekends and holidays (the same
-# approach as Security::Price::Importer). Recent carried-forward days are
-# provisional and refetched — at most twice a day, to stay within free API tiers.
+# approach as Security::Price::Importer). Today's price and recent
+# carried-forward days are provisional and refetched at most hourly. A spot
+# price stored for a day is never replaced by a futures price for that day.
 class Commodity::Price::Importer
   PROVISIONAL_LOOKBACK_DAYS = 7
-  REFETCH_AFTER = 12.hours
+  REFETCH_AFTER = 1.hour
 
   def initialize(metals:, start_date:, end_date:, clear_cache: false)
     @metals = metals
     @start_date = start_date
-    @end_date = [ end_date, Date.current.in_time_zone("America/New_York").to_date ].min
+    @today = Date.current.in_time_zone("America/New_York").to_date
+    @end_date = [ end_date, @today ].min
     @clear_cache = clear_cache
   end
 
@@ -44,21 +46,32 @@ class Commodity::Price::Importer
       return [] if prices.empty?
 
       by_date = prices.index_by(&:date)
-      stored = Commodity::Price.where(code: metal.code, date: fetch_from..end_date, provisional: false).index_by(&:date)
+      stored = Commodity::Price.where(code: metal.code, date: fetch_from..end_date).index_by(&:date)
       previous = prices.select { |p| p.date < fetch_from }.max_by(&:date) || latest_stored_before(metal.code, fetch_from)
 
       fetch_from.upto(end_date).filter_map do |date|
-        if (price = by_date[date])
+        price = by_date[date]
+        existing = stored[date]
+
+        if existing && price && better_source?(existing, price)
+          previous = existing
+          row(existing, date, provisional: date >= @today)
+        elsif price
           previous = price
-          row(price, date, provisional: false)
-        elsif stored[date]
-          previous = stored[date]
+          row(price, date, provisional: date >= @today) # today's price is intraday
+        elsif existing && !existing.provisional
+          previous = existing
           nil # keep a real stored price over a carried-forward one
         elsif previous
           # Honest gap before the first known price; afterwards carry forward.
           row(previous, date, provisional: date >= PROVISIONAL_LOOKBACK_DAYS.days.ago.to_date)
         end
       end
+    end
+
+    def better_source?(a, b)
+      rank = ->(price) { Commodity::Price::SOURCES.index(price.source) || Commodity::Price::SOURCES.size }
+      rank.call(a) < rank.call(b)
     end
 
     def latest_stored_before(code, date)

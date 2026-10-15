@@ -3,49 +3,58 @@ require "test_helper"
 class Commodity::Price::ProvidedTest < ActiveSupport::TestCase
   setup do
     DebugLogEntry.stubs(:capture)
+    travel_to Time.zone.local(2026, 10, 15, 18)
     @gold = Commodity.metal("XAU")
-    @date = Date.new(2026, 10, 1)
+    @today = Date.new(2026, 10, 15)
+    @yesterday = Date.new(2026, 10, 14)
+    @yahoo = Provider::YahooFinance.new
+    @gold_api = Provider::GoldApi.new
+    Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(@yahoo)
+    Provider::Registry.stubs(:get_provider).with(:gold_api).returns(@gold_api)
   end
 
-  test "falls back to Yahoo front-month futures without creating securities" do
-    Provider::Registry.stubs(:get_provider).with(:metal_price_api).returns(nil)
-    Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(yahoo = Provider::YahooFinance.new)
-    yahoo.expects(:fetch_security_prices)
-      .with(symbol: "GC=F", exchange_operating_mic: nil, start_date: @date, end_date: @date)
-      .returns(Provider::Response.new(success?: true, error: nil, data: [
-        Provider::SecurityConcept::Price.new(symbol: "GC=F", date: @date, price: 2650.4, currency: "USD", exchange_operating_mic: nil)
-      ]))
+  test "uses Yahoo futures for history and gold-api spot for today, without creating securities" do
+    @yahoo.expects(:fetch_security_prices)
+      .with(symbol: "GC=F", exchange_operating_mic: nil, start_date: @yesterday, end_date: @today)
+      .returns(futures([ @yesterday, 4100 ], [ @today, 4190 ]))
+    @gold_api.expects(:fetch_current_prices).with(symbols: [ "XAU" ]).returns(spot(@today, 4155.4))
 
     assert_no_difference [ "Security.count", "Holding.count", "Trade.count" ] do
-      prices = Commodity::Price.fetch_provider_prices([ @gold ], start_date: @date, end_date: @date)
+      prices = Commodity::Price.fetch_provider_prices([ @gold ], start_date: @yesterday, end_date: @today).fetch("XAU")
 
-      price = prices.fetch("XAU").sole
-      assert_equal [ "yahoo_futures", "USD", @date ], [ price.source, price.currency, price.date ]
+      assert_equal [ [ @yesterday, "yahoo_futures", BigDecimal("4100") ], [ @today, "gold_api", BigDecimal("4155.4") ] ],
+                   prices.map { |p| [ p.date, p.source, p.price ] }
     end
   end
 
-  test "uses the spot provider when an API key is configured" do
-    spot = Provider::MetalPriceApi.new("key")
-    Provider::Registry.stubs(:get_provider).with(:metal_price_api).returns(spot)
-    Provider::Registry.expects(:get_provider).with(:yahoo_finance).never
-    spot.expects(:fetch_commodity_prices).with(symbols: [ "XAU" ], start_date: @date, end_date: @date)
-      .returns(Provider::Response.new(success?: true, error: nil, data: [
-        Provider::MetalPriceApi::Price.new(symbol: "XAU", date: @date, price: BigDecimal("2648.1"), currency: "USD")
-      ]))
+  test "does not ask for spot prices when the range ends before today" do
+    @yahoo.stubs(:fetch_security_prices).returns(futures([ @yesterday, 4100 ]))
+    @gold_api.expects(:fetch_current_prices).never
 
-    price = Commodity::Price.fetch_provider_prices([ @gold ], start_date: @date, end_date: @date).fetch("XAU").sole
+    prices = Commodity::Price.fetch_provider_prices([ @gold ], start_date: @yesterday, end_date: @yesterday).fetch("XAU")
 
-    assert_equal [ "metal_price_api", BigDecimal("2648.1") ], [ price.source, price.price ]
+    assert_equal [ "yahoo_futures" ], prices.map(&:source)
   end
 
-  test "falls back to futures when the spot provider fails" do
-    spot = Provider::MetalPriceApi.new("key")
-    yahoo = Provider::YahooFinance.new
-    Provider::Registry.stubs(:get_provider).with(:metal_price_api).returns(spot)
-    Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(yahoo)
-    spot.stubs(:fetch_commodity_prices).returns(Provider::Response.new(success?: false, data: nil, error: Provider::MetalPriceApi::Error.new("limit")))
-    yahoo.expects(:fetch_security_prices).returns(Provider::Response.new(success?: true, error: nil, data: []))
+  test "falls back to futures when gold-api is unavailable" do
+    @yahoo.stubs(:fetch_security_prices).returns(futures([ @today, 4190 ]))
+    @gold_api.stubs(:fetch_current_prices).returns(Provider::Response.new(success?: false, data: nil, error: Provider::GoldApi::Error.new("down")))
 
-    assert_equal({ "XAU" => [] }, Commodity::Price.fetch_provider_prices([ @gold ], start_date: @date, end_date: @date))
+    prices = Commodity::Price.fetch_provider_prices([ @gold ], start_date: @today, end_date: @today).fetch("XAU")
+
+    assert_equal [ [ "yahoo_futures", BigDecimal("4190") ] ], prices.map { |p| [ p.source, p.price ] }
   end
+
+  private
+    def futures(*rows)
+      Provider::Response.new(success?: true, error: nil, data: rows.map { |date, price|
+        Provider::SecurityConcept::Price.new(symbol: "GC=F", date: date, price: BigDecimal(price.to_s), currency: "USD", exchange_operating_mic: nil)
+      })
+    end
+
+    def spot(date, price)
+      Provider::Response.new(success?: true, error: nil, data: [
+        Provider::GoldApi::Price.new(symbol: "XAU", date: date, price: BigDecimal(price.to_s), currency: "USD")
+      ])
+    end
 end

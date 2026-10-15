@@ -62,16 +62,6 @@ nl:
         status_inactive: Yahoo Finance verbinding mislukt
         connection_failed: Kan geen verbinding maken met Yahoo Finance
         troubleshooting: Controleer uw internetverbinding en firewallinstellingen. Yahoo Finance kan tijdelijk niet beschikbaar zijn.
-      metal_price_api_settings:
-        title: Edelmetaalprijzen (metalpriceapi.com)
-        description: Optioneel. Met een API-sleutel gebruiken goud, zilver en platina spotprijzen van metalpriceapi.com. Zonder sleutel worden Yahoo Finance-futures (front month) gebruikt als benadering van de spotprijs.
-        env_configured_message: Succesvol geconfigureerd via de omgevingsvariabele METAL_PRICE_API_KEY.
-        label: API-sleutel
-        placeholder: Voer hier je metalpriceapi.com API-sleutel in
-        show_details: "(details tonen)"
-        step_1_html: 'Ga naar <a href="https://metalpriceapi.com" target="_blank" rel="noopener noreferrer" class="underline">metalpriceapi.com</a> en maak een gratis account aan.'
-        step_2_html: 'Open je <a href="https://metalpriceapi.com/dashboard" target="_blank" rel="noopener noreferrer" class="underline">dashboard</a> om je API-sleutel te vinden.'
-        step_3: Kopieer je API-sleutel en plak die hieronder.
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API dagelijkse oproepen gebruikt (%{percentage})"
         description: Voer de API Key in die door Twelve Data is verstrekt

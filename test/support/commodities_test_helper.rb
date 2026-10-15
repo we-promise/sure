@@ -24,7 +24,7 @@ module CommoditiesTestHelper
     }.merge(attributes))
   end
 
-  def create_commodity_price(code:, date:, price:, currency: "USD", source: "metal_price_api")
+  def create_commodity_price(code:, date:, price:, currency: "USD", source: "gold_api")
     Commodity::Price.create!(code: code, date: date, price: price, currency: currency, source: source)
   end
 

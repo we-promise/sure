@@ -2,7 +2,8 @@
 class Commodity::Price < ApplicationRecord
   include Provided
 
-  SOURCES = %w[metal_price_api yahoo_futures].freeze
+  # Higher-ranked sources win when two report the same day: spot over futures.
+  SOURCES = %w[gold_api yahoo_futures].freeze
   # Days a missing price is carried forward when reading (weekends, holidays).
   LOOKBACK_DAYS = 7
 

@@ -89,7 +89,7 @@ class CommodityItemsControllerTest < ActionDispatch::IntegrationTest
     get commodity_price_lookup_path(code: "XAU", date: Date.current, currency: "USD")
 
     body = JSON.parse(response.body)
-    assert_equal [ "3110.3477", "100.0", "metal_price_api" ], body.values_at("price_per_ozt", "price_per_g", "source").map(&:to_s)
+    assert_equal [ "3110.3477", "100.0", "gold_api" ], body.values_at("price_per_ozt", "price_per_g", "source").map(&:to_s)
   end
 
   private

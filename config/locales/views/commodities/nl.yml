@@ -19,7 +19,7 @@ nl:
       granules: Granulaat
       other: Overig
     price_sources:
-      metal_price_api: spot (metalpriceapi.com)
+      gold_api: spot (gold-api.com)
       yahoo_futures: futures, benadering van spot (Yahoo Finance)
     weight_unit_toggle:
       label: Gewichtseenheid

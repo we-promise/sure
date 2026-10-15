@@ -95,9 +95,6 @@ class Setting < RailsSettings::Base
   # Mansa API (mansaapi.com) — African exchanges, including NGX (Nigeria),
   # which none of the providers above cover. See Provider::Mansa.
   field :mansa_api_key, type: :string, default: ENV["MANSA_API_KEY"]
-  # Precious metal spot prices (metalpriceapi.com). Without a key, commodity
-  # prices fall back to Yahoo Finance futures. See Commodity::Price::Provided.
-  field :metal_price_api_key, type: :string, default: ENV["METAL_PRICE_API_KEY"]
 
   # Property valuation (AVM) provider API keys
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
@@ -119,7 +116,6 @@ class Setting < RailsSettings::Base
       alpha_vantage_api_key
       tinkoff_invest_api_key
       mansa_api_key
-      metal_price_api_key
       rentcast_api_key
       realie_api_key
       chimnie_api_key
