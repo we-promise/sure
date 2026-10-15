@@ -13,11 +13,13 @@ class Commodity::ItemTest < ActiveSupport::TestCase
       fineness: BigDecimal("0.9167"), purchase_currency: "EUR"
     )
 
-    assert_equal BigDecimal("1.0909") * BigDecimal("31.1034768"), krugerrand.gross_weight_grams
+    krugerrand.reload
+    # 1.0909 ozt = 33.93078284112 g, stored at the column's 10-decimal scale
+    assert_equal BigDecimal("33.9307828411"), krugerrand.gross_weight_grams
     # 33.93078284 g gross x 0.9167 = 31.104 g fine (~1.000 ozt)
     assert_in_delta 31.1043486, krugerrand.fine_grams, 1e-6
     assert_in_delta 1.00002803, krugerrand.fine_troy_ounces, 1e-7
-    assert_equal BigDecimal("1.0909"), krugerrand.reload.weight_value
+    assert_equal BigDecimal("1.0909"), krugerrand.weight_value
   end
 
   test "fine weight of a multi-piece silver bar lot at .999" do
@@ -120,4 +122,3 @@ class Commodity::ItemTest < ActiveSupport::TestCase
     assert_equal BigDecimal("40"), item.premium
   end
 end
-

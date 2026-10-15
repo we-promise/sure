@@ -569,6 +569,98 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.index ["status"], name: "index_coinstats_items_on_status"
   end
 
+  create_table "commodities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "commodity_item_moves", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "from_location_id"
+    t.uuid "item_id", null: false
+    t.date "moved_on", null: false
+    t.uuid "to_location_id"
+    t.datetime "updated_at", null: false
+    t.index ["from_location_id"], name: "index_commodity_item_moves_on_from_location_id"
+    t.index ["item_id"], name: "index_commodity_item_moves_on_item_id"
+    t.index ["to_location_id"], name: "index_commodity_item_moves_on_to_location_id"
+  end
+
+  create_table "commodity_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "dealer"
+    t.decimal "fineness", precision: 6, scale: 5, null: false
+    t.string "form", default: "bar", null: false
+    t.decimal "gross_weight_grams", precision: 24, scale: 10, null: false
+    t.decimal "insurance", precision: 19, scale: 4, default: "0.0", null: false
+    t.uuid "location_id"
+    t.string "manufacturer"
+    t.decimal "metal_cost", precision: 19, scale: 4, default: "0.0", null: false
+    t.string "name", null: false
+    t.text "notes"
+    t.decimal "premium", precision: 19, scale: 4, default: "0.0", null: false
+    t.string "purchase_currency", null: false
+    t.date "purchase_date", null: false
+    t.integer "quantity", default: 1, null: false
+    t.integer "remaining_quantity", default: 1, null: false
+    t.string "sell_back_mode"
+    t.decimal "sell_back_value", precision: 19, scale: 4
+    t.string "serial_number"
+    t.decimal "shipping", precision: 19, scale: 4, default: "0.0", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "vat", precision: 19, scale: 4, default: "0.0", null: false
+    t.string "weight_unit", default: "g", null: false
+    t.integer "year"
+    t.index ["account_id", "code"], name: "index_commodity_items_on_account_id_and_code"
+    t.index ["account_id"], name: "index_commodity_items_on_account_id"
+    t.index ["location_id"], name: "index_commodity_items_on_location_id"
+    t.check_constraint "fineness > 0::numeric AND fineness <= 1::numeric", name: "chk_commodity_items_fineness"
+    t.check_constraint "form::text = ANY (ARRAY['bar'::character varying, 'coin'::character varying, 'round'::character varying, 'granules'::character varying, 'other'::character varying]::text[])", name: "chk_commodity_items_form"
+    t.check_constraint "gross_weight_grams > 0::numeric", name: "chk_commodity_items_weight_positive"
+    t.check_constraint "quantity >= 1 AND remaining_quantity >= 0 AND remaining_quantity <= quantity", name: "chk_commodity_items_quantity"
+    t.check_constraint "sell_back_mode IS NULL OR (sell_back_mode::text = ANY (ARRAY['spot_percent'::character varying, 'per_piece'::character varying]::text[]))", name: "chk_commodity_items_sell_back_mode"
+    t.check_constraint "weight_unit::text = ANY (ARRAY['g'::character varying, 'ozt'::character varying]::text[])", name: "chk_commodity_items_weight_unit"
+  end
+
+  create_table "commodity_locations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index "family_id, lower((name)::text)", name: "index_commodity_locations_on_family_and_lower_name", unique: true
+    t.index ["family_id"], name: "index_commodity_locations_on_family_id"
+  end
+
+  create_table "commodity_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", default: "USD", null: false
+    t.date "date", null: false
+    t.decimal "price", precision: 19, scale: 6, null: false
+    t.boolean "provisional", default: false, null: false
+    t.string "source", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code", "date", "currency"], name: "index_commodity_prices_on_code_and_date_and_currency", unique: true
+    t.check_constraint "price > 0::numeric", name: "chk_commodity_prices_price_positive"
+  end
+
+  create_table "commodity_sales", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "costs", precision: 19, scale: 4, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.date "date", null: false
+    t.uuid "item_id", null: false
+    t.decimal "proceeds", precision: 19, scale: 4, null: false
+    t.integer "quantity", null: false
+    t.datetime "updated_at", null: false
+    t.index ["item_id"], name: "index_commodity_sales_on_item_id"
+    t.check_constraint "quantity >= 1", name: "chk_commodity_sales_quantity"
+  end
+
   create_table "credit_cards", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.decimal "annual_fee", precision: 10, scale: 2
     t.decimal "apr", precision: 10, scale: 2
@@ -1965,7 +2057,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2993,6 +3085,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
   add_foreign_key "coinspot_items", "families"
   add_foreign_key "coinstats_accounts", "coinstats_items"
   add_foreign_key "coinstats_items", "families"
+  add_foreign_key "commodity_item_moves", "commodity_items", column: "item_id", on_delete: :cascade
+  add_foreign_key "commodity_item_moves", "commodity_locations", column: "from_location_id", on_delete: :nullify
+  add_foreign_key "commodity_item_moves", "commodity_locations", column: "to_location_id", on_delete: :nullify
+  add_foreign_key "commodity_items", "accounts", on_delete: :cascade
+  add_foreign_key "commodity_items", "commodity_locations", column: "location_id", on_delete: :nullify
+  add_foreign_key "commodity_locations", "families"
+  add_foreign_key "commodity_sales", "commodity_items", column: "item_id", on_delete: :cascade
   add_foreign_key "debug_log_entries", "account_providers", on_delete: :nullify
   add_foreign_key "debug_log_entries", "accounts", on_delete: :nullify
   add_foreign_key "debug_log_entries", "families", on_delete: :nullify

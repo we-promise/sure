@@ -23,7 +23,7 @@
           writable_accounts.map { |a| [ a.name, a.id ] } + [ [ t(".new_account"), "new" ] ],
           { label: t(".account"), selected: item.account_id } %>
     <%= text_field_tag :new_account_name, params[:new_account_name], placeholder: t(".new_account_name_placeholder"),
-          class: "form-field__input text-sm", "aria-label": t(".new_account_name_placeholder") %>
+          class: "form-field__input text-sm", autocomplete: "off", "aria-label": t(".new_account_name_placeholder") %>
   <% end %>
 
   <%= form.text_field :name, label: t(".name"), placeholder: t(".name_placeholder"), required: true %>

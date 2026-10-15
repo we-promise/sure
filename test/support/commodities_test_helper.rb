@@ -1,10 +1,10 @@
 module CommoditiesTestHelper
-  def create_commodity_account(family: families(:dylan_family), currency: "USD", name: Commodity::DEFAULT_ACCOUNT_NAME)
+  def create_commodity_account(family: families(:dylan_family), currency: "USD", name: Commodity::DEFAULT_ACCOUNT_NAME, owner: nil)
     family.accounts.create!(
       name: name,
       currency: currency,
       balance: 0,
-      owner: family.users.first,
+      owner: owner || (family == families(:dylan_family) ? users(:family_admin) : family.users.first),
       accountable: Commodity.new
     )
   end

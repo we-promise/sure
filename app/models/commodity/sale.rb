@@ -14,8 +14,10 @@ class Commodity::Sale < ApplicationRecord
   validate :quantity_available
   validate :not_before_purchase
 
-  after_save_commit :refresh_item
-  after_destroy_commit :refresh_item
+  # Held quantity changes in the same transaction as the sale.
+  after_save :refresh_remaining_quantity
+  after_destroy :refresh_remaining_quantity, unless: :destroyed_by_association
+  after_commit :sync_account, unless: :destroyed_by_association
 
   # Realized P&L = proceeds - sale costs - proportional cost basis of the pieces
   # sold, in the account currency. nil when an exchange rate is missing.
@@ -46,8 +48,11 @@ class Commodity::Sale < ApplicationRecord
       errors.add(:date, :before_purchase) if item && date && date < item.purchase_date
     end
 
-    def refresh_item
+    def refresh_remaining_quantity
       item.recalculate_remaining_quantity!
+    end
+
+    def sync_account
       item.account.sync_later
     end
 end

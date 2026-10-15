@@ -24,9 +24,9 @@ class CommodityTest < ActiveSupport::TestCase
 
     assert_equal 1000 + 5000 + 2300, balance_sheet.net_worth
     assert_equal "Commodities", commodities.name
-    assert_equal [ account ], commodities.accounts
+    assert_equal [ account ], commodities.accounts.map(&:account)
     investments = balance_sheet.assets.account_groups.find { |g| g.key == "investment" }
-    assert_not_includes investments.accounts, account
+    assert_not_includes investments.accounts.map(&:account), account
   end
 
   test "metals never become securities, holdings or trades, nor appear in investment reports" do

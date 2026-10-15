@@ -109,7 +109,8 @@ export default class extends Controller {
     if (!weight || !fineness) return null;
 
     const gramsPerOzt = Number(this.gramsPerOztValue);
-    const grams = this.unitTarget.value === "ozt" ? weight * gramsPerOzt : weight;
+    const grams =
+      this.unitTarget.value === "ozt" ? weight * gramsPerOzt : weight;
     return (grams * fineness * quantity) / gramsPerOzt;
   }
 }

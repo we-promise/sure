@@ -18,7 +18,7 @@ class CommodityItemsController < ApplicationController
   end
 
   def create
-    @item = Commodity::Item.new(item_params.except(:account_id))
+    @item = Commodity::Item.new(item_params)
     @item.account = target_account
     location = location_from_params
     @item.location = location unless location == :unchanged
@@ -43,7 +43,7 @@ class CommodityItemsController < ApplicationController
     location = location_from_params
 
     saved = Commodity::Item.transaction do
-      raise ActiveRecord::Rollback unless @item.update(item_params.except(:account_id, :code))
+      raise ActiveRecord::Rollback unless @item.update(item_params.except(:code))
 
       unless location == :unchanged
         location.save! if location&.new_record?
@@ -94,7 +94,7 @@ class CommodityItemsController < ApplicationController
 
     def item_params
       params.require(:commodity_item).permit(
-        :account_id, :code, :name, :form, :quantity, :weight_value, :weight_unit, :fineness,
+        :code, :name, :form, :quantity, :weight_value, :weight_unit, :fineness,
         :serial_number, :manufacturer, :year, :dealer, :notes, :photo,
         :purchase_date, :purchase_currency, :metal_price_value, :metal_price_basis, :premium, :premium_basis,
         :vat, :shipping, :insurance, :sell_back_mode, :sell_back_value
@@ -111,7 +111,7 @@ class CommodityItemsController < ApplicationController
     # The chosen commodities account, or a new one when the user has none yet
     # (or picked "new account"). Unsaved until the item is valid.
     def target_account
-      account_id = item_params[:account_id]
+      account_id = params.dig(:commodity_item, :account_id).to_s
       existing = writable_accounts.find { |a| a.id == account_id } if account_id.present? && account_id != "new"
       existing ||= writable_accounts.first if account_id.blank? && writable_accounts.one?
       existing || Current.family.accounts.build(
