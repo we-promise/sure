@@ -716,16 +716,19 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
                     "moving money out of the series is not a loss"
   end
 
-  # There is no second, wider "inside" to pass. A caller asking for one is
-  # told so rather than silently getting the accounts' own scope.
+  # There is no second, wider "inside" to pass, and no guard of the class's
+  # own: Ruby refuses the unknown keyword, which is the point. The message is
+  # pinned so that any other ArgumentError -- a new required keyword, say --
+  # fails this rather than passing it without checking the scope at all.
   test "the flow scope cannot be widened beyond the accounts in the series" do
-    assert_raises(ArgumentError) do
+    error = assert_raises(ArgumentError) do
       Portfolio::DailyReturns.new(
         account_ids: [ @account.id ], currency: @family.currency,
         period: Period.custom(start_date: @day_one, end_date: @day_two),
         scope_account_ids: [ @account.id, create_portfolio_account(family: @family).id ]
       )
     end
+    assert_match(/unknown keyword: :scope_account_ids/, error.message)
   end
 
   # The classifier's CASE arrives already sanitized and full of quoted labels.
