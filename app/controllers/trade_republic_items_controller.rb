@@ -46,9 +46,9 @@ class TradeRepublicItemsController < ApplicationController
               qr_login_auto_poll_item: (@trade_republic_item if qr_login_requested && @error_message.blank?)
             }
           ),
-          close_drawer_stream,
+          (close_drawer_stream if params[:in_drawer] == "1"),
           *flash_notification_stream_items
-        ]
+        ].compact
       elsif @error_message.present?
         redirect_to settings_providers_path(anchor: "trade-republic"), alert: @error_message, status: :see_other
       else

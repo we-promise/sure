@@ -4,6 +4,8 @@
                      method: :post,
                      data: { turbo: true },
                      class: "space-y-3" do |form| %>
+  <%= hidden_field_tag :in_drawer, "1" if in_drawer %>
+
   <%= form.text_field :phone_number,
                       label: translation("phone_number_label"),
                       placeholder: translation("phone_number_placeholder_new"),

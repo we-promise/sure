@@ -4,5 +4,5 @@
     <%= render DS::Alert.new(message: error_message, variant: :error) %>
   <% end %>
 
-  <%= render TradeRepublic::NewConnectionFormComponent.new(item: item) %>
+  <%= render TradeRepublic::NewConnectionFormComponent.new(item: item, in_drawer: true) %>
 </div>
