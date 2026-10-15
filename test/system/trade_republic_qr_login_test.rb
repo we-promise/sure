@@ -71,7 +71,7 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     assert_nil @item.reload.pending_login_state
   end
 
-  test "cancelling a running QR login in Settings brings back the credentials form" do
+  test "cancelling a running QR login in Settings refreshes its connection" do
     @item.update!(pending_login_state: "pending", status: :requires_update)
     Provider::TradeRepublicClient.any_instance.stubs(:login_stage).returns("qr_pending")
 
@@ -79,12 +79,31 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     find("summary", text: "Trade Republic").click
 
     within "##{TradeRepublic::ConnectionCardComponent.dom_id_for(@item)}" do
-      assert_no_field "trade_republic_item[phone_number]"
+      assert_text panel_t("awaiting_confirmation")
       click_on qr_cancel
-      assert_field "trade_republic_item[phone_number]"
+      assert_text panel_t("requires_update")
       assert_button qr_login
     end
     assert_nil @item.reload.pending_login_state
+  end
+
+  test "the PIN login opens below its connection and adding one opens the drawer" do
+    visit settings_providers_path
+    find("summary", text: "Trade Republic").click
+
+    within "##{TradeRepublic::ConnectionCardComponent.dom_id_for(@item)}" do
+      assert_no_field "trade_republic_item[pin]"
+      click_on panel_t("pin_login")
+      assert_field "trade_republic_item[pin]"
+      click_on panel_t("pin_login")
+      assert_no_field "trade_republic_item[pin]"
+    end
+
+    click_on panel_t("add_account")
+    within "#trade-republic-new-connection" do
+      assert_field "trade_republic_item[phone_number]"
+      assert_button panel_t("qr_login")
+    end
   end
 
   private
@@ -93,6 +112,7 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
       "##{ActionView::RecordIdentifier.dom_id(@item)}"
     end
 
-    def qr_login = I18n.t("settings.providers.trade_republic_panel.qr_login")
-    def qr_cancel = I18n.t("settings.providers.trade_republic_panel.qr_cancel")
+    def panel_t(key) = I18n.t("settings.providers.trade_republic_panel.#{key}")
+    def qr_login = panel_t("qr_login")
+    def qr_cancel = panel_t("qr_cancel")
 end

@@ -54,6 +54,23 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='trade_republic_item[phone_number]'][value='+491701234567']"
   end
 
+  test "new opens the add-connection form in the drawer" do
+    get new_trade_republic_item_url, headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "turbo-frame#drawer #trade-republic-new-connection form[action='#{trade_republic_items_path}']"
+  end
+
+  test "a failed connection attempt shows its error in the drawer" do
+    post trade_republic_items_url, params: {
+      trade_republic_item: { phone_number: "+491701234567", pin: "" }
+    }, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "trade-republic-new-connection" do
+      assert_select "input[name='trade_republic_item[phone_number]'][value='+491701234567']"
+    end
+  end
+
   test "create adds a second connection without touching the first" do
     existing_item = trade_republic_items(:configured_item)
     provider = mock
@@ -73,6 +90,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
+    assert_turbo_stream action: "replace", target: "drawer"
     new_item = families(:dylan_family).trade_republic_items.order(:created_at).last
     assert_equal "qr-second-pending", new_item.pending_login_state
     assert_includes response.body, existing_item.name

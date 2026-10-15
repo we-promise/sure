@@ -216,7 +216,7 @@ Rails.application.routes.draw do
 
   # Trade Republic routes (login steps are TR-specific: web login needs a
   # two-phase initiate/confirm handshake with the Trade Republic app)
-  resources :trade_republic_items, only: [ :show, :create, :update, :destroy ] do
+  resources :trade_republic_items, only: [ :show, :new, :create, :update, :destroy ] do
     collection do
       get :select_accounts
       get :select_existing_account

@@ -442,7 +442,7 @@ en:
         no_recent_sync: Sync overdue
         reconsent_required: Re-consent required
         login_required: Login required
-        login_expires_soon: "Login expires in %{time} (%{at})"
+        login_expires_soon: Login expires in %{time}
         reconsent_needed:
           one: Re-consent needed in 1 day
           other: Re-consent needed in %{count} days
@@ -724,7 +724,7 @@ en:
           title: Encryption is not configured
           message: Trade Republic credentials and session data cannot be stored securely until Active Record Encryption is configured.
         steps:
-          step_1: Enter the phone number and PIN or password you use for the Trade Republic app, then save.
+          step_1: Log in with the QR code, or with the phone number and PIN or password you use for the Trade Republic app.
           step_2: Enter the code from your authenticator app when requested.
           step_3: Approve the login in your Trade Republic app when prompted.
         phone_number_label: Phone number
@@ -732,7 +732,6 @@ en:
         phone_number_placeholder_existing: Leave blank to keep the current phone number
         pin_label: PIN or password
         pin_placeholder_new: Your Trade Republic PIN or password
-        pin_placeholder_existing: Leave blank to keep the current PIN or password
         currency_label: Account currency
         connect: Log in
         confirm_login: Check login
@@ -746,7 +745,6 @@ en:
         awaiting_confirmation: Approval in the Trade Republic app is pending.
         awaiting_authenticator_code: Authenticator code required.
         login_expired: The approval request has expired.
-        restart_login: Start login again
         connection_success:
           title: Trade Republic connected successfully
           message: Your Trade Republic connection is ready.
@@ -760,13 +758,13 @@ en:
         qr_success: Login approved. Sure is refreshing the provider page.
         qr_error: QR login could not be started. Please try again.
         requires_update: Log in again to resume syncing.
-        session_expires_in: "Login expires in %{time} (%{at})."
+        session_expires_in: Login expires in %{time}.
+        pin_login: Log in with PIN
+        remove: Remove
         add_account: Add another connection
         save_configuration: Save & Start Login
-        update_configuration: Update Configuration
         sync: Sync
         syncing: Syncing...
-        disconnect: Disconnect Trade Republic
         disconnect_confirm: Disconnect Trade Republic? Your synced accounts will become manual accounts.
         disconnect_confirm_with_identifier: "Disconnect the Trade Republic connection ending in %{last4}? Your synced accounts will become manual accounts."
         identifier_phone: Phone

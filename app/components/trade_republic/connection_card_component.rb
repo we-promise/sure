@@ -5,14 +5,13 @@ class TradeRepublic::ConnectionCardComponent < ApplicationComponent
     ActionView::RecordIdentifier.dom_id(item, :trade_republic_card)
   end
 
-  def initialize(item:, open: true, qr_active: false, qr_code_svg: nil)
+  def initialize(item:, qr_active: false, qr_code_svg: nil)
     @item = item
-    @open = open
     @qr_active = qr_active
     @qr_code_svg = qr_code_svg
   end
 
-  attr_reader :item, :open, :qr_active, :qr_code_svg
+  attr_reader :item, :qr_active, :qr_code_svg
 
   def dom_id
     self.class.dom_id_for(item)
@@ -36,6 +35,25 @@ class TradeRepublic::ConnectionCardComponent < ApplicationComponent
     return @login_stage if defined?(@login_stage)
 
     @login_stage = item.login_stage
+  end
+
+  # While Trade Republic waits for a push approval or an authenticator code,
+  # starting another login would replace that one.
+  def push_login_in_progress?
+    login_stage.in?(%w[waiting_for_approval authenticator_code])
+  end
+
+  def pin_login_form_id
+    "#{dom_id}_pin_login"
+  end
+
+  def status_dot_class
+    if item.syncing? then "bg-inverse animate-pulse"
+    elsif login_stage == "expired" then "bg-destructive"
+    elsif item.pending_login_state.present? || item.needs_login? then "bg-warning"
+    elsif item.ready_for_sync? then "bg-success"
+    else "bg-surface-inset"
+    end
   end
 
   private

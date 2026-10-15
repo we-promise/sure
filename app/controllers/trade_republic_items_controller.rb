@@ -1,9 +1,14 @@
 class TradeRepublicItemsController < ApplicationController
   before_action :set_trade_republic_item, only: [ :show, :update, :destroy, :sync, :repair, :setup_accounts, :complete_account_setup, :initiate_login, :complete_login, :poll_login, :initiate_qr_login, :poll_qr_login, :cancel_qr_login ]
-  before_action :require_admin!, only: [ :show, :create, :select_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :repair, :setup_accounts, :complete_account_setup, :initiate_login, :complete_login, :poll_login, :initiate_qr_login, :poll_qr_login, :cancel_qr_login ]
+  before_action :require_admin!, only: [ :show, :new, :create, :select_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :repair, :setup_accounts, :complete_account_setup, :initiate_login, :complete_login, :poll_login, :initiate_qr_login, :poll_qr_login, :cancel_qr_login ]
 
   def show
     redirect_to settings_providers_path(anchor: "trade-republic")
+  end
+
+  # Adding another connection opens in the drawer, like other providers.
+  def new
+    @trade_republic_item = Current.family.trade_republic_items.build
   end
 
   def create
@@ -15,7 +20,7 @@ class TradeRepublicItemsController < ApplicationController
     @trade_republic_item.status = :requires_update if qr_login_requested
 
     if !qr_login_requested && login_pin.blank?
-      render_panel_error(t("trade_republic_items.initiate_login.pin_required"))
+      render_new_connection_error(t("trade_republic_items.initiate_login.pin_required"))
       return
     end
 
@@ -41,6 +46,7 @@ class TradeRepublicItemsController < ApplicationController
               qr_login_auto_poll_item: (@trade_republic_item if qr_login_requested && @error_message.blank?)
             }
           ),
+          close_drawer_stream,
           *flash_notification_stream_items
         ]
       elsif @error_message.present?
@@ -49,7 +55,7 @@ class TradeRepublicItemsController < ApplicationController
         redirect_to accounts_path, **redirect_flash_options(t(".success")), status: :see_other
       end
     else
-      render_panel_error(@trade_republic_item.errors.full_messages.join(", "))
+      render_new_connection_error(@trade_republic_item.errors.full_messages.join(", "))
     end
   end
 
@@ -651,6 +657,29 @@ class TradeRepublicItemsController < ApplicationController
 
     # Only the add-connection form's own unsaved item should replace its blank
     # default; an existing item failing update/login keeps the add form blank.
+    def close_drawer_stream
+      turbo_stream.replace("drawer", view_context.turbo_frame_tag("drawer"))
+    end
+
+    # The first connection is added from the panel, later ones from the
+    # drawer; the error shows in whichever form was used.
+    def render_new_connection_error(message)
+      return render_panel_error(message) unless turbo_panel_request?
+
+      render turbo_stream: [
+        turbo_stream.replace(
+          "trade-republic-providers-panel",
+          partial: "settings/providers/trade_republic_panel",
+          locals: { error_message: message, new_item: @trade_republic_item }
+        ),
+        turbo_stream.replace(
+          "trade-republic-new-connection",
+          partial: "trade_republic_items/new_connection",
+          locals: { item: @trade_republic_item, error_message: message }
+        )
+      ], status: :unprocessable_entity
+    end
+
     def render_panel_error(message)
       render_provider_panel("trade_republic", alert: message, fallback_path: settings_providers_path(anchor: "trade-republic"),
                             new_item: (@trade_republic_item if @trade_republic_item&.new_record?))

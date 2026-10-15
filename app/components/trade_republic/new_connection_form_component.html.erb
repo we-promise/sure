@@ -1,0 +1,31 @@
+<%= helpers.styled_form_with model: item,
+                     url: helpers.trade_republic_items_path,
+                     scope: :trade_republic_item,
+                     method: :post,
+                     data: { turbo: true },
+                     class: "space-y-3" do |form| %>
+  <%= form.text_field :phone_number,
+                      label: translation("phone_number_label"),
+                      placeholder: translation("phone_number_placeholder_new"),
+                      type: :tel,
+                      value: item.phone_number %>
+
+  <%= form.text_field :pin,
+                      label: translation("pin_label"),
+                      placeholder: translation("pin_placeholder_new"),
+                      type: :password,
+                      value: nil %>
+
+  <div class="flex flex-wrap justify-end gap-2">
+    <%= form.submit(translation("save_configuration")) %>
+    <%= render DS::Button.new(
+          text: translation("qr_login"),
+          variant: :outline,
+          size: :sm,
+          icon: "qr-code",
+          type: "submit",
+          name: "login_method",
+          value: "qr"
+        ) %>
+  </div>
+<% end %>

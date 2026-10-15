@@ -426,7 +426,7 @@ uk:
         registration_needed: Потрібна реєстрація
         reconsent_required: Потрібна повторна згода
         login_required: "Потрібен вхід"
-        login_expires_soon: "Вхід завершиться через %{time} (%{at})"
+        login_expires_soon: "Вхід завершиться через %{time}"
         reconsent_needed:
           one: Повторна згода потрібна через %{count} день
           other: Повторна згода потрібна через %{count} днів
@@ -712,7 +712,7 @@ uk:
           title: Шифрування не налаштовано
           message: Облікові дані та дані сеансу Trade Republic не можна безпечно зберігати, доки не налаштовано шифрування Active Record.
         steps:
-          step_1: Введіть номер телефону та PIN-код або пароль, які ви використовуєте в застосунку Trade Republic, потім збережіть.
+          step_1: "Увійдіть за QR-кодом або за номером телефону та PIN-кодом чи паролем, які ви використовуєте в застосунку Trade Republic."
           step_2: Коли з'явиться запит, введіть код із застосунку-автентифікатора.
           step_3: Коли з'явиться запит, підтвердьте вхід у застосунку Trade Republic.
         phone_number_label: Номер телефону
@@ -720,7 +720,6 @@ uk:
         phone_number_placeholder_existing: Залиште порожнім, щоб зберегти поточний номер телефону
         pin_label: PIN-код або пароль
         pin_placeholder_new: PIN-код або пароль вашого застосунку Trade Republic
-        pin_placeholder_existing: Залиште порожнім, щоб зберегти поточний PIN-код або пароль
         currency_label: Валюта рахунку
         connect: Увійти
         confirm_login: Перевірити вхід
@@ -734,7 +733,6 @@ uk:
         awaiting_confirmation: Очікується підтвердження в застосунку Trade Republic.
         awaiting_authenticator_code: Потрібен код автентифікатора.
         login_expired: Термін дії запиту на підтвердження минув.
-        restart_login: Почати вхід знову
         connection_success:
           title: Trade Republic успішно підключено
           message: Ваше з'єднання з Trade Republic готове.
@@ -748,13 +746,13 @@ uk:
         qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.
         qr_error: Не вдалося розпочати вхід за QR-кодом. Спробуйте ще раз.
         requires_update: "Увійдіть знову, щоб відновити синхронізацію."
-        session_expires_in: "Вхід завершиться через %{time} (%{at})."
+        session_expires_in: "Вхід завершиться через %{time}."
+        pin_login: "Увійти з PIN-кодом"
+        remove: "Видалити"
         add_account: "Додати ще одне підключення"
         save_configuration: Зберегти й увійти
-        update_configuration: Оновити конфігурацію
         sync: Синхронізувати
         syncing: "Синхронізація..."
-        disconnect: Відключити Trade Republic
         disconnect_confirm: Відключити Trade Republic? Ваші синхронізовані рахунки стануть ручними.
         disconnect_confirm_with_identifier: "Відключити підключення Trade Republic, що закінчується на %{last4}? Ваші синхронізовані рахунки стануть ручними."
         identifier_phone: Телефон

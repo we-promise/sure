@@ -1,0 +1,8 @@
+<%# locals: (item:, error_message: nil) %>
+<div id="trade-republic-new-connection" class="space-y-4">
+  <% if error_message.present? %>
+    <%= render DS::Alert.new(message: error_message, variant: :error) %>
+  <% end %>
+
+  <%= render TradeRepublic::NewConnectionFormComponent.new(item: item) %>
+</div>

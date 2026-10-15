@@ -538,7 +538,7 @@ tr:
           other: "%{count} gün içinde yeniden onay gerekiyor"
         reconsent_required: Yeniden onay gerekiyor
         login_required: "Giriş gerekli"
-        login_expires_soon: "Girişin süresi %{time} içinde doluyor (%{at})"
+        login_expires_soon: "Girişin süresi %{time} içinde doluyor"
         registration_needed: Kayıt gerekiyor
         sync_error: Senkronizasyon hatası
       not_authorized: Yetkiniz yok
@@ -683,7 +683,7 @@ tr:
           title: Şifreleme yapılandırılmamış
           message: Active Record Encryption yapılandırılana kadar Trade Republic kimlik bilgileri ve oturum verileri güvenli şekilde saklanamaz.
         steps:
-          step_1: Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i veya şifreyi girip kaydedin.
+          step_1: "QR kodla ya da Trade Republic uygulamasında kullandığınız telefon numarası ve PIN veya şifreyle giriş yapın."
           step_2: İstendiğinde doğrulama uygulamanızdaki kodu girin.
           step_3: İstendiğinde girişi Trade Republic uygulamanızda onaylayın.
         phone_number_label: Telefon numarası
@@ -691,7 +691,6 @@ tr:
         phone_number_placeholder_existing: Mevcut telefon numarasını korumak için boş bırakın
         pin_label: PIN veya şifre
         pin_placeholder_new: Trade Republic uygulama PIN'iniz veya şifreniz
-        pin_placeholder_existing: Mevcut PIN'i veya şifreyi korumak için boş bırakın
         currency_label: Hesap para birimi
         connect: Giriş yap
         confirm_login: Girişi kontrol et
@@ -705,7 +704,6 @@ tr:
         awaiting_confirmation: Trade Republic uygulamasında onay bekleniyor.
         awaiting_authenticator_code: Doğrulama kodu gerekli.
         login_expired: Onay isteğinin süresi doldu.
-        restart_login: Girişi yeniden başlat
         connection_success:
           title: Trade Republic başarıyla bağlandı
           message: Trade Republic bağlantınız hazır.
@@ -719,13 +717,13 @@ tr:
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
         qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
         requires_update: "Senkronizasyona devam etmek için yeniden giriş yapın."
-        session_expires_in: "Girişin süresi %{time} içinde doluyor (%{at})."
+        session_expires_in: "Girişin süresi %{time} içinde doluyor."
+        pin_login: "PIN ile giriş yap"
+        remove: "Kaldır"
         add_account: "Başka bir bağlantı ekle"
         save_configuration: Kaydet ve Girişi Başlat
-        update_configuration: Yapılandırmayı Güncelle
         sync: Senkronize et
         syncing: "Senkronize ediliyor..."
-        disconnect: Trade Republic bağlantısını kes
         disconnect_confirm: Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir.
         disconnect_confirm_with_identifier: "%{last4} ile biten Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir."
         identifier_phone: Telefon

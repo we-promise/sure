@@ -490,7 +490,7 @@ ca:
           other: Cal renovar el consentiment en %{count} dies
         reconsent_required: Cal renovar el consentiment
         login_required: "Cal iniciar sessió"
-        login_expires_soon: "La sessió caduca d'aquí a %{time} (%{at})"
+        login_expires_soon: "La sessió caduca d'aquí a %{time}"
         sync_error: Error de sincronització
       not_authorized: No autoritzat
       not_found: Proveïdor no trobat.
@@ -637,7 +637,7 @@ ca:
           title: El xifratge no està configurat
           message: Les credencials i les dades de sessió de Trade Republic no es poden desar de manera segura fins que es configuri Active Record Encryption.
         steps:
-          step_1: Introdueix el número de telèfon i el PIN que fas servir a l'aplicació de Trade Republic i desa.
+          step_1: "Inicia sessió amb el codi QR, o amb el número de telèfon i el PIN que fas servir a l'aplicació de Trade Republic."
           step_2: Introdueix el codi de la teva aplicació d'autenticació quan se't demani.
           step_3: Aprova l'inici de sessió a l'aplicació de Trade Republic quan se't demani.
         phone_number_label: Número de telèfon
@@ -645,7 +645,6 @@ ca:
         phone_number_placeholder_existing: Deixa-ho en blanc per mantenir el número de telèfon actual
         pin_label: PIN
         pin_placeholder_new: El PIN de l'aplicació de Trade Republic
-        pin_placeholder_existing: Deixa-ho en blanc per mantenir el PIN actual
         currency_label: Divisa del compte
         connect: Inicia sessió
         confirm_login: Comprova l'inici de sessió
@@ -659,7 +658,6 @@ ca:
         awaiting_confirmation: L'aprovació a l'aplicació de Trade Republic està pendent.
         awaiting_authenticator_code: Cal el codi d'autenticació.
         login_expired: La sol·licitud d'aprovació ha caducat.
-        restart_login: Torna a iniciar sessió
         connection_success:
           title: Trade Republic s'ha connectat correctament
           message: La teva connexió de Trade Republic està a punt.
@@ -673,13 +671,13 @@ ca:
         qr_success: Inici de sessió aprovat. Sure està actualitzant la pàgina del proveïdor.
         qr_error: No s'ha pogut iniciar la sessió amb QR. Torna-ho a provar.
         requires_update: "Torna a iniciar sessió per reprendre la sincronització."
-        session_expires_in: "La sessió caduca d'aquí a %{time} (%{at})."
+        session_expires_in: "La sessió caduca d'aquí a %{time}."
+        pin_login: "Inicia sessió amb el PIN"
+        remove: "Elimina"
         add_account: "Afegeix una altra connexió"
         save_configuration: Desa i inicia sessió
-        update_configuration: Actualitza la configuració
         sync: Sincronitza
         syncing: "Sincronitzant..."
-        disconnect: Desconnecta Trade Republic
         disconnect_confirm: Vols desconnectar Trade Republic? Els comptes sincronitzats passaran a ser comptes manuals.
         disconnect_confirm_with_identifier: "Vols desconnectar la connexió de Trade Republic acabada en %{last4}? Els comptes sincronitzats passaran a ser comptes manuals."
         identifier_phone: Telèfon
