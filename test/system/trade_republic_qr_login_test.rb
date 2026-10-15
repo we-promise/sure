@@ -109,9 +109,32 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
       assert_selector ".qrcode svg"
       assert_no_button panel_t("pin_login")
       click_on qr_cancel
-      assert_button panel_t("pin_login")
-      assert_button qr_login
     end
+
+    # The cancel replaces the card, so each check looks it up again.
+    assert_selector "#{connection_card} button:not([disabled])", exact_text: panel_t("pin_login")
+    assert_selector "#{connection_card} button:not([disabled])", exact_text: qr_login
+  end
+
+  test "the PIN login comes back only once a QR cancel is done" do
+    visit settings_providers_path
+    find("summary", text: "Trade Republic").click
+    hold_qr_cancel
+
+    within "##{TradeRepublic::ConnectionCardComponent.dom_id_for(@item)}" do
+      click_on qr_login
+      assert_selector ".qrcode svg"
+      click_on qr_cancel
+      # The cancel could still clear a PIN login started now.
+      assert_button qr_login, disabled: true
+      assert_no_button panel_t("pin_login"), exact: true
+    end
+
+    page.execute_script("window.releaseQrCancel()")
+
+    # The cancel replaces the card, so each check looks it up again.
+    assert_selector "#{connection_card} button:not([disabled])", exact_text: panel_t("pin_login")
+    assert_selector "#{connection_card} button:not([disabled])", exact_text: qr_login
   end
 
   test "a new connection's PIN login takes the place of Add a connection, like its QR login" do
@@ -135,6 +158,23 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
   end
 
   private
+
+    def connection_card
+      "##{TradeRepublic::ConnectionCardComponent.dom_id_for(@item)}"
+    end
+
+    # Holds the browser's QR cancel request until releaseQrCancel() runs.
+    def hold_qr_cancel
+      page.execute_script(<<~JS)
+        const fetch = window.fetch;
+        window.fetch = (url, options) => {
+          if (!String(url).includes("cancel_qr_login")) return fetch(url, options);
+          return new Promise((resolve) => {
+            window.releaseQrCancel = () => resolve(fetch(url, options));
+          });
+        };
+      JS
+    end
 
     def card
       "##{ActionView::RecordIdentifier.dom_id(@item)}"
