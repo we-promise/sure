@@ -17,9 +17,9 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_enqueued_with(job: GenerateInsightsJob, args: [ { family_id: @family.id } ])
   end
 
-  # Insights is a preview feature and the job manufactures data (and can spend
-  # LLM budget) per family, so families with nobody opted in are skipped
-  # entirely rather than generated for and hidden.
+  # Insights is a preview feature and the job manufactures data per family,
+  # so families with nobody opted in are skipped entirely rather than
+  # generated for and hidden.
   test "without args enqueues nothing when no family has preview access" do
     disable_preview_features(@family)
 
@@ -185,7 +185,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
 
     insight.reload
     assert_equal "Idle cash in Holiday Fund", insight.title
-    assert_equal original_body, insight.body, "a rename is not worth an LLM rewrite"
+    assert_equal original_body, insight.body, "a rename doesn't rewrite the body"
     assert insight.read?, "a rename is not a reason to nag the user again"
   end
   test "a reactivated insight also picks up a renamed subject" do

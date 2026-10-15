@@ -37,7 +37,7 @@ Background jobs that classify transactions and detect merchants. These **always*
 
 If you use an external agent for chat, you still need `OPENAI_ACCESS_TOKEN` set for auto-categorization and merchant detection to work. The two systems are fully independent.
 
-With `mcp_only`, Sure also skips the features that need a user's AI consent: the LLM-written insight text and the bills AI shortcuts (review, smart fill, smart configuration).
+With `mcp_only`, Sure also skips the features that need a user's AI consent: the bills AI shortcuts (review, smart fill, smart configuration). Insights never use AI: their text comes from templates.
 
 ## Quickstart: OpenAI Token
 
