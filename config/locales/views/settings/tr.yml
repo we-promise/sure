@@ -538,7 +538,7 @@ tr:
           other: "%{count} gün içinde yeniden onay gerekiyor"
         reconsent_required: Yeniden onay gerekiyor
         login_required: "Giriş gerekli"
-        login_expires_soon: "Girişin süresi %{time} içinde doluyor"
+        login_expires_soon: "Girişin süresi %{time} içinde doluyor (%{at})"
         registration_needed: Kayıt gerekiyor
         sync_error: Senkronizasyon hatası
       not_authorized: Yetkiniz yok
@@ -709,7 +709,7 @@ tr:
           message: Trade Republic bağlantınız hazır.
           description: Sure, Trade Republic verilerinizi arka planda senkronize ediyor.
           close: Bitti
-        qr_login: QR kodla giriş yap
+        qr_login: QR ile giriş
         qr_cancel: QR girişini iptal et
         qr_back_to_credentials: Telefon numarası ve PIN'e veya şifreye dön
         qr_loading: QR kod hazırlanıyor …
@@ -717,8 +717,8 @@ tr:
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
         qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
         requires_update: "Senkronizasyona devam etmek için yeniden giriş yapın."
-        session_expires_in: "Girişin süresi %{time} içinde doluyor."
-        pin_login: "PIN ile giriş yap"
+        session_expires_in: "Girişin süresi %{time} içinde doluyor (%{at})."
+        pin_login: "PIN ile giriş"
         remove: "Kaldır"
         new_connection: "Yeni bağlantı"
         cancel_login: "İptal"
@@ -734,7 +734,7 @@ tr:
         accounts_tab: Hesaplar
         setup_accounts: Hesapları kur
         accounts_discovered:
-          one: '%{count} Trade Republic hesabı keşfedildi.'
+          one: 1 Trade Republic hesabı keşfedildi.
           other: '%{count} Trade Republic hesabı keşfedildi.'
         status_configured_suffix: sekmesine gidin.
         not_configured: Yapılandırılmadı.

@@ -150,3 +150,64 @@ nl:
       choose: Foto uploaden
       choose_label: (optioneel)
       change: Foto wijzigen
+    providers:
+      trade_republic_panel:
+        encryption_warning:
+          title: Versleuteling is niet geconfigureerd
+          message: Trade Republic-inloggegevens en sessiegegevens kunnen pas veilig worden opgeslagen als Active Record-versleuteling is geconfigureerd.
+        steps:
+          step_1: Log in met de QR-code, of met het telefoonnummer en de pincode of het wachtwoord dat je voor de Trade Republic-app gebruikt.
+          step_2: Voer de code uit je authenticator-app in wanneer daarom wordt gevraagd.
+          step_3: Keur de aanmelding goed in je Trade Republic-app wanneer daarom wordt gevraagd.
+        phone_number_label: Telefoonnummer
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: Laat leeg om het huidige telefoonnummer te behouden
+        pin_label: Pincode of wachtwoord
+        pin_placeholder_new: Je Trade Republic-pincode of -wachtwoord
+        currency_label: Rekeningvaluta
+        connect: Inloggen
+        confirm_login: Login controleren
+        complete_login: Doorgaan
+        authenticator_code_label: Authenticatorcode (indien gevraagd)
+        authenticator_code_placeholder: 6-cijferige code
+        push_login_notice: Keur de aanmelding nu goed in je Trade Republic-app. Sure controleert dit automatisch op de achtergrond. Je kunt de status ook zelf controleren.
+        check_login_status: Status nu controleren
+        authenticator_code_notice: Voer de code uit je authenticator-app in.
+        approval_pending: Aanmelding gestart. Keur deze goed in de Trade Republic-app; Sure controleert automatisch.
+        awaiting_confirmation: Goedkeuring in de Trade Republic-app is in behandeling.
+        awaiting_authenticator_code: Authenticatorcode vereist.
+        login_expired: Het goedkeuringsverzoek is verlopen.
+        connection_success:
+          title: Trade Republic is succesvol verbonden
+          message: Je Trade Republic-koppeling is klaar.
+          description: Sure synchroniseert je Trade Republic-gegevens nu op de achtergrond.
+          close: Gereed
+        qr_login: QR-login
+        qr_cancel: QR-login annuleren
+        qr_back_to_credentials: Terug naar telefoonnummer en pincode of wachtwoord
+        qr_loading: QR-code wordt voorbereid …
+        qr_instruction: Scan de QR-code met de camera van je telefoon en keur de aanmelding daarna goed in de Trade Republic-app.
+        qr_success: Aanmelding goedgekeurd. Sure vernieuwt de providerpagina.
+        qr_error: De QR-login kon niet worden gestart. Probeer het opnieuw.
+        requires_update: Log opnieuw in om het synchroniseren te hervatten.
+        session_expires_in: "Login verloopt over %{time} (%{at})."
+        pin_login: PIN-login
+        remove: Verwijderen
+        new_connection: Nieuwe koppeling
+        cancel_login: Annuleren
+        add_account: Nog een koppeling toevoegen
+        save_configuration: Opslaan en login starten
+        sync: Synchroniseren
+        syncing: Bezig met synchroniseren...
+        disconnect_confirm: Trade Republic ontkoppelen? Je gesynchroniseerde rekeningen worden handmatige rekeningen.
+        disconnect_confirm_with_identifier: "De Trade Republic-koppeling eindigend op %{last4} ontkoppelen? Je gesynchroniseerde rekeningen worden handmatige rekeningen."
+        identifier_phone: Telefoon
+        identifier_account: Rekening
+        status_configured_prefix: Verbonden. Ga naar het tabblad
+        accounts_tab: Rekeningen
+        setup_accounts: Rekeningen instellen
+        accounts_discovered:
+          one: 1 Trade Republic-rekening gevonden.
+          other: "%{count} Trade Republic-rekeningen gevonden."
+        status_configured_suffix: om gevonden rekeningen te beheren.
+        not_configured: Niet geconfigureerd.

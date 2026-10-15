@@ -422,7 +422,7 @@ de:
           other: Erneute Zustimmung in %{count} Tagen nötig
         reconsent_required: Erneute Zustimmung nötig
         login_required: "Anmeldung erforderlich"
-        login_expires_soon: "Anmeldung läuft in %{time} ab"
+        login_expires_soon: "Anmeldung läuft in %{time} ab (%{at})"
         sync_error: Sync-Fehler
       not_authorized: Nicht berechtigt
       not_found: Anbieter nicht gefunden.
@@ -544,7 +544,7 @@ de:
           message: Deine Trade-Republic-Verbindung ist eingerichtet.
           description: Sure synchronisiert deine Trade-Republic-Daten jetzt im Hintergrund.
           close: Fertig
-        qr_login: Mit QR-Code einloggen
+        qr_login: QR-Anmeldung
         qr_cancel: QR-Login abbrechen
         qr_back_to_credentials: Zurück zu Telefonnummer und PIN oder Passwort
         qr_loading: QR-Code wird vorbereitet …
@@ -552,8 +552,8 @@ de:
         qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
         qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
         requires_update: "Melde dich erneut an, um die Synchronisierung fortzusetzen."
-        session_expires_in: "Anmeldung läuft in %{time} ab."
-        pin_login: "Mit PIN anmelden"
+        session_expires_in: "Anmeldung läuft in %{time} ab (%{at})."
+        pin_login: "PIN-Anmeldung"
         remove: "Entfernen"
         new_connection: "Neue Verbindung"
         cancel_login: "Abbrechen"

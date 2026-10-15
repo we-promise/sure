@@ -479,7 +479,7 @@ fr:
           other: Consentement requis dans %{count} jours
         reconsent_required: Consentement requis
         login_required: "Connexion requise"
-        login_expires_soon: "La connexion expire dans %{time}"
+        login_expires_soon: "La connexion expire dans %{time} (%{at})"
         sync_error: Erreur de synchro
       not_authorized: Non autorisé
       not_found: Fournisseur non trouvé.
@@ -605,14 +605,14 @@ fr:
         qr_cancel: Annuler la connexion par QR code
         qr_error: La connexion par QR code n'a pas pu être lancée. Veuillez réessayer.
         requires_update: "Reconnectez-vous pour reprendre la synchronisation."
-        session_expires_in: "La connexion expire dans %{time}."
-        pin_login: "Se connecter avec le code PIN"
+        session_expires_in: "La connexion expire dans %{time} (%{at})."
+        pin_login: "Connexion PIN"
         remove: "Supprimer"
         new_connection: "Nouvelle connexion"
         cancel_login: "Annuler"
         qr_instruction: Scannez le QR code avec l'appareil photo de votre téléphone, puis approuvez la connexion dans l'application Trade Republic.
         qr_loading: Préparation du QR code …
-        qr_login: Se connecter avec un QR code
+        qr_login: Connexion QR
         qr_success: Connexion approuvée. Sure actualise la page du fournisseur.
         add_account: "Ajouter une autre connexion"
         save_configuration: Enregistrer et lancer la connexion

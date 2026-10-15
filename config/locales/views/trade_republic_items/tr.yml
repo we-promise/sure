@@ -60,6 +60,7 @@ tr:
       available_accounts:
         account_type_investment: "Yatırım portföyü"
         account_type_cash: "Nakit hesabı"
+        account_type_crypto: "Kripto hesabı"
         title: Kullanılabilir hesap
         account_summary: '%{account_type} • Bakiye: %{balance}'
         account_id: 'Hesap ID: %{account_id}'
@@ -99,7 +100,7 @@ tr:
         calculating_balances: "Bakiyeler hesaplanıyor..."
         checking_configuration: Hesap yapılandırması kontrol ediliyor...
         accounts_need_setup:
-          one: '%{count} Trade Republic hesabı kurulum gerektiriyor...'
+          one: 1 Trade Republic hesabı kurulum gerektiriyor...
           other: '%{count} Trade Republic hesabı kurulum gerektiriyor...'
     repair:
       scheduled: "Trade Republic veri onarımı planlandı."
@@ -134,7 +135,7 @@ tr:
         other: "%{count} Trade Republic hesabı başarıyla oluşturuldu."
       none_created: "Hiçbir hesap oluşturulmadı."
       partial_failure:
-        one: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
+        one: "Seçilen bir Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
         other: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
       none_selected: Hiçbir hesap seçilmedi.
     activities:
@@ -148,14 +149,14 @@ tr:
         card_fee: Kart ücreti
         card_refund: Kart iadesi
         tax_refund: Vergi iadesi
-        round_up: Round up
+        round_up: Küsurat yuvarlama
     duplicate_connection: "Bu Trade Republic hesabı zaten bağlı. Yeni bağlantı kaldırıldı."
     defaults:
       name: Trade Republic
     sync_status:
       no_accounts: Henüz Trade Republic hesabı keşfedilmedi
       all_linked:
-        one: '%{count} hesap bağlandı'
+        one: 1 hesap bağlandı
         other: '%{count} hesap bağlandı'
       partial: '%{linked} bağlandı, %{unlinked} kurulum gerektiriyor'
     create:

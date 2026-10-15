@@ -102,8 +102,9 @@ fr:
       available_accounts:
         account_id: 'Identifiant du compte : %{account_id}'
         account_summary: "%{account_type} • Solde : %{balance}"
-        account_type_investment: "Investment portfolio"
-        account_type_cash: "Cash account"
+        account_type_investment: "Portefeuille d'investissement"
+        account_type_cash: "Compte espèces"
+        account_type_crypto: "Compte crypto"
         title: Compte disponible
       buttons:
         back_to_settings: Retour aux paramètres
@@ -172,7 +173,7 @@ fr:
         card_fee: Frais de carte
         card_refund: Remboursement par carte
         tax_refund: Remboursement d'impôt
-        round_up: Round up
+        round_up: Arrondi
     update:
       pin_required: Saisissez votre code PIN ou mot de passe Trade Republic pour vous réauthentifier.
       success: Configuration Trade Republic mise à jour avec succès.

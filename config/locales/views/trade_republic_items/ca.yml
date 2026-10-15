@@ -61,6 +61,7 @@ ca:
       available_accounts:
         account_type_investment: "Cartera d'inversió"
         account_type_cash: "Compte d'efectiu"
+        account_type_crypto: "Compte de criptomonedes"
         title: Compte disponible
         account_summary: '%{account_type} • Saldo: %{balance}'
         account_id: 'ID del compte: %{account_id}'
@@ -100,7 +101,7 @@ ca:
         calculating_balances: "Calculant els saldos..."
         checking_configuration: Comprovant la configuració del compte...
         accounts_need_setup:
-          one: '%{count} compte de Trade Republic necessita configuració...'
+          one: "1 compte de Trade Republic necessita configuració..."
           other: '%{count} comptes de Trade Republic necessiten configuració...'
     repair:
       scheduled: "La reparació de les dades de Trade Republic s'ha programat."
@@ -113,9 +114,9 @@ ca:
       wait_for_sync: Espera que acabi la sincronització de descobriment de comptes.
       balance: Saldo
     initiate_login:
-      verification_required: "Inicia la sessió i confirma-la mitjançant %{method}, després prem Confirma l'inici de sessió."
+      verification_required: "S'ha iniciat la sessió. Confirma-la mitjançant %{method} i després prem Confirma l'inici de sessió."
       not_configured: Trade Republic no està configurat.
-      pin_required: Introdueix el PIN de Trade Republic per iniciar una sessió nova.
+      pin_required: Introdueix el PIN o la contrasenya de Trade Republic per iniciar una sessió nova.
     complete_login:
       approval_pending: "Encara no s'ha confirmat. Aprova l'inici de sessió a l'aplicació de Trade Republic i torna-ho a provar."
       success: "Trade Republic s'ha connectat correctament."
@@ -151,20 +152,20 @@ ca:
         tax_refund: Devolució d'impostos
         buy: Compra
         sell: Venda
-        round_up: Round up
+        round_up: Arrodoniment
     defaults:
       name: Trade Republic
     sync_status:
       no_accounts: Encara no s'ha descobert cap compte de Trade Republic
       all_linked:
-        one: '%{count} compte enllaçat'
+        one: "1 compte enllaçat"
         other: '%{count} comptes enllaçats'
       partial: '%{linked} enllaçats, %{unlinked} pendents de configurar'
     create:
       success: Trade Republic s'ha desat. Confirma l'inici de sessió a l'aplicació de Trade Republic per acabar de connectar.
     update:
       success: La configuració de Trade Republic s'ha actualitzat correctament.
-      pin_required: Introdueix el PIN de Trade Republic per tornar a autenticar-te.
+      pin_required: Introdueix el PIN o la contrasenya de Trade Republic per tornar a autenticar-te.
     destroy:
       success: S'ha programat l'eliminació de la connexió de Trade Republic.
       unlink_failed: No s'ha pogut desconnectar completament Trade Republic. S'ha conservat la connexió perquè es pugui tornar a intentar amb seguretat.

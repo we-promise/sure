@@ -16,7 +16,7 @@ pl:
         contribution: Wpłata
         dividend: Dywidenda
         interest: Odsetki
-        round_up: Round up
+        round_up: Zaokrąglenie
         tax_refund: Zwrot podatku
         withdrawal: Wypłata
     complete_account_setup:
@@ -101,6 +101,7 @@ pl:
         account_id: 'ID konta: %{account_id}'
         account_summary: "%{account_type} • Saldo: %{balance}"
         account_type_cash: Konto gotówkowe
+        account_type_crypto: Konto kryptowalutowe
         account_type_investment: Portfel inwestycyjny
         title: Dostępne konto
       buttons:

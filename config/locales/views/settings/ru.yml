@@ -533,7 +533,7 @@ ru:
           other: Повторное согласие требуется через %{count} дня
         reconsent_required: Требуется повторное согласие
         login_required: "Требуется вход"
-        login_expires_soon: "Вход истекает через %{time}"
+        login_expires_soon: "Вход истекает через %{time} (%{at})"
         sync_error: Ошибка синхронизации
       not_authorized: Не авторизован
       not_found: Провайдер не найден.
@@ -697,7 +697,7 @@ ru:
           message: Подключение Trade Republic готово.
           description: Sure синхронизирует ваши данные Trade Republic в фоновом режиме.
           close: Готово
-        qr_login: Войти по QR-коду
+        qr_login: Вход по QR
         qr_cancel: Отменить вход по QR-коду
         qr_back_to_credentials: Вернуться к номеру телефона и PIN-коду или паролю
         qr_loading: Подготовка QR-кода…
@@ -705,8 +705,8 @@ ru:
         qr_success: Вход подтверждён. Sure обновляет страницу провайдера.
         qr_error: Не удалось начать вход по QR-коду. Пожалуйста, попробуйте снова.
         requires_update: "Войдите снова, чтобы возобновить синхронизацию."
-        session_expires_in: "Вход истекает через %{time}."
-        pin_login: "Войти с PIN-кодом"
+        session_expires_in: "Вход истекает через %{time} (%{at})."
+        pin_login: "Вход по PIN"
         remove: "Удалить"
         new_connection: "Новое подключение"
         cancel_login: "Отменить"

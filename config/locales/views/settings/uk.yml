@@ -426,7 +426,7 @@ uk:
         registration_needed: Потрібна реєстрація
         reconsent_required: Потрібна повторна згода
         login_required: "Потрібен вхід"
-        login_expires_soon: "Вхід завершиться через %{time}"
+        login_expires_soon: "Вхід завершиться через %{time} (%{at})"
         reconsent_needed:
           one: Повторна згода потрібна через %{count} день
           other: Повторна згода потрібна через %{count} днів
@@ -738,7 +738,7 @@ uk:
           message: Ваше з'єднання з Trade Republic готове.
           description: Sure синхронізує ваші дані Trade Republic у фоновому режимі.
           close: Готово
-        qr_login: Увійти за QR-кодом
+        qr_login: Вхід за QR
         qr_cancel: Скасувати вхід за QR-кодом
         qr_back_to_credentials: Назад до номера телефону та PIN-коду або пароля
         qr_loading: Підготовка QR-коду…
@@ -746,8 +746,8 @@ uk:
         qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.
         qr_error: Не вдалося розпочати вхід за QR-кодом. Спробуйте ще раз.
         requires_update: "Увійдіть знову, щоб відновити синхронізацію."
-        session_expires_in: "Вхід завершиться через %{time}."
-        pin_login: "Увійти з PIN-кодом"
+        session_expires_in: "Вхід завершиться через %{time} (%{at})."
+        pin_login: "Вхід за PIN"
         remove: "Видалити"
         new_connection: "Нове підключення"
         cancel_login: "Скасувати"

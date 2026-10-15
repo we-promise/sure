@@ -91,6 +91,7 @@ ru:
         title: Доступный счёт
         account_type_investment: Инвестиционный портфель
         account_type_cash: Денежный счёт
+        account_type_crypto: Криптовалютный счёт
         account_summary: '%{account_type} • Баланс: %{balance}'
         account_id: 'ID счёта: %{account_id}'
       link_existing:
@@ -166,7 +167,7 @@ ru:
         card_fee: Комиссия по карте
         card_refund: Возврат на карту
         tax_refund: Налоговый возврат
-        round_up: Round up
+        round_up: Округление
     duplicate_connection: "Этот счёт Trade Republic уже подключён. Новое подключение удалено."
     defaults:
       name: Trade Republic

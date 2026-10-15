@@ -72,6 +72,7 @@ uk:
       available_accounts:
         account_type_investment: "Інвестиційний портфель"
         account_type_cash: "Грошовий рахунок"
+        account_type_crypto: "Криптовалютний рахунок"
         title: Доступний рахунок
         account_summary: '%{account_type} • Баланс: %{balance}'
         account_id: 'ID рахунку: %{account_id}'
@@ -166,7 +167,7 @@ uk:
         card_fee: Комісія за картку
         card_refund: Повернення на картку
         tax_refund: Повернення податку
-        round_up: Round up
+        round_up: Округлення
     duplicate_connection: "Цей рахунок Trade Republic уже підключено. Нове підключення видалено."
     defaults:
       name: Trade Republic
