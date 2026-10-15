@@ -674,6 +674,8 @@ ca:
         session_expires_in: "La sessió caduca d'aquí a %{time}."
         pin_login: "Inicia sessió amb el PIN"
         remove: "Elimina"
+        new_connection: "Nova connexió"
+        cancel_login: "Cancel·la"
         add_account: "Afegeix una altra connexió"
         save_configuration: Desa i inicia sessió
         sync: Sincronitza

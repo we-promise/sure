@@ -749,6 +749,8 @@ uk:
         session_expires_in: "Вхід завершиться через %{time}."
         pin_login: "Увійти з PIN-кодом"
         remove: "Видалити"
+        new_connection: "Нове підключення"
+        cancel_login: "Скасувати"
         add_account: "Додати ще одне підключення"
         save_configuration: Зберегти й увійти
         sync: Синхронізувати

@@ -1,23 +1,26 @@
-<% if items.any? %>
+<% if items.any? || pending_connection %>
   <div class="space-y-3">
     <% items.each do |item| %>
-      <%= render TradeRepublic::ConnectionCardComponent.new(
-            item: item,
-            qr_active: qr_login_active?(item),
-            qr_code_svg: qr_code_svg_for(item)
-          ) %>
+      <%= render TradeRepublic::ConnectionCardComponent.new(item: item, qr_active: qr_login_active?(item)) %>
+    <% end %>
+
+    <% if pending_connection %>
+      <%= render TradeRepublic::PendingConnectionCardComponent.new(pending_connection: pending_connection, qr_code_svg: qr_code_svg) %>
     <% end %>
   </div>
 
-  <div class="flex justify-center pt-2">
-    <%= render DS::Link.new(
-          text: translation("add_account"),
-          icon: "plus",
-          variant: "primary",
-          href: helpers.new_trade_republic_item_path,
-          frame: :drawer
-        ) %>
-  </div>
+  <%# One new connection at a time: finish or cancel the pending login first. %>
+  <% unless pending_connection %>
+    <div class="flex justify-center pt-2">
+      <%= render DS::Link.new(
+            text: translation("add_account"),
+            icon: "plus",
+            variant: "primary",
+            href: helpers.new_trade_republic_pending_connection_path,
+            frame: :drawer
+          ) %>
+    </div>
+  <% end %>
 <% else %>
-  <%= render TradeRepublic::NewConnectionFormComponent.new(item: new_item) %>
+  <%= render TradeRepublic::NewConnectionFormComponent.new(pending_connection: new_connection) %>
 <% end %>

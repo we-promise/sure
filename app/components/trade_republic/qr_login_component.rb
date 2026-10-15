@@ -5,14 +5,20 @@
 class TradeRepublic::QrLoginComponent < ApplicationComponent
   include TradeRepublic::PanelTranslatable
 
-  def initialize(item:, return_url:, active: false, code_svg: nil)
-    @item = item
+  # `record` is the connection logging in again or the pending connection
+  # of a new one; both answer the same login routes.
+  def initialize(record:, return_url:, active: false, code_svg: nil)
+    @record = record
     @return_url = return_url
     @active = active
     @code_svg = code_svg
   end
 
-  attr_reader :item, :return_url, :active, :code_svg
+  attr_reader :record, :return_url, :active, :code_svg
+
+  def login_path(action)
+    helpers.polymorphic_path([ action, record ])
+  end
 
   def button
     render DS::Button.new(

@@ -555,6 +555,8 @@ de:
         session_expires_in: "Anmeldung läuft in %{time} ab."
         pin_login: "Mit PIN anmelden"
         remove: "Entfernen"
+        new_connection: "Neue Verbindung"
+        cancel_login: "Abbrechen"
         add_account: Weitere Verbindung hinzufügen
         save_configuration: Speichern und Login starten
         sync: Sync

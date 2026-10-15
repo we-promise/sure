@@ -720,6 +720,8 @@ tr:
         session_expires_in: "Girişin süresi %{time} içinde doluyor."
         pin_login: "PIN ile giriş yap"
         remove: "Kaldır"
+        new_connection: "Yeni bağlantı"
+        cancel_login: "İptal"
         add_account: "Başka bir bağlantı ekle"
         save_configuration: Kaydet ve Girişi Başlat
         sync: Senkronize et

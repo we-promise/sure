@@ -708,6 +708,8 @@ ru:
         session_expires_in: "Вход истекает через %{time}."
         pin_login: "Войти с PIN-кодом"
         remove: "Удалить"
+        new_connection: "Новое подключение"
+        cancel_login: "Отменить"
         add_account: "Добавить ещё одно подключение"
         save_configuration: Сохранить и войти
         sync: Синхронизировать

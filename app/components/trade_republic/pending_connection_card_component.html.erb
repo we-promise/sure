@@ -1,0 +1,51 @@
+<%= tag.div id: dom_id,
+            class: "p-3 rounded-lg bg-container border border-primary space-y-3",
+            data: ({ controller: "trade-republic-login", trade_republic_login_url_value: helpers.poll_login_trade_republic_pending_connection_path(pending_connection) } if login_stage == "waiting_for_approval") do %>
+  <%= render TradeRepublic::QrLoginComponent.new(
+        record: pending_connection,
+        return_url: helpers.settings_providers_path(anchor: "trade-republic"),
+        active: login_stage == "qr_pending",
+        code_svg: qr_code_svg
+      ) do |qr| %>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-2 h-2 rounded-full shrink-0 <%= expired? ? "bg-destructive" : "bg-warning" %>"></div>
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-primary truncate">
+            <%= translation("new_connection") %>
+            <% if phone_last4 %>
+              <span class="font-normal text-secondary">&middot; <%= translation("identifier_phone") %> &bull;&bull;&bull;&bull; <%= phone_last4 %></span>
+            <% end %>
+          </p>
+          <p class="text-xs text-secondary">
+            <% if expired? %>
+              <span class="text-destructive"><%= translation("login_expired") %></span>
+            <% elsif login_stage == "authenticator_code" %>
+              <%= translation("awaiting_authenticator_code") %>
+            <% else %>
+              <%= translation("awaiting_confirmation") %>
+            <% end %>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <% if qr_login? || expired? %>
+          <%= qr.button %>
+        <% end %>
+        <% unless qr_login? && !expired? %>
+          <%= render DS::Button.new(
+                text: translation("cancel_login"),
+                variant: :outline,
+                size: :sm,
+                icon: "x",
+                href: helpers.trade_republic_pending_connection_path(pending_connection),
+                method: :delete
+              ) %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <%= render TradeRepublic::LoginChallengeComponent.new(record: pending_connection, login_stage: login_stage) %>
+<% end %>

@@ -36,6 +36,10 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
       click_on qr_login
       assert_selector ".qrcode svg"
       assert_button qr_cancel
+
+      # Stop the poller so no request is in flight when the test ends.
+      click_on qr_cancel
+      assert_button qr_login
     end
   end
 
@@ -101,7 +105,7 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
 
     click_on panel_t("add_account")
     within "#trade-republic-new-connection" do
-      assert_field "trade_republic_item[phone_number]"
+      assert_field "trade_republic_pending_connection[phone_number]"
       assert_button panel_t("qr_login")
     end
   end

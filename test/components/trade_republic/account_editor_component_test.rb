@@ -34,24 +34,45 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
   test "adding another connection opens in the drawer" do
     render_inline(TradeRepublic::AccountEditorComponent.new(items: [ trade_republic_items(:configured_item) ], family: families(:dylan_family)))
 
-    assert_selector "a[href='#{Rails.application.routes.url_helpers.new_trade_republic_item_path}'][data-turbo-frame='drawer']",
+    assert_selector "a[href='#{Rails.application.routes.url_helpers.new_trade_republic_pending_connection_path}'][data-turbo-frame='drawer']",
                     text: I18n.t("settings.providers.trade_republic_panel.add_account")
-    assert_no_selector "form[action='#{Rails.application.routes.url_helpers.trade_republic_items_path}']", visible: :all
+    assert_no_selector "form[action='#{Rails.application.routes.url_helpers.trade_republic_pending_connections_path}']", visible: :all
   end
 
-  test "the connection whose QR login just started shows its QR code" do
-    healthy = trade_republic_items(:configured_item)
-    other = trade_republic_items(:no_session_item)
+  test "a new connection whose QR login just started shows its QR code" do
+    family = families(:dylan_family)
+    pending_connection = family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
+    pending_connection.stubs(:login_stage).returns("qr_pending")
 
     render_inline(TradeRepublic::AccountEditorComponent.new(
-      items: [ healthy, other ],
-      family: families(:dylan_family),
-      qr_code_svg: "<svg id='fresh-qr'></svg>".html_safe,
-      qr_login_auto_poll_item: healthy
+      items: [],
+      family: family,
+      pending_connection: pending_connection,
+      qr_code_svg: "<svg id='fresh-qr'></svg>".html_safe
     ))
 
-    assert_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(healthy)} svg#fresh-qr", visible: :all
-    assert_no_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(other)} svg#fresh-qr", visible: :all
+    assert_selector "##{ActionView::RecordIdentifier.dom_id(pending_connection)} svg#fresh-qr", visible: :all
+    assert_text I18n.t("settings.providers.trade_republic_panel.new_connection")
+  end
+
+  test "no other connection can be added while one is still logging in" do
+    family = families(:dylan_family)
+    family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [ trade_republic_items(:configured_item) ], family: family))
+
+    assert_no_link I18n.t("settings.providers.trade_republic_panel.add_account")
+    assert_no_selector "form[action='#{Rails.application.routes.url_helpers.trade_republic_pending_connections_path}']", visible: :all
+  end
+
+  test "a new connection whose login lapsed can start a QR login again or be cancelled" do
+    pending_connection = families(:dylan_family).trade_republic_pending_connections.create!(qr_login: true)
+
+    render_inline(TradeRepublic::PendingConnectionCardComponent.new(pending_connection: pending_connection))
+
+    assert_text I18n.t("settings.providers.trade_republic_panel.login_expired")
+    assert_button I18n.t("settings.providers.trade_republic_panel.qr_login")
+    assert_button I18n.t("settings.providers.trade_republic_panel.cancel_login")
   end
 
   test "a connection offers QR and PIN login next to sync and remove" do
@@ -107,7 +128,7 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
 
     render_inline(TradeRepublic::AccountEditorComponent.new(items: [], family: family))
 
-    assert_selector "form[action='#{Rails.application.routes.url_helpers.trade_republic_items_path}']"
+    assert_selector "form[action='#{Rails.application.routes.url_helpers.trade_republic_pending_connections_path}']"
   end
 
   test "card summary shows the last 4 digits of the phone number" do
@@ -165,11 +186,11 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
 
   test "a failed connection attempt is redisplayed with its phone number" do
     family = families(:dylan_family)
-    failed_item = family.trade_republic_items.build(phone_number: "+491701234567")
+    failed_connection = family.trade_republic_pending_connections.build(phone_number: "+491701234567")
 
-    render_inline(TradeRepublic::AccountEditorComponent.new(items: [], family: family, new_item: failed_item))
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [], family: family, new_connection: failed_connection))
 
-    assert_selector "input[name='trade_republic_item[phone_number]'][value='+491701234567']"
+    assert_selector "input[name='trade_republic_pending_connection[phone_number]'][value='+491701234567']"
   end
 
   test "a connected card shows when its login expires" do

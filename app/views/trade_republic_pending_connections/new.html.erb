@@ -3,7 +3,7 @@
     <%= render "settings/providers/drawer_header", provider_key: "trade_republic", title: t("settings.providers.trade_republic_panel.add_account") %>
   <% end %>
   <% dialog.with_body do %>
-    <%= render "trade_republic_items/new_connection", item: @trade_republic_item %>
+    <%= render "trade_republic_pending_connections/new_connection", pending_connection: @pending_connection %>
 
     <p class="text-xs text-secondary mt-6 pt-3 border-t border-tertiary">
       <%= t(TradeRepublicItem.encryption_ready? ? "settings.providers.drawer_trust_statement" : "settings.providers.drawer_trust_statement_encryption_unconfigured") %>

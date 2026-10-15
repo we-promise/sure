@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2701,6 +2701,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
     t.index ["status"], name: "index_trade_republic_items_on_status"
   end
 
+  create_table "trade_republic_pending_connections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.uuid "device_id", default: -> { "gen_random_uuid()" }, null: false
+    t.uuid "family_id", null: false
+    t.text "pending_login_state"
+    t.string "phone_number"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_trade_republic_pending_connections_on_family_id"
+  end
+
   create_table "trades", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "currency"
@@ -3118,6 +3129,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "trade_republic_accounts", "trade_republic_items"
   add_foreign_key "trade_republic_items", "families"
+  add_foreign_key "trade_republic_pending_connections", "families"
   add_foreign_key "trades", "securities"
   add_foreign_key "trading212_accounts", "trading212_items"
   add_foreign_key "trading212_items", "families"

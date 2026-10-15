@@ -761,6 +761,8 @@ pl:
         session_expires_in: "Logowanie wygasa za %{time}."
         pin_login: "Zaloguj się PIN-em"
         remove: "Usuń"
+        new_connection: "Nowe połączenie"
+        cancel_login: "Anuluj"
         qr_instruction: Zeskanuj kod QR aparatem telefonu, a następnie zatwierdź logowanie w aplikacji Trade Republic.
         qr_loading: Przygotowywanie kodu QR…
         qr_login: Zaloguj się kodem QR

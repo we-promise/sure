@@ -1,6 +1,6 @@
-<%= helpers.styled_form_with model: item,
-                     url: helpers.trade_republic_items_path,
-                     scope: :trade_republic_item,
+<%= helpers.styled_form_with model: pending_connection,
+                     url: helpers.trade_republic_pending_connections_path,
+                     scope: :trade_republic_pending_connection,
                      method: :post,
                      data: { turbo: true },
                      class: "space-y-3" do |form| %>
@@ -10,7 +10,7 @@
                       label: translation("phone_number_label"),
                       placeholder: translation("phone_number_placeholder_new"),
                       type: :tel,
-                      value: item.phone_number %>
+                      value: pending_connection.phone_number %>
 
   <%= form.text_field :pin,
                       label: translation("pin_label"),

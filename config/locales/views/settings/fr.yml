@@ -608,6 +608,8 @@ fr:
         session_expires_in: "La connexion expire dans %{time}."
         pin_login: "Se connecter avec le code PIN"
         remove: "Supprimer"
+        new_connection: "Nouvelle connexion"
+        cancel_login: "Annuler"
         qr_instruction: Scannez le QR code avec l'appareil photo de votre téléphone, puis approuvez la connexion dans l'application Trade Republic.
         qr_loading: Préparation du QR code …
         qr_login: Se connecter avec un QR code
