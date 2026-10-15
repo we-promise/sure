@@ -50,7 +50,7 @@ module AccountsHelper
   # account access moves both together.
   def account_sidebar_tabs_cache_key(family:, active_tab:, mobile:)
     [
-      family.build_cache_key("account_sidebar_tabs_v4", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v5", invalidate_on_data_updates: true),
       Current.user&.id,
       Current.account_share_version,
       active_tab,

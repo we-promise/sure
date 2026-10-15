@@ -4,7 +4,7 @@
     ERB dependency tracker mis-parses as a bogus "Ds/D" template dependency
     and then logs "Couldn't find template for digesting: Ds/D" on every cache
     miss. The cache key is already manually versioned via
-    account_sidebar_tabs_cache_key ("account_sidebar_tabs_v4",
+    account_sidebar_tabs_cache_key ("account_sidebar_tabs_v5",
     invalidate_on_data_updates: true), so we opt out of automatic template
     digesting. Bump that version suffix when changing this template or its
     sidebar dependencies. %>

@@ -117,7 +117,7 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
       # The kept frame reconnects its timeout controller on the visit, but it
       # is no longer fetching, so no countdown may start again.
       wait_out_timeout_window
-      assert_no_selector "#{SPARKLINE_FRAME} p", text: BADGE_TEXT, visible: :all
+      assert_no_selector "##{frame_id} p", text: BADGE_TEXT, visible: :all
 
       refresh_with_morph
       assert_marked_frame frame_id
