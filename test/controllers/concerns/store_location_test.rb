@@ -23,4 +23,14 @@ class StoreLocationTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "/transactions", session[:return_to]
   end
+
+  test "clears a stored return_to when the new path is too long even without its query" do
+    get accounts_path(return_to: transactions_path)
+    assert_equal transactions_path, session[:return_to]
+
+    get accounts_path(return_to: "/" + "a" * (StoreLocation::MAX_STORED_RETURN_TO_BYTES + 1))
+
+    assert_response :success
+    assert_nil session[:return_to]
+  end
 end

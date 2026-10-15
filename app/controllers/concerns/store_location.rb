@@ -33,7 +33,12 @@ private
     return unless safe
 
     safe = safe.split("?", 2).first if safe.bytesize > MAX_STORED_RETURN_TO_BYTES
-    session[:return_to] = safe if safe.bytesize <= MAX_STORED_RETURN_TO_BYTES
+    if safe.bytesize <= MAX_STORED_RETURN_TO_BYTES
+      session[:return_to] = safe
+    else
+      # Don't leave an older target behind for previous_path to return.
+      session.delete(:return_to)
+    end
   end
 
   # Only allow internal absolute paths (a single leading "/"). Blocks absolute
