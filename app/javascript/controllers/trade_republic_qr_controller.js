@@ -201,16 +201,31 @@ export default class extends Controller {
       if (!response.ok)
         throw new Error(`QR login cancellation failed: ${response.status}`);
 
+      const stream = await response.text();
+      if (!this.element.isConnected) return;
+
       // In Settings this replaces the connection card, which brings back the
-      // credentials form hidden while the login was pending. The Accounts
-      // page has no such card and keeps the reset above.
-      Turbo.renderStreamMessage(await response.text());
+      // credentials form hidden while the login was pending. Turbo replaces
+      // it on the next repaint, so the old button stays disabled until the
+      // new card brings an enabled one. The Accounts page has no such card.
+      const replacesCard = this.streamReplacesElement(stream);
+      Turbo.renderStreamMessage(stream);
+      if (!replacesCard) this.buttonTarget.disabled = false;
     } catch (error) {
       this.stopped = false;
-      console.warn("[Trade Republic] QR login cancellation failed", error);
-    } finally {
       this.buttonTarget.disabled = false;
+      console.warn("[Trade Republic] QR login cancellation failed", error);
     }
+  }
+
+  streamReplacesElement(stream) {
+    const template = document.createElement("template");
+    template.innerHTML = stream;
+    const targetId = template.content
+      .querySelector("turbo-stream")
+      ?.getAttribute("target");
+    const target = targetId && document.getElementById(targetId);
+    return Boolean(target?.contains(this.element));
   }
 
   renderQr(result) {
