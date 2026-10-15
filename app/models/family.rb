@@ -684,6 +684,11 @@ class Family < ApplicationRecord
   end
 
   # Memoized per user for the same reason as #balance_sheet above.
+  def commodity_statement(user: Current.user)
+    @commodity_statements ||= {}
+    @commodity_statements[user&.id] ||= CommodityStatement.new(self, user: user)
+  end
+
   def investment_statement(user: Current.user)
     @investment_statements ||= {}
     @investment_statements[user&.id] ||= InvestmentStatement.new(self, user: user)

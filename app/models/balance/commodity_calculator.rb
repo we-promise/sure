@@ -67,46 +67,11 @@ class Balance::CommodityCalculator < Balance::BaseCalculator
     def value_of(code, ozt, date)
       return 0 if ozt.zero?
 
-      price = price_on(code, date)
+      price = price_series.price_on(code, date)
       price ? price * ozt : 0
     end
 
-    # Price per ozt in the account currency, carrying the last known price and
-    # rate forward. Before the first known price the item contributes nothing.
-    def price_on(code, date)
-      price = last_on_or_before(prices[code], date)
-      return nil unless price
-
-      rate = price[:currency] == account.currency ? 1 : last_on_or_before(rates[price[:currency]], date)&.dig(:rate)
-      rate && price[:price] * rate
-    end
-
-    def last_on_or_before(series, date)
-      return nil if series.blank?
-
-      index = series.bsearch_index { |row| row[:date] > date }
-      index = index.nil? ? series.size - 1 : index - 1
-      index >= 0 ? series[index] : nil
-    end
-
-    def prices
-      @prices ||= Commodity::Price
-        .where(code: items.map(&:code).uniq, date: (calculation_start_date - Commodity::Price::LOOKBACK_DAYS)..Date.current)
-        .order(:date)
-        .pluck(:code, :date, :price, :currency)
-        .group_by(&:first)
-        .transform_values { |rows| rows.map { |_, date, price, currency| { date: date, price: price, currency: currency } } }
-    end
-
-    def rates
-      @rates ||= begin
-        currencies = prices.values.flatten.map { |p| p[:currency] }.uniq - [ account.currency ]
-        ExchangeRate
-          .where(from_currency: currencies, to_currency: account.currency, date: (calculation_start_date - Commodity::Price::LOOKBACK_DAYS)..Date.current)
-          .order(:date)
-          .pluck(:from_currency, :date, :rate)
-          .group_by(&:first)
-          .transform_values { |rows| rows.map { |_, date, rate| { date: date, rate: rate } } }
-      end
+    def price_series
+      @price_series ||= Commodity::PriceSeries.new(codes: items.map(&:code), currency: account.currency, start_date: calculation_start_date)
     end
 end
