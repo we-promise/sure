@@ -120,6 +120,20 @@ module InsightsHelper
     end
   end
 
+  # "Dig in with AI" opens a chat about the insight (#4031). Gated per family,
+  # not per user, because cards are also rendered in broadcasts without a
+  # Current.user; chats#create asks a user without AI consent to opt in.
+  def insight_dig_in_available?(insight)
+    insight.family.assistant_enabled? && Provider::Registry.preferred_llm_provider.present?
+  end
+
+  def insight_dig_in_prompt(insight)
+    period = insight.period_start && insight.period_end ? "#{l(insight.period_start)} – #{l(insight.period_end)}" : "–"
+    facts = (insight.facts || {}).map { |key, value| "- #{key.to_s.humanize}: #{value}" }.join("\n")
+
+    t("insights.dig_in.prompt", title: insight.title, body: insight.body, period: period, facts: facts)
+  end
+
   # Sentiment picks the color; priority only orders the feed. The two are
   # orthogonal — a big savings-rate improvement is high priority AND good news,
   # and must not render red. Red is reserved for a projected-negative balance,
