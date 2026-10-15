@@ -142,6 +142,26 @@
 
                     <% if transaction.transfer.present? %>
                       <%= render "transactions/transfer_match", transaction: transaction %>
+                    <% elsif @transfer_hint_transaction_ids&.include?(transaction.id) %>
+                      <span id="<%= dom_id(transaction, :transfer_hint) %>" class="flex shrink-0 items-center gap-1">
+                        <%= link_to new_transaction_transfer_match_path(entry),
+                              class: "hover:opacity-80",
+                              data: { turbo_frame: "modal" } do %>
+                          <%= render DS::Pill.new(
+                            label: t("transactions.transaction.transfer_hint"),
+                            tone: :info,
+                            marker: false,
+                            icon: "refresh-cw",
+                            title: t("transactions.transaction.transfer_hint_tooltip")
+                          ) %>
+                        <% end %>
+                        <%= button_to transaction_transfer_match_path(entry),
+                              method: :delete,
+                              class: "text-subdued hover:text-primary flex items-center justify-center cursor-pointer",
+                              title: t("transactions.transaction.transfer_hint_dismiss") do %>
+                          <%= icon "x", size: "sm", color: "current" %>
+                        <% end %>
+                      </span>
                     <% end %>
                   </div>
 
