@@ -91,7 +91,7 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     assert_nil @item.reload.pending_login_state
   end
 
-  test "the PIN login opens below its connection and adding one opens the drawer" do
+  test "the PIN login opens below its connection and below Add a connection" do
     visit settings_providers_path
     find("summary", text: "Trade Republic").click
 
@@ -103,11 +103,14 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
       assert_no_field "trade_republic_item[pin]"
     end
 
-    click_on panel_t("add_account")
-    within "#trade-republic-new-connection" do
+    within "##{TradeRepublic::NewConnectionComponent::DOM_ID}" do
+      assert_no_field "trade_republic_pending_connection[phone_number]"
+      click_on panel_t("pin_login")
       assert_field "trade_republic_pending_connection[phone_number]"
-      assert_button panel_t("qr_login")
+      click_on panel_t("cancel_login")
+      assert_no_field "trade_republic_pending_connection[phone_number]"
     end
+    assert_no_selector "#drawer [role='dialog'], #drawer dialog"
   end
 
   private

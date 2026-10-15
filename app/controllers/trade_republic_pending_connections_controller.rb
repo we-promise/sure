@@ -4,12 +4,7 @@ class TradeRepublicPendingConnectionsController < ApplicationController
   include TradeRepublicLoginFlow
 
   before_action :require_admin!
-  before_action :set_pending_connection, except: [ :new, :create ]
-
-  # Adding another connection opens in the drawer, like other providers.
-  def new
-    @pending_connection = Current.family.trade_republic_pending_connections.build
-  end
+  before_action :set_pending_connection, except: :create
 
   def create
     qr_login = params[:login_method] == "qr"
@@ -35,14 +30,11 @@ class TradeRepublicPendingConnectionsController < ApplicationController
 
     return redirect_to(settings_providers_path(anchor: "trade-republic"), status: :see_other) unless turbo_panel_request?
 
-    render turbo_stream: [
-      turbo_stream.replace(
-        "trade-republic-providers-panel",
-        partial: "settings/providers/trade_republic_panel",
-        locals: { pending_connection: @pending_connection, qr_code_svg: qr_code_svg }
-      ),
-      (close_drawer_stream if params[:in_drawer] == "1")
-    ].compact
+    render turbo_stream: turbo_stream.replace(
+      "trade-republic-providers-panel",
+      partial: "settings/providers/trade_republic_panel",
+      locals: { pending_connection: @pending_connection, qr_code_svg: qr_code_svg }
+    )
   rescue Provider::TradeRepublicClient::Error => e
     DebugLogEntry.capture(
       category: "sync",
@@ -73,27 +65,15 @@ class TradeRepublicPendingConnectionsController < ApplicationController
       params.fetch(:trade_republic_pending_connection, {}).permit(:phone_number, :pin, :currency)
     end
 
-    def close_drawer_stream
-      turbo_stream.replace("drawer", view_context.turbo_frame_tag("drawer"))
-    end
-
-    # The first connection is added from the panel, later ones from the
-    # drawer; the error shows in whichever form was used.
+    # The PIN login form opens again with the phone number kept.
     def render_new_connection_error(message)
       return redirect_to(settings_providers_path(anchor: "trade-republic"), alert: message, status: :see_other) unless turbo_panel_request?
 
-      render turbo_stream: [
-        turbo_stream.replace(
-          "trade-republic-providers-panel",
-          partial: "settings/providers/trade_republic_panel",
-          locals: { error_message: message, new_connection: @pending_connection }
-        ),
-        turbo_stream.replace(
-          "trade-republic-new-connection",
-          partial: "trade_republic_pending_connections/new_connection",
-          locals: { pending_connection: @pending_connection, error_message: message }
-        )
-      ], status: :unprocessable_entity
+      render turbo_stream: turbo_stream.replace(
+        "trade-republic-providers-panel",
+        partial: "settings/providers/trade_republic_panel",
+        locals: { error_message: message, new_connection: @pending_connection }
+      ), status: :unprocessable_entity
     end
 
     # TradeRepublicLoginFlow: the login belongs to a connection not created yet.

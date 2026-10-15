@@ -724,9 +724,9 @@ en:
           title: Encryption is not configured
           message: Trade Republic credentials and session data cannot be stored securely until Active Record Encryption is configured.
         steps:
-          step_1: "Choose QR login or PIN login."
+          step_1: "Under Add a connection, choose QR login or PIN login."
           step_2: "QR login: scan the QR code with your phone's camera, then approve the login in the Trade Republic app."
-          step_3: "PIN login: enter the phone number and PIN or password you use for the Trade Republic app, then approve the login in the app or enter the code from your authenticator app."
+          step_3: "PIN login: enter the phone number and PIN or password you use for the Trade Republic app, then the code from your authenticator app, and approve the login in the Trade Republic app."
         phone_number_label: Phone number
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Leave blank to keep the current phone number
@@ -763,8 +763,8 @@ en:
         remove: Remove
         new_connection: New connection
         cancel_login: Cancel
-        add_account: Add another connection
-        save_configuration: Save & Start Login
+        add_connection: "Add a connection"
+        pin_login_hint: "Enter the phone number and PIN or password you use for the Trade Republic app."
         sync: Sync
         syncing: Syncing...
         disconnect_confirm: Disconnect Trade Republic? Your synced accounts will become manual accounts.

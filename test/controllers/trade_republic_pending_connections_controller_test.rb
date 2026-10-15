@@ -8,13 +8,6 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     @family = families(:dylan_family)
   end
 
-  test "new opens the add-connection form in the drawer" do
-    get new_trade_republic_pending_connection_url, headers: { "Turbo-Frame" => "drawer" }
-
-    assert_response :success
-    assert_select "turbo-frame#drawer #trade-republic-new-connection form[action='#{trade_republic_pending_connections_path}']"
-  end
-
   test "a QR login creates no connection until Trade Republic approves it" do
     stub_provider(initiate_qr_login: result("status" => "qr_pending", "pending_login_b64" => "qr-pending"), login_stage: "qr_pending")
 
@@ -27,15 +20,6 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     assert_response :success
     assert_equal "qr-pending", @family.trade_republic_pending_connections.last.pending_login_state
     assert_turbo_stream action: "replace", target: "trade-republic-providers-panel"
-    assert_turbo_stream action: "replace", target: "drawer", count: 0
-  end
-
-  test "a connection added from the drawer closes it once its login started" do
-    stub_provider(initiate_qr_login: result("status" => "qr_pending", "pending_login_b64" => "qr-pending"), login_stage: "qr_pending")
-
-    post trade_republic_pending_connections_url, params: { login_method: "qr", in_drawer: "1" }, headers: TURBO_STREAM
-
-    assert_turbo_stream action: "replace", target: "drawer"
   end
 
   test "a phone number and PIN login waits for approval without creating a connection" do
@@ -73,14 +57,13 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     assert_equal I18n.t("trade_republic_items.initiate_login.pin_required"), flash[:alert]
   end
 
-  test "a failed attempt shows its error in the panel and the drawer with the phone number kept" do
+  test "a failed attempt shows its error with the PIN login form open and the phone number kept" do
     post trade_republic_pending_connections_url, params: {
       trade_republic_pending_connection: { phone_number: "+491701234567", pin: "" }
     }, headers: TURBO_STREAM
 
-    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "trade-republic-providers-panel"
-    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "trade-republic-new-connection" do
-      assert_select "input[name='trade_republic_pending_connection[phone_number]'][value='+491701234567']"
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "trade-republic-providers-panel" do
+      assert_select "##{TradeRepublic::NewConnectionComponent::DOM_ID}-pin:not([hidden]) input[name='trade_republic_pending_connection[phone_number]'][value='+491701234567']"
     end
     assert_includes response.body, I18n.t("trade_republic_items.initiate_login.pin_required")
   end

@@ -1,0 +1,74 @@
+<div id="<%= DOM_ID %>" class="space-y-3" data-controller="trade-republic-pin-login">
+  <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+    <p class="text-sm font-medium text-primary"><%= translation("add_connection") %></p>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <%= render DS::Button.new(
+            text: translation("qr_login"),
+            variant: :outline,
+            size: :sm,
+            icon: "qr-code",
+            href: helpers.trade_republic_pending_connections_path,
+            method: :post,
+            params: { login_method: "qr" },
+            form: { data: { turbo: true } }
+          ) %>
+
+      <%= render DS::Button.new(
+            text: translation("pin_login"),
+            variant: :outline,
+            size: :sm,
+            icon: "log-in",
+            type: "button",
+            aria: { expanded: show_pin_form?, controls: pin_form_id },
+            data: { action: "trade-republic-pin-login#toggle", trade_republic_pin_login_target: "button" }
+          ) %>
+    </div>
+  </div>
+
+  <%= tag.div id: pin_form_id, hidden: !show_pin_form?, data: { trade_republic_pin_login_target: "form" } do %>
+    <%= render TradeRepublic::ConnectionRowComponent.new(id: "#{DOM_ID}-row") do %>
+      <%= render TradeRepublic::ConnectionRowHeaderComponent.new(title: translation("new_connection"), dot_class: "bg-warning") do |row| %>
+        <% row.with_status { translation("pin_login_hint") } %>
+
+        <% row.with_actions do %>
+          <%= render DS::Button.new(
+                text: translation("cancel_login"),
+                variant: :outline,
+                size: :sm,
+                icon: "x",
+                type: "button",
+                data: { action: "trade-republic-pin-login#toggle" }
+              ) %>
+        <% end %>
+      <% end %>
+
+      <div class="rounded-lg border border-secondary bg-container-inset p-4">
+        <%= helpers.styled_form_with model: pending_connection,
+                             url: helpers.trade_republic_pending_connections_path,
+                             scope: :trade_republic_pending_connection,
+                             method: :post,
+                             data: { turbo: true },
+                             class: "space-y-3" do |form| %>
+          <%= form.text_field :phone_number,
+                              label: translation("phone_number_label"),
+                              placeholder: translation("phone_number_placeholder_new"),
+                              type: :tel,
+                              value: pending_connection.phone_number,
+                              required: true %>
+
+          <%= form.text_field :pin,
+                              label: translation("pin_label"),
+                              placeholder: translation("pin_placeholder_new"),
+                              type: :password,
+                              value: nil,
+                              required: true %>
+
+          <div class="flex flex-wrap justify-end gap-2">
+            <%= form.submit(translation("connect")) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

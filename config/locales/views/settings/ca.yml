@@ -637,9 +637,9 @@ ca:
           title: El xifratge no està configurat
           message: Les credencials i les dades de sessió de Trade Republic no es poden desar de manera segura fins que es configuri Active Record Encryption.
         steps:
-          step_1: "Tria Accés amb QR o Accés amb PIN."
+          step_1: "A Afegeix una connexió, tria Accés amb QR o Accés amb PIN."
           step_2: "Accés amb QR: escaneja el codi QR amb la càmera del telèfon i després aprova l'inici de sessió a l'aplicació de Trade Republic."
-          step_3: "Accés amb PIN: introdueix el número de telèfon i el PIN o la contrasenya que fas servir a l'aplicació de Trade Republic i després aprova l'inici de sessió a l'aplicació o introdueix el codi de la teva aplicació d'autenticació."
+          step_3: "Accés amb PIN: introdueix el número de telèfon i el PIN o la contrasenya que fas servir a l'aplicació de Trade Republic, després el codi de la teva aplicació d'autenticació, i aprova l'inici de sessió a l'aplicació de Trade Republic."
         phone_number_label: Número de telèfon
         phone_number_placeholder_new: +49 170 1234567
         phone_number_placeholder_existing: Deixa-ho en blanc per mantenir el número de telèfon actual
@@ -676,8 +676,8 @@ ca:
         remove: "Elimina"
         new_connection: "Nova connexió"
         cancel_login: "Cancel·la"
-        add_account: "Afegeix una altra connexió"
-        save_configuration: Desa i inicia sessió
+        add_connection: "Afegeix una connexió"
+        pin_login_hint: "Introdueix el número de telèfon i el PIN o la contrasenya que fas servir a l'aplicació de Trade Republic."
         sync: Sincronitza
         syncing: "Sincronitzant..."
         disconnect_confirm: Vols desconnectar Trade Republic? Els comptes sincronitzats passaran a ser comptes manuals.

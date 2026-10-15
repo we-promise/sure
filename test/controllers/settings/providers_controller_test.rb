@@ -711,7 +711,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match(/Trade Republic/i, response.body)
-    assert_match(/Approve the login in your Trade Republic app/i, response.body)
+    assert_includes response.body, I18n.t("settings.providers.trade_republic_panel.steps.step_3")
   end
 
   test "GET connect_form renders Trade Republic panel" do

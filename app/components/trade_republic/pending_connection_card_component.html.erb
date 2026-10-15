@@ -25,11 +25,8 @@
       <% end %>
 
       <% row.with_actions do %>
-        <%# A lapsed login can start again with a QR code. Cancel stays
+        <%# A lapsed login starts again from Add a connection. Cancel stays
             available whatever happens to the QR login in the browser. %>
-        <% if expired? %>
-          <%= qr.button %>
-        <% end %>
         <%= render DS::Button.new(
               text: translation("cancel_login"),
               variant: :outline,

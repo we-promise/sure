@@ -216,7 +216,7 @@ Rails.application.routes.draw do
 
   # Trade Republic routes (login steps are TR-specific: web login needs a
   # two-phase initiate/confirm handshake with the Trade Republic app)
-  resources :trade_republic_pending_connections, only: [ :new, :create, :destroy ] do
+  resources :trade_republic_pending_connections, only: [ :create, :destroy ] do
     member do
       post :complete_login
       post :poll_login

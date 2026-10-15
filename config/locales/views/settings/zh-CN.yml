@@ -524,9 +524,9 @@ zh-CN:
           title: 未配置加密
           message: 在配置 Active Record Encryption 之前，无法安全地存储 Trade Republic 凭据和会话数据。
         steps:
-          step_1: "选择 QR 登录或 PIN 登录。"
+          step_1: "在“添加连接”中选择 QR 登录或 PIN 登录。"
           step_2: "QR 登录：使用手机相机扫描二维码，然后在 Trade Republic 应用中批准登录。"
-          step_3: "PIN 登录：输入您在 Trade Republic 应用中使用的电话号码和 PIN 或密码，然后在应用中批准登录，或输入身份验证器应用中的验证码。"
+          step_3: "PIN 登录：输入您在 Trade Republic 应用中使用的电话号码和 PIN 或密码，然后输入身份验证器应用中的验证码，并在 Trade Republic 应用中批准登录。"
         phone_number_label: 电话号码
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: 留空以保留当前电话号码
@@ -563,8 +563,8 @@ zh-CN:
         remove: 移除
         new_connection: 新建连接
         cancel_login: 取消
-        add_account: 添加其他连接
-        save_configuration: 保存并开始登录
+        add_connection: "添加连接"
+        pin_login_hint: "输入您在 Trade Republic 应用中使用的电话号码和 PIN 或密码。"
         sync: 同步
         syncing: 正在同步...
         disconnect_confirm: 断开 Trade Republic？您已同步的账户将变为手动账户。

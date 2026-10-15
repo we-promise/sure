@@ -8,20 +8,10 @@
       <%= render TradeRepublic::PendingConnectionCardComponent.new(pending_connection: pending_connection, qr_code_svg: qr_code_svg) %>
     <% end %>
   </div>
+<% end %>
 
-  <%# One new connection at a time: finish or cancel a pending login first,
-      unless it lapsed; adding another then replaces it. %>
-  <% if pending_connection.nil? || pending_connection.lapsed? %>
-    <div class="flex justify-center pt-2">
-      <%= render DS::Link.new(
-            text: translation("add_account"),
-            icon: "plus",
-            variant: "primary",
-            href: helpers.new_trade_republic_pending_connection_path,
-            frame: :drawer
-          ) %>
-    </div>
-  <% end %>
-<% else %>
-  <%= render TradeRepublic::NewConnectionFormComponent.new(pending_connection: new_connection) %>
+<%# One new connection at a time: finish or cancel a pending login first,
+    unless it lapsed; adding another then replaces it. %>
+<% if pending_connection.nil? || pending_connection.lapsed? %>
+  <%= render TradeRepublic::NewConnectionComponent.new(pending_connection: new_connection) %>
 <% end %>

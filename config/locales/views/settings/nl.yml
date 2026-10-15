@@ -156,9 +156,9 @@ nl:
           title: Versleuteling is niet geconfigureerd
           message: Trade Republic-inloggegevens en sessiegegevens kunnen pas veilig worden opgeslagen als Active Record-versleuteling is geconfigureerd.
         steps:
-          step_1: "Kies QR-login of PIN-login."
+          step_1: "Kies onder Koppeling toevoegen voor QR-login of PIN-login."
           step_2: "QR-login: scan de QR-code met de camera van je telefoon en keur de aanmelding daarna goed in de Trade Republic-app."
-          step_3: "PIN-login: voer het telefoonnummer en de pincode of het wachtwoord in dat je voor de Trade Republic-app gebruikt, en keur de aanmelding daarna goed in de app of voer de code uit je authenticator-app in."
+          step_3: "PIN-login: voer het telefoonnummer en de pincode of het wachtwoord in dat je voor de Trade Republic-app gebruikt, daarna de code uit je authenticator-app, en keur de aanmelding goed in de Trade Republic-app."
         phone_number_label: Telefoonnummer
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Laat leeg om het huidige telefoonnummer te behouden
@@ -195,8 +195,8 @@ nl:
         remove: Verwijderen
         new_connection: Nieuwe koppeling
         cancel_login: Annuleren
-        add_account: Nog een koppeling toevoegen
-        save_configuration: Opslaan en login starten
+        add_connection: "Koppeling toevoegen"
+        pin_login_hint: "Voer het telefoonnummer en de pincode of het wachtwoord in dat je voor de Trade Republic-app gebruikt."
         sync: Synchroniseren
         syncing: Bezig met synchroniseren...
         disconnect_confirm: Trade Republic ontkoppelen? Je gesynchroniseerde rekeningen worden handmatige rekeningen.

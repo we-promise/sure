@@ -616,9 +616,9 @@ zh-TW:
           title: 尚未設定加密
           message: 在設定 Active Record Encryption 之前，無法安全地儲存 Trade Republic 認證資訊與工作階段資料。
         steps:
-          step_1: "選擇 QR 登入或 PIN 登入。"
+          step_1: "在「新增連線」中選擇 QR 登入或 PIN 登入。"
           step_2: "QR 登入：使用手機相機掃描 QR 碼，然後在 Trade Republic 應用程式中核准登入。"
-          step_3: "PIN 登入：輸入您在 Trade Republic 應用程式中使用的電話號碼與 PIN 或密碼，然後在應用程式中核准登入，或輸入驗證器應用程式中的驗證碼。"
+          step_3: "PIN 登入：輸入您在 Trade Republic 應用程式中使用的電話號碼與 PIN 或密碼，接著輸入驗證器應用程式中的驗證碼，並在 Trade Republic 應用程式中核准登入。"
         phone_number_label: 電話號碼
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: 留白即維持目前的電話號碼
@@ -655,8 +655,8 @@ zh-TW:
         remove: 移除
         new_connection: 新增連線
         cancel_login: 取消
-        add_account: 新增其他連線
-        save_configuration: 儲存並開始登入
+        add_connection: "新增連線"
+        pin_login_hint: "輸入您在 Trade Republic 應用程式中使用的電話號碼與 PIN 或密碼。"
         sync: 同步
         syncing: 同步中...
         disconnect_confirm: 要中斷 Trade Republic 連線嗎？您已同步的帳戶將變成手動帳戶。

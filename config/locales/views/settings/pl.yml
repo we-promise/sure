@@ -767,15 +767,15 @@ pl:
         qr_loading: Przygotowywanie kodu QR…
         qr_login: Logowanie QR
         qr_success: Logowanie zatwierdzone. Sure odświeża stronę dostawcy.
-        add_account: "Dodaj kolejne połączenie"
-        save_configuration: Zapisz i rozpocznij logowanie
+        add_connection: "Dodaj połączenie"
+        pin_login_hint: "Wpisz numer telefonu i PIN lub hasło używane w aplikacji Trade Republic."
         setup_accounts: Skonfiguruj konta
         status_configured_prefix: Połączono. Przejdź do zakładki
         status_configured_suffix: ", aby zarządzać wykrytymi kontami."
         steps:
-          step_1: "Wybierz Logowanie QR lub Logowanie PIN."
+          step_1: "W sekcji Dodaj połączenie wybierz Logowanie QR lub Logowanie PIN."
           step_2: "Logowanie QR: zeskanuj kod QR aparatem telefonu, a następnie zatwierdź logowanie w aplikacji Trade Republic."
-          step_3: "Logowanie PIN: wpisz numer telefonu i PIN lub hasło używane w aplikacji Trade Republic, a następnie zatwierdź logowanie w aplikacji lub wpisz kod z aplikacji uwierzytelniającej."
+          step_3: "Logowanie PIN: wpisz numer telefonu i PIN lub hasło używane w aplikacji Trade Republic, potem kod z aplikacji uwierzytelniającej, a następnie zatwierdź logowanie w aplikacji Trade Republic."
         sync: Synchronizuj
         syncing: "Synchronizowanie..."
       trading212_panel:

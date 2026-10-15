@@ -683,9 +683,9 @@ tr:
           title: Şifreleme yapılandırılmamış
           message: Active Record Encryption yapılandırılana kadar Trade Republic kimlik bilgileri ve oturum verileri güvenli şekilde saklanamaz.
         steps:
-          step_1: "QR ile giriş veya PIN ile giriş seçeneğini belirleyin."
+          step_1: "Bağlantı ekle bölümünde QR ile giriş veya PIN ile giriş seçeneğini belirleyin."
           step_2: "QR ile giriş: QR kodu telefonunuzun kamerasıyla tarayın, ardından girişi Trade Republic uygulamasında onaylayın."
-          step_3: "PIN ile giriş: Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i veya şifreyi girin, ardından girişi uygulamada onaylayın ya da doğrulama uygulamanızdaki kodu girin."
+          step_3: "PIN ile giriş: Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i veya şifreyi, ardından doğrulama uygulamanızdaki kodu girin ve girişi Trade Republic uygulamasında onaylayın."
         phone_number_label: Telefon numarası
         phone_number_placeholder_new: +49 170 1234567
         phone_number_placeholder_existing: Mevcut telefon numarasını korumak için boş bırakın
@@ -722,8 +722,8 @@ tr:
         remove: "Kaldır"
         new_connection: "Yeni bağlantı"
         cancel_login: "İptal"
-        add_account: "Başka bir bağlantı ekle"
-        save_configuration: Kaydet ve Girişi Başlat
+        add_connection: "Bağlantı ekle"
+        pin_login_hint: "Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i veya şifreyi girin."
         sync: Senkronize et
         syncing: "Senkronize ediliyor..."
         disconnect_confirm: Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir.

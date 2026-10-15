@@ -614,15 +614,15 @@ fr:
         qr_loading: Préparation du QR code …
         qr_login: Connexion QR
         qr_success: Connexion approuvée. Sure actualise la page du fournisseur.
-        add_account: "Ajouter une autre connexion"
-        save_configuration: Enregistrer et lancer la connexion
+        add_connection: "Ajouter une connexion"
+        pin_login_hint: "Saisissez le numéro de téléphone et le code PIN ou le mot de passe de l'application Trade Republic."
         setup_accounts: Configurer les comptes
         status_configured_prefix: Connecté. Ouvrez l'onglet
         status_configured_suffix: pour gérer les comptes détectés.
         steps:
-          step_1: "Choisissez Connexion QR ou Connexion PIN."
+          step_1: "Sous Ajouter une connexion, choisissez Connexion QR ou Connexion PIN."
           step_2: "Connexion QR : scannez le QR code avec l'appareil photo de votre téléphone, puis approuvez la connexion dans l'application Trade Republic."
-          step_3: "Connexion PIN : saisissez le numéro de téléphone et le code PIN ou le mot de passe de l'application Trade Republic, puis approuvez la connexion dans l'application ou saisissez le code de votre application d'authentification."
+          step_3: "Connexion PIN : saisissez le numéro de téléphone et le code PIN ou le mot de passe de l'application Trade Republic, puis le code de votre application d'authentification, et approuvez la connexion dans l'application Trade Republic."
         sync: Synchroniser
         syncing: "Synchronisation..."
       trading212_panel:
