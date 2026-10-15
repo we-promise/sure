@@ -1538,4 +1538,50 @@ class RecurringTransactionTest < ActiveSupport::TestCase
         status: "active"
       }.merge(overrides))
     end
+
+  test "identify_patterns_for does not re-suggest a renamed name-matched bill" do
+    [ 0, 1, 2 ].each do |months_ago|
+      @account.entries.create!(
+        date: months_ago.months.ago.beginning_of_month + 5.days,
+        amount: 9.99,
+        currency: "USD",
+        name: "STREAMCO *CHG",
+        entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+
+    assert_difference "@family.recurring_transactions.count", 1 do
+      RecurringTransaction.identify_patterns_for!(@family)
+    end
+
+    bill = @family.recurring_transactions.last
+    assert_equal "STREAMCO *CHG", bill.matcher_name
+
+    bill.update!(name: "Streaming")
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      RecurringTransaction.identify_patterns_for!(@family)
+    end
+    assert_equal "STREAMCO *CHG", bill.reload.matcher_name
+  end
+
+  test "renaming a legacy bill without a stored detected name keeps its original name for matching" do
+    bill = @family.recurring_transactions.create!(
+      account: @account,
+      name: "LEGACY CO",
+      amount: 5,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 3,
+      bill_type: "bill",
+      manual: false
+    )
+
+    bill.update!(name: "Renamed Legacy")
+
+    assert_equal "LEGACY CO", bill.reload.matcher_name
+  end
 end
