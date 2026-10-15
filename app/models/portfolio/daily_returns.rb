@@ -70,6 +70,13 @@ class Portfolio::DailyReturns
   # series does not value makes a transfer to one of them internal, so it
   # leaves the denominator alone while the money leaves the close, and the
   # source account's drop reads as a loss.
+  #
+  # Asset accounts only. The levels are multiplied by flows_factor, but the
+  # flows (-entries.amount, a journal's value) are not, so on a liability they
+  # would carry the wrong sign against its balance and nothing would flag it.
+  # A liability is refused when the series is first queried (see
+  # #refuse_liabilities!), so building one stays free for a caller that only
+  # reads its attributes.
   def initialize(account_ids:, currency:, period:, active_until_dates: {})
     @account_ids = Array(account_ids).compact.map(&:to_s)
     @currency = currency
@@ -182,8 +189,21 @@ class Portfolio::DailyReturns
     # where each fragment belongs, and the fragment replaces it after the binds
     # are filled, so it is never scanned.
     def bind_and_splice(template)
+      refuse_liabilities!
+
       ActiveRecord::Base.sanitize_sql_array([ template, query_binds ])
         .gsub(FRAGMENT_MARKER) { fragments.fetch(Regexp.last_match(1)) }
+    end
+
+    # Every query this class runs goes through #bind_and_splice, so checking
+    # here covers each figure it can return. Once per instance.
+    def refuse_liabilities!
+      @liabilities_refused ||= begin
+        if Account.where(id: account_ids, classification: "liability").exists?
+          raise ArgumentError, "Portfolio::DailyReturns reads asset accounts only; liabilities are not supported"
+        end
+        true
+      end
     end
 
     def fragment(name)
@@ -311,10 +331,9 @@ class Portfolio::DailyReturns
         balances_by_date AS (
           SELECT
             d.date,
-            -- flows_factor is +1 for assets and -1 for liabilities. Investment
-            -- and Crypto are always assets, so this is an identity here; it is
-            -- applied anyway so the expression matches the chart series builder
-            -- and cannot silently invert if the scope ever widens.
+            -- flows_factor is +1 for assets and -1 for liabilities. The series
+            -- refuses liabilities, so this is an identity here; it is applied
+            -- anyway so the expression matches the chart series builder.
             COALESCE(SUM(lb.end_balance * lb.flows_factor * er.rate), 0) AS value_close,
             -- The opening level, which is only read for the FIRST day of the
             -- period (#rows carries the previous close afterwards).
