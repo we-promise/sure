@@ -49,6 +49,35 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     refute_includes at_rest, "tx-1"
   end
 
+  test "backfill encrypts provider account identifiers stored as plaintext" do
+    eb_item = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Backfill EB", country_code: "FI", application_id: "app", client_certificate: "cert"
+    )
+    eb_account = EnableBankingAccount.create!(enable_banking_item: eb_item, name: "Checking", uid: "uid_backfill", currency: "EUR")
+    akahu_account = AkahuAccount.create!(
+      akahu_item: AkahuItem.create!(family: families(:dylan_family), name: "Backfill Akahu", app_token: "app", user_token: "user"),
+      name: "Everyday", account_id: "acc_backfill", currency: "NZD"
+    )
+
+    # Plaintext values, as left by an install that synced before these columns were encrypted
+    connection = ActiveRecord::Base.connection
+    connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE enable_banking_accounts SET iban = ? WHERE id = ?", "FI2112345600000785", eb_account.id ])) # pipelock:ignore IBAN
+    connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE enable_banking_items SET last_psu_ip = ? WHERE id = ?", "203.0.113.7", eb_item.id ]))
+    connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE akahu_accounts SET formatted_account = ? WHERE id = ?", "12-3456-7654321-00", akahu_account.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    assert_equal "FI2112345600000785", eb_account.reload.iban # pipelock:ignore IBAN
+    assert_equal "203.0.113.7", eb_item.reload.last_psu_ip
+    assert_equal "12-3456-7654321-00", akahu_account.reload.formatted_account
+    refute_includes eb_account.read_attribute_before_type_cast(:iban).to_s, "785"
+    refute_includes eb_item.read_attribute_before_type_cast(:last_psu_ip).to_s, "203.0.113.7"
+    refute_includes akahu_account.read_attribute_before_type_cast(:formatted_account).to_s, "7654321"
+  end
+
   # Several payload columns default to {} — Rails presence checks treat empty
   # Hash/Array as absent, so the backfill must gate on nil-ness or empty
   # payloads stay plaintext and raise on every read once keys are live.

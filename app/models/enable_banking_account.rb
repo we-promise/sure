@@ -5,6 +5,9 @@ class EnableBankingAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
+    # Not deterministic: never looked up by value, and an IBAN is exactly the
+    # kind of field worth keeping opaque at rest (same as FioAccount#iban).
+    encrypts :iban
   end
 
   belongs_to :enable_banking_item

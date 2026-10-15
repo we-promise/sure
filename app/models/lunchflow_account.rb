@@ -5,6 +5,7 @@ class LunchflowAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
+    encrypts :raw_holdings_payload
   end
 
   belongs_to :lunchflow_item

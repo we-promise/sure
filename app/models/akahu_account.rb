@@ -14,6 +14,8 @@ class AkahuAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
+    # The full bank account number; never looked up by value.
+    encrypts :formatted_account
   end
 
   belongs_to :akahu_item
@@ -64,9 +66,7 @@ class AkahuAccount < ApplicationRecord
       institution_metadata: {
         id: connection[:_id].presence || connection[:id],
         name: connection[:name],
-        logo: connection[:logo],
-        account_number: snapshot[:formatted_account].presence || payment_details[:account_number],
-        holder: meta[:holder].presence || payment_details[:account_holder]
+        logo: connection[:logo]
       }.compact,
       raw_payload: account_snapshot
     )

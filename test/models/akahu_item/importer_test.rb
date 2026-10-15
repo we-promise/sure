@@ -92,6 +92,10 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
     assert_equal BigDecimal("123.45"), @akahu_account.current_balance
     assert_equal "12-3456-0000000-00", @akahu_account.formatted_account
     assert_equal "Test Bank", @akahu_account.institution_metadata["name"]
+    assert_not @akahu_account.institution_metadata.key?("account_number"),
+      "the account number belongs in the encrypted formatted_account only"
+    assert_not @akahu_account.institution_metadata.key?("holder"),
+      "the holder's name must not be copied into plaintext metadata"
 
     transactions = @akahu_account.raw_transactions_payload
     assert_equal [ "tx_1", "pending_1" ], transactions.map { |tx| tx["_id"] }
