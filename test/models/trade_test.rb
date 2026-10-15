@@ -197,6 +197,22 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(300), sale.realized_gain_loss.value.amount
   end
 
+  # A dividend is a trade of no quantity. After a sale it moves neither units
+  # nor basis, so the sale is still the day's last and the closing snapshot,
+  # here 120, is its basis -- not the day before's 100.
+  test "a dividend after a sale leaves it measured against the closing snapshot" do
+    account, security = cross_currency_account
+    day = Date.new(2026, 3, 10)
+    account.holdings.create!(security: security, date: day - 1, qty: 10, price: 100,
+                             amount: BigDecimal(1000), currency: "USD", cost_basis: 100)
+    sale = create_trade(security, account: account, qty: -5, date: day, price: 180).entryable
+    create_trade(security, account: account, qty: 0, date: day, price: 1)
+    account.holdings.create!(security: security, date: day, qty: 5, price: 180,
+                             amount: BigDecimal(900), currency: "USD", cost_basis: 120)
+
+    assert_equal BigDecimal(300), sale.realized_gain_loss.value.amount
+  end
+
   test "preloading answers whether each disposal was traded again that day in one query" do
     account, security = cross_currency_account
 

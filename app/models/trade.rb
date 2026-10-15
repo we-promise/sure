@@ -159,6 +159,7 @@ class Trade < ApplicationRecord
         security_id: trades.map(&:security_id).uniq,
         entries: { account_id: trades.map { |t| t.entry.account_id }.uniq, date: trades.map { |t| t.entry.date }.uniq }
       )
+      .where.not(qty: 0)
       .order("entries.created_at ASC, entries.id ASC")
       .group_by { |t| [ t.entry.account_id, t.security_id, t.entry.date ] }
 
@@ -269,7 +270,8 @@ class Trade < ApplicationRecord
     end
 
     # This security's trades in the account on the sale's date, in the order
-    # the calculators apply them.
+    # the calculators apply them. Not the ones of no quantity: a dividend or
+    # interest is a trade of none, and moves no units and no basis.
     def same_day_trades
       return @preloaded_same_day_trades if defined?(@preloaded_same_day_trades)
 
@@ -277,6 +279,7 @@ class Trade < ApplicationRecord
         .with_entry
         .includes(:entry)
         .where(security_id: security_id, entries: { date: entry.date })
+        .where.not(qty: 0)
         .order("entries.created_at ASC, entries.id ASC")
         .to_a
     end
