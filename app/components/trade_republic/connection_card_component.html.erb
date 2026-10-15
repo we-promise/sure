@@ -166,7 +166,7 @@
           </p>
         <% elsif item.needs_login? %>
           <div class="w-2 h-2 bg-warning rounded-full"></div>
-          <p class="text-sm text-secondary"><%= translation("requires_update") %></p>
+          <p class="text-sm text-destructive"><%= translation("requires_update") %></p>
         <% else %>
           <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
           <p class="text-sm text-secondary"><%= translation("not_configured") %></p>

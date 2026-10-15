@@ -189,7 +189,7 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
 
     render_inline(TradeRepublic::AccountEditorComponent.new(items: [ item ], family: families(:dylan_family)))
 
-    assert_text I18n.t("settings.providers.trade_republic_panel.requires_update")
+    assert_selector "p.text-destructive", text: I18n.t("settings.providers.trade_republic_panel.requires_update")
     assert_no_text I18n.t("settings.providers.trade_republic_panel.status_configured_prefix")
   end
 end
