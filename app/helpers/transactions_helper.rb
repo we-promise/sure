@@ -16,6 +16,13 @@ module TransactionsHelper
     ]
   end
 
+  # @param label [String] a stored investment_activity_label such as "Sweep In"
+  # @return [String] its name in the current locale, or the label itself when
+  #   it has no translation
+  def investment_activity_label_name(label)
+    t("transactions.activity_labels.#{label.parameterize(separator: "_")}", default: label)
+  end
+
   # @param filter [Hash] one entry from transaction_search_filters
   # @return [String] the partial that renders that filter's controls
   def get_transaction_search_filter_partial_path(filter)
