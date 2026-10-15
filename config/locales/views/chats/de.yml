@@ -4,6 +4,7 @@ de:
     demo_banner_title: "Demo-Modus aktiv"
     demo_banner_message: "Du nutzt ein Open-Weight-Qwen3-LLM mit Credits von Cloudflare Workers AI. Die Ergebnisse können abweichen, weil die Codebasis vor allem mit `gpt-4.1` getestet wurde. Deine Tokens werden nirgends zum Training verwendet. 🤖"
     thinking: "Wird verarbeitet ..."
+    ai_busy: "Das System ist ausgelastet. Deine Nachricht wird nach dem aktuellen Auftrag verarbeitet."
     ai_consent:
       available_description: Der KI-Chat beantwortet Finanzfragen und wertet deine Daten aus. Du musst die Funktion ausdrücklich einschalten, bevor du sie nutzen kannst.
       disable_note: Jederzeit abschaltbar. Alle Daten, die an unsere LLM-Anbieter gehen, sind anonymisiert.
