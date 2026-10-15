@@ -8,7 +8,8 @@ class Import::AccountTypeMapping < Import::Mapping
   end
 
   def selectable_values
-    Accountable::TYPES.map { |type| [ type.titleize, type ] }
+    # Commodity accounts hold inventory items, not imported balances.
+    (Accountable::TYPES - %w[Commodity]).map { |type| [ type.titleize, type ] }
   end
 
   def requires_selection?

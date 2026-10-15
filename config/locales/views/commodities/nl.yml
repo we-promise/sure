@@ -1,0 +1,13 @@
+---
+nl:
+  commodities:
+    subclasses:
+      precious_metal: Edelmetalen
+    metals:
+      gold: Goud
+      silver: Zilver
+      platinum: Platina
+      palladium: Palladium
+    units:
+      g: g
+      ozt: troy oz

@@ -3,7 +3,7 @@ Rails.application.config.to_prepare do
   module ActiveStorageAttachmentAuthorization
     extend ActiveSupport::Concern
     # STI subclasses (PdfImport, SureImport, ...) are stored under their base class, "Import".
-    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement FamilyExport Import FamilyDocument].freeze
+    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement FamilyExport Import FamilyDocument Commodity::Item].freeze
 
     included do
       include Authentication
@@ -43,6 +43,8 @@ Rails.application.config.to_prepare do
           import_attachment_authorized?(attachment)
         when "FamilyDocument"
           family_record_attachment_authorized?(attachment)
+        when "Commodity::Item"
+          commodity_item_attachment_authorized?(attachment)
         else
           false
         end
@@ -54,6 +56,17 @@ Rails.application.config.to_prepare do
         return false if transaction.nil?
 
         account = transaction.entry.account
+        account.family_id == Current.family&.id && account.shared_with?(Current.user)
+      rescue ActiveRecord::RecordNotFound, NoMethodError
+        false
+      end
+
+      # Item photos follow their account, like transaction attachments.
+      def commodity_item_attachment_authorized?(attachment)
+        item = attachment.record
+        return false if item.nil?
+
+        account = item.account
         account.family_id == Current.family&.id && account.shared_with?(Current.user)
       rescue ActiveRecord::RecordNotFound, NoMethodError
         false

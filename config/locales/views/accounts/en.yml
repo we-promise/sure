@@ -161,6 +161,7 @@ en:
       depository: Cash
       investment: Investment
       crypto: Crypto
+      commodity: Commodities
       property: Property
       vehicle: Vehicle
       other_asset: Other Asset
@@ -171,6 +172,7 @@ en:
       depository: Cash
       investment: Investments
       crypto: Crypto
+      commodity: Commodities
       property: Properties
       vehicle: Vehicles
       other_asset: Other Assets

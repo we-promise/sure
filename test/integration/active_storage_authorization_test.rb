@@ -1,6 +1,8 @@
 require "test_helper"
 
 class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
+  include CommoditiesTestHelper
+
   setup do
     @user_a = users(:family_admin) # In dylan_family
     @user_b = users(:empty) # In empty family
@@ -441,6 +443,19 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     get rails_blob_path(document.file)
 
     assert_response :not_found
+  end
+
+  test "commodity item photo is only served to users who can see its account" do
+    item = create_commodity_item(account: create_commodity_account)
+    item.photo.attach(io: StringIO.new("bar photo"), filename: "bar.jpg", content_type: "image/jpeg")
+
+    sign_in @user_b
+    get rails_blob_path(item.photo)
+    assert_response :not_found
+
+    sign_in @user_a
+    get rails_blob_path(item.photo)
+    assert_response :redirect
   end
 
   test "every attachment is either access-checked or intentionally public" do

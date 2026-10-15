@@ -1,0 +1,13 @@
+---
+en:
+  commodities:
+    subclasses:
+      precious_metal: Precious metals
+    metals:
+      gold: Gold
+      silver: Silver
+      platinum: Platinum
+      palladium: Palladium
+    units:
+      g: g
+      ozt: oz t

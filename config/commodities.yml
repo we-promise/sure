@@ -1,0 +1,30 @@
+# Commodities tracked as their own asset class. Each subclass lists the
+# commodities it supports; prices are per troy ounce in USD from the providers.
+# Enabling a commodity (e.g. palladium) makes it appear in the add flow, price
+# sync, valuation and charts — no code changes needed.
+shared:
+  precious_metal:
+    XAU:
+      key: gold
+      enabled: true
+      yahoo_symbol: GC=F
+      metal_price_api_symbol: XAU
+      default_fineness: { bar: 0.9999, coin: 0.9999, round: 0.999, granules: 0.9999, other: 0.999 }
+    XAG:
+      key: silver
+      enabled: true
+      yahoo_symbol: SI=F
+      metal_price_api_symbol: XAG
+      default_fineness: { bar: 0.999, coin: 0.999, round: 0.999, granules: 0.999, other: 0.925 }
+    XPT:
+      key: platinum
+      enabled: true
+      yahoo_symbol: PL=F
+      metal_price_api_symbol: XPT
+      default_fineness: { bar: 0.9995, coin: 0.9995, round: 0.9995, granules: 0.9995, other: 0.95 }
+    XPD:
+      key: palladium
+      enabled: false
+      yahoo_symbol: PA=F
+      metal_price_api_symbol: XPD
+      default_fineness: { bar: 0.9995, coin: 0.9995, round: 0.9995, granules: 0.9995, other: 0.95 }

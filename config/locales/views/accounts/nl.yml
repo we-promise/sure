@@ -93,6 +93,7 @@ nl:
       depository: Cash
       investment: Investering
       crypto: Crypto
+      commodity: Grondstoffen
       property: Eigendom
       vehicle: Voertuig
       other_asset: Overige activa

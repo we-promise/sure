@@ -1,0 +1,46 @@
+---
+en:
+  activerecord:
+    models:
+      commodity/item: Commodity item
+      commodity/location: Location
+      commodity/sale: Sale
+    attributes:
+      commodity/item:
+        code: Metal
+        name: Description
+        form: Form
+        quantity: Quantity
+        weight_value: Weight per piece
+        gross_weight_grams: Weight per piece
+        weight_unit: Unit
+        fineness: Fineness
+        purchase_date: Purchase date
+        purchase_currency: Currency
+        metal_cost: Metal cost
+        premium: Premium
+        vat: VAT / taxes
+        shipping: Shipping
+        insurance: Insurance
+        sell_back_value: Sell-back price
+      commodity/sale:
+        date: Sale date
+        quantity: Pieces sold
+        proceeds: Proceeds
+        costs: Sale costs
+      commodity/location:
+        name: Name
+    errors:
+      models:
+        commodity/item:
+          attributes:
+            account:
+              invalid: must be a commodities account
+            quantity:
+              less_than_sold: can't be lower than the number of pieces already sold
+        commodity/sale:
+          attributes:
+            quantity:
+              exceeds_held: is more than the pieces still held
+            date:
+              before_purchase: can't be before the purchase date

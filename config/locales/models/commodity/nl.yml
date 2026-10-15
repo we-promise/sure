@@ -1,0 +1,46 @@
+---
+nl:
+  activerecord:
+    models:
+      commodity/item: Grondstofitem
+      commodity/location: Locatie
+      commodity/sale: Verkoop
+    attributes:
+      commodity/item:
+        code: Metaal
+        name: Omschrijving
+        form: Vorm
+        quantity: Aantal
+        weight_value: Gewicht per stuk
+        gross_weight_grams: Gewicht per stuk
+        weight_unit: Eenheid
+        fineness: Zuiverheid
+        purchase_date: Aankoopdatum
+        purchase_currency: Valuta
+        metal_cost: Metaalkosten
+        premium: Premie
+        vat: Btw / belastingen
+        shipping: Verzending
+        insurance: Verzekering
+        sell_back_value: Terugkoopprijs
+      commodity/sale:
+        date: Verkoopdatum
+        quantity: Verkochte stuks
+        proceeds: Opbrengst
+        costs: Verkoopkosten
+      commodity/location:
+        name: Naam
+    errors:
+      models:
+        commodity/item:
+          attributes:
+            account:
+              invalid: moet een grondstoffenrekening zijn
+            quantity:
+              less_than_sold: mag niet lager zijn dan het aantal al verkochte stuks
+        commodity/sale:
+          attributes:
+            quantity:
+              exceeds_held: is meer dan het aantal stuks in bezit
+            date:
+              before_purchase: mag niet vóór de aankoopdatum liggen
