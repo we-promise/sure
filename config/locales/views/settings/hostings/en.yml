@@ -277,6 +277,16 @@ en:
         step_2_html: 'Go to your <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> to find your API token.'
         step_3: Copy your API token and paste it below.
         rate_limit_warning: "EODHD free tier is limited to 20 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
+      metal_price_api_settings:
+        title: Precious metal prices (metalpriceapi.com)
+        description: Optional. With an API key, gold, silver and platinum use spot prices from metalpriceapi.com. Without one, Yahoo Finance front-month futures are used as an approximation of spot.
+        env_configured_message: Successfully configured through the METAL_PRICE_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your metalpriceapi.com API key here
+        show_details: "(show details)"
+        step_1_html: 'Visit <a href="https://metalpriceapi.com" target="_blank" rel="noopener noreferrer" class="underline">metalpriceapi.com</a> and create a free account.'
+        step_2_html: 'Open your <a href="https://metalpriceapi.com/dashboard" target="_blank" rel="noopener noreferrer" class="underline">dashboard</a> to find your API key.'
+        step_3: Copy your API key and paste it below.
       mansa_settings:
         title: Mansa
         description: Enter the API key from Mansa API. Supports NGX (Nigerian Exchange), not covered by any other provider here. Mansa covers other African exchanges too, but only NGX is verified against this integration.

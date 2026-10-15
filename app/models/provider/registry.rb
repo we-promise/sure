@@ -124,6 +124,14 @@ class Provider::Registry
         Provider::YahooFinance.new
       end
 
+      def metal_price_api
+        api_key = ENV["METAL_PRICE_API_KEY"].presence || Setting.metal_price_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::MetalPriceApi.new(api_key)
+      end
+
       def tiingo
         api_key = ENV["TIINGO_API_KEY"].presence || Setting.tiingo_api_key # pipelock:ignore
 

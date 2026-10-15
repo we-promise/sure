@@ -51,6 +51,35 @@ class Commodity::Item < ApplicationRecord
 
   delegate :currency, to: :account
 
+  class << self
+    # Exchange-rate pairs (with the earliest date needed) to value the items in
+    # this scope: price currency, purchase currency and sale currency, each
+    # into the account currency. Returns { [from, to] => date }.
+    def exchange_rate_start_dates
+      pairs = {}
+      add = ->(from, to, date) do
+        next if from == to || date.nil?
+        pairs[[ from, to ]] = [ pairs[[ from, to ]], date ].compact.min
+      end
+
+      price_currencies = Commodity::Price.distinct.pluck(:currency).presence || [ "USD" ]
+      joins(:account).group("accounts.currency").minimum(:purchase_date).each do |account_currency, date|
+        price_currencies.each { |currency| add.call(currency, account_currency, date) }
+      end
+
+      joins(:account).group(:purchase_currency, "accounts.currency").minimum(:purchase_date).each do |(from, to), date|
+        add.call(from, to, date)
+      end
+
+      Commodity::Sale.where(item_id: select(:id)).joins(item: :account)
+        .group("commodity_sales.currency", "accounts.currency").minimum("commodity_sales.date").each do |(from, to), date|
+        add.call(from, to, date)
+      end
+
+      pairs
+    end
+  end
+
   def metal
     Commodity.metal(code)
   end

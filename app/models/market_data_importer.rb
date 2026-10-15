@@ -12,7 +12,21 @@ class MarketDataImporter
 
   def import_all
     import_security_prices
+    import_commodity_prices
     import_exchange_rates
+  end
+
+  # Commodity prices are stored separately from security prices (see Commodity::Price).
+  def import_commodity_prices
+    earliest = Commodity::Item.minimum(:purchase_date)
+    return unless earliest
+
+    Commodity::Price.import_provider_prices(
+      start_date: snapshot? ? [ earliest, default_start_date ].max : earliest,
+      end_date: end_date,
+      codes: Commodity::Item.distinct.pluck(:code),
+      clear_cache: clear_cache
+    )
   end
 
   # Syncs historical security prices (and details)
@@ -140,6 +154,11 @@ class MarketDataImporter
 
         key = [ account.source, target ]
         pair_dates[key] = [ pair_dates[key], chosen_date ].compact.min
+      end
+
+      # 3. COMMODITY PAIRS – commodity price, purchase and sale currencies into the account currency.
+      Commodity::Item.exchange_rate_start_dates.each do |key, date|
+        pair_dates[key] = [ pair_dates[key], date ].compact.min
       end
 
       # Convert to array of hashes for ease of use

@@ -9,7 +9,19 @@ class Account::MarketDataImporter
   # which exchange rate pairs the account needs.
   def import_all
     import_security_prices
+    import_commodity_prices
     import_exchange_rates
+  end
+
+  # Commodity accounts value their inventory from commodity prices (never
+  # securities), backfilled from the earliest purchase date.
+  def import_commodity_prices
+    return unless commodity?
+
+    Commodity::Price.import_provider_prices(
+      start_date: account.commodity_items.minimum(:purchase_date),
+      codes: account.commodity_items.distinct.pluck(:code)
+    )
   end
 
   def import_exchange_rates
@@ -46,6 +58,11 @@ class Account::MarketDataImporter
     # first date a price for that security is required.
     security_price_currency_start_dates.each do |source_currency, date|
       key = [ source_currency, account.currency ]
+      pair_dates[key] = [ pair_dates[key], date ].compact.min
+    end
+
+    # 4. COMMODITY PAIRS – price, purchase and sale currencies into the account currency.
+    commodity_exchange_rate_start_dates.each do |key, date|
       pair_dates[key] = [ pair_dates[key], date ].compact.min
     end
 
@@ -108,7 +125,16 @@ class Account::MarketDataImporter
     end
 
     def needs_exchange_rates?
-      has_multi_currency_entries? || foreign_account? || security_price_currency_start_dates.any?
+      has_multi_currency_entries? || foreign_account? || security_price_currency_start_dates.any? ||
+        commodity_exchange_rate_start_dates.any?
+    end
+
+    def commodity?
+      account.accountable_type == "Commodity"
+    end
+
+    def commodity_exchange_rate_start_dates
+      @commodity_exchange_rate_start_dates ||= commodity? ? account.commodity_items.exchange_rate_start_dates : {}
     end
 
     def has_multi_currency_entries?
