@@ -211,4 +211,41 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
       }
     end
   end
+
+  # The orphan cleanup's enqueue runs once the relink transaction commits. If it
+  # ran inside that transaction, its error would escape the action's rescue
+  # after the relink had committed, and the request would fail.
+  test "link_existing_account still succeeds when the orphan's destroy enqueue fails" do
+    orphan = Account.create!(
+      family: @family,
+      name: "Old Crypto",
+      balance: 0,
+      currency: "USD",
+      accountable: Crypto.create!(subtype: "exchange")
+    )
+    target = Account.create!(
+      family: @family,
+      name: "Manual Crypto",
+      balance: 0,
+      currency: "USD",
+      accountable: Crypto.create!(subtype: "exchange")
+    )
+    coinbase_account = @coinbase_item.coinbase_accounts.create!(
+      name: "BTC Wallet",
+      account_id: "btc_123",
+      currency: "BTC",
+      current_balance: 0.5
+    )
+    AccountProvider.create!(account: orphan, provider: coinbase_account)
+    DestroyJob.queue_adapter.expects(:enqueue).once.raises(RedisClient::CannotConnectError, "Connection refused")
+
+    post link_existing_account_coinbase_items_url, params: {
+      account_id: target.id,
+      coinbase_account_id: coinbase_account.id
+    }
+
+    assert_redirected_to accounts_path
+    assert_equal target, coinbase_account.reload.current_account
+    assert_equal "active", orphan.reload.status
+  end
 end

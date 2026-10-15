@@ -55,10 +55,11 @@ class Account::DestroyLaterTest < ActiveSupport::TestCase
     assert_equal "draft", @account.reload.status
   end
 
-  # The relink cleanup in the Coinbase, Enable Banking and SimpleFIN controllers
-  # calls destroy_later inside its own transaction, with its own rescue. The push
-  # only happens once that outer transaction commits, so the error escapes past
-  # the caller's rescue (unchanged); the account must still be restored.
+  # A caller that wraps destroy_later in its own transaction, with its own
+  # rescue, does not see the error there: the push only happens once that outer
+  # transaction commits, so the error leaves from the commit. The relink cleanup
+  # in the provider controllers calls destroy_later after its transaction for
+  # this reason. Whoever calls it, the account must still be restored.
   test "an enqueue failure after an outer transaction commits restores the status" do
     DestroyJob.queue_adapter.stubs(:enqueue).raises(RedisClient::CannotConnectError, "Connection refused")
     rescued_inside = false

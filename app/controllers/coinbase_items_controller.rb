@@ -121,6 +121,7 @@ class CoinbaseItemsController < ApplicationController
     end
 
     # Relink behavior: detach any existing link and point provider link at the chosen account
+    orphaned_account = nil
     Account.transaction do
       coinbase_account.lock!
 
@@ -136,12 +137,22 @@ class CoinbaseItemsController < ApplicationController
         begin
           previous_account.reload
           if previous_account.account_providers.none?
-            previous_account.destroy_later if previous_account.may_mark_for_deletion?
+            orphaned_account = previous_account if previous_account.may_mark_for_deletion?
           end
         rescue => e
           Rails.logger.warn("Failed orphan cleanup for account ##{previous_account&.id}: #{e.class} - #{e.message}")
         end
       end
+    end
+
+    # Queue the orphan for deletion only after the relink commits. destroy_later
+    # pushes DestroyJob only once every open transaction commits, so called in
+    # the block above, an enqueue error would leave it from the commit, past
+    # the rescue inside it.
+    begin
+      orphaned_account&.destroy_later
+    rescue => e
+      Rails.logger.warn("Failed orphan cleanup for account ##{orphaned_account.id}: #{e.class} - #{e.message}")
     end
 
     if turbo_frame_request?
