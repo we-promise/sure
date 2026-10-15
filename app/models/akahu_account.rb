@@ -14,8 +14,10 @@ class AkahuAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
-    # The full bank account number; never looked up by value.
-    encrypts :formatted_account
+    # The full bank account number; never looked up by value. Rows synced
+    # before this was encrypted stay readable (support_unencrypted_data) until
+    # they are encrypted; new writes are always encrypted.
+    encrypts :formatted_account, support_unencrypted_data: true
   end
 
   belongs_to :akahu_item
