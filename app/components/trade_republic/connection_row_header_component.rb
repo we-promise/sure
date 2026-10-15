@@ -1,5 +1,5 @@
-# Status dot, name and status lines on the left of a connection row, its
-# actions on the right.
+# Status dot, logo, name and status lines on the left of a connection row,
+# its actions on the right.
 class TradeRepublic::ConnectionRowHeaderComponent < ApplicationComponent
   renders_one :status
   renders_one :details

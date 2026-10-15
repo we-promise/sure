@@ -96,6 +96,14 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
     assert_button I18n.t("settings.providers.trade_republic_panel.cancel_login")
   end
 
+  test "a connection row shows the Trade Republic logo" do
+    item = trade_republic_items(:configured_item)
+
+    render_inline(TradeRepublic::ConnectionCardComponent.new(item: item))
+
+    assert_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(item)} .w-7.h-7"
+  end
+
   test "a connection offers QR and PIN login next to sync and remove" do
     render_inline(TradeRepublic::ConnectionCardComponent.new(item: trade_republic_items(:configured_item)))
 
@@ -221,6 +229,20 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
 
     assert_selector "#{add_connection}-pin:not([hidden]) input[name='trade_republic_pending_connection[phone_number]'][value='+491701234567']"
     assert_selector "#{add_connection} > [hidden]", text: I18n.t("settings.providers.trade_republic_panel.add_connection"), visible: :all
+  end
+
+  test "a failed PIN login without a phone number opens its form again" do
+    failed_connection = families(:dylan_family).trade_republic_pending_connections.build
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [], family: families(:dylan_family), new_connection: failed_connection))
+
+    assert_selector "#{add_connection}-pin:not([hidden]) input[name='trade_republic_pending_connection[phone_number]']"
+  end
+
+  test "the Add a connection PIN form starts closed" do
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [], family: families(:empty)))
+
+    assert_selector "#{add_connection}-pin[hidden]", visible: :all
   end
 
   test "a connected card shows when its login expires" do

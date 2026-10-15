@@ -8,7 +8,6 @@ export default class extends Controller {
     cancelUrl: String,
     returnUrl: String,
     autoPoll: { type: Boolean, default: false },
-    hideButtonWhilePolling: { type: Boolean, default: false },
     loadingText: String,
     instructionText: String,
     successText: String,
@@ -52,7 +51,6 @@ export default class extends Controller {
     this.startedAt = Date.now();
     this.panelTarget.hidden = false;
     this.setButtonLabel(this.cancelTextValue);
-    this.setButtonHidden(this.hideButtonWhilePollingValue);
     this.dispatch("started");
     this.codeTarget.replaceChildren();
     this.statusTarget.textContent = this.loadingTextValue;
@@ -180,7 +178,6 @@ export default class extends Controller {
     this.polling = false;
     this.setButtonLabel(this.loginTextValue);
     this.setButtonDisabled(false);
-    this.setButtonHidden(false);
     this.statusTarget.textContent = this.errorTextValue;
     this.dispatch("stopped");
   }
@@ -201,9 +198,9 @@ export default class extends Controller {
     this.polling = false;
     this.panelTarget.hidden = true;
     this.codeTarget.replaceChildren();
-    this.dispatch("stopped");
     // A login started before the server confirms the cancellation would be
-    // cleared by it, so the button stays disabled until then.
+    // cleared by it, so the button stays disabled until then, and the PIN
+    // login stays hidden ("stopped" is only sent once the cancel is done).
     this.setButtonDisabled(true);
     this.setButtonLabel(this.loginTextValue);
 
@@ -227,10 +224,14 @@ export default class extends Controller {
       // new card brings an enabled one. The Accounts page has no such card.
       const replacesCard = this.streamReplacesElement(stream);
       Turbo.renderStreamMessage(stream);
-      if (!replacesCard) this.setButtonDisabled(false);
+      if (!replacesCard) {
+        this.setButtonDisabled(false);
+        this.dispatch("stopped");
+      }
     } catch (error) {
       this.stopped = false;
       this.setButtonDisabled(false);
+      this.dispatch("stopped");
       console.warn("[Trade Republic] QR login cancellation failed", error);
     }
   }
@@ -259,14 +260,9 @@ export default class extends Controller {
     return remaining > 0 && remaining <= 1500 ? 100 : this.intervalValue;
   }
 
-  // A new connection's card shows no QR button while its QR code is up; it
-  // has a separate Cancel instead.
+  // A new connection's card shows no QR button; it has its own Cancel.
   setButtonDisabled(disabled) {
     if (this.hasButtonTarget) this.buttonTarget.disabled = disabled;
-  }
-
-  setButtonHidden(hidden) {
-    if (this.hasButtonTarget) this.buttonTarget.hidden = hidden;
   }
 
   setButtonLabel(label) {

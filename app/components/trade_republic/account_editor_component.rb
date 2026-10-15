@@ -9,6 +9,7 @@ class TradeRepublic::AccountEditorComponent < ApplicationComponent
     @pending_connection = pending_connection
     @qr_code_svg = qr_code_svg
     @new_connection = new_connection
+    @failed_connection = new_connection
   end
 
   attr_reader :items, :family, :qr_code_svg
@@ -22,6 +23,11 @@ class TradeRepublic::AccountEditorComponent < ApplicationComponent
 
   def new_connection
     @new_connection ||= family.trade_republic_pending_connections.build
+  end
+
+  # A failed PIN login opens its form again, even without a phone number.
+  def failed_pin_login?
+    @failed_connection.present? && !@failed_connection.qr_login
   end
 
   def qr_login_active?(item)

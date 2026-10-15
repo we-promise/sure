@@ -6,9 +6,11 @@ class TradeRepublic::NewConnectionComponent < ApplicationComponent
 
   DOM_ID = "trade-republic-add-connection".freeze
 
-  # `pending_connection` redisplays a failed attempt with its phone number.
-  def initialize(pending_connection:)
+  # `pending_connection` redisplays a failed attempt with its phone number;
+  # `open` shows its PIN login form again.
+  def initialize(pending_connection:, open: false)
     @pending_connection = pending_connection
+    @open = open
   end
 
   attr_reader :pending_connection
@@ -18,6 +20,6 @@ class TradeRepublic::NewConnectionComponent < ApplicationComponent
   end
 
   def show_pin_form?
-    pending_connection.phone_number.present?
+    @open
   end
 end

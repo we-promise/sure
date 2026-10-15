@@ -23,10 +23,13 @@ export default class extends Controller {
       const span = this.buttonTarget.querySelector("span");
       if (label && span) span.textContent = label;
     }
+    // Focus moves into the form, and back to the PIN login button when the
+    // form closes with the Cancel inside it.
     if (show)
       this.formTarget
         .querySelector("input:not([type='hidden']):not([disabled])")
         ?.focus();
+    else if (this.hasButtonTarget) this.buttonTarget.focus();
   }
 
   qrStarted() {

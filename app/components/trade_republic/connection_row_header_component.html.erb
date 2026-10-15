@@ -1,6 +1,7 @@
 <div class="flex flex-wrap items-center justify-between gap-3">
   <div class="flex items-center gap-3 min-w-0">
     <div class="w-2 h-2 rounded-full shrink-0 <%= dot_class %>"></div>
+    <%= render ProviderLogo.new(provider_key: :trade_republic, class_name: "w-7 h-7 rounded-lg shrink-0") %>
     <div class="min-w-0">
       <p class="text-sm font-medium text-primary truncate">
         <%= title %>
