@@ -192,4 +192,15 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
     assert_selector "p.text-destructive", text: I18n.t("settings.providers.trade_republic_panel.requires_update")
     assert_no_text I18n.t("settings.providers.trade_republic_panel.status_configured_prefix")
   end
+
+  test "a card whose QR login lapsed can start a QR login again" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "lapsed-qr")
+    item.stubs(:login_stage).returns("expired")
+
+    render_inline(TradeRepublic::ConnectionCardComponent.new(item: item))
+
+    assert_text I18n.t("settings.providers.trade_republic_panel.login_expired")
+    assert_button I18n.t("settings.providers.trade_republic_panel.qr_login")
+  end
 end

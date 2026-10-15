@@ -59,7 +59,8 @@
             ) %>
       </div>
 
-      <% if item.pending_login_state.blank? || login_stage == "qr_pending" %>
+      <%# A lapsed login can start again with a QR code, as on Accounts. %>
+      <% if item.pending_login_state.blank? || login_stage.in?(%w[qr_pending expired]) %>
         <%= render TradeRepublic::QrLoginComponent.new(
               item: item,
               return_url: helpers.settings_providers_path(anchor: "trade-republic"),
