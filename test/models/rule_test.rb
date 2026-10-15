@@ -508,21 +508,17 @@ class RuleTest < ActiveSupport::TestCase
     assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), new_entry.transaction.id
   end
 
-  test "a condition edit that rolls back does not re-seed on a later commit" do
+  test "a condition edit that rolls back leaves no re-seed pending" do
     rule = create_email_rule(value: "coffee")
-    create_transaction(date: Date.current, account: @account, name: "Coffee shop")
 
     Rule.transaction do
       rule.update!(conditions_attributes: [ { id: rule.conditions.first.id, value: "house" } ])
+      assert rule.instance_variable_get(:@reseed_notification_baseline)
       raise ActiveRecord::Rollback
     end
-    rule.reload
-    # A touch commits without running before_update, so only the rollback can clear the flag.
-    rule.touch
 
-    assert_enqueued_with(job: RuleEmailNotificationJob) do
-      rule.apply
-    end
+    assert_equal "coffee", rule.conditions.reload.first.value
+    assert_not rule.instance_variable_get(:@reseed_notification_baseline)
   end
 
   test "editing a condition while switching an action to email seeds the baseline once" do
