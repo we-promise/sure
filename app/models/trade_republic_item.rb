@@ -26,6 +26,9 @@ class TradeRepublicItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  before_save :set_session_expires_at, if: -> { session_blob_changed? || (session_expires_at.nil? && session_configured?) }
+  after_commit :schedule_sync_before_session_expires, if: -> { saved_change_to_session_expires_at? && session_expires_at.present? }
+
   # Reloading represents a new persisted state; never carry an authentication
   # PIN across that boundary in the in-memory model instance.
   def reload(*)
@@ -40,8 +43,16 @@ class TradeRepublicItem < ApplicationRecord
     session_blob.present?
   end
 
+  def session_expired?
+    session_configured? && session_expires_at.present? && session_expires_at <= Time.current
+  end
+
+  def needs_login?
+    requires_update? || session_expired?
+  end
+
   def ready_for_sync?
-    good? && pending_login_state.blank? && session_configured?
+    good? && pending_login_state.blank? && session_configured? && !session_expired?
   end
 
   def import_latest_data
@@ -223,4 +234,14 @@ class TradeRepublicItem < ApplicationRecord
       days: days
     }
   end
+
+  private
+
+    def set_session_expires_at
+      self.session_expires_at = session_configured? ? Provider::TradeRepublicSession.expires_at(session_blob) : nil
+    end
+
+    def schedule_sync_before_session_expires
+      TradeRepublicPreExpirySyncJob.schedule_for(self)
+    end
 end

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class TradeRepublicItemTest < ActiveSupport::TestCase
+  include TradeRepublicSessionTestHelper, ActiveJob::TestHelper
+
   test "database enforces one account of each kind per item" do
     item = trade_republic_items(:configured_item)
 
@@ -232,5 +234,44 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
     assert item.device_id.present?
     Provider::TradeRepublicClient.expects(:new).with(has_entry(device_id: item.device_id))
     item.trade_republic_provider(pin: "1234")
+  end
+
+  test "a new session records when it expires and plans a sync before then" do
+    item = trade_republic_items(:configured_item)
+    expires_at = 23.hours.from_now.change(usec: 0)
+
+    assert_enqueued_with job: TradeRepublicPreExpirySyncJob, at: expires_at - TradeRepublicPreExpirySyncJob::LEAD_TIME do
+      item.update!(session_blob: trade_republic_session_blob(expires_at: expires_at))
+    end
+    assert_equal expires_at, item.reload.session_expires_at
+  end
+
+  test "a refreshed session with the same expiry plans no extra sync" do
+    item = trade_republic_items(:configured_item)
+    expires_at = 23.hours.from_now.change(usec: 0)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: expires_at))
+
+    assert_no_enqueued_jobs only: TradeRepublicPreExpirySyncJob do
+      item.update!(session_blob: trade_republic_session_blob(expires_at: expires_at).sub("session", "renewed"))
+    end
+  end
+
+  test "an expired session needs a new login" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: 1.minute.ago))
+
+    assert item.good?
+    assert item.session_expired?
+    assert item.needs_login?
+    assert_not item.ready_for_sync?
+  end
+
+  test "clearing the session forgets its expiry" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: 5.hours.from_now))
+
+    item.update!(session_blob: nil, status: :requires_update)
+
+    assert_nil item.reload.session_expires_at
   end
 end

@@ -37,6 +37,23 @@ class Provider::TradeRepublicSession
     request(Net::HTTP::Get, path, body: body, headers: headers)
   end
 
+  def self.expires_at(session_blob)
+    new(phone_number: nil, pin: nil, session_blob: session_blob).expires_at
+  end
+
+  # A session ends when the tr_refresh JWT expires, 24 hours after login.
+  # Refreshing renews only tr_session, never tr_refresh. The token is not
+  # verified; the time is only used to show and plan around the expiry.
+  def expires_at
+    payload = @cookies["tr_refresh"].to_s.split(".")[1]
+    return if payload.blank?
+
+    claims = JSON.parse(Base64.urlsafe_decode64(payload))
+    Time.zone.at(claims["exp"]) if claims.is_a?(Hash) && claims["exp"].is_a?(Integer)
+  rescue ArgumentError, JSON::ParserError
+    nil
+  end
+
   def cookies_blob
     JSON.generate(@cookies)
   end
