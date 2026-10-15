@@ -36,6 +36,27 @@ class Insight::Generators::BudgetInsightGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  # Shared but excluded from reports: IncomeStatement does not count it, so
+  # the budget would again read zero spending as "on track".
+  test "no budget insight when the only shared accounts are excluded from reports" do
+    @family.accounts.accessible_by_all_active_members.update_all(exclude_from_reports: true)
+    budget_category(@budget)
+
+    travel_to @budget.end_date do
+      assert_empty generated_types
+    end
+  end
+
+  test "revoking a share changes the account digest of the insight" do
+    budget_category(@budget)
+    create_transaction(category: @category, amount: 95, date: Date.current)
+    before = generated_digest
+
+    account_shares(:credit_card_shared_with_member).destroy!
+
+    assert_not_equal before, generated_digest
+  end
+
   # A personal budget is visible to its owner and whoever they shared it with,
   # never to the whole family, so it must not reach the shared feed.
   test "a personal budget is not reported" do
@@ -53,6 +74,10 @@ class Insight::Generators::BudgetInsightGeneratorTest < ActiveSupport::TestCase
   private
     def budget_category(budget)
       budget.budget_categories.create!(category: @category, budgeted_spending: 100, currency: "USD")
+    end
+
+    def generated_digest
+      Insight::Generators::BudgetInsightGenerator.new(@family).generate.first.metadata[:accounts_digest]
     end
 
     def generated_types

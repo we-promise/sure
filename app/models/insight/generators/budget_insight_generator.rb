@@ -12,9 +12,9 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
   def generate
     budget = current_budget
     return [] unless budget&.initialized?
-    # With no account every member may see, the budget's spending reads as zero
+    # With no shared account the budget can count, its spending reads as zero
     # and would be reported as "on track" while members spend privately.
-    return [] unless shared_accounts.exists?
+    return [] unless countable_shared_accounts.exists?
 
     parent_categories = budget.budget_categories.reject(&:subcategory?)
     over = parent_categories.select(&:over_budget_with_budget?)
@@ -30,6 +30,13 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
   end
 
   private
+    # The same filters IncomeStatement applies to totals (visible, included in
+    # reports, not tax-advantaged), so a shared account that is disabled or
+    # excluded from reports does not count as something the budget can read.
+    def countable_shared_accounts
+      income_statement.eligible_accounts.where(id: shared_accounts.select(:id))
+    end
+
     # The household budget only: a personal budget is visible to its owner and
     # whoever they shared it with, not to the whole feed. Its spending is read
     # from the accounts every member may see; left alone, the budget would
@@ -63,7 +70,8 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
         metadata: {
           over_category_ids: over.map { |bc| bc.category.id }.sort,
           near_category_ids: near.map { |bc| bc.category.id }.sort,
-          budget_spent_pct_bucket: (round(budget.percent_of_budget_spent, 0).to_i / 10) * 10
+          budget_spent_pct_bucket: (round(budget.percent_of_budget_spent, 0).to_i / 10) * 10,
+          accounts_digest: shared_accounts_digest
         },
         period: budget.period,
         dedup_key: "budget_at_risk:#{month_token(budget.start_date)}"
@@ -84,7 +92,8 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
         # Bucketed to damp nightly churn: a one-point move shouldn't count as
         # a material change that rewrites the body or reactivates a dismissal.
         metadata: {
-          budget_spent_pct_bucket: (round(budget.percent_of_budget_spent, 0).to_i / 10) * 10
+          budget_spent_pct_bucket: (round(budget.percent_of_budget_spent, 0).to_i / 10) * 10,
+          accounts_digest: shared_accounts_digest
         },
         period: budget.period,
         dedup_key: "budget_on_track:#{month_token(budget.start_date)}"

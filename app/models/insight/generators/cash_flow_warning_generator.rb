@@ -65,7 +65,8 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         # bucket of the low point are material; display values live in `facts`.
         metadata: {
           negative: low_point.negative?,
-          projected_low_bucket: (round(low_point, 0).to_i / 250) * 250
+          projected_low_bucket: (round(low_point, 0).to_i / 250) * 250,
+          accounts_digest: shared_accounts_digest
         },
         period: Period.custom(start_date: Date.current, end_date: Date.current + HORIZON_DAYS),
         dedup_key: "cash_flow_warning:#{month_token}"
