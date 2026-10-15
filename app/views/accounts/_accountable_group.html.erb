@@ -14,8 +14,9 @@
       <div class="ml-auto text-right grow">
         <%= tag.p format_money(account_group.total_money), class: "text-sm font-medium text-primary privacy-sensitive" %>
         <%= turbo_frame_tag sidebar_sparkline_frame_id("#{account_group.key}_sparkline", all_tab: all_tab, mobile: mobile, version: sparkline_version),
-                            src: accountable_sparkline_path(account_group.key), loading: "lazy",
-                            data: { turbo_permanent: true, controller: "turbo-frame-timeout permanent-frame", turbo_frame_timeout_timeout_value: 10000 } do %>
+                            src: accountable_sparkline_path(account_group.key),
+                            loading: "lazy",
+                            data: sparkline_frame_data do %>
           <div class="flex items-center w-8 h-4 ml-auto">
             <div class="w-6 h-px bg-loader"></div>
           </div>
@@ -47,8 +48,9 @@
           <div class="ml-auto text-right grow h-10">
             <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
             <%= turbo_frame_tag sidebar_sparkline_frame_id(dom_id(account, :sparkline), all_tab: all_tab, mobile: mobile, version: sparkline_version),
-                                src: sparkline_account_path(account), loading: "lazy",
-                                data: { turbo_permanent: true, controller: "turbo-frame-timeout permanent-frame", turbo_frame_timeout_timeout_value: 10000 } do %>
+                                src: sparkline_account_path(account),
+                                loading: "lazy",
+                                data: sparkline_frame_data do %>
               <div class="flex items-center w-8 h-4 ml-auto">
                 <div class="w-6 h-px bg-loader"></div>
               </div>

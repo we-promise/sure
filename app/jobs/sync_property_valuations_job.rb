@@ -1,14 +1,18 @@
 # Refreshes the valuation of properties linked to an AVM provider.
 #
-# Runs once per day (see config/schedule.yml) — never hourly — because the
-# provider budgets are tight monthly caps (RentCast 50/month, Realie
-# 25/month). Each provider additionally enforces its cap via a durable
-# monthly request counter, so refreshes stop once the month's budget is spent.
+# Scheduled monthly (see config/schedule.yml) because the provider budgets
+# are tight monthly caps (RentCast 50/month, Realie 25/month). Each provider
+# additionally enforces its cap via a durable monthly request counter, so
+# refreshes stop once the month's budget is spent, and sets a minimum
+# interval between refreshes of the same property (`refresh_interval`).
+#
+# Pass `property_id:` with `force: true` for a user-requested refresh of a
+# single property, which skips the refresh interval.
 class SyncPropertyValuationsJob < ApplicationJob
   queue_as :scheduled
   sidekiq_options lock: :until_executed, on_conflict: :log
 
-  def perform
+  def perform(property_id: nil, force: false)
     registry = Provider::Registry.for_concept(:property_valuations)
 
     # Stalest valuations first (never-synced before oldest-refreshed) so a
@@ -17,26 +21,33 @@ class SyncPropertyValuationsJob < ApplicationJob
     properties = Property.where.not(avm_provider: nil)
                          .includes(:address, :account)
                          .order(Arel.sql("avm_last_synced_on ASC NULLS FIRST"))
+    properties = properties.where(id: property_id) if property_id.present?
 
     # One provider instance per key for the whole run — the request throttle
     # tracks its last request time on the instance, so a fresh instance per
     # property would bypass the inter-request delay.
     providers = {}
 
+    # Providers that hit their rate limit during this run; no further
+    # requests are sent to them until the next run.
+    rate_limited = Set.new
+
     properties.each do |property|
       account = property.account
       next unless account&.active?
-      next if property.avm_last_synced_on == Date.current
+      next if rate_limited.include?(property.avm_provider)
+
+      provider_class = Provider::PropertyValuationConcept.provider_class(property.avm_provider)
+      next unless provider_class
+      next if !force && recently_synced?(property, provider_class)
 
       # Skip before spending a monthly-budget request: mirrors the
       # import-time completeness check. A blank city/ZIP would also disable
       # the wrong-city guard in the Realie lookup, letting a refresh accept
-      # another property's valuation — and the providers only cover the US.
-      address = property.address
-      if address.nil? ||
-          %i[line1 locality region postal_code].any? { |field| address[field].blank? } ||
-          (address.country.present? && !address.country.to_s.strip.match?(/\A(US|USA)\z/i))
-        capture_failure(property, account, "Skipping refresh: property address is incomplete or not a US address", level: "warn")
+      # another property's valuation; ID-based providers (Chimnie) need the
+      # property's UPRN. Each provider covers a single country.
+      unless provider_class.lookup_ready?(property.address, property.avm_external_id)
+        capture_failure(property, account, "Skipping refresh: property address or identifier is incomplete, or the property is outside #{provider_class.supported_country}", level: "warn")
         next
       end
 
@@ -49,7 +60,10 @@ class SyncPropertyValuationsJob < ApplicationJob
       end
 
       provider = providers[property.avm_provider]
-      next unless provider # API key was removed after the property was linked
+      unless provider # API key was removed after the property was linked
+        capture_failure(property, account, "Skipping refresh: #{property.avm_provider} is not configured", level: "warn")
+        next
+      end
       next unless provider.requests_remaining?
 
       # The account was created in the provider's currency, but the user can
@@ -60,18 +74,23 @@ class SyncPropertyValuationsJob < ApplicationJob
         next
       end
 
-      response = provider.fetch_property_valuation(
+      address = property.address
+      lookup_params = {
         line1: address.line1,
         locality: address.locality,
         region: address.region,
         postal_code: address.postal_code
-      )
+      }
+      lookup_params[:external_id] = property.avm_external_id if provider_class.requires_external_id?
+
+      response = provider.fetch_property_valuation(**lookup_params)
 
       if response.success?
         result = nil
         Property.transaction do
           result = account.set_current_balance(response.data.valuation)
           raise ActiveRecord::Rollback unless result.success?
+          property.name_avm_valuation!
           property.update!(avm_last_synced_on: Date.current)
         end
 
@@ -79,6 +98,7 @@ class SyncPropertyValuationsJob < ApplicationJob
           capture_failure(property, account, "Failed to update valuation balance: #{result&.error}")
         end
       else
+        rate_limited << property.avm_provider if response.error.is_a?(provider_class::RateLimitError)
         capture_failure(property, account, "Valuation refresh failed: #{response.error.message}")
       end
     rescue => e
@@ -87,6 +107,12 @@ class SyncPropertyValuationsJob < ApplicationJob
   end
 
   private
+
+    # RentCast and Realie refresh at most daily; Chimnie at most monthly.
+    def recently_synced?(property, provider_class)
+      property.avm_last_synced_on.present? &&
+        property.avm_last_synced_on > Date.current - provider_class.refresh_interval
+    end
 
     def capture_failure(property, account, message, level: "error")
       DebugLogEntry.capture(

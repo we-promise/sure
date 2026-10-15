@@ -2,6 +2,7 @@
 
 class Api::V1::TransactionsController < Api::V1::BaseController
   include Pagy::Backend
+  include Api::V1::TransactionLookup
 
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
@@ -143,6 +144,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     Entry.transaction do
       if @entry.update(entry_params_for_update)
+        sync_needed = @entry.saved_changes_affect_balances?
+
         # Handle tags separately - only when explicitly provided in the request
         # This allows clearing tags with tag_ids: [] while preserving tags when not specified
         if tags_provided?
@@ -151,7 +154,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
           @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
         end
 
-        @entry.sync_account_later
+        @entry.sync_account_later if sync_needed
         @entry.lock_saved_attributes!
         @entry.mark_user_modified! if user_modified_requested?
 
@@ -203,19 +206,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   private
 
     def set_transaction
-      raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
-
-      family = current_resource_owner.family
-      @transaction = family.transactions
-        .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
-        .find(params[:id])
-      @entry = @transaction.entry
-    rescue ActiveRecord::RecordNotFound
-      render json: {
-        error: "not_found",
-        message: "Transaction not found"
-      }, status: :not_found
+      load_accessible_transaction(params[:id])
     end
 
     def ensure_read_scope
