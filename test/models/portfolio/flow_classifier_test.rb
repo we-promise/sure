@@ -246,6 +246,27 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_outflow, @family_scope.classify_ids([ out_leg.id ])[out_leg.id]
   end
 
+  # include_excluded asks for an excluded leg to be read as live, so the
+  # opposite leg's lookup has to read it as live too. Otherwise the excluded
+  # leg finds its live counterpart and is internal, while the live leg cannot
+  # see the excluded one and is external: one move, two answers.
+  test "include_excluded counts an excluded leg as the opposite leg of a security transfer" do
+    security = create_portfolio_security
+    out_leg, in_leg = create_security_transfer(security: security, from: @brokerage, to: @ira, qty: 10, price: 50)
+    out_leg.update_columns(excluded: true)
+    including = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], include_excluded: true)
+
+    assert_equal :internal, including.classify(out_leg)
+    assert_equal :internal, including.classify(in_leg)
+    assert_equal({ out_leg.id => :internal, in_leg.id => :internal }, including.classify_ids([ out_leg.id, in_leg.id ]))
+
+    # Without the option the excluded leg is not a flow and does not count as
+    # the live leg's counterpart, as before.
+    assert_nil @family_scope.classify(out_leg)
+    assert_equal :external_inflow, @family_scope.classify(in_leg)
+    assert_equal({ out_leg.id => nil, in_leg.id => :external_inflow }, @family_scope.classify_ids([ out_leg.id, in_leg.id ]))
+  end
+
   test "an unlabelled or Other trade is internal" do
     unlabelled = create_portfolio_trade(account: @brokerage, qty: 2, price: 10, label: nil)
     unlabelled.entryable.update!(investment_activity_label: nil)
