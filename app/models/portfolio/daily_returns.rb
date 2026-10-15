@@ -70,6 +70,13 @@ class Portfolio::DailyReturns
   # series does not value makes a transfer to one of them internal, so it
   # leaves the denominator alone while the money leaves the close, and the
   # source account's drop reads as a loss.
+  #
+  # Asset accounts only. The levels are multiplied by flows_factor, but the
+  # flows (-entries.amount, a journal's value) are not, so on a liability they
+  # would carry the wrong sign against its balance and nothing would flag it.
+  # A liability is refused when the series is first queried (see
+  # #refuse_liabilities!), so building one stays free for a caller that only
+  # reads its attributes.
   def initialize(account_ids:, currency:, period:, active_until_dates: {})
     @account_ids = Array(account_ids).compact.map(&:to_s)
     @currency = currency
@@ -211,8 +218,21 @@ class Portfolio::DailyReturns
     # where each fragment belongs, and the fragment replaces it after the binds
     # are filled, so it is never scanned.
     def bind_and_splice(template)
+      refuse_liabilities!
+
       ActiveRecord::Base.sanitize_sql_array([ template, query_binds ])
         .gsub(FRAGMENT_MARKER) { fragments.fetch(Regexp.last_match(1)) }
+    end
+
+    # Every query this class runs goes through #bind_and_splice, so checking
+    # here covers each figure it can return. Once per instance.
+    def refuse_liabilities!
+      @liabilities_refused ||= begin
+        if Account.where(id: account_ids, classification: "liability").exists?
+          raise ArgumentError, "Portfolio::DailyReturns reads asset accounts only; liabilities are not supported"
+        end
+        true
+      end
     end
 
     def fragment(name)
@@ -341,10 +361,9 @@ class Portfolio::DailyReturns
         balances_by_date AS (
           SELECT
             d.date,
-            -- flows_factor is +1 for assets and -1 for liabilities. Investment
-            -- and Crypto are always assets, so this is an identity here; it is
-            -- applied anyway so the expression matches the chart series builder
-            -- and cannot silently invert if the scope ever widens.
+            -- flows_factor is +1 for assets and -1 for liabilities. The series
+            -- refuses liabilities, so this is an identity here; it is applied
+            -- anyway so the expression matches the chart series builder.
             COALESCE(SUM(lb.end_balance * lb.flows_factor * er.rate), 0) AS value_close,
             -- The opening level, which is only read for the FIRST day of the
             -- period (#rows carries the previous close afterwards).
@@ -554,8 +573,9 @@ class Portfolio::DailyReturns
           GROUP BY entries.date
         ),
         -- An inbound journal that could not be valued on its own date, carried
-        -- to the first later day in the period on which the account's holding
-        -- of that security has a price, and booked THERE.
+        -- to the first later day on which the account's holding of that
+        -- security has a price, and booked THERE when that day is in the
+        -- period, whether or not the journal itself is.
         --
         -- Suppressing the journal day alone is not enough. Holding.gapfill
         -- carries the journal's zero price forward, so the position sits in
@@ -604,8 +624,14 @@ class Portfolio::DailyReturns
           LEFT JOIN LATERAL (
             SELECT #{rate_lookup('first_priced.currency', 'first_priced.date - 1')} AS rate
           ) carry_fx ON TRUE
+          -- Selected by the day the carry lands on, not by the journal's own
+          -- date: a journal dated before the period whose first priced day
+          -- falls inside it moved that day's balance as much as one dated in
+          -- the period. A journal inside the period still qualifies, since its
+          -- first priced day is after its own date.
           WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
-            AND entries.date BETWEEN :start_date AND :end_date
+            AND entries.date < DATE :end_date
+            AND first_priced.date >= DATE :start_date
             AND #{fragment(:journal_predicate)}
             AND trades.qty > 0
             AND (journal_day.price IS NULL OR journal_day.price <= 0)
