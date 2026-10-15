@@ -186,4 +186,4 @@ ro:
         card_fee: Comision card
         card_refund: Rambursare pe card
         tax_refund: Rambursare fiscală
-        round_up: Rotunjire
+        round_up: "Round up"

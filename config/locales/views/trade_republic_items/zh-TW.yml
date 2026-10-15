@@ -176,4 +176,4 @@ zh-TW:
         card_fee: 卡片費用
         card_refund: 卡片退款
         tax_refund: 退稅
-        round_up: 零錢湊整
+        round_up: "Round up"

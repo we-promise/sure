@@ -16,7 +16,7 @@ pl:
         contribution: Wpłata
         dividend: Dywidenda
         interest: Odsetki
-        round_up: Zaokrąglenie
+        round_up: "Round up"
         tax_refund: Zwrot podatku
         withdrawal: Wypłata
     complete_account_setup:

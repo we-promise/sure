@@ -176,4 +176,4 @@ zh-CN:
         card_fee: 卡费
         card_refund: 卡退款
         tax_refund: 退税
-        round_up: 零钱凑整
+        round_up: "Round up"

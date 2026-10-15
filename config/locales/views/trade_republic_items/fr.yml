@@ -173,7 +173,7 @@ fr:
         card_fee: Frais de carte
         card_refund: Remboursement par carte
         tax_refund: Remboursement d'impôt
-        round_up: Arrondi
+        round_up: "Round up"
     update:
       pin_required: Saisissez votre code PIN ou mot de passe Trade Republic pour vous réauthentifier.
       success: Configuration Trade Republic mise à jour avec succès.

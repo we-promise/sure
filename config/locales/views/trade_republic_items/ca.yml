@@ -152,7 +152,7 @@ ca:
         tax_refund: Devolució d'impostos
         buy: Compra
         sell: Venda
-        round_up: Arrodoniment
+        round_up: "Round up"
     defaults:
       name: Trade Republic
     sync_status:

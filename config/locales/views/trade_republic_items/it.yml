@@ -176,4 +176,4 @@ it:
         card_fee: Commissione carta
         card_refund: Rimborso carta
         tax_refund: Rimborso fiscale
-        round_up: Arrotondamento
+        round_up: "Round up"

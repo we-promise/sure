@@ -167,7 +167,7 @@ ru:
         card_fee: Комиссия по карте
         card_refund: Возврат на карту
         tax_refund: Налоговый возврат
-        round_up: Округление
+        round_up: "Round up"
     duplicate_connection: "Этот счёт Trade Republic уже подключён. Новое подключение удалено."
     defaults:
       name: Trade Republic

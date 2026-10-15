@@ -7,7 +7,7 @@ de:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Depot"
+      brokerage: "Brokerage"
       private_markets: "Private Märkte"
       interest_products: "Zinsprodukte"
       crypto_wallet: "Krypto-Wallet"
@@ -176,4 +176,4 @@ de:
         card_fee: Kartengebühr
         card_refund: Kartenrückerstattung
         tax_refund: Steuerrückerstattung
-        round_up: Aufrundung
+        round_up: "Round up"

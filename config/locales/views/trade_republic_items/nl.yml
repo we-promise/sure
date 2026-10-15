@@ -7,7 +7,7 @@ nl:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Effectenrekening"
+      brokerage: "Brokeragerekening"
       private_markets: "Privémarkten"
       interest_products: "Renteproducten"
       crypto_wallet: "Cryptowallet"
@@ -176,4 +176,4 @@ nl:
         card_fee: Kaartkosten
         card_refund: Kaartterugbetaling
         tax_refund: Belastingteruggaaf
-        round_up: Afronding
+        round_up: "Round up"
