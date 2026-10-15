@@ -109,6 +109,48 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal failed_at, @account.disabled_at
   end
 
+  # An account disabled and enabled again before enable cleared disabled_at
+  # still carries that date while active or draft. Deleting it must drop the
+  # stale date, so a failed destroy stamps the failure instead of reviving it
+  # as the account's net-worth cutoff.
+  test "a failed destroy of an active or draft account with a stale disabled_at stamps the failure" do
+    stale = 1.year.ago.change(usec: 0)
+    failed_at = 3.days.from_now.change(usec: 0)
+
+    results = %w[active draft].index_with do |status|
+      @account.update_columns(status: status, disabled_at: stale)
+      @account.reload.mark_for_deletion!
+      @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+      travel_to(failed_at) { assert_raises(StandardError) { @account.destroy } }
+      @account.unstub(:cleanup_transfers)
+
+      @account.reload
+      [ @account.status, @account.disabled_at ]
+    end
+
+    assert_equal({ "active" => [ "disabled", failed_at ], "draft" => [ "disabled", failed_at ] }, results)
+  end
+
+  test "marking an active or draft account for deletion clears a stale disabled_at" do
+    results = %w[active draft].index_with do |status|
+      @account.update_columns(status: status, disabled_at: 1.year.ago)
+      @account.reload.mark_for_deletion!
+      @account.reload.disabled_at
+    end
+
+    assert_equal({ "active" => nil, "draft" => nil }, results)
+  end
+
+  test "marking a disabled account for deletion keeps its disabled_at" do
+    disabled_at = 40.days.ago.change(usec: 0)
+    @account.update_columns(status: "disabled", disabled_at: disabled_at)
+
+    @account.reload.mark_for_deletion!
+
+    assert_equal disabled_at, @account.reload.disabled_at
+  end
+
   test "enabling an account clears disabled_at" do
     @account.disable!
     assert_not_nil @account.reload.disabled_at

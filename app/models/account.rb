@@ -190,8 +190,13 @@ class Account < ApplicationRecord
       transitions from: :disabled, to: :active, after: :clear_disabled_at
     end
 
+    # An active or draft account can still carry a disabled_at from before enable
+    # cleared it. Drop it here, so a failed deletion (below) stamps the failure
+    # rather than reviving that stale date as the cutoff. A disabled account
+    # keeps its date.
     event :mark_for_deletion do
-      transitions from: [ :draft, :active, :disabled ], to: :pending_deletion
+      transitions from: [ :draft, :active ], to: :pending_deletion, after: :clear_disabled_at
+      transitions from: :disabled, to: :pending_deletion
     end
 
     # The AASM way out of pending_deletion (destroy_later's enqueue failure
