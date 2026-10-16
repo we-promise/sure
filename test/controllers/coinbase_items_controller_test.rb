@@ -65,6 +65,37 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
     assert @coinbase_item.reload.syncing?
   end
 
+  # Add Account -> Crypto -> Coinbase used to bounce back to Settings even when
+  # the connection's sync had already found wallets waiting to be set up.
+  test "select_accounts opens the wallet setup of the family's Coinbase connection" do
+    get select_accounts_coinbase_items_url
+
+    assert_redirected_to setup_accounts_coinbase_item_path(@coinbase_item)
+    assert_response :see_other
+  end
+
+  test "select_accounts sends the user to Settings when no connection has credentials" do
+    @coinbase_item.update!(scheduled_for_deletion: true)
+
+    get select_accounts_coinbase_items_url
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("coinbase_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
+
+  test "select_accounts asks which connection when there are several, unless one is named" do
+    other_item = CoinbaseItem.create!(family: @family, name: "Second Coinbase", api_key: "key_2", api_secret: "secret_2")
+
+    get select_accounts_coinbase_items_url
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("coinbase_items.select_accounts.select_connection"), flash[:alert]
+
+    get select_accounts_coinbase_items_url(coinbase_item_id: other_item.id)
+
+    assert_redirected_to setup_accounts_coinbase_item_path(other_item)
+  end
+
   test "should show setup_accounts page" do
     get setup_accounts_coinbase_item_url(@coinbase_item)
     assert_response :success
