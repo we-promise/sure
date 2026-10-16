@@ -82,6 +82,37 @@ class BinanceItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to setup_accounts_binance_item_path(other_item)
   end
 
+  test "select_accounts says the named connection is unavailable when another one exists" do
+    only_binance_item(@binance_item)
+    get select_accounts_binance_items_url(binance_item_id: SecureRandom.uuid)
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("binance_items.select_accounts.connection_unavailable"), flash[:alert]
+  end
+
+  test "select_accounts carries a safe return_to into setup and drops an unsafe one" do
+    only_binance_item(@binance_item)
+    get select_accounts_binance_items_url(return_to: "/imports/123/confirm")
+    assert_redirected_to setup_accounts_binance_item_path(@binance_item, return_to: "/imports/123/confirm")
+
+    get select_accounts_binance_items_url(return_to: "//evil.example")
+    assert_redirected_to setup_accounts_binance_item_path(@binance_item)
+  end
+
+  test "setup_accounts keeps return_to for finishing and cancelling" do
+    get setup_accounts_binance_item_url(@binance_item, return_to: "/imports/123/confirm")
+
+    assert_response :success
+    assert_select "input[type=hidden][name=return_to][value=?]", "/imports/123/confirm"
+    assert_select "a[href=?]", "/imports/123/confirm", text: I18n.t("binance_items.setup_accounts.cancel")
+  end
+
+  test "complete_account_setup returns to return_to" do
+    post complete_account_setup_binance_item_url(@binance_item), params: { return_to: "/imports/123/confirm" }
+
+    assert_redirected_to "/imports/123/confirm"
+  end
+
   test "should show setup_accounts page" do
     get setup_accounts_binance_item_url(@binance_item)
     assert_response :success

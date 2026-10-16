@@ -69,12 +69,18 @@ class BinanceItemsController < ApplicationController
     end
 
     unless binance_item
-      message_key = binance_items.many? && params[:binance_item_id].blank? ? ".select_connection" : ".no_credentials_configured"
+      message_key = if params[:binance_item_id].present? && binance_items.any?
+        ".connection_unavailable"
+      elsif binance_items.many?
+        ".select_connection"
+      else
+        ".no_credentials_configured"
+      end
       redirect_to settings_providers_path, alert: t(message_key)
       return
     end
 
-    redirect_to setup_accounts_binance_item_path(binance_item), status: :see_other
+    redirect_to setup_accounts_binance_item_path(binance_item, return_to: safe_return_to(params[:return_to])), status: :see_other
   end
 
   def link_accounts
@@ -176,6 +182,9 @@ class BinanceItemsController < ApplicationController
   end
 
   def setup_accounts
+    # Where Add Account was opened from, carried through the form so finishing
+    # or cancelling goes back there.
+    @return_to = safe_return_to(params[:return_to])
     @binance_accounts = @binance_item.binance_accounts
       .left_joins(:account_provider)
       .where(account_providers: { id: nil })
@@ -260,7 +269,7 @@ class BinanceItemsController < ApplicationController
         )
       ] + Array(flash_notification_stream_items)
     else
-      redirect_to accounts_path, status: :see_other
+      redirect_to safe_return_to(params[:return_to]) || accounts_path, status: :see_other
     end
   end
 
