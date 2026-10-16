@@ -162,9 +162,9 @@ class CreditCard < ApplicationRecord
   # Whether the last statement came to more than the minimum payment. A card
   # carrying a minimum payment but no last statement cannot be short of it,
   # and a zero minimum payment means no minimum was set rather than one of nil.
-  def minimum_payment_shortfall?
+  def minimum_payment_shortfall?(as_of: Date.current)
     minimum = minimum_payment_money
-    balance = last_statement_balance_money
+    balance = last_statement_balance_money(as_of: as_of)
     return false if minimum.nil? || balance.nil?
 
     balance > minimum

@@ -261,13 +261,15 @@ class CreditCardTest < ActiveSupport::TestCase
   end
 
   test "the minimum payment shortfall reads against the last statement" do
-    card = statement_card(close_day: 25, due_day: 5, minimum_payment: 100)
+    travel_to Date.new(2026, 10, 16) do
+      card = statement_card(close_day: 25, due_day: 5, minimum_payment: 100)
 
-    charge(card.account, Date.new(2026, 9, 10), 250)
-    assert card.minimum_payment_shortfall?
+      charge(card.account, Date.new(2026, 9, 10), 250)
+      assert card.minimum_payment_shortfall?
 
-    card.update!(minimum_payment: 500)
-    assert_not card.minimum_payment_shortfall?
+      card.update!(minimum_payment: 500)
+      assert_not card.minimum_payment_shortfall?
+    end
   end
 
   test "a card with no minimum payment recorded is not in shortfall" do

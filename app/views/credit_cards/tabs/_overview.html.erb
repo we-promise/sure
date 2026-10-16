@@ -10,6 +10,8 @@
   <% last_balance = card.last_statement_balance_money(as_of: today) %>
   <% accrued = card.accrued_since_last_close_money(as_of: today) %>
   <% due_date = card.next_payment_due_date(as_of: today) %>
+  <% last_due_date = card.payment_due_date_for(card.last_statement_close_date(as_of: today)) %>
+  <% due_for_last_balance = due_date.present? && due_date == last_due_date %>
   <% next_close = card.next_statement_close_date(as_of: today) %>
 
   <div class="grid grid-cols-3 gap-2">
@@ -24,7 +26,7 @@
         because a bare date beside a balance reads as a second, separate bill. %>
     <%= summary_card title: t(".statement_balance") do %>
       <%= last_balance ? format_money(last_balance) : t(".unknown") %>
-      <% if due_date %>
+      <% if due_date && due_for_last_balance %>
         <span class="block text-sm text-secondary">
           <%= t(".due_on", date: l(due_date, format: :long)) %>
         </span>
@@ -38,7 +40,12 @@
         summing to the debt in the header instead of appearing to contradict it. %>
     <%= summary_card title: t(".since_last_statement") do %>
       <%= accrued ? format_money(accrued) : t(".unknown") %>
-      <% if accrued&.negative? %>
+      <% if due_date && !due_for_last_balance %>
+        <span class="block text-sm text-secondary">
+          <%= t(".due_on", date: l(due_date, format: :long)) %>
+        </span>
+        <span class="block text-sm text-secondary"><%= credit_card_due_countdown(card.days_until_due(as_of: today)) %></span>
+      <% elsif accrued&.negative? %>
         <span class="block text-sm text-secondary"><%= t(".credit_toward_next") %></span>
       <% elsif next_close %>
         <span class="block text-sm text-secondary"><%= t(".closes_on", date: l(next_close, format: :long)) %></span>
@@ -57,7 +64,7 @@
       that explains nothing. Set against the statement balance above it answers
       the question the cardholder actually has, which is whether paying the
       minimum clears the bill. %>
-  <% if card.minimum_payment_shortfall? %>
+  <% if card.minimum_payment_shortfall?(as_of: today) %>
     <div class="mt-2">
       <%= render DS::Alert.new(variant: :warning) do %>
         <%= t(".above_minimum",
