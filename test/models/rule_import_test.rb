@@ -411,6 +411,34 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_nil @family.rules.find_by(name: "Invalid condition rule")
   end
 
+  test "reports a validation error for a null byte inside a split action" do
+    split = { splits: [
+      { type: "percentage", name: "A", share: "50", category: "Bad\0Category" },
+      { type: "percentage", name: "B", share: "50" }
+    ] }
+    category_count = @family.categories.count
+
+    # As an object and as a JSON string (where the NUL byte is escaped in the raw text).
+    [ split, split.to_json ].each do |value|
+      csv = CSV.generate do |rows|
+        rows << %w[name resource_type active effective_date conditions actions]
+        rows << [
+          "Invalid split rule", "transaction", true, nil,
+          [ { condition_type: "transaction_name", operator: "like", value: "rent" } ].to_json,
+          [ { action_type: "split_transaction", value: value } ].to_json
+        ]
+      end
+
+      import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+      import.generate_rows_from_csv
+
+      error = assert_raises(ActiveRecord::RecordInvalid, value.class.name) { import.send(:import!) }
+      assert_match(/value is invalid/i, error.message)
+      assert_nil @family.rules.find_by(name: "Invalid split rule")
+      assert_equal category_count, @family.categories.count
+    end
+  end
+
   test "rejects an imported name with a trailing null byte" do
     import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
     import.generate_rows_from_csv

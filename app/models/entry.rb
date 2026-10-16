@@ -468,19 +468,36 @@ class Entry < ApplicationRecord
   # split rules, a rule and an API request) can both pass a splittable? check before either
   # inserts children, and split! only validates its own amounts, so without the lock both sets
   # of children would land and the amount would count twice. A provider sync can also mark the
-  # transaction pending or a transfer in between. Takes FOR UPDATE on the transaction and this
-  # row (lock! also reloads them) and re-checks under it. Returns true when it split.
-  #
-  # Explicit transaction + lock!, not with_lock: Entry#transaction is the delegated_type
-  # accessor for the Transaction entryable, so with_lock silently never yields.
+  # transaction pending or a transfer in between, so those are re-checked too. Returns true
+  # when it split.
   def split_once!(splits)
-    self.class.transaction do
-      txn = entryable if entryable.is_a?(Transaction)
-      txn&.lock!
-      lock!
+    with_split_lock do |txn|
       next false if split_parent? || excluded? || txn&.transfer? || txn&.pending?
 
       split!(splits)
+      true
+    end
+  end
+
+  # Replaces the children of a split under the same lock, so a concurrent unsplit can't be undone
+  # and two edits can't both insert children. Returns false when the entry is no longer a split
+  # parent. Editing an existing split doesn't re-check pending/transfer: it creates no new split.
+  def resplit!(splits)
+    with_split_lock do
+      next false unless split_parent?
+
+      unsplit!
+      split!(splits)
+      true
+    end
+  end
+
+  # Unsplits under the same lock. Returns false when another caller already did.
+  def unsplit_once!
+    with_split_lock do
+      next false unless split_parent?
+
+      unsplit!
       true
     end
   end
@@ -618,6 +635,20 @@ class Entry < ApplicationRecord
   end
 
   private
+    # Takes FOR UPDATE on the transaction row, then on this entry (lock! also reloads both), always
+    # in that order so the split methods can't deadlock each other. Yields the transaction, or nil
+    # for other entryables.
+    #
+    # Explicit transaction + lock!, not with_lock: Entry#transaction is the delegated_type
+    # accessor for the Transaction entryable, so with_lock silently never yields.
+    def with_split_lock
+      self.class.transaction do
+        txn = entryable if entryable.is_a?(Transaction)
+        txn&.lock!
+        lock!
+        yield txn
+      end
+    end
 
     # Remembers the earliest date this entry had before any save that changed
     # it, for sync_account_later to use as the sync window start.

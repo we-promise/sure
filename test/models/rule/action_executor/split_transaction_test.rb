@@ -45,6 +45,28 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     assert_equal [], without_merchant.transaction.tags
   end
 
+  test "percentage split rounds to the currency's minor unit" do
+    yen_account = @family.accounts.create!(name: "Yen split test", balance: 0, currency: "JPY", accountable: Depository.new)
+    entry = create_transaction(amount: 100, currency: "JPY", name: "Bundle", account: yen_account)
+
+    build_action(type: "percentage", splits: [
+      { name: "A", share: "33.33" }, { name: "B", share: "33.33" }, { name: "C", share: "33.34" }
+    ]).apply(yen_account.transactions)
+
+    amounts = entry.reload.child_entries.order(:name).pluck(:amount)
+    assert_equal [ 33, 33, 34 ], amounts
+    assert amounts.all? { |amount| amount == amount.round }, "no fractional yen: #{amounts.inspect}"
+  end
+
+  test "amount precision follows the currency, capped at the stored scale" do
+    klass = Rule::ActionExecutor::SplitTransaction
+    assert_equal 0, klass.amount_precision("JPY")
+    assert_equal 2, klass.amount_precision("EUR")
+    assert_equal 3, klass.amount_precision("KWD")
+    assert_equal 4, klass.amount_precision("BTC"), "entries.amount stores 4 decimals"
+    assert_equal 2, klass.amount_precision("XXQ"), "unknown codes fall back to cents"
+  end
+
   test "ignores a merchant and tags that don't belong to the family" do
     other_family_merchant = families(:empty).merchants.create!(name: "Foreign merchant", type: "FamilyMerchant")
     other_family_tag = families(:empty).tags.create!(name: "Foreign tag")

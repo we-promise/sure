@@ -3,6 +3,9 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
   # amount off the top, a percentage split takes a share of whatever's left after all fixed
   # splits are subtracted. Fixed splits are always resolved first, regardless of row order.
   TYPES = [ "fixed", "percentage" ].freeze
+  # entries.amount is decimal(19,4).
+  AMOUNT_SCALE = 4
+  REFERENCE_ERRORS = { category: :split_category_invalid, merchant: :split_merchant_invalid, tag: :split_tags_invalid }.freeze
   MIN_SPLITS = 2
   MAX_SPLITS = 20
   PERCENTAGE_TOTAL_TOLERANCE = 0.01
@@ -60,7 +63,7 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       next false unless txn.splittable?
 
       entry = txn.entry
-      splits = self.class.build_splits(config, entry.amount, references)
+      splits = self.class.build_splits(config, entry.amount, references, precision: self.class.amount_precision(entry.currency))
 
       if splits.nil?
         skipped << { transaction_id: txn.id, entry_id: entry.id, reason: "unresolvable_split_amounts", entry_amount: entry.amount.to_s }
@@ -103,9 +106,7 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
         return errors
       end
 
-      family_category_ids = family.categories.pluck(:id).to_set
-      family_merchant_ids = family.merchants.pluck(:id).to_set
-      family_tag_ids = family.tags.pluck(:id).to_set
+      references = Entry::SplitReferences.new(family)
 
       total_percentage = 0
       has_percentage = false
@@ -121,13 +122,17 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
         name = split["name"]
         type = split["type"]
         share = parse_decimal(split["share"])
-        category_id = split["category_id"].presence
-        merchant_id = split["merchant_id"].presence
-        tag_ids = Array(split["tag_ids"]).reject(&:blank?)
         position = index + 1
 
-        errors << [ :split_name_required, { index: position } ] if name.blank?
-        errors << [ :split_name_too_long, { index: position } ] if name.to_s.length > 255
+        # A NUL byte or broken UTF-8 would only fail once the rule runs and the child is saved.
+        # Checked first: blank? raises on broken UTF-8.
+        if !DatabaseTextValidator.acceptable?(name)
+          errors << [ :split_name_invalid, { index: position } ]
+        elsif name.blank?
+          errors << [ :split_name_required, { index: position } ]
+        elsif name.to_s.length > 255
+          errors << [ :split_name_too_long, { index: position } ]
+        end
         errors << [ :split_type_invalid, { index: position } ] unless TYPES.include?(type)
 
         if share.nil? || share <= 0
@@ -137,16 +142,9 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
           total_percentage += share
         end
 
-        if category_id && !family_category_ids.include?(category_id)
-          errors << [ :split_category_invalid, { index: position } ]
-        end
-
-        if merchant_id && !family_merchant_ids.include?(merchant_id)
-          errors << [ :split_merchant_invalid, { index: position } ]
-        end
-
-        if tag_ids.any? && !tag_ids.to_set.subset?(family_tag_ids)
-          errors << [ :split_tags_invalid, { index: position } ]
+        unknown = references.unknown(category_id: split["category_id"], merchant_id: split["merchant_id"], tag_ids: split["tag_ids"])
+        unknown.map(&:first).uniq.each do |kind|
+          errors << [ REFERENCE_ERRORS.fetch(kind), { index: position } ]
         end
       end
 
@@ -190,6 +188,24 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       config.merge("splits" => splits).to_json
     end
 
+    # Digits a percentage share is rounded to: the currency's minor unit (0 for JPY, 3 for KWD),
+    # capped at the 4 decimals entries.amount stores (crypto currencies list 8), so children that
+    # sum to the parent in memory still do once saved. Unknown codes fall back to cents.
+    def amount_precision(currency)
+      [ Money::Currency.new(currency).default_precision, AMOUNT_SCALE ].min
+    rescue Money::Currency::UnknownCurrencyError
+      2
+    end
+
+    # True when every text inside an imported split value (row names, category/merchant/tag names)
+    # can be stored. A JSON string hides NUL bytes as \u0000 escapes, so it is checked decoded.
+    def acceptable_text?(value)
+      decoded = value.is_a?(String) ? JSON.parse(value) : value
+      DatabaseTextValidator.acceptable?(decoded)
+    rescue JSON::ParserError
+      DatabaseTextValidator.acceptable?(value)
+    end
+
     # True if the config has at least one percentage-type split. Pure-fixed configs need an
     # exact-amount rule condition (see Rule::Action#split_config_valid); configs with a
     # percentage split don't, since the percentage share(s) always absorb whatever's left after
@@ -203,7 +219,10 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     # (e.g. fixed splits don't leave a positive remainder for the percentage splits to divide)
     # rather than raising, so the caller can skip just this transaction and keep processing the
     # rest of the scope.
-    def build_splits(config, entry_amount, references)
+    #
+    # precision comes from amount_precision, so a percentage share never produces a fraction of
+    # the currency's smallest unit.
+    def build_splits(config, entry_amount, references, precision: 2)
       raw_splits = config["splits"]
       sign = entry_amount.negative? ? -1 : 1
       total_magnitude = entry_amount.abs
@@ -248,13 +267,13 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
           if position == percentage_indices.size - 1
             amounts[split_index] = running_remaining
           else
-            share_amount = (remaining * percentages[position] / 100).round(2)
+            share_amount = (remaining * percentages[position] / 100).round(precision)
             amounts[split_index] = share_amount
             running_remaining -= share_amount
           end
         end
 
-        # The last percentage split absorbs whatever's left after rounding the others to cents,
+        # The last percentage split absorbs whatever's left after rounding the others to the minor unit,
         # which can go non-positive if per-row rounding drift stacks up (many splits, large
         # amount, tiny trailing percentage). Bail rather than create a zero/negative-amount
         # child entry.

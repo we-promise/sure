@@ -291,4 +291,31 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert_not stale.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
     assert_not @entry.reload.split_parent?
   end
+
+  test "resplit! replaces the children of a split" do
+    @entry.split!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+
+    assert @entry.resplit!([ { name: "C", amount: 30 }, { name: "D", amount: 70 } ])
+    assert_equal %w[C D], @entry.reload.child_entries.order(:name).pluck(:name)
+    assert @entry.excluded?
+  end
+
+  test "resplit! does not resurrect a split another caller removed" do
+    @entry.split!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    stale = Entry.find(@entry.id)
+    @entry.unsplit!
+
+    assert_not stale.resplit!([ { name: "C", amount: 30 }, { name: "D", amount: 70 } ])
+    assert_not @entry.reload.split_parent?
+    assert_not @entry.excluded?
+  end
+
+  test "unsplit_once! unsplits once and then reports nothing to do" do
+    @entry.split!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    stale = Entry.find(@entry.id)
+
+    assert @entry.unsplit_once!
+    assert_not stale.unsplit_once!
+    assert_not @entry.reload.split_parent?
+  end
 end

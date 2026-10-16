@@ -1512,6 +1512,11 @@ class Family::DataImporter
     # remapped through this import's source mappings, kept if it already belongs to the family,
     # and otherwise dropped.
     def resolve_split_action_value(value)
+      # Checked like every other rule text, before find_or_create can hit the database with a name.
+      unless Rule::ActionExecutor::SplitTransaction.acceptable_text?(value)
+        raise InvalidRecordError.new(record_type: "Rule", field: "value", value: "(invalid text)")
+      end
+
       Rule::ActionExecutor::SplitTransaction.localize_value(value) do |kind, name: nil, id: nil|
         relation = kind.to_s.pluralize.to_sym
         next mapped_id(relation, id, record_type: kind.to_s.classify, required: false) || (id if family_record_ids(relation).include?(id)) unless name

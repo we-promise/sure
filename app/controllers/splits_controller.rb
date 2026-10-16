@@ -47,9 +47,10 @@ class SplitsController < ApplicationController
 
     splits = build_splits
 
-    Entry.transaction do
-      @entry.unsplit!
-      @entry.split!(splits)
+    # A concurrent unsplit or edit can land between the check above and here.
+    unless @entry.resplit!(splits)
+      redirect_to transactions_path, alert: t("splits.edit.not_split")
+      return
     end
 
     @entry.sync_account_later
@@ -67,7 +68,10 @@ class SplitsController < ApplicationController
       return
     end
 
-    @entry.unsplit!
+    unless @entry.unsplit_once!
+      redirect_to transactions_path, alert: t("splits.edit.not_split")
+      return
+    end
     @entry.sync_account_later
 
     redirect_to transactions_path, notice: t("splits.destroy.success")

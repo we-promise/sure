@@ -14,6 +14,7 @@ en:
               invalid_split_count: "must have between %{min} and %{max} splits"
               split_name_required: "split #%{index} is missing a name"
               split_name_too_long: "split #%{index} name is too long (max 255 characters)"
+              split_name_invalid: "split #%{index} name contains invalid characters"
               split_type_invalid: "split #%{index} type must be fixed or percentage"
               split_share_invalid: "split #%{index} share must be a positive number"
               split_category_invalid: "split #%{index} category does not belong to this family"

@@ -50,8 +50,10 @@ class Api::V1::SplitsController < Api::V1::BaseController
 
     render_split status: :created
   rescue NotSplittable
-    # split_once! reloaded the entry under the lock, so the reason reflects what the other
-    # caller did (split it, or excluded it).
+    # Reload so the reason reflects what the other caller or a sync did in the meantime
+    # (split, excluded, pending, transfer), not the state checked before the lock.
+    @entry.reload
+    @transaction.reload
     render_unprocessable("Transaction cannot be split", [ not_splittable_reason ])
   rescue ActiveRecord::RecordInvalid => e
     render_unprocessable(e.message)
@@ -68,16 +70,9 @@ class Api::V1::SplitsController < Api::V1::BaseController
     splits = build_splits
     return if performed?
 
-    Entry.transaction do
-      @entry.lock!
-      # The split_parent? test above runs before the lock, so a concurrent
-      # DELETE can unsplit in between; without this the replacement would
-      # resurrect a split the other caller just removed.
-      raise NotSplit unless @entry.split_parent?
-
-      @entry.unsplit!
-      @entry.split!(splits)
-    end
+    # The split_parent? test above runs before the lock, so a concurrent DELETE can unsplit in
+    # between; resplit! re-checks under the lock instead of resurrecting the split.
+    raise NotSplit unless @entry.resplit!(splits)
     @entry.sync_account_later
     @entry.reload
 
@@ -92,12 +87,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
   def destroy
     return render_not_split unless @entry.split_parent?
 
-    Entry.transaction do
-      @entry.lock!
-      raise NotSplit unless @entry.split_parent?
-
-      @entry.unsplit!
-    end
+    raise NotSplit unless @entry.unsplit_once!
     @entry.sync_account_later
 
     head :no_content

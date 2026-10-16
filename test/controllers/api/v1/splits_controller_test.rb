@@ -474,6 +474,17 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_not @entry.reload.split_parent?
   end
 
+  test "names the current reason when the transaction stops being splittable under the lock" do
+    # A provider sync marked the transaction pending after the controller's own splittable? check
+    # passed (stubbed here); split_once! sees it under the lock.
+    Transaction.where(id: @transaction.id).update_all(extra: { "plaid" => { "pending" => true } })
+    Transaction.any_instance.stubs(:splittable?).returns(true)
+
+    post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+    assert_equal [ "Transaction is pending" ], JSON.parse(response.body)["errors"]
+  end
+
   test "returns 401 without an API key" do
     get api_v1_transaction_split_url(@transaction)
     assert_response :unauthorized

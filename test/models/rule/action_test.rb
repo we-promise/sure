@@ -375,6 +375,20 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_includes action.errors[:value], "split #1 share must be a positive number"
   end
 
+  test "split_transaction rejects a split name that the database cannot store" do
+    # A NUL byte, and a lone surrogate escape that JSON.parse turns into broken UTF-8.
+    [ "Bad\\u0000Name", "Bad\\udc00Name" ].each do |name|
+      action = Rule::Action.new(
+        rule: @transaction_rule,
+        action_type: "split_transaction",
+        value: %({"splits":[{"type":"percentage","name":"#{name}","share":"50"},{"type":"percentage","name":"B","share":"50"}]})
+      )
+
+      assert_not action.valid?, name.inspect
+      assert_includes action.errors[:value], "split #1 name contains invalid characters"
+    end
+  end
+
   test "split_transaction rejects rows that are not objects without raising" do
     [ [ nil, nil ], [ "A", "B" ], [ { type: "percentage", name: "A", share: "100" }, 42 ] ].each do |rows|
       action = Rule::Action.new(

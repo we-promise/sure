@@ -112,8 +112,8 @@ class RuleImport < Import
       text.strip
     end
 
-    def reject_invalid_text!(value, label:)
-      return if DatabaseTextValidator.acceptable?(value)
+    def reject_invalid_text!(value, label:, acceptable: DatabaseTextValidator.acceptable?(value))
+      return if acceptable
 
       errors.add(:base, :invalid, message: "#{label} #{I18n.t("errors.messages.invalid")}")
       raise ActiveRecord::RecordInvalid.new(self)
@@ -294,6 +294,9 @@ class RuleImport < Import
 
     # Names resolve like the other actions; a raw id is kept only if it belongs to the family.
     def resolve_import_split_value(value)
+      reject_invalid_text!(value, label: Rule::Action.human_attribute_name(:value),
+                                  acceptable: Rule::ActionExecutor::SplitTransaction.acceptable_text?(value))
+
       Rule::ActionExecutor::SplitTransaction.localize_value(value) do |kind, name: nil, id: nil|
         next (id if family_record_ids(kind.to_s.pluralize.to_sym).include?(id)) unless name
 
