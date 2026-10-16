@@ -99,6 +99,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
     assert_not_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert_select "form[action='#{sync_trade_republic_item_path(item, source: "panel")}'] button[disabled]"
   end
 
   test "Trade Republic PIN is filtered from logs" do

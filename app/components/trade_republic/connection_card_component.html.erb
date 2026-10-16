@@ -43,7 +43,7 @@
                 icon: "refresh-cw",
                 href: helpers.sync_trade_republic_item_path(item, source: "panel"),
                 method: :post,
-                disabled: item.syncing?
+                disabled: item.syncing? || !item.ready_for_sync?
               ) %>
         <% end %>
 
