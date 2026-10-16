@@ -952,10 +952,12 @@ class Provider::YahooFinance < Provider
     end
 
     # Moves the retried request and the memoized client's later requests to a
-    # user-agent other than the one that just got a 429.
+    # user-agent this request hasn't had a 429 for yet (any other one once
+    # every agent has been rejected).
     def switch_user_agent(env)
-      rejected = env.request_headers["User-Agent"]
-      replacement = (USER_AGENTS - [ rejected ]).sample
+      rejected = (env[:rejected_user_agents] ||= [])
+      rejected << env.request_headers["User-Agent"]
+      replacement = (USER_AGENTS - rejected).sample || (USER_AGENTS - [ rejected.last ]).sample
       env.request_headers["User-Agent"] = replacement
       @client.headers["User-Agent"] = replacement if @client
     end
