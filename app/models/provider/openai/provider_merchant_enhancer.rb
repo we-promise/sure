@@ -103,7 +103,7 @@ class Provider::Openai::ProviderMerchantEnhancer
         merchants: merchants
       })
 
-      response = client.responses.create(parameters: {
+      params = {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
         text: {
@@ -115,7 +115,10 @@ class Provider::Openai::ProviderMerchantEnhancer
           }
         },
         instructions: instructions
-      })
+      }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :responses)
+
+      response = client.responses.create(parameters: params)
 
       Rails.logger.info("Tokens used to enhance provider merchants: #{response.dig("usage", "total_tokens")}")
 
@@ -142,16 +145,24 @@ class Provider::Openai::ProviderMerchantEnhancer
         enhance_merchants_with_mode(json_mode)
       end
     rescue Faraday::BadRequestError => e
-      if json_mode == Provider::Openai::AutoMerchantDetector::JSON_MODE_STRICT || json_mode == Provider::Openai::AutoMerchantDetector::JSON_MODE_AUTO
+      # Auto mode handles rejection of its strict attempt inside its own helper.
+      # A 400 can reject the response format or reasoning effort; drop both.
+      if json_mode == Provider::Openai::AutoMerchantDetector::JSON_MODE_STRICT
         Rails.logger.warn("Strict JSON mode failed for merchant enhancement, falling back to none mode: #{e.message}")
-        enhance_merchants_with_mode(Provider::Openai::AutoMerchantDetector::JSON_MODE_NONE)
+        enhance_merchants_with_mode(Provider::Openai::AutoMerchantDetector::JSON_MODE_NONE, with_reasoning_effort: false)
       else
         raise
       end
     end
 
     def enhance_merchants_with_auto_mode
-      result = enhance_merchants_with_mode(Provider::Openai::AutoMerchantDetector::JSON_MODE_STRICT)
+      result = begin
+        enhance_merchants_with_mode(Provider::Openai::AutoMerchantDetector::JSON_MODE_STRICT)
+      rescue Faraday::BadRequestError => e
+        # Rescue only the strict attempt so a failed fallback propagates.
+        Rails.logger.warn("Auto mode: strict JSON mode rejected by provider for merchant enhancement (#{e.message}), retrying with none mode")
+        return enhance_merchants_with_mode(Provider::Openai::AutoMerchantDetector::JSON_MODE_NONE, with_reasoning_effort: false)
+      end
 
       null_count = result.count { |r| r.business_url.nil? }
       missing_count = merchants.size - result.size
@@ -166,7 +177,7 @@ class Provider::Openai::ProviderMerchantEnhancer
       end
     end
 
-    def enhance_merchants_with_mode(mode)
+    def enhance_merchants_with_mode(mode, with_reasoning_effort: true)
       span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         merchants: merchants,
@@ -194,6 +205,7 @@ class Provider::Openai::ProviderMerchantEnhancer
       when Provider::Openai::AutoMerchantDetector::JSON_MODE_OBJECT
         params[:response_format] = { type: "json_object" }
       end
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat) if with_reasoning_effort
 
       response = client.chat(parameters: params)
 

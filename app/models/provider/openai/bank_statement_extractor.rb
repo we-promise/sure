@@ -106,6 +106,7 @@ class Provider::Openai::BankStatementExtractor
         ],
         response_format: { type: "json_object" }
       }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
       response = client.chat(parameters: params)
       content = response.dig("choices", 0, "message", "content")

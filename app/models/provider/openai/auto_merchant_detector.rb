@@ -136,7 +136,7 @@ class Provider::Openai::AutoMerchantDetector
         user_merchants: user_merchants
       })
 
-      response = client.responses.create(parameters: {
+      params = {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
         text: {
@@ -148,7 +148,10 @@ class Provider::Openai::AutoMerchantDetector
           }
         },
         instructions: instructions
-      })
+      }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :responses)
+
+      response = client.responses.create(parameters: params)
 
       Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")}")
 
@@ -180,10 +183,11 @@ class Provider::Openai::AutoMerchantDetector
       end
     rescue Faraday::BadRequestError => e
       # If strict mode fails (HTTP 400), fall back to none mode
-      # This handles providers that don't support json_schema response format
-      if json_mode == JSON_MODE_STRICT || json_mode == JSON_MODE_AUTO
+      # Auto mode handles rejection of its strict attempt inside its own helper.
+      # A 400 can reject the response format or reasoning effort; drop both.
+      if json_mode == JSON_MODE_STRICT
         Rails.logger.warn("Strict JSON mode failed, falling back to none mode: #{e.message}")
-        auto_detect_merchants_with_mode(JSON_MODE_NONE)
+        auto_detect_merchants_with_mode(JSON_MODE_NONE, with_reasoning_effort: false)
       else
         raise
       end
@@ -191,7 +195,13 @@ class Provider::Openai::AutoMerchantDetector
 
     # Auto mode: try strict first, fall back to none if too many nulls or missing results
     def auto_detect_merchants_with_auto_mode
-      result = auto_detect_merchants_with_mode(JSON_MODE_STRICT)
+      result = begin
+        auto_detect_merchants_with_mode(JSON_MODE_STRICT)
+      rescue Faraday::BadRequestError => e
+        # Rescue only the strict attempt so a failed fallback propagates.
+        Rails.logger.warn("Auto mode: strict JSON mode rejected by provider (#{e.message}), retrying with none mode")
+        return auto_detect_merchants_with_mode(JSON_MODE_NONE, with_reasoning_effort: false)
+      end
 
       # Check if too many nulls OR missing results were returned
       # Models that can't reason in strict mode often:
@@ -210,7 +220,7 @@ class Provider::Openai::AutoMerchantDetector
       end
     end
 
-    def auto_detect_merchants_with_mode(mode)
+    def auto_detect_merchants_with_mode(mode, with_reasoning_effort: true)
       span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
@@ -242,6 +252,7 @@ class Provider::Openai::AutoMerchantDetector
         params[:response_format] = { type: "json_object" }
         # JSON_MODE_NONE: no response_format constraint
       end
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat) if with_reasoning_effort
 
       response = client.chat(parameters: params)
 

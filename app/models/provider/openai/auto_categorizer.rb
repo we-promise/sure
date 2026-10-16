@@ -124,7 +124,7 @@ class Provider::Openai::AutoCategorizer
         user_categories: user_categories
       })
 
-      response = client.responses.create(parameters: {
+      params = {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
         text: {
@@ -136,7 +136,10 @@ class Provider::Openai::AutoCategorizer
           }
         },
         instructions: instructions
-      })
+      }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :responses)
+
+      response = client.responses.create(parameters: params)
       Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage", "total_tokens")}")
 
       categorizations = extract_categorizations_native(response)
@@ -167,10 +170,11 @@ class Provider::Openai::AutoCategorizer
       end
     rescue Faraday::BadRequestError => e
       # If strict mode fails (HTTP 400), fall back to none mode
-      # This handles providers that don't support json_schema response format
-      if json_mode == JSON_MODE_STRICT || json_mode == JSON_MODE_AUTO
+      # Auto mode handles rejection of its strict attempt inside its own helper.
+      # A 400 can reject the response format or reasoning effort; drop both.
+      if json_mode == JSON_MODE_STRICT
         Rails.logger.warn("Strict JSON mode failed, falling back to none mode: #{e.message}")
-        auto_categorize_with_mode(JSON_MODE_NONE)
+        auto_categorize_with_mode(JSON_MODE_NONE, with_reasoning_effort: false)
       else
         raise
       end
@@ -186,7 +190,13 @@ class Provider::Openai::AutoCategorizer
     # The heuristic is simple: if >50% of results are null or missing, the model likely
     # needs the freedom to reason in its output (which strict mode prevents).
     def auto_categorize_with_auto_mode
-      result = auto_categorize_with_mode(JSON_MODE_STRICT)
+      result = begin
+        auto_categorize_with_mode(JSON_MODE_STRICT)
+      rescue Faraday::BadRequestError => e
+        # Rescue only the strict attempt so a failed fallback propagates.
+        Rails.logger.warn("Auto mode: strict JSON mode rejected by provider (#{e.message}), retrying with none mode")
+        return auto_categorize_with_mode(JSON_MODE_NONE, with_reasoning_effort: false)
+      end
 
       null_count = result.count { |r| r.category_name.nil? || r.category_name == "null" }
       missing_count = transactions.size - result.size
@@ -201,7 +211,7 @@ class Provider::Openai::AutoCategorizer
       end
     end
 
-    def auto_categorize_with_mode(mode)
+    def auto_categorize_with_mode(mode, with_reasoning_effort: true)
       span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
@@ -233,6 +243,7 @@ class Provider::Openai::AutoCategorizer
         params[:response_format] = { type: "json_object" }
         # JSON_MODE_NONE: no response_format constraint
       end
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat) if with_reasoning_effort
 
       response = client.chat(parameters: params)
 
