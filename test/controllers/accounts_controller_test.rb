@@ -679,6 +679,82 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=file]", count: 0
   end
 
+  test "credit card page offers an overview tab" do
+    sign_in users(:family_admin)
+
+    get account_url(accounts(:credit_card))
+
+    assert_response :success
+    assert_select "[role=tab][data-id=overview]"
+    assert_select "[role=tabpanel][data-id=overview]"
+  end
+
+  test "credit card overview renders the statement cycle" do
+    sign_in users(:family_admin)
+    card = accounts(:credit_card).credit_card
+    card.update!(statement_close_day: 25, due_day: 5, minimum_payment: 25)
+    accounts(:credit_card).entries.create!(
+      name: "Cycle charge",
+      date: Date.current.beginning_of_month + 9.days,
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    get account_url(accounts(:credit_card), tab: "overview")
+
+    assert_response :success
+    assert_match I18n.t("credit_cards.tabs.overview.statement_balance"), response.body
+  end
+
+  test "credit card overview shows the payment due this month for an early close day" do
+    sign_in users(:family_admin)
+    accounts(:credit_card).credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    # A card closing on the 10th and due on the 26th, read on the 16th. The
+    # bill due is the statement that closed on the 10th, which falls on the 26th
+    # of THIS month -- not the 26th of next, which is the statement still
+    # building and not yet owed.
+    travel_to Date.new(2026, 10, 16) do
+      get account_url(accounts(:credit_card), tab: "overview")
+
+      assert_response :success
+      assert_match I18n.l(Date.new(2026, 10, 26), format: :long), response.body
+      assert_match I18n.t("credit_cards.due.in_days", count: 10), response.body
+    end
+  end
+
+  test "credit card overview reads a negative since-statement balance as a credit" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    travel_to Date.new(2026, 10, 16) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 100, currency: "USD",
+        entryable: Transaction.new
+      )
+      account.entries.create!(
+        name: "Payment after the close", date: Date.new(2026, 10, 12), amount: -250, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t("credit_cards.tabs.overview.credit_toward_next"), response.body
+    end
+  end
+
+  test "credit card overview asks for a cycle when none is set" do
+    sign_in users(:family_admin)
+
+    get account_url(accounts(:credit_card), tab: "overview")
+
+    assert_response :success
+    assert_match I18n.t("credit_cards.tabs.overview.no_cycle_title"), response.body
+  end
+
   test "account activity marks trade amounts as privacy-sensitive" do
     trade_entry = entries(:trade)
     expected_amount = ApplicationController.helpers.format_money(-trade_entry.amount_money)

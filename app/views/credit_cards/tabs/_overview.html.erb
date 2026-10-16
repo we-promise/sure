@@ -1,0 +1,105 @@
+<%# locals: (account:, as_of: Date.current) %>
+
+<%# ONE reference date for every figure on this tab, the same one the Loan tab
+    takes, so a page read at the edge of a statement close does not show two
+    different cycles on two tabs. %>
+<% today = as_of %>
+<% card = account.credit_card %>
+
+<% if card.statement_cycle_configured? %>
+  <% last_balance = card.last_statement_balance_money(as_of: today) %>
+  <% accrued = card.accrued_since_last_close_money(as_of: today) %>
+  <% due_date = card.next_payment_due_date(as_of: today) %>
+  <% next_close = card.next_statement_close_date(as_of: today) %>
+
+  <div class="grid grid-cols-3 gap-2">
+    <%# The bill. This and the next card are a SPLIT of the balance in the page
+        header, not two more balances: the statement that closed is what you owe
+        now, and everything charged since belongs to the statement still
+        building. The two add back up to the debt, which is the one number the
+        header already gives; what the header cannot say is how much of it is
+        already a bill, and that is what this tab is for.
+
+        The due date sits under the amount rather than in a card of its own,
+        because a bare date beside a balance reads as a second, separate bill. %>
+    <%= summary_card title: t(".statement_balance") do %>
+      <%= last_balance ? format_money(last_balance) : t(".unknown") %>
+      <% if due_date %>
+        <span class="block text-sm text-secondary">
+          <%= t(".due_on", date: l(due_date, format: :long)) %>
+        </span>
+        <span class="block text-sm text-secondary"><%= credit_card_due_countdown(card.days_until_due(as_of: today)) %></span>
+      <% end %>
+    <% end %>
+
+    <%# A negative figure here is not a nonsense balance: paying the card down
+        by more than has been charged since the close leaves a credit that
+        reduces the next statement. Labelling it as such keeps the two cards
+        summing to the debt in the header instead of appearing to contradict it. %>
+    <%= summary_card title: t(".since_last_statement") do %>
+      <%= accrued ? format_money(accrued) : t(".unknown") %>
+      <% if accrued&.negative? %>
+        <span class="block text-sm text-secondary"><%= t(".credit_toward_next") %></span>
+      <% elsif next_close %>
+        <span class="block text-sm text-secondary"><%= t(".closes_on", date: l(next_close, format: :long)) %></span>
+      <% end %>
+    <% end %>
+
+    <%= summary_card title: t(".apr") do %>
+      <%= card.apr.present? ? number_to_percentage(card.apr, precision: 3) : t(".unknown") %>
+    <% end %>
+  </div>
+
+  <%# The minimum payment earns its place here only as this comparison. On its
+      own it is a number with nothing to be read against: a minimum is a share
+      of whatever the statement came to, so "Minimum Payment $100" beside a
+      balance the user cannot check it against is the one figure on this tab
+      that explains nothing. Set against the statement balance above it answers
+      the question the cardholder actually has, which is whether paying the
+      minimum clears the bill. %>
+  <% if card.minimum_payment_shortfall? %>
+    <div class="mt-2">
+      <%= render DS::Alert.new(variant: :warning) do %>
+        <%= t(".above_minimum",
+              balance: format_money(last_balance),
+              minimum: format_money(card.minimum_payment_money)) %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# A card whose cycle is configured but whose statement totals unknown is
+      saying something different from one that totals zero: the first has
+      entries we cannot add up in the card's own currency. Quoting $0.00 there
+      would be a wrong number presented as a right one. %>
+  <% if accrued.nil? || last_balance.nil? %>
+    <div class="mt-2">
+      <%= render DS::Alert.new(variant: :info) do %>
+        <%= t(".multi_currency_unavailable") %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="flex justify-center py-8">
+    <%= render DS::Link.new(
+      text: t(".edit_card_details"),
+      variant: "ghost",
+      href: edit_credit_card_path(account),
+      frame: :modal
+    ) %>
+  </div>
+<% else %>
+  <%= render DS::EmptyState.new(
+    icon: "calendar",
+    title: t(".no_cycle_title"),
+    description: t(".no_cycle_description")
+  ) %>
+
+  <div class="flex justify-center pb-8">
+    <%= render DS::Link.new(
+      text: t(".edit_card_details"),
+      variant: "secondary",
+      href: edit_credit_card_path(account),
+      frame: :modal
+    ) %>
+  </div>
+<% end %>
