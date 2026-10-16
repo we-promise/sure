@@ -322,10 +322,12 @@ class TradeRepublicItemsController < ApplicationController
 
   def sync
     # A connection that needs a new login can only fail to sync.
-    @trade_republic_item.sync_later if @trade_republic_item.ready_for_sync? && !@trade_republic_item.syncing?
+    syncing = @trade_republic_item.syncing?
+    queued = @trade_republic_item.ready_for_sync? && !syncing
+    @trade_republic_item.sync_later if queued
     if provider_panel_form? && turbo_panel_request?
       # Only this card, as the login steps do, so the other cards keep their state.
-      return render_login_panel(notice: t("settings.providers.sync_provider_in_progress"))
+      return render_login_panel(notice: (t("settings.providers.sync_provider_in_progress") if queued || syncing))
     end
 
     respond_to do |format|
