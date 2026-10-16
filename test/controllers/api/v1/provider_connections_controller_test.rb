@@ -14,7 +14,7 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
       user: @user,
       name: "Test Read Key",
       scopes: [ "read" ],
-      display_key: "test_read_#{SecureRandom.hex(8)}",
+      key: "test_read_#{SecureRandom.hex(8)}",
       source: "web"
     )
 
@@ -22,7 +22,7 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
       user: @user,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
-      display_key: "test_rw_#{SecureRandom.hex(8)}",
+      key: "test_rw_#{SecureRandom.hex(8)}",
       source: "mobile"
     )
 
@@ -209,7 +209,7 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
       user: @user,
       name: "Test Write Key",
       scopes: [ "write" ],
-      display_key: "test_write_#{SecureRandom.hex(8)}",
+      key: "test_write_#{SecureRandom.hex(8)}",
       source: "monitoring"
     ).tap { |api_key| api_key.save!(validate: false) }
 

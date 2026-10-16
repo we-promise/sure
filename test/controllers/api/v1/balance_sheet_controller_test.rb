@@ -13,7 +13,7 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "Test Read Key",
       scopes: [ "read" ],
-      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      key: "test_ro_#{SecureRandom.hex(8)}",
       source: "mobile"
     )
 
@@ -46,6 +46,6 @@ class Api::V1::BalanceSheetControllerTest < ActionDispatch::IntegrationTest
   private
 
     def api_headers(auth)
-      { "X-Api-Key" => auth.display_key }
+      { "X-Api-Key" => auth.plain_key }
     end
 end
