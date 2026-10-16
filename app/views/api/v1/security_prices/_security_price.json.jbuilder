@@ -3,7 +3,8 @@
 json.id security_price.id
 json.date security_price.date
 json.price Money.new(security_price.price, security_price.currency).format
-json.price_amount format("%.4f", security_price.price.to_d)
+# At least 4 decimals as before, and up to the column's 10 for low-value assets.
+json.price_amount format("%.10f", security_price.price.to_d).sub(/(\.\d{4}\d*?)0+\z/, '\1')
 json.currency security_price.currency
 json.provisional security_price.provisional
 

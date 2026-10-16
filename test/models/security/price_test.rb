@@ -23,6 +23,12 @@ class Security::PriceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.000002891"), price.reload.price
   end
 
+  test "still stores prices with 15 whole-number digits" do
+    price = Security::Price.create!(security: @security, date: 4.days.ago.to_date, price: "123456789012345.25", currency: "USD")
+
+    assert_equal BigDecimal("123456789012345.25"), price.reload.price
+  end
+
   test "caches prices from provider to DB" do
     price_date = 10.days.ago.to_date
 
