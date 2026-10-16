@@ -223,7 +223,7 @@ Sure ships with a separate compose file for AI-related features: `compose.exampl
 - **Pipelock** (always on): AI agent security proxy for outbound tunnel controls and inbound MCP scanning
 - **Ollama + Open WebUI** (optional `--profile local-ai`): local LLM inference
 
-`compose.example.ai.yml` is an example configuration, not a hardened setup. Its defaults publish the AI services on the host's loopback only and turn on the Open WebUI login, but securing a deployment (network exposure, secrets, updates) is up to whoever runs it.
+`compose.example.ai.yml` is an example configuration, not a hardened setup. Its defaults publish Ollama, Open WebUI and OpenClaw on the host's loopback only (the Sure web port and Pipelock's MCP port stay on all interfaces) and turn on the Open WebUI login, but securing a deployment (network exposure, secrets, updates) is up to whoever runs it.
 
 ### Using the AI compose file
 
