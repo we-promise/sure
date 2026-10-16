@@ -222,6 +222,24 @@ class InsightsHelperTest < ActionView::TestCase
     assert_not insight_dig_in_available?(insight)
   end
 
+  test "dig in is available through a configured external assistant without an LLM provider" do
+    insight = build_insight("idle_cash")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    insight.family.stubs(:effective_assistant_type).returns("external")
+    Assistant::External.stubs(:configured?).returns(true)
+
+    assert insight_dig_in_available?(insight)
+  end
+
+  test "dig in is unavailable when the external assistant is not configured" do
+    insight = build_insight("idle_cash")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(mock)
+    insight.family.stubs(:effective_assistant_type).returns("external")
+    Assistant::External.stubs(:configured?).returns(false)
+
+    assert_not insight_dig_in_available?(insight)
+  end
+
   private
     def build_insight(insight_type, priority: "medium", metadata: {}, facts: {}, period_start: nil, period_end: nil)
       Insight.new(
