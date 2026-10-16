@@ -361,6 +361,43 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  # The orphan cleanup's enqueue runs once the relink transaction commits. If it
+  # ran inside that transaction, its error would escape the action's rescue
+  # after the relink had committed, and the request would fail.
+  test "link_existing_account still succeeds when the orphan's destroy enqueue fails" do
+    orphan = Account.create!(
+      family: @family,
+      name: "Old Checking",
+      balance: 0,
+      currency: "EUR",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    target = Account.create!(
+      family: @family,
+      name: "Manual Checking",
+      balance: 0,
+      currency: "EUR",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    eb_account = @item.enable_banking_accounts.create!(
+      name: "Checking",
+      uid: "eb_relink_1",
+      currency: "EUR",
+      current_balance: 0
+    )
+    AccountProvider.create!(account: orphan, provider: eb_account)
+    DestroyJob.queue_adapter.expects(:enqueue).once.raises(RedisClient::CannotConnectError, "Connection refused")
+
+    post link_existing_account_enable_banking_items_path, params: {
+      account_id: target.id,
+      enable_banking_account_id: eb_account.id
+    }
+
+    assert_response :see_other
+    assert_equal target, AccountProvider.find_by!(provider: eb_account).account
+    assert_equal "active", orphan.reload.status
+  end
+
   private
 
     def stub_authorization_start

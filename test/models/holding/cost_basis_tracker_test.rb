@@ -38,6 +38,21 @@ class Holding::CostBasisTrackerTest < ActiveSupport::TestCase
     assert_equal BigDecimal("300"), @tracker.average_cost
   end
 
+  # Skipping a buy whose price is unknown would average the known buys over
+  # fewer units than are held.
+  test "a buy at an unknown price makes the average unknown until the position closes" do
+    @tracker.apply(BigDecimal("100"), BigDecimal("10"))
+    @tracker.apply(nil, BigDecimal("10"))
+    assert_nil @tracker.average_cost
+
+    @tracker.apply(BigDecimal("999"), BigDecimal("-5"))
+    assert_nil @tracker.average_cost, "a partial sell does not make it known"
+
+    @tracker.apply(BigDecimal("999"), BigDecimal("-15"))
+    @tracker.apply(BigDecimal("120"), BigDecimal("4"))
+    assert_equal BigDecimal("120"), @tracker.average_cost, "a repurchase after a full close starts clean"
+  end
+
   test "over-selling cannot drive quantity or basis negative" do
     @tracker.apply(BigDecimal("100"), BigDecimal("5"))
     @tracker.apply(BigDecimal("100"), BigDecimal("-10")) # sell more than held

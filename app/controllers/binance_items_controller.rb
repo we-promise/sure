@@ -58,8 +58,33 @@ class BinanceItemsController < ApplicationController
     end
   end
 
+  # Add Account -> Crypto -> Binance lands here. The connection's sync is what
+  # finds the accounts, so open that connection's account setup, as Kraken does.
   def select_accounts
-    redirect_to settings_providers_path
+    binance_items = Current.family.binance_items.active.ordered.select(&:credentials_configured?)
+    binance_item = if params[:binance_item_id].present?
+      binance_items.find { |item| item.id.to_s == params[:binance_item_id].to_s }
+    elsif binance_items.one?
+      binance_items.first
+    end
+
+    unless binance_item
+      message_key = if params[:binance_item_id].present? && binance_items.any?
+        ".connection_unavailable"
+      elsif binance_items.many?
+        ".select_connection"
+      else
+        ".no_credentials_configured"
+      end
+      if turbo_frame_request?
+        render_frame_redirect(settings_providers_path, alert: t(message_key))
+      else
+        redirect_to settings_providers_path, alert: t(message_key)
+      end
+      return
+    end
+
+    redirect_to setup_accounts_binance_item_path(binance_item, return_to: safe_return_to(params[:return_to])), status: :see_other
   end
 
   def link_accounts
@@ -146,10 +171,11 @@ class BinanceItemsController < ApplicationController
       end
 
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "binance_items/binance_item",
-          locals: { binance_item: item }
+          locals: { binance_item: item, visible_accounts: item.accounts }
         ),
         manual_accounts_stream,
         *Array(flash_notification_stream_items)
@@ -160,6 +186,9 @@ class BinanceItemsController < ApplicationController
   end
 
   def setup_accounts
+    # Where Add Account was opened from, carried through the form so finishing
+    # or cancelling goes back there.
+    @return_to = safe_return_to(params[:return_to])
     @binance_accounts = @binance_item.binance_accounts
       .left_joins(:account_provider)
       .where(account_providers: { id: nil })
@@ -236,14 +265,15 @@ class BinanceItemsController < ApplicationController
     if turbo_frame_request?
       @binance_items = Current.family.binance_items.ordered.includes(:syncs)
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@binance_item),
           partial: "binance_items/binance_item",
-          locals: { binance_item: @binance_item }
+          locals: { binance_item: @binance_item, visible_accounts: @binance_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else
-      redirect_to accounts_path, status: :see_other
+      redirect_to safe_return_to(params[:return_to]) || accounts_path, status: :see_other
     end
   end
 
@@ -259,5 +289,17 @@ class BinanceItemsController < ApplicationController
 
     def complete_account_setup_params
       params.permit(:sync_start_date, selected_accounts: [])
+    end
+
+    # Add Account opens select_accounts inside the "modal" turbo frame, and a
+    # plain redirect would be followed within it, losing the page and its
+    # alert. Answer with the frame carrying a redirect stream action instead,
+    # which performs a full-page visit (as PlaidItemsController does).
+    def render_frame_redirect(path, alert:)
+      flash[:alert] = alert
+
+      render html: helpers.turbo_frame_tag(turbo_frame_request_id) {
+        helpers.turbo_stream.action(:redirect, path)
+      }
     end
 end

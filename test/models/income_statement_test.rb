@@ -47,6 +47,60 @@ class IncomeStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "daily series narrows to categories, a parent covering its subcategories" do
+    period = Period.last_30_days
+    rent = @family.categories.create! name: "Rent"
+    create_transaction(account: @checking_account, amount: 50, category: @food_category)
+    create_transaction(account: @checking_account, amount: 700, category: rent)
+    create_transaction(account: @checking_account, amount: 15)
+    statement = IncomeStatement.new(@family)
+
+    total = ->(category_ids) { statement.daily_expense_series(period: period, category_ids: category_ids).sum(&:total) }
+
+    assert_equal 50 + 200 + 300 + 400, total.call([ @food_category.id ])
+    assert_equal 200 + 300 + 400, total.call([ @groceries_category.id ])
+    assert_equal 15, total.call([ Category::UNCATEGORIZED_FILTER_VALUE ])
+    assert_equal 700 + 15, total.call([ rent.id, Category::UNCATEGORIZED_FILTER_VALUE ])
+    assert_equal statement.daily_expense_series(period: period).sum(&:total),
+      total.call([ @food_category.id, rent.id, Category::UNCATEGORIZED_FILTER_VALUE ])
+  end
+
+  test "daily expense category ids list the categories with spending, nil for uncategorized" do
+    create_transaction(account: @checking_account, amount: 15)
+
+    ids = IncomeStatement.new(@family).daily_expense_category_ids(period: Period.last_30_days)
+
+    # The income category's only transaction is income, and Food has spending
+    # only through its subcategory.
+    assert_equal [ @groceries_category.id, nil ].to_set, ids.to_set
+  end
+
+  test "category-filtered daily series share one cached query per period, whatever the selection" do
+    period = Period.last_30_days
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    IncomeStatement::DailyExpenseTotals.expects(:new).with(@family, has_entry(by_category: true)).once.returns(
+      stub(call: [
+        IncomeStatement::DailyExpenseTotals::CategoryDailyTotal.new(date: Date.current, category_id: @groceries_category.id, total: 900),
+        IncomeStatement::DailyExpenseTotals::CategoryDailyTotal.new(date: Date.current, category_id: nil, total: 15)
+      ])
+    )
+
+    assert_equal [ 900 ], IncomeStatement.new(@family).daily_expense_series(period: period, category_ids: [ @food_category.id ]).map(&:total)
+    assert_equal [ 15 ], IncomeStatement.new(@family).daily_expense_series(period: period, category_ids: [ Category::UNCATEGORIZED_FILTER_VALUE ]).map(&:total)
+    assert_equal [ @groceries_category.id, nil ], IncomeStatement.new(@family).daily_expense_category_ids(period: period)
+  end
+
+  test "a new statement invalidates category-filtered daily series when entries change" do
+    period = Period.last_30_days
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::DailyExpenseTotals.expects(:new).twice.returns(stub(call: []))
+
+    IncomeStatement.new(@family).daily_expense_series(period: period, category_ids: [ @food_category.id ])
+    create_transaction(account: @checking_account, amount: 10, category: @food_category)
+    IncomeStatement.new(@family).daily_expense_series(period: period, category_ids: [ @food_category.id ])
+  end
+
   test "calculates totals for transactions" do
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
@@ -295,6 +349,18 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 4, totals.transactions_count # Only original 4 transactions
     assert_equal Money.new(1000, @family.currency), totals.income_money
     assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  # A flag PostgreSQL cannot cast to boolean used to raise
+  # PG::InvalidTextRepresentation and take the whole statement down.
+  test "a pending flag PostgreSQL cannot cast neither raises nor counts" do
+    assert_statement_leaves_out_flagged_expense("maybe")
+  end
+
+  # Transaction#pending? (and so the Pending badge) calls "no" pending;
+  # PostgreSQL's ::boolean called it posted and counted it.
+  test "a \"no\" pending flag is pending, as Transaction#pending? says" do
+    assert_statement_leaves_out_flagged_expense("no")
   end
 
   # NEW TESTS: Interval-Based Calculations
@@ -773,4 +839,24 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     assert_equal 1, totals_query_calls
   end
+
+  private
+    # Adds a 250 grocery expense whose pending flag is +flag+ and asserts every
+    # figure is the one without it: totals (Transaction.excluding_pending), the
+    # family median and average (FamilyStats) and the category median
+    # (CategoryStats), each of which reads the flag in its own SQL.
+    def assert_statement_leaves_out_flagged_expense(flag)
+      flagged = create_transaction(account: @checking_account, amount: 250, category: @groceries_category)
+      flagged.entryable.update!(extra: { "plaid" => { "pending" => flag } })
+      assert flagged.entryable.pending?, "pending? should call #{flag.inspect} pending"
+
+      income_statement = IncomeStatement.new(@family)
+      totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+      assert_equal 4, totals.transactions_count
+      assert_equal Money.new(900, @family.currency), totals.expense_money
+      assert_equal 900.0, income_statement.median_expense(interval: "month")
+      assert_equal 900.0, income_statement.avg_expense(interval: "month")
+      assert_equal 900.0, income_statement.median_expense(interval: "month", category: @groceries_category)
+    end
 end

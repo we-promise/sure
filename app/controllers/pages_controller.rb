@@ -27,9 +27,10 @@ class PagesController < ApplicationController
   MONEY_FLOW_CHART_MONTHS = 6
 
   # Query params that shape what the dashboard shows without being saved
-  # anywhere. Customize mode carries them through its links and hide/add
-  # buttons so the widgets don't jump back to their defaults.
-  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [] } ].freeze
+  # anywhere. Customize mode, the period picker and each widget's own month
+  # links and filter forms carry them along, so changing one control doesn't
+  # jump the other widgets back to their defaults.
+  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -47,9 +48,9 @@ class PagesController < ApplicationController
     @investment_statement = Current.family.investment_statement
     @accounts = Current.user.accessible_accounts.visible.with_attached_logo
 
+    @dashboard_view_params = dashboard_view_params
     @dashboard_sections, @hidden_dashboard_sections = build_dashboard_sections
     @customizing_dashboard = params[:customize].present?
-    @dashboard_view_params = dashboard_view_params
     @just_hidden_section = params[:hidden_section]
     @just_shown_section = params[:shown_section]
 
@@ -73,13 +74,16 @@ class PagesController < ApplicationController
     return head :not_found unless DASHBOARD_SECTION_LAYOUTS.key?(section_key)
 
     hidden = ActiveModel::Type::Boolean.new.cast(params[:hidden])
+    # Resolved before the change: hiding the spending widget would otherwise
+    # skip resolving its own filter on the way out.
+    view_params = dashboard_view_params
     Current.user.update_dashboard_section_hidden(section_key, hidden)
     # Two param names rather than one, so hiding a widget and adding it back
     # never redirect to the same URL: Turbo morphs a same-URL visit as a
     # refresh, and a morph doesn't apply the autofocus that keeps keyboard
     # users on the widget they just changed.
     changed = hidden ? { hidden_section: section_key } : { shown_section: section_key }
-    redirect_to root_path(dashboard_view_params.merge(customize: true, **changed)), status: :see_other
+    redirect_to root_path(view_params.merge(customize: true, **changed)), status: :see_other
   end
 
   def changelog
@@ -124,11 +128,23 @@ class PagesController < ApplicationController
         permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections].respond_to?(:to_unsafe_h)
         permitted["section_order"] = prefs[:section_order] if prefs[:section_order].is_a?(Array)
         permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout].respond_to?(:to_unsafe_h)
+        permitted["cashflow_sankey_group_by"] = prefs[:cashflow_sankey_group_by] if User::CASHFLOW_SANKEY_GROUPINGS.include?(prefs[:cashflow_sankey_group_by])
       end
     end
 
+    # The spending filter is carried as the widget resolved it: a selection
+    # that covers every category with spending is the unfiltered state, so it
+    # is dropped here rather than re-sent by every other control, where it
+    # would pin today's list and leave out categories another month or
+    # period adds. While the widget is hidden its ids are only checked
+    # against the family's categories, so its queries still never run.
     def dashboard_view_params
-      params.permit(*DASHBOARD_VIEW_PARAMS).to_h
+      view_params = params.permit(*DASHBOARD_VIEW_PARAMS).to_h
+      if view_params.key?(:spending_category_ids)
+        category_ids = Current.user.dashboard_hidden_sections.include?("spending_trend") ? spending_trend_category_ids_param : spending_trend_filter.category_ids
+        category_ids ? view_params[:spending_category_ids] = category_ids : view_params.delete(:spending_category_ids)
+      end
+      view_params
     end
 
     # Each widget builds its own data, so a hidden widget's builder is never
@@ -161,6 +177,7 @@ class PagesController < ApplicationController
               # to this broader set, not `accounts`, so the view needs it to
               # know when the drill-down links can safely omit account_ids.
               accessible_account_ids: Current.user.accessible_accounts.pluck(:id).map(&:to_s),
+              view_params: @dashboard_view_params,
               col_span: section_layout("money_flow")[:col_span]
             },
             visible: @accounts.any?,
@@ -173,7 +190,10 @@ class PagesController < ApplicationController
             title: "pages.dashboard.spending_trend.title",
             partial: "pages/dashboard/spending_trend",
             layout: section_layout("spending_trend"),
-            locals: { spending_trend_data: build_spending_trend_data(dashboard_income_statement, spending_trend_month_param) },
+            locals: {
+              spending_trend_data: build_spending_trend_data(dashboard_income_statement, spending_trend_month_param, spending_trend_filter),
+              view_params: @dashboard_view_params
+            },
             visible: @accounts.any?,
             collapsible: true
           }
@@ -551,21 +571,59 @@ class PagesController < ApplicationController
       current_month
     end
 
+    # Category ids (and the uncategorized sentinel) from the family's own
+    # categories. Not narrowed to the categories with spending this month, so
+    # a selection survives switching to a month where some of it is empty.
+    # nil means every category (the widget's default, unfiltered state).
+    def spending_trend_category_ids_param
+      ids = Array(params[:spending_category_ids]).reject(&:blank?).map(&:to_s)
+      return nil if ids.empty?
+
+      ids &= [ *Current.family.categories.pluck(:id), Category::UNCATEGORIZED_FILTER_VALUE ]
+      ids.presence
+    end
+
+    # The selected month (capped at today while it's in progress) and the
+    # month before it, which the widget compares against. Memoized: the
+    # filter and the widget both need them.
+    def spending_trend_periods(selected_month)
+      month_start = selected_month.beginning_of_month
+      (@spending_trend_periods ||= {})[month_start] ||= begin
+        current_period = Period.custom(start_date: month_start, end_date: [ month_start.end_of_month, Date.current ].min)
+        previous_month_start = (month_start - 1.month).beginning_of_month
+        previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
+        [ current_period, previous_period ]
+      end
+    end
+
+    # The widget's category filter (IncomeStatement::ExpenseCategoryFilter).
+    # Memoized: the view params and the widget both read it.
+    def spending_trend_filter
+      @spending_trend_filter ||= IncomeStatement::ExpenseCategoryFilter.new(
+        dashboard_income_statement,
+        periods: spending_trend_periods(spending_trend_month_param),
+        category_ids: spending_trend_category_ids_param
+      )
+    end
+
     # Cumulative daily spending for the selected month (capped at today while
     # the month is in progress) against the previous month's full curve, so
     # the two lines share one day-of-month axis. The header totals compare the
     # same number of elapsed days; only the chart draws the previous month out
     # to its final day.
-    def build_spending_trend_data(income_statement, selected_month)
+    #
+    # The category filter (an IncomeStatement::ExpenseCategoryFilter) narrows
+    # both months to the same categories, so the comparison stays
+    # like-for-like.
+    def build_spending_trend_data(income_statement, selected_month, category_filter)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
-      current_period = Period.custom(start_date: month_start, end_date: [ month_end, Date.current ].min)
+      current_period, previous_period = spending_trend_periods(month_start)
+      previous_month_start = previous_period.start_date
+      category_ids = category_filter.category_ids
 
-      previous_month_start = (month_start - 1.month).beginning_of_month
-      previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
-
-      current_daily = income_statement.daily_expense_series(period: current_period).index_by(&:date)
-      previous_daily = income_statement.daily_expense_series(period: previous_period).index_by(&:date)
+      current_daily = income_statement.daily_expense_series(period: current_period, category_ids: category_ids).index_by(&:date)
+      previous_daily = income_statement.daily_expense_series(period: previous_period, category_ids: category_ids).index_by(&:date)
 
       # The selected month always owns the axis: when the previous month is
       # longer, its extra days fold into the final visible point so the curve
@@ -603,7 +661,10 @@ class PagesController < ApplicationController
         delta: Money.new(current_total - previous_total, currency),
         previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
         previous_comparison_day: previous_comparison_day,
-        date_range_short: spending_trend_compact_date_range(current_period)
+        date_range_short: spending_trend_compact_date_range(current_period),
+        category_options: category_filter.options,
+        selected_category_count: category_filter.selected_count,
+        category_ids: category_ids
       }
     end
 
