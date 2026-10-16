@@ -198,6 +198,24 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_empty Array(@wise_item.wise_accounts.find_by(currency: "PLN").raw_transactions_payload)
   end
 
+  test "routes a transfer into a balance's own recipient to that balance and to its funding balance" do
+    balances = [ %w[GBP 77777000], %w[USD 77777001] ].each_with_index.map do |(currency, recipient_id), i|
+      { "id" => "3000000#{i}", "amount" => { "value" => 100.0, "currency" => currency }, "type" => "STANDARD",
+        "recipientId" => recipient_id.to_i }
+    end
+    borderless = [ { "id" => 88888001, "recipientId" => 99999001,
+                     "balances" => [ { "id" => 30000000 }, { "id" => 30000001 } ] } ]
+    top_up = build_transfer(id: 12, source_currency: "USD", target_currency: "USD", target_account: 77777001)
+    funded = build_transfer(id: 13, source_currency: "GBP", target_currency: "USD", target_account: 77777001)
+    provider = FakeWiseProvider.new(balances: balances, borderless_accounts: borderless, transfers: [ top_up, funded ],
+                                    raise_on: { get_balance_statements: "forbidden" })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal [ 13 ], @wise_item.wise_accounts.find_by(currency: "GBP").raw_transactions_payload.map { |t| t["id"] }
+    assert_equal [ 12, 13 ], @wise_item.wise_accounts.find_by(currency: "USD").raw_transactions_payload.map { |t| t["id"] }.sort
+  end
+
   test "drops previously stored transfers that did not move money in the STANDARD balance" do
     payout = build_transfer(id: 10, source_currency: "GBP", target_currency: "PLN", target_account: 1234)
     local = build_transfer(id: 11, source_currency: "PLN", target_currency: "PLN", target_account: 1234)

@@ -47,6 +47,18 @@ class WiseEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "incoming", entry.entryable.extra.dig("wise", "direction")
   end
 
+  test "imports a transfer into the balance's own recipient as negative income" do
+    # Top-ups and payments into a balance's account details target the balance's
+    # own recipientId, not the multi-currency account's recipient_id.
+    @wise_account.update!(raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001, "recipientId" => 99999002 })
+    transfer = build_transfer(id: 1005, target_account: 99999002, source_value: 2400.0, target_value: 2400.0)
+
+    entry = WiseEntry::Processor.new(transfer, wise_account: @wise_account).process
+
+    assert_equal BigDecimal("-2400.0"), entry.amount
+    assert_equal "incoming", entry.entryable.extra.dig("wise", "direction")
+  end
+
   test "books an incoming cross-currency transfer in the target currency" do
     transfer = build_transfer(id: 1003, target_account: 99999001, source_value: 100.0, target_value: 115.4,
                               source_currency: "GBP", target_currency: "EUR")
