@@ -375,6 +375,114 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal 8_000, account.entries.valuations.find_by(date: Date.current)&.amount
   end
 
+  # #3383: only a loan's start date moves the opening anchor.
+  test "create_and_sync dates a loan's opening anchor on its start date" do
+    Account.any_instance.stubs(:sync_later)
+    opening_balance_date = Date.current - 2.years
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Mortgage",
+        balance: 399_600,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 400_000, start_date: Date.new(2020, 1, 15),
+                                  rate_type: "fixed", interest_rate: 5, term_months: 360 }
+      },
+      skip_initial_sync: true,
+      opening_balance_date: opening_balance_date
+    )
+
+    assert_equal Date.new(2020, 1, 15), account.valuations.opening_anchor.first.entry.date
+    assert_equal 399_600, account.entries.valuations.find_by(date: Date.current)&.amount
+  end
+
+  # The anchor is dated on the start date only because Loan rejects a future
+  # one: an anchor after today would skip today's reconciliation and leave the
+  # account with no balance for today.
+  # Entry rejects a date on or before Entry.min_supported_date, so a loan drawn
+  # down that long ago keeps the form's opening date, as before the start date
+  # moved the anchor. Both sides of the boundary.
+  test "a loan whose start date is on the earliest supported entry date keeps the form's opening date" do
+    Account.any_instance.stubs(:sync_later)
+    opening_balance_date = Date.current - 2.years
+    start_date = Entry.min_supported_date
+
+    account = create_loan_with_start_date(start_date, opening_balance_date)
+
+    assert_equal start_date, account.accountable.start_date
+    assert_equal opening_balance_date, account.valuations.opening_anchor.first.entry.date
+  end
+
+  test "a loan started the day after the earliest supported date is anchored on its start date" do
+    Account.any_instance.stubs(:sync_later)
+    start_date = Entry.min_supported_date + 1.day
+
+    account = create_loan_with_start_date(start_date, Date.current - 2.years)
+
+    assert_equal start_date, account.valuations.opening_anchor.first.entry.date
+  end
+
+  test "create_and_sync rejects a loan with a future start date and writes no anchor" do
+    Account.any_instance.stubs(:sync_later)
+
+    assert_no_difference [ "Account.count", "Entry.count" ] do
+      assert_raises ActiveRecord::RecordInvalid do
+        Account.create_and_sync(
+          {
+            family: @family,
+            owner: @admin,
+            name: "Mortgage",
+            balance: 399_600,
+            currency: "USD",
+            accountable_type: "Loan",
+            accountable_attributes: { initial_balance: 400_000, start_date: Date.current + 1.month,
+                                      rate_type: "fixed", interest_rate: 5, term_months: 360 }
+          },
+          skip_initial_sync: true,
+          opening_balance_date: Date.current - 3.years
+        )
+      end
+    end
+  end
+
+  test "create_and_sync keeps a depository account's opening balance date" do
+    Account.any_instance.stubs(:sync_later)
+    opening_balance_date = Date.new(2020, 1, 15)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Checking",
+        balance: 1_000,
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable_attributes: {}
+      },
+      skip_initial_sync: true,
+      opening_balance_date: opening_balance_date
+    )
+
+    assert_equal opening_balance_date, account.valuations.opening_anchor.first.entry.date
+  end
+
+  test "a provider-created loan keeps the default opening date" do
+    item = SimplefinItem.create!(family: @family, name: "SF Conn", access_url: "https://example.com/access")
+    simplefin_account = SimplefinAccount.create!(
+      simplefin_item: item, name: "My Loan", account_id: "acct_424",
+      currency: "USD", account_type: "loan", current_balance: 5_000
+    )
+
+    account = Account.create_from_simplefin_account(simplefin_account, "Loan")
+
+    assert_nil account.accountable.start_date
+    assert_equal 2.years.ago.to_date, account.valuations.opening_anchor.first.entry.date
+    assert_equal 1, account.entries.valuations.count
+  end
+
   test "create_and_sync uses provided opening balance date" do
     Account.any_instance.stubs(:sync_later)
     opening_date = Time.zone.today
@@ -1091,4 +1199,22 @@ class AccountTest < ActiveSupport::TestCase
     accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
     assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
   end
+
+  private
+    def create_loan_with_start_date(start_date, opening_balance_date)
+      Account.create_and_sync(
+        {
+          family: @family,
+          owner: @admin,
+          name: "Mortgage",
+          balance: 399_600,
+          currency: "USD",
+          accountable_type: "Loan",
+          accountable_attributes: { initial_balance: 400_000, start_date: start_date,
+                                    rate_type: "fixed", interest_rate: 5, term_months: 360 }
+        },
+        skip_initial_sync: true,
+        opening_balance_date: opening_balance_date
+      )
+    end
 end
