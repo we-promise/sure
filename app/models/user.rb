@@ -515,6 +515,25 @@ class User < ApplicationRecord
     end
   end
 
+  # Same answer as verify_otp, but spends nothing: lets a passkey registration
+  # refuse a bad code before the browser creates a credential the server would
+  # then throw away. The code is still consumed by verify_otp when it is saved.
+  def otp_code_status(code)
+    return :invalid if otp_secret.blank?
+
+    normalized_code = normalize_mfa_code(code)
+    return :invalid if normalized_code.blank?
+
+    return :accepted if totp.verify(normalized_code, drift_behind: 15, after: otp_last_used_at)
+
+    if backup_code_input?(normalized_code)
+      matched = Array(otp_backup_codes).any? { |stored_code| backup_code_matches?(stored_code, normalized_code) }
+      return matched ? :accepted : :invalid
+    end
+
+    totp.verify(normalized_code, drift_behind: 15) ? :replayed : :invalid
+  end
+
   def verify_otp?(code)
     verify_otp(code) == :accepted
   end

@@ -56,4 +56,5 @@ en:
         redis_unreachable: "The app can't reach Redis. Check your REDIS_URL and that Redis is running."
         no_worker_processes: "No Sidekiq worker process is connected. Start the worker container or systemd unit."
         stale_heartbeat: "The Sidekiq worker hasn't reported a heartbeat recently. It may be stuck or crashed."
+        ai_queues_not_polled: "No worker is processing the AI queues (chat, merchant detection, categorization). Check that the worker loads config/sidekiq.yml."
         queue_backed_up: "The oldest enqueued job has been waiting beyond the latency budget. The worker is alive but falling behind."
