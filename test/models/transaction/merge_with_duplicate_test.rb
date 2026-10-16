@@ -2,6 +2,7 @@ require "test_helper"
 
 class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include ActiveJob::TestHelper
 
   setup do
     @account = accounts(:depository)
@@ -304,5 +305,48 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
   test "pending_duplicate_candidates returns Entry.none when transaction is not pending" do
     @pending_entry.transaction.update!(extra: {})
     assert_equal [], @pending_entry.transaction.pending_duplicate_candidates.to_a
+  end
+
+  test "moves the pending transaction's attachments to the posted transaction" do
+    pending_tx = @pending_entry.transaction
+    pending_tx.attachments.attach(io: StringIO.new("receipt"), filename: "receipt.pdf", content_type: "application/pdf")
+    blob = pending_tx.attachments.first.blob
+
+    perform_enqueued_jobs do
+      assert pending_tx.merge_with_duplicate!
+    end
+
+    posted_tx = @posted_entry.transaction.reload
+    assert_equal [ blob.id ], posted_tx.attachments.map(&:blob_id)
+    assert ActiveStorage::Blob.exists?(blob.id), "the receipt must not be purged with the pending entry"
+    assert_equal "receipt", posted_tx.attachments.first.download
+  end
+
+  test "adds the pending transaction's tags to the posted transaction" do
+    shared = @family.tags.create!(name: "Shared")
+    reimbursable = @family.tags.create!(name: "Reimbursable")
+    @pending_entry.transaction.tags << [ shared, reimbursable ]
+    @posted_entry.transaction.tags << shared
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal %w[Reimbursable Shared], @posted_entry.transaction.reload.tags.map(&:name).sort
+  end
+
+  test "keeps the pending entry's notes on the posted entry" do
+    @pending_entry.update!(notes: "Lunch with client")
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal "Lunch with client", @posted_entry.reload.notes
+  end
+
+  test "appends the pending entry's notes to existing notes on the posted entry" do
+    @pending_entry.update!(notes: "Lunch with client")
+    @posted_entry.update!(notes: "Booked")
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal "Booked\n\nLunch with client", @posted_entry.reload.notes
   end
 end

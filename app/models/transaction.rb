@@ -487,14 +487,26 @@ class Transaction < ApplicationRecord
         end
 
         posted_tx.update!(tx_attrs) if tx_attrs.any?
+
+        # Keep what the user added to the pending transaction (e.g. a receipt attached
+        # before the bank booked it); destroying the pending entry would purge it.
+        pending_transaction = pending_entry.entryable
+        carry_over_user_additions(from: pending_transaction, to: posted_tx) if pending_transaction.is_a?(Transaction)
       end
 
       # Date inheritance on the Entry row — separate from the Transaction update above.
+      entry_attrs = {}
       unless posted_entry.protected_from_sync?
         # Date: pending dates reflect actual transaction initiation time
-        posted_entry.update!(date: pending_entry_date) if posted_entry.date != pending_entry_date
+        entry_attrs[:date] = pending_entry_date if posted_entry.date != pending_entry_date
         # Name + Merchant intentionally NOT inherited — booked values are canonical
       end
+
+      # Notes are the user's own text, so they are kept even on a protected entry.
+      notes = merged_notes(posted_entry.notes, pending_entry.notes)
+      entry_attrs[:notes] = notes if notes != posted_entry.notes
+
+      posted_entry.update!(entry_attrs) if entry_attrs.any?
 
       # Lock the posted entry so future syncs cannot overwrite the merged state
       posted_entry.mark_user_modified!
@@ -550,6 +562,21 @@ class Transaction < ApplicationRecord
   end
 
   private
+    # Moves the pending transaction's attachments (the attachment rows themselves, so the
+    # blobs are not purged with the pending entry) and adds its tags to the posted one.
+    def carry_over_user_additions(from:, to:)
+      from.attachments_attachments.update_all(record_id: to.id) if from.attachments.attached?
+
+      new_tags = from.tags.where.not(id: to.tags.select(:id))
+      to.tags << new_tags if new_tags.any?
+    end
+
+    def merged_notes(posted_notes, pending_notes)
+      return posted_notes if pending_notes.blank? || posted_notes.to_s.include?(pending_notes)
+      return pending_notes if posted_notes.blank?
+
+      "#{posted_notes}\n\n#{pending_notes}"
+    end
 
     def validate_attachments
       # Check attachment count limit
