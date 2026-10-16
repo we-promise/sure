@@ -156,6 +156,25 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     assert_nil @item.reload.pending_login_state
   end
 
+  test "a QR login replaced by a newer login shows that login instead of offering to cancel it" do
+    item = @item
+    # Another tab starts a newer login while this tab's poll waits.
+    Provider::TradeRepublicClient.any_instance.stubs(:poll_qr_login).with { |**| item.update_columns(pending_login_state: "newer"); true }
+      .returns(Provider::TradeRepublicClient::Result.new(data: { "status" => "pending", "pending_login_b64" => "pending" }))
+
+    visit settings_providers_path
+    find("summary", text: "Trade Republic").click
+    page.execute_script("document.body.dataset.beforeReload = 'true'")
+
+    within("##{TradeRepublic::ConnectionCardComponent.dom_id_for(@item)}") { click_on qr_login }
+
+    # The page reloads with the newer login's state, and nothing cancels it.
+    assert_no_selector "body[data-before-reload]"
+    assert_no_selector "#{connection_card} .qrcode svg"
+    assert_no_button qr_cancel
+    assert_equal "newer", @item.reload.pending_login_state
+  end
+
   test "a failed QR cancel keeps the PIN login hidden until a retried cancel succeeds" do
     visit settings_providers_path
     find("summary", text: "Trade Republic").click

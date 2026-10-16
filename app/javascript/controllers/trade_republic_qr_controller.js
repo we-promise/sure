@@ -96,6 +96,14 @@ export default class extends Controller {
         body: this.body(),
         signal: this.pollRequest.signal,
       });
+      // A newer login (from another tab, say) replaced this one. Cancelling
+      // would end that login, so show the current state instead.
+      if (response.status === 409) {
+        this.stopped = true;
+        window.Turbo.visit(this.returnUrlValue, { action: "replace" });
+        return;
+      }
+
       const result = await this.jsonResponse(response);
       if (!response.ok) {
         const error = new Error(result.error || "QR login failed");
