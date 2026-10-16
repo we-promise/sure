@@ -35,6 +35,12 @@ class BillsHelperTest < ActionView::TestCase
     ], reasons
   end
 
+  test "a recurring transfer's match reads as a transfer to the same account" do
+    reasons = bills_match_reasons({ transfer: 0.40, account: 0.10 }, currency: "USD")
+
+    assert_equal [ I18n.t("bills.match.same_transfer") ], reasons
+  end
+
   # signals[:account] is a constant 0.10 on every candidate, because
   # identity_matches? has already rejected everything on another account. A
   # reason that never distinguishes anything is decoration.

@@ -409,6 +409,7 @@ module BillsHelper
 
     reasons << t("bills.match.same_merchant") if signals[:merchant]
     reasons << t("bills.match.name_matches") if signals[:name]
+    reasons << t("bills.match.same_transfer") if signals[:transfer]
 
     # Guarded: the review queue can hold an allocation whose entry has been
     # nullified out from under it, so neither figure is guaranteed.

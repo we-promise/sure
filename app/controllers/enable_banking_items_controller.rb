@@ -441,6 +441,7 @@ class EnableBankingItemsController < ApplicationController
     end
 
     # Relink behavior: detach any legacy link and point provider link at the chosen account
+    orphaned_account = nil
     Account.transaction do
       enable_banking_account.lock!
 
@@ -459,11 +460,21 @@ class EnableBankingItemsController < ApplicationController
           # Disabled accounts still appear (greyed-out) in the manual list after a full refresh.
           # Use the app's standard deletion path (async) so the duplicate disappears and the
           # "pending_deletion" state remains truthful in the UI.
-          previous_account.destroy_later if previous_account.may_mark_for_deletion?
+          orphaned_account = previous_account if previous_account.may_mark_for_deletion?
         rescue => e
           Rails.logger.warn("Failed to cleanup orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
         end
       end
+    end
+
+    # Queue the orphan for deletion only after the relink commits. destroy_later
+    # pushes DestroyJob only once every open transaction commits, so called in
+    # the block above, an enqueue error would leave it from the commit, past
+    # the rescue inside it.
+    begin
+      orphaned_account&.destroy_later
+    rescue => e
+      Rails.logger.warn("Failed to cleanup orphaned account #{orphaned_account.id}: #{e.class} - #{e.message}")
     end
 
     if turbo_frame_request?
@@ -498,10 +509,11 @@ class EnableBankingItemsController < ApplicationController
         # Optimistic removal of the specific account row if it exists in the DOM
         turbo_stream.remove(ActionView::RecordIdentifier.dom_id(@account)),
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "enable_banking_items/enable_banking_item",
-          locals: { enable_banking_item: item }
+          locals: { enable_banking_item: item, visible_accounts: item.accounts }
         ),
         turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
       ] + Array(flash_notification_stream_items)
@@ -542,13 +554,21 @@ class EnableBankingItemsController < ApplicationController
     end
 
     def enable_banking_item_params
-      params.require(:enable_banking_item).permit(
+      permitted = params.require(:enable_banking_item).permit(
         :name,
         :sync_start_date,
         :country_code,
         :application_id,
         :client_certificate
       )
+      # The panel never pre-fills the stored credentials, so a blank one on
+      # update means "keep the current value".
+      if @enable_banking_item&.persisted?
+        %i[application_id client_certificate].each do |credential|
+          permitted.delete(credential) if permitted[credential].blank?
+        end
+      end
+      permitted
     end
 
     def enable_banking_callback_url
