@@ -766,7 +766,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     get google_sheets_instructions_reports_url
 
     assert_response :success
-    assert_select "a[href=?]", settings_api_keys_path, text: I18n.t("reports.google_sheets_instructions.go_to_api_keys")
+    assert_select "a[href=?][data-turbo-frame=_top]", settings_api_keys_path, text: I18n.t("reports.google_sheets_instructions.go_to_api_keys")
     assert_select "form[action=?]", settings_api_keys_path, count: 0
   end
 
