@@ -130,6 +130,36 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "loan_payment", checking_entry.transaction.reload.kind
   end
 
+  test "re-importing a contribution the user turned into a plain transfer keeps that choice" do
+    checking_entry = @adapter.import_transaction(
+      external_id: "plaid_checking_to_broker",
+      amount: 300.00,
+      currency: "USD",
+      date: Date.current,
+      name: "To broker",
+      source: "plaid"
+    )
+    broker_entry = accounts(:investment).entries.create!(
+      name: "From checking", date: Date.current, amount: -300, currency: "USD", entryable: Transaction.new
+    )
+    transfer = Transfer.create!(inflow_transaction: broker_entry.transaction, outflow_transaction: checking_entry.transaction)
+    transfer.confirm!
+    transfer.update_investment_contribution!(false)
+
+    # A provider kind hint makes the adapter re-derive the leg from its transfer.
+    @adapter.import_transaction(
+      external_id: "plaid_checking_to_broker",
+      amount: 300.00,
+      currency: "USD",
+      date: Date.current,
+      name: "To broker",
+      source: "plaid",
+      kind: "standard"
+    )
+
+    assert_equal "funds_movement", checking_entry.transaction.reload.kind
+  end
+
   test "re-importing an unconfirmed auto-matched leg does not give it a transfer kind" do
     loan_entry = Account::ProviderImportAdapter.new(accounts(:loan)).import_transaction(
       external_id: "plaid_loan_inflow_pending", amount: -200.00, currency: "USD",
