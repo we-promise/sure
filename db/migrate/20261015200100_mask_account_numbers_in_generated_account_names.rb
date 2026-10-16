@@ -39,20 +39,20 @@ class MaskAccountNumbersInGeneratedAccountNames < ActiveRecord::Migration[8.1]
         masked_name = ->(name) { mask_name(name, identifier, style) }
 
         if (new_name = masked_name.call(provider_name))
-          execute "UPDATE #{quote_table_name(table)} SET name = #{quote(new_name)} WHERE id = #{quote(provider_id)}"
+          execute "UPDATE #{quote_table_name(table)} SET name = #{connection.quote(new_name)} WHERE id = #{connection.quote(provider_id)}"
         end
 
         account_rows = select_rows(<<~SQL)
           SELECT accounts.id, accounts.name FROM accounts
           INNER JOIN account_providers ON account_providers.account_id = accounts.id
-          WHERE account_providers.provider_type = #{quote(provider_type)}
-            AND account_providers.provider_id = #{quote(provider_id)}
+          WHERE account_providers.provider_type = #{connection.quote(provider_type)}
+            AND account_providers.provider_id = #{connection.quote(provider_id)}
         SQL
 
         account_rows.each do |account_id, account_name|
           next unless (new_name = masked_name.call(account_name))
 
-          execute "UPDATE accounts SET name = #{quote(new_name)} WHERE id = #{quote(account_id)}"
+          execute "UPDATE accounts SET name = #{connection.quote(new_name)} WHERE id = #{connection.quote(account_id)}"
         end
       end
     end
