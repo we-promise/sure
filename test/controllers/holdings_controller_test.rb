@@ -103,6 +103,13 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{form_id}_per_share_cost_basis[value='12.20']"
   end
 
+  test "cost basis editor does not round pasted values to its display decimals" do
+    get holding_path(@holding)
+
+    assert_select "form[data-controller=cost-basis-form] [data-controller=money-field]", count: 2
+    assert_select "form[data-controller=cost-basis-form] [data-money-field-precision-value]", count: 0
+  end
+
   test "cost basis editor shows a stored zero basis instead of placeholders" do
     @holding.update!(qty: 10, cost_basis: 0)
 
