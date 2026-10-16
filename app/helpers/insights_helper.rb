@@ -124,7 +124,10 @@ module InsightsHelper
   # not per user, because cards are also rendered in broadcasts without a
   # Current.user; chats#create asks a user without AI consent to opt in.
   def insight_dig_in_available?(insight)
-    insight.family.assistant_enabled? && Provider::Registry.preferred_llm_provider.present?
+    family = insight.family
+    return false unless family.assistant_enabled?
+
+    family.effective_assistant_type == "external" ? Assistant::External.configured? : Provider::Registry.preferred_llm_provider.present?
   end
 
   # Fills only these placeholders, so a mistyped one in an override stays as typed.
