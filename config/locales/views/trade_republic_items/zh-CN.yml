@@ -121,8 +121,6 @@ zh-CN:
       balance: "余额"
       link: "关联"
       cancel: "取消"
-    create:
-      success: "Trade Republic 已保存。请在 Trade Republic 应用中确认登录以完成连接。"
     update:
       success: "已成功更新 Trade Republic 配置。"
       pin_required: "请输入您的 Trade Republic PIN 或密码以重新认证。"
@@ -132,9 +130,7 @@ zh-CN:
     select_accounts:
       not_configured: "Trade Republic 尚未配置。"
     initiate_login:
-      not_configured: "Trade Republic 尚未配置。"
       pin_required: "请输入您的 Trade Republic PIN 或密码以开始新的登录。"
-      verification_required: "登录已开始。请通过 %{method} 确认，然后点击确认登录。"
     initiate_qr_login:
       not_configured: "Trade Republic 尚未配置。"
     poll_login:

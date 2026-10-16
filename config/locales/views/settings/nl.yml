@@ -166,7 +166,6 @@ nl:
         pin_placeholder_new: Je Trade Republic-pincode of -wachtwoord
         currency_label: Rekeningvaluta
         connect: Inloggen
-        confirm_login: Login controleren
         complete_login: Doorgaan
         authenticator_code_label: Authenticatorcode (indien gevraagd)
         authenticator_code_placeholder: 6-cijferige code
@@ -184,7 +183,6 @@ nl:
           close: Gereed
         qr_login: QR-login
         qr_cancel: QR-login annuleren
-        qr_back_to_credentials: Terug naar telefoonnummer en pincode of wachtwoord
         qr_loading: QR-code wordt voorbereid …
         qr_instruction: Scan de QR-code met de camera van je telefoon en keur de aanmelding daarna goed in de Trade Republic-app.
         qr_success: Aanmelding goedgekeurd. Sure vernieuwt de providerpagina.

@@ -121,8 +121,6 @@ en:
       balance: Balance
       link: Link
       cancel: Cancel
-    create:
-      success: Trade Republic saved. Confirm the login in the Trade Republic app to finish connecting.
     update:
       success: Successfully updated Trade Republic configuration.
       pin_required: Enter your Trade Republic PIN or password to re-authenticate.
@@ -132,9 +130,7 @@ en:
     select_accounts:
       not_configured: Trade Republic is not configured.
     initiate_login:
-      not_configured: Trade Republic is not configured.
       pin_required: Enter your Trade Republic PIN or password to start a new login.
-      verification_required: "Login started. Confirm it via %{method}, then press Confirm login."
     initiate_qr_login:
       not_configured: Trade Republic is not configured.
     poll_login:

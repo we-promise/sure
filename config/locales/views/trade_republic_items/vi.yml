@@ -121,8 +121,6 @@ vi:
       balance: "Số dư"
       link: "Liên kết"
       cancel: "Hủy"
-    create:
-      success: "Đã lưu Trade Republic. Xác nhận đăng nhập trong ứng dụng Trade Republic để hoàn tất kết nối."
     update:
       success: "Đã cập nhật cấu hình Trade Republic thành công."
       pin_required: "Nhập PIN hoặc mật khẩu Trade Republic để xác thực lại."
@@ -132,9 +130,7 @@ vi:
     select_accounts:
       not_configured: "Trade Republic chưa được cấu hình."
     initiate_login:
-      not_configured: "Trade Republic chưa được cấu hình."
       pin_required: "Nhập PIN hoặc mật khẩu Trade Republic để bắt đầu đăng nhập mới."
-      verification_required: "Đã bắt đầu đăng nhập. Xác nhận qua %{method}, sau đó nhấn Xác nhận đăng nhập."
     initiate_qr_login:
       not_configured: "Trade Republic chưa được cấu hình."
     poll_login:

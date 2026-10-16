@@ -121,8 +121,6 @@ de:
       balance: "Saldo"
       link: "Verknüpfen"
       cancel: "Abbrechen"
-    create:
-      success: "Trade Republic gespeichert. Bestätige die Anmeldung in der Trade-Republic-App, um die Verbindung abzuschließen."
     update:
       success: "Die Trade-Republic-Konfiguration wurde aktualisiert."
       pin_required: "Gib deine Trade-Republic-PIN oder dein Passwort ein, um die Verbindung erneut zu authentifizieren."
@@ -132,9 +130,7 @@ de:
     select_accounts:
       not_configured: "Trade Republic ist nicht konfiguriert."
     initiate_login:
-      not_configured: "Trade Republic ist nicht konfiguriert."
       pin_required: "Gib deine Trade-Republic-PIN oder dein Passwort ein, um eine neue Anmeldung zu starten."
-      verification_required: "Anmeldung gestartet. Bestätige sie über %{method} und klicke anschließend auf Anmeldung bestätigen."
     initiate_qr_login:
       not_configured: "Trade Republic ist nicht konfiguriert."
     poll_login:

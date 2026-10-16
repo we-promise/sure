@@ -1,47 +1,11 @@
 class TradeRepublicItemsController < ApplicationController
   include TradeRepublicLoginFlow
 
-  before_action :set_trade_republic_item, only: [ :show, :update, :destroy, :sync, :repair, :setup_accounts, :complete_account_setup, :initiate_login, :complete_login, :poll_login, :initiate_qr_login, :poll_qr_login, :cancel_qr_login ]
-  before_action :require_admin!, only: [ :show, :select_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :repair, :setup_accounts, :complete_account_setup, :initiate_login, :complete_login, :poll_login, :initiate_qr_login, :poll_qr_login, :cancel_qr_login ]
+  before_action :set_trade_republic_item, only: [ :show, :update, :destroy, :sync, :repair, :setup_accounts, :complete_account_setup, :complete_login, :poll_login, :initiate_qr_login, :poll_qr_login, :cancel_qr_login ]
+  before_action :require_admin!, only: [ :show, :select_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :repair, :setup_accounts, :complete_account_setup, :complete_login, :poll_login, :initiate_qr_login, :poll_qr_login, :cancel_qr_login ]
 
   def show
     redirect_to settings_providers_path(anchor: "trade-republic")
-  end
-
-  # Step 1 of authentication: starts a Trade Republic web login and stores the
-  # in-flight login state (encrypted) on the item. The user then confirms via
-  # push notification or authenticator code; no web request blocks on that.
-  def initiate_login
-    provider = @trade_republic_item.trade_republic_provider
-    unless provider
-      redirect_to settings_providers_path, alert: t(".not_configured"), status: :see_other
-      return
-    end
-
-    if @trade_republic_item.pin.blank?
-      @trade_republic_item.update!(pending_login_state: nil, status: :requires_update) if @trade_republic_item.pending_login_state.present?
-      return render_login_panel(alert: t(".pin_required")) if turbo_panel_request?
-
-      respond_to do |format|
-        format.html { redirect_to settings_providers_path(anchor: "trade-republic"), alert: t(".pin_required"), status: :see_other }
-        format.json { render json: { error: t(".pin_required") }, status: :unprocessable_entity }
-      end
-      return
-    end
-
-    invalidate_authentication!
-    result = @trade_republic_item.trade_republic_provider.initiate_login
-    @trade_republic_item.update!(
-      pending_login_state: result["pending_login_b64"],
-      status: :requires_update
-    )
-
-    respond_to do |format|
-      format.html { redirect_to settings_providers_path(anchor: "trade-republic"), notice: t(".verification_required", method: result["method"]) }
-      format.json { head :ok }
-    end
-  rescue Provider::TradeRepublicClient::Error => e
-    redirect_to settings_providers_path(anchor: "trade-republic"), alert: e.message, status: :see_other
   end
 
   def update
@@ -328,10 +292,6 @@ class TradeRepublicItemsController < ApplicationController
         family: item.family,
         provider_key: "trade_republic"
       )
-    end
-
-    def invalidate_authentication!
-      @trade_republic_item.update!(session_blob: nil, pending_login_state: nil, status: :requires_update)
     end
 
     def redirect_flash_options(success_message)

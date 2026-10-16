@@ -580,7 +580,6 @@ es:
         pin_placeholder_new: Tu PIN o contraseña de Trade Republic
         currency_label: Moneda de la cuenta
         connect: Iniciar sesión
-        confirm_login: Comprobar inicio de sesión
         complete_login: Continuar
         authenticator_code_label: Código de autenticación (si se solicita)
         authenticator_code_placeholder: Código de 6 dígitos
@@ -598,7 +597,6 @@ es:
           close: Listo
         qr_login: Acceso con QR
         qr_cancel: Cancelar acceso con QR
-        qr_back_to_credentials: Volver al número de teléfono y PIN o contraseña
         qr_loading: Preparando el código QR …
         qr_instruction: Escanea el código QR con la cámara de tu teléfono y luego aprueba el inicio de sesión en la aplicación de Trade Republic.
         qr_success: Inicio de sesión aprobado. Sure está actualizando la página de proveedores.

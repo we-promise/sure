@@ -84,32 +84,6 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "+491709876543", item.reload.phone_number
   end
 
-  test "initiate login does not destroy a working session when the PIN is missing" do
-    item = trade_republic_items(:configured_item)
-    original_session_blob = item.session_blob
-
-    post initiate_login_trade_republic_item_url(item)
-
-    assert_redirected_to settings_providers_path(anchor: "trade-republic")
-    assert_equal I18n.t("trade_republic_items.initiate_login.pin_required"), flash[:alert]
-    item.reload
-    assert_equal original_session_blob, item.session_blob
-    assert_predicate item, :good?
-  end
-
-  test "initiate login clears an expired pending state when the PIN is missing" do
-    item = trade_republic_items(:requires_update_item)
-    item.update!(pending_login_state: "expired-state")
-
-    post initiate_login_trade_republic_item_url(item)
-
-    assert_redirected_to settings_providers_path(anchor: "trade-republic")
-    assert_equal I18n.t("trade_republic_items.initiate_login.pin_required"), flash[:alert]
-    item.reload
-    assert_nil item.pending_login_state
-    assert_predicate item, :requires_update?
-  end
-
   test "complete account setup creates and links the selected account" do
     item = trade_republic_items(:configured_item)
     provider_account = trade_republic_accounts(:main_account)

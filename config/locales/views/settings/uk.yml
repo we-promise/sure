@@ -722,7 +722,6 @@ uk:
         pin_placeholder_new: PIN-код або пароль вашого застосунку Trade Republic
         currency_label: Валюта рахунку
         connect: Увійти
-        confirm_login: Перевірити вхід
         complete_login: Продовжити
         authenticator_code_label: Код автентифікатора (якщо буде запит)
         authenticator_code_placeholder: 6-значний код
@@ -740,7 +739,6 @@ uk:
           close: Готово
         qr_login: Вхід за QR
         qr_cancel: Скасувати вхід за QR-кодом
-        qr_back_to_credentials: Назад до номера телефону та PIN-коду або пароля
         qr_loading: Підготовка QR-коду…
         qr_instruction: Відскануйте QR-код камерою телефона, а потім підтвердьте вхід у застосунку Trade Republic.
         qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.

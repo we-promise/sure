@@ -114,8 +114,6 @@ ca:
       wait_for_sync: Espera que acabi la sincronització de descobriment de comptes.
       balance: Saldo
     initiate_login:
-      verification_required: "S'ha iniciat la sessió. Confirma-la mitjançant %{method} i després prem Confirma l'inici de sessió."
-      not_configured: Trade Republic no està configurat.
       pin_required: Introdueix el PIN o la contrasenya de Trade Republic per iniciar una sessió nova.
     complete_login:
       approval_pending: "Encara no s'ha confirmat. Aprova l'inici de sessió a l'aplicació de Trade Republic i torna-ho a provar."
@@ -161,8 +159,6 @@ ca:
         one: "1 compte enllaçat"
         other: '%{count} comptes enllaçats'
       partial: '%{linked} enllaçats, %{unlinked} pendents de configurar'
-    create:
-      success: Trade Republic s'ha desat. Confirma l'inici de sessió a l'aplicació de Trade Republic per acabar de connectar.
     update:
       success: La configuració de Trade Republic s'ha actualitzat correctament.
       pin_required: Introdueix el PIN o la contrasenya de Trade Republic per tornar a autenticar-te.

@@ -681,7 +681,6 @@ ru:
         pin_placeholder_new: PIN-код или пароль приложения Trade Republic
         currency_label: Валюта счёта
         connect: Войти
-        confirm_login: Проверить вход
         complete_login: Продолжить
         authenticator_code_label: Код аутентификатора (если запрошен)
         authenticator_code_placeholder: 6-значный код
@@ -699,7 +698,6 @@ ru:
           close: Готово
         qr_login: Вход по QR
         qr_cancel: Отменить вход по QR-коду
-        qr_back_to_credentials: Вернуться к номеру телефона и PIN-коду или паролю
         qr_loading: Подготовка QR-кода…
         qr_instruction: Отсканируйте QR-код камерой телефона, затем подтвердите вход в приложении Trade Republic.
         qr_success: Вход подтверждён. Sure обновляет страницу провайдера.

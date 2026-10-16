@@ -693,7 +693,6 @@ tr:
         pin_placeholder_new: Trade Republic uygulama PIN'iniz veya şifreniz
         currency_label: Hesap para birimi
         connect: Giriş yap
-        confirm_login: Girişi kontrol et
         complete_login: Devam et
         authenticator_code_label: Doğrulama kodu (istenirse)
         authenticator_code_placeholder: 6 haneli kod
@@ -711,7 +710,6 @@ tr:
           close: Bitti
         qr_login: QR ile giriş
         qr_cancel: QR girişini iptal et
-        qr_back_to_credentials: Telefon numarası ve PIN'e veya şifreye dön
         qr_loading: QR kod hazırlanıyor …
         qr_instruction: QR kodu telefonunuzun kamerasıyla tarayın, ardından girişi Trade Republic uygulamasında onaylayın.
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.

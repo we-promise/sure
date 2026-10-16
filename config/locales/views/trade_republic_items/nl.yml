@@ -121,8 +121,6 @@ nl:
       balance: "Saldo"
       link: "Koppelen"
       cancel: "Annuleren"
-    create:
-      success: "Trade Republic opgeslagen. Bevestig de aanmelding in de Trade Republic-app om het verbinden af te ronden."
     update:
       success: "Trade Republic-configuratie is bijgewerkt."
       pin_required: "Voer je Trade Republic-pincode of -wachtwoord in om opnieuw te authenticeren."
@@ -132,9 +130,7 @@ nl:
     select_accounts:
       not_configured: "Trade Republic is niet geconfigureerd."
     initiate_login:
-      not_configured: "Trade Republic is niet geconfigureerd."
       pin_required: "Voer je Trade Republic-pincode of -wachtwoord in om een nieuwe aanmelding te starten."
-      verification_required: "Aanmelding gestart. Bevestig via %{method} en klik daarna op Aanmelding bevestigen."
     initiate_qr_login:
       not_configured: "Trade Republic is niet geconfigureerd."
     poll_login:

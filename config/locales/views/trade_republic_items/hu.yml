@@ -121,8 +121,6 @@ hu:
       balance: "Egyenleg"
       link: "Kapcsolás"
       cancel: "Mégse"
-    create:
-      success: "A Trade Republic mentve. A csatlakozás befejezéséhez erősítsd meg a bejelentkezést a Trade Republic alkalmazásban."
     update:
       success: "A Trade Republic konfigurációja sikeresen frissítve."
       pin_required: "Az újrahitelesítéshez add meg a Trade Republic PIN-kódodat vagy jelszavadat."
@@ -132,9 +130,7 @@ hu:
     select_accounts:
       not_configured: "A Trade Republic nincs konfigurálva."
     initiate_login:
-      not_configured: "A Trade Republic nincs konfigurálva."
       pin_required: "Új bejelentkezés indításához add meg a Trade Republic PIN-kódodat vagy jelszavadat."
-      verification_required: "A bejelentkezés elindult. Erősítsd meg a(z) %{method} segítségével, majd nyomd meg a bejelentkezés megerősítését."
     initiate_qr_login:
       not_configured: "A Trade Republic nincs konfigurálva."
     poll_login:

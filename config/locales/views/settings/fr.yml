@@ -578,7 +578,6 @@ fr:
         awaiting_confirmation: L'approbation dans l'application Trade Republic est en attente.
         check_login_status: Vérifier maintenant
         complete_login: Continuer
-        confirm_login: Vérifier la connexion
         connect: Se connecter
         connection_success:
           close: Terminé
@@ -601,7 +600,6 @@ fr:
         pin_label: Code PIN ou mot de passe
         pin_placeholder_new: Le code PIN ou le mot de passe de votre application Trade Republic
         push_login_notice: Approuvez la connexion dans votre application Trade Republic dès maintenant. Sure vérifie automatiquement en arrière-plan. Vous pouvez aussi vérifier l'état vous-même.
-        qr_back_to_credentials: Revenir au numéro de téléphone et au code PIN ou mot de passe
         qr_cancel: Annuler la connexion par QR code
         qr_error: La connexion par QR code n'a pas pu être lancée. Veuillez réessayer.
         requires_update: "Reconnectez-vous pour reprendre la synchronisation."

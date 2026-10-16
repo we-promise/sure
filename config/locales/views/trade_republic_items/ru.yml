@@ -127,8 +127,6 @@ ru:
       wait_for_sync: Дождитесь завершения синхронизации для поиска счетов.
       balance: Баланс
     initiate_login:
-      verification_required: "Вход начат. Подтвердите его через %{method}, затем нажмите «Подтвердить вход»."
-      not_configured: Trade Republic не настроен.
       pin_required: Введите PIN-код или пароль Trade Republic, чтобы начать новый вход.
     complete_login:
       approval_pending: "Ещё не подтверждено. Одобрите вход в приложении Trade Republic и повторите попытку."
@@ -179,8 +177,6 @@ ru:
         many: '%{count} счетов связано'
         other: '%{count} счёта связаны'
       partial: '%{linked} связано, %{unlinked} требуют настройки'
-    create:
-      success: Trade Republic сохранён. Подтвердите вход в приложении Trade Republic, чтобы завершить подключение.
     update:
       success: Конфигурация Trade Republic успешно обновлена.
       pin_required: Введите PIN-код или пароль Trade Republic для повторной аутентификации.

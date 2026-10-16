@@ -534,7 +534,6 @@ zh-CN:
         pin_placeholder_new: 您的 Trade Republic PIN 或密码
         currency_label: 账户货币
         connect: 登录
-        confirm_login: 检查登录
         complete_login: 继续
         authenticator_code_label: 身份验证器验证码（如有提示）
         authenticator_code_placeholder: 6 位验证码
@@ -552,7 +551,6 @@ zh-CN:
           close: 完成
         qr_login: QR 登录
         qr_cancel: 取消 QR 登录
-        qr_back_to_credentials: 返回电话号码和 PIN 或密码登录
         qr_loading: 正在准备二维码…
         qr_instruction: 使用手机相机扫描二维码，然后在 Trade Republic 应用中批准登录。
         qr_success: 登录已批准。Sure 正在刷新提供商页面。

@@ -6,8 +6,6 @@ fr:
       connection_description: "Connecter un compte d’investissement Trade Republic via une connexion web sécurisée"
       institution_name: Trade Republic
   trade_republic_items:
-    create:
-      success: Trade Republic enregistré. Confirmez la connexion dans l'application Trade Republic pour la finaliser.
     duplicate_connection: "Ce compte Trade Republic est déjà connecté. La nouvelle connexion a été supprimée."
     defaults:
       name: Trade Republic
@@ -137,9 +135,7 @@ fr:
       cancel: "Annuler"
       wait_for_sync: Attendez la fin de la synchronisation de découverte des comptes.
     initiate_login:
-      not_configured: Trade Republic n'est pas configuré.
       pin_required: Saisissez votre code PIN ou mot de passe Trade Republic pour lancer une nouvelle connexion.
-      verification_required: "Connexion démarrée. Confirmez-la via %{method}, puis cliquez sur Confirmer la connexion."
     complete_login:
       approval_pending: "Pas encore confirmé. Approuvez la connexion dans l’application Trade Republic, puis réessayez."
       no_pending_login: Aucune connexion n'est en attente. Lancez d'abord une nouvelle connexion.

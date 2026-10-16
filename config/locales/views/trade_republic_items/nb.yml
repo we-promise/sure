@@ -121,8 +121,6 @@ nb:
       balance: "Saldo"
       link: "Koble til"
       cancel: "Avbryt"
-    create:
-      success: "Trade Republic er lagret. Bekreft påloggingen i Trade Republic-appen for å fullføre tilkoblingen."
     update:
       success: "Trade Republic-konfigurasjonen ble oppdatert."
       pin_required: "Skriv inn Trade Republic-PIN-koden eller passordet ditt for å autentisere på nytt."
@@ -132,9 +130,7 @@ nb:
     select_accounts:
       not_configured: "Trade Republic er ikke konfigurert."
     initiate_login:
-      not_configured: "Trade Republic er ikke konfigurert."
       pin_required: "Skriv inn Trade Republic-PIN-koden eller passordet ditt for å starte en ny pålogging."
-      verification_required: "Pålogging startet. Bekreft via %{method}, og trykk deretter på Bekreft pålogging."
     initiate_qr_login:
       not_configured: "Trade Republic er ikke konfigurert."
     poll_login:

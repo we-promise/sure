@@ -734,7 +734,6 @@ en:
         pin_placeholder_new: Your Trade Republic PIN or password
         currency_label: Account currency
         connect: Log in
-        confirm_login: Check login
         complete_login: Continue
         authenticator_code_label: Authenticator code (if prompted)
         authenticator_code_placeholder: "6-digit code"
@@ -752,7 +751,6 @@ en:
           close: Done
         qr_login: QR login
         qr_cancel: Cancel QR login
-        qr_back_to_credentials: Back to phone number and PIN or password
         qr_loading: Preparing QR code …
         qr_instruction: Scan the QR code with your phone's camera, then approve the login in the Trade Republic app.
         qr_success: Login approved. Sure is refreshing the provider page.

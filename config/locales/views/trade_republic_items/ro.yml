@@ -129,8 +129,6 @@ ro:
       balance: "Sold"
       link: "Asociază"
       cancel: "Anulează"
-    create:
-      success: "Trade Republic a fost salvat. Confirmă autentificarea în aplicația Trade Republic pentru a finaliza conectarea."
     update:
       success: "Configurația Trade Republic a fost actualizată cu succes."
       pin_required: "Introdu PIN-ul sau parola Trade Republic pentru a te reautentifica."
@@ -140,9 +138,7 @@ ro:
     select_accounts:
       not_configured: "Trade Republic nu este configurat."
     initiate_login:
-      not_configured: "Trade Republic nu este configurat."
       pin_required: "Introdu PIN-ul sau parola Trade Republic pentru a începe o nouă autentificare."
-      verification_required: "Autentificarea a început. Confirmă prin %{method}, apoi apasă Confirmă autentificarea."
     initiate_qr_login:
       not_configured: "Trade Republic nu este configurat."
     poll_login:

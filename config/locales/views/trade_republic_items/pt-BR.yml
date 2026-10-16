@@ -121,8 +121,6 @@ pt-BR:
       balance: "Saldo"
       link: "Vincular"
       cancel: "Cancelar"
-    create:
-      success: "Trade Republic salva. Confirme o login no aplicativo da Trade Republic para concluir a conexão."
     update:
       success: "Configuração da Trade Republic atualizada com sucesso."
       pin_required: "Insira seu PIN ou senha da Trade Republic para reautenticar."
@@ -132,9 +130,7 @@ pt-BR:
     select_accounts:
       not_configured: "A Trade Republic não está configurada."
     initiate_login:
-      not_configured: "A Trade Republic não está configurada."
       pin_required: "Insira seu PIN ou senha da Trade Republic para iniciar um novo login."
-      verification_required: "Login iniciado. Confirme por %{method} e pressione Confirmar login."
     initiate_qr_login:
       not_configured: "A Trade Republic não está configurada."
     poll_login:

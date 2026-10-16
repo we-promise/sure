@@ -238,7 +238,6 @@ Rails.application.routes.draw do
       post :repair
       get :setup_accounts
       post :complete_account_setup
-      post :initiate_login
       post :complete_login
       post :poll_login
       post :initiate_qr_login
