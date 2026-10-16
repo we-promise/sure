@@ -53,8 +53,6 @@ zh-CN:
         context_window_help: 留空时使用模型默认上下文窗口。
         max_response_tokens_label: 最大响应 Token（可选）
         max_response_tokens_help: 限制模型单次回答可生成的 Token 数。
-        max_items_per_call_label: 每次调用最大项目数
-        max_items_per_call_help: 限制单次请求传给模型的数据项数量。
       provider_selection:
         description: 选择用于获取汇率和证券价格的服务。Yahoo Finance 免费且无需 API 密钥。Twelve Data 需要免费的
           API 密钥，但可能提供更全面的数据覆盖。
@@ -165,6 +163,8 @@ zh-CN:
         not_configured_hint: "%{provider} 尚未配置。"
         data_retention_heading: 数据处理
         data_retention: 发送给 AI 提供商的数据可能包含财务上下文，请按你的部署策略配置。
+        max_items_per_call_label: 每次调用最大项目数
+        max_items_per_call_help: 限制单次请求传给模型的数据项数量。默认：25。使用 OpenAI 兼容服务时，过大的批次会自动切分以适应上下文窗口。
       anthropic_settings:
         title: Anthropic (Claude)
         description: 使用 Anthropic Claude 作为 AI 提供商。
