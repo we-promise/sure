@@ -16,6 +16,16 @@ module Holding::TradeCalculatorHelpers
       convert_to_account_currency(fee, trade, date: date)
     end
 
+    # Trades and splits in the order they took effect. A split goes first on its
+    # ex-date: it happens at the open, and that day's trades are already in
+    # post-split shares. `trades` is chronological and kept in its own order;
+    # the block gives a trade's date.
+    def replay_events(trades, splits, &date_of)
+      events = trades.each_with_index.map { |trade, index| [ date_of.call(trade), 1, index, trade ] }
+      events += splits.map { |split| [ split.ex_date, 0, 0, split ] }
+      events.sort_by { |date, kind, index, _| [ date, kind, index ] }.map(&:last)
+    end
+
     # What the units actually cost, per unit.
     #
     # An acquisition fee is part of the cost of the position, so it belongs in

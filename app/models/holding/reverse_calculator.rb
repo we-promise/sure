@@ -134,7 +134,7 @@ class Holding::ReverseCalculator
       # Re-sorting by date alone is unstable and could reorder same-day trades,
       # which matters because the tracker is order-sensitive once sells relieve.
       trades = portfolio_cache.get_trades
-      events = replay_events(trades)
+      events = replay_events(trades, portfolio_cache.get_splits, &:date)
 
       # A reverse-synced account can hold shares before its first imported trade,
       # because the provider gives current holdings rather than full history. Seed
@@ -207,15 +207,6 @@ class Holding::ReverseCalculator
 
       # Spans still open at the last trade stay unknown through to the present.
       open_unknown_start.each { |security_id, start| @unknown_spans[security_id] << [ start, nil ] }
-    end
-
-    # Trades and splits in the order they took effect. A split goes first on its
-    # ex-date: it happens at the open, and that day's trades are already in
-    # post-split shares. `trades` is chronological and kept in its own order.
-    def replay_events(trades)
-      events = trades.each_with_index.map { |entry, index| [ entry.date, 1, index, entry ] }
-      events += portfolio_cache.get_splits.map { |split| [ split.ex_date, 0, 0, split ] }
-      events.sort_by { |date, kind, index, _| [ date, kind, index ] }.map(&:last)
     end
 
     def transferred_by?(security_id, date)

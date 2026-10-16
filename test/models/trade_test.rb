@@ -40,6 +40,19 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(235), sell.realized_gain_loss.value.amount
   end
 
+  # A full close leaves the holding on the sale's date holding nothing and,
+  # without a materialized basis, the fallback answers for it: with what the
+  # units cost before the sale, not with the clean slate that follows it.
+  test "a sale that closes the position realizes its gain against what it held" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    security = securities(:aapl)
+    create_trade(security, account: account, qty: 10, price: 100, date: 2.days.ago.to_date)
+    sell = create_trade(security, account: account, qty: -10, price: 130, date: 1.day.ago.to_date)
+    account.holdings.create!(security: security, date: 1.day.ago.to_date, qty: 0, price: 130, amount: 0, currency: "USD")
+
+    assert_equal BigDecimal(300), sell.entryable.realized_gain_loss.value.amount
+  end
+
   # A lot cost what was paid for it, fee included: 10 bought at 100 with a 20
   # fee cost 1,020, so at 120 the lot is up 180, not 200.
   test "a purchase's unrealized gain is measured against its price plus its fee" do
