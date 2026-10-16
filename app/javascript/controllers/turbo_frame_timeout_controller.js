@@ -42,6 +42,14 @@ export default class extends Controller {
   }
 
   handleTimeout() {
+    this.timeoutId = null
+
+    // The response is in but not rendered yet: Turbo drops `busy` when the
+    // request finishes and fires turbo:frame-load only after rendering, and a
+    // busy main thread can let the countdown expire in between. The badge
+    // would then overwrite the sparkline that just arrived.
+    if (!this.element.hasAttribute("busy")) return
+
     // Replace loading content with error state
     this.element.innerHTML = `
       <div class="flex items-center justify-end gap-1">
