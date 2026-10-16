@@ -18,6 +18,8 @@ vi:
         webauthn_empty: Chưa có passkey hoặc khóa bảo mật nào được đăng ký.
         webauthn_last_used: Sử dụng lần cuối %{time_ago} trước
         webauthn_name_label: Tên khóa
+        webauthn_code_label: "Mã xác thực hoặc mã dự phòng"
+        webauthn_code_placeholder: "Mã hiện tại từ ứng dụng xác thực hoặc mã dự phòng chưa dùng"
         webauthn_name_placeholder: MacBook Touch ID, YubiKey, v.v.
         webauthn_remove: Xóa
         webauthn_remove_confirm: Bạn có chắc chắn muốn xóa passkey hoặc khóa bảo mật này không?
@@ -25,6 +27,9 @@ vi:
         webauthn_title: Passkey và khóa bảo mật
         webauthn_unsupported: Trình duyệt này không hỗ trợ passkey hoặc khóa bảo mật.
   webauthn_credentials:
+    code_already_used: "Mã này đã được sử dụng. Hãy chờ mã tiếp theo từ ứng dụng xác thực của bạn."
+    invalid_code: "Mã này không hợp lệ. Hãy nhập mã hiện tại từ ứng dụng xác thực hoặc một mã dự phòng chưa dùng."
+    rate_limited: "Quá nhiều lần thử. Vui lòng đợi một phút rồi thử lại."
     default_name: Khóa bảo mật
     failure: Không thể lưu passkey hoặc khóa bảo mật. Vui lòng thử lại.
     mfa_required: Bật xác thực hai yếu tố trước khi thêm passkey hoặc khóa bảo mật.
