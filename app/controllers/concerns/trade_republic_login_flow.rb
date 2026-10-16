@@ -181,10 +181,11 @@ module TradeRepublicLoginFlow
     render_qr_login_error(e, pending: pending)
   end
 
-  # A PIN login that replaced the QR login (in another tab, say) is not this
-  # cancel's to end; the card then shows that login.
+  # Only a QR login is this cancel's to end. A PIN login that replaced it (in
+  # another tab, say) stays, and so does a working session whose QR login
+  # never started; the card then shows the current state.
   def cancel_qr_login
-    end_login!(final: true) unless pin_login_pending?
+    end_login!(final: true) if login_record.pending_login_state.present? && !pin_login_pending?
     respond_to do |format|
       format.turbo_stream { render turbo_stream: replace_login_record_stream }
       format.json { render json: { status: "cancelled" } }

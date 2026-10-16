@@ -366,6 +366,16 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :conflict
   end
 
+  test "a QR cancel after a start that never got going leaves a working session" do
+    item = trade_republic_items(:configured_item)
+
+    post cancel_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_predicate item.reload, :good?
+    assert item.session_blob.present?
+  end
+
   test "a QR cancel leaves a PIN login that replaced the QR login" do
     item = trade_republic_items(:requires_update_item)
     item.update!(pending_login_state: "push-pending")
