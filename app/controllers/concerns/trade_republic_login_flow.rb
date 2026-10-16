@@ -252,8 +252,16 @@ module TradeRepublicLoginFlow
     def render_qr_login_error(error, pending: nil, status: :unprocessable_entity, retryable: false)
       capture_login_poll_error(error, login: "QR", retryable: retryable)
 
-      if pending.present? && error.respond_to?(:pending_login_b64) && error.pending_login_b64.present?
-        store_pending_login_if_current!(pending, error.pending_login_b64)
+      # A newer login replaced this one meanwhile; its error is not news, and
+      # offering Cancel for it would end the newer login.
+      if pending.present?
+        current =
+          if error.respond_to?(:pending_login_b64) && error.pending_login_b64.present?
+            store_pending_login_if_current!(pending, error.pending_login_b64)
+          else
+            with_current_pending_login(pending) { }
+          end
+        return render_superseded_qr_login unless current
       end
 
       render json: { error: error.message, retryable: retryable }, status: status

@@ -284,6 +284,25 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "qr-pending-with-process", item.reload.pending_login_state
   end
 
+  test "a QR poll error for a login replaced meanwhile is superseded" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic QR Connection",
+      currency: "EUR",
+      status: :requires_update
+    )
+    item.update!(pending_login_state: "qr-pending")
+    provider = mock
+    # Another tab starts a newer login while Trade Republic answers.
+    provider.expects(:poll_qr_login).with { |**| item.update_columns(pending_login_state: "newer") }
+      .raises(Provider::TradeRepublicClient::Error, "boom")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :conflict
+    assert_equal "newer", item.reload.pending_login_state
+  end
+
   test "QR polling records retryable provider failures for support" do
     item = families(:dylan_family).trade_republic_items.create!(
       name: "Trade Republic QR Connection",
@@ -346,7 +365,8 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
 
     post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
 
-    assert_response :service_unavailable
+    # The cancel ended this login, so the poller is told it is superseded.
+    assert_response :conflict
     assert_nil item.reload.pending_login_state
   end
 
