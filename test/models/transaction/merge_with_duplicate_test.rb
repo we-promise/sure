@@ -410,4 +410,23 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_equal 5, pending_tx.reload.attachments.count
     assert_equal 6, posted_tx.reload.attachments.count
   end
+
+  test "keeps attachments, tags and notes when the posted entry is protected from sync" do
+    pending_tx = @pending_entry.transaction
+    pending_tx.attachments.attach(io: StringIO.new("receipt"), filename: "receipt.pdf", content_type: "application/pdf")
+    blob = pending_tx.attachments.first.blob
+    reimbursable = @family.tags.create!(name: "Reimbursable")
+    pending_tx.tags << reimbursable
+    @pending_entry.update!(notes: "Lunch with client")
+    @posted_entry.mark_user_modified!
+
+    perform_enqueued_jobs do
+      assert pending_tx.merge_with_duplicate!
+    end
+
+    posted_tx = @posted_entry.transaction.reload
+    assert_equal [ blob.id ], posted_tx.attachments.map(&:blob_id)
+    assert_includes posted_tx.tags, reimbursable
+    assert_equal "Lunch with client", @posted_entry.reload.notes
+  end
 end
