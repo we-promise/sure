@@ -105,12 +105,127 @@ en:
         body: "This is a test push notification for your Sure account."
       verify_worker_ai:
         queued: "Worker check queued. It will appear below once a worker process picks it up, usually within a few seconds."
+      optional_services:
+        title: Optional services
+        description: "Optional operator integrations. Unconfigured services are informational. These checks inspect settings only; they do not test connectivity, send test events, or change analytics consent. Expand a service for setup details."
+        missing_settings: "Missing settings: %{settings}"
+        statuses:
+          configured: Configured (not tested)
+          not_configured: Not configured (optional)
+          incomplete: Incomplete configuration
+          disabled: Disabled in this process
+          not_checked: Not verified
+        notes:
+          restart_required: "Environment settings are present but do not match an initialized configuration in this process. Restart the affected web and worker services after changing their environment."
+          environment_disabled: "The loaded integration is disabled for this Rails environment."
+          explicitly_disabled: "SKYLIGHT_ENABLED explicitly disables instrumentation."
+          skylight_not_loaded: "Skylight is not loaded in this process. A token or SKYLIGHT_ENABLED alone does not load or start the SDK."
+          self_hosted_checkout_disabled: "Subscription checkout and the billing portal are disabled in self-hosted mode. Stripe webhooks can still be configured; checkout price IDs are not required here."
+          browser_analytics_disabled: "Browser analytics are disabled for this environment. This does not disable the separately configured server client."
+          shared_feedback_configured: "Self-hosted feedback has a separate bundled project and is enabled by its configuration. It does not require an operator POSTHOG_KEY. Browser opt-out and SDK availability are not checked."
+          shared_feedback_disabled: "The separate self-hosted feedback project is disabled by its feedback or environment setting. This does not disable operator-owned analytics."
+          production_only: "This integration is used only in production by the application's current configuration."
+        services:
+          langfuse:
+            title: Langfuse
+            description: "Optional AI tracing and evaluation reporting. No traces or evaluation requests are sent by this check."
+            guidance: "Set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY together. LANGFUSE_HOST is optional. Restart the affected services after changing these settings."
+          sentry:
+            title: Sentry
+            description: "Optional error and performance reporting. The current initializer enables reporting only in production."
+            guidance: "Set SENTRY_DSN and restart the affected services. This checks the loaded SDK configuration without capturing an error or sending an event."
+          skylight:
+            title: Skylight
+            description: "Optional application performance instrumentation. Configuration presence does not confirm that the agent is running or reporting."
+            guidance: "Set SKYLIGHT_AUTHENTICATION and ensure Skylight is loaded in the intended Rails environment. SKYLIGHT_ENABLED=false disables instrumentation; the flag alone does not load the gem. Restart after changes."
+          stripe:
+            title: Stripe
+            description: "Optional subscription billing and payment webhooks. This check does not create a Stripe client, validate credentials, or make payment requests."
+            guidance: "Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET together. Managed subscription checkout also needs STRIPE_MONTHLY_PRICE_ID and STRIPE_ANNUAL_PRICE_ID."
+          posthog:
+            title: PostHog
+            description: "Optional operator-owned analytics, using the configuration loaded at boot. Configured does not mean that a user has consented to analytics."
+            guidance: "Set POSTHOG_KEY and a nonblank POSTHOG_HOST, or leave the host unset to use the default. Browser analytics require production or POSTHOG_DEVELOPMENT_ENABLED in development. POSTHOG_FEEDBACK_ENABLED controls separate self-hosted feedback, not operator analytics."
+          logtail:
+            title: Logtail
+            description: "Optional production log forwarding. When it is unconfigured, the application continues logging to standard output."
+            guidance: "Set LOGTAIL_API_KEY and LOGTAIL_INGESTING_HOST together and restart the affected services. No test log is emitted by this check."
+      configuration:
+        description: "Configuration visible to this web process. These checks do not send emails, contact providers, or upload or download files. Configured means settings are present, not that delivery, provider access, or storage access has been verified."
+        statuses:
+          configured: Configured (not tested)
+          not_configured: Not configured
+          incomplete: Incomplete configuration
+          disabled: Disabled
+          not_checked: Not verified
+        settings_needed: Settings to review
+        unknown_provider: Unrecognized provider selection
+        provider_statuses:
+          configured: Configured (not tested)
+          not_configured: API key missing
+          invalid: Invalid selection
+        configure_providers: Open self-hosting settings
+        storage_backend: "Selected storage: %{backend}"
+        storage_backends:
+          local: Local disk
+          test: Test disk
+          amazon: Amazon S3
+          cloudflare: Cloudflare R2
+          generic_s3: S3-compatible storage
+          google: Google Cloud Storage
+          other: Custom or unrecognized backend
+        checks:
+          smtp:
+            title: Email (SMTP)
+            statuses:
+              configured: "SMTP settings are present. Email delivery has not been tested."
+              not_configured: "SMTP is not configured. Password resets, invitations, and other system emails cannot be sent through SMTP."
+              incomplete: "Some email settings are missing or incomplete. System emails or the links they contain may not work."
+              disabled: "Email delivery is disabled in the running mailer configuration."
+              not_checked: "This process uses a delivery method other than SMTP, such as a development preview. SMTP delivery is not assessed."
+            guidance: "SMTP cannot be configured in the admin UI. Set the email environment variables for both the web and worker services, then restart both. SMTP_USERNAME and SMTP_PASSWORD can both be omitted for an unauthenticated relay."
+            issues:
+              address: SMTP_ADDRESS
+              port: SMTP_PORT (a number from 1 to 65535)
+              sender: EMAIL_SENDER (replace the default sender@sure.local)
+              app_domain: APP_DOMAIN (used in email links)
+              authentication: SMTP_USERNAME and SMTP_PASSWORD (supply both or neither)
+          securities:
+            title: Market prices
+            statuses:
+              configured: "All enabled market-price providers have configuration. Credentials, coverage, and live lookups have not been tested."
+              not_configured: "The enabled market-price providers are missing their API keys. Automatic security searches and price lookups are unavailable through these providers."
+              incomplete: "At least one enabled market-price provider has missing configuration or an invalid selection. Securities assigned to that provider may not receive price updates."
+              disabled: "No market-price provider is enabled. Automatic security searches and price lookups are unavailable."
+            guidance: "Choose providers and add any required API keys in self-hosting settings, or configure them in the deployment environment. Environment overrides take precedence. Public providers do not need an API key."
+          exchange_rates:
+            title: Foreign exchange rates
+            statuses:
+              configured: "The selected exchange-rate provider has configuration. Credentials, currency coverage, and live lookups have not been tested."
+              not_configured: "No usable exchange-rate provider is configured. Automatic currency conversion may be unavailable when a stored rate is missing."
+              incomplete: "The exchange-rate provider selection is not recognized. Automatic rate lookups are unavailable."
+            guidance: "Choose an exchange-rate provider and add its API key if required in self-hosting settings, or configure it in the deployment environment. EXCHANGE_RATE_PROVIDER and provider API-key environment overrides take precedence."
+          storage:
+            title: File uploads and storage
+            statuses:
+              configured: "The selected backend has configuration. Local disk does not require cloud credentials. File access, permissions, and durability have not been tested."
+              not_configured: "The selected storage backend has no matching configuration. File uploads may be unavailable."
+              incomplete: "Required storage settings are missing or incomplete. File uploads or retrieval may not work."
+              not_checked: "This backend uses external credential discovery or a custom configuration. Its access cannot be determined from these settings alone."
+            guidance: "Review ACTIVE_STORAGE_SERVICE and the selected backend's deployment settings. Local disk needs persistent storage shared by the web and worker services. Changing backends does not migrate existing files; plan any migration separately."
+            issues:
+              root: Local storage root
+              bucket: Storage bucket
+              region: Storage region
+              credentials: Storage access key and secret key (supply both or use external credential discovery)
+              endpoint: Storage endpoint (and CLOUDFLARE_ACCOUNT_ID for R2)
       show:
         title: System health
         tabs:
           hosted_usage: "Hosted usage"
           background_jobs: Background jobs
           ai: AI status
+          configuration: Configuration
         alert:
           title: Background jobs aren't running
         status_section_title: Sidekiq status

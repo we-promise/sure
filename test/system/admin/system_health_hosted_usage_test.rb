@@ -17,7 +17,12 @@ class Admin::SystemHealthHostedUsageTest < ApplicationSystemTestCase
 
     visit admin_system_health_path
     assert_selector "turbo-frame#hosted_usage[loading='lazy']:not([complete])", visible: :all
+    click_button "Configuration"
+    assert_current_path admin_system_health_path(tab: "configuration")
+    assert_selector "[data-testid='configuration-health']"
+    assert_selector "turbo-frame#hosted_usage[loading='lazy']:not([complete])", visible: :all
     click_button "Hosted usage"
+    assert_no_selector "[data-testid='configuration-health']"
 
     assert_current_path admin_system_health_path(tab: "hosted_usage")
     assert_selector "button[role='tab'][aria-selected='true']", text: "Hosted usage"

@@ -18,10 +18,11 @@ class Admin::SystemHealthHostedUsageControllerTest < ActionDispatch::Integration
       host! domain
       sign_in @user
       ClimateControl.modify("APP_DOMAIN" => domain) do
-        %w[background_jobs ai hosted_usage].each do |tab|
+        %w[background_jobs ai configuration hosted_usage].each do |tab|
           get admin_system_health_path(tab: tab)
 
           assert_response :success
+          assert_select "button[role='tab'][data-id='configuration']", text: "Configuration"
           assert_select "button[role='tab'][data-id='hosted_usage']", text: "Hosted usage"
           assert_select "button[role='tab'][aria-selected='true'][data-id='#{tab}']"
           assert_select "turbo-frame#hosted_usage[loading='lazy'][src='#{hosted_usage_admin_system_health_path}']"

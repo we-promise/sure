@@ -1,0 +1,47 @@
+<div class="space-y-4" data-testid="configuration-health">
+  <p class="text-sm text-secondary"><%= t(".description") %></p>
+
+  <% health.checks.each do |check| %>
+    <%= render DS::Card.new(class: "gap-4", data: { testid: "configuration-#{check.key}" }) do %>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold text-primary"><%= t(".checks.#{check.key}.title") %></h2>
+        <%= render DS::Pill.new(label: t(".statuses.#{check.status}"), tone: check.tone, marker: false) %>
+      </div>
+      <p class="text-sm text-secondary"><%= t(".checks.#{check.key}.statuses.#{check.status}") %></p>
+
+      <% if check.backend %>
+        <p class="text-sm text-primary"><%= t(".storage_backend", backend: t(".storage_backends.#{check.backend}")) %></p>
+      <% end %>
+
+      <% if check.issues.any? %>
+        <div class="space-y-2 text-sm">
+          <p class="font-medium text-primary"><%= t(".settings_needed") %></p>
+          <ul class="list-disc pl-5 text-secondary">
+            <% check.issues.each do |issue| %>
+              <li><%= t(".checks.#{check.key}.issues.#{issue}") %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <% if check.providers.any? %>
+        <dl class="space-y-2 text-sm">
+          <% check.providers.each do |provider| %>
+            <div class="flex flex-wrap justify-between gap-2">
+              <dt class="text-primary"><%= provider.key == :unknown ? t(".unknown_provider") : t("settings.hostings.provider_selection.providers.#{provider.key}") %></dt>
+              <dd class="text-secondary"><%= t(".provider_statuses.#{provider.status}") %></dd>
+            </div>
+          <% end %>
+        </dl>
+      <% end %>
+
+      <p class="text-sm text-secondary"><%= t(".checks.#{check.key}.guidance") %></p>
+    <% end %>
+  <% end %>
+
+  <% if self_hosted? %>
+    <%= link_to t(".configure_providers"), settings_hosting_path, class: "text-sm text-link underline" %>
+  <% end %>
+
+  <%= render "optional_services", services: health.optional_services %>
+</div>
