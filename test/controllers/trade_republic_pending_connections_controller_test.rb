@@ -46,6 +46,20 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     assert_equal 1, @family.trade_republic_pending_connections.count
   end
 
+  test "a login started while another tab started a newer one leaves that login" do
+    newer = nil
+    provider = stub_provider
+    # The other tab's attempt is stored while Trade Republic answers this one.
+    provider.expects(:initiate_qr_login).with { newer = @family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "newer"); true }
+      .returns(result("status" => "qr_pending", "pending_login_b64" => "older"))
+
+    post trade_republic_pending_connections_url, params: { login_method: "qr" }, headers: TURBO_STREAM
+
+    assert_turbo_stream action: "replace", target: "trade-republic-providers-panel"
+    assert_equal [ newer.id ], @family.trade_republic_pending_connections.ids
+    assert_equal "newer", newer.reload.pending_login_state
+  end
+
   test "starting a login takes a family lock that lets an approval create its connection meanwhile" do
     stub_provider(initiate_qr_login: result("status" => "qr_pending", "pending_login_b64" => "qr-pending"), login_stage: "qr_pending")
 

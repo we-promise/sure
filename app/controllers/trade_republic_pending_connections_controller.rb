@@ -17,6 +17,7 @@ class TradeRepublicPendingConnectionsController < ApplicationController
     end
     return render_new_connection_error(@pending_connection.errors.full_messages.join(", ")) unless @pending_connection.valid?
 
+    replaced_ids = Current.family.trade_republic_pending_connections.ids
     provider = @pending_connection.trade_republic_provider
     result = qr_login ? provider.initiate_qr_login : provider.initiate_login
 
@@ -24,9 +25,19 @@ class TradeRepublicPendingConnectionsController < ApplicationController
     # family lock keeps two attempts at once from both getting through. It
     # is a NO KEY UPDATE lock so a login being approved meanwhile can still
     # create its connection, whose family foreign key needs a KEY SHARE lock.
-    Current.family.with_lock("FOR NO KEY UPDATE") do
+    # An attempt from another tab that was stored while Trade Republic
+    # answered this one is newer, so it stays and this one is dropped.
+    started = Current.family.with_lock("FOR NO KEY UPDATE") do
+      next false unless Current.family.trade_republic_pending_connections.ids.sort == replaced_ids.sort
+
       Current.family.trade_republic_pending_connections.destroy_all
       @pending_connection.update!(pending_login_state: result.data.fetch("pending_login_b64"))
+      true
+    end
+    unless started
+      return redirect_to(settings_providers_path(anchor: "trade-republic"), status: :see_other) unless turbo_panel_request?
+
+      return render turbo_stream: replace_panel_stream
     end
     qr_code_svg = view_context.generate_mfa_qr_code(result.data["qr_code_payload"]) if qr_login && result.data["qr_code_payload"].present?
 
