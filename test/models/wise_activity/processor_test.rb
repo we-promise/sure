@@ -78,6 +78,33 @@ class WiseActivity::ProcessorTest < ActiveSupport::TestCase
     assert_equal "wise_interbalance_5003_outflow", entry.external_id
   end
 
+  # INTERBALANCE — currency conversion between STANDARD balances
+
+  test "conversion on the source STANDARD balance is an outflow in the source currency" do
+    gbp_account = create_standard_account(currency: "GBP", balance_id: "10000003")
+    activity = build_interbalance("To <strong>EUR</strong>", amount: "117.50 EUR", resource_id: "8001",
+                                  secondary: "100 GBP")
+
+    entry = WiseActivity::Processor.new(activity, wise_account: gbp_account).process
+
+    assert_equal BigDecimal("100.0"), entry.amount
+    assert_equal "GBP", entry.currency
+    assert_equal "wise_interbalance_8001_outflow", entry.external_id
+    assert_equal I18n.t("wise_items.activities.transfer_to_jar", jar: "EUR"), entry.name
+  end
+
+  test "conversion on the target STANDARD balance is an inflow in the target currency" do
+    activity = build_interbalance("To <strong>EUR</strong>", amount: "1,234.56 EUR", resource_id: "8002",
+                                  secondary: "900 GBP")
+
+    entry = WiseActivity::Processor.new(activity, wise_account: @standard_account).process
+
+    assert_equal BigDecimal("-1234.56"), entry.amount
+    assert_equal "EUR", entry.currency
+    assert_equal "wise_interbalance_8002_inflow", entry.external_id
+    assert_equal I18n.t("wise_items.activities.transfer_from_jar", jar: "GBP"), entry.name
+  end
+
   # Amount parsing
 
   test "parses comma-formatted amount" do
@@ -174,16 +201,38 @@ class WiseActivity::ProcessorTest < ActiveSupport::TestCase
 
   private
 
-    def build_interbalance(title, amount:, resource_id:)
+    def build_interbalance(title, amount:, resource_id:, secondary: nil)
       {
         "id" => "interbalance_activity_#{resource_id}",
         "type" => "INTERBALANCE",
         "resource" => { "type" => "BALANCE_TRANSACTION", "id" => resource_id },
         "title" => title,
         "primaryAmount" => amount,
+        "secondaryAmount" => secondary,
         "status" => "COMPLETED",
         "createdOn" => "2026-05-01T06:12:11.597Z"
-      }
+      }.compact
+    end
+
+    def create_standard_account(currency:, balance_id:)
+      wise_account = WiseAccount.create!(
+        wise_item: @wise_item,
+        balance_id: balance_id,
+        name: "Wise #{currency}",
+        currency: currency,
+        raw_payload: { "type" => "STANDARD" }
+      )
+      AccountProvider.create!(
+        account: Account.create!(
+          family: @family,
+          name: "Wise #{currency}",
+          accountable: Depository.new(subtype: "checking"),
+          balance: 0,
+          currency: currency
+        ),
+        provider: wise_account
+      )
+      wise_account
     end
 
     def build_cashback(amount:, resource_id:)
