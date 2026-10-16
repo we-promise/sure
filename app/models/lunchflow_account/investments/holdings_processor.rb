@@ -74,15 +74,17 @@ class LunchflowAccount::Investments::HoldingsProcessor
         return
       end
 
+      holding_date = Date.current
+
       saved = import_adapter.import_holding(
         security: security,
         quantity: qty,
         amount: amount,
         currency: currency,
-        date: Date.current,
+        date: holding_date,
         price: price,
         cost_basis: cost_basis,
-        external_id: "lunchflow_#{holding_id}",
+        external_id: "lunchflow_#{holding_id}_#{holding_date}",
         account_provider_id: lunchflow_account.account_provider&.id,
         source: "lunchflow",
         delete_future_holdings: false

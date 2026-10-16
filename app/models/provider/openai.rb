@@ -188,10 +188,6 @@ class Provider::Openai < Provider
     [ context_window - max_response_tokens - system_prompt_reserve, 256 ].max
   end
 
-  def max_items_per_call
-    positive_budget(ENV["LLM_MAX_ITEMS_PER_CALL"], Setting.llm_max_items_per_call, 25)
-  end
-
   def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
       if user_categories.blank?
@@ -473,7 +469,6 @@ class Provider::Openai < Provider
     def slice_for_context(items, fixed: nil)
       BatchSlicer.call(
         Array(items),
-        max_items: max_items_per_call,
         max_tokens: max_input_tokens,
         fixed_tokens: fixed ? Assistant::TokenEstimator.estimate(fixed) : 0
       )
@@ -689,11 +684,12 @@ class Provider::Openai < Provider
         payload << { role: "user", content: prompt }
       end
 
-      # If there are function results, we need to add the assistant message that made the tool calls
-      # followed by the tool messages with the results
-      if function_results.any?
+      # For each tool round, add the assistant message that made the tool calls
+      # followed by the tool messages with the results, in order, so each
+      # follow-up request extends the previous one and prefix caches stay valid.
+      Assistant::Responder.group_by_round(function_results).each do |round_results|
         # Build assistant message with tool_calls
-        tool_calls = function_results.map do |fn_result|
+        tool_calls = round_results.map do |fn_result|
           # Shared with ToolCall::Function.serialize_arguments so history and
           # follow-up payloads stay in sync for strict OpenAI-compatible endpoints.
           arguments_str = ToolCall::Function.serialize_arguments(fn_result[:arguments])
@@ -717,7 +713,7 @@ class Provider::Openai < Provider
         }
 
         # Add function results as tool messages
-        function_results.each do |fn_result|
+        round_results.each do |fn_result|
           # Convert output to JSON string if it's not already a string
           # OpenAI API requires content to be either a string or array of objects
           # Handle nil explicitly to avoid serializing to "null"
