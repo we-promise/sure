@@ -484,6 +484,44 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     end
   end
 
+  test "refreshes claimed series without per-series recurrence rule or account lookups" do
+    account = @family.accounts.first
+    names = Array.new(3) { |index| "Claimed Performance Subscription #{index}" }
+
+    names.each_with_index do |name, index|
+      create_name_pattern_entries(account: account, name: name, amount: 40 + index, day: 5)
+
+      @family.recurring_transactions.create!(
+        account: account,
+        name: name,
+        amount: 40 + index,
+        currency: "USD",
+        expected_day_of_month: 5,
+        last_occurrence_date: 4.months.ago.to_date,
+        next_expected_date: 1.month.from_now.to_date,
+        occurrence_count: 1,
+        status: "active"
+      )
+    end
+
+    queries = nil
+    assert_no_difference -> { @family.recurring_transactions.count } do
+      queries = capture_sql_queries do
+        @identifier.identify_recurring_patterns
+      end
+    end
+
+    # One batched preload is fine; a query per claimed series is the N+1.
+    rule_queries = queries.grep(/\ASELECT .*FROM "recurrence_rules"/)
+    account_queries = queries.grep(/\ASELECT "accounts"\.\* FROM "accounts" WHERE "accounts"\."id"/)
+
+    assert_operator rule_queries.size, :<=, 1, rule_queries.join(" | ")
+    assert_operator account_queries.size, :<=, 1, account_queries.join(" | ")
+    @family.recurring_transactions.where(name: names).each do |recurring|
+      assert_equal 3, recurring.occurrence_count
+    end
+  end
+
   test "updates manual recurring variance without per-recurring entry lookups" do
     account = @family.accounts.first
     names = Array.new(4) { |index| "Manual Performance Subscription #{index}" }

@@ -76,5 +76,21 @@
         <p class="text-secondary text-xs"><%= t("credit_cards.form.simplefin_balance_sign_description") %></p>
       </div>
     <% end %>
+
+    <% sophtron_account = account.provider_account_for("SophtronAccount") if account.persisted? %>
+    <% if sophtron_account %>
+      <div class="space-y-1">
+        <%= form.fields_for :sophtron, sophtron_account do |sophtron_form| %>
+          <%= sophtron_form.select :balance_sign_override,
+                                   options_for_select([
+                                     [t("credit_cards.form.sophtron_balance_sign_auto"), ""],
+                                     [t("credit_cards.form.sophtron_balance_sign_debt"), "debt"],
+                                     [t("credit_cards.form.sophtron_balance_sign_credit"), "credit"]
+                                   ], sophtron_account.balance_sign_override),
+                                   { label: t("credit_cards.form.sophtron_balance_sign_label") } %>
+        <% end %>
+        <p class="text-secondary text-xs"><%= t("credit_cards.form.sophtron_balance_sign_description") %></p>
+      </div>
+    <% end %>
   </div>
 <% end %>

@@ -1120,4 +1120,92 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal [ tx.id ], history_ids
     assert_empty current_ids
   end
+
+  test "attachment_status with returns only transactions that have a file" do
+    with_file = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    attach_file(with_file)
+
+    without_file = create_transaction(account: @checking_account, amount: 50, kind: "standard").entryable
+
+    result_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "with" ] })
+                                  .transactions_scope.pluck(:id)
+
+    assert_equal [ with_file.id ], result_ids
+    assert_not_includes result_ids, without_file.id
+  end
+
+  test "attachment_status without returns only transactions that have no file" do
+    with_file = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    attach_file(with_file)
+
+    without_file = create_transaction(account: @checking_account, amount: 50, kind: "standard").entryable
+
+    result_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "without" ] })
+                                  .transactions_scope.pluck(:id)
+
+    assert_equal [ without_file.id ], result_ids
+  end
+
+  test "attachment_status with both, no or unknown values leaves the scope unchanged" do
+    with_file = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    attach_file(with_file)
+
+    without_file = create_transaction(account: @checking_account, amount: 50, kind: "standard").entryable
+
+    expected = [ with_file.id, without_file.id ].sort
+
+    [ [ "with", "without" ], [], [ "bogus" ] ].each do |statuses|
+      result_ids = Transaction::Search.new(@family, filters: { attachment_status: statuses })
+                                    .transactions_scope.pluck(:id)
+
+      assert_equal expected, result_ids.sort, "attachment_status #{statuses.inspect} must not filter"
+    end
+  end
+
+  test "a transaction with several files is returned and counted once" do
+    tx = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    attach_file(tx, filename: "invoice.pdf")
+    attach_file(tx, filename: "receipt.pdf")
+
+    search = Transaction::Search.new(@family, filters: { attachment_status: [ "with" ] })
+
+    assert_equal [ tx.id ], search.transactions_scope.pluck(:id)
+    assert_equal 1, search.totals.count
+  end
+
+  test "split children count as attached when the file is on their parent" do
+    parent = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    attach_file(parent.entryable)
+    child_ids = parent.split!([ { name: "Part one", amount: 60 }, { name: "Part two", amount: 40 } ]).map(&:entryable_id)
+
+    plain = create_transaction(account: @checking_account, amount: 25, kind: "standard").entryable
+
+    with_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "with" ] })
+                                .transactions_scope.pluck(:id)
+    without_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "without" ] })
+                                   .transactions_scope.pluck(:id)
+
+    assert_equal child_ids.sort, with_ids.sort
+    assert_equal [ plain.id ], without_ids
+  end
+
+  test "a split child's own file does not mark its siblings as attached" do
+    parent = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    with_file, without_file = parent.split!([ { name: "Part one", amount: 60 }, { name: "Part two", amount: 40 } ]).map(&:entryable)
+    attach_file(with_file)
+
+    with_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "with" ] })
+                                .transactions_scope.pluck(:id)
+    without_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "without" ] })
+                                   .transactions_scope.pluck(:id)
+
+    assert_equal [ with_file.id ], with_ids
+    assert_equal [ without_file.id ], without_ids
+  end
+
+  private
+    # Attaches a small PDF to the transaction.
+    def attach_file(transaction, filename: "invoice.pdf")
+      transaction.attachments.attach(io: StringIO.new("invoice"), filename: filename, content_type: "application/pdf")
+    end
 end

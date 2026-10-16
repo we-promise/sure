@@ -1,5 +1,5 @@
 class GenerateInsightsJob < ApplicationJob
-  queue_as :scheduled
+  queue_as :ai_low_priority
   sidekiq_options lock: :until_executed, on_conflict: :log
 
   # Without args (cron): fans out one job per family.

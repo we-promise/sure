@@ -274,6 +274,7 @@ en:
         tag: Tag
         merchant: Merchant
         ai: AI
+        attachment: Attachment
     convert_to_trade:
       title: Convert to Security Trade
       description: Convert this transaction into a trade with security details
@@ -344,6 +345,11 @@ en:
           pending: Pending
           ai_current: AI
           ai_history: AI history
+          attachment_with: With attachment
+          attachment_without: Without attachment
+        attachment_filter:
+          with: With attachment
+          without: Without attachment
         ai_filter:
           current: AI
           current_description: Category is still the one assigned automatically (AI or Bayes).
