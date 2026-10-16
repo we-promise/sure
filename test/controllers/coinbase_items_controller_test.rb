@@ -83,6 +83,17 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("coinbase_items.select_accounts.no_credentials_configured"), flash[:alert]
   end
 
+  test "select_accounts leaves the Add Account modal for Settings at the top level" do
+    @coinbase_item.update!(scheduled_for_deletion: true)
+
+    get select_accounts_coinbase_items_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("coinbase_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
+
   test "select_accounts asks which connection when there are several, unless one is named" do
     other_item = CoinbaseItem.create!(family: @family, name: "Second Coinbase", api_key: "key_2", api_secret: "secret_2")
 
