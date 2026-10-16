@@ -58,6 +58,18 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
     assert_not_includes TradeRepublicItem.syncable, item
   end
 
+  test "syncable scope excludes an ended session but keeps one without a known end" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+    assert_not_includes TradeRepublicItem.syncable, item
+
+    item.update_columns(session_expires_at: nil)
+    assert_includes TradeRepublicItem.syncable, item
+
+    item.update_columns(session_expires_at: 1.hour.from_now)
+    assert_includes TradeRepublicItem.syncable, item
+  end
+
   test "session_configured? reflects stored session" do
     assert_predicate trade_republic_items(:configured_item), :session_configured?
     assert_not_predicate trade_republic_items(:no_session_item), :session_configured?
