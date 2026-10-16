@@ -50,6 +50,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/für die am .* fällige Rechnung/, response.body)
   end
 
+  # The dialog route is GET only. Rendered as a button_to, "Create a bill"
+  # POSTed to it and the modal frame showed "Content Missing".
+  test "create a bill opens the prefilled dialog with a GET" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    href = new_recurring_transaction_path(entry_id: @entry.id)
+    assert_select "a[href=?][data-turbo-frame=modal]", href, text: /Create a bill/
+    assert_select "form[action=?]", href, count: 0
+
+    get href, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "turbo-frame#modal"
+  end
+
   test "the bill link-back stays hidden without preview access" do
     series = @user.family.recurring_transactions.create!(
       account: accounts(:depository), name: "Watson Property", amount: 2000,
@@ -1696,6 +1714,31 @@ end
       "revoking account-share access must not leave a stale cached count that still includes the now-inaccessible account"
   ensure
     Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count leaves out read-only shared accounts" do
+    sign_in users(:family_member)
+    get transactions_url
+    count_before = rendered_uncategorized_count
+
+    accounts(:credit_card).entries.create!( # shared read_only with family_member
+      name: "Uncategorized on read-only share",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+    accounts(:depository).entries.create!( # shared full_control with family_member
+      name: "Uncategorized on full-control share",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    assert_equal count_before + 1, rendered_uncategorized_count,
+      "the categorize count should only include entries the member can categorize"
   end
 
   test "index projected_recurring cache is invalidated when account-share access is revoked" do
