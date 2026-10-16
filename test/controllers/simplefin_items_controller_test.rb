@@ -1112,5 +1112,5 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       shared.account_shares.create!(user: admin, permission: "read_only")
       private_account = build.call("Member Private Manual Marker", member)
       [ own, shared, private_account ]
-  end
+    end
 end
