@@ -37,16 +37,22 @@
     <%# A negative figure here is not a nonsense balance: paying the card down
         by more than has been charged since the close leaves a credit that
         reduces the next statement. Labelling it as such keeps the two cards
-        summing to the debt in the header instead of appearing to contradict it. %>
+        summing to the debt in the header instead of appearing to contradict it.
+
+        The credit is checked before the due date rather than after it. A due
+        date that has already rolled past the last statement belongs to the
+        statement still building, and when the cardholder holds a credit that
+        statement may not produce a bill at all -- quoting a due date there
+        would promise a payment the credit may well cancel. %>
     <%= summary_card title: t(".since_last_statement") do %>
       <%= accrued ? format_money(accrued) : t(".unknown") %>
-      <% if due_date && !due_for_last_balance %>
+      <% if accrued&.negative? %>
+        <span class="block text-sm text-secondary"><%= t(".credit_toward_next") %></span>
+      <% elsif due_date && !due_for_last_balance %>
         <span class="block text-sm text-secondary">
           <%= t(".due_on", date: l(due_date, format: :long)) %>
         </span>
         <span class="block text-sm text-secondary"><%= credit_card_due_countdown(card.days_until_due(as_of: today)) %></span>
-      <% elsif accrued&.negative? %>
-        <span class="block text-sm text-secondary"><%= t(".credit_toward_next") %></span>
       <% elsif next_close %>
         <span class="block text-sm text-secondary"><%= t(".closes_on", date: l(next_close, format: :long)) %></span>
       <% end %>

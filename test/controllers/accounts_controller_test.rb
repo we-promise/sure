@@ -746,6 +746,33 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "credit card overview shows the credit label when a credit outlives the due date" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    # Read after the 26th: the due date has rolled to the statement still
+    # building, and the cardholder has paid down more than that statement has
+    # accrued. The credit is the fact worth stating; a due date here would
+    # promise a payment the credit may cancel.
+    travel_to Date.new(2026, 10, 30) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 100, currency: "USD",
+        entryable: Transaction.new
+      )
+      account.entries.create!(
+        name: "Payment after the close", date: Date.new(2026, 10, 12), amount: -250, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t("credit_cards.tabs.overview.credit_toward_next"), response.body
+      assert_no_match I18n.t("credit_cards.tabs.overview.due_on", date: ""), response.body
+    end
+  end
+
   test "credit card overview asks for a cycle when none is set" do
     sign_in users(:family_admin)
 
