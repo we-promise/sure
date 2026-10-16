@@ -2,6 +2,9 @@ module Assistant::Provided
   extend ActiveSupport::Concern
 
   def get_model_provider(ai_model)
+    preferred = Provider::Registry.preferred_llm_provider
+    return preferred if preferred&.supports_model?(ai_model)
+
     registry.providers.find { |provider| provider.supports_model?(ai_model) }
   end
 
