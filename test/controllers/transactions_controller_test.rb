@@ -1803,6 +1803,16 @@ end
     assert_no_match(/ai_status/, response.location)
   end
 
+  test "index says which currencies are left out of its totals" do
+    family = @user.family
+    family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+
+    get transactions_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from KRW to USD is stored yet, so some totals may leave out amounts in KRW/
+  end
+
   test "index with attachment_status=with lists only transactions that have a file" do
     @entry.entryable.attachments.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
 
