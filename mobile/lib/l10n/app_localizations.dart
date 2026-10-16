@@ -95,7 +95,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('sv'),
+    Locale('sv')
   ];
 
   /// Application title shown in the OS task switcher.
@@ -1915,6 +1915,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to start conversation. Please try again.'**
   String get chatConversationStartFailed;
+
+  /// No description provided for @monthlySpendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending by month'**
+  String get monthlySpendingTitle;
+
+  /// No description provided for @monthlySpendingPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get monthlySpendingPreview;
+
+  /// No description provided for @monthlySpendingFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get monthlySpendingFilters;
+
+  /// No description provided for @monthlySpendingReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get monthlySpendingReset;
+
+  /// No description provided for @monthlySpendingError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load spending. Connect to the server and try again.'**
+  String get monthlySpendingError;
+
+  /// No description provided for @monthlySpendingInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose 1–36 months in order and available accounts and categories.'**
+  String get monthlySpendingInvalid;
+
+  /// No description provided for @monthlySpendingScope.
+  ///
+  /// In en, this message translates to:
+  /// **'{accounts} accounts · {categories} categories'**
+  String monthlySpendingScope(int accounts, int categories);
+
+  /// No description provided for @monthlySpendingBasis.
+  ///
+  /// In en, this message translates to:
+  /// **'Posted gross expenses in family currency. Transfers and pending entries are excluded; refunds remain income.'**
+  String get monthlySpendingBasis;
+
+  /// No description provided for @monthlySpendingFx.
+  ///
+  /// In en, this message translates to:
+  /// **'Provisional: missing exchange rates. Original amounts are included without conversion.'**
+  String get monthlySpendingFx;
+
+  /// No description provided for @monthlySpendingEmptySelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one account and category to show spending.'**
+  String get monthlySpendingEmptySelection;
+
+  /// No description provided for @monthlySpendingEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No reportable expenses for this selection.'**
+  String get monthlySpendingEmpty;
+
+  /// No description provided for @monthlySpendingChartHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Chart hidden in privacy mode.'**
+  String get monthlySpendingChartHidden;
+
+  /// No description provided for @monthlySpendingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a bar for details; swipe sideways for more months. * Month in progress.'**
+  String get monthlySpendingHint;
+
+  /// No description provided for @monthlySpendingPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Month in progress'**
+  String get monthlySpendingPartial;
+
+  /// No description provided for @monthlySpendingDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Month details'**
+  String get monthlySpendingDetails;
+
+  /// No description provided for @monthlySpendingFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From month'**
+  String get monthlySpendingFrom;
+
+  /// No description provided for @monthlySpendingTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To month'**
+  String get monthlySpendingTo;
+
+  /// No description provided for @monthlySpendingAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get monthlySpendingAccounts;
+
+  /// No description provided for @monthlySpendingCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get monthlySpendingCategories;
+
+  /// No description provided for @monthlySpendingApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get monthlySpendingApply;
+
+  /// No description provided for @monthlySpendingSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get monthlySpendingSearch;
+
+  /// No description provided for @monthlySpendingAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get monthlySpendingAll;
+
+  /// No description provided for @monthlySpendingNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get monthlySpendingNone;
+
+  /// No description provided for @monthlySpendingNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get monthlySpendingNoResults;
+
+  /// No description provided for @monthlySpendingChooseMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose any month'**
+  String get monthlySpendingChooseMonth;
+
+  /// No description provided for @monthlySpendingLastTwelve.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 12 months'**
+  String get monthlySpendingLastTwelve;
+
+  /// No description provided for @monthlySpendingThisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This year'**
+  String get monthlySpendingThisYear;
+
+  /// No description provided for @monthlySpendingPreviousYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous year'**
+  String get monthlySpendingPreviousYear;
+
+  /// No description provided for @monthlySpendingShowOnHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Show monthly spending on Home'**
+  String get monthlySpendingShowOnHome;
 }
 
 class _AppLocalizationsDelegate

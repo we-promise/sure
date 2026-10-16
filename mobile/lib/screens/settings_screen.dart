@@ -30,6 +30,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _groupByType = false;
+  bool? _showMonthlySpending;
   String? _appVersion;
   // Identifiers for the in-progress destructive action. Defined once so the
   // discriminator can't drift via a mistyped string literal across handlers and
@@ -190,10 +191,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadPreferences() async {
+    final user = context.read<AuthProvider>().user;
     final groupByType = await PreferencesService.instance.getGroupByType();
+    final visible = user == null ? true : await MonthlySpendingPreferences.visible('${ApiConfig.baseUrl}:${user.id}');
     if (mounted) {
       setState(() {
         _groupByType = groupByType;
+        _showMonthlySpending = visible;
       });
     }
   }
@@ -751,6 +755,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: Colors.grey,
               ),
             ),
+          ),
+
+          SwitchListTile(
+            secondary: const Icon(Icons.bar_chart),
+            title: Text(l.monthlySpendingShowOnHome),
+            value: _showMonthlySpending ?? true,
+            onChanged: _showMonthlySpending == null ? null : (value) async {
+              final user = context.read<AuthProvider>().user;
+              if (user == null) return;
+              await MonthlySpendingPreferences.setVisible('${ApiConfig.baseUrl}:${user.id}', value);
+              if (mounted) setState(() => _showMonthlySpending = value);
+            },
           ),
 
           // Clear local data button

@@ -1,0 +1,16 @@
+<%= tag.fieldset class: "min-w-0 space-y-2", data: data do %>
+  <legend class="text-sm text-primary"><%= label %></legend>
+  <div class="grid grid-cols-2 gap-2">
+    <div class="min-w-0 space-y-1">
+      <%= helpers.label_tag "#{name}_month", t("ds.month_picker.month"), class: "block text-xs text-secondary" %>
+      <%= helpers.select_tag "#{name}_month", helpers.options_for_select((1..12).map { |number| [I18n.t("date.month_names")[number], number] }, month), prompt: t("ds.month_picker.choose_month"), required: true, class: select_classes, aria: { label: "#{label} · #{t('ds.month_picker.month')}" } %>
+    </div>
+    <div class="min-w-0 space-y-1">
+      <%= helpers.label_tag "#{name}_year", t("ds.month_picker.year"), class: "block text-xs text-secondary" %>
+      <%= helpers.select_tag "#{name}_year", helpers.options_for_select(years, year), prompt: t("ds.month_picker.choose_year"), required: true, class: select_classes, aria: { label: "#{label} · #{t('ds.month_picker.year')}" } %>
+    </div>
+  </div>
+  <% if invalid_value? %>
+    <p class="text-xs text-warning"><%= t("ds.month_picker.invalid_value", value: value) %></p>
+  <% end %>
+<% end %>

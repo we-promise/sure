@@ -158,6 +158,40 @@ old queued deliveries and deletes harmless. A missing or wrong proof returns 422
 An existing registration without a digest must first be enrolled by its original
 owner or removed by that owner; knowing the APNs token alone never authorizes transfer.
 
+## Monthly spending preview
+
+The Home monthly-spending card and Flutter companion app share
+`GET /api/v1/cash_flow?view=monthly_spending`. It requires ordinary read authentication and
+the authenticated user's personal preview setting. Browser sessions do not
+authenticate this API; use OAuth or `X-Api-Key`. Responses use `private, no-store`.
+
+The default range is twelve calendar months including the current month. Optional
+`from` and `to` are inclusive month starts in `YYYY-MM-01` format; select 1–36
+months ending no later than the current month. The server's `as_of` and
+`period.end_date` define the actual reporting cutoff. Missing months have zero
+totals and the unfinished current month has `partial: true`.
+
+Omit `account_ids[]` or `category_ids[]` to include all eligible options. To
+select none, send the corresponding array with a blank item (`account_ids[]=`).
+Selected IDs must belong to the returned options; malformed, foreign, or
+unavailable IDs return `422 invalid_selection`, never an unfiltered fallback.
+Categories are root categories (including child transactions), with
+`__uncategorized__` as the stable uncategorized ID. Both filters change the totals.
+
+Values are decimal strings in family currency. `basis: gross_expense` uses the
+existing income-statement classification: ordinary refunds remain income,
+transfers and pending/excluded entries are omitted, and account reporting and
+finance-access rules apply. A positive `missing_exchange_rates` count makes the
+figures provisional because the existing reporting conversion uses a 1:1
+fallback for those entries. Clients must display that warning.
+
+Flutter hides this preview on `403 preview_required` or `404` from an older
+server, and waits for a successful response before first showing the card.
+Confirmed users can retry later request failures without seeing stale totals.
+No new offline cache is provided. Financial aggregation belongs to the server;
+clients format decimal strings and render the supplied monthly/category data.
+See the [OpenAPI schema](api/openapi.yaml).
+
 ## FinanceKit device publisher
 
 The native Apple client can enroll as a FinanceKit device publisher, map explicitly selected Wallet accounts, and upload an ordered local outbox during foreground or iOS-granted background execution. Setup and repair use normal Sure authentication; uploads use a revocable one-purpose credential that cannot read Sure data. Stable server-issued account lineages preserve identity across publisher replacement. See the [OpenAPI reference](api/openapi.yaml) and [operator guide](hosting/financekit.md).

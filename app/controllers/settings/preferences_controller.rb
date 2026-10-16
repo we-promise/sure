@@ -13,7 +13,7 @@ class Settings::PreferencesController < ApplicationController
   # UsersController#update flow (which expects a full user form payload).
   def update
     @user = Current.user
-    user_params = params.permit(user: [ :preview_features_enabled ]).fetch(:user, {})
+    user_params = params.permit(user: [ :preview_features_enabled, :monthly_spending_visible ]).fetch(:user, {})
 
     @user.transaction do
       @user.lock!
@@ -21,6 +21,12 @@ class Settings::PreferencesController < ApplicationController
       if user_params.key?(:preview_features_enabled)
         updated_prefs["preview_features_enabled"] =
           ActiveModel::Type::Boolean.new.cast(user_params[:preview_features_enabled])
+      end
+      if user_params.key?(:monthly_spending_visible) && @user.preview_features_enabled?
+        hidden = !ActiveModel::Type::Boolean.new.cast(user_params[:monthly_spending_visible])
+        sections = @user.dashboard_hidden_sections - [ "monthly_spending" ]
+        sections << "monthly_spending" if hidden
+        updated_prefs["hidden_sections"] = sections
       end
       @user.update!(preferences: updated_prefs)
     end

@@ -1,0 +1,18 @@
+<fieldset class="space-y-2" data-controller="DS--filter-checklist">
+  <legend class="text-sm font-medium text-primary"><%= label %></legend>
+  <%= render DS::SearchInput.new(placeholder: t("ds.filter_checklist.search", label: label), data: { DS__filter_checklist_target: "search", action: "input->DS--filter-checklist#search" }) %>
+  <p class="hidden text-sm text-secondary" data-DS--filter-checklist-target="empty"><%= t("ds.filter_checklist.no_results") %></p>
+  <div class="flex gap-2">
+    <%= render DS::Button.new(text: t("ds.filter_checklist.all"), variant: :ghost, size: :sm, data: { action: "DS--filter-checklist#all" }) %>
+    <%= render DS::Button.new(text: t("ds.filter_checklist.none"), variant: :ghost, size: :sm, data: { action: "DS--filter-checklist#none" }) %>
+  </div>
+  <%= helpers.hidden_field_tag "#{name}[]", "", id: nil %>
+  <div class="max-h-48 overflow-y-auto space-y-1">
+    <% options.each do |option| %>
+      <label class="flex items-center gap-2 min-h-11 text-sm text-primary rounded-lg px-2 hover:bg-container-inset-hover" data-DS--filter-checklist-target="row" data-name="<%= option[:name] %>">
+        <%= helpers.check_box_tag "#{name}[]", option[:id], selected_ids.include?(option[:id]), id: nil, data: { DS__filter_checklist_target: "checkbox" } %>
+        <span class="break-words"><%= option[:name] %></span>
+      </label>
+    <% end %>
+  </div>
+</fieldset>
