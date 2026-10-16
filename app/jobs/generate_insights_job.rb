@@ -49,7 +49,7 @@ class GenerateInsightsJob < ApplicationJob
       # Outside the lock on purpose: even a lock-skipped run re-broadcasts the
       # current state, so a subscribed /insights page (waiting on its manual
       # refresh) always gets its list and button restored.
-      broadcast_feed(family)
+      I18n.with_locale(family.locale) { broadcast_feed(family) }
       Array(notifiable_insights).each { |insight| DeliverInsightNotificationJob.enqueue_for(insight) }
     end
 

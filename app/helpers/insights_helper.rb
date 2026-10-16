@@ -29,7 +29,7 @@ module InsightsHelper
   /x
 
   # Insight titles and bodies are stored as finished prose with the amounts
-  # already interpolated (by the i18n template or the LLM writer), so unlike
+  # already interpolated by the i18n template, so unlike
   # the rest of the app the figures can't be tagged where they're formatted.
   # This wraps each numeric fragment in a privacy-sensitive span at render
   # time so privacy mode blurs the numbers but the sentence stays readable.
