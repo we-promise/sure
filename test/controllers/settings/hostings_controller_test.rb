@@ -541,6 +541,15 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "max items per batch field is shown for every LLM provider" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_select "input[name=?]", "setting[llm_max_items_per_call]", count: 1
+      assert_select "[data-provider=openai] input[name=?]", "setting[llm_max_items_per_call]", count: 0
+    end
+  end
+
   test "falls back to openai when stored llm_provider is invalid" do
     with_self_hosting do
       Setting.llm_provider = "bogus"
@@ -1016,19 +1025,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { llm_context_window: "0" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Context Window (Optional) must be a whole number ≥ 256.", flash[:alert]
       assert_nil Setting.llm_context_window
 
       patch settings_hosting_url, params: { setting: { llm_max_response_tokens: "-5" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Max Response Tokens (Optional) must be a whole number ≥ 64.", flash[:alert]
       assert_nil Setting.llm_max_response_tokens
 
       patch settings_hosting_url, params: { setting: { llm_max_items_per_call: "not-a-number" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Max Items Per Batch (Optional) must be a whole number ≥ 1.", flash[:alert]
       assert_nil Setting.llm_max_items_per_call
 
       patch settings_hosting_url, params: { setting: { openai_request_timeout: "0" } }

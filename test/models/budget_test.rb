@@ -567,4 +567,35 @@ class BudgetTest < ActiveSupport::TestCase
       assert_equal 0, budget.days_remaining
     end
   end
+
+  test "income methods treat a nil expected_income as zero" do
+    budget = budgets(:one)
+    budget.update!(expected_income: nil)
+    budget.stubs(:actual_income).returns(BigDecimal("1200"))
+
+    assert budget.initialized?
+    assert_equal Money.new(0, budget.currency), budget.expected_income_money
+    assert_equal 0, budget.actual_income_percent
+    assert_equal(-1200, budget.remaining_expected_income)
+    assert_equal Money.new(-1200, budget.currency), budget.remaining_expected_income_money
+    assert_equal 100, budget.surplus_percent
+  end
+
+  test "surplus_percent is 100 when nothing was expected and income came in" do
+    budget = budgets(:one)
+    budget.update!(expected_income: 0)
+    budget.stubs(:actual_income).returns(BigDecimal("50"))
+
+    assert_equal 100, budget.surplus_percent
+  end
+
+  test "income methods with no expected_income and no income show nothing earned" do
+    budget = budgets(:one)
+    budget.update!(expected_income: nil)
+    budget.stubs(:actual_income).returns(BigDecimal("0"))
+
+    assert_equal 0, budget.actual_income_percent
+    assert_equal 0, budget.remaining_expected_income
+    assert_equal 0, budget.surplus_percent
+  end
 end
