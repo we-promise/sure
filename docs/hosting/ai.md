@@ -186,7 +186,7 @@ Or in the UI: **Settings** → **Self-Hosting** → **AI Provider** → **Anthro
 
 | Variable | Default | What it does |
 |----------|---------|--------------|
-| `LLM_PROVIDER` | `openai` | `anthropic` selects this provider. If the selected provider has no key, Sure uses the other one. While `OPENAI_URI_BASE` is set, chat still goes to that endpoint, so remove the OpenAI-compatible settings when switching. |
+| `LLM_PROVIDER` | `openai` | `anthropic` selects this provider. If the selected provider has no key, Sure uses the other one. While a custom OpenAI-compatible provider is configured (`OPENAI_URI_BASE` with an access token and model), chat still goes to it, so remove those settings when switching. |
 | `ANTHROPIC_API_KEY` | — | API key. `ANTHROPIC_ACCESS_TOKEN` also works and wins if both are set. |
 | `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for chat and all background jobs. Must start with `claude` unless a base URL is set. Claude Opus 5.5, Sonnet 5.5 and Fable 5.1 work for chat only until [#4125](https://github.com/we-promise/sure/issues/4125) is fixed. |
 | `ANTHROPIC_MAX_TOKENS` | `4096` | Reply limit, sent with every request (the Messages API requires one). |
