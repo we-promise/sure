@@ -25,7 +25,7 @@ The interactive chat where users ask questions about their finances. Routes thro
 
 ### 2. Auto-Categorization and Merchant Detection (background)
 
-Background jobs that classify transactions and detect merchants. These use the LLM provider selected by `LLM_PROVIDER` (OpenAI-compatible or native Anthropic), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
+Background jobs that classify transactions and detect merchants. These use the LLM provider selected by `LLM_PROVIDER` (OpenAI-compatible or native Anthropic; categorization uses Jev instead when it's selected), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
 
 ### What this means in practice
 
@@ -173,7 +173,7 @@ Sure talks to Anthropic's Messages API directly. It serves chat (streamed), auto
 
 ```bash
 LLM_PROVIDER=anthropic
-ANTHROPIC_API_KEY=your-anthropic-api-key
+ANTHROPIC_API_KEY=your-anthropic-api-key # pipelock:ignore
 
 # Optional
 # ANTHROPIC_MODEL=claude-sonnet-4-6
@@ -186,9 +186,9 @@ Or in the UI: **Settings** → **Self-Hosting** → **AI Provider** → **Anthro
 
 | Variable | Default | What it does |
 |----------|---------|--------------|
-| `LLM_PROVIDER` | `openai` | `anthropic` selects this provider. If the selected provider has no key, Sure uses the other one. |
+| `LLM_PROVIDER` | `openai` | `anthropic` selects this provider. If the selected provider has no key, Sure uses the other one. While `OPENAI_URI_BASE` is set, chat still goes to that endpoint, so remove the OpenAI-compatible settings when switching. |
 | `ANTHROPIC_API_KEY` | — | API key. `ANTHROPIC_ACCESS_TOKEN` also works and wins if both are set. |
-| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for chat and all background jobs. Must start with `claude` unless a base URL is set. |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for chat and all background jobs. Must start with `claude` unless a base URL is set. Claude Opus 5.5, Sonnet 5.5 and Fable 5.1 work for chat only until [#4125](https://github.com/we-promise/sure/issues/4125) is fixed. |
 | `ANTHROPIC_MAX_TOKENS` | `4096` | Reply limit, sent with every request (the Messages API requires one). |
 | `ANTHROPIC_REQUEST_TIMEOUT` | `600` | HTTP timeout per call, in seconds. |
 | `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Anthropic-compatible endpoint. Requires `ANTHROPIC_MODEL`. |
