@@ -22,7 +22,12 @@ class TradeRepublicItem < ApplicationRecord
   validates :phone_number, presence: true, unless: -> { requires_update? || session_configured? }
 
   scope :active, -> { where(scheduled_for_deletion: false) }
-  scope :syncable, -> { active.where(status: :good, pending_login_state: nil).where.not(session_blob: [ nil, "" ]) }
+  # Matches ready_for_sync?: a session without a known end (stored before
+  # session_expires_at existed) stays syncable until its next save sets one.
+  scope :syncable, -> {
+    active.where(status: :good, pending_login_state: nil).where.not(session_blob: [ nil, "" ])
+      .where("trade_republic_items.session_expires_at IS NULL OR trade_republic_items.session_expires_at > ?", Time.current)
+  }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
