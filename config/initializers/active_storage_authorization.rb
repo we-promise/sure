@@ -67,7 +67,7 @@ Rails.application.config.to_prepare do
         return false if export.nil?
 
         export.family_id == Current.family&.id && Current.user.admin?
-      rescue ActiveRecord::RecordNotFound
+      rescue ActiveRecord::RecordNotFound, NoMethodError
         false
       end
 
