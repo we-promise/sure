@@ -36,6 +36,16 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_url
   end
 
+  test "sync from the panel says nothing started for a connection whose session ended" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+
+    post sync_trade_republic_item_url(item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_not_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+  end
+
   test "Trade Republic PIN is filtered from logs" do
     parameter_filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
     filtered_params = parameter_filter.filter(
