@@ -17,6 +17,12 @@ class Security::PriceTest < ActiveSupport::TestCase
     assert_equal price, @security.find_or_fetch_price(date: price.date)
   end
 
+  test "stores prices below 0.0001 without rounding them to zero" do
+    price = Security::Price.create!(security: @security, date: 3.days.ago.to_date, price: "0.000002891", currency: "USD")
+
+    assert_equal BigDecimal("0.000002891"), price.reload.price
+  end
+
   test "caches prices from provider to DB" do
     price_date = 10.days.ago.to_date
 

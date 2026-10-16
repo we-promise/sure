@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1184,7 +1184,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.string "currency", null: false
     t.date "date", null: false
     t.string "external_id"
-    t.decimal "price", precision: 19, scale: 4, null: false
+    t.decimal "price", precision: 19, scale: 10, null: false
     t.uuid "provider_security_id"
     t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "security_id", null: false
@@ -1958,7 +1958,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2330,7 +2330,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.datetime "created_at", null: false
     t.string "currency", default: "USD", null: false
     t.date "date", null: false
-    t.decimal "price", precision: 19, scale: 4, null: false
+    t.decimal "price", precision: 19, scale: 10, null: false
     t.boolean "provisional", default: false, null: false
     t.uuid "security_id"
     t.datetime "updated_at", null: false
