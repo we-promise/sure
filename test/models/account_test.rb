@@ -16,6 +16,153 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "a destroy that raises leaves a pending_deletion account disabled" do
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    error = assert_raises(StandardError) { @account.destroy }
+
+    assert_equal "destroy failed", error.message
+    assert_equal "disabled", @account.reload.status
+  end
+
+  test "a disabled account can be scheduled for deletion again after a failed destroy" do
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+    assert_raises(StandardError) { @account.destroy }
+    @account.unstub(:cleanup_transfers)
+    @account.reload
+
+    assert_enqueued_with(job: DestroyJob, args: [ @account ]) do
+      @account.destroy_later
+    end
+    assert_equal "pending_deletion", @account.reload.status
+  end
+
+  test "a failed direct destroy still disables an active account" do
+    assert @account.active?
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    assert_raises(StandardError) { @account.destroy }
+
+    assert_equal "disabled", @account.reload.status
+  end
+
+  test "disable from active is unchanged" do
+    assert @account.active?
+
+    @account.disable!
+
+    assert_equal "disabled", @account.reload.status
+  end
+
+  test "no event other than the failed-deletion recovery leaves pending_deletion" do
+    @account.mark_for_deletion!
+
+    assert_not @account.may_activate?
+    assert_not @account.may_enable?
+    assert_not @account.may_disable?
+    assert_not @account.may_mark_for_deletion?
+    permitted = @account.aasm.events(permitted: true).map(&:name)
+    assert_equal [ :restore_after_failed_deletion ], permitted
+  end
+
+  test "the failed-deletion recovery only fires from pending_deletion" do
+    assert @account.active?
+    assert_not @account.aasm.may_fire_event?(:restore_after_failed_deletion)
+
+    @account.disable!
+    assert_not @account.aasm.may_fire_event?(:restore_after_failed_deletion)
+  end
+
+  # disabled_at is the net-worth cutoff for a disabled account
+  # (NetWorthSeriesBuilder, NetWorthBreakdownSeriesBuilder). A failed delete
+  # must not move it to the failure, which would count the account's balances
+  # for the whole time it was already disabled.
+  test "a failed destroy of a disabled account keeps its original disabled_at" do
+    disabled_at = 40.days.ago.change(usec: 0)
+    @account.update_columns(status: "disabled", disabled_at: disabled_at)
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    assert_raises(StandardError) { @account.destroy }
+
+    @account.reload
+    assert_equal "disabled", @account.status
+    assert_equal disabled_at, @account.disabled_at
+  end
+
+  # The other side: an account deleted from active has no cutoff yet, so the
+  # failure is when it stopped counting. One disabled and enabled again earlier
+  # must not inherit that old cutoff.
+  test "a failed destroy of an account that was active stamps disabled_at at the failure" do
+    @account.disable!
+    @account.enable!
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    failed_at = 3.days.from_now.change(usec: 0)
+    travel_to(failed_at) { assert_raises(StandardError) { @account.destroy } }
+
+    @account.reload
+    assert_equal "disabled", @account.status
+    assert_equal failed_at, @account.disabled_at
+  end
+
+  # An account disabled and enabled again before enable cleared disabled_at
+  # still carries that date while active or draft. Deleting it must drop the
+  # stale date, so a failed destroy stamps the failure instead of reviving it
+  # as the account's net-worth cutoff.
+  test "a failed destroy of an active or draft account with a stale disabled_at stamps the failure" do
+    stale = 1.year.ago.change(usec: 0)
+    failed_at = 3.days.from_now.change(usec: 0)
+
+    results = %w[active draft].index_with do |status|
+      @account.update_columns(status: status, disabled_at: stale)
+      @account.reload.mark_for_deletion!
+      @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+      travel_to(failed_at) { assert_raises(StandardError) { @account.destroy } }
+      @account.unstub(:cleanup_transfers)
+
+      @account.reload
+      [ @account.status, @account.disabled_at ]
+    end
+
+    assert_equal({ "active" => [ "disabled", failed_at ], "draft" => [ "disabled", failed_at ] }, results)
+  end
+
+  test "marking an active or draft account for deletion clears a stale disabled_at" do
+    results = %w[active draft].index_with do |status|
+      @account.update_columns(status: status, disabled_at: 1.year.ago)
+      @account.reload.mark_for_deletion!
+      @account.reload.disabled_at
+    end
+
+    assert_equal({ "active" => nil, "draft" => nil }, results)
+  end
+
+  test "marking a disabled account for deletion keeps its disabled_at" do
+    disabled_at = 40.days.ago.change(usec: 0)
+    @account.update_columns(status: "disabled", disabled_at: disabled_at)
+
+    @account.reload.mark_for_deletion!
+
+    assert_equal disabled_at, @account.reload.disabled_at
+  end
+
+  test "enabling an account clears disabled_at" do
+    @account.disable!
+    assert_not_nil @account.reload.disabled_at
+
+    @account.enable!
+    assert_nil @account.reload.disabled_at
+
+    @account.disable!
+    @account.activate!
+    assert_nil @account.reload.disabled_at
+  end
+
   test "default owner prefers a family admin before a super admin" do
     family = families(:empty)
     admin = users(:empty)
