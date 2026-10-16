@@ -50,6 +50,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/für die am .* fällige Rechnung/, response.body)
   end
 
+  # The dialog route is GET only. Rendered as a button_to, "Create a bill"
+  # POSTed to it and the modal frame showed "Content Missing".
+  test "create a bill opens the prefilled dialog with a GET" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    href = new_recurring_transaction_path(entry_id: @entry.id)
+    assert_select "a[href=?][data-turbo-frame=modal]", href, text: /Create a bill/
+    assert_select "form[action=?]", href, count: 0
+
+    get href, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "turbo-frame#modal"
+  end
+
   test "the bill link-back stays hidden without preview access" do
     series = @user.family.recurring_transactions.create!(
       account: accounts(:depository), name: "Watson Property", amount: 2000,
