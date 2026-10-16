@@ -189,6 +189,39 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil provider_account.current_account
   end
 
+  test "complete account setup after the session ended leaves the sync for the next login" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+
+    assert_no_difference "Sync.count" do
+      post complete_account_setup_trade_republic_item_url(item), params: { account_ids: [ trade_republic_accounts(:main_account).id ] }
+    end
+
+    assert_not_nil trade_republic_accounts(:main_account).reload.current_account
+  end
+
+  test "linking an existing account after the session ended leaves the sync for the next login" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+    account = families(:dylan_family).accounts.create!(name: "Manual brokerage", balance: 0, currency: "EUR", accountable: Investment.new)
+
+    assert_no_difference "Sync.count" do
+      post link_existing_account_trade_republic_items_url, params: { account_id: account.id, trade_republic_account_id: trade_republic_accounts(:main_account).id }
+    end
+
+    assert_equal account, trade_republic_accounts(:main_account).reload.current_account
+  end
+
+  test "opening account setup after the session ended starts no sync" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+    item.trade_republic_accounts.destroy_all
+
+    assert_no_difference "Sync.count" do
+      get setup_accounts_trade_republic_item_url(item)
+    end
+  end
+
   test "complete account setup creates a Crypto exchange account for the Crypto account" do
     item = trade_republic_items(:configured_item)
     provider_account = item.trade_republic_accounts.create!(
