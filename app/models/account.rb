@@ -635,11 +635,37 @@ class Account < ApplicationRecord
     end
   end
 
+  # Marks the account pending_deletion and enqueues DestroyJob. If the enqueue
+  # fails, the account goes back to the status it had, so it is not left hidden
+  # from every list with no job coming to delete it. Mirrors DestroyableLater,
+  # except that the claim is made under a row lock (see below).
+  #
+  # ApplicationJob defers enqueues until commit, so perform_later inside a
+  # transaction returns before the push is tried. The enqueue therefore runs
+  # once every open transaction has committed: immediately when there is none,
+  # so the caller sees the outcome, and after the outer commit for a caller that
+  # holds one (the relink cleanup), when the push really happens. A rolled-back
+  # outer transaction undoes the mark and never enqueues.
+  #
+  # The prior status is read and the mark made under a row lock, which reloads
+  # the account first. A second request for the same account (a double submit)
+  # waits for the first to commit, sees pending_deletion and raises
+  # AASM::InvalidTransition before it captures a status or schedules an
+  # enqueue, so a restore only ever undoes the mark its own call made. Callers
+  # pass a freshly loaded record: lock! refuses one with unsaved changes.
+  #
+  # Returns the job, or false when the enqueue was rejected. Inside an outer
+  # transaction the enqueue has not run yet, so it returns nil.
   def destroy_later
-    transaction do
-      mark_for_deletion!
-      DestroyJob.perform_later(self)
+    previous_status = with_lock do
+      status.tap { mark_for_deletion! }
     end
+
+    enqueued = nil
+    ActiveRecord.after_all_transactions_commit do
+      enqueued = enqueue_destroy_job(restoring: previous_status)
+    end
+    enqueued
   end
 
   # Override destroy to handle error recovery for accounts
@@ -792,6 +818,33 @@ class Account < ApplicationRecord
   end
 
   private
+
+    # perform_later raises (the Sidekiq adapter re-raises RedisClient errors) or
+    # returns false (ActiveJob::EnqueueError). Either way the status goes back.
+    def enqueue_destroy_job(restoring:)
+      enqueued = begin
+        DestroyJob.perform_later(self)
+      rescue StandardError
+        restore_status_after_failed_enqueue(restoring)
+        raise
+      end
+
+      # Match false exactly, as DestroyableLater does: a bare mock of
+      # perform_later returns nil, which is not a rejected enqueue.
+      restore_status_after_failed_enqueue(restoring) if enqueued == false
+      enqueued
+    end
+
+    # The row lock covers only the mark, and the push runs after commit, so
+    # another request may have written a newer status by now (toggle_active
+    # waiting on the lock, say). Undo the mark only while the row still holds
+    # it. A direct write, because AASM has no event back to the prior status and
+    # the restore must not fail on an unrelated validation and mask the error.
+    def restore_status_after_failed_enqueue(restoring)
+      restored = Account.where(id: id, status: "pending_deletion").update_all(status: restoring)
+      self.status = restoring if restored == 1
+      clear_attribute_changes([ :status ])
+    end
 
     def assign_default_owner
       return if owner.present?
