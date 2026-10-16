@@ -115,11 +115,20 @@
   "chatListNewChat": "New chat",
   "@chatListNewChat": { "description": "FAB tooltip for creating a new chat." },
 
-  "chatListEmpty": "No chats yet",
+  "chatListEmpty": "AI is ready when you are",
   "@chatListEmpty": { "description": "Empty-state heading on the chat list screen." },
 
-  "chatListEmptySubtitle": "Start a conversation with your AI assistant",
+  "chatListEmptySubtitle": "Start a new conversation with Sure when you have a question about your finances.",
   "@chatListEmptySubtitle": { "description": "Empty-state subtitle on the chat list screen." },
+
+  "chatAiDisabledMessage": "AI is not enabled yet for this account. Please contact support or an administrator to turn it on.",
+  "@chatAiDisabledMessage": { "description": "Snackbar shown when the user tries to open or send chat while AI is disabled for the account." },
+
+  "aiDisabledEmptyTitle": "AI is not enabled yet",
+  "@aiDisabledEmptyTitle": { "description": "Heading of the empty state shown in place of chat screens when AI is disabled for the account." },
+
+  "aiDisabledEmptySubtitle": "When AI is enabled for this account, your chats with Sure will appear here.",
+  "@aiDisabledEmptySubtitle": { "description": "Subtitle of the empty state shown in place of chat screens when AI is disabled for the account." },
 
   "chatListDeleteTitle": "Delete Chat",
   "@chatListDeleteTitle": { "description": "Title for the delete-chat confirmation dialog." },
@@ -859,20 +868,10 @@
   "chatConversationLoadError": "Failed to load chat",
   "@chatConversationLoadError": { "description": "Error-state heading when a chat fails to load." },
 
-  "navEnableAiChatTitle": "Turn on AI Chat?",
-  "@navEnableAiChatTitle": { "description": "Title for the dialog prompting the user to enable AI chat." },
 
-  "navEnableAiChatContent": "AI Chat is currently disabled in your account settings. Would you like to turn it on now?",
-  "@navEnableAiChatContent": { "description": "Body text for the enable-AI-chat dialog." },
 
-  "navEnableAiChatNotNow": "Not now",
-  "@navEnableAiChatNotNow": { "description": "Dismiss button in the enable-AI-chat dialog." },
 
-  "navEnableAiChatConfirm": "Turn on AI",
-  "@navEnableAiChatConfirm": { "description": "Confirm button in the enable-AI-chat dialog." },
 
-  "navEnableAiChatFailed": "Unable to enable AI right now.",
-  "@navEnableAiChatFailed": { "description": "Snackbar shown when enabling AI chat fails." },
 
   "transactionsListEditTooltip": "Edit transaction",
   "@transactionsListEditTooltip": { "description": "Tooltip for the edit button on a transaction row." },

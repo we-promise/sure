@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
+import '../widgets/ai_disabled_empty_state.dart';
 import 'chat_conversation_screen.dart';
 import '../l10n/app_localizations.dart';
 
@@ -15,6 +16,7 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen> {
   bool _isSelectionMode = false;
+  bool _hasLoadedChats = false;
   final Set<String> _selectedChatIds = {};
 
   @override
@@ -26,6 +28,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Future<void> _loadChats() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+
+    if (!authProvider.aiEnabled) {
+      _hasLoadedChats = false;
+      chatProvider.clearCurrentChat();
+      return;
+    }
+
+    _hasLoadedChats = true;
 
     final accessToken = await authProvider.getValidAccessToken();
     if (accessToken == null) {
@@ -130,6 +140,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Future<void> _openNewChat() async {
     if (!mounted) return;
 
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!authProvider.aiEnabled) {
+      _showAiDisabledMessage();
+      return;
+    }
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -138,6 +154,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
 
     if (mounted) _loadChats();
+  }
+
+  void _showAiDisabledMessage() {
+    if (!mounted) return;
+
+    final l = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l.chatAiDisabledMessage),
+      ),
+    );
   }
 
   String _formatDateTime(DateTime dateTime) {
@@ -188,7 +215,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               icon: const Icon(Icons.close),
               onPressed: _toggleSelectionMode,
             ),
-          ] else ...[
+          ] else if (context.watch<AuthProvider>().aiEnabled) ...[
             Padding(
               padding: const EdgeInsets.only(top: 12, right: 12),
               child: InkWell(
@@ -203,8 +230,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ],
         ],
       ),
-      body: Consumer<ChatProvider>(
-        builder: (context, chatProvider, _) {
+      body: Consumer2<AuthProvider, ChatProvider>(
+        builder: (context, authProvider, chatProvider, _) {
+          if (!authProvider.aiEnabled) {
+            return const AiDisabledEmptyState();
+          }
+
+          if (!_hasLoadedChats && !chatProvider.isLoading) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _loadChats();
+            });
+          }
+
           if (chatProvider.isLoading && chatProvider.chats.isEmpty) {
             return const Center(
               child: CircularProgressIndicator(),
@@ -395,11 +432,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openNewChat,
-        tooltip: l.chatListNewChat,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: context.watch<AuthProvider>().aiEnabled
+          ? FloatingActionButton(
+              onPressed: _openNewChat,
+              tooltip: l.chatListNewChat,
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }
