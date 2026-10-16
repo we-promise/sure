@@ -13,14 +13,18 @@ class WiseEntry::Processor
     funds_credited credited
   ].freeze
 
-  # An expense if targetAccount does NOT match our Wise recipientId
+  # An expense if targetAccount is none of our own Wise recipients
   # (i.e. money went TO an external account, not to us).
-  # An income if targetAccount == recipientId (money arrived at our Wise account).
+  # An income if targetAccount is one of them (money arrived at our Wise account).
+  # Our recipients are the multi-currency account's recipientId and the balance's
+  # own recipientId: top-ups and payments into a balance's account details
+  # target the balance's own recipient.
   # Falls back to status-based detection when no recipientId is stored.
-  def self.outgoing?(transfer, recipient_id:)
+  def self.outgoing?(transfer, recipient_id:, balance_recipient_id: nil)
     data = transfer.with_indifferent_access
-    if recipient_id.present?
-      return data[:targetAccount].to_s != recipient_id.to_s
+    own_recipient_ids = [ recipient_id, balance_recipient_id ].compact_blank.map(&:to_s)
+    if own_recipient_ids.any?
+      return own_recipient_ids.exclude?(data[:targetAccount].to_s)
     end
 
     # Status-based fallback
@@ -152,7 +156,11 @@ class WiseEntry::Processor
     end
 
     def outgoing?
-      self.class.outgoing?(data, recipient_id: wise_account.raw_payload&.dig("recipient_id"))
+      self.class.outgoing?(
+        data,
+        recipient_id: wise_account.raw_payload&.dig("recipient_id"),
+        balance_recipient_id: wise_account.raw_payload&.dig("recipientId")
+      )
     end
 
     def date

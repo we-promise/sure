@@ -435,7 +435,11 @@ class WiseItem::Importer
     # incoming one only the balance it landed in. Matching either currency
     # would also book e.g. a GBP-funded payout in PLN on the PLN balance.
     def transfer_for_account?(transfer, wise_account)
-      outgoing = WiseEntry::Processor.outgoing?(transfer, recipient_id: wise_account.raw_payload&.dig("recipient_id"))
+      outgoing = WiseEntry::Processor.outgoing?(
+        transfer,
+        recipient_id: wise_account.raw_payload&.dig("recipient_id"),
+        balance_recipient_id: wise_account.raw_payload&.dig("recipientId")
+      )
       currency = outgoing ? transfer["sourceCurrency"] : transfer["targetCurrency"]
       currency.blank? || currency == wise_account.currency
     end
