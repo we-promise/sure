@@ -16,12 +16,12 @@
     <% if @negative_positions.any? %>
       <%= render DS::Alert.new(title: t(".negative_positions_title"), variant: :warning) do %>
         <% @negative_positions.each do |position| %>
-          <p>
+          <p class="privacy-sensitive">
             <%= t(".negative_position",
                   name: position.security.name.presence || position.security.ticker,
                   ticker: position.security.ticker,
                   date: l(position.first_date),
-                  qty: number_with_precision(position.lowest_qty, precision: 8, strip_insignificant_zeros: true)) %>
+                  qty: number_with_precision(position.lowest_qty, precision: 18, strip_insignificant_zeros: true)) %>
           </p>
         <% end %>
         <p class="text-secondary"><%= t(".negative_positions_hint") %></p>

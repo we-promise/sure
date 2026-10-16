@@ -97,7 +97,7 @@ class TradesController < ApplicationController
     # form reloads with ?date= when the date changes.
     def requested_date
       Date.iso8601(params[:date].to_s)
-    rescue Date::Error
+    rescue ArgumentError # also covers Date::Error; overlong input raises a plain ArgumentError
       nil
     end
 

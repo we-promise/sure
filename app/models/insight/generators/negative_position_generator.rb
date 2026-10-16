@@ -59,7 +59,7 @@ class Insight::Generators::NegativePositionGenerator < Insight::Generator
 
     # With a true minus sign, like the rest of the feed's display facts.
     def format_qty(value)
-      digits = ActiveSupport::NumberHelper.number_to_rounded(value.to_d.abs, precision: 8, strip_insignificant_zeros: true)
+      digits = ActiveSupport::NumberHelper.number_to_rounded(value.to_d.abs, precision: 18, strip_insignificant_zeros: true)
       value.negative? ? "−#{digits}" : digits
     end
 end

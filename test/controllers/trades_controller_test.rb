@@ -445,6 +445,12 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name='model[security_id]'] option[value=?]", securities(:aapl).id, count: 0
   end
 
+  test "the sale form ignores an overlong date instead of failing" do
+    get new_trade_url(account_id: @entry.account_id, type: "sell", date: "2" * 129)
+
+    assert_response :success
+  end
+
   test "a sale larger than the holding is refused and the sale form shows why" do
     assert_no_difference [ "Entry.count", "Trade.count" ] do
       post trades_url(account_id: @entry.account_id), params: {

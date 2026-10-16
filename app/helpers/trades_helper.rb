@@ -10,7 +10,7 @@ module TradesHelper
         "trades.form.held_security",
         name: security.name.presence || security.ticker,
         ticker: security.ticker,
-        qty: number_with_precision(qty, precision: 8, strip_insignificant_zeros: true)
+        qty: number_with_precision(qty, precision: 18, strip_insignificant_zeros: true)
       )
 
       [ label, security.id ]

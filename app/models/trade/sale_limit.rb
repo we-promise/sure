@@ -171,6 +171,6 @@ class Trade::SaleLimit
     end
 
     def format_qty(value)
-      ActiveSupport::NumberHelper.number_to_rounded(value.to_d, precision: 8, strip_insignificant_zeros: true)
+      ActiveSupport::NumberHelper.number_to_rounded(value.to_d, precision: 18, strip_insignificant_zeros: true)
     end
 end
