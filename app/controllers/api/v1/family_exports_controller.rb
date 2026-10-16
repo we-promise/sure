@@ -74,6 +74,9 @@ class Api::V1::FamilyExportsController < Api::V1::BaseController
   rescue StandardError => e
     Rails.logger.error "FamilyExportsController#download error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
+    # send_blob_stream has already answered with a bare 500; rendering JSON on
+    # top of it would raise DoubleRenderError.
+    return if performed?
 
     render json: {
       error: "internal_server_error",
