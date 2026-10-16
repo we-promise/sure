@@ -172,14 +172,22 @@ export default class extends Controller {
     }
   }
 
+  // The login may still be pending on the server, so it stays the running
+  // login until it is cancelled: the button cancels it, and the PIN login
+  // returns only once that is done.
   showError(error) {
     if (this.stopped) return;
     console.warn("[Trade Republic] QR login failed", error);
-    this.polling = false;
-    this.setButtonLabel(this.loginTextValue);
+    this.showFailure();
+  }
+
+  showFailure() {
+    clearTimeout(this.timer);
+    this.polling = true;
+    this.panelTarget.hidden = false;
+    this.setButtonLabel(this.cancelTextValue);
     this.setButtonDisabled(false);
     this.statusTarget.textContent = this.errorTextValue;
-    this.dispatch("stopped");
   }
 
   toggle(event) {
@@ -229,10 +237,9 @@ export default class extends Controller {
         this.dispatch("stopped");
       }
     } catch (error) {
-      this.stopped = false;
-      this.setButtonDisabled(false);
-      this.dispatch("stopped");
+      // The login may still be pending, so the button offers the cancel again.
       console.warn("[Trade Republic] QR login cancellation failed", error);
+      this.showFailure();
     }
   }
 

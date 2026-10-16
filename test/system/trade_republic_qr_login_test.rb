@@ -137,6 +137,45 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     assert_selector "#{connection_card} button:not([disabled])", exact_text: qr_login
   end
 
+  test "a failed QR login keeps the PIN login hidden until it is cancelled" do
+    Provider::TradeRepublicClient.any_instance.stubs(:poll_qr_login).raises(Provider::TradeRepublicClient::Error, "boom")
+
+    visit settings_providers_path
+    find("summary", text: "Trade Republic").click
+
+    within "##{TradeRepublic::ConnectionCardComponent.dom_id_for(@item)}" do
+      click_on qr_login
+      assert_text panel_t("qr_error")
+      # The login may still be pending, so its button cancels it first.
+      assert_button qr_cancel
+      assert_no_button panel_t("pin_login"), exact: true
+      click_on qr_cancel
+    end
+
+    assert_selector "#{connection_card} button:not([disabled])", exact_text: panel_t("pin_login")
+    assert_nil @item.reload.pending_login_state
+  end
+
+  test "a failed QR cancel offers the cancel again and keeps the PIN login hidden" do
+    visit settings_providers_path
+    find("summary", text: "Trade Republic").click
+    page.execute_script(<<~JS)
+      const fetch = window.fetch;
+      window.fetch = (url, options) => String(url).includes("cancel_qr_login")
+        ? Promise.resolve(new Response("", { status: 500 }))
+        : fetch(url, options);
+    JS
+
+    within "##{TradeRepublic::ConnectionCardComponent.dom_id_for(@item)}" do
+      click_on qr_login
+      assert_selector ".qrcode svg"
+      click_on qr_cancel
+      assert_text panel_t("qr_error")
+      assert_button qr_cancel, disabled: false
+      assert_no_button panel_t("pin_login"), exact: true
+    end
+  end
+
   test "a new connection's PIN login takes the place of Add a connection, like its QR login" do
     visit settings_providers_path
     find("summary", text: "Trade Republic").click
