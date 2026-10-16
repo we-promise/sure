@@ -32,6 +32,11 @@
 #     - Set EXTERNAL_ASSISTANT_URL to http://openclaw:18789/v1/chat/completions
 #       for internal routing.
 #
+# This is an example configuration, not a hardened setup. Its defaults
+# publish services on the host's loopback only and turn on the Open WebUI
+# login, but securing a deployment (network exposure, secrets, updates) is
+# up to whoever runs it.
+#
 # Setup:
 # ------
 #
