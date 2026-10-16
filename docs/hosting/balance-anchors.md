@@ -10,7 +10,7 @@ When the flag is unset or false, every stale anchor is kept as a reconciliation 
 
 When the flag is truthy (`1`, `true`, or `yes`), the manager compares the stale anchor with the provider's new reading using the transactions imported in the same sync. If the imported ledger explains the move, the anchor is updated in place (amount and date). If it does not, the old anchor is preserved as a reconciliation waypoint and a new anchor is created.
 
-Only `:cash` accounts are evaluated. Investment, crypto, and other non-cash accounts keep the old behavior. Providers that update account balances directly, such as SimpleFIN and Lunchflow, are outside this path.
+Only `:cash` accounts are evaluated. Investment, crypto, and other non-cash accounts keep the old behavior. Providers that update account balances directly, such as Lunchflow, are outside this path.
 
 ## Rollout
 

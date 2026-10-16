@@ -98,6 +98,63 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "EUR", sf["fx_from"]
     assert_equal t_date.to_s, sf["fx_date"], "fx_date should prefer transacted_at"
   end
+
+  # SimplefinAccount::Processor writes the snapshot's currency to the account
+  # only after the transactions are imported, so a transaction without its own
+  # currency must follow the snapshot, not the account's previous currency.
+  test "a transaction without a currency takes the snapshot currency over the account's previous one" do
+    @simplefin_account.update!(currency: "EUR")
+    assert_equal "USD", @account.reload.currency
+
+    tx = {
+      id: "tx_no_currency",
+      amount: "-9.50",
+      payee: "Boulangerie",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_no_currency", source: "simplefin")
+    assert_equal "EUR", entry.currency
+    assert_nil entry.transaction.extra.fetch("simplefin")["fx_from"]
+  end
+
+  test "a transaction in the snapshot currency is not flagged as foreign while the account still holds the previous one" do
+    @simplefin_account.update!(currency: "EUR")
+
+    tx = {
+      id: "tx_snapshot_currency",
+      amount: "-9.50",
+      currency: "EUR",
+      payee: "Boulangerie",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_snapshot_currency", source: "simplefin")
+    assert_equal "EUR", entry.currency
+    assert_nil entry.transaction.extra.fetch("simplefin")["fx_from"]
+  end
+
+  test "an explicit transaction currency wins over the snapshot currency" do
+    @simplefin_account.update!(currency: "EUR")
+
+    tx = {
+      id: "tx_gbp",
+      amount: "-9.50",
+      currency: "GBP",
+      payee: "Corner Shop",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_gbp", source: "simplefin")
+    assert_equal "GBP", entry.currency
+    assert_equal "GBP", entry.transaction.extra.fetch("simplefin")["fx_from"]
+  end
   test "flags pending when provider pending flag is true (even if posted provided)" do
     tx = {
       id: "tx_pending_flag_1",

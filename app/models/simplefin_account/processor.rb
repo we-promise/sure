@@ -7,9 +7,12 @@ class SimplefinAccount::Processor
     @skipped_entries = []
   end
 
-  # Each step represents different SimpleFin data processing
-  # Processing the account is the first step and if it fails, we halt
-  # Each subsequent step can fail independently, but we continue processing
+  # Each step represents different SimpleFin data processing.
+  # Reading the balance is the first step and if it fails, we halt. The import
+  # steps can each fail independently, and the rest still run. The balance is
+  # anchored last: the anchor is judged against the imported ledger, so this
+  # sync's entries must already be in when it is written. See
+  # Account::CurrentBalanceManager.
   def process
     # If the account is missing (e.g., user deleted the connection and re‑linked later),
     # do not auto‑link. Relinking is now a manual, user‑confirmed flow via the Relink modal.
@@ -17,20 +20,37 @@ class SimplefinAccount::Processor
       return
     end
 
-    process_account!
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
+    balance_info = process_account!
+    return unless balance_info
+
     # Ensure provider link exists after processing the account/balance
     begin
       simplefin_account.ensure_account_provider!
     rescue => e
       Rails.logger.warn("SimpleFin provider link ensure failed for #{simplefin_account.id}: #{e.class} - #{e.message}")
     end
-    process_transactions
-    process_investments
+    transactions_ok = process_transactions
+    investments_ok = process_investments
     process_liabilities
+
+    # A partial import still records the balance, but the ledger it left is
+    # not trusted to move the previous anchor forward.
+    anchor_account!(
+      balance_info,
+      date: date,
+      reuse_explained_anchor: transactions_ok && investments_ok
+    )
   end
 
   private
 
+    # Works out the balance to record from the SimpleFIN snapshot. Nothing is
+    # written here; anchor_account! records it once the import is done.
+    # Returns the account and its balance and cash balance, or nil when there
+    # is no linked account.
     def process_account!
       # This should not happen in normal flow since accounts are created manually
       # during setup, but keeping as safety check
@@ -39,7 +59,6 @@ class SimplefinAccount::Processor
         return
       end
 
-      # Update account balance and cash balance from latest SimpleFin data
       account = simplefin_account.current_account
 
       # Extract raw values from SimpleFIN snapshot
@@ -186,27 +205,96 @@ class SimplefinAccount::Processor
         balance
       end
 
-      account.update!(
-        balance: balance,
-        cash_balance: cash_balance,
-        currency: simplefin_account.currency
-      )
+      { account: account, balance: balance, cash_balance: cash_balance }
     end
 
+    # Records the balance as the account's current anchor, as the other
+    # provider processors do, rather than writing the cached balance alone:
+    # without an anchor the balance history has nothing to rebuild from.
+    #
+    # One lock across the currency, the anchor and the cash split, as in
+    # PlaidAccount::Processor: a sync running beside this one can move the
+    # anchor between any two of these writes, so all three follow the same
+    # snapshot. The manager does not queue an account sync;
+    # SimplefinItem::Syncer schedules the account syncs once every account has
+    # been processed.
+    #
+    # requires_new gives the block its own savepoint, so the rollback below
+    # undoes only this account's writes when a caller has already opened a
+    # transaction.
+    #
+    # Returns true when the balance was recorded, false when it was not. A
+    # failure is logged rather than raised, so the other accounts in the sync
+    # are still processed.
+    def anchor_account!(balance_info, date:, reuse_explained_anchor:)
+      account = balance_info[:account]
+      result = nil
+
+      account.with_lock(requires_new: true) do
+        manager = Account::CurrentBalanceManager.new(account)
+        behind_anchor = manager.has_current_anchor? && manager.current_date > date
+
+        # A balance dated behind the anchor leaves the cached figures as they
+        # are, in the denomination they were written in.
+        if !behind_anchor && account.currency != simplefin_account.currency
+          account.update!(currency: simplefin_account.currency)
+        end
+
+        result = manager.set_current_balance(
+          balance_info[:balance],
+          date: date,
+          reuse_explained_anchor: reuse_explained_anchor
+        )
+
+        # The manager reports failure through its result, and its own lock
+        # joined this transaction, so whatever it wrote before failing would
+        # commit with the currency. Roll all of it back.
+        raise ActiveRecord::Rollback unless result.success?
+
+        account.update!(cash_balance: balance_info[:cash_balance]) unless result.historical?
+      end
+
+      return true if result.success?
+
+      # The rollback restores the row but not this object, which still holds
+      # the values written inside the block.
+      account.reload
+
+      Rails.logger.error("SimpleFIN: failed to set the current balance for account #{account.id}: #{result.error}")
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to set the current balance: #{result.error}",
+        source: self.class.name,
+        provider_key: "simplefin",
+        account: account,
+        account_provider: simplefin_account.account_provider,
+        metadata: { simplefin_account_id: simplefin_account.id }
+      )
+
+      false
+    end
+
+    # Returns false when the import raised or left rows out.
     def process_transactions
       processor = SimplefinAccount::Transactions::Processor.new(simplefin_account)
-      processor.process
+      complete = processor.process
       @skipped_entries.concat(processor.skipped_entries)
+      complete
     rescue => e
       report_exception(e, "transactions")
+      false
     end
 
+    # Returns false when the import raised.
     def process_investments
-      return unless simplefin_account.current_account&.accountable_type == "Investment"
+      return true unless simplefin_account.current_account&.accountable_type == "Investment"
       SimplefinAccount::Investments::TransactionsProcessor.new(simplefin_account).process
       SimplefinAccount::Investments::HoldingsProcessor.new(simplefin_account).process
+      true
     rescue => e
       report_exception(e, "investments")
+      false
     end
 
     def process_liabilities

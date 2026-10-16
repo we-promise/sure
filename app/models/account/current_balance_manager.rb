@@ -234,6 +234,14 @@ class Account::CurrentBalanceManager
         changes_made = true
       end
 
+      # A provider can change the account's currency between two syncs on the
+      # same day. The reading is in the account's currency now, so the anchor
+      # must not keep the old code.
+      if entry.currency != account.currency
+        entry.currency = account.currency
+        changes_made = true
+      end
+
       entry.save! if entry.changed?
 
       changes_made
