@@ -273,6 +273,20 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert device.active?
   end
 
+  test "should login a user whose email row is still legacy plaintext" do
+    user = users(:family_admin)
+    email = store_legacy_plaintext_email(user)
+
+    post "/api/v1/auth/login", params: {
+      email: email,
+      password: user_password_test,
+      device: @device_info
+    }
+
+    assert_response :success
+    assert_equal user.id.to_s, JSON.parse(response.body)["user"]["id"]
+  end
+
   test "should require MFA when enabled" do
     user = users(:family_admin)
     password = user_password_test
@@ -641,6 +655,34 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Linking code should be consumed
     assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
+  end
+
+  test "should link SSO for a user whose email row is still legacy plaintext" do
+    user = users(:family_admin)
+    email = store_legacy_plaintext_email(user)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-legacy",
+      email: "google@example.com",
+      first_name: "Google",
+      last_name: "User",
+      name: "Google User",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_difference("OidcIdentity.count", 1) do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :success
+    assert_equal user.id.to_s, JSON.parse(response.body)["user"]["id"]
   end
 
   test "should reject SSO link for a deactivated user even with correct password" do
