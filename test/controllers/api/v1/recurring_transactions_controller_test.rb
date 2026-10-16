@@ -15,13 +15,13 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
       source: "web",
-      display_key: "test_rw_#{SecureRandom.hex(8)}"
+      key: "test_rw_#{SecureRandom.hex(8)}"
     )
     @read_only_api_key = ApiKey.create!(
       user: @user,
       name: "Test Read Key",
       scopes: [ "read" ],
-      display_key: "test_read_#{SecureRandom.hex(8)}",
+      key: "test_read_#{SecureRandom.hex(8)}",
       source: "mobile"
     )
 
@@ -77,7 +77,7 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
       name: "Member Read-Write Key",
       scopes: [ "read_write" ],
       source: "web",
-      display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+      key: "test_member_rw_#{SecureRandom.hex(8)}"
     )
     read_only_account = accounts(:credit_card)
     recurring_transaction = @family.recurring_transactions.create!(

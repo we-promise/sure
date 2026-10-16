@@ -13,7 +13,7 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
       name: "Test Read Key",
       scopes: [ "read" ],
       source: "web",
-      display_key: "test_read_#{SecureRandom.hex(8)}"
+      key: "test_read_#{SecureRandom.hex(8)}"
     )
 
     @account = @family.accounts.create!(
@@ -178,7 +178,7 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
       name: "No Read Key",
       scopes: [],
       source: "mobile",
-      display_key: "no_read_#{SecureRandom.hex(8)}"
+      key: "no_read_#{SecureRandom.hex(8)}"
     )
     api_key_without_read.save!(validate: false)
 
@@ -192,6 +192,6 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
   private
 
     def api_headers(api_key)
-      { "X-Api-Key" => api_key.display_key }
+      { "X-Api-Key" => api_key.plain_key }
     end
 end

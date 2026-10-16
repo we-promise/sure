@@ -10,7 +10,7 @@ class CashFlowsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "requires a browser session even when an API key is supplied" do
-    get dashboard_cash_flow_path, params: @dates, headers: { "X-Api-Key" => api_key.display_key }
+    get dashboard_cash_flow_path, params: @dates, headers: { "X-Api-Key" => api_key.plain_key }
     assert_redirected_to new_session_path
   end
 
@@ -52,7 +52,7 @@ class CashFlowsControllerTest < ActionDispatch::IntegrationTest
       assert_equal "2024-02-29", graph["as_of"]
       assert_equal "America/Los_Angeles", graph["time_zone"]
       assert_equal "12.0", graph.dig("sankey", "spending")
-      get "/api/v1/cash_flow", params: @dates.merge(view: "sankey"), headers: { "X-Api-Key" => key.display_key }
+      get "/api/v1/cash_flow", params: @dates.merge(view: "sankey"), headers: { "X-Api-Key" => key.plain_key }
       assert_response :success
       assert_equal graph, response.parsed_body
     end
@@ -107,6 +107,6 @@ class CashFlowsControllerTest < ActionDispatch::IntegrationTest
   private
     def api_key
       ApiKey.create!(user: @user, name: "Graph Read", scopes: [ "read" ],
-        display_key: "test_ro_#{SecureRandom.hex(8)}", source: "mobile")
+        key: "test_ro_#{SecureRandom.hex(8)}", source: "mobile")
     end
 end

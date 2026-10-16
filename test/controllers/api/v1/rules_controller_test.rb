@@ -13,7 +13,7 @@ class Api::V1::RulesControllerTest < ActionDispatch::IntegrationTest
       name: "Test Read Key",
       scopes: [ "read" ],
       source: "web",
-      display_key: "test_read_#{SecureRandom.hex(8)}"
+      key: "test_read_#{SecureRandom.hex(8)}"
     )
 
     Redis.new.del("api_rate_limit:#{@api_key.id}")
@@ -165,7 +165,7 @@ class Api::V1::RulesControllerTest < ActionDispatch::IntegrationTest
         user: @user,
         name: "No Read Key",
         scopes: [],
-        display_key: "test_no_read_#{SecureRandom.hex(8)}",
+        key: "test_no_read_#{SecureRandom.hex(8)}",
         source: "mobile"
       ).tap { |api_key| api_key.save!(validate: false) }
     end

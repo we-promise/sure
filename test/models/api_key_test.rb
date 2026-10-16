@@ -17,9 +17,10 @@ class ApiKeyTest < ActiveSupport::TestCase
     assert @api_key.valid?
   end
 
-  test "should require display_key presence after save" do
+  test "should require a key" do
     @api_key.key = nil
     assert_not @api_key.valid?
+    assert_includes @api_key.errors.attribute_names, :key_digest
   end
 
   test "should require name presence" do
@@ -40,12 +41,71 @@ class ApiKeyTest < ActiveSupport::TestCase
     assert_includes @api_key.errors[:user], "must exist"
   end
 
-  test "should set display_key from key before saving" do
+  test "stores a digest and prefix of the key instead of the key" do
+    original_key = @api_key.key
+    @api_key.save!
+    @api_key.reload
+
+    assert_equal ApiKey.digest(original_key), @api_key.key_digest
+    assert_equal original_key.first(ApiKey::KEY_PREFIX_LENGTH), @api_key.key_prefix
+    assert_nil @api_key.display_key
+
+    stored_values = ApiKey.connection.select_rows("SELECT * FROM api_keys WHERE id = #{ApiKey.connection.quote(@api_key.id)}").flatten.map(&:to_s)
+    assert stored_values.none? { |value| value.include?(original_key) }, "the secret must not be persisted in any column"
+  end
+
+  test "plain key is only available on the instance that created it" do
     original_key = @api_key.key
     @api_key.save!
 
-    # display_key should be encrypted but plain_key should return the original
     assert_equal original_key, @api_key.plain_key
+    assert_nil ApiKey.find(@api_key.id).plain_key
+  end
+
+  test "digest is deterministic and differs per key" do
+    assert_equal ApiKey.digest("abc"), ApiKey.digest("abc")
+    assert_not_equal ApiKey.digest("abc"), ApiKey.digest("abd")
+    assert_match(/\A[0-9a-f]{64}\z/, ApiKey.digest("abc"))
+  end
+
+  test "key_matches? compares against the digest" do
+    @api_key.save!
+    api_key = ApiKey.find(@api_key.id)
+
+    assert api_key.key_matches?("test_plain_key_123")
+    assert_not api_key.key_matches?("test_plain_key_124")
+    assert_not api_key.key_matches?(nil)
+  end
+
+  test "rejects a duplicate key" do
+    @api_key.save!
+
+    duplicate = ApiKey.new(user: users(:family_member), name: "Other", key: "test_plain_key_123", scopes: [ "read" ])
+
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors.attribute_names, :key_digest
+  end
+
+  test "does not authenticate with the legacy display_key" do
+    ApiKey.insert!({ user_id: @user.id, name: "Legacy", display_key: "legacy_secret_123", scopes: [ "read" ], key_digest: ApiKey.digest("something_else") })
+
+    assert_nil ApiKey.find_by_value("legacy_secret_123")
+  end
+
+  test "authenticates and backfills on the fly when key was written with display_key and nil key_digest" do
+    ApiKey.insert!({ user_id: @user.id, name: "OldPodKey", display_key: "old_pod_secret_123", scopes: [ "read" ], key_digest: nil })
+
+    found_key = ApiKey.find_by_value("old_pod_secret_123")
+    assert_not_nil found_key
+    assert_equal "OldPodKey", found_key.name
+    assert_equal ApiKey.digest("old_pod_secret_123"), found_key.key_digest
+    assert_equal "old_pod_", found_key.key_prefix
+
+    # Updating/revoking does not fail validation
+    assert_nothing_raised do
+      found_key.revoke!
+    end
+    assert found_key.revoked?
   end
 
   test "should find api key by plain value" do
@@ -231,7 +291,7 @@ class ApiKeyTest < ActiveSupport::TestCase
     demo_key = ApiKey.create!(
       user: @user,
       name: "Demo Monitoring Key",
-      display_key: ApiKey::DEMO_MONITORING_KEY,
+      key: ApiKey::DEMO_MONITORING_KEY,
       scopes: [ "read" ]
     )
 
@@ -285,7 +345,7 @@ class ApiKeyTest < ActiveSupport::TestCase
     demo_key = ApiKey.create!(
       user: @user,
       name: "Demo Monitoring Key",
-      display_key: ApiKey::DEMO_MONITORING_KEY,
+      key: ApiKey::DEMO_MONITORING_KEY,
       scopes: [ "read" ]
     )
 
@@ -297,7 +357,7 @@ class ApiKeyTest < ActiveSupport::TestCase
     demo_key = ApiKey.create!(
       user: @user,
       name: "Demo Monitoring Key",
-      display_key: ApiKey::DEMO_MONITORING_KEY,
+      key: ApiKey::DEMO_MONITORING_KEY,
       scopes: [ "read" ]
     )
 
@@ -310,7 +370,7 @@ class ApiKeyTest < ActiveSupport::TestCase
     demo_key = ApiKey.create!(
       user: @user,
       name: "Demo Monitoring Key",
-      display_key: ApiKey::DEMO_MONITORING_KEY,
+      key: ApiKey::DEMO_MONITORING_KEY,
       scopes: [ "read" ]
     )
 
@@ -322,7 +382,7 @@ class ApiKeyTest < ActiveSupport::TestCase
     api_key = ApiKey.create!(
       user: @user,
       name: "Disposable API Key",
-      display_key: "disposable_key_123",
+      key: "disposable_key_123",
       scopes: [ "read" ]
     )
 
