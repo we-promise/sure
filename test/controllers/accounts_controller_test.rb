@@ -387,6 +387,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "##{dom_id(item)} [data-trade-republic-qr-initiate-url-value='#{initiate_qr_login_trade_republic_item_path(item)}']"
     assert_select "##{dom_id(item)} [data-trade-republic-qr-return-url-value='#{accounts_path}']"
+    # Until then a sync can only fail.
+    assert_select "##{dom_id(item)} form[action='#{sync_trade_republic_item_path(item)}'] button[disabled]"
   end
 
   test "index shows when a Trade Republic login expires" do

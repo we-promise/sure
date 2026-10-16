@@ -80,6 +80,17 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal existing_item.session_blob, existing_item.reload.session_blob
   end
 
+  test "a connection whose session ended is not synced" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+
+    assert_no_difference "Sync.count" do
+      post sync_trade_republic_item_url(item), headers: { "Referer" => accounts_url }
+    end
+
+    assert_redirected_to accounts_url
+  end
+
   test "Trade Republic PIN is filtered from logs" do
     parameter_filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
     filtered_params = parameter_filter.filter(

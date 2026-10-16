@@ -54,7 +54,7 @@
               "refresh-cw",
               as_button: true,
               href: sync_trade_republic_item_path(trade_republic_item),
-              disabled: trade_republic_item.syncing?
+              disabled: trade_republic_item.syncing? || !trade_republic_item.ready_for_sync?
             ) %>
 
             <%= render DS::Menu.new do |menu| %>
