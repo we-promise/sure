@@ -122,7 +122,7 @@ module InsightsHelper
 
   # "Dig in with AI" opens a chat about the insight (#4031). Gated per family,
   # not per user, because cards are also rendered in broadcasts without a
-  # Current.user; chats#create asks a user without AI consent to opt in.
+  # Current.user; chats#new asks a user without AI consent to opt in.
   def insight_dig_in_available?(insight)
     family = insight.family
     return false unless family.assistant_enabled?

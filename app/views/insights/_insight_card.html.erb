@@ -49,14 +49,13 @@
       <% end %>
 
       <% if insight_dig_in_available?(insight) %>
-        <%= render DS::Button.new(
+        <%= render DS::Link.new(
               text: t("insights.card.dig_in"),
               icon: "sparkles",
               variant: "ghost",
               size: "sm",
-              href: chats_path,
-              params: { chat: { content: insight_dig_in_prompt(insight), ai_model: default_ai_model } },
-              form: { data: { turbo_frame: chat_frame } },
+              href: new_chat_path(insight_id: insight.id),
+              frame: chat_frame,
               data: { action: "app-layout#openRightSidebar" }
             ) %>
       <% end %>
