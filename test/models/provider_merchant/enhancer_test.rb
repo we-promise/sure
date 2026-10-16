@@ -1,7 +1,7 @@
 require "test_helper"
 
 class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
-  include EntriesTestHelper, ProviderTestHelper
+  include EntriesTestHelper, ProviderTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:dylan_family)
@@ -10,6 +10,37 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     Provider::Registry.stubs(:get_provider).with(:openai).returns(@llm_provider)
     Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
     Setting.stubs(:brand_fetch_logo_size).returns(40)
+  end
+
+  test "batches holds one LLM call's worth of merchants each" do
+    3.times do |i|
+      merchant = ProviderMerchant.create!(source: "lunchflow", name: "Shop #{i}", provider_merchant_id: "lf_shop_#{i}")
+      create_transaction(account: @account, name: "Shop #{i}", merchant: merchant)
+    end
+    unenhanced = @family.assigned_merchants.where(type: "ProviderMerchant", website_url: [ nil, "" ]).pluck(:id)
+
+    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "2") do
+      batches = ProviderMerchant::Enhancer.new(@family).batches
+
+      assert_equal (unenhanced.size / 2.0).ceil, batches.size
+      assert batches.all? { |ids| ids.size <= 2 }
+      assert_equal unenhanced.sort, batches.flatten.sort
+    end
+  end
+
+  test "enhance with merchant_ids sends only those merchants" do
+    first, second = 2.times.map do |i|
+      ProviderMerchant.create!(source: "lunchflow", name: "Shop #{i}", provider_merchant_id: "lf_shop_#{i}").tap do |merchant|
+        create_transaction(account: @account, name: "Shop #{i}", merchant: merchant)
+      end
+    end
+
+    @llm_provider.expects(:enhance_provider_merchants).with do |*_args, **kwargs|
+      kwargs[:merchants].map { |m| m[:id] } == [ first.id ]
+    end.returns(provider_success_response([])).once
+
+    ProviderMerchant::Enhancer.new(@family, merchant_ids: [ first.id ]).enhance
+    assert_nil second.reload.website_url
   end
 
   test "enhances provider merchants with website and logo" do

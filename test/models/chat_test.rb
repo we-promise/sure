@@ -53,6 +53,21 @@ class ChatTest < ActiveSupport::TestCase
     assert_not Message.exists?(pending.id)
   end
 
+  test "the pending bubble says busy while the AI lane is busy, then Thinking when the job starts" do
+    chat = chats(:one)
+    user_message = chat.messages.where(type: "UserMessage").first
+    BackgroundJobHealth.stubs(:ai_busy?).returns(true)
+    Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:html] == I18n.t("chats.ai_busy") }
+
+    chat.ask_assistant_later(user_message)
+
+    pending = chat.messages.find_by!(type: "AssistantMessage", status: "pending")
+    Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:target] == ActionView::RecordIdentifier.dom_id(pending, :status) && opts[:html] == I18n.t("chats.thinking") }
+    Assistant.stubs(:for_chat).returns(stub(respond_to: nil))
+
+    chat.ask_assistant(user_message, assistant_message: pending)
+  end
+
   test "creates with default model when model is nil" do
     prompt = "Test prompt"
 
