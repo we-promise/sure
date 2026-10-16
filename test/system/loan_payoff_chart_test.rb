@@ -45,6 +45,41 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
     end
   end
 
+  # The Extra repayments tab's amount reaches the chart as a fourth line,
+  # through the form a borrower actually uses. The line must paint in its own
+  # colour in both themes, and the legend must name it.
+  test "an extra repayment paints its own line beside the others" do
+    travel_to TODAY do
+      account = on_contract_loan_account
+
+      visit account_path(account, period: "all_time", tab: "extra_repayments")
+      assert_no_selector "[data-controller='loan-payoff-chart'] svg path[data-series='extra']"
+
+      # The amount field and Apply share one row (#469's layout): a full-width
+      # field would push the button onto a line of its own.
+      field = find_field(I18n.t("loans.tabs.extra_repayments.amount_label"))
+      field_box = bounding_box(field.find(:xpath, "ancestor::div[contains(@class, 'form-field')][1]"))
+      apply_box = bounding_box(find_button(I18n.t("loans.tabs.extra_repayments.apply")))
+      assert_operator apply_box["top"], :<, field_box["bottom"], "Apply must sit on the field's row, not below it"
+      assert_operator apply_box["left"], :>=, field_box["right"], "and to the field's right"
+
+      field.fill_in with: "5000"
+      click_button I18n.t("loans.tabs.extra_repayments.apply")
+
+      extra = find("[data-controller='loan-payoff-chart'] svg path[data-series='extra']")
+      assert extra["d"].to_s.start_with?("M"), "the extra line has no geometry"
+      assert_not_equal "none", stroke_of("extra"), "the extra line has geometry but no resolved stroke"
+      assert_not_equal stroke_of("projected"), stroke_of("extra"), "the extra line must not reuse the projection's colour"
+      assert_selector "ul li", text: I18n.t("UI.account.chart.loan.extra")
+      assert_series_painted
+
+      light = stroke_of("extra")
+      page.execute_script("document.documentElement.setAttribute('data-theme', 'dark')")
+      wait_until { stroke_of("extra") != light }
+      assert_not_equal light, stroke_of("extra"), "the extra line must repaint from the dark theme's token"
+    end
+  end
+
   # The SVG names the balance and every payoff date in its label, the
   # same text is real DOM, and it points at no table that is not there.
   test "the SVG carries its description and no data table" do
@@ -243,6 +278,10 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
       page.evaluate_script(
         "getComputedStyle(document.querySelector(\"svg path[data-series='#{key}']\")).stroke"
       )
+    end
+
+    def bounding_box(element)
+      page.evaluate_script("arguments[0].getBoundingClientRect().toJSON()", element)
     end
 
     # Capybara retries its own matchers; a value read through evaluate_script
