@@ -2,7 +2,7 @@ class AccountsController < ApplicationController
   include StreamExtensions
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
-  before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
@@ -209,6 +209,21 @@ class AccountsController < ApplicationController
     end
   end
 
+  # Loads the icons found for the domain into the account form's icon block,
+  # so the rest of the form keeps what the user typed. Nothing is saved here.
+  def logo_options
+    return redirect_to account_path(@account) unless turbo_frame_request?
+
+    render_logo_options(@account)
+  end
+
+  # The same for the form of an account that is not created yet.
+  def new_logo_options
+    return redirect_to accounts_path unless turbo_frame_request?
+
+    render_logo_options(Current.family.accounts.build)
+  end
+
   def toggle_active
     if @account.active?
       @account.disable!
@@ -331,6 +346,12 @@ class AccountsController < ApplicationController
   end
 
   private
+    # The form may hold a domain or name that is not saved yet.
+    def render_logo_options(account)
+      account.assign_attributes(params.permit(:institution_domain, :institution_name))
+      render partial: "accounts/logo_field", locals: { account: account, candidates: Account::LogoFetcher.new(account).candidates }
+    end
+
     # Built here rather than in the template: assembling a chart payload is
     # domain work, and `show` asks for it exactly once per request, so there
     # is nothing to memoise.

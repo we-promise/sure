@@ -117,6 +117,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.text "notes"
     t.uuid "owner_id"
     t.uuid "plaid_account_id"
+    t.boolean "prefer_brandfetch_logo", default: false, null: false
     t.uuid "simplefin_account_id"
     t.string "status", default: "active"
     t.string "subtype"

@@ -14,6 +14,33 @@ class AccountsTest < ApplicationSystemTestCase
     assert_account_created("Depository")
   end
 
+  test "pick icon waits for a whole institution domain" do
+    click_link Accountable.from_type("Depository").singular_display_name
+    click_link "Enter account balance"
+    find("summary", text: "Additional details").click
+
+    assert_equal "true", find_button("Pick icon")["aria-disabled"]
+    click_button "Pick icon"
+    assert_text "Enter the institution domain"
+
+    fill_in "Institution domain", with: "tbank"
+    assert_equal "true", find_button("Pick icon")["aria-disabled"]
+
+    fill_in "Institution domain", with: "https://www.tbank.ru/"
+    assert_no_text "Enter the institution domain"
+    assert_equal "false", find_button("Pick icon")["aria-disabled"]
+  end
+
+  test "pick icon is ready in the edit form of an account with a saved domain" do
+    account = accounts(:depository)
+    account.update!(institution_domain: "tbank.ru")
+    visit account_url(account)
+    open_account_edit_dialog
+    find("summary", text: "Additional details").click
+
+    assert_equal "false", find_button("Pick icon")["aria-disabled"]
+  end
+
   test "can create investment account" do
     assert_account_created("Investment")
   end
