@@ -165,6 +165,10 @@ class RuleImport < Import
       rule.active = row.active || false
       rule.effective_date = parse_date(row.effective_date)
 
+      # An email action replacing the rule's own keeps the baseline it recorded
+      # (see Rule::Action#keep_notification_baseline).
+      had_email_action = rule.stored_email_notification_action?
+
       # Clear existing conditions and actions
       rule.conditions.destroy_all
       rule.actions.destroy_all
@@ -176,7 +180,7 @@ class RuleImport < Import
 
       # Create actions
       actions_data.each do |action_data|
-        build_action(rule, action_data)
+        build_action(rule, action_data).keep_notification_baseline = had_email_action
       end
 
       rule.save!
