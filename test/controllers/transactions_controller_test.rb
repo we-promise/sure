@@ -72,6 +72,22 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
       "the preview-gated bill link must not render for a user without the flag"
   end
 
+  test "the investment activity badge shows translated labels" do
+    @user.update!(locale: "ru")
+    accounts(:investment).entries.create!(
+      name: "Broker cash move", date: Date.current, amount: 100, currency: "USD",
+      entryable: Transaction.new(investment_activity_label: "Transfer")
+    )
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "[data-activity-label-quick-edit-target=badge]", text: /Перевод/
+    assert_select "[data-activity-label-quick-edit-target=badge]", text: /Transfer/, count: 0
+    # The picker shows translated names but still submits the stored label.
+    assert_select "button[data-label='Sweep In']", text: "Автоперевод (зачисление)"
+  end
+
   test "index groups subcategories immediately after their parent in the category filter" do
     get transactions_url
     assert_response :success
