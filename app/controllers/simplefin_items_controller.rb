@@ -335,10 +335,11 @@ class SimplefinItemsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@simplefin_item),
           partial: "simplefin_items/simplefin_item",
-          locals: { simplefin_item: @simplefin_item }
+          locals: { simplefin_item: @simplefin_item, visible_accounts: @simplefin_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else
@@ -484,10 +485,11 @@ class SimplefinItemsController < ApplicationController
         # Optimistic removal of the specific account row if it exists in the DOM
         turbo_stream.remove(ActionView::RecordIdentifier.dom_id(@account)),
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "simplefin_items/simplefin_item",
-          locals: { simplefin_item: item }
+          locals: { simplefin_item: item, visible_accounts: item.accounts }
         ),
         turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
       ] + Array(flash_notification_stream_items)

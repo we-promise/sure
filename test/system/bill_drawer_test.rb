@@ -11,7 +11,7 @@ class BillDrawerTest < ApplicationSystemTestCase
     # Overdue, so its row and its drawer offer Find payment, and so its row is
     # the only link to this cycle: Next up lists nothing already past due.
     due = 6.days.ago.to_date
-    bill = @user.family.recurring_transactions.create!(
+    @bill = bill = @user.family.recurring_transactions.create!(
       name: "City Water", account: accounts(:depository), amount: 80, currency: "USD",
       expected_day_of_month: due.day, last_occurrence_date: 2.months.ago.to_date,
       next_expected_date: due, status: "active"
@@ -54,22 +54,26 @@ class BillDrawerTest < ApplicationSystemTestCase
     page.driver.browser.manage.window.resize_to(1400, 1400)
   end
 
-  # Turbo caches the page as it was left. A drawer still open when "View full
-  # bill" navigated away came back from Back as a stray, non-modal dialog.
-  test "going back from the bill's page shows the list, not a leftover drawer" do
-    visit bills_url
+  # A pasted link, a new tab or a notification has no list to open the drawer
+  # over, so the overview renders around it. Closing it leaves the overview.
+  test "a bill visited directly opens its drawer over the overview" do
+    visit bill_url(@bill)
 
-    find(@row_link).click
-    within("dialog[open]") { click_on I18n.t("bills.view_full_bill") }
-    assert_selector "main h1", text: "City Water"
+    within("dialog[open]") do
+      assert_selector "h2", text: "City Water"
+      # The deep part arrives once scrolled to, in the same drawer.
+      scroll_to find("turbo-frame[src*='display=history']")
+      assert_text(/#{I18n.t("bills.detail.history_title")}/i)
+      click_on I18n.t("ds.dialog.close")
+    end
 
-    page.go_back
-    assert_selector @row_link
     assert_no_selector "dialog[open]"
+    assert_selector @row_link
   end
 
-  # The payment drawer's "View full bill" leaves the same way.
-  test "going back from the bill's page shows the list, not a leftover payment drawer" do
+  # The payment drawer's "View bill" swaps back to the bill's drawer, in the
+  # same frame, over the same list.
+  test "the payment drawer's View bill opens the bill's drawer" do
     # Rows carry their verb only from @lg, and at 1400 both sidebars leave the
     # list just short of it.
     page.current_window.resize_to(1440, 1400)
@@ -77,8 +81,18 @@ class BillDrawerTest < ApplicationSystemTestCase
 
     find(@find_payment_link).click
     within("dialog[open]") { click_on I18n.t("recurring_occurrences.show.view_bill") }
-    assert_selector "main h1", text: "City Water"
+    within("dialog[open]") do
+      assert_selector "h2", text: "City Water"
+      assert_selector "turbo-frame[src*='display=history']"
+    end
+    assert_selector @row_link
 
+    # Drawer swaps are frame visits, so Back leaves the overview. Turbo's
+    # cached copy of it must not bring the closed drawer back open.
+    page.send_keys(:escape)
+    assert_no_selector "dialog[open]"
+    click_on I18n.t("layouts.application.nav.transactions"), match: :first
+    assert_current_path transactions_path
     page.go_back
     assert_selector @row_link
     assert_no_selector "dialog[open]"

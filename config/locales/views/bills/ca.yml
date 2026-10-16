@@ -37,6 +37,7 @@ ca:
       current: Actual
       next_payment: Proper pagament
       around: cap al %{date}
+      overview: Resum
       rules: Com s'identifica aquesta factura
       rule_named: '%{name}'
       rule_amount_range: de %{min} a %{max}
@@ -54,7 +55,6 @@ ca:
       ytd: Pagat aquest any
       last_account: Últim compte utilitzat
       upcoming: Properament
-      recent_payments: Pagaments recents
       manual_payment: Pagament manual
       history: Historial
       payment_count:
@@ -85,15 +85,13 @@ ca:
     summary:
       remaining: '%{amount} pendents'
       paid_headline: '%{amount} pagats'
-      cost_line: Una mitjana de %{average} per pagament, uns %{annualized} l'any
     add_bill: Afegeix una factura
-    manage: Gestiona
+    manage: Mostra
     find_payment: Cerca el pagament
     add_payment: Afegeix un pagament
     review_match: Revisa la coincidència
     resolve: Resol
     manage_payments: Gestiona els pagaments
-    view_full_bill: Mostra la factura completa
     match:
       same_merchant: Mateix comerç
       name_matches: El nom coincideix
@@ -107,8 +105,9 @@ ca:
         one: '%{count} dia després del venciment'
         other: '%{count} dies després del venciment'
     attention:
+      paused: En pausa
       needs_review: Cal revisar la coincidència
-      partial: Parcial · %{amount} pendents
+      partial: Parcial
       amount_changed: L'import ha canviat
       overdue:
         one: Vençuda fa %{count} dia
@@ -120,7 +119,7 @@ ca:
     cancelled_still_scheduled: La vas marcar com a cancel·lada el %{date}, però encara està programada, així que continuaran apareixent factures futures.
     paid_over: Pagats %{paid}, més del previst
     remaining_label: pendents
-    debt_payment: · pagament de deute
+    debt_payment: Pagament de deute
     paid_from: des de %{account}
     amount_range: entre %{min} i %{max}
     possible_duplicate: Possible duplicat
@@ -253,13 +252,14 @@ ca:
       paid_so_far: Pagat fins ara
       hero_past_due: '%{amount} vençuts'
       hero_next_seven: '%{amount} vencen en els pròxims 7 dies'
-      add_bill: Afegeix una factura
-      add_income: Afegeix un ingrés
+      add_bill: Nova factura
+      add_income: Nou ingrés
       review_with_ai: Revisa amb IA
       detected_review:
         one: Hem trobat %{count} pagament recurrent a les teves transaccions. Revisa'l perquè els totals d'aquí coincideixin amb el que pagues realment.
         other: Hem trobat %{count} pagaments recurrents a les teves transaccions. Revisa'ls perquè els totals d'aquí coincideixin amb el que pagues realment.
       detected_review_action: Revisa'ls
+      notices_heading: Canvis
       needs_review: Cal revisar
       notice_trial: La prova de %{name} acaba el %{date}
       notice_renewal: '%{name} es renova el %{date}'
@@ -293,7 +293,7 @@ ca:
       this_month: Aquest mes
       later: Després d'aquest mes
       paid_this_month: Pagades aquest mes
-      dormant: Inactives
+      dormant: En pausa
       kpi_remaining: Pendent aquest mes
       kpi_paid: Pagat aquest mes
       kpi_next_seven: Venç en 7 dies

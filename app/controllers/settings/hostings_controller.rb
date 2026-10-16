@@ -2,14 +2,16 @@ class Settings::HostingsController < ApplicationController
   layout "settings"
 
   # Minimum accepted value for each configurable numeric LLM field. Mirrors the
-  # `min:` attribute on the form inputs in `_openai_settings.html.erb` so the
-  # controller rejects what the browser-side validator would reject.
+  # `min:` attribute on the form inputs in `_openai_settings.html.erb` and
+  # `_llm_provider_selector.html.erb`, so the controller rejects what the
+  # browser-side validator would reject.
   LLM_NUMERIC_MINIMUMS = {
     llm_context_window: 256,
     llm_max_response_tokens: 64,
     llm_max_items_per_call: 1,
     openai_request_timeout: Provider::Openai::MIN_REQUEST_TIMEOUT,
-    ai_response_timeout: Chat::MIN_RESPONSE_TIMEOUT.to_i
+    ai_response_timeout: Chat::MIN_RESPONSE_TIMEOUT.to_i,
+    ai_health_probe_timeout: 1
   }.freeze
 
   guard_feature unless: -> { self_hosted? }
@@ -55,6 +57,7 @@ class Settings::HostingsController < ApplicationController
     # monthly request caps when a key is configured
     @rentcast_usage = Provider::Registry.get_provider(:rentcast)&.usage
     @realie_usage = Provider::Registry.get_provider(:realie)&.usage
+    @chimnie_usage = Provider::Registry.get_provider(:chimnie)&.usage
 
     load_external_assistant_models
   end
@@ -149,6 +152,7 @@ class Settings::HostingsController < ApplicationController
     update_encrypted_setting(:mansa_api_key)
     update_encrypted_setting(:rentcast_api_key)
     update_encrypted_setting(:realie_api_key)
+    update_encrypted_setting(:chimnie_api_key)
 
     if hosting_params.key?(:syncs_include_pending)
       Setting.syncs_include_pending = hosting_params[:syncs_include_pending] == "1"
@@ -267,7 +271,8 @@ class Settings::HostingsController < ApplicationController
       end
       parsed = Integer(raw, 10) rescue nil
       if parsed.nil? || parsed < minimum
-        label = t("settings.hostings.openai_settings.#{key}_label")
+        scope = key == :llm_max_items_per_call ? "llm_provider_selector" : "openai_settings"
+        label = t("settings.hostings.#{scope}.#{key.to_s.delete_prefix("llm_")}_label")
         raise Setting::ValidationError, t(".invalid_llm_budget", field: label, minimum: minimum)
       end
       Setting.public_send("#{key}=", parsed)
@@ -323,14 +328,13 @@ class Settings::HostingsController < ApplicationController
     # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :chimnie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :ai_health_probe_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
     end
 
     def load_external_assistant_models
       @external_assistant_models = []
       @external_assistant_catalog_error = nil
-      effective_type = ENV["ASSISTANT_TYPE"].presence || Current.family.assistant_type
-      return unless effective_type == "external"
+      return unless Current.family.effective_assistant_type == "external"
 
       config = Assistant::External.config
       return unless config.url.present? && config.token.present?

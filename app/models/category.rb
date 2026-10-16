@@ -27,8 +27,14 @@ class Category < ApplicationRecord
   validates :name, exclusion: { in: [ UNCATEGORIZED_FILTER_VALUE ] }
 
   validate :category_level_limit
+  validate :parent_in_same_family
 
   before_save :inherit_color_from_parent
+
+  # prepend: runs before dependent: :nullify's own before_destroy, so the
+  # reassignment (which touches entries to bust report caches) still sees the
+  # transactions; nullify then runs as the safety net.
+  before_destroy :reassign_transactions_to_nothing, prepend: true
 
   scope :alphabetically, -> { order(:name) }
   scope :recently_used, -> { where.not(last_used_at: nil).order(last_used_at: :desc) }
@@ -346,7 +352,7 @@ class Category < ApplicationRecord
 
   def replace_and_destroy!(replacement)
     transaction do
-      transactions.update_all category_id: replacement&.id
+      Transaction.reassign_category!(transactions, replacement&.id)
       destroy!
     end
   end
@@ -406,10 +412,20 @@ class Category < ApplicationRecord
   end
 
   private
+    def reassign_transactions_to_nothing
+      Transaction.reassign_category!(transactions, nil)
+    end
+
     def category_level_limit
       if (subcategory? && parent&.subcategory?) || (parent? && subcategory?)
         errors.add(:parent, "can't have more than 2 levels of subcategories")
       end
+    end
+
+    def parent_in_same_family
+      return if parent.nil? || parent.family_id == family_id
+
+      errors.add(:parent, :invalid)
     end
 
     def monetizable_currency
