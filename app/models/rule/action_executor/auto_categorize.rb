@@ -52,7 +52,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
       return 0
     end
 
-    batch_size = 20
+    batch_size = Provider::LlmConcept.max_items_per_call
     jobs_count = 0
 
     enrichable_transactions.in_batches(of: batch_size).each_with_index do |transactions, idx|

@@ -1,6 +1,7 @@
 ---
 ro:
   passwords:
+    disabled: "Schimbarea parolei prin Sure este dezactivată. Gestionează-ți parola prin furnizorul tău de identitate."
     edit:
       password: Parolă nouă
       password_challenge: Parola curentă
