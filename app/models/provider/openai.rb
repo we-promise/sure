@@ -320,7 +320,7 @@ class Provider::Openai < Provider
   # @param model [String] optional override of the configured model
   # @param family [Family, nil] usage attribution
   # @return [Provider::Response] structured result or provider failure
-  def process_pdf(pdf_content:, model: "", family: nil)
+  def process_pdf(pdf_content:, model: "", family: nil, json_mode: nil)
     with_provider_response do
       effective_model = model.presence || @default_model
       raise Error, "Model does not support PDF/vision processing: #{effective_model}" unless supports_pdf_processing?(model: effective_model)
@@ -345,7 +345,8 @@ class Provider::Openai < Provider
         custom_provider: custom_provider?,
         langfuse_trace: trace,
         family: family,
-        max_response_tokens: response_limit
+        max_response_tokens: response_limit,
+        json_mode: json_mode
       ).process
 
       upsert_langfuse_trace(trace: trace, output: result.to_h)
@@ -354,7 +355,7 @@ class Provider::Openai < Provider
     end
   end
 
-  def extract_bank_statement(pdf_content:, model: "", family: nil)
+  def extract_bank_statement(pdf_content:, model: "", family: nil, json_mode: nil)
     with_provider_response do
       effective_model = model.presence || @default_model
 
@@ -366,7 +367,8 @@ class Provider::Openai < Provider
       result = BankStatementExtractor.new(
         client: client,
         pdf_content: pdf_content,
-        model: effective_model
+        model: effective_model,
+        json_mode: json_mode
       ).extract
 
       upsert_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })

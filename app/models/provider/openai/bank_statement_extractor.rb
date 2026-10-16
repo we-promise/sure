@@ -1,11 +1,14 @@
 class Provider::Openai::BankStatementExtractor
-  MAX_CHARS_PER_CHUNK = 3000
-  attr_reader :client, :pdf_content, :model
+  include Provider::Openai::Concerns::JsonMode
 
-  def initialize(client:, pdf_content:, model:)
+  MAX_CHARS_PER_CHUNK = 3000
+  attr_reader :client, :pdf_content, :model, :json_mode
+
+  def initialize(client:, pdf_content:, model:, json_mode: nil)
     @client = client
     @pdf_content = pdf_content
     @model = model
+    @json_mode = json_mode || default_json_mode
   end
 
   def extract
@@ -103,9 +106,10 @@ class Provider::Openai::BankStatementExtractor
         messages: [
           { role: "system", content: is_first_chunk ? instructions_with_metadata : instructions_transactions_only },
           { role: "user", content: "Extract transactions:\n\n#{text}" }
-        ],
-        response_format: { type: "json_object" }
+        ]
       }
+
+      apply_json_mode(params, mode: json_mode)
 
       response = client.chat(parameters: params)
       content = response.dig("choices", 0, "message", "content")
