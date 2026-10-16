@@ -349,4 +349,47 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
 
     assert_equal "Booked\n\nLunch with client", @posted_entry.reload.notes
   end
+
+  test "appends a pending note that is only a substring of the posted note" do
+    @pending_entry.update!(notes: "Order 123")
+    @posted_entry.update!(notes: "Order 1234")
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal "Order 1234\n\nOrder 123", @posted_entry.reload.notes
+  end
+
+  test "does not repeat a pending note already merged into the posted note" do
+    @pending_entry.update!(notes: "Lunch with client")
+    @posted_entry.update!(notes: "Booked\n\nLunch with client")
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal "Booked\n\nLunch with client", @posted_entry.reload.notes
+  end
+
+  test "keeps one attachment when both transactions have the same blob" do
+    pending_tx = @pending_entry.transaction
+    posted_tx = @posted_entry.transaction
+    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new("receipt"), filename: "receipt.pdf", content_type: "application/pdf")
+    pending_tx.attachments.attach(blob)
+    posted_tx.attachments.attach(blob)
+
+    assert pending_tx.merge_with_duplicate!
+
+    assert_equal [ blob.id ], posted_tx.reload.attachments.map(&:blob_id)
+  end
+
+  test "refuses a merge that would leave more than the attachment limit" do
+    pending_tx = @pending_entry.transaction
+    posted_tx = @posted_entry.transaction
+    6.times { |i| posted_tx.attachments.attach(io: StringIO.new("posted #{i}"), filename: "posted#{i}.pdf", content_type: "application/pdf") }
+    5.times { |i| pending_tx.attachments.attach(io: StringIO.new("pending #{i}"), filename: "pending#{i}.pdf", content_type: "application/pdf") }
+
+    assert_not pending_tx.merge_with_duplicate!
+
+    assert Entry.exists?(@pending_entry.id), "the pending entry and its attachments must be kept"
+    assert_equal 5, pending_tx.reload.attachments.count
+    assert_equal 6, posted_tx.reload.attachments.count
+  end
 end

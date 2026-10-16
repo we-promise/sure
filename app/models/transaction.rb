@@ -455,6 +455,15 @@ class Transaction < ApplicationRecord
       # cannot race on reading/writing extra (e.g., the manual_merge array).
       posted_tx = posted_entry.entryable
       posted_tx.lock! if posted_tx.is_a?(Transaction)
+
+      # Moving the attachments bypasses validation, so refuse a merge that would
+      # leave the posted transaction over the limit instead of dropping files.
+      if posted_tx.is_a?(Transaction) && pending_entry.entryable.is_a?(Transaction) &&
+          attachment_count_after_merge(from: pending_entry.entryable, to: posted_tx) > MAX_ATTACHMENTS_PER_TRANSACTION
+        Rails.logger.info("merge_with_duplicate! rejected: merging pending entry #{pending_entry_id} would exceed #{MAX_ATTACHMENTS_PER_TRANSACTION} attachments")
+        raise ActiveRecord::Rollback
+      end
+
       if posted_tx.is_a?(Transaction)
         tx_attrs = {}
 
@@ -565,15 +574,28 @@ class Transaction < ApplicationRecord
     # Moves the pending transaction's attachments (the attachment rows themselves, so the
     # blobs are not purged with the pending entry) and adds its tags to the posted one.
     def carry_over_user_additions(from:, to:)
-      from.attachments_attachments.update_all(record_id: to.id) if from.attachments.attached?
+      if from.attachments.attached?
+        # A blob already attached to the posted transaction would collide with the
+        # unique index on attachments once re-pointed, and is kept there anyway.
+        from.attachments_attachments.where(blob_id: to.attachments_attachments.select(:blob_id)).delete_all
+        from.attachments_attachments.update_all(record_id: to.id)
+      end
 
       new_tags = from.tags.where.not(id: to.tags.select(:id))
       to.tags << new_tags if new_tags.any?
     end
 
+    def attachment_count_after_merge(from:, to:)
+      to_blob_ids = to.attachments_attachments.pluck(:blob_id)
+      to_blob_ids.size + from.attachments_attachments.where.not(blob_id: to_blob_ids).count
+    end
+
+    # Notes merged earlier are joined by blank lines, so compare whole notes:
+    # "Order 123" is not already in "Order 1234".
     def merged_notes(posted_notes, pending_notes)
-      return posted_notes if pending_notes.blank? || posted_notes.to_s.include?(pending_notes)
+      return posted_notes if pending_notes.blank?
       return pending_notes if posted_notes.blank?
+      return posted_notes if posted_notes.split(/\n{2,}/).map(&:strip).include?(pending_notes.strip)
 
       "#{posted_notes}\n\n#{pending_notes}"
     end
