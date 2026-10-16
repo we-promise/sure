@@ -98,10 +98,6 @@ ca:
       no_rules_title: Encara no hi ha regles
       page_title: Regles
       rules_heading: Regles
-      sort_by: 'Ordena per:'
-      sort_name: Nom
-      sort_updated_at: Data d'actualització
-      toggle_sort_direction: Commuta el sentit d'ordenació
     no_action: Sense acció
     no_condition: Sense condició
     recent_runs:

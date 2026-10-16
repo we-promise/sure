@@ -138,9 +138,11 @@ class FamilyTest < ActiveSupport::TestCase
       name: "Test 2"
     )
 
+    txn2_entry_updated_at = txn2.entry.updated_at
+
     # Should merge both categories into one, keeping the oldest
     assert_difference "Category.count", -1 do
-      result = family.investment_contributions_category
+      result = travel_to(1.minute.from_now) { family.investment_contributions_category }
       assert_equal english_category.id, result.id
       assert_equal "Investment Contributions", result.name
 
@@ -148,9 +150,60 @@ class FamilyTest < ActiveSupport::TestCase
       assert_equal english_category.id, txn1.reload.category_id
       assert_equal english_category.id, txn2.reload.category_id
 
+      # Reassignment must touch entries so entry-keyed caches bust
+      # (only txn2 is reassigned — txn1 already points at the keeper)
+      assert txn2.entry.reload.updated_at > txn2_entry_updated_at
+
       # French category should be deleted
       assert_nil Category.find_by(id: french_category.id)
     end
+  end
+
+  test "investment_contributions_category merges duplicates across accounts" do
+    family = families(:dylan_family)
+    family.update!(locale: "en")
+    family.categories.where(name: [ "Investment Contributions", "Contributions aux investissements" ]).destroy_all
+
+    english_category = family.categories.create!(
+      name: "Investment Contributions",
+      color: "#0d9488",
+      lucide_icon: "trending-up"
+    )
+
+    french_category = family.categories.create!(
+      name: "Contributions aux investissements",
+      color: "#0d9488",
+      lucide_icon: "trending-up"
+    )
+
+    # Transactions on two different accounts of the same family: the
+    # transactions-through-accounts scope must reach both.
+    txn1 = Transaction.create!(category: english_category)
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: txn1,
+      amount: 100,
+      currency: "USD",
+      date: Date.current,
+      name: "First account txn"
+    )
+
+    txn2 = Transaction.create!(category: french_category)
+    Entry.create!(
+      account: accounts(:credit_card),
+      entryable: txn2,
+      amount: 50,
+      currency: "USD",
+      date: Date.current,
+      name: "Second account txn"
+    )
+
+    result = family.investment_contributions_category
+
+    assert_equal english_category.id, result.id
+    assert_equal english_category.id, txn1.reload.category_id
+    assert_equal english_category.id, txn2.reload.category_id,
+      "transaction on the second account must also be reassigned to the keeper"
   end
 
   test "moniker helpers return expected singular and plural labels" do
@@ -610,6 +663,37 @@ class FamilyTest < ActiveSupport::TestCase
     Provider::Registry.stubs(:get_provider).with(:jev).raises(ArgumentError, "boom")
 
     assert_raises(ArgumentError) { family.resolved_categorization_provider }
+  end
+
+  test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
+
+    account.entries.create!(date: Date.new(2000, 1, 15), name: "Old valuation",
+                            amount: 5000, currency: "USD", entryable: Valuation.new)
+    transaction_date = Date.new(2025, 3, 10)
+    account.entries.create!(date: transaction_date, name: "Groceries",
+                            amount: -50, currency: "USD", entryable: Transaction.new)
+
+    assert_equal transaction_date, family.earliest_activity_date
+
+    # A Trade earlier than the Transaction must win, so a regression that
+    # drops Trade from the filter is caught (#4007).
+    trade_date = Date.new(2020, 6, 15)
+    account.entries.create!(date: trade_date, name: "Investment purchase",
+                            amount: 100, currency: "USD",
+                            entryable: Trade.new(security: securities(:aapl), qty: 1, price: 100, currency: "USD"))
+
+    assert_equal trade_date, family.earliest_activity_date
+  end
+
+  test "earliest_activity_date returns nil when family has no Transaction/Trade entries" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "House", balance: 0, currency: "USD", accountable: Depository.new)
+    account.entries.create!(date: Date.new(2000, 1, 15), name: "Old valuation",
+                            amount: 5000, currency: "USD", entryable: Valuation.new)
+
+    assert_nil family.earliest_activity_date
   end
 
   private
