@@ -228,6 +228,70 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/resource type is invalid/i, response.body)
   end
 
+  test "rejects unknown action and resource types on create without saving or failing to render" do
+    {
+      "one unknown action" => { resource_type: "transaction", actions_attributes: { "0" => { action_type: "garbage" } } },
+      "two unknown actions" => { resource_type: "transaction",
+                                 actions_attributes: { "0" => { action_type: "garbage" }, "1" => { action_type: "garbage" } } },
+      "unknown resource type" => { resource_type: "account", actions_attributes: { "0" => { action_type: "exclude_transaction" } } },
+      "unknown resource type, no action" => { resource_type: "account" }
+    }.each do |label, rule_params|
+      assert_no_difference [ "Rule.count", "Rule::Action.count" ], label do
+        post rules_url, params: { rule: rule_params }
+      end
+
+      assert_response :unprocessable_entity, label
+      assert_equal "text/plain", response.media_type, label
+      assert_match(/type is not included in the list/i, response.body, label)
+    end
+  end
+
+  test "rejects an unknown action type on update" do
+    rule = rules(:one)
+    action = rule.actions.first
+    original_type = action.action_type
+
+    patch rule_url(rule), params: { rule: { actions_attributes: { "0" => { id: action.id, action_type: "garbage" } } } }
+
+    assert_response :unprocessable_entity
+    assert_equal "text/plain", response.media_type
+    assert_equal original_type, action.reload.action_type
+  end
+
+  test "rejects an unknown resource type on update" do
+    rule = rules(:one)
+
+    patch rule_url(rule), params: { rule: { resource_type: "account" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "text/plain", response.media_type
+    assert_equal "transaction", rule.reload.resource_type
+  end
+
+  test "does not render an unknown action type that is marked for destruction" do
+    rule = rules(:one)
+    action = rule.actions.first
+    original_type = action.action_type
+
+    patch rule_url(rule), params: {
+      rule: { actions_attributes: { "0" => { id: action.id, action_type: "garbage", _destroy: "1" } } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal "text/plain", response.media_type
+    assert_equal original_type, action.reload.action_type
+  end
+
+  test "new ignores an unknown resource type or action type" do
+    get new_rule_url(resource_type: "account")
+    assert_response :success
+    assert_select "input[name='rule[resource_type]'][value='transaction']"
+
+    get new_rule_url(resource_type: "transaction", action_type: "garbage", action_value: "x")
+    assert_response :success
+    assert_select "ul[data-rules-target='actionsList'] li", 0
+  end
+
   test "can update rule" do
     rule = rules(:one)
 
@@ -271,6 +335,53 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "100", rule.conditions.order("created_at ASC").last.value
 
     assert_redirected_to rules_url
+  end
+
+  test "saves stop processing" do
+    rule = rules(:one)
+
+    patch rule_url(rule), params: { rule: { stop_processing: "1" } }
+
+    assert rule.reload.stop_processing
+  end
+
+  test "index lists rules in run order" do
+    family = @user.family
+    newest = family.rules.create!(resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    ordered_ids = [ newest.id ] + (family.rules.ordered.pluck(:id) - [ newest.id ])
+    Rule.update_positions!(family, ordered_ids)
+
+    get rules_url
+
+    assert_response :success
+    assert_equal ordered_ids, css_select("[data-sortable-list-target='item']").map { |item| item["data-sortable-list-id"] }
+  end
+
+  test "reorder saves the new order" do
+    family = @user.family
+    second = family.rules.create!(resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    ordered_ids = family.rules.ordered.pluck(:id).reverse
+
+    patch reorder_rules_url, params: { rule_ids: ordered_ids }, as: :json
+
+    assert_response :no_content
+    assert_equal ordered_ids, family.rules.ordered.pluck(:id)
+    assert_equal second.id, ordered_ids.first
+  end
+
+  test "reorder rejects rules of another family" do
+    family = @user.family
+    other_rule = families(:empty).rules.create!(resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    before = family.rules.ordered.pluck(:id, :position)
+
+    patch reorder_rules_url, params: { rule_ids: family.rules.pluck(:id) + [ other_rule.id ] }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal before, family.rules.ordered.pluck(:id, :position)
+    assert_equal 1, other_rule.reload.position
   end
 
   test "can destroy conditions and actions while editing" do
@@ -384,6 +495,27 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "~typesafe/jev-latest", response.body
+  end
+
+  test "confirm says the active rules above run first" do
+    family = @user.family
+    family.rules.destroy_all
+    build = ->(name, active) do
+      family.rules.create!(name: name, resource_type: "transaction", active: active,
+        actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+    build.call("Active above", true)
+    build.call("Inactive above", false)
+    rule = build.call("Applied", true)
+    build.call("Below", true)
+
+    get confirm_rule_url(rule)
+    assert_response :success
+    assert_match I18n.t("rules.confirm.rules_above_notice", count: 1), response.body
+
+    get confirm_rule_url(family.rules.find_by!(name: "Active above"))
+    assert_response :success
+    assert_no_match "run first", response.body
   end
 
   test "confirm does not name Jev when the family has not selected it" do

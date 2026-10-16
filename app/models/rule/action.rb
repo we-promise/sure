@@ -1,7 +1,12 @@
 class Rule::Action < ApplicationRecord
   belongs_to :rule, touch: true
 
+  SUPPORTED_ACTION_TYPES = Rule::Registry::TransactionResource.action_executor_keys.freeze
+
   validates :action_type, presence: true, if: -> { action_type.to_s.valid_encoding? }
+  # A NUL or invalid encoding is reported by DatabaseTextValidator instead.
+  validates :action_type, inclusion: { in: SUPPORTED_ACTION_TYPES, allow_blank: true },
+    if: -> { DatabaseTextValidator.acceptable?(action_type) }
   validates_with DatabaseTextValidator, attributes: %i[action_type value]
 
   # Pre-seed (watermark): when a send_email_notification action is created — on a
@@ -57,6 +62,14 @@ class Rule::Action < ApplicationRecord
 
   def options
     executor.options
+  end
+
+  def claimed_attributes
+    executor.claimed_attributes
+  end
+
+  def reserves_claimed_attributes?
+    executor.reserves_claimed_attributes? && executor.actionable?(value)
   end
 
   def value_display

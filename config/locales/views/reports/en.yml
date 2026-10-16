@@ -16,6 +16,7 @@ en:
       export: Export CSV
       print_report: Print Report
       drag_to_reorder: "Drag to reorder section"
+      sections_aria: Reports sections
       toggle_section: "Toggle section visibility"
       periods:
         monthly: Monthly

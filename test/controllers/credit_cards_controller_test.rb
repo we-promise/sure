@@ -337,6 +337,174 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_nil simplefin_account.reload.balance_sign_override
   end
 
+  test "hides the Sophtron balance sign select for accounts without a Sophtron link" do
+    get edit_credit_card_path(@account)
+
+    assert_response :success
+    assert_select "select[name='account[sophtron][balance_sign_override]']", count: 0
+  end
+
+  test "updates Sophtron balance sign override when linked" do
+    sophtron_account = create_linked_sophtron_account
+
+    get edit_credit_card_path(@account)
+    assert_response :success
+    assert_select "select[name='account[sophtron][balance_sign_override]']"
+    SophtronAccount::Transactions::Processor.expects(:new).never
+
+    assert_enqueued_with(job: SyncJob) do
+      patch credit_card_path(@account), params: {
+        account: {
+          name: @account.name,
+          accountable_type: "CreditCard",
+          sophtron: { balance_sign_override: "credit" }
+        }
+      }
+    end
+
+    assert_redirected_to @account
+    assert_equal "credit", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("-25"), @account.reload.balance
+    assert_equal BigDecimal("-25"), @account.current_anchor_balance
+    assert_equal 1, @account.syncs.count
+    assert_empty sophtron_account.sophtron_item.syncs
+  end
+
+  test "applies a Sophtron sign override when the card requires manual sync" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.update!(manual_sync: true)
+
+    assert_no_difference -> { sophtron_account.sophtron_item.syncs.count } do
+      assert_difference -> { @account.syncs.count } => 1 do
+        patch credit_card_path(@account), params: {
+          account: {
+            name: @account.name,
+            accountable_type: "CreditCard",
+            sophtron: { balance_sign_override: "debt" }
+          }
+        }
+      end
+    end
+
+    assert_redirected_to @account
+    assert_equal "debt", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("25"), @account.reload.balance
+    assert_equal BigDecimal("25"), @account.current_anchor_balance
+  end
+
+  test "failed Sophtron balance application rolls back and can be retried" do
+    sophtron_account = create_linked_sophtron_account
+    original_balance = @account.balance
+    original_cash_balance = @account.cash_balance
+    original_anchor = @account.current_anchor_balance
+    submission = {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "credit" }
+      }
+    }
+    Account.any_instance.stubs(:set_current_balance).returns(
+      Account::CurrentBalanceManager::Result.new(success?: false, error: "anchor write failed")
+    )
+
+    assert_no_enqueued_jobs only: SyncJob do
+      patch credit_card_path(@account), params: submission
+    end
+
+    assert_redirected_to @account
+    assert_equal I18n.t("credit_cards.update.sophtron_balance_sign_error"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_nil sophtron_account.reload.balance_sign_override
+    assert_equal original_balance, @account.reload.balance
+    assert_equal original_cash_balance, @account.cash_balance
+    assert_equal original_anchor, @account.current_anchor_balance
+    diagnostic = DebugLogEntry.find_by!(source: "CreditCardsController#update_sophtron_settings")
+    assert_equal @account.family, diagnostic.family
+    assert_equal sophtron_account.account_provider, diagnostic.account_provider
+    assert_equal "sophtron", diagnostic.provider_key
+
+    Account.any_instance.unstub(:set_current_balance)
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      patch credit_card_path(@account), params: submission
+    end
+
+    assert_redirected_to @account
+    assert_equal "credit", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("-25"), @account.reload.balance
+    assert_equal BigDecimal("-25"), @account.current_anchor_balance
+  end
+
+  test "applies a Sophtron sign override when the parent item requires manual sync" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.sophtron_item.update!(manual_sync: true)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "credit" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_equal "credit", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("-25"), @account.reload.balance
+    assert_empty sophtron_account.sophtron_item.syncs
+    assert_equal 1, @account.syncs.count
+  end
+
+  test "clears Sophtron balance sign override when automatic is selected" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.update!(balance_sign_override: "credit")
+    @account.update!(balance: -25)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("25"), @account.reload.balance
+    assert_equal BigDecimal("25"), @account.current_anchor_balance
+  end
+
+  test "does not persist Sophtron override when the account update fails" do
+    sophtron_account = create_linked_sophtron_account
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: "",
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "credit" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil sophtron_account.reload.balance_sign_override
+  end
+
+  test "normalizes an unsupported Sophtron balance sign to automatic" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.update!(balance_sign_override: "credit")
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "unsupported" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil sophtron_account.reload.balance_sign_override
+  end
+
   private
     def create_linked_enable_banking_account
       enable_banking_item = EnableBankingItem.create!(
@@ -387,5 +555,21 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
       )
       AccountProvider.create!(account: @account, provider: simplefin_account)
       simplefin_account
+    end
+
+    def create_linked_sophtron_account
+      sophtron_item = @account.family.sophtron_items.create!(
+        name: "Test Sophtron",
+        user_id: "developer-user",
+        access_key: Base64.strict_encode64("secret-key")
+      )
+      sophtron_account = sophtron_item.sophtron_accounts.create!(
+        name: "Linked card",
+        account_id: "sophtron-linked-card",
+        currency: "USD",
+        balance: -25
+      )
+      AccountProvider.create!(account: @account, provider: sophtron_account)
+      sophtron_account
     end
 end

@@ -5,14 +5,7 @@ class RulesController < ApplicationController
   before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index
-    @sort_by = params[:sort_by] || "name"
-    @direction = params[:direction] || "asc"
-
-    allowed_columns = [ "name", "updated_at" ]
-    @sort_by = "name" unless allowed_columns.include?(@sort_by)
-    @direction = "asc" unless [ "asc", "desc" ].include?(@direction)
-
-    @rules = Current.family.rules.includes(conditions: :sub_conditions).order(@sort_by => @direction)
+    @rules = Current.family.rules.includes(conditions: :sub_conditions).ordered
 
     # Fetch recent rule runs with pagination
     recent_runs_scope = RuleRun
@@ -28,7 +21,7 @@ class RulesController < ApplicationController
 
   def new
     @rule = Current.family.rules.build(
-      resource_type: params[:resource_type] || "transaction",
+      resource_type: params[:resource_type].presence_in(Rule::SUPPORTED_RESOURCE_TYPES) || "transaction",
     )
 
     if params[:name].present?
@@ -40,7 +33,7 @@ class RulesController < ApplicationController
       )
     end
 
-    if params[:action_type].present? && params[:action_value].present?
+    if params[:action_type].in?(Rule::Action::SUPPORTED_ACTION_TYPES) && params[:action_value].present?
       @rule.actions.build(
         action_type: params[:action_type],
         value: params[:action_value]
@@ -65,6 +58,7 @@ class RulesController < ApplicationController
   end
 
   def confirm
+    @active_rules_above_count = @rule.active_rules_above.count
     # Compute provider, model, and cost estimation for auto-categorize actions
     if @rule.actions.any? { |a| a.action_type == "auto_categorize" }
       @selected_model, @estimated_cost = auto_categorize_estimate(@rule)
@@ -88,6 +82,13 @@ class RulesController < ApplicationController
   def destroy
     @rule.destroy
     redirect_to rules_path, notice: t(".success")
+  end
+
+  def reorder
+    Rule.update_positions!(Current.family, params.require(:rule_ids))
+    head :no_content
+  rescue ArgumentError
+    head :unprocessable_entity
   end
 
   def destroy_all
@@ -120,9 +121,10 @@ class RulesController < ApplicationController
 
   private
     def render_invalid_rule(template)
-      # A native select cannot preserve an invalid option on resubmission.
+      # A native select cannot preserve an invalid option on resubmission. An
+      # action marked for destruction is not validated, but is still rendered.
       invalid_selector = @rule.errors[:resource_type].any? ||
-        @rule.actions.any? { |action| action.errors[:action_type].any? } ||
+        @rule.actions.any? { |action| action.errors[:action_type].any? || !action.action_type.in?(Rule::Action::SUPPORTED_ACTION_TYPES) } ||
         @rule.conditions.any? { |condition| invalid_condition_selector?(condition) }
 
       if invalid_selector
@@ -210,7 +212,7 @@ class RulesController < ApplicationController
 
     def rule_params
       params.require(:rule).permit(
-        :resource_type, :effective_date, :active, :name,
+        :resource_type, :effective_date, :active, :name, :stop_processing,
         conditions_attributes: [
           :id, :condition_type, :operator, :value, :_destroy,
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]

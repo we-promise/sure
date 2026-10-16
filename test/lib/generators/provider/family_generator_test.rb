@@ -22,6 +22,38 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     ERB.new(template, trim_mode: "-").result(context.instance_eval { binding })
   end
 
+  # A generated view must be plain ERB once Thor has rendered it: no Ruby string
+  # building its tags, at either end, and source that Action View can compile.
+  def assert_plain_erb(generated)
+    # A tag built from strings renders as text: refuse a string that opens one
+    # ("<" + ..., "<%..."), or a concatenation that closes one (..." + ">").
+    assert_no_match(/["']<["'] \+|["']<%|%["'] \+ ["']>/, generated)
+    assert_parses ActionView::Template::Handlers::ERB::Erubi.new(generated).src
+  end
+
+  # Renders a generated view the way Rails would, from a real view path, so relative
+  # translation keys and strict locals behave as they do in the app. Redbark has the
+  # model, routes, fixtures and translations the generated views call, so it stands
+  # in for a new provider here. The view sits at the app's own path, prepended so it
+  # renders instead of Redbark's: under any other prefix its relative keys would
+  # resolve in a scope the app does not have.
+  def render_generated_view(generated, partial: nil, template: nil, **options)
+    Dir.mktmpdir do |dir|
+      virtual_path = partial ? partial.sub(%r{([^/]+)\z}, '_\\1') : template
+      file = File.join(dir, "#{virtual_path}.html.erb")
+      FileUtils.mkdir_p(File.dirname(file))
+      File.write(file, generated)
+
+      controller = Class.new(ApplicationController) { prepend_view_path dir }
+      target = partial ? { partial: partial } : { template: template, layout: false }
+      html = controller.renderer.render(**target, **options)
+      # Missing keys render a placeholder rather than raising in test, so a key
+      # the app does not define would otherwise pass unnoticed.
+      assert_not_includes html, "translation_missing"
+      html
+    end
+  end
+
   test "the unlinking scaffold renders to valid Ruby and carries the disposition seam" do
     rendered = render_template("unlinking_concern.rb.tt", class_name: "Gocardless", file_name: "gocardless")
 
@@ -39,8 +71,8 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     card = render_template("item_partial.html.erb.tt", file_name: "gocardless")
     job = render_template("activities_fetch_job.rb.tt", class_name: "Gocardless", file_name: "gocardless")
 
-    assert_includes card.lines.first, 'locals: (#{file_name}_item:, visible_accounts:)'
-    assert_includes card, 'render \\"accounts/index/account_groups\\", accounts: visible_accounts'
+    assert_equal "<%# locals: (gocardless_item:, visible_accounts:) %>\n", card.lines.first
+    assert_includes card, '<%= render "accounts/index/account_groups", accounts: visible_accounts %>'
     assert_parses job
     assert_not_includes job, '"gocardless_items/gocardless_item"'
     assert_includes job, "@gocardless_account.gocardless_item&.family&.broadcast_sync_complete"
@@ -213,5 +245,80 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_not_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "family"
     assert_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "family_id"
     assert_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "institution_id"
+  end
+
+  # The old templates built opening tags with "<" + and closing ones with "%" + ">".
+  # A string-built closer that ends a multi-line tag breaks the compiled Ruby, so
+  # the parse check catches it, but one standing alone still parses and renders a
+  # stray %> as text. The check refuses string building at either end.
+  test "the plain ERB check refuses a tag built from strings at either end" do
+    [
+      %(<div>\n<%= "<" + "%= t(\".title\") %" + ">" %>\n</div>\n),
+      %(<%= render DS::Link.new(\n  text: "x"\n) <%= "%" + ">" %>\n),
+      %(<p>x</p>\n<%= "%" + ">" %>\n),
+      %(<div>\n<%= "<%" + "= t(\\".title\\") %" + ">" %>\n</div>\n),
+      %(<p>x</p>\n<%= '%' + '>' %>\n),
+      %(<div>\n<%= "<%" + "= t(\\".title\\") %" + "" + ">" %>\n</div>\n),
+      %(<div>\n<%= "<" + "%= t(\\".title\\") %" + "" + ">" %>\n</div>\n)
+    ].each do |generated|
+      assert_raises(Minitest::Assertion) { assert_plain_erb generated }
+    end
+  end
+
+  test "the generated item card is plain ERB" do
+    generated = render_template("item_partial.html.erb.tt", file_name: "gocardless")
+
+    assert_plain_erb generated
+    assert_equal "<%# locals: (gocardless_item:, visible_accounts:) %>\n", generated.lines.first
+    assert_includes generated, "<%= tag.div id: dom_id(gocardless_item) do %>"
+  end
+
+  test "the generated item card renders the visible accounts it is given" do
+    Current.session = Session.create!(user: users(:family_admin))
+    item = redbark_items(:one)
+    linked = accounts(:depository)
+    generated = render_template("item_partial.html.erb.tt", file_name: "redbark")
+    render_card = lambda do |visible|
+      render_generated_view(generated, partial: "redbark_items/redbark_item",
+                                       locals: { redbark_item: item.reload, visible_accounts: visible.call })
+    end
+
+    before = render_card.call(-> { item.accounts.to_a })
+    AccountProvider.create!(account: linked, provider: redbark_accounts(:savings_account))
+    after = render_card.call(-> { item.accounts.to_a })
+    other = render_card.call(-> { [ accounts(:investment) ] })
+
+    assert_includes after, item.name
+    assert_not_includes before, linked.name
+    assert_includes after, linked.name
+    assert_not_includes after, accounts(:investment).name
+    # The card lists the accounts it is given, not every account on the connection.
+    assert_includes other, accounts(:investment).name
+    assert_not_includes other, linked.name
+  end
+
+  test "the generated setup accounts view is plain ERB that renders" do
+    assert_plain_erb render_template("setup_accounts.html.erb.tt", file_name: "gocardless")
+
+    item = redbark_items(:one)
+    html = render_generated_view(render_template("setup_accounts.html.erb.tt", file_name: "redbark"),
+                                 template: "redbark_items/setup_accounts",
+                                 assigns: { redbark_item: item, unlinked_accounts: item.redbark_accounts })
+
+    assert_includes html, redbark_accounts(:savings_account).name
+    assert_includes html, "/redbark_items/#{item.id}/complete_account_setup"
+  end
+
+  test "the generated select existing account view is plain ERB that renders" do
+    assert_plain_erb render_template("select_existing_account.html.erb.tt", file_name: "gocardless")
+
+    account = accounts(:depository)
+    html = render_generated_view(render_template("select_existing_account.html.erb.tt", file_name: "redbark"),
+                                 template: "redbark_items/select_existing_account",
+                                 assigns: { account: account, redbark_accounts: [ redbark_accounts(:savings_account) ] })
+
+    assert_includes html, account.name
+    assert_includes html, redbark_accounts(:savings_account).name
+    assert_includes html, "/redbark_items/link_existing_account"
   end
 end
