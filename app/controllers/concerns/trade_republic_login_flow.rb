@@ -32,23 +32,25 @@ module TradeRepublicLoginFlow
       code: trade_republic_login_params[:code]
     )
 
+    # Each outcome applies only while this code's login is still the current
+    # one; a cancel or a newer login in another tab may have replaced it.
     if result.data["status"] == "pending"
-      login_record.update!(pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
+      next_pending = result.data["pending_login_b64"].presence || pending
+      return render_superseded_code_login unless store_pending_login_if_current!(pending, next_pending)
+
       if turbo_panel_request?
         render_login_panel(notice: login_t("approval_pending"))
       else
         redirect_to settings_providers_path(anchor: "trade-republic"), notice: login_t("approval_pending")
       end
     elsif duplicate_connection?(result)
+      return render_superseded_code_login unless end_login_if_current!(pending, final: true)
+
       discard_duplicate_connection!
       render_duplicate_login
     else
       begin
-        unless connect_if_pending_login_current!(pending, result)
-          return render_login_panel if turbo_panel_request?
-
-          return redirect_to(settings_providers_path(anchor: "trade-republic"), status: :see_other)
-        end
+        return render_superseded_code_login unless connect_if_pending_login_current!(pending, result)
       rescue ActiveRecord::RecordNotUnique
         discard_duplicate_connection!
         return render_duplicate_login
@@ -62,7 +64,8 @@ module TradeRepublicLoginFlow
   rescue Provider::TradeRepublicClient::InvalidChallenge => e
     redirect_to settings_providers_path(anchor: "trade-republic"), alert: e.message, status: :see_other
   rescue Provider::TradeRepublicClient::LoginExpired, Provider::TradeRepublicClient::AuthenticationRequired
-    end_login!(final: false)
+    return render_superseded_code_login unless end_login_if_current!(pending, final: false)
+
     redirect_to settings_providers_path(anchor: "trade-republic"), alert: login_t("login_expired"), status: :see_other
   rescue Provider::TradeRepublicClient::Error => e
     redirect_to settings_providers_path(anchor: "trade-republic"), alert: e.message, status: :see_other
@@ -327,6 +330,12 @@ module TradeRepublicLoginFlow
     # A newer login owns the card now; leave its state and poller alone.
     def render_superseded_push_login
       login_poll_response(:no_content) { render_login_panel }
+    end
+
+    def render_superseded_code_login
+      return render_login_panel if turbo_panel_request?
+
+      redirect_to settings_providers_path(anchor: "trade-republic"), status: :see_other
     end
 
     def render_superseded_qr_login

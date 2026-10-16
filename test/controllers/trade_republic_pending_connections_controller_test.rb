@@ -191,6 +191,42 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     assert_redirected_to settings_providers_path(anchor: "trade-republic")
   end
 
+  test "an authenticator code still pending keeps a login that replaced it meanwhile" do
+    pending_connection = @family.trade_republic_pending_connections.create!(phone_number: "+491701234567", pending_login_state: "code-pending")
+    provider = stub_provider
+    provider.expects(:complete_login).with { |**| pending_connection.update_columns(pending_login_state: "newer") }
+      .returns(result("status" => "pending", "pending_login_b64" => "code-next"))
+
+    post complete_login_trade_republic_pending_connection_url(pending_connection), params: { trade_republic_login: { code: "123456" } }, headers: TURBO_STREAM
+
+    assert_equal "newer", pending_connection.reload.pending_login_state
+  end
+
+  test "an expired authenticator code does not end a login that replaced it meanwhile" do
+    pending_connection = @family.trade_republic_pending_connections.create!(phone_number: "+491701234567", pending_login_state: "code-pending")
+    provider = stub_provider
+    provider.expects(:complete_login).with { |**| pending_connection.update_columns(pending_login_state: "newer") }
+      .raises(Provider::TradeRepublicClient::LoginExpired, "expired")
+
+    post complete_login_trade_republic_pending_connection_url(pending_connection), params: { trade_republic_login: { code: "123456" } }
+
+    assert_redirected_to settings_providers_path(anchor: "trade-republic")
+    assert_equal "newer", pending_connection.reload.pending_login_state
+  end
+
+  test "a duplicate authenticator code result does not remove a login that replaced it meanwhile" do
+    pending_connection = @family.trade_republic_pending_connections.create!(phone_number: "+491701234567", pending_login_state: "code-pending")
+    @family.trade_republic_items.create!(name: "Trade Republic", currency: "EUR", status: :good, session_blob: "session", brokerage_account_id: "DE8888")
+    provider = stub_provider
+    provider.expects(:complete_login).with { |**| pending_connection.update_columns(pending_login_state: "newer") }
+      .returns(result("status" => "ok", "session_txt" => "session", "account" => { "brokerage_account_id" => "DE8888" }))
+
+    post complete_login_trade_republic_pending_connection_url(pending_connection), params: { trade_republic_login: { code: "123456" } }, headers: TURBO_STREAM
+
+    assert TradeRepublicPendingConnection.exists?(pending_connection.id)
+    assert_equal "newer", pending_connection.reload.pending_login_state
+  end
+
   test "the login is started and polled with the same device ID" do
     device_ids = []
     Provider::TradeRepublicClient.stubs(:new).with { |**options| device_ids << options[:device_id] }.returns(
