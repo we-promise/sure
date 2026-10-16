@@ -76,7 +76,11 @@ class BinanceItemsController < ApplicationController
       else
         ".no_credentials_configured"
       end
-      redirect_to settings_providers_path, alert: t(message_key)
+      if turbo_frame_request?
+        render_frame_redirect(settings_providers_path, alert: t(message_key))
+      else
+        redirect_to settings_providers_path, alert: t(message_key)
+      end
       return
     end
 
@@ -285,5 +289,17 @@ class BinanceItemsController < ApplicationController
 
     def complete_account_setup_params
       params.permit(:sync_start_date, selected_accounts: [])
+    end
+
+    # Add Account opens select_accounts inside the "modal" turbo frame, and a
+    # plain redirect would be followed within it, losing the page and its
+    # alert. Answer with the frame carrying a redirect stream action instead,
+    # which performs a full-page visit (as PlaidItemsController does).
+    def render_frame_redirect(path, alert:)
+      flash[:alert] = alert
+
+      render html: helpers.turbo_frame_tag(turbo_frame_request_id) {
+        helpers.turbo_stream.action(:redirect, path)
+      }
     end
 end
