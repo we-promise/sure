@@ -590,12 +590,15 @@ class Transaction < ApplicationRecord
       to_blob_ids.size + from.attachments_attachments.where.not(blob_id: to_blob_ids).count
     end
 
-    # Notes merged earlier are joined by blank lines, so compare whole notes:
-    # "Order 123" is not already in "Order 1234".
+    # Notes merged earlier are joined by blank lines, so look for the pending
+    # note's paragraphs, in order, among the posted note's: "Order 123" is not
+    # already in "Order 1234", and a multi-paragraph note is not split apart.
     def merged_notes(posted_notes, pending_notes)
       return posted_notes if pending_notes.blank?
       return pending_notes if posted_notes.blank?
-      return posted_notes if posted_notes.split(/\n{2,}/).map(&:strip).include?(pending_notes.strip)
+      posted_parts = posted_notes.split(/\n{2,}/).map(&:strip)
+      pending_parts = pending_notes.split(/\n{2,}/).map(&:strip)
+      return posted_notes if posted_parts.each_cons(pending_parts.size).include?(pending_parts)
 
       "#{posted_notes}\n\n#{pending_notes}"
     end

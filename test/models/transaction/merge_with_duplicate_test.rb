@@ -368,6 +368,24 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     assert_equal "Booked\n\nLunch with client", @posted_entry.reload.notes
   end
 
+  test "does not repeat a multi-paragraph pending note identical to the posted note" do
+    @pending_entry.update!(notes: "Lunch with client\n\nPaid by card")
+    @posted_entry.update!(notes: "Lunch with client\n\nPaid by card")
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal "Lunch with client\n\nPaid by card", @posted_entry.reload.notes
+  end
+
+  test "does not repeat a multi-paragraph pending note already merged into the posted note" do
+    @pending_entry.update!(notes: "Lunch with client\n\nPaid by card")
+    @posted_entry.update!(notes: "Booked\n\nLunch with client\n\nPaid by card")
+
+    @pending_entry.transaction.merge_with_duplicate!
+
+    assert_equal "Booked\n\nLunch with client\n\nPaid by card", @posted_entry.reload.notes
+  end
+
   test "keeps one attachment when both transactions have the same blob" do
     pending_tx = @pending_entry.transaction
     posted_tx = @posted_entry.transaction
