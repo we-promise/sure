@@ -74,6 +74,24 @@ class IncomeStatement::DailyExpenseTotalsTest < ActiveSupport::TestCase
     assert_equal [ 3.days.ago.to_date, Date.current ], daily_series.map(&:date)
   end
 
+  test "splits each day's expense total by category when asked" do
+    food = @family.categories.create! name: "Food"
+    create_transaction(account: @checking, amount: 100, date: Date.current, category: food)
+    create_transaction(account: @checking, amount: 50, date: Date.current, category: food)
+    create_transaction(account: @checking, amount: 25, date: Date.current)
+    create_transaction(account: @checking, amount: -500, date: Date.current, category: food) # income
+
+    rows = IncomeStatement::DailyExpenseTotals.new(
+      @family,
+      transactions_scope: @family.transactions.visible.excluding_pending.in_period(@period),
+      date_range: @period.date_range,
+      by_category: true
+    ).call
+
+    assert_equal({ food.id => 150, nil => 25 }, rows.to_h { |row| [ row.category_id, row.total ] })
+    assert_equal daily_series.sum(&:total), rows.sum(&:total)
+  end
+
   private
     def daily_series
       IncomeStatement.new(@family).daily_expense_series(period: @period)
