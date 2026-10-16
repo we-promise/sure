@@ -7,7 +7,8 @@ import { Controller } from "@hotwired/stimulus"
 // controller connects, or never, so the frame declares when to start:
 //
 //   data-action="turbo:before-fetch-request->turbo-frame-timeout#startTimeout
-//                turbo:frame-load->turbo-frame-timeout#clearTimeout"
+//                turbo:frame-load->turbo-frame-timeout#clearTimeout
+//                turbo:fetch-request-error->turbo-frame-timeout#handleError"
 export default class extends Controller {
   static values = { timeout: { type: Number, default: 10000 } }
 
@@ -50,6 +51,18 @@ export default class extends Controller {
     // would then overwrite the sparkline that just arrived.
     if (!this.element.hasAttribute("busy")) return
 
+    this.showBadge()
+  }
+
+  // A failed request (network error, dropped connection) clears `busy` without
+  // ever firing turbo:frame-load, so the timeout above would leave the loading
+  // placeholder in place for good. Show the badge right away instead.
+  handleError() {
+    this.clearTimeout()
+    this.showBadge()
+  }
+
+  showBadge() {
     // Replace loading content with error state
     this.element.innerHTML = `
       <div class="flex items-center justify-end gap-1">
