@@ -18,10 +18,10 @@ class Rule < ApplicationRecord
   # the next run would email every older transaction the edited rule now matches.
   #
   # Every update assigns the flag in before_update, and only the after_update of
-  # that same save reads it. Declared right below accepts_nested_attributes_for,
-  # that after_update runs once the nested conditions and actions are saved,
-  # inside the save's transaction, so a rolled back edit takes its baseline rows
-  # with it.
+  # that same save reads it. Rails adds the callbacks that save the nested
+  # conditions and actions where their has_many is declared, above this one, so
+  # this after_update runs after they are saved. It runs inside the save's
+  # transaction, so a rolled back edit takes its baseline rows with it.
   before_update :detect_matching_scope_change
   after_update :reseed_notification_baseline, if: -> { @reseed_notification_baseline }
 
