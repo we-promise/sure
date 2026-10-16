@@ -26,12 +26,8 @@ class TradeRepublic::ConnectionCardComponent < ApplicationComponent
     identifier&.last
   end
 
-  def identifier_label
-    translation("identifier_#{identifier.first}") if identifier
-  end
-
   def identifier_text
-    "#{identifier_label} \u2022\u2022\u2022\u2022 #{identifier_last4}" if identifier
+    masked_identifier(*identifier) if identifier
   end
 
   # TradeRepublicItem#login_stage decodes the pending login payload on every
@@ -77,10 +73,5 @@ class TradeRepublic::ConnectionCardComponent < ApplicationComponent
 
     def portfolio_account_id
       item.trade_republic_accounts.detect { |account| account.kind == "portfolio" }&.trade_republic_account_id
-    end
-
-    def last4(value)
-      cleaned = value.to_s.delete(" ")
-      cleaned.last(4) if cleaned.size >= 4
     end
 end

@@ -88,7 +88,8 @@ class TradeRepublicPendingConnectionsController < ApplicationController
     end
 
     # A cancelled login leaves nothing to keep. One that only lapsed keeps its
-    # row, so the QR login can start again from it.
+    # row, so the panel can say so until it is cancelled or a new login from
+    # Add a connection replaces it.
     def end_login!(final:)
       return if @pending_connection.destroyed?
 

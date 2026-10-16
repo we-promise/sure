@@ -21,18 +21,12 @@ class TradeRepublic::PendingConnectionCardComponent < ApplicationComponent
     @login_stage = pending_connection.login_stage
   end
 
+  # TradeRepublicPendingConnection#lapsed?, with the stage read above.
   def expired?
-    return @expired if defined?(@expired)
-
-    @expired = pending_connection.lapsed?
+    pending_connection.pending_login_state.blank? || login_stage == "expired"
   end
 
   def identifier_text
-    "#{translation("identifier_phone")} \u2022\u2022\u2022\u2022 #{phone_last4}" if phone_last4
-  end
-
-  def phone_last4
-    digits = pending_connection.phone_number.to_s.delete(" ")
-    digits.last(4) if digits.size >= 4
+    masked_identifier(:phone, last4(pending_connection.phone_number))
   end
 end
