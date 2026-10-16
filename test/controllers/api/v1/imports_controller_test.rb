@@ -15,7 +15,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
-      display_key: "test_rw_#{SecureRandom.hex(8)}",
+      key: "test_rw_#{SecureRandom.hex(8)}",
       source: "web"
     )
 
@@ -23,7 +23,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "Test Read-Only Key",
       scopes: [ "read" ],
-      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      key: "test_ro_#{SecureRandom.hex(8)}",
       source: "mobile"
     )
 
@@ -249,7 +249,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
       name: "No Read Key",
       scopes: [],
       source: "web",
-      display_key: "no_read_#{SecureRandom.hex(8)}"
+      key: "no_read_#{SecureRandom.hex(8)}"
     )
     api_key_without_read.save!(validate: false)
 

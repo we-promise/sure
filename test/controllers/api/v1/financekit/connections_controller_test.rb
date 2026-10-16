@@ -10,8 +10,8 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     financekit_setup
     @user.api_keys.active.destroy_all
     @key = ApiKey.create!(user: @user, name: "FinanceKit test", scopes: [ "read_write" ],
-      display_key: "test_#{SecureRandom.hex(16)}", source: "web")
-    @headers = { "X-Api-Key" => @key.display_key }
+      key: "test_#{SecureRandom.hex(16)}", source: "web")
+    @headers = { "X-Api-Key" => @key.plain_key }
     @publisher_headers = { "Authorization" => "Bearer #{@credential}", "Content-Type" => "application/json" }
     ApiRateLimiter.stubs(:limit).returns(nil)
     clear_enqueued_jobs
@@ -201,9 +201,9 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     # endpoints now, so this is the whole access check rather than one of three.
     member = users(:family_member)
     key = ApiKey.create!(user: member, name: "FinanceKit member test", scopes: [ "read_write" ],
-      display_key: "test_#{SecureRandom.hex(16)}", source: "web")
+      key: "test_#{SecureRandom.hex(16)}", source: "web")
 
-    get "/api/v1/financekit/capabilities", headers: { "X-Api-Key" => key.display_key }
+    get "/api/v1/financekit/capabilities", headers: { "X-Api-Key" => key.plain_key }
     assert_response :forbidden
     assert_equal "publisher_forbidden", response.parsed_body.fetch("error")
 
@@ -216,8 +216,8 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     assert other.admin?
     assert_not_equal @family.id, other.family_id
     other_key = ApiKey.create!(user: other, name: "FinanceKit other test", scopes: [ "read" ],
-      display_key: "test_#{SecureRandom.hex(16)}", source: "web")
-    get "/api/v1/financekit/connections/#{@item.id}", headers: { "X-Api-Key" => other_key.display_key }
+      key: "test_#{SecureRandom.hex(16)}", source: "web")
+    get "/api/v1/financekit/connections/#{@item.id}", headers: { "X-Api-Key" => other_key.plain_key }
     assert_response :not_found
   end
 

@@ -28,6 +28,8 @@ en:
         revoke_confirmation: "Are you sure you want to revoke \"%{name}\"? This will immediately disable any application using this key."
       key_reveal:
         copied: "Copied!"
+      usage:
+        api_key_placeholder: "YOUR_API_KEY"
       show:
         title: "API Key Management"
         newly_created:
@@ -42,8 +44,8 @@ en:
         current_api_key:
           title: "Your API Key"
           permissions: "Permissions"
-          copy_api_key: "Copy API Key"
-          copy_store_securely: "Copy and store this key securely. You'll need it to authenticate your API requests."
+          key_not_shown: "For your security, the full key is shown only once, when it is created, and cannot be displayed again. If you have lost it, revoke this key and create a new one."
+          key_prefix: "Starts with %{prefix}…"
           usage_instructions_title: "How to use your API key"
           usage_instructions: "Include your API key in the X-Api-Key header when making requests to the %{product_name} API:"
           back_to_keys: "Back to API Keys"

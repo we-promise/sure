@@ -1,7 +1,11 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+#
+# Keys are stored as digests only. A test that needs to authenticate with one of
+# these keys gets its secret from `fixture_api_key` in test_helper.rb.
 
 active_key:
-  display_key: "test_key_123"
+  key_digest: <%= ApiKey.digest("test_key_123") %>
+  key_prefix: "test_key"
   name: "Production API Key"
   user: family_admin
   scopes: ["read_write"]
@@ -10,7 +14,8 @@ active_key:
   revoked_at: null
 
 expired_key:
-  display_key: "expired_key_456"
+  key_digest: <%= ApiKey.digest("expired_key_456") %>
+  key_prefix: "expired_"
   name: "Expired API Key"
   user: family_member
   scopes: ["read"]
@@ -19,7 +24,8 @@ expired_key:
   revoked_at: null
 
 revoked_key:
-  display_key: "revoked_key_789"
+  key_digest: <%= ApiKey.digest("revoked_key_789") %>
+  key_prefix: "revoked_"
   name: "Revoked API Key"
   user: family_admin
   scopes: ["read_write"]
@@ -31,13 +37,15 @@ one:
   id: <%= SecureRandom.uuid %>
   user: family_admin
   name: "Test API Key"
-  display_key: "test_one_key_123"
+  key_digest: <%= ApiKey.digest("test_one_key_123") %>
+  key_prefix: "test_one"
   scopes: [ "read" ]
 
 two:
   id: <%= SecureRandom.uuid %>
   user: family_admin
   name: "Second API Key"
-  display_key: "test_two_key_456"
+  key_digest: <%= ApiKey.digest("test_two_key_456") %>
+  key_prefix: "test_two"
   scopes: [ "read_write" ]
   revoked_at: <%= 1.day.ago %>

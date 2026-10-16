@@ -8,9 +8,12 @@
 <% end %>
 
 <% if @newly_created %>
+  <% content_for :head do %>
+    <meta name="turbo-cache-control" content="no-cache">
+  <% end %>
   <%= content_for :page_title, t(".newly_created.page_title") %>
 
-  <div class="bg-container rounded-xl shadow-border-xs p-4">
+  <div id="newly_created_api_key_reveal" data-turbo-permanent class="bg-container rounded-xl shadow-border-xs p-4">
     <div class="space-y-4">
       <div class="p-3 shadow-border-xs bg-container rounded-lg">
         <div class="flex items-start gap-3">
@@ -28,13 +31,13 @@
       </div>
 
       <%= render "settings/api_keys/key_reveal",
-          api_key: @api_key,
+          plain_key: @plain_key,
           heading: t(".newly_created.your_api_key"),
           description: t(".newly_created.copy_store_securely"),
           copy_label: t(".newly_created.copy_api_key") %>
 
       <%= render "settings/api_keys/usage",
-          api_key: @api_key,
+          plain_key: @plain_key,
           title: t(".newly_created.how_to_use"),
           description: t(".current_api_key.usage_instructions", product_name: product_name) %>
 
@@ -74,14 +77,15 @@
         <%= render "settings/api_keys/scope_badges", scopes: @api_key.scopes %>
       </div>
 
-      <%= render "settings/api_keys/key_reveal",
-          api_key: @api_key,
-          heading: t(".current_api_key.title"),
-          description: t(".current_api_key.copy_store_securely"),
-          copy_label: t(".current_api_key.copy_api_key") %>
+      <div class="bg-surface-inset rounded-xl p-4">
+        <h4 class="font-medium text-primary mb-3"><%= t(".current_api_key.title") %></h4>
+        <p class="text-secondary text-sm"><%= t(".current_api_key.key_not_shown") %></p>
+        <% if @api_key.key_prefix.present? %>
+          <p class="text-primary text-sm font-mono mt-3"><%= t(".current_api_key.key_prefix", prefix: @api_key.key_prefix) %></p>
+        <% end %>
+      </div>
 
       <%= render "settings/api_keys/usage",
-          api_key: @api_key,
           title: t(".current_api_key.usage_instructions_title"),
           description: t(".current_api_key.usage_instructions", product_name: product_name) %>
 

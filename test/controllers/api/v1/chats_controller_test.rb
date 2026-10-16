@@ -49,7 +49,7 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
       name: "MCP Only Key",
       scopes: [ "read_write" ],
       source: "web",
-      display_key: "test_rw_#{SecureRandom.hex(8)}"
+      key: "test_rw_#{SecureRandom.hex(8)}"
     )
 
     get "/api/v1/chats", headers: api_headers(api_key)
