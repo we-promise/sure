@@ -156,12 +156,13 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     assert_nil @item.reload.pending_login_state
   end
 
-  test "a failed QR cancel offers the cancel again and keeps the PIN login hidden" do
+  test "a failed QR cancel keeps the PIN login hidden until a retried cancel succeeds" do
     visit settings_providers_path
     find("summary", text: "Trade Republic").click
     page.execute_script(<<~JS)
       const fetch = window.fetch;
-      window.fetch = (url, options) => String(url).includes("cancel_qr_login")
+      window.failQrCancel = true;
+      window.fetch = (url, options) => window.failQrCancel && String(url).includes("cancel_qr_login")
         ? Promise.resolve(new Response("", { status: 500 }))
         : fetch(url, options);
     JS
@@ -174,6 +175,13 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
       assert_button qr_cancel, disabled: false
       assert_no_button panel_t("pin_login"), exact: true
     end
+
+    page.execute_script("window.failQrCancel = false")
+    within("##{TradeRepublic::ConnectionCardComponent.dom_id_for(@item)}") { click_on qr_cancel }
+
+    # The cancel replaces the card, so each check looks it up again.
+    assert_selector "#{connection_card} button:not([disabled])", exact_text: panel_t("pin_login")
+    assert_nil @item.reload.pending_login_state
   end
 
   test "a new connection's PIN login takes the place of Add a connection, like its QR login" do
