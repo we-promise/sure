@@ -1,8 +1,14 @@
 class ProviderMerchant::Enhancer
-  BATCH_SIZE = 25
-
-  def initialize(family)
+  def initialize(family, merchant_ids: nil)
     @family = family
+    @merchant_ids = merchant_ids
+  end
+
+  # The unenhanced merchant ids, one batch per LLM call.
+  def batches
+    return [] unless llm_provider
+
+    unenhanced_merchants.map(&:id).each_slice(Provider::LlmConcept.max_items_per_call).to_a
   end
 
   def enhance
@@ -14,7 +20,7 @@ class ProviderMerchant::Enhancer
     enhanced_count = 0
     deduplicated_count = 0
 
-    unenhanced_merchants.each_slice(BATCH_SIZE) do |batch|
+    unenhanced_merchants.each_slice(Provider::LlmConcept.max_items_per_call) do |batch|
       result = llm_provider.enhance_provider_merchants(
         merchants: batch.map { |m| { id: m.id, name: m.name } },
         family: @family
@@ -79,10 +85,11 @@ class ProviderMerchant::Enhancer
     end
 
     def unenhanced_merchants
-      @unenhanced_merchants ||= @family.assigned_merchants
-                                       .where(type: "ProviderMerchant")
-                                       .where(website_url: [ nil, "" ])
-                                       .to_a
+      @unenhanced_merchants ||= begin
+        scope = @family.assigned_merchants.where(type: "ProviderMerchant").where(website_url: [ nil, "" ])
+        scope = scope.where(id: @merchant_ids) if @merchant_ids
+        scope.to_a
+      end
     end
 
     def build_logo_url(business_url)

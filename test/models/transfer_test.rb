@@ -14,6 +14,38 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
+  test "deleting one leg gives the other leg back the standard kind" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.confirm!
+    outflow = transfer.outflow_transaction
+    assert_equal "cc_payment", outflow.reload.kind
+
+    assert_difference "Transfer.count", -1 do
+      transfer.inflow_transaction.entry.destroy!
+    end
+
+    assert_equal "standard", outflow.reload.kind
+  end
+
+  test "deleting a leg of a pending transfer leaves the other leg's kind alone" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.inflow_transaction.update!(kind: "one_time")
+
+    transfer.outflow_transaction.entry.destroy!
+
+    assert_equal "one_time", transfer.inflow_transaction.reload.kind
+  end
+
+  test "destroy resets the transfer kinds of a confirmed transfer, like destroy!" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    transfer.confirm!
+
+    transfer.destroy
+
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
   test "destroy! clears the idempotency key so a retried request can create a new transfer" do
     idempotency_key = SecureRandom.uuid
 

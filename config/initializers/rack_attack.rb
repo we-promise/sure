@@ -143,6 +143,47 @@ class Rack::Attack
     credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/api/v1/auth/sso_link")
   end
 
+  # Self-service password change checks the current password
+  # (password_challenge) for a signed-in user, so there's no email param. The
+  # signed session cookie leads to the user whose password is being checked
+  # (the impersonated user while an impersonation is in progress, like
+  # Current.user), so neither rotating IPs nor holding several sessions buys
+  # more guesses. Only PATCH/PUT /password pays for the lookup, and it is
+  # memoized on the request so both throttles share it.
+  password_change_user = ->(request) do
+    request.env.fetch("sure.password_change_user") do
+      request.env["sure.password_change_user"] = begin
+        session_id = ActionDispatch::Request.new(request.env).cookie_jar.signed[:session_token]
+        # Same check as Authentication#find_session_by_cookie: a session whose
+        # owner was deactivated is rejected there, so it isn't counted here.
+        if session_id.present?
+          user_id, impersonation_id = Session.joins(:user).where(id: session_id, users: { active: true })
+            .pick(:user_id, :active_impersonator_session_id)
+        end
+        if impersonation_id
+          user_id = ImpersonationSession.in_progress.where(id: impersonation_id).pick(:impersonated_id) || user_id
+        end
+        "user:#{user_id}" if user_id
+      end
+    end
+  end
+
+  # Rack::MethodOverride runs earlier in the stack, so the form's
+  # `_method=patch` already shows up as PATCH here.
+  password_change_request = ->(request) do
+    (request.patch? || request.put?) && credential_guess_path.call(request, "/password")
+  end
+
+  # Requests without a valid session never reach the password check (they're
+  # redirected to sign in), so they don't spend the shared per-IP budget.
+  throttle("password_change/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if password_change_request.call(request) && password_change_user.call(request)
+  end
+
+  throttle("password_change/user", limit: 10, period: 1.minute) do |request|
+    password_change_user.call(request) if password_change_request.call(request)
+  end
+
   # FinanceKit publisher endpoints belong to this section: both the upload and
   # the receipt read authenticate a bearer token against a stored SHA-256
   # digest (FinancekitItem#authenticate_credential?), the same
