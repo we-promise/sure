@@ -54,6 +54,28 @@ class IncomeStatementTest < ActiveSupport::TestCase
     IncomeStatement.new(@family).send(:category_stats)
   end
 
+  test "cache freshness key changes through account deletion lifecycle and does not revert" do
+    empty_account = @family.accounts.create!(
+      name: "Empty Account",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Depository.new
+    )
+
+    @checking_account.touch
+    k0 = IncomeStatement.new(@family.reload).send(:cache_freshness_key)
+
+    empty_account.mark_for_deletion!
+    k1 = IncomeStatement.new(@family.reload).send(:cache_freshness_key)
+
+    empty_account.destroy!
+    k2 = IncomeStatement.new(@family.reload).send(:cache_freshness_key)
+
+    assert_not_equal k0, k1
+    assert_not_equal k1, k2
+    assert_not_equal k0, k2
+  end
+
   test "a new statement invalidates daily series when exchange rates change" do
     statement = IncomeStatement.new(@family)
     period = Period.last_30_days

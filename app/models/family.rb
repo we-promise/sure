@@ -684,7 +684,6 @@ class Family < ApplicationRecord
   # considers accessible).
   def accounts_status_version
     count, max_at = accounts.pick(Arel.sql("count(*)"), Arel.sql("max(updated_at)"))
-    max_at = max_at.to_time if max_at.is_a?(String)
     "#{count}-#{max_at&.to_f}"
   end
 
