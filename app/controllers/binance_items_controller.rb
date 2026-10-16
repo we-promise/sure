@@ -58,8 +58,23 @@ class BinanceItemsController < ApplicationController
     end
   end
 
+  # Add Account -> Crypto -> Binance lands here. The connection's sync is what
+  # finds the accounts, so open that connection's account setup, as Kraken does.
   def select_accounts
-    redirect_to settings_providers_path
+    binance_items = Current.family.binance_items.active.ordered.select(&:credentials_configured?)
+    binance_item = if params[:binance_item_id].present?
+      binance_items.find { |item| item.id.to_s == params[:binance_item_id].to_s }
+    elsif binance_items.one?
+      binance_items.first
+    end
+
+    unless binance_item
+      message_key = binance_items.many? && params[:binance_item_id].blank? ? ".select_connection" : ".no_credentials_configured"
+      redirect_to settings_providers_path, alert: t(message_key)
+      return
+    end
+
+    redirect_to setup_accounts_binance_item_path(binance_item), status: :see_other
   end
 
   def link_accounts
