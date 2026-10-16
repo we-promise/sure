@@ -12,16 +12,21 @@ class Rule < ApplicationRecord
   accepts_nested_attributes_for :conditions, allow_destroy: true
   accepts_nested_attributes_for :actions, allow_destroy: true
 
-  before_validation :normalize_name
-  before_create :assign_next_position
-
   # Re-watermark email notifications when an edit changes which transactions the
   # rule matches (its conditions or its effective date). Rule::Action only seeds
   # the baseline when an action becomes send_email_notification, so without this
   # the next run would email every older transaction the edited rule now matches.
+  #
+  # Every update assigns the flag in before_update, and only the after_update of
+  # that same save reads it. Declared right below accepts_nested_attributes_for,
+  # that after_update runs once the nested conditions and actions are saved,
+  # inside the save's transaction, so a rolled back edit takes its baseline rows
+  # with it.
   before_update :detect_matching_scope_change
-  after_update_commit :reseed_notification_baseline, if: -> { @reseed_notification_baseline }
-  after_rollback { @reseed_notification_baseline = false }
+  after_update :reseed_notification_baseline, if: -> { @reseed_notification_baseline }
+
+  before_validation :normalize_name
+  before_create :assign_next_position
 
   # Rules run top to bottom. created_at breaks ties, e.g. for rules created at
   # the same moment before anyone reordered them.
