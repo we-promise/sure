@@ -105,6 +105,65 @@ class RuleTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects an unknown action type" do
+    rule = @family.rules.build(resource_type: "transaction")
+    action = rule.actions.build(action_type: "garbage")
+
+    assert_not rule.valid?
+    assert action.errors.of_kind?(:action_type, :inclusion)
+  end
+
+  test "accepts every action executor as an action type" do
+    keys = Dir[Rails.root.join("app/models/rule/action_executor/*.rb")].map { |path| File.basename(path, ".rb") }
+    assert_includes keys, "auto_categorize"
+
+    keys.each do |key|
+      rule = @family.rules.build(resource_type: "transaction")
+      action = rule.actions.build(action_type: key)
+
+      # A split action is only valid with a split configuration in `value`;
+      # its action_type is still accepted.
+      if key == "split_transaction"
+        rule.valid?
+      else
+        assert rule.valid?, "#{key}: #{rule.errors.full_messages.to_sentence}"
+      end
+      assert_empty action.errors[:action_type], key
+    end
+  end
+
+  test "rejects an unknown resource type without raising or flagging its actions" do
+    rule = @family.rules.build(resource_type: "account")
+    action = rule.actions.build(action_type: "exclude_transaction")
+
+    assert_nothing_raised { assert_not rule.valid? }
+    assert rule.errors.of_kind?(:resource_type, :inclusion)
+    assert_empty action.errors[:action_type]
+
+    rule.resource_type = "transaction"
+    assert rule.valid?
+  end
+
+  test "keeps reporting a null byte in a type as invalid text" do
+    rule = @family.rules.build(resource_type: "transaction\0")
+    action = rule.actions.build(action_type: "exclude_transaction\0")
+
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:resource_type, :invalid)
+    assert action.errors.of_kind?(:action_type, :invalid)
+    assert_not rule.errors.of_kind?(:resource_type, :inclusion)
+    assert_not action.errors.of_kind?(:action_type, :inclusion)
+  end
+
+  test "an untouched saved action with an unknown type does not block an unrelated edit" do
+    rule = @family.rules.create!(resource_type: "transaction", actions_attributes: [ { action_type: "exclude_transaction" } ])
+    rule.actions.first.update_column(:action_type, "retired_action")
+
+    rule = Rule.find(rule.id)
+    assert rule.update(name: "Renamed"), rule.errors.full_messages.to_sentence
+    assert_equal "Renamed", rule.reload.name
+  end
+
   test "basic rule" do
     transaction_entry = create_transaction(date: Date.current, account: @account, merchant: @whole_foods_merchant)
 

@@ -510,6 +510,24 @@ class RuleImportTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects an unknown imported action type" do
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [
+        "Unknown action rule", "transaction", true, nil,
+        [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ].to_json,
+        [ { action_type: "garbage" } ].to_json
+      ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    error = assert_raises(ActiveRecord::RecordInvalid) { import.send(:import!) }
+    assert_match(/is not included in the list/, error.message)
+    assert_nil @family.rules.find_by(name: "Unknown action rule")
+  end
+
   test "imports valid JSON conditions whose values contain escaped quotes" do
     csv = CSV.generate do |out|
       out << %w[name resource_type active effective_date conditions actions]

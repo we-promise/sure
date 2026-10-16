@@ -238,6 +238,28 @@ class UserTest < ActiveSupport::TestCase
     assert_not User.find(user.id).verify_otp?(code), "a freshly loaded user must reject it too"
   end
 
+  test "otp_code_status answers like verify_otp without spending the code" do
+    user = users(:family_member)
+    user.setup_mfa!
+    backup_code = user.enable_mfa!.first
+
+    travel_to Time.zone.parse("2026-10-07 12:00:10") do
+      code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+      assert_equal :accepted, user.otp_code_status(code)
+      assert_equal :accepted, user.otp_code_status(code), "checking must not claim the time step"
+      assert_equal :accepted, user.otp_code_status(backup_code)
+      assert_equal :accepted, user.otp_code_status(backup_code), "checking must not consume the backup code"
+      assert_equal :invalid, user.otp_code_status("000000")
+      assert_equal :invalid, user.otp_code_status(nil)
+
+      assert_equal :accepted, user.verify_otp(code)
+      assert_equal :replayed, user.otp_code_status(code)
+      assert_equal :accepted, user.verify_otp(backup_code)
+      assert_equal :invalid, user.otp_code_status(backup_code)
+    end
+  end
+
   test "verify_otp? accepts the next time step's code after one was used" do
     user = users(:family_member)
     user.setup_mfa!

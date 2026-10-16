@@ -1,6 +1,8 @@
 class Rule::Action < ApplicationRecord
   belongs_to :rule, touch: true
 
+  SUPPORTED_ACTION_TYPES = Rule::Registry::TransactionResource.action_executor_keys.freeze
+
   # Virtual attribute for the split_transaction form: `value` is a single string column, so the
   # split builder UI posts real, individually-named fields here instead of driving a JSON blob
   # through custom JS. build_split_value assembles them into `value` before validation runs.
@@ -17,6 +19,9 @@ class Rule::Action < ApplicationRecord
   end
 
   validates :action_type, presence: true, if: -> { action_type.to_s.valid_encoding? }
+  # A NUL or invalid encoding is reported by DatabaseTextValidator instead.
+  validates :action_type, inclusion: { in: SUPPORTED_ACTION_TYPES, allow_blank: true },
+    if: -> { DatabaseTextValidator.acceptable?(action_type) }
   validates_with DatabaseTextValidator, attributes: %i[action_type value]
   before_validation :build_split_value, if: -> { action_type == "split_transaction" && split_rows.present? }
   validate :split_config_valid, if: -> { action_type == "split_transaction" }

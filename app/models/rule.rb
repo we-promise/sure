@@ -3,6 +3,7 @@ class Rule < ApplicationRecord
   POSITION_LOCK_NAMESPACE = 4013
 
   UnsupportedResourceTypeError = Class.new(StandardError)
+  SUPPORTED_RESOURCE_TYPES = %w[transaction].freeze
 
   belongs_to :family
   has_many :conditions, dependent: :destroy
@@ -20,6 +21,9 @@ class Rule < ApplicationRecord
   scope :ordered, -> { order(:position, :created_at, :id) }
 
   validates :resource_type, presence: true, if: -> { resource_type.to_s.valid_encoding? }
+  # A NUL or invalid encoding is reported by DatabaseTextValidator instead.
+  validates :resource_type, inclusion: { in: SUPPORTED_RESOURCE_TYPES, allow_blank: true },
+    if: -> { DatabaseTextValidator.acceptable?(resource_type) }
   validates :name, length: { minimum: 1 }, allow_nil: true, if: -> { name.to_s.valid_encoding? }
   validates_with DatabaseTextValidator, attributes: %i[name resource_type]
   validate :no_nested_compound_conditions
