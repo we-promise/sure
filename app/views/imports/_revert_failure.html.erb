@@ -15,7 +15,8 @@
       <%= render DS::Button.new(
         text: t(".try_again"),
         full_width: true,
-        href: revert_import_path(import)
+        href: revert_import_path(import),
+        method: :put
       ) %>
     <% end %>
   </div>

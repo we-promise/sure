@@ -26,6 +26,17 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     )
   end
 
+  test "group_by_round splits consecutive results by round and keeps untagged results together" do
+    a = { call_id: "a", round: 1 }
+    b = { call_id: "b", round: 2 }
+    c = { call_id: "c", round: 2 }
+
+    assert_equal [ [ a ], [ b, c ] ], Assistant::Responder.group_by_round([ a, b, c ])
+    assert_equal [ [ { call_id: "x" }, { call_id: "y" } ] ],
+                 Assistant::Responder.group_by_round([ { call_id: "x" }, { call_id: "y" } ])
+    assert_equal [], Assistant::Responder.group_by_round([])
+  end
+
   test "default iteration cap is eight rounds" do
     assert_equal 8, Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS
   end

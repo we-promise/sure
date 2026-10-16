@@ -59,6 +59,7 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     )
     family.auto_match_transfers!
     assert inflow.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
+    inflow.transaction.transfer.confirm!
 
     # The next sync replays the brokerage row; the matched inflow keeps funds_movement.
     brokerage.import_transaction(
@@ -90,7 +91,8 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     )
     family.auto_match_transfers!
     assert outflow.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
-    assert_equal "funds_movement", outflow.transaction.kind
+    outflow.transaction.transfer.confirm!
+    assert_equal "funds_movement", outflow.transaction.reload.kind
 
     totals = InvestmentFlowStatement.new(family).period_totals(period: period)
     assert_equal Money.new(300, "USD"), totals.withdrawals
@@ -133,6 +135,7 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
       family.auto_match_transfers!
       assert inflow.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
       assert_equal outflow.transaction.id, inflow.transaction.transfer.outflow_transaction_id
+      inflow.transaction.transfer.confirm!
       inflow
     end
 

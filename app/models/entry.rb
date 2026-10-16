@@ -4,6 +4,13 @@ class Entry < ApplicationRecord
   TRUTHY_VALUES = [ true, "true", "1", 1 ].freeze
   private_constant :TRUTHY_VALUES
 
+  # Attributes that only describe an entry. Balance materialization and
+  # transfer matching never read them, so an edit limited to them doesn't need
+  # an account sync. Reports and budgets pick such edits up through
+  # Family#entries_cache_version, which the save itself bumps.
+  DESCRIPTIVE_ATTRIBUTES = %w[name notes updated_at].freeze
+  DESCRIPTIVE_TRANSACTION_ATTRIBUTES = %w[category_id merchant_id updated_at].freeze
+
   attr_accessor :unsplitting
 
   monetize :amount
@@ -67,9 +74,8 @@ class Entry < ApplicationRecord
   # Pending transaction scopes - check Transaction.extra for provider pending flags
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {
-    conditions = Transaction::PENDING_PROVIDERS.map { |p| "(transactions.extra -> '#{p}' ->> 'pending')::boolean = true" }
     joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-      .where(conditions.join(" OR "))
+      .where(Transaction.pending_sql)
   }
 
   scope :excluding_pending, -> {
@@ -166,9 +172,7 @@ class Entry < ApplicationRecord
   def self.reconcile_pending_duplicates(account: nil, dry_run: false, date_window: 8, amount_tolerance: 0.25)
     stats = { checked: 0, reconciled: 0, details: [] }
 
-    not_pending_sql = Transaction::PENDING_PROVIDERS
-      .map { |p| "(transactions.extra -> '#{p}' ->> 'pending')::boolean IS NOT TRUE" }
-      .join(" AND ")
+    not_pending_sql = Transaction.not_pending_sql
 
     # Get pending entries to check
     scope = Entry.pending.where(excluded: false)
@@ -312,6 +316,15 @@ class Entry < ApplicationRecord
     sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed?
     @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
+  end
+
+  # Whether the last save changed anything a sync depends on. Call it right
+  # after the save, before any follow-up write resets saved_changes.
+  def saved_changes_affect_balances?
+    return true if (saved_changes.keys - DESCRIPTIVE_ATTRIBUTES).any?
+
+    descriptive = entryable.is_a?(Transaction) ? DESCRIPTIVE_TRANSACTION_ATTRIBUTES : %w[updated_at]
+    (entryable.saved_changes.keys - descriptive).any?
   end
 
   def entryable_name_short
@@ -516,6 +529,12 @@ class Entry < ApplicationRecord
     end
 
     # Bulk update entries with the given parameters.
+    #
+    # No authorization happens here: callers must scope the relation to entries
+    # the user may change (e.g. Current.annotatable_entries, Account.writable_by)
+    # and pass only the fields that permission allows
+    # (AccountShare::ANNOTATE_* for annotate-only shares), and must resolve
+    # category, merchant and tag IDs through the family.
     #
     # Tags are handled separately from other entryable attributes because they use
     # a join table (taggings) rather than a direct column. This means:
