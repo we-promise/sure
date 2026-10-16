@@ -85,6 +85,7 @@ en:
       limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
       tabs:
         activity: Activity
+        extra_repayments: Extra repayments
         holdings: Holdings
         overview: Overview
         schedule: Schedule

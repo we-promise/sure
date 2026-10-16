@@ -38,6 +38,26 @@ de:
       type: Typ
       unknown: Unbekannt
     tabs:
+      extra_repayments:
+        amount_label: Zusätzlich pro Monat
+        amount_placeholder: "0,00"
+        apply: Anwenden
+        baseline_not_cleared: "Mit der aktuellen Rate ist dieser Kredit bis zum ursprünglichen Laufzeitende nicht getilgt, und %{balloon} blieben offen. Es gibt daher kein früheres Datum und keine Zinsersparnis zum Vergleich. Mit diesem Zusatzbetrag ist er zum oben genannten Datum getilgt."
+        clear: Zurücksetzen
+        comparison_basis: Verglichen mit der aktuellen Rate ohne Zusatzbetrag, ab dem heutigen Saldo.
+        extra_not_cleared: Auch mit diesem Zusatzbetrag ist der Kredit bis zum ursprünglichen Laufzeitende nicht getilgt. Versuchen Sie einen höheren Betrag.
+        interest_saved: Gesparte Zinsen
+        intro: Sehen Sie, wie viel früher der Kredit getilgt ist und wie viel Zinsen Sie sparen, wenn Sie mit jeder Monatsrate einen Zusatzbetrag zahlen.
+        invalid_amount: Geben Sie einen Betrag von null oder mehr in Ziffern ein.
+        months_sooner:
+          zero: Im selben Monat getilgt
+          one: "%{count} Monat früher"
+          other: "%{count} Monate früher"
+        not_applicable: Auf diesen Kredit ist nichts mehr zu tilgen, daher gibt es keine Sondertilgung zu berechnen.
+        not_cleared: Mit der aktuellen Rate nicht getilgt
+        payoff_with_extra: Tilgung mit Zusatzbetrag
+        payoff_without_extra: Tilgung ohne Zusatzbetrag
+        variable_rate_notice: Der Zinssatz dieses Kredits ändert sich. Diese Zahlen berücksichtigen die bereits erfassten Zinsänderungen; eine noch nicht erfasste Änderung verschiebt sie.
       schedule:
         date: Datum
         description: Hochgerechnet aus ursprünglicher Kreditsumme, Zinssatz und Laufzeit, beginnend am %{start_date}. Sondertilgungen sind nicht berücksichtigt.

@@ -10,6 +10,10 @@ class Loan
   #              made are in here without being named: they are why today's
   #              balance is what it is.
   #
+  #   extra      the projection again, with the Extra repayments tab's extra
+  #              amount on top of every repayment. Drawn only when the page
+  #              was given one; without it the payload is exactly as above.
+  #
   # The picked period governs the x-domain, and it means what it means on
   # every other chart: 1Y is the last year, YTD the current calendar year,
   # clamped so no window opens before the loan does. Under "All" the domain
@@ -50,11 +54,14 @@ class Loan
 
     # `projection` lets a caller that also shows the forecast elsewhere on the
     # page build it once; it must be the loan's projection for this `as_of`.
-    def initialize(loan, as_of: Date.current, period: nil, projection: nil)
+    # `extra_projection`, when given, is the same loan and `as_of` with an
+    # extra amount, and adds the `extra` series.
+    def initialize(loan, as_of: Date.current, period: nil, projection: nil, extra_projection: nil)
       @loan = loan
       @as_of = as_of
       @period = period
       @projection = projection
+      @extra_projection = extra_projection
     end
 
     # nil when there is nothing to draw. The page falls back to the plain
@@ -67,6 +74,7 @@ class Loan
         scheduled: scheduled_series,
         projected: projection_series(projection)
       }
+      series[:extra] = projection_series(extra_projection) if extra_projection
 
       {
         today: as_of.iso8601,
@@ -80,9 +88,10 @@ class Loan
         domain_start: domain_start.iso8601,
         domain_end: domain_end.iso8601,
         **series,
-        visible: SERIES.select { |key| visible?(series[key]) },
+        visible: series_keys.select { |key| visible?(series[key]) },
         scheduled_payoff_date: schedule.payoff_date&.iso8601,
         projected_payoff_date: projection.payoff_date&.iso8601,
+        **extra_payoff,
         # The figures the cards beside the chart quote. nil when the projection
         # cannot run or never clears the balance, so a card is not shown for a
         # comparison that does not exist.
@@ -98,7 +107,18 @@ class Loan
     end
 
     private
-      attr_reader :loan, :as_of, :period
+      attr_reader :loan, :as_of, :period, :extra_projection
+
+      # SERIES, plus `extra` when the page was given an extra projection.
+      def series_keys
+        extra_projection ? SERIES + [ :extra ] : SERIES
+      end
+
+      # The extra line's payoff date, nil when even the extra does not clear
+      # the loan. No key at all without an extra projection.
+      def extra_payoff
+        extra_projection ? { extra_payoff_date: extra_projection.payoff_date&.iso8601 } : {}
+      end
 
       def schedule
         @schedule ||= loan.amortization_schedule
@@ -208,7 +228,7 @@ class Loan
       # The chart controller reads `interactive_chart` for the SVG's
       # aria-roledescription; without it every locale gets its English default.
       def labels
-        SERIES.index_with { |key| I18n.t("UI.account.chart.loan.#{key}") }
+        series_keys.index_with { |key| I18n.t("UI.account.chart.loan.#{key}") }
           .merge(
             # The Schedule tab's column labels, so the tooltip and the table
             # name the same figures the same way.
@@ -227,6 +247,13 @@ class Loan
           scheduled_payoff_date: long_date(schedule.payoff_date, I18n.t("loans.tabs.overview.unknown")),
           projected_payoff_date: long_date(projection.payoff_date, I18n.t("UI.account.chart.loan.no_payoff"))
         )
+
+        if extra_projection
+          description = [ description, I18n.t(
+            "UI.account.chart.loan.aria_extra_payoff",
+            date: long_date(extra_projection.payoff_date, I18n.t("UI.account.chart.loan.no_payoff"))
+          ) ].join(" ")
+        end
 
         actual_start_date = actual.first && Date.iso8601(actual.first[:date])
         if actual_start_date && actual_start_date > domain_start

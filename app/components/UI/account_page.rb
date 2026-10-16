@@ -9,14 +9,19 @@ class UI::AccountPage < ApplicationComponent
   # `as_of` is the page's one reference date, captured by the controller.
   # `loan_projection` is the projection the controller already built for the
   # chart, so the Schedule tab's forecast card does not simulate it again.
+  # `extra_repayment` is the Extra repayments tab's Loan::ExtraRepayment, and
+  # `loan_extra_projection` the projection with it applied, on the same
+  # `as_of`; nil when no extra applies.
   def initialize(account:, chart_view: nil, chart_period: nil, loan_chart: nil, as_of: Date.current, active_tab: nil,
                  statement_coverage: nil, statements: [], reconciliation_statuses: {}, can_manage_statements: false,
-                 loan_projection: nil)
+                 loan_projection: nil, loan_extra_projection: nil, extra_repayment: nil)
     @account = account
     @chart_view = chart_view
     @chart_period = chart_period
     @loan_chart = loan_chart
     @loan_projection = loan_projection
+    @loan_extra_projection = loan_extra_projection
+    @extra_repayment = extra_repayment
     @as_of = as_of
     @active_tab = active_tab
     @statement_coverage = statement_coverage
@@ -56,7 +61,7 @@ class UI::AccountPage < ApplicationComponent
     when "Investment", "Crypto"
       [ :activity, :holdings ]
     when "Loan"
-      account.loan.amortizable? ? [ :activity, :overview, :schedule ] : [ :activity, :overview ]
+      account.loan.amortizable? ? [ :activity, :overview, :schedule, :extra_repayments ] : [ :activity, :overview ]
     when "Property", "Vehicle"
       [ :activity, :overview ]
     else
@@ -89,6 +94,12 @@ class UI::AccountPage < ApplicationComponent
     @loan_projection ||= account.loan.payoff_projection(as_of: as_of)
   end
 
+  # The controller's when it built one; otherwise no extra, as before anything
+  # is entered.
+  def extra_repayment
+    @extra_repayment ||= Loan::ExtraRepayment.new(amount: nil, currency: account.currency)
+  end
+
   def tab_content_for(tab)
     case tab
     when :activity
@@ -105,6 +116,10 @@ class UI::AccountPage < ApplicationComponent
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
     when :schedule
       render "loans/tabs/schedule", account: account, as_of: as_of, projection: loan_projection
+    when :extra_repayments
+      render "loans/tabs/extra_repayments",
+             account: account, projection: loan_projection, extra_projection: @loan_extra_projection,
+             extra_repayment: extra_repayment
     when :statements
       render_statement_tab
     end

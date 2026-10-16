@@ -31,7 +31,8 @@ class UI::Account::Chart < ApplicationComponent
   LOAN_SERIES_STYLES = {
     "actual" => { token: "--color-success", dashed: false },
     "scheduled" => { token: "--color-destructive", dashed: true },
-    "projected" => { token: "--color-success", dashed: true }
+    "projected" => { token: "--color-success", dashed: true },
+    "extra" => { token: "--color-info", dashed: true }
   }.freeze
 
   def loan_legend

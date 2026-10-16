@@ -401,15 +401,21 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "table", { count: 1 }, "the Schedule tab's table is the only one: the chart has no data table"
   end
 
-  # A stray what-if parameter from an old link must change nothing: the
-  # feature is not in this tranche (#100 decision 10).
-  test "an extra-payment parameter is ignored" do
+  # The what-if left #100's tranche (decision 10) and returns as the Extra
+  # repayments tab. An extra adds its own line and moves nothing else: every
+  # other series, date and figure is what the page shows without one.
+  test "an extra-payment parameter adds the extra line and leaves the rest of the chart as it was" do
     get account_path(@account)
     baseline = chart_payload
     get account_path(@account, extra_payment: { amount: "2000", frequency: "monthly" })
 
     assert_response :success
-    assert_equal baseline, chart_payload
+    with_extra = chart_payload
+    described = %w[visible labels aria_description]
+    assert_equal baseline.except(*described), with_extra.except("extra", "extra_payoff_date", *described)
+    assert_equal baseline["visible"] + [ "extra" ], with_extra["visible"]
+    assert_equal baseline["labels"].merge("extra" => I18n.t("UI.account.chart.loan.extra")), with_extra["labels"]
+    assert with_extra["aria_description"].start_with?(baseline["aria_description"])
   end
 
   test "a loan with no schedule renders the page without a loan chart" do
@@ -877,6 +883,126 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{loans_path}']", count: 1
     assert_select "input[name='account[name]'][value='Loan Without Nested Attributes']", count: 1
     assert_select "input[name='account[accountable_attributes][interest_rate]']", minimum: 1
+  end
+
+  test "the extra repayments tab shows for a loan that can be amortized, and not otherwise" do
+    get account_path(@account)
+    assert_select "button[role='tab'][data-id='extra_repayments']", count: 1
+
+    @account.loan.update!(rate_type: "")
+    get account_path(@account)
+    assert_select "button[role='tab'][data-id='extra_repayments']", count: 0
+  end
+
+  test "an extra amount adds the extra's cards and the chart's extra line" do
+    get account_path(@account, tab: "extra_repayments")
+
+    assert_response :success
+    assert_select "[data-testid='extra-payoff-date']", count: 0
+    assert_select "[data-testid='baseline-payoff-date']", count: 1
+    assert_not_includes chart_payload["visible"], "extra"
+
+    get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "500" })
+
+    assert_response :success
+    loan = @account.loan.reload
+    baseline = loan.payoff_projection(as_of: Date.current)
+    extra = loan.payoff_projection(as_of: Date.current, extra: 500)
+    assert_select "[data-testid='extra-payoff-date']", text: I18n.l(extra.payoff_date, format: :long)
+    assert_select "[data-testid='extra-months-sooner']",
+      text: I18n.t("loans.tabs.extra_repayments.months_sooner", count: extra.months_sooner_than(baseline))
+    assert_select "[data-testid='extra-interest-saved']", text: format_money(extra.interest_saved_versus(baseline))
+    assert_select "[data-testid='baseline-payoff-date']", text: I18n.l(baseline.payoff_date, format: :long)
+    assert_select "input[name='extra_payment[amount]'][value='500']", count: 1
+    assert_includes chart_payload["visible"], "extra"
+    assert_equal extra.payoff_date.iso8601, chart_payload["extra_payoff_date"]
+  end
+
+  # One reference date for the page: the cards, the tab and the chart all read
+  # projections built on the controller's `as_of`, each built once.
+  test "the baseline and the extra projections are built once each, on the page's one date" do
+    travel_to Time.zone.local(2026, 10, 16, 23, 59, 59) do
+      as_of = Date.current
+      loan = @account.loan
+      baseline = loan.payoff_projection(as_of: as_of)
+      extra = loan.payoff_projection(as_of: as_of, extra: BigDecimal("500"))
+      Loan.any_instance.expects(:payoff_projection).with(as_of: as_of).once.returns(baseline)
+      Loan.any_instance.expects(:payoff_projection).with(as_of: as_of, extra: BigDecimal("500")).once.returns(extra)
+
+      get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "500" })
+
+      assert_response :success
+      assert_equal extra.payoff_date.iso8601, chart_payload["extra_payoff_date"]
+      assert_select "[data-testid='extra-payoff-date']", text: I18n.l(extra.payoff_date, format: :long)
+    end
+  end
+
+  test "a refused amount shows a message and no extra, keeping what was typed" do
+    [ "-1", "abc" ].each do |input|
+      get account_path(@account, tab: "extra_repayments", extra_payment: { amount: input })
+
+      assert_response :success
+      assert_select "[data-testid='extra-amount-error']", text: I18n.t("loans.tabs.extra_repayments.invalid_amount")
+      assert_select "input[name='extra_payment[amount]'][value='#{input}'][aria-invalid='true']", count: 1
+      assert_select "[data-testid='extra-payoff-date']", count: 0
+      assert_not_includes chart_payload["visible"], "extra"
+    end
+  end
+
+  test "a zero or blank amount shows no extra and no message" do
+    [ "0", "" ].each do |input|
+      get account_path(@account, tab: "extra_repayments", extra_payment: { amount: input })
+
+      assert_response :success
+      assert_select "[data-testid='extra-amount-error']", count: 0
+      assert_select "[data-testid='extra-payoff-date']", count: 0
+      assert_not_includes chart_payload["visible"], "extra"
+    end
+  end
+
+  # The params are the borrower's to shape. A scalar where the form sends a
+  # hash, or an array where it sends a scalar, is no extra rather than a 500.
+  test "extra repayment params of the wrong shape are ignored" do
+    get account_path(@account, tab: "extra_repayments", extra_payment: "500")
+    assert_response :success
+    assert_select "[data-testid='extra-payoff-date']", count: 0
+
+    get account_path(@account, tab: "extra_repayments", extra_payment: { amount: [ "500" ] })
+    assert_response :success
+    assert_select "[data-testid='extra-payoff-date']", count: 0
+  end
+
+  # A balance the current repayment never clears has no payoff date, so there
+  # is no "months sooner" or "interest saved" to quote. The tab gives the
+  # extra's own date and says why the comparison is missing.
+  test "when only the extra clears the loan, the tab gives its date and says the repayment alone never does" do
+    draw_down_loan_two_years_ago
+    @account.update!(balance: 600_000)
+    loan = @account.loan.reload
+    baseline = loan.payoff_projection(as_of: Date.current)
+    extra = loan.payoff_projection(as_of: Date.current, extra: 5_000)
+    assert_not baseline.converged?, "the fixture must be too far behind to clear"
+    assert extra.converged?, "and the extra must clear it"
+
+    get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "5000" })
+
+    assert_response :success
+    assert_select "[data-testid='extra-payoff-date']", text: I18n.l(extra.payoff_date, format: :long)
+    assert_select "[data-testid='extra-months-sooner']", count: 0
+    assert_select "[data-testid='extra-interest-saved']", count: 0
+    assert_select "[data-testid='baseline-not-cleared']",
+      text: I18n.t("loans.tabs.extra_repayments.baseline_not_cleared", balloon: format_money(baseline.balloon_amount))
+  end
+
+  test "an extra too small to clear the loan says so instead of quoting a date" do
+    draw_down_loan_two_years_ago
+    @account.update!(balance: 600_000)
+
+    get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "1" })
+
+    assert_response :success
+    assert_select "[data-testid='extra-payoff-date']", count: 0
+    assert_select "[data-testid='extra-not-cleared']", text: I18n.t("loans.tabs.extra_repayments.extra_not_cleared")
   end
 
   private

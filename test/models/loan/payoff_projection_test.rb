@@ -217,6 +217,87 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
       "on contract, the projection must charge the running month what the schedule charges it"
   end
 
+  # The extra rides on top of the contract's repayment in every period, so
+  # each period pays exactly the extra more than the same loan without it.
+  # The last row settles the balance and is the one exception.
+  test "a monthly extra adds to every period's repayment" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    baseline = loan.payoff_projection(as_of: @today)
+    with_extra = loan.payoff_projection(as_of: @today, extra: 1_000)
+
+    assert_operator with_extra.payments.length, :>, 1
+    with_extra.payments[0..-2].each_with_index do |payment, index|
+      assert_equal BigDecimal("1000"), payment[:payment_amount] - baseline.payments[index][:payment_amount],
+        "period #{index + 1} must pay the extra on top of the contract's repayment"
+    end
+  end
+
+  # Months sooner and interest saved are measured against the same loan paying
+  # no extra, not against the contract. On an overpaid loan the two differ, so
+  # comparing against the contract would fold in how far ahead the borrower
+  # already is.
+  test "the extra clears the loan sooner, and saves interest against no extra" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today) - 50_000)
+
+    baseline = loan.payoff_projection(as_of: @today)
+    with_extra = loan.payoff_projection(as_of: @today, extra: 5_000)
+
+    # The first period by hand: 6% a year is 0.5% a month on the balance the
+    # period opened with, and the payment is the contract's plus the extra.
+    opening = loan.account.balance
+    first = with_extra.payments.first
+    expected_interest = (opening * BigDecimal("0.005")).round(2)
+    assert_equal expected_interest, first[:interest_payment]
+    assert_equal baseline.payments.first[:payment_amount] + 5_000 - expected_interest, first[:principal_payment]
+
+    assert_equal baseline.payments.length - with_extra.payments.length, with_extra.months_sooner_than(baseline)
+    assert_operator with_extra.months_sooner_than(baseline), :>, 0
+    saved = baseline.total_interest.amount - with_extra.total_interest.amount
+    assert_equal Money.new(saved, "USD"), with_extra.interest_saved_versus(baseline)
+    assert_operator saved, :>, 0
+    assert_not_equal with_extra.interest_saved, with_extra.interest_saved_versus(baseline),
+      "against no extra, not against the contract: this loan was already ahead"
+  end
+
+  # A baseline that never clears has no payoff date, so there is no "sooner"
+  # to quote and no comparable total interest. Nor is there for an extra that
+  # does not clear the loan either.
+  test "a baseline that never clears quotes no months sooner or interest saved" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: 400_000)
+
+    baseline = loan.payoff_projection(as_of: @today)
+    clearing = loan.payoff_projection(as_of: @today, extra: 20_000)
+    too_small = loan.payoff_projection(as_of: @today, extra: 10)
+
+    assert_not baseline.converged?
+    assert clearing.converged?, "an extra this large clears the loan"
+    assert clearing.payoff_date
+    assert_nil clearing.months_sooner_than(baseline)
+    assert_nil clearing.interest_saved_versus(baseline)
+
+    assert_not too_small.converged?
+    assert_nil too_small.months_sooner_than(baseline)
+    assert_nil too_small.interest_saved_versus(baseline)
+  end
+
+  test "no extra leaves the projection identical" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today) - 10_000)
+
+    baseline = loan.payoff_projection(as_of: @today)
+
+    [ nil, 0 ].each do |extra|
+      projection = loan.payoff_projection(as_of: @today, extra: extra)
+      assert_equal baseline.payments, projection.payments, "extra: #{extra.inspect}"
+      assert_equal 0, projection.months_sooner_than(baseline)
+      assert_equal Money.new(0, "USD"), projection.interest_saved_versus(baseline)
+    end
+  end
+
   private
     # Built the way the account form builds one: with an opening valuation for
     # the amount borrowed. `Loan#original_balance` reads it; without it the

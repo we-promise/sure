@@ -1,0 +1,80 @@
+<%# locals: (account:, projection:, extra_projection:, extra_repayment:) %>
+
+<%# What paying an extra amount on top of every repayment does to the payoff
+    date and the interest. `projection` is the page's projection with no extra
+    and `extra_projection` the same loan on the same date with the extra, nil
+    when none applies. The chart above draws both, so the cards and the lines
+    quote one date. Each comparison is against paying no extra, not against
+    the contract: the Schedule tab and the chart already say how far ahead or
+    behind the loan is. %>
+<% invalid = extra_repayment.invalid? %>
+
+<div class="space-y-4">
+  <p class="text-sm text-secondary"><%= t(".intro") %></p>
+
+  <% if projection.applicable? %>
+    <%= form_with url: account_path(account), method: :get, scope: :extra_payment,
+                  data: { turbo_action: "advance" } do |f| %>
+      <%= hidden_field_tag :tab, "extra_repayments", id: nil %>
+      <div class="flex flex-wrap items-end gap-2">
+        <%# A bounded width: `.form-field` is full width, which pushes Apply
+            onto a line of its own. %>
+        <div class="form-field w-48">
+          <%= f.label :amount, t(".amount_label"), class: "form-field__label" %>
+          <%= f.number_field :amount, value: extra_repayment.input.presence, min: 0, step: "any",
+                class: "form-field__input", placeholder: t(".amount_placeholder"),
+                "aria-invalid": (invalid ? "true" : nil),
+                "aria-describedby": (dom_id(account, :extra_amount_error) if invalid) %>
+        </div>
+        <%= render DS::Button.new(text: t(".apply"), type: "submit", variant: "outline") %>
+        <% if extra_repayment.input.present? %>
+          <%= render DS::Link.new(text: t(".clear"), href: account_path(account, tab: "extra_repayments"), variant: "ghost") %>
+        <% end %>
+      </div>
+      <% if invalid %>
+        <p id="<%= dom_id(account, :extra_amount_error) %>" class="text-xs text-destructive mt-1" data-testid="extra-amount-error"><%= extra_repayment.errors[:amount].first %></p>
+      <% end %>
+    <% end %>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <% if extra_projection&.payoff_date %>
+        <%= summary_card title: t(".payoff_with_extra") do %>
+          <span data-testid="extra-payoff-date"><%= l extra_projection.payoff_date, format: :long %></span>
+          <% if (sooner = extra_projection.months_sooner_than(projection)) %>
+            <span class="block text-xs text-secondary mt-1" data-testid="extra-months-sooner"><%= t(".months_sooner", count: sooner) %></span>
+          <% end %>
+        <% end %>
+
+        <% if (saved = extra_projection.interest_saved_versus(projection)) %>
+          <%= summary_card title: t(".interest_saved") do %>
+            <span data-testid="extra-interest-saved"><%= format_money saved %></span>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%= summary_card title: t(".payoff_without_extra") do %>
+        <% if projection.payoff_date %>
+          <span data-testid="baseline-payoff-date"><%= l projection.payoff_date, format: :long %></span>
+        <% else %>
+          <%= t(".not_cleared") %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if extra_projection %>
+      <% if !extra_projection.converged? %>
+        <p class="text-sm text-secondary" data-testid="extra-not-cleared"><%= t(".extra_not_cleared") %></p>
+      <% elsif !projection.converged? %>
+        <p class="text-sm text-secondary privacy-sensitive" data-testid="baseline-not-cleared"><%= t(".baseline_not_cleared", balloon: format_money(projection.balloon_amount)) %></p>
+      <% else %>
+        <p class="text-xs text-secondary"><%= t(".comparison_basis") %></p>
+      <% end %>
+    <% end %>
+
+    <% if account.loan.variable_rate_type? %>
+      <p class="text-xs text-secondary"><%= t(".variable_rate_notice") %></p>
+    <% end %>
+  <% else %>
+    <p class="text-sm text-secondary"><%= t(".not_applicable") %></p>
+  <% end %>
+</div>

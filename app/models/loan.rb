@@ -424,10 +424,11 @@ class Loan < ApplicationRecord
     LEVERAGE_BANDS.find { |_band, range| range.cover?(ratio) }&.first
   end
 
-  # Where the loan is heading from today's balance. Not memoised: `as_of`
-  # makes each call a different question.
-  def payoff_projection(as_of: Date.current)
-    PayoffProjection.new(self, as_of: as_of)
+  # Where the loan is heading from today's balance, optionally with an extra
+  # amount on top of every repayment. Not memoised: `as_of` and `extra` make
+  # each call a different question.
+  def payoff_projection(as_of: Date.current, extra: nil)
+    PayoffProjection.new(self, as_of: as_of, extra: extra)
   end
 
   # The date the loan was drawn down. Recorded explicitly when the borrower

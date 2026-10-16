@@ -17,12 +17,17 @@ class Loan
   #
   # Extra payments the borrower has already made are in here without being
   # named: they are why today's balance is what it is.
+  #
+  # `extra` is a hypothetical: an amount paid on top of the contract's
+  # repayment in every period from here on, for the Extra repayments tab's
+  # "what if I pay more?". nil, the default, is the projection above.
   class PayoffProjection
-    attr_reader :loan, :as_of
+    attr_reader :loan, :as_of, :extra
 
-    def initialize(loan, as_of: Date.current)
+    def initialize(loan, as_of: Date.current, extra: nil)
       @loan = loan
       @as_of = as_of
+      @extra = extra.nil? ? nil : BigDecimal(extra.to_s)
     end
 
     # False when there is nothing to project: no schedule, nothing left to owe,
@@ -89,6 +94,27 @@ class Loan
       Money.new(remaining_contracted_interest - (simulation&.total_interest || 0), currency)
     end
 
+    # How much sooner this projection clears the loan than `other`, a
+    # projection of the same loan on the same `as_of`. Both walk the same
+    # remaining payment dates, so the difference in rows is the difference in
+    # months. nil unless both clear the loan: one that never does has no
+    # payoff date to be sooner than.
+    def months_sooner_than(other)
+      return nil unless converged? && other.converged?
+
+      other.payments.length - payments.length
+    end
+
+    # The interest this projection saves against `other`, on the same terms
+    # as #months_sooner_than. Measured against another projection, not the
+    # contract: #interest_saved already answers that, and folds in how far
+    # ahead or behind the loan is today.
+    def interest_saved_versus(other)
+      return nil unless converged? && other.converged?
+
+      other.total_interest - total_interest
+    end
+
     private
       def schedule
         @schedule ||= loan.amortization_schedule
@@ -120,9 +146,18 @@ class Loan
       # recorded rate change re-sizes this exactly where the schedule re-sizes
       # its own repayment. Past the last row -- unreachable today, since the
       # projection stops at the original maturity -- the last amount holds.
+      #
+      # Plus the period's extra, when there is one. The simulator settles the
+      # final period at whatever the balance needs, so an extra larger than
+      # what is left is never overpaid.
       def scheduled_payment_for(index:, **)
         row = remaining_scheduled_payments[index] || remaining_scheduled_payments.last
-        row.payment.amount
+        row.payment.amount + extra_for(index)
+      end
+
+      # Every period carries the same extra.
+      def extra_for(_index)
+        extra || 0
       end
 
       def remaining_contracted_interest
