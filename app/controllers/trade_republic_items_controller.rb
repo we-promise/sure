@@ -146,7 +146,8 @@ class TradeRepublicItemsController < ApplicationController
       )
     end
 
-    tr_account.trade_republic_item.sync_later unless tr_account.trade_republic_item.syncing?
+    linked_item = tr_account.trade_republic_item
+    linked_item.sync_later if linked_item.ready_for_sync? && !linked_item.syncing?
     if processing_failed
       redirect_to account_path(account), notice: t(".success"), alert: t(".processing_failed"), status: :see_other
     else
@@ -173,7 +174,7 @@ class TradeRepublicItemsController < ApplicationController
     latest_sync = @trade_republic_item.syncs.ordered.first
     should_sync = latest_sync.nil? || !latest_sync.completed?
 
-    if no_accounts && !@trade_republic_item.syncing? && should_sync && @trade_republic_item.session_configured?
+    if no_accounts && !@trade_republic_item.syncing? && should_sync && @trade_republic_item.ready_for_sync?
       @trade_republic_item.sync_later
     end
 
@@ -243,7 +244,8 @@ class TradeRepublicItemsController < ApplicationController
     end
 
     @trade_republic_item.update!(pending_account_setup: @trade_republic_item.unlinked_accounts_count.positive?)
-    @trade_republic_item.sync_later if created_accounts.any?
+    # The accounts are set up from stored data; syncing them needs a login.
+    @trade_republic_item.sync_later if created_accounts.any? && @trade_republic_item.ready_for_sync?
 
     if created_accounts.any?
       options = { notice: t(".success", count: created_accounts.count), status: :see_other }
