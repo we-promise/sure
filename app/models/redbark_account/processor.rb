@@ -51,10 +51,17 @@ class RedbarkAccount::Processor
       end
 
       # Banking sign convention:
-      # - CreditCard and Loan accounts may need sign inversion
-      # Provider returns negative for positive balance, so we negate it
+      # CreditCard and Loan balances are signed differently depending on the
+      # upstream source (Fiskil/CDR — AU — reports the amount owed as a
+      # negative balance; Plaid — US/CA — reports it as positive). The
+      # provider-specific rule and the DebugLogEntry captured for an
+      # unrecognised provider live on RedbarkAccount#normalized_liability_balance.
       if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
-        balance = -balance
+        balance = redbark_account.normalized_liability_balance(
+          accountable_type: account.accountable_type,
+          balance: balance,
+          account: account
+        )
       end
 
       Rails.logger.info "RedbarkAccount::Processor - Balance update: #{balance}"
