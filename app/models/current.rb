@@ -6,6 +6,8 @@ class Current < ActiveSupport::CurrentAttributes
 
   delegate :family, to: :user, allow_nil: true
 
+  resets { @accessible_accounts = @finance_accounts = nil }
+
   def user
     impersonated_user || session&.user
   end
@@ -19,13 +21,11 @@ class Current < ActiveSupport::CurrentAttributes
   end
 
   def accessible_accounts
-    return family&.accounts unless user
-    user.accessible_accounts
+    @accessible_accounts ||= (user ? user.accessible_accounts : family&.accounts)&.load
   end
 
   def finance_accounts
-    return family&.accounts unless user
-    user.finance_accounts
+    @finance_accounts ||= (user ? user.finance_accounts : family&.accounts)&.load
   end
 
   def accessible_entries
