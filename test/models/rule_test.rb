@@ -529,6 +529,26 @@ class RuleTest < ActiveSupport::TestCase
     end
   end
 
+  test "switching an action to email while replacing a condition seeds from the saved conditions" do
+    create_transaction(date: 90.days.ago.to_date, account: @account, name: "Coffee shop")
+    tea_house = create_transaction(date: 60.days.ago.to_date, account: @account, name: "Tea house")
+    rule = @family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Coffee" } ]
+    )
+
+    rule.update!(
+      conditions_attributes: [
+        { id: rule.conditions.first.id, _destroy: true },
+        { condition_type: "transaction_name", operator: "like", value: "house" }
+      ],
+      actions_attributes: [ { id: rule.actions.first.id, action_type: "send_email_notification" } ]
+    )
+
+    assert_equal [ tea_house.transaction.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+  end
+
   test "editing a condition while switching an action to email seeds the baseline once" do
     create_transaction(date: 90.days.ago.to_date, account: @account, name: "Coffee shop")
     tea_house = create_transaction(date: 60.days.ago.to_date, account: @account, name: "Tea house")

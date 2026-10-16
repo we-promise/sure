@@ -70,8 +70,11 @@ class Rule < ApplicationRecord
 
   # Records every transaction the rule matches now as already delivered, without
   # sending, so a send_email_notification action only emails about transactions
-  # that start matching afterwards.
+  # that start matching afterwards. The conditions are read again from the
+  # database, so the ones a save just added or removed count, whichever callback
+  # (the rule's or an action's) seeds.
   def seed_notification_baseline
+    conditions.reset
     NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)
   end
 
@@ -249,15 +252,21 @@ class Rule < ApplicationRecord
 
     def detect_matching_scope_change
       @reseed_notification_baseline = (will_save_change_to_effective_date? || conditions_changed?(conditions)) &&
-        actions.any? { |action| kept_email_action?(action) }
+        reseeds_for_email_actions?
     end
 
-    # An action created or switched to send_email_notification in the same save
-    # seeds the baseline from its own commit callback, so only an email action
-    # that stays as it was needs the rule to re-seed.
-    def kept_email_action?(action)
-      action.action_type == "send_email_notification" && action.persisted? &&
-        !action.marked_for_destruction? && !action.will_save_change_to_action_type?
+    # The baseline is the rule's (record_for takes the rule_id), so one seed
+    # covers every email action. An action created or switched to
+    # send_email_notification in this save seeds it from its own commit
+    # callback, so the rule re-seeds only when it has an email action and none
+    # of them seeds itself. before_update runs before the nested actions are
+    # saved, so new_record? and will_save_change_to_action_type? still see what
+    # this save does to them.
+    def reseeds_for_email_actions?
+      email_actions = actions.select do |action|
+        action.action_type == "send_email_notification" && !action.marked_for_destruction?
+      end
+      email_actions.any? && email_actions.none? { |action| action.new_record? || action.will_save_change_to_action_type? }
     end
 
     def conditions_changed?(association)
@@ -271,7 +280,6 @@ class Rule < ApplicationRecord
 
     def reseed_notification_baseline
       @reseed_notification_baseline = false
-      conditions.reset
       seed_notification_baseline
     end
 
