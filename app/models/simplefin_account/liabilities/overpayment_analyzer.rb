@@ -118,8 +118,10 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
     def gather_transactions(account)
       start_date = (@now.to_date - window_days.days)
 
-      # Prefer materialized entries
-      entries = account.entries.where("date >= ?", start_date).select(:amount, :date)
+      # Prefer materialized entries. Only transactions: valuations carry a
+      # balance, not a charge or payment, and the processor records one on
+      # every sync.
+      entries = account.entries.transactions.where("date >= ?", start_date).select(:amount, :date)
       txns = entries.map { |e| { amount: to_decimal(e.amount), date: e.date } }
       return txns if txns.size >= min_txns
 
