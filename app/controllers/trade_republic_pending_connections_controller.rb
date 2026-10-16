@@ -60,7 +60,20 @@ class TradeRepublicPendingConnectionsController < ApplicationController
   private
 
     def set_pending_connection
-      @pending_connection = Current.family.trade_republic_pending_connections.find(params[:id])
+      @pending_connection = Current.family.trade_republic_pending_connections.find_by(id: params[:id])
+      render_missing_pending_connection unless @pending_connection
+    end
+
+    # Cancelled, replaced or connected meanwhile, in another tab for example:
+    # the request is outdated, so show the current state instead of a 404.
+    def render_missing_pending_connection
+      if request.format.json?
+        render_superseded_qr_login
+      elsif turbo_panel_request?
+        render turbo_stream: replace_panel_stream
+      else
+        redirect_to settings_providers_path(anchor: "trade-republic"), status: :see_other
+      end
     end
 
     def pending_connection_params

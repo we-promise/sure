@@ -228,8 +228,35 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
 
     delete trade_republic_pending_connection_url(other)
 
-    assert_response :not_found
+    assert_redirected_to settings_providers_path(anchor: "trade-republic")
     assert TradeRepublicPendingConnection.exists?(other.id)
+  end
+
+  test "a QR poll for a pending connection removed before it started is superseded" do
+    gone = @family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
+    gone.destroy!
+
+    post poll_qr_login_trade_republic_pending_connection_url(gone), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :conflict
+  end
+
+  test "a push poll for a pending connection removed before it started shows the current panel" do
+    gone = @family.trade_republic_pending_connections.create!(phone_number: "+491701234567", pending_login_state: "push-pending")
+    gone.destroy!
+
+    post poll_login_trade_republic_pending_connection_url(gone), headers: TURBO_STREAM.merge("X-Requested-With" => "XMLHttpRequest")
+
+    assert_turbo_stream action: "replace", target: "trade-republic-providers-panel"
+  end
+
+  test "cancelling a pending connection that is already gone shows the current panel" do
+    gone = @family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
+    gone.destroy!
+
+    delete trade_republic_pending_connection_url(gone), headers: TURBO_STREAM
+
+    assert_turbo_stream action: "replace", target: "trade-republic-providers-panel"
   end
 
   private
