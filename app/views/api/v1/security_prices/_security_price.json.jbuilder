@@ -4,7 +4,9 @@ json.id security_price.id
 json.date security_price.date
 json.price Money.new(security_price.price, security_price.currency).format
 # At least 4 decimals as before, and up to the column's 10 for low-value assets.
-json.price_amount format("%.10f", security_price.price.to_d).sub(/(\.\d{4}\d*?)0+\z/, '\1')
+# Formatted from the BigDecimal: format("%f") goes through Float and rounds.
+whole, fraction = security_price.price.to_d.round(10).to_s("F").split(".")
+json.price_amount "#{whole}.#{fraction.to_s.ljust(4, "0")}"
 json.currency security_price.currency
 json.provisional security_price.provisional
 

@@ -83,6 +83,15 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "0.000002891", JSON.parse(response.body)["price_amount"]
   end
 
+  test "shows a large price with all its stored decimals" do
+    @security_price.update!(price: "12345678.1234567891")
+
+    get api_v1_security_price_url(@security_price), headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal "12345678.1234567891", JSON.parse(response.body)["price_amount"]
+  end
+
   test "returns not found for another family's security price" do
     get api_v1_security_price_url(@other_price), headers: api_headers(@api_key)
 
