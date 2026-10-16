@@ -68,7 +68,7 @@ Rails.application.config.to_prepare do
         return false if export.nil?
 
         export.family_id == Current.family&.id && Current.user.admin?
-      rescue ActiveRecord::RecordNotFound
+      rescue ActiveRecord::RecordNotFound, NoMethodError
         false
       end
 
@@ -78,7 +78,7 @@ Rails.application.config.to_prepare do
         return false if import.nil? || import.family_id != Current.family&.id
 
         import.account_statement.nil? || import.account_statement.viewable_by?(Current.user)
-      rescue ActiveRecord::RecordNotFound
+      rescue ActiveRecord::RecordNotFound, NoMethodError
         false
       end
 
@@ -87,7 +87,7 @@ Rails.application.config.to_prepare do
         return false if record.nil?
 
         record.family_id == Current.family&.id
-      rescue ActiveRecord::RecordNotFound
+      rescue ActiveRecord::RecordNotFound, NoMethodError
         false
       end
 
