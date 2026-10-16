@@ -17,7 +17,11 @@ class SimplefinAccount::Processor
       return
     end
 
-    process_account!
+    # A failed balance write leaves this account where it was; its
+    # transactions, holdings and liabilities wait for the next sync rather than
+    # being applied on top of a balance that was not recorded.
+    return unless process_account!
+
     # Ensure provider link exists after processing the account/balance
     begin
       simplefin_account.ensure_account_provider!
@@ -31,12 +35,13 @@ class SimplefinAccount::Processor
 
   private
 
+    # Returns true when the balance was recorded, false when it was not.
     def process_account!
       # This should not happen in normal flow since accounts are created manually
       # during setup, but keeping as safety check
       if simplefin_account.current_account.blank?
         Rails.logger.error("SimpleFin account #{simplefin_account.id} has no associated Account - this should not happen after manual setup")
-        return
+        return false
       end
 
       # Update account balance and cash balance from latest SimpleFin data
@@ -186,11 +191,57 @@ class SimplefinAccount::Processor
         balance
       end
 
-      account.update!(
-        balance: balance,
-        cash_balance: cash_balance,
-        currency: simplefin_account.currency
-      )
+      # Record the balance as the account's current anchor, as the other
+      # provider processors do, rather than writing the cached balance alone:
+      # without an anchor the balance history has nothing to rebuild from.
+      #
+      # One lock across the currency, the anchor and the cash split, as in
+      # PlaidAccount::Processor: a sync running beside this one can move the
+      # anchor between any two of these writes, so all three follow the same
+      # snapshot. The manager is called directly rather than through
+      # Account#set_current_balance, which would queue a sync;
+      # SimplefinItem::Syncer schedules the account syncs once every account
+      # has been processed.
+      #
+      # requires_new gives the block its own savepoint, so the rollback below
+      # undoes only this account's writes when a caller has already opened a
+      # transaction.
+      result = nil
+      account.with_lock(requires_new: true) do
+        manager = Account::CurrentBalanceManager.new(account)
+        behind_anchor = manager.has_current_anchor? && manager.current_date > Date.current
+
+        # A balance dated behind the anchor leaves the cached figures as they
+        # are, in the denomination they were written in.
+        if !behind_anchor && account.currency != simplefin_account.currency
+          account.update!(currency: simplefin_account.currency)
+        end
+
+        result = manager.set_current_balance(balance)
+
+        # The manager reports failure through its result, and its own lock
+        # joined this transaction, so whatever it wrote before failing would
+        # commit with the currency. Roll all of it back.
+        raise ActiveRecord::Rollback unless result.success?
+
+        account.update!(cash_balance: cash_balance) unless result.historical?
+      end
+
+      unless result.success?
+        Rails.logger.error("SimpleFIN: failed to set the current balance for account #{account.id}: #{result.error}")
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "error",
+          message: "Failed to set the current balance: #{result.error}",
+          source: self.class.name,
+          provider_key: "simplefin",
+          account: account,
+          account_provider: simplefin_account.account_provider,
+          metadata: { simplefin_account_id: simplefin_account.id }
+        )
+      end
+
+      result.success?
     end
 
     def process_transactions

@@ -76,6 +76,22 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzerTest < ActiveSupport::Te
     assert_equal :debt, result.classification, "expected classification to be debt"
   end
 
+  test "counts only transactions, not balance valuations" do
+    @acct.entries.delete_all
+    @acct.entries.create!(date: 12.days.ago.to_date, name: "Groceries", amount: 120, currency: "USD", entryable: Transaction.new)
+    @acct.entries.create!(date: 11.days.ago.to_date, name: "Coffee", amount: 10, currency: "USD", entryable: Transaction.new)
+    @acct.entries.create!(date: 9.days.ago.to_date,  name: "Payment", amount: -50, currency: "USD", entryable: Transaction.new)
+
+    # Balance snapshots the processor records on each sync. Their amounts are
+    # balances, not charges or payments.
+    @acct.entries.create!(date: 2.days.ago.to_date, name: "Reconciliation", amount: 75, currency: "USD", entryable: Valuation.new(kind: "reconciliation"))
+    @acct.entries.create!(date: Date.current, name: "Current balance", amount: 80, currency: "USD", entryable: Valuation.new(kind: "current_anchor"))
+
+    result = SimplefinAccount::Liabilities::OverpaymentAnalyzer.new(@sfa, observed_balance: BigDecimal("-80")).call
+    assert_equal :debt, result.classification
+    assert_equal 3, result.metrics[:tx_count]
+  end
+
   test "returns unknown when insufficient transactions" do
     @acct.entries.delete_all
     @acct.entries.create!(date: 5.days.ago.to_date, name: "Small", amount: 1, currency: "USD", entryable: Transaction.new)
