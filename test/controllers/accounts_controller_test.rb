@@ -863,6 +863,46 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Depository account scheduled for deletion", flash[:notice]
   end
 
+  test "destroy reports failure and keeps the account listed when the enqueue raises" do
+    DestroyJob.queue_adapter.stubs(:enqueue).raises(RedisClient::CannotConnectError, "Connection refused")
+
+    delete account_url(@account)
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.destroy.failed"), flash[:alert]
+    assert_equal "active", @account.reload.status
+
+    get accounts_url
+    assert_select "turbo-frame##{dom_id(@account)}"
+  end
+
+  test "destroy reports failure when the enqueue is rejected" do
+    DestroyJob.queue_adapter.stubs(:enqueue).raises(ActiveJob::EnqueueError, "rejected")
+
+    delete account_url(@account)
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.destroy.failed"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_equal "active", @account.reload.status
+  end
+
+  # The second request of a double submit finds the account already pending
+  # deletion. It reports failure rather than erroring, enqueues nothing more,
+  # and leaves the first request's mark in place.
+  test "a second destroy of an account pending deletion reports failure" do
+    delete account_url(@account)
+    assert_equal "pending_deletion", @account.reload.status
+
+    assert_no_enqueued_jobs(only: DestroyJob) do
+      delete account_url(@account)
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.destroy.failed"), flash[:alert]
+    assert_equal "pending_deletion", @account.reload.status
+  end
+
   test "syncing linked account triggers sync for all provider items" do
     plaid_account = plaid_accounts(:one)
     AccountProvider.create!(account: @account, provider: plaid_account)
