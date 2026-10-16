@@ -20,7 +20,6 @@ export default class extends Controller {
     "parentOption",
     "parentOptionTemplate",
     "parentRows",
-    "parentBack",
   ];
 
   static values = {
@@ -258,6 +257,10 @@ export default class extends Controller {
       if (!category) {
         this.hideParentPicker();
         this.showCreateError(error);
+        // The row that was clicked is disabled during the request, so focus
+        // has fallen to the page, where Escape would close the surrounding
+        // dialog. Put it back where the name can be fixed or retried.
+        this.searchTarget.focus();
         return;
       }
 
