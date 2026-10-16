@@ -915,13 +915,19 @@ class Provider::YahooFinance < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        # `retry_statuses` alone never retried a 429: `raise_error` below turns
+        # it into Faraday::TooManyRequestsError first (see Provider::Jev#client),
+        # so the 429 is named as an exception class too.
         faraday.request(:retry, {
           max: max_retries,
           interval: retry_interval,
           interval_randomness: 0.5,
           backoff_factor: 2,
           retry_statuses: [ 429 ],
-          exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
+          exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError, Faraday::TooManyRequestsError ],
+          # Yahoo answers 429 to some user-agents whatever the request rate, so
+          # a retry with the same one can't succeed. Retry with another.
+          retry_block: ->(env:, exception:, **) { switch_user_agent(env) if exception.is_a?(Faraday::TooManyRequestsError) }
         })
 
         faraday.request :json
@@ -943,6 +949,15 @@ class Provider::YahooFinance < Provider
 
     def random_user_agent
       USER_AGENTS.sample
+    end
+
+    # Moves the retried request and the memoized client's later requests to a
+    # user-agent other than the one that just got a 429.
+    def switch_user_agent(env)
+      rejected = env.request_headers["User-Agent"]
+      replacement = (USER_AGENTS - [ rejected ]).sample
+      env.request_headers["User-Agent"] = replacement
+      @client.headers["User-Agent"] = replacement if @client
     end
 
     def max_retries

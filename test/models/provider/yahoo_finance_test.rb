@@ -379,6 +379,30 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal :rate_limited, @provider.refresh_health_status
   end
 
+  # Yahoo answers 429 to some user-agents regardless of request rate (#4103).
+  # Retrying with the same one can't succeed, so the retry switches.
+  test "a 429 retry uses a different user-agent and keeps it for later requests" do
+    rejected = Provider::YahooFinance::USER_AGENTS.first
+    @provider.stubs(:random_user_agent).returns(rejected)
+    chart_url = "https://query1.finance.yahoo.com/v8/finance/chart/AAPL"
+    stub_request(:get, chart_url).with(headers: { "User-Agent" => rejected }).to_return(status: 429)
+    stub_request(:get, chart_url).with { |req| req.headers["User-Agent"] != rejected }.to_return(status: 200, body: "{}")
+
+    with_env_overrides("YAHOO_FINANCE_RETRY_INTERVAL" => "0") do
+      client = @provider.send(:client)
+
+      assert_equal 200, client.get("/v8/finance/chart/AAPL").status
+      replacement = client.headers["User-Agent"]
+      assert_not_equal rejected, replacement
+      assert_includes Provider::YahooFinance::USER_AGENTS, replacement
+
+      assert_equal 200, client.get("/v8/finance/chart/AAPL").status
+      assert_requested :get, chart_url, headers: { "User-Agent" => replacement }, times: 2
+    end
+
+    assert_requested :get, chart_url, headers: { "User-Agent" => rejected }, times: 1
+  end
+
   # ================================
   #      Exchange Rate Tests
   # ================================
