@@ -153,6 +153,44 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     assert_equal "qr-restarted", pending_connection.reload.pending_login_state
   end
 
+  test "a QR poll whose pending connection was removed meanwhile is superseded" do
+    pending_connection = @family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
+    provider = stub_provider
+    # A cancel in another request removes the row while Trade Republic answers.
+    provider.expects(:poll_qr_login).with { TradeRepublicPendingConnection.where(id: pending_connection.id).delete_all }
+      .returns(result("status" => "ok", "session_txt" => "qr-session"))
+
+    assert_no_difference "TradeRepublicItem.count" do
+      post poll_qr_login_trade_republic_pending_connection_url(pending_connection), headers: { "ACCEPT" => "application/json" }
+    end
+
+    assert_response :conflict
+  end
+
+  test "a push poll whose pending connection was removed meanwhile is superseded" do
+    pending_connection = @family.trade_republic_pending_connections.create!(phone_number: "+491701234567", pending_login_state: "push-pending")
+    provider = stub_provider
+    provider.expects(:complete_login).with { |**| TradeRepublicPendingConnection.where(id: pending_connection.id).delete_all }
+      .returns(result("status" => "pending", "pending_login_b64" => "push-next"))
+
+    post poll_login_trade_republic_pending_connection_url(pending_connection), headers: { "X-Requested-With" => "XMLHttpRequest" }
+
+    assert_response :no_content
+  end
+
+  test "an authenticator code for a login replaced meanwhile redirects a plain form submit" do
+    pending_connection = @family.trade_republic_pending_connections.create!(phone_number: "+491701234567", pending_login_state: "code-pending")
+    provider = stub_provider
+    provider.expects(:complete_login).with { |**| pending_connection.update_columns(pending_login_state: "newer") }
+      .returns(result("status" => "ok", "session_txt" => "session"))
+
+    assert_no_difference "TradeRepublicItem.count" do
+      post complete_login_trade_republic_pending_connection_url(pending_connection), params: { trade_republic_login: { code: "123456" } }
+    end
+
+    assert_redirected_to settings_providers_path(anchor: "trade-republic")
+  end
+
   test "the login is started and polled with the same device ID" do
     device_ids = []
     Provider::TradeRepublicClient.stubs(:new).with { |**options| device_ids << options[:device_id] }.returns(

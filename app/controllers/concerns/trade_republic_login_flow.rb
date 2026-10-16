@@ -44,7 +44,11 @@ module TradeRepublicLoginFlow
       render_duplicate_login
     else
       begin
-        return render_login_panel unless connect_if_pending_login_current!(pending, result)
+        unless connect_if_pending_login_current!(pending, result)
+          return render_login_panel if turbo_panel_request?
+
+          return redirect_to(settings_providers_path(anchor: "trade-republic"), status: :see_other)
+        end
       rescue ActiveRecord::RecordNotUnique
         discard_duplicate_connection!
         return render_duplicate_login
@@ -284,12 +288,16 @@ module TradeRepublicLoginFlow
 
     # Cancellation or a newer login can replace the state while a poll is in
     # flight; only the poll that started from the current state may write.
+    # A pending connection that was cancelled, replaced or connected meanwhile
+    # is gone altogether, which makes the poll just as outdated.
     def with_current_pending_login(expected_pending)
       login_record.with_lock do
         current = login_record.pending_login_state == expected_pending
         yield if current
         current
       end
+    rescue ActiveRecord::RecordNotFound
+      false
     end
 
     def store_pending_login_if_current!(expected_pending, pending_login_b64)
