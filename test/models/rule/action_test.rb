@@ -375,6 +375,19 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_includes action.errors[:value], "split #1 share must be a positive number"
   end
 
+  test "split_transaction rejects a fixed share with more decimals than amounts store" do
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: {
+        splits: [ { type: "fixed", name: "A", share: "10.12345" }, { type: "percentage", name: "B", share: "100" } ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "split #1 share must be a positive number"
+  end
+
   test "split_transaction rejects a split name that the database cannot store" do
     # A NUL byte, and a lone surrogate escape that JSON.parse turns into broken UTF-8.
     [ "Bad\\u0000Name", "Bad\\udc00Name" ].each do |name|

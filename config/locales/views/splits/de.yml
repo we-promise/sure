@@ -16,7 +16,7 @@ de:
       category_label: Kategorie
       uncategorized: "(nicht kategorisiert)"
       merchant_label: Händler
-      no_merchant: "(kein Händler)"
+      no_merchant: "(Händler der Hauptbuchung)"
       tags_label: Tags
       original_name: "Name:"
       original_date: "Datum:"

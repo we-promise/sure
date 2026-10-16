@@ -45,7 +45,9 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     config = self.class.parse_config(value)
     return 0 unless config
 
-    scope = transaction_scope.with_entry
+    # Children of an earlier split and excluded entries are never splittable;
+    # filtering them here saves a splittable? check per row on every run.
+    scope = transaction_scope.with_entry.where(entries: { parent_entry_id: nil, excluded: false })
     # Resolved once per rule application (not per transaction) since the scope shares one family.
     references = Entry::SplitReferences.new(family)
 
@@ -135,7 +137,9 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
         end
         errors << [ :split_type_invalid, { index: position } ] unless TYPES.include?(type)
 
-        if share.nil? || share <= 0
+        # A fixed share with more decimals than the amount columns hold would
+        # be stored rounded, and the children would no longer sum to the parent.
+        if share.nil? || share <= 0 || (type == "fixed" && share.round(AMOUNT_SCALE) != share)
           errors << [ :split_share_invalid, { index: position } ]
         elsif type == "percentage"
           has_percentage = true
