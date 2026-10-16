@@ -24,6 +24,14 @@ class Assistant::ProvidedTest < ActiveSupport::TestCase
     assert_same @custom_openai, @assistant.get_model_provider("gpt-4.1")
   end
 
+  test "builds each provider once when falling back" do
+    Setting.stubs(:llm_provider).returns("anthropic")
+    Provider::Registry.expects(:anthropic).once.returns(@anthropic)
+    Provider::Registry.expects(:openai).once.returns(@custom_openai)
+
+    assert_same @custom_openai, @assistant.get_model_provider("gpt-4.1")
+  end
+
   test "keeps OpenAI first when it is selected" do
     Setting.stubs(:llm_provider).returns("openai")
 
