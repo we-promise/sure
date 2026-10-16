@@ -66,7 +66,7 @@ class TradeRepublicItemsController < ApplicationController
           flash.now[:notice] = t(".success")
         end
         render turbo_stream: [
-          replace_card_stream,
+          replace_card_stream(pin_form_open: @error_message.present?),
           *flash_notification_stream_items
         ]
       elsif @error_message.present?
@@ -341,10 +341,10 @@ class TradeRepublicItemsController < ApplicationController
     # Push-login polling re-renders about once per second; replacing only this
     # item's card keeps other cards (open state, typed credentials, running QR
     # logins) intact.
-    def replace_card_stream(item = @trade_republic_item)
+    def replace_card_stream(item = @trade_republic_item, pin_form_open: false)
       turbo_stream.replace(
         TradeRepublic::ConnectionCardComponent.dom_id_for(item),
-        TradeRepublic::ConnectionCardComponent.new(item: item, qr_active: item.login_stage == "qr_pending")
+        TradeRepublic::ConnectionCardComponent.new(item: item, qr_active: item.login_stage == "qr_pending", pin_form_open: pin_form_open)
       )
     end
 

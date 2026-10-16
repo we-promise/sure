@@ -61,16 +61,16 @@
         <% unless push_login_in_progress? %>
           <%# QR and PIN login exclude each other: each hides the other's
               button while it runs. %>
-          <%= qr.button(data: { trade_republic_pin_login_target: "alternative" }) %>
+          <%= qr.button(hidden: pin_form_open, data: { trade_republic_pin_login_target: "alternative" }) %>
 
           <%= render DS::Button.new(
-                text: translation("pin_login"),
+                text: pin_form_open ? translation("pin_cancel") : translation("pin_login"),
                 variant: :outline,
                 size: :sm,
                 icon: "log-in",
                 type: "button",
                 hidden: qr_active,
-                aria: { expanded: false, controls: pin_login_form_id },
+                aria: { expanded: pin_form_open, controls: pin_login_form_id },
                 data: { action: "trade-republic-pin-login#toggle", trade_republic_pin_login_target: "button" }
               ) %>
         <% end %>
@@ -91,7 +91,7 @@
   <%= render TradeRepublic::LoginChallengeComponent.new(record: item, login_stage: login_stage) %>
 
   <% unless push_login_in_progress? %>
-    <%= render DS::Card.new(variant: :inset, tag: :div, id: pin_login_form_id, hidden: true, data: { trade_republic_pin_login_target: "form" }) do %>
+    <%= render DS::Card.new(variant: :inset, tag: :div, id: pin_login_form_id, hidden: !pin_form_open, data: { trade_republic_pin_login_target: "form" }) do %>
       <%= helpers.styled_form_with model: item,
                            url: helpers.trade_republic_item_path(item),
                            scope: :trade_republic_item,

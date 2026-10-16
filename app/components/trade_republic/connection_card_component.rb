@@ -5,13 +5,15 @@ class TradeRepublic::ConnectionCardComponent < ApplicationComponent
     ActionView::RecordIdentifier.dom_id(item, :trade_republic_card)
   end
 
-  def initialize(item:, qr_active: false, qr_code_svg: nil)
+  # `pin_form_open` shows the PIN login again after a failed attempt.
+  def initialize(item:, qr_active: false, qr_code_svg: nil, pin_form_open: false)
     @item = item
     @qr_active = qr_active
     @qr_code_svg = qr_code_svg
+    @pin_form_open = pin_form_open && !qr_active
   end
 
-  attr_reader :item, :qr_active, :qr_code_svg
+  attr_reader :item, :qr_active, :qr_code_svg, :pin_form_open
 
   def dom_id
     self.class.dom_id_for(item)

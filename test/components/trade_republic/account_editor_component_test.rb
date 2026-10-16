@@ -129,6 +129,16 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
     assert_selector "#{form} input[name='trade_republic_item[pin]'][required]", visible: :all
   end
 
+  test "a connection whose PIN login failed shows its PIN form again instead of the QR login" do
+    item = trade_republic_items(:configured_item)
+
+    render_inline(TradeRepublic::ConnectionCardComponent.new(item: item, pin_form_open: true))
+
+    assert_selector "[data-trade-republic-pin-login-target='form']:not([hidden]) input[name='trade_republic_item[pin]']"
+    assert_selector "button[aria-expanded='true']", text: I18n.t("settings.providers.trade_republic_panel.pin_cancel")
+    assert_selector "button[data-trade-republic-qr-target='button'][hidden]", visible: :all
+  end
+
   test "a QR login already running hides the PIN login" do
     item = trade_republic_items(:configured_item)
 

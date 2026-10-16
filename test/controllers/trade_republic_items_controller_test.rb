@@ -57,6 +57,20 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_session_blob, item.session_blob
   end
 
+  test "a failed PIN login keeps the connection's PIN form open" do
+    item = trade_republic_items(:requires_update_item)
+    provider = mock
+    provider.expects(:initiate_login).raises(Provider::TradeRepublicClient::Error, "Wrong PIN")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    patch trade_republic_item_url(item), params: { trade_republic_item: { pin: "0000" } },
+      headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item) do
+      assert_select "[data-trade-republic-pin-login-target='form']:not([hidden])"
+    end
+  end
+
   test "update keeps the phone number when it is left blank" do
     item = trade_republic_items(:requires_update_item)
     provider = mock

@@ -21,13 +21,14 @@ class TradeRepublic::QrLoginComponent < ApplicationComponent
   end
 
   # `data` lets the row's own controllers find the button too.
-  def button(data: {})
+  def button(hidden: false, data: {})
     render DS::Button.new(
       text: active ? translation("qr_cancel") : translation("qr_login"),
       variant: :outline,
       size: :sm,
       icon: "qr-code",
       type: "button",
+      hidden: hidden,
       data: {
         action: "trade-republic-qr#toggle",
         trade_republic_qr_target: "button"
