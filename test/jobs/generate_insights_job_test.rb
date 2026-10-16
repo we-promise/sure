@@ -104,6 +104,17 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     GenerateInsightsJob.perform_now(family_id: @family.id)
   end
 
+  test "broadcasts the feed in the family's locale" do
+    @family.update!(locale: "de")
+    stub_generated([ generated_insight ])
+    locales = []
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to).with { locales << I18n.locale; true }
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert_equal [ :de ], locales.uniq
+  end
+
   test "enqueues notifications for newly created high priority insights" do
     Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
     opted_in_user, opted_out_user = @family.users.to_a
