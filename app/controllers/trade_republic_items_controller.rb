@@ -55,7 +55,8 @@ class TradeRepublicItemsController < ApplicationController
   end
 
   def sync
-    @trade_republic_item.sync_later unless @trade_republic_item.syncing?
+    # A connection that needs a new login can only fail to sync.
+    @trade_republic_item.sync_later if @trade_republic_item.ready_for_sync? && !@trade_republic_item.syncing?
     if provider_panel_form? && turbo_panel_request?
       # Only this card, as the login steps do, so the other cards keep their state.
       return render_login_panel(notice: t("settings.providers.sync_provider_in_progress"))
