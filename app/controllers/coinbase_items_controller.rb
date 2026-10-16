@@ -77,12 +77,18 @@ class CoinbaseItemsController < ApplicationController
     end
 
     unless coinbase_item
-      message_key = coinbase_items.many? && params[:coinbase_item_id].blank? ? ".select_connection" : ".no_credentials_configured"
+      message_key = if params[:coinbase_item_id].present? && coinbase_items.any?
+        ".connection_unavailable"
+      elsif coinbase_items.many?
+        ".select_connection"
+      else
+        ".no_credentials_configured"
+      end
       redirect_to settings_providers_path, alert: t(message_key)
       return
     end
 
-    redirect_to setup_accounts_coinbase_item_path(coinbase_item), status: :see_other
+    redirect_to setup_accounts_coinbase_item_path(coinbase_item, return_to: safe_return_to(params[:return_to])), status: :see_other
   end
 
   def link_accounts
@@ -200,6 +206,9 @@ class CoinbaseItemsController < ApplicationController
   end
 
   def setup_accounts
+    # Where Add Account was opened from, carried through the form so finishing
+    # or cancelling goes back there.
+    @return_to = safe_return_to(params[:return_to])
     # Only show unlinked accounts
     @coinbase_accounts = @coinbase_item.coinbase_accounts
       .left_joins(:account_provider)
@@ -277,7 +286,7 @@ class CoinbaseItemsController < ApplicationController
         )
       ] + Array(flash_notification_stream_items)
     else
-      redirect_to accounts_path, status: :see_other
+      redirect_to safe_return_to(params[:return_to]) || accounts_path, status: :see_other
     end
   end
 

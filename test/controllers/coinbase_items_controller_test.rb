@@ -96,6 +96,35 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to setup_accounts_coinbase_item_path(other_item)
   end
 
+  test "select_accounts says the named connection is unavailable when another one exists" do
+    get select_accounts_coinbase_items_url(coinbase_item_id: SecureRandom.uuid)
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("coinbase_items.select_accounts.connection_unavailable"), flash[:alert]
+  end
+
+  test "select_accounts carries a safe return_to into setup and drops an unsafe one" do
+    get select_accounts_coinbase_items_url(return_to: "/imports/123/confirm")
+    assert_redirected_to setup_accounts_coinbase_item_path(@coinbase_item, return_to: "/imports/123/confirm")
+
+    get select_accounts_coinbase_items_url(return_to: "//evil.example")
+    assert_redirected_to setup_accounts_coinbase_item_path(@coinbase_item)
+  end
+
+  test "setup_accounts keeps return_to for finishing and cancelling" do
+    get setup_accounts_coinbase_item_url(@coinbase_item, return_to: "/imports/123/confirm")
+
+    assert_response :success
+    assert_select "input[type=hidden][name=return_to][value=?]", "/imports/123/confirm"
+    assert_select "a[href=?]", "/imports/123/confirm", text: I18n.t("coinbase_items.setup_accounts.cancel")
+  end
+
+  test "complete_account_setup returns to return_to" do
+    post complete_account_setup_coinbase_item_url(@coinbase_item), params: { return_to: "/imports/123/confirm" }
+
+    assert_redirected_to "/imports/123/confirm"
+  end
+
   test "should show setup_accounts page" do
     get setup_accounts_coinbase_item_url(@coinbase_item)
     assert_response :success
