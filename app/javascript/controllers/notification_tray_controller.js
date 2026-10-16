@@ -104,9 +104,12 @@ export default class extends Controller {
     this._dialogRemovalObserver ??= new MutationObserver(() =>
       this.#flushIfNoDialogOpen(),
     );
+    // `open` too: a dialog closed by dropping the attribute fires no close event.
     this._dialogRemovalObserver.observe(document.body, {
       childList: true,
       subtree: true,
+      attributes: true,
+      attributeFilter: ["open"],
     });
   }
 

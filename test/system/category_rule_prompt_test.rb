@@ -103,6 +103,17 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     assert_selector "#cta", text: "Updated to #{@categories.first.name}"
   end
 
+  test "a held prompt shows when the open attribute is removed from the dialog" do
+    visit transactions_url
+    open_drawer @entry
+    assign_category_in_drawer @categories.first
+    assert_no_selector "#cta *", visible: :all
+
+    page.execute_script(%(document.querySelector("turbo-frame#drawer dialog[open]").removeAttribute("open")))
+
+    assert_selector "#cta", text: "Updated to #{@categories.first.name}"
+  end
+
   private
     def open_drawer(entry)
       page.execute_script <<~JS
