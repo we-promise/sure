@@ -80,6 +80,30 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
     end
   end
 
+  # A loan has five tabs, more than the account column holds beside both side
+  # panels. Labels stay on one line, and the bar scrolls inside the column
+  # rather than pushing the page sideways and hiding Statements off-screen.
+  test "the loan's tab bar keeps one line and stays inside its column" do
+    travel_to TODAY do
+      visit account_path(on_contract_loan_account)
+
+      details = find("[data-testid='account-details']")
+      heights = all("[data-testid='account-details'] [role='tab']").map { |tab| bounding_box(tab)["height"] }
+
+      assert_equal 5, heights.length
+      assert_equal 1, heights.uniq.length, "every tab is the same height"
+      assert_operator heights.first, :<, 40, "a label that wraps doubles the tab's height"
+      # The bar's own box stays inside the column either way; what must not
+      # happen is its tabs spilling out and widening the column's content.
+      overflow = page.evaluate_script("arguments[0].scrollWidth - arguments[0].clientWidth", details)
+      assert_operator overflow, :<=, 0, "the tabs must not run past their column"
+
+      statements = find("[data-testid='account-details'] [role='tab'][data-id='statements']")
+      statements.click
+      assert_equal "true", statements["aria-selected"], "the last tab is reachable"
+    end
+  end
+
   # The SVG names the balance and every payoff date in its label, the
   # same text is real DOM, and it points at no table that is not there.
   test "the SVG carries its description and no data table" do
