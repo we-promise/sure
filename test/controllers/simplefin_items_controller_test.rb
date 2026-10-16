@@ -146,6 +146,44 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "pending_deletion", account_a.status, "expected orphaned duplicate to be hidden after relink"
   end
 
+  # The orphan cleanup's enqueue runs once the relink transaction commits. If it
+  # ran inside that transaction, its error would escape the action's rescue
+  # after the relink had committed, and the request would fail.
+  test "relink still succeeds when the orphan's destroy enqueue fails" do
+    account_a = Account.create!(
+      family: @family,
+      name: "Duplicate A",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    account_b = Account.create!(
+      family: @family,
+      name: "Target B",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.create!(subtype: "savings")
+    )
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "SF For Duplicate",
+      account_id: "sf_dup_enqueue",
+      account_type: "depository",
+      currency: "USD",
+      current_balance: 0
+    )
+    AccountProvider.create!(account: account_a, provider: sfa)
+    DestroyJob.queue_adapter.expects(:enqueue).once.raises(RedisClient::CannotConnectError, "Connection refused")
+
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: account_b.id,
+      simplefin_account_id: sfa.id
+    }
+
+    assert_response :see_other
+    assert_equal account_b, AccountProvider.find_by!(provider: sfa).account
+    assert_equal "active", account_a.reload.status
+  end
+
   test "should get edit" do
     @simplefin_item.update!(status: :requires_update)
     get edit_simplefin_item_url(@simplefin_item)
