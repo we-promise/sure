@@ -16,6 +16,6 @@ class TradeRepublic::LoginChallengeComponent < ApplicationComponent
   end
 
   def login_path(action)
-    helpers.polymorphic_path([ action, record ])
+    helpers.polymorphic_path([ action, record ], login_token: record.login_token)
   end
 end

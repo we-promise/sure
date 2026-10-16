@@ -7,6 +7,7 @@ export default class extends Controller {
     pollUrl: String,
     cancelUrl: String,
     returnUrl: String,
+    loginToken: String,
     autoPoll: { type: Boolean, default: false },
     loadingText: String,
     instructionText: String,
@@ -54,6 +55,8 @@ export default class extends Controller {
     this.dispatch("started");
     this.codeTarget.replaceChildren();
     this.statusTarget.textContent = this.loadingTextValue;
+    // Until the server answers, a cancel ends whichever QR login is current.
+    this.loginTokenValue = "";
 
     let initiation = null;
     try {
@@ -73,6 +76,7 @@ export default class extends Controller {
         throw new Error(`QR login initiation failed: ${response.status}`);
 
       const result = await response.json();
+      this.loginTokenValue = result.login_token || "";
       if (this.stopped) return;
       this.renderQr(result);
 
@@ -304,6 +308,10 @@ export default class extends Controller {
   body() {
     const csrfToken =
       document.querySelector("meta[name='csrf-token']")?.content || "";
-    return new URLSearchParams({ authenticity_token: csrfToken });
+    const body = new URLSearchParams({ authenticity_token: csrfToken });
+    // Tells the server which login this page shows, so a poll or cancel
+    // leaves a newer one (from another tab, say) alone.
+    if (this.loginTokenValue) body.set("login_token", this.loginTokenValue);
+    return body;
   }
 }

@@ -26,6 +26,7 @@ module TradeRepublicLoginFlow
       redirect_to settings_providers_path(anchor: "trade-republic"), alert: login_t("no_pending_login"), status: :see_other
       return
     end
+    return render_superseded_code_login if superseded_login_request?
 
     result = provider.complete_login(
       pending_login_b64: pending,
@@ -79,6 +80,7 @@ module TradeRepublicLoginFlow
     unless provider && pending.present?
       return render_login_panel(alert: login_t("no_pending_login"))
     end
+    return render_superseded_push_login if superseded_login_request?
 
     result = provider.complete_login(pending_login_b64: pending)
     if result.data["status"] == "pending"
@@ -128,6 +130,7 @@ module TradeRepublicLoginFlow
     return render_superseded_qr_login unless started
 
     response_data = result.data.except("pending_login_b64")
+    response_data["login_token"] = Provider::TradeRepublicClient.login_token(result.data["pending_login_b64"])
     response_data["qr_code_svg"] = view_context.generate_mfa_qr_code(result.data["qr_code_payload"]) if result.data["qr_code_payload"].present?
     render json: response_data, status: :accepted
   rescue Provider::TradeRepublicClient::Error => e
@@ -138,8 +141,8 @@ module TradeRepublicLoginFlow
     provider = login_record.trade_republic_provider
     pending = login_record.pending_login_state
     raise Provider::TradeRepublicClient::InvalidChallenge, login_t("no_pending_login") if provider.blank? || pending.blank?
-    # A PIN login started in another tab replaced this QR login.
-    return render_superseded_qr_login if pin_login_pending?
+    # A login started in another tab replaced this QR login.
+    return render_superseded_qr_login if pin_login_pending? || superseded_login_request?
 
     result = provider.poll_qr_login(pending_login_b64: pending)
     if result.data["status"] == "pending"
@@ -181,11 +184,11 @@ module TradeRepublicLoginFlow
     render_qr_login_error(e, pending: pending)
   end
 
-  # Only a QR login is this cancel's to end. A PIN login that replaced it (in
-  # another tab, say) stays, and so does a working session whose QR login
-  # never started; the card then shows the current state.
+  # Only the QR login this page shows is this cancel's to end. A login that
+  # replaced it (in another tab, say) stays, and so does a working session
+  # whose QR login never started; the card then shows the current state.
   def cancel_qr_login
-    end_login!(final: true) if login_record.pending_login_state.present? && !pin_login_pending?
+    end_login!(final: true) if login_record.pending_login_state.present? && !pin_login_pending? && !superseded_login_request?
     respond_to do |format|
       format.turbo_stream { render turbo_stream: replace_login_record_stream }
       format.json { render json: { status: "cancelled" } }
@@ -340,6 +343,13 @@ module TradeRepublicLoginFlow
     # A newer login owns the card now; leave its state and poller alone.
     def render_superseded_push_login
       login_poll_response(:no_content) { render_login_panel }
+    end
+
+    # A page sends the token of the login it shows; without one (a page
+    # rendered before tokens existed) the current login is assumed.
+    def superseded_login_request?
+      token = params[:login_token]
+      token.present? && token != login_record.login_token
     end
 
     def pin_login_pending?

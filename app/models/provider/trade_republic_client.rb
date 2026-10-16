@@ -500,6 +500,16 @@ class Provider::TradeRepublicClient
   class << self
     def available? = !!defined?(WebSocket::Driver)
 
+    # Identifies one login across its steps: a QR login keeps its challenge
+    # and a PIN login its process. Only a digest leaves the server.
+    def login_token(pending_login_b64)
+      pending = JSON.parse(Base64.strict_decode64(pending_login_b64.to_s))
+      id = pending["challenge_id"].presence || pending["process_id"].presence if pending.is_a?(Hash)
+      Digest::SHA256.hexdigest(id.to_s)[0, 16] if id
+    rescue JSON::ParserError, ArgumentError
+      nil
+    end
+
     # Stops the given topics' backfills that read further back in history.
     # Gap backfills fetch events newer than anything stored, so they keep
     # running.

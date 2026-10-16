@@ -264,6 +264,18 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     assert_not TradeRepublicPendingConnection.exists?(pending_connection.id)
   end
 
+  test "a QR cancel from a page showing an earlier QR login keeps the pending connection" do
+    newer = Base64.strict_encode64(JSON.generate("challenge_id" => "newer-challenge", "session_blob" => "session=1"))
+    earlier = Base64.strict_encode64(JSON.generate("challenge_id" => "earlier-challenge", "session_blob" => "session=1"))
+    pending_connection = @family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: newer)
+
+    post cancel_qr_login_trade_republic_pending_connection_url(pending_connection),
+      params: { login_token: Provider::TradeRepublicClient.login_token(earlier) }, headers: TURBO_STREAM
+
+    assert_turbo_stream action: "replace", target: "trade-republic-providers-panel"
+    assert_equal newer, pending_connection.reload.pending_login_state
+  end
+
   test "cancelling a phone number and PIN login removes the pending connection" do
     pending_connection = @family.trade_republic_pending_connections.create!(phone_number: "+491701234567", pending_login_state: "push-pending")
 

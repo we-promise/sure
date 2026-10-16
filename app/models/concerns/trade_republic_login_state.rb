@@ -13,6 +13,12 @@ module TradeRepublicLoginState
     nil
   end
 
+  # Sent back by the page showing this login, so a request from a page that
+  # still shows an earlier login can be told apart.
+  def login_token
+    Provider::TradeRepublicClient.login_token(pending_login_state) if pending_login_state.present?
+  end
+
   def login_stage
     return nil if pending_login_state.blank?
 

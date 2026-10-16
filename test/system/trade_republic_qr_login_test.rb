@@ -175,6 +175,33 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     assert_equal "newer", @item.reload.pending_login_state
   end
 
+  test "a QR cancel in a tab whose QR login was replaced leaves the newer login" do
+    encode = ->(challenge_id) { Base64.strict_encode64(JSON.generate("challenge_id" => challenge_id, "session_blob" => "session=1")) }
+    shown = encode.("shown-challenge")
+    newer = encode.("newer-challenge")
+    Provider::TradeRepublicClient.any_instance.stubs(:initiate_qr_login).returns(
+      Provider::TradeRepublicClient::Result.new(data: { "status" => "qr_pending", "pending_login_b64" => shown, "qr_code_payload" => "https://example.com/qr" })
+    )
+    # The poll is still on its way when the cancel is sent, so no 409 has told
+    # this tab about the newer login yet.
+    Provider::TradeRepublicClient.any_instance.stubs(:poll_qr_login).with { |**| sleep 2; true }
+      .raises(Provider::TradeRepublicClient::RateLimited, "Slow down")
+
+    visit accounts_path
+
+    within card do
+      click_on qr_login
+      assert_selector ".qrcode svg"
+      # Another tab starts a newer QR login.
+      @item.update_columns(pending_login_state: newer)
+      click_on qr_cancel
+      assert_button qr_login, disabled: false
+    end
+    # Let the poll that was on its way finish.
+    sleep 2.5
+    assert_equal newer, @item.reload.pending_login_state
+  end
+
   test "a failed QR cancel keeps the PIN login hidden until a retried cancel succeeds" do
     visit settings_providers_path
     find("summary", text: "Trade Republic").click

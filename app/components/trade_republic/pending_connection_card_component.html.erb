@@ -1,6 +1,6 @@
 <%= render TradeRepublic::ConnectionRowComponent.new(
       id: dom_id,
-      data: ({ controller: "trade-republic-login", trade_republic_login_url_value: helpers.poll_login_trade_republic_pending_connection_path(pending_connection) } if login_stage == "waiting_for_approval") || {}
+      data: ({ controller: "trade-republic-login", trade_republic_login_url_value: helpers.poll_login_trade_republic_pending_connection_path(pending_connection, login_token: pending_connection.login_token) } if login_stage == "waiting_for_approval") || {}
     ) do %>
   <%= render TradeRepublic::QrLoginComponent.new(
         record: pending_connection,

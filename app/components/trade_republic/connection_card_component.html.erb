@@ -5,7 +5,7 @@
         action: "trade-republic-qr:started->trade-republic-pin-login#qrStarted trade-republic-qr:stopped->trade-republic-pin-login#qrStopped",
         trade_republic_pin_login_login_text_value: translation("pin_login"),
         trade_republic_pin_login_cancel_text_value: translation("pin_cancel"),
-        trade_republic_login_url_value: (helpers.poll_login_trade_republic_item_path(item) if login_stage == "waiting_for_approval")
+        trade_republic_login_url_value: (helpers.poll_login_trade_republic_item_path(item, login_token: item.login_token) if login_stage == "waiting_for_approval")
       }.compact
     ) do %>
   <%= render TradeRepublic::QrLoginComponent.new(
