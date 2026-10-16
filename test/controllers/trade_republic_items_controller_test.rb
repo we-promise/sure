@@ -258,6 +258,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").returns(
       Provider::TradeRepublicClient::Result.new(
         data: { "status" => "confirmed", "session_txt" => "qr-session" }
@@ -284,6 +285,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").raises(
       Provider::TradeRepublicClient::Timeout,
       "Trade Republic WebSocket timed out"
@@ -305,6 +307,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     error = Provider::TradeRepublicClient::TransientProviderError.new("Trade Republic login failed")
     error.define_singleton_method(:pending_login_b64) { "qr-pending-with-process" }
     provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").raises(error)
@@ -325,6 +328,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     # Another tab starts a newer login while Trade Republic answers.
     provider.expects(:poll_qr_login).with { |**| item.update_columns(pending_login_state: "newer") }
       .raises(Provider::TradeRepublicClient::Error, "boom")
@@ -336,6 +340,43 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "newer", item.reload.pending_login_state
   end
 
+  test "a QR login started while another tab started a newer one leaves that login" do
+    item = trade_republic_items(:requires_update_item)
+    provider = mock
+    provider.expects(:initiate_qr_login).with { item.update_columns(pending_login_state: "newer"); true }
+      .returns(Provider::TradeRepublicClient::Result.new(data: { "status" => "qr_pending", "pending_login_b64" => "qr-pending" }))
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post initiate_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :conflict
+    assert_equal "newer", item.reload.pending_login_state
+  end
+
+  test "a QR poll after a PIN login replaced it is superseded" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "push-pending")
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("waiting_for_approval")
+    provider = mock
+    provider.expects(:poll_qr_login).never
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :conflict
+  end
+
+  test "a QR cancel leaves a PIN login that replaced the QR login" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "push-pending")
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("waiting_for_approval")
+
+    post cancel_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_equal "push-pending", item.reload.pending_login_state
+  end
+
   test "QR polling records retryable provider failures for support" do
     item = families(:dylan_family).trade_republic_items.create!(
       name: "Trade Republic QR Connection",
@@ -344,6 +385,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).raises(Provider::TradeRepublicClient::RateLimited, "Slow down")
     TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
 
@@ -365,6 +407,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).raises(
       Provider::TradeRepublicClient::MalformedResponse,
       "Trade Republic returned invalid JSON: unexpected token at '<html>secret-body</html>'"
@@ -390,6 +433,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     error = Provider::TradeRepublicClient::TransientProviderError.new("Trade Republic login failed")
     error.define_singleton_method(:pending_login_b64) { "qr-pending-with-process" }
     provider = Object.new
+    provider.define_singleton_method(:login_stage) { |**| "qr_pending" }
     provider.define_singleton_method(:poll_qr_login) do |pending_login_b64:|
       TradeRepublicItem.find(item.id).update!(pending_login_state: nil)
       raise error
@@ -411,6 +455,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = Object.new
+    provider.define_singleton_method(:login_stage) { |**| "qr_pending" }
     provider.define_singleton_method(:poll_qr_login) do |pending_login_b64:|
       TradeRepublicItem.find(item.id).update!(pending_login_state: "qr-pending-new")
       raise Provider::TradeRepublicClient::LoginExpired, "Trade Republic login expired"
@@ -431,6 +476,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = Object.new
+    provider.define_singleton_method(:login_stage) { |**| "qr_pending" }
     provider.define_singleton_method(:poll_qr_login) do |pending_login_b64:|
       TradeRepublicItem.find(item.id).update!(pending_login_state: nil)
       Provider::TradeRepublicClient::Result.new(data: { "status" => "confirmed", "session_txt" => "qr-session" })
@@ -661,6 +707,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
       name: "Trade Republic", currency: "EUR", status: :requires_update, pending_login_state: "qr-pending"
     )
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").returns(
       Provider::TradeRepublicClient::Result.new(
         data: { "status" => "ok", "session_txt" => "duplicate-session", "account" => { "brokerage_account_id" => "DE1234" } }
@@ -738,6 +785,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     item = trade_republic_items(:configured_item)
     item.update!(pending_login_state: "qr-pending", status: :requires_update)
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").returns(
       Provider::TradeRepublicClient::Result.new(
         data: { "status" => "ok", "session_txt" => "fresh-session", "account" => { "brokerage_account_id" => "DE1234" } }

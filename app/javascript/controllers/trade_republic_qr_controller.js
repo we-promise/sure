@@ -68,6 +68,7 @@ export default class extends Controller {
       this.initiation = initiation;
       const response = await initiation;
       if (this.stopped) return;
+      if (response.status === 409) return this.showCurrentLogin();
       if (!response.ok)
         throw new Error(`QR login initiation failed: ${response.status}`);
 
@@ -96,13 +97,7 @@ export default class extends Controller {
         body: this.body(),
         signal: this.pollRequest.signal,
       });
-      // A newer login (from another tab, say) replaced this one. Cancelling
-      // would end that login, so show the current state instead.
-      if (response.status === 409) {
-        this.stopped = true;
-        window.Turbo.visit(this.returnUrlValue, { action: "replace" });
-        return;
-      }
+      if (response.status === 409) return this.showCurrentLogin();
 
       const result = await this.jsonResponse(response);
       if (!response.ok) {
@@ -178,6 +173,13 @@ export default class extends Controller {
       error.retryable = this.retryableStatus(response.status);
       throw error;
     }
+  }
+
+  // A newer login (from another tab, say) replaced this one. Cancelling
+  // would end that login, so show the current state instead.
+  showCurrentLogin() {
+    this.stopped = true;
+    window.Turbo.visit(this.returnUrlValue, { action: "replace" });
   }
 
   // The login may still be pending on the server, so it stays the running

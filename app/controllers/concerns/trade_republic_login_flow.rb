@@ -120,8 +120,13 @@ module TradeRepublicLoginFlow
     provider = login_record.trade_republic_provider
     raise Provider::TradeRepublicClient::ConfigurationError, login_t("not_configured") unless provider
 
+    # A login started elsewhere while Trade Republic answered is newer; it
+    # keeps its place and this tab shows it instead.
+    previous = login_record.pending_login_state
     result = provider.initiate_qr_login
-    start_qr_login!(result.data.fetch("pending_login_b64"))
+    started = with_current_pending_login(previous) { start_qr_login!(result.data.fetch("pending_login_b64")) }
+    return render_superseded_qr_login unless started
+
     response_data = result.data.except("pending_login_b64")
     response_data["qr_code_svg"] = view_context.generate_mfa_qr_code(result.data["qr_code_payload"]) if result.data["qr_code_payload"].present?
     render json: response_data, status: :accepted
@@ -133,6 +138,8 @@ module TradeRepublicLoginFlow
     provider = login_record.trade_republic_provider
     pending = login_record.pending_login_state
     raise Provider::TradeRepublicClient::InvalidChallenge, login_t("no_pending_login") if provider.blank? || pending.blank?
+    # A PIN login started in another tab replaced this QR login.
+    return render_superseded_qr_login if pin_login_pending?
 
     result = provider.poll_qr_login(pending_login_b64: pending)
     if result.data["status"] == "pending"
@@ -174,8 +181,10 @@ module TradeRepublicLoginFlow
     render_qr_login_error(e, pending: pending)
   end
 
+  # A PIN login that replaced the QR login (in another tab, say) is not this
+  # cancel's to end; the card then shows that login.
   def cancel_qr_login
-    end_login!(final: true)
+    end_login!(final: true) unless pin_login_pending?
     respond_to do |format|
       format.turbo_stream { render turbo_stream: replace_login_record_stream }
       format.json { render json: { status: "cancelled" } }
@@ -330,6 +339,10 @@ module TradeRepublicLoginFlow
     # A newer login owns the card now; leave its state and poller alone.
     def render_superseded_push_login
       login_poll_response(:no_content) { render_login_panel }
+    end
+
+    def pin_login_pending?
+      login_record.login_stage.in?(%w[waiting_for_approval authenticator_code])
     end
 
     def render_superseded_code_login
