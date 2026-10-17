@@ -19,6 +19,7 @@ module Assistant
     Function::ListAccountStatements,
     Function::GetAccountStatement,
     Function::GetStatementCoverage,
+    Function::GetDocumentText,
     Function::RecordValuation,
     Function::GetValuations,
     Function::GetInsights,
