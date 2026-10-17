@@ -5,16 +5,24 @@ require "application_system_test_case"
 # countdown therefore has to time the request rather than the element
 # connecting — otherwise every unexpanded row claims it timed out, ten seconds
 # into any page load, without a single request having been made.
+#
+# The frames are also data-turbo-permanent and carry a data version in their
+# id. A loaded sparkline must survive navigations and morph refreshes while
+# its data is unchanged, and must be replaced by a fresh frame once the data
+# changes. Idiomorph never removes permanent elements on its own;
+# permanent_frame_controller.js releases the stale frame on a morph.
 class SidebarSparklinesTest < ApplicationSystemTestCase
-  SPARKLINE_FRAME = "#sidebar-scroll turbo-frame[data-controller='turbo-frame-timeout']"
+  FRAME_SELECTOR = "turbo-frame[id^='tab_'][id*='_sparkline_'][complete]".freeze
+  SPARKLINE_FRAME = "#sidebar-scroll turbo-frame[data-controller~='turbo-frame-timeout']"
   BADGE_TEXT = "Timeout"
 
   # The group total in the <summary> renders the same chart as the rows inside
   # the disclosure and is on screen from the start, so "a sparkline loaded" has
-  # to say which one: the rows are `dom_id(account, :sparkline)`, the total is
-  # "#{account_group.key}_sparkline".
-  ACCOUNT_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}[id^='sparkline_account_']"
-  GROUP_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}[id$='_sparkline']"
+  # to say which one. Both ids carry the placement and the data version (see
+  # AccountsHelper#sidebar_sparkline_frame_id); the rows are built from
+  # `dom_id(account, :sparkline)`, the total from "#{account_group.key}_sparkline".
+  ACCOUNT_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}[id*='_sparkline_account_']"
+  GROUP_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}:not([id*='_sparkline_account_'])"
 
   # The shipped window is ten seconds. Outliving it for real would add most of
   # a minute to the system suite for a cosmetic badge, so the frames render
@@ -97,6 +105,40 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a loaded sparkline frame is kept while its data is unchanged" do
+    with_short_sparkline_timeout do
+      visit root_path
+      frame_id = mark_loaded_sparkline
+
+      find("a[href='#{transactions_path}']", match: :first).click
+      assert_current_path transactions_path
+      assert_marked_frame frame_id
+
+      # The kept frame reconnects its timeout controller on the visit, but it
+      # is no longer fetching, so no countdown may start again.
+      wait_out_timeout_window
+      assert_no_selector "##{frame_id} p", text: BADGE_TEXT, visible: :all
+
+      refresh_with_morph
+      assert_marked_frame frame_id
+    end
+  end
+
+  test "a morph refresh replaces a sparkline frame whose data changed" do
+    visit root_path
+    frame_id = mark_loaded_sparkline
+
+    # Any account update moves the sparkline data version, as a completed
+    # sync does.
+    @user.family.accounts.first.touch
+
+    refresh_with_morph
+
+    assert_no_selector "##{frame_id}", visible: :all
+    assert_selector FRAME_SELECTOR, visible: :all
+    assert_no_selector "#{FRAME_SELECTOR}[data-test-marker]", visible: :all
+  end
+
   private
 
     def with_short_sparkline_timeout(&block)
@@ -118,5 +160,30 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
     # only means anything once the window it would have fired in has passed.
     def wait_out_timeout_window
       sleep (SHORT_TIMEOUT_MS * 3) / 1000.0
+    end
+
+    # Waits for a sidebar sparkline to finish loading and tags that element, so
+    # a later check can tell the same DOM node apart from a re-rendered one.
+    def mark_loaded_sparkline
+      frame = find(FRAME_SELECTOR, match: :first, visible: :all)
+      page.execute_script("arguments[0].setAttribute('data-test-marker', 'loaded')", frame)
+      frame[:id]
+    end
+
+    def assert_marked_frame(frame_id)
+      assert_selector "##{frame_id}[complete][data-test-marker='loaded']", visible: :all
+    end
+
+    # What a broadcast refresh (turbo_stream_from Current.family) does after a
+    # sync completes: reload the current URL, rendered as a morph.
+    def refresh_with_morph
+      page.execute_script(<<~JS)
+        document.documentElement.removeAttribute("data-test-refreshed")
+        document.addEventListener("turbo:render", () => {
+          document.documentElement.setAttribute("data-test-refreshed", "true")
+        }, { once: true })
+        Turbo.session.refresh(window.location.href)
+      JS
+      assert_selector "html[data-test-refreshed='true']", visible: :all
     end
 end
