@@ -656,7 +656,7 @@ class Family < ApplicationRecord
     # Balance-sheet / sidebar / sparkline caches convert foreign-currency balances
     # into family.currency (often falling back to 1:1 when no rate exists yet).
     # Rates and the target currency can change without touching accounts or syncs
-    # (e.g. first USD→ILS row arrives after linking IBKR). Mirror
+    # (e.g. first USD→EUR row arrives after linking IBKR). Mirror
     # IncomeStatement#cache_freshness_key so those caches do not serve 1:1
     # amounts labeled in the family currency until a 12h TTL or unrelated write.
     # Related: #4200 (currency-change gap); this covers newly fetched FX rates.

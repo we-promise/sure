@@ -698,7 +698,7 @@ class FamilyTest < ActiveSupport::TestCase
 
   # Related to #4200: family.currency alone is not enough — newly fetched FX rates
   # (common right after linking a foreign-currency account) must also bust caches
-  # that convert into family.currency, or the sidebar keeps 1:1 amounts labeled as ILS/EUR/etc.
+  # that convert into family.currency, or the sidebar keeps 1:1 amounts labeled as EUR/etc.
   test "build_cache_key changes when an exchange rate is created" do
     family = families(:dylan_family)
 
