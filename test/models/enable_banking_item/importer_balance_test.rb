@@ -62,6 +62,47 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-50.00"), @enable_banking_account.reload.current_balance
   end
 
+  # Some cards report the credit limit as the booked balance and the available
+  # credit as the available balance (mBank PL: ITBD = limit, ITAV = available).
+  test "fetch_and_update_balance prefers available balance when the balance is treated as available credit" do
+    @enable_banking_account.update!(treat_balance_as_available_credit: true)
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "ITBD",
+          balance_amount: { amount: "11500.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "ITAV",
+          balance_amount: { amount: "4531.68", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("4531.68"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance falls back to booked balance when treated as available credit and no available balance is reported" do
+    @enable_banking_account.update!(treat_balance_as_available_credit: true)
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "ITBD",
+          balance_amount: { amount: "4531.68", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("4531.68"), @enable_banking_account.reload.current_balance
+  end
+
   test "fetch_and_update_balance prefers opening/previously-closed booked balance over expected and available" do
     @mock_provider.stubs(:get_account_balances).returns(
       balances: [

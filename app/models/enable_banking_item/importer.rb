@@ -27,6 +27,15 @@ class EnableBankingItem::Importer
     ITAV interimAvailable
   ].freeze
 
+  # With "Balance is available credit" on, the bank's figure is the available
+  # credit, so available types come first. Some cards report the credit limit as
+  # the booked balance (mBank PL: ITBD = limit, ITAV = available credit).
+  AVAILABLE_CREDIT_BALANCE_TYPE_PRIORITY = (%w[
+    CLAV closingAvailable
+    ITAV interimAvailable
+    XPCD expected
+  ] + BALANCE_TYPE_PRIORITY).uniq.freeze
+
   PERIOD_BOUNDARY_TYPES = %w[opbd openingbooked prcd previouslyclosedbooked].freeze
 
   # Only these types may outrank OPBD/PRCD on freshness (see fresher_balance) —
@@ -235,7 +244,9 @@ class EnableBankingItem::Importer
       end
 
       currency, kept, skipped = split_balances_by_currency(balances, enable_banking_account)
-      balance = select_current_balance(kept)
+      balance = select_current_balance(
+        kept, prefer_available: enable_banking_account.treat_balance_as_available_credit?
+      )
 
       unless balance.present?
         mark_balance_unavailable(enable_banking_account)
@@ -337,10 +348,11 @@ class EnableBankingItem::Importer
       )
     end
 
-    def select_current_balance(balances)
+    def select_current_balance(balances, prefer_available: false)
       by_type = balances.index_by { |balance| normalize_balance_type(balance[:balance_type]) }
+      priority = prefer_available ? AVAILABLE_CREDIT_BALANCE_TYPE_PRIORITY : BALANCE_TYPE_PRIORITY
 
-      BALANCE_TYPE_PRIORITY.each do |type|
+      priority.each do |type|
         normalized_type = normalize_balance_type(type)
         balance = by_type[normalized_type]
         next unless balance.present?
