@@ -429,6 +429,23 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil item.reload.pending_login_state
   end
 
+  test "a QR cancel leaves a QR login stored while the cancel was checked" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: login_state("challenge_id" => "shown-challenge"))
+    shown_token = item.login_token
+    newer = login_state("challenge_id" => "newer-challenge")
+    stored = false
+    TradeRepublicItem.any_instance.stubs(:login_stage).with do
+      item.update_columns(pending_login_state: newer) unless stored
+      stored = true
+    end.returns("qr_pending")
+
+    post cancel_qr_login_trade_republic_item_url(item), params: { login_token: shown_token },
+      headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_equal newer, item.reload.pending_login_state
+  end
+
   test "a QR poll from a page showing an earlier QR login is superseded" do
     item = trade_republic_items(:requires_update_item)
     item.update!(pending_login_state: login_state("challenge_id" => "newer-challenge"))

@@ -187,8 +187,10 @@ module TradeRepublicLoginFlow
   # Only the QR login this page shows is this cancel's to end. A login that
   # replaced it (in another tab, say) stays, and so does a working session
   # whose QR login never started; the card then shows the current state.
+  # The login ends under the row lock, so one stored meanwhile also stays.
   def cancel_qr_login
-    end_login!(final: true) if login_record.pending_login_state.present? && !pin_login_pending? && !superseded_login_request?
+    pending = login_record.pending_login_state
+    end_login_if_current!(pending, final: true) if pending.present? && !pin_login_pending? && !superseded_login_request?
     respond_to do |format|
       format.turbo_stream { render turbo_stream: replace_login_record_stream }
       format.json { render json: { status: "cancelled" } }
