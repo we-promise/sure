@@ -58,7 +58,9 @@ class WiseStatement::Processor
         date: date,
         name: name,
         source: "wise",
-        extra: extra
+        extra: extra,
+        # extra[:wise] is the full snapshot, so a flag Wise stops reporting clears.
+        replace_extra_namespaces: [ "wise" ]
       )
     end
 
@@ -72,7 +74,8 @@ class WiseStatement::Processor
         date: date,
         name: I18n.t("wise_items.entries.fee_name"),
         source: "wise",
-        extra: { wise: { statement_id: transaction_id, type: "FEE", fee: fee } }
+        extra: { wise: { statement_id: transaction_id, type: "FEE", fee: fee } },
+        replace_extra_namespaces: [ "wise" ]
       )
     end
 

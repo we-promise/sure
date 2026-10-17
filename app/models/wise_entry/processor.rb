@@ -35,6 +35,18 @@ class WiseEntry::Processor
     true
   end
 
+  # Wise reports `created` in UTC without a zone designator
+  # ("2025-03-27 18:04:33"), so it is parsed as UTC rather than in the
+  # server's zone. Order transfers by this instant; book them on its
+  # family-zone date.
+  def self.created_at(transfer)
+    raw = transfer["created"]
+    case raw
+    when String then ActiveSupport::TimeZone["UTC"].parse(raw) if raw.present?
+    when Time, Date then raw.in_time_zone("UTC")
+    end
+  end
+
   def initialize(wise_transaction, wise_account:)
     @wise_transaction = wise_transaction
     @wise_account = wise_account
@@ -96,7 +108,10 @@ class WiseEntry::Processor
         date: date,
         name: name,
         source: "wise",
-        extra: extra
+        extra: extra,
+        # extra[:wise] is the full snapshot, so a flag Wise stops reporting
+        # clears; the top-level exchange_rate is still merged.
+        replace_extra_namespaces: [ "wise" ]
       )
     end
 
@@ -108,7 +123,8 @@ class WiseEntry::Processor
         date: date,
         name: I18n.t("wise_items.entries.fee_name"),
         source: "wise",
-        extra: { wise: { transfer_id: transfer_id, type: "FEE" } }
+        extra: { wise: { transfer_id: transfer_id, type: "FEE" } },
+        replace_extra_namespaces: [ "wise" ]
       )
     end
 
@@ -163,6 +179,11 @@ class WiseEntry::Processor
       )
     end
 
+    # The family's zone (WiseItem#time_zone).
+    def time_zone
+      wise_account.wise_item.time_zone
+    end
+
     def date
       raw = data[:created].presence
       raise ArgumentError, "Wise transfer missing created date" unless raw
@@ -170,12 +191,15 @@ class WiseEntry::Processor
       case raw
       when String
         if raw.include?("T") || raw.include?(":")
-          Time.parse(raw).in_time_zone(account&.family&.timezone).to_date
+          created_at = self.class.created_at(data)
+          raise ArgumentError, "Unable to parse date #{raw.inspect}" unless created_at
+
+          created_at.in_time_zone(time_zone).to_date
         else
           Date.parse(raw)
         end
       when Time, DateTime
-        raw.in_time_zone(account&.family&.timezone).to_date
+        raw.in_time_zone(time_zone).to_date
       when Date then raw
       else raise ArgumentError, "Invalid date format: #{raw.inspect}"
       end
