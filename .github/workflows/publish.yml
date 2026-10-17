@@ -37,7 +37,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # GHCR requires lowercase repository names. github.repository preserves owner casing
+  # (e.g. WeekendSuperhero/sure), so IMAGE_NAME is set per-job via GITHUB_REPOSITORY,,.
 
 permissions:
   contents: write
@@ -49,9 +50,59 @@ jobs:
     with:
       require_js_dependency_audit: false
 
+  # Resolved once, outside the matrix. Each matrix child checking out the ref
+  # itself would let a branch that moves mid-run produce images from different
+  # commits, and colliding matrix outputs mean only one child's metadata
+  # survives — so the manifest could describe a commit it was not built from.
+  # Pinning an immutable SHA here makes every child build the same tree.
+  resolve:
+    name: Resolve requested ref
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    outputs:
+      sha: ${{ steps.built_ref.outputs.sha }}
+      ref_name: ${{ steps.built_ref.outputs.ref_name }}
+
+    steps:
+      # github.sha, not github.ref, for the fallback. Supplying `ref:` at all
+      # discards checkout's own pinning: given an explicit non-SHA ref it leaves
+      # `commit` unset and resolves the ref remotely at fetch time, so a branch
+      # that moves between the triggering push and this job would be built
+      # instead of the commit that triggered the run.
+      - name: Check out the requested ref
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.inputs.ref || github.sha }}
+
+      - name: Resolve it to an immutable commit
+        id: built_ref
+        shell: bash
+        # The ref reaches the script through env rather than `${{ }}`: a workflow_dispatch
+        # input (or a ref name, which git permits `$` and backticks in) would otherwise be
+        # pasted into the generated bash and execute on the runner. Newlines are rejected
+        # because GITHUB_OUTPUT is line-oriented — a CR/LF would let the value declare
+        # further outputs.
+        env:
+          REQUESTED_REF: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          BUILT_SHA="$(git rev-parse HEAD)"
+          BUILT_REF_NAME="$REQUESTED_REF"
+
+          if [[ -z "$BUILT_REF_NAME" || "$BUILT_REF_NAME" == *$'\r'* || "$BUILT_REF_NAME" == *$'\n'* ]]; then
+            echo "Refusing to build: ref name is empty or contains a line break" >&2
+            exit 1
+          fi
+
+          printf 'sha=%s\n' "$BUILT_SHA" >> "$GITHUB_OUTPUT"
+          printf 'ref_name=%s\n' "$BUILT_REF_NAME" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build Docker image
-    needs: [ ci ]
+    needs: [ ci, resolve ]
 
     strategy:
       fail-fast: false
@@ -74,11 +125,16 @@ jobs:
       packages: write
 
     steps:
-      - name: Check out the repo
+      - name: Set lowercase image name
+        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      # The resolved SHA, not the mutable ref: both matrix children must build
+      # the identical tree even if the branch moves mid-run.
+      - name: Check out the resolved commit
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ needs.resolve.outputs.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
@@ -93,8 +149,12 @@ jobs:
       - name: Configure image tags
         id: tag_config
         shell: bash
+        env:
+          BUILD_SHA: ${{ needs.resolve.outputs.sha }}
         run: |
-          BASE_CONFIG="type=sha,format=long"
+          # Equivalent to `type=sha,format=long`, but pinned to the commit we
+          # checked out rather than to github.sha.
+          BASE_CONFIG="type=raw,value=sha-${BUILD_SHA}"
           if [[ $GITHUB_EVENT_NAME == "schedule" ]]; then
             BASE_CONFIG+=$'\n'"type=schedule,pattern=nightly"
             BASE_CONFIG+=$'\n'"type=schedule,pattern=nightly-{{date 'ddd'}}"
@@ -129,7 +189,8 @@ jobs:
           labels: |
             org.opencontainers.image.version=${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
-            org.opencontainers.image.ref.name=${{ github.ref_name }}
+            org.opencontainers.image.revision=${{ needs.resolve.outputs.sha }}
+            org.opencontainers.image.ref.name=${{ needs.resolve.outputs.ref_name }}
             org.opencontainers.image.vendor=we-promise
             org.opencontainers.image.title=Sure
             org.opencontainers.image.description=A multi-arch Docker image for the Sure Rails app
@@ -139,7 +200,7 @@ jobs:
         id: build
         with:
           context: .
-          build-args: BUILD_COMMIT_SHA=${{ github.sha }}
+          build-args: BUILD_COMMIT_SHA=${{ needs.resolve.outputs.sha }}
           platforms: 'linux/${{ matrix.platform }}'
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }}
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }},mode=max
@@ -171,7 +232,7 @@ jobs:
   merge:
     name: Merge multi-arch manifest & push multi-arch tag
     if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || github.event.inputs.push }}
-    needs: [build]
+    needs: [ build, resolve ]
 
     timeout-minutes: 60
     runs-on: 'ubuntu-24.04'
@@ -180,6 +241,9 @@ jobs:
       packages: write
 
     steps:
+      - name: Set lowercase image name
+        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
@@ -201,7 +265,8 @@ jobs:
         env:
           TAGS: ${{ needs.build.outputs.tags }}
           DIGESTS_DIR: ${{ runner.temp }}/digests
-          REF_NAME: ${{ github.ref_name }}
+          REF_NAME: ${{ needs.resolve.outputs.ref_name }}
+          REVISION: ${{ needs.resolve.outputs.sha }}
         shell: bash -xeuo pipefail {0}
         run: |
           tag_args=()
@@ -218,7 +283,7 @@ jobs:
           annotations=(
             "index:org.opencontainers.image.created=$(date -Iseconds)"
             'index:org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}'
-            'index:org.opencontainers.image.revision=${{ github.sha }}'
+            "index:org.opencontainers.image.revision=${REVISION}"
             "index:org.opencontainers.image.ref.name=${REF_NAME}"
             'index:org.opencontainers.image.vendor=we-promise'
             'index:org.opencontainers.image.licenses=AGPL-3.0'
