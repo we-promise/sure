@@ -70,4 +70,32 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     assert_match(/"p":/, account.read_attribute_before_type_cast(:raw_payload).to_s,
       "the stored value must be an encryption envelope, not plaintext {}")
   end
+
+  # DebugLogEntry rows written before the write-time key redaction existed can
+  # still hold sensitive values — the backfill must redact them, not just
+  # encrypt them, or support keeps reading the secrets after decryption.
+  test "backfill redacts historic sensitive DebugLogEntry metadata before encrypting" do
+    entry = DebugLogEntry.log!(
+      category: "provider_sync_error", level: "warn",
+      message: "Backfill redaction test", source: "BackfillTest")
+
+    # Simulate a pre-redaction, pre-encryption row: plaintext metadata with
+    # keys the current write path would have redacted.
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE debug_log_entries SET metadata = ?::jsonb WHERE id = ?",
+      { balance: "1234.56", api_key: "sk-live-9", details: { wallet_address: "0xabc" }, status: "ok" }.to_json,
+      entry.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    entry.reload
+    assert_equal "[REDACTED]", entry.metadata["balance"]
+    assert_equal "[REDACTED]", entry.metadata["api_key"]
+    assert_equal "[REDACTED]", entry.metadata["details"]["wallet_address"]
+    assert_equal "ok", entry.metadata["status"]
+
+    at_rest = entry.read_attribute_before_type_cast(:metadata).to_s
+    refute_includes at_rest, "1234.56", "the sensitive value must not survive at rest"
+    refute_includes at_rest, "sk-live-9"
+  end
 end

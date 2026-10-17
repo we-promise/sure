@@ -290,9 +290,7 @@ class MonobankEntry::Processor
         account: account,
         account_provider: monobank_account.account_provider,
         metadata: {
-          external_id: external_id,
           operation_currency: operation_currency,
-          operation_amount: value.to_s,
           monobank_account_id: monobank_account.id
         }
       )

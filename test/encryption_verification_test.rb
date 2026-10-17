@@ -353,6 +353,19 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     assert_column_not_plaintext(MonobankAccount, account.id, :raw_transactions_payload, "tx_probe")
   end
 
+  test "debug log entry metadata is encrypted" do
+    entry = DebugLogEntry.capture(
+      category: "provider_sync",
+      level: "info",
+      message: "Encryption probe",
+      source: "EncryptionVerificationTest",
+      metadata: { status: "encryption-probe-value" }
+    )
+
+    assert_equal "encryption-probe-value", entry.reload.metadata["status"]
+    assert_column_not_plaintext(DebugLogEntry, entry.id, :metadata, "encryption-probe-value")
+  end
+
   test "plaid account holdings stored before encryption was enabled can be read and backfilled" do
     account = PlaidAccount.create!(
       plaid_item: plaid_items(:one),

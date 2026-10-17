@@ -354,7 +354,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
     entry = DebugLogEntry.where(category: "provider_sync").order(:created_at).last
     assert_equal "EUR", entry.metadata["currency"]
-    assert_equal [ { "currency" => "USD", "balance_type" => "CLBD", "amount" => "15.50" } ], entry.metadata["other_balances"]
+    assert_equal [ { "currency" => "USD", "balance_type" => "CLBD", "amount" => "[REDACTED]" } ], entry.metadata["other_balances"]
   end
 
   test "fetch_and_update_balance does not log other currencies when the chosen balance has no amount" do
