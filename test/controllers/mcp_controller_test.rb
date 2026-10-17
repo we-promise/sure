@@ -63,7 +63,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :created
     app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
-    assert_equal "read_write", app.scopes.to_s
+    assert_equal "mcp", app.scopes.to_s
 
     sign_in(@user)
     verifier = SecureRandom.urlsafe_base64(64)
@@ -91,13 +91,40 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     token_response = JSON.parse(response.body)
-    assert_equal "read_write", token_response["scope"]
+    assert_equal "mcp", token_response["scope"]
 
     post "/mcp", params: jsonrpc_request("initialize").to_json,
          headers: mcp_headers(token_response["access_token"])
 
     assert_response :ok
     assert_mcp_initialize_response(JSON.parse(response.body)["result"])
+  end
+
+  test "dynamically registered MCP token cannot access JSON API" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "https://claude.ai/callback" ],
+        grant_types: [ "authorization_code" ],
+        response_types: [ "code" ],
+        token_endpoint_auth_method: "none"
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
+
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: @user.id,
+      scopes: "mcp",
+      expires_in: 1.year
+    )
+
+    delete "/api/v1/users/me", headers: { "Authorization" => "Bearer #{token.token}" }
+
+    assert_response :unauthorized
+    assert_equal "unauthorized", JSON.parse(response.body)["error"]
   end
 
   test "rejects token with read-only scope" do
