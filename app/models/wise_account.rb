@@ -7,7 +7,7 @@ class WiseAccount < ApplicationRecord
   # ids that decide transfer direction (a failed lookup must not flip it)
   # and Sure's own markers on the balance.
   PRESERVED_KEYS = %w[
-    recipient_id borderless_account_id recipientId closed_at absent_count statements_coverage name_history
+    recipient_id borderless_account_id recipientId closed_at absent_count statements_coverage name_history prune_cap_bypass
     opening_anchor
   ].freeze
 
@@ -56,6 +56,36 @@ class WiseAccount < ApplicationRecord
   # When Wise opened the balance (its creationTime), as a UTC time, or nil.
   def creation_time
     parse_utc(raw_payload["creationTime"]) if raw_payload.is_a?(Hash)
+  end
+
+  # The window successful statement fetches for this balance have covered
+  # without a gap, as { from:, through: } UTC times (raw_payload
+  # "statements_coverage", one of PRESERVED_KEYS), or nil before the first.
+  def statements_coverage
+    coverage = raw_payload["statements_coverage"] if raw_payload.is_a?(Hash)
+    return nil unless coverage.is_a?(Hash)
+
+    from, through = coverage.values_at("from", "through").map { |time| parse_utc(time) }
+    { from: from, through: through } if from && through
+  end
+
+  # The external ids of the entries whose rows a sync that re-fetched the
+  # whole history moved out of this balance's payload, or left booking
+  # nothing on it (raw_payload "prune_cap_bypass", one of PRESERVED_KEYS):
+  # the stale-entry clean-up may delete these beyond its cap until it has
+  # run after a complete import (WiseAccount::Transactions::Processor).
+  def prune_cap_bypass_ids
+    ids = raw_payload["prune_cap_bypass"] if raw_payload.is_a?(Hash)
+    Array(ids).map(&:to_s)
+  end
+
+  # Once the clean-up has run after a complete import; taken out of the
+  # snapshot as stored now (#locked_raw_payload), so what a sync stored
+  # meanwhile stays.
+  def spend_prune_cap_bypass!
+    return unless raw_payload.is_a?(Hash) && raw_payload.key?("prune_cap_bypass")
+
+    self.class.transaction { update!(raw_payload: locked_raw_payload.except("prune_cap_bypass")) }
   end
 
   # The opening anchor Sure last set on the balance's account (raw_payload
@@ -160,8 +190,16 @@ class WiseAccount < ApplicationRecord
     )
   end
 
-  def upsert_wise_transactions_snapshot!(transactions)
-    update!(raw_transactions_payload: transactions)
+  # statements_coverage: the coverage this sync's statement fetch extended
+  # ({ "from", "through" } ISO-8601 strings), saved with the rows it brought.
+  # prune_cap_bypass: what #prune_cap_bypass_ids lists from now on. Marks are
+  # merged into the snapshot as stored now (#merge_raw_payload!), so an
+  # opening anchor a link recorded meanwhile stays.
+  def upsert_wise_transactions_snapshot!(transactions, statements_coverage: nil, prune_cap_bypass: nil)
+    markers = { "statements_coverage" => statements_coverage, "prune_cap_bypass" => prune_cap_bypass }.compact
+    return update!(raw_transactions_payload: transactions) if markers.empty?
+
+    merge_raw_payload!(markers, raw_transactions_payload: transactions)
   end
 
   private

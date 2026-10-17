@@ -16,52 +16,58 @@ class Provider::WiseTest < ActiveSupport::TestCase
     end
   end
 
+  # Intervals are UTC instants (the window a statement fetch asks for starts
+  # at the moment given, not at midnight in the job's zone), chunked into
+  # MAX_STATEMENT_DAYS windows that each start where the previous one ended.
   test "chunks balance statement requests into windows under the 469-day limit" do
-    start_date = Date.new(2015, 4, 12)
-    end_date = Date.new(2018, 4, 30)
+    interval_start = Time.utc(2015, 4, 12, 10, 30)
+    interval_end = Time.utc(2018, 4, 30, 12)
+    window = Provider::Wise::MAX_STATEMENT_DAYS.days
+    expected = [
+      [ interval_start, interval_start + window ],
+      [ interval_start + window, interval_start + 2 * window ],
+      [ interval_start + 2 * window, interval_end ]
+    ]
 
-    expected_windows = []
-    window_start = start_date
-    while window_start <= end_date
-      window_end = [ window_start + (Provider::Wise::MAX_STATEMENT_DAYS - 1), end_date ].min
-      expected_windows << {
-        interval_start: window_start.beginning_of_day,
-        interval_end: window_end.end_of_day
-      }
-      window_start = window_end + 1.day
-    end
-    assert_operator expected_windows.size, :>, 1
-
-    expected_windows.each do |window|
+    expected.each do |window_start, window_end|
       @provider.expects(:get_balance_statement)
-        .with("111", "222", currency: "EUR",
-              interval_start: window[:interval_start],
-              interval_end: window[:interval_end])
-        .returns({ "transactions" => [] })
+        .with("111", "222", currency: "EUR", interval_start: window_start, interval_end: window_end)
+        .returns({ "transactions" => [ { "referenceNumber" => window_start.iso8601 } ] })
         .once
     end
 
-    result = @provider.get_balance_statements("111", "222", currency: "EUR", start_date: start_date, end_date: end_date)
+    result = @provider.get_balance_statements("111", "222", currency: "EUR", interval_start: interval_start, interval_end: interval_end)
+
+    assert_equal expected.map { |window_start, _| window_start.iso8601 }, result.map { |row| row["referenceNumber"] }
+  end
+
+  test "uses a single request when the range fits within the limit" do
+    @provider.expects(:get_balance_statement)
+      .with("111", "222", currency: "EUR", interval_start: Time.utc(2018, 1, 1, 8), interval_end: Time.utc(2018, 4, 30, 17))
+      .returns({ "transactions" => [] })
+      .once
+
+    result = @provider.get_balance_statements("111", "222", currency: "EUR", interval_start: Time.utc(2018, 1, 1, 8),
+                                                            interval_end: Time.utc(2018, 4, 30, 17))
 
     assert_equal [], result
   end
 
-  test "uses a single request when the range fits within the limit" do
-    @provider.stubs(:get_balance_statement)
-      .with("111", "222", currency: "EUR",
-            interval_start: Date.new(2018, 1, 1).beginning_of_day,
-            interval_end: Date.new(2018, 4, 30).end_of_day)
-      .returns({ "transactions" => [] })
+  # A job keeps the zone of the request that enqueued it, and
+  # Date#beginning_of_day in America/New_York started the window five hours
+  # after the balance was created.
+  test "sends statement intervals as UTC instants whatever zone the job runs in" do
+    sent = nil
+    Provider::Wise.expects(:get)
+      .with { |_url, options| sent = options[:query] }
+      .returns(fake_response(code: 200, body: '{"transactions":[]}'))
 
-    result = @provider.get_balance_statements(
-      "111",
-      "222",
-      currency: "EUR",
-      start_date: Date.new(2018, 1, 1),
-      end_date: Date.new(2018, 4, 30)
-    )
+    Time.use_zone("America/New_York") do
+      @provider.get_balance_statements("111", "222", currency: "USD", interval_start: Time.utc(2025, 11, 26, 6, 52, 41),
+                                                     interval_end: Time.zone.local(2025, 12, 3, 9))
+    end
 
-    assert_equal [], result
+    assert_equal({ currency: "USD", intervalStart: "2025-11-26T06:52:41Z", intervalEnd: "2025-12-03T14:00:00Z" }, sent)
   end
 
   test "signs the SCA challenge and retries once when a private key is configured" do
@@ -112,13 +118,8 @@ class Provider::WiseTest < ActiveSupport::TestCase
       .returns({ "transactions" => [] }).then
       .returns({ "transactions" => [] })
 
-    result = @provider.get_balance_statements(
-      "111",
-      "222",
-      currency: "EUR",
-      start_date: Date.new(2018, 1, 1),
-      end_date: Date.new(2018, 4, 30)
-    )
+    result = @provider.get_balance_statements("111", "222", currency: "EUR", interval_start: Time.utc(2018, 1, 1),
+                                                            interval_end: Time.utc(2018, 4, 30))
 
     assert_equal [], result
   end

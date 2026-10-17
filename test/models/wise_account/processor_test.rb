@@ -129,6 +129,22 @@ class WiseAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2025, 10, 23), BigDecimal("0") ], opening_anchor(account)
   end
 
+  # A connection whose balances all have statements lists no transfers, so
+  # no transfers coverage is recorded; the balance's statements, fetched
+  # from when Wise opened it, carry what its transfers did.
+  test "moves the opening balance of a balance its statements cover in place of a transfer list" do
+    account = full_history_account(creation_time: "2025-03-26T08:00:00Z")
+    @wise_item.update!(raw_payload: { "coverage" => { "activities" => @wise_item.sync_metadata.dig("coverage", "activities") } })
+    statements = { "from" => "2025-03-26T08:00:00Z", "through" => "2026-10-17T12:00:00Z" }
+
+    WiseAccount::Processor.new(@wise_account.reload, import_complete: true).process
+    assert_equal [ 2.years.ago.to_date, BigDecimal("80") ], opening_anchor(account)
+
+    @wise_account.update!(raw_payload: @wise_account.raw_payload.merge("statements_coverage" => statements))
+    WiseAccount::Processor.new(@wise_account.reload, import_complete: true).process
+    assert_equal [ Date.new(2025, 3, 25), BigDecimal("0") ], opening_anchor(account)
+  end
+
   test "creates the opening balance at 0 the day before Wise opened a full-history balance" do
     @family.update!(timezone: "Europe/Dublin")
     @wise_item.update!(import_all_history: true)
