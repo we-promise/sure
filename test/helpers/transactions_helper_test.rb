@@ -8,6 +8,33 @@ class TransactionsHelperTest < ActionView::TestCase
     OpenStruct.new(extra: extra)
   end
 
+  test "can_reconcile_account? mirrors the write access the reconcile action requires" do
+    Current.session = Session.create!(user: users(:family_member))
+
+    assert can_reconcile_account?(accounts(:depository)),
+      "full_control share is write access"
+    assert_not can_reconcile_account?(accounts(:credit_card)),
+      "read_only share cannot reconcile"
+    assert_not can_reconcile_account?(accounts(:investment)),
+      "an account with no share at all cannot reconcile"
+  end
+
+  test "can_reconcile_account? lets the owner reconcile" do
+    Current.session = Session.create!(user: users(:family_admin))
+
+    assert can_reconcile_account?(accounts(:investment)), "owner can reconcile"
+  end
+
+  test "can_reconcile_account? does not treat annotate access as write access" do
+    share = account_shares(:credit_card_shared_with_member)
+    share.update!(permission: "read_write")
+
+    Current.session = Session.create!(user: users(:family_member))
+
+    assert_not can_reconcile_account?(accounts(:credit_card)),
+      "read_write is annotate access, and #reconcile requires write"
+  end
+
   test "extracts the named Plaid fields into their own section" do
     details = build_transaction_extra_details(transaction_with({
       "plaid" => {

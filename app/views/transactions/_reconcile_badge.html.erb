@@ -1,8 +1,11 @@
 <%# locals: (entry:, compact: false) %>
 <%# Manual reconciliation status — only meaningful for manual (unsynced) accounts.
     Synced accounts already have duplicate-matching + statement-level reconciliation
-    (see Entry#reconciled_status for the full rationale). %>
-<% if entry.account.manual? %>
+    (see Entry#reconciled_status for the full rationale).
+
+    Gated on write access as well: #reconcile requires it, so a read_write or
+    read_only share must not be offered a control the server would reject. %>
+<% if entry.account.manual? && can_reconcile_account?(entry.account) %>
   <%
     status = entry.reconciled_status
     tooltip = t("transactions.reconcile.badge.#{status}_tooltip")

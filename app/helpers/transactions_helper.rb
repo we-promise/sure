@@ -78,6 +78,20 @@ module TransactionsHelper
     @annotatable_account_ids.include?(account.id)
   end
 
+  # Whether the current user may cycle the manual reconciliation status.
+  # TransactionsController#reconcile requires write access (see
+  # require_account_permission! in AccountAuthorizable), so the badge must
+  # only be offered on accounts the user owns or holds full_control on --
+  # otherwise the click is rejected and the status never advances. Matches
+  # the "write" predicate rather than the annotate one, since reconciling is
+  # not an annotation. Memoized per request so list rows don't query per row.
+  def can_reconcile_account?(account)
+    return false unless Current.user
+
+    @reconcilable_account_ids ||= Account.writable_by(Current.user).pluck(:id).to_set
+    @reconcilable_account_ids.include?(account.id)
+  end
+
   # ---- Transaction extra details helpers ----
   # Returns a structured hash describing extra details for a transaction.
   # Input can be a Transaction or an Entry (responds_to :transaction).

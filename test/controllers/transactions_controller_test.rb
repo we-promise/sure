@@ -1467,6 +1467,23 @@ end
     assert_equal "unreconciled", entry.reload.reconciled_status
   end
 
+  # The badge used to render for any manual account, so a read_only share got a
+  # control the action refuses -- the click redirected back with an alert and
+  # the status never moved. Reconciling needs write access, not annotate access.
+  test "reconcile is rejected on a manual account shared with read-only access" do
+    read_only_account = accounts(:credit_card)
+    assert read_only_account.manual?, "fixture precondition: credit_card account must be manual"
+
+    entry = create_transaction(account: read_only_account, amount: 75)
+
+    sign_in users(:family_member)
+    patch reconcile_transaction_path(entry.transaction)
+
+    assert_redirected_to account_path(read_only_account)
+    assert_equal "You don't have permission to manage this account", flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
   test "reconcile is not accessible for another family's transaction" do
     other_family = families(:empty)
     other_account = other_family.accounts.create!(name: "Other family manual account", balance: 0, currency: "USD", accountable: Depository.new)
