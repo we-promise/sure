@@ -65,6 +65,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
   # Some cards report the credit limit as the booked balance and the available
   # credit as the available balance (mBank PL: ITBD = limit, ITAV = available).
   test "fetch_and_update_balance prefers available balance when the balance is treated as available credit" do
+    link_account(CreditCard.create!)
     @enable_banking_account.update!(treat_balance_as_available_credit: true)
     @mock_provider.stubs(:get_account_balances).returns(
       balances: [
@@ -87,12 +88,59 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
   end
 
   test "fetch_and_update_balance falls back to booked balance when treated as available credit and no available balance is reported" do
+    link_account(CreditCard.create!)
     @enable_banking_account.update!(treat_balance_as_available_credit: true)
     @mock_provider.stubs(:get_account_balances).returns(
       balances: [
         {
           balance_type: "ITBD",
           balance_amount: { amount: "4531.68", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("4531.68"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance keeps booked before expected when treated as available credit" do
+    link_account(CreditCard.create!)
+    @enable_banking_account.update!(treat_balance_as_available_credit: true)
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "XPCD",
+          balance_amount: { amount: "11500.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "ITBD",
+          balance_amount: { amount: "4531.68", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("4531.68"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance stays booked-first for a non-card account with the available credit flag set" do
+    link_account(Depository.create!)
+    @enable_banking_account.update!(treat_balance_as_available_credit: true)
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "ITBD",
+          balance_amount: { amount: "4531.68", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "ITAV",
+          balance_amount: { amount: "11500.00", currency: "EUR" },
           credit_debit_indicator: "CRDT"
         }
       ]
@@ -547,6 +595,18 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
   end
 
   private
+
+    def link_account(accountable)
+      account = Account.create!(
+        family: @family,
+        name: "CGD linked",
+        balance: 123.45,
+        cash_balance: 123.45,
+        currency: "EUR",
+        accountable: accountable
+      )
+      AccountProvider.create!(account: account, provider: @enable_banking_account)
+    end
 
     # Shaped like PayPal's response: the primary EUR balance first, then empty
     # CAD and USD balances under the same type.

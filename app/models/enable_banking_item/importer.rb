@@ -27,13 +27,14 @@ class EnableBankingItem::Importer
     ITAV interimAvailable
   ].freeze
 
-  # With "Balance is available credit" on, the bank's figure is the available
-  # credit, so available types come first. Some cards report the credit limit as
-  # the booked balance (mBank PL: ITBD = limit, ITAV = available credit).
+  # With "Balance is available credit" on for a credit card, the bank's figure
+  # is the available credit, so available types come first. Some cards report
+  # the credit limit as the booked balance (mBank PL: ITBD = limit, ITAV =
+  # available credit). XPCD (expected) keeps its place after the booked types:
+  # it is a projected booked balance, not an available-credit figure.
   AVAILABLE_CREDIT_BALANCE_TYPE_PRIORITY = (%w[
     CLAV closingAvailable
     ITAV interimAvailable
-    XPCD expected
   ] + BALANCE_TYPE_PRIORITY).uniq.freeze
 
   PERIOD_BOUNDARY_TYPES = %w[opbd openingbooked prcd previouslyclosedbooked].freeze
@@ -245,7 +246,7 @@ class EnableBankingItem::Importer
 
       currency, kept, skipped = split_balances_by_currency(balances, enable_banking_account)
       balance = select_current_balance(
-        kept, prefer_available: enable_banking_account.treat_balance_as_available_credit?
+        kept, prefer_available: prefer_available_balance?(enable_banking_account)
       )
 
       unless balance.present?
@@ -346,6 +347,14 @@ class EnableBankingItem::Importer
           other_balances: funded
         }
       )
+    end
+
+    # The flag only changes how a credit card's balance is read (see
+    # EnableBankingAccount::Processor#process_account!), so any other linked
+    # account stays booked-first even if the flag is still set from an earlier link.
+    def prefer_available_balance?(enable_banking_account)
+      enable_banking_account.treat_balance_as_available_credit? &&
+        enable_banking_account.current_account&.accountable_type == "CreditCard"
     end
 
     def select_current_balance(balances, prefer_available: false)
