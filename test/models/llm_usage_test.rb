@@ -13,6 +13,7 @@ class LlmUsageTest < ActiveSupport::TestCase
   end
 
   test "infer_provider returns google for gemini and google/ models" do
+    assert_equal "google", LlmUsage.infer_provider("gemini-4-argon")
     assert_equal "google", LlmUsage.infer_provider("gemini-3.8-flash")
     assert_equal "google", LlmUsage.infer_provider("gemini-3.1-pro")
     assert_equal "google", LlmUsage.infer_provider("gemini-2.5-flash")
@@ -196,6 +197,15 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_in_delta 6.251438, LlmUsage.estimate_auto_categorize_cost(
       model: "gemini-2.5-pro", transaction_count: 10_000, category_count: 20
     ), 0.000001
+  end
+
+  test "calculate_cost returns Google pricing for Gemini 4 Argon" do
+    # gemini-4-argon promotional pricing: $2.00 prompt / $10.00 completion per 1M tokens
+    %w[gemini-4-argon gemini-4-argon-preview google/gemini-4-argon].each do |model|
+      cost = LlmUsage.calculate_cost(model: model, prompt_tokens: 1_000_000, completion_tokens: 100_000)
+      # 1M * $2.00 + 100k * $10.00 = $2.00 + $1.00 = $3.00
+      assert_in_delta 3.00, cost, 0.0001
+    end
   end
 
   test "calculate_cost returns Google pricing for Gemini 3 models" do
