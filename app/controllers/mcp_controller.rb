@@ -4,7 +4,7 @@ class McpController < ApplicationController
   PROTOCOL_VERSION = "2025-06-18"
   SUPPORTED_PROTOCOL_VERSIONS = [ "2025-03-26", PROTOCOL_VERSION ].freeze
   MCP_SESSION_TTL = 1.day
-  REQUIRED_SCOPE = "read_write"
+  REQUIRED_SCOPE = "mcp"
 
   # Skip session-based auth and CSRF — this is a token-authenticated API
   skip_authentication
@@ -135,7 +135,7 @@ class McpController < ApplicationController
     def authenticate_via_doorkeeper(token)
       access_token = Doorkeeper::AccessToken.by_token(token)
       return false unless access_token&.accessible?
-      return false unless access_token.scopes.include?(REQUIRED_SCOPE)
+      return false unless access_token.scopes.include?("mcp") || access_token.scopes.include?("read_write")
 
       user = User.find_by(id: access_token.resource_owner_id)
       return false unless user&.active?
