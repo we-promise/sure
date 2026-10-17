@@ -52,6 +52,10 @@ ca:
       balance: 'Saldo a la data:'
       institution_domain_label: Domini de l'entitat
       institution_domain_placeholder: p. ex., chase.com
+      iban_label: "IBAN"
+      iban_placeholder: "p. ex., DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN desat, introdueix un valor nou per substituir-lo"
+      iban_remove_label: "Elimina l'IBAN"
       institution_name_label: Nom de l'entitat
       institution_name_placeholder: p. ex., Chase Bank
       name_label: Nom del compte

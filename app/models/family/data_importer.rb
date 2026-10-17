@@ -60,6 +60,10 @@ class Family::DataImporter
     "Category" => "categories",
     "Tag" => "tags",
     "Merchant" => "merchants",
+    # An imported IBAN another account (same currency) or merchant of the
+    # family already holds is dropped; the record itself is still imported.
+    "AccountIban" => "account_ibans",
+    "MerchantIban" => "merchant_ibans",
     "ProviderMerchant" => "provider_merchants",
     "RecurringTransaction" => "recurring_transactions",
     "RecurrenceRule" => "recurrence_rules",
@@ -330,6 +334,10 @@ class Family::DataImporter
           notes: data["notes"],
           status: importable_account_status(data["status"])
         )
+        # Older or hand-built files omit iban; don't clear an existing one.
+        if data.key?("iban")
+          assign_imported_iban(account, data["iban"], @family.accounts.where(currency: account.currency), "AccountIban")
+        end
 
         account.save!
 
@@ -349,6 +357,20 @@ class Family::DataImporter
         @created_accounts << account if created
         increment_summary("Account", created ? :created : :updated)
       end
+    end
+
+    # Leaves the record's IBAN unchanged when another record in +taken_scope+
+    # already holds the imported one, so the uniqueness validation cannot
+    # abort the whole import.
+    def assign_imported_iban(record, raw_iban, taken_scope, record_type)
+      iban = IbanNormalizable.normalize(raw_iban)
+
+      if iban && taken_scope.where.not(id: record.id).exists?(iban: iban)
+        increment_summary(record_type, :skipped)
+        return
+      end
+
+      record.iban = iban
     end
 
     def importable_account_status(status)
@@ -493,8 +515,9 @@ class Family::DataImporter
           color: data["color"],
           logo_url: data["logo_url"]
         )
-        # Older or hand-built files omit website_url; don't clear an existing one.
+        # Older or hand-built files omit website_url and iban; don't clear existing ones.
         merchant.website_url = data["website_url"] if data.key?("website_url")
+        assign_imported_iban(merchant, data["iban"], @family.merchants, "MerchantIban") if data.key?("iban")
         merchant.save!
         map_source!(:merchants, old_id, merchant)
         increment_summary("Merchant", created ? :created : :updated)

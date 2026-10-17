@@ -54,6 +54,10 @@ ru:
       exclude_from_reports: Исключить из всех отчётов
       institution_domain_label: Домен учреждения
       institution_domain_placeholder: например, sberbank.ru
+      iban_label: "IBAN"
+      iban_placeholder: "например, DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN сохранён, введите новое значение, чтобы заменить его"
+      iban_remove_label: "Удалить IBAN"
       institution_name_label: Название учреждения
       institution_name_placeholder: например, Сбербанк
       name_label: Название счёта

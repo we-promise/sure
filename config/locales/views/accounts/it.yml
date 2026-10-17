@@ -48,6 +48,10 @@ it:
       institution_name_placeholder: es. Banca Intesa
       institution_domain_label: Dominio istituzione
       institution_domain_placeholder: es. intesasanpaolo.com
+      iban_label: "IBAN"
+      iban_placeholder: "es. DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN salvato, inserisci un nuovo valore per sostituirlo"
+      iban_remove_label: "Rimuovi IBAN"
       notes_label: Note
       notes_placeholder: Conserva informazioni aggiuntive come numeri di conto, IBAN, codici ABI/CAB, ecc.
       exclude_from_reports: Escludi da tutti i report

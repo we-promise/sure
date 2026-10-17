@@ -57,6 +57,10 @@ pl:
       exclude_from_reports: Wyklucz ze wszystkich raportów
       institution_domain_label: Domena instytucji
       institution_domain_placeholder: np. pkobp.pl
+      iban_label: "IBAN"
+      iban_placeholder: "np. DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN zapisany, wprowadź nową wartość, aby go zastąpić"
+      iban_remove_label: "Usuń IBAN"
       institution_name_label: Nazwa instytucji
       institution_name_placeholder: np. PKO Bank Polski
       name_label: Nazwa konta

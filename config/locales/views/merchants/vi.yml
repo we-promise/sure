@@ -13,6 +13,10 @@ vi:
       name_placeholder: Tên nhà cung cấp
       website_placeholder: "Trang web (ví dụ: starbucks.com)"
       website_hint: Nhập trang web của nhà cung cấp để tự động hiển thị logo của họ
+      iban_placeholder: "IBAN (không bắt buộc)"
+      iban_set_placeholder: "•••• •••• •••• •••• — Đã lưu IBAN, nhập giá trị mới để thay thế"
+      iban_hint: "Số tài khoản ngân hàng của nhà cung cấp, nếu biết"
+      iban_remove_label: "Xóa IBAN"
     index:
       empty: Chưa có nhà cung cấp nào
       new: Nhà cung cấp mới
