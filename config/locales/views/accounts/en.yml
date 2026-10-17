@@ -138,6 +138,9 @@ en:
     update:
       success: "%{type} account updated"
     sidebar:
+      account_count:
+        one: 1 account
+        other: "%{count} accounts"
       missing_data: Missing historical data
       missing_data_description: "%{product} uses third party providers to fetch historical exchange rates, security prices, and more. This data is required to calculate accurate historical account balances."
       configure_providers: Configure your providers here.

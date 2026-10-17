@@ -123,6 +123,9 @@ it:
     update:
       success: "Conto %{type} aggiornato"
     sidebar:
+      account_count:
+        one: 1 conto
+        other: "%{count} conti"
       missing_data: Dati storici mancanti
       missing_data_description: "%{product} utilizza provider di terze parti per recuperare tassi di cambio storici, prezzi dei titoli e altro. Questi dati sono necessari per calcolare i saldi storici accurati del conto."
       configure_providers: Configura i tuoi provider qui.

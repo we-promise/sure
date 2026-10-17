@@ -5,7 +5,7 @@
   <%= render DS::Disclosure.new(align: :left, open: is_open) do |disclosure| %>
     <% disclosure.with_summary_content do %>
       <div class="flex items-center gap-3">
-        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+        <%= icon "chevron-right", class: "[details[open]>summary_&]:rotate-90 motion-safe:transition-transform" %>
         <%= tag.span class: class_names("text-sm text-primary font-medium", "animate-pulse" => account_group.syncing?) do %>
           <%= account_group.name %>
         <% end %>
@@ -24,6 +24,7 @@
       </div>
     <% end %>
 
+    <% if sortable %>
     <%= tag.div class: "space-y-1",
           data: sortable ? {
             controller: "sortable-list",
@@ -34,63 +35,38 @@
             sortable_list_mirror_lists_value: true,
             action: "dragover->sortable-list#dragOver drop->sortable-list#drop account-sort-mode:stop@window->sortable-list#releaseKeyboardGrab turbo:before-visit@window->sortable-list#saveBeforeVisit"
           } : {} do %>
-      <% account_group.accounts.each do |account| %>
-        <%# Rows become draggable only in sort mode (account-sort-mode). %>
-        <%= tag.div class: "flex items-center gap-1 rounded-lg",
-              data: sortable ? {
-                sortable_list_target: "item",
-                sortable_list_id: account.id,
-                action: "dragstart->sortable-list#dragStart dragend->sortable-list#dragEnd"
-              } : {} do %>
-        <% if sortable %>
-          <%# Hidden until the sidebar is in sort mode (account-sort-mode). %>
-          <%= render DS::Button.new(
-            variant: :icon,
-            icon: "grip-vertical",
-            size: :sm,
-            style: "display:none",
-            class: "shrink-0 cursor-grab active:cursor-grabbing touch-none [-webkit-touch-callout:none]",
-            aria_label: t("accounts.sidebar.reorder_account", account: account.name),
-            title: t("accounts.sidebar.reorder_hint"),
-            data: {
-              account_sort_mode_target: "handle",
-              action: "touchstart->sortable-list#touchStart touchmove->sortable-list#touchMove touchend->sortable-list#touchEnd touchcancel->sortable-list#touchCancel contextmenu->sortable-list#suppressContextMenu keydown->sortable-list#handleKeyDown"
-            }
-          ) %>
-        <% end %>
-        <%= link_to account_path(account),
-                  class: class_names(
-                    "block flex items-center gap-2 px-3 py-2 rounded-lg min-w-0 grow",
-                    page_active?(account_path(account)) ? "bg-container" : "hover:bg-surface-hover"
-                  ),
-                  data: page_active?(account_path(account)) ? { active_account: true } : {},
-                  title: account.name do %>
-          <%= render "accounts/logo", account: account, size: "sm", color: account_group.color %>
-
-          <div class="min-w-0 grow">
-            <div class="flex items-center gap-2 mb-0.5">
-              <%= tag.p account.name, class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) %>
-              <% if account.shared? %>
-                <%= icon("users", class: "w-3 h-3 text-secondary shrink-0") %>
-              <% end %>
-            </div>
-            <%= tag.p account_sidebar_description(account), class: "text-sm text-secondary truncate" %>
-          </div>
-
-          <div class="ml-auto text-right grow h-10">
-            <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
-            <%= turbo_frame_tag dom_id(account, :sparkline),
-                                src: sparkline_account_path(account),
-                                loading: "lazy",
-                                data: sparkline_frame_data do %>
-              <div class="flex items-center w-8 h-4 ml-auto">
-                <div class="w-6 h-px bg-loader"></div>
+      <%= render partial: "accounts/sidebar_account", collection: account_group.accounts, as: :account, locals: { color: account_group.color, sortable: true } %>
+    <% end %>
+    <% else %>
+    <div class="space-y-2">
+      <% account_group.institution_groups.each do |institution_group| %>
+        <% if institution_group.name.present? %>
+          <% institution_open = institution_group.accounts.any? { |account| page_active?(account_path(account)) } || Current.user.always_expanded_account_group?(account_group.key) || open == true %>
+          <%= render DS::Disclosure.new(
+            open: institution_open,
+            class: "rounded-xl border border-primary",
+            summary_class: "flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer focus-ring min-h-11 hover:bg-surface-hover",
+            body_class: "ml-3 pl-2 pb-2 border-l border-primary",
+            data: { institution_group: institution_group.name }
+          ) do |institution_disclosure| %>
+            <% institution_disclosure.with_summary_content do %>
+              <%= icon "chevron-right", class: "shrink-0 [details[open]>summary_&]:rotate-90 motion-safe:transition-transform" %>
+              <div class="min-w-0 flex-1">
+                <%= tag.p institution_group.name, class: "text-sm font-medium text-primary truncate" %>
+                <%= tag.p t("accounts.sidebar.account_count", count: institution_group.accounts.size), class: "text-xs text-secondary" %>
               </div>
+              <%= tag.p format_money(institution_group.total_money), class: "shrink-0 text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
             <% end %>
-          </div>
-        <% end %>
+
+            <div class="space-y-1">
+              <%= render partial: "accounts/sidebar_account", collection: institution_group.accounts, as: :account, locals: { color: account_group.color } %>
+            </div>
+          <% end %>
+        <% else %>
+          <%= render partial: "accounts/sidebar_account", collection: institution_group.accounts, as: :account, locals: { color: account_group.color } %>
         <% end %>
       <% end %>
+    </div>
     <% end %>
 
     <div class="my-2">

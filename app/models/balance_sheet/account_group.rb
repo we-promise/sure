@@ -33,6 +33,20 @@ class BalanceSheet::AccountGroup
     accountable_type.to_s.underscore
   end
 
+  def institution_groups
+    accounts.group_by { |account| account.institution_name&.strip.presence }
+            .sort_by { |name, _| [ name.nil? ? 1 : 0, name.to_s.downcase ] }
+            .map do |name, institution_accounts|
+              self.class.new(
+                name: name,
+                color: color,
+                accountable_type: accountable_type,
+                accounts: institution_accounts,
+                classification_group: classification_group
+              )
+            end
+  end
+
   # Counts the same accounts as the classification total and net worth, so the
   # group weights add up and the sidebar sparkline matches this figure.
   def total
