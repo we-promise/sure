@@ -1,9 +1,16 @@
 class OauthRegistrationController < ApplicationController
+  include OauthBase
+
   LOOPBACK_HOSTS = [ "localhost", "127.0.0.1", "::1" ].freeze
   # Schemes that can execute script, read local files, invoke device handlers,
   # or are not OAuth redirects.
   FORBIDDEN_SCHEMES = %w[javascript data file about blob ws wss ftp mailto tel sms intent].freeze
   SCHEME_PATTERN = /\A[a-z][a-z0-9+\-.]*\z/.freeze
+
+  VALID_SCOPES = OauthBase.mcp_scopes
+  # Least privilege by default: a client that does not ask for read_write does
+  # not get it. A client that wants MCP writes must say so explicitly.
+  DEFAULT_SCOPE = "read"
 
   skip_authentication
   skip_before_action :verify_authenticity_token
@@ -50,14 +57,14 @@ class OauthRegistrationController < ApplicationController
 
     client_name = body["client_name"].presence || "MCP Client"
 
+    scope = resolve_requested_scope(body["scope"])
+    return if performed?
+
     app = Doorkeeper::Application.new(
       name: client_name,
       redirect_uri: redirect_uris.join("\n"),
       confidential: false,
-      # MCP requires the read_write scope. Without assigning it to the
-      # dynamically registered client, Doorkeeper falls back to the provider's
-      # default read scope and the token is rejected by McpController.
-      scopes: "read_write"
+      scopes: scope
     )
 
     if app.save
@@ -66,6 +73,12 @@ class OauthRegistrationController < ApplicationController
         client_name: app.name,
         redirect_uris: app.redirect_uri.split("\n"),
         grant_types: [ "authorization_code" ],
+        # RFC 7591 §3.2.1: when the server substitutes a metadata value —
+        # here, the requested scope defaulted, narrowed, or reordered — it
+        # MUST return the value actually registered, so a client can tell
+        # "no scope sent, got read" from "sent read_write, got read_write"
+        # instead of finding out later as missing tools.
+        scope: app.scopes.to_s,
         token_endpoint_auth_method: "none"
       }, status: :created
     else
@@ -82,6 +95,35 @@ class OauthRegistrationController < ApplicationController
   end
 
   private
+
+    # RFC 7591 §2's "scope" is a space-delimited string ("read read_write"),
+    # but tolerate an array too rather than reject it outright. Blank/absent
+    # falls back to DEFAULT_SCOPE.
+    #
+    # Scopes outside VALID_SCOPES are dropped, not rejected (RFC 7591 §3.2.1
+    # lets the server substitute what it registers): real clients send generic
+    # scopes such as "openid", "profile" or "mcp", and rejecting them would
+    # leave the user no way to connect at all. Dropping can only narrow what is
+    # granted — never widen it — and a client that wanted more than it got can
+    # see the scope actually registered in the response body. If nothing valid
+    # is left, the client gets DEFAULT_SCOPE.
+    #
+    # Preserves exactly what was requested (deduped) rather than collapsing
+    # to "read_write" whenever it's present: Doorkeeper's ScopeChecker
+    # validates a later /oauth/authorize?scope=... request against the
+    # app's OWN registered scopes in preference to the server defaults, so a
+    # client that registered with only "read_write" stored can never
+    # subsequently request just "read" for that app. Keeping "read" in the
+    # stored set when the client asked for it avoids foreclosing that.
+    def resolve_requested_scope(raw)
+      return DEFAULT_SCOPE if raw.blank?
+
+      requested = Array(raw).join(" ").split.uniq
+      ignored = requested - VALID_SCOPES
+      Rails.logger.info "[MCP] Ignored unsupported scope(s) at client registration: #{ignored.join(', ')}" if ignored.any?
+
+      (requested & VALID_SCOPES).join(" ").presence || DEFAULT_SCOPE
+    end
 
     # Returns true for https, loopback http, and RFC 8252 private-use schemes
     # (cursor://, vscode://). Rejects fragments, userinfo, handler schemes, and

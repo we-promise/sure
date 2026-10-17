@@ -4,6 +4,8 @@ class McpController < ApplicationController
   PROTOCOL_VERSION = "2025-06-18"
   SUPPORTED_PROTOCOL_VERSIONS = [ "2025-03-26", PROTOCOL_VERSION ].freeze
   MCP_SESSION_TTL = 1.day
+  # See authenticate_via_env_token below.
+  MCP_API_TOKEN_SCOPES = OauthBase.mcp_scopes
 
   # Skip session-based auth and CSRF — this is a token-authenticated API
   skip_authentication
@@ -26,9 +28,20 @@ class McpController < ApplicationController
 
     request_id = body["id"]
 
-    # JSON-RPC notifications omit the id field — server must not respond
+    # JSON-RPC notifications omit the id field entirely — server must not
+    # send a body. MCP Streamable HTTP answers a notification with 202
+    # Accepted (204 is for "processed, nothing to say"; 202 is "accepted, no
+    # reply is coming"). An explicit "id": null is a different thing: the key
+    # IS present, so this is a real request, not a notification — but null is
+    # not a usable id either, so it is rejected before dispatch rather than
+    # executed and answered with an "id": null response.
     unless body.key?("id")
-      return head(:no_content)
+      return head(:accepted)
+    end
+
+    if request_id.nil?
+      render_jsonrpc_error(nil, -32600, "Invalid Request")
+      return
     end
 
     result = dispatch_jsonrpc(request_id, body["method"], body["params"])
@@ -51,6 +64,13 @@ class McpController < ApplicationController
     end
 
     def dispatch_jsonrpc(request_id, method, params)
+      # JSON-RPC 2.0 allows "params" to be an Array (positional) as well as an
+      # Object; nothing Sure implements takes positional params, but every
+      # downstream #dig call below assumes Hash semantics. Array#dig raises
+      # TypeError on a String key, which would otherwise 500 a spec-legal
+      # "params": [] instead of degrading to "no named params given".
+      params = {} unless params.is_a?(Hash)
+
       return unless prepare_mcp_request_context(request_id, method, params)
 
       case method
@@ -69,7 +89,11 @@ class McpController < ApplicationController
     def handle_initialize(params)
       @mcp_protocol_version = negotiated_protocol_version(params)
       @mcp_session_id = SecureRandom.uuid
-      Rails.cache.write(mcp_session_cache_key(@mcp_session_id), mcp_user.id, expires_in: MCP_SESSION_TTL)
+      Rails.cache.write(
+        mcp_session_cache_key(@mcp_session_id),
+        { user_id: mcp_user.id, access_mode: @mcp_access_mode.to_s },
+        expires_in: MCP_SESSION_TTL
+      )
 
       {
         protocolVersion: @mcp_protocol_version,
@@ -80,7 +104,7 @@ class McpController < ApplicationController
     end
 
     def handle_tools_list
-      tools = Assistant.function_classes(mcp_user).map do |fn_class|
+      tools = mcp_function_classes.map do |fn_class|
         fn_instance = fn_class.new(mcp_user)
         {
           name: fn_instance.name,
@@ -96,10 +120,13 @@ class McpController < ApplicationController
       name = params&.dig("name")
       arguments = params&.dig("arguments") || {}
 
-      # Scoped to the authenticated user so a tool hidden from tools/list is not
-      # callable by guessing its name — a non-preview caller gets the same
-      # "Unknown tool" response as for a name that does not exist.
-      fn_class = Assistant.function_classes(mcp_user).find { |fc| fc.name == name }
+      # Scoped to mcp_function_classes, which already applies both the preview
+      # gate and the read-only allowlist — a write tool hidden from tools/list
+      # by either filter is equally unreachable here. A read-only caller who
+      # knows a write tool's exact name gets the same "Unknown tool" response
+      # as a name that does not exist; there is no separate "forbidden" path
+      # that would confirm the tool exists.
+      fn_class = mcp_function_classes.find { |fc| fc.name == name }
 
       unless fn_class
         render_jsonrpc_error(request_id, -32602, "Unknown tool: #{name}")
@@ -130,18 +157,41 @@ class McpController < ApplicationController
       render_mcp_unauthorized
     end
 
+    # Doorkeeper is already configured with the only two scopes MCP cares
+    # about (config/initializers/doorkeeper.rb: default_scopes :read,
+    # optional_scopes :read_write) — reused as-is rather than introducing a
+    # parallel scope system. "read_write" implies "read", so a token carrying
+    # both (possible if a client explicitly requests the superset) is treated
+    # as read_write. A token with neither scope is not a valid MCP credential,
+    # regardless of what else Doorkeeper considers it authorized for.
     def authenticate_via_doorkeeper(token)
       access_token = Doorkeeper::AccessToken.by_token(token)
       return false unless access_token&.accessible?
-      return false unless access_token.scopes.include?("read_write")
+
+      access_mode = doorkeeper_mcp_access_mode(access_token.scopes)
+      return false unless access_mode
 
       user = User.find_by(id: access_token.resource_owner_id)
       return false unless user&.active?
 
       setup_mcp_session(user)
+      @mcp_access_mode = access_mode
       true
     end
 
+    def doorkeeper_mcp_access_mode(scopes)
+      return :read_write if scopes.include?("read_write")
+      return :read_only if scopes.include?("read")
+
+      nil
+    end
+
+    # MCP_API_TOKEN_SCOPE lets a self-hosted install pin the static bearer
+    # token to the same read/read_write levels OAuth uses, instead of a
+    # separate second token. Unset keeps the historical default: full access,
+    # so existing installs see no change. An explicit but unrecognized value
+    # fails the authentication rather than silently granting read_write —
+    # a typo here must never widen access.
     def authenticate_via_env_token(token)
       expected = ENV["MCP_API_TOKEN"]
       return false unless expected.present?
@@ -149,6 +199,12 @@ class McpController < ApplicationController
         OpenSSL::Digest::SHA256.hexdigest(token),
         OpenSSL::Digest::SHA256.hexdigest(expected)
       )
+
+      scope = ENV["MCP_API_TOKEN_SCOPE"].presence || "read_write"
+      unless MCP_API_TOKEN_SCOPES.include?(scope)
+        Rails.logger.warn "[MCP] MCP_API_TOKEN_SCOPE=#{scope.inspect} is invalid (must be \"read\" or \"read_write\") — check environment configuration"
+        return false
+      end
 
       user = User.find_by(email: ENV["MCP_USER_EMAIL"])
 
@@ -158,6 +214,7 @@ class McpController < ApplicationController
       end
 
       setup_mcp_session(user)
+      @mcp_access_mode = scope == "read_write" ? :read_write : :read_only
       true
     end
 
@@ -174,6 +231,30 @@ class McpController < ApplicationController
 
     def mcp_user
       @mcp_user
+    end
+
+    # A global kill-switch: when set, every connection is limited to read-only
+    # tools regardless of how it authenticated (OAuth scope or the static
+    # MCP_API_TOKEN_SCOPE). @mcp_access_mode alone covers the per-credential case.
+    def mcp_read_only?
+      ActiveModel::Type::Boolean.new.cast(ENV["MCP_READ_ONLY"]) || @mcp_access_mode == :read_only
+    end
+
+    # Single source of truth for both tools/list and tools/call: filtering only
+    # tools/list would hide write tools from discovery while leaving them
+    # callable by a client that already knows (or guesses) their name.
+    #
+    # Each class answers its own Assistant::Function.read_only? (false unless
+    # explicitly overridden — see that base class), so classifying a tool is a
+    # one-line change on the class itself rather than a list to keep in sync
+    # here. A preview tool is still gated first by Assistant.function_classes:
+    # being read-only never makes a tool reachable for a user without preview
+    # features on.
+    def mcp_function_classes
+      classes = Assistant.function_classes(mcp_user)
+      return classes unless mcp_read_only?
+
+      classes.select(&:read_only?)
     end
 
     def prepare_mcp_request_context(request_id, method, params)
@@ -194,12 +275,38 @@ class McpController < ApplicationController
       session_id = mcp_request_header("Mcp-Session-Id").presence
       return true unless session_id
 
-      unless Rails.cache.read(mcp_session_cache_key(session_id)) == mcp_user.id
+      unless valid_mcp_session?(session_id)
         render_jsonrpc_error(request_id, -32600, t("mcp.errors.invalid_session_id"), status: :not_found)
         return false
       end
 
       @mcp_session_id = session_id
+      true
+    end
+
+    # Backward-compatible with cache entries written before this patch, which
+    # stored the bare user id (every credential was read_write back then, so
+    # that is exactly what a legacy entry means — not an ambiguity to resolve
+    # in the caller's favor). A session never grants more access than the
+    # credential that created it: if the session was minted read-only, it stays
+    # read-only for its full lifetime even if this request's own token is
+    # read-write.
+    def valid_mcp_session?(session_id)
+      cached = Rails.cache.read(mcp_session_cache_key(session_id))
+
+      user_id, session_access_mode =
+        case cached
+        when Hash
+          [ cached[:user_id] || cached["user_id"], (cached[:access_mode] || cached["access_mode"])&.to_sym ]
+        when String, Integer
+          # Pre-patch entries stored the bare id (a UUID string on this
+          # schema); every credential was read_write back then.
+          [ cached, :read_write ]
+        end
+
+      return false unless user_id.present? && user_id == mcp_user&.id
+
+      @mcp_access_mode = :read_only if session_access_mode == :read_only
       true
     end
 
@@ -218,10 +325,19 @@ class McpController < ApplicationController
       request.headers[name] || request.get_header("HTTP_#{name.upcase.tr('-', '_')}")
     end
 
+    # scope="read" tells a client what to request first: the minimum needed to
+    # get in the door at all. Least privilege by default, guided by the server
+    # rather than left to whatever the client happens to default to.
     def render_mcp_unauthorized
       response.set_header(
         "WWW-Authenticate",
-        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource\""
+        # The resource-scoped metadata document, not the root one: its
+        # "resource" field is "<base>/mcp", matching the identifier a client
+        # constructs this exact URL from (RFC 9728 §3.3) — pointing at the
+        # root path here would advertise a document whose "resource" doesn't
+        # match, which spec-strict clients (e.g. the official TypeScript SDK)
+        # reject outright.
+        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource/mcp\", scope=\"read\""
       )
       render json: { error: "unauthorized" }, status: :unauthorized
     end

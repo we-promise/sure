@@ -23,6 +23,10 @@ class Assistant::Function::GetRuleOptions < Assistant::Function
         (auto categorize, auto detect merchants) are not available here.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?

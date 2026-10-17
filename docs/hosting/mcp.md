@@ -17,17 +17,61 @@ Sure supports two ways to authenticate MCP clients:
 
 ### 1. OAuth 2.0 / dynamic client registration (recommended)
 
-This is the best option for Claude.ai and other MCP clients that support OAuth. Sure exposes:
+This is the best option for Claude.ai, ChatGPT (via the OpenAI Secure MCP
+Tunnel), and other MCP clients that support OAuth. Sure exposes:
 
-- `/.well-known/oauth-protected-resource`
+- `/.well-known/oauth-protected-resource` (and the resource-scoped
+  `/.well-known/oauth-protected-resource/mcp`)
 - `/.well-known/oauth-authorization-server`
 - `POST /register` for dynamic client registration
 
-These endpoints let compatible MCP clients register a public OAuth client, redirect you back to Sure for sign-in, and receive a bearer token with the `read_write` scope.
+These endpoints let a compatible MCP client register a public OAuth client,
+redirect you back to Sure for sign-in, and receive a bearer token scoped to
+one of Sure's two existing Doorkeeper scopes:
+
+| Scope | Grants |
+|-------|--------|
+| `read` | MCP read-only: only tools confirmed to perform no mutation (see [Read-only mode](#read-only-mode)) |
+| `read_write` | Full MCP access: everything `read` exposes, plus every write-capable tool |
+
+**A client that registers without specifying a scope gets `read`** — least
+privilege by default. A client that wants write access must explicitly
+request it when it registers: pass `"scope": "read_write"` (or
+`"scope": "read read_write"`) in the `POST /register` body. The scopes a
+client registered with are the ceiling for everything it requests later:
+`/oauth/authorize` only grants scopes within that set, so a client registered
+as `read` cannot ask for `read_write` at authorization time and must
+re-register. Sure never upgrades a client to `read_write` on its own.
+Any other scope in the request (`openid`, `profile`, `mcp`, …) is ignored
+rather than rejected; if nothing valid is left the client is registered as
+`read`. The response's `scope` field always reports what was actually
+registered.
+
+Recommend `read` for ChatGPT, analytics assistants, and any integration that
+only needs to see the data. Reserve `read_write` for a client you actually
+want making changes (creating tags, updating transactions, and so on).
+
+#### Upgrading from a version without scopes
+
+Before scopes, every MCP connection was effectively `read_write`. After
+upgrading:
+
+- **Connections you already have keep working unchanged.** Their tokens and
+  client registrations are untouched, so they keep `read_write`.
+- **A connector you remove and add again registers as `read`**, unless the
+  client sends `"scope": "read_write"`. Its write tools then disappear from
+  `tools/list` (`tools/call` answers "Unknown tool"). See [OAuth token
+  authenticates but write tools are missing](#oauth-token-authenticates-but-write-tools-are-missing).
+- **An existing token that only has the `read` scope can now use MCP**, with
+  the read-only tool surface. MCP used to reject it with `401`. It gains no
+  more than it already had on the REST API.
+- **`MCP_API_TOKEN` keeps full access** unless you set `MCP_API_TOKEN_SCOPE`.
 
 ### 2. Static bearer token via environment variables
 
-This is the simpler fallback for custom agents, scripts, and deployments where you want to pin the MCP server to a specific Sure user.
+This is the fallback for custom agents, scripts, and deployments where OAuth
+isn't practical, or where you want to pin the MCP server to a specific Sure
+user regardless of which client connects.
 
 Set these environment variables:
 
@@ -35,9 +79,21 @@ Set these environment variables:
 |----------|-------------|---------|
 | `MCP_API_TOKEN` | Bearer token for authentication | `your-secret-token-here` |
 | `MCP_USER_EMAIL` | Email of the Sure user whose data the assistant can access | `user@example.com` |
+| `MCP_API_TOKEN_SCOPE` | Optional. `read` or `read_write` — mirrors the OAuth scopes above. Defaults to `read_write`, matching this token's historical behavior. | `read` |
 
-Both variables are required for the legacy token flow. OAuth clients using the
-MCP discovery and dynamic registration endpoints do not need these variables.
+`MCP_API_TOKEN` and `MCP_USER_EMAIL` are both required for the static-token
+flow. OAuth clients using the MCP discovery and dynamic registration
+endpoints do not need these variables. An `MCP_API_TOKEN_SCOPE` value other
+than `read` or `read_write` is rejected — the token fails to authenticate
+rather than silently falling back to full access.
+
+> [!IMPORTANT]
+> In ChatGPT's Secure MCP Tunnel UI, selecting "Authentication: None" for the
+> tunnel does **not** mean Sure's `/mcp` endpoint is reachable anonymously —
+> the tunnel client injects the bearer token locally via `MCP_EXTRA_HEADERS`
+> (or equivalent), and Sure still requires and checks it on every request. Do
+> not expose `/mcp` without a token (or an OAuth-authenticated client)
+> configured on the Sure side.
 
 ### Generating a secure token
 
@@ -57,6 +113,79 @@ The `MCP_USER_EMAIL` must match an existing Sure user's email address. The AI as
 > [!CAUTION]
 > The AI assistant can call the MCP tools available to the specified user. This includes reading financial data and write-capable tools such as statement import, goal/category/tag changes, transaction updates, and budget updates. Only set this for users you trust with your AI provider.
 
+## Read-only mode
+
+A connection ends up limited to read-only tools when any of the following is
+true — they compose, and any one of them is enough:
+
+| Source | Effect |
+|--------|--------|
+| OAuth token scoped `read` | That connection only (the normal case — see [Authentication Modes](#authentication-modes)) |
+| `MCP_API_TOKEN_SCOPE=read` | The static token only |
+| `MCP_READ_ONLY=true` | Kill switch: **every** MCP connection, regardless of how it authenticated, including an OAuth token scoped `read_write` |
+
+Recommended setups:
+
+- **ChatGPT via OAuth (recommended):** register it with the default scope
+  (`read`) — no environment variable needed. See
+  [Authentication Modes](#authentication-modes).
+- **Claude via the static token, keeping ChatGPT read-only:** there is only
+  one `MCP_API_TOKEN` per install, so this only works if ChatGPT uses OAuth
+  (`read` scope) and the static token — with `MCP_API_TOKEN_SCOPE` unset or
+  `read_write` — is reserved for Claude. Two *static* tokens at different
+  scopes are not supported; use OAuth for whichever client needs a scope
+  different from the static token's.
+- **Lock down `/mcp` entirely, regardless of who connects:**
+  ```bash
+  MCP_READ_ONLY=true
+  ```
+
+### What "read-only" actually restricts
+
+Read-only mode is enforced with an explicit allowlist of tool classes whose
+implementation was read and confirmed to perform no `INSERT`, `UPDATE`,
+`DELETE`, file write, or other mutation — not a naming convention like
+"starts with `get_`". Both `tools/list` and `tools/call` consult the same
+filtered list, so a write tool is not only hidden from discovery, it also
+cannot be invoked by a client that already knows (or guesses) its exact name:
+calling `update_transaction` under a read-only credential returns the same
+"Unknown tool" error as calling a name that does not exist at all — the
+response does not confirm the tool exists but is forbidden.
+
+Allowed in read-only mode: `get_transactions`, `get_recurring_transactions`,
+`get_accounts`, `get_holdings`, `get_balance_sheet`, `get_income_statement`,
+`get_tags`, `get_categories`, `get_merchants`, `get_rules`,
+`get_rule_options`, `preview_rule` (it only reads and signs a token; the
+`apply_rule` it feeds is not reachable), and, for users
+with preview features enabled, `list_account_statements`,
+`get_account_statement`, `get_statement_coverage`, `get_valuations`,
+`get_insights`, `get_bills`, `get_bill_details`, `get_paycheck_plan`,
+`get_bill_audit`.
+
+Never allowed in read-only mode, even though the name suggests otherwise:
+`get_budget` — its default (current-month) path calls
+`Budget.find_or_bootstrap`, which creates the month's budget record on first
+access. `search_family_files` — non-mutating, but it can surface
+uploaded-document contents outside the structured financial data the other
+read tools expose, a larger data surface than this mode is meant to grant an
+external assistant. Every other excluded tool (`create_goal`, `create_tag`, `update_tag`, `create_category`,
+`update_category`, `create_transaction`, `update_transaction`, `delete_transaction`, `update_budget`,
+`import_bank_statement`, `upload_account_statement`, `record_valuation`,
+`create_bill`, `update_bill`, `record_bill_payment`, `create_rule`, `update_rule`,
+`apply_rule`, `unmatch_transfer`, `set_opening_balance`) performs a real mutation.
+
+### Sessions and read-only mode
+
+A session is created by `initialize` and keeps the access mode of the
+credential that opened it, so it can never escalate beyond it.
+
+An MCP session (`Mcp-Session-Id`) remembers the access mode of the credential
+that created it and never grants more than that for the life of the session,
+even if a later request on the same session id authenticates with a
+read-write token. Sessions created before this feature existed (no stored
+access mode) are treated as read-write, matching what every session meant
+before read-only mode was introduced.
+
 ## Configuration
 
 ### Docker Compose
@@ -67,6 +196,9 @@ Add the environment variables to your `compose.yml`:
 x-rails-env: &rails_env
   MCP_API_TOKEN: your-secret-token-here
   MCP_USER_EMAIL: user@example.com
+  # Optional — see "Read-only mode" above
+  # MCP_API_TOKEN_SCOPE: "read"
+  # MCP_READ_ONLY: "true"
 ```
 
 Both `web` and `worker` services inherit this configuration.
@@ -79,6 +211,9 @@ Add the variables to your `values.yaml` or set them via Secrets:
 env:
   MCP_API_TOKEN: your-secret-token-here
   MCP_USER_EMAIL: user@example.com
+  # Optional — see "Read-only mode" above
+  # MCP_API_TOKEN_SCOPE: "read"
+  # MCP_READ_ONLY: "true"
 ```
 
 Or create a Secret and reference it:
@@ -100,13 +235,13 @@ POST /mcp
 ### Authentication
 
 MCP supports OAuth authorization-code flow for clients such as Claude Code.
-Clients should discover the protected-resource metadata, register dynamically,
-request the advertised `read_write` scope, and send the resulting access token
-as a Bearer token. Dynamically registered clients are assigned this scope so
-their tokens can authenticate to MCP.
+Clients should discover the protected-resource metadata, register dynamically
+(requesting `read` or `read_write` — see [Authentication
+Modes](#authentication-modes)), and send the resulting access token as a
+Bearer token.
 
 For self-hosted deployments or clients without OAuth support, requests may use
-the legacy `MCP_API_TOKEN` as a Bearer token:
+the static `MCP_API_TOKEN` as a Bearer token:
 
 ```
 Authorization: Bearer <token>
@@ -126,6 +261,19 @@ Sure implements the following JSON-RPC 2.0 methods:
 | `initialize` | Protocol handshake, returns server info and capabilities |
 | `tools/list` | Lists available financial tools with schemas |
 | `tools/call` | Executes a tool with provided arguments |
+
+A JSON-RPC request without an `id` (a notification, e.g.
+`notifications/initialized`) gets `202 Accepted` with an empty body — Sure
+never replies with data to a request that declared it wants no reply.
+
+### Protocol versions
+
+Sure accepts the `2025-03-26` and `2025-06-18` MCP protocol versions,
+resolved per request from the `MCP-Protocol-Version` header and falling back
+to `2025-06-18`. Any other value is rejected with `400 Bad Request`.
+`initialize` negotiates its own `protocolVersion` from the request
+`params`, and returns an `Mcp-Session-Id` that later requests may (but need
+not) send back.
 
 ### Available Tools
 
@@ -151,6 +299,8 @@ At the time of writing, `tools/list` includes:
 | `create_tag` / `update_tag` | Manage tags |
 | `create_category` / `update_category` | Manage categories |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
+| `create_transaction` | Create a new transaction on one of the user's accounts |
+| `delete_transaction` | Permanently delete a transaction from the ledger (destructive, irreversible) |
 | `update_budget` | Update budget allocations for a month |
 | `get_rules` / `get_rule_options` | Transaction rules in readable form (ids resolved to names, latest run; paginated, with a text search), and the condition and action types a rule can use |
 | `preview_rule` | Match count and a sample of matching transactions for a saved rule or an unsaved definition, without changing anything |
@@ -262,7 +412,20 @@ The authorization-server metadata includes:
 - `authorization_endpoint`: `https://your-sure-instance/oauth/authorize`
 - `token_endpoint`: `https://your-sure-instance/oauth/token`
 - `registration_endpoint`: `https://your-sure-instance/register`
-- `scopes_supported`: `["read_write"]`
+- `scopes_supported`: `["read", "read_write"]`
+
+The protected-resource metadata is served at two paths, and `resource` differs
+between them on purpose (RFC 9728 §3.3: it must match the identifier the
+client built the metadata URL from):
+
+- `/.well-known/oauth-protected-resource` → `resource` is the bare origin
+  (`https://your-sure-instance`)
+- `/.well-known/oauth-protected-resource/mcp` → `resource` is the MCP endpoint
+  (`https://your-sure-instance/mcp`)
+
+An unauthenticated `/mcp` request gets a `401` whose `WWW-Authenticate` header
+points at the resource-scoped document and carries `scope="read"`, the minimum
+a client needs to request first.
 
 ### Call a Tool
 
@@ -344,6 +507,15 @@ The `/mcp` endpoint is exposed on the same port as the web UI (default 3000). Fo
 - Use NetworkPolicies to restrict access to the MCP endpoint
 - Route external agents through Pipelock's MCP reverse proxy
 - See the [Helm chart documentation](../../charts/sure/README.md) for Pipelock ingress setup
+
+Only `/mcp` traffic itself needs to go through Pipelock. The OAuth and
+discovery endpoints — `/.well-known/oauth-protected-resource`,
+`/.well-known/oauth-authorization-server`, `/register`, `/oauth/authorize`,
+`/oauth/token` — are served directly by Sure and should stay that way; there
+is no supported configuration where a reverse proxy fakes a 404 on these to
+simulate "no OAuth support". Doing so does not disable OAuth, it just breaks
+discovery for clients that rely on it, while the static-token fallback keeps
+working regardless.
 
 ## Production Deployment
 
@@ -433,18 +605,45 @@ MCP does not depend on the in-app assistant. To use only your own agent, set the
 
 **Fix:** Verify one of these is true:
 
-- The OAuth flow completed successfully and the client is sending the issued bearer token
+- The OAuth flow completed successfully, the token carries `read` or
+  `read_write` scope, and the client is sending the issued bearer token
 - The static token matches `MCP_API_TOKEN`
-- If you are using the static-token flow, `MCP_USER_EMAIL` matches an existing Sure user
+- If you are using the static-token flow, `MCP_USER_EMAIL` matches an existing Sure user, and `MCP_API_TOKEN_SCOPE` (if set) is `read` or `read_write`
 
 ### Static token works, but the user still gets rejected
 
 **Symptom:** Requests return HTTP 401 even though the bearer token matches `MCP_API_TOKEN`
 
-**Fix:** The `MCP_USER_EMAIL` probably does not match an existing user. Check that:
+**Fix:** Either the `MCP_USER_EMAIL` does not match an existing user, or
+`MCP_API_TOKEN_SCOPE` is set to something other than `read` or `read_write`
+(an invalid scope fails the token rather than falling back to full access).
+Check that:
 - The email is correct
 - The user exists in the database
 - There are no typos or extra spaces
+- `MCP_API_TOKEN_SCOPE`, if set, is exactly `read` or `read_write`
+
+### OAuth token authenticates but write tools are missing
+
+**Symptom:** `tools/list` succeeds but tools like `update_transaction` are
+absent, or `tools/call` on one returns "Unknown tool"
+
+**Fix:** This is expected for a token scoped `read` — see [Read-only
+mode](#read-only-mode). Re-authorizing an existing connection with a wider
+scope does **not** work: Doorkeeper validates a `/oauth/authorize` scope
+request against the client application's own registered scopes, and a
+client registered with only `read` stored can never be granted `read_write`
+that way. Two options actually grant it:
+
+1. **Re-register the client** with `"scope": "read_write"` in the `POST
+   /register` body — for Claude or ChatGPT, remove and re-add the connector.
+   This only helps if the client actually sends a `scope` field; check its
+   own settings for a scope or permissions option.
+2. **Edit the application's scopes directly**, for a client that doesn't
+   expose a scope option: a `super_admin` can open
+   `/oauth/applications/:id/edit` (Doorkeeper's admin UI, mounted and gated
+   on `super_admin?` — see `config/initializers/doorkeeper.rb`), set scopes
+   to `read_write`, then have the user re-authorize.
 
 ### Pipelock connection refused
 

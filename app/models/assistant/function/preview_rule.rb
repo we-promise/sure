@@ -29,6 +29,10 @@ class Assistant::Function::PreviewRule < Assistant::Function
         when every match is in an account you cannot see.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?
