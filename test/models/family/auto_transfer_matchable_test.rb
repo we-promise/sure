@@ -769,6 +769,44 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow_entry.entryable.kind
   end
 
+  test "does not match an EMI purchase entry, even when it looks like a transfer candidate" do
+    # An EMI purchase entry has an opposite-signed match sitting in another
+    # account on the same day. The candidate SQL joins transactions with
+    # `kind NOT IN ('emi_purchase', 'emi_installment', 'emi_fee')` on both
+    # sides, so this pair never surfaces and auto_match_transfers! has
+    # nothing to do. Without that filter a Transfer would be created for an
+    # entry whose amount/date/kind are all locked by its plan -- the pair
+    # must be silently skipped instead.
+    purchase_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    EmiPlan.build!(entry: purchase_entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
+
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      assert_nothing_raised do
+        @family.auto_match_transfers!
+      end
+    end
+
+    assert_equal "emi_purchase", purchase_entry.reload.entryable.kind
+  end
+
+  test "does not match an EMI installment entry, even when it looks like a transfer candidate" do
+    purchase_entry = create_transaction(date: Date.current - 1.month, account: @depository, amount: 600)
+    plan = EmiPlan.build!(entry: purchase_entry, interest_rate: 0, tenure_months: 6, processing_fee: 0, start_date: Date.current)
+    installment = plan.installment_entries.find_by(emi_installment_number: 1)
+
+    create_transaction(date: Date.current, account: @credit_card, amount: -installment.amount)
+
+    assert_no_difference -> { Transfer.count } do
+      assert_nothing_raised do
+        @family.auto_match_transfers!
+      end
+    end
+
+    assert_equal "emi_installment", installment.reload.entryable.kind
+  end
+
   private
     def auto_match_and_confirm_transfers!
       @family.auto_match_transfers!
