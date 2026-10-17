@@ -155,6 +155,9 @@ ca:
       failed: No s'ha pogut enllaçar el saldo de Wise. Torna-ho a provar.
     link_existing_account:
       not_found: No s'ha trobat el compte o el saldo de Wise.
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor.
+      unsupported_account_type: Els saldos de Wise només es poden enllaçar a comptes d'efectiu.
+      currency_mismatch: "Aquest saldo de Wise és en %{balance_currency}, però el compte és en %{account_currency}. Tria un saldo en la moneda del compte."
       success: S'ha enllaçat correctament %{account_name} amb Wise
       failed: No s'ha pogut enllaçar el compte. Torna-ho a provar.
     complete_account_setup:

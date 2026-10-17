@@ -181,6 +181,20 @@ class WiseAccount::ProcessorTest < ActiveSupport::TestCase
     assert_empty anchor_notes
   end
 
+  # The current anchor another provider left moves to today before the repair
+  # looks for the oldest entry, so its old date never pulls the opening
+  # balance back.
+  test "repairs the opening balance of an account another provider anchored by the Wise rows alone" do
+    account = full_history_account(creation_time: "2026-04-08T08:00:00Z")
+    account.entries.create!(date: Date.new(2026, 3, 1), name: "Current balance", amount: 80, currency: "EUR",
+                            entryable: Valuation.new(kind: "current_anchor"))
+
+    WiseAccount::Processor.new(@wise_account.reload, import_complete: true).process
+
+    assert_equal [ Date.new(2026, 4, 7), BigDecimal("0") ], opening_anchor(account)
+    assert_equal [ Date.current, BigDecimal("80") ], current_anchor(account)
+  end
+
   # The valuation drawer saves a person's edit through
   # Account#update_reconciliation, which does not mark the entry
   # user_modified, so the repair replaced the opening balance they entered. It

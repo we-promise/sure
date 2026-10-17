@@ -20,9 +20,14 @@ class WiseAccount::Processor
         next
       end
 
-      process_account!
+      account = wise_account.current_account
+      follow_current_anchor(account)
       result = process_transactions
       repair_opening_anchor
+      # The account's own save last, once the rows behind its balance are
+      # booked; it locks the owner's users row for that save's transaction
+      # only (Account#owner_belongs_to_family), never for the rows'.
+      update_balance!(account)
       result
     end
   rescue StandardError => e
@@ -33,16 +38,13 @@ class WiseAccount::Processor
 
   private
 
-    def process_account!
-      account = wise_account.current_account
-      balance = wise_account.current_balance || 0
+    def update_balance!(account)
+      balance = live_balance
+      account.update!(balance: balance, cash_balance: balance, currency: wise_account.currency)
+    end
 
-      account.update!(
-        balance: balance,
-        cash_balance: balance,
-        currency: wise_account.currency
-      )
-      follow_current_anchor(account, balance)
+    def live_balance
+      wise_account.current_balance || 0
     end
 
     # The balance is set as is, with no current anchor: set_current_balance
@@ -51,12 +53,14 @@ class WiseAccount::Processor
     # shift every earlier day for good. An account linked from another
     # provider can still hold that provider's current anchor, which the
     # balance history would start from (frozen at its date and amount), so it
-    # follows the live balance in place, never rotated. Never raises.
-    def follow_current_anchor(account, balance)
+    # follows the live balance in place, never rotated. It moves before the
+    # opening balance repair, which reads the oldest entry. Never raises.
+    def follow_current_anchor(account)
       anchor = account.valuations.current_anchor.includes(:entry).first&.entry
       return unless anchor
 
-      anchor.update!(amount: balance, currency: account.currency, date: Time.current.in_time_zone(wise_account.wise_item.time_zone).to_date)
+      anchor.update!(amount: live_balance, currency: wise_account.currency,
+                     date: Time.current.in_time_zone(wise_account.wise_item.time_zone).to_date)
     rescue StandardError => e
       capture_debug_log(
         category: "provider_sync_error",

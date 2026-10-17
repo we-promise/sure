@@ -171,6 +171,9 @@ ru:
       failed: Не удалось связать баланс Wise. Повторите попытку.
     link_existing_account:
       not_found: Счёт или баланс Wise не найден.
+      account_already_linked: Этот счёт уже привязан к провайдеру.
+      unsupported_account_type: Балансы Wise можно связать только с денежными счетами.
+      currency_mismatch: "Этот баланс Wise в %{balance_currency}, а счёт — в %{account_currency}. Выберите баланс в валюте счёта."
       success: '%{account_name} успешно связан с Wise'
       failed: Не удалось связать счёт. Повторите попытку.
     complete_account_setup:

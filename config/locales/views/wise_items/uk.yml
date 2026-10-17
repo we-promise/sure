@@ -171,6 +171,9 @@ uk:
       failed: Не вдалося пов'язати баланс Wise. Спробуйте ще раз.
     link_existing_account:
       not_found: Рахунок або баланс Wise не знайдено.
+      account_already_linked: Цей рахунок уже пов'язано з постачальником.
+      unsupported_account_type: Баланси Wise можна пов'язати лише з грошовими рахунками.
+      currency_mismatch: "Цей баланс Wise у %{balance_currency}, а рахунок — у %{account_currency}. Виберіть баланс у валюті рахунку."
       success: "Успішно пов'язано %{account_name} з Wise"
       failed: Не вдалося пов'язати рахунок. Спробуйте ще раз.
     complete_account_setup:

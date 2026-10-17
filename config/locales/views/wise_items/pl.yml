@@ -32,9 +32,12 @@ pl:
       not_found: Nie znaleziono salda Wise.
       success: Połączono saldo Wise z kontem.
     link_existing_account:
+      account_already_linked: To konto jest już połączone z dostawcą.
+      currency_mismatch: "To saldo Wise jest w %{balance_currency}, a konto w %{account_currency}. Wybierz saldo w walucie konta."
       failed: Nie można połączyć konta. Spróbuj ponownie.
       not_found: Nie znaleziono konta lub salda Wise.
       success: Połączono %{account_name} z Wise
+      unsupported_account_type: Salda Wise można połączyć tylko z kontami gotówkowymi.
     link_profiles:
       already_connected: Wszystkie wybrane profile są już połączone.
       no_profiles_selected: Wybierz co najmniej jeden profil.

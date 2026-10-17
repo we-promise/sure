@@ -146,6 +146,9 @@ pt-PT:
       failed: Falha ao associar o saldo da Wise. Tente novamente.
     link_existing_account:
       not_found: Conta ou saldo da Wise não encontrado.
+      account_already_linked: Esta conta já está associada a um serviço.
+      unsupported_account_type: Os saldos da Wise só podem ser associados a contas de dinheiro.
+      currency_mismatch: "Este saldo da Wise está em %{balance_currency}, mas a conta está em %{account_currency}. Escolha um saldo na moeda da conta."
       success: "%{account_name} associada com sucesso à Wise"
       failed: Falha ao associar a conta. Tente novamente.
     complete_account_setup:
