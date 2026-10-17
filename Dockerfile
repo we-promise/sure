@@ -56,6 +56,11 @@ USER 1000:1000
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 
+# Make internal writable paths usable by an arbitrary user. 
+RUN mkdir -p /rails/tmp/pids /rails/tmp/sockets /rails/tmp/cache /rails/log && \
+    chmod -R a+rwX /rails/tmp /rails/log && \
+    find /rails/tmp /rails/log -type d -exec chmod +t {} +
+
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
