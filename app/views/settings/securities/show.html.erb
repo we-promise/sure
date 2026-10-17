@@ -14,6 +14,15 @@
   </div>
 <% end %>
 
+<% if @encryption_using_compromised_secret %>
+  <div class="mb-4">
+    <%= render DS::Alert.new(variant: :warning, title: t(".compromised_secret_warning.title")) do %>
+      <p><%= t(".compromised_secret_warning.intro") %></p>
+      <p><%= t(".compromised_secret_warning.generate") %></p>
+    <% end %>
+  </div>
+<% end %>
+
 <%= settings_section title: t(".mfa_title"), subtitle: t(".mfa_description") do %>
   <div class="space-y-4">
     <div class="p-3 shadow-border-xs bg-container rounded-lg md:flex md:justify-between md:items-center">
