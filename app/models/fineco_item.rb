@@ -14,6 +14,7 @@ class FinecoItem < ApplicationRecord
     "identity_verification_required" => "Fineco account identity verification is required before investment syncing can start.",
     "account_identity_changed" => "The selected Fineco account or dossier changed. Reconnect the original account before syncing.",
     "invalid_snapshot" => "Fineco returned an incomplete portfolio snapshot. Your previous holdings and balance were kept.",
+    "quote_data_unavailable" => "Fineco temporarily omitted market prices from its portfolio response. Your previous holdings and balance were kept.",
     "partial_snapshot" => "Fineco returned a filtered portfolio snapshot. Your previous holdings and balance were kept.",
     "unsupported_position" => "Fineco returned an unsupported position. Your previous holdings and balance were kept.",
     "duplicate_position" => "Fineco returned ambiguous position identities. Your previous holdings and balance were kept.",

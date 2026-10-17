@@ -10,6 +10,10 @@ The observed account-list response contained one account and one dossier. Their 
 
 The browser session cookie is a full Fineco web-session credential, not a bank-issued read-only token; fixed account and portfolio GETs do not narrow its authority. Fineco sessions can expire or require SCA again, so a manual reconnect may be needed. Sure does not promise an indefinitely renewable session.
 
+When automatic synchronization is enabled, the worker schedules active Fineco connections every 20 minutes. A portfolio response that omits quote fields receives one bounded retry within the existing request deadline. If prices are still unavailable, Sure keeps the previous complete holdings and balance, reports the missing-price condition, and leaves the connection eligible for the next scheduled attempt. It does not derive missing prices or import a partial snapshot.
+
+Valid session-cookie replacements are stored encrypted. If an identity-verified read rotates the cookie and a later portfolio read fails, Sure retains the validated replacement only when the selected bank account and dossier still match the saved connection. An authentication failure still requires reconnection; periodic reads do not guarantee that Fineco will extend an absolute session limit.
+
 The intended import creates a separate EUR Investment account for securities. Existing Enable Banking cash and deposit accounts stay separate and unchanged; Fineco's securities account reports zero cash. Snapshot history is not trade history: Sure does not invent purchases or sales to fill gaps between snapshots.
 
 Once capture is enabled, the importer will accept only a complete, unfiltered portfolio summary with EUR totals. Every position must have a valid ISIN, a supported position type (`stock`, `equity`, `etf`, or `bond`), and a supported exchange venue (`XETR`/`XETRA` or `ETLX`). A position's quote currency may differ from EUR, but the imported Investment account and total remain in EUR. Missing or inconsistent totals, filters, unsupported positions, identity conflicts, and incomplete responses reject the whole snapshot and keep prior holdings and balance in place.

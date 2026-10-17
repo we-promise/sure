@@ -174,6 +174,26 @@ class Provider::FinecoTest < ActiveSupport::TestCase
     end
   end
 
+  test "does not retain rotation or bank context from an invalid identity response" do
+    invalid_identity = identity_payload
+    invalid_identity["accounts"][1].delete("number")
+    rotated = json_response(
+      invalid_identity,
+      headers: { "set-cookie" => "gsessionid=unverified-session; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly" }
+    )
+    http = stub_identity_http(rotated)
+    client = fineco
+
+    assert_raises Provider::Fineco::InvalidResponse do
+      with_http(http) { client.fetch_portfolio_summary }
+    end
+
+    assert_equal 1, http.request_count
+    assert_nil client.last_rotated_gsessionid
+    assert_nil client.last_verified_bank_identity
+    refute_includes client.inspect, "unverified-session"
+  end
+
   test "canonical identity ignores selector indexes and mutable dossier descriptors" do
     first_result = with_http(stub_http(success_response)) { fineco.fetch_portfolio_summary }
     changed = identity_payload
@@ -312,24 +332,175 @@ class Provider::FinecoTest < ActiveSupport::TestCase
     assert_equal "rotated-session", result.rotated_gsessionid
   end
 
+  test "retains a validated rotation when portfolio validation fails" do
+    rotated_identity = json_response(
+      identity_payload,
+      headers: { "set-cookie" => "gsessionid=identity-session; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly" }
+    )
+    incomplete_payload = complete_payload(positions: [ POSITION ], summary: SUMMARY)
+    incomplete_payload["positions"]["show"].first.delete("marketPrice")
+    rotated_portfolio = json_response(
+      incomplete_payload,
+      headers: { "set-cookie" => "gsessionid=portfolio-session; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly" }
+    )
+    http = stub_http(rotated_portfolio, identity: rotated_identity)
+    client = fineco
+
+    error = assert_raises Provider::Fineco::InvalidResponse do
+      with_http(http) { client.fetch_portfolio_summary }
+    end
+
+    assert_equal "Fineco returned an incomplete portfolio position.", error.message
+    assert_equal "gsessionid=identity-session", http.request_objects.last["Cookie"]
+    assert_equal "identity-session", client.last_rotated_gsessionid
+    refute_includes client.inspect, "identity-session"
+    refute_includes client.to_s, "identity-session"
+  end
+
+  test "retries one quote-incomplete portfolio response and accepts only a complete snapshot" do
+    rotated_identity = json_response(
+      identity_payload,
+      headers: { "set-cookie" => "gsessionid=identity-session; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly" }
+    )
+    incomplete = json_response(
+      quote_data_unavailable_payload,
+      headers: { "set-cookie" => "gsessionid=portfolio-session; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly" }
+    )
+    http = StubHttp.new([ rotated_identity, incomplete, success_response ])
+    client = fineco
+
+    result = with_http(http) { client.fetch_portfolio_summary }
+
+    assert_equal 3, http.request_count
+    assert_equal "gsessionid=identity-session", http.request_objects[1]["Cookie"]
+    assert_equal "gsessionid=portfolio-session", http.request_objects[2]["Cookie"]
+    assert_equal [ POSITION ], result.payload.dig("positions", "show")
+    assert_equal "portfolio-session", result.rotated_gsessionid
+  end
+
+  test "rejects a second quote-incomplete portfolio response without a third read" do
+    first_incomplete = json_response(
+      quote_data_unavailable_payload,
+      headers: { "set-cookie" => "gsessionid=first-rotation; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly" }
+    )
+    second_incomplete = json_response(
+      quote_data_unavailable_payload,
+      headers: { "set-cookie" => "gsessionid=second-rotation; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly" }
+    )
+    http = StubHttp.new([ json_response(identity_payload), first_incomplete, second_incomplete ])
+    client = fineco
+
+    error = assert_raises Provider::Fineco::MarketDataUnavailable do
+      with_http(http) { client.fetch_portfolio_summary }
+    end
+
+    assert_equal "Fineco temporarily omitted market data for a portfolio position.", error.message
+    assert_equal 3, http.request_count
+    assert_equal "gsessionid=first-rotation", http.request_objects[2]["Cookie"]
+    assert_equal "second-rotation", client.last_rotated_gsessionid
+  end
+
+  test "does not retry quote omissions when a position identity is invalid" do
+    invalid_identity = quote_data_unavailable_payload
+    invalid_identity["positions"]["show"][0]["instrId"] = "not-an-isin"
+    http = stub_http(json_response(invalid_identity))
+
+    assert_raises Provider::Fineco::InvalidResponse do
+      with_http(http) { fineco.fetch_portfolio_summary }
+    end
+
+    assert_equal 2, http.request_count
+  end
+
+  test "does not classify quote omissions when a later position is unsupported" do
+    missing_quotes = POSITION.except(*Provider::Fineco::POSITION_MARKET_DATA_FIELDS)
+    unsupported_position = POSITION.merge("type" => "option")
+    summary = SUMMARY.merge("bookValue" => 180, "marketValue" => 200, "profitLoss" => 20)
+    payload = complete_payload(positions: [ missing_quotes, unsupported_position ], summary: summary)
+    response = json_response(
+      payload,
+      headers: { "set-cookie" => "gsessionid=unverified-portfolio-session; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly" }
+    )
+    http = stub_http(response)
+    client = fineco
+
+    error = assert_raises Provider::Fineco::InvalidResponse do
+      with_http(http) { client.fetch_portfolio_summary }
+    end
+
+    assert_equal "Fineco returned an unsupported portfolio position.", error.message
+    assert_equal 2, http.request_count
+    assert_nil client.last_rotated_gsessionid
+  end
+
+  test "does not classify quote omissions when EUR summary totals are inconsistent" do
+    payload = quote_data_unavailable_payload
+    payload["summary"]["total"]["marketValue"] += 1
+    response = json_response(
+      payload,
+      headers: { "set-cookie" => "gsessionid=unverified-portfolio-session; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly" }
+    )
+    http = stub_http(response)
+    client = fineco
+
+    error = assert_raises Provider::Fineco::InvalidResponse do
+      with_http(http) { client.fetch_portfolio_summary }
+    end
+
+    assert_instance_of Provider::Fineco::InvalidResponse, error
+    assert_equal "Fineco returned partial portfolio totals.", error.message
+    assert_equal 2, http.request_count
+    assert_nil client.last_rotated_gsessionid
+  end
+
+  test "does not classify quote omissions when portfolio summary currency is not EUR" do
+    payload = quote_data_unavailable_payload
+    payload["summary"]["show"]["currencyCd"] = "USD"
+    payload["summary"]["total"]["currencyCd"] = "USD"
+    response = json_response(
+      payload,
+      headers: { "set-cookie" => "gsessionid=unverified-portfolio-session; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly" }
+    )
+    http = stub_http(response)
+    client = fineco
+
+    error = assert_raises Provider::Fineco::InvalidResponse do
+      with_http(http) { client.fetch_portfolio_summary }
+    end
+
+    assert_instance_of Provider::Fineco::InvalidResponse, error
+    assert_equal "Fineco returned an invalid portfolio currency.", error.message
+    assert_equal 2, http.request_count
+    assert_nil client.last_rotated_gsessionid
+  end
+
   test "maps the Fineco read-time SCA response and recognized HTML challenges to reauthentication" do
     response = StubResponse.new(
       code: 451,
       body: '{"issues":[{"reason":"Sca di sessione non valida"}]}',
-      headers: { "content-type" => "application/json" }
+      headers: {
+        "content-type" => "application/json",
+        "set-cookie" => "gsessionid=step-up-session; Domain=.finecobank.com; Path=/v1/private/tol; Secure; HttpOnly"
+      }
     )
+    http = stub_http(response)
+    client = fineco
     assert_raises Provider::Fineco::ReauthenticationRequired do
-      with_http(stub_http(response)) { fineco.fetch_portfolio_summary }
+      with_http(http) { client.fetch_portfolio_summary }
     end
+    assert_equal 2, http.request_count
+    assert_nil client.last_rotated_gsessionid
 
     html = StubResponse.new(
       code: 200,
       body: "<html><body>strong_auth</body></html>",
       headers: { "content-type" => "text/html" }
     )
+    http = stub_http(html)
     assert_raises Provider::Fineco::ReauthenticationRequired do
-      with_http(stub_http(html)) { fineco.fetch_portfolio_summary }
+      with_http(http) { fineco.fetch_portfolio_summary }
     end
+    assert_equal 2, http.request_count
   end
 
   test "rejects HTML and malformed JSON without presenting an empty complete portfolio" do
@@ -626,6 +797,11 @@ class Provider::FinecoTest < ActiveSupport::TestCase
         "positions" => { "show" => positions.map(&:dup) },
         "summary" => { "show" => summary.dup, "total" => summary.dup }
       }
+    end
+
+    def quote_data_unavailable_payload
+      position = POSITION.except(*Provider::Fineco::POSITION_MARKET_DATA_FIELDS)
+      complete_payload(positions: [ position ], summary: SUMMARY)
     end
 
     def zero_summary

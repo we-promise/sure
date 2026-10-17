@@ -42,7 +42,7 @@ sync_hourly:
   description: "Syncs provider items that opt-in to hourly syncing"
 
 fineco_portfolios:
-  cron: "*/15 * * * *"
+  cron: "*/20 * * * *"
   class: "FinecoPortfolioSyncJob"
   active_job: true
   queue: "scheduled"

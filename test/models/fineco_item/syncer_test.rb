@@ -87,13 +87,10 @@ class FinecoItem::SyncerTest < ActiveSupport::TestCase
   end
 
   test "authentication expiry clears the session and prevents automatic rescheduling" do
-    Account.any_instance.stubs(:sync_later).returns(nil)
-    @item.import_portfolio_snapshot!(payload: portfolio_payload, captured_at: Time.current)
-    @item.accounts.sole
-    Account.any_instance.unstub(:sync_later)
-    sync = Sync.create!(syncable: @item)
+    _account, sync = prepare_sync
     Provider::Fineco.any_instance.stubs(:fetch_portfolio_summary)
       .raises(Provider::Fineco::ReauthenticationRequired, "private bank message")
+    stub_client_rotation(identity: verified_identity)
 
     sync.perform
 
@@ -104,6 +101,60 @@ class FinecoItem::SyncerTest < ActiveSupport::TestCase
     assert_not @item.syncable?
     assert_not FinecoItem.syncable.exists?(id: @item.id)
     refute_includes sync.error, "private bank message"
+  end
+
+  test "keeps the last complete snapshot and session usable when quote data is unavailable" do
+    account, sync = prepare_sync
+    holdings_before = account.holdings.order(:id).map(&:attributes)
+    balance_before = account.reload.balance
+    Provider::Fineco.any_instance.stubs(:fetch_portfolio_summary)
+      .raises(Provider::Fineco::MarketDataUnavailable, "private market-data detail")
+    stub_client_rotation(identity: verified_identity)
+
+    sync.perform
+
+    @item.reload
+    assert sync.reload.failed?
+    assert_equal "quote_data_unavailable", @item.last_sync_error_code
+    assert_equal "rotated-session", @item.gsessionid
+    assert @item.good?
+    assert @item.syncable?
+    assert_equal holdings_before, account.holdings.order(:id).map(&:attributes)
+    assert_equal balance_before, account.reload.balance
+    assert_includes sync.error, "temporarily omitted market prices"
+    assert_includes sync.error, "previous holdings and balance were kept"
+    refute_includes sync.error, "private market-data detail"
+  end
+
+  test "does not persist a rotated session when the verified bank identity has changed" do
+    _account, sync = prepare_sync
+    Provider::Fineco.any_instance.stubs(:fetch_portfolio_summary)
+      .raises(Provider::Fineco::MarketDataUnavailable, "private market-data detail")
+    stub_client_rotation(identity: Provider::Fineco::VerifiedBankIdentity.new(
+      account_number: "OTHER-ACCOUNT",
+      dossier_identity: Digest::SHA256.hexdigest("other-dossier")
+    ))
+
+    sync.perform
+
+    @item.reload
+    assert_equal "quote_data_unavailable", @item.last_sync_error_code
+    assert_equal "synthetic-session", @item.gsessionid
+    assert @item.good?
+  end
+
+  test "persists a matching rotated session after another non-reauthentication provider error" do
+    _account, sync = prepare_sync
+    Provider::Fineco.any_instance.stubs(:fetch_portfolio_summary)
+      .raises(Provider::Fineco::InvalidResponse, "private validation detail")
+    stub_client_rotation(identity: verified_identity)
+
+    sync.perform
+
+    @item.reload
+    assert_equal "sync_failed", @item.last_sync_error_code
+    assert_equal "rotated-session", @item.gsessionid
+    assert @item.good?
   end
 
   test "a queued sync rechecks that its owner is active before contacting Fineco" do
@@ -159,5 +210,25 @@ class FinecoItem::SyncerTest < ActiveSupport::TestCase
         "positions" => { "show" => [ position ] },
         "summary" => { "show" => summary, "total" => summary }
       }
+    end
+
+    def prepare_sync
+      Account.any_instance.stubs(:sync_later).returns(nil)
+      @item.import_portfolio_snapshot!(payload: portfolio_payload, captured_at: Time.current)
+      account = @item.accounts.sole
+      Account.any_instance.unstub(:sync_later)
+      [ account, Sync.create!(syncable: @item) ]
+    end
+
+    def verified_identity
+      Provider::Fineco::VerifiedBankIdentity.new(
+        account_number: @item.bank_account_number,
+        dossier_identity: @item.dossier_identity
+      )
+    end
+
+    def stub_client_rotation(identity:)
+      Provider::Fineco.any_instance.stubs(:last_rotated_gsessionid).returns("rotated-session")
+      Provider::Fineco.any_instance.stubs(:last_verified_bank_identity).returns(identity)
     end
 end

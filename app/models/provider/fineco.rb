@@ -37,6 +37,9 @@ class Provider::Fineco
   POSITION_REQUIRED_FIELDS = %w[
     instrId venueSystem currencyCd qty marketPrice bookValue marketValue profitLoss
   ].freeze
+  POSITION_MARKET_DATA_FIELDS = %w[marketPrice marketValue profitLoss].freeze
+  POSITION_NON_MARKET_DATA_FIELDS = (POSITION_REQUIRED_FIELDS - POSITION_MARKET_DATA_FIELDS).freeze
+  OPTIONAL_POSITION_NUMBER_FIELDS = %w[avgPrice accrual ongoingAccrual].freeze
   FILTER_GROUPS = %w[currencies instrumentTypes].freeze
   STEP_UP_MARKERS = %w[
     authorisationid availablemethods strong_auth strongauth step_up stepup
@@ -74,6 +77,7 @@ class Provider::Fineco
   class ReauthenticationRequired < Error; end
   class RedirectRejected < Error; end
   class InvalidResponse < Error; end
+  class MarketDataUnavailable < InvalidResponse; end
   class ResponseTooLarge < Error; end
   class RequestTimeout < Error; end
   class RequestFailed < Error; end
@@ -103,10 +107,27 @@ class Provider::Fineco
     alias to_s inspect
   end
 
+  class VerifiedBankIdentity
+    def initialize(account_number:, dossier_identity:)
+      @account_number = account_number
+      @dossier_identity = dossier_identity
+    end
+
+    def matches?(account_number:, dossier_identity:)
+      @account_number == account_number.to_s && @dossier_identity == dossier_identity.to_s
+    end
+
+    def inspect
+      "#<#{self.class.name}: verified>"
+    end
+    alias to_s inspect
+  end
+
   def initialize(gsessionid:, account_index:, dossier_index:)
     @gsessionid = validate_cookie!(gsessionid)
     @account_index = validate_index!(account_index)
     @dossier_index = validate_index!(dossier_index)
+    @last_rotated_gsessionid = nil
   end
 
   def self.verified_identity_contract?
@@ -114,6 +135,9 @@ class Provider::Fineco
   end
 
   def fetch_portfolio_summary
+    @last_rotated_gsessionid = nil
+    @last_verified_bank_identity = nil
+
     unless self.class.verified_identity_contract?
       raise IdentityVerificationRequired, "Fineco account identity verification is required."
     end
@@ -122,16 +146,17 @@ class Provider::Fineco
       identity_response, identity_body = request_endpoint(ACCOUNT_LIST_ENDPOINT, @gsessionid)
       validate_success_response!(identity_response, identity_body)
       identity = selected_bank_identity!(parse_payload(identity_body))
-      identity_cookie = rotated_gsessionid_from(identity_response)
+      @last_verified_bank_identity = VerifiedBankIdentity.new(
+        account_number: identity.fetch(:account_number),
+        dossier_identity: identity.fetch(:dossier_identity)
+      )
+      retain_rotated_gsessionid!(identity_response)
 
-      portfolio_response, portfolio_body = request_endpoint(ENDPOINT, identity_cookie.presence || @gsessionid)
-      validate_success_response!(portfolio_response, portfolio_body)
-      payload = parse_payload(portfolio_body)
-      validate_portfolio!(payload)
+      payload = fetch_validated_portfolio!
 
       PortfolioResult.new(
         payload: payload,
-        rotated_gsessionid: rotated_gsessionid_from(portfolio_response) || identity_cookie,
+        rotated_gsessionid: @last_rotated_gsessionid,
         account_number: identity.fetch(:account_number),
         dossier_identity: identity.fetch(:dossier_identity)
       )
@@ -149,6 +174,9 @@ class Provider::Fineco
     "#<#{self.class.name}: authenticated client>"
   end
   alias to_s inspect
+
+  attr_reader :last_rotated_gsessionid
+  attr_reader :last_verified_bank_identity
 
   private
 
@@ -332,8 +360,12 @@ class Provider::Fineco
       validate_filters!(payload["filters"])
       validate_summary!(show)
       validate_summary!(total)
-      rows = validate_positions!(positions)
+      rows, market_data_unavailable = validate_positions!(positions)
       validate_summary_totals!(show, total, rows)
+      if market_data_unavailable
+        validate_quote_unavailable_context!(show, total, positions)
+        raise MarketDataUnavailable, "Fineco temporarily omitted market data for a portfolio position."
+      end
     end
 
     def validate_filters!(filters)
@@ -383,25 +415,128 @@ class Provider::Fineco
     end
 
     def validate_positions!(positions)
-      positions.map do |position|
-        unless position.is_a?(Hash) && POSITION_REQUIRED_FIELDS.all? { |field| position.key?(field) } &&
-               position["instrId"].is_a?(String) && position["instrId"].present? &&
-               position["venueSystem"].is_a?(String) && position["venueSystem"].present? &&
-               position["currencyCd"].is_a?(String) && position["currencyCd"].match?(/\A[A-Za-z]{3}\z/)
-          raise InvalidResponse, "Fineco returned an incomplete portfolio position."
+      market_data_unavailable = false
+      rows = positions.map do |position|
+        if missing_market_data_fields?(position)
+          unless market_data_unavailable_position?(position)
+            raise InvalidResponse, "Fineco returned an incomplete portfolio position."
+          end
+
+          market_data_unavailable = true
+          {
+            "bookValue" => decimal_value(position["bookValue"]),
+            "accrual" => position["accrual"].nil? ? BigDecimal("0") : decimal_value(position["accrual"])
+          }
+        else
+          validate_complete_position!(position)
+        end
+      end
+
+      [ rows, market_data_unavailable ]
+    end
+
+    def validate_complete_position!(position)
+      unless position.is_a?(Hash) && POSITION_REQUIRED_FIELDS.all? { |field| position.key?(field) } &&
+             position["instrId"].is_a?(String) && position["instrId"].present? &&
+             position["venueSystem"].is_a?(String) && position["venueSystem"].present? &&
+             position["currencyCd"].is_a?(String) && position["currencyCd"].match?(/\A[A-Za-z]{3}\z/)
+        raise InvalidResponse, "Fineco returned an incomplete portfolio position."
+      end
+
+      POSITION_MONEY_FIELDS.each { |field| decimal_value(position[field]) }
+      decimal_value(position["qty"])
+      decimal_value(position["marketPrice"])
+      accrual = position["accrual"].nil? ? BigDecimal("0") : decimal_value(position["accrual"])
+      {
+        "bookValue" => decimal_value(position["bookValue"]),
+        "marketValue" => decimal_value(position["marketValue"]),
+        "profitLoss" => decimal_value(position["profitLoss"]),
+        "accrual" => accrual
+      }
+    end
+
+    def missing_market_data_fields?(position)
+      position.is_a?(Hash) && POSITION_MARKET_DATA_FIELDS.none? { |field| position.key?(field) }
+    end
+
+    def validate_quote_unavailable_context!(show, total, positions)
+      unless show["currencyCd"] == "EUR" && total["currencyCd"] == "EUR"
+        raise InvalidResponse, "Fineco returned an invalid portfolio currency."
+      end
+
+      identities = positions.map do |position|
+        unless valid_quote_unavailable_context_position?(position)
+          raise InvalidResponse, "Fineco returned an unsupported portfolio position."
         end
 
-        POSITION_MONEY_FIELDS.each { |field| decimal_value(position[field]) }
-        decimal_value(position["qty"])
-        decimal_value(position["marketPrice"])
-        accrual = position["accrual"].nil? ? BigDecimal("0") : decimal_value(position["accrual"])
-        {
-          "bookValue" => decimal_value(position["bookValue"]),
-          "marketValue" => decimal_value(position["marketValue"]),
-          "profitLoss" => decimal_value(position["profitLoss"]),
-          "accrual" => accrual
-        }
+        position["instrId"].upcase
       end
+
+      unless identities.uniq.size == identities.size
+        raise InvalidResponse, "Fineco returned duplicate portfolio positions."
+      end
+    end
+
+    def valid_quote_unavailable_context_position?(position)
+      return false unless position.is_a?(Hash)
+      return false unless POSITION_NON_MARKET_DATA_FIELDS.all? { |field| position.key?(field) }
+      return false unless position["instrId"].is_a?(String) && FinecoItem::PortfolioNormalizer.valid_isin?(position["instrId"])
+      return false unless position["type"].is_a?(String) &&
+        FinecoItem::PortfolioNormalizer::SUPPORTED_POSITION_TYPES.include?(position["type"].downcase)
+      return false unless position["venueSystem"].is_a?(String)
+
+      mic = FinecoItem::PortfolioNormalizer::MIC_MAP[position["venueSystem"].upcase]
+      return false unless mic.present? && Security::EXCHANGES.key?(mic)
+      return false unless position["currencyCd"].is_a?(String) && position["currencyCd"].match?(/\A[A-Za-z]{3}\z/)
+
+      quote_fields_missing = POSITION_MARKET_DATA_FIELDS.reject { |field| position.key?(field) }
+      return false unless quote_fields_missing.empty? || quote_fields_missing == POSITION_MARKET_DATA_FIELDS
+
+      values = { "qty" => decimal_value(position["qty"]), "bookValue" => decimal_value(position["bookValue"]) }
+      unless quote_fields_missing.any?
+        POSITION_MARKET_DATA_FIELDS.each { |field| values[field] = decimal_value(position[field]) }
+      end
+      return false if values["qty"].negative? || values["bookValue"].negative? || values["marketValue"]&.negative? ||
+        values["marketPrice"]&.negative?
+      return false if values["qty"].zero? && values.values_at("bookValue", "marketValue", "profitLoss").compact.any?(&:nonzero?)
+      return false unless OPTIONAL_POSITION_NUMBER_FIELDS.all? do |field|
+        !position.key?(field) || position[field].nil? || valid_decimal_value?(position[field])
+      end
+
+      true
+    rescue InvalidResponse
+      false
+    end
+
+    def fetch_validated_portfolio!
+      attempts = 0
+
+      begin
+        response, body = request_endpoint(ENDPOINT, @last_rotated_gsessionid.presence || @gsessionid)
+        validate_success_response!(response, body)
+        payload = parse_payload(body)
+        validate_portfolio!(payload)
+      rescue MarketDataUnavailable
+        retain_rotated_gsessionid!(response)
+        attempts += 1
+        retry if attempts < 2
+
+        raise
+      end
+
+      retain_rotated_gsessionid!(response)
+      payload
+    end
+
+    def market_data_unavailable_position?(position)
+      missing_market_data_fields?(position) && valid_quote_unavailable_context_position?(position)
+    end
+
+    def valid_decimal_value?(value)
+      decimal_value(value)
+      true
+    rescue InvalidResponse
+      false
     end
 
     def validate_summary_totals!(show, total, rows)
@@ -417,9 +552,11 @@ class Provider::Fineco
           raise InvalidResponse, "Fineco returned partial portfolio totals."
         end
 
-        row_total = rows.sum { |row| row[field] || BigDecimal("0") }
-        if (row_total - total_value).abs > tolerance
-          raise InvalidResponse, "Fineco returned incomplete portfolio positions."
+        if rows.all? { |row| row.key?(field) }
+          row_total = rows.sum(BigDecimal("0")) { |row| row[field] }
+          if (row_total - total_value).abs > tolerance
+            raise InvalidResponse, "Fineco returned incomplete portfolio positions."
+          end
         end
       end
 
@@ -455,6 +592,10 @@ class Provider::Fineco
       return nil unless session_headers.one?
 
       parse_rotation_cookie(session_headers.first)
+    end
+
+    def retain_rotated_gsessionid!(response)
+      @last_rotated_gsessionid = rotated_gsessionid_from(response) || @last_rotated_gsessionid
     end
 
     def parse_rotation_cookie(header)

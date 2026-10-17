@@ -7,6 +7,8 @@ class FinecoItem::Syncer
     failure = nil
 
     @item.with_lock do
+      client = nil
+
       begin
         unless Provider::Fineco.verified_identity_contract?
           raise FinecoItem::PortfolioImportError.new(:identity_verification_required)
@@ -24,11 +26,12 @@ class FinecoItem::Syncer
           raise FinecoItem::PortfolioImportError.new(:account_conflict)
         end
 
-        result = Provider::Fineco.new(
+        client = Provider::Fineco.new(
           gsessionid: @item.gsessionid,
           account_index: @item.account_index,
           dossier_index: @item.dossier_index
-        ).fetch_portfolio_summary
+        )
+        result = client.fetch_portfolio_summary
 
         unless @item.same_bank_identity?(account_number: result.account_number, dossier_identity: result.dossier_identity)
           @item.require_reauthentication!(code: "account_identity_changed")
@@ -62,9 +65,11 @@ class FinecoItem::Syncer
         @item.require_reauthentication! if error.code == "reauthentication_required" && !@item.requires_update?
         @item.record_sync_failure!(error.code)
         failure = error
-      rescue Provider::Fineco::Error
-        @item.record_sync_failure!(:sync_failed)
-        failure = FinecoItem::PortfolioImportError.new(:sync_failed)
+      rescue Provider::Fineco::Error => error
+        persist_rotated_session!(client)
+        code = error.is_a?(Provider::Fineco::MarketDataUnavailable) ? :quote_data_unavailable : :sync_failed
+        @item.record_sync_failure!(code)
+        failure = FinecoItem::PortfolioImportError.new(code)
       rescue StandardError
         @item.record_sync_failure!(:sync_failed)
         failure = FinecoItem::PortfolioImportError.new(:sync_failed)
@@ -81,5 +86,16 @@ class FinecoItem::Syncer
 
     def active_owner?
       User.where(id: @item.owner_id, family_id: @item.family_id, active: true).exists?
+    end
+
+    def persist_rotated_session!(client)
+      rotated_gsessionid = client&.last_rotated_gsessionid
+      identity = client&.last_verified_bank_identity
+      return unless rotated_gsessionid.present? && identity&.matches?(
+        account_number: @item.bank_account_number,
+        dossier_identity: @item.dossier_identity
+      )
+
+      @item.update!(gsessionid: rotated_gsessionid)
     end
 end
