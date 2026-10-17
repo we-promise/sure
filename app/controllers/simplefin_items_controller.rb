@@ -22,9 +22,9 @@ class SimplefinItemsController < ApplicationController
     return render_error(t(".errors.blank_token"), context: :edit) if setup_token.blank?
 
     begin
-      # Validate token shape early so the user gets immediate feedback.
-      claim_url = Base64.decode64(setup_token)
-      URI.parse(claim_url)
+      # Validate the token's claim URL (shape and address) early so the user
+      # gets immediate feedback; the job claims it later.
+      Provider::Simplefin.new.validate_setup_token!(setup_token)
 
       # Updating a SimpleFin connection can involve network retries/backoff and account import.
       # Do it asynchronously so web requests aren't blocked by retry sleeps.
@@ -46,6 +46,8 @@ class SimplefinItemsController < ApplicationController
       error_message = case e.error_type
       when :token_compromised
         t(".errors.token_compromised")
+      when :invalid_url
+        t(".errors.invalid_token")
       else
         t(".errors.update_failed", message: e.message)
       end
@@ -78,6 +80,8 @@ class SimplefinItemsController < ApplicationController
       error_message = case e.error_type
       when :token_compromised
         t(".errors.token_compromised")
+      when :invalid_url
+        t(".errors.invalid_token")
       else
         t(".errors.create_failed", message: e.message)
       end
