@@ -76,6 +76,9 @@ module Api
         user = User.find_by(email: params[:email])
 
         if user&.authenticate(params[:password])
+          # Taken before the reload below, so a password change after this check is noticed.
+          password_fingerprint = user.password_fingerprint
+
           unless user.active?
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return
@@ -117,9 +120,12 @@ module Api
           end
 
           begin
-            token_response = device.issue_token!
+            token_response = device.issue_token!(password_fingerprint: password_fingerprint)
           rescue User::InactiveError
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          rescue User::StaleCredentialsError
+            render json: { error: "Invalid email or password" }, status: :unauthorized
             return
           end
 
@@ -214,11 +220,15 @@ module Api
             )
 
             device = MobileDevice.upsert_device!(user, device_info)
-            token_response = device.issue_token!
+            token_response = device.issue_token!(password_fingerprint: user.password_fingerprint)
           end
         rescue User::InactiveError
           restore_linking_code!(linking_code, cached)
           render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+          return
+        rescue User::StaleCredentialsError
+          restore_linking_code!(linking_code, cached)
+          render json: { error: "Invalid email or password" }, status: :unauthorized
           return
         rescue ActiveRecord::RecordInvalid => e
           restore_linking_code!(linking_code, cached)

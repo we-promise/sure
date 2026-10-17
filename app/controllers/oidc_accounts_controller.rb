@@ -49,7 +49,7 @@ class OidcAccountsController < ApplicationController
         )
 
         unless user.otp_required?
-          @session = create_session_for(user)
+          @session = create_session_for(user, password_fingerprint: user.password_fingerprint)
           raise ActiveRecord::Rollback unless @session
         end
 
@@ -66,6 +66,7 @@ class OidcAccountsController < ApplicationController
 
       if user.otp_required?
         session[:mfa_user_id] = user.id
+        session[:mfa_password_fingerprint] = user.password_fingerprint
         redirect_to verify_mfa_path
       else
         notice = if accept_pending_invitation_for(user)

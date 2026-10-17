@@ -28,6 +28,36 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_url
   end
 
+  test "update revokes the user's OAuth access tokens" do
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: @user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass" } }
+
+    assert_redirected_to new_session_url
+    assert token.reload.revoked_at.present?
+  end
+
+  test "update signs the user out of every web session" do
+    session_record = @user.sessions.create!
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass" } }
+
+    assert_redirected_to new_session_url
+    assert_not Session.exists?(session_record.id)
+  end
+
   test "all actions redirect when password features are disabled" do
     AuthConfig.stubs(:password_features_enabled?).returns(false)
 

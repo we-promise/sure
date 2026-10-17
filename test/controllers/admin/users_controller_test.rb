@@ -326,6 +326,46 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert target.authenticate(new_password), "User should authenticate with the new password"
   end
 
+  test "update with a new password signs the user out of their web sessions" do
+    target = users(:family_member)
+    target_session = target.sessions.create!
+    admin_session = Current.session
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "Secure1!pass" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_not Session.exists?(target_session.id)
+    assert Session.exists?(admin_session.id), "the acting admin must stay signed in"
+  end
+
+  test "update with a new password for the acting admin keeps their current session" do
+    admin = users(:sure_support_staff)
+    current_session = Current.session
+    other_session = admin.sessions.create!
+
+    patch admin_user_url(admin), params: {
+      user: { role: admin.role, password: "Secure1!pass" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert Session.exists?(current_session.id)
+    assert_not Session.exists?(other_session.id)
+  end
+
+  test "update without a password change keeps the user's web sessions" do
+    target = users(:family_member)
+    target_session = target.sessions.create!
+
+    patch admin_user_url(target), params: {
+      user: { role: "admin", password: "" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert Session.exists?(target_session.id)
+  end
+
   test "update shows descriptive notification for role change only" do
     target = users(:family_member)
 

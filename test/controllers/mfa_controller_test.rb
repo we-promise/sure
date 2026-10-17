@@ -166,6 +166,23 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
   end
 
+  test "verify_code cannot create a session after the password changed" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    assert_redirected_to verify_mfa_path
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    User.find(@user.id).update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+
+    assert_no_difference -> { Session.where(user_id: @user.id).count } do
+      post verify_mfa_path, params: { code: totp.now }
+    end
+    assert_redirected_to new_session_path
+  end
+
   test "verify_code authenticates with valid backup code" do
     @user.setup_mfa!
     backup_code = @user.enable_mfa!.first
