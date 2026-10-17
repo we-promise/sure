@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 class WiseAccount::Processor
-  attr_reader :wise_account
+  attr_reader :wise_account, :import_complete
 
-  def initialize(wise_account)
+  # import_complete: see WiseItem#process_accounts. Processing an account on
+  # its own leaves it false, so nothing is deleted or rewritten.
+  def initialize(wise_account, import_complete: false)
     @wise_account = wise_account
+    @import_complete = import_complete
   end
 
   def process
@@ -35,7 +38,7 @@ class WiseAccount::Processor
     end
 
     def process_transactions
-      WiseAccount::Transactions::Processor.new(wise_account).process
+      WiseAccount::Transactions::Processor.new(wise_account, import_complete: import_complete).process
     rescue StandardError => e
       Rails.logger.error "WiseAccount::Processor - Failed to process transactions for wise_account #{wise_account.id}: #{e.message}"
       Rails.logger.error Array(e.backtrace).first(10).join("\n")

@@ -5,6 +5,12 @@ class WiseItem < ApplicationRecord
 
   SCA_PRIVATE_KEY_ATTRIBUTE = "sca_private_key"
 
+  # Raised whenever a build starts storing rows an earlier build dropped or
+  # routing stored rows to other balances: coverage an older build recorded
+  # claims rows it did not keep, so every install then fetches its whole
+  # history once more (WiseItem::Importer#window_start).
+  COVERAGE_VERSION = 1
+
   # How often a family zone tzdata does not know is reported (#time_zone):
   # every balance's processing asks for it on every sync.
   UNKNOWN_TIME_ZONE_LOG_INTERVAL = 1.day
@@ -59,13 +65,16 @@ class WiseItem < ApplicationRecord
     raise
   end
 
-  def process_accounts
+  # import_complete: whether this sync's import fetched every source in full
+  # (see WiseItem::Importer#import). Steps that delete or rewrite entries
+  # only run when it is true.
+  def process_accounts(import_complete: false)
     return [] if wise_accounts.empty?
 
     results = []
     wise_accounts.joins(:account).merge(Account.visible).each do |wise_account|
       begin
-        result = WiseAccount::Processor.new(wise_account).process
+        result = WiseAccount::Processor.new(wise_account, import_complete: import_complete).process
         results << { wise_account_id: wise_account.id, success: true, result: result }
       rescue => e
         Rails.logger.error "WiseItem #{id} - Failed to process account #{wise_account.id}: #{e.message}"
@@ -130,6 +139,33 @@ class WiseItem < ApplicationRecord
 
   def has_completed_initial_setup?
     accounts.any?
+  end
+
+  # Sure's own sync bookkeeping (fetch coverage, the multi-currency account)
+  # lives in raw_payload, which Wise never fills.
+  def sync_metadata
+    raw_payload.is_a?(Hash) ? raw_payload : {}
+  end
+
+  def merge_sync_metadata!(attributes)
+    update!(raw_payload: sync_metadata.merge(attributes.deep_stringify_keys))
+  end
+
+  # The window successful fetches of `source` (:transfers or :activities)
+  # have covered without a gap, as { from:, through: } UTC times, or nil
+  # before the first one and when an older build recorded it
+  # (COVERAGE_VERSION). `through` is when the latest fetch started.
+  def fetch_coverage(source)
+    coverage = sync_metadata["coverage"]
+    window = coverage[source.to_s] if coverage.is_a?(Hash)
+    return nil unless window.is_a?(Hash) && window["version"].to_i >= COVERAGE_VERSION
+
+    from, through = window.values_at("from", "through").map do |time|
+      ActiveSupport::TimeZone["UTC"].parse(time.to_s) if time.present?
+    end
+    { from: from, through: through } if from && through
+  rescue ArgumentError
+    nil
   end
 
   # The zone Wise movements are dated in: the family's, or UTC when it has

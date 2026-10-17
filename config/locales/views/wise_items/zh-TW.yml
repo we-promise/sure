@@ -54,6 +54,9 @@ zh-TW:
       account_sync_failed:
         one: '%{count} 個 Wise 帳戶同步無法排程。'
         other: '%{count} 個 Wise 帳戶同步無法排程。'
+      fetch_failed:
+        one: '%{count} 個 Wise 請求失敗，下次同步時會重試。'
+        other: '%{count} 個 Wise 請求失敗，下次同步時會重試。'
     provider_panel:
       add_connection: 新增 Wise 連線
       token_label: API 權杖 (API Token)

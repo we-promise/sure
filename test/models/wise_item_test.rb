@@ -137,6 +137,33 @@ class WiseItemTest < ActiveSupport::TestCase
     assert_not_equal first_public_key, second_public_key
   end
 
+  # Sync metadata (raw_payload)
+
+  test "sync metadata reads a blank raw_payload and merges writes" do
+    assert_equal({}, @wise_item.sync_metadata)
+    assert_nil @wise_item.fetch_coverage(:transfers)
+
+    @wise_item.merge_sync_metadata!(coverage: { "transfers" => { "from" => "2025-04-02T16:00:00Z", "through" => "2026-10-17T12:00:00Z",
+                                                                 "version" => WiseItem::COVERAGE_VERSION } })
+    @wise_item.merge_sync_metadata!("multi_currency_account" => { "recipientId" => 99999001 })
+
+    assert_equal %w[coverage multi_currency_account], @wise_item.reload.raw_payload.keys.sort
+    assert_equal({ from: Time.utc(2025, 4, 2, 16), through: Time.utc(2026, 10, 17, 12) }, @wise_item.fetch_coverage("transfers"))
+    assert_nil @wise_item.fetch_coverage(:activities)
+  end
+
+  # Coverage an older build recorded claims rows that build did not keep, so
+  # it counts as none.
+  test "fetch coverage ignores coverage recorded under an older coverage version" do
+    window = { "from" => "2025-08-27T03:00:00Z", "through" => "2026-10-17T12:00:00Z" }
+    @wise_item.merge_sync_metadata!(coverage: { "transfers" => window, "activities" => window.merge("version" => WiseItem::COVERAGE_VERSION - 1) })
+    assert_nil @wise_item.fetch_coverage(:transfers)
+    assert_nil @wise_item.fetch_coverage(:activities)
+
+    @wise_item.merge_sync_metadata!(coverage: { "transfers" => window.merge("version" => WiseItem::COVERAGE_VERSION + 1) })
+    assert_equal({ from: Time.utc(2025, 8, 27, 3), through: Time.utc(2026, 10, 17, 12) }, @wise_item.fetch_coverage(:transfers))
+  end
+
   # Family checks its zone only when it changes, so a zone stored before that
   # check (or one tzdata dropped later) can stay. Every Wise row then failed
   # on it; now Wise dates fall back to UTC, reported once a day rather than on
@@ -160,6 +187,22 @@ class WiseItemTest < ActiveSupport::TestCase
     assert_equal ActiveSupport::TimeZone["UTC"], WiseItem.find(@wise_item.id).time_zone
   ensure
     Rails.cache = original_cache
+  end
+
+  test "process_accounts tells each account processor whether the import was complete" do
+    WiseAccount::Processor.expects(:new).with(@standard_account, import_complete: true).returns(stub(process: { imported: 0 }))
+    WiseAccount::Processor.expects(:new).with(@jar_account, import_complete: true).returns(stub(process: { imported: 0 }))
+
+    results = @wise_item.process_accounts(import_complete: true)
+
+    assert_equal [ true, true ], results.map { |result| result[:success] }
+  end
+
+  test "process_accounts assumes an incomplete import unless told otherwise" do
+    WiseAccount::Processor.expects(:new).twice.with { |_wise_account, options| options == { import_complete: false } }
+                          .returns(stub(process: nil))
+
+    @wise_item.process_accounts
   end
 
   # link_jar_transfers!

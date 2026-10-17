@@ -115,6 +115,11 @@ class WiseActivity::Processor
     }
   end
 
+  # A stored activity row, as opposed to a /v1/transfers or a statement row.
+  def self.activity_row?(row)
+    row["wise_statement"].blank? && row["createdOn"].present? && row["resource"].present?
+  end
+
   # createdOn is a UTC ISO-8601 timestamp ("2026-09-16T22:41:38.553Z").
   # Order activities by this instant; book them on its family-zone date.
   def self.created_at(activity)

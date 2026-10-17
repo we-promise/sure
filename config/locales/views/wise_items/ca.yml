@@ -90,6 +90,9 @@ ca:
       account_sync_failed:
         one: No s'ha pogut programar la sincronització de %{count} compte Wise.
         other: No s'ha pogut programar la sincronització de %{count} comptes Wise.
+      fetch_failed:
+        one: "%{count} sol·licitud a Wise ha fallat. La propera sincronització la tornarà a provar."
+        other: "%{count} sol·licituds a Wise han fallat. La propera sincronització les tornarà a provar."
     provider_connection:
       default_name: Wise
       default_description: Connecta el teu compte multidivisa de Wise
