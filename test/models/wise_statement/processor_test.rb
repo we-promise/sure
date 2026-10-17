@@ -70,6 +70,22 @@ class WiseStatement::ProcessorTest < ActiveSupport::TestCase
     assert_equal I18n.t("wise_items.entries.fee_name"), fee_entry.name
   end
 
+  test "re-importing a statement row drops wise metadata Wise no longer reports" do
+    statement = {
+      "type" => "DEBIT",
+      "date" => "2026-01-15T10:00:00Z",
+      "amount" => { "value" => "-7.76", "currency" => "EUR" },
+      "details" => { "description" => "Card payment", "paymentReference" => "INV-1234" },
+      "referenceNumber" => "statement-457"
+    }
+    WiseStatement::Processor.new(statement, wise_account: @wise_account).process
+
+    entry = WiseStatement::Processor.new(statement.merge("details" => { "description" => "Card payment" }),
+                                         wise_account: @wise_account).process
+
+    assert_nil entry.entryable.reload.extra.dig("wise", "payment_reference")
+  end
+
   test "ignores fees denominated in a different currency" do
     statement = {
       "type" => "DEBIT",
