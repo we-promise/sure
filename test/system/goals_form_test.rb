@@ -30,4 +30,38 @@ class GoalsFormTest < ApplicationSystemTestCase
     assert swapped.has_css?("span", text: "*"),
            "the label swap deleted the required marker"
   end
+
+  test "a months-of-expenses reserve can actually be created" do
+    family = @user.family
+    spending = family.accounts.create!(accountable: Depository.new, name: "Checking",
+                                       currency: family.currency, balance: 0)
+    6.times do |i|
+      month = Date.current.prev_month.beginning_of_month - i.months
+      spending.entries.create!(date: month + 5.days, name: "Bills", amount: 1_450,
+                               currency: family.currency, entryable: Transaction.new)
+    end
+    savings = family.accounts.create!(accountable: Depository.new, name: "Savings",
+                                      currency: family.currency, balance: 4_200)
+
+    visit new_goal_path
+    choose I18n.t("goals.form.kinds.maintained.label")
+    select I18n.t("goals.form.target_modes.months_of_expenses"),
+           from: I18n.t("goals.form.fields.target_mode")
+    find("input[name='goal[target_months]']").fill_in(with: "6")
+    fill_in I18n.t("goals.form.fields.name"), with: "Emergency fund E2E"
+    check "goal_account_ids_#{savings.id}"
+
+    # goal-kind disables the amount input in this mode: its figure is derived
+    # server-side, not typed. goal-form's isValid() used to require it to hold
+    # a positive number regardless, so the button stayed refused and the click
+    # never reached the server — a months-of-expenses reserve could not be
+    # created from the UI at all.
+    click_on I18n.t("goals.form.create")
+
+    assert_text I18n.t("goals.create.success")
+    goal = Goal.find_by(name: "Emergency fund E2E")
+    assert goal.present?, "the goal was never created — the submit was refused client-side"
+    assert goal.target_amount.to_d.positive?, "the derived amount never made it in"
+    assert_current_path goal_path(goal)
+  end
 end
