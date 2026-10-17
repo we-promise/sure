@@ -19,6 +19,18 @@ class Rule::ActionExecutor::ExcludeTransaction < Rule::ActionExecutor
     end
 
     count_modified_resources(scope) do |txn|
+      # Excluding an EMI-linked entry silently breaks the plan's arithmetic.
+      # Budget analytics filter on entries.excluded, so excluding an
+      # installment drops real money movement out of income statement and
+      # budget totals while the balance (computed from every non-pending
+      # entry, see Balance::SyncCache#converted_entries) keeps counting it --
+      # the spend would exist in one report and not the other, with no
+      # schedule left to explain the gap. Skipped silently, same as the
+      # transfer conversion in SetAsTransferOrPayment, rather than raising
+      # part-way through the batch and halting every other transaction in the
+      # rule run.
+      next false if txn.entry.emi_linked?
+
       # enrich_attribute returns true if the entry was actually modified, false otherwise
       txn.entry.enrich_attribute(
         :excluded,

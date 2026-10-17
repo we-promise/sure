@@ -51,6 +51,16 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "sample data seeds EMI plans covering the active and foreclosed states" do
+    generator = Demo::Generator.new(seed: 42)
+    stub_non_emi_activity(generator)
+    @family.expects(:sync_later)
+
+    generator.generate_new_user_data_for!(@family, email: @admin_user.email)
+
+    assert_demo_emi_plans
+  end
+
   test "monitoring api key creation reassigns stale demo monitoring key owned by another user" do
     stale_family = Family.create!(name: "Old Demo Family")
     stale_user = create_user!(stale_family, "old-demo-admin@example.com")
@@ -208,11 +218,84 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
          generate_personal_care_transactions! generate_investment_transactions!
          generate_transfers_and_payments! generate_regular_expenses!
          generate_legacy_transactions! generate_crypto_and_misc_assets!
+         generate_emi_plans!
          generate_budget_auto_fill! generate_goals! sync_family_accounts!].each do |step|
         generator.stubs(step)
       end
       Demo::FinancekitGenerator.any_instance.stubs(:create_accounts!)
       Demo::FinancekitGenerator.any_instance.stubs(:create_transactions!)
+    end
+
+    def stub_non_emi_activity(generator)
+      %i[load_securities! generate_salary_history! generate_housing_transactions!
+         generate_food_transactions! generate_transportation_transactions!
+         generate_entertainment_transactions! generate_shopping_transactions!
+         generate_healthcare_transactions! generate_travel_transactions!
+         generate_personal_care_transactions! generate_investment_transactions!
+         generate_major_purchases! generate_transfers_and_payments! generate_loan_payments!
+         generate_regular_expenses! generate_legacy_transactions! generate_crypto_and_misc_assets!
+         generate_budget_auto_fill! generate_goals! sync_family_accounts!].each do |step|
+        generator.stubs(step)
+      end
+      Demo::FinancekitGenerator.any_instance.stubs(:create_accounts!)
+      Demo::FinancekitGenerator.any_instance.stubs(:create_transactions!)
+    end
+
+    # The demo data is the only place all three plan states exist at once, so
+    # these assertions are what keep the seeded dataset usable for reviewing
+    # the feature without hand-building a plan first.
+    def assert_demo_emi_plans
+      plans = EmiPlan.order(:created_at).to_a
+      assert_equal 3, plans.size
+
+      plans.each do |plan|
+        assert_equal plan.account, plan.entry.account
+        assert_equal "emi_purchase", plan.entry.transaction.kind
+
+        # The scheduled rows only. A foreclosed plan also carries the
+        # settlement entry, which foreclose! names separately.
+        scheduled = plan.installment_entries.where(emi_installment_number: 1..plan.tenure_months)
+        assert scheduled.any?, "#{plan.entry.name} should have installments"
+        assert scheduled.all? { |entry| entry.name.include?("Installment") }
+        # Installments inherit the purchase's category, so the seeded dataset
+        # doesn't quietly dent the rake task's categorization-coverage check.
+        assert plan.installment_entries.all? { |entry| entry.transaction.category_id.present? }
+      end
+
+      active = plans.select(&:active?)
+      assert_equal 2, active.size
+
+      # Both active plans are partway through their term: the drawer shows
+      # posted and upcoming installments side by side.
+      active.each do |plan|
+        assert plan.posted_installments.exists?, "#{plan.entry.name} should have posted installments"
+        assert plan.remaining_installments.exists?, "#{plan.entry.name} should have upcoming installments"
+      end
+
+      # One active plan is interest-bearing and charges a processing fee, so
+      # the plan's total-interest and total-payable math has something to show.
+      fee_plan = active.find { |plan| plan.processing_fee.positive? }
+      assert fee_plan, "expected an active plan with a processing fee"
+      assert fee_plan.total_interest.positive?, "fee plan should accrue interest"
+      assert_equal fee_plan.processing_fee, fee_plan.processing_fee_entry.amount
+      assert_not fee_plan.entry.transaction.emi_convertible?, "a converted purchase can't be converted again"
+
+      # ...and one is a 0% plan, the no-cost case the schedule has a separate
+      # branch for.
+      assert active.any? { |plan| plan.interest_rate.zero? && plan.total_interest.zero? }
+
+      foreclosed = plans.reject(&:active?)
+      assert_equal 1, foreclosed.size
+      foreclosed_plan = foreclosed.first
+      assert_equal "foreclosed", foreclosed_plan.status
+      assert foreclosed_plan.posted_installments.exists?, "foreclosing keeps installments that already posted"
+      assert_empty foreclosed_plan.remaining_installments, "foreclosing cancels every upcoming installment"
+
+      settlement = foreclosed_plan.installment_entries.find_by(
+        emi_installment_number: foreclosed_plan.tenure_months + 1
+      )
+      assert settlement, "foreclosure should settle the outstanding principal"
+      assert_equal Date.current, settlement.date
     end
 
     def assert_demo_loan_payments
@@ -239,6 +322,7 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
          generate_healthcare_transactions! generate_travel_transactions!
          generate_personal_care_transactions! generate_investment_transactions!
          generate_major_purchases! generate_transfers_and_payments! generate_loan_payments!
+         generate_emi_plans!
          generate_regular_expenses! generate_legacy_transactions! generate_crypto_and_misc_assets!
          generate_budget_auto_fill! generate_goals! sync_family_accounts!].each do |step|
         generator.stubs(step)

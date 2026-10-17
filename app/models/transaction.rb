@@ -5,6 +5,11 @@ class Transaction < ApplicationRecord
   belongs_to :merchant, optional: true
   belongs_to :transfer, optional: true
 
+  # Set internally by EmiPlan#build!/#foreclose! to allow those two specific,
+  # controlled kind transitions (standard <-> emi_purchase) even while
+  # cannot_change_kind_of_active_emi_entry would otherwise block them.
+  attr_accessor :changing_emi_kind
+
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
@@ -24,10 +29,12 @@ class Transaction < ApplicationRecord
   ].freeze
 
   validate :validate_attachments, if: -> { attachments.attached? }
+  validate :cannot_change_kind_of_active_emi_entry
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
+  after_update_commit :propagate_category_to_emi_entries
 
   # Accessors for exchange_rate stored in extra jsonb field
   def exchange_rate
@@ -73,7 +80,10 @@ class Transaction < ApplicationRecord
     cc_payment: "cc_payment", # A CC payment, excluded from budget analytics (CC payments offset the sum of expense transactions)
     loan_payment: "loan_payment", # A payment to a Loan account, treated as an expense in budgets
     one_time: "one_time", # A one-time expense/income, excluded from budget analytics
-    investment_contribution: "investment_contribution" # Transfer to investment/crypto account, treated as an expense in budgets
+    investment_contribution: "investment_contribution", # Transfer to investment/crypto account, treated as an expense in budgets
+    emi_purchase: "emi_purchase", # Original purchase converted to an EMI plan. Excluded — the real spend is counted as each installment lands.
+    emi_installment: "emi_installment", # A single EMI installment (principal + interest share). Included in budgets as a normal expense.
+    emi_fee: "emi_fee" # One-time EMI processing fee. Included in budgets as a normal expense.
   }
 
   # All kinds where money moves between accounts (transfer? returns true).
@@ -83,7 +93,9 @@ class Transaction < ApplicationRecord
   # Kinds excluded from budget/income-statement analytics.
   # loan_payment and investment_contribution are intentionally NOT here —
   # they represent real cash outflow from a budgeting perspective.
-  BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
+  # emi_installment and emi_fee are intentionally NOT here for the same reason:
+  # they are the real cash outflow that emi_purchase's exclusion defers.
+  BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment emi_purchase].freeze
 
   # Kinds that never belong in the "Uncategorized" bucket, whichever surface
   # asks for it (the Transactions category filter, the uncategorized badge
@@ -601,6 +613,60 @@ class Transaction < ApplicationRecord
       return posted_notes if posted_parts.each_cons(pending_parts.size).include?(pending_parts)
 
       "#{posted_notes}\n\n#{pending_notes}"
+    end
+
+    # Blocks changing kind away from emi_purchase, or into/out of
+    # emi_installment, while the linked EmiPlan is still "live" (active, or
+    # foreclosed with posted history -- same bar as Entry's balance/amount/
+    # date guards, see Entry#excluding_emi_purchases and
+    # #cannot_edit_emi_purchase_amount_or_date). Without this, kind could be
+    # flipped directly, bypassing every other EMI guard entirely, since those
+    # only watch Entry's amount/date -- kind lives here on Transaction.
+    #
+    # changing_emi_kind is the deliberate, narrow bypass used by
+    # EmiPlan#build!/#foreclose! themselves, the only two places that are
+    # allowed to make this specific transition.
+    def cannot_change_kind_of_active_emi_entry
+      return if changing_emi_kind
+      return unless kind_changed?
+      return if entry.nil? # new/unpersisted entry, nothing to protect yet
+
+      plan = entry.originated_emi_plan || EmiPlan.find_by(id: entry.emi_plan_id)
+      return if plan.nil?
+      return unless plan.active? || plan.posted_installments.exists?
+
+      errors.add(:kind, "can't be changed while its EMI plan is active. Foreclose the plan first.")
+    end
+
+    # A converted purchase is the plan's source of truth for what the money was
+    # spent on. Copying its category onto the generated entries only happens once,
+    # in EmiPlan#build!, so recategorising the purchase afterwards would leave the
+    # installments (and the fee) reporting under the old category -- while the
+    # purchase itself is excluded from budget analytics for as long as the plan is
+    # live, so the old category would still show the full principal against it.
+    # Re-sync them so the series reports under one category.
+    def propagate_category_to_emi_entries
+      return unless saved_change_to_category_id?
+
+      new_category_id = category_id
+
+      # find_by, not entry.originated_emi_plan: EmiPlan#build! reads
+      # emi_convertible? (via Entry#emi_purchase?) *before* it saves the plan,
+      # which loads and caches that association as nil on the entry it was
+      # called on. The plan row is the only reliable source here.
+      plan = entry && EmiPlan.find_by(entry_id: entry.id)
+      return if plan.nil?
+
+      plan.installment_entries.includes(:entryable).each do |installment|
+        next if installment.entryable.category_id == new_category_id
+
+        installment.entryable.update_column(:category_id, new_category_id)
+      end
+
+      fee_entry = plan.processing_fee_entry
+      return if fee_entry.nil? || fee_entry.entryable.category_id == new_category_id
+
+      fee_entry.entryable.update_column(:category_id, new_category_id)
     end
 
     def validate_attachments

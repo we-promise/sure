@@ -1,6 +1,8 @@
 require "test_helper"
 
 class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   def setup
     @family = families(:dylan_family)
     @identifier = RecurringTransaction::Identifier.new(@family)
@@ -994,6 +996,34 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
         "an unpinned series is still corrected to the day its charges land on"
     end
 
+    test "EMI installments are not detected as a recurring bill" do
+      account = @family.accounts.first
+      emi_plan_with_posted_installments(account: account)
+
+      assert_no_difference "@family.recurring_transactions.count" do
+        @identifier.identify_recurring_patterns
+      end
+
+      # The add-bill picker offers candidates for unclaimed patterns, so the
+      # EMI installments must not show up there either.
+      offered = @identifier.candidate_patterns(sign: :outflow, min_occurrences: 2).map { |pattern| pattern[:name] }
+      assert(offered.none? { |name| name.include?("Installment") },
+        "EMI installments should not be offered as bill candidates: #{offered.inspect}")
+    end
+
+    test "a purchase converted to an EMI plan is not detected as a recurring bill" do
+      account = @family.accounts.first
+      purchase = create_transaction(
+        account: account, amount: 600, name: "Demo Laptop",
+        category: categories(:food_and_drink), date: 4.months.ago.to_date
+      )
+      EmiPlan.build!(entry: purchase, interest_rate: 0, tenure_months: 6, processing_fee: 25, start_date: 4.months.ago.to_date)
+
+      assert_no_difference "@family.recurring_transactions.count" do
+        @identifier.identify_recurring_patterns
+      end
+    end
+
   private
     # Three same-day charges inside the detection window: the smallest thing
     # the Identifier will turn into a monthly series.
@@ -1014,5 +1044,20 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
         raise "fixture did not produce a detected series" if series.nil?
         raise "fixture produced a manual series" if series.manual?
       end
+    end
+
+    # A 0% EMI is otherwise the detector's perfect input: equal amounts on a
+    # monthly cadence from one account. Detection used to stay clear of it only
+    # because the generated names carry their position ("Installment 3/12"),
+    # which is not something to lean on.
+    def emi_plan_with_posted_installments(account:)
+      purchase = create_transaction(
+        account: account,
+        amount: 600,
+        name: "Demo Laptop",
+        category: categories(:food_and_drink),
+        date: 4.months.ago.to_date
+      )
+      EmiPlan.build!(entry: purchase, interest_rate: 0, tenure_months: 6, processing_fee: 0, start_date: 4.months.ago.to_date)
     end
 end

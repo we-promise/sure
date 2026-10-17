@@ -14,6 +14,7 @@ class Family::FinancialDataReset
     accounts
     account_shares
     account_providers
+    emi_plans
     entries
     transactions
     transfers
@@ -149,6 +150,14 @@ class Family::FinancialDataReset
       scope(:family_exports).destroy_all
       scope(:imports).destroy_all
       scope(:import_sessions).destroy_all
+      # EMI plans go before their entries: Entry's before_destroy guards
+      # refuse to delete a converted purchase or a generated installment
+      # directly (the plan has to be foreclosed first), and this path destroys
+      # entries straight off a relation, so neither guard sees a
+      # destroyed_by_association. Deleting the plans first relies on the
+      # entries.emi_plan_id FK's ON DELETE NULLIFY, which un-tags the
+      # installments and un-links the purchases, so both guards stand down.
+      scope(:emi_plans).delete_all
       scope(:entries).destroy_all
       scope(:holdings).destroy_all
       scope(:balances).destroy_all
@@ -273,6 +282,7 @@ class Family::FinancialDataReset
           account_shares: AccountShare.where(account_id: account_ids),
           account_providers: AccountProvider.where(account_id: account_ids),
           entries: Entry.where(account_id: account_ids),
+          emi_plans: EmiPlan.where(account_id: account_ids),
           transactions: transaction_scope,
           transfers: Transfer.where(inflow_transaction_id: transaction_ids)
                              .or(Transfer.where(outflow_transaction_id: transaction_ids)),

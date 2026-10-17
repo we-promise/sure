@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Family::FinancialDataResetTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     @family = @user.family
@@ -111,6 +113,25 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     assert User.exists?(@user.id)
     assert_equal @family.id, User.find(@user.id).family_id
     assert Category.exists?(@other_category.id)
+  end
+
+  test "destructive reset removes EMI plans along with their purchases and installments" do
+    entry = create_transaction(amount: 1200, name: "EMI Purchase", account: accounts(:depository))
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 12, processing_fee: 25)
+
+    assert_equal 1, reset_counts(@family)[:emi_plans]
+
+    result = Family::FinancialDataReset.new(
+      user: @user,
+      dry_run: false,
+      confirmed: true
+    ).call
+
+    assert_equal 1, result.deleted_counts[:emi_plans]
+    assert_equal 0, result.after_counts[:emi_plans]
+    assert_equal 0, result.after_counts[:entries]
+    assert_not EmiPlan.exists?(plan.id)
+    assert_not Entry.exists?(entry.id)
   end
 
   test "destructive reset revokes provider item and clears provider account attachments" do

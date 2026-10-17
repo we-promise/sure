@@ -213,12 +213,19 @@ class RecurringTransaction
         # represent the underlying account-pair flow. Recurring transfers are tracked on a
         # different shape (RecurringTransaction with destination_account_id). Filtering at the
         # SQL level avoids loading and discarding transfer entries for a busy family.
+        #
+        # Skip EMI kinds too. A 0% EMI is the detector's exact dream: equal amounts, monthly
+        # cadence, one account -- but the plan's installments are already a self-scheduling
+        # series that the app tracks (and forecloses) on its own surface. Detecting a bill on
+        # top of one would double-represent the same obligation. Grouping by name was never
+        # enough to exclude them (installment names carry their position, "Installment 3/12"),
+        # so this has to be explicit rather than relying on the name not clustering.
         entries_with_transactions = family.entries
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
           .where(entryable_type: "Transaction")
           .where("accounts.accountable_type IS NULL OR accounts.accountable_type NOT IN (?)", NON_BILLABLE_ACCOUNTABLE_TYPES)
           .where("entries.date >= ?", three_months_ago)
-          .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
+          .where.not("transactions.kind": Transaction::TRANSFER_KINDS + %w[emi_purchase emi_installment emi_fee])
           .includes(:entryable)
           .to_a
 
