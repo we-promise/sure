@@ -42,6 +42,20 @@ class WiseAccount < ApplicationRecord
     raw_payload&.dig("type") == "SAVINGS"
   end
 
+  # Every name Wise gave the balance that Sure saw: the current one, the
+  # ones it had before a rename (raw_payload "name_history", one of
+  # PRESERVED_KEYS) and the one Sure stored when it first saw it. Activity
+  # titles name a jar as it was called at the time.
+  def known_names
+    payload = raw_payload.is_a?(Hash) ? raw_payload : {}
+    [ payload["name"], *Array(payload["name_history"]), name ].filter_map { |known| known.to_s.strip.presence }.uniq
+  end
+
+  # The name Wise gives the balance now (raw_payload "name"), or nil.
+  def current_name
+    raw_payload["name"].to_s.strip.presence if raw_payload.is_a?(Hash)
+  end
+
   # Wise no longer lists the balance (raw_payload "closed_at", one of
   # PRESERVED_KEYS).
   def closed?
@@ -167,27 +181,36 @@ class WiseAccount < ApplicationRecord
     payload = balance_data.is_a?(Hash) ? balance_data.dup : balance_data
     payload = payload.merge("borderless_account_id" => borderless_account_id) if borderless_account_id
     payload = payload.merge("recipient_id" => recipient_id) if recipient_id
-    previous = raw_payload.is_a?(Hash) ? raw_payload : {}
-    PRESERVED_KEYS.each do |key|
-      payload = payload.merge(key => previous[key]) if previous.key?(key) && !payload.key?(key)
+    # Read under the row lock, so a mark another sync or link stored after
+    # this record was loaded is kept (see #merge_raw_payload!). A balance
+    # seen for the first time has nothing stored yet.
+    self.class.transaction do
+      previous = persisted? ? locked_raw_payload : {}
+      # Renamed in Wise: the old name joins the history (#known_names).
+      if previous["name"].present? && previous["name"] != payload["name"]
+        payload = payload.merge("name_history" => (Array(previous["name_history"]) + [ previous["name"] ]).uniq)
+      end
+      PRESERVED_KEYS.each do |key|
+        payload = payload.merge(key => previous[key]) if previous.key?(key) && !payload.key?(key)
+      end
+
+      currency_code = data.dig(:amount, :currency).presence || data[:currency].presence || currency
+      savings = data[:type] == "SAVINGS"
+      # A STANDARD balance's amount leaves out what card holds keep back
+      # (reservedAmount), while Sure books a card payment only once Wise
+      # completes it, so the holds are counted back in. A jar's is totalWorth.
+      balance_value = savings ? data.dig(:totalWorth, :value).to_d : data.dig(:amount, :value).to_d + data.dig(:reservedAmount, :value).to_d
+      api_name = data[:name].presence
+      default_name = savings ? "Wise JAR #{currency_code}" : "Wise #{currency_code}"
+
+      update!(
+        current_balance: balance_value,
+        reserved_balance: data.dig(:reservedAmount, :value).to_d,
+        currency: currency_code,
+        name: name.presence || api_name || default_name,
+        raw_payload: payload
+      )
     end
-
-    currency_code = data.dig(:amount, :currency).presence || data[:currency].presence || currency
-    savings = data[:type] == "SAVINGS"
-    # A STANDARD balance's amount leaves out what card holds keep back
-    # (reservedAmount), while Sure books a card payment only once Wise
-    # completes it, so the holds are counted back in. A jar's is totalWorth.
-    balance_value = savings ? data.dig(:totalWorth, :value).to_d : data.dig(:amount, :value).to_d + data.dig(:reservedAmount, :value).to_d
-    api_name = data[:name].presence
-    default_name = savings ? "Wise JAR #{currency_code}" : "Wise #{currency_code}"
-
-    update!(
-      current_balance: balance_value,
-      reserved_balance: data.dig(:reservedAmount, :value).to_d,
-      currency: currency_code,
-      name: name.presence || api_name || default_name,
-      raw_payload: payload
-    )
   end
 
   # statements_coverage: the coverage this sync's statement fetch extended

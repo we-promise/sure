@@ -188,6 +188,20 @@ class WiseItem::BalanceReplayTest < ActiveSupport::TestCase
     assert_empty result.split_annotations
   end
 
+  # A move between the balance and a jar Sure does not have is read by its
+  # title like the processor books it (WiseActivity::Processor.jar_deposit?):
+  # into the jar when the title names the jar, back into the balance when it
+  # names the balance's currency.
+  test "replays the moves to and from a jar Sure does not have the way they are booked" do
+    gbp = balance("GBP", "70", [
+      top_up(1, "100", "GBP", "2026-03-01 09:00:00"),
+      activity("jar-in", "INTERBALANCE", "50 GBP", nil, "2026-03-02T10:00:00Z", title: "To <strong>Trip</strong>"),
+      activity("jar-out", "INTERBALANCE", "20 GBP", nil, "2026-03-03T10:00:00Z", title: "To <strong>GBP</strong>")
+    ])
+
+    assert replay(gbp).outcomes.sole.success?
+  end
+
   test "bounds a split part with a rate Sure stored when the feed has none" do
     payment = card("card-1", "25 EUR", "CHF, EUR", "2026-03-01T12:00:00Z")
     eur = balance("EUR", "0", [ top_up(1, "10", "EUR", "2026-03-01 09:00:00"), payment ])

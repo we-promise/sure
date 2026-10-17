@@ -56,6 +56,16 @@ class WiseAccountTest < ActiveSupport::TestCase
     assert_equal "STANDARD", @checking.raw_payload["type"]
   end
 
+  test "upsert_wise_snapshot! keeps marks stored after the record was loaded" do
+    @checking.update!(raw_payload: { "type" => "STANDARD" })
+    loaded = WiseAccount.find(@checking.id)
+    WiseAccount.find(@checking.id).send(:merge_raw_payload!, { "opening_anchor" => { "entry_id" => "e1" }, "closed_at" => "2026-01-02" })
+
+    loaded.upsert_wise_snapshot!({ "id" => "10000001", "amount" => { "value" => 10.0, "currency" => "EUR" }, "type" => "STANDARD" })
+
+    assert_equal [ { "entry_id" => "e1" }, "2026-01-02" ], @checking.reload.raw_payload.values_at("opening_anchor", "closed_at")
+  end
+
   test "upsert_wise_snapshot! uses totalWorth for SAVINGS balance" do
     balance_data = {
       "id" => "10000002",
@@ -122,6 +132,28 @@ class WiseAccountTest < ActiveSupport::TestCase
     @checking.upsert_wise_snapshot!(balance_data)
 
     assert_equal "My Wise EUR", @checking.name
+  end
+
+  # Activity titles name a jar as it was called then, so a jar Wise renamed
+  # keeps the names Sure saw before.
+  test "upsert_wise_snapshot! keeps the names a renamed jar had" do
+    @jar.update!(raw_payload: { "type" => "SAVINGS", "name" => "Holiday" })
+    savings = ->(name) { { "id" => "10000002", "type" => "SAVINGS", "name" => name, "totalWorth" => { "value" => 1.0, "currency" => "EUR" } } }
+
+    @jar.upsert_wise_snapshot!(savings.call("Holiday"))
+    assert_nil @jar.reload.raw_payload["name_history"]
+
+    @jar.upsert_wise_snapshot!(savings.call("Trip"))
+    @jar.upsert_wise_snapshot!(savings.call("Trip"))
+    @jar.upsert_wise_snapshot!(savings.call("Summer"))
+
+    assert_equal %w[Holiday Trip], @jar.reload.raw_payload["name_history"]
+    assert_equal "Summer", @jar.raw_payload["name"]
+    # The name Sure stored when it first saw the balance counts too.
+    assert_equal %w[Summer Holiday Trip Jar], @jar.known_names
+    # Only the name Wise gives it now is its current one.
+    assert_equal "Summer", @jar.current_name
+    assert_nil WiseAccount.new(raw_payload: { "type" => "SAVINGS", "name" => " " }).current_name
   end
 
   # Processing a balance and deleting its stale entries hold a session-level
