@@ -50,6 +50,9 @@ zh-CN:
       holdings: 持仓
       name: 名称
       new_holding: 新活动
+      negative_position: "%{name} (%{ticker})：自 %{date} 起低于零，最低 %{qty}。"
+      negative_positions_hint: "可能缺少一笔买入或转入。请补上，或更正使持仓低于零的交易。"
+      negative_positions_title: "部分持仓低于零"
       no_holdings: 没有可显示的持仓。
       return: 总回报
       weight: 权重

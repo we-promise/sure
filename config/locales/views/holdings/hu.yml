@@ -50,6 +50,9 @@ hu:
       holdings: Pozíciók
       name: Név
       new_holding: Új tevékenység
+      negative_position: "%{name} (%{ticker}): %{date} óta nulla alatt, legalacsonyabb %{qty}."
+      negative_positions_hint: "Valószínűleg hiányzik egy vétel vagy átvezetés. Vedd fel, vagy javítsd azokat a tranzakciókat, amelyek nulla alá vitték a pozíciót."
+      negative_positions_title: "Néhány pozíció nulla alá került"
       no_holdings: Nincs megjeleníthető pozíció.
       return: Teljes hozam
       weight: Súly

@@ -50,6 +50,9 @@ zh-TW:
       holdings: 持股
       name: 名稱
       new_holding: 新增活動
+      negative_position: "%{name} (%{ticker})：自 %{date} 起低於零，最低 %{qty}。"
+      negative_positions_hint: "可能缺少一筆買入或轉入。請補上，或更正使持倉低於零的交易。"
+      negative_positions_title: "部分持倉低於零"
       no_holdings: 沒有可顯示的持股。
       return: 總報酬
       weight: 占比

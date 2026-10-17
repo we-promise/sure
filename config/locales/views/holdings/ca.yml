@@ -37,6 +37,9 @@ ca:
       holdings: Posicions
       name: Nom
       new_holding: Nova activitat
+      negative_position: "%{name} (%{ticker}): per sota de zero des del %{date}, mínim %{qty}."
+      negative_positions_hint: "Probablement falta una compra o un traspàs. Afegeix-la o corregeix les operacions que han deixat la posició per sota de zero."
+      negative_positions_title: "Algunes posicions han quedat per sota de zero"
       no_holdings: No hi ha posicions per mostrar.
       return: Rendiment total
       weight: Pes
