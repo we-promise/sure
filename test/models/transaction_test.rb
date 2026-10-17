@@ -564,6 +564,91 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
   end
 
+  # A tag can only be applied once to a transaction, so a writer handed the
+  # same tag twice must store it once rather than fail on the unique index.
+  test "assigning a repeated tag id stores it once" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+
+    transaction.update!(tag_ids: [ tag.id, tag.id, tag.id.upcase ])
+
+    assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
+  end
+
+  # The dedupe above relies on the uuid cast downcasing a non-canonical id
+  # (ActiveRecord's PostgreSQL OID::Uuid#format_uuid), so pin that, and an
+  # assignment made only of case variants of one id.
+  test "an id differing only in case is the same tag" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+
+    assert_equal tag.id, Tag.type_for_attribute(:id).cast(tag.id.upcase)
+
+    transaction.update!(tag_ids: [ tag.id.upcase, tag.id.downcase ])
+
+    assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
+  end
+
+  # Rails' ids writer drops blanks before it casts, so the dedupe must not cast a
+  # malformed id to a blank: the writer would then discard it and clear the tags
+  # instead of refusing the unknown id.
+  test "a malformed tag id still raises and leaves the tags in place" do
+    transaction = transactions(:transfer_out)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+    before_ids = transaction.reload.tag_ids.sort
+
+    assert_raises(ActiveRecord::RecordNotFound) { transaction.tag_ids = [ "not-a-uuid" ] }
+
+    assert_equal before_ids, transaction.reload.tag_ids.sort
+  end
+
+  test "a malformed tag id beside a valid one still raises" do
+    transaction = transactions(:transfer_out)
+    transaction.update!(tag_ids: [ tags(:two).id ])
+
+    assert_raises(ActiveRecord::RecordNotFound) { transaction.tag_ids = [ tags(:one).id, "not-a-uuid" ] }
+
+    assert_equal [ tags(:two).id ], transaction.reload.tag_ids
+  end
+
+  # A blank and a malformed id both cast to nil, so deduping on the cast alone
+  # would keep the blank, drop the malformed id, and clear the tags.
+  test "a malformed tag id after a blank one still raises" do
+    transaction = transactions(:transfer_out)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+
+    assert_raises(ActiveRecord::RecordNotFound) { transaction.tag_ids = [ "", "not-a-uuid" ] }
+
+    assert_equal [ tags(:one).id ], transaction.reload.tag_ids
+  end
+
+  test "a blank tag id is still ignored" do
+    transaction = transactions(:transfer_out)
+
+    transaction.update!(tag_ids: [ "", tags(:one).id, "" ])
+
+    assert_equal [ tags(:one).id ], transaction.reload.tag_ids
+  end
+
+  test "assigning a repeated tag stores it once" do
+    transaction = transactions(:transfer_out)
+    tag = tags(:one)
+
+    transaction.tags = [ tag, tag ]
+
+    assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id)
+  end
+
+  test "a new transaction built with a repeated tag saves it once" do
+    tag = tags(:one)
+    entry = accounts(:depository).entries.create!(
+      name: "Repeated tag", amount: 10, currency: "USD", date: Date.current,
+      entryable: Transaction.new(tags: [ tag, tag ])
+    )
+
+    assert_equal [ tag.id ], entry.transaction.taggings.pluck(:tag_id)
+  end
+
   private
     # Whether each SQL form of "is this transaction pending?" says it is.
     def sql_pending_answers(transaction)
