@@ -25,3 +25,9 @@ en:
         unsupported_property: Chimnie only values residential properties; this UPRN belongs to a commercial or mixed-use property.
         unauthorized: Chimnie rejected the API key. Check the key in Settings → Self-Hosting.
         insufficient_balance: Your Chimnie account balance is too low for this request.
+    terrascoutx:
+      errors:
+        no_property: TerraScoutX could not find a property matching this address.
+        no_valuation: TerraScoutX did not return a value for this property.
+        location_mismatch: TerraScoutX matched a property with a different house number or ZIP code. Please double-check the address.
+        insecure_url: TERRASCOUTX_URL must use https://.
