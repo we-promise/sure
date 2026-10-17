@@ -1279,6 +1279,339 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_empty standard.raw_transactions_payload.select { |a| a["type"] == "BALANCE_CASHBACK" }
   end
 
+  # Single-leg activities on balances without statements: the feed is the only
+  # source of card payments, refunds, cash and direct debits, here in each
+  # shape Wise reports them.
+  test "books each card, cash and direct debit shape on the balance it moved money on" do
+    @family.update!(timezone: "Europe/Dublin")
+    activities = [
+      build_card_activity("same_currency", "37.65 CHF", created_on: "2026-09-08T14:26:51.473Z"),
+      build_card_activity("late_evening", "15 CHF", created_on: "2026-06-24T23:18:42.519Z"),
+      build_card_activity("auto_converted", "7.40 CHF", "6.42 GBP", created_on: "2026-04-09T13:07:36.928Z"),
+      build_card_activity("paid_from_chf", "2.84 GBP", "3.29 CHF", created_on: "2026-03-17T17:52:04.211Z"),
+      build_card_activity("refund", "<positive>+ 0.64 CHF</positive>", created_on: "2026-08-04T00:26:13.684Z"),
+      build_card_activity("split_card", "17.60 CHF", "AUD, CHF", created_on: "2026-03-25T10:41:58.032Z"),
+      build_card_activity("atm", "120 CHF", "GBP, CHF", type: "CASH_WITHDRAWAL", created_on: "2026-09-29T15:33:21.137Z"),
+      build_card_activity("declined_atm", "120 CHF", "122.70 CHF", type: "CASH_WITHDRAWAL", status: "CANCELLED",
+                          created_on: "2026-04-15T19:08:33.836Z"),
+      build_card_activity("card_check", "0 CHF", type: "CARD_CHECK", status: "CANCELLED", created_on: "2026-07-08T08:14:55.817Z"),
+      build_card_activity("direct_debit", "83.10 CAD", type: "DIRECT_DEBIT_TRANSACTION", resource_type: "DIRECT_DEBIT_TRANSACTION",
+                          created_on: "2026-06-15T05:46:29.302Z")
+    ]
+    provider = FakeWiseProvider.new(balances: balances_in(%w[GBP CHF AUD CAD]), borderless_accounts: [],
+                                    activities: activities, raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    stored = @wise_item.wise_accounts.to_h { |wa| [ wa.currency, Array(wa.raw_transactions_payload).map { |row| row["id"] }.sort ] }
+    assert_equal({ "GBP" => %w[atm auto_converted],
+                   "CHF" => %w[atm declined_atm late_evening paid_from_chf refund same_currency split_card],
+                   "AUD" => %w[split_card], "CAD" => %w[direct_debit] }, stored)
+
+    booked = @wise_item.wise_accounts.to_h do |wise_account|
+      wise_account = link_account(wise_account)
+      assert WiseAccount::Transactions::Processor.new(wise_account).process[:success]
+      [ wise_account.currency, wise_account.current_account.entries.order(:external_id).pluck(:external_id, :amount, :date) ]
+    end
+    # Without a balance replay a split payment books in full on the
+    # merchant-currency balance (CHF); 23:18Z on 24 June is 25 June in Dublin.
+    assert_equal({
+      "GBP" => [ [ "wise_activity_auto_converted", BigDecimal("6.42"), Date.new(2026, 4, 9) ] ],
+      "CHF" => [ [ "wise_activity_atm", BigDecimal("120"), Date.new(2026, 9, 29) ],
+                 [ "wise_activity_late_evening", BigDecimal("15"), Date.new(2026, 6, 25) ],
+                 [ "wise_activity_paid_from_chf", BigDecimal("3.29"), Date.new(2026, 3, 17) ],
+                 [ "wise_activity_refund", BigDecimal("-0.64"), Date.new(2026, 8, 4) ],
+                 [ "wise_activity_same_currency", BigDecimal("37.65"), Date.new(2026, 9, 8) ],
+                 [ "wise_activity_split_card", BigDecimal("17.60"), Date.new(2026, 3, 25) ] ],
+      "AUD" => [],
+      "CAD" => [ [ "wise_activity_direct_debit", BigDecimal("83.10"), Date.new(2026, 6, 15) ] ]
+    }, booked)
+  end
+
+  # A deposit into the account details from a bank or another Wise profile has
+  # no /v1/transfers row, so its activity is booked; the activity of a
+  # transfer Sure has only enriches that transfer.
+  test "books a deposit for no transfer Sure has, and only attaches one for a transfer it has" do
+    top_up = build_transfer(id: 9000000104, target_account: 99999001)
+    matched = build_transfer_activity(9000000104, primary: "<positive>+ 100 EUR</positive>").merge("type" => "BALANCE_DEPOSIT")
+    deposit = build_transfer_activity(77001, id: "bank_deposit", primary: "<positive>+ 450 EUR</positive>").merge("type" => "BALANCE_DEPOSIT")
+    unknown_payout = build_transfer_activity(77002, id: "unknown_payout", primary: "30 EUR")
+    provider = FakeWiseProvider.new(transfers: [ top_up ], activities: [ matched, deposit, unknown_payout ],
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    eur = link_account(@wise_item.wise_accounts.first)
+    assert_equal [ "9000000104", "bank_deposit" ], eur.raw_transactions_payload.map { |row| row["id"].to_s }.sort
+    WiseAccount::Transactions::Processor.new(eur).process
+    assert_equal({ "wise_transfer_9000000104" => BigDecimal("-100"), "wise_activity_bank_deposit" => BigDecimal("-450") },
+                 eur.current_account.entries.pluck(:external_id, :amount).to_h)
+
+    # A later sync whose transfer list fails keeps the booked deposit.
+    failing = FakeWiseProvider.new(activities: [ matched, deposit, unknown_payout ],
+                                   raise_on: { get_transfers: "Unexpected response 502", get_balance_statements: statements_forbidden })
+    WiseItem::Importer.new(@wise_item, wise_provider: failing).import
+    assert_equal [ "9000000104", "bank_deposit" ], eur.reload.raw_transactions_payload.map { |row| row["id"].to_s }.sort
+  end
+
+  test "waits for a sync whose transfer list arrived before booking a deposit for an unknown transfer" do
+    deposit = build_transfer_activity(77001, id: "late_transfer", primary: "<positive>+ 450 EUR</positive>").merge("type" => "BALANCE_DEPOSIT")
+    failing = FakeWiseProvider.new(activities: [ deposit ],
+                                   raise_on: { get_transfers: "Unexpected response 502", get_balance_statements: statements_forbidden })
+
+    assert_difference -> { activity_notes.count }, 1 do
+      WiseItem::Importer.new(@wise_item, wise_provider: failing).import
+    end
+    assert_equal 1, activity_notes.recent.first.metadata["deferred_transfer_count"]
+    eur = @wise_item.wise_accounts.first
+    assert_empty Array(eur.raw_transactions_payload)
+
+    # The transfer was only late: once listed, the activity just enriches it.
+    late = build_transfer(id: 77001, target_account: 99999001).merge("sourceValue" => 450.0, "targetValue" => 450.0)
+    recovered = FakeWiseProvider.new(transfers: [ late ], activities: [ deposit ],
+                                     raise_on: { get_balance_statements: statements_forbidden })
+    WiseItem::Importer.new(@wise_item, wise_provider: recovered).import
+
+    stored = eur.reload.raw_transactions_payload.sole
+    assert_equal [ 77001, "late_transfer" ], [ stored["id"], stored.dig("wise_activity", "id") ]
+  end
+
+  # The sync that defers a deposit (its transfer list failed) read its
+  # activities in full, and covering them ran the next window from 30 days
+  # before that sync: a deposit older than that was never fetched again, nor
+  # booked. Activity coverage now ends a day before the oldest deferred one.
+  test "fetches a deferred deposit again and books it once a transfer list arrives" do
+    travel_to Time.utc(2026, 10, 17, 12) do
+      salary = build_transfer_activity(77001, id: "salary_july", primary: "<positive>+ 450 EUR</positive>",
+                                              created_on: 90.days.ago.utc.iso8601(3)).merge("type" => "BALANCE_DEPOSIT")
+      failing = FakeWiseProvider.new(activities: [ salary ], windowed_activities: true,
+                                     raise_on: { get_transfers: "Unexpected response 502", get_balance_statements: statements_forbidden })
+      WiseItem::Importer.new(@wise_item, wise_provider: failing).import
+      eur = @wise_item.wise_accounts.sole
+      assert_empty Array(eur.raw_transactions_payload)
+      assert_equal 91.days.ago.utc.iso8601, @wise_item.reload.raw_payload.dig("coverage", "activities", "through")
+
+      travel 1.day
+      recovered = FakeWiseProvider.new(activities: [ salary ], windowed_activities: true, raise_on: { get_balance_statements: statements_forbidden })
+      assert WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: recovered).import[:complete]
+
+      assert_equal Time.utc(2026, 6, 18, 12), recovered.activity_requests.sole[:since]
+      assert_equal [ "salary_july" ], eur.reload.raw_transactions_payload.map { |row| row["id"] }
+      assert_equal "2026-10-18T12:00:00Z", @wise_item.reload.raw_payload.dig("coverage", "activities", "through")
+    end
+  end
+
+  # Transfers are listed before activities, so a top-up created in between was
+  # missing from the list, booked from its activity, then once more from its
+  # transfer on the next sync. A credit for a transfer Sure does not have,
+  # created after the list was read, now waits for the next sync's list (and
+  # no balance is replayed meanwhile).
+  test "books a top-up created after the transfer list was read once, from its transfer" do
+    travel_to Time.utc(2026, 10, 17, 12) do
+      payout = build_transfer(id: 1).merge("created" => 20.days.ago.utc.strftime("%Y-%m-%d %H:%M:%S"))
+      eur = link_account(@wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR",
+                                                          raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
+                                                          raw_transactions_payload: [ payout ]))
+      top_up_activity = build_transfer_activity(88001, id: "top_up", primary: "<positive>+ 450 EUR</positive>", title: "To <strong>EUR</strong>",
+                                                       created_on: Time.current.utc.iso8601(3)).merge("type" => "BALANCE_DEPOSIT")
+      listed_first = FakeWiseProvider.new(transfers: [ payout ], activities: [ top_up_activity ], raise_on: { get_balance_statements: statements_forbidden })
+
+      WiseItem::Importer.new(@wise_item, wise_provider: listed_first).import
+      assert_equal [ :get_transfers, :get_activities ], listed_first.calls & [ :get_transfers, :get_activities ]
+      assert_equal 1, activity_notes.sole.metadata["deferred_transfer_count"]
+      WiseAccount::Transactions::Processor.new(eur.reload).process
+
+      travel 1.day
+      top_up = build_transfer(id: 88001, target_account: 99999001).merge("sourceValue" => 450.0, "targetValue" => 450.0,
+                                                                         "created" => 1.day.ago.utc.strftime("%Y-%m-%d %H:%M:%S"))
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: FakeWiseProvider.new(
+        transfers: [ payout, top_up ], activities: [ top_up_activity ], raise_on: { get_balance_statements: statements_forbidden }
+      )).import
+      WiseAccount::Transactions::Processor.new(eur.reload).process
+
+      assert_equal [ [ "wise_transfer_88001", BigDecimal("-450") ] ], eur.current_account.entries.where("amount < 0").pluck(:external_id, :amount)
+    end
+  end
+
+  # A credit deferred while this sync asked for no transfer list at all
+  # (statements carry the balances' movements) does not hold the activity
+  # coverage back: no later sync is sure to list transfers either.
+  test "does not hold activity coverage back for a deposit no transfer list was asked for" do
+    travel_to Time.utc(2026, 10, 17, 12) do
+      deposit = build_transfer_activity(77001, id: "bank_deposit", primary: "<positive>+ 450 EUR</positive>",
+                                               created_on: 90.days.ago.utc.iso8601(3)).merge("type" => "BALANCE_DEPOSIT")
+      @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR", raw_payload: { "type" => "STANDARD" },
+                                       raw_transactions_payload: [ statement_row("CARD-1", "-5", "EUR").merge("wise_statement" => true) ])
+      provider = FakeWiseProvider.new(activities: [ deposit ], statements: [])
+
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+      assert_not_includes provider.calls, :get_transfers
+      assert_equal 1, activity_notes.sole.metadata["deferred_transfer_count"]
+      assert_equal "2026-10-17T12:00:00Z", @wise_item.reload.raw_payload.dig("coverage", "activities", "through")
+    end
+  end
+
+  test "drops a stored deposit once Sure has the transfer it belongs to" do
+    deposit = build_transfer_activity(77001, id: "bank_deposit", primary: "<positive>+ 450 EUR</positive>").merge("type" => "BALANCE_DEPOSIT")
+    eur = @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR",
+                                           raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
+                                           raw_transactions_payload: [ deposit ])
+    transfer = build_transfer(id: 77001, target_account: 99999001)
+    provider = FakeWiseProvider.new(transfers: [ transfer ], raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal [ 77001 ], eur.reload.raw_transactions_payload.map { |row| row["id"] }
+  end
+
+  # Wrapper types move money as transfers Sure already imports, and the rest
+  # have not been seen; none is booked.
+  # Booked in full on the first balance the payment lists, which support
+  # should know is an estimate.
+  test "tells support about a split payment in a currency none of its balances is in" do
+    provider = FakeWiseProvider.new(balances: [ eur_balance("10000001", 10.0), standard_balance("10000002", "GBP", 10.0) ],
+                                    borderless_accounts: [], activities: [ build_card_activity("split_usd", "100 USD", "GBP, EUR") ],
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal [ [ "split_usd" ], [ "split_usd" ] ], payload_ids.values_at("10000001", "10000002")
+    note = activity_notes.sole
+    assert_equal [ "warn", 1 ], [ note.level, note.metadata["foreign_split_count"] ]
+  end
+
+  test "stores no activity Sure cannot book and reports them once per sync" do
+    activities = [
+      build_card_activity("card_check", "0 EUR", type: "CARD_CHECK", status: "CANCELLED"),
+      build_card_activity("scheduled_1", "50 EUR", type: "SCHEDULED_SEND_ORDER", resource_type: "SEND_ORDER"),
+      build_card_activity("scheduled_2", "60 EUR", type: "SCHEDULED_SEND_ORDER", resource_type: "SEND_ORDER"),
+      build_card_activity("fee_refund", "<positive>+ 1 EUR</positive>", type: "FEE_REFUND"),
+      build_card_activity("paid_from_chf", "10 EUR", "9.50 CHF")
+    ]
+    provider = FakeWiseProvider.new(activities: activities, raise_on: { get_balance_statements: statements_forbidden })
+
+    assert_difference -> { activity_notes.count }, 1 do
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
+
+    assert_empty Array(@wise_item.wise_accounts.first.raw_transactions_payload)
+    note = activity_notes.recent.first
+    assert_equal "warn", note.level
+    assert_equal({ "CARD_CHECK" => 1, "SCHEDULED_SEND_ORDER" => 2, "FEE_REFUND" => 1 }, note.metadata["unbooked_type_counts"])
+    assert_equal [ 1, [ "CHF" ] ], note.metadata.values_at("unrouted_count", "unrouted_currencies")
+  end
+
+  test "routes an auto-conversion to both balances and links its legs" do
+    conversion = build_interbalance("To <strong>EUR</strong>", resource_id: "9001", primary: "117.50 EUR", secondary: "100 GBP")
+                   .merge("type" => "AUTO_CONVERSION", "id" => "auto_conversion_9001")
+    provider = FakeWiseProvider.new(balances: balances_in(%w[GBP EUR]), borderless_accounts: [], activities: [ conversion ],
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    legs = @wise_item.wise_accounts.to_h do |wise_account|
+      wise_account = link_account(wise_account)
+      WiseAccount::Transactions::Processor.new(wise_account).process
+      [ wise_account.currency, wise_account.current_account.entries.pluck(:external_id, :amount) ]
+    end
+    @wise_item.link_jar_transfers!
+
+    assert_equal({ "GBP" => [ [ "wise_interbalance_9001_outflow", BigDecimal("100") ] ],
+                   "EUR" => [ [ "wise_interbalance_9001_inflow", BigDecimal("-117.50") ] ] }, legs)
+    transfer = Transfer.find_by!(inflow_transaction_id: Entry.find_by!(external_id: "wise_interbalance_9001_inflow").entryable_id)
+    assert_equal "wise_interbalance_9001_outflow", transfer.outflow_transaction.entry.external_id
+  end
+
+  # A balance's statement rows already carry its card payments, so the
+  # activity feed must not book them again, also on the first sync where its
+  # statements arrive.
+  test "leaves card payments to the statements of the balances they cover" do
+    balances = balances_in(%w[EUR USD GBP])
+    eur = @wise_item.wise_accounts.create!(
+      balance_id: balances[0]["id"], name: "Wise EUR", currency: "EUR", raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [ statement_row("CARD-1", "-5.00", "EUR").merge("wise_statement" => true) ]
+    )
+    usd = @wise_item.wise_accounts.create!(
+      balance_id: balances[1]["id"], name: "Wise USD", currency: "USD", raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [ build_card_activity("usd_earlier", "4 USD") ]
+    )
+    activities = [ build_card_activity("eur_card", "12 EUR"), build_card_activity("usd_card", "3.40 USD"),
+                   build_card_activity("gbp_card", "7.40 EUR", "6.42 GBP") ]
+    provider = FakeWiseProvider.new(balances: balances, borderless_accounts: [], activities: activities)
+    statements_by_balance = { balances[1]["id"] => [ statement_row("CARD-2", "-3.40", "USD") ] }
+    provider.define_singleton_method(:get_balance_statements) do |_profile_id, balance_id, **|
+      statements_by_balance.fetch(balance_id, [])
+    end
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal [ "CARD-1" ], eur.reload.raw_transactions_payload.map { |row| row["referenceNumber"] }
+    assert_equal [ [ nil, "CARD-2" ] ], usd.reload.raw_transactions_payload.map { |row| row.values_at("id", "referenceNumber") }
+    assert_equal [ "gbp_card" ], @wise_item.wise_accounts.find_by!(currency: "GBP").raw_transactions_payload.map { |row| row["id"] }
+  end
+
+  test "books a card payment on the open balance of a reopened currency, not the closed one" do
+    closed = @wise_item.wise_accounts.create!(balance_id: "10000009", name: "Wise EUR (closed)", currency: "EUR",
+                                              raw_payload: { "type" => "STANDARD", "closed_at" => 10.days.ago.utc.iso8601 })
+    provider = FakeWiseProvider.new(activities: [ build_card_activity("card_1", "12 EUR") ],
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal [ "card_1" ], @wise_item.wise_accounts.find_by!(balance_id: "10000001").raw_transactions_payload.map { |row| row["id"] }
+    assert_empty Array(closed.reload.raw_transactions_payload)
+  end
+
+  # The row-kind predicate: a stored card payment is not a /v1/transfers row,
+  # so it neither asks for the transfer fallback nor starts the legacy window
+  # whose outgoing statement rows used to be dropped.
+  test "does not treat stored card payments as legacy transfers" do
+    @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR", raw_payload: { "type" => "STANDARD" },
+                                     raw_transactions_payload: [ build_card_activity("card_1", "12 EUR", created_on: "2024-01-10T10:00:00Z") ])
+    provider = FakeWiseProvider.new(statements: [ statement_row("CARD-555", "-12.50", "EUR", date: "2024-01-15T10:00:00Z") ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    refute_includes provider.calls, :get_transfers
+    assert_includes @wise_item.wise_accounts.first.raw_transactions_payload.map { |row| row["referenceNumber"] }, "CARD-555"
+  end
+
+  # Interest and fees go to the open jars as before, else to the balance in
+  # their currency.
+  test "routes balance interest to the balance in its currency while the profile has no open jar" do
+    closed_jar = @wise_item.wise_accounts.create!(balance_id: "50000009", name: "Old jar", currency: "EUR",
+                                                  raw_payload: { "type" => "SAVINGS", "closed_at" => 10.days.ago.utc.iso8601 })
+    interest = build_card_activity("interest_eur", "<positive>+ 0.42 EUR</positive>", type: "BALANCE_INTEREST", resource_type: "BALANCE_INTEREST")
+    cashback = build_card_activity("cashback_gbp", "0.10 GBP", type: "BALANCE_CASHBACK", resource_type: "BALANCE_CASHBACK")
+    provider = FakeWiseProvider.new(balances: balances_in(%w[GBP EUR]), borderless_accounts: [], activities: [ interest, cashback ],
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    routed = @wise_item.wise_accounts.reject(&:jar?).to_h { |wa| [ wa.currency, wa.raw_transactions_payload.map { |row| row["id"] } ] }
+    assert_equal({ "GBP" => [ "cashback_gbp" ], "EUR" => [ "interest_eur" ] }, routed)
+    assert_empty Array(closed_jar.reload.raw_transactions_payload)
+  end
+
+  test "stores an activity in any status and books it once Wise completes it" do
+    pending = build_card_activity("card_1", "12 EUR", status: "IN_PROGRESS")
+    WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(
+      activities: [ pending ], raise_on: { get_balance_statements: statements_forbidden }
+    )).import
+    eur = link_account(@wise_item.wise_accounts.first)
+
+    assert_equal [ "IN_PROGRESS" ], eur.raw_transactions_payload.map { |row| row["status"] }
+    assert_equal 1, WiseAccount::Transactions::Processor.new(eur).process[:skipped]
+    assert_empty eur.current_account.entries
+
+    WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(
+      activities: [ pending.merge("status" => "COMPLETED") ], raise_on: { get_balance_statements: statements_forbidden }
+    )).import
+    WiseAccount::Transactions::Processor.new(eur.reload).process
+
+    assert_equal [ [ "wise_activity_card_1", BigDecimal("12") ] ], eur.current_account.entries.pluck(:external_id, :amount)
+  end
+
   # A repeated cursor means Wise ignored it and the feed was not read to the
   # end, so the fetch now fails the import and its pages are dropped instead
   # of passing for the complete history.
@@ -1733,10 +2066,41 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
       }.compact
     end
 
+    # STANDARD balances with their own account details, in the given order.
+    def balances_in(currencies)
+      currencies.each_with_index.map do |currency, i|
+        { "id" => "5000000#{i}", "type" => "STANDARD", "recipientId" => 70000000 + i,
+          "amount" => { "value" => 0.0, "currency" => currency }, "reservedAmount" => { "value" => 0.0, "currency" => currency } }
+      end
+    end
+
+    # A single-leg activity as Wise lists it (card payment unless told
+    # otherwise); the secondary is empty when no conversion or fee applied.
+    def build_card_activity(id, primary, secondary = "", type: "CARD_PAYMENT", status: "COMPLETED",
+                            resource_type: "CARD_TRANSACTION", created_on: 3.days.ago.utc.iso8601(3))
+      {
+        "id" => id,
+        "type" => type,
+        "resource" => { "type" => resource_type, "id" => "resource_#{id}" },
+        "title" => "<strong>Merchant</strong>",
+        "description" => "",
+        "primaryAmount" => primary,
+        "secondaryAmount" => secondary,
+        "status" => status,
+        "createdOn" => created_on,
+        "updatedOn" => created_on
+      }
+    end
+
     def statement_row(reference, value, currency, date: 2.days.ago.utc.iso8601)
       { "type" => value.to_d.negative? ? "DEBIT" : "CREDIT", "date" => date,
         "amount" => { "value" => value, "currency" => currency }, "details" => { "type" => "CARD" },
         "referenceNumber" => reference }
+    end
+
+    # What the importer reports about activities it books on no balance.
+    def activity_notes
+      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "activity_routing")
     end
 
     def standard_balance(id, currency, value)

@@ -46,8 +46,11 @@ class WiseItem::Importer
     @sync_start_date = sync_start_date
     @fetch_failures = 0
     @fetched_windows = {}
+    @known_transfer_ids = Set.new
+    @statement_covered_account_ids = Set.new
     @statement_retry_accounts = []
     @statements_refused_accounts = []
+    @deferred_activity_times = []
   end
 
   # `complete:` is true only when every source this sync needed arrived in
@@ -514,10 +517,22 @@ class WiseItem::Importer
       @fetched_windows.each do |source, window|
         covered = wise_item.fetch_coverage(source)
         from = covered && window[:start] <= covered[:through] ? [ covered[:from], window[:start] ].min : window[:start]
-        coverage[source.to_s] = { "from" => from.utc.iso8601, "through" => window[:through].utc.iso8601,
+        through = source == :activities ? [ window[:through], deferred_activity_cutoff ].compact.min : window[:through]
+        coverage[source.to_s] = { "from" => from.utc.iso8601, "through" => through.utc.iso8601,
                                   "version" => WiseItem::COVERAGE_VERSION }
       end
       coverage
+    end
+
+    # A credit this sync deferred (#transfer_activity_route) is booked by a
+    # later sync, which must read it again: activity coverage ends a day
+    # before the oldest one, so the next window reaches back to it. Not when
+    # this sync asked for no transfer list at all (statements carry the
+    # movements): no later sync is sure to list transfers either, and the
+    # window would only grow.
+    def deferred_activity_cutoff
+      oldest = @deferred_activity_times.compact.min if @transfers_attempted
+      oldest - 1.day if oldest
     end
 
     def parse_utc(raw)
@@ -565,9 +580,7 @@ class WiseItem::Importer
           next
         end
 
-        legacy = existing.select do |transaction|
-          transaction["wise_statement"].blank? && !jar_activity?(transaction)
-        end
+        legacy = existing.select { |transaction| transfer_row?(transaction) }
         legacy_cutoff = legacy.filter_map { |transaction| parse_transaction_date(transaction) }.min
 
         start_date =
@@ -713,7 +726,7 @@ class WiseItem::Importer
         next false if wise_account.jar?
 
         payload = Array(wise_account.raw_transactions_payload)
-        has_legacy = payload.any? { |transaction| transaction["wise_statement"].blank? && !jar_activity?(transaction) }
+        has_legacy = payload.any? { |transaction| transfer_row?(transaction) }
         has_statement = payload.any? { |transaction| transaction["wise_statement"].present? }
 
         has_legacy && !has_statement
@@ -721,9 +734,10 @@ class WiseItem::Importer
     end
 
     # Partitions transactions by the balance each one moved money on (see
-    # #transfer_for_account? and #activity_for_account?). Routes transfers to
-    # STANDARD accounts and activities to JAR accounts. Transfers, fetched or
-    # stored, first get the activity this sync saw for them.
+    # #transfer_for_account? and #activity_for_account?): transfers and
+    # statement rows go to STANDARD balances, activities to the balances they
+    # moved money on, jars included. Transfers, fetched or stored, first get
+    # the activity this sync saw for them.
     def store_transfers_per_account(transfers, activities: [], statements: {}, statement_failures: [], fallback_to_transfers: false)
       transactions_imported = 0
       transactions_failed = 0
@@ -731,6 +745,10 @@ class WiseItem::Importer
       stored_transfers = stored_transfer_rows.index_by { |row| row["id"].to_s }
       transfers = transfers.map { |transfer| enrich_transfer(transfer, transfer_activities) }
       report_transfer_notes(transfers, stored_transfers, transfer_activities)
+      @known_transfer_ids = known_transfer_ids(transfers)
+      @statement_covered_account_ids = statement_covered_account_ids(statements)
+      @deferred_activity_times = activities.select { |activity| activity_route(activity) == :deferred }.map { |activity| activity_created_at(activity) }
+      report_activity_routing(activities)
 
       wise_item.wise_accounts.find_each do |wise_account|
         # A failed statement request for a balance that holds statement rows
@@ -758,8 +776,8 @@ class WiseItem::Importer
           existing_legacy = Array(wise_account.raw_transactions_payload).filter_map do |transaction|
             next if transaction["wise_statement"].present?
 
-            if jar_activity?(transaction)
-              transaction if activity_for_account?(transaction, wise_account)
+            if WiseActivity::Processor.activity_row?(transaction)
+              transaction if activity_for_account?(transaction, wise_account, stored: true)
             else
               transfer = enrich_transfer(transaction, transfer_activities)
               transfer if transfer_for_account?(transfer, wise_account)
@@ -778,14 +796,13 @@ class WiseItem::Importer
             else
               transfers.select { |t| transfer_for_account?(t, wise_account) }
             end
-          # Also include INTERBALANCE activities so the standard account shows outflows to the JAR.
-          interbalance = activities.select { |a| activity_for_account?(a, wise_account) }
+          routed_activities = activities.select { |a| activity_for_account?(a, wise_account) }
           payload = merge_transaction_payloads(
-            existing_legacy + account_transfers + existing_statements + account_statements + interbalance
+            existing_legacy + account_transfers + existing_statements + account_statements + routed_activities
           )
           # A statement request can legitimately return no rows for a token
           # lacking statement permission; preserve transfer fallback behavior.
-          payload = merge_transaction_payloads(account_transfers + interbalance) if payload.empty?
+          payload = merge_transaction_payloads(account_transfers + routed_activities) if payload.empty?
           wise_account.upsert_wise_transactions_snapshot!(payload)
           transactions_imported += payload.size
         end
@@ -953,7 +970,7 @@ class WiseItem::Importer
       transactions.each_with_object({}) do |transaction, merged|
         key = if transaction["wise_statement"].present?
           [ "statement", transaction["referenceNumber"].presence || transaction["id"] || transaction.to_json ]
-        elsif transaction["type"].present?
+        elsif WiseActivity::Processor.activity_row?(transaction)
           [ "activity", transaction["id"] || transaction.to_json ]
         else
           [ "transfer", transaction["id"] || transaction.to_json ]
@@ -965,10 +982,6 @@ class WiseItem::Importer
     def with_sticky_keys(row, stored)
       kept = stored.is_a?(Hash) ? stored.slice(*STICKY_ROW_KEYS).except(*row.keys) : {}
       kept.empty? ? row : row.merge(kept)
-    end
-
-    def jar_activity?(transaction)
-      WiseActivity::Processor::JAR_ACTIVITY_TYPES.include?(transaction["type"])
     end
 
     # A source that failed to arrive in full: logged for support and counted,
@@ -1019,29 +1032,174 @@ class WiseItem::Importer
       Rails.logger.warn "WiseItem::Importer - Failed to capture Wise debug log: #{trace_error.message}"
     end
 
-    # Routes an activity to the given WiseAccount.
-    # JAR: receives INTERBALANCE where the activity title's <strong> tag matches the JAR name,
-    #      plus BALANCE_CASHBACK and BALANCE_ASSET_FEE.
-    # STANDARD: receives INTERBALANCE activities that move money in its own
-    #      currency: the outflow side of JAR transfers, and either side of a
-    #      currency conversion between the profile's balances. Activities are
-    #      fetched profile-wide, so without this filter every balance would show
-    #      every conversion in some other currency.
-    def activity_for_account?(activity, wise_account)
-      type = activity["type"]
-
-      case type
-      when "INTERBALANCE"
+    # Whether the given balance stores an activity (see #activity_route).
+    # Activities are fetched profile-wide, so without this filter every
+    # balance would show every activity.
+    # - Conversions (INTERBALANCE, AUTO_CONVERSION): a jar whose name the
+    #   title gives; a STANDARD balance on either side of a currency
+    #   conversion, or in the currency of a jar move (its outflow side).
+    # - Interest, cashback and fees on holdings: every open jar, as before;
+    #   while the profile has no open jar, the STANDARD balance in their
+    #   currency.
+    # - Single-leg activities: each open STANDARD balance that paid or
+    #   received it (several for a split payment), unless statements cover
+    #   that balance, whose statement rows then carry the movement.
+    # stored: re-routes a row an earlier sync stored on this balance.
+    def activity_for_account?(activity, wise_account, stored: false)
+      case activity_route(activity, stored: stored)
+      when :conversion
         if wise_account.jar?
           jar_title_match?(activity, wise_account)
         else
           standard_interbalance_for_account?(activity, wise_account)
         end
-      when "BALANCE_ASSET_FEE", "BALANCE_CASHBACK"
-        wise_account.jar?
+      when :holding
+        if wise_account.jar?
+          !wise_account.closed?
+        else
+          !open_jar? && single_leg_for_account?(activity, wise_account)
+        end
+      when :single_leg
+        single_leg_for_account?(activity, wise_account)
       else
         false
       end
+    end
+
+    # How an activity reaches the balances:
+    #   :conversion  both sides of a move between the profile's own balances
+    #   :holding     interest, cashback and fees on holdings
+    #   :single_leg  the balance(s) that paid or received it
+    #   :transfer    none: it enriches a transfer Sure has (#enrich_transfer)
+    #   :deferred    none yet: a credit for a transfer this sync could not
+    #                look for, as its transfer list did not arrive
+    #   :unbooked    none: a type Sure does not book (wrapper types whose
+    #                money moves as /v1/transfers transfers, card checks,
+    #                types not seen yet), or a debit for an unknown transfer
+    def activity_route(activity, stored: false)
+      type = activity["type"].to_s
+      if WiseActivity::Processor::TWO_LEG_TYPES.include?(type) then :conversion
+      elsif WiseActivity::Processor::HOLDING_TYPES.include?(type) then :holding
+      elsif WiseActivity::Processor::SINGLE_LEG_TYPES.include?(type) then :single_leg
+      elsif WiseActivity::Processor::TRANSFER_TYPES.include?(type) then transfer_activity_route(activity, stored: stored)
+      else :unbooked
+      end
+    end
+
+    # The activity of a transfer Sure has only enriches it. A credit for one
+    # it does not have (paid into the account details from a bank or another
+    # Wise profile, which /v1/transfers does not list) is booked, but a new
+    # one only when this sync's transfer list would show that transfer: not
+    # when the list did not arrive, nor for an activity created after the
+    # list was read (its transfer may be younger than the list). So a
+    # transfer that is merely late is not booked twice. A row stored that
+    # way stays.
+    def transfer_activity_route(activity, stored:)
+      resource = activity["resource"].is_a?(Hash) ? activity["resource"] : {}
+      of_transfer = resource["type"] == "TRANSFER"
+      return :transfer if of_transfer && @known_transfer_ids.include?(resource["id"].to_s)
+      return :unbooked unless WiseActivity::Processor.direction(activity) == :credit
+      return :deferred if of_transfer && !stored && !transfer_list_covers?(activity)
+
+      :single_leg
+    end
+
+    # Whether this sync's transfer list arrived and was read after the
+    # activity was created (#transfer_activity_route).
+    def transfer_list_covers?(activity)
+      listed = @fetched_windows[:transfers]
+      return false unless listed
+
+      created_at = activity_created_at(activity)
+      created_at.nil? || created_at < listed[:through]
+    end
+
+    def single_leg_for_account?(activity, wise_account)
+      return false if wise_account.jar? || wise_account.closed? || @statement_covered_account_ids.include?(wise_account.id)
+
+      funding = WiseActivity::Processor.balance_amount(activity)
+      funding.present? && funding[:currencies].include?(wise_account.currency)
+    end
+
+    # Transfers Sure has: listed or read this sync, or stored on any balance.
+    def known_transfer_ids(transfers)
+      stored = wise_item.wise_accounts.flat_map do |wise_account|
+        Array(wise_account.raw_transactions_payload).select { |row| transfer_row?(row) }
+      end
+      (transfers + stored).filter_map { |transfer| transfer["id"].presence&.to_s }.to_set
+    end
+
+    # Balances whose statements carry their card payments and other
+    # single-leg movements: those that hold statement rows, and those whose
+    # statements this sync returned rows for.
+    def statement_covered_account_ids(statements)
+      wise_item.wise_accounts.filter_map do |wise_account|
+        stored = Array(wise_account.raw_transactions_payload).any? { |row| row["wise_statement"].present? }
+        wise_account.id if stored || Array(statements[wise_account.id]).any?
+      end.to_set
+    end
+
+    def open_jar?
+      return @open_jar if defined?(@open_jar)
+
+      @open_jar = wise_item.wise_accounts.any? { |wise_account| wise_account.jar? && !wise_account.closed? }
+    end
+
+    def open_standard_currencies
+      @open_standard_currencies ||= wise_item.wise_accounts.reject { |wise_account| wise_account.jar? || wise_account.closed? }
+                                                          .map(&:currency).to_set
+    end
+
+    # Tells support, once per sync, about this sync's activities that book on
+    # no balance or that Sure books on its own judgement: types it does not
+    # book (counted per type), credits for transfers it does not have
+    # (booked, or deferred while the transfer list failed), activities in a
+    # currency no open STANDARD balance holds and split payments in a
+    # currency none of their balances is in (booked in full on the first one
+    # until the balance replay finds the parts). Counts and currencies only.
+    def report_activity_routing(activities)
+      unbooked = Hash.new(0)
+      unmatched = 0
+      deferred = 0
+      unrouted = 0
+      unrouted_currencies = Set.new
+      foreign_splits = 0
+
+      activities.each do |activity|
+        route = activity_route(activity)
+        case route
+        when :unbooked
+          unbooked[activity["type"].to_s.presence || "unknown"] += 1
+        when :deferred
+          deferred += 1
+        when :single_leg, :holding
+          unmatched += 1 if WiseActivity::Processor::TRANSFER_TYPES.include?(activity["type"].to_s)
+          next if route == :holding && open_jar?
+
+          funding = WiseActivity::Processor.balance_amount(activity)
+          currencies = Array(funding&.dig(:currencies))
+          foreign_splits += 1 if funding&.dig(:split) && currencies.exclude?(funding[:currency])
+          next if currencies.any? { |currency| open_standard_currencies.include?(currency) }
+
+          unrouted += 1
+          unrouted_currencies.merge(currencies)
+        end
+      end
+      return if unbooked.empty? && (unmatched + deferred + unrouted + foreign_splits).zero?
+
+      capture_debug_log(
+        category: "provider_sync",
+        level: (unrouted + foreign_splits).positive? ? "warn" : "info",
+        message: "WiseItem::Importer - Wise activities this sync that book on no balance, or that are booked as " \
+                 "payments into the account for transfers Sure does not have",
+        operation: "activity_routing",
+        unbooked_type_counts: unbooked.presence,
+        unmatched_transfer_count: unmatched.nonzero?,
+        deferred_transfer_count: deferred.nonzero?,
+        unrouted_count: unrouted.nonzero?,
+        unrouted_currencies: unrouted_currencies.to_a.presence,
+        foreign_split_count: foreign_splits.nonzero?
+      )
     end
 
     def standard_interbalance_for_account?(activity, wise_account)
