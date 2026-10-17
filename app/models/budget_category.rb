@@ -21,8 +21,6 @@ class BudgetCategory < ApplicationRecord
   belongs_to :budget
   belongs_to :category
 
-  validates :budget_id, uniqueness: { scope: :category_id }
-
   monetize :budgeted_spending, :available_to_spend, :avg_monthly_expense, :median_monthly_expense, :actual_spending,
            :rolled_over_amount
 
