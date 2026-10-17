@@ -135,7 +135,8 @@ class SimplefinItemsController < ApplicationController
   # Starts a balances-only sync for this SimpleFin item
   def balances
     # Create a Sync and enqueue it to run asynchronously with a runtime-only flag
-    sync = @simplefin_item.syncs.create!(status: :pending)
+    # data marks it so Sync.joinable never folds a full sync request into it
+    sync = @simplefin_item.syncs.create!(status: :pending, data: { "balances_only" => true })
     SyncJob.perform_later(sync, balances_only: true)
 
     respond_to do |format|

@@ -53,7 +53,15 @@ module Syncable
   def sync_later(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     Sync.transaction do
       with_lock do
-        sync = self.syncs.visible.first
+        # A sync waiting for the lock past the visible window belongs to the
+        # parent that requested it. Join it only from that parent, or adopt it
+        # if it has none. Another parent would finalize without waiting for it,
+        # and a standalone request would be lost if its parent cancelled it;
+        # those get their own sync, which runs after the waiter.
+        joinable = self.syncs.joinable
+        sync = joinable.visible
+          .or(joinable.where(parent_id: [ nil, parent_sync&.id ].uniq))
+          .ordered.first
 
         if sync
           Rails.logger.info("There is an existing recent sync, expanding window if needed (#{sync.id})")

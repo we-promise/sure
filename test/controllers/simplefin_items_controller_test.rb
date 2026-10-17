@@ -41,6 +41,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     body = JSON.parse(@response.body)
     assert_equal true, body["ok"], "expected ok: true"
     assert body["sync_id"].present?, "expected sync_id to be present"
+    assert_equal true, Sync.find(body["sync_id"]).data["balances_only"], "full sync requests must not join it"
   end
 
   test "relink does not disable a previously linked account that still has other provider links" do
