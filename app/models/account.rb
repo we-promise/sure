@@ -856,10 +856,10 @@ class Account < ApplicationRecord
     provider_balance.to_d + provider_balance_adjustment.to_d
   end
 
-  # A cash account's cash is its whole balance, so an adjusted balance carries
-  # into it; other accounts keep the provider's own cash split.
+  # A cash account's cash is its whole balance, so an adjustment in effect
+  # carries into it; otherwise the provider's own cash figure stands.
   def provider_cash_balance(provider_cash_balance)
-    balance_type == :cash ? balance : provider_cash_balance
+    balance_type == :cash && provider_balance_adjusted? ? balance : provider_cash_balance
   end
 
   def provider_balance_adjustment_caught_up?

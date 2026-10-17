@@ -52,9 +52,11 @@ class Account::CurrentBalanceManager
         manual_result
       end
 
-    # A cash account's cash is its whole balance, adjustment included. A
-    # statement behind the anchor leaves the cached figures alone.
-    if apply_provider_adjustment && result.success? && account.balance_type == :cash && !result.historical?
+    # A cash account's cash is its whole balance, adjustment included. Only an
+    # adjustment in effect changes it; a statement behind the anchor leaves the
+    # cached figures alone.
+    if apply_provider_adjustment && account.provider_balance_adjusted? && result.success? &&
+        account.balance_type == :cash && !result.historical?
       account.update!(cash_balance: balance)
     end
 
