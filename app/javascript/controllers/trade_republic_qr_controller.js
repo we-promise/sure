@@ -61,23 +61,25 @@ export default class extends Controller {
     let initiation = null;
     try {
       // A cancel waits for this request: sent earlier, it would be overtaken
-      // by the login this request stores.
+      // by the login this request stores. It also needs that login's token,
+      // so a login another tab stores meanwhile stays.
       initiation = fetch(this.initiateUrlValue, {
         method: "POST",
         headers: { ...this.headers(), Accept: "text/vnd.turbo-stream.html" },
         credentials: "same-origin",
         body: this.body(),
+      }).then(async (response) => {
+        const result = response.ok ? await response.json() : null;
+        this.loginTokenValue = result?.login_token || "";
+        return { response, result };
       });
       this.initiation = initiation;
-      const response = await initiation;
+      const { response, result } = await initiation;
       if (this.stopped) return;
       if (response.status === 409) return this.showCurrentLogin();
       if (!response.ok)
         throw new Error(`QR login initiation failed: ${response.status}`);
 
-      const result = await response.json();
-      this.loginTokenValue = result.login_token || "";
-      if (this.stopped) return;
       this.renderQr(result);
 
       await this.poll();

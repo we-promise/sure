@@ -202,6 +202,33 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     assert_equal newer, @item.reload.pending_login_state
   end
 
+  test "a QR cancel sent while its login starts leaves a login another tab stores meanwhile" do
+    encode = ->(challenge_id) { Base64.strict_encode64(JSON.generate("challenge_id" => challenge_id, "session_blob" => "session=1")) }
+    shown = encode.("shown-challenge")
+    newer = encode.("newer-challenge")
+    Provider::TradeRepublicClient.any_instance.stubs(:initiate_qr_login).with { sleep 1; true }.returns(
+      Provider::TradeRepublicClient::Result.new(data: { "status" => "qr_pending", "pending_login_b64" => shown, "qr_code_payload" => "https://example.com/qr" })
+    )
+
+    visit accounts_path
+    # The cancel takes its time, so another tab can start a login first.
+    page.execute_script(<<~JS)
+      const fetch = window.fetch;
+      window.fetch = (url, options) => String(url).includes("cancel_qr_login")
+        ? new Promise((resolve) => setTimeout(resolve, 1500)).then(() => fetch(url, options))
+        : fetch(url, options);
+    JS
+
+    within card do
+      click_on qr_login
+      click_on qr_cancel
+      Timeout.timeout(5) { sleep 0.1 until @item.reload.pending_login_state == shown }
+      @item.update_columns(pending_login_state: newer)
+      assert_button qr_login, disabled: false, wait: 10
+    end
+    assert_equal newer, @item.reload.pending_login_state
+  end
+
   test "a failed QR cancel keeps the PIN login hidden until a retried cancel succeeds" do
     visit settings_providers_path
     find("summary", text: "Trade Republic").click
