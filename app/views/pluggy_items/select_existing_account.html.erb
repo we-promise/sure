@@ -1,0 +1,76 @@
+<% content_for :title, t(".title") %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".header")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "link", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle", account_name: @account.name) %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <% if @pluggy_accounts.blank? %>
+      <div class="text-center py-8">
+        <%= icon "alert-circle", class: "text-warning mx-auto mb-4", size: "lg" %>
+        <p class="text-secondary"><%= t(".no_accounts") %></p>
+        <p class="text-sm text-secondary mt-2"><%= t(".connect_hint") %></p>
+        <%= render DS::Link.new(
+          text: t(".settings_link"),
+          variant: "primary",
+          size: "sm",
+          class: "mt-4",
+          href: settings_providers_path
+        ) %>
+      </div>
+    <% else %>
+      <div class="space-y-4">
+        <div class="bg-surface border border-primary p-4 rounded-lg mb-4">
+          <p class="text-sm text-primary">
+            <strong><%= t(".linking_to") %></strong>
+            <%= @account.name %>
+          </p>
+        </div>
+
+        <% @pluggy_accounts.each do |pluggy_account| %>
+          <%= form_with url: link_existing_account_pluggy_items_path,
+                        method: :post,
+                        local: true,
+                        class: "border border-primary rounded-lg p-4 hover:bg-surface transition-colors" do |form| %>
+            <%= hidden_field_tag :account_id, @account.id %>
+            <%= hidden_field_tag :pluggy_account_id, pluggy_account.id %>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-medium text-primary"><%= pluggy_account.name %></h4>
+                <% if pluggy_account.activities_fetch_pending? %>
+                  <p class="text-sm italic text-secondary">
+                    <%= t(".balance_pending") %>
+                  </p>
+                <% else %>
+                  <p class="text-sm text-secondary">
+                    <%= t(".balance_label") %>
+                    <%= number_to_currency(pluggy_account.current_balance || 0, unit: Money::Currency.new(pluggy_account.currency || "USD").symbol) %>
+                  </p>
+                <% end %>
+              </div>
+              <%= render DS::Button.new(
+                text: t(".link_button"),
+                variant: "primary",
+                size: "sm",
+                type: "submit"
+              ) %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="mt-6">
+        <%= render DS::Link.new(
+          text: t(".cancel_button"),
+          variant: "secondary",
+          href: account_path(@account)
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

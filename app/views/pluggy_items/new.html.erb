@@ -1,0 +1,21 @@
+<%# app/views/pluggy_items/new.html.erb %>
+<div class="mx-auto max-w-md p-6 bg-container rounded-lg border border-primary">
+  <h1 class="text-primary text-lg font-semibold mb-4">
+    <%= t("pluggy_items.new.title") %>
+  </h1>
+  <p class="text-primary text-sm mb-6"><%= t("pluggy_items.new.description") %></p>
+
+  <% if @connect_token.present? %>
+    <div
+      data-controller="pluggy"
+      data-pluggy-connect-token-value="<%= @connect_token %>"
+      data-pluggy-auto-open-value="true">
+      <p class="text-primary text-sm"><%= t("pluggy_items.new.opening_widget") %></p>
+    </div>
+  <% else %>
+    <p class="text-secondary text-sm"><%= t("pluggy_items.new.no_connect_token") %></p>
+  <% end %>
+
+  <%= link_to t("pluggy_items.new.back"), settings_providers_path,
+        class: "inline-block mt-6 text-primary underline" %>
+</div>
