@@ -419,7 +419,7 @@ en:
       fineco_panel:
         preview: Preview
         preview_connection: Fineco preview
-        description: "Fineco is an unofficial portfolio connector. Its browser session keeps the permissions Fineco grants to your login; Sure uses it only for a fixed portfolio read. Copied login values are sent to the remote browser, cleared from the paste helper, and never stored by Sure."
+        description: "Fineco is an unofficial portfolio connector. Its browser session keeps the permissions Fineco grants to your login; Sure uses fixed account and portfolio reads. When capture is enabled, Sure automatically selects a single account and dossier after you approve the bank challenge."
         read_only: "Sure imports security snapshots into a native Investment account. Cash stays in your linked EB account. Sure does not place trades or create trade history."
         session_expiry: "Fineco sessions may expire and require you to reconnect."
         syncing: A Fineco portfolio sync is running.
@@ -432,7 +432,7 @@ en:
         stop_syncing_confirmation: Stop Fineco syncing? Sure will clear the stored bank session and retain your existing Investment account, holdings, and snapshot history.
         connect: Connect Fineco
         reconnect: Reconnect Fineco
-        drawer_trust_statement: "Fineco browser sessions carry the permissions of your Fineco login. Sure uses the session only for a fixed read-only portfolio request, stores the session cookie encrypted, and does not submit trading or payment actions."
+        drawer_trust_statement: "Fineco browser sessions carry the permissions of your Fineco login. Sure uses the session only for fixed read-only account and portfolio requests, stores the session cookie encrypted, and does not submit trading or payment actions."
       drawer_trust_statement: "Read-only access. Sure can never move money, and your credentials are stored encrypted."
       drawer_trust_statement_encryption_unconfigured: "Read-only access. Sure can never move money. Configure explicit encryption keys before storing provider credentials in production."
       provider_setup_encryption_warning:

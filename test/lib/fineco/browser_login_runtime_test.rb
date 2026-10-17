@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "open3"
 require "tmpdir"
 
 class FinecoBrowserLoginRuntimeTest < ActiveSupport::TestCase
@@ -9,8 +10,8 @@ class FinecoBrowserLoginRuntimeTest < ActiveSupport::TestCase
   class CaptureFlowDouble
     attr_reader :captured_session, :capture_attempts
 
-    def initialize(capture_enabled: true)
-      @state = :awaiting_login
+    def initialize(capture_enabled: true, state: :awaiting_login)
+      @state = state
       @capture_attempts = 0
       @capture_enabled = capture_enabled
     end
@@ -19,10 +20,30 @@ class FinecoBrowserLoginRuntimeTest < ActiveSupport::TestCase
       @capture_enabled
     end
 
+    def active?
+      !%i[captured failed rejected expired stopped].include?(@state)
+    end
+
+    def cancellation_requested?
+      false
+    end
+
+    def expired?
+      false
+    end
+
+    def authorized?
+      true
+    end
+
     def begin_capture
       @capture_attempts += 1
       @state = :capturing
       true
+    end
+
+    def awaiting_login!
+      @state = :awaiting_login if @state == :starting
     end
 
     def finish_capture(session)
@@ -41,9 +62,16 @@ class FinecoBrowserLoginRuntimeTest < ActiveSupport::TestCase
 
   class CdpConnectionDouble
     attr_reader :commands
+    attr_accessor :runtime_evaluation_result
 
     def initialize
       @commands = []
+      @runtime_evaluation_result = {
+        "result" => {
+          "type" => "object",
+          "value" => { "account_index" => "3", "dossier_index" => "7" }
+        }
+      }
     end
 
     def command(method, params = {}, timeout: 5, session_id: nil)
@@ -64,6 +92,8 @@ class FinecoBrowserLoginRuntimeTest < ActiveSupport::TestCase
             { "name" => "gsessionid", "value" => "smoke-session", "domain" => ".finecobank.com", "path" => "/", "secure" => true }
           ]
         }
+      when "Runtime.evaluate"
+        @runtime_evaluation_result
       end
     end
   end
@@ -93,6 +123,140 @@ class FinecoBrowserLoginRuntimeTest < ActiveSupport::TestCase
       "https://private-api.finecobank.com.evil.example/v1/private/tol/positions/summary?type=sintesi",
       "GET"
     )
+  end
+
+  test "account context expression returns only indices for one unambiguous account" do
+    response = execute_account_context_expression(
+      page_url: "https://finecobank.com/pvt/home",
+      payload: {
+        "accounts" => [
+          { "index" => 12, "number" => 123456789, "dossiers" => [ { "index" => 4, "number" => 987654321 } ] }
+        ]
+      }
+    )
+
+    assert_equal({ "account_index" => "12", "dossier_index" => "4" }, response.fetch("value"))
+    assert_equal 1, response.fetch("fetch_calls")
+
+    ambiguous = execute_account_context_expression(
+      page_url: "https://finecobank.com/pvt/home",
+      payload: {
+        "accounts" => [
+          { "index" => 12, "dossiers" => [ { "index" => 4 } ] },
+          { "index" => 13, "dossiers" => [ { "index" => 5 } ] }
+        ]
+      }
+    )
+
+    assert_nil ambiguous.fetch("value")
+    assert_equal 1, ambiguous.fetch("fetch_calls")
+
+    untrusted = execute_account_context_expression(
+      page_url: "https://finecobank.com.evil.example/pvt/home",
+      payload: { "accounts" => [ { "index" => 12, "dossiers" => [ { "index" => 4 } ] } ] }
+    )
+
+    assert_nil untrusted.fetch("value")
+    assert_equal 0, untrusted.fetch("fetch_calls")
+  end
+
+  test "automatic discovery waits for the main private page context and login readiness" do
+    flow = CaptureFlowDouble.new(state: :starting)
+    connection = CdpConnectionDouble.new
+    observer = Observer.new(flow)
+    observer.instance_variable_set(:@connection, connection)
+    observer.instance_variable_set(
+      :@page_sessions,
+      {
+        "page-session" => {
+          main_frame_id: nil,
+          private_page: false,
+          dom_content_ready: false,
+          execution_context_id: nil
+        }
+      }
+    )
+
+    observer.send(
+      :process_event,
+      {
+        "method" => "Page.frameNavigated",
+        "sessionId" => "page-session",
+        "params" => { "frame" => { "id" => "main-frame", "url" => "https://finecobank.com/pvt/home" } }
+      }
+    )
+    observer.send(
+      :process_event,
+      {
+        "method" => "Runtime.executionContextCreated",
+        "sessionId" => "page-session",
+        "params" => {
+          "context" => {
+            "id" => 14,
+            "auxData" => { "isDefault" => true, "frameId" => "main-frame" }
+          }
+        }
+      }
+    )
+
+    assert_empty connection.commands
+    assert_equal 0, flow.capture_attempts
+
+    flow.awaiting_login!
+    observer.send(:discover_ready_pages)
+    assert_empty connection.commands
+    observer.send(
+      :process_event,
+      { "method" => "Page.domContentEventFired", "sessionId" => "page-session", "params" => {} }
+    )
+
+    assert_equal [ "Runtime.evaluate", "Network.getCookies" ], connection.commands.map(&:first)
+    assert_equal 14, connection.commands.first.fetch(1).fetch("contextId")
+    assert_equal "3", flow.captured_session.fetch(:account_index)
+    assert_equal "7", flow.captured_session.fetch(:dossier_index)
+    assert_equal 1, flow.capture_attempts
+  end
+
+  test "automatic discovery page check accepts only Fineco HTTPS private routes" do
+    assert Observer.private_page_url?("https://finecobank.com/pvt/home")
+    assert Observer.private_page_url?("https://finecobank.com/pvt")
+    refute Observer.private_page_url?("https://finecobank.com.evil.example/pvt/home")
+    refute Observer.private_page_url?("https://finecobank.com/pvtish/home")
+    refute Observer.private_page_url?("http://finecobank.com/pvt/home")
+    refute Observer.private_page_url?("https://user@finecobank.com/pvt/home")
+  end
+
+  test "automatic account context discovery has one request budget per flow" do
+    flow = CaptureFlowDouble.new
+    connection = CdpConnectionDouble.new
+    connection.runtime_evaluation_result = { "result" => { "type" => "object", "subtype" => "null" } }
+    observer = Observer.new(flow)
+    observer.instance_variable_set(:@connection, connection)
+    observer.instance_variable_set(
+      :@page_sessions,
+      {
+        "page-session" => {
+          main_frame_id: "main-frame",
+          private_page: true,
+          dom_content_ready: true,
+          execution_context_id: 14
+        }
+      }
+    )
+
+    observer.send(:discover_ready_pages)
+    observer.send(
+      :process_event,
+      {
+        "method" => "Page.navigatedWithinDocument",
+        "sessionId" => "page-session",
+        "params" => { "frameId" => "main-frame", "url" => "https://finecobank.com/pvt/portfolio" }
+      }
+    )
+    observer.send(:discover_ready_pages)
+
+    assert_equal 1, connection.commands.count { |command| command.first == "Runtime.evaluate" }
+    assert_equal 0, flow.capture_attempts
   end
 
   test "portfolio capture requires one valid selected account and dossier index" do
@@ -353,5 +517,63 @@ class FinecoBrowserLoginRuntimeTest < ActiveSupport::TestCase
         "REQUEST_METHOD" => "GET",
         "HTTP_ORIGIN" => "https://sure.example"
       )
+    end
+
+    def execute_account_context_expression(page_url:, payload:)
+      javascript = <<~JAVASCRIPT
+        const fs = require("fs");
+        const vm = require("vm");
+        (async () => {
+          const input = JSON.parse(fs.readFileSync(0, "utf8"));
+          const bytes = Buffer.from(JSON.stringify(input.payload), "utf8");
+          const body = new ReadableStream({
+            start(controller) {
+              controller.enqueue(new Uint8Array(bytes));
+              controller.close();
+            }
+          });
+          let fetchCalls = 0;
+          const context = {
+            URL,
+            location: new URL(input.page_url),
+            AbortController,
+            TextDecoder,
+            Uint8Array,
+            setTimeout,
+            clearTimeout,
+            fetch: async (url, options) => {
+              fetchCalls += 1;
+              if (url !== "https://private-api.finecobank.com/v1/private/users/accounts" ||
+                  options.method !== "GET" || options.mode !== "cors" ||
+                  options.credentials !== "include" || options.redirect !== "error" ||
+                  options.cache !== "no-store") throw new Error("unexpected request");
+              return {
+                status: 200,
+                redirected: false,
+                url,
+                headers: new Headers({ "content-length": String(bytes.byteLength) }),
+                body
+              };
+            }
+          };
+          const value = await vm.runInNewContext(input.expression, context);
+          process.stdout.write(JSON.stringify({ value, fetch_calls: fetchCalls }));
+        })().catch(error => {
+          process.stderr.write(error.stack || String(error));
+          process.exit(1);
+        });
+      JAVASCRIPT
+      stdout, stderr, status = Open3.capture3(
+        "node",
+        "-e",
+        javascript,
+        stdin_data: JSON.generate(
+          expression: Observer::ACCOUNT_CONTEXT_EXPRESSION,
+          page_url: page_url,
+          payload: payload
+        )
+      )
+      assert status.success?, stderr
+      JSON.parse(stdout)
     end
 end

@@ -81,23 +81,32 @@ container's tmpfs clears profile files on container restart.
 
 Portfolio capture is gated by the code capability
 `Provider::Fineco.verified_identity_contract?`; request parameters and environment
-variables cannot enable it. That capability is currently false, so the initial
-flow is diagnostic-only: it opens the browser and viewer, reports
-`setup_verification_required`, and remains available until stop or timeout. In
-this mode the runtime does not enable CDP Network observation, inspect cookies or
-response bodies, invoke the persistence callback, or auto-finish after a portfolio
-request. Enabling capture later requires a reviewed identity-verification
-implementation and its regression evidence.
+variables cannot enable it. When the capability is false, the flow opens the
+browser and viewer for login diagnostics, reports `setup_verification_required`,
+and remains available until stop or timeout. It does not enable CDP Network
+observation, inspect cookies or response bodies, invoke the persistence callback,
+or auto-finish.
 
-When that capability is enabled, the runtime recognizes only the exact Fineco
-portfolio-summary GET with the single `type=sintesi` query value, a successful
-recognized response, and the bank-generated account and dossier index headers.
-It reads only a secure, domain- and path-matching `gsessionid` cookie from CDP and
-passes that cookie, the selected indices, and capture time to the app callback in
-memory. The callback rechecks the initiating Sure session, calls the fixed Fineco
-verification client, and persists only after validation and encryption. Browser
-output, clipboard contents, page bodies, cookie values, and local debugging ports
-are never written to logs or status responses.
+With the capability enabled, the observer watches exact
+top-level HTTPS `finecobank.com/pvt/` pages and their default JavaScript context.
+It makes one fixed credentialed fetch to Fineco's account-list endpoint, rejects
+redirects, uses an eight-second abort and no-store caching, and caps the streamed
+response at 512 KiB. It returns only the account and dossier indices when the
+response contains exactly one of each and both indices are valid. If the result is
+ambiguous or unavailable, it does not guess; the exact portfolio-summary GET with
+bank-generated account and dossier index headers remains the explicit-selection
+fallback.
+
+For either path, the observer reads only a secure, domain- and path-matching
+`gsessionid` cookie from CDP and passes that cookie, the selected indices, and
+capture time to the app callback in memory. The callback rechecks the initiating
+Sure session, makes its own fixed account and portfolio requests, validates the
+business identity and complete snapshot, and persists only after validation and
+encryption. A successful callback closes the viewer and confirms the connection.
+Browser output, clipboard contents, page bodies, cookie values, and local
+debugging ports are never written to logs or status responses. A real cookie-only
+Ruby replay, completed import, and unattended expiry or refresh have not yet been
+verified by an attended capture.
 
 ## Verification
 

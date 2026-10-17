@@ -23,6 +23,8 @@ class Provider::Fineco
   MAX_BODY_BYTES = 2 * 1024 * 1024
   MAX_POSITION_COUNT = 2_000
   MAX_FILTER_VALUE_COUNT = 256
+  MAX_SAFE_BUSINESS_NUMBER = (2**53) - 1
+  IDENTITY_NAMESPACE = "fineco/business-account-dossier/v1".freeze
 
   COOKIE_VALUE_PATTERN = /\A[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]{1,512}\z/
   INDEX_PATTERN = /\A\d{1,6}\z/
@@ -108,7 +110,7 @@ class Provider::Fineco
   end
 
   def self.verified_identity_contract?
-    false
+    true
   end
 
   def fetch_portfolio_summary
@@ -199,34 +201,59 @@ class Provider::Fineco
         raise InvalidResponse, "Fineco returned an incomplete account selection response."
       end
 
-      account_matches = accounts.select do |account|
-        account.is_a?(Hash) && selected_index?(account["index"], @account_index)
+      account_records = accounts.map do |account|
+        raise InvalidResponse, "Fineco could not verify the selected account." unless account.is_a?(Hash)
+
+        [ account, canonical_business_number!(account["number"]) ]
+      end
+      account_numbers = account_records.map(&:last)
+      unless account_numbers.uniq.length == account_numbers.length
+        raise InvalidResponse, "Fineco could not verify the selected account."
+      end
+
+      account_matches = account_records.select do |account, _number|
+        selected_index?(account["index"], @account_index)
       end
       unless account_matches.one?
         raise InvalidResponse, "Fineco could not verify the selected account."
       end
 
-      account = account_matches.first
-      account_number = account["number"]
-      unless account_number.is_a?(String) && account_number == account_number.strip &&
-             account_number.present? && account_number.length <= 128 && !account_number.match?(/[\x00-\x1F\x7F]/)
-        raise InvalidResponse, "Fineco could not verify the selected account."
-      end
+      account, account_number = account_matches.first
 
       dossiers = account["dossiers"]
       unless dossiers.is_a?(Array) && dossiers.size <= MAX_POSITION_COUNT
         raise InvalidResponse, "Fineco returned an incomplete dossier selection response."
       end
 
-      dossier_matches = dossiers.select do |dossier|
-        dossier.is_a?(Hash) && selected_index?(dossier["index"], @dossier_index)
+      dossier_records = dossiers.map do |dossier|
+        raise InvalidResponse, "Fineco could not verify the selected dossier." unless dossier.is_a?(Hash)
+
+        [ dossier, canonical_business_number!(dossier["number"]) ]
       end
-      unless dossier_matches.one? && (dossier_matches.first.keys - [ "index" ]).any?
+      dossier_numbers = dossier_records.map(&:last)
+      unless dossier_numbers.uniq.length == dossier_numbers.length
         raise InvalidResponse, "Fineco could not verify the selected dossier."
       end
 
-      dossier_fingerprint = Digest::SHA256.hexdigest(JSON.generate(canonical_json_value(dossier_matches.first)))
-      { account_number: account_number, dossier_identity: dossier_fingerprint }
+      dossier_matches = dossier_records.select do |dossier, _number|
+        selected_index?(dossier["index"], @dossier_index)
+      end
+      unless dossier_matches.one?
+        raise InvalidResponse, "Fineco could not verify the selected dossier."
+      end
+
+      _dossier, dossier_number = dossier_matches.first
+      identity_pair = [ IDENTITY_NAMESPACE, account_number, dossier_number ]
+      dossier_identity = Digest::SHA256.hexdigest(JSON.generate(identity_pair))
+      { account_number: account_number, dossier_identity: dossier_identity }
+    end
+
+    def canonical_business_number!(value)
+      unless value.is_a?(Integer) && value.positive? && value <= MAX_SAFE_BUSINESS_NUMBER
+        raise InvalidResponse, "Fineco could not verify the selected business identity."
+      end
+
+      value.to_s
     end
 
     def selected_index?(value, expected)
@@ -234,21 +261,6 @@ class Provider::Fineco
       when Integer then value.to_s == expected
       when String then value.match?(INDEX_PATTERN) && value == expected
       else false
-      end
-    end
-
-    def canonical_json_value(value)
-      case value
-      when Hash
-        value.keys.sort.each_with_object({}) do |key, result|
-          result[key] = canonical_json_value(value.fetch(key))
-        end
-      when Array
-        value.map { |entry| canonical_json_value(entry) }
-      when String, Integer, Float, TrueClass, FalseClass, NilClass
-        value
-      else
-        raise InvalidResponse, "Fineco returned an unsupported account selection value."
       end
     end
 

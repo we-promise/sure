@@ -13,6 +13,98 @@ module Fineco
       PORTFOLIO_HOST = "private-api.finecobank.com".freeze
       PORTFOLIO_PATH = "/v1/private/tol/positions/summary".freeze
       PORTFOLIO_URL = "https://#{PORTFOLIO_HOST}#{PORTFOLIO_PATH}?type=sintesi".freeze
+      ACCOUNT_CONTEXT_EXPRESSION = <<~JAVASCRIPT.freeze
+        (async () => {
+          try {
+            const pageUrl = new URL(location.href);
+            if (pageUrl.origin !== "https://finecobank.com" ||
+                (pageUrl.pathname !== "/pvt" && !pageUrl.pathname.startsWith("/pvt/")) ||
+                pageUrl.username !== "" || pageUrl.password !== "") return null;
+
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
+            let reader;
+            let streamDone = false;
+            try {
+              const response = await fetch("https://private-api.finecobank.com/v1/private/users/accounts", {
+                method: "GET",
+                mode: "cors",
+                credentials: "include",
+                redirect: "error",
+                cache: "no-store",
+                headers: { "Accept": "application/json" },
+                signal: controller.signal
+              });
+              if (response.status !== 200 || response.redirected ||
+                  response.url !== "https://private-api.finecobank.com/v1/private/users/accounts" ||
+                  !response.body) {
+                controller.abort();
+                if (response.body) {
+                  try { await response.body.cancel(); } catch (_error) {}
+                }
+                return null;
+              }
+
+              const contentLength = response.headers.get("content-length");
+              if (contentLength !== null &&
+                  (!/^\\d{1,10}$/.test(contentLength) || Number(contentLength) > 512 * 1024)) {
+                controller.abort();
+                try { await response.body.cancel(); } catch (_error) {}
+                return null;
+              }
+
+              reader = response.body.getReader();
+              const chunks = [];
+              let byteLength = 0;
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                  streamDone = true;
+                  break;
+                }
+                byteLength += value.byteLength;
+                if (byteLength > 512 * 1024 || chunks.length >= 1024) {
+                  controller.abort();
+                  try { await reader.cancel(); } catch (_error) {}
+                  streamDone = true;
+                  return null;
+                }
+                chunks.push(value);
+              }
+
+              const bytes = new Uint8Array(byteLength);
+              let offset = 0;
+              for (const chunk of chunks) {
+                bytes.set(chunk, offset);
+                offset += chunk.byteLength;
+              }
+              const payload = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+              if (!payload || !Array.isArray(payload.accounts) || payload.accounts.length !== 1) return null;
+
+              const account = payload.accounts[0];
+              if (!account || typeof account !== "object" || Array.isArray(account) ||
+                  !Array.isArray(account.dossiers) || account.dossiers.length !== 1) return null;
+              const dossier = account.dossiers[0];
+              if (!dossier || typeof dossier !== "object" || Array.isArray(dossier)) return null;
+
+              const toIndex = value => Number.isSafeInteger(value) && value >= 0 && value <= 999999 ? String(value) : null;
+              const accountIndex = toIndex(account.index);
+              const dossierIndex = toIndex(dossier.index);
+              if (accountIndex === null || dossierIndex === null) return null;
+
+              return { account_index: accountIndex, dossier_index: dossierIndex };
+            } finally {
+              clearTimeout(timeout);
+              if (reader && !streamDone) {
+                try { await reader.cancel(); } catch (_error) {}
+              }
+              try { reader?.releaseLock(); } catch (_error) {}
+            }
+          } catch (_error) {
+            return null;
+          }
+        })()
+      JAVASCRIPT
       MAX_RESPONSE_BODY_BYTES = 2 * 1024 * 1024
       MAX_TRACKED_REQUESTS = 32
       MAX_PAGE_SESSIONS = 16
@@ -23,6 +115,7 @@ module Fineco
         @flow = flow
         @pending_requests = {}
         @page_sessions = {}
+        @account_context_discovery_attempted = false
         @last_authorization_check = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
 
@@ -42,6 +135,7 @@ module Fineco
         )
         wait_for_page_session
         @flow.awaiting_login!
+        discover_ready_pages
         observe
       rescue StandardError
         @flow.terminate!(:failed) if @flow.active?
@@ -58,6 +152,28 @@ module Fineco
           parsed.query == "type=sintesi"
       rescue URI::InvalidURIError, NoMethodError
         false
+      end
+
+      def self.private_page_url?(url)
+        return false unless url.is_a?(String) && url.bytesize <= 4_096
+
+        parsed = URI.parse(url)
+        parsed.scheme == "https" && parsed.host == "finecobank.com" && parsed.port == 443 &&
+          parsed.userinfo.nil? && parsed.fragment.nil? &&
+          (parsed.path == "/pvt" || parsed.path.start_with?("/pvt/"))
+      rescue URI::InvalidURIError, NoMethodError
+        false
+      end
+
+      def self.discovered_indices(value)
+        return unless value.is_a?(Hash) && value.keys.sort == %w[account_index dossier_index]
+
+        account = value["account_index"]
+        dossier = value["dossier_index"]
+        return unless account.is_a?(String) && account.bytesize <= 6 && account.match?(INDEX_PATTERN)
+        return unless dossier.is_a?(String) && dossier.bytesize <= 6 && dossier.match?(INDEX_PATTERN)
+
+        { account_index: account, dossier_index: dossier }.freeze
       end
 
       def self.request_indices(headers)
@@ -127,7 +243,7 @@ module Fineco
           raise CdpConnection::Error unless url.is_a?(String)
 
           url
-          end
+        end
 
         def process_event(event)
           method = event["method"]
@@ -139,6 +255,18 @@ module Fineco
             attach_page_session(params)
           when "Target.detachedFromTarget"
             detach_page_session(params["sessionId"])
+          when "Page.frameNavigated"
+            frame_navigated(event["sessionId"], params["frame"])
+          when "Page.navigatedWithinDocument"
+            navigated_within_document(event["sessionId"], params)
+          when "Page.domContentEventFired"
+            dom_content_event_fired(event["sessionId"])
+          when "Runtime.executionContextCreated"
+            execution_context_created(event["sessionId"], params["context"])
+          when "Runtime.executionContextDestroyed"
+            execution_context_destroyed(event["sessionId"], params["executionContextId"])
+          when "Runtime.executionContextsCleared"
+            execution_contexts_cleared(event["sessionId"])
           when "Network.requestWillBeSent"
             record_request(event["sessionId"], params)
           when "Network.responseReceived"
@@ -178,7 +306,18 @@ module Fineco
             },
             session_id: session_id
           )
-          @page_sessions[session_id] = target["targetId"]
+          @page_sessions[session_id] = {
+            target_id: target["targetId"],
+            main_frame_id: nil,
+            private_page: false,
+            dom_content_ready: false,
+            execution_context_id: nil
+          }
+          @connection.command("Page.enable", {}, session_id: session_id)
+          @connection.command("Runtime.enable", {}, session_id: session_id)
+          frame_tree = @connection.command("Page.getFrameTree", {}, session_id: session_id)
+          main_frame = frame_tree.dig("frameTree", "frame") if frame_tree.is_a?(Hash)
+          update_main_frame(session_id, main_frame) if main_frame.is_a?(Hash)
         rescue StandardError
           detach_target(session_id)
         end
@@ -186,6 +325,117 @@ module Fineco
         def detach_page_session(session_id)
           @page_sessions.delete(session_id)
           @pending_requests.delete_if { |(session, _request_id), _indices| session == session_id }
+        end
+
+        def frame_navigated(session_id, frame)
+          return unless frame.is_a?(Hash) && frame["parentId"].nil?
+
+          update_main_frame(session_id, frame)
+          maybe_discover_account_context(session_id)
+        end
+
+        def navigated_within_document(session_id, params)
+          page = @page_sessions[session_id]
+          return unless page && params["frameId"] == page[:main_frame_id]
+
+          page[:private_page] = self.class.private_page_url?(params["url"])
+          page[:dom_content_ready] = true
+          maybe_discover_account_context(session_id)
+        end
+
+        def dom_content_event_fired(session_id)
+          page = @page_sessions[session_id]
+          return unless page
+
+          page[:dom_content_ready] = true
+          maybe_discover_account_context(session_id)
+        end
+
+        def execution_context_created(session_id, context)
+          page = @page_sessions[session_id]
+          return unless page && context.is_a?(Hash)
+
+          auxiliary = context["auxData"]
+          return unless auxiliary.is_a?(Hash) && auxiliary["isDefault"] == true
+          return unless auxiliary["frameId"] == page[:main_frame_id]
+          return unless context["id"].is_a?(Integer)
+
+          page[:execution_context_id] = context["id"]
+          maybe_discover_account_context(session_id)
+        end
+
+        def execution_context_destroyed(session_id, context_id)
+          page = @page_sessions[session_id]
+          return unless page && page[:execution_context_id] == context_id
+
+          page[:execution_context_id] = nil
+        end
+
+        def execution_contexts_cleared(session_id)
+          page = @page_sessions[session_id]
+          return unless page
+
+          page[:execution_context_id] = nil
+        end
+
+        def update_main_frame(session_id, frame)
+          page = @page_sessions[session_id]
+          return unless page
+          return unless frame["id"].is_a?(String) && frame["id"].bytesize <= 128
+
+          page[:main_frame_id] = frame["id"]
+          page[:private_page] = self.class.private_page_url?(frame["url"])
+          page[:dom_content_ready] = false
+          page[:execution_context_id] = nil
+        end
+
+        def discover_ready_pages
+          @page_sessions.each_key { |session_id| maybe_discover_account_context(session_id) }
+        end
+
+        def maybe_discover_account_context(session_id)
+          return unless @flow.capture_enabled?
+
+          page = @page_sessions[session_id]
+          return unless page && page[:private_page] && page[:dom_content_ready] && page[:execution_context_id]
+          return if @account_context_discovery_attempted
+          return unless capture_discovery_allowed?
+
+          context_id = page[:execution_context_id]
+          @account_context_discovery_attempted = true
+          response = @connection.command(
+            "Runtime.evaluate",
+            {
+              "expression" => ACCOUNT_CONTEXT_EXPRESSION,
+              "awaitPromise" => true,
+              "returnByValue" => true,
+              "silent" => true,
+              "contextId" => context_id
+            },
+            timeout: 12,
+            session_id: session_id
+          )
+          return unless capture_discovery_allowed?
+          return unless @page_sessions[session_id].equal?(page) && page[:private_page] &&
+            page[:execution_context_id] == context_id
+
+          remote = response["result"] if response.is_a?(Hash)
+          indices = self.class.discovered_indices(remote["value"]) if remote.is_a?(Hash) && remote["type"] == "object"
+          return unless indices && @flow.begin_capture
+
+          finish_capture_with_indices(session_id, indices)
+        rescue StandardError
+          @flow.capture_retryable if @flow.current_state == :capturing
+        end
+
+        def capture_discovery_allowed?
+          return false unless @flow.active? && !@flow.cancellation_requested?
+          return false unless @flow.current_state == :awaiting_login
+          return false if @flow.expired? && @flow.terminate!(:expired)
+          return true if @flow.authorized?
+
+          @flow.terminate!(:rejected)
+          false
         end
 
         def detach_target(session_id)
@@ -243,6 +493,14 @@ module Fineco
           body = decode_body(body_response)
           payload = JSON.parse(body)
           return @flow.capture_retryable unless self.class.portfolio_schema?(payload)
+
+          finish_capture_with_indices(session_id, indices)
+        rescue StandardError
+          @flow.capture_retryable if @flow.current_state == :capturing
+        end
+
+        def finish_capture_with_indices(session_id, indices)
+          return unless @flow.active? && @flow.current_state == :capturing && !@flow.cancellation_requested?
 
           cookie_response = @connection.command("Network.getCookies", { "urls" => [ PORTFOLIO_URL ] }, timeout: 5, session_id: session_id)
           cookies = cookie_response["cookies"]

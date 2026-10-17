@@ -3,8 +3,8 @@ en:
     show:
       title: Fineco login preview
       preview: Preview
-      description: "Sign in to Fineco in the browser below and complete any bank challenge there. This preview is diagnostic-only; Sure does not copy your bank session or portfolio into the app."
-      bank_session_authority: "The Fineco browser session has the permissions Fineco grants to it. Sure uses fixed portfolio GET requests only; this does not make the bank session read-only."
+      description: "Sign in to Fineco in the browser below and complete any bank challenge there. When capture is enabled, Sure automatically verifies a single account and dossier after approval; it will not guess when there are multiple choices."
+      bank_session_authority: "The Fineco browser session has the permissions Fineco grants to it. Sure uses fixed account and portfolio GET requests only; this does not make the bank session read-only."
       read_only: "After verification, Sure imports a securities snapshot into a native Investment account. Cash stays in your linked EB account. Sure does not place trades or create trade history."
       session_expiry: "Fineco sessions may expire and require you to reconnect."
       setup_verification_required: "Fineco investment import is not available yet. You can open the diagnostic login browser, but Sure will not copy your bank session or portfolio out of it until account and dossier checks are complete."

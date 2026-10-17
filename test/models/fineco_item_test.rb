@@ -14,10 +14,6 @@ class FinecoItemTest < ActiveSupport::TestCase
     assert_not FinecoItem.member_connectable?
   end
 
-  test "identity verification contract remains closed until a stable dossier key is implemented" do
-    assert_not Provider::Fineco.verified_identity_contract?
-  end
-
   test "owner defaults to the current user" do
     Current.session = @admin.sessions.create!
     item = @family.fineco_items.build

@@ -107,7 +107,7 @@ class Provider::FinecoTest < ActiveSupport::TestCase
     assert_equal Provider::Fineco::READ_TIMEOUT_SECONDS, http.read_timeout
     assert_equal Provider::Fineco::WRITE_TIMEOUT_SECONDS, http.write_timeout
     assert_equal SUMMARY["marketValue"], result.payload.dig("summary", "total", "marketValue")
-    assert_equal "SYNTHETIC-ACCOUNT-2", result.account_number
+    assert_equal "23456789", result.account_number
     assert_equal 64, result.dossier_identity.length
   end
 
@@ -121,15 +121,6 @@ class Provider::FinecoTest < ActiveSupport::TestCase
 
     assert_match(/identity verification is required/i, error.message)
     refute_includes error.message, "opaque-session"
-  end
-
-  test "refuses HTTP when the identity verification capability is closed" do
-    Provider::Fineco.expects(:verified_identity_contract?).returns(false)
-    Net::HTTP.expects(:new).never
-
-    assert_raises Provider::Fineco::IdentityVerificationRequired do
-      fineco.fetch_portfolio_summary
-    end
   end
 
   test "rejects cookies containing separators or header injection before a request" do
@@ -170,15 +161,89 @@ class Provider::FinecoTest < ActiveSupport::TestCase
 
   test "verifies the selected bank account and dossier before requesting positions" do
     identity = identity_payload
-    identity["accounts"][1]["dossiers"][0] = { "index" => 10, "label" => "Other" }
-    identity["accounts"][1]["dossiers"] << { "label" => "Portfolio", "index" => 11 }
+    identity["accounts"][1]["dossiers"] = [
+      { "index" => 10, "number" => 20_010, "header" => "Other" },
+      { "number" => 20_011, "index" => 11, "header" => "Portfolio" }
+    ]
     with_http(stub_http(success_response, identity: json_response(identity))) do |stub|
       result = fineco.fetch_portfolio_summary
 
-      assert_equal "SYNTHETIC-ACCOUNT-2", result.account_number
+      assert_equal "23456789", result.account_number
       assert_equal 64, result.dossier_identity.length
       assert_equal 2, stub.request_count
     end
+  end
+
+  test "canonical identity ignores selector indexes and mutable dossier descriptors" do
+    first_result = with_http(stub_http(success_response)) { fineco.fetch_portfolio_summary }
+    changed = identity_payload
+    changed_account = changed["accounts"][1]
+    changed_account["index"] = 9
+    changed_account["header"] = "Changed account header"
+    changed_account["equityEnabled"] = false
+    changed_account["fundEnabled"] = true
+    changed_account["hasSubAccounts"] = true
+    changed_account["tradingEnabled"] = false
+    changed_dossier = changed_account["dossiers"].first
+    changed_dossier["index"] = 19
+    changed_dossier["header"] = "Changed dossier header"
+    changed_dossier["type"] = "changed"
+    changed_dossier["equityEnabled"] = false
+    changed_dossier["fundEnabled"] = true
+    changed_dossier["hasSubAccounts"] = true
+    changed_dossier["tradingEnabled"] = false
+
+    second_result = with_http(stub_http(success_response, identity: json_response(changed))) do
+      Provider::Fineco.new(
+        gsessionid: "opaque-session",
+        account_index: "9",
+        dossier_index: "19"
+      ).fetch_portfolio_summary
+    end
+
+    assert_equal first_result.account_number, second_result.account_number
+    assert_equal first_result.dossier_identity, second_result.dossier_identity
+
+    changed_dossier["number"] += 1
+    changed_number_result = with_http(stub_http(success_response, identity: json_response(changed))) do
+      Provider::Fineco.new(
+        gsessionid: "opaque-session",
+        account_index: "9",
+        dossier_index: "19"
+      ).fetch_portfolio_summary
+    end
+
+    refute_equal first_result.dossier_identity, changed_number_result.dossier_identity
+
+    changed_account_identity = identity_payload
+    changed_account_identity["accounts"][1]["number"] += 1
+    changed_account_result = with_http(stub_http(success_response, identity: json_response(changed_account_identity))) do
+      fineco.fetch_portfolio_summary
+    end
+
+    refute_equal first_result.dossier_identity, changed_account_result.dossier_identity
+  end
+
+  test "canonicalizes positive safe integer business numbers without float conversion" do
+    identity = identity_payload
+    identity["accounts"][1]["number"] = Provider::Fineco::MAX_SAFE_BUSINESS_NUMBER
+    identity["accounts"][1]["dossiers"][0]["number"] = Provider::Fineco::MAX_SAFE_BUSINESS_NUMBER - 1
+
+    result = with_http(stub_http(success_response, identity: json_response(identity))) do
+      fineco.fetch_portfolio_summary
+    end
+
+    assert_equal Provider::Fineco::MAX_SAFE_BUSINESS_NUMBER.to_s, result.account_number
+    expected_identity = Digest::SHA256.hexdigest(
+      JSON.generate(
+        [
+          Provider::Fineco::IDENTITY_NAMESPACE,
+          Provider::Fineco::MAX_SAFE_BUSINESS_NUMBER.to_s,
+          (Provider::Fineco::MAX_SAFE_BUSINESS_NUMBER - 1).to_s
+        ]
+      )
+    )
+    assert_equal expected_identity, result.dossier_identity
   end
 
   test "rejects unknown, ambiguous, or incomplete account and dossier identity" do
@@ -187,20 +252,47 @@ class Provider::FinecoTest < ActiveSupport::TestCase
     assert_identity_rejected(missing_account)
 
     duplicate_account = identity_payload
-    duplicate_account["accounts"] << duplicate_account["accounts"].last.dup
+    duplicate_account["accounts"][0]["number"] = duplicate_account["accounts"][1]["number"]
     assert_identity_rejected(duplicate_account)
+
+    duplicate_account_index = identity_payload
+    duplicate_account_index["accounts"] << {
+      "index" => 2,
+      "number" => 34_567_890,
+      "dossiers" => [ { "index" => 12, "number" => 34_512 } ]
+    }
+    assert_identity_rejected(duplicate_account_index)
 
     missing_number = identity_payload
     missing_number["accounts"][1].delete("number")
     assert_identity_rejected(missing_number)
+
+    [ nil, "23456789", 0, -1, Provider::Fineco::MAX_SAFE_BUSINESS_NUMBER + 1, 2.5 ].each do |number|
+      invalid_number = identity_payload
+      invalid_number["accounts"][1]["number"] = number
+      assert_identity_rejected(invalid_number)
+    end
 
     missing_dossier = identity_payload
     missing_dossier["accounts"][1]["dossiers"].clear
     assert_identity_rejected(missing_dossier)
 
     duplicate_dossier = identity_payload
-    duplicate_dossier["accounts"][1]["dossiers"] << duplicate_dossier["accounts"][1]["dossiers"].first.dup
+    duplicate_dossier["accounts"][1]["dossiers"] << duplicate_dossier["accounts"][1]["dossiers"].first.merge("index" => 12)
     assert_identity_rejected(duplicate_dossier)
+
+    duplicate_dossier_index = identity_payload
+    duplicate_dossier_index["accounts"][1]["dossiers"] << {
+      "index" => 11,
+      "number" => 20_012
+    }
+    assert_identity_rejected(duplicate_dossier_index)
+
+    [ nil, "20011", 0, -1, Provider::Fineco::MAX_SAFE_BUSINESS_NUMBER + 1, 2.5 ].each do |number|
+      invalid_number = identity_payload
+      invalid_number["accounts"][1]["dossiers"][0]["number"] = number
+      assert_identity_rejected(invalid_number)
+    end
 
     index_only_dossier = identity_payload
     index_only_dossier["accounts"][1]["dossiers"] = [ { "index" => 11 } ]
@@ -479,8 +571,31 @@ class Provider::FinecoTest < ActiveSupport::TestCase
     def identity_payload
       {
         "accounts" => [
-          { "index" => 1, "number" => "SYNTHETIC-ACCOUNT-1", "dossiers" => [ { "index" => 10, "label" => "Other" } ] },
-          { "index" => 2, "number" => "SYNTHETIC-ACCOUNT-2", "dossiers" => [ { "index" => 11, "label" => "Portfolio" } ] }
+          {
+            "index" => 1,
+            "number" => 12_345_678,
+            "header" => "Synthetic account one",
+            "dossiers" => [
+              { "index" => 10, "number" => 10_010, "header" => "Other" }
+            ]
+          },
+          {
+            "index" => 2,
+            "number" => 23_456_789,
+            "header" => "Synthetic account two",
+            "dossiers" => [
+              {
+                "index" => 11,
+                "number" => 20_011,
+                "type" => "investment",
+                "header" => "Portfolio",
+                "equityEnabled" => true,
+                "fundEnabled" => true,
+                "hasSubAccounts" => false,
+                "tradingEnabled" => true
+              }
+            ]
+          }
         ]
       }
     end
