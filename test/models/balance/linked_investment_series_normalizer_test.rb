@@ -609,4 +609,30 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal [ holdings_start_date, Date.current ], normalized.values.map(&:date)
     assert_equal Money.new(5000, "USD"), normalized.values.first.value
   end
+
+  # resets_point_on? names the one date normalize resets: where supported
+  # history starts, when that is also the first provider activity date. A
+  # first activity after holdings already started is not that date.
+  test "resets_point_on? is true only where supported history starts at the first provider activity" do
+    account = families(:empty).accounts.create!(name: "Linked Reset Date", balance: 0, currency: "USD", accountable: Investment.new)
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    account_provider = account.account_providers.create!(provider: coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD"))
+    holdings_start_date = 10.days.ago.to_date
+    activity_date = 5.days.ago.to_date
+    Holding.create!(account: account, security: Security.create!(ticker: "RST", name: "Reset"), date: holdings_start_date,
+                    qty: 10, price: 500, amount: 5000, currency: "USD", account_provider_id: account_provider.id)
+    account.entries.create!(date: activity_date, name: "Deposit", amount: -100, currency: "USD", source: "plaid",
+                            entryable: Transaction.new(kind: "standard"))
+    resets = ->(date) { Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: nil).resets_point_on?(date) }
+
+    refute resets.call(activity_date), "the first activity, after holdings started"
+    refute resets.call(holdings_start_date), "where holdings start, with no activity that day"
+    refute resets.call(nil)
+
+    account.entries.create!(date: holdings_start_date, name: "Deposit", amount: -100, currency: "USD", source: "plaid",
+                            entryable: Transaction.new(kind: "standard"))
+
+    assert resets.call(holdings_start_date), "supported history now starts at the first activity"
+    refute resets.call(activity_date)
+  end
 end
