@@ -57,6 +57,7 @@ en:
     wallet_value: Wallet value
     pending_amount: "%{amount} BTC unconfirmed"
     connect_explainer_new: Tracking adds this BTC position to the account and keeps it up to date every hour.
+    connect_explainer_balance: "This account's balance of %{balance} was entered by hand. Tracking replaces it with the wallet value; past balances are kept."
     connect_explainer_replace: "This account currently records %{previous} BTC. Tracking replaces it with the wallet balance (%{difference} BTC); past activity is kept."
     start_tracking: Start tracking
     sync_now: Read now

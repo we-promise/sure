@@ -315,9 +315,12 @@ class Entry < ApplicationRecord
   # Starting the window after the old date would seed the incremental balance
   # calculation from a balance that still includes this entry.
   #
+  # A delete normally rebuilds everything. A cash-anchored account only
+  # rebuilds from a given date, so its deleted entry still names its own.
+  #
   # @return [void]
   def sync_account_later
-    sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed?
+    sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed? && !account.accounting_start_date
     @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
   end

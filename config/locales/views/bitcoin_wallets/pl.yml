@@ -63,6 +63,7 @@ pl:
     wallet_value: "Wartość portfela"
     pending_amount: "%{amount} BTC niepotwierdzone"
     connect_explainer_new: "Śledzenie dodaje tę pozycję BTC do konta i aktualizuje ją co godzinę."
+    connect_explainer_balance: "Saldo tego konta, %{balance}, zostało wpisane ręcznie. Śledzenie zastąpi je wartością portfela; wcześniejsze salda zostaną zachowane."
     connect_explainer_replace: "To konto obecnie zapisuje %{previous} BTC. Śledzenie zastąpi to saldem portfela (%{difference} BTC); wcześniejsza aktywność zostanie zachowana."
     start_tracking: "Zacznij śledzić"
     sync_now: "Odczytaj teraz"

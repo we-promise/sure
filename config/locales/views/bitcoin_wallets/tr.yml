@@ -59,6 +59,7 @@ tr:
     wallet_value: "Cüzdan değeri"
     pending_amount: "%{amount} BTC onaylanmamış"
     connect_explainer_new: "Takip, bu BTC pozisyonunu hesaba ekler ve her saat günceller."
+    connect_explainer_balance: "Bu hesabın %{balance} bakiyesi elle girildi. Takip bunu cüzdan değeriyle değiştirir; geçmiş bakiyeler korunur."
     connect_explainer_replace: "Bu hesapta şu anda %{previous} BTC kayıtlı. Takip bunu cüzdan bakiyesiyle değiştirir (%{difference} BTC); geçmiş hareketler korunur."
     start_tracking: "Takibi başlat"
     sync_now: "Şimdi oku"

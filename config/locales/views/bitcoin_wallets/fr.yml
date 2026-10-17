@@ -59,6 +59,7 @@ fr:
     wallet_value: "Valeur du portefeuille"
     pending_amount: "%{amount} BTC non confirmés"
     connect_explainer_new: "Le suivi ajoute cette position BTC au compte et la met à jour toutes les heures."
+    connect_explainer_balance: "Le solde de ce compte, %{balance}, a été saisi à la main. Le suivi le remplace par la valeur du portefeuille ; les soldes passés sont conservés."
     connect_explainer_replace: "Ce compte enregistre actuellement %{previous} BTC. Le suivi le remplace par le solde du portefeuille (%{difference} BTC) ; l'historique est conservé."
     start_tracking: "Commencer le suivi"
     sync_now: "Lire maintenant"

@@ -10,6 +10,10 @@ class BitcoinWalletAccount::SyncLifecycleTest < ActiveSupport::TestCase
     @account.holdings.destroy_all
     @account.balances.destroy_all
     @account.update!(cash_balance: 100, balance: 100)
+    # Deposited cash, not a typed value of the coins, so connecting keeps it.
+    # Dated before every travel_to below.
+    @account.entries.create!(date: Date.new(2026, 9, 1), amount: -100, currency: "USD", name: "Deposit",
+      entryable: Transaction.new)
     @wallet = build_bitcoin_wallet(status: :preview, balance_sats: 20_000_000, last_synced_at: Time.current)
     manual_bitcoin_source(@wallet)
     @provider = FakeProvider.new

@@ -108,6 +108,7 @@ class BitcoinWalletsController < ApplicationController
       price = BitcoinWalletAccount::Processor.new(@wallet).price_on(Date.current) if @wallet.last_synced_at
       @value = Money.new(@wallet.quantity * price, @account.currency) if price
       @quantity_difference = @wallet.quantity - @previous_quantity.to_d
+      @replaced_balance = @account.balance_money if @wallet.account_provider.nil? && @account.balance.nonzero? && @account.typed_balance_only?
       @discovery_checked = @sources.sum { |source| source.discovery.values_at("0", "1").compact.sum { |branch| branch.fetch("index", 0).to_i } }
       @hd_wallet = @sources.any? { |source| source.kind == "bip84" }
       @form_values ||= {}

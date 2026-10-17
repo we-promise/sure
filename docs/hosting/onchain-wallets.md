@@ -244,6 +244,9 @@ can still be tracked through manually supplied public addresses.
 An administrator with **Settings → Preferences → Preview features** enabled can
 open a manual Crypto account's menu and choose **Connect Bitcoin wallet**.
 This preserves the existing account, its other assets and its cash balance.
+An account that only has a balance typed by hand, with no holdings or
+transactions, is taken to hold just these coins: tracking replaces that balance
+with the wallet value, and its cash starts at zero.
 
 The wallet must be the account's only provider. An account linked to an
 exchange or another provider cannot track a Bitcoin wallet, and an account that

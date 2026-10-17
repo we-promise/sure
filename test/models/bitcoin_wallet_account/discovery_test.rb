@@ -114,7 +114,10 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
     legacy = @wallet.onchain_wallet_item.onchain_wallet_accounts.create!(chain: Onchain::Chains::BITCOIN,
       wallet_address: RECEIVE, asset_kind: "native", symbol: "BTC", name: "Bitcoin",
       decimals: 8, quantity: "0.1", currency: "USD")
-    legacy.ensure_account_provider!(@wallet.account)
+    # The wallet's own account may have no other provider, so the legacy link
+    # lives on another account of the same household.
+    legacy.ensure_account_provider!(@wallet.family.accounts.create!(name: "Legacy wallet", currency: "USD",
+      balance: 0, accountable: Crypto.new))
     manual_bitcoin_source(@wallet)
     assert_raises(BitcoinWalletAccount::Discovery::Conflict) do
       BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform

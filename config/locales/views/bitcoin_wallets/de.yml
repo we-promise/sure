@@ -59,6 +59,7 @@ de:
     wallet_value: "Wallet-Wert"
     pending_amount: "%{amount} BTC unbestätigt"
     connect_explainer_new: "Beim Verfolgen wird diese BTC-Position zum Konto hinzugefügt und stündlich aktualisiert."
+    connect_explainer_balance: "Der Kontostand von %{balance} wurde von Hand eingegeben. Beim Verfolgen wird er durch den Wert des Wallets ersetzt; frühere Kontostände bleiben erhalten."
     connect_explainer_replace: "Dieses Konto erfasst derzeit %{previous} BTC. Beim Verfolgen wird das durch das Wallet-Guthaben ersetzt (%{difference} BTC); frühere Aktivitäten bleiben erhalten."
     start_tracking: "Verfolgen starten"
     sync_now: "Jetzt lesen"

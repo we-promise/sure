@@ -104,12 +104,19 @@ module Account::Anchorable
     window_start_date || balances.where(currency: currency).maximum(:date) || accounting_start_date
   end
 
+  # A balance typed on an account with no positions or activity is the value
+  # of the coins a wallet now reports, not cash.
+  def typed_balance_only?
+    !holdings.exists? && !entries.where.not(entryable_type: "Valuation").exists?
+  end
+
   # Capture cash and its ledger baseline without reapplying earlier transactions.
   # Same-day total valuations yield to this new anchor until explicitly edited.
   def create_cash_anchor!
     entry = entries.valuations.find_by(date: Date.current, entryable_id: Valuation.cash_anchor.select(:id)) ||
       entries.new(date: Date.current, entryable: Valuation.new(kind: :cash_anchor))
-    entry.assign_attributes(amount: cash_balance, currency: currency, name: I18n.t("valuations.cash_anchor", locale: family.locale))
+    entry.assign_attributes(amount: typed_balance_only? ? 0 : cash_balance, currency: currency,
+      name: I18n.t("valuations.cash_anchor", locale: family.locale))
     entry.entryable.cash_entry_total = Balance::SyncCache.new(self).cash_entry_total(Date.current)
     entry.save!
     valuations.where.not(kind: "cash_anchor").joins(:entry).where(entries: { date: Date.current }).update_all(superseded_at: Time.current)

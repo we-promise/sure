@@ -59,6 +59,7 @@ ca:
     wallet_value: "Valor de la cartera"
     pending_amount: "%{amount} BTC sense confirmar"
     connect_explainer_new: "El seguiment afegeix aquesta posició BTC al compte i l'actualitza cada hora."
+    connect_explainer_balance: "El saldo d'aquest compte, %{balance}, es va introduir a mà. El seguiment el substitueix pel valor de la cartera; els saldos anteriors es conserven."
     connect_explainer_replace: "Aquest compte registra ara %{previous} BTC. El seguiment ho substitueix pel saldo de la cartera (%{difference} BTC); l'activitat anterior es conserva."
     start_tracking: "Comença el seguiment"
     sync_now: "Llegeix ara"

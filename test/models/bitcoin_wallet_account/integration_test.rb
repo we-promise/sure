@@ -102,6 +102,27 @@ class BitcoinWalletAccount::IntegrationTest < ActiveSupport::TestCase
     assert_equal 85, @account.reload.cash_balance
   end
 
+  test "a balance typed by hand is replaced by the wallet value, not kept as cash" do
+    @account.holdings.destroy_all
+    @account.update!(balance: 2000, cash_balance: 2000)
+    @wallet.connect!
+    assert_equal 0, @account.reload.cash_balance
+    assert_equal 2000, @account.balance
+  end
+
+  test "deleting a past cash movement rebuilds from its date" do
+    @wallet.connect!
+    entry = cash_entry(amount: 10, date: 3.days.ago.to_date)
+    materialize(window_start_date: entry.date)
+    assert_equal 90, @account.reload.cash_balance
+
+    entry.destroy!
+    Account.any_instance.expects(:sync_later).with(window_start_date: entry.date)
+    entry.sync_account_later
+    materialize(window_start_date: entry.date)
+    assert_equal 100, @account.reload.cash_balance
+  end
+
   test "manual tracking after disconnect preserves cash and quantity" do
     @wallet.connect!
     cash_entry(amount: 10)

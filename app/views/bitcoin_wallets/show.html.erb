@@ -57,7 +57,9 @@
 
         <% if @wallet.status_preview? && !@wallet.stale? && @wallet.account_provider.nil? %>
           <p class="text-sm text-secondary">
-            <% if @previous_quantity.to_d.zero? %>
+            <% if @replaced_balance %>
+              <%= t("bitcoin_wallets.connect_explainer_balance", balance: format_money(@replaced_balance)) %>
+            <% elsif @previous_quantity.to_d.zero? %>
               <%= t("bitcoin_wallets.connect_explainer_new") %>
             <% else %>
               <%= t("bitcoin_wallets.connect_explainer_replace",

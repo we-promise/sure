@@ -90,8 +90,14 @@ class Holding < ApplicationRecord
   def destroy_holding_and_entries!
     raise ManagedPositionError, "A provider manages this position" unless account.can_delete_holding?(self)
 
+    trade_entries = account.entries.where(entryable: account.trades.where(security: security))
+    # A cash-anchored account only rebuilds from a given date: start where this position began.
+    if account.accounting_start_date
+      window_start_date = [ trade_entries.minimum(:date), account.holdings.where(security: security).minimum(:date) ].compact.min
+    end
+
     transaction do
-      account.entries.where(entryable: account.trades.where(security: security)).destroy_all
+      trade_entries.destroy_all
       if account.accounting_start_date
         account.holdings.where(security: security, account_provider_id: nil).destroy_all
       else
@@ -99,7 +105,7 @@ class Holding < ApplicationRecord
       end
     end
 
-    account.sync_later
+    account.sync_later(window_start_date: window_start_date)
   end
 
   # A manually asserted quantity may predate its trade journal. Record only
