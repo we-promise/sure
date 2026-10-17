@@ -124,6 +124,28 @@ class WiseAccountTest < ActiveSupport::TestCase
     assert_equal "My Wise EUR", @checking.name
   end
 
+  # Activity titles name a jar as it was called then, so a jar Wise renamed
+  # keeps the names Sure saw before.
+  test "upsert_wise_snapshot! keeps the names a renamed jar had" do
+    @jar.update!(raw_payload: { "type" => "SAVINGS", "name" => "Holiday" })
+    savings = ->(name) { { "id" => "10000002", "type" => "SAVINGS", "name" => name, "totalWorth" => { "value" => 1.0, "currency" => "EUR" } } }
+
+    @jar.upsert_wise_snapshot!(savings.call("Holiday"))
+    assert_nil @jar.reload.raw_payload["name_history"]
+
+    @jar.upsert_wise_snapshot!(savings.call("Trip"))
+    @jar.upsert_wise_snapshot!(savings.call("Trip"))
+    @jar.upsert_wise_snapshot!(savings.call("Summer"))
+
+    assert_equal %w[Holiday Trip], @jar.reload.raw_payload["name_history"]
+    assert_equal "Summer", @jar.raw_payload["name"]
+    # The name Sure stored when it first saw the balance counts too.
+    assert_equal %w[Summer Holiday Trip Jar], @jar.known_names
+    # Only the name Wise gives it now is its current one.
+    assert_equal "Summer", @jar.current_name
+    assert_nil WiseAccount.new(raw_payload: { "type" => "SAVINGS", "name" => " " }).current_name
+  end
+
   # Processing a balance and deleting its stale entries hold a session-level
   # advisory lock, not a transaction.
   test "with_processing_lock holds the balance's advisory lock until the outermost block ends" do

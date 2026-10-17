@@ -56,15 +56,119 @@ class WiseActivity::ProcessorTest < ActiveSupport::TestCase
     assert_equal I18n.t("wise_items.activities.jar_deposit"), entry.name
   end
 
+  # A leg's side now follows the money, so the jar's withdrawal leg is its
+  # outflow and pairs with the balance's inflow.
   test "INTERBALANCE 'From Jar' on JAR account is expense (positive)" do
     activity = build_interbalance("From <strong>EUR</strong>", amount: "500 EUR", resource_id: "5002")
-    # Simulates a withdrawal: title doesn't start with "To"
 
     entry = WiseActivity::Processor.new(activity, wise_account: @jar_account).process
 
     assert_equal BigDecimal("500.0"), entry.amount
-    assert_equal "wise_interbalance_5002_inflow", entry.external_id
+    assert_equal "wise_interbalance_5002_outflow", entry.external_id
     assert_equal I18n.t("wise_items.activities.jar_withdrawal"), entry.name
+  end
+
+  # Wise names where the money went, as in "To <strong>EUR</strong>" on every
+  # conversion, so a title naming the balance's currency or the jar the money
+  # left is a withdrawal.
+  test "a jar withdrawal is an inflow on the balance and an outflow on the jar, however Wise titles it" do
+    {
+      "To <strong>EUR</strong>" => I18n.t("wise_items.activities.jar_withdrawal"),
+      "From <strong>EUR</strong>" => I18n.t("wise_items.activities.jar_withdrawal"),
+      "From <strong>Jar</strong>" => I18n.t("wise_items.activities.transfer_from_jar", jar: "Jar")
+    }.each_with_index do |(title, balance_name), index|
+      activity = build_interbalance(title, amount: "500 EUR", resource_id: "520#{index}")
+
+      jar_leg = WiseActivity::Processor.new(activity, wise_account: @jar_account).process
+      balance_leg = WiseActivity::Processor.new(activity, wise_account: @standard_account).process
+
+      assert_equal [ "wise_interbalance_520#{index}_outflow", BigDecimal("500") ], [ jar_leg.external_id, jar_leg.amount ], title
+      assert_equal [ "wise_interbalance_520#{index}_inflow", BigDecimal("-500"), balance_name ],
+                   [ balance_leg.external_id, balance_leg.amount, balance_leg.name ], title
+    end
+  end
+
+  test "tells a jar deposit from a withdrawal by the balance its title names" do
+    deposit = ->(title) { WiseActivity::Processor.jar_deposit?(build_interbalance(title, amount: "500 EUR", resource_id: "1")) }
+
+    assert deposit.call("To <strong>Holiday</strong>")
+    assert deposit.call("Moved to <strong>Tom &amp; Jerry</strong>")
+    assert_not deposit.call("From <strong>Holiday</strong>")
+    assert_not deposit.call("To <strong>EUR</strong>")
+    assert_not deposit.call("From <strong>eur</strong>")
+    # Without a named balance only the wording is left, as before.
+    assert deposit.call("Added to your jar")
+    assert_not deposit.call("Moved out")
+  end
+
+  # A conversion debits its source currency and credits its target one, on a
+  # jar as on any balance.
+  test "a jar's leg of a move in two currencies is booked in the jar's currency" do
+    gbp_jar = create_jar_account(currency: "GBP", balance_id: "10000004", name: "Holiday")
+    into_jar = build_interbalance("To <strong>Jar</strong>", amount: "117.50 EUR", resource_id: "5301", secondary: "100 GBP")
+    out_of_jar = build_interbalance("From <strong>Holiday</strong>", amount: "117.50 EUR", resource_id: "5302", secondary: "100 GBP")
+
+    deposit = WiseActivity::Processor.new(into_jar, wise_account: @jar_account).process
+    withdrawal = WiseActivity::Processor.new(out_of_jar, wise_account: gbp_jar).process
+
+    assert_equal [ "wise_interbalance_5301_inflow", BigDecimal("-117.50"), "EUR", I18n.t("wise_items.activities.jar_deposit") ],
+                 [ deposit.external_id, deposit.amount, deposit.currency, deposit.name ]
+    assert_equal [ "wise_interbalance_5302_outflow", BigDecimal("100"), "GBP", I18n.t("wise_items.activities.jar_withdrawal") ],
+                 [ withdrawal.external_id, withdrawal.amount, withdrawal.currency, withdrawal.name ]
+  end
+
+  # Sure used to book a jar's leg as "_inflow" and a balance's as "_outflow"
+  # whichever way the money went, a conversion's leg on its target balance
+  # too; the entry of a leg booked that way is renamed in place
+  # (WiseAccount::Transactions::Processor), not replaced.
+  test "names the entry a jar move's leg had before its side followed the money" do
+    withdrawal = build_interbalance("To <strong>EUR</strong>", amount: "500 EUR", resource_id: "5401")
+    deposit = build_interbalance("To <strong>Jar</strong>", amount: "500 EUR", resource_id: "5402")
+    conversion = build_interbalance("To <strong>EUR</strong>", amount: "117.50 EUR", resource_id: "5403", secondary: "100 GBP")
+
+    assert_equal({ "wise_interbalance_5401_inflow" => "wise_interbalance_5401_outflow" },
+                 WiseActivity::Processor.new(withdrawal, wise_account: @jar_account).superseded_external_ids)
+    assert_equal({ "wise_interbalance_5401_outflow" => "wise_interbalance_5401_inflow" },
+                 WiseActivity::Processor.new(withdrawal, wise_account: @standard_account).superseded_external_ids)
+    assert_equal({ "wise_interbalance_5402_outflow" => "wise_interbalance_5402_inflow" },
+                 WiseActivity::Processor.new(deposit, wise_account: @jar_account).superseded_external_ids)
+    assert_equal({ "wise_interbalance_5403_outflow" => "wise_interbalance_5403_inflow" },
+                 WiseActivity::Processor.new(conversion, wise_account: @standard_account).superseded_external_ids)
+    # Its source balance's leg always had the side it has now.
+    gbp_account = create_standard_account(currency: "GBP", balance_id: "10000003")
+    assert_empty WiseActivity::Processor.new(conversion, wise_account: gbp_account).superseded_external_ids
+    assert_empty WiseActivity::Processor.new(withdrawal.merge("status" => "IN_PROGRESS"), wise_account: @jar_account).superseded_external_ids
+    assert_empty WiseActivity::Processor.new(build_cashback(amount: "1.12 EUR", resource_id: "57010"), wise_account: @jar_account)
+                                        .superseded_external_ids
+  end
+
+  # A payload an older build stored holds every conversion and jar move of
+  # the profile, which processing must not book on a balance they never
+  # touched (after a failed import, or for a balance linked mid-sync).
+  test "books no move or payment of currencies the balance is not in, nor one routed to another balance" do
+    usd_account = create_standard_account(currency: "USD", balance_id: "10000004")
+    holiday = create_jar_account(currency: "EUR", balance_id: "10000005", name: "Holiday")
+    conversion = build_interbalance("To <strong>GBP</strong>", amount: "860 GBP", resource_id: "77", secondary: "1,000 EUR")
+    jar_move = build_interbalance("To <strong>Holiday</strong>", amount: "200 EUR", resource_id: "78")
+                 .merge(WiseItem::Importer::ROUTING_DECISION_KEY => holiday.balance_id)
+    to_jar_from_gbp = build_interbalance("To <strong>Holiday</strong>", amount: "50 EUR", resource_id: "79", secondary: "43 GBP")
+                        .merge(WiseItem::Importer::ROUTING_DECISION_KEY => holiday.balance_id)
+    interest = build_cashback(amount: "1.12 EUR", resource_id: "57011").merge(WiseItem::Importer::ROUTING_DECISION_KEY => holiday.balance_id)
+    gbp_interest = build_cashback(amount: "0.10 GBP", resource_id: "57012")
+    card = build_activity("CARD_PAYMENT", "12 GBP", id: "gbp_card")
+
+    {
+      [ conversion, usd_account ] => :skipped, [ conversion, @standard_account ] => Entry,
+      [ jar_move, usd_account ] => :skipped, [ jar_move, @jar_account ] => :skipped, [ jar_move, holiday ] => Entry,
+      [ to_jar_from_gbp, @standard_account ] => :skipped, [ to_jar_from_gbp, holiday ] => Entry,
+      [ interest, @jar_account ] => :skipped, [ interest, holiday ] => Entry, [ gbp_interest, @jar_account ] => :skipped,
+      [ card, @standard_account ] => :skipped
+    }.each do |(row, wise_account), outcome|
+      processor = WiseActivity::Processor.new(row, wise_account: wise_account)
+      result = processor.process
+      assert(outcome == :skipped ? result == :skipped : result.is_a?(Entry), "#{row['id']} on #{wise_account.name}")
+      assert_empty processor.expected_external_ids if outcome == :skipped
+    end
   end
 
   # INTERBALANCE — STANDARD side
@@ -595,6 +699,14 @@ class WiseActivity::ProcessorTest < ActiveSupport::TestCase
         ),
         provider: wise_account
       )
+      wise_account
+    end
+
+    def create_jar_account(currency:, balance_id:, name:)
+      wise_account = WiseAccount.create!(wise_item: @wise_item, balance_id: balance_id, name: name, currency: currency,
+                                         raw_payload: { "type" => "SAVINGS", "name" => name })
+      account = Account.create!(family: @family, name: name, accountable: Depository.new(subtype: "savings"), balance: 0, currency: currency)
+      AccountProvider.create!(account: account, provider: wise_account)
       wise_account
     end
 

@@ -42,6 +42,20 @@ class WiseAccount < ApplicationRecord
     raw_payload&.dig("type") == "SAVINGS"
   end
 
+  # Every name Wise gave the balance that Sure saw: the current one, the
+  # ones it had before a rename (raw_payload "name_history", one of
+  # PRESERVED_KEYS) and the one Sure stored when it first saw it. Activity
+  # titles name a jar as it was called at the time.
+  def known_names
+    payload = raw_payload.is_a?(Hash) ? raw_payload : {}
+    [ payload["name"], *Array(payload["name_history"]), name ].filter_map { |known| known.to_s.strip.presence }.uniq
+  end
+
+  # The name Wise gives the balance now (raw_payload "name"), or nil.
+  def current_name
+    raw_payload["name"].to_s.strip.presence if raw_payload.is_a?(Hash)
+  end
+
   # Wise no longer lists the balance (raw_payload "closed_at", one of
   # PRESERVED_KEYS).
   def closed?
@@ -168,6 +182,10 @@ class WiseAccount < ApplicationRecord
     payload = payload.merge("borderless_account_id" => borderless_account_id) if borderless_account_id
     payload = payload.merge("recipient_id" => recipient_id) if recipient_id
     previous = raw_payload.is_a?(Hash) ? raw_payload : {}
+    # Renamed in Wise: the old name joins the history (#known_names).
+    if previous["name"].present? && previous["name"] != payload["name"]
+      payload = payload.merge("name_history" => (Array(previous["name_history"]) + [ previous["name"] ]).uniq)
+    end
     PRESERVED_KEYS.each do |key|
       payload = payload.merge(key => previous[key]) if previous.key?(key) && !payload.key?(key)
     end

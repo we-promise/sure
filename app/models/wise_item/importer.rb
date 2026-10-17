@@ -42,6 +42,16 @@ class WiseItem::Importer
   STICKY_ROW_KEYS = (ENRICHMENT_KEYS + WiseItem::BalanceReplay::ANNOTATION_KEYS + %w[wise_statement_id]).freeze
   MAX_LOGGED_TRANSFER_IDS = 20
 
+  # Where a jar move, or interest or a fee on holdings, was first routed:
+  # the Wise balance id of its jar (for interest and fees, of whichever
+  # balance took them). Written on every stored copy and honoured from then
+  # on, so a jar renamed in Wise, a second jar in the currency or a jar
+  # opened later moves nothing already routed (#routing_decision).
+  ROUTING_DECISION_KEY = "wise_jar_balance_id"
+  # A balance in one of these states holds investments, which earn interest
+  # and fees like a jar.
+  INVESTED_STATES = %w[INVESTED INVESTING DIVESTING].freeze
+
   # Wise answered with a page this fetch had already read.
   PaginationError = Class.new(StandardError)
 
@@ -931,11 +941,18 @@ class WiseItem::Importer
         end
 
         if wise_account.jar?
-          jar_activities = activities.select { |a| activity_for_account?(a, wise_account) }
+          stored_rows = Array(wise_account.raw_transactions_payload)
           # Merged, never replaced: this sync's window (or a failed fetch)
           # holds only part of the jar's history, and a jar is only linked
-          # after the sync that first stored it.
-          payloads[wise_account] = merge_transaction_payloads(Array(wise_account.raw_transactions_payload) + jar_activities)
+          # after the sync that first stored it. Its stored rows are routed
+          # again like new ones, which keeps every row on the jar it first
+          # went to (#routing_decision) and drops rows an older rule copied
+          # to every jar; a closed jar's stay as they are.
+          unless wise_account.closed?
+            stored_rows = stored_rows.select { |row| activity_for_account?(row, wise_account, stored: true) }.map { |row| with_routing_decision(row) }
+          end
+          jar_activities = activities.select { |a| activity_for_account?(a, wise_account) }.map { |a| with_routing_decision(a) }
+          payloads[wise_account] = merge_transaction_payloads(stored_rows + jar_activities)
         else
           covered = @statement_covered_account_ids.include?(wise_account.id)
           stored_rows = Array(wise_account.raw_transactions_payload)
@@ -951,7 +968,9 @@ class WiseItem::Importer
             next if transaction["wise_statement"].present?
 
             if WiseActivity::Processor.activity_row?(transaction)
-              transaction if wise_account.closed? || activity_for_account?(transaction, wise_account, stored: true, ignore_statements: true)
+              next transaction if wise_account.closed?
+
+              with_routing_decision(transaction) if activity_for_account?(transaction, wise_account, stored: true, ignore_statements: true)
             else
               transfer = enrich_transfer(transaction, transfer_activities)
               transfer if wise_account.closed? || transfer_for_account?(transfer, wise_account)
@@ -969,7 +988,7 @@ class WiseItem::Importer
               held.include?(t["id"].to_s) || !statement_covered?(wise_account) { transfer_created_at(t) }
             end
           end
-          routed_activities = activities.select { |a| activity_for_account?(a, wise_account) }
+          routed_activities = activities.select { |a| activity_for_account?(a, wise_account) }.map { |a| with_routing_decision(a) }
           payload = merge_transaction_payloads(
             existing_legacy + account_transfers + existing_statements + account_statements + routed_activities
           )
@@ -1316,20 +1335,24 @@ class WiseItem::Importer
 
     # The times whose rows each balance takes, { wise_account id => { from:,
     # before:, through:, debits_from:, credits_before: } }. A closed balance
-    # takes the rows created until Sure found it closed (`through`). Wise
-    # keeps one STANDARD balance per currency, so two of them mean the
-    # currency was closed and opened again under a new balance id: the older
-    # one takes the rows from before Wise opened the newer one (`before`), the
-    # newer one those after, so no movement books on both. In the day before
-    # (a pay-in can be dated before the balance it reached existed), money
-    # that came in went to the newer one (`from`, `credits_before`) and money
-    # that left, such as the conversion that emptied the older one, left the
-    # older one, as the newer held nothing yet (`debits_from`). Only balances
-    # Wise dated can be ordered.
+    # takes the rows created until Sure found it closed (`through`), and a jar
+    # those from a day before Wise opened it (`from`). Wise keeps one STANDARD
+    # balance per currency, so two of them mean the currency was closed and
+    # opened again under a new balance id: the older one takes the rows from
+    # before Wise opened the newer one (`before`), the newer one those after,
+    # so no movement books on both. In the day before (a pay-in can be dated
+    # before the balance it reached existed), money that came in went to the
+    # newer one (`from`, `credits_before`) and money that left, such as the
+    # conversion that emptied the older one, left the older one, as the
+    # newer held nothing yet (`debits_from`). Only balances Wise dated can be
+    # ordered.
     def routing_windows
       @routing_windows ||= begin
         accounts = wise_item.wise_accounts.to_a
-        windows = accounts.to_h { |wise_account| [ wise_account.id, { from: nil, before: nil, through: wise_account.closed_at } ] }
+        windows = accounts.to_h do |wise_account|
+          opened = wise_account.creation_time - 1.day if wise_account.jar? && wise_account.creation_time
+          [ wise_account.id, { from: opened, before: nil, through: wise_account.closed_at } ]
+        end
         accounts.reject(&:jar?).select(&:creation_time).group_by(&:currency).each_value do |standard|
           standard.sort_by(&:creation_time).each_cons(2) do |older, newer|
             margin = newer.creation_time - 1.day
@@ -1561,17 +1584,16 @@ class WiseItem::Importer
     # Whether the given balance stores an activity (see #activity_route).
     # Activities are fetched profile-wide, so without this filter every
     # balance would show every activity.
-    # - Conversions (INTERBALANCE, AUTO_CONVERSION): a jar whose name the
-    #   title gives; a STANDARD balance on either side of a currency
-    #   conversion, or in the currency of a jar move (its outflow side).
-    # - Interest, cashback and fees on holdings: every open jar, as before;
-    #   while the profile has no open jar, the STANDARD balance in their
-    #   currency.
+    # - Conversions (INTERBALANCE, AUTO_CONVERSION): the jar of a jar move
+    #   (#jar_move) and the STANDARD balance on its other side; a STANDARD
+    #   balance on either side of a conversion between two balances.
+    # - Interest, cashback and fees on holdings: the jar or invested balance
+    #   in their currency, else the balance in it (#holding_balance).
     # - Single-leg activities: each open STANDARD balance that paid or
     #   received it (several for a split payment), unless statements cover
     #   that balance, whose statement rows then carry the movement.
-    # Conversions and single-leg activities reach a closed balance only if
-    # created before it closed, and in a currency Wise closed and opened
+    # Activities reach a closed balance only if created before it closed, a
+    # jar only once it was opened, and in a currency Wise closed and opened
     # again only the balance of their time (#takes_row?).
     # stored: re-routes a row an earlier sync stored on this balance.
     # ignore_statements: as if statements did not cover the balance, for
@@ -1579,19 +1601,204 @@ class WiseItem::Importer
     def activity_for_account?(activity, wise_account, stored: false, ignore_statements: false)
       case activity_route(activity, stored: stored)
       when :conversion
-        routed = wise_account.jar? ? jar_title_match?(activity, wise_account) : standard_interbalance_for_account?(activity, wise_account)
+        routed =
+          if wise_account.jar?
+            move = jar_move(activity)
+            # While several jars fit, each keeps the copy an earlier sync
+            # stored on it, so the clean-up deletes none of their entries.
+            move[:jar]&.id == wise_account.id || (stored && Array(move[:candidates]).include?(wise_account))
+          else
+            standard_interbalance_for_account?(activity, wise_account)
+          end
         routed && takes_row?(wise_account, debit: leaves_balance?(activity, wise_account)) { activity_created_at(activity) }
       when :holding
-        if wise_account.jar?
-          !wise_account.closed?
-        else
-          !open_jar? && single_leg_for_account?(activity, wise_account, ignore_statements: ignore_statements)
-        end
+        holding_balance(activity)[:balance]&.id == wise_account.id &&
+          (wise_account.jar? || ignore_statements || !statement_covered?(wise_account) { activity_created_at(activity) })
       when :single_leg
         single_leg_for_account?(activity, wise_account, ignore_statements: ignore_statements)
       else
         false
       end
+    end
+
+    # The jar a move between a balance and a jar belongs to, decided once
+    # per sync and activity: { jar: } or { state: } when there is none:
+    #   :conversion    a conversion between two balances, no jar named
+    #   :unidentified  a move in one currency whose jar Sure cannot tell
+    #   :ambiguous     several jars fit (`candidates:`)
+    # A move first routed to a jar stays with it (#routing_decision). Else
+    # the title decides: a jar in the currency of the move's jar side
+    # (#jar_currency) that Wise has called by the name it gives
+    # (WiseAccount#known_names); in one currency, a title naming that
+    # currency (the balance) is a withdrawal from the only jar in it. Of
+    # several that fit, the one an earlier sync stored the move on keeps it.
+    def jar_move(activity)
+      (@jar_moves ||= {})[decision_key(activity)] ||= begin
+        time = activity_created_at(activity)
+        currency = jar_currency(activity)
+        decided = routing_decision(activity, time)
+        if decided&.jar? && decided.currency == currency
+          { jar: decided }
+        else
+          named = WiseActivity::Processor.named_balance(activity)
+          candidates, none =
+            if WiseActivity::Processor.conversion_currencies(activity) then [ jars_named(named, [ currency ], time), :conversion ]
+            elsif named.present? && named.casecmp?(currency.to_s) then [ jars_in(currency, time), :unidentified ]
+            else [ jars_named(named, [ currency ].compact, time), :unidentified ]
+            end
+          pick_jar(activity, candidates, none: none)
+        end
+      end
+    end
+
+    # The one jar that fits; of several, the one an earlier sync stored the
+    # move on, as no title tells them apart (several or none of them hold
+    # it: :ambiguous, see #activity_for_account?).
+    def pick_jar(activity, candidates, none:)
+      return { state: none } if candidates.empty?
+      return { jar: candidates.first } if candidates.one?
+
+      holders = candidates.select { |jar| stored_on?(jar, activity) }
+      holders.one? ? { jar: holders.first } : { state: :ambiguous, candidates: candidates }
+    end
+
+    # The currency of a jar move's jar side. Between two currencies the
+    # title points at it: a deposit ("To <strong>Holiday</strong>") credits
+    # the jar in the primary currency, money taken "From" a jar is debited
+    # from it in the secondary one (WiseActivity::Processor.jar_deposit?).
+    # So a jar of that name in the other currency is never it.
+    def jar_currency(activity)
+      conversion = WiseActivity::Processor.conversion_currencies(activity)
+      return move_currencies(activity).first unless conversion
+
+      WiseActivity::Processor.jar_deposit?(activity) ? conversion[:target] : conversion[:source]
+    end
+
+    # Whether the activity is in the balance's payload as an earlier sync
+    # stored it.
+    def stored_on?(wise_account, activity)
+      key = decision_key(activity)
+      Array(wise_account.raw_transactions_payload).any? { |row| WiseActivity::Processor.activity_row?(row) && decision_key(row) == key }
+    end
+
+    # The balance interest, cashback or a fee on holdings goes to, once per
+    # sync and activity: { balance: } or { state: } when there is none
+    # (:ambiguous, :unrouted). A row first routed to a balance stays with it
+    # (#routing_decision). Else the jar or invested balance in its currency,
+    # the jar the title names when there are several, and without one the
+    # balance in its currency (`fallback: true`).
+    def holding_balance(activity)
+      (@holding_balances ||= {})[decision_key(activity)] ||= begin
+        time = activity_created_at(activity)
+        currency = WiseActivity::Processor.balance_amount(activity)&.dig(:currency)
+        debit = WiseActivity::Processor.direction(activity) == :debit
+        decided = routing_decision(activity, time)
+        if decided && decided.currency == currency
+          { balance: decided }
+        else
+          holders = jars_in(currency, time) + standard_balances_in(currency, time, debit: debit).select { |wise_account| invested?(wise_account) }
+          if holders.size > 1
+            named = jars_named(WiseActivity::Processor.named_balance(activity), [ currency ], time) & holders
+            named.one? ? { balance: named.first } : { state: :ambiguous }
+          elsif holders.one?
+            { balance: holders.first }
+          else
+            standard = standard_balances_in(currency, time, debit: debit)
+            if standard.one? then { balance: standard.first, fallback: true }
+            elsif standard.empty? then { state: :unrouted }
+            else { state: :ambiguous }
+            end
+          end
+        end
+      end
+    end
+
+    # The balance a stored copy of the row says it was first routed to
+    # (ROUTING_DECISION_KEY), as long as that balance still takes it.
+    def routing_decision(activity, time)
+      balance_id = activity[ROUTING_DECISION_KEY].presence || routing_decisions[decision_key(activity)]
+      decided = accounts_by_balance_id[balance_id.to_s] if balance_id.present?
+      decided if decided && takes_row?(decided, debit: WiseActivity::Processor.direction(activity) == :debit) { time }
+    end
+
+    # { activity id => balance id } from every stored copy that carries one.
+    def routing_decisions
+      @routing_decisions ||= wise_item.wise_accounts.each_with_object({}) do |wise_account, decisions|
+        Array(wise_account.raw_transactions_payload).each do |row|
+          next unless WiseActivity::Processor.activity_row?(row) && row[ROUTING_DECISION_KEY].present?
+
+          decisions[decision_key(row)] ||= row[ROUTING_DECISION_KEY].to_s
+        end
+      end
+    end
+
+    # Writes where a jar move or a row of interest or fees was routed onto
+    # the copy about to be stored, and removes a stale mark. Other rows are
+    # left as they are. Interest that fell back to the balance in its
+    # currency while the jar list failed is not marked, so the jar it may
+    # belong to takes it once listed.
+    def with_routing_decision(row)
+      return row unless WiseActivity::Processor.activity_row?(row)
+
+      type = row["type"].to_s
+      decided =
+        if WiseActivity::Processor::TWO_LEG_TYPES.include?(type) then jar_move(row)[:jar]
+        elsif WiseActivity::Processor::HOLDING_TYPES.include?(type)
+          route = holding_balance(row)
+          route[:balance] unless route[:fallback] && @balance_list_failed
+        else return row
+        end
+      decided ? row.merge(ROUTING_DECISION_KEY => decided.balance_id.to_s) : row.except(ROUTING_DECISION_KEY)
+    end
+
+    def decision_key(activity)
+      activity["id"].presence&.to_s || activity.to_json
+    end
+
+    # The currencies a move between two balances is in: the credited
+    # (primary) one first.
+    def move_currencies(activity)
+      %w[primaryAmount secondaryAmount].filter_map { |key| WiseActivity::Processor.parse_money(activity[key]).last }.uniq
+    end
+
+    def jars_in(currency, time)
+      jars.select { |jar| jar.currency == currency && takes_row?(jar) { time } }
+    end
+
+    # Jars in one of the currencies that Wise calls by this name now or, if
+    # none, that Wise called by it before (WiseAccount#known_names): a title
+    # names a jar as it was called then, but a jar opened under a name
+    # another jar had before takes the moves naming it. A bare currency
+    # code names that currency's STANDARD balance ("To <strong>EUR</strong>"),
+    # not a jar called like it.
+    def jars_named(named, currencies, time)
+      return [] if named.blank? || standard_currencies.include?(named.upcase)
+
+      named_jars = jars.select do |jar|
+        currencies.include?(jar.currency) && jar.known_names.any? { |name| name.casecmp?(named) } && takes_row?(jar) { time }
+      end
+      named_jars.select { |jar| jar.current_name&.casecmp?(named) }.presence || named_jars
+    end
+
+    def standard_balances_in(currency, time, debit: false)
+      wise_item.wise_accounts.reject(&:jar?).select { |wise_account| wise_account.currency == currency && takes_row?(wise_account, debit: debit) { time } }
+    end
+
+    def invested?(wise_account)
+      INVESTED_STATES.include?(wise_account.raw_payload["investmentState"]) if wise_account.raw_payload.is_a?(Hash)
+    end
+
+    def jars
+      @jars ||= wise_item.wise_accounts.select(&:jar?)
+    end
+
+    def accounts_by_balance_id
+      @accounts_by_balance_id ||= wise_item.wise_accounts.index_by { |wise_account| wise_account.balance_id.to_s }
+    end
+
+    # Every STANDARD balance's currency, closed ones included.
+    def standard_currencies
+      @standard_currencies ||= wise_item.wise_accounts.reject(&:jar?).map(&:currency).to_set
     end
 
     # How an activity reaches the balances:
@@ -1705,12 +1912,6 @@ class WiseItem::Importer
       end.compact
     end
 
-    def open_jar?
-      return @open_jar if defined?(@open_jar)
-
-      @open_jar = wise_item.wise_accounts.any? { |wise_account| wise_account.jar? && !wise_account.closed? }
-    end
-
     def open_standard_currencies
       @open_standard_currencies ||= wise_item.wise_accounts.reject { |wise_account| wise_account.jar? || wise_account.closed? }
                                                           .map(&:currency).to_set
@@ -1720,9 +1921,12 @@ class WiseItem::Importer
     # no balance or that Sure books on its own judgement: types it does not
     # book (counted per type), credits for transfers it does not have
     # (booked, or deferred while the transfer list failed), activities in a
-    # currency no open STANDARD balance holds and split payments in a
-    # currency none of their balances is in (booked in full on the first one
-    # until the balance replay finds the parts). Counts and currencies only.
+    # currency no balance holds, split payments in a currency none of their
+    # balances is in (booked in full on the first one until the balance
+    # replay finds the parts), jar moves whose jar the title does not tell
+    # (#jar_move: booked on no jar) and interest or fees several jars or
+    # invested balances could hold (#holding_balance: booked nowhere).
+    # Counts and currencies only.
     def report_activity_routing(activities)
       unbooked = Hash.new(0)
       unmatched = 0
@@ -1730,18 +1934,28 @@ class WiseItem::Importer
       unrouted = 0
       unrouted_currencies = Set.new
       foreign_splits = 0
+      unclear_jar_moves = Hash.new(0)
+      ambiguous_holdings = 0
 
       activities.each do |activity|
-        route = activity_route(activity)
-        case route
+        case activity_route(activity)
         when :unbooked
           unbooked[activity["type"].to_s.presence || "unknown"] += 1
         when :deferred
           deferred += 1
-        when :single_leg, :holding
+        when :conversion
+          state = jar_move(activity)[:state]
+          unclear_jar_moves[state] += 1 if %i[ambiguous unidentified].include?(state)
+        when :holding
+          case holding_balance(activity)[:state]
+          when :ambiguous
+            ambiguous_holdings += 1
+          when :unrouted
+            unrouted += 1
+            unrouted_currencies.merge(Array(WiseActivity::Processor.balance_amount(activity)&.dig(:currencies)))
+          end
+        when :single_leg
           unmatched += 1 if WiseActivity::Processor::TRANSFER_TYPES.include?(activity["type"].to_s)
-          next if route == :holding && open_jar?
-
           funding = WiseActivity::Processor.balance_amount(activity)
           currencies = Array(funding&.dig(:currencies))
           foreign_splits += 1 if funding&.dig(:split) && currencies.exclude?(funding[:currency])
@@ -1751,40 +1965,43 @@ class WiseItem::Importer
           unrouted_currencies.merge(currencies)
         end
       end
-      return if unbooked.empty? && (unmatched + deferred + unrouted + foreign_splits).zero?
+      unclear = unrouted + foreign_splits + unclear_jar_moves.values.sum + ambiguous_holdings
+      return if unbooked.empty? && (unmatched + deferred + unclear).zero?
 
       capture_debug_log(
         category: "provider_sync",
-        level: (unrouted + foreign_splits).positive? ? "warn" : "info",
-        message: "WiseItem::Importer - Wise activities this sync that book on no balance, or that are booked as " \
-                 "payments into the account for transfers Sure does not have",
+        level: unclear.positive? ? "warn" : "info",
+        message: "WiseItem::Importer - Wise activities this sync that book on no balance or on one side only, or that " \
+                 "are booked as payments into the account for transfers Sure does not have",
         operation: "activity_routing",
         unbooked_type_counts: unbooked.presence,
         unmatched_transfer_count: unmatched.nonzero?,
         deferred_transfer_count: deferred.nonzero?,
         unrouted_count: unrouted.nonzero?,
         unrouted_currencies: unrouted_currencies.to_a.presence,
-        foreign_split_count: foreign_splits.nonzero?
+        foreign_split_count: foreign_splits.nonzero?,
+        ambiguous_jar_move_count: unclear_jar_moves[:ambiguous].nonzero?,
+        unidentified_jar_move_count: unclear_jar_moves[:unidentified].nonzero?,
+        ambiguous_holding_count: ambiguous_holdings.nonzero?
       )
     end
 
+    # A STANDARD balance takes its side of a conversion, the source or the
+    # target currency, unless a jar holds that side: a jar move between two
+    # currencies, whose jar side is in the currency its title points at
+    # (#jar_currency), also while it is unclear which of several jars it
+    # was. It always takes its side of a jar move in its own currency, also
+    # when the jar is unknown.
     def standard_interbalance_for_account?(activity, wise_account)
       conversion = WiseActivity::Processor.conversion_currencies(activity)
 
       if conversion
-        return true if conversion[:source] == wise_account.currency
-        # A cross-currency move into a JAR has no STANDARD target side.
-        conversion[:target] == wise_account.currency &&
-          wise_item.wise_accounts.none? { |other| other.jar? && jar_title_match?(activity, other) }
+        jar_side = jar_currency(activity) unless jar_move(activity)[:state] == :conversion
+        conversion.values.include?(wise_account.currency) && wise_account.currency != jar_side
       else
         currency = WiseActivity::Processor.parse_money(activity["primaryAmount"]).last
         currency.blank? || currency == wise_account.currency
       end
-    end
-
-    def jar_title_match?(activity, jar_account)
-      jar_name_in_title = activity["title"].to_s.scan(/<strong>([^<]+)<\/strong>/).flatten.last.to_s.strip
-      jar_name_in_title.present? && jar_name_in_title.casecmp?(jar_account.name.to_s.strip)
     end
 
     def full_history?

@@ -305,6 +305,21 @@ class WiseAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     assert Entry.exists?(unexplained.id)
   end
 
+  # Every jar move names an id its other side could have had; the account's
+  # ids are read once for them all, not once per row.
+  test "reads the account's entry ids once for the renames of a whole payload" do
+    moves = (1..5).map { |i| jar_move("880#{i}", "To <strong>Jar</strong>") }
+    stale_entry("wise_interbalance_8801_inflow", amount: -500)
+    store(*moves)
+    lookups = []
+    callback = ->(*, payload) { lookups << payload[:sql] if payload[:sql].match?(/FROM "entries" WHERE .*"entries"\."external_id" IN/) }
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { process }
+
+    assert_empty lookups
+    assert_equal [ "wise_interbalance_8801_outflow", "wise_interbalance_8802_outflow" ], wise_external_ids.first(2)
+  end
+
   # Another processor may hold the balance's lock once its session ended, so
   # nothing is deleted then; the next sync cleans up.
   test "deletes nothing once the balance's processing lock was lost" do
@@ -344,6 +359,29 @@ class WiseAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     assert_equal [ 1, 0 ], result.values_at(:failed, :pruned)
     assert_equal [ "wise_transfer_905" ], wise_external_ids
     assert_equal 1, rekey_notes.sole.metadata["failed_count"]
+  end
+
+  # Sure booked a jar withdrawal on the balance's "_outflow" side whatever way
+  # the money went. Its leg is the inflow now, and the entry is renamed in
+  # place, keeping what a person did to it, rather than deleted as stale and
+  # booked again.
+  test "renames a jar withdrawal's entry to the side it is booked on" do
+    old = stale_entry("wise_interbalance_5501_outflow", amount: 500, notes: "Back from savings")
+    store(jar_move("5501", "To <strong>EUR</strong>"))
+
+    result = process
+
+    assert_equal [ 1, 0 ], result.values_at(:imported, :pruned)
+    assert_equal [ [ old.id, "wise_interbalance_5501_inflow", BigDecimal("-500") ] ],
+                 @account.entries.where(source: "wise").pluck(:id, :external_id, :amount)
+    assert_equal "Back from savings", old.reload.notes
+    assert_equal({ "operation" => "leg_side_rekey", "renamed_count" => 1 },
+                 DebugLogEntry.where(provider_key: "wise").sole.metadata.slice("operation", "renamed_count", "replaced_count"))
+
+    # Booked on its side, the next run renames nothing.
+    assert_no_difference -> { DebugLogEntry.count } do
+      process
+    end
   end
 
   # A family zone tzdata does not know (Family checks it only when it changes)
@@ -464,6 +502,12 @@ class WiseAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     # A same-currency transfer into the account recipient (a pay-in).
     def pay_in(id)
       payout(id).merge("targetAccount" => 99999001)
+    end
+
+    # A move between this balance and a jar, both in EUR.
+    def jar_move(resource_id, title)
+      { "id" => "interbalance_#{resource_id}", "type" => "INTERBALANCE", "resource" => { "type" => "BALANCE_TRANSACTION", "id" => resource_id },
+        "title" => title, "primaryAmount" => "500 EUR", "status" => "COMPLETED", "createdOn" => "2026-10-10T08:00:00Z" }
     end
 
     def card_payment(id)

@@ -46,7 +46,8 @@ class WiseAccount::Transactions::Processor
     errors = []
     expected_ids = Set.new
     row_dates = []
-    @rekeys = Hash.new { |outcomes, outcome| outcomes[outcome] = [] }
+    # { kind of rename => { outcome => external ids } } (#take_over_entries).
+    @rekeys = Hash.new { |kinds, kind| kinds[kind] = Hash.new { |outcomes, outcome| outcomes[outcome] = [] } }
 
     rows.each_with_index do |tx_data, index|
       processor = processor_for(tx_data)
@@ -106,19 +107,27 @@ class WiseAccount::Transactions::Processor
     # those are free. When both exist (an older migration booked both), the
     # one a person acted on or linked stays under the statement id and the
     # other is deleted; if a person acted on both, both stay (logged).
-    # Deleting waits for a complete import.
+    # Deleting waits for a complete import. A jar move's leg takes over its
+    # entry booked on the other side the same way (WiseActivity::Processor
+    # #superseded_external_ids).
     def take_over_entries(processor)
       return unless account.present? && processor.respond_to?(:superseded_external_ids)
 
       mapping = processor.superseded_external_ids
-      return if mapping.empty?
+      # Every jar move names its other side, and most have no entry under it,
+      # so the account's ids are read once per run (#entry_external_ids).
+      return if mapping.empty? || mapping.keys.none? { |external_id| entry_external_ids.include?(external_id) }
 
+      rekeys = @rekeys[processor.is_a?(WiseStatement::Processor) ? :statement : :leg_side]
       outcomes = Entry.transaction(requires_new: true) { mapping.map { |from, to| rekey_entry(from, to) } }
-      outcomes.each { |outcome, external_id| @rekeys[outcome] << external_id unless outcome == :none }
+      outcomes.each { |outcome, external_id| rekeys[outcome] << external_id unless outcome == :none }
+      mapping.each_key.zip(outcomes) do |from, (outcome, _external_id)|
+        entry_external_ids.delete(from) if %i[renamed replaced dropped].include?(outcome)
+      end
     rescue StandardError
       # The row fails rather than book a second entry next to the old one;
       # the next sync tries again.
-      @rekeys[:failed].concat(Array(mapping&.keys))
+      rekeys[:failed].concat(Array(mapping&.keys)) if rekeys
       raise
     end
 
@@ -159,15 +168,28 @@ class WiseAccount::Transactions::Processor
       entry.excluded? ? 0 : 1
     end
 
+    # One DebugLogEntry per kind of rename that did anything this run.
     def log_rekeys
-      return if @rekeys.values.all?(&:empty?)
+      @rekeys.each do |kind, rekeys|
+        next if rekeys.values.all?(&:empty?)
 
-      warn = @rekeys[:kept_both].any? || @rekeys[:failed].any?
+        taken = rekeys[:renamed].size + rekeys[:replaced].size
+        if kind == :statement
+          log_rekey(rekeys, operation: "statement_rekey",
+                            message: "Statement rows took over #{taken} Wise entries booked before the balance had statements")
+        else
+          log_rekey(rekeys, operation: "leg_side_rekey",
+                            message: "Renamed #{taken} Wise jar move entries to the side of the move they are booked on")
+        end
+      end
+    end
+
+    def log_rekey(rekeys, operation:, message:)
+      warn = rekeys[:kept_both].any? || rekeys[:failed].any?
       DebugLogEntry.capture(
         category: "provider_sync",
         level: warn ? "warn" : "info",
-        message: "WiseAccount::Transactions::Processor - Statement rows took over #{@rekeys[:renamed].size + @rekeys[:replaced].size} " \
-                 "Wise entries booked before the balance had statements",
+        message: "WiseAccount::Transactions::Processor - #{message}",
         source: self.class.name,
         provider_key: "wise",
         family: account.family,
@@ -176,20 +198,25 @@ class WiseAccount::Transactions::Processor
           wise_item_id: wise_account.wise_item_id,
           wise_account_id: wise_account.id,
           currency: wise_account.currency,
-          operation: "statement_rekey",
-          renamed_count: @rekeys[:renamed].size,
-          replaced_count: @rekeys[:replaced].size.nonzero?,
-          replaced_external_ids: @rekeys[:replaced].first(MAX_LOGGED_EXTERNAL_IDS).presence,
-          dropped_count: @rekeys[:dropped].size.nonzero?,
-          dropped_external_ids: @rekeys[:dropped].first(MAX_LOGGED_EXTERNAL_IDS).presence,
-          deferred_count: @rekeys[:deferred].size.nonzero?,
-          kept_both_count: @rekeys[:kept_both].size.nonzero?,
-          kept_both_external_ids: @rekeys[:kept_both].first(MAX_LOGGED_EXTERNAL_IDS).presence,
-          failed_count: @rekeys[:failed].size.nonzero?
+          operation: operation,
+          renamed_count: rekeys[:renamed].size,
+          replaced_count: rekeys[:replaced].size.nonzero?,
+          replaced_external_ids: rekeys[:replaced].first(MAX_LOGGED_EXTERNAL_IDS).presence,
+          dropped_count: rekeys[:dropped].size.nonzero?,
+          dropped_external_ids: rekeys[:dropped].first(MAX_LOGGED_EXTERNAL_IDS).presence,
+          deferred_count: rekeys[:deferred].size.nonzero?,
+          kept_both_count: rekeys[:kept_both].size.nonzero?,
+          kept_both_external_ids: rekeys[:kept_both].first(MAX_LOGGED_EXTERNAL_IDS).presence,
+          failed_count: rekeys[:failed].size.nonzero?
         }.compact
       )
     rescue StandardError => e
       Rails.logger.warn "WiseAccount::Transactions::Processor - Failed to capture Wise debug log: #{e.message}"
+    end
+
+    # The external ids of the account's Wise entries, as renames leave them.
+    def entry_external_ids
+      @entry_external_ids ||= account.entries.where(source: "wise").pluck(:external_id).to_set
     end
 
     # Looked up once per run rather than once per transfer.
