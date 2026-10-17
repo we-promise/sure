@@ -10,7 +10,8 @@ module InsightsHelper
     "budget_on_track" => "circle-check",
     # Same shield the reserve panel uses on the goal page, so the two read as
     # the same object seen from two places.
-    "maintained_goal_depleted" => "shield-alert"
+    "maintained_goal_depleted" => "shield-alert",
+    "balance_discrepancy" => "scale"
   }.freeze
 
   def insight_icon_key(insight)
@@ -72,6 +73,8 @@ module InsightsHelper
       facts["amount"] && [ facts["amount"], t("insights.figures.days_overdue", count: facts["days_overdue"].to_i) ]
     when "idle_cash"
       facts["balance"] && [ facts["balance"], t("insights.figures.idle_days", count: facts["idle_days"].to_i) ]
+    when "balance_discrepancy"
+      facts["difference"] && [ facts["difference"], t("insights.figures.days_open", count: facts["days_open"].to_i) ]
     when "budget_at_risk"
       # Not budget_spent_pct: this card's headline is "N categories need
       # attention", and total consumption ("14% of budget") reads as reassurance
@@ -101,6 +104,9 @@ module InsightsHelper
     when "idle_cash"
       account = insight.family.accounts.visible.find_by(id: metadata["account_id"])
       account && { text: t("insights.actions.idle_cash"), href: account_path(account) }
+    when "balance_discrepancy"
+      account = insight.family.accounts.visible.find_by(id: metadata["account_id"])
+      account && { text: t("insights.actions.balance_discrepancy"), href: account_path(account) }
     when "subscription_audit"
       { text: t("insights.actions.subscription_audit"), href: recurring_transactions_path }
     when "cash_flow_warning"
@@ -158,9 +164,10 @@ module InsightsHelper
       metadata["direction"] == "below" ? :positive : :warning
     when "cash_flow_warning"
       metadata["negative"] ? :negative : :warning
-    when "budget_at_risk", "maintained_goal_depleted"
-      # Warning, not negative: the reserve is short, not overdrawn, and red is
-      # reserved here for money actually going the wrong side of zero.
+    when "budget_at_risk", "maintained_goal_depleted", "balance_discrepancy"
+      # Warning, not negative: this is a data-integrity signal (a missing or
+      # duplicated transaction), not money actually lost — red is reserved
+      # here for the account really going the wrong side of zero.
       :warning
     else
       :neutral
