@@ -17,6 +17,10 @@
                        method: goal.persisted? ? :patch : :post,
                        class: "space-y-5",
                        data: { action: "submit->goal-form#validateOnSubmit" } do |f| %>
+    <% if goal.errors.any? %>
+      <%= render "shared/form_errors", model: goal %>
+    <% end %>
+
     <div class="flex justify-center">
       <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
     </div>
