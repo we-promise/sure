@@ -115,11 +115,20 @@ module Family::AutoTransferMatchable
           outflow_transaction_id: match.outflow_transaction_id,
         )
       end
+    rescue ActiveRecord::RecordNotFound
+      # A unique index rejected the insert because a concurrent sync committed a
+      # transfer between our find and our insert. In Rails 8.1 find_or_create_by! is
+      # `find_by || create_or_find_by!`, and create_or_find_by! rescues that
+      # RecordNotUnique itself and re-reads the row with find_by!. That returns the
+      # committed row when it is this exact (inflow, outflow) pair, but raises
+      # RecordNotFound when a different pairing claimed one of the two transactions
+      # (each transaction is unique per side). Look again and return nil in that
+      # case, so the caller skips rather than marking a transaction with no Transfer
+      # behind it.
+      existing_transfer(match)
     rescue ActiveRecord::RecordNotUnique
-      # The composite unique index rejected the insert because this exact
-      # (inflow, outflow) pair was committed concurrently between our find and our
-      # insert. Return that committed row; if it is somehow absent, return nil so the
-      # caller skips rather than marking a transaction with no Transfer behind it.
+      # Defensive: covers a find_or_create_by! that lets the unique violation escape
+      # (as it did before create_or_find_by! became its fallback). Same handling.
       existing_transfer(match)
     rescue ActiveRecord::RecordInvalid => e
       # The same race surfaces through the per-column uniqueness validation. Re-raise
@@ -225,6 +234,10 @@ module Family::AutoTransferMatchable
     # one day closer would claim a transaction whose real exact-amount counterpart
     # appears one day later.
     #
+    # existing_transfers excludes a candidate whose transaction is already in a transfer in
+    # either role: a provider can flip an entry's sign, which would otherwise let a
+    # transaction be the inflow of one transfer and the outflow of another.
+    #
     # NOTE: this is passed through `.squish`, which collapses all whitespace (including
     # newlines) into single spaces -- a `--` SQL line comment anywhere in this heredoc would
     # swallow the remainder of the query. Put explanatory comments here in Ruby instead.
@@ -251,8 +264,8 @@ module Family::AutoTransferMatchable
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
           LEFT JOIN transfers existing_transfers ON (
-            existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
-            existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
+            existing_transfers.inflow_transaction_id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id) OR
+            existing_transfers.outflow_transaction_id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id)
           )
           LEFT JOIN rejected_transfers ON (
             rejected_transfers.inflow_transaction_id = inflow_candidates.entryable_id AND
@@ -328,8 +341,8 @@ module Family::AutoTransferMatchable
             confirmed_routes.inflow_account_id = inflow_candidates.account_id
           )
           LEFT JOIN transfers existing_transfers ON (
-            existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
-            existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
+            existing_transfers.inflow_transaction_id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id) OR
+            existing_transfers.outflow_transaction_id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id)
           )
           LEFT JOIN rejected_transfers ON (
             rejected_transfers.inflow_transaction_id = inflow_candidates.entryable_id AND

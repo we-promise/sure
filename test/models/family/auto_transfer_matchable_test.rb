@@ -81,6 +81,47 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert Transfer.exists?(inflow_transaction_id: good_in.entryable_id, outflow_transaction_id: good_out.entryable_id)
   end
 
+  test "a concurrent match of the same outflow to a different inflow is skipped, not duplicated" do
+    outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    # Far outside the matching window, so it only serves as the other sync's pick.
+    rival_inflow_entry = create_transaction(date: 60.days.ago.to_date, account: @loan, amount: -500)
+
+    # Another sync commits a transfer claiming the same outflow after our
+    # uniqueness validation ran but before our INSERT.
+    rival_insert = lambda do |_transfer|
+      Transfer.insert!({ inflow_transaction_id: rival_inflow_entry.entryable_id, outflow_transaction_id: outflow_entry.entryable_id })
+    end
+    Transfer.set_callback(:create, :before, rival_insert)
+
+    begin
+      assert_nothing_raised { @family.auto_match_transfers! }
+    ensure
+      Transfer.skip_callback(:create, :before, rival_insert)
+    end
+
+    # The rival row is rolled back with our savepoint here (in production it was
+    # committed by the other connection); what matters is that this sync skipped
+    # the pair instead of raising, and did not mark the inflow.
+    assert_nil Transfer.find_by(inflow_transaction_id: inflow_entry.entryable_id)
+    refute_equal "funds_movement", inflow_entry.reload.entryable.kind
+  end
+
+  test "a transaction already in a transfer as inflow is not matched again as an outflow" do
+    flipped = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: -500)
+    other_outflow = create_transaction(date: 1.day.ago.to_date, account: @credit_card, amount: 500)
+    Transfer.create!(inflow_transaction: flipped.entryable, outflow_transaction: other_outflow.entryable)
+    # A provider later corrects the sign: the linked inflow now looks like an outflow.
+    flipped.update_columns(amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+    assert_nil Transfer.find_by(outflow_transaction_id: flipped.entryable_id)
+    assert_nil Transfer.find_by(inflow_transaction_id: inflow_entry.entryable_id)
+  end
+
   test "a :taken on one column from a different pairing is skipped, not marked" do
     outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)

@@ -2,6 +2,7 @@
 vi:
   transfer_matches:
     create:
+      already_matched: "Một trong các giao dịch này đã thuộc về một chuyển khoản khác."
       success: Chuyển khoản đã được tạo
     new:
       header:

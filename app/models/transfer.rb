@@ -1,4 +1,6 @@
 class Transfer < ApplicationRecord
+  TRANSACTION_LOCK_NAMESPACE = 7741
+
   belongs_to :inflow_transaction, class_name: "Transaction", inverse_of: :transfer_as_inflow
   belongs_to :outflow_transaction, class_name: "Transaction", inverse_of: :transfer_as_outflow
 
@@ -10,6 +12,7 @@ class Transfer < ApplicationRecord
 
   validates :inflow_transaction_id, uniqueness: true
   validates :outflow_transaction_id, uniqueness: true
+  validate :transactions_not_in_another_transfer_role
 
   validate :transfer_has_different_accounts
   validate :transfer_has_opposite_amounts
@@ -172,6 +175,38 @@ class Transfer < ApplicationRecord
   end
 
   private
+    # The unique indexes only cover one column each, so a transaction that is the
+    # inflow of one transfer could still become the outflow of another (e.g. after
+    # its amount sign was edited). Reported as :taken like the uniqueness checks.
+    #
+    # The check runs inside the save transaction, after a transaction-scoped
+    # advisory lock per leg. A concurrent save that uses the same transaction in
+    # the other role waits for this one to commit and then sees its row.
+    def transactions_not_in_another_transfer_role
+      lock_transactions_for_transfer!
+      other_transfers = Transfer.where.not(id: id)
+
+      if inflow_transaction_id && other_transfers.exists?(outflow_transaction_id: inflow_transaction_id)
+        errors.add(:inflow_transaction_id, :taken)
+      end
+
+      if outflow_transaction_id && other_transfers.exists?(inflow_transaction_id: outflow_transaction_id)
+        errors.add(:outflow_transaction_id, :taken)
+      end
+    end
+
+    # Sorted so two saves that share both legs take the locks in the same order.
+    # Outside a transaction (a bare valid?) the lock is released right away.
+    def lock_transactions_for_transfer!
+      [ inflow_transaction_id, outflow_transaction_id ].compact.map(&:to_s).sort.each do |transaction_id|
+        self.class.connection.execute(
+          self.class.sanitize_sql_array(
+            [ "SELECT pg_advisory_xact_lock(?, hashtext(?))", TRANSACTION_LOCK_NAMESPACE, transaction_id ]
+          )
+        )
+      end
+    end
+
     # Gives each surviving transaction back its standalone state. When the
     # transfer goes because one leg is being deleted (dependent: :destroy on
     # Transaction), that leg is skipped.
