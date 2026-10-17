@@ -110,6 +110,20 @@ class ActiveStorageDerivedBlobAuthorizationTest < ActionDispatch::IntegrationTes
     assert_response :redirect
   end
 
+  test "disk urls fail closed once the blob row is gone" do
+    blob = @receipt.blob
+    disk_url = ActiveStorage::Current.set(url_options: { host: "www.example.com" }) { blob.url }
+    # Drop the rows but keep the file, as between a purge and its file deletion.
+    ActiveStorage::Attachment.where(id: @receipt.id).delete_all
+    ActiveStorage::Blob.where(id: blob.id).delete_all
+    assert ActiveStorage::Blob.service.exist?(blob.key)
+
+    sign_in @owner
+    get disk_url
+
+    assert_response :not_found
+  end
+
   test "preview images of unattached blobs fail closed" do
     source = ActiveStorage::Blob.create_and_upload!(
       io: StringIO.new("%PDF-1.4 orphan"),

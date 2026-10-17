@@ -2,7 +2,7 @@
 Rails.application.config.to_prepare do
   module ActiveStorageAttachmentAuthorization
     extend ActiveSupport::Concern
-    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement FamilyExport].freeze
+    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement].freeze
 
     included do
       include Authentication
@@ -20,6 +20,8 @@ Rails.application.config.to_prepare do
         raise ActiveRecord::RecordNotFound if attachments.empty?
         # Archived exports belong to no family; ArchivedExportsController releases them by download token only.
         raise ActiveRecord::RecordNotFound if attachments.any? { |attachment| attachment.record_type == "ArchivedExport" }
+        # Family exports hold the whole family's data; FamilyExportsController releases them to family admins only.
+        raise ActiveRecord::RecordNotFound if attachments.any? { |attachment| attachment.record_type == "FamilyExport" && !family_admin_export?(attachment) }
 
         protected_attachments = attachments.select { |attachment| attachment.record_type.in?(PROTECTED_RECORD_TYPES) }
         return if protected_attachments.empty?
@@ -34,8 +36,6 @@ Rails.application.config.to_prepare do
           transaction_attachment_authorized?(attachment)
         when "AccountStatement"
           account_statement_attachment_authorized?(attachment)
-        when "FamilyExport"
-          family_export_attachment_authorized?(attachment)
         else
           false
         end
@@ -61,16 +61,6 @@ Rails.application.config.to_prepare do
         false
       end
 
-      # Mirrors FamilyExportsController, which limits exports to family admins.
-      def family_export_attachment_authorized?(attachment)
-        export = attachment.record
-        return false if export.nil?
-
-        export.family_id == Current.family&.id && Current.user.admin?
-      rescue ActiveRecord::RecordNotFound, NoMethodError
-        false
-      end
-
       def authorized_attachments
         return nil unless authorized_blob
 
@@ -88,7 +78,8 @@ Rails.application.config.to_prepare do
         return nil if key.blank?
 
         blob_key = key.to_s[%r{\Avariants/([^/]+)/}, 1] || key
-        ActiveStorage::Blob.find_by(key: blob_key)
+        # A signed key whose blob row is gone (e.g. purged, file not yet deleted) must not bypass the checks.
+        ActiveStorage::Blob.find_by!(key: blob_key)
       rescue ActiveStorage::InvalidKeyError
         nil
       end
@@ -120,6 +111,15 @@ Rails.application.config.to_prepare do
         record.is_a?(ActiveStorage::VariantRecord) ? record.blob : record
       rescue ActiveRecord::RecordNotFound
         nil
+      end
+
+      def family_admin_export?(attachment)
+        export = attachment.record
+        return false if export.nil?
+
+        export.family_id == Current.family&.id && Current.user.admin?
+      rescue ActiveRecord::RecordNotFound, NoMethodError
+        false
       end
 
       def new_session_url
