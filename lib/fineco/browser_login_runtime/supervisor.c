@@ -715,20 +715,71 @@ static int command_line(pid_t pid, char *buffer, size_t buffer_size) {
   return 1;
 }
 
+static int supervisor_ids_match(uid_t expected_effective_uid, gid_t expected_effective_gid) {
+  uid_t real_uid;
+  uid_t effective_uid;
+  uid_t saved_uid;
+  gid_t real_gid;
+  gid_t effective_gid;
+  gid_t saved_gid;
+
+  if (getresuid(&real_uid, &effective_uid, &saved_uid) != 0 || getresgid(&real_gid, &effective_gid, &saved_gid) != 0) return 0;
+  return real_uid == RAILS_UID && effective_uid == expected_effective_uid && saved_uid == 0 &&
+      real_gid == RAILS_GID && effective_gid == expected_effective_gid && saved_gid == RAILS_GID;
+}
+
+static int supervisor_nondumpable(void) {
+  return prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) == 0 && prctl(PR_GET_DUMPABLE, 0, 0, 0, 0) == 0;
+}
+
+static int restore_supervisor_identity(void) {
+  int restored = 1;
+
+  if (seteuid(0) != 0) restored = 0;
+  if (setegid(RAILS_GID) != 0) restored = 0;
+  if (!supervisor_nondumpable()) restored = 0;
+  if (!supervisor_ids_match(0, RAILS_GID)) restored = 0;
+  return restored;
+}
+
+static int namespace_stat_as_browser(pid_t pid, struct stat *status) {
+  char path[64];
+  int result;
+  int stat_errno;
+
+  if (!supervisor_ids_match(0, RAILS_GID) || !supervisor_nondumpable()) return -1;
+  if (setegid(BROWSER_GID) != 0) return restore_supervisor_identity() ? 0 : -1;
+  if (!supervisor_ids_match(0, BROWSER_GID) || !supervisor_nondumpable()) {
+    restore_supervisor_identity();
+    return -1;
+  }
+  if (seteuid(BROWSER_UID) != 0) return restore_supervisor_identity() ? 0 : -1;
+  if (!supervisor_ids_match(BROWSER_UID, BROWSER_GID) || !supervisor_nondumpable()) {
+    restore_supervisor_identity();
+    return -1;
+  }
+
+  snprintf(path, sizeof(path), "/proc/%ld/ns/user", (long)pid);
+  result = stat(path, status);
+  stat_errno = errno;
+  if (!restore_supervisor_identity()) return -1;
+  errno = stat_errno;
+  return result == 0 ? 1 : 0;
+}
+
 static int renderer_sandboxed(pid_t browser_pid, pid_t runtime_session_id, pid_t *renderer_pid) {
-  char browser_path[64];
   struct stat browser_namespace;
   DIR *directory;
   struct dirent *entry;
   int found = 0;
+  int namespace_result;
 
-  snprintf(browser_path, sizeof(browser_path), "/proc/%ld/ns/user", (long)browser_pid);
-  if (stat(browser_path, &browser_namespace) != 0) return 0;
+  namespace_result = namespace_stat_as_browser(browser_pid, &browser_namespace);
+  if (namespace_result <= 0) return namespace_result;
   directory = opendir("/proc");
   if (!directory) return 0;
   while ((entry = readdir(directory)) != NULL) {
     pid_t pid;
-    char path[PATH_MAX];
     char cmdline[32768];
     struct stat renderer_namespace;
     char seccomp[64];
@@ -747,8 +798,12 @@ static int renderer_sandboxed(pid_t browser_pid, pid_t runtime_session_id, pid_t
         session_id != runtime_session_id ||
         !command_line(pid, cmdline, sizeof(cmdline))) continue;
     if (!strstr(cmdline, "--type=renderer")) continue;
-    snprintf(path, sizeof(path), "/proc/%ld/ns/user", (long)pid);
-    if (stat(path, &renderer_namespace) != 0) continue;
+    namespace_result = namespace_stat_as_browser(pid, &renderer_namespace);
+    if (namespace_result < 0) {
+      closedir(directory);
+      return -1;
+    }
+    if (namespace_result == 0) continue;
     if (renderer_namespace.st_dev == browser_namespace.st_dev && renderer_namespace.st_ino == browser_namespace.st_ino) continue;
     if (!status_field(pid, "Seccomp", seccomp, sizeof(seccomp)) || strcmp(seccomp, "2") != 0) continue;
     if (!status_field(pid, "Seccomp_filters", filters, sizeof(filters)) || strtol(filters, NULL, 10) < 2) continue;
@@ -769,7 +824,9 @@ static int wait_for_renderer(pid_t browser_pid, pid_t runtime_session_id, pid_t 
   double deadline = monotonic_seconds() + timeout_seconds;
   struct timespec pause = { .tv_sec = 0, .tv_nsec = 100000000 };
   while (monotonic_seconds() < deadline && !should_stop()) {
-    if (renderer_sandboxed(browser_pid, runtime_session_id, renderer_pid)) return 1;
+    int sandboxed = renderer_sandboxed(browser_pid, runtime_session_id, renderer_pid);
+    if (sandboxed > 0) return 1;
+    if (sandboxed < 0) return 0;
     nanosleep(&pause, NULL);
   }
   return 0;

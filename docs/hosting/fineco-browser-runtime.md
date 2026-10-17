@@ -118,8 +118,8 @@ confirm the rendered Chrome sandbox and namespace/seccomp status; test that the
 browser UID cannot read Rails files or the Rails process environment and file
 descriptors; verify the helper rejects UID 1001; exercise normal, EOF, timeout,
 and abrupt-parent cleanup plus stale-profile recovery; and check exact loopback
-listeners and reserved-socket handling. Verify raw-RFB pointer and normal
-keyboard input with synthetic text only;
-an RFB handshake alone does not prove input delivery. A running browser or a
-passing source test alone does not establish these runtime properties. Do not
-test with real Fineco credentials or production mounts.
+listeners and reserved-socket handling. Verify raw-RFB pointer and ordinary
+keyboard input with synthetic key presses; an RFB handshake alone does not prove
+input delivery. A running browser or a passing source test alone does not
+establish these runtime properties. Do not test with real Fineco credentials or
+production mounts.
