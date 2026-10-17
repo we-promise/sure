@@ -15,7 +15,7 @@ ca:
       sync_start_date_label: Importa transaccions des de
       sync_start_date_help: Els extractes de Wise s'importen a partir d'aquesta data. Deixa el valor per defecte per obtenir fins a un any d'historial.
       import_all_history_label: Importa tot l'historial de transaccions
-      import_all_history_help: Obté tots els extractes històrics de Wise en lloc de només el darrer any.
+      import_all_history_help: Importa tot l'historial de Wise (transferències, activitats i extractes) en lloc de només el darrer any. Cada saldo comença llavors a 0 el dia que Wise el va obrir.
       connect: Connecta Wise
       update_connection: Actualitza la connexió
       setup_accounts: Configura comptes

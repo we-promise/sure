@@ -31,6 +31,21 @@ class WiseStatement::Processor
     raise
   end
 
+  # The external ids of the entries processing this statement row keeps on
+  # its balance (see WiseAccount::Transactions::Processor's prune).
+  def expected_external_ids
+    ids = [ "wise_statement_#{transaction_id}" ]
+    ids << "wise_statement_#{transaction_id}_fee" if fee.positive?
+    ids
+  end
+
+  # The day the row books on; nil when it has no readable date.
+  def booking_date
+    date if account.present?
+  rescue ArgumentError
+    nil
+  end
+
   private
 
     attr_reader :statement, :wise_account

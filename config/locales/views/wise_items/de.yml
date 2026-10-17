@@ -77,7 +77,7 @@ de:
         generate: Schlüsselpaar erzeugen
         regenerate: Neues Schlüsselpaar erzeugen
         regenerate_confirm: "Dadurch wird ein neues Schlüsselpaar erzeugt. Wise akzeptiert den bisherigen öffentlichen Schlüssel weiterhin, bis du ihn selbst in deinem Wise-Konto entfernst – Sure kann ihn nicht aus der Ferne widerrufen. Du musst den neuen öffentlichen Schlüssel bei Wise registrieren, bevor Kontoauszüge wieder synchronisiert werden können. Fortfahren?"
-      import_all_history_help: Holt alle historischen Wise-Kontoauszüge statt nur das letzte Jahr.
+      import_all_history_help: Importiert die gesamte Wise-Historie (Überweisungen, Aktivitäten und Kontoauszüge) statt nur das letzte Jahr. Jedes Guthaben beginnt dann bei 0 an dem Tag, an dem Wise es eröffnet hat.
       import_all_history_label: Vollständige Transaktionshistorie importieren
       keep_token_placeholder: Leer lassen, um den bisherigen Token zu behalten
       not_configured: Nicht eingerichtet

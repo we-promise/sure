@@ -39,9 +39,13 @@ class WiseItem::Syncer
     if linked_count.positive?
       update_status(sync, :processing_transactions)
       mark_import_started(sync)
-      process_results = wise_item.process_accounts(import_complete: import_complete?(import_result))
+      process_results = wise_item.process_accounts(
+        import_complete: import_complete?(import_result),
+        coverage_upgraded: import_result.is_a?(Hash) && import_result[:coverage_upgraded] == true
+      )
       sync_errors.concat(result_failure_errors(process_results, category: :account_processing_error, message_key: :account_processing_failed))
       capture_transaction_processing_summary(process_results)
+      collect_wise_prune_stats(sync, process_results)
 
       wise_item.link_jar_transfers!
 
@@ -120,6 +124,18 @@ class WiseItem::Syncer
       [ sync_error(category, message_key, count: failed) ]
     end
 
+    # Stale Wise entries the processing deleted (see
+    # WiseAccount::Transactions::Processor), summed over the accounts.
+    def collect_wise_prune_stats(sync, results)
+      return unless sync.respond_to?(:sync_stats)
+
+      merge_sync_stats(sync, { "wise_pruned_entries" => pruned_entry_count(results) })
+    end
+
+    def pruned_entry_count(results)
+      Array(results).sum { |result| result.is_a?(Hash) && result[:result].is_a?(Hash) ? result[:result][:pruned].to_i : 0 }
+    end
+
     def capture_transaction_processing_summary(results)
       account_results = Array(results)
       transaction_results = account_results.filter_map { |result| result[:result] if result.is_a?(Hash) }
@@ -143,7 +159,8 @@ class WiseItem::Syncer
           processed_account_count: account_results.size,
           imported_transaction_count: imported,
           skipped_transaction_count: skipped,
-          failed_transaction_count: failed
+          failed_transaction_count: failed,
+          pruned_entry_count: pruned_entry_count(account_results)
         }
       )
     rescue => e

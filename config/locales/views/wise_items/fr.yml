@@ -69,7 +69,7 @@ fr:
       sync_start_date_label: Importer les transactions à partir de
       sync_start_date_help: Les relevés Wise sont importés à partir de cette date. Conservez la valeur par défaut pour importer jusqu'à un an d'historique.
       import_all_history_label: Importer tout l'historique des transactions
-      import_all_history_help: Récupère tous les relevés Wise historiques au lieu de seulement la dernière année.
+      import_all_history_help: Importe tout l'historique Wise (virements, activités et relevés) au lieu de seulement la dernière année. Chaque solde commence alors à 0 le jour où Wise l'a ouvert.
       disconnect: Déconnecter
       disconnect_confirm: Voulez-vous vraiment déconnecter %{name} ? Cela supprimera
         toutes les données de compte synchronisées.

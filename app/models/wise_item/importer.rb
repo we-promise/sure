@@ -41,6 +41,10 @@ class WiseItem::Importer
   # Wise answered with a page this fetch had already read.
   PaginationError = Class.new(StandardError)
 
+  # How many syncs in a row both balance lists must arrive in full without a
+  # stored balance before Sure takes it as closed.
+  CLOSURE_ABSENCES = 2
+
   attr_reader :wise_item, :wise_provider, :sync_start_date
 
   def initialize(wise_item, wise_provider:, sync_start_date: nil)
@@ -49,6 +53,7 @@ class WiseItem::Importer
     @sync_start_date = sync_start_date
     @fetch_failures = 0
     @fetched_windows = {}
+    @coverage_upgrade_sources = Set.new
     @known_transfer_ids = Set.new
     @statement_covered_account_ids = Set.new
     @statement_retry_accounts = []
@@ -61,6 +66,7 @@ class WiseItem::Importer
   # full: balances, transfers and their re-reads, activities, and statements
   # of balances that already hold statement rows. Steps that delete or
   # rewrite entries must not run after an incomplete import.
+  # `coverage_upgraded:` see #coverage_upgraded?.
   def import
     Rails.logger.info "WiseItem::Importer - Starting import for item #{wise_item.id} (profile #{wise_item.profile_id})"
 
@@ -77,6 +83,7 @@ class WiseItem::Importer
       borderless_accounts: borderless_accounts,
       account_recipient_id: @multi_currency_account&.dig("recipientId")
     )
+    track_closed_balances(all_balances)
 
     transfers = fetch_transfers if legacy_transfer_import_needed?
     activities = fetch_activities
@@ -103,6 +110,7 @@ class WiseItem::Importer
     {
       success: success,
       complete: @fetch_failures.zero?,
+      coverage_upgraded: coverage_upgraded?,
       fetch_failures: @fetch_failures,
       **account_result,
       **transaction_result
@@ -161,6 +169,62 @@ class WiseItem::Importer
     # them is really gone from Wise.
     def balance_lists_complete?
       @standard_balances_complete == true && @savings_balances_complete == true
+    end
+
+    # Wise lists only the balances a profile has now, and closes only empty
+    # ones. A stored balance missing from both lists, arrived in full, in
+    # CLOSURE_ABSENCES syncs in a row is closed: marked closed_at and set to
+    # 0 (once; Wise no longer reports it), which freezes its payload (see
+    # #store_transfers_per_account) and stops its statements. One the lists
+    # show again is open again. A failed or partial list proves nothing, so
+    # it counts no absence.
+    def track_closed_balances(listed_balances)
+      listed_ids = Array(listed_balances).filter_map { |balance| balance["id"].presence&.to_s if balance.is_a?(Hash) }.to_set
+      complete = balance_lists_complete?
+      changed = false
+
+      WiseAccount.where(wise_item_id: wise_item.id).find_each do |wise_account|
+        payload = wise_account.raw_payload.is_a?(Hash) ? wise_account.raw_payload : {}
+        changed |=
+          if listed_ids.include?(wise_account.balance_id.to_s)
+            reopen_balance(wise_account, payload)
+          elsif complete && payload["closed_at"].blank?
+            count_balance_absence(wise_account, payload)
+          else
+            false
+          end
+      rescue => e
+        Rails.logger.error "WiseItem::Importer - Failed to track whether balance #{wise_account.id} is closed: #{e.message}"
+      end
+
+      # Later reads of the item's balances see the marks.
+      wise_item.wise_accounts.reset if changed
+    end
+
+    # Clears the absence count and closure of a balance Wise lists.
+    def reopen_balance(wise_account, payload)
+      return false unless payload.key?("closed_at") || payload.key?("absent_count")
+
+      wise_account.update!(raw_payload: payload.except("closed_at", "absent_count"))
+      if payload["closed_at"].present?
+        capture_debug_log(category: "provider_sync", level: "info", wise_account: wise_account, operation: "balances",
+                          message: "WiseItem::Importer - Wise lists a balance Sure had marked closed again; it is open again")
+      end
+      true
+    end
+
+    def count_balance_absence(wise_account, payload)
+      absences = payload["absent_count"].to_i + 1
+      if absences < CLOSURE_ABSENCES
+        wise_account.update!(raw_payload: payload.merge("absent_count" => absences))
+      else
+        wise_account.update!(current_balance: 0, reserved_balance: 0,
+                             raw_payload: payload.merge("absent_count" => absences, "closed_at" => Time.current.utc.iso8601))
+        capture_debug_log(category: "provider_sync", level: "info", wise_account: wise_account, operation: "balances",
+                          message: "WiseItem::Importer - Wise no longer lists a balance; Sure marks it closed at 0",
+                          absent_count: absences)
+      end
+      true
     end
 
     # The account recipient (what transfers into the account target) and the
@@ -428,7 +492,10 @@ class WiseItem::Importer
     def window_start(source)
       coverage = wise_item.fetch_coverage(source)
       start = history_start
-      return start if coverage.nil? || coverage[:from] > start
+      if coverage.nil? || coverage[:from] > start
+        @coverage_upgrade_sources << source
+        return start
+      end
 
       if source == :transfers
         [ coverage[:through] - TRANSFER_OVERLAP, TRANSFER_RECHECK_PERIOD.ago ].min
@@ -511,6 +578,15 @@ class WiseItem::Importer
       wise_item.merge_sync_metadata!("coverage" => coverage_after_fetch) if @fetched_windows.any?
     end
 
+    # Whether a source arrived in full for the first time (an install from
+    # before coverage was kept) or from the start of the whole history its
+    # coverage did not reach (the full history switched on): the payloads
+    # were rebuilt from a complete fetch, so the stale entry clean-up may
+    # exceed its cap once (WiseAccount::Transactions::Processor).
+    def coverage_upgraded?
+      @coverage_upgrade_sources.any? { |source| @fetched_windows.key?(source) }
+    end
+
     # The stored coverage extended by each source fetched in full this sync,
     # recorded under this build's WiseItem::COVERAGE_VERSION: `through` is
     # when that fetch started and `from` only moves earlier. A window that
@@ -572,7 +648,8 @@ class WiseItem::Importer
       refusal = nil
 
       statements = wise_item.wise_accounts.each_with_object({}) do |wise_account, result|
-        next if wise_account.jar?
+        # A closed balance has no statements to fetch any more.
+        next if wise_account.jar? || wise_account.closed?
 
         existing = Array(wise_account.raw_transactions_payload)
         has_statement_rows = existing.any? { |transaction| transaction["wise_statement"].present? }
@@ -777,15 +854,17 @@ class WiseItem::Importer
           account_statements = statements[wise_account.id] || []
           # Stored rows are re-routed too, so rows saved under an older
           # routing rule (an INTERBALANCE for another currency, the funding
-          # side of a pay-in) drop out.
+          # side of a pay-in) drop out. A closed balance's stored rows stay
+          # as they are: nothing Wise still lists can show they belong
+          # elsewhere, and its entries are no longer pruned.
           existing_legacy = Array(wise_account.raw_transactions_payload).filter_map do |transaction|
             next if transaction["wise_statement"].present?
 
             if WiseActivity::Processor.activity_row?(transaction)
-              transaction if activity_for_account?(transaction, wise_account, stored: true)
+              transaction if wise_account.closed? || activity_for_account?(transaction, wise_account, stored: true)
             else
               transfer = enrich_transfer(transaction, transfer_activities)
-              transfer if transfer_for_account?(transfer, wise_account)
+              transfer if wise_account.closed? || transfer_for_account?(transfer, wise_account)
             end
           end
           existing_statements = Array(wise_account.raw_transactions_payload).select { |transaction| transaction["wise_statement"].present? }
@@ -1028,20 +1107,60 @@ class WiseItem::Importer
       end
     end
 
-    # A pay-in (a transfer into one of the profile's own recipients) only
-    # touches the balance whose account details it paid into or, paid to the
-    # account recipient, the balance in its target currency. Any other
-    # transfer only touches the balance it was paid from: matching either
-    # currency would also book e.g. a GBP-funded payout in PLN on the PLN
-    # balance. Wise does not say whether a balance paid for a pay-in ("send to
-    # myself"), so none is debited for it (see #report_transfer_notes).
+    # A transfer goes to the balance it reaches (WiseEntry::Processor
+    # .balance_route, the rule the balance books it by), created at a time
+    # the balance takes rows (#takes_row?). Wise does not say whether a
+    # balance paid for a pay-in ("send to myself"), so none is debited for it
+    # (see #report_transfer_notes).
     def transfer_for_account?(transfer, wise_account)
-      incoming = WiseEntry::Processor.direction(transfer, own_recipient_ids: own_recipient_ids) == :incoming
-      owners = balance_recipient_owners[transfer["targetAccount"].to_s] if incoming
-      return owners.include?(wise_account.id) if owners
+      route = WiseEntry::Processor.balance_route(transfer, wise_account, own_recipient_ids: own_recipient_ids,
+                                                                        recipient_owners: balance_recipient_owners)
+      # The balance's own account details name it, whatever else shares its currency.
+      route.present? && takes_row?(wise_account, by_currency: route == :currency, debit: !pay_in?(transfer)) { transfer_created_at(transfer) }
+    end
 
-      currency = incoming ? transfer["targetCurrency"] : transfer["sourceCurrency"]
-      currency.blank? || currency == wise_account.currency
+    # Whether a balance takes a row created at the time the block returns
+    # (read only when the balance has a window, see #routing_windows).
+    # by_currency: false when the row names the balance itself, so only its
+    # closure limits it. debit: the row takes money from the balance.
+    def takes_row?(wise_account, by_currency: true, debit: false)
+      window = routing_windows[wise_account.id] || {}
+      window = window.slice(:through) unless by_currency
+      return true if window.values.none?
+
+      time = yield
+      return false unless time
+
+      from = (window[:debits_from] if debit) || window[:from]
+      before = (window[:credits_before] unless debit) || window[:before]
+      (from.nil? || time >= from) && (before.nil? || time < before) && (window[:through].nil? || time <= window[:through])
+    end
+
+    # The times whose rows each balance takes, { wise_account id => { from:,
+    # before:, through:, debits_from:, credits_before: } }. A closed balance
+    # takes the rows created until Sure found it closed (`through`). Wise
+    # keeps one STANDARD balance per currency, so two of them mean the
+    # currency was closed and opened again under a new balance id: the older
+    # one takes the rows from before Wise opened the newer one (`before`), the
+    # newer one those after, so no movement books on both. In the day before
+    # (a pay-in can be dated before the balance it reached existed), money
+    # that came in went to the newer one (`from`, `credits_before`) and money
+    # that left, such as the conversion that emptied the older one, left the
+    # older one, as the newer held nothing yet (`debits_from`). Only balances
+    # Wise dated can be ordered.
+    def routing_windows
+      @routing_windows ||= begin
+        accounts = wise_item.wise_accounts.to_a
+        windows = accounts.to_h { |wise_account| [ wise_account.id, { from: nil, before: nil, through: wise_account.closed_at } ] }
+        accounts.reject(&:jar?).select(&:creation_time).group_by(&:currency).each_value do |standard|
+          standard.sort_by(&:creation_time).each_cons(2) do |older, newer|
+            margin = newer.creation_time - 1.day
+            windows[older.id].merge!(before: newer.creation_time, credits_before: margin)
+            windows[newer.id].merge!(from: margin, debits_from: newer.creation_time)
+          end
+        end
+        windows
+      end
     end
 
     def own_recipient_ids
@@ -1258,15 +1377,15 @@ class WiseItem::Importer
     # - Single-leg activities: each open STANDARD balance that paid or
     #   received it (several for a split payment), unless statements cover
     #   that balance, whose statement rows then carry the movement.
+    # Conversions and single-leg activities reach a closed balance only if
+    # created before it closed, and in a currency Wise closed and opened
+    # again only the balance of their time (#takes_row?).
     # stored: re-routes a row an earlier sync stored on this balance.
     def activity_for_account?(activity, wise_account, stored: false)
       case activity_route(activity, stored: stored)
       when :conversion
-        if wise_account.jar?
-          jar_title_match?(activity, wise_account)
-        else
-          standard_interbalance_for_account?(activity, wise_account)
-        end
+        routed = wise_account.jar? ? jar_title_match?(activity, wise_account) : standard_interbalance_for_account?(activity, wise_account)
+        routed && takes_row?(wise_account, debit: leaves_balance?(activity, wise_account)) { activity_created_at(activity) }
       when :holding
         if wise_account.jar?
           !wise_account.closed?
@@ -1329,10 +1448,20 @@ class WiseItem::Importer
     end
 
     def single_leg_for_account?(activity, wise_account)
-      return false if wise_account.jar? || wise_account.closed? || @statement_covered_account_ids.include?(wise_account.id)
+      return false if wise_account.jar? || @statement_covered_account_ids.include?(wise_account.id)
 
       funding = WiseActivity::Processor.balance_amount(activity)
-      funding.present? && funding[:currencies].include?(wise_account.currency)
+      funding.present? && funding[:currencies].include?(wise_account.currency) &&
+        takes_row?(wise_account, debit: funding[:direction] == :debit) { activity_created_at(activity) }
+    end
+
+    # Whether a balance's leg of a move between two balances takes money from
+    # it: a conversion's source, a balance's move into a jar, a jar's move out.
+    def leaves_balance?(activity, wise_account)
+      conversion = WiseActivity::Processor.conversion_currencies(activity)
+      return conversion[:source] == wise_account.currency if conversion
+
+      wise_account.jar? != WiseActivity::Processor.jar_deposit?(activity)
     end
 
     # Transfers Sure has: listed or read this sync, or stored on any balance.
@@ -1480,6 +1609,7 @@ class WiseItem::Importer
       {
         success: false,
         complete: false,
+        coverage_upgraded: false,
         fetch_failures: [ @fetch_failures, 1 ].max,
         error: error,
         accounts_created: 0,
