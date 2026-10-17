@@ -30,6 +30,36 @@ class HoldingCostBasisTest < ApplicationSystemTestCase
     assert_equal BigDecimal("0.0049"), @holding.reload.cost_basis
   end
 
+  # 10 x 0.0049 = 0.049. A total rounded to cents (0.05) saved 0.005 per share,
+  # also when the form was saved unchanged.
+  test "a sub-cent per-share price survives a total below a cent and an unchanged save" do
+    @holding.update!(qty: 10)
+
+    open_cost_basis_editor
+    find(per_share_field).fill_in(with: "0.0049")
+    assert_field total_field_id, with: "0.05"
+    save_cost_basis
+
+    assert_equal BigDecimal("0.0049"), @holding.reload.cost_basis
+
+    open_cost_basis_editor
+    assert_field per_share_field_id, with: "0.0049"
+    save_cost_basis
+
+    assert_equal BigDecimal("0.0049"), @holding.reload.cost_basis
+  end
+
+  test "a total fills in the per-share cost with up to four decimals" do
+    @holding.update!(qty: 3)
+
+    open_cost_basis_editor
+    find("##{total_field_id}").fill_in(with: "49")
+    assert_field per_share_field_id, with: "16.3333"
+    save_cost_basis
+
+    assert_equal BigDecimal("16.3333"), @holding.reload.cost_basis
+  end
+
   private
     def form_id
       "#{dom_id(@holding, :drawer_cost_basis)}_holding"
