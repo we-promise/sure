@@ -79,8 +79,9 @@
 
     <% unless redbark_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if redbark_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: redbark_item.accounts %>
+        <% visible_accounts = redbark_item.accounts.select { |account| @accessible_account_ids.include?(account.id) } %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>

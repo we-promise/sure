@@ -14,6 +14,29 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "index only renders accessible accounts from a redbark item" do
+    redbark_item = redbark_items(:one)
+    shared_account = accounts(:depository)
+    private_account = accounts(:investment)
+
+    [ shared_account, private_account ].each do |account|
+      redbark_account = redbark_item.redbark_accounts.create!(
+        redbark_account_id: "redbark-#{account.id}",
+        connection_id: "connection-#{account.id}",
+        name: account.name,
+        currency: account.currency
+      )
+      AccountProvider.create!(account: account, provider: redbark_account)
+    end
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href='#{account_path(shared_account)}']", text: shared_account.name
+    assert_select "a[href='#{account_path(private_account)}']", text: private_account.name, count: 0
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success
