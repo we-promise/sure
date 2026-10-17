@@ -46,7 +46,12 @@ class KrakenItemsController < ApplicationController
     kraken_item = account_flow[:kraken_item]
 
     unless kraken_item
-      redirect_to settings_providers_path, alert: kraken_item_selection_message(account_flow[:credentialed_items])
+      message = kraken_item_selection_message(account_flow[:credentialed_items])
+      if turbo_frame_request?
+        render_frame_redirect(settings_providers_path, alert: message)
+      else
+        redirect_to settings_providers_path, alert: message
+      end
       return
     end
 
@@ -215,5 +220,17 @@ class KrakenItemsController < ApplicationController
       value
     rescue URI::InvalidURIError
       nil
+    end
+
+    # Add Account opens select_accounts inside the "modal" turbo frame, and a
+    # plain redirect would be followed within it, losing the page and its
+    # alert. Answer with the frame carrying a redirect stream action instead,
+    # which performs a full-page visit (as PlaidItemsController does).
+    def render_frame_redirect(path, alert:)
+      flash[:alert] = alert
+
+      render html: helpers.turbo_frame_tag(turbo_frame_request_id) {
+        helpers.turbo_stream.action(:redirect, path)
+      }
     end
 end
