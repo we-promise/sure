@@ -189,6 +189,34 @@ class WiseItemTest < ActiveSupport::TestCase
     Rails.cache = original_cache
   end
 
+  test "own_recipient_ids holds the account recipient and every balance's own recipient" do
+    @wise_item.merge_sync_metadata!("multi_currency_account" => { "recipientId" => 99999009 })
+    @standard_account.update!(raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001, "recipientId" => 77777001 })
+    WiseAccount.create!(wise_item: @wise_item, balance_id: "10000003", name: "Wise USD", currency: "USD",
+                        raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001, "recipientId" => 77777003,
+                                       "closed_at" => "2026-09-01T00:00:00Z" })
+
+    assert_equal %w[99999009 99999001 77777001 77777003].sort, @wise_item.own_recipient_ids.sort
+  end
+
+  # Each balance's processing asks for the recipients, so reading every
+  # balance's stored rows (the whole history) for them would grow with the
+  # square of the balances.
+  test "reads the recipients without loading any balance's stored rows" do
+    @standard_account.update!(raw_payload: { "type" => "STANDARD", "recipientId" => 77777001 },
+                              raw_transactions_payload: [ { "id" => 1 } ])
+    queries = []
+    callback = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?("wise_accounts") }
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      assert_includes WiseItem.find(@wise_item.id).own_recipient_ids, "77777001"
+      assert_equal({ "77777001" => [ @standard_account.id ] }, WiseItem.find(@wise_item.id).balance_recipient_owners)
+    end
+
+    assert_equal 2, queries.size
+    queries.each { |sql| assert_no_match(/raw_transactions_payload|wise_accounts"\.\*/, sql) }
+  end
+
   test "process_accounts tells each account processor whether the import was complete" do
     WiseAccount::Processor.expects(:new).with(@standard_account, import_complete: true).returns(stub(process: { imported: 0 }))
     WiseAccount::Processor.expects(:new).with(@jar_account, import_complete: true).returns(stub(process: { imported: 0 }))

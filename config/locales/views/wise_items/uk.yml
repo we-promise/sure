@@ -6,6 +6,7 @@ uk:
     entries:
       default_name: Транзакція Wise
       fee_name: Комісія Wise
+      refund_name: Повернення Wise
     activities:
       jar_deposit: Переказ у Jar
       jar_withdrawal: Переказ із Jar

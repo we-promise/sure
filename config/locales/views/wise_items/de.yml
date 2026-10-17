@@ -22,6 +22,7 @@ de:
     entries:
       default_name: Wise-Transaktion
       fee_name: Wise-Gebühr
+      refund_name: Wise-Rückerstattung
     generate_sca_keypair:
       failed: Das neue SCA-Schlüsselpaar ließ sich nicht erzeugen. Versuch es noch einmal.
       success: Neues SCA-Schlüsselpaar erzeugt. Registriere den öffentlichen Schlüssel bei Wise, um die Einrichtung abzuschließen.

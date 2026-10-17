@@ -22,6 +22,7 @@ tr:
     entries:
       default_name: Wise işlemi
       fee_name: Wise ücreti
+      refund_name: Wise iadesi
     link_accounts:
       failed: Wise bakiyesi bağlanamadı. Lütfen tekrar deneyin.
       not_found: Wise bakiyesi bulunamadı.
