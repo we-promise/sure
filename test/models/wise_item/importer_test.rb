@@ -7,6 +7,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
   # An offset that is not a multiple of the limit is refused as Wise refuses
   # it (HTTP 422 inconsistent.pagination).
   # transfer_pages: { offset => rows } instead of slices of `transfers`.
+  # later_balances: what the balances read after the first one returns.
   # windowed_activities: only the activities created at or after `since`
   # come back (the field Wise filters on is undocumented; this is the
   # narrowest reading).
@@ -15,10 +16,11 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
 
     attr_reader :calls, :statement_requests, :transfer_requests, :activity_requests, :transfer_reads
 
-    def initialize(balances: nil, savings_balances: nil, borderless_accounts: nil, multi_currency_account: nil,
+    def initialize(balances: nil, later_balances: nil, savings_balances: nil, borderless_accounts: nil, multi_currency_account: nil,
                    transfers: nil, transfer_pages: nil, transfer_details: {}, activities: nil, activity_pages: nil, windowed_activities: false,
                    statements: nil, raise_on: {}, statement_fail_balance_ids: [])
       @balances = balances || [ standard_balance ]
+      @later_balances = later_balances
       @savings_balances = savings_balances || []
       @borderless_accounts = borderless_accounts || [ borderless_account ]
       @multi_currency_account = multi_currency_account || default_multi_currency_account
@@ -41,7 +43,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     def get_balances(profile_id)
       @calls << :get_balances
       raise_if(:get_balances)
-      @balances
+      @later_balances && @calls.count(:get_balances) > 1 ? @later_balances : @balances
     end
 
     def get_savings_balances(profile_id)
@@ -1612,6 +1614,286 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ [ "wise_activity_card_1", BigDecimal("12") ] ], eur.current_account.entries.pluck(:external_id, :amount)
   end
 
+  # Balance replay
+
+  # A synthetic multi-currency profile (fixture: every id, name, amount, rate
+  # and time made up). Every balance replays from zero to its live amount: the
+  # split parts are the ones the profile was built with (the ATM's 7.85 PLN
+  # fee is the 1.74 CHF the CHF balance paid of it), and the only payouts a
+  # balance cannot have paid are the CHF to CAD transfer a card paid (CHF held
+  # at most 182.23 of its 421.86) and a CHF to DKK one a bank transfer paid
+  # (CHF held at most 358.21 of its 486.40). That one follows a top-up and a
+  # card payment one summer night after 23:00 UTC (the next day in Dublin):
+  # only with Wise's times read as UTC do the three replay in order.
+  test "replays a synthetic multi-currency profile to its split parts and its card-funded payout" do
+    travel_to Time.utc(2026, 10, 17, 12) do
+      @family.update!(timezone: "Europe/Dublin")
+      @wise_item.update!(import_all_history: true)
+      provider = profile_provider
+
+      # Its transfers in pages Wise takes, and its statements unavailable
+      # without a warning per balance.
+      assert_no_difference -> { DebugLogEntry.where(provider_key: "wise", category: "provider_sync_error").count } do
+        assert_difference -> { replay_notes.where(level: "info").count }, 1 do
+          assert WiseItem::Importer.new(@wise_item, wise_provider: provider).import[:complete]
+        end
+      end
+      # Read again after the transfers and activities, unchanged.
+      assert_equal 2, provider.calls.count(:get_balances)
+
+      atm, sek_card, chf_card = %w[evt-109 evt-120 evt-124]
+      assert_equal({
+        "PLN" => [ [ atm, { "CHF" => "1.74", "PLN" => "400.00" }, [ "CHF" ] ],
+                   [ sek_card, { "SEK" => "262.45", "PLN" => "44.65" }, nil ],
+                   [ chf_card, { "CHF" => "12.95", "PLN" => "93.85" }, [ "CHF" ] ] ],
+        "CHF" => [ [ atm, { "CHF" => "1.74", "PLN" => "400.00" }, [ "CHF" ] ],
+                   [ chf_card, { "CHF" => "12.95", "PLN" => "93.85" }, [ "CHF" ] ] ],
+        "SEK" => [ [ sek_card, { "SEK" => "262.45", "PLN" => "44.65" }, nil ] ]
+      }, split_marks)
+      assert_equal [ [ "CHF", 62000107 ], [ "CHF", 62000113 ] ], funding_marks
+      assert_equal [ "62000107", "62000113" ], replay_notes.sole.metadata["external_transfer_ids"]
+
+      booked = process_every_balance
+      # From zero, each balance's entries add up to what Wise holds.
+      assert_equal({ "CHF" => BigDecimal("343.52"), "SEK" => BigDecimal("147.62"), "PLN" => BigDecimal("26.45"),
+                     "NOK" => BigDecimal("0") },
+                   booked.transform_values { |entries| -entries.sum { |entry| entry[2] } })
+      assert_equal [ BigDecimal("1.74"), BigDecimal("12.95") ],
+                   booked["CHF"].select { |entry| [ "wise_activity_#{atm}", "wise_activity_#{chf_card}" ].include?(entry[1]) }.map { |entry| entry[2] }
+      assert_empty booked["CHF"].select { |entry| entry[1].end_with?("_62000107") }
+
+      # A second sync with the same data changes nothing.
+      payloads = @wise_item.wise_accounts.reload.to_h { |wise_account| [ wise_account.currency, wise_account.raw_transactions_payload ] }
+      assert_no_difference -> { replay_notes.count } do
+        WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: profile_provider).import
+      end
+      assert_equal payloads, @wise_item.wise_accounts.reload.to_h { |wise_account| [ wise_account.currency, wise_account.raw_transactions_payload ] }
+      assert_equal booked, process_every_balance
+    end
+  end
+
+  # The balance moved between the two reads (a card payment settling while
+  # the feed was read), so its rows cannot be matched with either amount:
+  # the replay waits, and the re-fetched payout keeps its mark.
+  test "keeps a balance's marks when Wise holds another amount after the fetch" do
+    @wise_item.update!(import_all_history: true)
+    WiseItem::Importer.new(@wise_item, wise_provider: card_funded_payout_provider).import
+    gbp = @wise_item.wise_accounts.find_by!(currency: "GBP")
+    assert_equal [ [ "GBP", 7102 ] ], funding_marks
+
+    moving = card_funded_payout_provider(live: 125.0, later_live: 118.0)
+    assert_no_difference -> { replay_notes.count } do
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: moving).import
+    end
+
+    assert_equal 2, moving.calls.count(:get_balances)
+    assert_equal "external", gbp.reload.raw_transactions_payload.find { |row| row["id"] == 7102 }["wise_funding"]
+  end
+
+  # A replay that does not reconcile keeps the last marks instead of booking
+  # the payout again.
+  test "keeps a balance's marks and tells support when its replay does not reconcile" do
+    @wise_item.update!(import_all_history: true)
+    WiseItem::Importer.new(@wise_item, wise_provider: card_funded_payout_provider).import
+
+    # 10 GBP left the balance in a way no row shows.
+    assert_difference -> { replay_notes.where(level: "warn").count }, 1 do
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: card_funded_payout_provider(live: 90.0)).import
+    end
+
+    note = replay_notes.where(level: "warn").sole
+    gbp = @wise_item.wise_accounts.find_by!(currency: "GBP")
+    assert_equal [ "leftover_unexplained", "GBP", gbp.id ], note.metadata.values_at("reason", "currency", "wise_account_id")
+    assert_equal({ "flow_count" => 3, "payout_count" => 1 }, note.metadata.slice("flow_count", "payout_count"))
+    assert_equal [ [ "GBP", 7102 ] ], funding_marks
+  end
+
+  # GBP got a 90 top-up and a 4 GBP fee refund (a type Sure does not book),
+  # paid a 93 GBP payout from the balance, got 12 more and paid 7.42 GBP of a
+  # 150 EUR cash withdrawal the euro balance paid the rest of. EUR has a jar,
+  # so it is not replayed. GBP reconciled only by giving its leftover to that
+  # withdrawal, whose parts are not written: the payout is not marked
+  # externally funded, and support is told why (GBP keeps the payout booked,
+  # which its replay did not, so it does not reconcile).
+  test "marks no payout when the balance's leftover went into a split part that is not written" do
+    travel_to Time.utc(2026, 9, 14, 12) do
+      @wise_item.update!(import_all_history: true)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "GBP", date: Date.new(2026, 9, 11), rate: 0.86)
+      provider = split_withdrawal_provider(eur_top_up: "150", savings_balances: [ jar_balance(60000009, "EUR", "Holiday") ])
+
+      assert WiseItem::Importer.new(@wise_item, wise_provider: provider).import[:complete]
+
+      assert_empty funding_marks
+      note = replay_notes.sole
+      assert_equal [ "warn", "funding_unconfirmed", "GBP" ], [ note.level, *note.metadata.values_at("reason", "currency") ]
+    end
+  end
+
+  # As above, but the euro balance is replayed (it paid 145 EUR of the
+  # withdrawal) and Sure knows no EUR/GBP rate. GBP reconciled only with the
+  # payout taken as externally funded and a 96.42 GBP share no rate bounds; it
+  # kept the payout booked and the share was written too, so GBP booked the 93
+  # twice (-87.42 for a live 5.58). Now the withdrawal keeps its parts (none):
+  # GBP books the payout once and the euro balance the whole withdrawal, as
+  # without a replay.
+  test "books a payout once when the share of a split payment its replay put the payout's money in is not confirmed" do
+    travel_to Time.utc(2026, 9, 14, 12) do
+      @wise_item.update!(import_all_history: true)
+
+      assert WiseItem::Importer.new(@wise_item, wise_provider: split_withdrawal_provider(eur_top_up: "145")).import[:complete]
+
+      assert_empty funding_marks
+      assert_empty split_marks
+      assert_equal [ %w[EUR split_parts_withheld], %w[GBP funding_unconfirmed] ],
+                   replay_notes.where(level: "warn").map { |note| note.metadata.values_at("currency", "reason") }.sort
+      booked = process_every_balance.transform_values { |entries| entries.map { |_id, external_id, amount| [ external_id, amount ] } }
+      assert_equal [ [ "wise_transfer_7101", BigDecimal("-90") ], [ "wise_transfer_7102", BigDecimal("93") ],
+                     [ "wise_transfer_7103", BigDecimal("-12") ] ], booked["GBP"]
+      assert_equal [ [ "wise_activity_atm_1", BigDecimal("150") ], [ "wise_transfer_7104", BigDecimal("-145") ] ], booked["EUR"]
+    end
+  end
+
+  test "replays nothing when the second balance read fails, without failing the import" do
+    @wise_item.update!(import_all_history: true)
+    provider = card_funded_payout_provider
+    first_read = provider.method(:get_balances)
+    provider.define_singleton_method(:get_balances) do |profile_id|
+      raise Provider::Wise::WiseError.new("Unexpected response 502", :fetch_failed) if calls.include?(:get_balances)
+
+      first_read.call(profile_id)
+    end
+
+    result = nil
+    assert_difference -> { DebugLogEntry.where(provider_key: "wise", category: "provider_sync_error", level: "warn").count }, 1 do
+      result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
+
+    assert result[:success]
+    assert result[:complete]
+    assert_empty funding_marks
+  end
+
+  # A balance Wise dates before the fetched history (coverage from later than
+  # its creationTime) and one sharing its currency with another open balance
+  # (split parts are kept by currency).
+  test "replays only balances whose rows can hold everything that moved them" do
+    jar = { "id" => 60000009, "type" => "SAVINGS", "currency" => "GBP", "name" => "Holiday",
+            "amount" => { "value" => 0.0, "currency" => "GBP" }, "totalWorth" => { "value" => 0.0, "currency" => "GBP" } }
+    # A credit for a transfer Sure does not have, after the payout.
+    deposit = build_transfer_activity(99001, id: "bank_deposit", primary: "<positive>+ 30 GBP</positive>",
+                                             created_on: "2026-07-16T10:00:00.000Z").merge("type" => "BALANCE_DEPOSIT")
+    # Older than the payout balance, which takes every row (a currency Wise
+    # opened again under a new balance).
+    older_gbp = standard_balance(60000002, "GBP", 0.0).merge("investmentState" => "NOT_INVESTED", "creationTime" => "2026-04-01T08:00:00Z")
+    {
+      "without the full history" => [ { full_history: false }, 1 ],
+      "after a failed fetch" => [ { raise_on: { get_activities: "Unexpected response 502" } }, 1 ],
+      "for an invested balance" => [ { balance: { "investmentState" => "INVESTED" } }, 1 ],
+      "without the balance's creation time" => [ { balance: { "creationTime" => nil } }, 1 ],
+      "with a jar in its currency" => [ { savings_balances: [ jar ] }, 2 ],
+      "with a credit for an unknown transfer" => [ { live: 130.0, extra_activities: [ deposit ] }, 2 ],
+      "for a balance Wise dates before the account and the fetched history" => [ { balance: { "creationTime" => "2026-04-01T08:00:00Z" } }, 2 ],
+      "with another open balance in its currency" => [ { more_balances: [ older_gbp ] }, 2 ]
+    }.each do |label, (variant, balance_reads)|
+      @wise_item.wise_accounts.destroy_all
+      # Reloaded first: the previous import stored coverage the stale copy does not hold.
+      @wise_item.reload.update!(import_all_history: variant.fetch(:full_history, true), raw_payload: nil)
+      provider = card_funded_payout_provider(**variant.except(:full_history))
+
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+
+      assert_empty funding_marks, label
+      assert_equal balance_reads, provider.calls.count(:get_balances), label
+    end
+  end
+
+  # Payloads are stored in one transaction with a savepoint per balance, so
+  # the database refusing one balance's rows (PostgreSQL takes no NUL in
+  # jsonb) keeps the others'.
+  test "stores the other balances' rows when the database refuses one balance's" do
+    provider = FakeWiseProvider.new(
+      balances: [ eur_balance("10000001", 0.0), standard_balance("10000002", "USD", 0.0) ], borderless_accounts: [],
+      transfers: [ build_transfer(id: 1), build_transfer(id: 2, source_currency: "USD", target_currency: "USD").merge("reference" => "a\u0000b") ],
+      raise_on: { get_balance_statements: statements_forbidden }
+    )
+
+    result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_not result[:success]
+    assert_equal 1, result[:transactions_failed]
+    assert_equal [ 1 ], @wise_item.wise_accounts.find_by!(currency: "EUR").raw_transactions_payload.map { |row| row["id"] }
+    assert_nil @wise_item.wise_accounts.find_by!(currency: "USD").raw_transactions_payload
+  end
+
+  # GBP got 50, converted 11.31 GBP into 13 EUR, and paid 10.44 GBP of a 25
+  # EUR card payment the euro balance paid 13 EUR of. The copies of a split
+  # payment carry the same parts, so when the database refuses the euro
+  # balance's payload (a NUL in a held card payment), GBP's new parts are
+  # not stored either, and the next sync stores both.
+  test "stores a split payment's new parts on every balance holding it or on none" do
+    travel_to Time.utc(2026, 3, 5, 12) do
+      @wise_item.update!(import_all_history: true)
+      replayable = { "investmentState" => "NOT_INVESTED", "creationTime" => "2026-03-01T08:00:00Z" }
+      balances = [ standard_balance(60000001, "GBP", 28.25).merge(replayable, "recipientId" => 90000101),
+                   standard_balance(60000002, "EUR", 0.0).merge(replayable, "recipientId" => 90000102) ]
+      top_up = build_transfer(id: 7101, source_currency: "GBP", target_currency: "GBP", target_account: 90000101)
+                 .merge("sourceValue" => 50.0, "targetValue" => 50.0, "created" => "2026-03-01 09:00:00")
+      activities = [ build_interbalance("To <strong>EUR</strong>", resource_id: "8001", primary: "13 EUR", secondary: "11.31 GBP")
+                       .merge("createdOn" => "2026-03-01T10:00:00Z"),
+                     build_card_activity("split_card", "25 EUR", "GBP, EUR", created_on: "2026-03-01T12:00:00.000Z") ]
+      held = build_card_activity("held_card", "4 EUR", status: "IN_PROGRESS", created_on: "2026-03-02T12:00:00.000Z")
+      import = lambda do |extra_activities|
+        provider = FakeWiseProvider.new(balances: balances, borderless_accounts: [],
+                                        multi_currency_account: { "id" => 40000001, "recipientId" => 90000001, "creationTime" => "2026-03-01T07:59:00Z" },
+                                        transfers: [ top_up ], activities: activities + extra_activities,
+                                        raise_on: { get_balance_statements: statements_forbidden })
+        WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+      end
+
+      refused = import.call([ held.merge("title" => "<strong>Caf\u0000e</strong>") ])
+      assert_equal 2, refused[:transactions_failed]
+      assert_empty split_marks
+
+      assert_equal 0, import.call([ held ])[:transactions_failed]
+      parts = { "EUR" => "13.00", "GBP" => "10.44" }
+      assert_equal({ "EUR" => [ [ "split_card", parts, nil ] ], "GBP" => [ [ "split_card", parts, nil ] ] }, split_marks)
+    end
+  end
+
+  # The replay runs in a savepoint, so a database error in its exchange rate
+  # lookup changes no mark and loses no payload; support is told.
+  test "stores the payloads unmarked when the replay's rate lookup fails in the database" do
+    @wise_item.update!(import_all_history: true)
+    broken_lookup = ExchangeRate.where("wise_no_such_column = 1")
+    ExchangeRate.stubs(:where).returns(broken_lookup)
+    atm = build_card_activity("atm_1", "150 EUR", "GBP, EUR", type: "CASH_WITHDRAWAL", created_on: "2026-07-17T10:00:00.000Z")
+
+    result = nil
+    assert_difference -> { DebugLogEntry.where(provider_key: "wise", category: "provider_sync_error", level: "error").count }, 1 do
+      result = WiseItem::Importer.new(@wise_item, wise_provider: card_funded_payout_provider(extra_activities: [ atm ])).import
+    end
+
+    assert result[:success]
+    assert_equal %w[7101 7102 atm_1 card_1], @wise_item.wise_accounts.sole.raw_transactions_payload.map { |row| row["id"].to_s }.sort
+    assert_empty funding_marks
+    assert_equal "balance_replay", DebugLogEntry.where(provider_key: "wise", category: "provider_sync_error").sole.metadata["operation"]
+  end
+
+  # A card payment Wise has not completed is not booked and its hold is out of
+  # the balance's amount, so the live amount the replay ends at counts the
+  # hold back in (amount 90 + 10 reserved): the card-funded payout is still
+  # found.
+  test "replays a balance with a pending card hold to its amount plus what the hold reserves" do
+    @wise_item.update!(import_all_history: true)
+    hold = build_card_activity("hold_1", "10 GBP", status: "IN_PROGRESS", created_on: "2026-07-15T10:00:00.000Z")
+    provider = card_funded_payout_provider(live: 90.0, balance: { "reservedAmount" => { "value" => 10.0, "currency" => "GBP" } },
+                                           extra_activities: [ hold ])
+
+    assert WiseItem::Importer.new(@wise_item, wise_provider: provider).import[:complete]
+
+    assert_equal [ [ "GBP", 7102 ] ], funding_marks
+  end
+
   # A repeated cursor means Wise ignored it and the feed was not read to the
   # end, so the fetch now fails the import and its pages are dropped instead
   # of passing for the complete history.
@@ -2103,6 +2385,11 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
       DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "activity_routing")
     end
 
+    # What the importer reports about the balance replay.
+    def replay_notes
+      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "balance_replay")
+    end
+
     def standard_balance(id, currency, value)
       { "id" => id, "type" => "STANDARD", "amount" => { "value" => value, "currency" => currency },
         "reservedAmount" => { "value" => 0.0, "currency" => currency } }
@@ -2110,6 +2397,111 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
 
     def eur_balance(id, value)
       standard_balance(id, "EUR", value)
+    end
+
+    # Statements answered with Wise's SCA challenge, as without an SCA key.
+    def profile_provider
+      profile = JSON.parse(file_fixture("wise/multi_currency_profile.json").read)
+      FakeWiseProvider.new(balances: profile["balances"], borderless_accounts: [],
+                           multi_currency_account: profile["multi_currency_account"], transfers: profile["transfers"],
+                           activities: profile["activities"], raise_on: { get_balance_statements: statements_challenged })
+    end
+
+    # A GBP balance that held 120 when a card paid its GBP to USD payout
+    # (160.25 GBP gross), then paid 20 GBP by card, so Wise holds 100
+    # (later_live: what the balance read after the transfers and activities
+    # returns instead; more_balances: other balances Wise lists).
+    def card_funded_payout_provider(live: 100.0, later_live: nil, balance: {}, more_balances: [], extra_activities: [], raise_on: {}, **options)
+      gbp = { "id" => 60000001, "currency" => "GBP", "type" => "STANDARD", "investmentState" => "NOT_INVESTED",
+              "creationTime" => "2026-07-01T08:00:00Z", "recipientId" => 90000101,
+              "amount" => { "value" => live, "currency" => "GBP" },
+              "reservedAmount" => { "value" => 0.0, "currency" => "GBP" } }.merge(balance)
+      activities = [
+        build_transfer_activity(7101, primary: "<positive>+ 120 GBP</positive>", created_on: "2026-07-07T11:38:24.906Z"),
+        build_transfer_activity(7102, primary: "213 USD", secondary: "160.25 GBP", created_on: "2026-07-09T15:21:08.517Z"),
+        build_card_activity("card_1", "20 GBP", created_on: "2026-07-13T10:00:00.000Z")
+      ]
+      FakeWiseProvider.new(
+        balances: [ gbp ] + more_balances,
+        later_balances: later_live && [ gbp.merge("amount" => { "value" => later_live, "currency" => "GBP" }) ] + more_balances,
+        borderless_accounts: [],
+        multi_currency_account: { "id" => 40000001, "recipientId" => 90000001, "creationTime" => "2026-07-01T07:59:00Z" },
+        transfers: card_funded_transfers, activities: activities + extra_activities,
+        raise_on: { get_balance_statements: statements_forbidden }.merge(raise_on), **options
+      )
+    end
+
+    # The split withdrawal scenario: GBP got a 90 top-up and a 4 GBP fee
+    # refund (a type Sure does not book), paid a 93 GBP payout from the
+    # balance, got 12 more, and paid what the euro balance did not of a
+    # 150 EUR cash withdrawal; the euro balance got eur_top_up just before.
+    # Wise holds GBP 5.58 and EUR 0.
+    def split_withdrawal_provider(eur_top_up:, savings_balances: [])
+      replayable = { "investmentState" => "NOT_INVESTED", "creationTime" => "2026-08-26T13:00:00Z" }
+      balances = [ standard_balance(60000001, "GBP", 5.58).merge(replayable, "recipientId" => 90000101),
+                   standard_balance(60000002, "EUR", 0.0).merge(replayable, "recipientId" => 90000102) ]
+      transfer = ->(id, currency, value, target_account, created) {
+        build_transfer(id: id, source_currency: currency, target_currency: currency, target_account: target_account)
+          .merge("sourceValue" => value.to_f, "targetValue" => value.to_f, "created" => created)
+      }
+      # Top-ups into the balances' own account details, and a payout.
+      transfers = [ transfer.call(7101, "GBP", "90", 90000101, "2026-09-01 09:20:00"), transfer.call(7102, "GBP", "93", 55555555, "2026-09-05 11:12:00"),
+                    transfer.call(7103, "GBP", "12", 90000101, "2026-09-08 15:35:00"), transfer.call(7104, "EUR", eur_top_up, 90000102, "2026-09-11 07:50:00") ]
+      activities = [
+        build_transfer_activity(7101, primary: "<positive>+ 90 GBP</positive>", created_on: "2026-09-01T09:20:00.500Z"),
+        build_card_activity("fee_refund_1", "<positive>+ 4 GBP</positive>", type: "FEE_REFUND", resource_type: "BALANCE_TRANSACTION",
+                                                                           created_on: "2026-09-01T13:45:00.000Z"),
+        build_transfer_activity(7102, primary: "93 GBP", created_on: "2026-09-05T11:12:00.500Z"),
+        build_transfer_activity(7103, primary: "<positive>+ 12 GBP</positive>", created_on: "2026-09-08T15:35:00.500Z"),
+        build_transfer_activity(7104, primary: "<positive>+ #{eur_top_up} EUR</positive>", created_on: "2026-09-11T07:50:00.500Z"),
+        build_card_activity("atm_1", "150 EUR", "GBP, EUR", type: "CASH_WITHDRAWAL", created_on: "2026-09-11T10:41:00.000Z")
+      ]
+      FakeWiseProvider.new(
+        balances: balances, savings_balances: savings_balances, borderless_accounts: [],
+        multi_currency_account: { "id" => 40000001, "recipientId" => 90000001, "creationTime" => "2026-08-26T12:59:00Z" },
+        transfers: transfers, activities: activities, raise_on: { get_balance_statements: statements_forbidden }
+      )
+    end
+
+    # The card-funded payout scenario's top-up into the GBP balance's own
+    # account details and the 158.40 (gross 160.25) GBP to USD payout.
+    def card_funded_transfers
+      [ build_transfer(id: 7101, source_currency: "GBP", target_currency: "GBP", target_account: 90000101)
+          .merge("created" => "2026-07-07 11:38:24", "sourceValue" => 120.0, "targetValue" => 120.0),
+        build_transfer(id: 7102, source_currency: "GBP", target_currency: "USD", target_account: 55555555)
+          .merge("created" => "2026-07-09 15:21:07", "sourceValue" => 158.4, "targetValue" => 213.0) ]
+    end
+
+    # { currency => [[activity id, split parts, estimated currencies], ...] }
+    # for the stored rows that carry split parts.
+    def split_marks
+      @wise_item.wise_accounts.reload.to_h do |wise_account|
+        marked = Array(wise_account.raw_transactions_payload).select { |row| row.key?("wise_split_parts") }
+        [ wise_account.currency, marked.map { |row| row.values_at("id", "wise_split_parts", "wise_split_estimated") }.sort_by(&:first) ]
+      end.reject { |_currency, rows| rows.empty? }
+    end
+
+    # [currency, transfer id] of each stored transfer marked externally funded.
+    def funding_marks
+      @wise_item.wise_accounts.reload.flat_map do |wise_account|
+        Array(wise_account.raw_transactions_payload).select { |row| row["wise_funding"] == "external" }
+                                                    .map { |row| [ wise_account.currency, row["id"] ] }
+      end
+    end
+
+    # Links (once) and processes every balance:
+    # { currency => [[entry id, external id, amount], ...] }.
+    def process_every_balance
+      @wise_item.wise_accounts.reload.to_h do |wise_account|
+        wise_account = link_account(wise_account) unless wise_account.current_account
+        assert WiseAccount::Transactions::Processor.new(wise_account).process[:success]
+        [ wise_account.currency, wise_account.current_account.entries.order(:external_id).pluck(:id, :external_id, :amount) ]
+      end
+    end
+
+    def jar_balance(id, currency, name, value = 0.0)
+      { "id" => id, "type" => "SAVINGS", "name" => name, "amount" => { "value" => value, "currency" => currency },
+        "totalWorth" => { "value" => value, "currency" => currency }, "reservedAmount" => { "value" => 0.0, "currency" => currency } }
     end
 
     # { balance id => sorted ids of the rows stored on it }.
