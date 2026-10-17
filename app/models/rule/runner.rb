@@ -148,6 +148,22 @@ class Rule::Runner
       error_message = "#{error.class}: #{error.message}"
       Rails.logger.error("Rule::Runner failed for rule #{rule.id}: #{error_message}")
 
+      DebugLogEntry.capture(
+        category: "rule_run",
+        level: "error",
+        message: "Rule run failed: #{error_message}",
+        source: self.class.name,
+        family: rule.family,
+        metadata: {
+          rule_id: rule.id,
+          rule_name: rule.name,
+          execution_type: execution_type,
+          error_class: error.class.name,
+          error_message: error.message,
+          backtrace: Array(error.backtrace).first(10)
+        }
+      )
+
       if rule_run
         rule_run.update(status: "failed", error_message: error_message)
         rule_run
