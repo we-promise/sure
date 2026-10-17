@@ -1846,6 +1846,30 @@ RSpec.configure do |config|
               sankey: { '$ref' => '#/components/schemas/CashFlowSankey' }
             }
           },
+          SpendingVsNormalCategory: {
+            type: :object, required: %w[id name color filter_value total normal change ratio],
+            properties: {
+              id: { type: :string, format: :uuid, nullable: true, description: 'Null for the synthetic Uncategorized category. A parent\'s own spending is listed among its subcategories with the parent\'s id' },
+              name: { type: :string }, color: { type: :string, nullable: true },
+              filter_value: { type: :string, description: 'Value for the transactions category filter' },
+              total: { type: :string, description: 'Net spending in the period (expense minus refunds), at least zero' },
+              normal: { type: :string, nullable: true, description: 'Net spending over the baseline period, scaled to the period length. Null without enough history' },
+              change: { type: :string, nullable: true, description: 'total minus normal' },
+              ratio: { type: :string, nullable: true, description: 'Fractional change against normal (0.5 = 50% more). Null without a positive normal' },
+              subcategories: { type: :array, items: { '$ref' => '#/components/schemas/SpendingVsNormalCategory' }, description: 'Present on parent categories only; adds up to the parent total' }
+            }
+          },
+          SpendingVsNormal: {
+            type: :object, required: %w[currency period baseline_period comparable total normal_total categories],
+            properties: {
+              currency: { type: :string },
+              period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+              baseline_period: { allOf: [ { '$ref' => '#/components/schemas/FinancialPeriod' } ], nullable: true, description: 'Up to a year before the period, from the first counted transaction. Null with under 28 days of history' },
+              comparable: { type: :boolean },
+              total: { type: :string }, normal_total: { type: :string, nullable: true },
+              categories: { type: :array, items: { '$ref' => '#/components/schemas/SpendingVsNormalCategory' }, description: 'Parent categories, largest total first' }
+            }
+          },
           CashFlow: {
             type: :object,
             required: %w[month as_of time_zone currency period income spending net_savings savings_rate spending_comparison],
