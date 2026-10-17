@@ -960,6 +960,44 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "dashboard shows the availability widget only with preview features" do
+    get root_path
+    assert_select "#liquidity-overview", count: 0
+
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    @family.accounts.create!(name: "Term deposit", balance: 2_500, currency: "USD",
+                             accountable: Depository.new(subtype: "cd"),
+                             liquidity_choice: "locked", available_on: Date.current + 60)
+
+    get root_path
+    assert_response :ok
+    assert_select "#liquidity-overview"
+    assert_select "#liquidity-overview [data-liquidity-level='locked']"
+    assert_select "#liquidity-release-timeline [data-liquidity-bucket='within_3_months']", text: /Term deposit/
+  end
+
+  test "availability widget asks once to check the classification" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get root_path
+    assert_select "#liquidity-review"
+
+    patch dashboard_liquidity_review_path
+    assert_redirected_to root_path
+    assert @user.reload.liquidity_review_dismissed?
+
+    get root_path
+    assert_select "#liquidity-overview"
+    assert_select "#liquidity-review", count: 0
+  end
+
+  test "the hidden availability widget is not offered back without preview features" do
+    @user.update_dashboard_section_hidden("liquidity", true)
+
+    get root_path(customize: true)
+    assert_select "form[action='#{dashboard_section_hidden_path("liquidity")}']", count: 0
+  end
+
   test "dashboard spending trend category filter narrows both months and the header totals" do
     account, selected_month, previous_month = spending_trend_filter_setup
     food = @family.categories.create!(name: "Spending Filter Food")

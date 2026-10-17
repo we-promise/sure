@@ -131,17 +131,61 @@ class BudgetAvailableCashTest < ActiveSupport::TestCase
     assert_equal 1_000, @budget.available_cash
   end
 
+  # --- Availability (Account::Liquidity), preview only ---
+
+  test "with preview on, a term deposit counts only once it is released" do
+    viewer = preview_viewer
+    checking = depository(2_000, owner: viewer)
+    cd = depository(5_000, subtype: "cd", owner: viewer)
+    cd.update!(available_on: Date.current + 30)
+
+    assert_equal 2_000, budget_for(viewer).available_cash
+
+    cd.update!(available_on: Date.current)
+
+    assert_equal checking.balance + cd.balance, budget_for(viewer).available_cash
+  end
+
+  test "with preview on, an HSA and a brokerage account do not count, a manual immediate account does" do
+    viewer = preview_viewer
+    depository(2_000, owner: viewer)
+    depository(3_000, subtype: "hsa", owner: viewer)
+    investment(9_000, owner: viewer)
+    investment(400, owner: viewer).update!(liquidity_choice: "immediate")
+
+    assert_equal 2_400, budget_for(viewer).available_cash
+  end
+
+  test "without preview, every depository still counts" do
+    viewer = users(:empty)
+    viewer.update!(preferences: (viewer.preferences || {}).merge("preview_features_enabled" => false))
+    depository(2_000, owner: viewer)
+    depository(5_000, subtype: "cd", owner: viewer).update!(available_on: Date.current + 30)
+
+    assert_equal 7_000, budget_for(viewer).available_cash
+  end
+
   private
-    def depository(balance)
+    def preview_viewer
+      users(:empty).tap do |user|
+        user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+      end
+    end
+
+    def budget_for(user)
+      Budget.find(@budget.id).tap { |budget| budget.current_user = user }
+    end
+
+    def depository(balance, subtype: nil, owner: nil)
       Account.create!(
-        family: @family, accountable: Depository.new,
+        family: @family, accountable: Depository.new(subtype: subtype), owner: owner,
         name: "Cash #{SecureRandom.hex(4)}", currency: @family.currency, balance: balance
       )
     end
 
-    def investment(balance)
+    def investment(balance, owner: nil)
       Account.create!(
-        family: @family, accountable: Investment.new,
+        family: @family, accountable: Investment.new, owner: owner,
         name: "Brokerage #{SecureRandom.hex(4)}", currency: @family.currency, balance: balance
       )
     end

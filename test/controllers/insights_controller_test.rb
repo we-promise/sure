@@ -308,6 +308,23 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", insights_path, count: 0
   end
 
+  test "renders a release reminder with its figure and account link" do
+    account = accounts(:depository)
+    @user.family.insights.create!(
+      insight_type: "account_release", priority: "medium", status: "active",
+      title: "Term deposit is released soon", body: "$5,000.00 on Term deposit becomes available on October 15, 2026.",
+      facts: { "balance" => "$5,000.00", "days" => 10 },
+      metadata: { "account_id" => account.id, "kind" => "upcoming", "release_on" => "2026-10-15" },
+      generated_at: Time.current, dedup_key: "account_release:upcoming:#{account.id}:2026-10-15"
+    )
+
+    get insights_url
+
+    assert_response :success
+    assert_includes response.body, "free in 10 days"
+    assert_select "a[href='#{account_path(account)}']", text: I18n.t("insights.actions.account_release")
+  end
+
   private
     def enable_preview_features
       @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))

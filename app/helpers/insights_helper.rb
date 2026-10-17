@@ -10,7 +10,8 @@ module InsightsHelper
     "budget_on_track" => "circle-check",
     # Same shield the reserve panel uses on the goal page, so the two read as
     # the same object seen from two places.
-    "maintained_goal_depleted" => "shield-alert"
+    "maintained_goal_depleted" => "shield-alert",
+    "account_release" => "calendar-clock"
   }.freeze
 
   def insight_icon_key(insight)
@@ -81,6 +82,8 @@ module InsightsHelper
     when "budget_on_track"
       # Still the right figure here, where overall usage *is* the subject.
       facts["budget_spent_pct"] && [ "#{facts["budget_spent_pct"]}%", t("insights.figures.of_budget") ]
+    when "account_release"
+      facts["balance"] && [ facts["balance"], account_release_caption(insight) ]
     end
   end
 
@@ -117,6 +120,9 @@ module InsightsHelper
     when "maintained_goal_depleted"
       goal = insight.family.goals.find_by(id: metadata["goal_id"])
       goal && { text: t("insights.actions.maintained_goal_depleted"), href: goal_path(goal) }
+    when "account_release"
+      account = insight.family.accounts.visible.find_by(id: metadata["account_id"])
+      account && { text: t("insights.actions.account_release"), href: account_path(account) }
     end
   end
 
@@ -158,6 +164,13 @@ module InsightsHelper
       metadata["direction"] == "below" ? :positive : :warning
     when "cash_flow_warning"
       metadata["negative"] ? :negative : :warning
+    when "account_release"
+      # Money coming free is good news; a renewal is a deadline to act on.
+      case metadata["kind"]
+      when "released" then :positive
+      when "renewal" then :warning
+      else :neutral
+      end
     when "budget_at_risk", "maintained_goal_depleted"
       # Warning, not negative: the reserve is short, not overdrawn, and red is
       # reserved here for money actually going the wrong side of zero.
@@ -168,6 +181,16 @@ module InsightsHelper
   end
 
   private
+    def account_release_caption(insight)
+      facts = insight.facts || {}
+
+      case insight.metadata&.dig("kind")
+      when "released" then t("insights.figures.released")
+      when "renewal" then t("insights.figures.renews_on", date: facts["date"])
+      else t("insights.figures.released_in", count: facts["days"].to_i)
+      end
+    end
+
     # "June" for month-aligned periods, "Next 30 days" / "Last 30 days" for
     # rolling windows, an explicit range otherwise; subject name (account,
     # merchant) for insights without a period.

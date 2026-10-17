@@ -89,6 +89,7 @@ en:
         overview: Overview
         schedule: Schedule
         statements: Statements
+        details: Details
       activity:
         amount: Amount
         balance: Balance
@@ -171,6 +172,49 @@ en:
       credit_card: Credit Cards
       loan: Loans
       other_liability: Other Liabilities
+    liquidity:
+      preview: Preview
+      levels:
+        immediate: Available immediately
+        short_term: Available at short notice
+        locked: Locked until a date
+        long_term: Locked long-term
+      badge:
+        short_term: Available at short notice
+        locked: Locked
+        locked_until: "Locked until %{date}"
+        long_term: Locked long-term
+      form:
+        heading: Availability
+        level_label: How quickly can you get to this money?
+        level_hint: Set automatically from the account type. Change it if this account works differently.
+        automatic: "Automatic (%{level})"
+        available_on_label: Locked until
+        auto_renew_label: Renews automatically
+        renewal_term_months_label: Term in months
+      details:
+        title: Details
+        intro_subtype: "Rules for this account. Defaults come from the subtype %{subtype}."
+        intro_type: "Rules for this account. Defaults come from the account type %{type}."
+        edit: Change availability
+        "yes": "Yes"
+        "no": "No"
+        no_release_date: No date set
+        renews:
+          one: renews every month
+          other: "renews every %{count} months"
+        rows:
+          liquidity: Availability
+          release: Released on
+          tax_treatment: Tax treatment
+          counts_in_budget: Transactions count in budget and cash flow
+          counts_as_budget_cash: Balance counts as free money in the budget
+        sources:
+          subtype: "From subtype %{subtype}"
+          account_type: "From account type %{type}"
+          user: Set by you
+          tax_treatment: Follows the tax treatment
+          liquidity: Follows the availability
     tax_treatments:
       taxable: Taxable
       tax_deferred: Tax-Deferred

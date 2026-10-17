@@ -12,6 +12,17 @@ de:
       heading: Nutzungsbedingungen
       placeholder: Der Inhalt der Nutzungsbedingungen wird hier angezeigt.
     dashboard:
+      liquidity:
+        title: Verfügbarkeit
+        available_net_worth: Verfügbares Vermögen
+        available_assets: Verfügbar
+        bound_assets: Gebunden
+        short_term_liabilities: Kurzfristige Schulden
+        view_report: Freigabetermine in den Berichten
+        review:
+          title: Bitte prüfe die Einstufung deiner Konten
+          body: Jedes Konto hat seine Verfügbarkeit aus der Kontoart bekommen. Sparkonten sind in der Praxis oft gebunden. Öffne unten ein Konto und ändere die Verfügbarkeit in den Kontoeinstellungen, wenn es anders funktioniert.
+          dismiss: Verstanden
       welcome: "Willkommen zurück, %{name}"
       subtitle: "Hier siehst du, was in deinen Finanzen passiert."
       new: "Neu"

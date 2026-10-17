@@ -270,6 +270,13 @@ class Demo::Generator
       # Savings account (USD)
       @marcus_savings = family.accounts.create!(accountable: Depository.new(subtype: "savings"), name: "Marcus High-Yield Savings", balance: 0, currency: "USD")
 
+      # Money locked until a date (Account::Liquidity): a term deposit maturing
+      # in a few months and a building savings contract running for years.
+      @ally_cd = family.accounts.create!(accountable: Depository.new(subtype: "cd"), name: "Ally 12-Month CD", balance: 0, currency: "USD",
+                                         available_on: 5.months.from_now.to_date)
+      @building_savings = family.accounts.create!(accountable: Depository.new(subtype: "building_savings"), name: "Building Savings Contract", balance: 0,
+                                                  currency: "USD", available_on: 3.years.from_now.to_date)
+
       # EUR checking (EUR)
       @eu_checking = family.accounts.create!(accountable: Depository.new(subtype: "checking"), name: "Deutsche Bank EUR Account", balance: 0, currency: "EUR")
 
@@ -1334,6 +1341,22 @@ class Demo::Generator
         name: Valuation.build_reconciliation_name(@jewelry.accountable_type),
         currency: "USD",
         date: 90.days.ago.to_date
+      )
+
+      @ally_cd.entries.create!(
+        entryable: Valuation.new(kind: "reconciliation"),
+        amount: 15_000,
+        name: Valuation.build_reconciliation_name(@ally_cd.accountable_type),
+        currency: "USD",
+        date: 7.months.ago.to_date
+      )
+
+      @building_savings.entries.create!(
+        entryable: Valuation.new(kind: "reconciliation"),
+        amount: 8_400,
+        name: Valuation.build_reconciliation_name(@building_savings.accountable_type),
+        currency: "USD",
+        date: 60.days.ago.to_date
       )
 
       @personal_loc.entries.create!(

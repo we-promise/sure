@@ -145,4 +145,18 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
     assert listed[:claimed_in_full]
     assert listed.key?(:free_to_earmark)
   end
+
+  test "does not list or link another member's private account" do
+    other = users(:family_member)
+    private_account = Account.create!(
+      family: @family, accountable: Investment.new, owner: other,
+      name: "Private Brokerage", currency: "USD", balance: 9_000
+    )
+
+    result = @fn.call("name" => "Rainy day", "target_amount" => 500, "linked_account_names" => [ private_account.name ])
+
+    assert_not result[:success]
+    assert_equal [ private_account.name ], result[:unknown_names]
+    assert_not_includes result[:available_accounts].map { |account| account[:name] }, private_account.name
+  end
 end

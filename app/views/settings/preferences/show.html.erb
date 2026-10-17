@@ -267,6 +267,27 @@
   <% end %>
 <% end %>
 
+<% if preview_features_enabled? %>
+  <%# Release reminders for locked accounts. Per person, so it
+      posts to the same per-user preferences endpoint as the preview toggle. %>
+  <%= settings_section title: t(".account_release.title"), subtitle: t(".account_release.subtitle") do %>
+    <%= styled_form_with url: settings_preferences_path, method: :patch, scope: :user, class: "space-y-4",
+          data: { controller: "auto-submit-form" } do |form| %>
+      <%= form.select :account_release_channel,
+          User::ACCOUNT_RELEASE_CHANNELS.map { |channel| [ t(".account_release.channels.#{channel}"), channel ] },
+          { label: t(".account_release.channel_label"), selected: @user.account_release_channel },
+          { data: { auto_submit_form_target: "auto" } } %>
+      <%= form.number_field :account_release_lead_days,
+          value: @user.account_release_lead_days,
+          min: Account::ReleaseReminder::LEAD_DAYS_RANGE.min,
+          max: Account::ReleaseReminder::LEAD_DAYS_RANGE.max,
+          label: t(".account_release.lead_days_label"),
+          data: { auto_submit_form_target: "auto" } %>
+      <p class="text-xs text-secondary"><%= t(".account_release.hint") %></p>
+    <% end %>
+  <% end %>
+<% end %>
+
 <%# Preview features toggle — visible to all users, not just admins. Lives at
     the bottom of Preferences as a standalone card (no section header) so the
     toggle row is the entire surface. Posts directly to

@@ -68,6 +68,17 @@ de:
         manage_currencies_subtitle: Wähle Währungen ab, die du nie brauchst, oder kürze die Liste auf wenige zusammen.
         no_additional_currencies: Keine ausgewählt
         no_matching_currencies: Keine Währungen gefunden
+        account_release:
+          title: Freigabe-Hinweise
+          subtitle: Erfahre, wann Geld auf einem Festgeld oder ähnlichen Konto frei wird oder sich bald verlängert.
+          channel_label: Wie möchtest du informiert werden?
+          channels:
+            insight: In den Hinweisen
+            email: Per E-Mail
+            both: Hinweise und E-Mail
+            "off": Gar nicht
+          lead_days_label: Tage vorher
+          hint: Du bekommst so viele Tage vor dem Freigabe- bzw. Verlängerungsdatum einen Hinweis und noch einmal, sobald das Geld frei ist. Die Hinweise sieht dein ganzer Haushalt.
         preview:
           description: Schalte Funktionen frei, die noch in Arbeit sind und als Preview oder Canary gekennzeichnet sind.
           title: Vorschaufunktionen aktivieren

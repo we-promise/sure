@@ -27,6 +27,12 @@ class Loan < ApplicationRecord
   MAX_INTEREST_RATE = 100
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
+
+  # A line of credit is drawn on like an overdraft, so it is a short-term debt;
+  # every other loan is long-term.
+  def self.default_liquidity_for(subtype)
+    subtype == "line_of_credit" ? "immediate" : "long_term"
+  end
   # The form caps the date picker at today; this is the same bound where a
   # crafted request cannot skip it. A loan drawn down in the future has no
   # history to chart and would schedule a first payment months away while

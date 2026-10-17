@@ -3,6 +3,7 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
 
   MAX_SERIES_POINTS = 400
   INTERVALS = [ "1 day", "1 week", "1 month" ].freeze
+  MAX_RELEASES = 10
 
   class << self
     def name
@@ -16,6 +17,8 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
         This is great for answering questions like:
         - What is the user's net worth?  What is it composed of?
         - How has the user's wealth changed over time?
+        - How much money can the user get to at short notice, and when is locked money released?
+          (use "availability": available vs. locked wealth and upcoming release dates)
 
         For "net worth over time" questions, pass a named period (or a custom
         start_date and end_date) and an interval to control the granularity of
@@ -80,6 +83,7 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
         current: balance_sheet.liabilities.total_money.format,
         monthly_history: historical_data(period, interval, classification: "liability")
       },
+      availability: availability_data,
       insights: insights_data
     }
   end
@@ -132,6 +136,28 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
 
         to_ai_time_series(builder.balance_series)
       end
+    end
+
+    # Available vs. locked wealth (Account::Liquidity), so "how much can I
+    # spend" questions do not count term deposits or pensions as free money.
+    def availability_data
+      overview = balance_sheet.liquidity
+
+      {
+        as_of_date: overview.date,
+        available_net_worth: overview.available_net_worth.format,
+        available_assets: overview.available_assets.format,
+        locked_assets: overview.bound_assets.format,
+        short_term_liabilities: overview.short_term_liabilities.format,
+        upcoming_releases: overview.releases.first(MAX_RELEASES).map do |release|
+          {
+            account: release.account.name,
+            date: release.date,
+            amount: release.amount.format,
+            renews_automatically: release.auto_renew
+          }
+        end
+      }
     end
 
     def insights_data

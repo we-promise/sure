@@ -25,6 +25,7 @@ en:
       header_new: New
       acknowledge_aria: "Got it: %{title}"
     types:
+      account_release: Release
       spending_anomaly: Spending
       cash_flow_warning: Cash flow
       net_worth_milestone: Net worth
@@ -43,6 +44,11 @@ en:
         other: Last %{count} days
       date_range: "%{from} to %{to}"
     figures:
+      released: available now
+      released_in:
+        one: free in %{count} day
+        other: free in %{count} days
+      renews_on: "renews %{date}"
       vs_previous: vs prior month
       today: today
       on_pace: on pace
@@ -55,6 +61,7 @@ en:
         one: idle %{count} day
         other: idle %{count} days
     actions:
+      account_release: Go to account
       spending_anomaly: View %{category} transactions
       cash_flow_warning: Review recurring transactions
       net_worth_milestone: View net worth report
@@ -64,6 +71,10 @@ en:
       budget: View budget
       maintained_goal_depleted: View reserve
     titles:
+      account_release:
+        upcoming: "%{account} is released soon"
+        released: "%{account} is available now"
+        renewal: "%{account} renews soon"
       spending_anomaly:
         above: "%{category} spending is trending up"
         below: "%{category} spending is trending down"
@@ -82,6 +93,10 @@ en:
         other: "%{count} categories need attention in your budget"
       budget_on_track: Your budget is on track
     templates:
+      account_release:
+        upcoming: "%{balance} on %{account} becomes available on %{date}."
+        released: "%{balance} on %{account} has been available since %{date}. Set a new date if you reinvest it, or mark the account as available."
+        renewal_notice: "%{account} (%{balance}) renews automatically on %{date}. To get the money out, cancel before then."
       spending_anomaly:
         above: You're on pace to spend %{projected_spend} on %{category} this month, about %{deviation_pct}% more than your recent monthly average of %{baseline_spend}.
         below: You're on pace to spend %{projected_spend} on %{category} this month, about %{deviation_pct}% less than your recent monthly average of %{baseline_spend}.

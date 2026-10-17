@@ -101,6 +101,12 @@
     <%= render "unattributed_outflows", goal: @goal, outflows: @unattributed_outflows %>
   <% end %>
 
+  <% if (unavailable_accounts = @goal.unavailable_linked_accounts).any? %>
+    <%= render DS::Alert.new(variant: "warning", title: t("goals.show.unavailable_accounts_banner.title")) do %>
+      <p class="text-secondary"><%= t("goals.show.unavailable_accounts_banner.body", accounts: unavailable_accounts.map(&:name).to_sentence) %></p>
+    <% end %>
+  <% end %>
+
   <% if @goal.paused? %>
     <%= render DS::Alert.new(variant: "info", title: t("goals.show.paused_banner.title")) do %>
       <p class="text-secondary"><%= t("goals.show.paused_banner.body") %></p>

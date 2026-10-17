@@ -127,6 +127,9 @@ class ReportsController < ApplicationController
       # Net worth metrics
       @net_worth_metrics = build_net_worth_metrics
 
+      # Available vs. locked wealth (preview, Account::Liquidity)
+      @liquidity_metrics = build_liquidity_metrics if preview_features_enabled?
+
       # Transactions breakdown
       @transactions = build_transactions_breakdown
 
@@ -159,6 +162,14 @@ class ReportsController < ApplicationController
           partial: "reports/net_worth",
           locals: { net_worth_metrics: @net_worth_metrics },
           visible: accessible_accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "liquidity",
+          title: "reports.liquidity.title",
+          partial: "reports/liquidity",
+          locals: { liquidity_metrics: @liquidity_metrics },
+          visible: @liquidity_metrics.present? && @liquidity_metrics[:overview].any?,
           collapsible: true
         },
         {
@@ -664,6 +675,24 @@ class ReportsController < ApplicationController
         liability_groups: liability_groups,
         breakdown_series: breakdown_series
       }
+    end
+
+    # Today's split by availability, plus the available net worth over the
+    # report period (release dates evaluated per day).
+    #
+    # The series stops at today: a report period usually ends in the future,
+    # and carrying today's balances forward would count deposits released
+    # later as a change in this period.
+    def build_liquidity_metrics
+      balance_sheet = Current.family.balance_sheet
+      today = Account.liquidity_today_for(Current.family)
+
+      trend = if @period.start_date < today
+        period = Period.custom(start_date: @period.start_date, end_date: [ @period.end_date, today ].min)
+        balance_sheet.available_net_worth_series(period: period)&.trend
+      end
+
+      { overview: balance_sheet.liquidity, trend: trend }
     end
 
     def apply_transaction_filters(scope)

@@ -55,6 +55,9 @@ class Investment < ApplicationRecord
     "pea" => { short: "PEA", long: "Plan d'Épargne en Actions", region: "eu", tax_treatment: :tax_advantaged },
     "pillar_3a" => { short: "Pillar 3a", long: "Private Pension (Pillar 3a)", region: "eu", tax_treatment: :tax_deferred },
     "riester" => { short: "Riester", long: "Riester-Rente", region: "eu", tax_treatment: :tax_deferred },
+    "ruerup" => { short: "Rürup", long: "Rürup-Rente (Basisrente)", region: "eu", tax_treatment: :tax_deferred },
+    "bav" => { short: "bAV", long: "Company Pension (bAV)", region: "eu", tax_treatment: :tax_deferred },
+    "vl" => { short: "VL", long: "Capital-Forming Savings (VL)", region: "eu", tax_treatment: :taxable },
 
     # === India ===
     # Pensions & insurance
@@ -95,11 +98,27 @@ class Investment < ApplicationRecord
     "other" => { short: "Other", long: "Other Investment", region: nil, tax_treatment: :taxable }
   }.freeze
 
+  # Subtypes with a fixed term: their money is locked until a date even though
+  # they are taxable (Account::Liquidity).
+  LOCKED_SUBTYPES = %w[fd rd nsc kvp vl].freeze
+
   def tax_treatment
     SUBTYPES.dig(subtype, :tax_treatment) || :taxable
   end
 
   class << self
+    # A taxable account can be sold within days; tax-deferred, tax-exempt and
+    # tax-advantaged wrappers are retirement or education money.
+    def default_liquidity_for(subtype)
+      return "locked" if LOCKED_SUBTYPES.include?(subtype)
+
+      default_tax_treatment_for(subtype) == :taxable ? "short_term" : "long_term"
+    end
+
+    def default_tax_treatment_for(subtype)
+      SUBTYPES.dig(subtype, :tax_treatment) || :taxable
+    end
+
     def color
       "#1570EF"
     end

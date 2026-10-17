@@ -211,6 +211,9 @@ en:
         title: This goal is paused
         body: Resume it to keep tracking your progress.
         resume_cta: Resume goal
+      unavailable_accounts_banner:
+        title: Part of this reserve is not available right now
+        body: "%{accounts} cannot be reached at short notice, so it would not help in an emergency. Keep a reserve on money you can use straight away."
       archived_banner:
         title: This goal is archived
         body: Restore it to continue contributing, or leave it as a record.

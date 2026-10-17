@@ -24,6 +24,10 @@
 
     <%= yield form %>
 
+    <% if preview_features_enabled? && account.accountable_class&.classification == "asset" %>
+      <%= render "accounts/liquidity_fields", form: form, account: account %>
+    <% end %>
+
     <% if account.persisted? && account.supports_category_matcher? %>
       <div class="flex items-center justify-between gap-3 py-2">
         <div class="space-y-1">

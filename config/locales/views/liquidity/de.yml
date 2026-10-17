@@ -1,0 +1,34 @@
+---
+de:
+  liquidity:
+    buckets:
+      within_3_months: In den nächsten 3 Monaten
+      within_12_months: In 3 bis 12 Monaten
+      within_36_months: In 1 bis 3 Jahren
+      later: Später
+      no_date: Gebunden, ohne Datum
+      long_term: Langfristig gebunden
+    remaining:
+      today: Heute
+      days:
+        one: in 1 Tag
+        other: "in %{count} Tagen"
+    levels:
+      level: Verfügbarkeit
+      share: Anteil
+      value: Wert
+      short_term_liabilities: Kurzfristige Schulden
+    release_timeline:
+      title: Wann gebundenes Geld frei wird
+      empty: Kein gebundenes Geld.
+      no_date: Kein Freigabedatum
+      renews: verlängert sich automatisch
+    releases_table:
+      caption: Gebundene Konten nach Freigabedatum
+      account: Konto
+      released_on: Frei ab
+      remaining: Restlaufzeit
+      amount: Betrag
+      renews: Verlängert sich automatisch
+      year_total: "Summe %{year}"
+      empty: Keine gebundenen Konten mit Freigabedatum.
