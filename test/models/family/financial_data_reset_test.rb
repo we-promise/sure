@@ -58,6 +58,23 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     end
   end
 
+  test "report: false skips count queries but still deletes financial data" do
+    assert_operator @family.accounts.count, :>, 0
+
+    result = Family::FinancialDataReset.new(
+      user: @user,
+      dry_run: false,
+      confirmed: true,
+      report: false
+    ).call
+
+    assert_equal({}, result.before_counts)
+    assert_equal({}, result.after_counts)
+    assert result.deleted_counts.values.all?(&:zero?)
+    assert_equal 0, @family.reload.accounts.count
+    assert User.exists?(@user.id)
+  end
+
   test "destructive reset without confirmation does not partially mutate financial data" do
     create_extra_target_data!(family: @family, label: "Unconfirmed")
     before_counts = reset_counts(@family)
