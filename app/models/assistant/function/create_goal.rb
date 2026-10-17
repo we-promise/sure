@@ -1,155 +1,72 @@
 class Assistant::Function::CreateGoal < Assistant::Function
   class << self
-    def name
-      "create_goal"
-    end
+    def name = "create_goal"
 
     def description
       <<~INSTRUCTIONS
-        Creates a goal for the user's family.
+        Creates a goal backed by accessible Depository or Investment accounts.
 
-        Use when the user describes a target they want to save toward — e.g.
-        "vacation in 4 months for $5000", "downpayment for a car next year",
-        "build an emergency fund of $10k".
-
-        Before calling, confirm the key details by paraphrasing back to the
-        user: the name, target amount, target date (if mentioned), and which
-        of their accounts will fund it. Only call once they've confirmed.
-
-        Constraints:
-        - The goal must link to at least one of the user's Depository
-          accounts (checking, savings, HSA, CD, money-market).
-        - All linked accounts must share the same currency.
-        - Use account names exactly as listed in the user's Depository
-          accounts.
-
-        On success returns the new goal's URL so you can point the user to
-        it. On a soft failure (e.g. account name doesn't match), the
-        response includes the available account list so you can re-ask.
+        Use get_accounts first. Pass one complete funding_accounts list using stable
+        account IDs. Each account must explicitly use either whole_account or
+        fixed_amount allocation. Accounts already claimed in full require fixed_amount.
       INSTRUCTIONS
     end
   end
 
-  def strict_mode?
-    false
-  end
+  def strict_mode? = false
 
   def params_schema
     build_schema(
-      required: %w[name target_amount linked_account_names],
+      required: %w[name target_amount funding_accounts],
       properties: {
-        name: {
-          type: "string",
-          description: "Short goal name, e.g. 'Vacation in Italy'."
-        },
-        target_amount: {
-          type: "number",
-          description: "Total amount to save, in the linked accounts' currency."
-        },
-        target_date: {
-          type: "string",
-          description: "Optional ISO 8601 date (YYYY-MM-DD) for when the user wants to reach the target."
-        },
-        linked_account_names: {
-          type: "array",
-          items: { type: "string" },
-          description: "Names of the user's Depository accounts to link. Must contain at least one. Use names exactly as they appear in the available accounts list. The goal's balance is the balance of these accounts."
-        },
-        earmarks: {
-          type: "object",
-          description: "Optional map of account name to the amount to reserve from that account, e.g. {\"Livret A\": 2000}. Required for an account already claimed in full by another goal — the available accounts list says which, and how much room is left. Accounts left out of this map reserve whatever the account has spare.",
-          additionalProperties: { type: "number" }
-        },
-        notes: {
-          type: "string",
-          description: "Optional freeform notes."
-        }
+        name: { type: "string", description: "Short goal name" },
+        target_amount: { type: "number", exclusiveMinimum: 0, description: "Total target in the funding accounts' currency" },
+        target_date: { type: [ "string", "null" ], format: "date", description: "Optional target date in YYYY-MM-DD format" },
+        funding_accounts: Assistant::Function::GoalFundingSelection.schema,
+        notes: { type: [ "string", "null" ], description: "Optional notes" }
       }
     )
   end
 
   def call(params = {})
     name = params["name"].to_s.strip
-    target_amount = parse_decimal(params["target_amount"])
-    target_date = parse_date(params["target_date"])
-    linked_account_names = Array(params["linked_account_names"]).map { |n| n.to_s.strip }.reject(&:blank?)
-    notes = params["notes"].to_s.strip
-    earmarks = parse_earmarks(params["earmarks"])
-
     return error("name_required", "Please provide a name for the goal.") if name.blank?
 
-    return error("target_amount_invalid", "Target amount must be greater than zero.") unless target_amount && target_amount > 0
+    target_amount = parse_decimal(params["target_amount"])
+    return error("target_amount_invalid", "Target amount must be finite and greater than zero.") unless target_amount&.finite? && target_amount.positive?
 
-    if linked_account_names.empty?
-      return error(
-        "no_linked_accounts",
-        "Please specify at least one Depository account to link to this goal.",
-        available_accounts: depository_account_payload
-      )
-    end
+    selection = funding_selection(params["funding_accounts"]).resolve!
+    target_date = parse_date(params["target_date"])
 
-    available = family.accounts.where(accountable_type: "Depository").visible.where(name: linked_account_names)
-    missing = linked_account_names - available.pluck(:name).uniq
-    if missing.any?
-      return error(
-        "unknown_accounts",
-        "Some account names didn't match the user's Depository accounts.",
-        unknown_names: missing,
-        available_accounts: depository_account_payload
-      )
-    end
+    goal = Goal.transaction do
+      locked = Account::MutationAccess.lock!(accounts: selection.accounts, user:, level: Account::MutationAccess::READ)
+      locked_funding_accounts = selection.accounts.map { |account| locked.fetch(account.id.to_s) }
+      fundable_ids = Assistant::Function::GoalFundingSelection
+        .fundable_accounts_for(user)
+        .where(id: locked_funding_accounts.map(&:id))
+        .pluck(:id)
+      raise Account::MutationAccess::Denied unless fundable_ids.size == locked_funding_accounts.size
 
-    # Multiple accounts can share a name. Block silent over-linking by
-    # surfacing the ambiguity so the assistant re-asks with disambiguated
-    # input rather than attaching every same-named account to the goal.
-    grouped = available.group_by(&:name)
-    ambiguous_names = grouped.select { |_, accts| accts.size > 1 }.keys
-    if ambiguous_names.any?
-      return error(
-        "ambiguous_accounts",
-        "Multiple accounts share a name. Ask the user which one to use.",
-        ambiguous_names: ambiguous_names,
-        available_accounts: depository_account_payload
-      )
-    end
-
-    matched = linked_account_names.map { |name| grouped[name].first }
-
-    currencies = matched.map(&:currency).uniq
-    if currencies.size > 1
-      return error(
-        "currency_mismatch",
-        "All linked accounts must share the same currency. Found: #{currencies.join(', ')}."
-      )
-    end
-
-    # Named before the save, so the assistant gets a reason it can act on
-    # rather than a generic validation failure it can only relay. Claiming an
-    # account in full is exclusive; joining one that is already claimed needs
-    # an explicit earmark, and the assistant can ask for one.
-    over_claimed = matched.select { |a| whole_account_claimed_ids.include?(a.id) && earmarks[a.name].nil? }
-    if over_claimed.any?
-      return error(
-        "account_claimed_in_full",
-        "Another goal already claims #{over_claimed.map(&:name).to_sentence} in full. " \
-        "Ask the user how much to reserve from #{'it'.pluralize(over_claimed.size)}, then pass it in `earmarks`.",
-        claimed_account_names: over_claimed.map(&:name),
-        available_accounts: depository_account_payload
-      )
-    end
-
-    goal = nil
-    Goal.transaction do
-      goal = family.goals.new(
-        name: name,
-        target_amount: target_amount,
-        target_date: target_date,
+      currencies = locked_funding_accounts.map(&:currency).uniq
+      unless currencies.one?
+        raise Assistant::Function::GoalFundingSelection::Invalid.new(
+          "currency_mismatch",
+          "All funding accounts must share one currency. Found: #{currencies.join(', ')}."
+        )
+      end
+      created = family.goals.new(
+        name:,
+        target_amount:,
+        target_date:,
         currency: currencies.first,
-        notes: notes.presence,
+        notes: params["notes"].presence,
         color: Goal::COLORS.sample
       )
-      matched.each { |a| goal.goal_accounts.build(account: a, allocated_amount: earmarks[a.name]) }
-      goal.save!
+      locked_funding_accounts.each do |account|
+        created.goal_accounts.build(account:, allocated_amount: selection.allocations.fetch(account.id.to_s))
+      end
+      created.save!
+      created
     end
 
     {
@@ -160,18 +77,24 @@ class Assistant::Function::CreateGoal < Assistant::Function
       currency: goal.currency,
       target_date: goal.target_date&.iso8601,
       url: absolute_url_for(goal),
-      linked_account_names: matched.map(&:name),
+      funding_accounts: goal.goal_accounts.map { |link| { account_id: link.account_id, allocated_amount: link.allocated_amount } },
       message: "Created goal '#{goal.name}' (target #{goal.target_amount_money.format}). View it at #{absolute_url_for(goal)}."
     }
+  rescue Account::MutationAccess::Denied
+    error("unknown_accounts", "One or more funding accounts are no longer accessible.")
+  rescue Assistant::Function::GoalFundingSelection::Invalid => e
+    error(e.key, e.message, e.extras)
+  rescue Date::Error
+    error("invalid_date", "target_date must use YYYY-MM-DD format.")
   rescue ActiveRecord::RecordInvalid => e
     error("validation_failed", e.record.errors.full_messages.join("; "))
   end
 
   private
-    # Build an absolute URL for the new goal so chat clients (which render
-    # outside the request that produced the goal) can link directly. Falls
-    # back to the relative path when no host is configured (e.g. self-hosted
-    # in a job without ENV).
+    def funding_selection(raw)
+      Assistant::Function::GoalFundingSelection.new(user:, family:, raw:)
+    end
+
     def absolute_url_for(goal)
       host_opts = Rails.application.config.action_mailer.default_url_options || {}
       if host_opts[:host].present?
@@ -182,59 +105,16 @@ class Assistant::Function::CreateGoal < Assistant::Function
     end
 
     def parse_decimal(value)
-      return nil if value.nil?
       BigDecimal(value.to_s)
     rescue ArgumentError, TypeError
       nil
     end
 
     def parse_date(value)
-      return nil if value.blank?
-      Date.iso8601(value.to_s)
-    rescue Date::Error
-      nil
-    end
-
-    # Says what is left, not just what exists. A goal that claims an account in
-    # full is exclusive, so an account already claimed can only be joined with
-    # an explicit earmark — and the assistant has no way to know that unless
-    # the list says so.
-    def depository_account_payload
-      claimed = whole_account_claimed_ids
-
-      family.accounts.where(accountable_type: "Depository").visible.map do |account|
-        {
-          name: account.name,
-          currency: account.currency,
-          free_to_earmark: Money.new(account.free_to_earmark, account.currency).format,
-          claimed_in_full: claimed.include?(account.id)
-        }
-      end
-    end
-
-    def whole_account_claimed_ids
-      @whole_account_claimed_ids ||= GoalAccount.joins(:goal)
-                                                .where(allocated_amount: nil)
-                                                .where(goals: { family_id: family.id })
-                                                .where.not(goals: { state: Goal::RELEASED_STATES })
-                                                .pluck(:account_id)
-                                                .to_set
-    end
-
-    # Names are the assistant's handle on an account, so the map is keyed by
-    # them. Non-positive amounts are dropped rather than refused: a zero
-    # earmark and no earmark mean different things to the model, and neither
-    # is what the user asked for.
-    def parse_earmarks(raw)
-      return {} unless raw.is_a?(Hash)
-
-      raw.each_with_object({}) do |(account_name, amount), acc|
-        value = parse_decimal(amount)
-        acc[account_name.to_s.strip] = value if value && value.positive?
-      end
+      value.blank? ? nil : Date.iso8601(value.to_s)
     end
 
     def error(key, message, extras = {})
-      { success: false, error: key, message: message }.merge(extras)
+      { success: false, error: key, message: }.merge(extras)
     end
 end
