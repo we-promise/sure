@@ -37,6 +37,7 @@ class User < ApplicationRecord
   has_many :sso_audit_logs, dependent: :nullify
   has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
+  has_many :entry_reads, dependent: :delete_all
   has_many :shared_accounts, through: :account_shares, source: :account
   has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
   has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy
@@ -163,6 +164,43 @@ class User < ApplicationRecord
 
   def accessible_accounts
     family.accounts.accessible_by(self)
+  end
+
+  # Synced or imported transactions in this user's accounts they have not seen yet.
+  def unread_entries
+    Entry.where(account_id: accessible_accounts.select(:id)).unread_by(self)
+  end
+
+  def unread_entry_counts_by_account
+    unread_entries.group(:account_id).count
+  end
+
+  def mark_entries_read!(entry_ids)
+    EntryRead.mark!(user: self, entry_ids: entry_ids)
+  end
+
+  # Without a scope everything becomes read by moving the watermark, which also
+  # makes the per-entry rows up to it redundant. With a scope (a filtered list,
+  # one account) only the unread entries inside it are marked.
+  #
+  # `as_of` is when the user's list was rendered. Transactions a sync creates
+  # after that were never on screen, so they stay unread even though the click
+  # comes later.
+  def mark_all_transactions_read!(entries_scope = nil, as_of: Time.current)
+    as_of = [ as_of, Time.current ].min
+
+    if entries_scope.nil?
+      transaction do
+        # GREATEST in SQL: two tabs clicking at once must not move it backwards.
+        self.class.where(id: id).update_all([ "transactions_read_before = GREATEST(transactions_read_before, ?)", as_of ])
+        reload
+        entry_reads.joins(:entry).where("entries.created_at <= ?", as_of).delete_all
+      end
+    else
+      mark_entries_read!(
+        entries_scope.merge(Entry.unread_by(self)).where("entries.created_at <= ?", as_of).pluck("entries.id")
+      )
+    end
   end
 
   def finance_accounts
