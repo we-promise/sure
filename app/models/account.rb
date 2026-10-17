@@ -924,6 +924,11 @@ class Account < ApplicationRecord
       result = set_current_balance(provider_balance, apply_provider_adjustment: true)
       raise Account::CurrentBalanceManager::InvalidOperation, result.error unless result.success?
 
+      # Setting or clearing an adjustment restates the balance, and on a cash
+      # account cash is the whole of it. Clearing leaves no adjustment for the
+      # manager to apply, so the cash figure is brought along here.
+      update!(cash_balance: balance) if balance_type == :cash && !result.historical?
+
       result
     end
   rescue ActiveRecord::RecordInvalid => e
