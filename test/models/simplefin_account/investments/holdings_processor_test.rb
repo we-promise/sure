@@ -181,6 +181,18 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_in_delta 38.50, cost_basis.to_f, 0.01
   end
 
+  test "parse_decimal tells an unreadable number from zero" do
+    assert_equal 0, @processor.send(:parse_decimal, nil)
+    assert_equal 0, @processor.send(:parse_decimal, "")
+    assert_equal BigDecimal("0"), @processor.send(:parse_decimal, "0.0")
+    assert_equal BigDecimal("12.5"), @processor.send(:parse_decimal, "12.5")
+    assert_equal BigDecimal("3"), @processor.send(:parse_decimal, 3)
+
+    assert_nil @processor.send(:parse_decimal, "invalid")
+    assert_nil @processor.send(:parse_decimal, "NaN")
+    assert_nil @processor.send(:parse_decimal, { "amount" => "1" })
+  end
+
   test "missing cost basis fields return nil" do
     payload = {
       "market_value" => "10108.16"
@@ -285,6 +297,234 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_equal [ "simplefin_lot-a_#{first_day}", "simplefin_lot-a_#{first_day + 1}" ], holdings.map(&:external_id)
   end
 
+  test "a position missing from a later same-day payload loses its row for the day" do
+    # A position sold during the day, or a sweep fund reported while a
+    # deposit settled, would otherwise keep the row an earlier sync gave it,
+    # and the balance history counts that row.
+    account, provider, processor, simplefin_account = same_day_processor
+    kept = Security.create!(ticker: "KEPT", name: "Kept Fund")
+    gone = Security.create!(ticker: "GONE", name: "Gone Fund")
+    processor.stubs(:resolve_security).with("KEPT", anything).returns(kept)
+    processor.stubs(:resolve_security).with("GONE", anything).returns(gone)
+
+    simplefin_account.update!(raw_holdings_payload: [
+      { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" },
+      { "id" => "lot-g", "symbol" => "GONE", "shares" => "5", "market_value" => "500" }
+    ])
+    processor.process
+    assert_equal 2, account.holdings.where(date: Date.current, account_provider: provider).count
+
+    simplefin_account.update!(raw_holdings_payload: [
+      { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" }
+    ])
+    processor.process
+
+    assert_equal [ kept.id ], account.holdings.where(date: Date.current, account_provider: provider).pluck(:security_id)
+  end
+
+  test "a later same-day payload leaves earlier days' rows alone" do
+    account, provider, processor, simplefin_account = same_day_processor
+    gone = Security.create!(ticker: "GONE", name: "Gone Fund")
+    kept = Security.create!(ticker: "KEPT", name: "Kept Fund")
+    processor.stubs(:resolve_security).with("GONE", anything).returns(gone)
+    processor.stubs(:resolve_security).with("KEPT", anything).returns(kept)
+
+    travel_to 1.day.ago do
+      simplefin_account.update!(raw_holdings_payload: [
+        { "id" => "lot-g", "symbol" => "GONE", "shares" => "5", "market_value" => "500" }
+      ])
+      processor.process
+    end
+
+    simplefin_account.update!(raw_holdings_payload: [
+      { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" }
+    ])
+    processor.process
+
+    assert_equal [ gone.id ], account.holdings.where(date: 1.day.ago.to_date, account_provider: provider).pluck(:security_id)
+  end
+
+  test "a payload with a position that failed to import removes nothing" do
+    account, provider, processor, simplefin_account = same_day_processor
+    kept = Security.create!(ticker: "KEPT", name: "Kept Fund")
+    other = Security.create!(ticker: "OTHER", name: "Other Fund")
+    processor.stubs(:resolve_security).with("KEPT", anything).returns(kept)
+    processor.stubs(:resolve_security).with("OTHER", anything).returns(other)
+
+    simplefin_account.update!(raw_holdings_payload: [
+      { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" },
+      { "id" => "lot-o", "symbol" => "OTHER", "shares" => "5", "market_value" => "500" }
+    ])
+    processor.process
+
+    processor.stubs(:resolve_security).with("OTHER", anything).returns(nil)
+    processor.process
+
+    assert_equal [ kept.id, other.id ].sort, account.holdings.where(date: Date.current, account_provider: provider).pluck(:security_id).sort
+  end
+
+  test "a payload with a record it cannot read removes nothing" do
+    # A record with no id, or with neither a symbol nor a description, is
+    # skipped without being imported, so its position's earlier row for the
+    # day has to stay.
+    account, provider, processor, simplefin_account = same_day_processor
+    kept = Security.create!(ticker: "KEPT", name: "Kept Fund")
+    other = Security.create!(ticker: "OTHER", name: "Other Fund")
+    processor.stubs(:resolve_security).with("KEPT", anything).returns(kept)
+    processor.stubs(:resolve_security).with("OTHER", anything).returns(other)
+
+    [
+      { "symbol" => "OTHER", "shares" => "5", "market_value" => "500" },
+      { "id" => "lot-o", "shares" => "5", "market_value" => "500" }
+    ].each do |unreadable|
+      simplefin_account.update!(raw_holdings_payload: [
+        { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" },
+        { "id" => "lot-o", "symbol" => "OTHER", "shares" => "5", "market_value" => "500" }
+      ])
+      processor.process
+
+      simplefin_account.update!(raw_holdings_payload: [
+        { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" },
+        unreadable
+      ])
+      processor.process
+
+      assert_equal [ kept.id, other.id ].sort,
+        account.holdings.where(date: Date.current, account_provider: provider).pluck(:security_id).sort,
+        "purged a row for #{unreadable.inspect}"
+    end
+  end
+
+  test "a position now reported with nothing in it loses its row for the day" do
+    account, provider, processor, simplefin_account = same_day_processor
+    kept = Security.create!(ticker: "KEPT", name: "Kept Fund")
+    gone = Security.create!(ticker: "GONE", name: "Gone Fund")
+    processor.stubs(:resolve_security).with("KEPT", anything).returns(kept)
+    processor.stubs(:resolve_security).with("GONE", anything).returns(gone)
+
+    [
+      { "shares" => "0", "market_value" => "0" },
+      { "shares" => 0, "market_value" => 0 },
+      { "shares" => "0.0", "market_value" => "0.00" }
+    ].each do |empty|
+      simplefin_account.update!(raw_holdings_payload: [
+        { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" },
+        { "id" => "lot-g", "symbol" => "GONE", "shares" => "5", "market_value" => "500" }
+      ])
+      processor.process
+
+      simplefin_account.update!(raw_holdings_payload: [
+        { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" },
+        { "id" => "lot-g", "symbol" => "GONE" }.merge(empty)
+      ])
+      processor.process
+
+      assert_equal [ kept.id ], account.holdings.where(date: Date.current, account_provider: provider).pluck(:security_id),
+        "kept a row for #{empty.inspect}"
+    end
+  end
+
+  test "a record with a number it cannot read removes nothing" do
+    # An unreadable quantity is not a zero quantity. Read as zero, the record
+    # would look like an empty position and its earlier row would be purged.
+    account, provider, processor, simplefin_account = same_day_processor
+    kept = Security.create!(ticker: "KEPT", name: "Kept Fund")
+    other = Security.create!(ticker: "OTHER", name: "Other Fund")
+    processor.stubs(:resolve_security).with("KEPT", anything).returns(kept)
+    processor.stubs(:resolve_security).with("OTHER", anything).returns(other)
+
+    {
+      { "shares" => "invalid", "market_value" => "0" } => [ "quantity" ],
+      { "shares" => "0", "market_value" => "N/A" } => [ "market_value" ],
+      { "shares" => "5", "price" => "unknown" } => [ "price" ]
+    }.each do |numbers, fields|
+      simplefin_account.update!(raw_holdings_payload: [
+        { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" },
+        { "id" => "lot-o", "symbol" => "OTHER", "shares" => "5", "market_value" => "500" }
+      ])
+      processor.process
+
+      simplefin_account.update!(raw_holdings_payload: [
+        { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" },
+        { "id" => "lot-o", "symbol" => "OTHER" }.merge(numbers)
+      ])
+      assert_difference "DebugLogEntry.count", 1 do
+        processor.process
+      end
+
+      assert_equal [ kept.id, other.id ].sort,
+        account.holdings.where(date: Date.current, account_provider: provider).pluck(:security_id).sort,
+        "purged a row for #{numbers.inspect}"
+
+      skipped = DebugLogEntry.order(:created_at).last.metadata["not_imported"]
+      assert_equal [ { "reason" => "malformed_number", "fields" => fields, "id" => "lot-o", "symbol" => "OTHER" } ], skipped
+    end
+  end
+
+  test "an incomplete payload is recorded in the debug log" do
+    account, provider, processor, simplefin_account = same_day_processor
+    kept = Security.create!(ticker: "KEPT", name: "Kept Fund")
+    processor.stubs(:resolve_security).with("KEPT", anything).returns(kept)
+    processor.stubs(:resolve_security).with("OTHER", anything).returns(nil)
+
+    simplefin_account.update!(raw_holdings_payload: [
+      { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" },
+      { "id" => "lot-o", "symbol" => "OTHER", "shares" => "5", "market_value" => "500" }
+    ])
+
+    assert_difference "DebugLogEntry.count", 1 do
+      processor.process
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "simplefin", entry.provider_key
+    assert_equal "warn", entry.level
+    assert_equal account, entry.account
+    assert_equal provider, entry.account_provider
+    assert_equal account.family, entry.family
+    assert_equal 1, entry.metadata["not_imported_count"]
+    assert_equal "unresolved_security", entry.metadata["not_imported"].first["reason"]
+  end
+
+  test "a run whose payload was replaced mid-run changes nothing" do
+    # The holdings apply job and the sync's own processing can run for the
+    # same account at once. A run still working from an older payload must
+    # neither delete rows the newer payload saved nor bring back or overwrite
+    # rows from its own older payload.
+    account, provider, processor, simplefin_account = same_day_processor
+    kept = Security.create!(ticker: "KEPT", name: "Kept Fund")
+    added = Security.create!(ticker: "ADDED", name: "Added Fund")
+    gone = Security.create!(ticker: "GONE", name: "Gone Fund")
+    processor.stubs(:resolve_security).with("KEPT", anything).returns(kept)
+    processor.stubs(:resolve_security).with("ADDED", anything).returns(added)
+    processor.stubs(:resolve_security).with("GONE", anything).returns(gone)
+
+    simplefin_account.update!(raw_holdings_payload: [
+      { "id" => "lot-k", "symbol" => "KEPT", "shares" => "10", "market_value" => "1000" },
+      { "id" => "lot-a", "symbol" => "ADDED", "shares" => "5", "market_value" => "500" }
+    ])
+    processor.process
+
+    # This run read an older payload: KEPT at another quantity, GONE, and no
+    # ADDED. A newer sync has since stored and applied the payload above.
+    simplefin_account.raw_holdings_payload = [
+      { "id" => "lot-k", "symbol" => "KEPT", "shares" => "7", "market_value" => "700" },
+      { "id" => "lot-g", "symbol" => "GONE", "shares" => "3", "market_value" => "300" }
+    ]
+    processor.process
+
+    today = account.holdings.where(date: Date.current, account_provider: provider)
+    assert_equal [ added.id, kept.id ].sort, today.pluck(:security_id).sort
+    assert_equal 10, today.find_by(security: kept).qty
+
+    # Once the stored payload matches, the run applies it in full.
+    simplefin_account.save!
+    processor.process
+
+    assert_equal [ gone.id, kept.id ].sort, today.pluck(:security_id).sort
+    assert_equal 7, today.find_by(security: kept).qty
+  end
+
   test "a position with any unknown-basis lot reports no aggregate basis" do
     # Averaging only the lots that reported a basis would apply that figure to
     # shares whose cost is unknown, fabricating cost and gain/loss.
@@ -329,4 +569,21 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     # but the basis is unknown for the position as a whole, NOT $100/share
     assert_nil position[:cost_basis]
   end
+
+  private
+    def same_day_processor
+      account = accounts(:investment)
+      item = SimplefinItem.create!(family: account.family, name: "SimpleFIN", access_url: "https://example.com/access")
+      simplefin_account = SimplefinAccount.create!(
+        simplefin_item: item, name: "Brokerage", account_id: "sf_same_day",
+        currency: "USD", account_type: "investment", current_balance: 0
+      )
+      provider = AccountProvider.create!(account: account, provider: simplefin_account)
+
+      processor = SimplefinAccount::Investments::HoldingsProcessor.new(simplefin_account)
+      processor.stubs(:account).returns(account)
+      processor.stubs(:institution_reports_total_basis?).returns(false)
+
+      [ account, provider, processor, simplefin_account ]
+    end
 end
