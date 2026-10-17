@@ -1,5 +1,5 @@
-<%# Plan hub: budgets + goals under one nav entry. Two summary cards
-    fronting the existing /budgets and /goals pages — the two features
+<%# Plan hub: budgets, goals and bills under one nav entry. Summary cards
+    fronting the existing /budgets, /goals and /bills pages — the features
     share a home here, not a data model. %>
 <div class="@container space-y-6 pb-6 lg:pb-12">
   <header>
@@ -13,5 +13,10 @@
   <div class="grid grid-cols-1 @3xl:grid-cols-2 gap-4 items-stretch">
     <%= render "plans/budget_card", budget: @budget, top_budget_categories: @top_budget_categories, editable: @editable, switch_options: @switch_options %>
     <%= render "plans/goals_card", goals: @goals, summary: @goals_summary, linkable_account_count: @linkable_account_count, family_has_goals: @family_has_goals %>
+    <% if @show_bills %>
+      <div class="@3xl:col-span-2">
+        <%= render "plans/bills_card", summary: @bills_summary %>
+      </div>
+    <% end %>
   </div>
 </div>

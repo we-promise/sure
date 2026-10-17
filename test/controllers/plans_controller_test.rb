@@ -84,6 +84,81 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", goals_path, minimum: 1
   end
 
+  # Bills lives in the hub, not the nav, for the users who see the hub.
+  test "fronts Bills with a hub card instead of a nav entry" do
+    get plan_url
+
+    assert_response :success
+    assert_select "main h2", text: I18n.t("plans.bills_card.title")
+    assert_select "main a[href=?]", bills_path
+    assert_select "nav a[href=?]", bills_path, count: 0
+    assert_select "nav a[href=?][aria-current=page]", plan_path, minimum: 1
+  end
+
+  test "keeps the Plan nav entry lit on the Bills page" do
+    get bills_url
+
+    assert_response :success
+    assert_select "nav a[href=?][aria-current=page]", plan_path, minimum: 1
+  end
+
+  test "the bills card counts what is owed this month" do
+    next_month = Date.current.next_month.beginning_of_month
+    series = recurring_transactions(:netflix_subscription)
+    series.recurring_occurrences.create!(family: @user.family, original_due_on: next_month, due_on: next_month, currency: "USD")
+
+    get plan_url
+    assert_select "main p", text: I18n.t("plans.bills_card.nothing_owed")
+
+    series.recurring_occurrences.create!(family: @user.family, original_due_on: Date.current, due_on: Date.current, currency: "USD")
+
+    get plan_url
+    assert_select "main p", text: I18n.t("plans.bills_card.owed_count", count: 1)
+  end
+
+  # An upgraded instance has series but no occurrence rows until something
+  # generates them, and Plan is now the way into Bills.
+  test "the bills card counts an upgraded family's bills before Bills was ever opened" do
+    @user.family.recurring_transactions.create!(
+      name: "Rent", account: accounts(:depository), amount: 1200, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current, status: "active", manual: true
+    )
+    @user.family.recurring_occurrences.delete_all
+
+    get plan_url
+
+    assert_response :success
+    assert_operator @user.family.recurring_occurrences.count, :>, 0
+    assert_select "main p", text: I18n.t("plans.bills_card.nothing_owed"), count: 0
+  end
+
+  # The card headers' trailing counts are the easiest strings to lose to a
+  # lazy lookup resolving against the wrong template, and a missing key
+  # renders a humanized fallback rather than failing.
+  test "card headers carry their own translated counts" do
+    recurring_transactions(:netflix_subscription).recurring_occurrences.create!(
+      family: @user.family, original_due_on: Date.current - 10, due_on: Date.current - 10, currency: "USD"
+    )
+
+    get plan_url
+
+    assert_response :success
+    assert_select "main span", text: "· #{I18n.t("plans.goals_card.active_count", count: Goal.active_prepared_for(@user.family).size)}"
+    assert_select "main", text: /#{I18n.t("plans.bills_card.overdue_count", count: 1)}/
+    assert_no_match(/translation_missing/, response.body)
+  end
+
+  test "drops the bills card while recurring detection is off" do
+    @user.family.update!(recurring_transactions_disabled: true)
+
+    get plan_url
+
+    assert_response :success
+    assert_select "main h2", text: I18n.t("plans.bills_card.title"), count: 0
+    assert_select "a[href=?]", bills_path, count: 0
+  end
+
   test "shows the budget setup CTA when the month is uninitialized" do
     budgets(:one).update!(budgeted_spending: nil)
 
