@@ -67,21 +67,23 @@ class FinecoItem::ImporterTest < ActiveSupport::TestCase
   end
 
   test "same-day updates are idempotent and anchor the balance to provider holdings" do
-    captured_at = Time.current
-    @item.import_portfolio_snapshot!(payload: payload(positions: [ ETF ]), captured_at: captured_at)
-    account = @item.accounts.sole
-    anchor_count = account.valuations.current_anchor.count
+    travel_to(Time.zone.local(Date.current.year, Date.current.month, Date.current.day, 12)) do
+      captured_at = Time.current
+      @item.import_portfolio_snapshot!(payload: payload(positions: [ ETF ]), captured_at: captured_at)
+      account = @item.accounts.sole
+      anchor_count = account.valuations.current_anchor.count
 
-    updated_etf = ETF.merge("marketValue" => "120", "marketPrice" => "60", "profitLoss" => "30")
-    updated_summary = summary_payload(market_value: "120", profit_loss: "30", profit_loss_perc: "33.33")
-    @item.import_portfolio_snapshot!(payload: payload(positions: [ updated_etf ], summary: updated_summary), captured_at: captured_at + 1.hour)
+      updated_etf = ETF.merge("marketValue" => "120", "marketPrice" => "60", "profitLoss" => "30")
+      updated_summary = summary_payload(market_value: "120", profit_loss: "30", profit_loss_perc: "33.33")
+      @item.import_portfolio_snapshot!(payload: payload(positions: [ updated_etf ], summary: updated_summary), captured_at: captured_at + 1.hour)
 
-    assert_equal 1, account.holdings.where(date: captured_at.to_date).count
-    assert_equal anchor_count, account.valuations.current_anchor.count
-    assert_equal BigDecimal("120"), account.valuations.current_anchor.sole.entry.amount
-    assert_equal BigDecimal("120"), account.reload.balance
-    assert_equal BigDecimal("0"), account.cash_balance
-    assert_equal captured_at.to_date, account.latest_provider_holdings_snapshot_date
+      assert_equal 1, account.holdings.where(date: captured_at.to_date).count
+      assert_equal anchor_count, account.valuations.current_anchor.count
+      assert_equal BigDecimal("120"), account.valuations.current_anchor.sole.entry.amount
+      assert_equal BigDecimal("120"), account.reload.balance
+      assert_equal BigDecimal("0"), account.cash_balance
+      assert_equal captured_at.to_date, account.latest_provider_holdings_snapshot_date
+    end
   end
 
   test "rejects an older same-day snapshot without replacing newer holdings or balance" do
