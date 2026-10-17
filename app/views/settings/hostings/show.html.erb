@@ -61,6 +61,7 @@
   <div class="space-y-6">
     <%= render "settings/hostings/rentcast_settings" %>
     <%= render "settings/hostings/realie_settings" %>
+    <%= render "settings/hostings/chimnie_settings" %>
   </div>
 <% end %>
 <%= settings_section title: t(".sync_settings") do %>
@@ -69,6 +70,11 @@
 <% if Current.user.super_admin? %>
   <%= settings_section title: t(".invites") do %>
     <%= render "settings/hostings/invite_code_settings" %>
+  <% end %>
+<% end %>
+<% if Current.user.super_admin? %>
+  <%= settings_section title: t(".demo_refresh") do %>
+    <%= render "settings/hostings/demo_refresh_settings" %>
   <% end %>
 <% end %>
 <%= settings_section title: t(".danger_zone") do %>

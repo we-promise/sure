@@ -87,7 +87,7 @@ pl:
         target_months: Miesiące wydatków
         target_months_hint: Przeliczane 1. dnia każdego miesiąca na podstawie mediany
           Twoich miesięcznych wydatków.
-        whole_balance: Całe saldo
+        whole_balance: "Puste: całe saldo"
       kinds:
         maintained:
           hint: Saldo do utrzymania, jak fundusz awaryjny. Nigdy nie jest zamykane.

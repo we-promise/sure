@@ -35,6 +35,7 @@ class AccountStatement::MetadataDetector
   MAX_CSV_COLUMNS = 100
   MAX_CSV_DATE_SAMPLES = 250
   MAX_CSV_SAMPLE_BYTES = 256
+  MAX_PDF_METADATA_PAGES = 2
 
   attr_reader :statement, :content
 
@@ -47,6 +48,12 @@ class AccountStatement::MetadataDetector
     output = statement.sanitized_parser_output || {}
     metadata_sources = []
 
+    # The document's own text is more reliable than the filename, so it runs
+    # first and the filename only fills what it left blank.
+    if statement.pdf? && detect_from_pdf(output)
+      metadata_sources << "pdf_text"
+    end
+
     if detect_from_filename
       metadata_sources << "filename"
     end
@@ -56,12 +63,14 @@ class AccountStatement::MetadataDetector
     elsif statement.xlsx?
       output["spreadsheet_detection"] = "filename_only"
     elsif statement.pdf?
-      output["pdf_detection"] = "filename_only"
+      output["pdf_detection"] ||= "filename_only"
     end
 
     output["metadata_sources"] = metadata_sources
     statement.sanitized_parser_output = output
-    statement.parser_confidence ||= if metadata_sources.include?("csv_dates")
+    statement.parser_confidence ||= if metadata_sources.include?("pdf_text")
+      0.85
+    elsif metadata_sources.include?("csv_dates")
       0.65
     elsif metadata_sources.any?
       0.45
@@ -120,6 +129,41 @@ class AccountStatement::MetadataDetector
       end
 
       detected
+    end
+
+    def detect_from_pdf(output)
+      summary = AccountStatement::TextMetadataParser.parse(pdf_text, currency: statement.currency)
+      return false unless summary
+
+      statement.period_start_on ||= summary.period_start_on
+      statement.period_end_on ||= summary.period_end_on
+      statement.account_last4_hint ||= summary.iban_last4
+
+      # Only keep balances when they are in the statement's currency; a
+      # mismatch would make reconciliation compare different currencies.
+      balances_kept = summary.currency.present? && (statement.currency.blank? || statement.currency == summary.currency)
+      if balances_kept
+        statement.currency ||= summary.currency
+        statement.opening_balance ||= summary.opening_balance
+        statement.closing_balance ||= summary.closing_balance
+      end
+
+      output["pdf_detection"] = "text"
+      output["pdf"] = {
+        "balances_source" => (summary.balances_source if balances_kept),
+        "balances_detected" => statement.opening_balance.present? && statement.closing_balance.present?
+      }
+      true
+    end
+
+    # Text of the first pages only: periods and balance summaries sit at the
+    # top of a statement. Any reader failure leaves filename detection as the
+    # fallback instead of failing the upload.
+    def pdf_text
+      Pdf::TextExtractor.pages(content, max_pages: MAX_PDF_METADATA_PAGES).join("\n")
+    rescue StandardError => e
+      Rails.logger.info("AccountStatement::MetadataDetector - PDF text unavailable: #{e.class}")
+      ""
     end
 
     def detect_from_csv(output)

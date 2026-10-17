@@ -353,7 +353,7 @@ uk:
         notes_placeholder: Нагадування для себе в майбутньому…
         funding_accounts: Рахунки фінансування
         funding_accounts_hint: Баланс цієї цілі — це баланс (або відкладена частина) цих рахунків.
-        whole_balance: Весь баланс
+        whole_balance: "Порожньо: весь баланс"
         earmark_for: Сума, яку відкласти з %{account}
         earmark_hint: Залиште суму порожньою, щоб використати весь баланс рахунку.
       subtypes:

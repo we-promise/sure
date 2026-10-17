@@ -50,6 +50,49 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_empty rendered_codes & @user.otp_backup_codes
   end
 
+  # A double-click or browser resubmit replays the correct enrollment code;
+  # before the guard this fell into disable_mfa! and wiped the whole setup.
+  test "resubmitting the enrollment code does not tear down the finished setup" do
+    @user.setup_mfa!
+    code = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances").now
+
+    post mfa_path, params: { code: code }
+    assert_response :success
+    assert @user.reload.otp_required?
+
+    @user.webauthn_credentials.create!(
+      nickname: "Touch ID",
+      credential_id: "touch-id-credential",
+      public_key: "public-key"
+    )
+
+    post mfa_path, params: { code: code }
+
+    assert_redirected_to root_path
+    @user.reload
+    assert @user.otp_required?, "MFA must stay enabled"
+    assert_equal 8, @user.otp_backup_codes.length
+    assert @user.webauthn_credentials.exists?, "WebAuthn credentials must survive"
+  end
+
+  # Same replay, but caught before the first submit finished enabling MFA
+  # (the otp_required? guard cannot help yet): keep the pending secret so
+  # the user can enter the next code instead of restarting setup.
+  test "a replayed enrollment code keeps the pending secret" do
+    @user.setup_mfa!
+    code = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances").now
+    assert @user.verify_otp?(code), "simulates the concurrent submit that claimed the step first"
+    secret = @user.otp_secret
+
+    post mfa_path, params: { code: code }
+
+    assert_redirected_to new_mfa_path
+    assert_equal I18n.t("mfa.create.code_already_used"), flash[:alert]
+    @user.reload
+    assert_equal secret, @user.otp_secret, "the pending secret must survive"
+    assert_not @user.otp_required?
+  end
+
   test "does not enable MFA with invalid code" do
     @user.setup_mfa!
 
@@ -310,11 +353,14 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     def register_webauthn_credential(origin: "http://www.example.com", rp_id: "www.example.com")
       client = WebAuthn::FakeClient.new(origin)
 
-      post options_settings_webauthn_credentials_path, as: :json
+      # A backup code confirms the registration so the current TOTP step stays
+      # free for the sign-in steps these tests go on to exercise.
+      code = @user.enable_mfa!.first
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: code } }, as: :json
       options = JSON.parse(response.body)
       credential = client.create(challenge: options.fetch("challenge"), rp_id: rp_id)
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "MacBook Touch ID" },
+        webauthn_credential: { nickname: "MacBook Touch ID", code: code },
         credential: credential
       }, as: :json
       assert_response :success

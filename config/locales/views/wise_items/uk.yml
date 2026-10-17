@@ -66,7 +66,6 @@ uk:
         few: Синхронізацію %{count} рахунків Wise не вдалося запланувати.
         many: Синхронізацію %{count} рахунків Wise не вдалося запланувати.
     provider_panel:
-      setup_title: "Інструкції з налаштування:"
       add_connection: Додати з'єднання Wise
       token_label: Токен API
       token_placeholder: Вставте свій особистий токен API Wise
@@ -80,9 +79,6 @@ uk:
       disconnect: Відключити
       disconnect_label: "Відключити %{name}"
       disconnect_confirm: "Ви впевнені, що хочете відключити %{name}? Це видалить усі синхронізовані дані рахунку."
-      accounts_link: Рахунки
-      configured_html: "Підключено та синхронізується. Перейдіть на вкладку %{accounts_link}, щоб керувати своїми рахунками."
-      not_configured: Не налаштовано
       sandbox_note_html: "Використовуйте базову URL-адресу <strong>пісочниці</strong> (<code>https://api.sandbox.transferwise.tech</code>) для тестування. Встановіть <code>WISE_BASE_URL</code> у вашому середовищі."
       encryption_warning:
         title: Шифрування бази даних не налаштовано

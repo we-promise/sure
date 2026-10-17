@@ -120,6 +120,13 @@
                             label: t(".webauthn_name_label"),
                             data: { webauthn_registration_target: "nickname" } %>
 
+        <%= form.text_field :code,
+                            required: true,
+                            autocomplete: "one-time-code",
+                            label: t(".webauthn_code_label"),
+                            placeholder: t(".webauthn_code_placeholder"),
+                            data: { webauthn_registration_target: "code" } %>
+
         <p class="text-sm text-destructive" role="alert" aria-live="assertive" aria-atomic="true" aria-hidden="true" hidden data-webauthn-registration-target="error"></p>
 
         <div>

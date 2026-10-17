@@ -1,18 +1,10 @@
 <div id="trade-republic-providers-panel" class="space-y-4">
   <% unless TradeRepublicItem.encryption_ready? %>
-    <div class="p-3 rounded-md bg-warning/10 text-warning text-sm">
-      <div class="flex items-start gap-2">
-        <%= icon "shield-alert", size: "sm", class: "mt-0.5 shrink-0" %>
-        <div>
-          <p class="font-medium"><%= t(".encryption_warning.title") %></p>
-          <p class="mt-1"><%= t(".encryption_warning.message") %></p>
-        </div>
-      </div>
-    </div>
-  <% end %>
-  <% error_msg = local_assigns[:error_message] || @error_message %>
-  <% if error_msg.present? %>
-    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+    <%= render DS::Alert.new(
+          variant: :warning,
+          title: t(".encryption_warning.title"),
+          message: t(".encryption_warning.message")
+        ) %>
   <% end %>
 
   <%= render "settings/providers/setup_steps",
@@ -21,6 +13,11 @@
                t(".steps.step_2"),
                t(".steps.step_3")
              ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
 
   <%= render TradeRepublic::AccountEditorComponent.new(
                items: local_assigns[:trade_republic_items] || @trade_republic_items,

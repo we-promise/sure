@@ -183,6 +183,14 @@ class PlaidItemTest < ActiveSupport::TestCase
     end
   end
 
+  # The test env's null store runs the real check. Naming MemCacheStore there
+  # autoloads it, and that raises LoadError without the dalli gem.
+  test "user sync skips provider refresh on an unshared cache without loading dalli" do
+    assert_no_enqueued_jobs only: PlaidTransactionsRefreshJob do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
   test "user sync releases cooldown lease when refresh job is not enqueued" do
     @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
     Rails.cache.stubs(:write).returns(true)

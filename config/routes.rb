@@ -336,6 +336,7 @@ Rails.application.routes.draw do
   get "feedback", to: "pages#feedback"
   get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
   patch "dashboard/preferences", to: "pages#update_preferences"
+  patch "dashboard/sections/:section_key/hidden", to: "pages#update_section_hidden", as: :dashboard_section_hidden
 
   resource :current_session, only: %i[update]
 
@@ -653,6 +654,7 @@ Rails.application.routes.draw do
 
     collection do
       delete :destroy_all
+      patch :reorder
       get :confirm_all
       post :apply_all
       post :clear_ai_cache
@@ -702,6 +704,8 @@ Rails.application.routes.draw do
 
       get :address
       patch :update_address
+
+      post :refresh_valuation
     end
   end
   resources :vehicles, only: %i[new create edit update]
@@ -756,7 +760,9 @@ Rails.application.routes.draw do
       resources :security_prices, only: [ :index, :show ]
       resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
-      resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :transactions, only: [ :index, :show, :create, :update, :destroy ] do
+        resource :split, only: [ :show, :create, :update, :destroy ]
+      end
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]
       resources :transfers, only: [ :index, :show ]
@@ -1014,6 +1020,7 @@ Rails.application.routes.draw do
     # so name it explicitly.
     resource :system_health, only: :show, controller: "system_health" do
       get :ai_status
+      get :hosted_usage
       post :verify_worker_ai
       post :send_test_push
     end

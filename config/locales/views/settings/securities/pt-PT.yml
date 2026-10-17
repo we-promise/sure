@@ -21,6 +21,8 @@ pt-PT:
         webauthn_empty: Ainda não existem chaves de acesso ou chaves de segurança registadas.
         webauthn_last_used: Utilizada pela última vez há %{time_ago}
         webauthn_name_label: Designação da chave
+        webauthn_code_label: "Código do autenticador ou de cópia de segurança"
+        webauthn_code_placeholder: "Código atual do autenticador ou um código de cópia de segurança não utilizado"
         webauthn_name_placeholder: MacBook Touch ID, YubiKey, etc.
         webauthn_remove: Eliminar
         webauthn_remove_confirm: Tem a certeza de que pretende eliminar esta chave de
@@ -32,6 +34,9 @@ pt-PT:
         webauthn_unsupported: Este navegador não suporta chaves de acesso ou chaves
           de segurança.
   webauthn_credentials:
+    code_already_used: "Esse código já foi utilizado. Aguarde o próximo código da sua aplicação de autenticação."
+    invalid_code: "Esse código não é válido. Introduza um código atual da sua aplicação de autenticação ou um código de cópia de segurança não utilizado."
+    rate_limited: "Demasiadas tentativas. Aguarde um minuto e tente novamente."
     default_name: Chave de segurança
     failure: Não foi possível guardar essa chave de acesso ou chave de segurança. Tente
       novamente.

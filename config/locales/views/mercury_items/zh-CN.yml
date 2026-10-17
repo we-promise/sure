@@ -75,6 +75,7 @@ zh-CN:
       connection_name_label: 连接名称
       connection_name_placeholder: 企业支票账户
       default_connection_name: Mercury 连接
+      disconnect: 断开连接
       disconnect_confirm: "断开 %{name}？"
       instructions:
         copy_token_html: "复制完整 token（包括 <code>secret-token:</code> 前缀），并将其作为命名连接添加到下方"

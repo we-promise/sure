@@ -28,7 +28,7 @@
   <% if largest.present? %>
     <p class="text-xs text-secondary">
       <%= t("bills.paycheck.shortfall_largest") %>
-      <%= link_to bill_path(largest.occurrence.recurring_transaction), class: "text-primary hover:underline" do %>
+      <%= link_to bill_path(largest.occurrence.recurring_transaction, occurrence: largest.occurrence.id), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "text-primary hover:underline" do %>
         <%= largest.occurrence.recurring_transaction.display_name %>
         &middot; <span class="tabular-nums privacy-sensitive"><%= format_money(Money.new(largest.remaining_total, currency)) %></span>
       <% end %>

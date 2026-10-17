@@ -113,12 +113,12 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
   # auth error handling
   # ---------------------------------------------------------------------------
 
-  test "marks item requires_update on 401 from Mercury API" do
+  test "marks item requires_update and raises on 401 from Mercury API" do
     @provider.stubs(:get_accounts).raises(
       Provider::Mercury::MercuryError.new("Unauthorized", :unauthorized)
     )
 
-    run_import
+    assert_raises(Provider::Mercury::MercuryError) { run_import }
 
     assert @item.reload.requires_update?
   end

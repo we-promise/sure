@@ -101,6 +101,7 @@ ru:
       connection_name_label: Название подключения
       connection_name_placeholder: Бизнес-счёт
       default_connection_name: Подключение Mercury
+      disconnect: Отключить
       disconnect_confirm: Отключить %{name}?
       instructions:
         copy_token_html: Скопируйте <strong>полный токен</strong> (включая префикс

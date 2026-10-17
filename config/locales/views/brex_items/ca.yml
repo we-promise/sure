@@ -114,15 +114,13 @@ ca:
       description: Connecta amb %{name}
       name: Brex - %{name}
     provider_panel:
-      accounts_link: Comptes
       add_connection: Afegeix connexió Brex
       base_url_label: URL base (opcional)
       base_url_placeholder: https://api.brex.com
-      configured_html: Configurat i a punt per utilitzar. Visita la pestanya %{accounts_link}
-        per gestionar i configurar comptes.
       connection_name_label: Nom de la connexió
       connection_name_placeholder: Compte corrent d'empresa
       default_connection_name: Connexió Brex
+      disconnect: Desconnecta
       disconnect_confirm: Vols desconnectar %{name}?
       disconnect_label: Desconnecta %{name}
       encryption_warning:
@@ -140,13 +138,11 @@ ca:
           a l'empresa que vols connectar
         sign_in_html: Visita %{link} i inicia sessió al compte que vols connectar
       keep_token_placeholder: Deixa-ho en blanc per mantenir el token actual
-      not_configured: No configurat
       sandbox_note_html: Utilitza una connexió amb nom separada per a cada empresa/token
         API de Brex que vulguis sincronitzar. Deixa l'URL base en blanc per a producció.
         El staging està limitat a les proves aprovades per Brex i no funciona amb tokens
         de clients.
       setup_accounts: Configura comptes
-      setup_title: 'Instruccions de configuració:'
       sync: Sincronitza
       token_label: Token
       token_placeholder: Enganxa el token aquí

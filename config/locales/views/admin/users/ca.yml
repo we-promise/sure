@@ -40,8 +40,6 @@ ca:
           member: Membre
           super_admin: Super administrador
         section_title: Famílies / Grups
-        summary:
-          trials_expiring_7_days: Proves que caduquen en els pròxims 7 dies
         table:
           family_accounts: Comptes familiars
           family_transactions: Transaccions familiars
@@ -102,6 +100,7 @@ ca:
         success_family: Pertinença de l'usuari a la família/grup actualitzada correctament.
         family_required: Selecciona una família/grup existent o introdueix un nom per crear-ne una de nova.
         password_and_family_conflict: No es poden actualitzar alhora la contrasenya i la pertinença a la família/grup.
+        password_disabled: Establir una contrasenya està desactivat perquè els usuaris només poden iniciar sessió amb SSO.
         password_too_short: La contrasenya ha de tenir com a mínim 8 caràcters.
         password_missing_case: La contrasenya ha d'incloure lletres majúscules i minúscules.
         password_missing_number: La contrasenya ha d'incloure com a mínim un número.

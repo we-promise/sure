@@ -253,9 +253,9 @@ module SettingsHelper
 
       return { status: :err, meta: t("settings.providers.meta.sync_error"), last_synced_at: nil } if health[:error]
 
-      valid_items = @enable_banking_items&.select(&:session_valid?) || []
+      valid_items = @enable_banking_items&.reject(&:needs_authorization?) || []
 
-      # All items have expired/missing sessions — need re-authorization
+      # All items have expired, missing or rejected sessions — need re-authorization
       if valid_items.empty?
         return { status: :warn, meta: t("settings.providers.meta.reconsent_required"), last_synced_at: last_synced_at }
       end

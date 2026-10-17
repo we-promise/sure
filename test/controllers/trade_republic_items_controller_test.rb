@@ -5,6 +5,26 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row. Only
+  # this card is replaced, so the other cards keep their state.
+  test "sync from the panel re-renders its card in place" do
+    item = trade_republic_items(:configured_item)
+
+    post sync_trade_republic_item_url(item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert item.reload.syncing?
+  end
+
+  # The Accounts page's Sync button posts here too, without the panel's source.
+  test "sync from the Accounts page goes back to it" do
+    post sync_trade_republic_item_url(trade_republic_items(:configured_item)),
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml", "Referer" => accounts_url }
+
+    assert_redirected_to accounts_url
+  end
+
   test "create rejects a web login without a PIN before persisting the item" do
     assert_no_difference "TradeRepublicItem.count" do
       post trade_republic_items_url, params: {
@@ -29,7 +49,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
       }, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
     end
 
-    assert_response :unprocessable_entity
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "trade-republic-providers-panel"
     assert_includes response.body, I18n.t("trade_republic_items.initiate_login.pin_required")
     assert_select "input[name='trade_republic_item[phone_number]'][value='+491701234567']"
   end
@@ -713,6 +733,17 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate item, :good?
     assert_equal "fresh-session", item.session_blob
     assert_not item.scheduled_for_deletion?
+  end
+
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    families(:dylan_family).trade_republic_items.update_all(scheduled_for_deletion: true)
+
+    get select_accounts_trade_republic_items_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("trade_republic_items.select_accounts.not_configured"), flash[:alert]
   end
 
   private

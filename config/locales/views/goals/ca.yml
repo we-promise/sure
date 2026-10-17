@@ -333,7 +333,7 @@ ca:
         notes_placeholder: Un recordatori per al teu jo del futur…
         funding_accounts: Comptes de finançament
         funding_accounts_hint: El saldo d'aquest objectiu és el saldo (o la part reservada) d'aquests comptes.
-        whole_balance: Tot el saldo
+        whole_balance: "Buit: tot el saldo"
         earmark_for: Import reservat de %{account}
         earmark_hint: Deixa un import en blanc per destinar-hi tot el saldo d'aquell compte.
       subtypes:
