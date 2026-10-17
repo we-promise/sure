@@ -91,7 +91,7 @@ class Import::UploadsController < ApplicationController
     end
 
     def csv_str
-      @csv_str ||= upload_params[:import_file]&.read || upload_params[:raw_file_str]
+      @csv_str ||= (upload_params[:import_file]&.read || upload_params[:raw_file_str])&.gsub("\x00", "")
     end
 
     def csv_valid?(str)
