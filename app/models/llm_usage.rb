@@ -94,7 +94,6 @@ class LlmUsage < ApplicationRecord
       # Gemini 4 models
       # Gemini 4 Argon promotional pricing through 2026-11-30: $2.00 / $10.00 ($4.00 / $20.00 starting December 2026)
       "gemini-4-argon" => { prompt: 2.00, completion: 10.00 },
-      "gemini-4-argon-preview" => { prompt: 2.00, completion: 10.00 },
       # Gemini 3 models
       # Flash series promotion through 2026-12-31: $0.75 / $3.75 ($1.50 / $7.50 starting 2027)
       "gemini-3.8-flash" => { prompt: 0.75, completion: 3.75 },

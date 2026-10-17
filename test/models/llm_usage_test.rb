@@ -201,7 +201,7 @@ class LlmUsageTest < ActiveSupport::TestCase
 
   test "calculate_cost returns Google pricing for Gemini 4 Argon" do
     # gemini-4-argon promotional pricing: $2.00 prompt / $10.00 completion per 1M tokens
-    %w[gemini-4-argon gemini-4-argon-preview google/gemini-4-argon].each do |model|
+    %w[gemini-4-argon google/gemini-4-argon].each do |model|
       cost = LlmUsage.calculate_cost(model: model, prompt_tokens: 1_000_000, completion_tokens: 100_000)
       # 1M * $2.00 + 100k * $10.00 = $2.00 + $1.00 = $3.00
       assert_in_delta 3.00, cost, 0.0001
