@@ -102,12 +102,16 @@ class Balance::BaseCalculator
       # must not produce spurious non_cash_outflows in the flow breakdown).
       regular_trades = entries.select { |e| e.trade? && e.entryable.qty != 0 }
       income_trades   = entries.select { |e| e.trade? && e.entryable.qty == 0 }
+      cash_regular_trades = regular_trades.select { |e| e.entryable.affects_cash_balance?(e) }
+      cash_income_trades = income_trades.select { |e| e.entryable.affects_cash_balance?(e) }
 
-      trade_cash_inflow_sum = regular_trades.select { |e| e.amount < 0 }.sum(&:amount)
-      trade_cash_outflow_sum = regular_trades.select { |e| e.amount >= 0 }.sum(&:amount)
+      trade_cash_inflow_sum = cash_regular_trades.select { |e| e.amount < 0 }.sum(&:amount)
+      trade_cash_outflow_sum = cash_regular_trades.select { |e| e.amount >= 0 }.sum(&:amount)
 
-      income_inflow_sum = income_trades.select { |e| e.amount < 0 }.sum(&:amount)
-      income_outflow_sum = income_trades.select { |e| e.amount >= 0 }.sum(&:amount)
+      income_inflow_sum = cash_income_trades.select { |e| e.amount < 0 }.sum(&:amount)
+      income_outflow_sum = cash_income_trades.select { |e| e.amount >= 0 }.sum(&:amount)
+      trade_non_cash_inflow_sum = regular_trades.select { |e| e.amount >= 0 }.sum(&:amount)
+      trade_non_cash_outflow_sum = regular_trades.select { |e| e.amount < 0 }.sum(&:amount)
 
       if account.balance_type == :non_cash && account.accountable_type == "Loan"
         non_cash_inflows = txn_inflow_sum.abs
@@ -117,8 +121,8 @@ class Balance::BaseCalculator
         cash_outflows = txn_outflow_sum + trade_cash_outflow_sum + income_outflow_sum
 
         # Trades are inverse (a "buy" is outflow of cash, but "inflow" of non-cash, aka "holdings")
-        non_cash_outflows = trade_cash_inflow_sum.abs
-        non_cash_inflows = trade_cash_outflow_sum
+        non_cash_outflows = trade_non_cash_outflow_sum.abs
+        non_cash_inflows = trade_non_cash_inflow_sum
       end
 
       {
@@ -135,7 +139,10 @@ class Balance::BaseCalculator
       if account.balance_type == :non_cash
         0
       else
-        cash_balance + signed_entry_flows(entries)
+        cash_entries = entries.reject do |entry|
+          entry.trade? && !entry.entryable.affects_cash_balance?(entry)
+        end
+        cash_balance + signed_entry_flows(cash_entries)
       end
     end
 

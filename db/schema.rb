@@ -1078,6 +1078,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.string "currency", limit: 3, null: false
     t.string "external_id", null: false
     t.uuid "fineco_item_id", null: false
+    t.jsonb "history_ledger"
+    t.datetime "history_synced_at"
     t.datetime "last_snapshot_at"
     t.date "last_snapshot_date"
     t.string "name", null: false
@@ -1098,6 +1100,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.text "dossier_index", null: false
     t.uuid "family_id", null: false
     t.text "gsessionid"
+    t.string "history_sync_error_code"
     t.string "last_sync_error_code"
     t.uuid "owner_id"
     t.datetime "portfolio_snapshot_at"

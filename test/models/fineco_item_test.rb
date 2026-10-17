@@ -1,6 +1,8 @@
 require "test_helper"
 
 class FinecoItemTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @family = families(:dylan_family)
     @admin = users(:family_admin)
@@ -78,6 +80,31 @@ class FinecoItemTest < ActiveSupport::TestCase
     assert_not item.credentials_configured?
   end
 
+  test "a normal sync schedules history refresh when the Fineco item is ready" do
+    item = build_ready_item
+
+    assert item.ready_for_sync?
+    assert_enqueued_jobs 1, only: FinecoHistorySyncJob do
+      item.sync_later
+    end
+  end
+
+  test "disabled or unready items do not schedule history refresh" do
+    item = build_ready_item
+    Provider::Fineco.stubs(:verified_identity_contract?).returns(false)
+
+    assert_no_enqueued_jobs only: FinecoHistorySyncJob do
+      item.sync_later
+    end
+
+    Provider::Fineco.stubs(:verified_identity_contract?).returns(true)
+    item.disconnect!
+
+    assert_no_enqueued_jobs only: FinecoHistorySyncJob do
+      item.sync_history_later
+    end
+  end
+
   private
 
     def build_item(account_index: "2", dossier_index: "3")
@@ -91,5 +118,28 @@ class FinecoItemTest < ActiveSupport::TestCase
         dossier_identity: Digest::SHA256.hexdigest("synthetic-dossier"),
         captured_at: Time.current
       )
+    end
+
+    def build_ready_item
+      ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+      Provider::Fineco.stubs(:verified_identity_contract?).returns(true)
+
+      item = build_item
+      item.save!
+      fineco_account = item.fineco_accounts.create!(
+        external_id: FinecoAccount::EXTERNAL_ID,
+        name: "Fineco",
+        currency: "EUR"
+      )
+      account = @family.accounts.create!(
+        name: "Fineco Investment",
+        balance: 0,
+        cash_balance: 0,
+        currency: "EUR",
+        accountable: Investment.new,
+        owner: @admin
+      )
+      AccountProvider.create!(account: account, provider: fineco_account)
+      item
     end
 end

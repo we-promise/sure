@@ -30,6 +30,21 @@ class Provider::FinecoTest < ActiveSupport::TestCase
     "accrual" => 0
   }.freeze
 
+  MOVEMENT = {
+    "type" => "ORDER",
+    "transactionDate" => "2025-01-15T09:30:00+01:00",
+    "valueDate" => "2025-01-17T00:00:00+01:00",
+    "description" => "Synthetic purchase",
+    "name" => "Synthetic fund",
+    "isin" => "US0000000002",
+    "sign" => "A",
+    "amount" => "2.00",
+    "currency" => "EUR",
+    "price" => "50.00",
+    "exchange" => "1.0000",
+    "equivalentValue" => "100.00"
+  }.freeze
+
   class StubResponse
     attr_reader :code
 
@@ -109,6 +124,290 @@ class Provider::FinecoTest < ActiveSupport::TestCase
     assert_equal SUMMARY["marketValue"], result.payload.dig("summary", "total", "marketValue")
     assert_equal "23456789", result.account_number
     assert_equal 64, result.dossier_identity.length
+  end
+
+  test "fetches a fixed movements page with validated context and redacted result" do
+    identity = json_response(
+      identity_payload,
+      headers: { "set-cookie" => "gsessionid=identity-session; Domain=.finecobank.com; Path=/; Secure; HttpOnly" }
+    )
+    movements = movements_payload
+    movement_response = json_response(
+      movements,
+      headers: { "set-cookie" => "gsessionid=movements-session; Domain=.finecobank.com; Path=/; Secure; HttpOnly" }
+    )
+    http = StubHttp.new([ identity, movement_response ])
+    client = fineco
+    date_to = bank_today
+
+    result = with_http(http) do
+      client.fetch_movements_page(date_from: "2026-01-01", date_to: date_to, offset: 10)
+    end
+
+    identity_request, request = http.request_objects
+    assert_instance_of Net::HTTP::Get, identity_request
+    assert_equal Provider::Fineco::ACCOUNT_LIST_ENDPOINT.request_uri, identity_request.path
+    assert_instance_of Net::HTTP::Post, request
+    assert_equal Provider::Fineco::MOVEMENTS_ENDPOINT.request_uri, request.path
+    assert_equal "gsessionid=identity-session", request["Cookie"]
+    assert_equal "2", request["X-Account-Index"]
+    assert_equal "11", request["X-Dossier-Index"]
+    assert_equal "01", request["X-Subaccount-Index"]
+    assert_match(/\A[0-9a-f-]{36}\z/, request["X-Request-Id"])
+    assert_equal(
+      {
+        "type" => "ORDER",
+        "keyword" => {
+          "key" => "ADVANCED",
+          "word" => "",
+          "dateFrom" => "2026-01-01",
+          "dateTo" => date_to.iso8601
+        },
+        "offset" => 10,
+        "limit" => 10
+      },
+      JSON.parse(request.body)
+    )
+    assert_equal movements, result.payload
+    assert_equal "movements-session", result.rotated_gsessionid
+    assert_equal true, result.payload["lastPage"]
+    assert_equal "23456789", result.account_number
+    assert_equal 64, result.dossier_identity.length
+    refute_includes result.inspect, "Synthetic purchase"
+    refute_includes result.inspect, "US0000000002"
+    refute_includes result.to_s, "100.00"
+  end
+
+  test "fetches a complete movements window with the export limit and ignores the page hint" do
+    payload = movements_payload(last_page: false)
+    movement_response = json_response(
+      payload,
+      headers: { "set-cookie" => "gsessionid=window-session; Domain=.finecobank.com; Path=/; Secure; HttpOnly" }
+    )
+    http = stub_http(movement_response)
+    client = fineco
+
+    result = with_http(http) do
+      client.fetch_movements_window(date_from: "2026-01-01", date_to: bank_today)
+    end
+
+    request = http.request_objects.last
+    assert_instance_of Net::HTTP::Post, request
+    assert_equal Provider::Fineco::MOVEMENTS_ENDPOINT.request_uri, request.path
+    assert_equal "gsessionid=opaque-session", http.request_objects.first["Cookie"]
+    assert_equal "01", request["X-Subaccount-Index"]
+    assert_match(/\A[0-9a-f-]{36}\z/, request["X-Request-Id"])
+    assert_equal(
+      {
+        "type" => "ORDER",
+        "keyword" => {
+          "key" => "ADVANCED",
+          "word" => "",
+          "dateFrom" => "2026-01-01",
+          "dateTo" => bank_today.iso8601
+        },
+        "offset" => 0,
+        "limit" => -1
+      },
+      JSON.parse(request.body)
+    )
+    assert_equal false, result.payload.fetch("lastPage")
+    assert_equal "window-session", result.rotated_gsessionid
+    assert_equal "23456789", result.account_number
+  end
+
+  test "classifies limited and capped movement windows for recursive date splitting" do
+    limited = json_response(
+      movements_payload(limited_result: true),
+      headers: { "set-cookie" => "gsessionid=split-session; Domain=.finecobank.com; Path=/; Secure; HttpOnly" }
+    )
+    http = stub_http(limited)
+    client = fineco
+
+    assert_raises Provider::Fineco::MovementsWindowTooLarge do
+      with_http(http) do
+        client.fetch_movements_window(date_from: "2026-01-01", date_to: bank_today)
+      end
+    end
+    assert_equal "split-session", client.last_rotated_gsessionid
+
+    capped_payload = movements_payload(movements: Array.new(Provider::Fineco::MAX_MOVEMENTS_PER_WINDOW) { MOVEMENT.dup })
+    assert_raises Provider::Fineco::MovementsWindowTooLarge do
+      with_http(stub_http(json_response(capped_payload))) do
+        fineco.fetch_movements_window(date_from: "2026-01-01", date_to: bank_today)
+      end
+    end
+  end
+
+  test "rejects malformed movement window metadata and rows" do
+    missing_metadata = movements_payload.except("limitedResult")
+    assert_raises Provider::Fineco::InvalidResponse do
+      with_http(stub_http(json_response(missing_metadata))) do
+        fineco.fetch_movements_window(date_from: "2026-01-01", date_to: bank_today)
+      end
+    end
+
+    invalid_row = MOVEMENT.except("isin")
+    assert_raises Provider::Fineco::InvalidResponse do
+      with_http(stub_http(json_response(movements_payload(movements: [ invalid_row ])))) do
+        fineco.fetch_movements_window(date_from: "2026-01-01", date_to: bank_today)
+      end
+    end
+  end
+
+  test "recognizes only the bank's structured minimum-date response" do
+    body = { "issues" => [ { "reason" => "Sono accettate solo date dal 19 Oct 2022 fino ad oggi." } ] }.to_json
+    response = StubResponse.new(
+      code: 400,
+      body: body,
+      headers: { "set-cookie" => "gsessionid=boundary-session; Domain=.finecobank.com; Path=/; Secure; HttpOnly" }
+    )
+    client = fineco
+    error = assert_raises Provider::Fineco::MovementsDateRangeUnavailable do
+      with_http(stub_http(response)) do
+        client.fetch_movements_window(date_from: "2018-01-01", date_to: bank_today)
+      end
+    end
+
+    assert_equal Date.new(2022, 10, 19), error.earliest_date
+    assert_equal "boundary-session", client.last_rotated_gsessionid
+    refute_includes error.message, "2022"
+    refute_includes error.inspect, body
+
+    generic_body = { "issues" => [ { "reason" => "request rejected" } ] }.to_json
+    generic_response = StubResponse.new(
+      code: 400,
+      body: generic_body,
+      headers: { "set-cookie" => "gsessionid=untrusted-session; Domain=.finecobank.com; Path=/; Secure; HttpOnly" }
+    )
+    client = fineco
+    upstream_error = assert_raises Provider::Fineco::UpstreamResponse do
+      with_http(stub_http(generic_response)) do
+        client.fetch_movements_window(date_from: "2018-01-01", date_to: bank_today)
+      end
+    end
+
+    assert_equal 400, upstream_error.status
+    assert_nil client.last_rotated_gsessionid
+    refute_includes upstream_error.message, generic_body
+  end
+
+  test "validates movements request type dates and offset before making requests" do
+    invalid_requests = [
+      { movement_type: "FUND" },
+      { date_from: "2017-12-31" },
+      { date_to: bank_today + 1.day },
+      { date_from: bank_today, date_to: bank_today - 1.day },
+      { offset: -10 },
+      { offset: 1 },
+      { offset: 10_010 }
+    ]
+
+    Net::HTTP.expects(:new).never
+    invalid_requests.each do |overrides|
+      arguments = { date_from: "2026-01-01", date_to: bank_today, offset: 0 }.merge(overrides)
+
+      assert_raises Provider::Fineco::ConfigurationError do
+        fineco.fetch_movements_page(**arguments)
+      end
+    end
+  end
+
+  test "supports the whitelisted TITLE request without assuming its row schema" do
+    payload = movements_payload(movements: [ { "titleRowField" => "synthetic" } ])
+    http = stub_http(json_response(payload))
+
+    result = with_http(http) do
+      fineco.fetch_movements_page(
+        date_from: Date.new(2026, 1, 1),
+        date_to: bank_today,
+        offset: 0,
+        movement_type: "TITLE"
+      )
+    end
+
+    assert_equal "TITLE", JSON.parse(http.request_objects.last.body).fetch("type")
+    assert_equal payload, result.payload
+  end
+
+  test "rejects limited or malformed movements pages without retaining their cookie rotation" do
+    limited = movements_payload
+    limited["limitedResult"] = true
+    limited_response = json_response(
+      limited,
+      headers: { "set-cookie" => "gsessionid=unvalidated-session; Domain=.finecobank.com; Path=/; Secure; HttpOnly" }
+    )
+    http = stub_http(limited_response)
+    client = fineco
+
+    error = assert_raises Provider::Fineco::InvalidResponse do
+      with_http(http) do
+        client.fetch_movements_page(date_from: "2026-01-01", date_to: bank_today, offset: 0)
+      end
+    end
+
+    assert_equal "Fineco limited the requested movements result.", error.message
+    assert_equal 2, http.request_count
+    assert_nil client.last_rotated_gsessionid
+
+    malformed = movements_payload
+    malformed["movements"][0].delete("equivalentValue")
+    http = stub_http(json_response(malformed))
+    assert_raises Provider::Fineco::InvalidResponse do
+      with_http(http) do
+        fineco.fetch_movements_page(date_from: "2026-01-01", date_to: bank_today, offset: 0)
+      end
+    end
+    assert_equal 2, http.request_count
+  end
+
+  test "fails closed on movements authentication and redirects" do
+    [ 401, 403 ].each do |status|
+      http = stub_http(StubResponse.new(code: status))
+      assert_raises Provider::Fineco::ReauthenticationRequired do
+        with_http(http) do
+          fineco.fetch_movements_page(date_from: "2026-01-01", date_to: bank_today, offset: 0)
+        end
+      end
+      assert_equal 2, http.request_count
+    end
+
+    http = stub_http(StubResponse.new(code: 302, headers: { "location" => "https://evil.example/collect" }))
+    assert_raises Provider::Fineco::RedirectRejected do
+      with_http(http) do
+        fineco.fetch_movements_page(date_from: "2026-01-01", date_to: bank_today, offset: 0)
+      end
+    end
+    assert_equal 2, http.request_count
+
+    challenge = StubResponse.new(
+      code: 451,
+      body: '{"issues":[{"reason":"Sca di sessione non valida"}]}',
+      headers: { "set-cookie" => "gsessionid=step-up-session; Domain=.finecobank.com; Path=/; Secure; HttpOnly" }
+    )
+    http = stub_http(challenge)
+    client = fineco
+    assert_raises Provider::Fineco::ReauthenticationRequired do
+      with_http(http) do
+        client.fetch_movements_page(date_from: "2026-01-01", date_to: bank_today, offset: 0)
+      end
+    end
+    assert_equal 2, http.request_count
+    assert_nil client.last_rotated_gsessionid
+  end
+
+  test "does not request movements when the selected bank identity is invalid" do
+    invalid_identity = identity_payload
+    invalid_identity["accounts"][1].delete("number")
+    http = stub_identity_http(json_response(invalid_identity))
+
+    assert_raises Provider::Fineco::InvalidResponse do
+      with_http(http) do
+        fineco.fetch_movements_page(date_from: "2026-01-01", date_to: bank_today, offset: 0)
+      end
+    end
+
+    assert_equal 1, http.request_count
   end
 
   test "does not make an HTTP request until the identity contract is verified" do
@@ -802,6 +1101,14 @@ class Provider::FinecoTest < ActiveSupport::TestCase
     def quote_data_unavailable_payload
       position = POSITION.except(*Provider::Fineco::POSITION_MARKET_DATA_FIELDS)
       complete_payload(positions: [ position ], summary: SUMMARY)
+    end
+
+    def movements_payload(movements: [ MOVEMENT.dup ], last_page: true, limited_result: false)
+      { "movements" => movements, "lastPage" => last_page, "limitedResult" => limited_result }
+    end
+
+    def bank_today
+      Time.find_zone!(Provider::Fineco::BANK_TIME_ZONE).today
     end
 
     def zero_summary

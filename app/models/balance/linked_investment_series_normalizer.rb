@@ -2,6 +2,13 @@ class Balance::LinkedInvestmentSeriesNormalizer
   attr_reader :account, :series, :view
 
   class << self
+    def provider_activity_entries(scope)
+      scope.excluding_pending
+        .where.not(source: nil)
+        .where.not(entryable_type: "Valuation")
+        .where.not(id: Trade.fineco_history.select("entries.id"))
+    end
+
     def aggregate_accounts(accounts:, currency:, period:, favorable_direction:, interval: "1 day")
       aggregate_account_ids(
         account_ids: Array(accounts).map(&:id),
@@ -46,10 +53,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
         account_ids = Array(account_ids).compact
         return if account_ids.empty?
 
-        activity_dates = Entry.where(account_id: account_ids)
-          .excluding_pending
-          .where.not(source: nil)
-          .where.not(entryable_type: "Valuation")
+        activity_dates = provider_activity_entries(Entry.where(account_id: account_ids))
           .group(:account_id)
           .minimum(:date)
 
@@ -182,11 +186,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
     end
 
     def first_provider_activity_date
-      @first_provider_activity_date ||= account.entries
-        .excluding_pending
-        .where.not(source: nil)
-        .where.not(entryable_type: "Valuation")
-        .minimum(:date)
+      @first_provider_activity_date ||= self.class.provider_activity_entries(account.entries).minimum(:date)
     end
 
     def provider_holdings_scope

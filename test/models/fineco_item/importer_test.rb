@@ -66,6 +66,59 @@ class FinecoItem::ImporterTest < ActiveSupport::TestCase
     assert_equal @before_enable_banking_provider_ids, AccountProvider.where(provider_type: "EnableBankingAccount").ids
   end
 
+  test "content validation accepts only history trades owned by this Fineco account" do
+    @item.import_portfolio_snapshot!(payload: payload(positions: [ ETF ]), captured_at: Time.current)
+    account = @item.accounts.sole
+    fineco_account = @item.fineco_accounts.sole
+
+    owned_entry = create_history_trade(account:, suffix: "owned", provider_account_id: fineco_account.id)
+    assert_equal Trade::FINECO_HISTORY_SCHEMA_VERSION, owned_entry.entryable.extra.dig("fineco", "history_schema_version")
+    assert_equal fineco_account.id, owned_entry.entryable.extra.dig("fineco", "provider_account_id")
+    assert owned_entry.entryable.fineco_history_entry?(owned_entry)
+    assert_includes Trade.fineco_history.ids, owned_entry.entryable_id
+
+    assert FinecoAccount::ContentValidator.new(account, fineco_account).validate!
+
+    create_history_trade(account:, suffix: "foreign", provider_account_id: SecureRandom.uuid)
+    error = assert_raises FinecoItem::PortfolioImportError do
+      FinecoAccount::ContentValidator.new(account, fineco_account).validate!
+    end
+
+    assert_equal "account_content_conflict", error.code
+  end
+
+  test "a protected manual transaction blocks Fineco refresh and remains unchanged" do
+    @item.import_portfolio_snapshot!(payload: payload(positions: [ ETF ]), captured_at: Time.current)
+    account = @item.accounts.sole
+    prior_snapshot_at = @item.portfolio_snapshot_at
+    prior_holding = account.holdings.sole.attributes
+    manual_entry = account.entries.create!(
+      name: "Protected manual transaction",
+      date: Date.current,
+      amount: 25,
+      currency: "EUR",
+      source: "manual",
+      user_modified: true,
+      entryable: Transaction.new
+    )
+
+    updated_etf = ETF.merge("marketValue" => "120", "marketPrice" => "60", "profitLoss" => "30")
+    updated_summary = summary_payload(market_value: "120", profit_loss: "30", profit_loss_perc: "33.33")
+    error = assert_raises FinecoItem::PortfolioImportError do
+      @item.import_portfolio_snapshot!(
+        payload: payload(positions: [ updated_etf ], summary: updated_summary),
+        captured_at: Time.current + 1.day
+      )
+    end
+
+    assert_equal "account_content_conflict", error.code
+    assert_equal prior_snapshot_at, @item.reload.portfolio_snapshot_at
+    assert_equal prior_holding, account.holdings.sole.attributes
+    assert manual_entry.reload.protected_from_sync?
+    assert_equal BigDecimal("100"), account.reload.balance
+    assert_equal BigDecimal("0"), account.cash_balance
+  end
+
   test "same-day updates are idempotent and anchor the balance to provider holdings" do
     travel_to(Time.zone.local(Date.current.year, Date.current.month, Date.current.day, 12)) do
       captured_at = Time.current
@@ -406,6 +459,32 @@ class FinecoItem::ImporterTest < ActiveSupport::TestCase
         bank_account_number: "SYNTHETIC-ACCOUNT",
         dossier_identity: Digest::SHA256.hexdigest("synthetic-dossier"),
         captured_at: Time.current
+      )
+    end
+
+    def create_history_trade(account:, suffix:, provider_account_id:)
+      security = Security.find_by!(ticker: ETF.fetch("instrId"))
+      account.entries.create!(
+        name: "Fineco historical purchase",
+        date: Date.current,
+        amount: 20,
+        currency: "EUR",
+        source: "fineco",
+        external_id: "#{Trade::FINECO_HISTORY_EXTERNAL_ID_PREFIX}#{suffix}",
+        entryable: Trade.new(
+          qty: 1,
+          security: security,
+          price: 20,
+          currency: "EUR",
+          investment_activity_label: "Buy",
+          extra: {
+            "fineco" => {
+              "history_schema_version" => Trade::FINECO_HISTORY_SCHEMA_VERSION,
+              "provider_account_id" => provider_account_id,
+              "cash_account_external" => true
+            }
+          }
+        )
       )
     end
 

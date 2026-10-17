@@ -104,9 +104,10 @@ Sure session, makes its own fixed account and portfolio requests, validates the
 business identity and complete snapshot, and persists only after validation and
 encryption. A successful callback closes the viewer and confirms the connection.
 Browser output, clipboard contents, page bodies, cookie values, and local
-debugging ports are never written to logs or status responses. A real cookie-only
-Ruby replay, completed import, and unattended expiry or refresh have not yet been
-verified by an attended capture.
+debugging ports are never written to logs or status responses. Attended automatic
+capture, cookie-only Ruby requests, completed import, and subsequent worker
+refreshes have been verified. The bank's absolute session lifetime and indefinite
+unattended renewal remain unverified.
 
 ## Verification
 

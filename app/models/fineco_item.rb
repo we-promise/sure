@@ -24,6 +24,13 @@ class FinecoItem < ApplicationRecord
     "account_conflict" => "The Fineco Investment account is not linked safely. Your previous holdings and balance were kept.",
     "stale_snapshot" => "Fineco returned an older portfolio snapshot. Your previous holdings and balance were kept.",
     "encryption_unavailable" => "Fineco syncing requires application encryption to be configured.",
+    "history_sync_failed" => "Fineco investment history could not be refreshed. Your saved activity and portfolio were kept.",
+    "history_incomplete" => "Fineco returned incomplete investment history. Your saved activity was kept.",
+    "history_inconsistent" => "Fineco investment history changed during retrieval. Your saved activity was kept; retry the sync.",
+    "history_changed" => "Fineco changed previously imported investment history. Your saved activity was kept for review.",
+    "history_invalid_data" => "Fineco returned invalid investment activity. Your saved activity was kept.",
+    "history_unsupported_activity" => "Fineco returned investment activity that cannot be imported safely. Your saved activity was kept.",
+    "history_identity_changed" => "The Fineco account or dossier changed while reading investment history. Reconnect the original account.",
     "sync_failed" => "Fineco portfolio syncing failed. Your previous holdings and balance were kept. Retry or reconnect."
   }.freeze
 
@@ -101,6 +108,30 @@ class FinecoItem < ApplicationRecord
     ready_for_sync?
   end
 
+  def sync_later(**options)
+    sync = super
+    sync_history_later
+    sync
+  end
+
+  def sync_history_later
+    return unless ready_for_sync?
+
+    FinecoHistorySyncJob.perform_later(self)
+  rescue StandardError
+    update!(history_sync_error_code: "history_sync_failed")
+    DebugLogEntry.capture(
+      category: "sync",
+      level: "error",
+      message: "Fineco investment history could not be scheduled.",
+      source: "fineco",
+      provider_key: "fineco",
+      family: family,
+      metadata: { fineco_item_id: id }
+    )
+    nil
+  end
+
   def same_bank_identity?(account_number:, dossier_identity:)
     bank_account_number.present? && self.dossier_identity.present? &&
       bank_account_number == account_number.to_s && self.dossier_identity == dossier_identity.to_s
@@ -140,7 +171,7 @@ class FinecoItem < ApplicationRecord
   end
 
   def last_sync_error
-    SYNC_ERROR_MESSAGES[last_sync_error_code]
+    SYNC_ERROR_MESSAGES[last_sync_error_code].presence || SYNC_ERROR_MESSAGES[history_sync_error_code]
   end
 
   def sync_error

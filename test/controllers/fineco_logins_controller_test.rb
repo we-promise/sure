@@ -329,16 +329,18 @@ class FinecoLoginsControllerTest < ActionDispatch::IntegrationTest
     ).returns(client)
 
     captured = nil
-    with_fineco_access do
-      captured = @runtime.capture(
-        identity: @runtime.identity,
-        session: {
-          gsessionid: "captured-session-cookie",
-          account_index: "2",
-          dossier_index: "4",
-          captured_at: Time.current
-        }
-      )
+    assert_enqueued_jobs 1, only: FinecoHistorySyncJob do
+      with_fineco_access do
+        captured = @runtime.capture(
+          identity: @runtime.identity,
+          session: {
+            gsessionid: "captured-session-cookie",
+            account_index: "2",
+            dossier_index: "4",
+            captured_at: Time.current
+          }
+        )
+      end
     end
 
     assert captured
@@ -415,16 +417,18 @@ class FinecoLoginsControllerTest < ActionDispatch::IntegrationTest
       dossier_index: "4"
     ).returns(client)
     captured = nil
-    with_fineco_access do
-      captured = @runtime.capture(
-        identity: @runtime.identity,
-        session: {
-          gsessionid: "new-session-cookie",
-          account_index: "2",
-          dossier_index: "4",
-          captured_at: Time.current
-        }
-      )
+    assert_no_enqueued_jobs only: FinecoHistorySyncJob do
+      with_fineco_access do
+        captured = @runtime.capture(
+          identity: @runtime.identity,
+          session: {
+            gsessionid: "new-session-cookie",
+            account_index: "2",
+            dossier_index: "4",
+            captured_at: Time.current
+          }
+        )
+      end
     end
 
     assert_not captured

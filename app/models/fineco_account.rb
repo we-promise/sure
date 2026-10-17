@@ -4,6 +4,7 @@ class FinecoAccount < ApplicationRecord
   include Encryptable
 
   encrypts :raw_position_metadata
+  encrypts :history_ledger
 
   belongs_to :fineco_item
 

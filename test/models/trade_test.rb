@@ -3,6 +3,45 @@ require "test_helper"
 class TradeTest < ActiveSupport::TestCase
   include EntriesTestHelper
   include SqlQueryCapture
+
+  test "only marked Fineco history trades are excluded from cash balance impact" do
+    account = families(:empty).accounts.create!(
+      name: "Trade cash impact",
+      balance: 0,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "CASH-IMPACT-TEST", name: "Cash impact test")
+    entry = create_trade(security, account: account, qty: 1, date: Date.current, price: 10, currency: "EUR")
+    trade = entry.entryable
+
+    assert trade.affects_cash_balance?(entry)
+
+    entry.update!(
+      source: "fineco",
+      external_id: "#{Trade::FINECO_HISTORY_EXTERNAL_ID_PREFIX}row-1"
+    )
+    trade.update!(
+      extra: {
+        "fineco" => {
+          "history_schema_version" => Trade::FINECO_HISTORY_SCHEMA_VERSION,
+          "provider_account_id" => "00000000-0000-0000-0000-000000000042",
+          "cash_account_external" => true
+        }
+      }
+    )
+    refute trade.affects_cash_balance?(entry)
+
+    trade.update!(extra: {
+      "fineco" => {
+        "history_schema_version" => 1,
+        "provider_account_id" => "00000000-0000-0000-0000-000000000042",
+        "cash_account_external" => false
+      }
+    })
+    assert trade.affects_cash_balance?(entry)
+  end
+
   # `Trend#value` is `current - previous`, and `Money#-` keeps the left
   # operand's currency while taking the right one's bare amount without
   # converting or raising. So a disposal priced in the security's currency had

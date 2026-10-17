@@ -30,6 +30,22 @@ class Trade < ApplicationRecord
   # same ownership-preserving rule.
   TRANSFER_LABEL = "Transfer".freeze
 
+  FINECO_HISTORY_EXTERNAL_ID_PREFIX = "fineco-history-v1:".freeze
+  FINECO_HISTORY_SCHEMA_VERSION = 1
+  FINECO_HISTORY_PROVIDER_ACCOUNT_ID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i.freeze
+
+  scope :fineco_history, -> {
+    joins(:entry)
+      .where(entries: { source: "fineco" })
+      .where("entries.external_id LIKE ?", "#{FINECO_HISTORY_EXTERNAL_ID_PREFIX}%")
+      .where("jsonb_typeof(trades.extra #> '{fineco,history_schema_version}') = 'number'")
+      .where("trades.extra #>> '{fineco,history_schema_version}' = ?", FINECO_HISTORY_SCHEMA_VERSION.to_s)
+      .where("jsonb_typeof(trades.extra #> '{fineco,provider_account_id}') = 'string'")
+      .where("trades.extra #>> '{fineco,provider_account_id}' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'")
+      .where("jsonb_typeof(trades.extra #> '{fineco,cash_account_external}') = 'boolean'")
+      .where("trades.extra #>> '{fineco,cash_account_external}' = 'true'")
+  }
+
   validates :qty, presence: true
   validates :price, :currency, presence: true
   validates :investment_activity_label, inclusion: { in: ACTIVITY_LABELS }, allow_nil: true
@@ -68,6 +84,22 @@ class Trade < ApplicationRecord
   # like a sale — same sign, same shape — and only the label tells them apart.
   def internal_movement?
     INTERNAL_MOVEMENT_LABELS.include?(investment_activity_label)
+  end
+
+  def affects_cash_balance?(entry_record = entry)
+    !fineco_history_entry?(entry_record)
+  end
+
+  def fineco_history_entry?(entry_record = entry)
+    metadata = extra&.dig("fineco")
+    return false unless entry_record&.source == "fineco"
+    return false unless entry_record.external_id.to_s.start_with?(FINECO_HISTORY_EXTERNAL_ID_PREFIX)
+
+    metadata.is_a?(Hash) &&
+      metadata["history_schema_version"] == FINECO_HISTORY_SCHEMA_VERSION &&
+      metadata["provider_account_id"].is_a?(String) &&
+      metadata["provider_account_id"].match?(FINECO_HISTORY_PROVIDER_ACCOUNT_ID_PATTERN) &&
+      metadata["cash_account_external"] == true
   end
 
   class << self

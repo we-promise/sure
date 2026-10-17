@@ -38,7 +38,14 @@ class FinecoAccount::ContentValidator
     end
 
     def unsafe_entries?
-      account.entries.where.not(entryable_type: "Valuation").exists?
+      owned_history_entry_ids = Trade.fineco_history
+        .where("trades.extra #>> '{fineco,provider_account_id}' = ?", fineco_account.id)
+        .select("entries.id")
+
+      account.entries
+        .where.not(entryable_type: "Valuation")
+        .where.not(id: owned_history_entry_ids)
+        .exists?
     end
 
     def unsafe_valuations?

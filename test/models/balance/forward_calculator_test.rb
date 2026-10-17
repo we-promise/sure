@@ -572,6 +572,65 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "Fineco history buys and sells keep the separate investment cash balance at zero" do
+    anchor_date = 3.days.ago.to_date
+    buy_date = 2.days.ago.to_date
+    sell_date = 1.day.ago.to_date
+    ticker = "FINECO-HISTORY-FLOW-TEST"
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "EUR" },
+      entries: [ { type: "opening_anchor", date: anchor_date, balance: 0 } ],
+      holdings: [
+        { date: buy_date, ticker: ticker, qty: 2, price: 50, amount: 100, currency: "EUR" },
+        { date: sell_date, ticker: ticker, qty: 1, price: 60, amount: 60, currency: "EUR" }
+      ]
+    )
+    security = Security.find_by!(ticker: ticker)
+
+    [
+      { date: buy_date, suffix: "buy", qty: 2, price: 50, amount: 100 },
+      { date: sell_date, suffix: "sell", qty: -1, price: 60, amount: -60 }
+    ].each do |trade_data|
+      account.entries.create!(
+        name: "Fineco historical trade",
+        date: trade_data[:date],
+        amount: trade_data[:amount],
+        currency: "EUR",
+        source: "fineco",
+        external_id: "#{Trade::FINECO_HISTORY_EXTERNAL_ID_PREFIX}#{trade_data[:suffix]}",
+        entryable: Trade.new(
+          qty: trade_data[:qty],
+          security: security,
+          price: trade_data[:price],
+          currency: "EUR",
+          investment_activity_label: trade_data[:qty].positive? ? "Buy" : "Sell",
+          extra: {
+            "fineco" => {
+              "history_schema_version" => Trade::FINECO_HISTORY_SCHEMA_VERSION,
+              "provider_account_id" => "00000000-0000-0000-0000-000000000001",
+              "cash_account_external" => true
+            }
+          }
+        )
+      )
+    end
+
+    calculated = Balance::ForwardCalculator.new(account).calculate.index_by(&:date)
+    buy_balance = calculated.fetch(buy_date)
+    sell_balance = calculated.fetch(sell_date)
+
+    assert_equal BigDecimal("0"), buy_balance.cash_balance
+    assert_equal 0, buy_balance.cash_inflows
+    assert_equal 0, buy_balance.cash_outflows
+    assert_equal BigDecimal("100"), buy_balance.non_cash_inflows
+    assert_equal BigDecimal("0"), buy_balance.non_cash_outflows
+    assert_equal BigDecimal("0"), sell_balance.cash_balance
+    assert_equal 0, sell_balance.cash_inflows
+    assert_equal 0, sell_balance.cash_outflows
+    assert_equal BigDecimal("0"), sell_balance.non_cash_inflows
+    assert_equal BigDecimal("60"), sell_balance.non_cash_outflows
+  end
+
   test "investment account interest trade is classified as cash-only, not non-cash outflow" do
     account = create_account_with_ledger(
       account: { type: Investment, currency: "USD" },

@@ -50,7 +50,9 @@ class FinecoItem
         return false unless capture_allowed?(callback_identity, cancelled)
         return false unless verified_bank_identity?(result)
 
-        persist_verified_capture(item, captured, result, callback_identity, cancelled)
+        persisted = persist_verified_capture(item, captured, result, callback_identity, cancelled)
+        item.sync_history_later if persisted
+        persisted
       end
 
       def persist_verified_capture(item, captured, result, callback_identity, cancelled)

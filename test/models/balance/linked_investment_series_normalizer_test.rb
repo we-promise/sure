@@ -116,6 +116,77 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal trade_date, start_date
   end
 
+  test "Fineco history activity does not predate the first observed provider holding snapshot" do
+    account = families(:empty).accounts.create!(
+      name: "Fineco History Boundary",
+      balance: 0,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    item = account.family.coinstats_items.create!(name: "Provider", api_key: "test-key")
+    provider_account = item.coinstats_accounts.create!(name: "Provider Investment", currency: "EUR")
+    account_provider = account.account_providers.create!(provider: provider_account)
+    history_date = 3.years.ago.to_date
+    snapshot_date = 6.months.ago.to_date
+    security = Security.create!(ticker: "FINECO-HISTORY-BOUNDARY", name: "Fineco history boundary")
+
+    history_entry = account.entries.create!(
+      name: "Fineco historical purchase",
+      date: history_date,
+      amount: 100,
+      currency: "EUR",
+      source: "fineco",
+      external_id: "#{Trade::FINECO_HISTORY_EXTERNAL_ID_PREFIX}purchase",
+      entryable: Trade.new(
+        qty: 2,
+        security: security,
+        price: 50,
+        currency: "EUR",
+        investment_activity_label: "Buy",
+        extra: {
+          "fineco" => {
+            "history_schema_version" => Trade::FINECO_HISTORY_SCHEMA_VERSION,
+            "provider_account_id" => provider_account.id,
+            "cash_account_external" => true
+          }
+        }
+      )
+    )
+    assert history_entry.entryable.fineco_history_entry?(history_entry)
+    assert_includes Trade.fineco_history.ids, history_entry.entryable_id
+    Holding.create!(
+      account: account,
+      security: security,
+      date: snapshot_date,
+      qty: 2,
+      price: 250,
+      amount: 500,
+      currency: "EUR",
+      account_provider_id: account_provider.id
+    )
+
+    raw_series = Series.new(
+      start_date: history_date,
+      end_date: Date.current,
+      interval: "1 day",
+      values: [
+        Series::Value.new(date: history_date, date_formatted: "", value: Money.new(0, "EUR")),
+        Series::Value.new(date: snapshot_date, date_formatted: "", value: Money.new(500, "EUR")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(550, "EUR"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalized = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series).normalize
+    common_start_date = Balance::LinkedInvestmentSeriesNormalizer
+      .send(:common_supported_history_start_date, [ account.id ])
+
+    assert_equal snapshot_date, normalized.start_date
+    assert_equal [ snapshot_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(500, "EUR"), normalized.values.first.value
+    assert_equal snapshot_date, common_start_date
+  end
+
   test "normalizer leaves series untouched for unlinked accounts" do
     account = families(:empty).accounts.create!(
       name: "Unlinked Account",

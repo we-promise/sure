@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
 require "bigdecimal"
+require "date"
 require "digest"
 require "json"
 require "net/http"
 require "openssl"
+require "securerandom"
 require "set"
 require "timeout"
 require "time"
@@ -13,8 +15,10 @@ require "uri"
 class Provider::Fineco
   ACCOUNT_LIST_ENDPOINT = URI("https://private-api.finecobank.com/v1/private/users/accounts").freeze
   ENDPOINT = URI("https://private-api.finecobank.com/v1/private/tol/positions/summary?type=sintesi").freeze
+  MOVEMENTS_ENDPOINT = URI("https://private-api.finecobank.com/v1/private/dossier-order/movements").freeze
   HOST = "private-api.finecobank.com".freeze
   PORTFOLIO_REFERER = "https://finecobank.com/pvt/portfolio/trading-summary/home".freeze
+  MOVEMENTS_REFERER = "https://finecobank.com/pvt/portfolio/report/accounts/movements".freeze
 
   OPEN_TIMEOUT_SECONDS = 5
   READ_TIMEOUT_SECONDS = 10
@@ -22,6 +26,17 @@ class Provider::Fineco
   TOTAL_TIMEOUT_SECONDS = 30
   MAX_BODY_BYTES = 2 * 1024 * 1024
   MAX_POSITION_COUNT = 2_000
+  MAX_MOVEMENTS_PER_PAGE = 10
+  MAX_MOVEMENTS_PER_WINDOW = 1_000
+  MAX_MOVEMENTS_OFFSET = 10_000
+  BANK_TIME_ZONE = "Europe/Rome".freeze
+  MOVEMENTS_DATE_MINIMUM = Date.new(2018, 1, 1).freeze
+  MOVEMENTS_TYPES = %w[ORDER TITLE].freeze
+  MOVEMENTS_ROW_REQUIRED_FIELDS = %w[
+    type transactionDate valueDate description name isin sign amount currency price exchange equivalentValue
+  ].freeze
+  MOVEMENT_DATE_PATTERN = /\A\d{4}-\d{2}-\d{2}\z/
+  MOVEMENT_SHORT_STRING_LIMIT = 64
   MAX_FILTER_VALUE_COUNT = 256
   MAX_SAFE_BUSINESS_NUMBER = (2**53) - 1
   IDENTITY_NAMESPACE = "fineco/business-account-dossier/v1".freeze
@@ -78,6 +93,21 @@ class Provider::Fineco
   class RedirectRejected < Error; end
   class InvalidResponse < Error; end
   class MarketDataUnavailable < InvalidResponse; end
+  class MovementsWindowTooLarge < Error; end
+
+  class MovementsDateRangeUnavailable < Error
+    attr_reader :earliest_date
+
+    def initialize(earliest_date)
+      @earliest_date = earliest_date
+      super("Fineco movements are available from a later date.")
+    end
+
+    def inspect
+      "#<#{self.class.name}: validated>"
+    end
+    alias to_s inspect
+  end
   class ResponseTooLarge < Error; end
   class RequestTimeout < Error; end
   class RequestFailed < Error; end
@@ -92,6 +122,22 @@ class Provider::Fineco
   end
 
   class PortfolioResult
+    attr_reader :payload, :rotated_gsessionid, :account_number, :dossier_identity
+
+    def initialize(payload:, rotated_gsessionid:, account_number:, dossier_identity:)
+      @payload = payload
+      @rotated_gsessionid = rotated_gsessionid
+      @account_number = account_number
+      @dossier_identity = dossier_identity
+    end
+
+    def inspect
+      "#<#{self.class.name}: validated>"
+    end
+    alias to_s inspect
+  end
+
+  class MovementsPage
     attr_reader :payload, :rotated_gsessionid, :account_number, :dossier_identity
 
     def initialize(payload:, rotated_gsessionid:, account_number:, dossier_identity:)
@@ -170,6 +216,151 @@ class Provider::Fineco
     raise RequestFailed.new("Fineco request failed."), cause: nil
   end
 
+  def fetch_movements_page(date_from:, date_to:, offset:, movement_type: "ORDER")
+    @last_rotated_gsessionid = nil
+    @last_verified_bank_identity = nil
+
+    unless self.class.verified_identity_contract?
+      raise IdentityVerificationRequired, "Fineco account identity verification is required."
+    end
+
+    normalized_type = validate_movements_type!(movement_type)
+    normalized_offset = validate_movements_offset!(offset)
+    from_date, to_date = validate_movements_dates!(date_from, date_to)
+
+    ::Timeout.timeout(TOTAL_TIMEOUT_SECONDS, RequestTimeout, "Fineco request timed out.") do
+      identity_response, identity_body = request_endpoint(ACCOUNT_LIST_ENDPOINT, @gsessionid)
+      validate_success_response!(identity_response, identity_body)
+      identity = selected_bank_identity!(parse_payload(identity_body))
+      @last_verified_bank_identity = VerifiedBankIdentity.new(
+        account_number: identity.fetch(:account_number),
+        dossier_identity: identity.fetch(:dossier_identity)
+      )
+      retain_rotated_gsessionid!(identity_response)
+
+      request_body = {
+        "type" => normalized_type,
+        "keyword" => {
+          "key" => "ADVANCED",
+          "word" => "",
+          "dateFrom" => from_date.iso8601,
+          "dateTo" => to_date.iso8601
+        },
+        "offset" => normalized_offset,
+        "limit" => MAX_MOVEMENTS_PER_PAGE
+      }
+      movement_response, movement_body = request_endpoint(
+        MOVEMENTS_ENDPOINT,
+        @last_rotated_gsessionid.presence || @gsessionid,
+        method: :post,
+        body: request_body,
+        headers: {
+          "X-Subaccount-Index" => "01",
+          "X-Request-Id" => SecureRandom.uuid,
+          "Referer" => MOVEMENTS_REFERER
+        }
+      )
+      validate_success_response!(movement_response, movement_body)
+      payload = parse_movements_payload(movement_body)
+      validate_movements_page!(payload, movement_type: normalized_type)
+      retain_rotated_gsessionid!(movement_response)
+
+      MovementsPage.new(
+        payload: payload,
+        rotated_gsessionid: @last_rotated_gsessionid,
+        account_number: identity.fetch(:account_number),
+        dossier_identity: identity.fetch(:dossier_identity)
+      )
+    end
+  rescue ReauthenticationRequired, RedirectRejected, InvalidResponse, ResponseTooLarge,
+         RequestTimeout, RequestFailed, ConfigurationError, UpstreamResponse
+    raise
+  rescue Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ::Timeout::Error
+    raise RequestTimeout.new("Fineco request timed out."), cause: nil
+  rescue OpenSSL::SSL::SSLError, SocketError, SystemCallError, EOFError, IOError, Net::HTTPError
+    raise RequestFailed.new("Fineco request failed."), cause: nil
+  end
+
+  def fetch_movements_window(date_from:, date_to:, movement_type: "ORDER")
+    @last_rotated_gsessionid = nil
+    @last_verified_bank_identity = nil
+
+    unless self.class.verified_identity_contract?
+      raise IdentityVerificationRequired, "Fineco account identity verification is required."
+    end
+
+    normalized_type = validate_movements_type!(movement_type)
+    from_date, to_date = validate_movements_dates!(date_from, date_to)
+
+    ::Timeout.timeout(TOTAL_TIMEOUT_SECONDS, RequestTimeout, "Fineco request timed out.") do
+      identity_response, identity_body = request_endpoint(ACCOUNT_LIST_ENDPOINT, @gsessionid)
+      validate_success_response!(identity_response, identity_body)
+      identity = selected_bank_identity!(parse_payload(identity_body))
+      @last_verified_bank_identity = VerifiedBankIdentity.new(
+        account_number: identity.fetch(:account_number),
+        dossier_identity: identity.fetch(:dossier_identity)
+      )
+      retain_rotated_gsessionid!(identity_response)
+
+      request_body = {
+        "type" => normalized_type,
+        "keyword" => {
+          "key" => "ADVANCED",
+          "word" => "",
+          "dateFrom" => from_date.iso8601,
+          "dateTo" => to_date.iso8601
+        },
+        "offset" => 0,
+        "limit" => -1
+      }
+      begin
+        movement_response, movement_body = request_endpoint(
+          MOVEMENTS_ENDPOINT,
+          @last_rotated_gsessionid.presence || @gsessionid,
+          method: :post,
+          body: request_body,
+          headers: {
+            "X-Subaccount-Index" => "01",
+            "X-Request-Id" => SecureRandom.uuid,
+            "Referer" => MOVEMENTS_REFERER
+          }
+        )
+      rescue ResponseTooLarge
+        raise MovementsWindowTooLarge, "Fineco movements window exceeded the response size limit."
+      end
+
+      begin
+        validate_movements_window_response!(movement_response, movement_body)
+      rescue MovementsDateRangeUnavailable
+        retain_rotated_gsessionid!(movement_response)
+        raise
+      end
+      payload = parse_movements_payload(movement_body)
+      begin
+        validate_movements_window!(payload, movement_type: normalized_type)
+      rescue MovementsWindowTooLarge
+        retain_rotated_gsessionid!(movement_response)
+        raise
+      end
+      retain_rotated_gsessionid!(movement_response)
+
+      MovementsPage.new(
+        payload: payload,
+        rotated_gsessionid: @last_rotated_gsessionid,
+        account_number: identity.fetch(:account_number),
+        dossier_identity: identity.fetch(:dossier_identity)
+      )
+    end
+  rescue ReauthenticationRequired, RedirectRejected, InvalidResponse, MovementsWindowTooLarge,
+         MovementsDateRangeUnavailable,
+         ResponseTooLarge, RequestTimeout, RequestFailed, ConfigurationError, UpstreamResponse
+    raise
+  rescue Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ::Timeout::Error
+    raise RequestTimeout.new("Fineco request timed out."), cause: nil
+  rescue OpenSSL::SSL::SSLError, SocketError, SystemCallError, EOFError, IOError, Net::HTTPError
+    raise RequestFailed.new("Fineco request failed."), cause: nil
+  end
+
   def inspect
     "#<#{self.class.name}: authenticated client>"
   end
@@ -180,7 +371,7 @@ class Provider::Fineco
 
   private
 
-    def request_endpoint(uri, gsessionid)
+    def request_endpoint(uri, gsessionid, method: :get, body: nil, headers: {})
       http = Net::HTTP.new(uri.host, uri.port, nil)
       http.use_ssl = true
       http.verify_mode = OpenSSL::SSL::VERIFY_PEER
@@ -190,11 +381,18 @@ class Provider::Fineco
       http.write_timeout = WRITE_TIMEOUT_SECONDS
       http.max_retries = 0 if http.respond_to?(:max_retries=)
 
-      request = Net::HTTP::Get.new(uri.request_uri)
+      request_class = case method
+      when :get then Net::HTTP::Get
+      when :post then Net::HTTP::Post
+      else raise ConfigurationError, "Fineco request method is invalid."
+      end
+      request = request_class.new(uri.request_uri)
       STATIC_HEADERS.each { |key, value| request[key] = value }
+      headers.each { |key, value| request[key] = value }
       request["X-Account-Index"] = @account_index
       request["X-Dossier-Index"] = @dossier_index
       request["Cookie"] = "gsessionid=#{gsessionid}"
+      request.body = JSON.generate(body) if body
 
       response = nil
       body = +""
@@ -334,6 +532,167 @@ class Provider::Fineco
       payload
     rescue JSON::ParserError, Encoding::InvalidByteSequenceError
       raise InvalidResponse.new("Fineco returned an invalid portfolio response."), cause: nil
+    end
+
+    def validate_movements_type!(movement_type)
+      return movement_type if movement_type.is_a?(String) && MOVEMENTS_TYPES.include?(movement_type)
+
+      raise ConfigurationError, "Fineco movements type is invalid."
+    end
+
+    def validate_movements_offset!(offset)
+      unless offset.is_a?(Integer) && offset.between?(0, MAX_MOVEMENTS_OFFSET) && (offset % MAX_MOVEMENTS_PER_PAGE).zero?
+        raise ConfigurationError, "Fineco movements offset is invalid."
+      end
+
+      offset
+    end
+
+    def validate_movements_dates!(date_from, date_to)
+      from_date = movement_date!(date_from)
+      to_date = movement_date!(date_to)
+      today = Time.find_zone!(BANK_TIME_ZONE).today
+
+      unless from_date >= MOVEMENTS_DATE_MINIMUM && to_date >= from_date && to_date <= today
+        raise ConfigurationError, "Fineco movements date range is invalid."
+      end
+
+      [ from_date, to_date ]
+    end
+
+    def movement_date!(value)
+      return value if value.instance_of?(Date)
+      return Date.iso8601(value) if value.is_a?(String) && value.match?(MOVEMENT_DATE_PATTERN)
+
+      raise ConfigurationError, "Fineco movements date is invalid."
+    rescue ArgumentError
+      raise ConfigurationError, "Fineco movements date is invalid."
+    end
+
+    def parse_movements_payload(body)
+      payload = JSON.parse(body)
+      raise InvalidResponse, "Fineco returned an invalid movements response." unless payload.is_a?(Hash)
+
+      payload
+    rescue JSON::ParserError, Encoding::InvalidByteSequenceError
+      raise InvalidResponse.new("Fineco returned an invalid movements response."), cause: nil
+    end
+
+    def validate_movements_page!(payload, movement_type:)
+      movements = payload["movements"]
+      unless movements.is_a?(Array) && movements.size <= MAX_MOVEMENTS_PER_PAGE &&
+             [ true, false ].include?(payload["lastPage"]) && [ true, false ].include?(payload["limitedResult"])
+        raise InvalidResponse, "Fineco returned an incomplete movements page."
+      end
+      raise InvalidResponse, "Fineco limited the requested movements result." if payload["limitedResult"]
+
+      movements.each do |movement|
+        if movement_type == "ORDER"
+          validate_order_movement!(movement)
+        elsif !movement.is_a?(Hash)
+          raise InvalidResponse, "Fineco returned an invalid movements row."
+        end
+      end
+    end
+
+    def validate_movements_window!(payload, movement_type:)
+      movements = payload["movements"]
+      unless movements.is_a?(Array) && [ true, false ].include?(payload["lastPage"]) &&
+             [ true, false ].include?(payload["limitedResult"])
+        raise InvalidResponse, "Fineco returned an incomplete movements window."
+      end
+      raise MovementsWindowTooLarge, "Fineco limited the requested movements window." if payload["limitedResult"]
+      if movements.size >= MAX_MOVEMENTS_PER_WINDOW
+        raise MovementsWindowTooLarge, "Fineco movements window reached the row limit."
+      end
+
+      movements.each do |movement|
+        if movement_type == "ORDER"
+          validate_order_movement!(movement)
+        elsif !movement.is_a?(Hash)
+          raise InvalidResponse, "Fineco returned an invalid movements row."
+        end
+      end
+    end
+
+    def validate_movements_window_response!(response, body)
+      validate_success_response!(response, body)
+    rescue UpstreamResponse => error
+      raise unless error.status == 400
+
+      earliest_date = movements_earliest_available_date(body)
+      raise MovementsDateRangeUnavailable.new(earliest_date) if earliest_date
+
+      raise
+    end
+
+    def movements_earliest_available_date(body)
+      payload = JSON.parse(body)
+      issues = payload["issues"] if payload.is_a?(Hash)
+      return unless issues.is_a?(Array) && issues.one? && issues.first.is_a?(Hash)
+
+      reason = issues.first["reason"]
+      return unless reason.is_a?(String)
+
+      match = /\ASono accettate solo date dal (?<day>\d{1,2}) (?<month>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?<year>\d{4}) fino ad oggi\.\z/i.match(reason)
+      return unless match
+
+      month = {
+        "jan" => 1, "feb" => 2, "mar" => 3, "apr" => 4,
+        "may" => 5, "jun" => 6, "jul" => 7, "aug" => 8,
+        "sep" => 9, "oct" => 10, "nov" => 11, "dec" => 12
+      }.fetch(match[:month].downcase)
+      earliest_date = Date.new(match[:year].to_i, month, match[:day].to_i)
+      bank_today = Time.find_zone!(BANK_TIME_ZONE).today
+      earliest_date if earliest_date.between?(MOVEMENTS_DATE_MINIMUM, bank_today)
+    rescue JSON::ParserError, ArgumentError, Encoding::InvalidByteSequenceError
+      nil
+    end
+
+    def validate_order_movement!(movement)
+      unless movement.is_a?(Hash) && MOVEMENTS_ROW_REQUIRED_FIELDS.all? { |field| movement.key?(field) }
+        raise InvalidResponse, "Fineco returned an incomplete movements row."
+      end
+
+      unless bounded_movement_string?(movement["transactionDate"]) && bounded_movement_string?(movement["valueDate"]) &&
+             bounded_movement_string?(movement["type"], max_bytes: MOVEMENT_SHORT_STRING_LIMIT) &&
+             bounded_movement_string?(movement["sign"], max_bytes: MOVEMENT_SHORT_STRING_LIMIT) &&
+             movement["description"].is_a?(String) && movement["name"].is_a?(String) &&
+             movement["isin"].is_a?(String) && FinecoItem::PortfolioNormalizer.valid_isin?(movement["isin"]) &&
+             movement["currency"].is_a?(String) && movement["currency"].present? &&
+             movement["currency"].bytesize <= MOVEMENT_SHORT_STRING_LIMIT
+        raise InvalidResponse, "Fineco returned an invalid movements row."
+      end
+
+      unless iso_datetime?(movement["transactionDate"]) && iso_datetime?(movement["valueDate"])
+        raise InvalidResponse, "Fineco returned an invalid movements date."
+      end
+
+      unless %w[amount price exchange equivalentValue].all? { |field| finite_movement_number?(movement[field]) }
+        raise InvalidResponse, "Fineco returned an invalid movements value."
+      end
+    end
+
+    def bounded_movement_string?(value, max_bytes: 64)
+      value.is_a?(String) && value.present? && value.bytesize <= max_bytes
+    end
+
+    def iso_datetime?(value)
+      Time.iso8601(value)
+      true
+    rescue ArgumentError
+      false
+    end
+
+    def finite_movement_number?(value)
+      decimal = case value
+      when BigDecimal, Integer, Float then BigDecimal(value.to_s)
+      when String then BigDecimal(value)
+      else return false
+      end
+      decimal.finite?
+    rescue ArgumentError
+      false
     end
 
     def validate_portfolio!(payload)
