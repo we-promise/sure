@@ -7,6 +7,7 @@ pt-PT:
     entries:
       default_name: Transação Wise
       fee_name: Comissão da Wise
+      refund_name: Reembolso da Wise
     activities:
       jar_deposit: Depósito no jar
       jar_withdrawal: Levantamento do jar

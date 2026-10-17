@@ -43,6 +43,7 @@ ca:
     entries:
       default_name: Transacció Wise
       fee_name: Comissió de Wise
+      refund_name: Reemborsament de Wise
     activities:
       jar_deposit: Transferència a la guardiola
       jar_withdrawal: Transferència des de la guardiola

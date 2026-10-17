@@ -24,6 +24,7 @@ fr:
     entries:
       default_name: Transaction Wise
       fee_name: Frais Wise
+      refund_name: Remboursement Wise
     generate_sca_keypair:
       failed: Impossible de générer une nouvelle paire de clés SCA. Veuillez réessayer.
       success: Nouvelle paire de clés SCA générée. Enregistrez la clé publique auprès de Wise pour terminer l'activation.

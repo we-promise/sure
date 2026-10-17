@@ -43,6 +43,7 @@ ru:
     entries:
       default_name: Операция Wise
       fee_name: Комиссия Wise
+      refund_name: Возврат Wise
     activities:
       jar_deposit: Перевод в копилку
       jar_withdrawal: Перевод из копилки

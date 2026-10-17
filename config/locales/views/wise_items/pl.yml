@@ -22,6 +22,7 @@ pl:
     entries:
       default_name: Transakcja Wise
       fee_name: Opłata Wise
+      refund_name: Zwrot Wise
     generate_sca_keypair:
       failed: Nie udało się wygenerować nowej pary kluczy SCA. Spróbuj ponownie.
       success: Wygenerowano nową parę kluczy SCA. Zarejestruj klucz publiczny w Wise,

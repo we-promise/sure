@@ -183,6 +183,30 @@ class WiseItem < ApplicationRecord
     end
   end
 
+  # The profile's own recipients: the account recipient (the multi-currency
+  # account's, kept on every balance as recipient_id) and each balance's own
+  # account details (recipientId), closed balances included. A transfer into
+  # one of them is a pay-in, not a payout (WiseEntry::Processor.direction).
+  def own_recipient_ids
+    multi_currency_account = sync_metadata["multi_currency_account"]
+    ids = [ (multi_currency_account["recipientId"] if multi_currency_account.is_a?(Hash)) ]
+    balance_snapshots.each do |wise_account|
+      payload = wise_account.raw_payload
+      ids.concat(payload.values_at("recipient_id", "recipientId")) if payload.is_a?(Hash)
+    end
+    ids.compact_blank.map(&:to_s).uniq
+  end
+
+  # Each balance's own account details (recipientId) => the ids of the
+  # WiseAccounts holding them, closed balances included: a pay-in into them
+  # reaches that balance only (WiseEntry::Processor.balance_route).
+  def balance_recipient_owners
+    balance_snapshots.each_with_object({}) do |wise_account, owners|
+      recipient = wise_account.raw_payload["recipientId"] if wise_account.raw_payload.is_a?(Hash)
+      (owners[recipient.to_s] ||= []) << wise_account.id if recipient.present?
+    end
+  end
+
   def credentials_configured?
     token.to_s.strip.present?
   end
@@ -257,6 +281,12 @@ class WiseItem < ApplicationRecord
   end
 
   private
+
+    # Every balance's id and snapshot, without its stored rows: those are the
+    # whole history, and processing asks for the recipients once per balance.
+    def balance_snapshots
+      wise_accounts.select(:id, :raw_payload)
+    end
 
     def normalize_token
       self.token = token&.strip
