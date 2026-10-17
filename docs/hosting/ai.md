@@ -1131,7 +1131,7 @@ Good test queries that exercise different capabilities:
 
 ### Cloud Costs
 
-**Pricing table last updated and verified: October 4, 2026.** Every model
+**Pricing table last updated and verified: October 17, 2026.** Every model
 listed in [`LlmUsage::PRICING`](../../app/models/llm_usage.rb) was checked against
 official sources. `PRICING_VERIFIED_ON` supplies the verification date shown on
 the LLM usage screen. This is a manual review date, not a claim that providers
@@ -1166,7 +1166,7 @@ and the [Opus 4.7](https://www.anthropic.com/news/claude-opus-4-7) and
 [Opus 4.6](https://www.anthropic.com/news/claude-opus-4-6) announcements.
 For other listed rates, the latest price-change date was **not established**;
 their current prices were verified on October 17. Google's pricing page lists
-launch promotional pricing for Gemini 4 Argon ($2.00 / $10.00) through November 30, 2026
+launch promotional pricing for Gemini 4 Argon ($2.00 / $10.00) through November 30, 2026,
 and Gemini 3.8, 3.7, and 3.6 Flash through December 31, 2026.
 
 #### Context tiers and estimate limits
