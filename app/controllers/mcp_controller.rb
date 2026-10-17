@@ -118,7 +118,7 @@ class McpController < ApplicationController
     def authenticate_via_doorkeeper(token)
       access_token = Doorkeeper::AccessToken.by_token(token)
       return false unless access_token&.accessible?
-      return false unless access_token.scopes.include?("read_write")
+      return false unless access_token.scopes.include?("mcp") || access_token.scopes.include?("read_write")
 
       user = User.find_by(id: access_token.resource_owner_id)
       return false unless user&.active?

@@ -85,9 +85,10 @@ POST /mcp
 
 MCP supports OAuth authorization-code flow for clients such as Claude Code.
 Clients should discover the protected-resource metadata, register dynamically,
-request the advertised `read_write` scope, and send the resulting access token
-as a Bearer token. Dynamically registered clients are assigned this scope so
-their tokens can authenticate to MCP.
+request the advertised MCP scope, and send the resulting access token as a
+Bearer token. Dynamically registered clients are assigned the MCP-only `mcp`
+scope so their tokens can authenticate to MCP without granting global JSON API
+write access.
 
 For self-hosted deployments or clients without OAuth support, requests may use
 the legacy `MCP_API_TOKEN` as a Bearer token:
