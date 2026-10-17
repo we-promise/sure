@@ -1,22 +1,22 @@
 import { Controller } from "@hotwired/stimulus"
 import parseLocaleFloat from "utils/parse_locale_float"
 
+// cost_basis stores the per-share cost with four decimals.
+const PER_SHARE_DECIMALS = 4
+
 // Handles bidirectional conversion between total cost basis and per-share cost
-// in the manual cost basis entry form.
+// in the manual cost basis entry form. Only the per-share field is submitted.
 export default class extends Controller {
-  static targets = ["total", "perShare", "perShareValue"]
+  static targets = ["total", "perShare"]
   static values = { qty: Number }
 
   // Called when user types in the total cost basis field
-  // Updates the per-share display and input to show the calculated value
+  // Updates the per-share field with the calculated value, keeping up to four
+  // decimals so a price below a cent is not saved as 0.00
   updatePerShare() {
     const total = parseLocaleFloat(this.totalTarget.value)
     const qty = this.qtyValue || 1
-    const perShare = qty > 0 ? (total / qty).toFixed(2) : "0.00"
-    this.perShareValueTarget.textContent = perShare
-    if (this.hasPerShareTarget) {
-      this.perShareTarget.value = perShare
-    }
+    this.perShareTarget.value = qty > 0 ? this.#formatPerShare(total / qty) : "0.00"
   }
 
   // Called when user types in the per-share field
@@ -24,8 +24,11 @@ export default class extends Controller {
   updateTotal() {
     const perShare = parseLocaleFloat(this.perShareTarget.value)
     const qty = this.qtyValue || 1
-    const total = (perShare * qty).toFixed(2)
-    this.totalTarget.value = total
-    this.perShareValueTarget.textContent = perShare.toFixed(2)
+    this.totalTarget.value = (perShare * qty).toFixed(2)
+  }
+
+  // At least two decimals, more only when the value needs them.
+  #formatPerShare(value) {
+    return value.toFixed(PER_SHARE_DECIMALS).replace(/0{1,2}$/, "")
   }
 }

@@ -75,6 +75,101 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert @holding.cost_basis_locked?
   end
 
+  test "updates cost basis with the submitted per-share cost" do
+    @holding.update!(qty: 10, cost_basis: nil, cost_basis_source: nil, cost_basis_locked: false)
+
+    # 10 x 0.0049 is 0.049, which a total rounded to cents would turn into 0.005
+    patch holding_path(@holding), params: { holding: { per_share_cost_basis: "0.0049" } }
+
+    @holding.reload
+    assert_equal BigDecimal("0.0049"), @holding.cost_basis
+    assert_equal "manual", @holding.cost_basis_source
+    assert @holding.cost_basis_locked?
+  end
+
+  test "cost basis editor shows the stored decimals of a per-share cost below a cent" do
+    @holding.update!(qty: 10, cost_basis: 0.0049, cost_basis_locked: true)
+
+    get holding_path(@holding)
+
+    form_id = "#{dom_id(@holding, :drawer_cost_basis)}_holding"
+    assert_select "##{form_id}_per_share_cost_basis[value='0.0049']"
+    assert_select "##{form_id}_total_cost_basis[value='0.05']"
+  end
+
+  test "cost basis editor reads per share times quantity equals total" do
+    @holding.update!(qty: 10, cost_basis: 12.5)
+
+    get holding_path(@holding)
+
+    form_id = "#{dom_id(@holding, :drawer_cost_basis)}_holding"
+    assert_select "form[data-controller=cost-basis-form]" do |forms|
+      rows = forms.first.element_children.select { |node| node.matches?(".form-field, p") }
+      assert_equal 3, rows.size
+      assert rows[0].at_css("input##{form_id}_per_share_cost_basis[name='holding[per_share_cost_basis]'][value='12.50']")
+      assert_equal "× 10 shares", rows[1].text.squish
+      assert rows[2].at_css("input##{form_id}_total_cost_basis:not([name])[value='125.00']")
+    end
+    assert_select "label[for=#{form_id}_per_share_cost_basis]", text: I18n.t("holdings.cost_basis_cell.per_share_label")
+    assert_select "label[for=#{form_id}_total_cost_basis]", text: "= #{I18n.t("holdings.cost_basis_cell.total_cost_basis_label")}"
+    assert_select "[data-cost-basis-form-target=perShareValue]", count: 0
+  end
+
+  test "cost basis editor keeps two decimals for zero-decimal currencies" do
+    @holding.update!(qty: 2, cost_basis: 12.2, currency: "JPY")
+
+    get holding_path(@holding)
+
+    form_id = "#{dom_id(@holding, :drawer_cost_basis)}_holding"
+    assert_select "##{form_id}_total_cost_basis[value='24.40']"
+    assert_select "##{form_id}_per_share_cost_basis[value='12.20']"
+  end
+
+  test "cost basis editor does not round pasted values to its display decimals" do
+    get holding_path(@holding)
+
+    assert_select "form[data-controller=cost-basis-form] [data-controller=money-field]", count: 2
+    assert_select "form[data-controller=cost-basis-form] [data-money-field-precision-value]", count: 0
+  end
+
+  test "cost basis editor shows a stored zero basis instead of placeholders" do
+    @holding.update!(qty: 10, cost_basis: 0, cost_basis_locked: true)
+
+    get holding_path(@holding)
+
+    form_id = "#{dom_id(@holding, :drawer_cost_basis)}_holding"
+    assert_select "##{form_id}_per_share_cost_basis[value='0.00']"
+    assert_select "##{form_id}_total_cost_basis[value='0.00']"
+  end
+
+  test "cost basis editor leaves the fields empty for an unknown zero basis" do
+    # Providers report 0 when they don't know the basis; avg_cost then falls
+    # back to the trades, so the editor must not offer 0 for saving.
+    @holding.update!(qty: 10, cost_basis: 0, cost_basis_locked: false)
+
+    get holding_path(@holding)
+
+    form_id = "#{dom_id(@holding, :drawer_cost_basis)}_holding"
+    assert_select "##{form_id}_per_share_cost_basis:not([value])"
+    assert_select "##{form_id}_total_cost_basis:not([value])"
+  end
+
+  test "cost basis editor keeps the equation operators readable" do
+    get holding_path(@holding)
+
+    assert_select "form[data-controller=cost-basis-form] [aria-hidden]", count: 0
+  end
+
+  test "cost basis editor in the holdings list uses its own field ids" do
+    holding = @account.current_holdings.first
+    holding.update!(cost_basis_locked: false)
+
+    get holdings_url(account_id: @account.id)
+
+    assert_select "##{dom_id(holding, :popover_cost_basis)}_holding_per_share_cost_basis[name='holding[per_share_cost_basis]']", count: 1
+    assert_select "[id^=drawer_cost_basis_]", count: 0
+  end
+
   test "unlock_cost_basis removes lock" do
     # Given: locked holding
     @holding.update!(cost_basis: 50.0, cost_basis_source: "manual", cost_basis_locked: true)
