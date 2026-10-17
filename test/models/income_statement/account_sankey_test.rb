@@ -47,6 +47,56 @@ class IncomeStatement::AccountSankeyTest < ActiveSupport::TestCase
     assert_balanced result
   end
 
+  test "a card paid off from a surplus account is drawn as a flow between the accounts" do
+    transaction(@checking, -1000, @salary)
+    transaction(@card, 250, @shopping)
+    create_transfer(from_account: @checking, to_account: @card, amount: 250, date: @month + 5)
+    result = graph
+
+    assert_link result, "account_#{@checking.id}", "account_#{@card.id}", "250.0"
+    assert_link result, "account_#{@checking.id}", "surplus_node", "750.0"
+    assert_nil node(result, "deficit_node")
+    assert_equal "750.0", result[:net_savings]
+    assert_balanced result
+  end
+
+  test "only the transferred part of a shortfall is drawn, the rest still comes from Deficit" do
+    transaction(@checking, -1000, @salary)
+    transaction(@card, 250, @shopping)
+    create_transfer(from_account: @checking, to_account: @card, amount: 100, date: @month + 5)
+    result = graph
+
+    assert_link result, "account_#{@checking.id}", "account_#{@card.id}", "100.0"
+    assert_link result, "deficit_node", "account_#{@card.id}", "150.0"
+    assert_link result, "account_#{@checking.id}", "surplus_node", "900.0"
+    assert_balanced result
+  end
+
+  test "transfers are netted per pair and capped at the shortfall" do
+    transaction(@checking, -1000, @salary)
+    transaction(@card, 250, @shopping)
+    create_transfer(from_account: @checking, to_account: @card, amount: 400, date: @month + 5)
+    create_transfer(from_account: @card, to_account: @checking, amount: 50, date: @month + 6)
+    create_transfer(from_account: @checking, to_account: @card, amount: 999, date: @month - 10)
+    result = graph
+
+    assert_link result, "account_#{@checking.id}", "account_#{@card.id}", "250.0"
+    assert_nil node(result, "deficit_node")
+    assert_link result, "account_#{@checking.id}", "surplus_node", "750.0"
+    assert_balanced result
+  end
+
+  test "a transfer out of an account in deficit is not drawn" do
+    transaction(@checking, -1000, @salary)
+    transaction(@card, 250, @shopping)
+    create_transfer(from_account: @card, to_account: @checking, amount: 250, date: @month + 5)
+    result = graph
+
+    assert_empty(result[:links].select { |link| result[:nodes][link[:source]][:kind] == "account" && result[:nodes][link[:target]][:kind] == "account" })
+    assert_link result, "deficit_node", "account_#{@card.id}", "250.0"
+    assert_balanced result
+  end
+
   test "accounts without income or spending are left out, and an empty period is empty" do
     transaction(@checking, 50, @shopping)
     assert_nil node(graph, "account_#{@card.id}")
