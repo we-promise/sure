@@ -562,6 +562,33 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # The Wise sync links a conversion's legs again on its own, so removing
+  # that link rejects it, and the legs stay unlinked.
+  test "rejects a link the Wise sync makes, so it stays removed" do
+    family = users(:family_admin).family
+    wise_item = WiseItem.create!(family: family, name: "Wise", token: "test_token", profile_id: "123", profile_type: :business)
+    legs = { "EUR" => -117.5, "GBP" => 100 }.to_h do |currency, amount|
+      wise_account = wise_item.wise_accounts.create!(balance_id: "1000000#{currency == 'EUR' ? 1 : 2}", name: "Wise #{currency}",
+                                                     currency: currency, raw_payload: { "type" => "STANDARD" })
+      account = Account.create!(family: family, name: "Wise #{currency}", balance: 0, currency: currency,
+                                accountable: Depository.new(subtype: "checking"))
+      AccountProvider.create!(account: account, provider: wise_account)
+      side = amount.negative? ? "inflow" : "outflow"
+      [ currency, account.entries.create!(external_id: "wise_interbalance_8001_#{side}", source: "wise", amount: amount, currency: currency,
+                                          date: Date.current, name: "Conversion", entryable: Transaction.new) ]
+    end
+    wise_item.link_jar_transfers!
+    transfer = Transfer.find_by!(inflow_transaction_id: legs["EUR"].entryable_id)
+
+    delete transfer_url(transfer)
+
+    assert RejectedTransfer.exists?(inflow_transaction_id: legs["EUR"].entryable_id, outflow_transaction_id: legs["GBP"].entryable_id)
+    assert_no_difference -> { Transfer.count } do
+      wise_item.link_jar_transfers!
+    end
+    assert_equal %w[standard standard], legs.values.map { |entry| entry.entryable.reload.kind }
+  end
+
   test "can create transfer with tags on both sides" do
     tag = tags(:one)
 
