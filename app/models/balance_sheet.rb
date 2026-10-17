@@ -69,15 +69,25 @@ class BalanceSheet
 
       case order_key
       when "name_asc"
-        accounts.sort_by(&:name)
+        sort_by_name(accounts)
       when "name_desc"
-        accounts.sort_by(&:name).reverse
+        sort_by_name(accounts).reverse
       when "balance_asc"
-        accounts.sort_by(&:balance)
+        sort_by_balance(accounts)
       when "balance_desc"
-        accounts.sort_by(&:balance).reverse
+        sort_by_balance(accounts).reverse
       else
         accounts
       end
+    end
+
+    # Array#sort_by isn't stable, so accounts with an equal sort value could
+    # swap places between renders; the id tie-break keeps the order fixed.
+    def sort_by_name(accounts)
+      accounts.sort_by { |account| [ account.name.to_s.downcase, account.id ] }
+    end
+
+    def sort_by_balance(accounts)
+      accounts.sort_by { |account| [ account.converted_balance, account.id ] }
     end
 end
