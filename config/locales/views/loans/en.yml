@@ -24,7 +24,7 @@ en:
       rate_change_add: Add rate change
       rate_change_remove: Remove
       start_date: Origination date
-      start_date_hint: When the loan was drawn down. Leave blank to use the account's opening date.
+      start_date_hint: When the loan was drawn down. A new loan's balance history starts on this date, not the opening balance date. Leave blank to use the opening balance date.
       down_payment: Down payment
       insurance_rate: Insurance rate
       insurance_rate_placeholder: '0.36'

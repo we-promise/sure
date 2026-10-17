@@ -95,11 +95,19 @@ class Account < ApplicationRecord
   }
 
   # Accounts a user can write to (owned or shared with full_control)
+  WRITABLE_BY_CONDITION = "accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')".freeze
+
   scope :writable_by, ->(user) {
     left_joins(:account_shares)
-      .where("accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')", uid: user.id)
+      .where(WRITABLE_BY_CONDITION, uid: user.id)
       .distinct
   }
+
+  # SQL boolean for "user may write to this account", for selecting next to
+  # rows already joined with account_shares (e.g. through annotatable_by).
+  def self.writable_by_sql(user)
+    Arel.sql("(#{sanitize_sql([ WRITABLE_BY_CONDITION, uid: user.id ])})")
+  end
 
   # Accounts a user can annotate (category, tags, notes, merchant): owned,
   # or shared with full_control or read_write
@@ -176,8 +184,11 @@ class Account < ApplicationRecord
     state :disabled
     state :pending_deletion
 
+    # `timestamps: true` stamps disabled_at on entering disabled but never
+    # clears it, so leaving disabled clears it here. A present disabled_at then
+    # means the account was disabled, which the failed-deletion restore relies on.
     event :activate do
-      transitions from: [ :draft, :disabled ], to: :active
+      transitions from: [ :draft, :disabled ], to: :active, after: :clear_disabled_at
     end
 
     event :disable do
@@ -185,11 +196,29 @@ class Account < ApplicationRecord
     end
 
     event :enable do
-      transitions from: :disabled, to: :active
+      transitions from: :disabled, to: :active, after: :clear_disabled_at
     end
 
+    # An active or draft account can still carry a disabled_at from before enable
+    # cleared it. Drop it here, so a failed deletion (below) stamps the failure
+    # rather than reviving that stale date as the cutoff. A disabled account
+    # keeps its date.
     event :mark_for_deletion do
-      transitions from: [ :draft, :active, :disabled ], to: :pending_deletion
+      transitions from: [ :draft, :active ], to: :pending_deletion, after: :clear_disabled_at
+      transitions from: :disabled, to: :pending_deletion
+    end
+
+    # The AASM way out of pending_deletion (destroy_later's enqueue failure
+    # restores by update_column instead): Account#destroy fires it when the
+    # destroy raises, so the account is visible again and can be re-deleted.
+    # A separate event rather than widening `disable`, which would let every
+    # `disable!`/`may_disable?` caller act on an account being deleted.
+    #
+    # disabled_at is the net-worth cutoff, so an account that was already
+    # disabled keeps the date it was disabled; only one deleted from active or
+    # draft is stamped at the failure.
+    event :restore_after_failed_deletion do
+      transitions from: :pending_deletion, to: :disabled, after: :keep_original_disabled_at
     end
   end
 
@@ -212,6 +241,17 @@ class Account < ApplicationRecord
 
       transaction do
         account.save!
+
+        # A loan's original principal was its balance on the day it was drawn
+        # down, so that is where its opening anchor belongs. The form always
+        # sends an opening balance date (defaulting to two years ago), so the
+        # server cannot tell a deliberate one from the default: the loan's
+        # start date wins. Loan validates start_date as on or before today, so
+        # the anchor never lands after the reconciliation below. Entry rejects
+        # a date on or before Entry.min_supported_date, so a loan started that
+        # long ago keeps the form's date; its schedule still uses start_date.
+        loan_start_date = account.accountable.start_date if initial_balance && account.loan?
+        opening_balance_date = loan_start_date if loan_start_date && loan_start_date > Entry.min_supported_date
 
         manager = Account::OpeningBalanceManager.new(account)
         result = manager.set_opening_balance(
@@ -636,20 +676,51 @@ class Account < ApplicationRecord
     end
   end
 
+  # Marks the account pending_deletion and enqueues DestroyJob. If the enqueue
+  # fails, the account goes back to the status it had, so it is not left hidden
+  # from every list with no job coming to delete it. Mirrors DestroyableLater,
+  # except that the claim is made under a row lock (see below).
+  #
+  # ApplicationJob defers enqueues until commit, so perform_later inside a
+  # transaction returns before the push is tried. The enqueue therefore runs
+  # once every open transaction has committed: immediately when there is none,
+  # so the caller sees the outcome, and after the outer commit for a caller that
+  # holds one (the relink cleanup), when the push really happens. A rolled-back
+  # outer transaction undoes the mark and never enqueues.
+  #
+  # The prior status is read and the mark made under a row lock, which reloads
+  # the account first. A second request for the same account (a double submit)
+  # waits for the first to commit, sees pending_deletion and raises
+  # AASM::InvalidTransition before it captures a status or schedules an
+  # enqueue, so a restore only ever undoes the mark its own call made. Callers
+  # pass a freshly loaded record: lock! refuses one with unsaved changes.
+  #
+  # Returns the job, or false when the enqueue was rejected. Inside an outer
+  # transaction the enqueue has not run yet, so it returns nil.
   def destroy_later
-    transaction do
-      mark_for_deletion!
-      DestroyJob.perform_later(self)
+    previous_status = with_lock do
+      status.tap { mark_for_deletion! }
     end
+
+    enqueued = nil
+    ActiveRecord.after_all_transactions_commit do
+      enqueued = enqueue_destroy_job(restoring: previous_status)
+    end
+    enqueued
   end
 
   # Override destroy to handle error recovery for accounts
   def destroy
     super
   rescue => e
-    # If destruction fails, transition back to disabled state
-    # This provides a cleaner recovery path than the generic scheduled_for_deletion flag
-    disable! if may_disable?
+    # If destruction fails, leave the account disabled so it stays visible and
+    # can be deleted again. DestroyJob's scheduled_for_deletion reset is for
+    # provider items; accounts track deletion in `status`.
+    if may_restore_after_failed_deletion?
+      restore_after_failed_deletion!
+    elsif may_disable?
+      disable!
+    end
     raise e
   end
 
@@ -811,6 +882,33 @@ class Account < ApplicationRecord
 
   private
 
+    # perform_later raises (the Sidekiq adapter re-raises RedisClient errors) or
+    # returns false (ActiveJob::EnqueueError). Either way the status goes back.
+    def enqueue_destroy_job(restoring:)
+      enqueued = begin
+        DestroyJob.perform_later(self)
+      rescue StandardError
+        restore_status_after_failed_enqueue(restoring)
+        raise
+      end
+
+      # Match false exactly, as DestroyableLater does: a bare mock of
+      # perform_later returns nil, which is not a rejected enqueue.
+      restore_status_after_failed_enqueue(restoring) if enqueued == false
+      enqueued
+    end
+
+    # The row lock covers only the mark, and the push runs after commit, so
+    # another request may have written a newer status by now (toggle_active
+    # waiting on the lock, say). Undo the mark only while the row still holds
+    # it. A direct write, because AASM has no event back to the prior status and
+    # the restore must not fail on an unrelated validation and mask the error.
+    def restore_status_after_failed_enqueue(restoring)
+      restored = Account.where(id: id, status: "pending_deletion").update_all(status: restoring)
+      self.status = restoring if restored == 1
+      clear_attribute_changes([ :status ])
+    end
+
     def assign_default_owner
       return if owner.present?
 
@@ -834,6 +932,16 @@ class Account < ApplicationRecord
       return if owner_user&.family_id == family_id
 
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    # AASM transition callbacks run after the timestamp is set and before the
+    # state is saved, so both land in the event's own save.
+    def clear_disabled_at
+      self.disabled_at = nil
+    end
+
+    def keep_original_disabled_at
+      self.disabled_at = disabled_at_in_database if disabled_at_in_database.present?
     end
 
     def capture_account_statement_ids_to_move
