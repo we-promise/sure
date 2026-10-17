@@ -2,10 +2,9 @@ module ExchangeRate::Provided
   extend ActiveSupport::Concern
 
   class_methods do
+    # Resolve the rate provider from the same snapshot used by import configuration.
     def provider
-      provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
-      registry = Provider::Registry.for_concept(:exchange_rates)
-      registry.get_provider(provider.to_sym)
+      provider_configuration.last
     end
 
     # Maximum number of days to look back for a cached rate before calling the provider.
@@ -101,7 +100,8 @@ module ExchangeRate::Provided
 
     # @return [Integer] The number of exchange rates synced
     def import_provider_rates(from:, to:, start_date:, end_date:, clear_cache: false)
-      unless provider.present?
+      provider_name, exchange_rate_provider = provider_configuration
+      unless exchange_rate_provider.present?
         Rails.logger.warn("No provider configured for ExchangeRate.import_provider_rates")
         return 0
       end
@@ -125,7 +125,8 @@ module ExchangeRate::Provided
 
       begin
         ExchangeRate::Importer.new(
-          exchange_rate_provider: provider,
+          exchange_rate_provider: exchange_rate_provider,
+          provider_name: provider_name,
           from: from,
           to: to,
           start_date: start_date,
@@ -138,5 +139,13 @@ module ExchangeRate::Provided
         Rails.cache.delete(lock_key) if Rails.cache.read(lock_key) == lock_token
       end
     end
+
+    private
+      # Return the provider and its name from one configuration snapshot.
+      def provider_configuration
+        provider_name = (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
+        registry = Provider::Registry.for_concept(:exchange_rates)
+        [ provider_name, registry.get_provider(provider_name.to_sym) ]
+      end
   end
 end
