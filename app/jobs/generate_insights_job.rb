@@ -115,6 +115,15 @@ class GenerateInsightsJob < ApplicationJob
             generated_at: Time.current,
             dedup_key: generated.dedup_key
           )
+        elsif !existing.expired? && existing.metadata != metadata &&
+              existing.metadata.except("accounts_digest") == metadata.except("accounts_digest")
+          # Only the account set behind an aggregate changed (a share granted
+          # or revoked, or a row written before the digest existed). The prose
+          # may quote figures from the old set, so it is rewritten, but the
+          # signal itself did not change: read and dismissed state stay.
+          existing.update!(title: generated.title, body: writer.write(generated), metadata: metadata,
+                           facts: facts, generated_at: Time.current)
+          nil
         elsif existing.metadata != metadata
           # The numbers changed materially: refresh the prose and resurface the
           # insight even if the user had read or dismissed the stale version.
