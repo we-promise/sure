@@ -715,6 +715,7 @@ Rails.application.routes.draw do
       patch :update_address
 
       post :refresh_valuation
+      post :link_valuation
     end
   end
   resources :vehicles, only: %i[new create edit update]
