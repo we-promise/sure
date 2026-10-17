@@ -147,6 +147,168 @@ class WiseActivity::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.83"), entry.amount
   end
 
+  # Amount strings, in the shapes Wise returns
+
+  test "parse_amount reads value, currency and markup" do
+    assert_equal({ value: BigDecimal("1618.42"), currency: "USD", currencies: [ "USD" ], marked: nil, sign: nil },
+                 WiseActivity::Processor.parse_amount("1,618.42 USD"))
+    assert_equal({ value: BigDecimal("2465"), currency: "GBP", currencies: [ "GBP" ], marked: :positive, sign: 1 },
+                 WiseActivity::Processor.parse_amount("<positive>+ 2,465 GBP</positive>"))
+    assert_equal({ value: BigDecimal("0"), currency: "EUR", currencies: [ "EUR" ], marked: nil, sign: nil },
+                 WiseActivity::Processor.parse_amount("0 EUR"))
+  end
+
+  test "parse_amount reads a split-funding list as currencies without a value" do
+    assert_equal({ value: nil, currency: "GBP", currencies: %w[GBP EUR], marked: nil, sign: nil },
+                 WiseActivity::Processor.parse_amount("GBP, EUR"))
+    assert_equal({ value: nil, currency: "AUD", currencies: %w[AUD EUR], marked: nil, sign: nil },
+                 WiseActivity::Processor.parse_amount("AUD, EUR"))
+  end
+
+  test "parse_amount tells positive from negative amounts" do
+    positive = WiseActivity::Processor.parse_amount("<positive>+ 0.64 EUR</positive>")
+    negative = WiseActivity::Processor.parse_amount("<negative>- 0.64 EUR</negative>")
+
+    assert_equal [ BigDecimal("0.64"), :positive, 1 ], positive.values_at(:value, :marked, :sign)
+    assert_equal [ BigDecimal("0.64"), :negative, -1 ], negative.values_at(:value, :marked, :sign)
+    # A leading sign without markup counts as well.
+    assert_equal :positive, WiseActivity::Processor.parse_amount("+ 1.12 EUR")[:marked]
+    assert_equal :negative, WiseActivity::Processor.parse_amount("-3 EUR")[:marked]
+  end
+
+  test "parse_amount of a missing amount is empty" do
+    empty = { value: nil, currency: nil, currencies: [], marked: nil, sign: nil }
+
+    assert_equal empty, WiseActivity::Processor.parse_amount("")
+    assert_equal empty, WiseActivity::Processor.parse_amount(nil)
+  end
+
+  test "parse_money needs a digit, so a split-funding list has no amount" do
+    # The old pattern read the lone comma in "GBP, EUR" as 0 GBP.
+    assert_equal [ nil, "GBP" ], WiseActivity::Processor.parse_money("GBP, EUR")
+    assert_equal [ nil, "AUD" ], WiseActivity::Processor.parse_money("AUD, EUR")
+    assert_equal [ BigDecimal("1618.42"), "USD" ], WiseActivity::Processor.parse_money("1,618.42 USD")
+    assert_equal [ BigDecimal("2465"), "GBP" ], WiseActivity::Processor.parse_money("<positive>+ 2,465 GBP</positive>")
+    assert_equal [ BigDecimal("0"), "EUR" ], WiseActivity::Processor.parse_money("0 EUR")
+  end
+
+  # Direction of single-leg activities
+
+  test "a positive-marked activity is a credit whatever its type" do
+    assert_equal :credit, direction_of("CARD_PAYMENT", "<positive>+ 0.64 EUR</positive>")
+    assert_equal :credit, direction_of("TRANSFER", "<positive>+ 2,465 GBP</positive>")
+    assert_equal :credit, direction_of("BALANCE_DEPOSIT", "<positive>+ 715 GBP</positive>")
+    assert_equal :credit, direction_of("CARD_PAYMENT", "7.40 EUR", "<positive>+ 6.42 GBP</positive>")
+  end
+
+  test "an unmarked activity is a debit unless its type only ever pays in" do
+    assert_equal :debit, direction_of("CARD_PAYMENT", "7.40 EUR", "6.42 GBP")
+    assert_equal :debit, direction_of("TRANSFER", "1,618.42 USD", "1,620.79 USD")
+    assert_equal :debit, direction_of("CASH_WITHDRAWAL", "150 CHF", "GBP, CHF")
+    assert_equal :debit, direction_of("DIRECT_DEBIT_TRANSACTION", "64.20 CAD")
+    assert_equal :debit, direction_of("BALANCE_ASSET_FEE", "0.06 EUR")
+
+    %w[REWARD CARD_CASHBACK BALANCE_INTEREST BALANCE_CASHBACK].each do |type|
+      assert_equal :credit, direction_of(type, "1.12 EUR"), type
+      assert_equal :debit, direction_of(type, "<negative>- 1.12 EUR</negative>"), type
+    end
+  end
+
+  test "a conversion between two balances has no single direction" do
+    assert_nil direction_of("INTERBALANCE", "117.50 EUR", "100 GBP")
+    assert_nil direction_of("AUTO_CONVERSION", "117.50 EUR", "100 GBP")
+  end
+
+  # Amount a single-leg activity moved on its balance
+
+  test "a debit books what left the paying balance" do
+    # Card payment auto-converted from GBP: the merchant got 7.40 EUR.
+    assert_equal [ BigDecimal("6.42"), "GBP" ], booked("CARD_PAYMENT", "7.40 EUR", "6.42 GBP")
+    assert_equal [ BigDecimal("3.29"), "EUR" ], booked("CARD_PAYMENT", "2.84 GBP", "3.29 EUR")
+    # Payouts: the secondary is the gross debit, fee included.
+    assert_equal [ BigDecimal("1620.79"), "USD" ], booked("TRANSFER", "1,618.42 USD", "1,620.79 USD")
+    assert_equal [ BigDecimal("212.86"), "GBP" ], booked("TRANSFER", "41,500 JPY", "212.86 GBP")
+    # Same currency and no fee: Wise leaves the secondary empty.
+    assert_equal [ BigDecimal("37.65"), "EUR" ], booked("CARD_PAYMENT", "37.65 EUR", "")
+    assert_equal [ BigDecimal("0"), "CHF" ], booked("CARD_CHECK", "0 CHF", "")
+  end
+
+  test "a credit books the primary amount, which is what Wise credited" do
+    refund = build_activity("CARD_PAYMENT", "<positive>+ 0.64 EUR</positive>", "")
+
+    assert_equal({ value: BigDecimal("0.64"), currency: "EUR", direction: :credit, split: false, currencies: [ "EUR" ] },
+                 WiseActivity::Processor.balance_amount(refund))
+    assert_equal [ BigDecimal("6.42"), "GBP" ], booked("CARD_PAYMENT", "<positive>+ 6.42 GBP</positive>", "7.40 EUR")
+    assert_equal [ BigDecimal("2465"), "GBP" ], booked("TRANSFER", "<positive>+ 2,465 GBP</positive>", "")
+  end
+
+  test "a debit funded from several balances is split without per-balance amounts" do
+    atm = build_activity("CASH_WITHDRAWAL", "150 CHF", "GBP, CHF")
+    card = build_activity("CARD_PAYMENT", "17.60 CHF", "AUD, CHF")
+
+    assert WiseActivity::Processor.split?(atm)
+    assert_equal({ value: BigDecimal("150"), currency: "CHF", direction: :debit, split: true, currencies: %w[GBP CHF] },
+                 WiseActivity::Processor.balance_amount(atm))
+    assert WiseActivity::Processor.split?(card)
+    assert_equal %w[AUD CHF], WiseActivity::Processor.balance_amount(card)[:currencies]
+  end
+
+  test "only debits are split" do
+    refund = build_activity("CARD_PAYMENT", "<positive>+ 26.80 EUR</positive>", "GBP, EUR")
+    single = build_activity("CARD_PAYMENT", "7.40 EUR", "6.42 GBP")
+
+    assert_not WiseActivity::Processor.split?(refund)
+    assert_equal({ value: BigDecimal("26.80"), currency: "EUR", direction: :credit, split: false, currencies: [ "EUR" ] },
+                 WiseActivity::Processor.balance_amount(refund))
+    assert_not WiseActivity::Processor.split?(single)
+  end
+
+  test "a conversion has no single balance amount" do
+    conversion = build_interbalance("To <strong>EUR</strong>", amount: "117.50 EUR", resource_id: "8003", secondary: "100 GBP")
+
+    assert_nil WiseActivity::Processor.balance_amount(conversion)
+    assert_not WiseActivity::Processor.split?(conversion)
+  end
+
+  test "books a single-leg activity with its markup's sign and the paying balance's amount" do
+    gbp_account = create_standard_account(currency: "GBP", balance_id: "10000003")
+    refund = build_activity("CARD_PAYMENT", "<positive>+ 0.64 EUR</positive>", "", id: "card_refund_1")
+    payment = build_activity("CARD_PAYMENT", "7.40 EUR", "6.42 GBP", id: "card_payment_1")
+
+    refund_entry = WiseActivity::Processor.new(refund, wise_account: @standard_account).process
+    payment_entry = WiseActivity::Processor.new(payment, wise_account: gbp_account).process
+
+    assert_equal [ BigDecimal("-0.64"), "EUR" ], [ refund_entry.amount, refund_entry.currency ]
+    assert_equal [ BigDecimal("6.42"), "GBP" ], [ payment_entry.amount, payment_entry.currency ]
+  end
+
+  test "a negative-marked cashback is booked as an expense" do
+    activity = build_cashback(amount: "<negative>- 0.10 EUR</negative>", resource_id: "57005")
+
+    entry = WiseActivity::Processor.new(activity, wise_account: @jar_account).process
+
+    assert_equal BigDecimal("0.10"), entry.amount
+  end
+
+  # Dates
+
+  test "dates an activity in the family time zone, like transfers and statements" do
+    @family.update!(timezone: "Europe/Dublin")
+    activity = build_interbalance("To <strong>EUR</strong>", amount: "15 EUR", resource_id: "8004", secondary: "13 GBP")
+                 .merge("createdOn" => "2026-08-11T23:52:27.164Z")
+
+    entry = WiseActivity::Processor.new(activity, wise_account: @standard_account).process
+
+    # 23:52 UTC on 11 August is 00:52 on 12 August in Dublin (IST).
+    assert_equal Date.new(2026, 8, 12), entry.date
+  end
+
+  test "created_at is the UTC instant of createdOn" do
+    assert_equal Time.utc(2026, 9, 16, 22, 41, 38.553r),
+                 WiseActivity::Processor.created_at({ "createdOn" => "2026-09-16T22:41:38.553Z" })
+    assert_nil WiseActivity::Processor.created_at({ "createdOn" => "" })
+  end
+
   # BALANCE_CASHBACK (interest)
 
   test "BALANCE_CASHBACK is imported as income (negative)" do
@@ -249,6 +411,27 @@ class WiseActivity::ProcessorTest < ActiveSupport::TestCase
         provider: wise_account
       )
       wise_account
+    end
+
+    def build_activity(type, primary, secondary = nil, id: "#{type.downcase}_activity")
+      {
+        "id" => id,
+        "type" => type,
+        "resource" => { "type" => "CARD_TRANSACTION", "id" => "3000001" },
+        "title" => "<strong>Merchant</strong>",
+        "primaryAmount" => primary,
+        "secondaryAmount" => secondary,
+        "status" => "COMPLETED",
+        "createdOn" => "2025-09-17T15:33:48.972Z"
+      }.compact
+    end
+
+    def direction_of(type, primary, secondary = nil)
+      WiseActivity::Processor.direction(build_activity(type, primary, secondary))
+    end
+
+    def booked(type, primary, secondary = nil)
+      WiseActivity::Processor.balance_amount(build_activity(type, primary, secondary)).values_at(:value, :currency)
     end
 
     def build_cashback(amount:, resource_id:)

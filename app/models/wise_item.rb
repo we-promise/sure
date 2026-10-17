@@ -5,6 +5,10 @@ class WiseItem < ApplicationRecord
 
   SCA_PRIVATE_KEY_ATTRIBUTE = "sca_private_key"
 
+  # How often a family zone tzdata does not know is reported (#time_zone):
+  # every balance's processing asks for it on every sync.
+  UNKNOWN_TIME_ZONE_LOG_INTERVAL = 1.day
+
   # Raised rather than returned so no caller can mistake "not stored" for
   # "stored"; the controller turns it into the same panel error as any other
   # keypair failure.
@@ -128,6 +132,21 @@ class WiseItem < ApplicationRecord
     accounts.any?
   end
 
+  # The zone Wise movements are dated in: the family's, or UTC when it has
+  # none or one tzdata does not know. Family checks its zone only when it
+  # changes, so one stored before that check (or one tzdata dropped later)
+  # can stay; it is reported (#log_unknown_time_zone) rather than failing
+  # every row.
+  def time_zone
+    @time_zone ||= begin
+      requested = family&.timezone.presence
+      ActiveSupport::TimeZone[requested || "UTC"] || begin
+        log_unknown_time_zone(requested)
+        ActiveSupport::TimeZone["UTC"]
+      end
+    end
+  end
+
   def credentials_configured?
     token.to_s.strip.present?
   end
@@ -205,6 +224,26 @@ class WiseItem < ApplicationRecord
 
     def normalize_token
       self.token = token&.strip
+    end
+
+    # Once per interval for a family and value, the way Localize reports a
+    # zone it cannot use (an atomic write that only one caller wins).
+    def log_unknown_time_zone(requested)
+      lease = Rails.cache.write([ "wise_unknown_family_timezone", family_id, requested ], true,
+                                expires_in: UNKNOWN_TIME_ZONE_LOG_INTERVAL, unless_exist: true)
+      return unless lease
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "WiseItem - Unknown family time zone #{requested.inspect}; Wise movements are dated in UTC",
+        source: self.class.name,
+        provider_key: "wise",
+        family: family,
+        metadata: { wise_item_id: id, operation: "time_zone" }
+      )
+    rescue StandardError => e
+      Rails.logger.warn "WiseItem - Failed to capture Wise debug log: #{e.message}"
     end
 
     # Scoped to writes of the key itself. An install that generated a key

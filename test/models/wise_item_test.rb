@@ -137,6 +137,31 @@ class WiseItemTest < ActiveSupport::TestCase
     assert_not_equal first_public_key, second_public_key
   end
 
+  # Family checks its zone only when it changes, so a zone stored before that
+  # check (or one tzdata dropped later) can stay. Every Wise row then failed
+  # on it; now Wise dates fall back to UTC, reported once a day rather than on
+  # every sync of every balance.
+  test "time zone falls back to UTC for a family zone tzdata does not know, reported once a day" do
+    original_cache = Rails.cache
+    # The test store (:null_store) keeps nothing, so the once-a-day lease
+    # needs a real one.
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    @family.update_column(:timezone, "Invalid/Timezone")
+    notes = -> { DebugLogEntry.where(provider_key: "wise").where("metadata ->> 'operation' = ?", "time_zone") }
+
+    assert_difference -> { notes.call.count }, 1 do
+      2.times { assert_equal ActiveSupport::TimeZone["UTC"], WiseItem.find(@wise_item.id).time_zone }
+    end
+    assert_equal [ "warn", @family ], notes.call.sole.then { |note| [ note.level, note.family ] }
+
+    @family.update_column(:timezone, "Europe/Dublin")
+    assert_equal ActiveSupport::TimeZone["Europe/Dublin"], WiseItem.find(@wise_item.id).time_zone
+    @family.update_column(:timezone, nil)
+    assert_equal ActiveSupport::TimeZone["UTC"], WiseItem.find(@wise_item.id).time_zone
+  ensure
+    Rails.cache = original_cache
+  end
+
   # link_jar_transfers!
 
   test "links matching interbalance inflow and outflow entries as a Transfer" do

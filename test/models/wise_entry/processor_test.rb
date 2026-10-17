@@ -133,6 +133,18 @@ class WiseEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal I18n.t("wise_items.entries.default_name"), entry.name
   end
 
+  test "renames an existing entry when the transfer's name changes" do
+    # Renaming logs a DataEnrichment under source "wise", which the enum used
+    # to reject, failing the row on every later sync.
+    WiseEntry::Processor.new(build_transfer(id: 3003, target_account: 9999, reference: nil),
+                             wise_account: @wise_account).process
+
+    entry = WiseEntry::Processor.new(build_transfer(id: 3003, target_account: 9999, reference: "Invoice #43"),
+                                     wise_account: @wise_account).process
+
+    assert_equal "Invoice #43", entry.reload.name
+  end
+
   # Fee handling
 
   test "creates separate fee entry when sourceValue exceeds targetValue in same currency" do
@@ -164,6 +176,38 @@ class WiseEntry::ProcessorTest < ActiveSupport::TestCase
     WiseEntry::Processor.new(transfer, wise_account: @wise_account).process
 
     assert_equal 1, @account.entries.where(source: "wise").count
+  end
+
+  test "re-importing a transfer drops wise metadata Wise no longer reports" do
+    WiseEntry::Processor.new(build_transfer(id: 4004, target_account: 9999, source_value: 100.5, target_value: 100.0),
+                             wise_account: @wise_account).process
+
+    entry = WiseEntry::Processor.new(build_transfer(id: 4004, target_account: 9999, source_value: 100.0, target_value: 100.0),
+                                     wise_account: @wise_account).process
+
+    assert_nil entry.entryable.reload.extra.dig("wise", "fee")
+  end
+
+  # Dates
+
+  test "reads created as UTC whatever the server time zone" do
+    @family.update!(timezone: "Europe/Dublin")
+    transfer = build_transfer(id: 7001, target_account: 9999).merge("created" => "2026-06-30 23:30:00")
+
+    entry = with_server_time_zone("Europe/Dublin") do
+      WiseEntry::Processor.new(transfer, wise_account: @wise_account).process
+    end
+
+    # Wise sends created in UTC without a zone designator: 23:30 UTC is 00:30
+    # on 1 July in Dublin (IST).
+    assert_equal Date.new(2026, 7, 1), entry.date
+  end
+
+  test "created_at is the UTC instant of created" do
+    with_server_time_zone("Asia/Tokyo") do
+      assert_equal Time.utc(2026, 6, 30, 23, 30), WiseEntry::Processor.created_at({ "created" => "2026-06-30 23:30:00" })
+    end
+    assert_nil WiseEntry::Processor.created_at({ "created" => nil })
   end
 
   # Exchange rate for balance conversion
@@ -219,6 +263,15 @@ class WiseEntry::ProcessorTest < ActiveSupport::TestCase
   end
 
   private
+
+    # Time.parse reads a zone-less string in the process time zone (ENV["TZ"]).
+    def with_server_time_zone(zone)
+      previous = ENV["TZ"]
+      ENV["TZ"] = zone
+      yield
+    ensure
+      ENV["TZ"] = previous
+    end
 
     def build_transfer(id:, target_account:, source_value: 100.0, target_value: nil,
                         source_currency: "EUR", target_currency: nil, status: "outgoing_payment_sent",
