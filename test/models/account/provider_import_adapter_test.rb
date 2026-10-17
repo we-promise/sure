@@ -813,6 +813,34 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal 1, account.holdings.where(security: [ original, chosen ], date: Date.current).count
   end
 
+  # Chained remaps: the user moved the provider's A onto B, and the provider's B
+  # onto C. An incoming B matches yesterday's B->C row by provider security and
+  # the A->B row as a correction locked to B, both on the same date. The
+  # provider-security match is the position B came from, so it wins. The A->B
+  # row is created first and has the lower id, so neither insertion order nor
+  # an id tiebreak alone would return the right one.
+  test "a chained remap carries forward the row the provider security came from" do
+    account, adapter, account_provider = provider_holding_setup
+    first = Security.create!(ticker: "CHNA", name: "Provider A")
+    middle = Security.create!(ticker: "CHNB", name: "Provider B, chosen for A")
+    last = Security.create!(ticker: "CHNC", name: "Chosen for B")
+    yesterday = Date.current - 1
+    account.holdings.create!(
+      id: "00000000-0000-4000-8000-000000000001", security: middle, provider_security: first, security_locked: true, account_provider: account_provider,
+      date: yesterday, currency: "USD", qty: 1, price: 10, amount: 10, cost_basis: 11, cost_basis_locked: true
+    )
+    account.holdings.create!(
+      id: "ffffffff-ffff-4fff-bfff-ffffffffffff", security: last, provider_security: middle, security_locked: true, account_provider: account_provider,
+      date: yesterday, currency: "USD", qty: 2, price: 10, amount: 20, cost_basis: 22, cost_basis_locked: true
+    )
+
+    today = import_holding_without_external_id(adapter, account_provider, middle, Date.current)
+
+    assert_equal last.id, today.security_id
+    assert_equal middle.id, today.provider_security_id
+    assert_equal 22, today.cost_basis
+  end
+
   test "another provider's same-day row with that provider security is not claimed" do
     account, adapter, account_provider = provider_holding_setup
     other_provider = AccountProvider.create!(account: account, provider: snaptrade_accounts(:vanguard_ira))

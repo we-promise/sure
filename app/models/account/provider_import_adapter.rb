@@ -1077,6 +1077,12 @@ class Account::ProviderImportAdapter
     # user's chosen security instead still finds the row the user locked to
     # it. Only the latest row counts, so a correction the user has since
     # undone is not revived from an older day.
+    #
+    # Within that day, a row recording this provider security is the position
+    # it came from, and wins over a correction locked to it: with chained
+    # remaps (A onto B, B onto C) an incoming B matches both the B->C row and
+    # the A->B row on the same date. `id` settles anything left, so the pick
+    # never depends on the query plan.
     def previous_holding_for(security:, currency:, date:, account_provider_id:)
       scope = account.holdings
         .where(currency: currency)
@@ -1087,7 +1093,13 @@ class Account::ProviderImportAdapter
           id: security.id
         )
       scope = scope.where(account_provider_id: account_provider_id) if account_provider_id.present?
-      scope.order(date: :desc).first
+
+      match_rank = ActiveRecord::Base.sanitize_sql_array([
+        "CASE WHEN holdings.provider_security_id = :id THEN 0 " \
+        "WHEN holdings.provider_security_id IS NULL AND holdings.security_id = :id THEN 1 ELSE 2 END",
+        id: security.id
+      ])
+      scope.order(date: :desc).order(Arel.sql(match_rank)).order(:id).first
     end
 
     # Loads the transfer together with both legs, their entries and accounts in
