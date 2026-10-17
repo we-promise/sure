@@ -692,7 +692,7 @@ class Family < ApplicationRecord
   # nothing on entries, but changes which entries `uncategorized_transactions`
   # considers accessible).
   def accounts_status_version
-    count, max_at = accounts.pick(Arel.sql("count(*)"), Arel.sql("max(updated_at)"))
+    count, max_at = accounts.pick(Arel.sql("count(*)"), Arel.sql('max("accounts"."updated_at")'))
     "#{count}-#{max_at&.to_f}"
   end
 
