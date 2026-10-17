@@ -138,6 +138,10 @@ class McpController < ApplicationController
       user = User.find_by(id: access_token.resource_owner_id)
       return false unless user&.active?
 
+      # Doorkeeper revokes the refresh token a token was refreshed from only
+      # when the new token is first used (Doorkeeper::OAuth::Token.authenticate).
+      # by_token skips that step, so do it here.
+      access_token.revoke_previous_refresh_token!
       setup_mcp_session(user)
       true
     end

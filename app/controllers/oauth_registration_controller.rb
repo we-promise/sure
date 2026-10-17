@@ -65,7 +65,7 @@ class OauthRegistrationController < ApplicationController
         client_id: app.uid,
         client_name: app.name,
         redirect_uris: app.redirect_uri.split("\n"),
-        grant_types: [ "authorization_code" ],
+        grant_types: [ "authorization_code", "refresh_token" ],
         token_endpoint_auth_method: "none"
       }, status: :created
     else
