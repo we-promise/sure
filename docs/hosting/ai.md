@@ -19,25 +19,43 @@ Sure has **two separate AI systems** that operate independently. Understanding t
 
 The interactive chat where users ask questions about their finances. Routes through one of two backends, or is turned off:
 
-- **Builtin** (default): Uses the OpenAI-compatible provider configured via `OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`. Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
+- **Builtin** (default): Uses the LLM provider selected by `LLM_PROVIDER`: the OpenAI-compatible provider (`OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`, the default) or the [native Anthropic provider](#anthropic-native). Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
 - **External**: Delegates the entire conversation to a remote AI agent. The agent calls back to Sure via MCP to access financial data. Set `ASSISTANT_TYPE=external` as a global override, or configure each family's assistant type in Settings.
 - **None in app** (`mcp_only`): Removes the in-app chat for the household: the right-hand chat sidebar and its toggle, the mobile Assistant tab, and the buttons that start a chat. Bring your own agent and connect it through [MCP](mcp.md), which keeps working. Set `ASSISTANT_TYPE=mcp_only` to remove the chat for every family.
 
 ### 2. Auto-Categorization and Merchant Detection (background)
 
-Background jobs that classify transactions and detect merchants. These **always** use the OpenAI-compatible provider (`OPENAI_ACCESS_TOKEN`), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
+Background jobs that classify transactions and detect merchants. These use the LLM provider selected by `LLM_PROVIDER` (OpenAI-compatible or native Anthropic; categorization uses Jev instead when it's selected), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
 
 ### What this means in practice
 
 | Setting | Chat assistant | Auto-categorization |
 |---------|---------------|---------------------|
-| `ASSISTANT_TYPE=builtin` (default) | Uses OpenAI provider | Uses OpenAI provider |
-| `ASSISTANT_TYPE=external` | Uses external agent | Still uses OpenAI provider |
+| `ASSISTANT_TYPE=builtin` (default) | Uses the LLM provider | Uses the LLM provider |
+| `ASSISTANT_TYPE=external` | Uses external agent | Still uses the LLM provider |
 | `ASSISTANT_TYPE=mcp_only` | None in app; connect your own agent via MCP | Unchanged; uses the configured categorization provider |
 
-If you use an external agent for chat, you still need `OPENAI_ACCESS_TOKEN` set for auto-categorization and merchant detection to work. The two systems are fully independent.
+If you use an external agent for chat, you still need an LLM provider configured (`OPENAI_ACCESS_TOKEN` or `ANTHROPIC_API_KEY`) for auto-categorization and merchant detection to work. The two systems are fully independent.
 
 With `mcp_only`, Sure also skips the features that need a user's AI consent: the LLM-written insight text and the bills AI shortcuts (review, smart fill, smart configuration).
+
+### Where AI jobs run (Sidekiq lanes)
+
+AI work runs in the Sidekiq `worker`, in its own capsule ("lane"), so a slow model can't hold up syncs, balance recalculation and scheduled jobs. Both lanes are defined in `config/sidekiq.yml`:
+
+| Lane | Queues | Threads | Jobs |
+|------|--------|---------|------|
+| default | `scheduled`, `high_priority`, `medium_priority`, `low_priority`, `default` | `RAILS_MAX_THREADS - RAILS_AI_MAX_THREADS` (3 - 1 = 2) | syncs, balances, rules, imports, scheduled jobs |
+| ai | `ai_high_priority`, then `ai_low_priority` (strict order) | `RAILS_AI_MAX_THREADS` (default `1`) | chat (`ai_high_priority`); auto-categorization, merchant detection and enhancement, PDF processing, insights (`ai_low_priority`) |
+
+- `RAILS_MAX_THREADS` is the worker's total thread count, as before, and also sizes its database pool. It must be greater than `RAILS_AI_MAX_THREADS` (so at least `2` by default): a lane with 0 threads stops the worker from starting ("Concurrency of 0 is not supported"). Puma reads the same variable, so if you lower it for the web service to save memory, set the worker's separately.
+- **Strict order:** a waiting chat runs next, but it doesn't interrupt the AI job already running. Auto-categorization, merchant-detection and merchant-enhancement jobs make one LLM call each, of `LLM_MAX_ITEMS_PER_CALL` items (default `25`), or more if the batch doesn't fit the context window; PDF import, insight and chat jobs can make several. With one AI thread, a PDF import or other `ai_low_priority` job waits behind earlier ones, and continuous chat use pauses background AI work.
+- **Busy notice:** when a chat would wait behind another AI job (a chat has waited over 30 seconds, or, with one AI thread, background AI work has), its "Thinking" bubble says the system is busy until the chat's job starts. `AI_RESPONSE_TIMEOUT` includes that wait.
+- **One AI thread suits a model that serves one request at a time,** such as a local model on CPU: a chat turn's calls then run back to back, keeping the model's prompt cache warm. If your provider serves requests in parallel (hosted APIs, or a local server with several slots), raise `RAILS_AI_MAX_THREADS`, and `RAILS_MAX_THREADS` by the same amount so the default lane keeps its threads.
+- **The worker must load `config/sidekiq.yml`,** as `bundle exec sidekiq` does by default. A worker started with its own queue list (`sidekiq -q …`, a custom Helm `worker.command`) doesn't get the AI lane. If no worker polls `ai_high_priority` and `ai_low_priority`, **System health** (`/admin/system_health`) and the site-wide banner report "No worker is processing the AI queues", and the chat page warns that responses may not be delivered. Keep `-C config/sidekiq.yml`; adding `-q ai_high_priority -q ai_low_priority` also works, but AI jobs then share that worker's threads.
+- **System health:** AI backlog doesn't count towards "queue backed up" (a large merchant-detection run can queue for hours), but "Oldest job age" still includes it. Check the queue table or `/sidekiq` to see which queue is waiting.
+- **Upgrading:** AI jobs moved from `high_priority` (chat), `medium_priority` and `scheduled` to the AI queues. Jobs already queued under the old names still run once, in the default lane.
+- **Large batches:** Sure doesn't limit `LLM_MAX_ITEMS_PER_CALL`. OpenAI-compatible providers split a batch that doesn't fit the context window; with the native Anthropic provider, raise `ANTHROPIC_MAX_TOKENS` (default `4096`) along with it, or replies are cut off.
 
 ## Quickstart: OpenAI Token
 
@@ -149,6 +167,44 @@ Text extraction keeps its existing request behavior. Custom endpoints retain
 their existing token parameters. Increase the LLM context budget for cloud
 reasoning models; the default 2048-token context is intended for small local models.
 
+### Anthropic (native)
+
+Sure talks to Anthropic's Messages API directly. It serves chat (streamed), auto-categorization, merchant detection and enhancement, bill setup suggestions, and PDF imports (Claude reads the PDF itself; no vision setting needed).
+
+```bash
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your-anthropic-api-key # pipelock:ignore
+
+# Optional
+# ANTHROPIC_MODEL=claude-sonnet-4-6
+# ANTHROPIC_MAX_TOKENS=4096
+# ANTHROPIC_REQUEST_TIMEOUT=600
+# ANTHROPIC_BASE_URL=
+```
+
+Or in the UI: **Settings** → **Self-Hosting** → **AI Provider** → **Anthropic (Claude)**, then API Key, Base URL and Default Model. An env var disables its field; `LLM_PROVIDER` locks the provider choice.
+
+| Variable | Default | What it does |
+|----------|---------|--------------|
+| `LLM_PROVIDER` | `openai` | `anthropic` selects this provider. If the selected provider has no key, Sure uses the other one. While a custom OpenAI-compatible provider is configured (`OPENAI_URI_BASE` with an access token and model), chat still goes to it, so remove those settings when switching. |
+| `ANTHROPIC_API_KEY` | — | API key. `ANTHROPIC_ACCESS_TOKEN` also works and wins if both are set. |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for chat and all background jobs. Must start with `claude` unless a base URL is set. Claude Opus 5.5, Sonnet 5.5 and Fable 5.1 work for chat only until [#4125](https://github.com/we-promise/sure/issues/4125) is fixed. |
+| `ANTHROPIC_MAX_TOKENS` | `4096` | Reply limit, sent with every request (the Messages API requires one). |
+| `ANTHROPIC_REQUEST_TIMEOUT` | `600` | HTTP timeout per call, in seconds. |
+| `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Anthropic-compatible endpoint. Requires `ANTHROPIC_MODEL`. |
+
+How it differs from the OpenAI-compatible provider:
+
+- **No token budget.** `LLM_CONTEXT_WINDOW` (default `2048`) does less here:
+  - **Every provider:** below `4096`, the chat's system prompt lists accounts and categories only as counts, and the model fetches them with tools.
+  - **OpenAI-compatible:** it is also the budget, with `LLM_MAX_RESPONSE_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE`, for splitting auto-categorization and merchant batches, and for trimming chat history on Chat Completions endpoints (`LLM_MAX_HISTORY_TOKENS`). The native OpenAI Responses API keeps history on OpenAI's side, so nothing is trimmed there.
+  - **Native Anthropic:** only the system-prompt check applies. History is sent whole, batches aren't split, and `LLM_MAX_RESPONSE_TOKENS`, `LLM_MAX_HISTORY_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE` are ignored. Set `LLM_CONTEXT_WINDOW` by env (e.g. `200000`) so the prompt lists accounts and categories; its UI field is in the OpenAI panel.
+- **The reply limit is always sent.** A reply that needs more than `ANTHROPIC_MAX_TOKENS` is cut off. Only bank statement extraction detects this (it logs a warning). Raise the limit if long answers or batch results come back incomplete.
+- **Batch size.** Auto-categorization, merchant detection and merchant enhancement send `LLM_MAX_ITEMS_PER_CALL` items per request (default `25`), with no splitting to fit the context window. Raise `ANTHROPIC_MAX_TOKENS` along with it, or replies are cut off (see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes)).
+- **Its own timeout.** `ANTHROPIC_REQUEST_TIMEOUT` replaces `OPENAI_REQUEST_TIMEOUT`. `AI_RESPONSE_TIMEOUT` still covers the whole chat turn. `OPENAI_EXTRA_HEADERS`, `LLM_JSON_MODE` and `OPENAI_SUPPORTS_*` don't apply.
+
+**Bedrock, Vertex and proxies:** `ANTHROPIC_BASE_URL` can point at any endpoint that speaks the Anthropic Messages API, such as a gateway in front of AWS Bedrock or Google Vertex AI. Set `ANTHROPIC_MODEL` to that endpoint's model ID (for Bedrock, e.g. `anthropic.claude-sonnet-4-5-20250929-v1:0`); the `claude` prefix check is skipped. Sure sends the key as an Anthropic API key (`x-api-key`) and doesn't sign AWS or Google requests itself.
+
 ### Google Gemini
 
 You can connect to Google Gemini either directly via Google AI Studio's OpenAI-compatible endpoint or via OpenRouter.
@@ -187,7 +243,9 @@ OPENAI_MODEL=google/gemini-3.8-flash
 - Automatic fallbacks
 - Usage tracking
 
-### Anthropic Claude (via OpenRouter)
+### Anthropic Claude via OpenRouter (OpenAI-compatible)
+
+This route uses the OpenAI-compatible provider and its token budget. To call Anthropic directly, use the [native Anthropic provider](#anthropic-native).
 
 ```bash
 OPENAI_ACCESS_TOKEN=your-openrouter-api-key
@@ -314,6 +372,7 @@ AI_DEBUG_MODE=true
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
 - If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits. You can also set this in **Settings → Self-Hosting → OpenAI → Request Timeout** when the environment variable is not configured.
 - Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
+- AI jobs run one at a time by default (`RAILS_AI_MAX_THREADS=1`), which suits a local model with one slot; see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes) before raising it
 
 ### Docker Compose Example
 
@@ -398,13 +457,13 @@ Similar requirements to categorization:
 For self-hosted deployments, you can configure AI settings through the web interface:
 
 1. Go to **Settings** → **Self-Hosting**
-2. Scroll to the **AI Provider** section
-3. Configure the provider:
+2. Scroll to the **AI Provider** section and choose **OpenAI** or **Anthropic (Claude)**
+3. Configure the provider (OpenAI fields shown; for Anthropic see [Anthropic (native)](#anthropic-native)):
    - **Access Token** - Your API key
    - **API Base URL** - Custom endpoint (leave blank for OpenAI)
    - **Model** - Model name (required for custom endpoints)
    - **JSON Mode** - Structured-output format; `Auto` suits most models
-4. Optionally tune **Token Budget** — Context Window, Max Response Tokens and Max Items Per Batch. The defaults are conservative so small-context local models work out of the box; raise them for cloud or large-context models.
+4. Optionally set **Max Items Per Batch** under the provider choice; it applies to every provider. For OpenAI-compatible endpoints, also tune **Token Budget** — Context Window and Max Response Tokens. The defaults are conservative so small-context local models work out of the box; raise them for cloud or large-context models.
 5. Optionally set **Chat Response Timeout** — how long the chat waits for a whole turn before showing a "no response" error (default 90s). Raise it for slow local models; see [Chat Errors While the Model Is Still Generating](#chat-errors-while-the-model-is-still-generating).
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
@@ -1282,7 +1341,7 @@ Then restart both `web` and `worker` so the new env var is loaded. If you are us
 
 - `OPENAI_REQUEST_TIMEOUT` (default `60`) — applies to **each HTTP call** to the model, on its own.
 - `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` (default `8`) — how many chained tool-call rounds one turn may make. A turn costs up to `1 + this` model calls. On the final permitted round the model is offered no tools, so it answers in text instead of erroring.
-- `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it.
+- `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it. With one AI thread, that includes waiting for the AI job already running (see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes)).
 
 Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. Worse, the assistant only shows text once a response actually contains some — a tool-call-only response produces nothing to display — so a turn that chains several tool calls sits on "Thinking…" through all of them. At the defaults the worst case is nine sequential model calls plus eight tool-round executions.
 

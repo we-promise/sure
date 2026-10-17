@@ -31,6 +31,33 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[data-turbo-frame=_top] input[type=file][onchange='this.form.requestSubmit()']", count: 2
   end
 
+  # DS::Button with an href renders button_to, which POSTs unless given a
+  # method. revert only routes PUT, so Try again hit a routing error.
+  test "try again on a failed revert PUTs to revert" do
+    import = imports(:transaction)
+    import.update_columns(status: "revert_failed")
+    TransactionImport.any_instance.stubs(uploaded?: true, publishable?: true)
+
+    get import_url(import)
+
+    assert_response :success
+    assert_select "form[action=?]", revert_import_path(import) do
+      assert_select "input[name=_method][value=put]"
+    end
+  end
+
+  # POSTing to imports_path is create, which needs import params.
+  test "back to imports on an empty import is a link to the imports page" do
+    import = imports(:transaction)
+    TransactionImport.any_instance.stubs(uploaded?: true, publishable?: true)
+
+    get import_url(import)
+
+    assert_response :success
+    assert_select "a[href=?]", imports_path, text: I18n.t("imports.ready.back_to_imports")
+    assert_select "form[action=?]", imports_path, count: 0
+  end
+
   test "cancel marks a lost import as failed" do
     import = imports(:transaction)
     import.update_columns(status: "importing", updated_at: 2.hours.ago)

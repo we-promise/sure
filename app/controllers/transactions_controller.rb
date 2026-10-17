@@ -76,8 +76,10 @@ class TransactionsController < ApplicationController
       Set.new
     end
 
+    # Counts what the categorize wizard can act on, so read-only shares don't
+    # keep the "Categorize" menu item visible.
     @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
-      Current.accessible_entries.uncategorized_transactions.count
+      Current.annotatable_entries.uncategorized_transactions.count
     end
 
     # Load projected recurring transactions for next 10 days. Only the IDs are
@@ -558,7 +560,7 @@ class TransactionsController < ApplicationController
     # active status (AccountsController#toggle_active) doesn't touch `entries`
     # or `AccountShare`, so it wouldn't otherwise bust this cache.
     def uncategorized_count_cache_key
-      "transactions_uncategorized_count/v4/#{Current.family.id}/#{Current.user.id}/" \
+      "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 
@@ -740,9 +742,9 @@ class TransactionsController < ApplicationController
         entry_params
       when :read_write
         # Annotate only: category, tags, merchant, notes
-        ep = entry_params.slice(:notes)
+        ep = entry_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES)
         if entry_params[:entryable_attributes].present?
-          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :merchant_id, :tag_ids)
+          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES)
         end
         ep
       else
