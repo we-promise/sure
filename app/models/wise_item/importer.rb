@@ -29,10 +29,13 @@ class WiseItem::Importer
   MISSING_TRANSFER_REREADS = 3
 
   # What Sure attaches to a stored transfer row: the activity Wise shows for
-  # the transfer and the refund credit of a refunded payout. A re-fetched
-  # copy of the row keeps them unless it brings its own, so a sync whose
-  # activities do not reach that far back (or failed) loses nothing.
-  STICKY_ROW_KEYS = %w[wise_activity wise_refund_activity].freeze
+  # the transfer and the refund credit of a refunded payout.
+  ENRICHMENT_KEYS = %w[wise_activity wise_refund_activity].freeze
+  # A re-fetched copy of a row keeps what Sure attached to the stored copy
+  # unless it brings its own, so a sync whose activities do not reach that
+  # far back (or failed) loses nothing: the enrichment and the balance
+  # replay's marks, which only the replay changes (WiseItem::BalanceReplay).
+  STICKY_ROW_KEYS = (ENRICHMENT_KEYS + WiseItem::BalanceReplay::ANNOTATION_KEYS).freeze
   MAX_LOGGED_TRANSFER_IDS = 20
 
   # Wise answered with a page this fetch had already read.
@@ -51,6 +54,7 @@ class WiseItem::Importer
     @statement_retry_accounts = []
     @statements_refused_accounts = []
     @deferred_activity_times = []
+    @live_amounts = {}
   end
 
   # `complete:` is true only when every source this sync needed arrived in
@@ -79,6 +83,7 @@ class WiseItem::Importer
     statements = fetch_statements
     statement_fallbacks = statement_fetches_failed_completely?
     transfers = fetch_transfers if (statement_fallbacks || statements_missing?) && !@transfers_attempted
+    @live_amounts = fetch_live_amounts(balances) if balance_replay_wanted?(balances)
     transaction_result = store_transfers_per_account(
       transfers || [],
       activities: activities || [],
@@ -737,7 +742,8 @@ class WiseItem::Importer
     # #transfer_for_account? and #activity_for_account?): transfers and
     # statement rows go to STANDARD balances, activities to the balances they
     # moved money on, jars included. Transfers, fetched or stored, first get
-    # the activity this sync saw for them.
+    # the activity this sync saw for them. The balance replay then marks the
+    # merged payloads (#annotate_with_balance_replay) before they are stored.
     def store_transfers_per_account(transfers, activities: [], statements: {}, statement_failures: [], fallback_to_transfers: false)
       transactions_imported = 0
       transactions_failed = 0
@@ -749,6 +755,7 @@ class WiseItem::Importer
       @statement_covered_account_ids = statement_covered_account_ids(statements)
       @deferred_activity_times = activities.select { |activity| activity_route(activity) == :deferred }.map { |activity| activity_created_at(activity) }
       report_activity_routing(activities)
+      payloads = {}
 
       wise_item.wise_accounts.find_each do |wise_account|
         # A failed statement request for a balance that holds statement rows
@@ -765,9 +772,7 @@ class WiseItem::Importer
           # Merged, never replaced: this sync's window (or a failed fetch)
           # holds only part of the jar's history, and a jar is only linked
           # after the sync that first stored it.
-          payload = merge_transaction_payloads(Array(wise_account.raw_transactions_payload) + jar_activities)
-          wise_account.upsert_wise_transactions_snapshot!(payload)
-          transactions_imported += payload.size
+          payloads[wise_account] = merge_transaction_payloads(Array(wise_account.raw_transactions_payload) + jar_activities)
         else
           account_statements = statements[wise_account.id] || []
           # Stored rows are re-routed too, so rows saved under an older
@@ -803,15 +808,224 @@ class WiseItem::Importer
           # A statement request can legitimately return no rows for a token
           # lacking statement permission; preserve transfer fallback behavior.
           payload = merge_transaction_payloads(account_transfers + routed_activities) if payload.empty?
-          wise_account.upsert_wise_transactions_snapshot!(payload)
-          transactions_imported += payload.size
+          payloads[wise_account] = payload
         end
       rescue => e
         transactions_failed += 1
         Rails.logger.error "WiseItem::Importer - Failed to store transactions for wise_account #{wise_account.id}: #{e.message}"
       end
 
+      # Each balance in its own savepoint, so one that fails to save keeps its
+      # old payload without holding back the others, except that the balances
+      # whose split marks the replay changed are stored all or none: the
+      # copies of a split payment on several balances carry the same parts.
+      WiseAccount.transaction do
+        changed, unchanged = annotate_with_balance_replay(payloads).partition do |wise_account, payload|
+          split_marks_changed?(wise_account, payload)
+        end
+        [ changed, *unchanged.map { |pair| [ pair ] } ].reject(&:empty?).each do |group|
+          WiseAccount.transaction(requires_new: true) do
+            group.each { |wise_account, payload| wise_account.upsert_wise_transactions_snapshot!(payload) }
+          end
+          transactions_imported += group.sum { |_wise_account, payload| payload.size }
+        rescue => e
+          transactions_failed += group.size
+          Rails.logger.error "WiseItem::Importer - Failed to store transactions for wise_accounts #{group.map { |wise_account, _payload| wise_account.id }.join(', ')}: #{e.message}"
+        end
+      end
+
       { transactions_imported: transactions_imported, transactions_failed: transactions_failed }
+    end
+
+    # Replays the balances that can be replayed (#balances_to_replay) and puts
+    # what it found on their rows: "wise_funding" on the transfers of each
+    # balance that reconciled, "wise_split_parts" (and "wise_split_estimated")
+    # on every copy of a split payment whose balances all reconciled. Rows of
+    # any other balance keep their marks. A replay that raises changes nothing
+    # and never fails the import.
+    def annotate_with_balance_replay(payloads)
+      balances = balances_to_replay(payloads)
+      return payloads if balances.empty?
+
+      # A savepoint, so a failed rate lookup cannot abort the transaction.
+      result = WiseAccount.transaction(requires_new: true) do
+        WiseItem::BalanceReplay.new(balances, own_recipient_ids: own_recipient_ids, feed: payloads.values.flatten).call
+      end
+      annotated = apply_balance_replay(payloads, result)
+      report_balance_replay(result, payloads, annotated)
+      annotated
+    rescue => e
+      Rails.logger.error "WiseItem::Importer - Wise balance replay failed: #{e.class} - #{e.message}"
+      capture_debug_log(
+        category: "provider_sync_error",
+        level: "error",
+        message: "WiseItem::Importer - Wise balance replay failed (#{e.class}); funding and split marks are unchanged",
+        operation: "balance_replay",
+        error_class: e.class.name
+      )
+      payloads
+    end
+
+    # A balance is replayed only when its rows can hold everything that moved
+    # it: a full-history import whose fetches all succeeded and reached back
+    # to the balance's creation, an open STANDARD balance not invested (its
+    # holdings move without rows), without statement coverage (statement rows
+    # are not replayed), no jar in its currency (jar moves and interest), no
+    # other open balance in its currency, no stored credit for a transfer
+    # Sure does not have (it may be a transfer Wise lists late), and Wise
+    # held the same amount before and after the fetch.
+    def balances_to_replay(payloads)
+      return [] unless full_history? && @fetch_failures.zero? && @live_amounts.any?
+      return [] unless @fetched_windows.key?(:transfers) && @fetched_windows.key?(:activities)
+      # A deferred credit is in no payload yet.
+      return [] if @deferred_activity_times.any?
+
+      coverage = coverage_after_fetch
+      jar_currencies = WiseAccount.where(wise_item_id: wise_item.id).select(&:jar?).map(&:currency).to_set
+      open_standard = payloads.keys.reject { |wise_account| wise_account.jar? || wise_account.closed? }
+      shared_currencies = open_standard.group_by(&:currency).select { |_currency, accounts| accounts.size > 1 }.keys
+
+      open_standard.filter_map do |wise_account|
+        live = @live_amounts[wise_account.balance_id.to_s]
+        next unless live && replayable_balance?(wise_account, payloads[wise_account], coverage)
+        next if jar_currencies.include?(wise_account.currency) || shared_currencies.include?(wise_account.currency)
+
+        WiseItem::BalanceReplay::Balance.new(key: wise_account.id, currency: wise_account.currency, live: live,
+                                             rows: payloads[wise_account])
+      end
+    end
+
+    def replayable_balance?(wise_account, payload, coverage)
+      snapshot = wise_account.raw_payload.is_a?(Hash) ? wise_account.raw_payload : {}
+      created_at = parse_utc(snapshot["creationTime"])
+      return false unless created_at && snapshot["investmentState"] == "NOT_INVESTED"
+      return false if @statement_covered_account_ids.include?(wise_account.id)
+
+      covered = %w[transfers activities].all? do |source|
+        from = parse_utc(coverage.dig(source, "from"))
+        from && from <= created_at
+      end
+      covered && payload.none? { |row| unmatched_transfer_activity?(row) }
+    end
+
+    # Activities of transfers are stored only for transfers Sure does not
+    # have (#transfer_activity_route).
+    def unmatched_transfer_activity?(row)
+      WiseActivity::Processor.activity_row?(row) &&
+        WiseActivity::Processor::TRANSFER_TYPES.include?(row["type"].to_s) &&
+        row["resource"].is_a?(Hash) && row["resource"]["type"] == "TRANSFER"
+    end
+
+    def apply_balance_replay(payloads, result)
+      payloads.to_h do |wise_account, payload|
+        externals = result.funding[wise_account.id]
+        rows = payload.map do |row|
+          if externals && transfer_row?(row)
+            external = externals.include?(row["id"].to_s)
+            with_annotations(row, "wise_funding" => (WiseItem::BalanceReplay::EXTERNAL_FUNDING if external))
+          elsif WiseActivity::Processor.activity_row?(row) && (annotations = result.split_annotations[row["id"].to_s])
+            with_annotations(row, annotations)
+          else
+            row
+          end
+        end
+        [ wise_account, rows ]
+      end
+    end
+
+    # Whether an activity the balance stores has other split marks than its
+    # stored copy (one stored for the first time with none has none).
+    def split_marks_changed?(wise_account, payload)
+      keys = %w[wise_split_parts wise_split_estimated]
+      stored = Array(wise_account.raw_transactions_payload).select { |row| WiseActivity::Processor.activity_row?(row) }.index_by { |row| row["id"] }
+      payload.any? { |row| WiseActivity::Processor.activity_row?(row) && row.slice(*keys) != stored[row["id"]].to_h.slice(*keys) }
+    end
+
+    # Replaces the given marks on a row; a nil value removes the mark.
+    def with_annotations(row, annotations)
+      row.except(*annotations.keys).merge(annotations.compact)
+    end
+
+    # Tells support, per balance, why a replay did not reconcile (its marks
+    # stay as they were) or why one that did keeps its funding marks, and
+    # once when the marks changed: which transfers are now externally
+    # funded and how many split parts no rate bounded.
+    def report_balance_replay(result, before, after)
+      accounts = before.keys.index_by(&:id)
+      result.outcomes.each do |outcome|
+        next if outcome.success? && outcome.funding_withheld.nil?
+
+        message =
+          if outcome.success?
+            "replays to its live amount, but part of it went into a split payment share Sure cannot confirm " \
+              "(#{outcome.funding_withheld}); its funding marks stay as they were"
+          else
+            "does not replay to its live amount (#{outcome.reason}); its funding and split marks stay as they were"
+          end
+        capture_debug_log(
+          category: "provider_sync",
+          level: "warn",
+          message: "WiseItem::Importer - The Wise #{outcome.currency} balance #{message}",
+          wise_account: accounts[outcome.key],
+          operation: "balance_replay",
+          reason: (outcome.reason || outcome.funding_withheld).to_s,
+          **outcome.counts
+        )
+      end
+
+      changed = before.sum do |wise_account, rows|
+        rows.zip(after[wise_account]).count do |old_row, new_row|
+          old_row.slice(*WiseItem::BalanceReplay::ANNOTATION_KEYS) != new_row.slice(*WiseItem::BalanceReplay::ANNOTATION_KEYS)
+        end
+      end
+      return if changed.zero?
+
+      unbounded = result.outcomes.select(&:success?).sum { |outcome| outcome.notes.fetch(:unbounded_part_count, 0) }
+      external_ids = result.funding.values.flat_map(&:to_a).sort
+      capture_debug_log(
+        category: "provider_sync",
+        level: "info",
+        message: "WiseItem::Importer - The Wise balance replay changed the funding or split marks of #{changed} rows",
+        operation: "balance_replay",
+        changed_row_count: changed,
+        external_transfer_count: external_ids.size,
+        external_transfer_ids: external_ids.first(MAX_LOGGED_TRANSFER_IDS).presence,
+        unbounded_part_count: unbounded.nonzero?
+      )
+    end
+
+    # The replay needs what Wise holds once the transfers and activities are
+    # fetched, so the balances are read again: { balance id => amount +
+    # reservedAmount (card holds are not booked) } for each balance that did
+    # not move since the first read. One that did (a card payment settling
+    # in between) cannot be told apart from a missing row, so it waits.
+    def fetch_live_amounts(first_read)
+      before = balance_amounts(first_read)
+      balance_amounts(Provider::Wise.with_retries { wise_provider.get_balances(wise_item.profile_id) }).filter_map do |balance_id, amounts|
+        [ balance_id, amounts.sum ] if before[balance_id] == amounts
+      end.to_h
+    rescue => e
+      trace_wise_fetch(operation: "balances", status: "failed", level: "warn", error: e, purpose: "balance_replay")
+      {}
+    end
+
+    def balance_amounts(balances)
+      Array(balances).each_with_object({}) do |balance, amounts|
+        next unless balance.is_a?(Hash) && balance["id"].present?
+
+        amounts[balance["id"].to_s] = [ balance.dig("amount", "value").to_d, balance.dig("reservedAmount", "value").to_d ]
+      end
+    end
+
+    # Only a full-history import whose fetches all succeeded replays, and
+    # only balances Wise describes well enough (#replayable_balance?); the
+    # second balance read is skipped otherwise.
+    def balance_replay_wanted?(first_read)
+      return false unless full_history? && @fetch_failures.zero?
+
+      Array(first_read).any? do |balance|
+        balance.is_a?(Hash) && balance["investmentState"] == "NOT_INVESTED" && balance["creationTime"].present?
+      end
     end
 
     # A pay-in (a transfer into one of the profile's own recipients) only
@@ -932,7 +1146,7 @@ class WiseItem::Importer
     end
 
     def enrichment_ids(transfer)
-      transfer.values_at(*STICKY_ROW_KEYS).map { |activity| activity["id"] if activity.is_a?(Hash) }
+      transfer.values_at(*ENRICHMENT_KEYS).map { |activity| activity["id"] if activity.is_a?(Hash) }
     end
 
     def pay_in?(transfer)
