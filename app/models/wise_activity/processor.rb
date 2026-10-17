@@ -1,15 +1,37 @@
 # frozen_string_literal: true
 
 class WiseActivity::Processor
-  JAR_ACTIVITY_TYPES = %w[INTERBALANCE BALANCE_CASHBACK BALANCE_ASSET_FEE].freeze
-
   # Conversions between two of the profile's own balances. Wise credits the
   # primary amount to one balance and debits the secondary from another, with
   # no markup, so they have no single direction.
   TWO_LEG_TYPES = %w[INTERBALANCE AUTO_CONVERSION].freeze
 
+  # Money one balance paid or received that, without balance statements,
+  # only the activity feed reports: card payments and their refunds, cash
+  # withdrawals, direct debits, cashback and rewards, adjustments, card
+  # acquiring, and the card and account-details order fees.
+  SINGLE_LEG_TYPES = %w[
+    CARD_PAYMENT CASH_WITHDRAWAL DIRECT_DEBIT_TRANSACTION CARD_CASHBACK REWARD
+    BALANCE_ADJUSTMENT ACQUIRING_PAYMENT CARD_ORDER BANK_DETAILS_ORDER
+  ].freeze
+
+  # The activity of a transfer. For a /v1/transfers transfer it only enriches
+  # that transfer; a credit for a transfer Sure does not have (a bank payment
+  # into the account details, money from another Wise profile) is booked like
+  # a single-leg activity (see WiseItem::Importer#activity_route).
+  TRANSFER_TYPES = %w[TRANSFER BALANCE_DEPOSIT].freeze
+
+  # Interest, cashback and fees on what a balance holds, which belong to a
+  # jar or an invested balance in their currency.
+  HOLDING_TYPES = %w[BALANCE_INTEREST BALANCE_CASHBACK BALANCE_ASSET_FEE BALANCE_HOLD_FEE].freeze
+
   # Types that only ever pay money in: an unmarked amount is still a credit.
   CREDIT_ONLY_TYPES = %w[REWARD CARD_CASHBACK BALANCE_INTEREST BALANCE_CASHBACK].freeze
+
+  # Only a completed activity moved money. Wise also lists IN_PROGRESS (a card
+  # hold), UPCOMING, REQUIRES_ATTENTION and CANCELLED (a declined payment)
+  # ones; they are stored so a later status is seen, but book nothing.
+  BOOKED_STATUS = "COMPLETED"
 
   # At least one digit, so the comma in a split-funding list such as
   # "GBP, EUR" is not read as an amount of 0.
@@ -23,11 +45,11 @@ class WiseActivity::Processor
   end
 
   # INTERBALANCE covers both Jar moves and currency conversions between the
-  # profile's own balances. For a conversion Wise reports the target amount
-  # as primaryAmount and the source amount as secondaryAmount, so the two
-  # currencies differ.
+  # profile's own balances; AUTO_CONVERSION is a conversion Wise made on its
+  # own. For a conversion Wise reports the target amount as primaryAmount and
+  # the source amount as secondaryAmount, so the two currencies differ.
   def self.conversion_currencies(activity)
-    return nil unless activity["type"].to_s == "INTERBALANCE"
+    return nil unless TWO_LEG_TYPES.include?(activity["type"].to_s)
 
     target = parse_money(activity["primaryAmount"]).last
     source = parse_money(activity["secondaryAmount"]).last
@@ -149,6 +171,11 @@ class WiseActivity::Processor
       return :skipped
     end
 
+    if skip_reason
+      Rails.logger.debug "WiseActivity::Processor - Skipping activity #{safe_id} on wise_account #{wise_account.id}: #{skip_reason}"
+      return :skipped
+    end
+
     import_entry(
       external_id: external_id,
       amount: amount,
@@ -166,6 +193,14 @@ class WiseActivity::Processor
   rescue => e
     Rails.logger.error "WiseActivity::Processor - Error for activity #{safe_id}: #{e.class} - #{e.message}"
     raise
+  end
+
+  # The external ids of the entries processing this activity keeps on its
+  # balance: none when it books nothing there (not completed, or another
+  # balance's share of a split payment), so an entry it booked earlier is
+  # stale.
+  def expected_external_ids
+    skip_reason ? [] : [ external_id ]
   end
 
   private
@@ -187,15 +222,31 @@ class WiseActivity::Processor
       @account ||= wise_account.current_account
     end
 
-    # INTERBALANCE uses resource_id so both sides can be matched for Transfer linking.
-    # Other activity types use the opaque activity id.
+    # Why the activity books nothing on this balance, or nil when it books.
+    def skip_reason
+      return @skip_reason if defined?(@skip_reason)
+
+      @skip_reason =
+        if activity[:status].to_s != BOOKED_STATUS
+          :status
+        elsif split? && split_amount.nil?
+          :split_paid_elsewhere
+        end
+    end
+
+    # Conversions use resource_id so both sides can be matched for Transfer
+    # linking. Other activity types use the opaque activity id.
     def external_id
-      if activity_type == "INTERBALANCE"
+      if two_leg?
         side = wise_account.jar? || conversion_target? ? "inflow" : "outflow"
         "wise_interbalance_#{resource_id}_#{side}"
       else
         "wise_activity_#{activity[:id]}"
       end
+    end
+
+    def two_leg?
+      TWO_LEG_TYPES.include?(activity_type)
     end
 
     def safe_id
@@ -229,7 +280,7 @@ class WiseActivity::Processor
     def amount
       return amount_value(activity[:secondaryAmount]) if conversion_source?
       return -amount_value(activity[:primaryAmount]) if conversion_target?
-      return single_leg_amount unless activity_type == "INTERBALANCE"
+      return single_leg_amount unless two_leg?
 
       raw = amount_value(activity[:primaryAmount])
       if wise_account.jar?
@@ -243,13 +294,57 @@ class WiseActivity::Processor
 
     # The sign comes from Wise's markup (see .direction), not from the type.
     def single_leg_amount
-      value = single_leg[:value] || 0.to_d
+      value = split? ? split_amount : (single_leg[:value] || 0.to_d)
       single_leg[:direction] == :credit ? -value : value
     end
 
     def single_leg
       @single_leg ||= self.class.balance_amount(activity) ||
         raise(ArgumentError, "Wise activity #{safe_id} (#{activity_type}) moves money between two balances")
+    end
+
+    # A debit Wise drew from several balances (see .split?). The importer
+    # stores it on each of them.
+    def split?
+      !two_leg? && single_leg[:split]
+    end
+
+    # This balance's share of a split debit: the part the balance replay
+    # worked out ("wise_split_parts", { currency => decimal string }), or
+    # without one the whole merchant amount on one balance the payment lists
+    # (#unresolved_split_currency), a documented limitation for items
+    # without a replay. nil when this balance books nothing.
+    def split_amount
+      return @split_amount if defined?(@split_amount)
+
+      @split_amount =
+        if split_parts
+          part = split_parts[wise_account.currency].presence&.to_d
+          part if part&.positive?
+        elsif unresolved_split_currency == wise_account.currency
+          single_leg[:value]
+        end
+    end
+
+    # The balance a split debit without parts books in full on, in the
+    # merchant's currency: the merchant-currency one, or the first Wise
+    # lists when it drew on no balance in that currency (a payment in a
+    # currency the profile does not hold).
+    def unresolved_split_currency
+      listed = single_leg[:currencies]
+      listed.include?(single_leg[:currency]) ? single_leg[:currency] : listed.first
+    end
+
+    def split_parts
+      parts = activity[:wise_split_parts]
+      parts if parts.is_a?(Hash) && parts.present?
+    end
+
+    # The balance replay marks a part estimated ("wise_split_estimated", the
+    # list of currencies whose parts it estimated, or true for all of them).
+    def split_estimated?
+      estimated = activity[:wise_split_estimated]
+      estimated == true || (estimated.is_a?(Array) && estimated.include?(wise_account.currency))
     end
 
     # True when the activity title indicates money flowing INTO the JAR.
@@ -261,7 +356,10 @@ class WiseActivity::Processor
     def currency
       return conversion[:source] if conversion_source?
       return conversion[:target] if conversion_target?
-      return single_leg[:currency] || wise_account.currency unless activity_type == "INTERBALANCE"
+      # A split part is in the currency of the balance that paid it; the
+      # whole payment, without parts, in the merchant's.
+      return split_parts ? wise_account.currency : single_leg[:currency] if split?
+      return single_leg[:currency] || wise_account.currency unless two_leg?
 
       self.class.parse_amount(activity[:primaryAmount])[:currency] || wise_account.currency
     end
@@ -270,7 +368,7 @@ class WiseActivity::Processor
       jar_name = wise_account.jar? ? (wise_account.raw_payload&.dig("name") || "Jar") : nil
 
       case activity_type
-      when "INTERBALANCE"
+      when *TWO_LEG_TYPES
         if conversion_source?
           I18n.t("wise_items.activities.transfer_to_jar", jar: conversion[:target])
         elsif conversion_target?
@@ -280,12 +378,12 @@ class WiseActivity::Processor
         else
           deposit_direction? ? I18n.t("wise_items.activities.transfer_to_jar", jar: jar_name_for_standard) : I18n.t("wise_items.activities.transfer_from_jar", jar: jar_name_for_standard)
         end
-      when "BALANCE_CASHBACK"
+      when "BALANCE_CASHBACK", "BALANCE_INTEREST"
         I18n.t("wise_items.activities.interest")
       when "BALANCE_ASSET_FEE"
         I18n.t("wise_items.activities.asset_fee")
       else
-        strip_html(activity[:title]).strip.presence ||
+        self.class.plain_text(activity[:title]).presence ||
           I18n.t("wise_items.activities.default_name")
       end
     end
@@ -306,13 +404,22 @@ class WiseActivity::Processor
       created_at.in_time_zone(wise_account.wise_item.time_zone).to_date
     end
 
+    # The full wise namespace on every import (flags clear when false).
     def extra
+      split = split?
+
       {
         wise: {
           activity_id: activity[:id],
           activity_type: activity_type,
           resource_type: activity.dig(:resource, :type),
-          resource_id: resource_id.presence
+          resource_id: resource_id.presence,
+          description: activity[:description].presence,
+          primary_amount: activity[:primaryAmount].presence,
+          secondary_amount: activity[:secondaryAmount].presence,
+          split_part: (true if split && split_parts),
+          split_estimated: (true if split && split_parts && split_estimated?),
+          split_unresolved: (true if split && !split_parts)
         }.compact
       }
     end
