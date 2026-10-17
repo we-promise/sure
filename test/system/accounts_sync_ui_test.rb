@@ -10,7 +10,6 @@ class AccountsSyncUiTest < ApplicationSystemTestCase
 
   teardown do
     Sync.incomplete.destroy_all
-    super
   end
 
   test "idle state shows a plain refresh trigger with no cancel control" do
