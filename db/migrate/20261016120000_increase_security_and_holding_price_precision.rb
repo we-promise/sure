@@ -8,7 +8,7 @@ class IncreaseSecurityAndHoldingPricePrecision < ActiveRecord::Migration[8.1]
   end
 
   def down
-    change_column :security_prices, :price, :decimal, precision: 19, scale: 4, null: false
-    change_column :holdings, :price, :decimal, precision: 19, scale: 4, null: false
+    raise ActiveRecord::IrreversibleMigration,
+      "Reducing security and holding prices to four decimal places would round low-value asset prices to 0"
   end
 end
