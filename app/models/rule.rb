@@ -13,6 +13,19 @@ class Rule < ApplicationRecord
   accepts_nested_attributes_for :conditions, allow_destroy: true
   accepts_nested_attributes_for :actions, allow_destroy: true
 
+  # Re-watermark email notifications when an edit changes which transactions the
+  # rule matches (its conditions or its effective date). Rule::Action only seeds
+  # the baseline when an action becomes send_email_notification, so without this
+  # the next run would email every older transaction the edited rule now matches.
+  #
+  # Every update assigns the flag in before_update, and only the after_update of
+  # that same save reads it. Rails adds the callbacks that save the nested
+  # conditions and actions where their has_many is declared, above this one, so
+  # this after_update runs after they are saved. It runs inside the save's
+  # transaction, so a rolled back edit takes its baseline rows with it.
+  before_update :detect_matching_scope_change
+  after_update :reseed_notification_baseline, if: -> { @reseed_notification_baseline }
+
   before_validation :normalize_name
   before_create :assign_next_position
 
@@ -57,6 +70,16 @@ class Rule < ApplicationRecord
   # (e.g. the notification baseline pre-seed).
   def matching_transaction_ids
     matching_scope.pluck(:id)
+  end
+
+  # Records every transaction the rule matches now as already delivered, without
+  # sending, so a send_email_notification action only emails about transactions
+  # that start matching afterwards. The conditions are read again from the
+  # database, so the ones a save just added or removed count, whichever callback
+  # (the rule's or an action's) seeds.
+  def seed_notification_baseline
+    conditions.reset
+    NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)
   end
 
   # Sets the run order of all rules of a family. ordered_ids must list every
@@ -229,6 +252,39 @@ class Rule < ApplicationRecord
         self.class.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family_id.to_s ])
       )
       self.position = family.rules.maximum(:position).to_i + 1
+    end
+
+    def detect_matching_scope_change
+      @reseed_notification_baseline = (will_save_change_to_effective_date? || conditions_changed?(conditions)) &&
+        reseeds_for_email_actions?
+    end
+
+    # The baseline is the rule's (record_for takes the rule_id), so one seed
+    # covers every email action. An action created or switched to
+    # send_email_notification in this save seeds it from its own commit
+    # callback, so the rule re-seeds only when it has an email action and none
+    # of them seeds itself. before_update runs before the nested actions are
+    # saved, so new_record? and will_save_change_to_action_type? still see what
+    # this save does to them.
+    def reseeds_for_email_actions?
+      email_actions = actions.select do |action|
+        action.action_type == "send_email_notification" && !action.marked_for_destruction?
+      end
+      email_actions.any? && email_actions.none? { |action| action.new_record? || action.will_save_change_to_action_type? }
+    end
+
+    def conditions_changed?(association)
+      return false unless association.loaded?
+
+      association.target.any? do |condition|
+        condition.new_record? || condition.marked_for_destruction? || condition.changed? ||
+          conditions_changed?(condition.sub_conditions)
+      end
+    end
+
+    def reseed_notification_baseline
+      @reseed_notification_baseline = false
+      seed_notification_baseline
     end
 
     def min_actions

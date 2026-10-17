@@ -1,7 +1,7 @@
 require "test_helper"
 
 class RuleTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:empty)
@@ -526,8 +526,113 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal [ first, second ], @family.rules.ordered.to_a
   end
 
+  test "editing a condition re-seeds the email baseline so older matches are not emailed" do
+    create_transaction(date: 90.days.ago.to_date, account: @account, name: "Coffee shop")
+    create_transaction(date: 60.days.ago.to_date, account: @account, name: "Tea house")
+    rule = create_email_rule(value: "coffee")
+
+    rule.update!(conditions_attributes: [ { id: rule.conditions.first.id, value: "house" } ])
+
+    assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+      rule.apply
+    end
+  end
+
+  test "clearing the effective date re-seeds the email baseline" do
+    create_transaction(date: 60.days.ago.to_date, account: @account, name: "Coffee shop")
+    rule = create_email_rule(value: "coffee", effective_date: 30.days.ago.to_date)
+
+    rule.update!(effective_date: nil)
+
+    assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+      rule.apply
+    end
+  end
+
+  test "renaming a rule does not re-seed, so a match not yet emailed is still emailed" do
+    rule = create_email_rule(value: "coffee")
+    new_entry = create_transaction(date: Date.current, account: @account, name: "Coffee shop")
+
+    rule.update!(name: "Coffee alerts")
+
+    assert_enqueued_with(job: RuleEmailNotificationJob) do
+      rule.apply
+    end
+    assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), new_entry.transaction.id
+  end
+
+  test "a condition edit that rolls back takes its re-seed with it" do
+    tea_house = create_transaction(date: 60.days.ago.to_date, account: @account, name: "Tea house")
+    rule = create_email_rule(value: "coffee")
+    create_transaction(date: Date.current, account: @account, name: "Coffee shop")
+
+    Rule.transaction do
+      rule.update!(conditions_attributes: [ { id: rule.conditions.first.id, value: "house" } ])
+      assert_equal [ tea_house.transaction.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+      raise ActiveRecord::Rollback
+    end
+
+    assert_equal "coffee", rule.conditions.reload.first.value
+    assert_empty NotificationDelivery.where(rule: rule)
+
+    rule.update!(name: "Coffee alerts")
+
+    assert_enqueued_with(job: RuleEmailNotificationJob) do
+      rule.apply
+    end
+  end
+
+  test "switching an action to email while replacing a condition seeds from the saved conditions" do
+    create_transaction(date: 90.days.ago.to_date, account: @account, name: "Coffee shop")
+    tea_house = create_transaction(date: 60.days.ago.to_date, account: @account, name: "Tea house")
+    rule = @family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Coffee" } ]
+    )
+
+    rule.update!(
+      conditions_attributes: [
+        { id: rule.conditions.first.id, _destroy: true },
+        { condition_type: "transaction_name", operator: "like", value: "house" }
+      ],
+      actions_attributes: [ { id: rule.actions.first.id, action_type: "send_email_notification" } ]
+    )
+
+    assert_equal [ tea_house.transaction.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+  end
+
+  test "editing a condition while switching an action to email seeds the baseline once" do
+    create_transaction(date: 90.days.ago.to_date, account: @account, name: "Coffee shop")
+    tea_house = create_transaction(date: 60.days.ago.to_date, account: @account, name: "Tea house")
+    rule = @family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Coffee" } ]
+    )
+
+    assert_queries_match(/INSERT INTO "notification_deliveries"/, count: 1) do
+      rule.update!(
+        conditions_attributes: [ { id: rule.conditions.first.id, value: "house" } ],
+        actions_attributes: [ { id: rule.actions.first.id, action_type: "send_email_notification" } ]
+      )
+    end
+
+    assert_equal [ tea_house.transaction.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+  end
+
   private
     def create_exclude_rule
       @family.rules.create!(resource_type: "transaction", actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+
+    def create_email_rule(value:, effective_date: nil)
+      @family.rules.create!(
+        resource_type: "transaction",
+        active: true,
+        effective_date: effective_date,
+        conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: value } ],
+        actions_attributes: [ { action_type: "send_email_notification" } ]
+      )
     end
 end
