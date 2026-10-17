@@ -194,6 +194,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
       { key: "monobank",       title: "Monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
       { key: "fio",            title: "Fio banka",       turbo_id: "fio",            partial: "fio_panel" },
+      { key: "gocardless",     title: "GoCardless",      turbo_id: "gocardless",     partial: "gocardless_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
       { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
@@ -225,6 +226,7 @@ class Settings::ProvidersController < ApplicationController
       "up"             => "UpItem",
       "monobank"       => "MonobankItem",
       "fio"            => "FioItem",
+      "gocardless"     => "GocardlessItem",
       "simplefin"      => "SimplefinItem",
       "lunchflow"      => "LunchflowItem",
       "redbark"        => "RedbarkItem",
@@ -257,6 +259,8 @@ class Settings::ProvidersController < ApplicationController
         @monobank_items = Current.family.monobank_items.active.ordered
       when "fio"
         @fio_items = Current.family.fio_items.active.ordered
+      when "gocardless"
+        @gocardless_items = Current.family.gocardless_items.active.ordered
       when "simplefin"
         @simplefin_items = Current.family.simplefin_items.ordered
       when "lunchflow"
@@ -343,6 +347,7 @@ class Settings::ProvidersController < ApplicationController
           accounts = item.accounts.select { |account| accessible_account_ids.include?(account.id) && !account.pending_deletion? }
           { item: item, accounts: accounts } if accounts.any?
         end
+      @gocardless_items = Current.family.gocardless_items.active.where.not(secret_id: [ nil, "" ]).ordered.select(:id)
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
@@ -365,6 +370,7 @@ class Settings::ProvidersController < ApplicationController
         "up"             => @up_items,
         "monobank"       => @monobank_items,
         "fio"            => @fio_items,
+        "gocardless"     => @gocardless_items,
         "simplefin"      => @simplefin_items,
         "lunchflow"      => @lunchflow_items,
         "redbark"        => @redbark_items,

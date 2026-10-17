@@ -2,6 +2,28 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :gocardless_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+      # The bank redirects the browser back here after the user consents. It is a
+      # collection route because GoCardless returns no item id of its own: the item is
+      # recovered from the `ref` we set on the requisition.
+      get :callback
+      # Collection, not member: the item is created as part of connecting, once a bank
+      # has actually been chosen.
+      post :connect
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
