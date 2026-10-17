@@ -4,6 +4,11 @@ class Provider::Openai < Provider
   # Subclass so errors caught in this provider are raised as Provider::Openai::Error
   Error = Class.new(Provider::Error)
 
+  # Raised when a successful HTTP response can't be parsed into the expected
+  # structure; used by Auto JSON mode to decide whether to retry without
+  # response_format.
+  ResponseFormatError = Class.new(Error)
+
   DEFAULT_MODEL = "gpt-4.1".freeze
   DEFAULT_REQUEST_TIMEOUT = 60
   MIN_REQUEST_TIMEOUT = 1
