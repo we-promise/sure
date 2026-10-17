@@ -17,6 +17,9 @@ class WiseItem::Importer
   ACTIVITY_OVERLAP = 30.days
   UNFINISHED_ACTIVITY_LOOKBACK = 180.days
   FINAL_ACTIVITY_STATUSES = %w[COMPLETED CANCELLED].freeze
+  # A balance's statements are fetched again from a week before the end of
+  # its last successful statement fetch.
+  STATEMENT_OVERLAP = 7.days
 
   # A transfer in one of these statuses no longer changes. Stored transfers
   # in any other status but outgoing_payment_sent (which the 60-day window
@@ -33,9 +36,10 @@ class WiseItem::Importer
   ENRICHMENT_KEYS = %w[wise_activity wise_refund_activity].freeze
   # A re-fetched copy of a row keeps what Sure attached to the stored copy
   # unless it brings its own, so a sync whose activities do not reach that
-  # far back (or failed) loses nothing: the enrichment and the balance
-  # replay's marks, which only the replay changes (WiseItem::BalanceReplay).
-  STICKY_ROW_KEYS = (ENRICHMENT_KEYS + WiseItem::BalanceReplay::ANNOTATION_KEYS).freeze
+  # far back (or failed) loses nothing: the enrichment, the balance replay's
+  # marks, which only the replay changes (WiseItem::BalanceReplay), and the
+  # id a statement row booked under (WiseItem::StatementMigration).
+  STICKY_ROW_KEYS = (ENRICHMENT_KEYS + WiseItem::BalanceReplay::ANNOTATION_KEYS + %w[wise_statement_id]).freeze
   MAX_LOGGED_TRANSFER_IDS = 20
 
   # Wise answered with a page this fetch had already read.
@@ -54,8 +58,11 @@ class WiseItem::Importer
     @fetch_failures = 0
     @fetched_windows = {}
     @coverage_upgrade_sources = Set.new
+    @statement_windows = {}
+    @statement_coverage_upgrades = Set.new
     @known_transfer_ids = Set.new
     @statement_covered_account_ids = Set.new
+    @statement_cutoffs = {}
     @statement_retry_accounts = []
     @statements_refused_accounts = []
     @deferred_activity_times = []
@@ -66,7 +73,9 @@ class WiseItem::Importer
   # full: balances, transfers and their re-reads, activities, and statements
   # of balances that already hold statement rows. Steps that delete or
   # rewrite entries must not run after an incomplete import.
-  # `coverage_upgraded:` see #coverage_upgraded?.
+  # `coverage_upgraded:` see #coverage_upgraded? (for support and tests: the
+  # balances it rebuilt keep what it means for them themselves,
+  # WiseAccount#prune_cap_bypass_ids).
   def import
     Rails.logger.info "WiseItem::Importer - Starting import for item #{wise_item.id} (profile #{wise_item.profile_id})"
 
@@ -418,7 +427,7 @@ class WiseItem::Importer
     # they are.
     def reread_transfers(except:)
       candidates = stored_transfer_rows
-        .select { |row| reread_transfer?(row) && except.exclude?(row["id"].to_s) }
+        .select { |row| reread_transfer?(row) && row["wise_superseded_by"].blank? && except.exclude?(row["id"].to_s) }
         .reject { |row| row["wise_missing_count"].to_i >= MISSING_TRANSFER_REREADS }
         .sort_by { |row| transfer_created_at(row) || Time.at(0) }
         .last(MAX_TRANSFER_REREADS)
@@ -459,14 +468,13 @@ class WiseItem::Importer
       status != "outgoing_payment_sent" || WiseEntry::Processor.refund(row).present?
     end
 
-    # One copy per transfer stored on the balances that still take
-    # /v1/transfers rows (no statement rows yet).
+    # One copy per transfer stored on the STANDARD balances, statement-
+    # covered ones included: a transfer their statement rows have not taken
+    # over yet still books from its row (WiseItem::StatementMigration), so
+    # it is read again like any other (#reread_transfers skips the rest).
     def stored_transfer_rows
       wise_item.wise_accounts.reject(&:jar?).flat_map do |wise_account|
-        rows = Array(wise_account.raw_transactions_payload)
-        next [] if rows.any? { |row| row["wise_statement"].present? }
-
-        rows.select { |row| transfer_row?(row) }
+        Array(wise_account.raw_transactions_payload).select { |row| transfer_row?(row) }
       end.uniq { |row| row["id"].to_s }
     end
 
@@ -580,11 +588,19 @@ class WiseItem::Importer
 
     # Whether a source arrived in full for the first time (an install from
     # before coverage was kept) or from the start of the whole history its
-    # coverage did not reach (the full history switched on): the payloads
-    # were rebuilt from a complete fetch, so the stale entry clean-up may
-    # exceed its cap once (WiseAccount::Transactions::Processor).
+    # coverage did not reach (the full history switched on), transfers and
+    # activities or a balance's statements (#statement_coverage_upgrade?):
+    # the payloads were rebuilt from a complete fetch, so the stale entry
+    # clean-up may exceed its cap for the rows that moved (#prune_cap_bypass_to_store).
     def coverage_upgraded?
-      @coverage_upgrade_sources.any? { |source| @fetched_windows.key?(source) }
+      @coverage_upgrade_sources.any? { |source| @fetched_windows.key?(source) } || @statement_coverage_upgrades.any?
+    end
+
+    # Transfers and activities feed every balance; a balance's statements
+    # only that balance.
+    def coverage_upgraded_for?(wise_account)
+      @coverage_upgrade_sources.any? { |source| @fetched_windows.key?(source) } ||
+        @statement_coverage_upgrades.include?(wise_account.id)
     end
 
     # The stored coverage extended by each source fetched in full this sync,
@@ -622,21 +638,20 @@ class WiseItem::Importer
       nil
     end
 
-    # Fetches statement rows for STANDARD balances. Legacy transfer snapshots
-    # are retained; outgoing statement rows dated on/after the oldest legacy
-    # transfer are dropped since transfers already captured that side (see
-    # #legacy_overlap_outgoing_row?), while incoming rows there are kept so
-    # money the legacy fallback could never capture (external payments) gets
-    # backfilled -- at the cost of occasionally re-importing the credit leg of
-    # a historical internal conversion transfers also already captured (see
-    # #legacy_overlap_outgoing_row? for why that trade-off is intentional).
+    # Fetches statement rows for STANDARD balances, each from its own
+    # coverage (#statement_window_start) until now, as UTC instants. Every
+    # row is kept: rows a balance booked before it had statements (its
+    # /v1/transfers and activity rows) hand their movements over to the
+    # statement rows that carry them (WiseItem::StatementMigration).
     #
     # A 403 Sure cannot get past (#statements_refused?) means the token
     # cannot read statements this sync: the other balances without statement
     # rows are not asked, and it is logged once, not counted as a failure. A
     # balance that holds statement rows is still asked, and a 403 on it (also
     # Wise refusing a configured SCA key's answer) is no failure either:
-    # nothing a later sync retries would get past it. Any other failure
+    # nothing a later sync retries would get past it. The balance then takes
+    # what happened after its statements last reached from transfers and
+    # activities (#statement_covered?). Any other failure
     # counts against the import for a balance that holds statement rows,
     # also when the transfer fallback runs, and keeps its payload as it was
     # (#statement_retry_accounts); a balance without statement rows takes
@@ -651,8 +666,7 @@ class WiseItem::Importer
         # A closed balance has no statements to fetch any more.
         next if wise_account.jar? || wise_account.closed?
 
-        existing = Array(wise_account.raw_transactions_payload)
-        has_statement_rows = existing.any? { |transaction| transaction["wise_statement"].present? }
+        has_statement_rows = Array(wise_account.raw_transactions_payload).any? { |transaction| transaction["wise_statement"].present? }
 
         if unavailable_count.positive? && !has_statement_rows
           @statement_fetch_attempted_accounts << wise_account.id
@@ -662,22 +676,9 @@ class WiseItem::Importer
           next
         end
 
-        legacy = existing.select { |transaction| transfer_row?(transaction) }
-        legacy_cutoff = legacy.filter_map { |transaction| parse_transaction_date(transaction) }.min
-
-        start_date =
-          if has_statement_rows &&
-             sync_start_date.blank? && wise_item.sync_start_date.blank? && wise_item.last_synced_at.present?
-            # Incremental: once statements exist, only fetch the short overlap.
-            (wise_item.last_synced_at - 7.days).to_date
-          elsif full_history?
-            full_history_start_date(wise_account)
-          else
-            sync_start_date_value
-          end
-        end_date = Date.current
-
-        next if start_date > end_date
+        started_at = Time.current
+        interval_start = statement_window_start(wise_account)
+        next if interval_start > started_at
 
         @statement_fetch_attempted_accounts << wise_account.id
         trace_wise_fetch(
@@ -685,27 +686,28 @@ class WiseItem::Importer
           status: "started",
           level: "info",
           wise_account: wise_account,
-          start_date: start_date,
-          end_date: end_date
+          interval_start: interval_start,
+          interval_end: started_at
         )
         rows = wise_provider.get_balance_statements(
           wise_item.profile_id,
           wise_account.balance_id,
           currency: wise_account.currency,
-          start_date: start_date,
-          end_date: end_date
+          interval_start: interval_start,
+          interval_end: started_at
         )
-        received_row_count = Array(rows).size
-        rows = Array(rows).reject { |row| legacy_overlap_outgoing_row?(row, legacy_cutoff) }
+        rows = Array(rows).map { |row| row.merge("wise_statement" => true) }.uniq { |row| statement_key(row) }
         trace_wise_fetch(
           operation: "balance_statement",
           status: "completed",
           level: "info",
           wise_account: wise_account,
-          received_row_count: received_row_count,
-          stored_row_count: rows.size
+          received_row_count: rows.size
         )
-        result[wise_account.id] = rows.map { |row| row.merge("wise_statement" => true) }
+        @statement_windows[wise_account.id] = { start: interval_start, through: started_at }
+        @statement_coverage_upgrades << wise_account.id if statement_coverage_upgrade?(wise_account)
+        check_running_balances(wise_account, rows)
+        result[wise_account.id] = rows
       rescue => e
         @statement_fetch_failed_accounts << wise_account.id
         result[wise_account.id] = []
@@ -723,6 +725,105 @@ class WiseItem::Importer
 
       log_statements_unavailable(unavailable_count, refusal) if refusal
       statements
+    end
+
+    # Where this sync's statement fetch for a balance starts, from the
+    # balance's own coverage, like #window_start for transfers and
+    # activities: the whole history (#statement_history_start) while
+    # nothing is covered or the coverage starts later (the full history
+    # switched on, the sync start date moved back); otherwise a week before
+    # the end of the last successful fetch, so a statement outage leaves no
+    # gap. Statement rows are kept whatever the build, so their coverage
+    # has no version.
+    def statement_window_start(wise_account)
+      coverage = wise_account.statements_coverage
+      start = statement_history_start(wise_account)
+      return start if coverage.nil? || coverage[:from] > start
+
+      coverage[:through] - STATEMENT_OVERLAP
+    end
+
+    def statement_history_start(wise_account)
+      history_start(statement_full_start(wise_account))
+    end
+
+    # A full-history import fetches a balance's statements from the moment
+    # Wise opened it, else from where transfers and activities start.
+    def statement_full_start(wise_account)
+      (full_history? && wise_account.creation_time) || full_history_start
+    end
+
+    # Whether this sync's statements rebuild a balance's stored rows from its
+    # first coverage or from the whole history its coverage did not reach
+    # (see #coverage_upgraded?).
+    def statement_coverage_upgrade?(wise_account)
+      return false if Array(wise_account.raw_transactions_payload).empty?
+
+      coverage = wise_account.statements_coverage
+      coverage.nil? || coverage[:from] > statement_history_start(wise_account)
+    end
+
+    # The balance's statement coverage ({ from:, through: } UTC times)
+    # extended by this sync's fetch, else as stored: `from` only moves
+    # earlier, unless the fetch started after the stored `through` (see
+    # #coverage_after_fetch).
+    def statement_coverage(wise_account)
+      stored = wise_account.statements_coverage
+      window = @statement_windows[wise_account.id]
+      return stored unless window
+
+      from = stored && window[:start] <= stored[:through] ? [ stored[:from], window[:start] ].min : window[:start]
+      { from: from, through: window[:through] }
+    end
+
+    # What is saved with the rows a balance's statement fetch brought this
+    # sync (raw_payload "statements_coverage"); nil when it fetched none.
+    def statements_coverage_to_store(wise_account)
+      return nil unless @statement_windows.key?(wise_account.id)
+
+      statement_coverage(wise_account).transform_keys(&:to_s).transform_values { |time| time.utc.iso8601 }
+    end
+
+    # Each statement row carries the balance after it (runningBalance), so
+    # consecutive rows chain: previous + amount = running. A break suggests
+    # Sure reads the amounts wrongly (a credit's amount is taken as already
+    # net of its fee), so it is logged for support: counts only, and how
+    # many breaks the row's own fee would explain. Rows at the same time may
+    # come in any order, so a row chains from any row of its own time or of
+    # the time before; the earliest time has its predecessor outside the
+    # window and is not checked.
+    def check_running_balances(wise_account, rows)
+      groups = rows.filter_map do |row|
+        posted_at = WiseStatement::Processor.posted_at(row)
+        [ posted_at, row ] if posted_at && row.dig("runningBalance", "value").present? && row.dig("amount", "value").present?
+      end.group_by(&:first).sort_by(&:first).map { |_time, pairs| pairs.map(&:last) }
+
+      breaks = 0
+      fee_explained = 0
+      groups.each_cons(2) do |previous, group|
+        group.each do |row|
+          gaps = (previous + group.reject { |other| other.equal?(row) }).map do |before|
+            row.dig("runningBalance", "value").to_d - before.dig("runningBalance", "value").to_d - row.dig("amount", "value").to_d
+          end
+          next if gaps.any? { |gap| gap.abs <= WiseItem::StatementMigration::TOLERANCE }
+
+          breaks += 1
+          fee = row.dig("totalFees", "value").to_d
+          fee_explained += 1 if fee.positive? && gaps.any? { |gap| (gap.abs - fee).abs <= WiseItem::StatementMigration::TOLERANCE }
+        end
+      end
+      return if breaks.zero?
+
+      capture_debug_log(
+        category: "provider_sync",
+        level: "warn",
+        message: "WiseItem::Importer - #{breaks} Wise statement rows do not follow on from the running balance before them",
+        wise_account: wise_account,
+        operation: "running_balance",
+        row_count: groups.sum(&:size),
+        break_count: breaks,
+        fee_explained_count: fee_explained
+      )
     end
 
     # A 403 without an SCA challenge (the token may not read statements at
@@ -760,32 +861,6 @@ class WiseItem::Importer
       )
     end
 
-    # The legacy /v1/transfers fallback captured outgoing money unconditionally,
-    # plus the incoming leg of any internal cross-currency conversion between
-    # the profile's own balances (transfers where this balance is the target).
-    # So an outgoing statement row (Wise reports debits as non-positive) dated
-    # on/after the oldest legacy transfer already has a legacy counterpart and
-    # would double-book it.
-    #
-    # An incoming row in that same window *could* be the credit leg of one of
-    # those internal conversions (also already covered) rather than a genuine
-    # external payment -- but nothing short of an endpoint-proven correlation
-    # id can tell the two apart without risk of a false match, and silently
-    # dropping a real external payment is a worse failure than an occasional
-    # visible, user-correctable duplicate for a historical conversion. So
-    # incoming rows are always kept here; #legacy_transfer_import_needed?
-    # instead bounds the exposure by stopping the transfer fallback (and with
-    # it, any *new* double-booking) as soon as an account's statements prove
-    # to work.
-    def legacy_overlap_outgoing_row?(row, legacy_cutoff)
-      return false unless legacy_cutoff
-
-      date = parse_transaction_date(row)
-      return false unless date && date >= legacy_cutoff
-
-      row.dig("amount", "value").to_d <= 0
-    end
-
     # Statements are only "unavailable" when every attempted standard balance
     # request failed (e.g. the token lacks statement access). Successful
     # requests that return zero rows are normal — quiet incremental syncs must
@@ -797,22 +872,32 @@ class WiseItem::Importer
       attempted.any? && (attempted - failed).empty?
     end
 
-    # The transfer endpoint remains a compatibility fallback only until an
-    # account's statements are proven to work: once a statement row has
-    # landed for an account, statements alone cover both directions of money
-    # movement going forward, so re-fetching transfers would only re-invite
-    # double-booking new internal conversions (see #legacy_overlap_outgoing_row?)
-    # for no benefit.
+    # Transfers are fetched ahead of the statements while a balance still
+    # books /v1/transfers rows: one without statement rows yet, or one whose
+    # statements have not taken over every transfer that books inside their
+    # window (WiseItem::StatementMigration keeps those rows, which are read
+    # again, until a statement row carries them).
     def legacy_transfer_import_needed?
-      wise_item.wise_accounts.any? do |wise_account|
-        next false if wise_account.jar?
+      wise_item.wise_accounts.any? { |wise_account| legacy_transfers_pending?(wise_account) }
+    end
 
-        payload = Array(wise_account.raw_transactions_payload)
-        has_legacy = payload.any? { |transaction| transfer_row?(transaction) }
-        has_statement = payload.any? { |transaction| transaction["wise_statement"].present? }
+    def legacy_transfers_pending?(wise_account)
+      return false if wise_account.jar?
 
-        has_legacy && !has_statement
-      end
+      payload = Array(wise_account.raw_transactions_payload)
+      legacy = payload.select { |transaction| transfer_row?(transaction) }
+      return false if legacy.empty?
+      return true if payload.none? { |transaction| transaction["wise_statement"].present? }
+
+      window = wise_account.statements_coverage
+      window.present? && legacy.any? { |transfer| transfer["wise_superseded_by"].blank? && books_since?(transfer, window[:from]) }
+    end
+
+    # Whether a transfer row books and was created at `from` or later.
+    def books_since?(transfer, from)
+      created_at = transfer_created_at(transfer)
+      direction = WiseEntry::Processor.direction(transfer, own_recipient_ids: own_recipient_ids)
+      created_at.present? && created_at >= from && WiseEntry::Processor.skip_reason(transfer, direction: direction).nil?
     end
 
     # Partitions transactions by the balance each one moved money on (see
@@ -830,6 +915,7 @@ class WiseItem::Importer
       report_transfer_notes(transfers, stored_transfers, transfer_activities)
       @known_transfer_ids = known_transfer_ids(transfers)
       @statement_covered_account_ids = statement_covered_account_ids(statements)
+      @statement_cutoffs = statement_cutoffs
       @deferred_activity_times = activities.select { |activity| activity_route(activity) == :deferred }.map { |activity| activity_created_at(activity) }
       report_activity_routing(activities)
       payloads = {}
@@ -851,42 +937,43 @@ class WiseItem::Importer
           # after the sync that first stored it.
           payloads[wise_account] = merge_transaction_payloads(Array(wise_account.raw_transactions_payload) + jar_activities)
         else
+          covered = @statement_covered_account_ids.include?(wise_account.id)
+          stored_rows = Array(wise_account.raw_transactions_payload)
           account_statements = statements[wise_account.id] || []
           # Stored rows are re-routed too, so rows saved under an older
           # routing rule (an INTERBALANCE for another currency, the funding
           # side of a pay-in) drop out. A closed balance's stored rows stay
           # as they are: nothing Wise still lists can show they belong
-          # elsewhere, and its entries are no longer pruned.
-          existing_legacy = Array(wise_account.raw_transactions_payload).filter_map do |transaction|
+          # elsewhere, and its entries are no longer pruned. A balance's
+          # statements do not drop its stored activities here: they are
+          # handed over to the statement rows (#hand_over_to_statements).
+          existing_legacy = stored_rows.filter_map do |transaction|
             next if transaction["wise_statement"].present?
 
             if WiseActivity::Processor.activity_row?(transaction)
-              transaction if wise_account.closed? || activity_for_account?(transaction, wise_account, stored: true)
+              transaction if wise_account.closed? || activity_for_account?(transaction, wise_account, stored: true, ignore_statements: true)
             else
               transfer = enrich_transfer(transaction, transfer_activities)
               transfer if wise_account.closed? || transfer_for_account?(transfer, wise_account)
             end
           end
-          existing_statements = Array(wise_account.raw_transactions_payload).select { |transaction| transaction["wise_statement"].present? }
-          # `transfers` is fetched profile-wide as soon as ANY account still
-          # needs the legacy fallback (see #legacy_transfer_import_needed?),
-          # so it can contain movements for a currency this specific account
-          # already covers via its own statements. Only apply it here if this
-          # account hasn't migrated yet -- otherwise the same movement would
-          # be merged twice under different keys (see #merge_transaction_payloads).
-          account_transfers =
-            if existing_statements.any?
-              []
-            else
-              transfers.select { |t| transfer_for_account?(t, wise_account) }
+          existing_statements = WiseItem::StatementMigration.with_booked_ids(stored_rows.select { |transaction| transaction["wise_statement"].present? })
+          # `transfers` is fetched profile-wide while any balance still books
+          # them (#legacy_transfer_import_needed?). A balance with statements
+          # takes no new one its statement rows carry (#statement_covered?);
+          # it takes fresh copies of the rows it still holds.
+          account_transfers = transfers.select { |t| transfer_for_account?(t, wise_account) }
+          if covered
+            held = existing_legacy.filter_map { |transaction| transaction["id"].to_s if transfer_row?(transaction) }.to_set
+            account_transfers = account_transfers.select do |t|
+              held.include?(t["id"].to_s) || !statement_covered?(wise_account) { transfer_created_at(t) }
             end
+          end
           routed_activities = activities.select { |a| activity_for_account?(a, wise_account) }
           payload = merge_transaction_payloads(
             existing_legacy + account_transfers + existing_statements + account_statements + routed_activities
           )
-          # A statement request can legitimately return no rows for a token
-          # lacking statement permission; preserve transfer fallback behavior.
-          payload = merge_transaction_payloads(account_transfers + routed_activities) if payload.empty?
+          payload = hand_over_to_statements(wise_account, payload) if covered && !wise_account.closed?
           payloads[wise_account] = payload
         end
       rescue => e
@@ -898,13 +985,17 @@ class WiseItem::Importer
       # old payload without holding back the others, except that the balances
       # whose split marks the replay changed are stored all or none: the
       # copies of a split payment on several balances carry the same parts.
+      item_ids = coverage_upgraded? ? payloads.values.flatten.flat_map { |row| booked_external_ids(row) }.to_set : Set.new
       WiseAccount.transaction do
         changed, unchanged = annotate_with_balance_replay(payloads).partition do |wise_account, payload|
           split_marks_changed?(wise_account, payload)
         end
         [ changed, *unchanged.map { |pair| [ pair ] } ].reject(&:empty?).each do |group|
           WiseAccount.transaction(requires_new: true) do
-            group.each { |wise_account, payload| wise_account.upsert_wise_transactions_snapshot!(payload) }
+            group.each do |wise_account, payload|
+              wise_account.upsert_wise_transactions_snapshot!(payload, statements_coverage: statements_coverage_to_store(wise_account),
+                                                                       prune_cap_bypass: prune_cap_bypass_to_store(wise_account, item_ids))
+            end
           end
           transactions_imported += group.sum { |_wise_account, payload| payload.size }
         rescue => e
@@ -914,6 +1005,93 @@ class WiseItem::Importer
       end
 
       { transactions_imported: transactions_imported, transactions_failed: transactions_failed }
+    end
+
+    # A sync that rebuilt the payloads from a whole history (#coverage_upgraded_for?)
+    # can leave more stale entries than the clean-up deletes at once: what an
+    # older build booked from rows this one routes elsewhere or books another
+    # way (a conversion's copy on every balance, interest copied to every
+    # jar, a payout Wise cancelled), and the entries of rows handed over to
+    # statement rows or that book nothing here now. The balance's entries a
+    # row Sure holds can have booked (#booked_external_ids of the balance's
+    # stored rows and of every payload this sync stores, item_ids), added to
+    # what an earlier such sync left, are kept on the balance until a
+    # clean-up after a complete import has used them (WiseAccount
+    # #prune_cap_bypass_ids); an entry no row explains stays under the cap.
+    # nil when this sync adds nothing.
+    def prune_cap_bypass_to_store(wise_account, item_ids)
+      return nil unless coverage_upgraded_for?(wise_account)
+
+      account = wise_account.current_account
+      return nil unless account
+
+      explained = item_ids | Array(wise_account.raw_transactions_payload).flat_map { |row| booked_external_ids(row) }
+      ids = account.entries.where(source: "wise").pluck(:external_id).select { |external_id| explained.include?(external_id) }
+      wise_account.prune_cap_bypass_ids | ids if ids.any?
+    end
+
+    # The external ids of every entry a stored row can have booked on a
+    # balance, whichever side or kind the row processors gave it.
+    def booked_external_ids(row)
+      if row["wise_statement"].present?
+        id = "wise_statement_#{WiseStatement::Processor.transaction_id(row)}"
+        [ id, "#{id}_fee" ]
+      elsif WiseActivity::Processor.activity_row?(row)
+        resource_id = row["resource"]["id"] if row["resource"].is_a?(Hash)
+        if WiseActivity::Processor::TWO_LEG_TYPES.include?(row["type"].to_s)
+          resource_id.present? ? %w[inflow outflow].map { |side| "wise_interbalance_#{resource_id}_#{side}" } : []
+        else
+          row["id"].present? ? [ "wise_activity_#{row['id']}" ] : []
+        end
+      elsif row["id"].present?
+        %w[transfer fee refund].map { |kind| "wise_#{kind}_#{row['id']}" }
+      else
+        []
+      end
+    end
+
+    # The rows a balance with statements booked before it had them hand their
+    # movements over to the statement rows that carry them, and its statement
+    # rows of conversions give way to the conversions' own rows
+    # (WiseItem::StatementMigration).
+    def hand_over_to_statements(wise_account, payload)
+      migration = WiseItem::StatementMigration.new(
+        wise_account, payload,
+        own_recipient_ids: own_recipient_ids,
+        window: statement_coverage(wise_account),
+        entry_ids: entry_ids_lookup(wise_account)
+      ).call
+      report_statement_migration(wise_account, migration.counts)
+      migration.rows
+    end
+
+    # Which of the given external ids the balance's account has Wise entries
+    # for; nil while the balance is not linked.
+    def entry_ids_lookup(wise_account)
+      account = wise_account.current_account
+      return nil unless account
+
+      ->(external_ids) { external_ids.empty? ? [] : account.entries.where(source: "wise", external_id: external_ids).pluck(:external_id) }
+    end
+
+    # Tells support, per balance and sync, what has no statement row yet:
+    # transfers that book inside the statements' window (their rows keep
+    # booking and transfers are still fetched for the balance) and dropped
+    # activities (a statement row carries their movement under another
+    # reference), and which rows left once their entries were renamed.
+    def report_statement_migration(wise_account, counts)
+      return if counts.values_at(:transfers_unmatched, :activities_unmatched, :retired).all?(&:zero?)
+
+      capture_debug_log(
+        category: "provider_sync",
+        level: (counts[:transfers_unmatched] + counts[:activities_unmatched]).positive? ? "warn" : "info",
+        message: "WiseItem::Importer - Wise statement rows took over #{counts[:transfers_matched]} transfers and " \
+                 "#{counts[:activities_matched]} activities; #{counts[:transfers_unmatched]} transfers inside the statements' " \
+                 "window have no statement row yet and keep booking, #{counts[:activities_unmatched]} activities without one were dropped",
+        wise_account: wise_account,
+        operation: "statement_migration",
+        **counts
+      )
     end
 
     # Replays the balances that can be replayed (#balances_to_replay) and puts
@@ -1301,20 +1479,35 @@ class WiseItem::Importer
     # to that copy (STICKY_ROW_KEYS) unless it brings its own.
     def merge_transaction_payloads(transactions)
       transactions.each_with_object({}) do |transaction, merged|
-        key = if transaction["wise_statement"].present?
-          [ "statement", transaction["referenceNumber"].presence || transaction["id"] || transaction.to_json ]
-        elsif WiseActivity::Processor.activity_row?(transaction)
-          [ "activity", transaction["id"] || transaction.to_json ]
-        else
-          [ "transfer", transaction["id"] || transaction.to_json ]
-        end
+        key = payload_key(transaction)
         merged[key] = with_sticky_keys(transaction, merged[key])
       end.values
+    end
+
+    # What tells the copies of one row in a payload apart from other rows.
+    def payload_key(row)
+      if row["wise_statement"].present?
+        statement_key(row)
+      elsif WiseActivity::Processor.activity_row?(row)
+        [ "activity", row["id"] || row.to_json ]
+      else
+        [ "transfer", row["id"] || row.to_json ]
+      end
     end
 
     def with_sticky_keys(row, stored)
       kept = stored.is_a?(Hash) ? stored.slice(*STICKY_ROW_KEYS).except(*row.keys) : {}
       kept.empty? ? row : row.merge(kept)
+    end
+
+    # Wise reuses a transfer's reference on its refund, so a statement row is
+    # told apart by its reference, type (DEBIT/CREDIT), time and amount.
+    def statement_key(row)
+      reference = row["referenceNumber"].presence
+      return [ "statement", row["id"] || row.except(*WiseItem::StatementMigration::MARKER_KEYS).to_json ] unless reference
+
+      posted_at = WiseStatement::Processor.posted_at(row)
+      [ "statement", reference, row["type"].to_s, posted_at&.iso8601(3) || row["date"].to_s, row.dig("amount", "value").to_d.to_s("F") ]
     end
 
     # A source that failed to arrive in full: logged for support and counted,
@@ -1381,7 +1574,9 @@ class WiseItem::Importer
     # created before it closed, and in a currency Wise closed and opened
     # again only the balance of their time (#takes_row?).
     # stored: re-routes a row an earlier sync stored on this balance.
-    def activity_for_account?(activity, wise_account, stored: false)
+    # ignore_statements: as if statements did not cover the balance, for
+    # stored rows its statement rows take over (#hand_over_to_statements).
+    def activity_for_account?(activity, wise_account, stored: false, ignore_statements: false)
       case activity_route(activity, stored: stored)
       when :conversion
         routed = wise_account.jar? ? jar_title_match?(activity, wise_account) : standard_interbalance_for_account?(activity, wise_account)
@@ -1390,10 +1585,10 @@ class WiseItem::Importer
         if wise_account.jar?
           !wise_account.closed?
         else
-          !open_jar? && single_leg_for_account?(activity, wise_account)
+          !open_jar? && single_leg_for_account?(activity, wise_account, ignore_statements: ignore_statements)
         end
       when :single_leg
-        single_leg_for_account?(activity, wise_account)
+        single_leg_for_account?(activity, wise_account, ignore_statements: ignore_statements)
       else
         false
       end
@@ -1447,8 +1642,9 @@ class WiseItem::Importer
       created_at.nil? || created_at < listed[:through]
     end
 
-    def single_leg_for_account?(activity, wise_account)
-      return false if wise_account.jar? || @statement_covered_account_ids.include?(wise_account.id)
+    def single_leg_for_account?(activity, wise_account, ignore_statements: false)
+      return false if wise_account.jar?
+      return false if !ignore_statements && statement_covered?(wise_account) { activity_created_at(activity) }
 
       funding = WiseActivity::Processor.balance_amount(activity)
       funding.present? && funding[:currencies].include?(wise_account.currency) &&
@@ -1480,6 +1676,33 @@ class WiseItem::Importer
         stored = Array(wise_account.raw_transactions_payload).any? { |row| row["wise_statement"].present? }
         wise_account.id if stored || Array(statements[wise_account.id]).any?
       end.to_set
+    end
+
+    # Whether a balance's statements carry its movement of the time the block
+    # returns (see #statement_covered_account_ids). Once Wise refuses them,
+    # they carry what happened until they last reached (#statement_cutoffs),
+    # and the balance takes what happened after from transfers and
+    # activities, which hand it over to the statement rows when they work
+    # again (WiseItem::StatementMigration).
+    def statement_covered?(wise_account)
+      return false unless @statement_covered_account_ids.include?(wise_account.id)
+
+      cutoff = @statement_cutoffs[wise_account.id]
+      return true unless cutoff
+
+      time = yield
+      time.nil? || time <= cutoff
+    end
+
+    # { wise_account id => time } for each balance whose statements Wise
+    # refused this sync: the end of their coverage, else its latest statement
+    # row.
+    def statement_cutoffs
+      wise_item.wise_accounts.select { |wise_account| @statements_refused_accounts.include?(wise_account.id) }.to_h do |wise_account|
+        statement_rows = Array(wise_account.raw_transactions_payload).select { |row| row["wise_statement"].present? }
+        latest = statement_rows.filter_map { |row| WiseStatement::Processor.posted_at(row) }.max
+        [ wise_account.id, wise_account.statements_coverage&.dig(:through) || latest ]
+      end.compact
     end
 
     def open_jar?
@@ -1564,33 +1787,8 @@ class WiseItem::Importer
       jar_name_in_title.present? && jar_name_in_title.casecmp?(jar_account.name.to_s.strip)
     end
 
-    def sync_start_date_value
-      (sync_start_date.presence || wise_item.sync_start_date.presence || DEFAULT_HISTORY_DAYS.days.ago).to_date
-    end
-
     def full_history?
       wise_item.import_all_history?
-    end
-
-    # Full-history imports start from the balance's creation time when Wise
-    # reports one, falling back to a far-past date so every historical row is
-    # fetched regardless.
-    def full_history_start_date(wise_account)
-      raw = wise_account.raw_payload&.dig("creationTime")
-      return FULL_HISTORY_START_DATE if raw.blank?
-
-      Time.parse(raw.to_s).to_date
-    rescue ArgumentError, TypeError
-      FULL_HISTORY_START_DATE
-    end
-
-    def parse_transaction_date(transaction)
-      raw = transaction["created"] || transaction["createdOn"] || transaction["date"]
-      return nil if raw.blank?
-
-      Time.parse(raw.to_s).to_date
-    rescue ArgumentError, TypeError
-      nil
     end
 
     def credentials_error?(error)
