@@ -32,6 +32,50 @@ class IncomeStatementTest < ActiveSupport::TestCase
     IncomeStatement.new(@family).daily_expense_series(period: period)
   end
 
+  test "a new statement invalidates family_stats when the family currency changes" do
+    statement = IncomeStatement.new(@family)
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::FamilyStats.expects(:new).twice.returns(stub(call: []))
+
+    statement.send(:family_stats)
+    @family.update!(currency: "EUR")
+    IncomeStatement.new(@family).send(:family_stats)
+  end
+
+  test "a new statement invalidates category_stats when the family currency changes" do
+    statement = IncomeStatement.new(@family)
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::CategoryStats.expects(:new).twice.returns(stub(call: []))
+
+    statement.send(:category_stats)
+    @family.update!(currency: "EUR")
+    IncomeStatement.new(@family).send(:category_stats)
+  end
+
+  test "cache freshness key changes through account deletion lifecycle and does not revert" do
+    empty_account = @family.accounts.create!(
+      name: "Empty Account",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Depository.new
+    )
+
+    @checking_account.touch
+    k0 = IncomeStatement.new(@family.reload).send(:cache_freshness_key)
+
+    empty_account.mark_for_deletion!
+    k1 = IncomeStatement.new(@family.reload).send(:cache_freshness_key)
+
+    empty_account.destroy!
+    k2 = IncomeStatement.new(@family.reload).send(:cache_freshness_key)
+
+    assert_not_equal k0, k1
+    assert_not_equal k1, k2
+    assert_not_equal k0, k2
+  end
+
   test "a new statement invalidates daily series when exchange rates change" do
     statement = IncomeStatement.new(@family)
     period = Period.last_30_days
