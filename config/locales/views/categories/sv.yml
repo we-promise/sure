@@ -1,0 +1,70 @@
+---
+sv:
+  categories:
+    bootstrap:
+      success: Standardkategorier skapades
+    category:
+      delete: Ta bort kategori
+      edit: Redigera kategori
+    create:
+      success: Kategorin skapades
+    destroy:
+      success: Kategorin togs bort
+    edit:
+      edit: Redigera kategori
+    form:
+      placeholder: Kategorinamn
+      name_label: Namn
+      unassigned: "(otilldelad)"
+      parent_category_label: "Överordnad kategori (valfritt)"
+      trigger_label: Välj färg och ikon
+      color: Färg
+      icon: Ikon
+      auto_adjust: justera automatiskt.
+      poor_contrast: "Dålig kontrast, välj en mörkare färg eller"
+    destroy_all:
+      success: Alla kategorier togs bort
+    index:
+      bootstrap: Använd standardval (rekommenderas)
+      categories: Kategorier
+      categories_expenses: Utgiftskategorier
+      categories_incomes: Inkomstkategorier
+      delete_all: Ta bort alla
+      empty: Inga kategorier hittades
+      merge: Sammanfoga kategorier
+      new: Ny kategori
+    merge:
+      title: Sammanfoga kategorier
+      description: Välj en målkategori och de kategorier som ska sammanfogas in i den. Matchande transaktioner och budgetposter flyttas till målkategorin.
+      target_label: Sammanfoga till (mål)
+      select_target: Välj målkategori...
+      sources_label: Kategorier att sammanfoga
+      sources_hint: Valda kategorier tas bort efter att deras transaktioner och budgetposter flyttats till målkategorin. Välj inte målet som en källa.
+      submit: Sammanfoga markerade
+    menu:
+      loading: Laddar...
+    new:
+      new_category: Ny kategori
+    perform_merge:
+      success:
+        one: Sammanfogade %{count} kategori
+        other: Sammanfogade %{count} kategorier
+      no_categories_selected: Inga kategorier valda att sammanfoga
+      target_not_found: Målkategorin hittades inte
+      invalid_categories: Ogiltiga kategorier valda
+      target_selected_as_source: Välj olika kategorier för mål och källor.
+    update:
+      success: Kategorin uppdaterades
+    virtual:
+      transfer: Överföring
+      payment: Betalning
+      trade: Handel
+  category:
+    dropdowns:
+      show:
+        bootstrap: Generera standardkategorier
+        empty: Inga kategorier hittades
+        match_transfer: "Matcha överföring/betalning"
+        one_time: "Engångs-%{type}"
+        income: "inkomst"
+        expense: "utgift"

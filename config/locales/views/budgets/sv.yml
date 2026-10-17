@@ -1,0 +1,135 @@
+---
+sv:
+  budgets:
+    switcher:
+      aria_label: "Byt budget"
+      household: "Hushåll"
+    budget_donut:
+      spent: "Spenderat"
+      new_budget: "Ny budget"
+      of_budget: "av %{amount}"
+      unused: "Oanvänt"
+    budget_header:
+      today: "Idag"
+    budget_nav:
+      categories: Kategorier
+      setup: Konfiguration
+    over_allocation_warning:
+      over_allocated_message: "Du har allokerat mer än din budget. Justera dina allokeringar."
+      fix_allocations: "Åtgärda allokeringar"
+    actuals_summary:
+      income: "Inkomst"
+      expenses: "Utgifter"
+    budgeted_summary:
+      expected_income: "Förväntad inkomst"
+      budgeted: "Budgeterat"
+      earned: "%{amount} intjänat"
+      over: "%{amount} över"
+      left: "%{amount} kvar"
+      spent: "%{amount} spenderat"
+    edit:
+      setup_title: "Konfigurera din budget"
+      setup_description: "Ange dina månatliga inkomster och planerade utgifter nedan för att konfigurera din budget."
+      budgeted_spending: "Budgeterade utgifter"
+      expected_income: "Förväntad inkomst"
+      autosuggest_title: "Autoförslag för inkomst- och utgiftsbudget"
+      autosuggest_description: "Detta baseras på transaktionshistorik. AI kan göra fel, verifiera innan du fortsätter."
+      continue: "Fortsätt"
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    available_cash:
+      heading: Kontanter tillgängliga
+      subtitle: Vid sidan av planen ovan, inte en del av den.
+      available: Tillgängligt i kontanter
+      earmarked: Redan avsatt för mål
+      free: Verkligen fritt
+      goals_link: Visa mål
+    show:
+      categories:
+        amount: Belopp
+        edit: Redigera
+        title: Kategorier
+      on_track_categories:
+        short_title: På rätt spår
+        title: På rätt spår
+      over_budget_categories:
+        short_title: Över budget
+        title: Över budget
+      filter:
+        all: Alla
+        aria_label: Filtrera budgetkategorier
+        on_track: På rätt spår
+        over_budget: Över budget
+      tabs:
+        actual: Faktiskt
+        budgeted: Budgeterat
+    copy_previous_prompt:
+      title: "Konfigurera din budget"
+      description: "Du kan kopiera din budget från %{source_name} eller börja om från början."
+      copy_button: "Kopiera från %{source_name}"
+      fresh_button: "Börja om"
+    copy_previous:
+      success: "Budgeten kopierades från %{source_name}"
+      no_source: "Ingen tidigare budget hittades att kopiera från"
+      already_initialized: "Denna budget har redan konfigurerats"
+  budget_categories:
+    bills_reserved: "%{amount} reserverat av räkningar"
+    bills_reserved_unconvertible:
+      one: "1 räkning är inte reserverad, ingen växelkurs tillgänglig"
+      other: "%{count} räkningar är inte reserverade, ingen växelkurs tillgänglig"
+    allocation_progress:
+      budget_exceeded_html: 'Budgeten överskriden med <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: kvar att allokera
+      over_set: "> 100 % satt"
+      percent_set: "%{percent} satt"
+    budget_category:
+      rolled_over: "+%{amount} överfört"
+    budget_category_form:
+      monthly_average: "%{amount}/mån snitt"
+      rollover_label: Överföring
+      rollover_title: Behåll denna kategoris oanvända pengar från en månad till nästa
+      shared_placeholder: Delad
+      shared_title: Lämna tomt för att dela överordnad kategoris budget
+    confirm_button:
+      confirm: "Bekräfta"
+    move:
+      button_title: Flytta pengar från den här kategorin
+      cancel: Avbryt
+      dialog_title: Flytta pengar
+      no_destination: Det här är det enda kuvertet pengarna kan flyttas mellan just nu — en kategori kan inte skicka till sin egen överordnade eller underordnade kategori.
+      submit: Flytta
+      amount_label: Belopp
+      available: "%{amount} tillgängligt"
+      from_label: Från
+      to_label: Till
+      success: Pengarna flyttades.
+      errors:
+        different_budgets: Båda kategorierna måste tillhöra samma budget.
+        insufficient_funds: Det är mer än vad den här kategorin har allokerat.
+        non_positive_amount: Ange ett belopp större än noll.
+        parent_child: Pengar kan inte flyttas mellan en kategori och dess egen underkategori — justera underkategorin direkt.
+        same_category: Välj en annan kategori att flytta pengarna till.
+        uncategorized: Okategoriserat är inget riktigt kuvert, så pengar kan inte flyttas in eller ut från det.
+    no_categories:
+      oops: "Hoppsan!"
+      no_categories_message: "Du har inte skapat eller tilldelat några utgiftskategorier till dina transaktioner ännu."
+      use_defaults: "Använd standardval (rekommenderas)"
+      new_category: "Ny kategori"
+    index:
+      title: "Redigera dina kategoribudgetar"
+      description: "Justera kategoribudgetar för att sätta utgiftsgränser. Otilldelade medel tilldelas automatiskt som okategoriserade."
+    show:
+      category: "Kategori"
+      overview: "Översikt"
+      spending: "%{date} utgifter"
+      status: "Status"
+      overspent: "överspenderat"
+      left: "kvar"
+      budgeted: "Budgeterat"
+      rolled_over: "Överfört"
+      monthly_average_spending: "Genomsnittliga månatliga utgifter"
+      monthly_median_spending: "Median för månatliga utgifter"
+      recent_transactions: "Senaste transaktioner"
+      view_all_transactions: "Visa alla kategoritransaktioner"
+      no_transactions: "Inga transaktioner hittades för denna budgetperiod."

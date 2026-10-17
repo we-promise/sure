@@ -1,0 +1,56 @@
+---
+sv:
+  concerns:
+    self_hostable:
+      redis_configured: "Redis är nu korrekt konfigurerat! Du kan nu sätta upp din Sure-applikation."
+  shared:
+    preview: Förhandsgranska
+    dot_separator: "·"
+    sync_toast:
+      message: "Ny data tillgänglig"
+      refresh: "Uppdatera"
+    confirm_modal:
+      accept: Bekräfta
+      body_html: "<p>Du kommer inte kunna ångra detta beslut</p>"
+      cancel: Avbryt
+      title: Är du säker?
+    money_field:
+      label: Belopp
+    exchange_rate_tabs:
+      calculate_rate_tab: Beräkna växelkurs
+      convert_tab: Konvertera med växelkurs
+      destination_amount: Målbelopp
+      exchange_rate: Växelkurs
+      exchange_rate_help: Välj hur du vill ange beloppet.
+    syncing_notice:
+      syncing: Synkroniserar kontodata...
+    require_admin: "Endast administratörer kan utföra denna åtgärd"
+    require_connector_owner: "Du kan bara hantera anslutningar du själv lagt till"
+    custom_confirm:
+      default_title: "Är du säker?"
+      default_body: "Detta går inte att ångra."
+      default_btn_text: "Bekräfta"
+      resource_deletion_title: "Ta bort %{resource}?"
+      resource_deletion_body: "Är du säker på att du vill ta bort %{resource}? Detta går inte att ångra."
+      resource_deletion_btn_text: "Ta bort %{resource}"
+    family_moniker:
+      group_plural: Grupper
+      group_singular: Grupp
+      plural: Familjer
+      singular: Familj
+    trend_change:
+      no_change: "ingen förändring"
+    cancel: Avbryt
+    transaction_tabs:
+      expense: Utgift
+      income: Inkomst
+      transfer: Överföring
+    sidekiq_health_banner:
+      title: Viss data kan vara inaktuell
+      body: "Bakgrundsjobb bearbetas inte, så saldon, nettoförmögenhet och kontosynkroniseringar kan vara inaktuella eller saknas."
+      cta: Visa systemhälsa
+      reasons:
+        redis_unreachable: "Appen kan inte nå Redis. Kontrollera din REDIS_URL och att Redis körs."
+        no_worker_processes: "Ingen Sidekiq-arbetsprocess är ansluten. Starta arbetscontainern eller systemd-enheten."
+        stale_heartbeat: "Sidekiq-arbetaren har inte rapporterat en heartbeat på senaste tiden. Den kan ha fastnat eller kraschat."
+        queue_backed_up: "Det äldsta köade jobbet har väntat längre än latensbudgeten. Arbetaren lever men hamnar efter."

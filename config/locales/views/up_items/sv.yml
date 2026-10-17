@@ -1,0 +1,116 @@
+---
+sv:
+  providers:
+    up:
+      name: Up
+      description: Anslut australiska Up-bankkonton via en personlig åtkomsttoken
+  family:
+    up:
+      create_up_item:
+        default_name: Up-anslutning
+  up_account:
+    fallback: Up-konto
+  up_item:
+    errors:
+      account_processing_failed: Kunde inte synka Up-kontot
+      account_sync_schedule_failed: Kunde inte schemalägga synkning av Up-kontot
+      transactions_failed: Kunde inte hämta Up-transaktioner
+      sync_failed: Kunde inte synka Up-anslutningen
+    sync_status:
+      no_accounts: Inga konton hittades
+      all_synced:
+        one: 1 konto synkat
+        other: "%{count} konton synkade"
+      partial: "%{linked} synkade, %{unlinked} behöver konfigureras"
+    institution_summary:
+      none: Inga institutioner anslutna
+      one: 1 institution
+      count:
+        one: 1 institution
+        other: "%{count} institutioner"
+  up_items:
+    provider_panel:
+      default_connection_name: Up-anslutning
+      add_connection: Lägg till Up-anslutning
+      update_connection: Uppdatera anslutning
+      connection_name_label: Anslutningsnamn
+      connection_name_placeholder: Huvud-Up
+      access_token_label: Personlig åtkomsttoken
+      access_token_placeholder: Klistra in din personliga Up-token
+      keep_access_token_placeholder: Lämna tomt för att behålla befintlig token
+      setup_accounts: Konfigurera konton
+      syncing: Synkar...
+      sync: Synka
+      disconnect: Koppla från
+      disconnect_confirm: "Är du säker på att du vill koppla från %{name}?"
+    create:
+      success: Up-anslutningen har sparats.
+    update:
+      success: Up-anslutningen har uppdaterats.
+    destroy:
+      success: Up-anslutningen är schemalagd för borttagning.
+      unlink_failed: Kunde inte koppla från Up-anslutningen
+    select_accounts:
+      title: Länka Up-konton
+      description: Välj vilka Up-konton du vill lägga till.
+      no_accounts_found: Inga olänkade Up-konton hittades.
+      no_credentials_configured: Konfigurera Up i leverantörsinställningarna först.
+      cancel: Avbryt
+      link_accounts: Länka konton
+    link_accounts:
+      success:
+        one: Länkade 1 Up-konto.
+        other: "Länkade %{count} Up-konton."
+      no_accounts_selected: Välj minst ett konto.
+      no_credentials_configured: Konfigurera Up i leverantörsinställningarna först.
+      unsupported_account_type: Up stödjer inte den kontotypen.
+      link_failed: Inga konton länkades.
+    select_existing_account:
+      title: "Länka Up-konto till %{account_name}"
+      description: Välj ett olänkat Up-konto att ansluta till detta konto.
+      no_accounts_found: Inga olänkade Up-konton hittades.
+      no_credentials_configured: Konfigurera Up i leverantörsinställningarna först.
+      account_already_linked: Det kontot är redan länkat till en leverantör.
+      cancel: Avbryt
+      link_account: Länka konto
+    link_existing_account:
+      success: "Länkade Up-konto till %{account_name}."
+      account_already_linked: Det kontot är redan länkat till en leverantör.
+      up_account_already_linked: Det Up-kontot är redan länkat.
+      no_account_selected: Välj ett Up-konto att länka.
+    setup_accounts:
+      title: Länka Up-konton
+      subtitle: Välj hur varje Up-konto ska visas i Sure.
+      no_credentials: Konfigurera Up-uppgifter först.
+      api_error: Kunde inte hämta Up-konton.
+      fetch_failed: Kunde inte hämta konton
+      no_accounts_to_setup: Inga konton att konfigurera
+      all_accounts_linked: Alla Up-konton är redan länkade.
+      choose_account_type: Välj en kontotyp
+      choose_account_type_description: Hoppa över konton du inte vill spåra.
+      account_type_label: Kontotyp
+      account_types:
+        skip: Hoppa över
+        depository: Kontanter
+        loan: Lån
+      create_accounts: Skapa konton
+      cancel: Avbryt
+    complete_account_setup:
+      success:
+        one: Skapade 1 Up-konto.
+        other: "Skapade %{count} Up-konton."
+      all_skipped: Inga Up-konton skapades.
+      no_accounts: Inga Up-konton valdes.
+      creation_failed: Kunde inte skapa Up-konton.
+    up_item:
+      deletion_in_progress: Borttagning pågår
+      syncing: Synkar
+      error: Fel
+      status_with_summary: "Synkade %{timestamp} sedan · %{summary}"
+      status_never: Har aldrig synkats
+      delete: Ta bort
+      setup_needed: Kontokonfiguration behövs
+      setup_description: "%{linked} av %{total} konton länkade."
+      setup_action: Konfigurera konton
+      no_accounts_title: Inga konton importerade än
+      no_accounts_description: Hämta Up-konton och välj vilka du vill länka.

@@ -1,0 +1,77 @@
+---
+sv:
+  settings:
+    api_keys_controller:
+      success: "Din API-nyckel har skapats"
+      revoked_successfully: "API-nyckeln har återkallats"
+      revoke_failed: "Det gick inte att återkalla API-nyckeln"
+    api_keys:
+      create:
+        success: "Din API-nyckel har skapats"
+      destroy:
+        revoked_successfully: "API-nyckeln har återkallats"
+        revoke_failed: "Det gick inte att återkalla API-nyckeln"
+      shared:
+        active: "Aktiv"
+        created_ago: "Skapad %{time} sedan"
+        last_used_ago: "Senast använd %{time} sedan"
+        never_used: "Aldrig använd"
+        scope_read_only: "Endast läsning"
+        scope_read_write: "Läs/skriv"
+      index:
+        title: "API-nycklar"
+        subtitle: "Hantera API-nycklar för programmatisk åtkomst till din data."
+        new_key: "Ny API-nyckel"
+        empty_heading: "Inga API-nycklar än"
+        empty_description: "Skapa en API-nyckel för att komma åt din data programmatiskt."
+        revoke_key: "Återkalla"
+        revoke_confirmation: "Är du säker på att du vill återkalla \"%{name}\"? Detta inaktiverar omedelbart alla applikationer som använder denna nyckel."
+      key_reveal:
+        copied: "Kopierat!"
+      show:
+        title: "Hantera API-nyckel"
+        newly_created:
+          page_title: "API-nyckeln har skapats"
+          heading: "API-nyckeln har skapats!"
+          key_ready: "Din nya API-nyckel \"%{name}\" har skapats och är redo att användas."
+          your_api_key: "Din API-nyckel"
+          copy_store_securely: "Kopiera och spara denna nyckel säkert. Du behöver den för att autentisera dina API-anrop."
+          copy_api_key: "Kopiera API-nyckel"
+          how_to_use: "Så använder du din API-nyckel"
+          continue: "Fortsätt till API-nyckelinställningar"
+        current_api_key:
+          title: "Din API-nyckel"
+          permissions: "Behörigheter"
+          copy_api_key: "Kopiera API-nyckel"
+          copy_store_securely: "Kopiera och spara denna nyckel säkert. Du behöver den för att autentisera dina API-anrop."
+          usage_instructions_title: "Så använder du din API-nyckel"
+          usage_instructions: "Inkludera din API-nyckel i X-Api-Key-headern när du gör anrop till %{product_name}-API:et:"
+          back_to_keys: "Tillbaka till API-nycklar"
+          revoke_key: "Återkalla nyckel"
+          revoke_confirmation: "Är du säker på att du vill återkalla den här API-nyckeln? Detta kan inte ångras och inaktiverar omedelbart alla applikationer som använder denna nyckel."
+      new:
+        title: "Skapa API-nyckel"
+        create_new_api_key: "Skapa ny API-nyckel"
+        subtitle: "Skapa en ny API-nyckel för att komma åt din Sure-data programmatiskt."
+        description: "Konfigurera din nya API-nyckel med ett beskrivande namn och lämpliga behörigheter."
+        name_label: "Namn på API-nyckel"
+        name_placeholder: "t.ex. Min budgetapp, Portföljspårare"
+        name_help_text: "Välj ett beskrivande namn så att du kan känna igen nyckeln senare."
+        name_help: "Välj ett beskrivande namn som beskriver nyckelns syfte."
+        permissions_label: "Behörigheter"
+        permissions_help: "Välj vilka behörigheter denna API-nyckel ska ha:"
+        scope_read_only: "Endast läsning"
+        scope_read_only_description: "Visa dina konton, transaktioner och saldon"
+        scope_read_write: "Läs/skriv"
+        scope_read_write_description: "Visa din data och skapa nya transaktioner"
+        scope_details:
+          read_accounts: "Visa kontoinformation, saldon och kontodata"
+          read_transactions: "Visa transaktionsdata, kategorier och transaktionsdetaljer"
+          read_balances: "Visa historisk saldodata och trender för kontovärde"
+          write_transactions: "Skapa och uppdatera transaktionsposter (kommer snart)"
+        security_warning_title: "Säkerhetsvarning"
+        security_warning_body: "Din API-nyckel visas endast en gång efter att den skapats. Se till att kopiera och spara den säkert. Alla med åtkomst till denna nyckel kan komma åt din data enligt de behörigheter du valt."
+        security_warning: "Din API-nyckel visas endast en gång efter att den skapats. Spara den säkert och dela den aldrig offentligt. Om du tappar bort den måste du skapa en ny."
+        create_key: "Skapa API-nyckel"
+        cancel: "Avbryt"
+        save_api_key: "Spara API-nyckel"

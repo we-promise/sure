@@ -1,0 +1,7 @@
+---
+sv:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Kan inte koppla bort den sista identiteten
+        success: Klart
