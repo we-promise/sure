@@ -98,14 +98,26 @@ class Property < ApplicationRecord
   # address the provider can't value, an exhausted monthly budget) reverts
   # it, so the property can still be linked to another provider instead of
   # being stuck on one that never worked. Returns whether the link was kept.
+  #
+  # Claiming and reverting are conditional updates, so overlapping link
+  # attempts can't clear each other's link: only the attempt that claimed the
+  # unlinked property runs the valuation, and the revert only applies while
+  # that attempt's link is still unsynced.
   def link_avm_provider!(provider_key)
     raise ArgumentError, "#{provider_key} can't be linked to this property" unless avm_linkable?(provider_key)
 
-    update!(avm_provider: provider_key.to_s, avm_last_synced_on: nil)
-    SyncPropertyValuationsJob.perform_now(property_id: id, force: true)
-    return true if reload.avm_last_synced_on.present?
+    key = provider_key.to_s
+    claimed = Property.where(id: id, avm_provider: nil)
+                      .update_all(avm_provider: key, avm_last_synced_on: nil, updated_at: Time.current)
+    return false unless claimed == 1
 
-    update!(avm_provider: nil)
+    SyncPropertyValuationsJob.perform_now(property_id: id, force: true)
+    reload
+    return true if avm_provider == key && avm_last_synced_on.present?
+
+    Property.where(id: id, avm_provider: key, avm_last_synced_on: nil)
+            .update_all(avm_provider: nil, updated_at: Time.current)
+    reload
     false
   end
 
