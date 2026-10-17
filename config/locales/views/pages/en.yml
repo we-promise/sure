@@ -92,6 +92,7 @@ en:
           cash_flow: "Cash Flow"
           surplus: "Surplus"
           deficit: "Deficit"
+          invested: "Invested"
         title: "New Sankey chart"
         preview: "Preview"
         preview_tooltip: "This will replace the above visualization as it uses a new shared API with the mobile Swift client."
