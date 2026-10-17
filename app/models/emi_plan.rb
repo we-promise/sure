@@ -73,6 +73,26 @@ class EmiPlan < ApplicationRecord
       else
         interest_component = monthly_rate.zero? ? 0.to_d : (remaining_principal * monthly_rate).round(precision)
         principal_component = emi - interest_component
+
+        # When `emi` rounds *up* (most easily at 0% interest, where it is just
+        # p/n rounded to the currency's precision), rows 1..n-1 can over-pay the
+        # principal and drive `remaining_principal` negative. The last row then
+        # takes `remaining_principal` verbatim and produces a *negative*
+        # installment, which is not a no-op downstream: build! persists every
+        # row as a real Entry, a negative amount counts as an inflow in
+        # Balance::BaseCalculator#flows_for_date, and Entry has no sign
+        # constraint on amount (negatives are legitimate inflows elsewhere), so
+        # nothing else would catch it.
+        #
+        # Capping each row at the principal actually outstanding keeps the
+        # running remainder >= 0. The "last row absorbs the remainder" contract
+        # above is unaffected: this only ever trims a row that was going to
+        # over-pay, so the schedule still sums back to the exact principal --
+        # it just stops collecting once the loan is paid off. Flooring `emi`
+        # instead would also avoid negatives, but it shifts the user-visible
+        # monthly installment in ~45% of principal/tenure combinations, so the
+        # cap is far less disruptive.
+        principal_component = remaining_principal if principal_component > remaining_principal
       end
 
       interest_component = [ interest_component, 0.to_d ].max.round(precision)

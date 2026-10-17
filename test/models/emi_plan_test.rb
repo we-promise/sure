@@ -35,6 +35,66 @@ class EmiPlanTest < ActiveSupport::TestCase
     assert_equal 1000.0, schedule.sum { |s| s[:principal] }.to_f
   end
 
+  # A rounded-up `emi` (most easily at 0%, where it is just p/n rounded to the
+  # currency's precision) used to over-pay the principal across rows 1..n-1,
+  # leaving a negative remainder that the last row took verbatim. That negative
+  # total is persisted as a real installment Entry, and since Entry has no sign
+  # constraint on amount (negatives are legitimate inflows elsewhere), it would
+  # silently count as an inflow in balance reconstruction. The schedule now caps
+  # each row at the outstanding principal instead.
+  test "amortization schedule never produces a negative installment" do
+    # Each of these over-pays at 0%: p/n rounds up, so rows 1..n-1 collect more
+    # than the principal before the final (previously negative) row.
+    [ [ 1, 36 ], [ 6, 48 ], [ 1, 60 ], [ 1, 120 ], [ 3, 480 ], [ 100, 480 ] ].each do |principal, tenure|
+      schedule = EmiPlan.new(principal_amount: principal, interest_rate: 0, tenure_months: tenure).amortization_schedule
+
+      assert schedule.none? { |s| s[:principal].negative? },
+        "principal component went negative for principal=#{principal} tenure=#{tenure}"
+      assert schedule.none? { |s| s[:total] < 0 },
+        "installment total went negative for principal=#{principal} tenure=#{tenure}: " \
+        "#{schedule.map { |s| s[:total] }.inspect}"
+      assert_equal principal.to_d, schedule.sum { |s| s[:principal] }
+    end
+  end
+
+  test "amortization schedule still reconciles to principal when a row is capped" do
+    # p=50 over 180 months at 0% rounds 50/180 up to 0.28, so the cap has to
+    # engage for the schedule to still sum back to exactly 50.
+    schedule = EmiPlan.new(principal_amount: 50, interest_rate: 0, tenure_months: 180).amortization_schedule
+
+    assert_equal 50.0, schedule.sum { |s| s[:principal] }.to_f
+    assert_equal 0.to_d, schedule.last[:total]
+  end
+
+  test "amortization schedule stops collecting once the principal is paid off" do
+    # p=50 over 180 months at 3% leaves the loan satisfied well before the last
+    # row. Capping must stop the schedule charging principal past payoff, rather
+    # than emitting further full installments (which is what produced the
+    # over-payment this cap exists to prevent).
+    schedule = EmiPlan.new(principal_amount: 50, interest_rate: 3, tenure_months: 180).amortization_schedule
+
+    assert schedule.none? { |s| s[:total] < 0 }
+    assert_equal 50.0, schedule.sum { |s| s[:principal] }.to_f
+    assert_equal 50.0 + 12.28, schedule.sum { |s| s[:total] }.to_f,
+      "expected the schedule to stop at 50 principal + 12.28 interest once paid off"
+  end
+
+  test "build! never persists a negative-amount installment entry" do
+    entry = create_transaction(
+      amount: 1,
+      name: "Tiny purchase",
+      account: accounts(:depository),
+      category: categories(:food_and_drink)
+    )
+
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 36, processing_fee: 0)
+
+    amounts = plan.installment_entries.pluck(:amount)
+    assert amounts.none? { |a| a.negative? },
+      "build! persisted a negative installment entry: #{amounts.inspect}"
+    assert_equal 1.to_d, amounts.sum
+  end
+
   test "build! creates a one-time processing fee entry dated today" do
     plan = EmiPlan.build!(entry: @entry, interest_rate: 10, tenure_months: 6, processing_fee: 49)
 

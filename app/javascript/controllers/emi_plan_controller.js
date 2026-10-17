@@ -73,6 +73,14 @@ export default class extends Controller {
             ? 0
             : this.roundToPrecision(remainingPrincipal * monthlyRate);
         principalComponent = emi - interestComponent;
+        // Mirrors the cap in EmiPlan#amortization_schedule: a rounded-up `emi`
+        // can over-pay the principal across rows 1..n-1, which would drive the
+        // running remainder negative and hand the final row a negative
+        // installment. Without this the preview would show a negative last
+        // payment that the server never persists.
+        if (principalComponent > remainingPrincipal) {
+          principalComponent = remainingPrincipal;
+        }
       }
 
       interestComponent = this.roundToPrecision(Math.max(interestComponent, 0));
