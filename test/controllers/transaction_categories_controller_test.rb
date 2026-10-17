@@ -31,6 +31,18 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_nil category.reload.last_used_at
   end
 
+  test "rejects a category from another family" do
+    foreign_category = families(:empty).categories.create!(name: "Foreign", color: "#000000", lucide_icon: "folder")
+    original_category_id = @transaction.category_id
+
+    patch transaction_category_url(@entry),
+      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: foreign_category.id } } },
+      as: :turbo_stream
+
+    assert_response :not_found
+    assert_equal original_category_id, @transaction.reload.category_id
+  end
+
   test "offers a rule prompt when the chosen category's existing rule does not cover this transaction" do
     category = categories(:income)
     @entry.update!(name: "AMZN Mktp UK")
