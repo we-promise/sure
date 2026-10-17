@@ -1005,6 +1005,62 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a rejected create account attempt"
   end
 
+  test "should reject SSO create account when self-hosted signups closed after the callback" do
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-closed",
+      email: "closed-sso@example.com",
+      first_name: "Closed",
+      last_name: "User",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    with_self_hosting do
+      Setting.onboarding_state = "closed"
+
+      assert_no_difference("User.count") do
+        post "/api/v1/auth/sso_create_account", params: {
+          linking_code: linking_code,
+          first_name: "Closed",
+          last_name: "User"
+        }
+      end
+    end
+
+    assert_response :forbidden
+    assert_match(/disabled/, JSON.parse(response.body)["error"])
+  end
+
+  test "should reject SSO create account when self-hosted signups are invite-only" do
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-invite-only",
+      email: "invite-only-sso@example.com",
+      first_name: "Invite",
+      last_name: "Only",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    with_self_hosting do
+      Setting.onboarding_state = "invite_only"
+
+      assert_no_difference("User.count") do
+        post "/api/v1/auth/sso_create_account", params: {
+          linking_code: linking_code,
+          first_name: "Invite",
+          last_name: "Only"
+        }
+      end
+    end
+
+    assert_response :forbidden
+    assert_match(/disabled/, JSON.parse(response.body)["error"])
+  end
+
   test "should reject SSO create account with expired linking code" do
     post "/api/v1/auth/sso_create_account", params: {
       linking_code: "expired-code",
@@ -1237,4 +1293,101 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal family.id, invitee.family_id
     assert_equal 0, AccountShare.where(user: invitee).count
   end
+
+  test "signup is rejected when self-hosted signups are closed" do
+    with_self_hosting do
+      Setting.onboarding_state = "closed"
+
+      assert_no_difference("User.count") do
+        post "/api/v1/auth/signup", params: signup_params("closed-signup@example.com")
+      end
+    end
+
+    assert_response :forbidden
+    assert_equal "Signups are closed", JSON.parse(response.body)["error"]
+  end
+
+  test "signup joins the invite-only default family as member" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    Setting.onboarding_state = "invite_only"
+    Setting.invite_only_default_family_id = family.id
+
+    assert_no_difference("Family.count") do
+      post "/api/v1/auth/signup", params: signup_params("default-family-api@example.com")
+    end
+
+    assert_response :created
+    user = User.find_by!(email: "default-family-api@example.com")
+    assert_equal family.id, user.family_id
+    assert_equal "member", user.role
+    assert_equal family.accounts.pluck(:id).sort, AccountShare.where(user: user).pluck(:account_id).sort
+  end
+
+  test "signup fails when the invite code was claimed by a concurrent signup" do
+    invite_code = InviteCode.create!
+    Api::V1::AuthController.any_instance.stubs(:invite_code_required?).returns(true)
+    InviteCode.stubs(:claim!).returns(nil)
+
+    assert_no_difference([ "User.count", "MobileDevice.count" ]) do
+      post "/api/v1/auth/signup", params: signup_params("race-signup@example.com").merge(invite_code: invite_code.token)
+    end
+
+    assert_response :forbidden
+    assert_equal "Invalid invite code", JSON.parse(response.body)["error"]
+  end
+
+  test "login is rejected when local login is disabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    user = users(:family_admin)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: { email: user.email, password: user_password_test, device: @device_info }
+    end
+
+    assert_response :forbidden
+  end
+
+  test "login with local admin override is rejected for non super admins" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+    user = users(:family_admin)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: { email: user.email, password: user_password_test, device: @device_info }
+    end
+
+    # Same answer as a wrong password, so super admins can't be enumerated.
+    assert_response :unauthorized
+    assert_equal "Invalid email or password", JSON.parse(response.body)["error"]
+  end
+
+  test "login with local admin override is allowed for super admins" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+    user = users(:sure_support_staff)
+
+    assert_difference("Doorkeeper::AccessToken.count", 1) do
+      post "/api/v1/auth/login", params: { email: user.email, password: user_password_test, device: @device_info }
+    end
+
+    assert_response :success
+  end
+
+  test "login hashes the password even when the email is unknown" do
+    User.expects(:authenticate_by).with(email: "nobody@example.com", password: "Whatever1!").returns(nil)
+
+    post "/api/v1/auth/login", params: { email: "nobody@example.com", password: "Whatever1!", device: @device_info }
+
+    assert_response :unauthorized
+  end
+
+  private
+
+    def signup_params(email)
+      {
+        user: { email: email, password: "SecurePass123!", first_name: "New", last_name: "User" },
+        device: @device_info
+      }
+    end
 end

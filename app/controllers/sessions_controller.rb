@@ -489,7 +489,7 @@ class SessionsController < ApplicationController
       email = auth.info&.email
 
       has_pending_invitation = email.present? && Invitation.pending.exists?(email: email)
-      allow_creation = has_pending_invitation || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email))
+      allow_creation = has_pending_invitation || AuthConfig.jit_account_creation_allowed?(email)
 
       linking_code = SecureRandom.urlsafe_base64(32)
       Rails.cache.write(

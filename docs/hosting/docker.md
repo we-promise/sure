@@ -194,6 +194,8 @@ After creating your initial admin account, you can control how other people join
 - **Invite-only**: New account creation stays enabled. Signups require a valid invite code unless you configure a default family for invite-only onboarding.
 - **Closed**: The registration page is disabled for new signups.
 
+In **Invite-only** and **Closed** mode, signing in through SSO only creates a new account for people with a pending invitation. See [OIDC and SSO](oidc.md#33-jit-user-creation).
+
 If you do not want additional self-service registrations, switch the instance to **Closed** after the initial setup.
 
 ### Step 6: Run the app in the background
