@@ -155,11 +155,31 @@ class WiseActivity::Processor
     CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(html.to_s)).strip
   end
 
-  # Whether a move between a balance and a jar went into the jar, which
-  # only its title tells ("To <strong>Holiday</strong>").
+  # The balance a title names, as plain text: its last <strong>, e.g.
+  # "Holiday" in "To <strong>Holiday</strong>"; nil without one.
+  def self.named_balance(activity)
+    named = activity["title"].to_s.scan(%r{<strong>([^<]*)</strong>}i).flatten.last
+    plain_text(named).presence if named
+  end
+
+  # Whether a move between a balance and a jar in one currency went into
+  # the jar, which only its title tells. Wise names where the money went
+  # ("To <strong>Holiday</strong>", as "To <strong>EUR</strong>" on every
+  # conversion), so a title naming the currency, that is the balance, or
+  # the jar the money came from ("From <strong>Holiday</strong>") is a
+  # withdrawal. A title naming no balance leaves only its wording.
   def self.jar_deposit?(activity)
-    title = ActionController::Base.helpers.strip_tags(activity["title"].to_s).downcase
-    title.start_with?("to") || title.include?("received") || title.include?("added")
+    title = activity["title"].to_s
+    named = named_balance(activity)
+    unless named
+      text = plain_text(title).downcase
+      return text.start_with?("to") || text.include?("received") || text.include?("added")
+    end
+
+    currency = parse_amount(activity["primaryAmount"])[:currency]
+    return false if currency.present? && named.casecmp?(currency)
+
+    !plain_text(title[0...title.rindex(/<strong>/i)]).match?(/\bfrom\b/i)
   end
 
   def self.split_funding?(parsed)
@@ -217,6 +237,19 @@ class WiseActivity::Processor
     { external_id: external_id, amount: amount, currency: currency } unless skip_reason
   end
 
+  # Sure used to name a jar's leg of a move "_inflow" and a balance's
+  # "_outflow" whichever way the money went, the leg of a conversion on its
+  # target balance included. Its side now follows the money, so the entry
+  # booked the old way is renamed in place (WiseAccount::Transactions
+  # ::Processor#take_over_entries), keeping what a person did to it:
+  # { old external id => external id }.
+  def superseded_external_ids
+    return {} unless two_leg? && skip_reason.nil? && (wise_account.jar? || conversion.nil? || conversion_target?)
+
+    other_side = leg_direction == :credit ? "outflow" : "inflow"
+    { "wise_interbalance_#{resource_id}_#{other_side}" => external_id }
+  end
+
   # The day the activity books on, whether it books here or not; nil when
   # it has no readable date.
   def booking_date
@@ -253,6 +286,8 @@ class WiseActivity::Processor
       @skip_reason =
         if activity[:wise_superseded_by].present?
           :superseded
+        elsif !routed_here?
+          :other_balance
         elsif activity[:status].to_s != BOOKED_STATUS
           :status
         elsif split? && split_amount.nil?
@@ -260,15 +295,61 @@ class WiseActivity::Processor
         end
     end
 
+    # Whether the row is this balance's at all. Processing books what a
+    # payload holds, also one an older build stored, which put every
+    # conversion and jar move on every balance and interest on every jar:
+    # after an import that fails before it stores the payloads again, or for
+    # a balance linked while a sync still fetches. So a move between
+    # currencies the balance is not in books nothing here, nor a jar move or
+    # interest the importer routed to another balance (its routing decision,
+    # WiseItem::Importer::ROUTING_DECISION_KEY), nor a payment none of whose
+    # currencies is the balance's.
+    def routed_here?
+      decided = activity[WiseItem::Importer::ROUTING_DECISION_KEY].presence&.to_s
+      balance_id = wise_account.balance_id.to_s
+      if two_leg? && conversion
+        conversion.values.include?(wise_account.currency) &&
+          (decided.nil? || (wise_account.jar? ? decided == balance_id : wise_account.currency != jar_side))
+      elsif two_leg?
+        currency = self.class.parse_amount(activity[:primaryAmount])[:currency]
+        (currency.blank? || currency == wise_account.currency) && (!wise_account.jar? || decided.nil? || decided == balance_id)
+      elsif HOLDING_TYPES.include?(activity_type) && decided
+        decided == balance_id
+      else
+        single_leg[:currencies].include?(wise_account.currency)
+      end
+    end
+
+    # The currency of a jar move's jar side: a deposit credits the jar in the
+    # target currency, a withdrawal debits it in the source one.
+    def jar_side
+      self.class.jar_deposit?(activity) ? conversion[:target] : conversion[:source]
+    end
+
     # Conversions use resource_id so both sides can be matched for Transfer
-    # linking. Other activity types use the opaque activity id.
+    # linking; the leg the money went to is the inflow. Other activity types
+    # use the opaque activity id.
     def external_id
       if two_leg?
-        side = wise_account.jar? || conversion_target? ? "inflow" : "outflow"
+        side = leg_direction == :credit ? "inflow" : "outflow"
         "wise_interbalance_#{resource_id}_#{side}"
       else
         "wise_activity_#{activity[:id]}"
       end
+    end
+
+    # This balance's leg of a move between two of the profile's balances:
+    # :credit when the money came in, else :debit. A conversion debits the
+    # balance in its source currency and credits the one in its target
+    # currency, a jar's included; a move between a balance and a jar in one
+    # currency goes the way its title says (.jar_deposit?).
+    def leg_direction
+      @leg_direction ||=
+        if conversion_source? then :debit
+        elsif conversion_target? then :credit
+        elsif wise_account.jar? == self.class.jar_deposit?(activity) then :credit
+        else :debit
+        end
     end
 
     def two_leg?
@@ -290,7 +371,7 @@ class WiseActivity::Processor
     def conversion
       return @conversion if defined?(@conversion)
 
-      @conversion = wise_account.jar? ? nil : self.class.conversion_currencies(activity)
+      @conversion = self.class.conversion_currencies(activity)
     end
 
     def conversion_source?
@@ -303,19 +384,13 @@ class WiseActivity::Processor
 
     # Expenses (outflow) → positive in Sure.
     # Incomes (inflow / interest) → negative in Sure.
+    # A conversion's source pays its secondary amount, every other leg moves
+    # the primary one.
     def amount
-      return amount_value(activity[:secondaryAmount]) if conversion_source?
-      return -amount_value(activity[:primaryAmount]) if conversion_target?
       return single_leg_amount unless two_leg?
 
-      raw = amount_value(activity[:primaryAmount])
-      if wise_account.jar?
-        # JAR perspective: "To Jar" = deposit (income, negative)
-        deposit_direction? ? -raw : raw
-      else
-        # STANDARD perspective: "To Jar" = outflow (expense, positive)
-        deposit_direction? ? raw : -raw
-      end
+      value = amount_value(conversion_source? ? activity[:secondaryAmount] : activity[:primaryAmount])
+      leg_direction == :credit ? -value : value
     end
 
     # The sign comes from Wise's markup (see .direction), not from the type.
@@ -373,11 +448,6 @@ class WiseActivity::Processor
       estimated == true || (estimated.is_a?(Array) && estimated.include?(wise_account.currency))
     end
 
-    # True when the activity title indicates money flowing INTO the JAR.
-    def deposit_direction?
-      self.class.jar_deposit?(activity)
-    end
-
     def currency
       return conversion[:source] if conversion_source?
       return conversion[:target] if conversion_target?
@@ -390,18 +460,21 @@ class WiseActivity::Processor
     end
 
     def name
-      jar_name = wise_account.jar? ? (wise_account.raw_payload&.dig("name") || "Jar") : nil
-
       case activity_type
       when *TWO_LEG_TYPES
-        if conversion_source?
+        if wise_account.jar?
+          leg_direction == :credit ? I18n.t("wise_items.activities.jar_deposit") : I18n.t("wise_items.activities.jar_withdrawal")
+        elsif conversion_source?
           I18n.t("wise_items.activities.transfer_to_jar", jar: conversion[:target])
         elsif conversion_target?
           I18n.t("wise_items.activities.transfer_from_jar", jar: conversion[:source])
-        elsif wise_account.jar?
-          deposit_direction? ? I18n.t("wise_items.activities.jar_deposit") : I18n.t("wise_items.activities.jar_withdrawal")
+        elsif leg_direction == :debit
+          I18n.t("wise_items.activities.transfer_to_jar", jar: jar_name_for_standard)
+        elsif names_currency?
+          # A withdrawal titled with the balance's own currency names no jar.
+          I18n.t("wise_items.activities.jar_withdrawal")
         else
-          deposit_direction? ? I18n.t("wise_items.activities.transfer_to_jar", jar: jar_name_for_standard) : I18n.t("wise_items.activities.transfer_from_jar", jar: jar_name_for_standard)
+          I18n.t("wise_items.activities.transfer_from_jar", jar: jar_name_for_standard)
         end
       when "BALANCE_CASHBACK", "BALANCE_INTEREST"
         I18n.t("wise_items.activities.interest")
@@ -414,7 +487,12 @@ class WiseActivity::Processor
     end
 
     def jar_name_for_standard
-      activity[:title].to_s.scan(/<strong>([^<]+)<\/strong>/).flatten.last || "Jar"
+      self.class.named_balance(activity) || "Jar"
+    end
+
+    def names_currency?
+      named = self.class.named_balance(activity)
+      named.present? && named.casecmp?(currency.to_s)
     end
 
     # The date in the family's zone (WiseItem#time_zone), as for transfers

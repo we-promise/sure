@@ -1821,21 +1821,31 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 1, @wise_item.wise_accounts.find_by(balance_id: "20000003").raw_transactions_payload.size
   end
 
-  test "does not route a same-currency JAR move to a STANDARD balance in another currency" do
+  # A jar takes moves in its own currency only, and the balance in the move's
+  # currency books its side, an outflow into the unknown jar, which support is
+  # told about.
+  test "does not route a same-currency JAR move to a STANDARD balance or a jar in another currency" do
     balances = [
       { "id" => "20000001", "amount" => { "value" => 100.0, "currency" => "GBP" }, "type" => "STANDARD" },
       { "id" => "20000002", "amount" => { "value" => 100.0, "currency" => "EUR" }, "type" => "STANDARD" }
     ]
-    move = build_interbalance("To <strong>Jar</strong>", resource_id: "7004")
-    provider = FakeWiseProvider.new(balances: balances, activities: [ move ])
+    move = build_interbalance("To <strong>Jar</strong>", resource_id: "7004", primary: "1,250 EUR")
+    provider = FakeWiseProvider.new(balances: balances, savings_balances: [ jar_balance("20000003", "GBP", "Jar") ], activities: [ move ])
 
-    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    assert_difference -> { activity_notes.count }, 1 do
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
 
-    assert_empty Array(@wise_item.wise_accounts.find_by(balance_id: "20000001").raw_transactions_payload)
-    assert_equal 1, @wise_item.wise_accounts.find_by(balance_id: "20000002").raw_transactions_payload.size
+    assert_equal({ "20000001" => [], "20000002" => [ "interbalance_7004" ], "20000003" => [] }, payload_ids)
+    assert_equal 1, activity_notes.sole.metadata["unidentified_jar_move_count"]
+    eur = link_account(@wise_item.wise_accounts.find_by!(balance_id: "20000002"))
+    WiseAccount::Transactions::Processor.new(eur).process
+    assert_equal [ [ "wise_interbalance_7004_outflow", BigDecimal("1250") ] ], eur.current_account.entries.pluck(:external_id, :amount)
   end
 
-  test "routes BALANCE_CASHBACK only to JAR account" do
+  # Cashback goes to the jar in its currency only (it used to go to every jar
+  # whatever its currency).
+  test "routes BALANCE_CASHBACK to the jar in its currency only" do
     savings = {
       "id" => "10000002",
       "amount" => { "value" => 1000.0, "currency" => "EUR" },
@@ -1845,15 +1855,394 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
       "name" => "Jar"
     }
     cashback = build_cashback("57001")
-    provider = FakeWiseProvider.new(savings_balances: [ savings ], activities: [ cashback ])
+    provider = FakeWiseProvider.new(savings_balances: [ savings, jar_balance("10000003", "GBP", "Rainy day", 500) ], activities: [ cashback ])
 
     WiseItem::Importer.new(@wise_item, wise_provider: provider).import
 
-    jar = @wise_item.wise_accounts.find_by(balance_id: "10000002")
-    standard = @wise_item.wise_accounts.find_by(balance_id: "10000001")
+    assert_equal({ "10000001" => [], "10000002" => [ "cashback_57001" ], "10000003" => [] }, payload_ids)
+    assert_equal "10000002", @wise_item.wise_accounts.find_by!(balance_id: "10000002").raw_transactions_payload.sole["wise_jar_balance_id"]
+  end
 
-    assert_equal 1, jar.raw_transactions_payload.size
-    assert_empty standard.raw_transactions_payload.select { |a| a["type"] == "BALANCE_CASHBACK" }
+  # Jars
+
+  # Wise names where money went, as in "To <strong>EUR</strong>" on every
+  # conversion, so a move naming the balance's currency or coming "From" the
+  # jar is a withdrawal: an outflow on the jar, an inflow on the balance,
+  # linked as a transfer.
+  test "books jar deposits and withdrawals on both sides and links them, however Wise titles them" do
+    moves = [
+      build_interbalance("To <strong>Holiday</strong>", resource_id: "6000", primary: "500 EUR"),
+      build_interbalance("To <strong>EUR</strong>", resource_id: "6001", primary: "200 EUR"),
+      build_interbalance("From <strong>EUR</strong>", resource_id: "6002", primary: "50 EUR"),
+      build_interbalance("From <strong>Holiday</strong>", resource_id: "6003", primary: "30 EUR")
+    ]
+    provider = FakeWiseProvider.new(savings_balances: [ jar_balance("10000002", "EUR", "Holiday", 220) ], activities: moves)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    booked = book_every_balance
+
+    assert_equal [ [ "wise_interbalance_6000_inflow", BigDecimal("-500"), "EUR" ], [ "wise_interbalance_6001_outflow", BigDecimal("200"), "EUR" ],
+                   [ "wise_interbalance_6002_outflow", BigDecimal("50"), "EUR" ], [ "wise_interbalance_6003_outflow", BigDecimal("30"), "EUR" ] ],
+                 booked["Holiday"]
+    assert_equal [ [ "wise_interbalance_6000_outflow", BigDecimal("500"), "EUR" ], [ "wise_interbalance_6001_inflow", BigDecimal("-200"), "EUR" ],
+                   [ "wise_interbalance_6002_inflow", BigDecimal("-50"), "EUR" ], [ "wise_interbalance_6003_inflow", BigDecimal("-30"), "EUR" ] ],
+                 booked["Wise EUR"]
+    assert_equal 4, Transfer.where(status: "confirmed").count
+    # Every copy says which jar the move was routed to.
+    assert_equal [ "10000002" ], @wise_item.wise_accounts.flat_map { |wa| wa.raw_transactions_payload.map { |row| row["wise_jar_balance_id"] } }.uniq
+  end
+
+  # A move out of a jar into a balance in another currency debits the jar, not
+  # the balance in the jar's currency. (The same move titled "To
+  # <strong>EUR</strong>" stays a conversion between the two balances: nothing
+  # in it names the jar, and Wise documents jar withdrawals in one currency
+  # only.)
+  test "books a move out of a jar into another currency on the jar and the receiving balance only" do
+    balances = [ standard_balance("20000001", "GBP", 0), standard_balance("20000002", "EUR", 117.5) ]
+    move = build_interbalance("From <strong>Holiday</strong>", resource_id: "6800", primary: "117.50 EUR", secondary: "100 GBP")
+    provider = FakeWiseProvider.new(balances: balances, savings_balances: [ jar_balance("20000003", "GBP", "Holiday") ],
+                                    borderless_accounts: [], activities: [ move ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal({ "Wise GBP" => [], "Wise EUR" => [ [ "wise_interbalance_6800_inflow", BigDecimal("-117.5"), "EUR" ] ],
+                   "Holiday" => [ [ "wise_interbalance_6800_outflow", BigDecimal("100"), "GBP" ] ] }, book_every_balance)
+    assert_equal 1, Transfer.where(status: "confirmed").count
+  end
+
+  # Titles name a jar as it was called then. After a rename in Wise its new
+  # and earlier names both route to it, and its moves from another currency
+  # stay off the balance in its currency.
+  test "keeps routing moves to a jar Wise renamed" do
+    balances = [ standard_balance("20000001", "GBP", 0), standard_balance("20000002", "EUR", 0) ]
+    old_deposit = build_interbalance("To <strong>Holiday</strong>", resource_id: "7001", primary: "100 EUR")
+    WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(
+      balances: balances, savings_balances: [ jar_balance("20000003", "EUR", "Holiday") ], borderless_accounts: [], activities: [ old_deposit ]
+    )).import
+
+    moves = [
+      old_deposit,
+      build_interbalance("To <strong>Trip</strong>", resource_id: "7002", primary: "50 EUR"),
+      build_interbalance("To <strong>Trip</strong>", resource_id: "7003", primary: "117.50 EUR", secondary: "100 GBP"),
+      build_interbalance("To <strong>Holiday</strong>", resource_id: "7004", primary: "20 EUR")
+    ]
+    WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: FakeWiseProvider.new(
+      balances: balances, savings_balances: [ jar_balance("20000003", "EUR", "Trip") ], borderless_accounts: [], activities: moves
+    )).import
+
+    assert_equal [ "Trip", [ "Holiday" ] ], @wise_item.wise_accounts.find_by!(balance_id: "20000003").raw_payload.values_at("name", "name_history")
+    assert_equal({ "20000001" => %w[interbalance_7003], "20000002" => %w[interbalance_7001 interbalance_7002 interbalance_7004],
+                   "20000003" => %w[interbalance_7001 interbalance_7002 interbalance_7003 interbalance_7004] }, payload_ids)
+  end
+
+  # A jar Wise calls by a name now takes the moves naming it before a jar that
+  # had the name earlier (renamed since), which still takes those from before
+  # the new jar opened. Only jars alike in that, both called so now or both
+  # before, leave a move unclear.
+  test "routes a move to the jar called by its name now before a jar called so earlier" do
+    { "30000001" => "Holiday", "30000003" => "Trip", "30000004" => "Trip" }.each do |balance_id, name|
+      @wise_item.wise_accounts.create!(balance_id: balance_id, name: name, currency: "EUR", raw_payload: { "type" => "SAVINGS", "name" => name })
+    end
+    jars = [ jar_balance("30000001", "EUR", "Holiday 2025").merge("creationTime" => 400.days.ago.utc.iso8601),
+             jar_balance("30000002", "EUR", "Holiday").merge("creationTime" => 2.days.ago.utc.iso8601),
+             jar_balance("30000003", "EUR", "Trip to Rome"), jar_balance("30000004", "EUR", "Trip to Oslo") ]
+    moves = [
+      build_interbalance("To <strong>Holiday</strong>", resource_id: "9100", primary: "100 EUR").merge("createdOn" => 1.hour.ago.utc.iso8601),
+      build_interbalance("To <strong>Holiday</strong>", resource_id: "9101", primary: "40 EUR").merge("createdOn" => 300.days.ago.utc.iso8601),
+      build_interbalance("To <strong>Trip</strong>", resource_id: "9102", primary: "20 EUR")
+    ]
+    provider = FakeWiseProvider.new(balances: [ standard_balance("20000001", "EUR", 0) ], savings_balances: jars, borderless_accounts: [],
+                                    activities: moves)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal [ "Holiday 2025", [ "Holiday" ] ], @wise_item.wise_accounts.find_by!(balance_id: "30000001").raw_payload.values_at("name", "name_history")
+    assert_equal({ "20000001" => %w[interbalance_9100 interbalance_9101 interbalance_9102], "30000001" => %w[interbalance_9101],
+                   "30000002" => %w[interbalance_9100], "30000003" => [], "30000004" => [] }, payload_ids)
+    assert_equal 1, activity_notes.sole.metadata["ambiguous_jar_move_count"]
+  end
+
+  # A jar takes a move in its own currency only, and a title that is a bare
+  # currency code names that currency's balance, not a jar called like it.
+  test "routes a move to the jar of that name in its currency, and never to a jar named like a currency" do
+    balances = [ standard_balance("20000001", "GBP", 0), standard_balance("20000002", "EUR", 117.5) ]
+    jars = [ jar_balance("30000001", "GBP", "Savings", 100), jar_balance("30000002", "EUR", "Savings"), jar_balance("30000003", "GBP", "EUR") ]
+    deposit = build_interbalance("To <strong>Savings</strong>", resource_id: "9003", primary: "100 GBP")
+    conversion = build_interbalance("To <strong>EUR</strong>", resource_id: "7001", primary: "117.50 EUR", secondary: "100 GBP")
+    provider = FakeWiseProvider.new(balances: balances, savings_balances: jars, borderless_accounts: [], activities: [ deposit, conversion ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal({ "20000001" => %w[interbalance_7001 interbalance_9003], "20000002" => %w[interbalance_7001],
+                   "30000001" => %w[interbalance_9003], "30000002" => [], "30000003" => [] }, payload_ids)
+  end
+
+  # Several jars fit the title, or none: a move in one currency still books on
+  # the balance in that currency (its side is certain) but on no jar. A move
+  # between two currencies has its jar in the currency the title points at, so
+  # the balance in the other one books its side also while several jars fit.
+  # Support is told once per sync. So 8103 is booked on the GBP balance and
+  # the EUR jar Twin (the GBP jar also called Twin does not make the deposit
+  # credited in EUR ambiguous), and 8104, between two currencies with two EUR
+  # jars called Holiday, books the GBP balance's side.
+  test "books no jar side of a move whose title does not tell the jar, and tells support" do
+    balances = [ standard_balance("20000001", "EUR", 0), standard_balance("20000002", "GBP", 0) ]
+    jars = [ jar_balance("30000001", "EUR", "Holiday"), jar_balance("30000002", "EUR", "Twin"), jar_balance("30000003", "GBP", "Twin"),
+             jar_balance("30000004", "EUR", "Holiday") ]
+    moves = [
+      build_interbalance("To <strong>EUR</strong>", resource_id: "8101", primary: "200 EUR"),
+      build_interbalance("To <strong>Savings</strong>", resource_id: "8102", primary: "100 EUR"),
+      build_interbalance("To <strong>Twin</strong>", resource_id: "8103", primary: "117.50 EUR", secondary: "100 GBP"),
+      build_interbalance("To <strong>Holiday</strong>", resource_id: "8104", primary: "58.75 EUR", secondary: "50 GBP")
+    ]
+    provider = FakeWiseProvider.new(balances: balances, savings_balances: jars, borderless_accounts: [], activities: moves)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal({ "20000001" => %w[interbalance_8101 interbalance_8102], "20000002" => %w[interbalance_8103 interbalance_8104],
+                   "30000001" => [], "30000002" => %w[interbalance_8103], "30000003" => [], "30000004" => [] }, payload_ids)
+    note = activity_notes.sole
+    assert_equal [ "warn", 2, 1 ], [ note.level, *note.metadata.values_at("ambiguous_jar_move_count", "unidentified_jar_move_count") ]
+    eur = link_account(@wise_item.wise_accounts.find_by!(balance_id: "20000001"))
+    gbp = link_account(@wise_item.wise_accounts.find_by!(balance_id: "20000002"))
+    [ eur, gbp ].each { |wise_account| WiseAccount::Transactions::Processor.new(wise_account).process }
+    assert_equal [ [ "wise_interbalance_8101_inflow", BigDecimal("-200") ], [ "wise_interbalance_8102_outflow", BigDecimal("100") ] ],
+                 eur.current_account.entries.order(:external_id).pluck(:external_id, :amount)
+    assert_equal [ [ "wise_interbalance_8103_outflow", BigDecimal("100") ], [ "wise_interbalance_8104_outflow", BigDecimal("50") ] ],
+                 gbp.current_account.entries.order(:external_id).pluck(:external_id, :amount)
+  end
+
+  # Between two currencies the title points at the jar's side. A deposit
+  # ("To") credits the jar the primary amount; money taken "From" a jar is
+  # debited from it, the secondary. A jar of the same name in the other
+  # currency is not it, and both sides book and link.
+  test "books a move between two currencies on the jar in the currency its title points at" do
+    balances = [ standard_balance("20000001", "GBP", 0), standard_balance("20000002", "EUR", 0) ]
+    jars = [ jar_balance("30000001", "GBP", "Savings", 50), jar_balance("30000002", "EUR", "Savings", 117.5) ]
+    moves = [
+      build_interbalance("To <strong>Savings</strong>", resource_id: "8301", primary: "117.50 EUR", secondary: "100 GBP"),
+      build_interbalance("From <strong>Savings</strong>", resource_id: "8302", primary: "58.75 EUR", secondary: "50 GBP")
+    ]
+    provider = FakeWiseProvider.new(balances: balances, savings_balances: jars, borderless_accounts: [], activities: moves)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal({ "20000001" => [ [ "wise_interbalance_8301_outflow", BigDecimal("100"), "GBP" ] ],
+                   "20000002" => [ [ "wise_interbalance_8302_inflow", BigDecimal("-58.75"), "EUR" ] ],
+                   "30000001" => [ [ "wise_interbalance_8302_outflow", BigDecimal("50"), "GBP" ] ],
+                   "30000002" => [ [ "wise_interbalance_8301_inflow", BigDecimal("-117.5"), "EUR" ] ] }, book_every_balance(key: :balance_id))
+    assert_equal 2, Transfer.where(status: "confirmed").count
+  end
+
+  # With only the GBP jar of that name known (the EUR one closed before Sure
+  # saw it), a deposit credited in EUR is not taken out of the GBP jar, also
+  # where a stored copy says it went there (as an earlier build decided), and
+  # the GBP balance books its debit.
+  test "never books a deposit as a withdrawal from a jar of its name in the other currency" do
+    move = build_interbalance("To <strong>Savings</strong>", resource_id: "8105", primary: "117.50 EUR", secondary: "100 GBP")
+    @wise_item.wise_accounts.create!(balance_id: "30000001", name: "Savings", currency: "GBP", raw_payload: { "type" => "SAVINGS", "name" => "Savings" },
+                                     raw_transactions_payload: [ move.merge("wise_jar_balance_id" => "30000001") ])
+    balances = [ standard_balance("20000001", "GBP", 0), standard_balance("20000002", "EUR", 0) ]
+    provider = FakeWiseProvider.new(balances: balances, savings_balances: [ jar_balance("30000001", "GBP", "Savings", 100) ],
+                                    borderless_accounts: [], activities: [ move ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_empty payload_ids["30000001"]
+    gbp = link_account(@wise_item.wise_accounts.find_by!(balance_id: "20000001"))
+    WiseAccount::Transactions::Processor.new(gbp).process
+    assert_equal [ [ "wise_interbalance_8105_outflow", BigDecimal("100"), "GBP" ] ], gbp.current_account.entries.pluck(:external_id, :amount, :currency)
+  end
+
+  # An older build booked the debit of a deposit into the EUR jar Savings on
+  # the GBP balance, and both jars called Savings booked its credit. The first
+  # sync after keeps the debit and the EUR jar's credit; only the GBP jar's
+  # copy goes.
+  test "keeps what an older build booked right for a move between two currencies" do
+    move = build_interbalance("To <strong>Savings</strong>", resource_id: "8103", primary: "117.50 EUR", secondary: "100 GBP")
+    stored = { [ "20000001", "Wise GBP", "GBP", "STANDARD" ] => [ move ], [ "20000002", "Wise EUR", "EUR", "STANDARD" ] => [],
+               [ "30000001", "Savings", "GBP", "SAVINGS" ] => [ move ], [ "30000002", "Savings", "EUR", "SAVINGS" ] => [ move ] }
+    accounts = stored.to_h do |(balance_id, name, currency, type), rows|
+      wise_account = @wise_item.wise_accounts.create!(balance_id: balance_id, name: name, currency: currency, raw_transactions_payload: rows,
+                                                      raw_payload: { "type" => type, "name" => (name if type == "SAVINGS") }.compact)
+      [ balance_id, link_account(wise_account).current_account ]
+    end
+    book = ->(balance_id, external_id, amount, currency) {
+      accounts[balance_id].entries.create!(external_id: external_id, source: "wise", amount: amount, currency: currency,
+                                           date: 7.days.ago.to_date, name: "Jar move", entryable: Transaction.new)
+    }
+    debit = book.call("20000001", "wise_interbalance_8103_outflow", 100, "GBP")
+    credit = book.call("30000002", "wise_interbalance_8103_inflow", -117.5, "EUR")
+    copy = book.call("30000001", "wise_interbalance_8103_inflow", -117.5, "EUR")
+    balances = [ standard_balance("20000001", "GBP", 0), standard_balance("20000002", "EUR", 0) ]
+    jars = [ jar_balance("30000001", "GBP", "Savings", 100), jar_balance("30000002", "EUR", "Savings", 117.5) ]
+    provider = FakeWiseProvider.new(balances: balances, savings_balances: jars, borderless_accounts: [], activities: [ move ],
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+    WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+
+    assert result[:complete]
+    assert_equal [ [ debit.id, BigDecimal("100") ], [ credit.id, BigDecimal("-117.5") ] ],
+                 Entry.where(account_id: accounts.values.map(&:id), source: "wise").order(amount: :desc).pluck(:id, :amount)
+    assert_not Entry.exists?(copy.id)
+  end
+
+  # While several jars fit a move (two EUR jars called Twin), a copy an
+  # earlier sync stored stays: on the one of them that holds it, which keeps
+  # the move from then on, or on each that holds it, so the clean-up deletes
+  # none of their entries. A move no sync stored books only on the balance on
+  # its other side.
+  test "keeps a move that several jars fit on the jars an earlier sync stored it on" do
+    held_by_both = build_interbalance("To <strong>Twin</strong>", resource_id: "8201", primary: "117.50 EUR", secondary: "100 GBP")
+    held_by_one = build_interbalance("To <strong>Twin</strong>", resource_id: "8202", primary: "58.75 EUR", secondary: "50 GBP")
+    in_one_currency = build_interbalance("To <strong>Twin</strong>", resource_id: "8203", primary: "30 EUR")
+    unseen = build_interbalance("To <strong>Twin</strong>", resource_id: "8204", primary: "23.50 EUR", secondary: "20 GBP")
+    stored = { [ "20000001", "Wise GBP", "GBP", "STANDARD" ] => [ held_by_both, held_by_one ],
+               [ "20000002", "Wise EUR", "EUR", "STANDARD" ] => [ in_one_currency ],
+               [ "30000001", "Twin", "EUR", "SAVINGS" ] => [ held_by_both, held_by_one, in_one_currency ],
+               [ "30000002", "Twin", "EUR", "SAVINGS" ] => [ held_by_both, in_one_currency ] }
+    stored.each do |(balance_id, name, currency, type), rows|
+      @wise_item.wise_accounts.create!(balance_id: balance_id, name: name, currency: currency, raw_transactions_payload: rows,
+                                       raw_payload: { "type" => type, "name" => (name if type == "SAVINGS") }.compact)
+    end
+    balances = [ standard_balance("20000001", "GBP", 0), standard_balance("20000002", "EUR", 0) ]
+    jars = [ jar_balance("30000001", "EUR", "Twin"), jar_balance("30000002", "EUR", "Twin") ]
+    provider = FakeWiseProvider.new(balances: balances, savings_balances: jars, borderless_accounts: [],
+                                    activities: [ held_by_both, held_by_one, in_one_currency, unseen ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal({ "20000001" => %w[interbalance_8201 interbalance_8202 interbalance_8204], "20000002" => %w[interbalance_8203],
+                   "30000001" => %w[interbalance_8201 interbalance_8202 interbalance_8203], "30000002" => %w[interbalance_8201 interbalance_8203] },
+                 payload_ids)
+    decided = @wise_item.wise_accounts.flat_map { |wise_account| wise_account.raw_transactions_payload.map { |row| row.values_at("id", "wise_jar_balance_id") } }
+    assert_equal({ "interbalance_8201" => [ nil ], "interbalance_8202" => [ "30000001" ], "interbalance_8203" => [ nil ], "interbalance_8204" => [ nil ] },
+                 decided.group_by(&:first).transform_values { |pairs| pairs.map(&:last).uniq })
+    assert_equal 3, activity_notes.sole.metadata["ambiguous_jar_move_count"]
+  end
+
+  # Interest, cashback and fees on holdings go to the jar or invested balance
+  # in their currency (the one the title names when there are several), else
+  # to the balance in their currency; when it stays unclear, nowhere, and
+  # support is told.
+  test "routes interest and fees to the jar or invested balance in their currency" do
+    balances = [ standard_balance("20000001", "EUR", 0), standard_balance("20000002", "USD", 0).merge("investmentState" => "INVESTED"),
+                 standard_balance("20000003", "GBP", 0) ]
+    jars = [ jar_balance("30000001", "EUR", "Holiday"), jar_balance("30000002", "CHF", "Rainy day"), jar_balance("30000003", "CHF", "House") ]
+    activities = [
+      holding_activity("cashback_eur", "BALANCE_CASHBACK", "<positive>+ 1.12 EUR</positive>", title: "<strong>Cashback</strong>"),
+      holding_activity("interest_usd", "BALANCE_INTEREST", "<positive>+ 0.42 USD</positive>"),
+      holding_activity("asset_fee_usd", "BALANCE_ASSET_FEE", "0.06 USD", title: "<strong>Wise Assets fee</strong>"),
+      holding_activity("interest_gbp", "BALANCE_INTEREST", "<positive>+ 0.10 GBP</positive>"),
+      holding_activity("cashback_chf", "BALANCE_CASHBACK", "<positive>+ 0.50 CHF</positive>", title: "<strong>Cashback</strong>"),
+      holding_activity("interest_chf", "BALANCE_INTEREST", "<positive>+ 0.20 CHF</positive>", title: "Interest on <strong>House</strong>")
+    ]
+    provider = FakeWiseProvider.new(balances: balances, savings_balances: jars, borderless_accounts: [], activities: activities,
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal({ "20000001" => [], "20000002" => %w[asset_fee_usd interest_usd], "20000003" => %w[interest_gbp],
+                   "30000001" => %w[cashback_eur], "30000002" => [], "30000003" => %w[interest_chf] }, payload_ids)
+    note = activity_notes.sole
+    assert_equal [ "warn", 1 ], [ note.level, note.metadata["ambiguous_holding_count"] ]
+  end
+
+  # Where a jar move or holding row first went is kept on every stored copy
+  # ("wise_jar_balance_id") and honoured, so a second jar in the currency or a
+  # jar opened later takes no row booked elsewhere; only new rows follow the
+  # new jars.
+  test "keeps each jar move and interest row on the balance it was first routed to" do
+    balances = [ standard_balance("20000001", "EUR", 0), standard_balance("20000002", "GBP", 0) ]
+    withdrawal = build_interbalance("To <strong>EUR</strong>", resource_id: "8001", primary: "200 EUR")
+    interest_eur = holding_activity("interest_eur", "BALANCE_INTEREST", "<positive>+ 0.42 EUR</positive>")
+    interest_gbp = holding_activity("interest_gbp", "BALANCE_INTEREST", "<positive>+ 0.10 GBP</positive>")
+    sync = lambda do |jars, activities|
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: FakeWiseProvider.new(
+        balances: balances, savings_balances: jars, borderless_accounts: [], activities: activities
+      )).import
+    end
+
+    sync.call([ jar_balance("30000001", "EUR", "Holiday") ], [ withdrawal, interest_eur, interest_gbp ])
+    assert_equal({ "20000001" => %w[interbalance_8001], "20000002" => %w[interest_gbp], "30000001" => %w[interbalance_8001 interest_eur] },
+                 payload_ids)
+
+    later_jars = [ jar_balance("30000001", "EUR", "Holiday"), jar_balance("30000002", "EUR", "House"), jar_balance("30000003", "GBP", "Trip") ]
+    interest_trip = holding_activity("interest_trip", "BALANCE_INTEREST", "<positive>+ 0.05 GBP</positive>", created_on: 1.hour.ago.utc.iso8601(3))
+    assert_no_difference -> { activity_notes.count } do
+      sync.call(later_jars, [ withdrawal, interest_eur, interest_gbp, interest_trip ])
+    end
+    expected = { "20000001" => %w[interbalance_8001], "20000002" => %w[interest_gbp], "30000001" => %w[interbalance_8001 interest_eur],
+                 "30000002" => [], "30000003" => %w[interest_trip] }
+    assert_equal expected, payload_ids
+
+    # Rows the window no longer reaches stay where they went.
+    sync.call(later_jars, [])
+    assert_equal expected, payload_ids
+  end
+
+  # A jar takes no row from before Wise opened it, such as interest stored
+  # on the balance that earned it before Sure kept where rows went.
+  test "leaves interest from before a jar was opened on the balance that earned it" do
+    interest = holding_activity("interest_gbp", "BALANCE_INTEREST", "<positive>+ 0.10 GBP</positive>", created_on: 10.days.ago.utc.iso8601(3))
+    @wise_item.wise_accounts.create!(balance_id: "20000002", currency: "GBP", name: "Wise GBP", raw_payload: { "type" => "STANDARD" },
+                                     raw_transactions_payload: [ interest ])
+    jar = jar_balance("30000003", "GBP", "Trip").merge("creationTime" => 2.days.ago.utc.iso8601)
+    provider = FakeWiseProvider.new(balances: [ standard_balance("20000002", "GBP", 0) ], savings_balances: [ jar ], borderless_accounts: [],
+                                    activities: [ interest ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal({ "20000002" => %w[interest_gbp], "30000003" => [] }, payload_ids)
+    assert_equal "20000002", @wise_item.wise_accounts.find_by!(balance_id: "20000002").raw_transactions_payload.sole["wise_jar_balance_id"]
+  end
+
+  # The interest a jar earned is booked once, on the jar, also while syncs
+  # after the jar closed still fetch it.
+  test "books the interest a jar earned once, also after the jar closed" do
+    interest = holding_activity("interest_1", "BALANCE_INTEREST", "<positive>+ 0.42 EUR</positive>", created_on: 5.days.ago.utc.iso8601(3))
+    sync = lambda do |jars|
+      provider = FakeWiseProvider.new(balances: [ standard_balance("10000001", "EUR", 100) ], savings_balances: jars, borderless_accounts: [],
+                                      activities: [ interest ], raise_on: { get_balance_statements: statements_forbidden })
+      result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+    end
+    jar = jar_balance("10000002", "EUR", "Holiday")
+
+    sync.call([ jar ])
+    @wise_item.wise_accounts.reload.each { |wise_account| link_account(wise_account) }
+    sync.call([ jar ])
+    2.times { sync.call([]) }
+
+    assert @wise_item.wise_accounts.reload.find(&:jar?).closed?
+    assert_equal [ "Holiday" ], Entry.where(source: "wise", external_id: "wise_activity_interest_1").map { |entry| entry.account.name }
+  end
+
+  # A jar linked after the first sync books the moves that sync stored, and
+  # the leg of a withdrawal Sure had booked on the wrong side is renamed in
+  # place, so both link.
+  test "a jar linked after the first sync books its stored moves and renames a leg booked on the wrong side" do
+    jar = jar_balance("10000002", "EUR", "Holiday", 250)
+    deposit = build_interbalance("To <strong>Holiday</strong>", resource_id: "9001", primary: "300 EUR").merge("createdOn" => 30.days.ago.utc.iso8601)
+    withdrawal = build_interbalance("From <strong>Holiday</strong>", resource_id: "9002", primary: "50 EUR").merge("createdOn" => 20.days.ago.utc.iso8601)
+    WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(savings_balances: [ jar ], activities: [ deposit, withdrawal ])).import
+    eur = link_account(@wise_item.wise_accounts.find_by!(balance_id: "10000001"))
+    holiday = link_account(@wise_item.wise_accounts.find_by!(balance_id: "10000002"))
+    old_leg = eur.current_account.entries.create!(external_id: "wise_interbalance_9002_outflow", source: "wise", amount: -50, currency: "EUR",
+                                                  date: 20.days.ago.to_date, name: "Transfer from Holiday", entryable: Transaction.new)
+
+    # The sync that linking starts reaches back only weeks.
+    result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: FakeWiseProvider.new(savings_balances: [ jar ])).import
+    WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+    @wise_item.link_jar_transfers!
+
+    assert_equal [ [ "wise_interbalance_9001_inflow", BigDecimal("-300") ], [ "wise_interbalance_9002_outflow", BigDecimal("50") ] ],
+                 holiday.current_account.entries.order(:external_id).pluck(:external_id, :amount)
+    assert_equal [ [ "wise_interbalance_9001_outflow", BigDecimal("300") ], [ "wise_interbalance_9002_inflow", BigDecimal("-50") ] ],
+                 eur.current_account.entries.order(:external_id).pluck(:external_id, :amount)
+    assert_equal "wise_interbalance_9002_inflow", old_leg.reload.external_id
+    assert_equal 2, Transfer.where(status: "confirmed").count
   end
 
   # Single-leg activities on balances without statements: the feed is the only
@@ -2153,8 +2542,9 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_includes @wise_item.wise_accounts.first.raw_transactions_payload.map { |row| row["referenceNumber"] }, "CARD-555"
   end
 
-  # Interest and fees go to the open jars as before, else to the balance in
-  # their currency.
+  # Interest and fees go to the balance in their currency when no jar or
+  # invested balance in it takes them; a jar closed before they were paid
+  # takes none.
   test "routes balance interest to the balance in its currency while the profile has no open jar" do
     closed_jar = @wise_item.wise_accounts.create!(balance_id: "50000009", name: "Old jar", currency: "EUR",
                                                   raw_payload: { "type" => "SAVINGS", "closed_at" => 10.days.ago.utc.iso8601 })
@@ -3067,6 +3457,73 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_equal({ [ BigDecimal("100"), "GBP" ] => 10 }, gbp.entries.where(source: "wise").group(:amount, :currency).count)
   end
 
+  # The older build's copy on the target balance was an outflow of what it
+  # received, which a person categorized: it is renamed to the inflow in
+  # place, keeps the category and gets the conversion's amount.
+  test "renames a conversion's outflow copy on its target balance to its inflow, keeping what a person did" do
+    conversion = build_interbalance("To <strong>USD</strong>", resource_id: "771", primary: "120 USD", secondary: "100 GBP")
+                   .merge("createdOn" => 10.days.ago.utc.iso8601(3))
+    usd = link_account(@wise_item.wise_accounts.create!(balance_id: "32000002", name: "Wise USD", currency: "USD",
+                                                         raw_payload: standard_balance("32000002", "USD", 120.0)))
+    category = @family.categories.create!(name: "Savings", color: "#000000")
+    copy = usd.current_account.entries.create!(external_id: "wise_interbalance_771_outflow", source: "wise", amount: 120, currency: "USD",
+                                               date: 10.days.ago.to_date, name: "To USD", user_modified: true,
+                                               entryable: Transaction.new(category: category))
+    provider = FakeWiseProvider.new(balances: [ standard_balance("32000001", "GBP", 0.0), standard_balance("32000002", "USD", 120.0) ],
+                                    borderless_accounts: [], activities: [ conversion ], raise_on: { get_balance_statements: statements_forbidden })
+
+    result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+
+    assert_equal [ [ copy.id, "wise_interbalance_771_inflow", BigDecimal("-120") ] ],
+                 usd.current_account.entries.where(source: "wise").pluck(:id, :external_id, :amount)
+    assert_equal category, copy.reload.entryable.category
+  end
+
+  # An older build booked every jar's interest and cashback on every jar,
+  # and kept a jar's payload to the last sync's activities, so most copies
+  # have no stored row. The balance in the interest's currency books it now,
+  # which explains the copies on the jar, so they go beyond the cap.
+  test "the first full sync removes the interest copies an older build booked on a jar in another currency" do
+    cashbacks = (1..30).map do |i|
+      holding_activity("cb_gbp_#{i}", "BALANCE_CASHBACK", "<positive>+ 0.10 GBP</positive>", title: "<strong>Cashback</strong>",
+                                                                                              created_on: (40 - i).days.ago.utc.iso8601(3))
+    end
+    gbp = link_account(@wise_item.wise_accounts.create!(balance_id: "32000001", name: "Wise GBP", currency: "GBP",
+                                                         raw_payload: standard_balance("32000001", "GBP", 3.0)))
+    jar = link_account(@wise_item.wise_accounts.create!(balance_id: "32000009", name: "Holiday", currency: "EUR",
+                                                         raw_payload: jar_balance("32000009", "EUR", "Holiday", 0.0),
+                                                         raw_transactions_payload: cashbacks.last(2)))
+    cashbacks.each do |activity|
+      jar.current_account.entries.create!(external_id: "wise_activity_#{activity['id']}", source: "wise", amount: -0.10, currency: "GBP",
+                                          date: Time.zone.parse(activity["createdOn"]).to_date, name: "Interest", entryable: Transaction.new)
+    end
+    provider = FakeWiseProvider.new(balances: [ standard_balance("32000001", "GBP", 3.0) ], savings_balances: [ jar_balance("32000009", "EUR", "Holiday", 0.0) ],
+                                    borderless_accounts: [], activities: cashbacks, raise_on: { get_balance_statements: statements_forbidden })
+
+    2.times do
+      result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+    end
+
+    assert_equal 0, jar.current_account.entries.where(source: "wise").count
+    assert_equal 30, gbp.current_account.entries.where(source: "wise").count
+  end
+
+  # Interest the failed jar list made fall back to the balance in its
+  # currency is not pinned there, so the jar takes it once listed.
+  test "interest a failed jar list left on the balance moves to the jar once the list arrives" do
+    jar = jar_balance("10000002", "EUR", "Holiday", 1000.0).merge("creationTime" => 200.days.ago.utc.iso8601)
+    interest = holding_activity("interest_1", "BALANCE_INTEREST", "<positive>+ 1.12 EUR</positive>")
+    [ { get_savings_balances: "Unexpected response 503" }, {} ].each do |failures|
+      provider = FakeWiseProvider.new(savings_balances: [ jar ], activities: [ interest ],
+                                      raise_on: { get_balance_statements: statements_forbidden }.merge(failures))
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+    end
+
+    assert_equal({ "10000001" => [], "10000002" => [ "interest_1" ] }, payload_ids)
+  end
+
   test "says when the import covered a source for the first time or re-fetched the whole history" do
     provider = FakeWiseProvider.new(raise_on: { get_balance_statements: statements_forbidden })
     import = ->(**options) { WiseItem::Importer.new(WiseItem.find(@wise_item.id), **options).import[:coverage_upgraded] }
@@ -3358,11 +3815,29 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
         "totalWorth" => { "value" => value, "currency" => currency }, "reservedAmount" => { "value" => 0.0, "currency" => currency } }
     end
 
+    # Interest, cashback or a fee on what a balance holds.
+    def holding_activity(id, type, primary, title: "<strong>Interest</strong>", created_on: 3.days.ago.utc.iso8601(3))
+      build_card_activity(id, primary, type: type, resource_type: type, created_on: created_on).merge("title" => title)
+    end
+
     # { balance id => sorted ids of the rows stored on it }.
     def payload_ids
       @wise_item.wise_accounts.reload.to_h do |wise_account|
         [ wise_account.balance_id, Array(wise_account.raw_transactions_payload).map { |row| row["id"] }.sort ]
       end
+    end
+
+    # Links (once) and processes every balance, then links the conversion
+    # legs: { balance name => [[external id, amount, currency], ...] }
+    # (key: :balance_id where jars share a name).
+    def book_every_balance(key: :name)
+      booked = @wise_item.wise_accounts.reload.to_h do |wise_account|
+        wise_account = link_account(wise_account) unless wise_account.current_account
+        assert WiseAccount::Transactions::Processor.new(wise_account).process[:success]
+        [ wise_account.public_send(key), wise_account.current_account.entries.where(source: "wise").order(:external_id).pluck(:external_id, :amount, :currency) ]
+      end
+      @wise_item.link_jar_transfers!
+      booked
     end
 
     def build_cashback(resource_id)
