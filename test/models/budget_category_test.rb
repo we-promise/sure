@@ -235,6 +235,21 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_empty uncategorized_bc.subcategories
   end
 
+  test "subcategories returns the parent's children" do
+    assert_equal [ @subcategory_with_limit_bc.id, @subcategory_inheriting_bc.id ].sort,
+                 @parent_budget_category.subcategories.map(&:id).sort
+    assert_empty @subcategory_with_limit_bc.subcategories
+  end
+
+  test "subcategories reuses the loaded budget categories instead of querying each call" do
+    parent = @parent_budget_category.reload
+    parent.subcategories # warm the budget and its preloaded budget_categories
+
+    assert_no_queries do
+      3.times { parent.subcategories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount) }
+    end
+  end
+
   test "parent with only inheriting subcategories shares entire budget" do
     # Set subcategory_with_limit to also inherit
     @subcategory_with_limit_bc.update!(budgeted_spending: 0)

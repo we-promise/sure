@@ -406,13 +406,15 @@ class BudgetCategory < ApplicationRecord
     budget.budget_categories.select { |bc| bc.category.parent_id == category.parent_id && bc.id != id }
   end
 
+  # Filters the budget's already-loaded categories in memory (the association
+  # preloads :category), like `siblings` and `parent_budget_category`. Issuing
+  # a query here ran once per call, and parent cards call this several times
+  # each while rendering -- an N+1 on the budget page.
   def subcategories
-    return BudgetCategory.none unless category.parent_id.nil?
-    return BudgetCategory.none if category.id.nil?
+    return [] unless category.parent_id.nil?
+    return [] if category.id.nil?
 
-    budget.budget_categories
-      .joins(:category)
-      .where(categories: { parent_id: category.id })
+    budget.budget_categories.select { |bc| bc.category.parent_id == category.id }
   end
 
   private
