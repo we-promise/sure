@@ -1,0 +1,32 @@
+<%# locals: (entry:, compact: false) %>
+<%# Manual reconciliation status — only meaningful for manual (unsynced) accounts.
+    Synced accounts already have duplicate-matching + statement-level reconciliation
+    (see Entry#reconciled_status for the full rationale).
+
+    Gated on write access as well: #reconcile requires it, so a read_write or
+    read_only share must not be offered a control the server would reject. %>
+<% if entry.account.manual? && can_reconcile_account?(entry.account) %>
+  <%
+    status = entry.reconciled_status
+    tooltip = t("transactions.reconcile.badge.#{status}_tooltip")
+  %>
+  <%= link_to reconcile_transaction_path(entry.transaction),
+      data: { turbo_method: :patch, turbo_frame: "_top" },
+      title: tooltip,
+      aria: { label: t("transactions.reconcile.statuses.#{status}") },
+      class: "hover:opacity-80 transition-opacity flex items-center" do %>
+    <% if compact %>
+      <span class="<%= reconcile_status_text_class(status) %>">
+        <%= icon reconcile_status_icon(status), size: "sm", color: "current" %>
+      </span>
+    <% else %>
+      <%= render DS::Pill.new(
+        label: t("transactions.reconcile.statuses.#{status}"),
+        tone: reconcile_status_tone(status),
+        marker: false,
+        icon: reconcile_status_icon(status),
+        title: tooltip
+      ) %>
+    <% end %>
+  <% end %>
+<% end %>

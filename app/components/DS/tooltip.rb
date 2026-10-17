@@ -2,7 +2,7 @@ class DS::Tooltip < ApplicationComponent
   AS_OPTIONS = %i[button span].freeze
   VARIANTS = %i[inverse surface].freeze
 
-  attr_reader :placement, :offset, :cross_axis, :icon_name, :size, :color, :tooltip_id, :as, :html_class, :variant
+  attr_reader :placement, :offset, :cross_axis, :icon_name, :size, :color, :tooltip_id, :as, :html_class, :trigger_content, :variant
 
   # Optional custom trigger that replaces the icon, for hover-to-reveal
   # details on existing markup (e.g. a summary pill). It renders like
@@ -37,7 +37,12 @@ class DS::Tooltip < ApplicationComponent
   #   :surface — themed card matching the chart hover cards
   #     (`.chart-tooltip`), for richer content such as colored pills that
   #     would lose contrast on the inverse surface.
-  def initialize(text: nil, placement: "top", offset: 10, cross_axis: 0, icon: "info", size: "sm", color: "default", as: :button, html_class: nil, variant: :inverse)
+  #
+  # `trigger_content:` renders raw markup in place of the default icon when
+  # `as: :span` (e.g. a reconciliation status indicator). Prefer the
+  # `trigger` slot for new usages; this option is kept for simple inline
+  # indicator markup.
+  def initialize(text: nil, placement: "top", offset: 10, cross_axis: 0, icon: "info", size: "sm", color: "default", as: :button, html_class: nil, trigger_content: nil, variant: :inverse)
     raise ArgumentError, "as: must be one of #{AS_OPTIONS.inspect}" unless AS_OPTIONS.include?(as)
     raise ArgumentError, "variant: must be one of #{VARIANTS.inspect}" unless VARIANTS.include?(variant.to_sym)
 
@@ -50,6 +55,7 @@ class DS::Tooltip < ApplicationComponent
     @color = color
     @as = as
     @html_class = html_class
+    @trigger_content = trigger_content
     @variant = variant.to_sym
     @tooltip_id = "tooltip-#{SecureRandom.hex(4)}"
   end

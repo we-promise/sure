@@ -139,6 +139,7 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ new_tag.id ], transaction_entry.transaction.tag_ids
   end
 
+
   test "bulk update ignores category, merchant and tag ids from another family" do
     other_family = families(:empty)
     foreign_category = other_family.categories.create!(name: "Foreign category")
@@ -268,5 +269,51 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Renamed", "bulk note" ], [ full_entry.reload.name, full_entry.notes ]
     assert_equal [ "Annotate", "bulk note" ], [ annotate_entry.reload.name, annotate_entry.notes ]
     assert_equal [ "Private", nil ], [ private_entry.reload.name, private_entry.notes ]
+  end
+
+  test "bulk update sets reconciled_status on manual accounts" do
+    manual_entry = create_transaction(account: accounts(:depository))
+    assert accounts(:depository).manual?
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ manual_entry.id ],
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "reconciled", manual_entry.reload.reconciled_status
+  end
+
+  test "bulk update ignores reconciled_status on synced accounts" do
+    synced_entry = create_transaction(account: accounts(:connected))
+    assert_not accounts(:connected).manual?
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ synced_entry.id ],
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "unreconciled", synced_entry.reload.reconciled_status
+  end
+
+  test "bulk update rejects an invalid reconciled_status value without raising" do
+    manual_entry = create_transaction(account: accounts(:depository))
+
+    assert_no_changes -> { manual_entry.reload.reconciled_status } do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: [ manual_entry.id ],
+          reconciled_status: "not_a_real_status"
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.reconcile.failure"), flash[:alert]
   end
 end

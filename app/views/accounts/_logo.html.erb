@@ -1,4 +1,4 @@
-<%# locals: (account:, size: "md", color: nil) %>
+<%# locals: (account:, size: "md", color: nil, reconciliation_indicator: nil) %>
 
 <% size_classes = {
   "sm" => "w-6 h-6",
@@ -7,16 +7,58 @@
   "full" => "w-full h-full"
 } %>
 
-<% if account.logo_url.present? %>
-  <%= image_tag account.logo_url,
-        class: "shrink-0 rounded-full #{size_classes[size]}",
-        loading: "lazy" %>
-<% else %>
-  <%= render DS::FilledIcon.new(
-        variant: :text,
-        hex_color: color || account.accountable&.color,
-        text: account.name,
-        size: size,
-        rounded: true
-      ) %>
-<% end %>
+<div class="relative shrink-0">
+  <% if account.logo_url.present? %>
+    <%= image_tag account.logo_url,
+          class: "rounded-full #{size_classes[size]}",
+          loading: "lazy" %>
+  <% else %>
+    <%= render DS::FilledIcon.new(
+          variant: :text,
+          hex_color: color || account.accountable&.color,
+          text: account.name,
+          size: size,
+          rounded: true
+        ) %>
+  <% end %>
+
+  <% if reconciliation_indicator.present? %>
+    <%#
+      Status only, never an action — the account itself offers no
+      reconciliation control, so the tooltip explains the colour on hover and
+      is exposed to AT via aria-describedby.
+
+      The corner offset lives on the tooltip wrapper (`html_class:`), not on
+      the dot. The wrapper is inline-level, so in flow it opens a line box
+      inside the logo's `relative` container and grows that container — which
+      pushed the `absolute` dot clear of the corner. Out of flow, the wrapper
+      sizes to the dot and anchors to the container as intended.
+
+      The dot carries `data-row-click-ignore` so a click on it doesn't open the
+      account row (ClickableRowController#open).
+    %>
+    <% matched = reconciliation_indicator == :matched %>
+    <% if matched %>
+      <%= render DS::Tooltip.new(
+            text: t("accounts.reconciliation_indicator.matched"),
+            as: :span,
+            html_class: "absolute -bottom-0.5 -right-0.5",
+            trigger_content: tag.span(
+              icon("check", class: "w-2 h-2 text-inverse"),
+              class: "flex h-3 w-3 items-center justify-center rounded-full border border-container bg-success",
+              data: { row_click_ignore: true }
+            )
+          ) %>
+    <% else %>
+      <%= render DS::Tooltip.new(
+            text: t("accounts.reconciliation_indicator.needs_attention"),
+            as: :span,
+            html_class: "absolute -bottom-0.5 -right-0.5",
+            trigger_content: tag.span(
+              class: "h-2.5 w-2.5 rounded-full border border-container bg-warning",
+              data: { row_click_ignore: true }
+            )
+          ) %>
+    <% end %>
+  <% end %>
+</div>

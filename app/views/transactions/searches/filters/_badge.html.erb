@@ -48,6 +48,11 @@
     <div class="flex items-center gap-2">
       <p><%= Tag.untagged_name %></p>
     </div>
+  <% elsif param_key == "reconcile_status" %>
+    <div class="flex items-center gap-2 px-1">
+      <%= icon(reconcile_status_icon(param_value), size: "sm") %>
+      <p><%= t("transactions.reconcile.statuses.#{param_value}") %></p>
+    </div>
   <% elsif param_key == "categories" && param_value == Category::UNCATEGORIZED_FILTER_VALUE %>
     <div class="flex items-center gap-2">
       <p><%= Category.uncategorized_name %></p>

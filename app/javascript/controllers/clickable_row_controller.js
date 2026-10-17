@@ -9,7 +9,12 @@ export default class extends Controller {
   static targets = ["link"];
 
   open(event) {
-    if (event.target.closest("a, button, input, select, textarea, label")) return;
+    if (event.target.closest("a, button, input, select, textarea, label"))
+      return;
+    // Passive markers (e.g. the account reconciliation flag in the accounts
+    // list) sit inside the row but are not controls, so a click on one is not
+    // a request to open the row either.
+    if (event.target.closest("[data-row-click-ignore]")) return;
     // Popover/menu/dropdown panels (category dropdown, account/kebab menu,
     // investment activity quick-edit) render as `position: fixed`/`absolute`
     // but stay DOM descendants of the row, so a click anywhere on their

@@ -1,6 +1,6 @@
 class UI::AccountPage < ApplicationComponent
   attr_reader :account, :chart_view, :chart_period, :loan_chart, :as_of, :statement_coverage, :statements,
-              :reconciliation_statuses, :can_manage_statements
+              :reconciliation_statuses, :reconciliation_indicator, :can_manage_statements
 
   renders_one :activity_feed, ->(feed_data:, pagy:, search:) { UI::Account::ActivityFeed.new(feed_data: feed_data, pagy: pagy, search: search) }
 
@@ -10,8 +10,8 @@ class UI::AccountPage < ApplicationComponent
   # `loan_projection` is the projection the controller already built for the
   # chart, so the Schedule tab's forecast card does not simulate it again.
   def initialize(account:, chart_view: nil, chart_period: nil, loan_chart: nil, as_of: Date.current, active_tab: nil,
-                 statement_coverage: nil, statements: [], reconciliation_statuses: {}, can_manage_statements: false,
-                 loan_projection: nil)
+                 statement_coverage: nil, statements: [], reconciliation_statuses: {}, reconciliation_indicator: nil,
+                 can_manage_statements: false, loan_projection: nil)
     @account = account
     @chart_view = chart_view
     @chart_period = chart_period
@@ -22,6 +22,7 @@ class UI::AccountPage < ApplicationComponent
     @statement_coverage = statement_coverage
     @statements = statements
     @reconciliation_statuses = reconciliation_statuses
+    @reconciliation_indicator = reconciliation_indicator
     @can_manage_statements = can_manage_statements
   end
 
