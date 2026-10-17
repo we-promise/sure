@@ -34,6 +34,58 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal posted_date, start_date
   end
 
+  test "trim_to_supported_history drops the points before the common supported start" do
+    account = families(:empty).accounts.create!(name: "Linked Investment", balance: 0, currency: "USD", accountable: Investment.new)
+    account.entries.create!(date: 3.days.ago.to_date, name: "Deposit", amount: -100, currency: "USD", source: "plaid", entryable: Transaction.new)
+    values = (0..5).map do |offset|
+      date = 5.days.ago.to_date + offset
+      Series::Value.new(
+        date: date,
+        date_formatted: date.to_s,
+        value: Money.new(offset, "USD"),
+        trend: Trend.new(current: Money.new(offset, "USD"), previous: Money.new([ offset - 1, 0 ].max, "USD"), favorable_direction: "up")
+      )
+    end
+    series = Series.new(start_date: values.first.date, end_date: values.last.date, interval: "1 day", values: values, favorable_direction: "up")
+
+    trimmed = Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(series, account_ids: [ account.id ])
+
+    assert_equal 3.days.ago.to_date, trimmed.start_date
+    assert_equal 4, trimmed.values.size
+    assert_equal series.end_date, trimmed.end_date
+
+    # The point that survives the trim has nothing before it any more, so it
+    # must not keep reporting a change against the point that was removed.
+    assert_equal trimmed.values.first.value, trimmed.values.first.trend.previous
+    assert trimmed.values.first.trend.direction.flat?
+
+    # An unlinked account (no sourced entries, no provider holdings) has no
+    # supported-history start, so the series is returned untouched.
+    manual = families(:empty).accounts.create!(name: "Manual", balance: 0, currency: "USD", accountable: Investment.new)
+    assert_same series, Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(series, account_ids: [ manual.id ])
+  end
+
+  # The sparkline's aggregate goes through the same trim, so it must still
+  # drop the leading points, and the totals it renders (first and last value,
+  # read by Series#trend) are those of the trimmed points.
+  test "aggregate_account_ids trims the aggregate to the common supported start" do
+    account = families(:empty).accounts.create!(name: "Linked Investment", balance: 0, currency: "USD", accountable: Investment.new)
+    (0..5).each do |offset|
+      account.balances.create!(date: 5.days.ago.to_date + offset, balance: offset * 100, currency: "USD", start_non_cash_balance: offset * 100)
+    end
+    account.entries.create!(date: 3.days.ago.to_date, name: "Deposit", amount: -100, currency: "USD", source: "plaid", entryable: Transaction.new)
+    period = Period.custom(start_date: 5.days.ago.to_date, end_date: Date.current)
+
+    series = Balance::LinkedInvestmentSeriesNormalizer.aggregate_account_ids(
+      account_ids: [ account.id ], currency: "USD", period: period, favorable_direction: "up"
+    )
+
+    assert_equal 3.days.ago.to_date, series.start_date
+    assert_equal (3.days.ago.to_date..Date.current).to_a, series.values.map(&:date)
+    assert_equal Money.new(200, "USD"), series.trend.previous
+    assert_equal Money.new(500, "USD"), series.trend.current
+  end
+
   test "common_supported_history_start_date ignores unlinked manual accounts in mixed portfolio" do
     linked_account = families(:empty).accounts.create!(
       name: "Linked Investment",
