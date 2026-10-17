@@ -42,9 +42,9 @@ class UI::AccountPage < ApplicationComponent
   end
 
   def subtitle
-    return nil unless account.property?
-
-    account.property.address
+    details = [ account.institution_name ]
+    details << account.property.address if account.property?
+    details.compact_blank.join(" · ").presence
   end
 
   def active_tab

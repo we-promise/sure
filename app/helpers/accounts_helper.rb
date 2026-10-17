@@ -9,6 +9,10 @@ module AccountsHelper
     sync_account_path(account)
   end
 
+  def account_sidebar_description(account)
+    [ account.institution_name, account.short_subtype_label ].compact_blank.join(" · ")
+  end
+
   # How long a sidebar sparkline frame may spend fetching before
   # `turbo_frame_timeout_controller` replaces it with a warning badge.
   SPARKLINE_FRAME_TIMEOUT_MS = 10_000
@@ -56,7 +60,7 @@ module AccountsHelper
       end
 
     [
-      family.build_cache_key("account_sidebar_tabs_v5", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v6", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
       active_tab,
