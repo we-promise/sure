@@ -316,6 +316,22 @@ class User {
 - Production environment enforces HTTPS
 - Development environment supports HTTP (local testing only)
 
+### 5. Private Certificate Authorities
+- Users may import one PEM or DER root CA for a private Sure server, such as a
+  server using Caddy's internal issuer.
+- The imported CA is additive: public servers continue to use the platform
+  trust store, and TLS hostname verification remains enabled.
+- Custom trust is restricted to the configured server's exact scheme, host,
+  and port. Requests to any other origin use platform trust only.
+- Automatic redirects are disabled on the custom-trust transport so a redirect
+  cannot carry that trust decision to another origin.
+- The app never enables Android's complete user certificate store and never
+  accepts all certificates. Certificate files are validated before saving and
+  their SHA-256 fingerprint is displayed for verification.
+- CA certificates are public trust material, so the selected certificate and
+  filename are stored in `shared_preferences`; private keys are not accepted or
+  stored.
+
 ## Theme & UI
 
 ### Material Design 3

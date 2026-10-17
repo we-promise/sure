@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'api_config.dart';
+import 'api_http_client.dart';
 
 /// Service for fetching balance sheet data (net worth, assets, liabilities)
 /// from the Sure API.
@@ -15,7 +15,7 @@ class BalanceSheetService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/balance_sheet');
 
-      final response = await http.get(
+      final response = await ApiHttpClient.instance.get(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));

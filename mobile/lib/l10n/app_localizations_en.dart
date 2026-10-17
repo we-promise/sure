@@ -70,6 +70,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginSignInWithGoogle => 'Sign in with Google';
 
   @override
+  String get loginSsoCustomCertificateUnsupported =>
+      'Browser sign-in cannot use an app-managed CA certificate. Install the CA on your device and remove it from the app to use Google sign-in.';
+
+  @override
   String get loginMfaLabel => 'Authentication Code';
 
   @override
@@ -496,6 +500,32 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backendConfigChangeHint =>
       'You can change this later in the settings.';
+
+  @override
+  String get backendConfigCertificateLabel => 'Custom CA certificate';
+
+  @override
+  String get backendConfigCertificateSubtitle =>
+      'Optional certificate for a private HTTPS server';
+
+  @override
+  String get backendConfigCertificateChoose => 'Choose certificate';
+
+  @override
+  String get backendConfigCertificateRemove => 'Remove certificate';
+
+  @override
+  String get backendConfigCertificateHelp =>
+      'Select the root CA certificate used by your server (for example Caddy\'s root.crt). PEM and DER certificates are supported. Hostname verification remains enabled.';
+
+  @override
+  String get backendConfigCertificateInvalid =>
+      'Select a file containing one valid X.509 certificate (maximum 64 KB).';
+
+  @override
+  String backendConfigCertificateFingerprint(String fingerprint) {
+    return 'SHA-256: $fingerprint';
+  }
 
   @override
   String get recentTransactionsTitle => 'Recent Transactions';
@@ -997,6 +1027,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backendConfigUrlScheme =>
       'URL must start with http:// or https://';
+
+  @override
+  String get backendConfigCertificateRequiresHttps =>
+      'A custom CA certificate requires an https:// backend URL';
 
   @override
   String get backendConfigUrlInvalid => 'Please enter a valid URL';
