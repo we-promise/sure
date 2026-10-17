@@ -60,6 +60,33 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_response :forbidden
   end
 
+  test "a generic entry name skips ILIKE evidence gathering, using only the picked entry" do
+    unrelated = accounts(:depository).entries.create!(
+      date: 3.days.ago.to_date, amount: 999, currency: "USD",
+      name: I18n.t("transactions.unknown_name"), entryable: Transaction.new
+    )
+    generic_entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 40, currency: "USD",
+      name: I18n.t("transactions.unknown_name"), entryable: Transaction.new
+    )
+
+    stub_provider(raw)
+
+    RecurringTransaction::AiSetupSuggester.any_instance.expects(:suggest_from_entries)
+      .with([ generic_entry ])
+      .returns(RecurringTransaction::AiSetupSuggester::Suggestion.new(
+        name: nil, amount: nil, frequency: nil, day_of_month: nil, weekday: nil,
+        month_of_year: nil, category_id: nil, category_name: nil, bill_type: nil, autopay: nil,
+        confidence: nil, rationale: nil
+      ))
+
+    post smart_fill_recurring_transactions_url(entry_id: generic_entry.id),
+         headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert unrelated.persisted?, "sanity check: the unrelated same-name entry exists in the DB"
+  end
+
   test "an inaccessible entry never becomes evidence" do
     stub_provider(raw(name: "Should not appear"))
     hidden = accounts(:investment).entries.create!(
