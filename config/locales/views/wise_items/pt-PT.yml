@@ -68,7 +68,7 @@ pt-PT:
       sync_start_date_label: Importar transações a partir de
       sync_start_date_help: Os extratos da Wise são importados a partir desta data. Deixe o valor predefinido para até um ano de histórico.
       import_all_history_label: Importar o histórico completo de transações
-      import_all_history_help: Obter todos os extratos históricos da Wise em vez de apenas o último ano.
+      import_all_history_help: Importar todo o histórico da Wise (transferências, atividades e extratos) em vez de apenas o último ano. Cada saldo começa então em 0 no dia em que a Wise o abriu.
       connect: Ligar à Wise
       update_connection: Atualizar ligação
       setup_accounts: Configurar contas

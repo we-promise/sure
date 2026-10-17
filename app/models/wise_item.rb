@@ -68,13 +68,17 @@ class WiseItem < ApplicationRecord
   # import_complete: whether this sync's import fetched every source in full
   # (see WiseItem::Importer#import). Steps that delete or rewrite entries
   # only run when it is true.
-  def process_accounts(import_complete: false)
+  # coverage_upgraded: whether that import re-fetched the whole history (an
+  # upgraded install, the full history switched on), which lets the stale
+  # entry clean-up exceed its cap once (WiseAccount::Transactions::Processor).
+  def process_accounts(import_complete: false, coverage_upgraded: false)
     return [] if wise_accounts.empty?
 
     results = []
     wise_accounts.joins(:account).merge(Account.visible).each do |wise_account|
       begin
-        result = WiseAccount::Processor.new(wise_account, import_complete: import_complete).process
+        result = WiseAccount::Processor.new(wise_account, import_complete: import_complete,
+                                                          coverage_upgraded: coverage_upgraded).process
         results << { wise_account_id: wise_account.id, success: true, result: result }
       rescue => e
         Rails.logger.error "WiseItem #{id} - Failed to process account #{wise_account.id}: #{e.message}"

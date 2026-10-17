@@ -54,7 +54,7 @@ tr:
       sync_start_date_label: İşlemleri şu tarihten itibaren içe aktar
       sync_start_date_help: Wise hesap özetleri bu tarihten itibaren içe aktarılır. Varsayılanı bırakırsanız bir yıla kadar geçmiş yüklenir.
       import_all_history_label: Tüm işlem geçmişini içe aktar
-      import_all_history_help: Yalnızca son bir yıl yerine tüm geçmiş Wise hesap özetlerini getirir.
+      import_all_history_help: Yalnızca son bir yıl yerine tüm Wise geçmişini (transferler, işlemler ve hesap özetleri) içe aktarır. Her bakiye bu durumda Wise'ın onu açtığı gün 0'dan başlar.
       disconnect: Bağlantıyı kes
       disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?
         Bu, tüm eşitlenmiş hesap verilerini kaldıracaktır."

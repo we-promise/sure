@@ -1132,6 +1132,31 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  # Coverage says which build recorded it (WiseItem::COVERAGE_VERSION). An
+  # older build may have dropped rows the current one stores, or put them on
+  # other balances, so its coverage counts as none: the whole history is
+  # fetched once again, then incrementally.
+  test "fetches the whole history once again when an older build recorded the coverage" do
+    travel_to Time.utc(2026, 10, 17, 12) do
+      older = { "from" => "2025-10-17T12:00:00Z", "through" => "2026-09-29T12:00:00Z" }
+      @wise_item.update!(raw_payload: { "coverage" => { "transfers" => older, "activities" => older } })
+      card = build_card_activity("card_1", "10 EUR", created_on: "2026-03-01T10:00:00.000Z")
+      provider = FakeWiseProvider.new(activities: [ card ], windowed_activities: true, raise_on: { get_balance_statements: statements_forbidden })
+      import = -> { WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import }
+
+      assert import.call[:coverage_upgraded]
+
+      assert_equal [ 365.days.ago ], provider.transfer_requests.map { |request| request[:created_date_start] }
+      assert_equal [ 365.days.ago ], provider.activity_requests.map { |request| request[:since] }
+      assert_equal [ "card_1" ], @wise_item.wise_accounts.sole.raw_transactions_payload.map { |row| row["id"] }
+      covered = { "from" => "2025-10-17T12:00:00Z", "through" => "2026-10-17T12:00:00Z", "version" => WiseItem::COVERAGE_VERSION }
+      assert_equal({ "transfers" => covered, "activities" => covered }, @wise_item.reload.raw_payload["coverage"])
+
+      assert_not import.call[:coverage_upgraded]
+      assert_equal 30.days.ago, provider.activity_requests.last[:since]
+    end
+  end
+
   test "re-reads activities back to the oldest stored one that can still change, at most 180 days" do
     travel_to Time.utc(2026, 10, 17, 12) do
       @wise_item.update!(raw_payload: {
@@ -2253,6 +2278,181 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  # Closed balances
+
+  test "marks a balance closed only after two complete balance lists in a row without it" do
+    old_eur = @wise_item.wise_accounts.create!(balance_id: "10000009", name: "Wise EUR (old)", currency: "EUR", current_balance: 50,
+                                               raw_payload: { "type" => "STANDARD" })
+    listed = FakeWiseProvider.new(raise_on: { get_balance_statements: statements_forbidden })
+
+    # A list that failed or answered not_found proves nothing.
+    [ { get_savings_balances: "Unexpected response 500" },
+      { get_savings_balances: Provider::Wise::WiseError.new("Resource not found", :not_found) },
+      { get_balances: Provider::Wise::WiseError.new("Resource not found", :not_found) } ].each do |raise_on|
+      partial = FakeWiseProvider.new(raise_on: raise_on.merge(get_balance_statements: statements_forbidden))
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: partial).import
+      assert_nil old_eur.reload.raw_payload["absent_count"], raise_on.keys.first
+    end
+
+    WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: listed).import
+    assert_equal 1, old_eur.reload.raw_payload["absent_count"]
+    assert_not old_eur.closed?
+    assert_equal BigDecimal("50"), old_eur.current_balance
+
+    assert_difference -> { balance_notes.count }, 1 do
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: listed).import
+    end
+    assert old_eur.reload.closed?
+    assert_equal [ 2, BigDecimal("0") ], [ old_eur.raw_payload["absent_count"], old_eur.current_balance ]
+    assert_equal old_eur.id, balance_notes.sole.metadata["wise_account_id"]
+
+    # Listed again: open again, at the amount Wise reports.
+    reopened = FakeWiseProvider.new(balances: [ eur_balance("10000001", 1964.88), eur_balance("10000009", 12.0) ],
+                                    raise_on: { get_balance_statements: statements_forbidden })
+    WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: reopened).import
+    assert_not old_eur.reload.closed?
+    assert_not old_eur.raw_payload.key?("absent_count")
+    assert_equal BigDecimal("12"), old_eur.current_balance
+  end
+
+  # Wise closes only empty balances, and the conversion that emptied one
+  # usually comes in the first sync whose lists miss it.
+  test "a closed balance keeps the conversion that emptied it and drops to zero" do
+    WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(
+      balances: [ standard_balance("20000001", "GBP", 100), standard_balance("20000002", "EUR", 50) ], borderless_accounts: [],
+      raise_on: { get_balance_statements: statements_forbidden }
+    )).import
+    eur = link_account(@wise_item.wise_accounts.find_by!(currency: "EUR"))
+    convert_out = build_interbalance("To <strong>GBP</strong>", resource_id: "9100", primary: "43.10 GBP", secondary: "50 EUR")
+    emptied = FakeWiseProvider.new(balances: [ standard_balance("20000001", "GBP", 143.10) ], borderless_accounts: [],
+                                   activities: [ convert_out ], raise_on: { get_balance_statements: statements_forbidden })
+
+    2.times do
+      result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: emptied).import
+      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete], coverage_upgraded: result[:coverage_upgraded])
+    end
+
+    assert eur.reload.closed?
+    assert_equal [ [ "wise_interbalance_9100_outflow", BigDecimal("50") ] ], eur.current_account.entries.pluck(:external_id, :amount)
+    assert_equal BigDecimal("0"), eur.current_account.reload.balance
+  end
+
+  # Wise opened a closed currency again under a new balance id.
+  test "books each movement of a reopened currency on the balance of its time" do
+    old_eur = @wise_item.wise_accounts.create!(balance_id: "10000009", currency: "EUR", name: "Wise EUR (old)", current_balance: 111,
+                                               raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001, "recipientId" => 1111,
+                                                              "creationTime" => "2025-01-10T09:00:00Z" })
+    link_account(old_eur)
+    new_eur = eur_balance("10000001", 960.0).merge("creationTime" => 10.days.ago.utc.iso8601)
+    before_reopening = build_transfer(id: 76, target_account: 5555).merge("created" => 20.days.ago.utc.strftime("%Y-%m-%d %H:%M:%S"))
+    after_reopening = build_transfer(id: 77, target_account: 5555).merge("created" => 2.days.ago.utc.strftime("%Y-%m-%d %H:%M:%S"))
+    provider = FakeWiseProvider.new(balances: [ new_eur ], transfers: [ before_reopening, after_reopening ],
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    2.times { WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import }
+
+    holders = [ 76, 77 ].index_with do |id|
+      @wise_item.wise_accounts.reload.select { |wa| Array(wa.raw_transactions_payload).any? { |row| row["id"] == id } }.map(&:balance_id)
+    end
+    assert_equal({ 76 => [ "10000009" ], 77 => [ "10000001" ] }, holders)
+    assert old_eur.reload.closed?
+    WiseAccount::Processor.new(old_eur).process
+    assert_equal BigDecimal("0"), old_eur.current_account.reload.balance
+  end
+
+  # Wise opened the new euro balance at 15:00, six hours after a conversion
+  # emptied the old one. In the day before the opening, money that left the
+  # currency left the old balance (the new one held nothing yet), and money
+  # that came in reached the new one (a pay-in can be dated before the
+  # balance it reached existed).
+  test "books what left a currency reopened within a day on the old balance and what came in on the new one" do
+    @wise_item.wise_accounts.create!(balance_id: "10000009", currency: "EUR", name: "Wise EUR (old)", current_balance: 50,
+                                     raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001, "creationTime" => "2025-01-10T09:00:00Z" })
+    reopened_at = 10.days.ago.utc.change(hour: 15)
+    emptied = build_interbalance("To <strong>GBP</strong>", resource_id: "9100", primary: "43.10 GBP", secondary: "50 EUR")
+                .merge("createdOn" => reopened_at.change(hour: 9).iso8601)
+    pay_in = build_transfer(id: 9200, target_account: 99999001).merge("created" => (reopened_at - 2.hours).strftime("%Y-%m-%d %H:%M:%S"))
+    provider = FakeWiseProvider.new(balances: [ eur_balance("10000001", 100.0).merge("creationTime" => reopened_at.iso8601),
+                                                standard_balance("20000001", "GBP", 43.10) ],
+                                    borderless_accounts: [], transfers: [ pay_in ], activities: [ emptied ],
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    2.times { WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import }
+
+    assert_equal({ "10000009" => [ "interbalance_9100" ], "10000001" => [ 9200 ], "20000001" => [ "interbalance_9100" ] }, payload_ids)
+  end
+
+  test "keeps a closed balance's rows as they are, adds only older ones and asks it for no statements" do
+    misrouted = build_interbalance("To <strong>CHF</strong>", resource_id: "7006", primary: "1,345.20 CHF", secondary: "1,500 USD")
+    closed = @wise_item.wise_accounts.create!(balance_id: "10000009", currency: "EUR", name: "Wise EUR (closed)",
+                                              raw_payload: { "type" => "STANDARD", "closed_at" => 5.days.ago.utc.iso8601 },
+                                              raw_transactions_payload: [ misrouted ])
+    provider = FakeWiseProvider.new(activities: [ build_card_activity("card_old", "8 EUR", created_on: 6.days.ago.utc.iso8601(3)),
+                                                  build_card_activity("card_new", "12 EUR", created_on: 1.day.ago.utc.iso8601(3)) ],
+                                    statements: [ statement_row("CARD-1", "-3", "EUR") ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal %w[interbalance_7006 card_old], closed.reload.raw_transactions_payload.map { |row| row["id"] }
+    assert_equal [ "10000001" ], provider.statement_requests.map { |request| request[:balance_id] }
+  end
+
+  # An install that booked each conversion leg on every balance before routing
+  # was fixed. The first sync of the fixed code re-fetches the whole history,
+  # so processing removes the legs no balance's rows book any more, on the
+  # emptied USD balance too.
+  test "the first full sync removes conversion legs an older routing booked on every balance" do
+    conversion = build_interbalance("To <strong>AUD</strong>", resource_id: "9000000106", primary: "3,710.65 AUD", secondary: "1,875 GBP")
+                   .merge("createdOn" => 20.days.ago.utc.iso8601)
+    balance_ids = { "GBP" => "20000001", "AUD" => "20000003", "USD" => "20000004" }
+    accounts = balance_ids.to_h do |currency, balance_id|
+      wise_account = @wise_item.wise_accounts.create!(balance_id: balance_id, currency: currency, name: "Wise #{currency}",
+                                                      raw_payload: { "type" => "STANDARD" }, raw_transactions_payload: [ conversion ])
+      account = link_account(wise_account).current_account
+      # What older routing booked on every STANDARD balance.
+      account.entries.create!(external_id: "wise_interbalance_9000000106_outflow", source: "wise", amount: 3710.65, currency: "AUD",
+                              date: 20.days.ago.to_date, name: "Transfer to AUD", entryable: Transaction.new)
+      [ currency, account ]
+    end
+    provider = FakeWiseProvider.new(balances: balance_ids.map { |currency, id| standard_balance(id, currency, 0) }, borderless_accounts: [],
+                                    activities: [ conversion ], raise_on: { get_balance_statements: statements_forbidden })
+
+    result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    assert result[:coverage_upgraded]
+    WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete], coverage_upgraded: result[:coverage_upgraded])
+
+    assert_empty @wise_item.wise_accounts.find_by!(currency: "USD").raw_transactions_payload
+    assert_not accounts["USD"].entries.exists?
+    assert_equal [ [ "wise_interbalance_9000000106_outflow", BigDecimal("1875"), "GBP" ] ],
+                 accounts["GBP"].entries.pluck(:external_id, :amount, :currency)
+    assert_equal BigDecimal("-3710.65"), accounts["AUD"].entries.sum(:amount)
+    assert_equal 1, Entry.where(source: "wise", external_id: "wise_interbalance_9000000106_outflow").count
+  end
+
+  test "says when the import covered a source for the first time or re-fetched the whole history" do
+    provider = FakeWiseProvider.new(raise_on: { get_balance_statements: statements_forbidden })
+    import = ->(**options) { WiseItem::Importer.new(WiseItem.find(@wise_item.id), **options).import[:coverage_upgraded] }
+
+    assert import.call(wise_provider: provider)
+    assert_not import.call(wise_provider: provider)
+
+    # A sync start date inside the covered window changes nothing; one before
+    # anything is covered starts the first coverage.
+    assert_not import.call(wise_provider: provider, sync_start_date: 30.days.ago.to_date)
+    @wise_item.reload.update!(raw_payload: nil)
+    assert import.call(wise_provider: provider, sync_start_date: 30.days.ago.to_date)
+
+    # Coverage that does not reach the full history is fetched again from its start.
+    @wise_item.reload.update!(import_all_history: true)
+    assert import.call(wise_provider: provider)
+
+    # Fetches that failed upgrade nothing.
+    @wise_item.reload.update!(raw_payload: nil)
+    failing = FakeWiseProvider.new(raise_on: { get_activities: "Unexpected response 502", get_transfers: "Unexpected response 502",
+                                               get_balance_statements: statements_forbidden })
+    assert_not import.call(wise_provider: failing)
+  end
+
   # Returns failed result when balances fetch fails
 
   test "returns failed result when STANDARD balances fetch fails" do
@@ -2388,6 +2588,11 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     # What the importer reports about the balance replay.
     def replay_notes
       DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "balance_replay")
+    end
+
+    # What the importer reports about balances it marks closed or open.
+    def balance_notes
+      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "balances")
     end
 
     def standard_balance(id, currency, value)

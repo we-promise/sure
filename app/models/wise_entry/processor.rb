@@ -50,8 +50,8 @@ class WiseEntry::Processor
   # Matching either currency would also book e.g. a GBP-funded payout to PLN
   # on the PLN balance, and Wise does not say whether a balance paid for a
   # pay-in ("send to myself"). A transfer without a currency reaches every
-  # balance. The importer routes transfers by the same rule
-  # (#transfer_for_account?), and a balance books only the ones it reaches.
+  # balance. The importer routes transfers by this, and a balance books only
+  # the ones it reaches.
   def self.balance_route(transfer, wise_account, own_recipient_ids:, recipient_owners:)
     incoming = direction(transfer, own_recipient_ids: own_recipient_ids) == :incoming
     owners = recipient_owners[transfer["targetAccount"].to_s] if incoming
@@ -221,6 +221,14 @@ class WiseEntry::Processor
     ids << "wise_fee_#{transfer_id}" if fee.positive?
     ids << "wise_refund_#{transfer_id}" if refund
     ids
+  end
+
+  # The day the transfer books on, whether it books or not; nil when it has
+  # no readable date.
+  def booking_date
+    date
+  rescue ArgumentError
+    nil
   end
 
   private
