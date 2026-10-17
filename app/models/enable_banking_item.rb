@@ -46,6 +46,37 @@ class EnableBankingItem < ApplicationRecord
     )
   }
 
+  # Enable Banking's primary identification_hash is computed from IBAN + currency,
+  # so an ASPSP exposing several products on one IBAN (e.g. a deferred-debit card
+  # sharing the current account's IBAN) returns the SAME
+  # identification_hash for each — collapsing them into a single account.
+  #
+  # This returns a uid that stays unique per product: the primary hash when there
+  # is no collision (unchanged behavior for everyone else), otherwise the first
+  # identification_hash that no sibling shares (these include resource_id / card
+  # number based hashes, which are stable across sessions), falling back to the
+  # session uid.
+  def self.stable_account_uid(account_data, siblings = [])
+    return account_data.to_s if account_data.is_a?(String)
+    return nil unless account_data.is_a?(Hash)
+
+    ad = account_data.with_indifferent_access
+    primary = (ad[:identification_hash] || ad[:uid]).to_s
+    return primary if primary.blank?
+
+    hash_siblings = Array(siblings).select { |s| s.is_a?(Hash) }.map(&:with_indifferent_access)
+    return primary if hash_siblings.count { |s| s[:identification_hash].to_s == primary } <= 1
+
+    own_uid = ad[:uid].to_s
+    other_hashes = hash_siblings
+      .reject { |s| own_uid.present? && s[:uid].to_s == own_uid }
+      .flat_map { |s| Array(s[:identification_hashes]).map(&:to_s) << s[:identification_hash].to_s }
+      .to_set
+
+    Array(ad[:identification_hashes]).map(&:to_s)
+      .find { |h| h.present? && !other_hashes.include?(h) } || own_uid.presence || primary
+  end
+
   def credentials_configured?
     application_id.present? && client_certificate.present? && country_code.present?
   end
@@ -425,12 +456,12 @@ class EnableBankingItem < ApplicationRecord
       return if accounts_data.blank?
 
       accounts_data.each do |account_data|
-        # Use identification_hash as the stable identifier across sessions
-        uid = account_data[:identification_hash] || account_data[:uid]
+        # Unique per product, even when several products share an IBAN.
+        uid = self.class.stable_account_uid(account_data, accounts_data)
         next unless uid.present?
 
         enable_banking_account = enable_banking_accounts.find_or_initialize_by(uid: uid)
-        enable_banking_account.upsert_enable_banking_snapshot!(account_data)
+        enable_banking_account.upsert_enable_banking_snapshot!(account_data, uid: uid)
         enable_banking_account.save!
       end
     end
