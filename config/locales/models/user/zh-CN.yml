@@ -10,11 +10,17 @@ zh-CN:
         last_name: 姓氏
         password: 密码
         password_confirmation: 密码确认
+        password_challenge: 当前密码
     errors:
       models:
         user:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: 存在其他用户时无法删除管理员账户，请先删除所有家庭成员。
+            password:
+              missing_case: 必须同时包含大写和小写字母
+              missing_number: 必须包含至少一个数字
+              missing_special: 必须包含至少一个特殊字符
+              too_long: "过长（最多 %{count} 字节；中文字符和表情符号各占多个字节）"
             profile_image:
               invalid_file_size: 文件大小必须小于 %{max_megabytes}MB

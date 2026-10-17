@@ -10,11 +10,17 @@ de:
         last_name: Nachname
         password: Passwort
         password_confirmation: Passwortbestätigung
+        password_challenge: Aktuelles Passwort
     errors:
       models:
         user:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: Admin kann das Konto nicht löschen, solange noch andere Benutzer vorhanden sind Bitte zuerst alle Mitglieder löschen
+            password:
+              missing_case: muss Groß- und Kleinbuchstaben enthalten
+              missing_number: muss mindestens eine Ziffer enthalten
+              missing_special: muss mindestens ein Sonderzeichen enthalten
+              too_long: "ist zu lang (höchstens %{count} Bytes; Umlaute, Akzente und Emojis belegen mehr als ein Byte)"
             profile_image:
               invalid_file_size: Dateigröße muss kleiner als %{max_megabytes}MB sein
