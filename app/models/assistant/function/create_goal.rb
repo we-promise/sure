@@ -17,10 +17,11 @@ class Assistant::Function::CreateGoal < Assistant::Function
         of their accounts will fund it. Only call once they've confirmed.
 
         Constraints:
-        - The goal must link to at least one of the user's Depository
-          accounts (checking, savings, HSA, CD, money-market).
+        - The goal must link to at least one of the user's Depository or
+          Physical Cash accounts (checking, savings, HSA, CD, money-market,
+          or physical cash like a wallet or safe).
         - All linked accounts must share the same currency.
-        - Use account names exactly as listed in the user's Depository
+        - Use account names exactly as listed in the user's available
           accounts.
 
         On success returns the new goal's URL so you can point the user to
@@ -29,6 +30,11 @@ class Assistant::Function::CreateGoal < Assistant::Function
       INSTRUCTIONS
     end
   end
+
+  # Investment accounts are intentionally excluded here (unlike
+  # Goal::FUNDABLE_ACCOUNT_TYPES) to keep the assistant's mental model simple:
+  # only plain cash accounts, not brokerage holdings.
+  FUNDABLE_TYPES = %w[Depository PhysicalCash].freeze
 
   def strict_mode?
     false
@@ -53,7 +59,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         linked_account_names: {
           type: "array",
           items: { type: "string" },
-          description: "Names of the user's Depository accounts to link. Must contain at least one. Use names exactly as they appear in the available accounts list. The goal's balance is the balance of these accounts."
+          description: "Names of the user's Depository or Physical Cash accounts to link. Must contain at least one. Use names exactly as they appear in the available accounts list. The goal's balance is the balance of these accounts."
         },
         earmarks: {
           type: "object",
@@ -83,19 +89,19 @@ class Assistant::Function::CreateGoal < Assistant::Function
     if linked_account_names.empty?
       return error(
         "no_linked_accounts",
-        "Please specify at least one Depository account to link to this goal.",
-        available_accounts: depository_account_payload
+        "Please specify at least one Depository or Physical Cash account to link to this goal.",
+        available_accounts: fundable_account_payload
       )
     end
 
-    available = family.accounts.where(accountable_type: "Depository").visible.where(name: linked_account_names)
+    available = family.accounts.where(accountable_type: FUNDABLE_TYPES).visible.where(name: linked_account_names)
     missing = linked_account_names - available.pluck(:name).uniq
     if missing.any?
       return error(
         "unknown_accounts",
-        "Some account names didn't match the user's Depository accounts.",
+        "Some account names didn't match the user's Depository or Physical Cash accounts.",
         unknown_names: missing,
-        available_accounts: depository_account_payload
+        available_accounts: fundable_account_payload
       )
     end
 
@@ -109,7 +115,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         "ambiguous_accounts",
         "Multiple accounts share a name. Ask the user which one to use.",
         ambiguous_names: ambiguous_names,
-        available_accounts: depository_account_payload
+        available_accounts: fundable_account_payload
       )
     end
 
@@ -134,7 +140,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         "Another goal already claims #{over_claimed.map(&:name).to_sentence} in full. " \
         "Ask the user how much to reserve from #{'it'.pluralize(over_claimed.size)}, then pass it in `earmarks`.",
         claimed_account_names: over_claimed.map(&:name),
-        available_accounts: depository_account_payload
+        available_accounts: fundable_account_payload
       )
     end
 
@@ -199,10 +205,10 @@ class Assistant::Function::CreateGoal < Assistant::Function
     # full is exclusive, so an account already claimed can only be joined with
     # an explicit earmark — and the assistant has no way to know that unless
     # the list says so.
-    def depository_account_payload
+    def fundable_account_payload
       claimed = whole_account_claimed_ids
 
-      family.accounts.where(accountable_type: "Depository").visible.map do |account|
+      family.accounts.where(accountable_type: FUNDABLE_TYPES).visible.map do |account|
         {
           name: account.name,
           currency: account.currency,

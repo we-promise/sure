@@ -41,13 +41,15 @@
       </summary>
 
       <div class="space-y-2 mt-2 pl-4 border-l border-primary">
-        <%= form.text_field :institution_name,
-            label: t(".institution_name_label"),
-            placeholder: account.provider&.institution_name || t(".institution_name_placeholder") %>
+        <% unless account.physical_cash? %>
+          <%= form.text_field :institution_name,
+              label: t(".institution_name_label"),
+              placeholder: account.provider&.institution_name || t(".institution_name_placeholder") %>
 
-        <%= form.text_field :institution_domain,
-            label: t(".institution_domain_label"),
-            placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
+          <%= form.text_field :institution_domain,
+              label: t(".institution_domain_label"),
+              placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
+        <% end %>
 
         <%= form.text_area :notes,
             label: t(".notes_label"),

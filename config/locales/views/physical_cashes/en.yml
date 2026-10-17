@@ -1,0 +1,26 @@
+---
+en:
+  physical_cashes:
+    edit:
+      edit: Edit %{account}
+    form:
+      none: None
+      subtype_prompt: Select cash type
+    new:
+      title: Enter cash balance
+    subtypes:
+      wallet:
+        long: Wallet
+        short: Wallet
+      safe:
+        long: Home Safe
+        short: Safe
+      piggy_bank:
+        long: Piggy Bank
+        short: Piggy Bank
+      envelope:
+        long: Envelope / Budget Cash
+        short: Envelope
+      other:
+        long: Other
+        short: Other

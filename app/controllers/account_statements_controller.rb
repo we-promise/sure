@@ -18,7 +18,7 @@ class AccountStatementsController < ApplicationController
     @unmatched_pagy, @unmatched_statements = pagy(account_statements.unmatched, limit: safe_per_page, page_param: :unmatched_page)
     @linked_pagy, @linked_statements = pagy(linked_statement_scope, limit: safe_per_page, page_param: :linked_page)
     @total_storage_bytes = visible_storage_scope.sum(:byte_size)
-    @accounts = Current.user.accessible_accounts.visible.alphabetically
+    @accounts = statementable_accounts.visible.alphabetically
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("account_statements.index.title"), account_statements_path ]
@@ -27,7 +27,7 @@ class AccountStatementsController < ApplicationController
   end
 
   def show
-    @accounts = Current.user.accessible_accounts.visible.alphabetically
+    @accounts = statementable_accounts.visible.alphabetically
     @can_manage_statement = @statement.manageable_by?(Current.user)
     @reconciliation_checks = @statement.reconciliation_checks
     @breadcrumbs = [
@@ -71,7 +71,7 @@ class AccountStatementsController < ApplicationController
   def update
     return if @statement.account && !require_account_permission!(@statement.account)
 
-    target = statement_account_id.present? ? Current.user.accessible_accounts.find(statement_account_id) : nil
+    target = statement_account_id.present? ? statementable_accounts.find(statement_account_id) : nil
     return if target && !require_account_permission!(target)
 
     attrs = statement_params.to_h
@@ -83,7 +83,7 @@ class AccountStatementsController < ApplicationController
     if @statement.save
       redirect_to account_statement_path(@statement), notice: t("account_statements.update.success")
     else
-      @accounts = Current.user.accessible_accounts.visible.alphabetically
+      @accounts = statementable_accounts.visible.alphabetically
       @can_manage_statement = @statement.manageable_by?(Current.user)
       @reconciliation_checks = @statement.reconciliation_checks
       flash.now[:alert] = @statement.errors.full_messages.to_sentence
@@ -100,7 +100,7 @@ class AccountStatementsController < ApplicationController
       return
     end
 
-    account = Current.user.accessible_accounts.find(account_id)
+    account = statementable_accounts.find(account_id)
     return unless require_account_permission!(account)
 
     @statement.link_to_account!(account)
@@ -149,6 +149,13 @@ class AccountStatementsController < ApplicationController
       redirect_to accounts_path, alert: t("accounts.not_authorized")
     end
 
+    # Physical Cash accounts have no statements tab or menu entry to redirect
+    # back to (see UI::AccountPage#tabs), so they're excluded from statement
+    # upload/linking everywhere an account is picked, not just the dropdown.
+    def statementable_accounts
+      Current.user.accessible_accounts.where.not(accountable_type: "PhysicalCash")
+    end
+
     def statement_upload_params
       params.fetch(:account_statement, ActionController::Parameters.new).permit(files: [])
     end
@@ -170,7 +177,7 @@ class AccountStatementsController < ApplicationController
       account_id = statement_account_id.presence
       return nil if account_id.blank?
 
-      Current.user.accessible_accounts.find(account_id)
+      statementable_accounts.find(account_id)
     end
 
     def statement_account_id

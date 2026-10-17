@@ -342,4 +342,8 @@ en:
         hsa: HSA
         cd: CD
         money_market: Money market
+        wallet: Wallet
+        safe: Home Safe
+        piggy_bank: Piggy Bank
+        envelope: Envelope
         other: Other
