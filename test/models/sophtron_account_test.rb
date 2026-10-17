@@ -22,6 +22,14 @@ class SophtronAccountTest < ActiveSupport::TestCase
     assert_equal "ui-apple", account.institution_metadata["user_institution_id"]
   end
 
+  test "declares raw payloads as encrypted" do
+    skip "Encryption not configured" unless SophtronAccount.encryption_ready?
+
+    encrypted = SophtronAccount.encrypted_attributes.map(&:to_s)
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_transactions_payload"
+  end
+
   test "database rejects an unsupported balance sign override" do
     account = build_sophtron_account
     account.balance_sign_override = "unsupported"
